@@ -36,6 +36,10 @@ def build_report_download_budget(
         max_browser_launches=settings.run_budget_max_browser_launches,
         max_pdfs=settings.run_budget_max_pdfs,
         max_drive_writes=settings.run_budget_max_drive_writes,
+        max_drive_reads=getattr(settings, "run_budget_max_drive_reads", None),
+        max_mailbox_reads=getattr(settings, "run_budget_max_mailbox_reads", None),
+        max_retries=getattr(settings, "run_budget_max_retries", None),
+        max_runtime_seconds=getattr(settings, "run_budget_max_runtime_seconds", None),
         limit_decision=settings.run_budget_limit_decision,
         policy_version=getattr(
             settings, "run_budget_policy_version", "budget-authority-v2"
@@ -46,6 +50,7 @@ def build_report_download_budget(
         run_limits=getattr(settings, "run_budget_limits_run", None),
         day_limits=getattr(settings, "run_budget_limits_day", None),
         publisher_limits=getattr(settings, "run_budget_limits_publisher", None),
+        enabled_effect_kinds=getattr(settings, "run_budget_enabled_effect_kinds", ()),
     )
 
 

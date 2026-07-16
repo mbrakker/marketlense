@@ -28,20 +28,23 @@ from src.contracts.browser_download import (
     BrowserDownloadNetworkEvent,
     BrowserReportDownloadRequest,
 )
-from src.contracts.llm_usage import (
-    LLMUsageSpendGuardrailRequest,
-    LLMUsageSpendReservationReleaseRequest,
-)
 from src.contracts.openai import OpenAIUsageAccountingRequest
-from src.contracts.run_budget import BudgetRequest, RunBudget
+from src.contracts.run_budget import (
+    BudgetDecision,
+    BudgetRequest,
+    BudgetSideEffectFinalizeRequest,
+    RunBudget,
+    RunBudgetUsage,
+)
 from src.contracts.run_context import RunContext
 from src.services import llm_service
 from src.services._llm_service.policy import spend_reservation_key
 from src.services.llm_usage_ledger_service import (
     evaluate_budget_request,
-    evaluate_daily_spend_guardrail,
-    release_daily_spend_reservation,
+    finalize_budget_side_effect,
+    reconcile_budget_reservation,
 )
+from src.contracts.run_budget import BudgetReservationReconcileRequest
 from src.services._browser_report_download.cdp import (
     capture_print_pdf_via_cdp,
     collect_terminal_dialog_evidence_via_cdp,
@@ -537,7 +540,16 @@ def run_browser_report_download_agent(
             },
         )
     )
+    launch_budget, launch_decision = _reserve_browser_launch(
+        request=request,
+        ctx=ctx,
+        normalized_url=normalized_url,
+    )
     browser_use = _load_browser_use_runtime(normalized_url)
+    launch_started = False
+    launch_outcome = "completed"
+    launch_error_code = ""
+    launch_started_at = time.monotonic()
     if _should_run_browser_agent_in_subprocess(browser_use, request=request):
         logger.info(
             log_event(
@@ -551,14 +563,30 @@ def run_browser_report_download_agent(
                 },
             )
         )
-        return _run_browser_report_download_agent_subprocess(
-            request=request,
-            ctx=ctx,
-            normalized_url=normalized_url,
-            execution_url=execution_url,
-            download_dir=download_dir,
-            prompt_bundle=prompt_bundle,
-        )
+        try:
+            launch_started = True
+            return _run_browser_report_download_agent_subprocess(
+                request=request,
+                ctx=ctx,
+                normalized_url=normalized_url,
+                execution_url=execution_url,
+                download_dir=download_dir,
+                prompt_bundle=prompt_bundle,
+            )
+        except AppError as exc:
+            launch_outcome = "failed"
+            launch_error_code = exc.code
+            raise
+        finally:
+            _finalize_browser_launch(
+                budget=launch_budget,
+                decision=launch_decision,
+                ctx=ctx,
+                started=launch_started,
+                outcome=launch_outcome,
+                error_code=launch_error_code,
+                runtime_seconds=max(0, int(time.monotonic() - launch_started_at)),
+            )
     browser: Any | None = None
     usage_writer: BrowserUsageWriter | None = None
     _cleanup_stale_browser_use_temp_dirs(ctx=ctx, normalized_url=normalized_url)
@@ -595,6 +623,7 @@ def run_browser_report_download_agent(
     dialog_evidence: list[BrowserDownloadDialogEvidence] = []
     browser_spend_reservation_key = ""
     try:
+        launch_started = True
         browser = browser_use.Browser(
             downloads_path=str(download_dir),
             user_data_dir=str(profile_dir),
@@ -841,6 +870,8 @@ def run_browser_report_download_agent(
                 "browser_rendered_print_to_pdf" if print_pdf_capture_path else ""
             )
     except AppError as exc:
+        launch_outcome = "failed"
+        launch_error_code = exc.code
         if exc.code == "browser_download_agent_timeout" and browser is not None:
             timed_out_form_assisted = False
             if _should_attempt_lookup_submission_assist(
@@ -895,6 +926,8 @@ def run_browser_report_download_agent(
         )
         raise
     except Exception as exc:
+        launch_outcome = "failed"
+        launch_error_code = "browser_download_agent_failed"
         if _is_browser_start_timeout_error(exc):
             logger.info(
                 log_event(
@@ -956,6 +989,15 @@ def run_browser_report_download_agent(
                 ctx=ctx,
                 reservation_key=browser_spend_reservation_key,
             )
+        _finalize_browser_launch(
+            budget=launch_budget,
+            decision=launch_decision,
+            ctx=ctx,
+            started=launch_started,
+            outcome=launch_outcome,
+            error_code=launch_error_code,
+            runtime_seconds=max(0, int(time.monotonic() - launch_started_at)),
+        )
         if browser is not None:
             dialog_evidence.extend(
                 _capture_terminal_dialog_evidence(
@@ -1074,6 +1116,7 @@ def _reserve_browser_use_spend(
         run_limits=settings.run_budget_limits_run,
         day_limits=settings.run_budget_limits_day,
         publisher_limits=settings.run_budget_limits_publisher,
+        enabled_effect_kinds=settings.run_budget_enabled_effect_kinds,
     )
     authority = evaluate_budget_request(
         BudgetRequest(
@@ -1098,29 +1141,16 @@ def _reserve_browser_use_spend(
         raise AppError(
             code=f"browser_use_budget_{authority.decision}",
             message="Browser Use provider call blocked by the canonical budget authority",
-            retryable=authority.decision in {"defer", "pause"},
+            retryable=False,
             context={
                 "reason_code": authority.reason_code,
                 "affected_limit": authority.affected_limit,
+                "retry_decision": (
+                    "defer" if authority.decision == "defer" else "abort"
+                ),
+                "next_action": authority.next_action,
             },
         )
-    decision = evaluate_daily_spend_guardrail(
-        LLMUsageSpendGuardrailRequest(
-            schema_version="1.0",
-            db_path=settings.usage_db_path,
-            warn_usd=settings.daily_spend_warn_usd,
-            pause_usd=settings.daily_spend_pause_usd,
-            stop_usd=settings.daily_spend_stop_usd,
-            provider=provider,
-            task="browser_use_llm_call",
-            action="browser_use_llm_call",
-            model=model,
-            prompt_namespace=prompt_bundle.namespace,
-            reservation_key=reservation_key,
-            reserve_in_flight=True,
-        ),
-        ctx,
-    )
     logger.info(
         log_event(
             ctx,
@@ -1130,25 +1160,13 @@ def _reserve_browser_use_spend(
             fields={
                 "provider": provider,
                 "model": model,
-                "decision": decision.decision,
-                "projected_spend_usd": decision.projected_spend_usd,
-                "forecast_status": decision.forecast_status,
-                "reservation_created": decision.reservation_created,
+                "decision": authority.decision,
+                "projected_spend_usd": authority.projected_usage.spend_usd,
+                "forecast_status": authority.reason_code,
+                "reservation_created": authority.reservation_created,
             },
         )
     )
-    if decision.decision in {"pause", "stop"}:
-        raise AppError(
-            code=f"browser_use_daily_spend_{decision.decision}",
-            message="Canonical daily spend reached the configured browser-use limit",
-            retryable=decision.decision == "pause",
-            context={
-                "provider": provider,
-                "model": model,
-                "projected_spend_usd": decision.projected_spend_usd,
-                "decision": decision.decision,
-            },
-        )
     return reservation_key
 
 
@@ -1159,11 +1177,12 @@ def _release_browser_use_spend(
     reservation_key: str,
 ) -> None:
     try:
-        release_daily_spend_reservation(
-            LLMUsageSpendReservationReleaseRequest(
+        reconcile_budget_reservation(
+            BudgetReservationReconcileRequest(
                 schema_version="1.0",
-                db_path=request.settings.usage_db_path,
+                usage_db_path=request.settings.usage_db_path,
                 reservation_key=reservation_key,
+                actual_cost_usd=0.0,
             ),
             ctx,
         )
@@ -1177,6 +1196,89 @@ def _release_browser_use_spend(
                 fields={"code": exc.code, "reservation_key": reservation_key},
             )
         )
+
+
+def _reserve_browser_launch(
+    *,
+    request: BrowserReportDownloadRequest,
+    ctx: RunContext,
+    normalized_url: str,
+) -> tuple[RunBudget, BudgetDecision]:
+    """Reserve the browser-launch ceiling immediately before browser startup."""
+    budget = request.run_budget or RunBudget(
+        schema_version="1.0",
+        run_id=ctx.run_id,
+        publisher_name=request.publisher_name,
+        usage_db_path=request.settings.usage_db_path,
+        max_spend_usd=request.settings.daily_spend_stop_usd,
+        max_browser_launches=request.settings.run_budget_max_browser_launches,
+        limit_decision=request.settings.run_budget_limit_decision,
+        policy_version=request.settings.run_budget_policy_version,
+        reservation_ttl_seconds=request.settings.run_budget_reservation_ttl_seconds,
+        run_limits=request.settings.run_budget_limits_run,
+        day_limits=request.settings.run_budget_limits_day,
+        publisher_limits=request.settings.run_budget_limits_publisher,
+        enabled_effect_kinds=request.settings.run_budget_enabled_effect_kinds,
+    )
+    decision = evaluate_budget_request(
+        BudgetRequest(
+            schema_version="1.0",
+            budget=budget,
+            run_id=ctx.run_id,
+            workflow_id="browser_acquisition",
+            publisher_id=request.publisher_name,
+            report_id=_browser_usage_report_name(request) or normalized_url,
+            resource_type="browser_launch",
+            operation="browser_launch",
+            estimated_duration_seconds=int(request.settings.timeout_seconds),
+            forecast_method="explicit",
+            idempotency_key=f"browser-launch:{ctx.run_id}:{ctx.task_id}:{ctx.span_id}",
+            reserve_in_flight=True,
+        ),
+        ctx,
+    )
+    if decision.decision in {"defer", "pause", "stop"}:
+        raise AppError(
+            code=f"browser_budget_{decision.decision}",
+            message="Browser launch was blocked by the canonical budget authority",
+            retryable=False,
+            context={
+                "reason_code": decision.reason_code,
+                "affected_limit": decision.affected_limit,
+                "retry_decision": "defer" if decision.decision == "defer" else "abort",
+                "next_action": decision.next_action,
+            },
+        )
+    return budget, decision
+
+
+def _finalize_browser_launch(
+    *,
+    budget: RunBudget,
+    decision: BudgetDecision,
+    ctx: RunContext,
+    started: bool,
+    outcome: str,
+    error_code: str,
+    runtime_seconds: int,
+) -> None:
+    if not decision.reservation_key:
+        return
+    finalize_budget_side_effect(
+        BudgetSideEffectFinalizeRequest(
+            schema_version="1.0",
+            usage_db_path=budget.usage_db_path,
+            reservation_key=decision.reservation_key,
+            actual_usage=RunBudgetUsage(
+                schema_version="1.0",
+                browser_launches=1 if started else 0,
+                runtime_seconds=max(0, runtime_seconds),
+            ),
+            outcome=outcome,
+            error_code=error_code,
+        ),
+        ctx,
+    )
 
 
 def _configure_browser_use_usage_recorder(

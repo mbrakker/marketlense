@@ -38,11 +38,17 @@ class RunBudgetLimits:
     max_drive_writes: int | None = field(
         default=None, metadata={"doc": "Maximum Drive writes."}
     )
+    max_drive_reads: int | None = field(
+        default=None, metadata={"doc": "Maximum material Drive API reads."}
+    )
     max_wordpress_writes: int | None = field(
         default=None, metadata={"doc": "Maximum WordPress writes."}
     )
     max_pdfs: int | None = field(
         default=None, metadata={"doc": "Maximum processed PDFs."}
+    )
+    max_mailbox_reads: int | None = field(
+        default=None, metadata={"doc": "Maximum material mailbox polling reads."}
     )
 
 
@@ -62,7 +68,12 @@ class BudgetOverrideContext:
 
 @dataclass(frozen=True)
 class BudgetRequest:
-    """One typed pre-side-effect request sent to the canonical budget owner."""
+    """One typed pre-side-effect request sent to the canonical budget owner.
+
+    ``workflow_id`` and ``operation`` identify the workflow and its concrete
+    step.  ``resource_type`` is the stable effect kind.  The established name
+    is retained as the public compatibility contract for side-effect budgeting.
+    """
 
     schema_version: str = field(metadata={"doc": "Budget request schema version."})
     budget: "RunBudget" = field(
@@ -105,8 +116,14 @@ class BudgetRequest:
     estimated_writes: int = field(
         default=0, metadata={"doc": "Forecast external-write count."}
     )
+    estimated_drive_reads: int = field(
+        default=0, metadata={"doc": "Forecast material Drive-read count."}
+    )
     estimated_pdfs: int = field(
         default=0, metadata={"doc": "Forecast PDF-processing count."}
+    )
+    estimated_mailbox_reads: int = field(
+        default=0, metadata={"doc": "Forecast material mailbox-read count."}
     )
     estimated_duration_seconds: int = field(
         default=0, metadata={"doc": "Forecast duration."}
@@ -209,6 +226,49 @@ class BudgetReservationReconcileResponse:
 
 
 @dataclass(frozen=True)
+class BudgetSideEffectFinalizeRequest:
+    """Finalize one reserved non-provider side effect in the canonical ledger."""
+
+    schema_version: str = field(
+        metadata={"doc": "Side-effect finalization schema version."}
+    )
+    usage_db_path: str = field(
+        metadata={"doc": "Canonical usage-ledger database path."}
+    )
+    reservation_key: str = field(
+        metadata={"doc": "Idempotency key returned by the pre-effect reservation."}
+    )
+    actual_usage: "RunBudgetUsage" = field(
+        metadata={"doc": "Measured non-provider usage consumed by the effect."}
+    )
+    outcome: str = field(
+        default="completed",
+        metadata={"doc": "completed, failed, or cancelled finalization outcome."},
+    )
+    error_code: str = field(
+        default="", metadata={"doc": "Bounded error code when outcome is failed."}
+    )
+
+
+@dataclass(frozen=True)
+class BudgetSideEffectFinalizeResponse:
+    """Idempotent result of reconciling a reserved non-provider effect."""
+
+    schema_version: str = field(
+        metadata={"doc": "Side-effect finalization response schema version."}
+    )
+    finalized: bool = field(
+        metadata={"doc": "Whether the reservation has a durable final outcome."}
+    )
+    actual_recorded: bool = field(
+        metadata={"doc": "Whether this call inserted the durable actual-use row."}
+    )
+    reservation_released: bool = field(
+        metadata={"doc": "Whether an active reservation was released."}
+    )
+
+
+@dataclass(frozen=True)
 class BudgetAuthorityReport:
     """Derived policy evidence; actual monetary charges remain in LLM usage events."""
 
@@ -305,12 +365,19 @@ class RunBudget:
     max_drive_writes: int | None = field(
         default=None, metadata={"doc": "Maximum Drive writes before a stop decision."}
     )
+    max_drive_reads: int | None = field(
+        default=None, metadata={"doc": "Maximum material Drive reads before a stop decision."}
+    )
     max_wordpress_writes: int | None = field(
         default=None,
         metadata={"doc": "Maximum WordPress writes before a stop decision."},
     )
     max_pdfs: int | None = field(
         default=None, metadata={"doc": "Maximum PDFs processed before a stop decision."}
+    )
+    max_mailbox_reads: int | None = field(
+        default=None,
+        metadata={"doc": "Maximum material mailbox reads before a stop decision."},
     )
     warning_fraction: float = field(
         default=0.8,
@@ -331,6 +398,15 @@ class RunBudget:
     reservation_ttl_seconds: int = field(
         default=300,
         metadata={"doc": "Default bounded TTL for forecast reservations."},
+    )
+    enabled_effect_kinds: tuple[str, ...] = field(
+        default_factory=tuple,
+        metadata={
+            "doc": (
+                "Optional independently enabled resource_type values; an empty "
+                "tuple preserves legacy behaviour by governing every effect."
+            )
+        },
     )
     run_limits: RunBudgetLimits | None = field(
         default=None, metadata={"doc": "Explicit limits for this run scope."}
@@ -361,10 +437,14 @@ class RunBudgetUsage:
         default=0, metadata={"doc": "Browser launches consumed."}
     )
     drive_writes: int = field(default=0, metadata={"doc": "Drive writes consumed."})
+    drive_reads: int = field(default=0, metadata={"doc": "Material Drive reads consumed."})
     wordpress_writes: int = field(
         default=0, metadata={"doc": "WordPress writes consumed."}
     )
     pdfs: int = field(default=0, metadata={"doc": "PDFs processed."})
+    mailbox_reads: int = field(
+        default=0, metadata={"doc": "Material mailbox polling reads consumed."}
+    )
 
 
 @dataclass(frozen=True)

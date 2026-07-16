@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from inspect import Parameter, signature
 from typing import Callable, Optional
 
@@ -23,7 +23,12 @@ from src.contracts.regeneration import (
     LineageRegenerationQualityReport,
 )
 from src.contracts.report_generation import ReportGenerationClientBundle
-from src.contracts.run_budget import BudgetRequest, RunBudget
+from src.contracts.run_budget import (
+    BudgetRequest,
+    BudgetSideEffectFinalizeRequest,
+    RunBudget,
+    RunBudgetUsage,
+)
 from src.contracts.run_context import RunContext
 from src.contracts.workflow_control import WorkflowControlSettings
 from src.orchestrators.pipeline_preflight_orchestrator import (
@@ -37,7 +42,10 @@ from src.orchestrators.report_generation_orchestrator import (
 from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
 from src.orchestrators.workflow_control_orchestrator import resolve_retry_policy
 from src.services import llm_service
-from src.services.llm_usage_ledger_service import evaluate_budget_request
+from src.services.llm_usage_ledger_service import (
+    evaluate_budget_request,
+    finalize_budget_side_effect,
+)
 from src.services.report_store_service import (
     build_current_report_execution_compatibility,
     build_minimal_execution_plan,
@@ -154,36 +162,6 @@ def run_report_pipeline(
     lineage_available: bool = False,
     execution_plan_mode: str = "shadow",
 ) -> IngestOutcome:
-    pdf_decision = evaluate_budget_request(
-        BudgetRequest(
-            schema_version="1.0",
-            budget=RunBudget(
-                schema_version="1.0",
-                run_id=ctx.run_id,
-                publisher_name="",
-                usage_db_path=settings.usage_db_path,
-                max_pdfs=getattr(settings, "run_budget_max_pdfs", None),
-            ),
-            run_id=ctx.run_id,
-            workflow_id="report_generation",
-            report_id=file.file_id,
-            resource_type="pdf_process",
-            operation="process_pdf",
-            estimated_pdfs=1,
-            idempotency_key=f"pdf-process:{ctx.run_id}:{file.file_id}:{md5 or ''}",
-        ),
-        ctx,
-    )
-    if pdf_decision.decision in {"defer", "pause", "stop"}:
-        raise AppError(
-            code=f"report_pipeline_pdf_budget_{pdf_decision.decision}",
-            message="PDF processing was blocked by the canonical budget authority",
-            retryable=pdf_decision.decision in {"defer", "pause"},
-            context={
-                "reason_code": pdf_decision.reason_code,
-                "affected_limit": pdf_decision.affected_limit,
-            },
-        )
     report_fn = generate_report_fn or generate_report_orchestrator
     preflight_report = (
         preflight_fn(settings, ctx)
@@ -227,6 +205,23 @@ def run_report_pipeline(
         retry_policy = resolved_policy.policy
         retry_policy_id = resolved_policy.policy_id
         configured_retries = retry_policy.retries
+    pipeline_budget = RunBudget(
+        schema_version="1.0",
+        run_id=ctx.run_id,
+        publisher_name="",
+        usage_db_path=settings.usage_db_path,
+        max_pdfs=getattr(settings, "run_budget_max_pdfs", None),
+        max_retries=getattr(settings, "run_budget_max_retries", None),
+        max_runtime_seconds=getattr(settings, "run_budget_max_runtime_seconds", None),
+        limit_decision=getattr(settings, "run_budget_limit_decision", "stop"),
+        enabled_effect_kinds=getattr(settings, "run_budget_enabled_effect_kinds", ()),
+    )
+    retry_policy = replace(
+        retry_policy,
+        budget=pipeline_budget,
+        budget_workflow_id="report_generation",
+        budget_report_id=file.file_id,
+    )
     normalized_plan_mode = str(execution_plan_mode or "shadow").strip().lower()
     if normalized_plan_mode not in {"shadow", "enforce", "disabled"}:
         raise AppError(
@@ -582,42 +577,99 @@ def run_report_pipeline(
             )
         return outcome
 
-    outcome = run_with_retry(
-        step_name="report_pipeline",
-        operation=_report_attempt,
-        ctx=ctx,
-        logger=logger,
-        module_name=logger.name,
-        policy=retry_policy,
-        retry_event="report_pipeline_retry",
-        retry_fields_builder=lambda exc, attempt: {
-            "file_id": file.file_id,
-            "attempt": attempt + 1,
-            "code": exc.code if isinstance(exc, AppError) else "",
-        },
-        failure_event="report_pipeline_failed",
-        failure_fields_builder=lambda exc, attempt, retryable: {
-            "file_id": file.file_id,
-            "code": exc.code if isinstance(exc, AppError) else "",
-            "error": exc.message if isinstance(exc, AppError) else str(exc),
-            "attempt": attempt,
-            "retryable": retryable,
-        },
-        on_terminal_failure=lambda exc, decision: record_workflow_failure(
-            state_db=settings.state_db,
-            workflow="report_generation",
-            stage="report_pipeline",
-            operation="generate_report",
-            error=exc,
-            ctx=ctx,
-            retry_decision=decision,
-            input_checksum=md5 or file.file_id,
+    pdf_decision = evaluate_budget_request(
+        BudgetRequest(
+            schema_version="1.0",
+            budget=pipeline_budget,
+            run_id=ctx.run_id,
+            workflow_id="report_generation",
             report_id=file.file_id,
-            source_id=local_pdf_path,
+            resource_type="pdf_process",
+            operation="process_pdf",
+            estimated_pdfs=1,
+            idempotency_key=f"pdf-process:{ctx.run_id}:{file.file_id}:{md5 or ''}",
+            reserve_in_flight=True,
         ),
-        is_retryable=lambda exc: isinstance(exc, AppError) and exc.retryable,
-        sleep_fn=time.sleep,
+        ctx,
     )
+    if pdf_decision.decision in {"defer", "pause", "stop"}:
+        raise AppError(
+            code=f"report_pipeline_pdf_budget_{pdf_decision.decision}",
+            message="PDF processing was blocked by the canonical budget authority",
+            retryable=False,
+            context={
+                "reason_code": pdf_decision.reason_code,
+                "affected_limit": pdf_decision.affected_limit,
+                "retry_decision": "defer" if pdf_decision.decision == "defer" else "abort",
+                "next_action": pdf_decision.next_action,
+            },
+        )
+    pdf_started = False
+    try:
+        pdf_started = True
+        outcome = run_with_retry(
+            step_name="report_pipeline",
+            operation=_report_attempt,
+            ctx=ctx,
+            logger=logger,
+            module_name=logger.name,
+            policy=retry_policy,
+            retry_event="report_pipeline_retry",
+            retry_fields_builder=lambda exc, attempt: {
+                "file_id": file.file_id,
+                "attempt": attempt + 1,
+                "code": exc.code if isinstance(exc, AppError) else "",
+            },
+            failure_event="report_pipeline_failed",
+            failure_fields_builder=lambda exc, attempt, retryable: {
+                "file_id": file.file_id,
+                "code": exc.code if isinstance(exc, AppError) else "",
+                "error": exc.message if isinstance(exc, AppError) else str(exc),
+                "attempt": attempt,
+                "retryable": retryable,
+            },
+            on_terminal_failure=lambda exc, decision: record_workflow_failure(
+                state_db=settings.state_db,
+                workflow="report_generation",
+                stage="report_pipeline",
+                operation="generate_report",
+                error=exc,
+                ctx=ctx,
+                retry_decision=decision,
+                input_checksum=md5 or file.file_id,
+                report_id=file.file_id,
+                source_id=local_pdf_path,
+            ),
+            is_retryable=lambda exc: isinstance(exc, AppError) and exc.retryable,
+            sleep_fn=time.sleep,
+        )
+    except AppError as exc:
+        if pdf_decision.reservation_key:
+            finalize_budget_side_effect(
+                BudgetSideEffectFinalizeRequest(
+                    schema_version="1.0",
+                    usage_db_path=pipeline_budget.usage_db_path,
+                    reservation_key=pdf_decision.reservation_key,
+                    actual_usage=RunBudgetUsage(
+                        schema_version="1.0", pdfs=1 if pdf_started else 0
+                    ),
+                    outcome="failed",
+                    error_code=exc.code,
+                ),
+                ctx,
+            )
+        raise
+    if pdf_decision.reservation_key:
+        finalize_budget_side_effect(
+            BudgetSideEffectFinalizeRequest(
+                schema_version="1.0",
+                usage_db_path=pipeline_budget.usage_db_path,
+                reservation_key=pdf_decision.reservation_key,
+                actual_usage=RunBudgetUsage(schema_version="1.0", pdfs=1),
+                outcome="completed",
+            ),
+            ctx,
+        )
     if outcome.status == "error":
         record_workflow_failure(
             state_db=settings.state_db,

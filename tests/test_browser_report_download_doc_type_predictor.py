@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+from hashlib import sha256
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
@@ -292,11 +293,11 @@ def test_download_report_predicts_query_embedded_pdf_before_browser(
     events = _service_events(caplog)
     prediction_fields = _prediction_fields(events)
     assert prediction_fields["predicted_doc_type"] == "direct_pdf"
-    assert prediction_fields["probe_url"] == pdf_url
-    assert prediction_fields["evidence_labels"] == [
-        "embedded_pdf_target",
-        "query_redirect_pdf",
-    ]
+    assert prediction_fields["probe_host"] == "cdn.example.com"
+    assert prediction_fields["probe_url_sha256"] == sha256(
+        pdf_url.encode("utf-8")
+    ).hexdigest()
+    assert prediction_fields["evidence_label_count"] == 2
     assert observed_urls == [pdf_url]
     assert response.route_family == "direct_pdf_probe"
     assert response.final_page_url == pdf_url
@@ -363,8 +364,11 @@ def test_download_report_predicts_candidate_pdf_before_browser(
     events = _service_events(caplog)
     prediction_fields = _prediction_fields(events)
     assert prediction_fields["predicted_doc_type"] == "direct_pdf"
-    assert prediction_fields["probe_url"] == candidate_pdf_url
-    assert prediction_fields["evidence_labels"] == ["candidate_trace_pdf_url"]
+    assert prediction_fields["probe_host"] == "cdn.example.com"
+    assert prediction_fields["probe_url_sha256"] == sha256(
+        candidate_pdf_url.encode("utf-8")
+    ).hexdigest()
+    assert prediction_fields["evidence_label_count"] == 1
     assert observed_urls == [candidate_pdf_url]
     assert response.used_candidate_pdf_url is True
     assert response.route_family == "direct_pdf_probe"

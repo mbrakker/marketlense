@@ -15,9 +15,10 @@ from src.contracts.wordpress import (
 )
 from src.utils.errors import AppError
 from src.utils.logging import log_event
-from src.utils.run_budget import evaluate_proposed_side_effect_budget
-
-from .budget import assert_wordpress_write_authority
+from .budget import (
+    assert_wordpress_write_authority,
+    finalize_wordpress_write_authority,
+)
 
 from .transport import (
     _execute_request,
@@ -435,7 +436,7 @@ def _raise_term_semantics_readback_mismatch(
 def ensure_taxonomy_terms(
     request: WordPressTaxonomyEnsureRequest, ctx: RunContext
 ) -> WordPressTaxonomyEnsureResponse:
-    assert_wordpress_write_authority(
+    authority_budget, authority_decision = assert_wordpress_write_authority(
         request,
         ctx,
         operation="taxonomy_ensure",
@@ -498,16 +499,24 @@ def ensure_taxonomy_terms(
             },
         )
     )
-    return WordPressTaxonomyEnsureResponse(
+    response = WordPressTaxonomyEnsureResponse(
         schema_version="1.0",
         slug_to_id=slug_to_id,
     )
+    finalize_wordpress_write_authority(
+        budget=authority_budget,
+        decision=authority_decision,
+        ctx=ctx,
+        outcome="completed",
+        actual_writes=len(request.terms),
+    )
+    return response
 
 
 def ensure_tags(
     request: WordPressTagEnsureRequest, ctx: RunContext
 ) -> WordPressTagEnsureResponse:
-    assert_wordpress_write_authority(
+    authority_budget, authority_decision = assert_wordpress_write_authority(
         request,
         ctx,
         operation="tag_ensure",
@@ -562,50 +571,25 @@ def ensure_tags(
             fields={"count": len(slug_to_id)},
         )
     )
-    return WordPressTagEnsureResponse(schema_version="1.0", slug_to_id=slug_to_id)
+    response = WordPressTagEnsureResponse(
+        schema_version="1.0", slug_to_id=slug_to_id
+    )
+    finalize_wordpress_write_authority(
+        budget=authority_budget,
+        decision=authority_decision,
+        ctx=ctx,
+        outcome="completed",
+        actual_writes=len(request.tags),
+    )
+    return response
 
 
 def update_post_categories(
     request: WordPressPostUpdateRequest, ctx: RunContext
 ) -> WordPressPostUpdateResponse:
-    assert_wordpress_write_authority(request, ctx, operation="post_update")
-    budget_decision = evaluate_proposed_side_effect_budget(
-        request.run_budget,
-        request.run_budget_usage,
-        metric="wordpress_writes",
-        override_actor=request.budget_override_actor,
-        override_reason=request.budget_override_reason,
+    authority_budget, authority_decision = assert_wordpress_write_authority(
+        request, ctx, operation="post_update"
     )
-    budget = request.run_budget
-    if budget_decision is not None and budget is not None:
-        logger.info(
-            log_event(
-                ctx,
-                role="service",
-                event="wordpress_write_budget_evaluated",
-                module=logger.name,
-                fields={
-                    "operation": "post_update",
-                    "decision": budget_decision.decision,
-                    "breached_metrics": budget_decision.breached_metrics,
-                    "side_effect_allowed": budget_decision.side_effect_allowed,
-                    "run_id": budget.run_id,
-                    "day_utc": budget.day_utc,
-                    "publisher_name": budget.publisher_name,
-                    "override_actor": budget_decision.override_actor,
-                },
-            )
-        )
-        if not budget_decision.side_effect_allowed:
-            raise AppError(
-                code=f"wordpress_post_update_budget_{budget_decision.decision}",
-                message="WordPress write was blocked by the configured run budget",
-                retryable=False,
-                context={
-                    "decision": budget_decision.decision,
-                    "breached_metrics": budget_decision.breached_metrics,
-                },
-            )
     post_type_endpoint = _post_type_endpoint(request.post_type)
     logger.info(
         log_event(
@@ -683,9 +667,17 @@ def update_post_categories(
             },
         )
     )
-    return WordPressPostUpdateResponse(
+    response = WordPressPostUpdateResponse(
         schema_version="1.0", post_id=request.post_id, link=str(link) if link else None
     )
+    finalize_wordpress_write_authority(
+        budget=authority_budget,
+        decision=authority_decision,
+        ctx=ctx,
+        outcome="completed",
+        actual_writes=1,
+    )
+    return response
 
 
 __all__ = [

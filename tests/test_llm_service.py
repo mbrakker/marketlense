@@ -485,7 +485,10 @@ def test_llm_client_logs_replayable_model_call_audit_record(
     assert fields["model"] == "gpt-5-mini"
     assert fields["seed_supported"] is True
     assert fields["schema_name"] == "doc_map"
-    assert fields["response_id"] == "resp_123"
+    response_id = cast(dict[str, Any], fields["response_id"])
+    assert response_id["redaction"] == "***REDACTED***"
+    assert response_id["character_count"] == 8
+    assert len(response_id["sha256"]) == 64
     assert fields["total_tokens"] == 17
     assert fields["cache_decision"] == "enabled"
     assert fields["provider_decision"] == "openai_primary"

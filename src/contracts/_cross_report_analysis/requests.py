@@ -8,6 +8,7 @@ from src.contracts._cross_report_analysis import (
     ProjectionReadinessStatus,
     PublicationMode,
 )
+from src.contracts.run_budget import RunBudget
 
 @dataclass(frozen=True)
 class CrossReportAnalysisRequest:
@@ -69,6 +70,10 @@ class CrossReportAnalysisRequest:
     )
     publication_mode: PublicationMode = field(
         metadata={"doc": "Requested publication mode for this workflow."}
+    )
+    run_budget: RunBudget | None = field(
+        default=None,
+        metadata={"doc": "Optional scoped budget forwarded to the model call."},
     )
 
 
@@ -166,4 +171,8 @@ class CrossReportAnalysisOrchestratorRequest:
     publish_target_route: str = field(
         default="wordpress:ml_briefing",
         metadata={"doc": "Publication target route for cross-report Briefing posts."},
+    )
+    run_budget: RunBudget | None = field(
+        default=None,
+        metadata={"doc": "Optional scoped budget for cross-report retries and models."},
     )

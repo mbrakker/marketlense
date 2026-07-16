@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 from src.contracts.llm import LLMContextCompactionPolicy
 from src.contracts.pdf_ocr import PdfOcrPageText
 from src.contracts.report_models import ReportPayload
+from src.contracts.run_budget import RunBudget
 
 
 @dataclass(frozen=True)
@@ -560,6 +561,14 @@ class OpenAIJSONPromptRequest:
     usage_db_path: str = field(
         default="./state/llm_usage.sqlite",
         metadata={"doc": "Canonical SQLite usage ledger path for this provider call."},
+    )
+    run_budget: RunBudget | None = field(
+        default=None,
+        metadata={"doc": "Optional canonical scoped budget for this provider call."},
+    )
+    workflow_id: str = field(
+        default="llm",
+        metadata={"doc": "Workflow identifier recorded by the budget authority."},
     )
     daily_spend_warn_usd: float = field(
         default=3.0,

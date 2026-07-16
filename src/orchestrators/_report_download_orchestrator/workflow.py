@@ -20,6 +20,11 @@ from src.contracts.report_store import (
     PublisherDownloadRouteGetRequest,
     PublisherDownloadRouteResponse,
 )
+from src.contracts.run_budget import (
+    BudgetRequest,
+    BudgetSideEffectFinalizeRequest,
+    RunBudgetUsage,
+)
 from src.contracts.run_context import RunContext
 from src.contracts.state import (
     MailDeliveryRequestUpsertRequest,
@@ -29,7 +34,6 @@ from src.contracts.workflow_control import WorkflowControlObservation
 from src.orchestrators._report_download_orchestrator.budget import (
     build_report_download_budget,
     read_report_download_budget_usage,
-    record_report_download_budget_event,
 )
 from src.orchestrators._report_download_orchestrator.candidate_readiness import (
     assert_candidate_download_ready,
@@ -46,6 +50,10 @@ from src.orchestrators._report_download_orchestrator.failure_forensics import (
     persist_failed_attempt_forensics_pack,
     terminal_evidence_from_error_context,
     with_failure_forensics_context,
+)
+from src.services.llm_usage_ledger_service import (
+    evaluate_budget_request,
+    finalize_budget_side_effect,
 )
 from src.orchestrators._report_download_orchestrator.persistence import (
     record_downloaded_source,
@@ -499,28 +507,69 @@ def _run_download_attempt(
             run_budget=run_budget,
             run_budget_usage=read_report_download_budget_usage(run_budget, ctx),
         )
+        pdf_decision = None
+        if run_budget is not None:
+            pdf_decision = evaluate_budget_request(
+                BudgetRequest(
+                    schema_version="1.0",
+                    budget=run_budget,
+                    run_id=ctx.run_id,
+                    workflow_id="report_download",
+                    publisher_id=request.publisher_name,
+                    report_id=request.report_title or service_request.url,
+                    resource_type="pdf_process",
+                    operation="acquire_report_pdf",
+                    estimated_pdfs=1,
+                    idempotency_key=(
+                        f"pdf-acquire:{ctx.run_id}:{planned_step.step_name}:{attempt_number}"
+                    ),
+                    reserve_in_flight=True,
+                ),
+                ctx,
+            )
+            if pdf_decision.decision in {"defer", "pause", "stop"}:
+                raise AppError(
+                    code=f"report_download_pdf_budget_{pdf_decision.decision}",
+                    message="Report PDF acquisition was blocked by the canonical budget authority",
+                    retryable=False,
+                    context={
+                        "reason_code": pdf_decision.reason_code,
+                        "affected_limit": pdf_decision.affected_limit,
+                        "retry_decision": (
+                            "defer" if pdf_decision.decision == "defer" else "abort"
+                        ),
+                        "next_action": pdf_decision.next_action,
+                    },
+                )
         try:
             result = dependencies.download_report_with_browser_use(attempt_request, ctx)
-            if result.browser_had_structured_result:
-                record_report_download_budget_event(
-                    budget=run_budget,
-                    event_key=(
-                        f"browser:{ctx.run_id}:{planned_step.step_name}:{attempt_number}"
+            if pdf_decision is not None and pdf_decision.reservation_key:
+                finalize_budget_side_effect(
+                    BudgetSideEffectFinalizeRequest(
+                        schema_version="1.0",
+                        usage_db_path=run_budget.usage_db_path,
+                        reservation_key=pdf_decision.reservation_key,
+                        actual_usage=RunBudgetUsage(
+                            schema_version="1.0",
+                            pdfs=1 if result.downloaded_file_path else 0,
+                        ),
                     ),
-                    metric="browser_launches",
-                    ctx=ctx,
-                )
-            if result.downloaded_file_path:
-                record_report_download_budget_event(
-                    budget=run_budget,
-                    event_key=(
-                        f"pdf:{ctx.run_id}:{planned_step.step_name}:{attempt_number}"
-                    ),
-                    metric="pdfs",
-                    ctx=ctx,
+                    ctx,
                 )
             return result
         except AppError as exc:
+            if pdf_decision is not None and pdf_decision.reservation_key:
+                finalize_budget_side_effect(
+                    BudgetSideEffectFinalizeRequest(
+                        schema_version="1.0",
+                        usage_db_path=run_budget.usage_db_path,
+                        reservation_key=pdf_decision.reservation_key,
+                        actual_usage=RunBudgetUsage(schema_version="1.0"),
+                        outcome="failed",
+                        error_code=exc.code,
+                    ),
+                    ctx,
+                )
             pack: FailedAcquisitionForensicsPack | None = None
             try:
                 pack = persist_failed_attempt_forensics_pack(

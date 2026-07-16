@@ -553,6 +553,28 @@ class BrowserDownloadSettings:
             "doc": "Maximum governed Drive writes per run, day, and publisher scope."
         },
     )
+    run_budget_max_drive_reads: int | None = field(
+        default=None,
+        metadata={"doc": "Maximum governed material Drive reads per scope."},
+    )
+    run_budget_max_mailbox_reads: int | None = field(
+        default=None,
+        metadata={"doc": "Maximum governed mailbox polls per scope."},
+    )
+    run_budget_max_retries: int | None = field(
+        default=None,
+        metadata={"doc": "Maximum governed retry attempts per scope."},
+    )
+    run_budget_max_runtime_seconds: int | None = field(
+        default=None,
+        metadata={"doc": "Maximum governed elapsed expensive-effect duration."},
+    )
+    run_budget_enabled_effect_kinds: tuple[str, ...] = field(
+        default_factory=tuple,
+        metadata={
+            "doc": "Independently feature-gated side-effect kinds; empty enables all."
+        },
+    )
     run_budget_limit_decision: str = field(
         default="stop",
         metadata={

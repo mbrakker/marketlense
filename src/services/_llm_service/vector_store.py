@@ -48,10 +48,12 @@ def _require_vector_store_budget(
         raise AppError(
             code=f"{operation}_budget_{decision.decision}",
             message="Vector-store provider call was blocked by the canonical budget authority",
-            retryable=decision.decision in {"defer", "pause"},
+            retryable=False,
             context={
                 "reason_code": decision.reason_code,
                 "affected_limit": decision.affected_limit,
+                "retry_decision": "defer" if decision.decision == "defer" else "abort",
+                "next_action": decision.next_action,
             },
         )
 

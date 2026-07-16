@@ -28,7 +28,6 @@ from src.orchestrators._report_download_orchestrator.dependencies import (
 from src.orchestrators._report_download_orchestrator.budget import (
     build_report_download_budget,
     read_report_download_budget_usage,
-    record_report_download_budget_event,
 )
 from src.orchestrators._report_download_orchestrator.persistence import (
     _idempotency_key_with_checksum,
@@ -503,12 +502,6 @@ def archive_single_artifact(
         retry_event="report_download_drive_upload_retry",
         failure_event="report_download_drive_upload_failed",
         sleep_fn=dependencies.sleep_fn,
-    )
-    record_report_download_budget_event(
-        budget=run_budget,
-        event_key=f"drive:{ctx.run_id}:{upload_key}",
-        metric="drive_writes",
-        ctx=ctx,
     )
     upload = ReportDownloadDriveUpload(
         schema_version="1.0",

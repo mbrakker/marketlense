@@ -30,7 +30,7 @@ All work is listed below in one register. `Active` items have detailed completio
 | Active | A3 | Durable dead letters, scheduled actions, full autonomous smoke, and side-effect idempotency | One recovery/remediation outcome. |
 | Active | A4 | Malformed-Drive-PDF quarantine | Standalone bounded source-recovery outcome. |
 | Closed | A5 | Business-email, CAPTCHA, anti-bot, terminal-evidence, and avoided-browser-spend route policy | TTL-bound route policy now avoids browser/mailbox work for retained hard blockers and allows explicit revalidation. |
-| Active | A6 | Day/run/publisher spend guardrails | One pipeline-wide budget outcome. |
+| Active | A10 | Budget-deferred-work recovery and operator requeue | Turn durable budget deferrals into safe, visible, idempotent resumption. |
 | Closed | A7 | Budget-aware model routing, compaction, and failure-class fallback | YAML routing, anchor-preserving compaction, same-provider fallback, retained-corpus evidence gate, and regression coverage are active. |
 | Active | A8 | Model-call replay drift comparison | Standalone read-only regression outcome. |
 | Active | A9 | Source publication-metadata capture for retained regeneration | Source-supported render metadata outcome. |
@@ -76,6 +76,7 @@ All work is listed below in one register. `Active` items have detailed completio
 
 ## Recently Closed
 
+- **A6 (2026-07-16):** The canonical SQLite ledger now owns typed pre-side-effect decisions and TTL-bound reservations for provider calls, browser launches and browser-vendor model calls, material Drive reads/writes, WordPress writes, PDF processing, retry attempts, and mailbox polls. Actual non-monetary use finalizes in the same ledger; provider monetary actuals remain in canonical LLM usage events. Run/day/publisher limits, expiry-bound override audit, independent category gates, avoided-effect telemetry, and durable deferred-work records are covered by focused tests. A guarded live Drive list passed; the guarded OpenAI smoke attempt reached the real API but exceeded the surrounding process deadline and was terminated without a completion claim.
 - **Bounded structured logging (2026-07-16):** Standard events now apply deterministic byte, depth, node, collection, and text bounds; report and browser terminal events emit scalar summaries with retained audit references; CI rejects direct `fields=asdict(...)` serialization. Focused report/logging and browser suites passed, as did guarded live browser and OpenAI runs. The remaining broader architecture-enforcement work stays under R2; R6 owns reduction telemetry review.
 - **A7 (2026-07-14):** The retained 15-report corpus is now a required no-provider routing gate across 30 configured prompt routes. It confirms explicit policy selection, same-provider constraints, and zero lost retained evidence IDs; focused routing/compaction/fallback tests and the full suite pass.
 - **R5 (2026-07-15):** The canonical lock records SHA-256 hashes for all 177 active Ubuntu CPython 3.12 artifacts, including `numpy==2.4.2` from its official manylinux wheel. CI installs with `--require-hashes`; a native official-PyPI wheelhouse passed an offline clean install, while a tampered NumPy hash failed before package installation.
@@ -138,23 +139,18 @@ The original ten-item screenshot baseline is complete in the committed implement
 - Default ingest skips quarantined files; explicit rescan/revalidation clears only a valid replacement.
 - CLI or dashboard exposes quarantined inputs and remediation guidance, with tests for write, skip, revalidation, and valid-replacement transitions.
 
-#### A6. Pipeline-wide budget manager
+#### A10. Budget-deferred-work recovery and operator requeue
 
-- **Title:** Pipeline-wide budget manager
-- **Impact 5 / effort: 3**
-- **Context:** Canonical OpenAI and OpenRouter calls now evaluate daily spend with exact matched-median forecasts, atomically reserve in-flight cost, release it on canonical recording, and finalize their projection. Browser Use direct vendor clients, Drive, WordPress, and run/publisher limits are not yet governed by that same policy.
-- **Benefit:** Unattended runs gain predictable spend, runtime, and call ceilings before they make any expensive side effect.
-- **Risks to avoid:** Extend the canonical ledger and service boundaries; do not create a parallel ledger or silently drop work.
-
-**Current foundation:** OpenAI chat, image chat, embeddings, OCR, vector-store, and OpenRouter JSON calls use canonical spend plus matched median and in-flight reservation where available. Projection finalization is fenced, segment-backed, and reconciled from canonical SQLite.
-
+- **Title:** Budget-deferred-work recovery and operator requeue
+- **Impact 5 / effort: 2**
+- **Context:** The budget authority now persists actionable deferred work with its run, publisher, workflow, effect kind, limit, and next action. Operators can inspect that evidence, but there is no bounded reaper that rechecks capacity and idempotently requeues eligible work.
+- **Benefit:** Capacity recovered through actual-use reconciliation or a new UTC day can turn into completed work without manual ledger archaeology, while preserving the same idempotency and side-effect ceilings.
+- **Risks to avoid:** Do not create a generic queue or distributed scheduler. Reuse workflow control, require a fresh pre-side-effect decision, preserve original idempotency keys, and keep public writes review-gated.
 - **Success criteria:**
 
-- Typed `RunBudget` covers run, day, and publisher scopes for spend, tokens, time, retries, browser launches, Drive/WordPress writes, and PDFs.
-- Browser Use OpenAI/OpenRouter calls use the same canonical reservation and post-call release path; a crashed worker cannot retain a reservation beyond its bounded TTL.
-- Non-OpenAI side effects receive explicit `warn`, `pause`, `defer`, `stop`, or authorized `override` decisions; cold-start forecasting is named and logged.
-- Overrides are YAML-backed, expiry-bound, and require actor, reason, and scope; each is durably logged and reconciled to actual canonical cost.
-- Health scorecards retain usage, avoided calls, breaches, and overrides; tests cover all outcomes, required log fields, and the absence of side effects after a stop/defer decision.
+- Workflow control lists pending budget deferrals with scopes, breached metrics, and actionable next steps in the operator surface.
+- A bounded explicit reaper re-evaluates only eligible deferred records, claims them idempotently, and records completion, continued deferral, or terminal operator action.
+- Tests prove day rollover, released reservation capacity, duplicate reaper suppression, failed requeue recovery, and zero public WordPress/mail side effects without their existing authorization gates.
 
 #### A8. Compare retained model-call replay bundles
 

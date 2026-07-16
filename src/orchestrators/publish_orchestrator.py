@@ -76,7 +76,6 @@ from src.generators.publish_generator import publish_html
 from src.orchestrators._publish_orchestrator.budget import (
     build_publish_budget,
     read_publish_budget_usage,
-    record_publish_budget_write,
 )
 from src.orchestrators._publish_orchestrator.cross_report import (
     _briefing_url_is_in_section,
@@ -1009,11 +1008,6 @@ def run_publish(
                         validation_issues,
                     )
                     if outcome.status == "published" and outcome.post_url:
-                        record_publish_budget_write(
-                            publish_budget,
-                            event_key=f"wordpress:{root_ctx.run_id}:{file_id}",
-                            ctx=file_ctx,
-                        )
                         state_record_publish(
                             StatePublishRecordRequest(
                                 schema_version="1.0",
@@ -1095,11 +1089,6 @@ def run_publish(
             )
             outcome = _with_validation(outcome, validation_status, validation_issues)
             if outcome.status == "published" and outcome.post_id and outcome.post_url:
-                record_publish_budget_write(
-                    publish_budget,
-                    event_key=f"wordpress:{root_ctx.run_id}:{file_id}",
-                    ctx=file_ctx,
-                )
                 state_record_publish(
                     StatePublishRecordRequest(
                         schema_version="1.0",

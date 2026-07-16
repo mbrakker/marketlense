@@ -11,9 +11,17 @@ from .auth import (
     _resolve_drive_credentials,
 )
 from .client_cache import _get_drive_client
-from src.utils.run_budget import evaluate_proposed_side_effect_budget
-from src.contracts.run_budget import BudgetRequest, RunBudget
-from src.services.llm_usage_ledger_service import evaluate_budget_request
+from src.contracts.run_budget import (
+    BudgetDecision,
+    BudgetRequest,
+    BudgetSideEffectFinalizeRequest,
+    RunBudget,
+    RunBudgetUsage,
+)
+from src.services.llm_usage_ledger_service import (
+    evaluate_budget_request,
+    finalize_budget_side_effect,
+)
 
 
 def preflight_drive_write_access(
@@ -369,7 +377,7 @@ def _authority_budget(request: object, ctx: RunContext) -> RunBudget:
 
 def _assert_drive_write_authority(
     request: object, ctx: RunContext, *, operation: str, report_id: str
-) -> None:
+) -> tuple[RunBudget, BudgetDecision]:
     budget = _authority_budget(request, ctx)
     authority = evaluate_budget_request(
         BudgetRequest(
@@ -385,6 +393,7 @@ def _assert_drive_write_authority(
             idempotency_key=(
                 f"drive:{operation}:{ctx.run_id}:{ctx.task_id}:{ctx.span_id}:{report_id}"
             ),
+            reserve_in_flight=True,
         ),
         ctx,
     )
@@ -395,12 +404,43 @@ def _assert_drive_write_authority(
         raise AppError(
             code=f"{error_operation}_budget_{authority.decision}",
             message="Drive write was blocked by the canonical budget authority",
-            retryable=authority.decision in {"defer", "pause"},
+            retryable=False,
             context={
                 "reason_code": authority.reason_code,
                 "affected_limit": authority.affected_limit,
+                "retry_decision": (
+                    "defer" if authority.decision == "defer" else "abort"
+                ),
+                "next_action": authority.next_action,
             },
         )
+    return budget, authority
+
+
+def _finalize_drive_write_authority(
+    *,
+    budget: RunBudget,
+    decision: BudgetDecision,
+    ctx: RunContext,
+    outcome: str,
+    error_code: str = "",
+    actual_writes: int = 0,
+) -> None:
+    if not decision.reservation_key:
+        return
+    finalize_budget_side_effect(
+        BudgetSideEffectFinalizeRequest(
+            schema_version="1.0",
+            usage_db_path=budget.usage_db_path,
+            reservation_key=decision.reservation_key,
+            actual_usage=RunBudgetUsage(
+                schema_version="1.0", drive_writes=max(0, actual_writes)
+            ),
+            outcome=outcome,
+            error_code=error_code,
+        ),
+        ctx,
+    )
 
 
 def ensure_folder(
@@ -523,7 +563,7 @@ def ensure_folder(
                 )
             )
             return response
-    _assert_drive_write_authority(
+    authority_budget, authority_decision = _assert_drive_write_authority(
         request,
         ctx,
         operation="drive_ensure_folder",
@@ -544,6 +584,14 @@ def ensure_folder(
             .execute()
         )
     except DRIVE_BOUNDARY_EXCEPTIONS as exc:
+        _finalize_drive_write_authority(
+            budget=authority_budget,
+            decision=authority_decision,
+            ctx=ctx,
+            outcome="failed",
+            error_code="drive_folder_create_failed",
+            actual_writes=1,
+        )
         logger.info(
             log_event(
                 ctx,
@@ -588,6 +636,13 @@ def ensure_folder(
         parent_folder_id=parent_folder_id,
         created=True,
     )
+    _finalize_drive_write_authority(
+        budget=authority_budget,
+        decision=authority_decision,
+        ctx=ctx,
+        outcome="completed",
+        actual_writes=1,
+    )
     logger.info(
         log_event(
             ctx,
@@ -609,48 +664,12 @@ def upload_bytes(
     request: DriveUploadBytesRequest, ctx: RunContext
 ) -> DriveUploadBytesResponse:
     auth_mode = _request_auth_mode(request)
-    _assert_drive_write_authority(
+    authority_budget, authority_decision = _assert_drive_write_authority(
         request,
         ctx,
         operation="drive_upload_bytes",
         report_id=request.file_name,
     )
-    budget_decision = evaluate_proposed_side_effect_budget(
-        request.run_budget,
-        request.run_budget_usage,
-        metric="drive_writes",
-        override_actor=request.budget_override_actor,
-        override_reason=request.budget_override_reason,
-    )
-    budget = request.run_budget
-    if budget_decision is not None and budget is not None:
-        logger.info(
-            log_event(
-                ctx,
-                role="service",
-                event="drive_upload_budget_evaluated",
-                module=logger.name,
-                fields={
-                    "decision": budget_decision.decision,
-                    "breached_metrics": budget_decision.breached_metrics,
-                    "side_effect_allowed": budget_decision.side_effect_allowed,
-                    "run_id": budget.run_id,
-                    "day_utc": budget.day_utc,
-                    "publisher_name": budget.publisher_name,
-                    "override_actor": budget_decision.override_actor,
-                },
-            )
-        )
-        if not budget_decision.side_effect_allowed:
-            raise AppError(
-                code=f"drive_upload_budget_{budget_decision.decision}",
-                message="Drive upload was blocked by the configured run budget",
-                retryable=False,
-                context={
-                    "decision": budget_decision.decision,
-                    "breached_metrics": budget_decision.breached_metrics,
-                },
-            )
     logger.info(
         log_event(
             ctx,
@@ -708,6 +727,14 @@ def upload_bytes(
             .execute()
         )
     except DRIVE_BOUNDARY_EXCEPTIONS as exc:
+        _finalize_drive_write_authority(
+            budget=authority_budget,
+            decision=authority_decision,
+            ctx=ctx,
+            outcome="failed",
+            error_code="drive_upload_failed",
+            actual_writes=1,
+        )
         logger.info(
             log_event(
                 ctx,
@@ -740,6 +767,13 @@ def upload_bytes(
         ),
         size=len(request.content),
         md5=_md5_for_bytes(request.content) if request.content else None,
+    )
+    _finalize_drive_write_authority(
+        budget=authority_budget,
+        decision=authority_decision,
+        ctx=ctx,
+        outcome="completed",
+        actual_writes=1,
     )
     logger.info(
         log_event(

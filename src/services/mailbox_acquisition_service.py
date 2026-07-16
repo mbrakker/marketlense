@@ -31,7 +31,18 @@ from src.contracts.mailbox_acquisition import (
     MailboxSearchRequest,
     MailboxSearchResult,
 )
+from src.contracts.run_budget import (
+    BudgetDecision,
+    BudgetRequest,
+    BudgetSideEffectFinalizeRequest,
+    RunBudget,
+    RunBudgetUsage,
+)
 from src.contracts.run_context import RunContext
+from src.services.llm_usage_ledger_service import (
+    evaluate_budget_request,
+    finalize_budget_side_effect,
+)
 from src.utils.clock import utc_now_seconds_z
 from src.utils.errors import AppError
 from src.utils.logging import log_event
@@ -41,6 +52,76 @@ logger = logging.getLogger("market_lense.mailbox_acquisition_service")
 _BODY_CHAR_LIMIT = 20000
 _URL_RX = re.compile(r"https?://[^\s<>\"')]+", re.IGNORECASE)
 _SAFE_FILENAME_RX = re.compile(r"[^A-Za-z0-9._-]+")
+
+
+def _mailbox_budget(request: MailboxSearchRequest, ctx: RunContext) -> RunBudget:
+    if request.run_budget is not None:
+        return request.run_budget
+    return RunBudget(schema_version="1.0", run_id=ctx.run_id, publisher_name=request.publisher_name)
+
+
+def _reserve_mailbox_read(
+    request: MailboxSearchRequest, ctx: RunContext
+) -> tuple[RunBudget, BudgetDecision]:
+    budget = _mailbox_budget(request, ctx)
+    decision = evaluate_budget_request(
+        BudgetRequest(
+            schema_version="1.0",
+            budget=budget,
+            run_id=ctx.run_id,
+            workflow_id="mail_report_acquisition",
+            publisher_id=request.publisher_name or budget.publisher_name,
+            report_id=request.report_title,
+            resource_type="mailbox_read",
+            operation="search_mailbox_messages",
+            estimated_mailbox_reads=1,
+            idempotency_key=(
+                f"mailbox-read:{ctx.run_id}:{ctx.task_id}:{ctx.span_id}:"
+                f"{request.source_url}:{max(0, request.poll_number)}"
+            ),
+            reserve_in_flight=True,
+        ),
+        ctx,
+    )
+    if decision.decision in {"defer", "pause", "stop"}:
+        raise AppError(
+            code=f"mailbox_search_budget_{decision.decision}",
+            message="Mailbox search was blocked by the canonical budget authority",
+            retryable=False,
+            context={
+                "reason_code": decision.reason_code,
+                "affected_limit": decision.affected_limit,
+                "retry_decision": "defer" if decision.decision == "defer" else "abort",
+                "next_action": decision.next_action,
+            },
+        )
+    return budget, decision
+
+
+def _finalize_mailbox_read(
+    *,
+    budget: RunBudget,
+    decision: BudgetDecision,
+    ctx: RunContext,
+    outcome: str,
+    actual_reads: int,
+    error_code: str = "",
+) -> None:
+    if not decision.reservation_key:
+        return
+    finalize_budget_side_effect(
+        BudgetSideEffectFinalizeRequest(
+            schema_version="1.0",
+            usage_db_path=budget.usage_db_path,
+            reservation_key=decision.reservation_key,
+            actual_usage=RunBudgetUsage(
+                schema_version="1.0", mailbox_reads=max(0, actual_reads)
+            ),
+            outcome=outcome,
+            error_code=error_code,
+        ),
+        ctx,
+    )
 
 
 def search_mailbox_messages(
@@ -64,51 +145,66 @@ def search_mailbox_messages(
             },
         )
     )
+    budget, budget_decision = _reserve_mailbox_read(request, ctx)
     result: MailboxSearchResult | None = None
     last_error: AppError | None = None
+    provider_attempts = 0
     provider_order = mailbox_provider_order(settings)
-    for index, selected_provider in enumerate(provider_order):
-        try:
-            if selected_provider == "gmail":
-                result = _search_gmail_messages(request, ctx)
-            elif selected_provider == "imap":
-                result = _search_imap_messages(request, ctx)
-            else:
-                raise AppError(
-                    code="mailbox_provider_unsupported",
-                    message="Mailbox provider must be `gmail`, `imap`, or `auto`",
-                    retryable=False,
-                    context={"provider": selected_provider},
+    try:
+        for index, selected_provider in enumerate(provider_order):
+            try:
+                if selected_provider == "gmail":
+                    provider_attempts += 1
+                    result = _search_gmail_messages(request, ctx)
+                elif selected_provider == "imap":
+                    provider_attempts += 1
+                    result = _search_imap_messages(request, ctx)
+                else:
+                    raise AppError(
+                        code="mailbox_provider_unsupported",
+                        message="Mailbox provider must be `gmail`, `imap`, or `auto`",
+                        retryable=False,
+                        context={"provider": selected_provider},
+                    )
+                break
+            except AppError as exc:
+                last_error = exc
+                remaining = provider_order[index + 1 :]
+                if not exc.retryable or not remaining:
+                    raise
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="service",
+                        event="mailbox_provider_fallback",
+                        module=logger.name,
+                        fields={
+                            "failed_provider": selected_provider,
+                            "error_code": exc.code,
+                            "fallback_provider": remaining[0],
+                        },
+                    )
                 )
-            break
-        except AppError as exc:
-            last_error = exc
-            remaining = provider_order[index + 1 :]
-            if not exc.retryable or not remaining:
-                raise
-            logger.info(
-                log_event(
-                    ctx,
-                    role="service",
-                    event="mailbox_provider_fallback",
-                    module=logger.name,
-                    fields={
-                        "failed_provider": selected_provider,
-                        "error_code": exc.code,
-                        "fallback_provider": remaining[0],
-                    },
-                )
+                continue
+        if result is None:
+            if last_error is not None:
+                raise last_error
+            raise AppError(
+                code="mailbox_provider_unsupported",
+                message="No supported mailbox provider is configured",
+                retryable=False,
+                context={"provider": provider},
             )
-            continue
-    if result is None:
-        if last_error is not None:
-            raise last_error
-        raise AppError(
-            code="mailbox_provider_unsupported",
-            message="No supported mailbox provider is configured",
-            retryable=False,
-            context={"provider": provider},
+    except AppError as exc:
+        _finalize_mailbox_read(
+            budget=budget,
+            decision=budget_decision,
+            ctx=ctx,
+            outcome="failed",
+            actual_reads=provider_attempts,
+            error_code=exc.code,
         )
+        raise
     logger.info(
         log_event(
             ctx,
@@ -121,6 +217,13 @@ def search_mailbox_messages(
                 "query": _sanitize_query_for_log(result.query),
             },
         )
+    )
+    _finalize_mailbox_read(
+        budget=budget,
+        decision=budget_decision,
+        ctx=ctx,
+        outcome="completed",
+        actual_reads=provider_attempts,
     )
     return result
 

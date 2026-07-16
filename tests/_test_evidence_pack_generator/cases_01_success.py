@@ -111,8 +111,11 @@ def test_generate_evidence_packs_logs_prompt_observability_and_raw_response(
     assert rendered_fields["namespace"] == "report_vs/doc_map"
     assert rendered_fields["system_path"] == "system"
     assert rendered_fields["user_path"] == "user"
-    assert rendered_fields["system_prompt"] == "sys"
-    assert rendered_fields["user_prompt"] == "user"
+    for field_name, expected_count in (("system_prompt", 3), ("user_prompt", 4)):
+        redacted = rendered_fields[field_name]
+        assert redacted["redaction"] == "***REDACTED***"
+        assert redacted["character_count"] == expected_count
+        assert len(redacted["sha256"]) == 64
     assert rendered_fields["resolved_model"] == "gpt-4.1-mini"
     raw = next(
         event for event in events if event.get("event") == "evidence_pack_raw_response"
@@ -120,7 +123,10 @@ def test_generate_evidence_packs_logs_prompt_observability_and_raw_response(
     raw_fields = raw["fields"]
     assert raw_fields["pack"] == "doc_map"
     assert raw_fields["has_json"] is True
-    assert raw_fields["raw_response"] == "{}"
+    redacted_response = raw_fields["raw_response"]
+    assert redacted_response["redaction"] == "***REDACTED***"
+    assert redacted_response["character_count"] == 2
+    assert len(redacted_response["sha256"]) == 64
 
 def test_generate_evidence_packs_handles_missing_json(tmp_path):
     fake_openai = FakeOpenAIClient(parsed=None)

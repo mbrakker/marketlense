@@ -94,6 +94,12 @@ class PublishSettings:
             "doc": "Maximum final WordPress publication writes per governed scope."
         },
     )
+    run_budget_enabled_effect_kinds: tuple[str, ...] = field(
+        default_factory=tuple,
+        metadata={
+            "doc": "Independently feature-gated side-effect kinds; empty enables all."
+        },
+    )
     run_budget_limit_decision: str = field(
         default="stop",
         metadata={"doc": "Action when the WordPress publication budget is reached."},

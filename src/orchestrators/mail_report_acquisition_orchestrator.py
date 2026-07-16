@@ -23,6 +23,7 @@ from src.contracts.mailbox_acquisition import (
     MailReportAcquisitionResult,
 )
 from src.contracts.report_store import PublisherDownloadRouteRecordRequest
+from src.contracts.run_budget import RunBudget
 from src.contracts.run_context import RunContext
 from src.contracts.state import (
     MailboxCandidateRejection,
@@ -47,6 +48,33 @@ from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.mail_report_acquisition_orchestrator")
+
+
+def _mailbox_run_budget(
+    request: MailReportAcquisitionRequest, ctx: RunContext
+) -> RunBudget:
+    settings = request.browser_download_settings
+    return RunBudget(
+        schema_version="1.0",
+        run_id=ctx.run_id,
+        publisher_name=request.publisher_name,
+        usage_db_path=settings.usage_db_path,
+        max_runtime_seconds=getattr(settings, "run_budget_max_runtime_seconds", None),
+        max_retries=getattr(settings, "run_budget_max_retries", None),
+        max_browser_launches=getattr(
+            settings, "run_budget_max_browser_launches", None
+        ),
+        max_pdfs=getattr(settings, "run_budget_max_pdfs", None),
+        max_drive_writes=getattr(settings, "run_budget_max_drive_writes", None),
+        max_mailbox_reads=getattr(settings, "run_budget_max_mailbox_reads", None),
+        limit_decision=settings.run_budget_limit_decision,
+        policy_version=settings.run_budget_policy_version,
+        reservation_ttl_seconds=settings.run_budget_reservation_ttl_seconds,
+        run_limits=settings.run_budget_limits_run,
+        day_limits=settings.run_budget_limits_day,
+        publisher_limits=settings.run_budget_limits_publisher,
+        enabled_effect_kinds=settings.run_budget_enabled_effect_kinds,
+    )
 
 
 @dataclass(frozen=True)
@@ -114,6 +142,7 @@ def run_mail_report_acquisition(
     last_message_count = 0
     last_candidate_count = 0
     request_watermark = _parse_requested_after_utc(request.requested_after_utc)
+    mailbox_budget = _mailbox_run_budget(request, ctx)
     while True:
         poll_count += 1
         mailbox_result = deps.search_mailbox_messages(
@@ -126,6 +155,8 @@ def run_mail_report_acquisition(
                 publisher_name=request.publisher_name,
                 query_terms=query_terms,
                 seen_provider_message_ids=request.seen_provider_message_ids,
+                run_budget=mailbox_budget,
+                poll_number=poll_count,
             ),
             ctx,
         )

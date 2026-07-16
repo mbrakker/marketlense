@@ -72,6 +72,9 @@ class DriveListRequest:
             "doc": "OAuth authorized-user token JSON path when auth_mode=oauth_user."
         },
     )
+    run_budget: RunBudget | None = field(
+        default=None, metadata={"doc": "Optional governed budget for this Drive read."}
+    )
 
 
 @dataclass(frozen=True)
@@ -100,6 +103,9 @@ class DriveFileMetadataRequest:
         metadata={
             "doc": "OAuth authorized-user token JSON path when auth_mode=oauth_user."
         },
+    )
+    run_budget: RunBudget | None = field(
+        default=None, metadata={"doc": "Optional governed budget for this Drive read."}
     )
 
 
@@ -137,6 +143,9 @@ class DriveDownloadRequest:
         metadata={
             "doc": "OAuth authorized-user token JSON path when auth_mode=oauth_user."
         },
+    )
+    run_budget: RunBudget | None = field(
+        default=None, metadata={"doc": "Optional governed budget for this Drive read."}
     )
 
 
@@ -185,6 +194,9 @@ class DriveDownloadToPathRequest:
         metadata={
             "doc": "OAuth authorized-user token JSON path when auth_mode=oauth_user."
         },
+    )
+    run_budget: RunBudget | None = field(
+        default=None, metadata={"doc": "Optional governed budget for this Drive read."}
     )
 
 
@@ -254,6 +266,9 @@ class DriveFolderFileListRequest:
         metadata={
             "doc": "OAuth authorized-user token JSON path when auth_mode=oauth_user."
         },
+    )
+    run_budget: RunBudget | None = field(
+        default=None, metadata={"doc": "Optional governed budget for this Drive read."}
     )
 
 

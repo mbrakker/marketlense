@@ -7,6 +7,7 @@ from src.contracts.browser_download import (
     BrowserDownloadSettings,
     ReportDownloadOrchestratorResult,
 )
+from src.contracts.run_budget import RunBudget
 
 
 @dataclass(frozen=True)
@@ -149,6 +150,14 @@ class MailboxSearchRequest:
     seen_provider_message_ids: list[str] = field(
         default_factory=list,
         metadata={"doc": "Provider message IDs already inspected for this request."},
+    )
+    run_budget: RunBudget | None = field(
+        default=None,
+        metadata={"doc": "Optional canonical budget governing this mailbox read."},
+    )
+    poll_number: int = field(
+        default=0,
+        metadata={"doc": "One-based logical polling attempt for idempotent accounting."},
     )
 
 

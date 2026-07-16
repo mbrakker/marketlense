@@ -15,8 +15,10 @@ _METRICS = (
     ("retries", "max_retries"),
     ("browser_launches", "max_browser_launches"),
     ("drive_writes", "max_drive_writes"),
+    ("drive_reads", "max_drive_reads"),
     ("wordpress_writes", "max_wordpress_writes"),
     ("pdfs", "max_pdfs"),
+    ("mailbox_reads", "max_mailbox_reads"),
 )
 
 

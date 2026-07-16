@@ -164,6 +164,9 @@ def _retry_policy(request: CrossReportAnalysisOrchestratorRequest) -> RetryPolic
         base_delay_seconds=request.retry_base_delay_seconds,
         backoff_step_seconds=request.retry_backoff_step_seconds,
         jitter_seconds=request.retry_jitter_seconds,
+        budget=request.run_budget,
+        budget_workflow_id="cross_report_analysis",
+        budget_report_id=request.analysis_request.request_id,
     )
 
 
@@ -789,7 +792,7 @@ def run_cross_report_analysis(
     generated = _run_step(
         step_name="generate_analysis",
         operation=lambda: generate_cross_report_analysis(
-            request.analysis_request,
+            replace(request.analysis_request, run_budget=request.run_budget),
             evidence_inputs,
             signal_result,
             agreement_result,

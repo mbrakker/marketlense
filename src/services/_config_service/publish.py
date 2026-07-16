@@ -25,8 +25,10 @@ def _load_budget_limits(raw: object) -> RunBudgetLimits | None:
         max_retries=limit("max_retries"),
         max_browser_launches=limit("max_browser_launches"),
         max_drive_writes=limit("max_drive_writes"),
+        max_drive_reads=limit("max_drive_reads"),
         max_wordpress_writes=limit("max_wordpress_writes"),
         max_pdfs=limit("max_pdfs"),
+        max_mailbox_reads=limit("max_mailbox_reads"),
     )
 
 
@@ -194,6 +196,11 @@ def load_publish_settings(
             max(_to_int(run_budget_cfg.get("max_wordpress_writes"), 0), 1)
             if not _is_missing(run_budget_cfg.get("max_wordpress_writes"))
             else None
+        ),
+        run_budget_enabled_effect_kinds=tuple(
+            str(kind).strip()
+            for kind in authority_cfg.get("enabled_effect_kinds", [])
+            if str(kind).strip()
         ),
         run_budget_limit_decision=str(run_budget_cfg.get("limit_decision") or "stop")
         .strip()

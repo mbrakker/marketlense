@@ -39,6 +39,7 @@ def build_publish_budget(
         run_limits=settings.run_budget_limits_run,
         day_limits=settings.run_budget_limits_day,
         publisher_limits=settings.run_budget_limits_publisher,
+        enabled_effect_kinds=settings.run_budget_enabled_effect_kinds,
     )
 
 

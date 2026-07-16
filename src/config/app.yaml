@@ -39,6 +39,11 @@ ingest:
   batch_limit: 20
   worker_limit: 2
   report_worker_limit: 2
+  run_budget:
+    max_pdfs: 20
+    max_retries: 40
+    max_runtime_seconds: 43200
+    limit_decision: "stop"
   pdf_text:
     max_pages: 5
     max_chars: 80000
@@ -192,6 +197,10 @@ browser_download:
     max_browser_launches: 30
     max_pdfs: 30
     max_drive_writes: 30
+    max_drive_reads: 120
+    max_mailbox_reads: 24
+    max_retries: 20
+    max_runtime_seconds: 21600
     limit_decision: "stop"
   route_budgets:
     browser_email_form:
@@ -337,6 +346,22 @@ cost:
   budget_authority:
     policy_version: "budget-authority-v2"
     reservation_ttl_seconds: 300
+    # Each newly governed category can be rolled back independently without
+    # deleting retained decision or accounting evidence.
+    enabled_effect_kinds:
+      - "llm_provider"
+      - "embedding"
+      - "ocr"
+      - "vision"
+      - "browser_use_model"
+      - "vector_store"
+      - "browser_launch"
+      - "drive_read"
+      - "drive_write"
+      - "wordpress_write"
+      - "pdf_process"
+      - "retry"
+      - "mailbox_read"
     # Scoped limits are opt-in unless an existing workflow-specific limit maps
     # to the same metric; this preserves the current successful default policy.
     run: {}

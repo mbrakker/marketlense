@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+# Compatibility resolver facade intentionally shares the common configuration helpers.
+# ruff: noqa: F403, F405
 from src.services._config_service.common import *
 
 
@@ -85,6 +87,26 @@ def _resolve_ingest_runtime_settings(
             ),
         ],
     )
+    run_budget_cfg = ingest.get("run_budget", {}) or {}
+    if not isinstance(run_budget_cfg, dict):
+        run_budget_cfg = {}
+    resolved["run_budget_max_pdfs"] = _optional_positive_int(
+        run_budget_cfg.get("max_pdfs")
+    )
+    resolved["run_budget_max_retries"] = _optional_nonnegative_int(
+        run_budget_cfg.get("max_retries")
+    )
+    resolved["run_budget_max_runtime_seconds"] = _optional_positive_int(
+        run_budget_cfg.get("max_runtime_seconds")
+    )
+    resolved["run_budget_enabled_effect_kinds"] = tuple(
+        str(effect).strip()
+        for effect in (run_budget_cfg.get("enabled_effect_kinds") or [])
+        if str(effect).strip()
+    )
+    resolved["run_budget_limit_decision"] = str(
+        run_budget_cfg.get("limit_decision") or "stop"
+    ).strip().lower()
     resolved["taxonomy_temperature"] = _to_float(
         _resolve_setting_raw(
             ingest,
@@ -101,6 +123,18 @@ def _resolve_ingest_runtime_settings(
     )
     resolved["openai_seed"] = _opt_int(ingest.get("seed"))
     return resolved
+
+
+def _optional_positive_int(value: object) -> int | None:
+    if value is None or str(value).strip() == "":
+        return None
+    return max(_to_int(value, 0), 1)
+
+
+def _optional_nonnegative_int(value: object) -> int | None:
+    if value is None or str(value).strip() == "":
+        return None
+    return max(_to_int(value, 0), 0)
 
 
 __all__ = [name for name in globals() if not name.startswith("__")]

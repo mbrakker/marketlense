@@ -240,7 +240,10 @@ def test_openai_chat_json_emits_redacted_model_call_audit(
     assert fields["scope"] == "direct-openai-chat-json"
     assert fields["rendered_prompt_redaction_hash"]
     assert fields["model"] == "gpt-4.1-mini"
-    assert fields["response_id"] == "chat_1"
+    response_id = fields["response_id"]
+    assert response_id["redaction"] == "***REDACTED***"
+    assert response_id["character_count"] == len("chat_1")
+    assert response_id["sha256"]
     assert fields["input_tokens"] == 12
     assert fields["output_tokens"] == 5
     assert fields["total_tokens"] == 17

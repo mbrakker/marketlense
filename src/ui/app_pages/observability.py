@@ -3,8 +3,6 @@ from __future__ import annotations
 """Observability Streamlit pages owned by logs, cost, and storage workflows."""
 
 from dataclasses import asdict
-from typing import Any
-
 import streamlit as st
 
 from src.contracts.costs import (
@@ -14,6 +12,7 @@ from src.contracts.costs import (
 )
 from src.contracts.semantic_ids import RunId
 from src.orchestrators.cost_reporting_orchestrator import run_cost_reporting
+from src.services.llm_usage_ledger_service import read_budget_authority_report
 from src.ui import state as ui_state
 from src.ui._streamlit_pages.read_models import (
     _discover_log_files,
@@ -151,6 +150,15 @@ def render_cost_usage() -> None:
         _ctx("cost_rollup"),
     )
     rollup = rollup_reporting.rollup
+    try:
+        budget_authority = read_budget_authority_report(
+            usage_db_path=settings.usage_db_path,
+            run_id=selected_run_id,
+            ctx=_ctx("budget_authority_report"),
+        )
+    except UI_SURFACE_EXCEPTIONS as exc:
+        budget_authority = None
+        _append_terminal(f"Budget authority report failed: {exc}")
 
     with main_col:
         st.subheader("Ledger Explorer")
@@ -172,6 +180,11 @@ def render_cost_usage() -> None:
             st.dataframe(duration_rows[:100], use_container_width=True, hide_index=True)
         else:
             st.caption("No structured events with timestamps available.")
+        st.subheader("Budget Authority")
+        if budget_authority is not None:
+            st.json(asdict(budget_authority))
+        else:
+            st.caption("Budget authority report is unavailable; inspect the terminal.")
         last_report = st.session_state.get("last_cost_report")
         if last_report:
             st.subheader("Cost Report Output")

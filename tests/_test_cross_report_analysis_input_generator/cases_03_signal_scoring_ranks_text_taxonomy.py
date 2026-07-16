@@ -236,9 +236,8 @@ def test_evidence_assembly_prefers_fresh_semantic_claim_embeddings_under_cap(
         for event in events
         if event["event"] == "cross_report_evidence_input_assembly_complete"
     ][0]
-    assert complete["fields"]["semantic_preselection"]["mode"] == (
-        "claim_embedding_similarity"
-    )
+    assert complete["fields"]["semantic_preselection_present"] is True
+    assert complete["fields"]["semantic_preselection_selected_count"] == 2
 
 
 def test_evidence_assembly_falls_back_when_claim_embeddings_are_absent(

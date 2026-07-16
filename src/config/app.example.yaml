@@ -15,6 +15,11 @@ ingest:
     min_score: 0.2
     min_recall_pages: 12
     min_recall_page_fraction: 0.65
+  run_budget:
+    max_pdfs: 20
+    max_retries: 40
+    max_runtime_seconds: 43200
+    limit_decision: "stop"
 
 publish:
   wp:
@@ -23,6 +28,10 @@ publish:
     post_status: "publish"
     post_type: "ml_report"
     ssl_verify: true
+  run_budget:
+    enabled: true
+    max_wordpress_writes: 30
+    limit_decision: "stop"
 
 browser_download:
   model: "gpt-5-mini"
@@ -36,6 +45,39 @@ browser_download:
   private_api_playbook_promotion_mode: "disabled"
   private_api_playbook_min_success_count: 3
   private_api_playbook_min_distinct_source_urls: 2
+  run_budget:
+    enabled: true
+    max_browser_launches: 30
+    max_pdfs: 30
+    max_drive_writes: 30
+    max_drive_reads: 120
+    max_mailbox_reads: 24
+    max_retries: 20
+    max_runtime_seconds: 21600
+    limit_decision: "stop"
+
+cost:
+  usage_db_path: "./state/llm_usage.sqlite"
+  budget_authority:
+    policy_version: "budget-authority-v2"
+    reservation_ttl_seconds: 300
+    enabled_effect_kinds:
+      - "llm_provider"
+      - "embedding"
+      - "ocr"
+      - "vision"
+      - "browser_use_model"
+      - "vector_store"
+      - "browser_launch"
+      - "drive_read"
+      - "drive_write"
+      - "wordpress_write"
+      - "pdf_process"
+      - "retry"
+      - "mailbox_read"
+    run: {}
+    day: {}
+    publisher: {}
 
 mailbox_acquisition:
   provider: "imap"

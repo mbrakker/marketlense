@@ -6,6 +6,92 @@ from src.services import drive_service as boundary
 
 from .shared import *  # noqa: F401,F403
 from .client_cache import _get_drive_client
+from src.contracts.run_budget import (
+    BudgetDecision,
+    BudgetRequest,
+    BudgetSideEffectFinalizeRequest,
+    RunBudget,
+    RunBudgetUsage,
+)
+from src.services.llm_usage_ledger_service import (
+    evaluate_budget_request,
+    finalize_budget_side_effect,
+)
+
+
+def _authority_budget(request: object, ctx: RunContext) -> RunBudget:
+    configured = getattr(request, "run_budget", None)
+    if configured is not None:
+        return configured
+    return RunBudget(schema_version="1.0", run_id=ctx.run_id, publisher_name="")
+
+
+def _assert_drive_read_authority(
+    request: object,
+    ctx: RunContext,
+    *,
+    operation: str,
+    report_id: str,
+) -> tuple[RunBudget, BudgetDecision]:
+    """Reserve one material Drive read before credentials or API client I/O."""
+    budget = _authority_budget(request, ctx)
+    decision = evaluate_budget_request(
+        BudgetRequest(
+            schema_version="1.0",
+            budget=budget,
+            run_id=ctx.run_id,
+            workflow_id="drive",
+            publisher_id=budget.publisher_name,
+            report_id=report_id,
+            resource_type="drive_read",
+            operation=operation,
+            estimated_drive_reads=1,
+            idempotency_key=(
+                f"drive-read:{operation}:{ctx.run_id}:{ctx.task_id}:{ctx.span_id}:{report_id}"
+            ),
+            reserve_in_flight=True,
+        ),
+        ctx,
+    )
+    if decision.decision in {"defer", "pause", "stop"}:
+        raise AppError(
+            code=f"{operation}_budget_{decision.decision}",
+            message="Drive read was blocked by the canonical budget authority",
+            retryable=False,
+            context={
+                "reason_code": decision.reason_code,
+                "affected_limit": decision.affected_limit,
+                "retry_decision": "defer" if decision.decision == "defer" else "abort",
+                "next_action": decision.next_action,
+            },
+        )
+    return budget, decision
+
+
+def _finalize_drive_read_authority(
+    *,
+    budget: RunBudget,
+    decision: BudgetDecision,
+    ctx: RunContext,
+    outcome: str,
+    actual_reads: int,
+    error_code: str = "",
+) -> None:
+    if not decision.reservation_key:
+        return
+    finalize_budget_side_effect(
+        BudgetSideEffectFinalizeRequest(
+            schema_version="1.0",
+            usage_db_path=budget.usage_db_path,
+            reservation_key=decision.reservation_key,
+            actual_usage=RunBudgetUsage(
+                schema_version="1.0", drive_reads=max(0, actual_reads)
+            ),
+            outcome=outcome,
+            error_code=error_code,
+        ),
+        ctx,
+    )
 
 
 def _iter_list_files_paginated(
@@ -213,31 +299,41 @@ def list_pdfs(request: DriveListRequest, ctx: RunContext) -> Iterable[DriveFile]
             },
         )
     )
-    _require_drive_auth(
-        auth_mode=auth_mode,
-        service_account_path=request.service_account_path,
-        oauth_token_path=request.oauth_token_path,
-    )
     if not request.folder_id:
         raise AppError(
             code="drive_folder_id_missing",
             message="Drive folder ID is required to list PDFs",
             retryable=False,
         )
-    drive = _get_drive_client(
-        auth_mode=auth_mode,
-        service_account_path=request.service_account_path,
-        oauth_token_path=request.oauth_token_path,
-        ctx=ctx,
+    budget, budget_decision = _assert_drive_read_authority(
+        request,
+        ctx,
+        operation="drive_list_pdfs",
+        report_id=request.folder_id,
     )
-    folder_ids = _resolve_folder_scope(drive, request, ctx)
-    list_mode = (request.list_mode or "full").strip().lower()
-    fields = "files(id,modifiedTime,md5Checksum),nextPageToken"
-    if list_mode == "full":
-        fields = "files(id,name,modifiedTime,md5Checksum),nextPageToken"
     total = 0
     completed = False
+    read_started = False
+    outcome = "completed"
+    error_code = ""
     try:
+        _require_drive_auth(
+            auth_mode=auth_mode,
+            service_account_path=request.service_account_path,
+            oauth_token_path=request.oauth_token_path,
+        )
+        drive = _get_drive_client(
+            auth_mode=auth_mode,
+            service_account_path=request.service_account_path,
+            oauth_token_path=request.oauth_token_path,
+            ctx=ctx,
+        )
+        read_started = True
+        folder_ids = _resolve_folder_scope(drive, request, ctx)
+        list_mode = (request.list_mode or "full").strip().lower()
+        fields = "files(id,modifiedTime,md5Checksum),nextPageToken"
+        if list_mode == "full":
+            fields = "files(id,name,modifiedTime,md5Checksum),nextPageToken"
         for folder_id in folder_ids:
             q = f"'{folder_id}' in parents and mimeType='application/pdf' and trashed=false"
             if request.modified_after:
@@ -266,7 +362,19 @@ def list_pdfs(request: DriveListRequest, ctx: RunContext) -> Iterable[DriveFile]
                     mime_type=f.get("mimeType"),
                 )
         completed = True
+    except AppError as exc:
+        outcome = "failed"
+        error_code = exc.code
+        raise
     finally:
+        _finalize_drive_read_authority(
+            budget=budget,
+            decision=budget_decision,
+            ctx=ctx,
+            outcome=outcome,
+            actual_reads=1 if read_started else 0,
+            error_code=error_code,
+        )
         logger.info(
             log_event(
                 ctx,
@@ -291,24 +399,32 @@ def get_file_metadata(
             fields={"file_id": request.file_id, "auth_mode": auth_mode},
         )
     )
-    _require_drive_auth(
-        auth_mode=auth_mode,
-        service_account_path=request.service_account_path,
-        oauth_token_path=request.oauth_token_path,
-    )
     if not request.file_id:
         raise AppError(
             code="drive_file_id_missing",
             message="Drive file ID is required to fetch metadata",
             retryable=False,
         )
-    drive = _get_drive_client(
-        auth_mode=auth_mode,
-        service_account_path=request.service_account_path,
-        oauth_token_path=request.oauth_token_path,
-        ctx=ctx,
+    budget, budget_decision = _assert_drive_read_authority(
+        request,
+        ctx,
+        operation="drive_get_file_metadata",
+        report_id=request.file_id,
     )
+    read_started = False
     try:
+        _require_drive_auth(
+            auth_mode=auth_mode,
+            service_account_path=request.service_account_path,
+            oauth_token_path=request.oauth_token_path,
+        )
+        drive = _get_drive_client(
+            auth_mode=auth_mode,
+            service_account_path=request.service_account_path,
+            oauth_token_path=request.oauth_token_path,
+            ctx=ctx,
+        )
+        read_started = True
         resp = (
             drive.files()
             .get(
@@ -327,13 +443,39 @@ def get_file_metadata(
                 fields={"file_id": request.file_id, "error": str(exc)},
             )
         )
-        raise AppError(
+        error = AppError(
             code="drive_metadata_failed",
             message="Drive metadata fetch failed",
             cause=exc,
             retryable=True,
             context={"file_id": request.file_id},
-        ) from exc
+        )
+        _finalize_drive_read_authority(
+            budget=budget,
+            decision=budget_decision,
+            ctx=ctx,
+            outcome="failed",
+            actual_reads=1 if read_started else 0,
+            error_code=error.code,
+        )
+        raise error from exc
+    except AppError as exc:
+        _finalize_drive_read_authority(
+            budget=budget,
+            decision=budget_decision,
+            ctx=ctx,
+            outcome="failed",
+            actual_reads=1 if read_started else 0,
+            error_code=exc.code,
+        )
+        raise
+    _finalize_drive_read_authority(
+        budget=budget,
+        decision=budget_decision,
+        ctx=ctx,
+        outcome="completed",
+        actual_reads=1,
+    )
     file = DriveFile(
         schema_version="1.0",
         file_id=resp.get("id", request.file_id),
@@ -374,24 +516,32 @@ def download_pdf(
         )
     )
 
-    _require_drive_auth(
-        auth_mode=auth_mode,
-        service_account_path=request.service_account_path,
-        oauth_token_path=request.oauth_token_path,
-    )
     if not file_meta.file_id:
         raise AppError(
             code="drive_file_id_missing",
             message="Drive file ID is required to download a PDF",
             retryable=False,
         )
-    drive = _get_drive_client(
-        auth_mode=auth_mode,
-        service_account_path=request.service_account_path,
-        oauth_token_path=request.oauth_token_path,
-        ctx=ctx,
+    budget, budget_decision = _assert_drive_read_authority(
+        request,
+        ctx,
+        operation="drive_download_pdf",
+        report_id=file_meta.file_id,
     )
+    read_started = False
     try:
+        _require_drive_auth(
+            auth_mode=auth_mode,
+            service_account_path=request.service_account_path,
+            oauth_token_path=request.oauth_token_path,
+        )
+        drive = _get_drive_client(
+            auth_mode=auth_mode,
+            service_account_path=request.service_account_path,
+            oauth_token_path=request.oauth_token_path,
+            ctx=ctx,
+        )
+        read_started = True
         req = drive.files().get_media(fileId=file_meta.file_id)
         buffer = io.BytesIO()
         downloader = boundary.MediaIoBaseDownload(buffer, req)
@@ -399,13 +549,32 @@ def download_pdf(
         while not done:
             _, done = downloader.next_chunk()
     except DRIVE_BOUNDARY_EXCEPTIONS as exc:
-        raise AppError(
+        error = AppError(
             code="drive_download_failed",
             message="Drive download failed",
             cause=exc,
             retryable=True,
             context={"file_id": file_meta.file_id},
-        ) from exc
+        )
+        _finalize_drive_read_authority(
+            budget=budget,
+            decision=budget_decision,
+            ctx=ctx,
+            outcome="failed",
+            actual_reads=1 if read_started else 0,
+            error_code=error.code,
+        )
+        raise error from exc
+    except AppError as exc:
+        _finalize_drive_read_authority(
+            budget=budget,
+            decision=budget_decision,
+            ctx=ctx,
+            outcome="failed",
+            actual_reads=1 if read_started else 0,
+            error_code=exc.code,
+        )
+        raise
 
     content = buffer.getvalue()
     md5 = _md5_for_bytes(content) if content else None
@@ -417,6 +586,13 @@ def download_pdf(
             module=logger.name,
             fields={"md5": md5, "size": len(content)},
         )
+    )
+    _finalize_drive_read_authority(
+        budget=budget,
+        decision=budget_decision,
+        ctx=ctx,
+        outcome="completed",
+        actual_reads=1,
     )
 
     return DriveDownloadResponse(
@@ -450,11 +626,6 @@ def download_pdf_to_path(
         )
     )
 
-    _require_drive_auth(
-        auth_mode=auth_mode,
-        service_account_path=request.service_account_path,
-        oauth_token_path=request.oauth_token_path,
-    )
     if not file_meta.file_id:
         raise AppError(
             code="drive_file_id_missing",
@@ -472,15 +643,28 @@ def download_pdf_to_path(
     if request.make_parents:
         path.parent.mkdir(parents=True, exist_ok=True)
 
-    drive = _get_drive_client(
-        auth_mode=auth_mode,
-        service_account_path=request.service_account_path,
-        oauth_token_path=request.oauth_token_path,
-        ctx=ctx,
+    budget, budget_decision = _assert_drive_read_authority(
+        request,
+        ctx,
+        operation="drive_download_pdf_to_path",
+        report_id=file_meta.file_id,
     )
     size = 0
     md5 = None
+    read_started = False
     try:
+        _require_drive_auth(
+            auth_mode=auth_mode,
+            service_account_path=request.service_account_path,
+            oauth_token_path=request.oauth_token_path,
+        )
+        drive = _get_drive_client(
+            auth_mode=auth_mode,
+            service_account_path=request.service_account_path,
+            oauth_token_path=request.oauth_token_path,
+            ctx=ctx,
+        )
+        read_started = True
         req = drive.files().get_media(fileId=file_meta.file_id)
         with path.open("wb") as fh:
             writer = _HashingWriter(fh)
@@ -520,13 +704,32 @@ def download_pdf_to_path(
                 },
             )
         )
-        raise AppError(
+        error = AppError(
             code="drive_download_failed",
             message="Drive download failed",
             cause=exc,
             retryable=True,
             context={"file_id": file_meta.file_id, "output_path": request.output_path},
-        ) from exc
+        )
+        _finalize_drive_read_authority(
+            budget=budget,
+            decision=budget_decision,
+            ctx=ctx,
+            outcome="failed",
+            actual_reads=1 if read_started else 0,
+            error_code=error.code,
+        )
+        raise error from exc
+    except AppError as exc:
+        _finalize_drive_read_authority(
+            budget=budget,
+            decision=budget_decision,
+            ctx=ctx,
+            outcome="failed",
+            actual_reads=1 if read_started else 0,
+            error_code=exc.code,
+        )
+        raise
 
     logger.info(
         log_event(
@@ -536,6 +739,13 @@ def download_pdf_to_path(
             module=logger.name,
             fields={"md5": md5, "size": size, "output_path": request.output_path},
         )
+    )
+    _finalize_drive_read_authority(
+        budget=budget,
+        decision=budget_decision,
+        ctx=ctx,
+        outcome="completed",
+        actual_reads=1,
     )
 
     return DriveDownloadToPathResponse(
@@ -570,23 +780,60 @@ def list_files_in_folder(
             },
         )
     )
-    _require_drive_auth(
-        auth_mode=auth_mode,
-        service_account_path=request.service_account_path,
-        oauth_token_path=request.oauth_token_path,
-    )
     if not request.folder_id:
         raise AppError(
             code="drive_folder_id_missing",
             message="Drive folder ID is required to list folder files",
             retryable=False,
         )
-    drive = _get_drive_client(
-        auth_mode=auth_mode,
-        service_account_path=request.service_account_path,
-        oauth_token_path=request.oauth_token_path,
-        ctx=ctx,
+    budget, budget_decision = _assert_drive_read_authority(
+        request,
+        ctx,
+        operation="drive_list_folder_files",
+        report_id=request.folder_id,
     )
+    read_started = False
+    try:
+        _require_drive_auth(
+            auth_mode=auth_mode,
+            service_account_path=request.service_account_path,
+            oauth_token_path=request.oauth_token_path,
+        )
+        drive = _get_drive_client(
+            auth_mode=auth_mode,
+            service_account_path=request.service_account_path,
+            oauth_token_path=request.oauth_token_path,
+            ctx=ctx,
+        )
+        read_started = True
+        response = _list_files_in_folder_with_client(
+            drive=drive,
+            request=request,
+            ctx=ctx,
+        )
+    except AppError as exc:
+        _finalize_drive_read_authority(
+            budget=budget,
+            decision=budget_decision,
+            ctx=ctx,
+            outcome="failed",
+            actual_reads=1 if read_started else 0,
+            error_code=exc.code,
+        )
+        raise
+    _finalize_drive_read_authority(
+        budget=budget,
+        decision=budget_decision,
+        ctx=ctx,
+        outcome="completed",
+        actual_reads=1,
+    )
+    return response
+
+
+def _list_files_in_folder_with_client(
+    *, drive, request: DriveFolderFileListRequest, ctx: RunContext
+) -> DriveFolderFileListResponse:
     name_prefix = str(request.name_prefix or "").replace("'", "\\'")
     query = f"'{request.folder_id}' in parents and trashed=false"
     if name_prefix:
@@ -618,6 +865,7 @@ def list_files_in_folder(
         auth_mode=request.auth_mode,
         oauth_client_path=request.oauth_client_path,
         oauth_token_path=request.oauth_token_path,
+        run_budget=request.run_budget,
     )
     limit = request.limit if request.limit > 0 else 50
     files: list[DriveFile] = []

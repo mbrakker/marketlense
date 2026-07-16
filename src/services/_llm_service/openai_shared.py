@@ -14,7 +14,6 @@ from typing import Any, Callable
 import openai as openai_legacy
 
 from src.contracts.files import WriteBytesRequest
-from src.contracts.llm_usage import LLMUsageSpendGuardrailRequest
 from src.contracts.run_budget import BudgetRequest, RunBudget
 from src.contracts.openai import (
     OpenAIAnalyzeRequest,
@@ -56,7 +55,6 @@ from src.services._llm_service.openai_usage_accounting import (
 from src.services._llm_service.policy import spend_reservation_key
 from src.services.llm_usage_ledger_service import (
     evaluate_budget_request,
-    evaluate_daily_spend_guardrail,
 )
 from src.utils.errors import AppError
 from src.utils.json_recovery import parse_json_from_text, strip_json_fence
@@ -106,12 +104,10 @@ def enforce_daily_spend_guardrail(
         namespace_parts = namespace_parts[1:]
     semantic_action = ":".join(namespace_parts) or operation
     reservation_key = spend_reservation_key(ctx, provider=provider, operation=operation)
-    # This is the typed pipeline-wide decision.  The legacy guardrail below is
-    # retained temporarily to preserve its configured warn/pause/stop semantics.
     authority = evaluate_budget_request(
         BudgetRequest(
             schema_version="1.0",
-            budget=RunBudget(
+            budget=getattr(request, "run_budget", None) or RunBudget(
                 schema_version="1.0",
                 run_id=ctx.run_id,
                 publisher_name=str(getattr(request, "publisher_name", "") or ""),
@@ -141,48 +137,18 @@ def enforce_daily_spend_guardrail(
         raise AppError(
             code=f"{provider}_daily_spend_{authority.decision}",
             message="Canonical budget authority blocked the provider call",
-            retryable=authority.decision in {"pause", "defer"},
+            retryable=False,
             context={
                 "operation": operation,
                 "reason_code": authority.reason_code,
                 "affected_limit": authority.affected_limit,
+                "retry_decision": (
+                    "defer" if authority.decision == "defer" else "abort"
+                ),
+                "next_action": authority.next_action,
             },
         )
-    guardrail = evaluate_daily_spend_guardrail(
-        LLMUsageSpendGuardrailRequest(
-            schema_version="1.0",
-            db_path=str(getattr(request, "usage_db_path", "./state/llm_usage.sqlite")),
-            warn_usd=float(getattr(request, "daily_spend_warn_usd", 3.0)),
-            pause_usd=float(getattr(request, "daily_spend_pause_usd", 5.0)),
-            stop_usd=float(getattr(request, "daily_spend_stop_usd", 6.0)),
-            overrides_allowed=False,
-            provider=provider,
-            task=semantic_action,
-            action=semantic_action,
-            model=str(getattr(request, "model", "")),
-            prompt_namespace=str(getattr(request, "prompt_namespace", "")),
-            reservation_key=reservation_key,
-            reserve_in_flight=True,
-        ),
-        ctx,
-    )
-    if guardrail.decision in {"pause", "stop"}:
-        raise AppError(
-            code=f"{provider}_daily_spend_{guardrail.decision}",
-            message=(
-                "Canonical daily spend reached the configured "
-                f"{guardrail.decision} threshold"
-            ),
-            retryable=guardrail.decision == "pause",
-            context={
-                "operation": operation,
-                "canonical_spend_usd": guardrail.canonical_spend_usd,
-                "median_forecast_usd": guardrail.median_forecast_usd,
-                "projected_spend_usd": guardrail.projected_spend_usd,
-                "warn_usd": guardrail.warn_usd,
-            },
-        )
-    if guardrail.decision == "warn":
+    if authority.decision == "warn":
         logger.warning(
             log_event(
                 ctx,
@@ -191,9 +157,9 @@ def enforce_daily_spend_guardrail(
                 module=logger.name,
                 fields={
                     "operation": operation,
-                    "day_utc": guardrail.day_utc,
-                    "canonical_spend_usd": guardrail.canonical_spend_usd,
-                    "warn_usd": guardrail.warn_usd,
+                    "canonical_spend_usd": authority.current_usage.spend_usd,
+                    "projected_spend_usd": authority.projected_usage.spend_usd,
+                    "affected_limit": authority.affected_limit,
                 },
             )
         )

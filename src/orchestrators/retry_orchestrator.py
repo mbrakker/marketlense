@@ -7,7 +7,17 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Optional, TypeVar
 
 from src.contracts.retry_decision import RetryDecision, RetryDecisionAction
+from src.contracts.run_budget import (
+    BudgetRequest,
+    BudgetSideEffectFinalizeRequest,
+    RunBudget,
+    RunBudgetUsage,
+)
 from src.contracts.run_context import RunContext
+from src.services.llm_usage_ledger_service import (
+    evaluate_budget_request,
+    finalize_budget_side_effect,
+)
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -42,6 +52,22 @@ class RetryPolicy:
         metadata={
             "doc": "Optional explicit retry delays by zero-based failed attempt."
         },
+    )
+    budget: RunBudget | None = field(
+        default=None,
+        metadata={"doc": "Optional canonical budget enforced before every retry."},
+    )
+    budget_workflow_id: str = field(
+        default="",
+        metadata={"doc": "Workflow scope recorded for retry budget decisions."},
+    )
+    budget_publisher_id: str = field(
+        default="",
+        metadata={"doc": "Publisher scope recorded for retry budget decisions."},
+    )
+    budget_report_id: str = field(
+        default="",
+        metadata={"doc": "Report scope recorded for retry budget decisions."},
     )
 
 
@@ -215,6 +241,56 @@ def _decision_fields(decision: RetryDecision) -> dict[str, Any]:
     }
 
 
+def _reserve_retry_budget(
+    *, policy: RetryPolicy, step_name: str, attempt: int, ctx: RunContext
+) -> None:
+    """Reserve and finalize a retry slot before another expensive attempt begins."""
+    budget = policy.budget
+    if budget is None:
+        return
+    decision = evaluate_budget_request(
+        BudgetRequest(
+            schema_version="1.0",
+            budget=budget,
+            run_id=ctx.run_id,
+            workflow_id=policy.budget_workflow_id or step_name,
+            publisher_id=policy.budget_publisher_id or budget.publisher_name,
+            report_id=policy.budget_report_id,
+            resource_type="retry",
+            operation=f"retry:{step_name}",
+            attempt_number=attempt + 1,
+            idempotency_key=(
+                f"retry:{ctx.run_id}:{ctx.task_id}:{ctx.span_id}:{step_name}:{attempt + 1}"
+            ),
+            reserve_in_flight=True,
+        ),
+        ctx,
+    )
+    if decision.decision in {"defer", "pause", "stop"}:
+        raise AppError(
+            code=f"retry_budget_{decision.decision}",
+            message="Retry was blocked by the canonical budget authority",
+            retryable=False,
+            context={
+                "reason_code": decision.reason_code,
+                "affected_limit": decision.affected_limit,
+                "retry_decision": "defer" if decision.decision == "defer" else "abort",
+                "next_action": decision.next_action,
+            },
+        )
+    if decision.reservation_key:
+        finalize_budget_side_effect(
+            BudgetSideEffectFinalizeRequest(
+                schema_version="1.0",
+                usage_db_path=budget.usage_db_path,
+                reservation_key=decision.reservation_key,
+                actual_usage=RunBudgetUsage(schema_version="1.0", retries=1),
+                outcome="completed",
+            ),
+            ctx,
+        )
+
+
 def run_with_retry(
     *,
     step_name: str,
@@ -278,6 +354,12 @@ def run_with_retry(
                     module=module_name,
                     fields=fields,
                 )
+            )
+            _reserve_retry_budget(
+                policy=policy,
+                step_name=step_name,
+                attempt=attempt,
+                ctx=ctx,
             )
             sleep_fn(decision.delay_seconds)
             attempt += 1

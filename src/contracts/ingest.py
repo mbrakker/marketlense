@@ -480,6 +480,28 @@ class IngestSettings:
         default="./state/llm_usage.sqlite",
         metadata={"doc": "Canonical SQLite path for durable LLM usage events."},
     )
+    run_budget_max_pdfs: int | None = field(
+        default=None,
+        metadata={"doc": "Maximum PDFs processed by one report-generation run."},
+    )
+    run_budget_max_retries: int | None = field(
+        default=None,
+        metadata={"doc": "Maximum expensive retries for one report-generation run."},
+    )
+    run_budget_max_runtime_seconds: int | None = field(
+        default=None,
+        metadata={"doc": "Maximum elapsed report-generation runtime in seconds."},
+    )
+    run_budget_enabled_effect_kinds: tuple[str, ...] = field(
+        default=(),
+        metadata={
+            "doc": "Enabled report-generation effect categories; empty means all."
+        },
+    )
+    run_budget_limit_decision: str = field(
+        default="stop",
+        metadata={"doc": "Decision used when a report-generation ceiling is met."},
+    )
     model_pricing: dict = field(
         default_factory=dict,
         metadata={

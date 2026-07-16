@@ -324,10 +324,101 @@ def _llm_usage_001_create_budget_authority_tables(conn: sqlite3.Connection) -> N
     )
 
 
+def _llm_usage_002_add_side_effect_actuals_and_deferred_work(
+    conn: sqlite3.Connection,
+) -> None:
+    """Retain final non-provider usage and actionable deferrals in the same DB.
+
+    Provider monetary actuals intentionally remain only in ``llm_usage_events``;
+    this table records the non-monetary side effects that that ledger cannot
+    describe without manufacturing a provider-cost record.
+    """
+    _add_column_if_missing(
+        conn,
+        table_name="budget_authority_reservations",
+        column_name="estimated_drive_reads",
+        column_type="INTEGER NOT NULL DEFAULT 0",
+    )
+    _add_column_if_missing(
+        conn,
+        table_name="budget_authority_reservations",
+        column_name="estimated_mailbox_reads",
+        column_type="INTEGER NOT NULL DEFAULT 0",
+    )
+    conn.execute(
+        """
+        create table if not exists budget_authority_actuals (
+            reservation_key text primary key,
+            schema_version text not null,
+            finalized_at_utc text not null,
+            run_id text not null,
+            workflow_id text not null,
+            publisher_name text not null,
+            report_id text not null,
+            resource_type text not null,
+            operation text not null,
+            day_utc text not null,
+            outcome text not null,
+            error_code text not null default '',
+            actual_tokens integer not null default 0,
+            actual_calls integer not null default 0,
+            actual_steps integer not null default 0,
+            actual_duration_seconds integer not null default 0,
+            actual_retries integer not null default 0,
+            actual_browser_launches integer not null default 0,
+            actual_drive_writes integer not null default 0,
+            actual_drive_reads integer not null default 0,
+            actual_wordpress_writes integer not null default 0,
+            actual_pdfs integer not null default 0,
+            actual_mailbox_reads integer not null default 0
+        )
+        """
+    )
+    conn.execute(
+        """
+        create index if not exists idx_budget_authority_actuals_scope
+        on budget_authority_actuals(
+            day_utc, run_id, publisher_name, resource_type, finalized_at_utc
+        )
+        """
+    )
+    conn.execute(
+        """
+        create table if not exists budget_authority_deferred_work (
+            work_key text primary key,
+            schema_version text not null,
+            deferred_at_utc text not null,
+            run_id text not null,
+            workflow_id text not null,
+            publisher_name text not null,
+            report_id text not null,
+            resource_type text not null,
+            operation text not null,
+            idempotency_key text not null,
+            next_action text not null,
+            affected_limit text not null,
+            policy_version text not null,
+            status text not null default 'pending'
+        )
+        """
+    )
+    conn.execute(
+        """
+        create index if not exists idx_budget_authority_deferred_work_pending
+        on budget_authority_deferred_work(status, run_id, workflow_id, deferred_at_utc)
+        """
+    )
+
+
 _LLM_USAGE_LEDGER_MIGRATIONS: tuple[_MigrationSpec, ...] = (
     _MigrationSpec(
         migration_id="llm_usage_ledger_001_create_budget_authority_tables",
         version=1,
         apply_fn=_llm_usage_001_create_budget_authority_tables,
+    ),
+    _MigrationSpec(
+        migration_id="llm_usage_ledger_002_add_side_effect_actuals_and_deferred_work",
+        version=2,
+        apply_fn=_llm_usage_002_add_side_effect_actuals_and_deferred_work,
     ),
 )

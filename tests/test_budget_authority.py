@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import threading
 import time
+import json
+import logging
+import sqlite3
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
@@ -13,16 +16,22 @@ from src.contracts.run_budget import (
     BudgetOverrideContext,
     BudgetRequest,
     BudgetReservationReconcileRequest,
+    BudgetSideEffectFinalizeRequest,
     RunBudget,
     RunBudgetLimits,
+    RunBudgetUsage,
+    RunBudgetUsageReadRequest,
 )
 from src.contracts.run_context import RunContext
 from src.services.llm_usage_ledger_service import (
     append_usage,
     evaluate_budget_request,
+    finalize_budget_side_effect,
     read_budget_authority_report,
+    read_run_budget_usage,
     reconcile_budget_reservation,
 )
+from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
 from src.utils.errors import AppError
 
 
@@ -267,6 +276,21 @@ def test_browser_worker_crash_reservation_expires_before_later_call(tmp_path) ->
     assert report.orphaned_reservation_recoveries == 1
 
 
+def test_budget_reservation_ttl_bounds_default_side_effect_requests(tmp_path) -> None:
+    budget = _budget(tmp_path, reservation_ttl_seconds=1)
+
+    decision = evaluate_budget_request(_request(budget), _ctx())
+
+    with sqlite3.connect(budget.usage_db_path) as conn:
+        created_at, expires_at = conn.execute(
+            "select created_at_utc, expires_at_utc from budget_authority_reservations "
+            "where reservation_key = ?",
+            (decision.reservation_key,),
+        ).fetchone()
+    elapsed = datetime.fromisoformat(expires_at) - datetime.fromisoformat(created_at)
+    assert timedelta(seconds=0) < elapsed <= timedelta(seconds=1, milliseconds=1)
+
+
 @pytest.mark.parametrize(
     ("scope_name", "budget_field"),
     (("run", "run_limits"), ("day", "day_limits"), ("publisher", "publisher_limits")),
@@ -283,3 +307,195 @@ def test_authority_enforces_each_configured_scope(
 
     assert decision.decision == "stop"
     assert decision.affected_limit == f"{scope_name}.calls"
+
+
+def _drive_read_request(budget: RunBudget, *, key: str, publisher: str = "Publisher") -> BudgetRequest:
+    return BudgetRequest(
+        schema_version="1.0",
+        budget=budget,
+        run_id=budget.run_id,
+        workflow_id="report_download",
+        publisher_id=publisher,
+        report_id="report-1",
+        resource_type="drive_read",
+        operation="drive_list_pdfs",
+        estimated_drive_reads=1,
+        idempotency_key=key,
+        reserve_in_flight=True,
+    )
+
+
+def _finalize_drive_read(budget: RunBudget, key: str, *, actual_reads: int) -> None:
+    finalize_budget_side_effect(
+        BudgetSideEffectFinalizeRequest(
+            schema_version="1.0",
+            usage_db_path=budget.usage_db_path,
+            reservation_key=key,
+            actual_usage=RunBudgetUsage(
+                schema_version="1.0", drive_reads=actual_reads
+            ),
+        ),
+        _ctx(),
+    )
+
+
+def test_side_effect_actual_reconciliation_releases_unused_capacity_and_is_idempotent(
+    tmp_path,
+) -> None:
+    budget = _budget(
+        tmp_path,
+        run_limits=RunBudgetLimits(schema_version="1.0", max_drive_reads=2),
+    )
+    reserved = evaluate_budget_request(_drive_read_request(budget, key="read:one"), _ctx())
+    assert reserved.decision == "allow"
+
+    _finalize_drive_read(budget, reserved.reservation_key, actual_reads=0)
+    replay = finalize_budget_side_effect(
+        BudgetSideEffectFinalizeRequest(
+            schema_version="1.0",
+            usage_db_path=budget.usage_db_path,
+            reservation_key=reserved.reservation_key,
+            actual_usage=RunBudgetUsage(schema_version="1.0", drive_reads=0),
+        ),
+        _ctx(),
+    )
+    assert replay.actual_recorded is False
+    assert replay.reservation_released is False
+
+    next_read = evaluate_budget_request(_drive_read_request(budget, key="read:two"), _ctx())
+    assert next_read.decision == "allow"
+    usage = read_run_budget_usage(
+        RunBudgetUsageReadRequest(schema_version="1.0", budget=budget), _ctx()
+    ).usage
+    assert usage.drive_reads == 0
+
+
+def test_authority_day_scope_spans_runs_and_publisher_scope_isolated(tmp_path) -> None:
+    usage_db_path = str(tmp_path / "usage.sqlite")
+    day_limits = RunBudgetLimits(schema_version="1.0", max_drive_reads=2)
+    run_a = RunBudget(
+        schema_version="1.0", run_id="run-a", publisher_name="Publisher A",
+        usage_db_path=usage_db_path, day_utc="2026-07-16", day_limits=day_limits,
+    )
+    ctx_a = RunContext(schema_version="1.0", run_id="run-a", task_id="task", span_id="a")
+    first = evaluate_budget_request(
+        _drive_read_request(run_a, key="day:a", publisher="Publisher A"), ctx_a
+    )
+    finalize_budget_side_effect(
+        BudgetSideEffectFinalizeRequest(
+            schema_version="1.0", usage_db_path=usage_db_path,
+            reservation_key=first.reservation_key,
+            actual_usage=RunBudgetUsage(schema_version="1.0", drive_reads=1),
+        ),
+        ctx_a,
+    )
+    run_b = replace(run_a, run_id="run-b", publisher_name="Publisher B")
+    ctx_b = RunContext(schema_version="1.0", run_id="run-b", task_id="task", span_id="b")
+    blocked_by_day = evaluate_budget_request(
+        _drive_read_request(run_b, key="day:b", publisher="Publisher B"), ctx_b
+    )
+    assert blocked_by_day.decision == "stop"
+    assert blocked_by_day.affected_limit == "day.drive_reads"
+
+    publisher_budget = replace(
+        run_a,
+        day_limits=None,
+        publisher_limits=RunBudgetLimits(schema_version="1.0", max_drive_reads=2),
+    )
+    isolated = evaluate_budget_request(
+        _drive_read_request(
+            replace(publisher_budget, run_id="run-c", publisher_name="Publisher B"),
+            key="publisher:b",
+            publisher="Publisher B",
+        ),
+        RunContext(schema_version="1.0", run_id="run-c", task_id="task", span_id="c"),
+    )
+    assert isolated.decision == "allow"
+
+
+def test_defer_persists_actionable_work_and_cold_start_forecast_is_audited(tmp_path) -> None:
+    budget = _budget(
+        tmp_path,
+        limit_decision="defer",
+        run_limits=RunBudgetLimits(schema_version="1.0", max_calls=1),
+    )
+    deferred = evaluate_budget_request(_request(budget, idempotency_key="defer:one"), _ctx())
+    assert deferred.decision == "defer"
+    cold = evaluate_budget_request(
+        _request(
+            _budget(tmp_path),
+            idempotency_key="cold:one",
+            estimated_cost_usd=None,
+        ),
+        _ctx(),
+    )
+    assert cold.decision == "allow"
+    with sqlite3.connect(budget.usage_db_path) as conn:
+        work = conn.execute(
+            "select status, next_action from budget_authority_deferred_work"
+        ).fetchone()
+        details_raw = conn.execute(
+            "select details_json from budget_authority_events where reservation_key = ?",
+            ("cold:one",),
+        ).fetchone()[0]
+    assert work == ("pending", "defer_or_request_expiry_bound_override")
+    assert json.loads(details_raw)["forecast_method"] == "unavailable"
+
+
+def test_override_audit_persists_actor_reason_scope_and_expiry(tmp_path) -> None:
+    budget = _budget(
+        tmp_path,
+        run_limits=RunBudgetLimits(schema_version="1.0", max_calls=1),
+    )
+    override = BudgetOverrideContext(
+        schema_version="1.0",
+        actor="on-call-operator",
+        reason="approved incident recovery",
+        scope="run",
+        expires_at_utc=(datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat(),
+        policy_version=budget.policy_version,
+    )
+    evaluate_budget_request(_request(budget, requested_override=override), _ctx())
+    with sqlite3.connect(budget.usage_db_path) as conn:
+        audit = conn.execute(
+            "select override_actor, override_reason, override_scope, override_expires_at_utc "
+            "from budget_authority_events"
+        ).fetchone()
+    assert audit == (
+        "on-call-operator",
+        "approved incident recovery",
+        "run",
+        override.expires_at_utc,
+    )
+
+
+def test_retry_budget_stop_prevents_the_second_side_effect_attempt(tmp_path) -> None:
+    budget = _budget(
+        tmp_path,
+        run_limits=RunBudgetLimits(schema_version="1.0", max_retries=1),
+    )
+    attempts = {"count": 0}
+
+    def fail_once() -> None:
+        attempts["count"] += 1
+        raise AppError(code="provider_transient", message="retry", retryable=True)
+
+    with pytest.raises(AppError) as exc_info:
+        run_with_retry(
+            step_name="expensive_provider_step",
+            operation=fail_once,
+            ctx=_ctx(),
+            logger=logging.getLogger("market_lense.test_budget_authority"),
+            module_name="market_lense.test_budget_authority",
+            policy=RetryPolicy(
+                retries=2,
+                base_delay_seconds=0.0,
+                backoff_step_seconds=0.0,
+                budget=budget,
+                budget_workflow_id="report_download",
+            ),
+            retry_event="retry",
+            sleep_fn=lambda _seconds: None,
+        )
+    assert exc_info.value.code == "retry_budget_stop"
+    assert attempts["count"] == 1

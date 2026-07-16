@@ -37,6 +37,8 @@ from src.contracts.llm_usage import (
 from src.contracts.run_budget import (
     BudgetDecision,
     BudgetAuthorityReport,
+    BudgetSideEffectFinalizeRequest,
+    BudgetSideEffectFinalizeResponse,
     BudgetRequest,
     BudgetReservationReconcileRequest,
     BudgetReservationReconcileResponse,
@@ -73,6 +75,7 @@ _PENDING_MEDIAN_REBUILD_LOCK = threading.Lock()
 _MEDIAN_REBUILD_EVENT_INTERVAL = 20
 _USAGE_EXPORT_PROJECTION_INTERVAL = 20
 _PROJECTION_LEASE_SECONDS = 120
+_MAX_BUDGET_RESERVATION_TTL_SECONDS = 3600
 _OUTCOME_STATUSES = {"valid", "invalid", "not_validated", "not_applicable"}
 _PROVIDER_CALL_STATUSES = {"completed", "failed"}
 _ERROR_CODE_STAGES = {
@@ -86,11 +89,14 @@ _ERROR_CODE_STAGES = {
 }
 _ERROR_STAGES = {"", *set(_ERROR_CODE_STAGES.values())}
 _RUN_BUDGET_EVENT_METRICS = {
+    "runtime_seconds",
     "retries",
     "browser_launches",
+    "drive_reads",
     "drive_writes",
     "wordpress_writes",
     "pdfs",
+    "mailbox_reads",
 }
 
 
@@ -433,6 +439,12 @@ def _validate_run_budget(budget: RunBudget) -> None:
             message="Run-budget usage_db_path is required for canonical accounting",
             retryable=False,
         )
+    if not 0 < budget.reservation_ttl_seconds <= _MAX_BUDGET_RESERVATION_TTL_SECONDS:
+        raise AppError(
+            code="run_budget_reservation_ttl_invalid",
+            message="Run-budget reservation TTL must be between one second and one hour",
+            retryable=False,
+        )
 
 
 def _budget_day_utc(budget: RunBudget) -> str:
@@ -449,21 +461,6 @@ def _budget_day_utc(budget: RunBudget) -> str:
                 context={"day_utc": value},
             ) from exc
     return datetime.now(timezone.utc).date().isoformat()
-
-
-def _usage_from_row(row: sqlite3.Row | tuple[object, ...] | None) -> RunBudgetUsage:
-    values = row or (0.0, 0, 0, 0, 0, 0, 0, 0)
-    return RunBudgetUsage(
-        schema_version="1.0",
-        spend_usd=float(cast(Any, values[0]) or 0.0),
-        tokens=int(cast(Any, values[1]) or 0),
-        calls=int(cast(Any, values[2]) or 0),
-        retries=int(cast(Any, values[3]) or 0),
-        browser_launches=int(cast(Any, values[4]) or 0),
-        drive_writes=int(cast(Any, values[5]) or 0),
-        wordpress_writes=int(cast(Any, values[6]) or 0),
-        pdfs=int(cast(Any, values[7]) or 0),
-    )
 
 
 def _read_budget_usage_for_scope(
@@ -484,16 +481,54 @@ def _read_budget_usage_for_scope(
     events = conn.execute(
         f"""
         select
+            coalesce(sum(case when metric = 'runtime_seconds' then quantity else 0 end), 0),
             coalesce(sum(case when metric = 'retries' then quantity else 0 end), 0),
             coalesce(sum(case when metric = 'browser_launches' then quantity else 0 end), 0),
+            coalesce(sum(case when metric = 'drive_reads' then quantity else 0 end), 0),
             coalesce(sum(case when metric = 'drive_writes' then quantity else 0 end), 0),
             coalesce(sum(case when metric = 'wordpress_writes' then quantity else 0 end), 0),
-            coalesce(sum(case when metric = 'pdfs' then quantity else 0 end), 0)
+            coalesce(sum(case when metric = 'pdfs' then quantity else 0 end), 0),
+            coalesce(sum(case when metric = 'mailbox_reads' then quantity else 0 end), 0)
         from run_budget_side_effect_events where {event_where}
         """,
         event_params,
     ).fetchone()
-    return _usage_from_row((*(llm or (0.0, 0, 0)), *(events or (0, 0, 0, 0, 0))))
+    actuals = conn.execute(
+        f"""
+        select
+            coalesce(sum(actual_tokens), 0),
+            coalesce(sum(actual_calls), 0),
+            coalesce(sum(actual_steps), 0),
+            coalesce(sum(actual_duration_seconds), 0),
+            coalesce(sum(actual_retries), 0),
+            coalesce(sum(actual_browser_launches), 0),
+            coalesce(sum(actual_drive_reads), 0),
+            coalesce(sum(actual_drive_writes), 0),
+            coalesce(sum(actual_wordpress_writes), 0),
+            coalesce(sum(actual_pdfs), 0),
+            coalesce(sum(actual_mailbox_reads), 0)
+        from budget_authority_actuals where {event_where}
+        """,
+        event_params,
+    ).fetchone()
+    llm_values = llm or (0.0, 0, 0)
+    event_values = events or (0, 0, 0, 0, 0, 0, 0, 0)
+    actual_values = actuals or (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    return RunBudgetUsage(
+        schema_version="1.0",
+        spend_usd=float(cast(Any, llm_values[0]) or 0.0),
+        tokens=int(llm_values[1] or 0) + int(actual_values[0] or 0),
+        calls=int(llm_values[2] or 0) + int(actual_values[1] or 0),
+        steps=int(actual_values[2] or 0),
+        runtime_seconds=int(event_values[0] or 0) + int(actual_values[3] or 0),
+        retries=int(event_values[1] or 0) + int(actual_values[4] or 0),
+        browser_launches=int(event_values[2] or 0) + int(actual_values[5] or 0),
+        drive_reads=int(event_values[3] or 0) + int(actual_values[6] or 0),
+        drive_writes=int(event_values[4] or 0) + int(actual_values[7] or 0),
+        wordpress_writes=int(event_values[5] or 0) + int(actual_values[8] or 0),
+        pdfs=int(event_values[6] or 0) + int(actual_values[9] or 0),
+        mailbox_reads=int(event_values[7] or 0) + int(actual_values[10] or 0),
+    )
 
 
 def _merge_budget_usage(*usages: RunBudgetUsage) -> RunBudgetUsage:
@@ -506,8 +541,10 @@ def _merge_budget_usage(*usages: RunBudgetUsage) -> RunBudgetUsage:
         "retries",
         "browser_launches",
         "drive_writes",
+        "drive_reads",
         "wordpress_writes",
         "pdfs",
+        "mailbox_reads",
     )
     return RunBudgetUsage(
         schema_version="1.0",
@@ -552,6 +589,7 @@ def read_run_budget_usage(
     budget = request.budget
     day_utc = _budget_day_utc(budget)
     path = Path(budget.usage_db_path)
+    _apply_budget_authority_migrations(path, ctx)
     logger.info(
         log_event(
             ctx,
@@ -597,7 +635,18 @@ def read_run_budget_usage(
             )
             event_count = int(
                 conn.execute(
-                    "select count(*) from run_budget_side_effect_events where run_id = ? or day_utc = ? or (publisher_name = ? and day_utc = ?)",
+                    """
+                    select count(*) from run_budget_side_effect_events
+                    where run_id = ? or day_utc = ? or (publisher_name = ? and day_utc = ?)
+                    """,
+                    (budget.run_id, day_utc, budget.publisher_name, day_utc),
+                ).fetchone()[0]
+            ) + int(
+                conn.execute(
+                    """
+                    select count(*) from budget_authority_actuals
+                    where run_id = ? or day_utc = ? or (publisher_name = ? and day_utc = ?)
+                    """,
                     (budget.run_id, day_utc, budget.publisher_name, day_utc),
                 ).fetchone()[0]
             )
@@ -646,7 +695,7 @@ def read_run_budget_usage(
                 "day_utc": day_utc,
                 "publisher_name": budget.publisher_name,
                 "event_count": response.event_count,
-                "usage": response.usage.__dict__,
+                **_usage_log_fields("usage", response.usage),
                 "projection_outcome": response.projection_outcome,
                 "projection_pending_event_count": response.projection_pending_event_count,
                 "projection_pending_estimated_cost_usd": response.projection_pending_estimated_cost_usd,
@@ -666,8 +715,10 @@ _BUDGET_LIMIT_FIELDS = (
     ("retries", "max_retries"),
     ("browser_launches", "max_browser_launches"),
     ("drive_writes", "max_drive_writes"),
+    ("drive_reads", "max_drive_reads"),
     ("wordpress_writes", "max_wordpress_writes"),
     ("pdfs", "max_pdfs"),
+    ("mailbox_reads", "max_mailbox_reads"),
 )
 
 
@@ -680,7 +731,7 @@ def _apply_budget_authority_migrations(path: Path, ctx: RunContext) -> None:
                 schema_version="1.0",
                 database_key="llm_usage_ledger",
                 db_path=str(path),
-                target_version=1,
+                target_version=2,
                 ctx=ctx,
             ),
             conn,
@@ -701,13 +752,33 @@ def _add_budget_usage(*usages: RunBudgetUsage) -> RunBudgetUsage:
         "retries",
         "browser_launches",
         "drive_writes",
+        "drive_reads",
         "wordpress_writes",
         "pdfs",
+        "mailbox_reads",
     )
     return RunBudgetUsage(
         schema_version="1.0",
         **{field: sum(getattr(usage, field) for usage in usages) for field in fields},
     )
+
+
+def _usage_log_fields(prefix: str, usage: RunBudgetUsage) -> dict[str, float | int]:
+    """Return bounded scalar usage fields suitable for a structured event."""
+    return {
+        f"{prefix}_spend_usd": usage.spend_usd,
+        f"{prefix}_tokens": usage.tokens,
+        f"{prefix}_calls": usage.calls,
+        f"{prefix}_steps": usage.steps,
+        f"{prefix}_runtime_seconds": usage.runtime_seconds,
+        f"{prefix}_retries": usage.retries,
+        f"{prefix}_browser_launches": usage.browser_launches,
+        f"{prefix}_drive_reads": usage.drive_reads,
+        f"{prefix}_drive_writes": usage.drive_writes,
+        f"{prefix}_wordpress_writes": usage.wordpress_writes,
+        f"{prefix}_pdfs": usage.pdfs,
+        f"{prefix}_mailbox_reads": usage.mailbox_reads,
+    }
 
 
 def _request_usage(request: BudgetRequest) -> RunBudgetUsage:
@@ -736,9 +807,13 @@ def _request_usage(request: BudgetRequest) -> RunBudgetUsage:
         retries=1 if resource == "retry" else 0,
         browser_launches=1 if resource == "browser_launch" else 0,
         drive_writes=writes if resource == "drive_write" else 0,
+        drive_reads=max(0, int(request.estimated_drive_reads))
+        or (1 if resource == "drive_read" else 0),
         wordpress_writes=writes if resource == "wordpress_write" else 0,
         pdfs=max(0, int(request.estimated_pdfs))
         or (1 if resource == "pdf_process" else 0),
+        mailbox_reads=max(0, int(request.estimated_mailbox_reads))
+        or (1 if resource == "mailbox_read" else 0),
     )
 
 
@@ -753,8 +828,10 @@ def _legacy_limits(budget: RunBudget) -> RunBudgetLimits:
         max_retries=budget.max_retries,
         max_browser_launches=budget.max_browser_launches,
         max_drive_writes=budget.max_drive_writes,
+        max_drive_reads=budget.max_drive_reads,
         max_wordpress_writes=budget.max_wordpress_writes,
         max_pdfs=budget.max_pdfs,
+        max_mailbox_reads=budget.max_mailbox_reads,
     )
 
 
@@ -800,13 +877,15 @@ def _reservation_usage_for_scope(
                coalesce(sum(case when resource_type = 'retry' then 1 else 0 end), 0),
                coalesce(sum(case when resource_type = 'browser_launch' then 1 else 0 end), 0),
                coalesce(sum(case when resource_type = 'drive_write' then estimated_writes else 0 end), 0),
+               coalesce(sum(estimated_drive_reads), 0),
                coalesce(sum(case when resource_type = 'wordpress_write' then estimated_writes else 0 end), 0),
-               coalesce(sum(estimated_pdfs), 0)
+               coalesce(sum(estimated_pdfs), 0),
+               coalesce(sum(estimated_mailbox_reads), 0)
         from budget_authority_reservations where {where}
         """,
         tuple(params),
     ).fetchone()
-    values = row or (0.0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    values = row or (0.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
     return RunBudgetUsage(
         schema_version="1.0",
         spend_usd=float(values[0] or 0.0),
@@ -817,8 +896,10 @@ def _reservation_usage_for_scope(
         retries=int(values[5] or 0),
         browser_launches=int(values[6] or 0),
         drive_writes=int(values[7] or 0),
-        wordpress_writes=int(values[8] or 0),
-        pdfs=int(values[9] or 0),
+        drive_reads=int(values[8] or 0),
+        wordpress_writes=int(values[9] or 0),
+        pdfs=int(values[10] or 0),
+        mailbox_reads=int(values[11] or 0),
     )
 
 
@@ -884,7 +965,22 @@ def _validate_budget_request(request: BudgetRequest) -> None:
     if (
         request.attempt_number < 0
         or request.reservation_ttl_seconds <= 0
+        or request.reservation_ttl_seconds > _MAX_BUDGET_RESERVATION_TTL_SECONDS
         or not 0.0 <= float(request.forecast_confidence) <= 1.0
+        or any(
+            float(value) < 0
+            for value in (
+                request.estimated_cost_usd or 0.0,
+                request.estimated_tokens,
+                request.estimated_calls,
+                request.estimated_steps,
+                request.estimated_writes,
+                request.estimated_drive_reads,
+                request.estimated_pdfs,
+                request.estimated_mailbox_reads,
+                request.estimated_duration_seconds,
+            )
+        )
     ):
         raise AppError(
             code="budget_request_estimate_invalid",
@@ -1051,6 +1147,7 @@ def _record_budget_authority_event(
                     "forecast_confidence": request.forecast_confidence,
                     "forecast_cost_usd": request.estimated_cost_usd or 0.0,
                     "forecast_calls": _request_usage(request).calls,
+                    "forecast_usage": _request_usage(request).__dict__,
                 },
                 sort_keys=True,
             ),
@@ -1065,6 +1162,13 @@ def evaluate_budget_request(request: BudgetRequest, ctx: RunContext) -> BudgetDe
     this function stores only forecasts, decision evidence, and override audit.
     """
     _validate_budget_request(request)
+    request = replace(
+        request,
+        reservation_ttl_seconds=min(
+            request.reservation_ttl_seconds,
+            request.budget.reservation_ttl_seconds,
+        ),
+    )
     request = _apply_historical_cost_forecast(request)
     path = Path(request.budget.usage_db_path)
     _apply_budget_authority_migrations(path, ctx)
@@ -1073,6 +1177,10 @@ def evaluate_budget_request(request: BudgetRequest, ctx: RunContext) -> BudgetDe
     now_utc = now.isoformat()
     day_utc = _budget_day_utc(request.budget)
     proposed = _request_usage(request)
+    effect_enabled = not request.budget.enabled_effect_kinds or (
+        str(request.resource_type).strip()
+        in set(request.budget.enabled_effect_kinds)
+    )
     logger.info(
         log_event(
             ctx,
@@ -1129,13 +1237,14 @@ def evaluate_budget_request(request: BudgetRequest, ctx: RunContext) -> BudgetDe
                 ]
                 | None
             ) = None
-            for scope, actual, reserved, projected in scope_rows:
-                limit_breach = _budget_limit_breach(
-                    _scope_limits(request.budget, scope), projected
-                )
-                if limit_breach is not None:
-                    breach = (scope, limit_breach, actual, reserved, projected)
-                    break
+            if effect_enabled:
+                for scope, actual, reserved, projected in scope_rows:
+                    limit_breach = _budget_limit_breach(
+                        _scope_limits(request.budget, scope), projected
+                    )
+                    if limit_breach is not None:
+                        breach = (scope, limit_breach, actual, reserved, projected)
+                        break
             warning: (
                 tuple[
                     str,
@@ -1146,7 +1255,7 @@ def evaluate_budget_request(request: BudgetRequest, ctx: RunContext) -> BudgetDe
                 ]
                 | None
             ) = None
-            if breach is None:
+            if effect_enabled and breach is None:
                 for scope, actual, reserved, projected in scope_rows:
                     limit_warning = _budget_warning(
                         _scope_limits(request.budget, scope),
@@ -1196,11 +1305,17 @@ def evaluate_budget_request(request: BudgetRequest, ctx: RunContext) -> BudgetDe
                     "budget_warning_threshold",
                     "proceed_and_monitor_budget",
                 )
-            else:
+            elif effect_enabled:
                 decision_name, reason_code, next_action = (
                     "allow",
                     "within_budget",
                     "proceed",
+                )
+            else:
+                decision_name, reason_code, next_action = (
+                    "allow",
+                    "effect_category_disabled",
+                    "proceed_without_budget_reservation",
                 )
             if decision_name not in _BUDGET_DECISIONS:
                 raise AppError(
@@ -1211,6 +1326,7 @@ def evaluate_budget_request(request: BudgetRequest, ctx: RunContext) -> BudgetDe
             reservation_key = (
                 request.idempotency_key
                 if request.reserve_in_flight
+                and effect_enabled
                 and decision_name in {"allow", "warn", "authorized_override"}
                 else ""
             )
@@ -1222,9 +1338,10 @@ def evaluate_budget_request(request: BudgetRequest, ctx: RunContext) -> BudgetDe
                         reservation_key, schema_version, run_id, workflow_id, publisher_name,
                         report_id, resource_type, operation, day_utc, estimated_cost_usd,
                         estimated_tokens, estimated_calls, estimated_steps, estimated_writes,
-                        estimated_pdfs, estimated_duration_seconds, status, expires_at_utc,
+                        estimated_drive_reads, estimated_pdfs, estimated_mailbox_reads,
+                        estimated_duration_seconds, status, expires_at_utc,
                         created_at_utc
-                    ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'reserved', ?, ?)
+                    ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'reserved', ?, ?)
                     on conflict(reservation_key) do nothing
                     """,
                     (
@@ -1242,7 +1359,9 @@ def evaluate_budget_request(request: BudgetRequest, ctx: RunContext) -> BudgetDe
                         proposed.calls,
                         proposed.steps,
                         max(proposed.drive_writes, proposed.wordpress_writes),
+                        proposed.drive_reads,
                         proposed.pdfs,
+                        proposed.mailbox_reads,
                         proposed.runtime_seconds,
                         (
                             now + timedelta(seconds=request.reservation_ttl_seconds)
@@ -1267,6 +1386,48 @@ def evaluate_budget_request(request: BudgetRequest, ctx: RunContext) -> BudgetDe
             _record_budget_authority_event(
                 conn, request=request, decision=decision, now_utc=now_utc
             )
+            if decision.decision == "defer":
+                work_key_material = request.idempotency_key or "|".join(
+                    (
+                        request.run_id,
+                        request.workflow_id,
+                        request.publisher_id,
+                        request.report_id,
+                        request.resource_type,
+                        request.operation,
+                        str(request.attempt_number),
+                    )
+                )
+                work_key = sha256(work_key_material.encode("utf-8")).hexdigest()
+                conn.execute(
+                    """
+                    insert into budget_authority_deferred_work(
+                        work_key, schema_version, deferred_at_utc, run_id, workflow_id,
+                        publisher_name, report_id, resource_type, operation,
+                        idempotency_key, next_action, affected_limit, policy_version
+                    ) values (?, '1.0', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    on conflict(work_key) do update set
+                        deferred_at_utc=excluded.deferred_at_utc,
+                        next_action=excluded.next_action,
+                        affected_limit=excluded.affected_limit,
+                        policy_version=excluded.policy_version,
+                        status='pending'
+                    """,
+                    (
+                        work_key,
+                        now_utc,
+                        request.run_id,
+                        request.workflow_id,
+                        request.publisher_id,
+                        request.report_id,
+                        request.resource_type,
+                        request.operation,
+                        request.idempotency_key,
+                        decision.next_action,
+                        decision.affected_limit,
+                        decision.policy_version,
+                    ),
+                )
             conn.commit()
     except (sqlite3.Error, OSError, ValueError) as exc:
         raise AppError(
@@ -1294,6 +1455,20 @@ def evaluate_budget_request(request: BudgetRequest, ctx: RunContext) -> BudgetDe
         "reserved_cost_usd": decision.reserved_usage.spend_usd,
         "projected_cost_usd": decision.projected_usage.spend_usd,
         "forecast_calls": _request_usage(request).calls,
+        "forecast_method": request.forecast_method,
+        "forecast_confidence": request.forecast_confidence,
+        "override_actor": (
+            request.requested_override.actor if request.requested_override else ""
+        ),
+        **_usage_log_fields("forecast", _request_usage(request)),
+        "override_scope": (
+            request.requested_override.scope if request.requested_override else ""
+        ),
+        "override_expires_at_utc": (
+            request.requested_override.expires_at_utc
+            if request.requested_override
+            else ""
+        ),
     }
     logger.info(
         log_event(
@@ -1338,10 +1513,15 @@ def evaluate_budget_request(request: BudgetRequest, ctx: RunContext) -> BudgetDe
         logger.info(
             log_event(
                 ctx,
-                role="service",
-                event="side_effect_prevented",
-                module=logger.name,
-                fields=fields,
+            role="service",
+            event="side_effect_prevented",
+            module=logger.name,
+            fields={
+                **fields,
+                "avoided_effect": True,
+                "avoided_calls": _request_usage(request).calls,
+                "avoided_estimated_cost_usd": request.estimated_cost_usd or 0.0,
+            },
             )
         )
         if decision.decision == "defer":
@@ -1355,6 +1535,166 @@ def evaluate_budget_request(request: BudgetRequest, ctx: RunContext) -> BudgetDe
                 )
             )
     return decision
+
+
+def finalize_budget_side_effect(
+    request: BudgetSideEffectFinalizeRequest, ctx: RunContext
+) -> BudgetSideEffectFinalizeResponse:
+    """Atomically replace an in-flight side-effect forecast with measured usage.
+
+    The reservation and actual row share an idempotency key.  This gives SQLite
+    transactions enough authority to prevent a concurrent run from spending the
+    released capacity twice, without adding a lock service or queue.  Provider
+    monetary actuals are finalized through :func:`reconcile_budget_reservation`
+    after their existing ``llm_usage_events`` write and are never duplicated here.
+    """
+    valid_outcomes = {"completed", "failed", "cancelled"}
+    actual = request.actual_usage
+    fields = (
+        "spend_usd",
+        "tokens",
+        "calls",
+        "steps",
+        "runtime_seconds",
+        "retries",
+        "browser_launches",
+        "drive_reads",
+        "drive_writes",
+        "wordpress_writes",
+        "pdfs",
+        "mailbox_reads",
+    )
+    if (
+        request.schema_version != "1.0"
+        or not str(request.usage_db_path or "").strip()
+        or not str(request.reservation_key or "").strip()
+        or actual.schema_version != "1.0"
+        or request.outcome not in valid_outcomes
+        or any(float(getattr(actual, field)) < 0 for field in fields)
+    ):
+        raise AppError(
+            code="budget_side_effect_finalize_request_invalid",
+            message="Budget side-effect finalization requires non-negative measured usage",
+            retryable=False,
+        )
+    if float(actual.spend_usd) != 0.0:
+        raise AppError(
+            code="budget_side_effect_actual_cost_duplicate_forbidden",
+            message="Non-provider side-effect finalization must not record monetary cost",
+            retryable=False,
+        )
+    path = Path(request.usage_db_path)
+    _apply_budget_authority_migrations(path, ctx)
+    now_utc = datetime.now(timezone.utc).isoformat()
+    row: tuple[object, ...] | None = None
+    actual_recorded = False
+    reservation_released = False
+    try:
+        with _LOCK, sqlite3.connect(path) as conn:
+            conn.execute("begin immediate")
+            row = conn.execute(
+                """
+                select run_id, workflow_id, publisher_name, report_id, resource_type,
+                       operation, day_utc, status
+                from budget_authority_reservations where reservation_key = ?
+                """,
+                (request.reservation_key,),
+            ).fetchone()
+            if row is None:
+                existing = conn.execute(
+                    "select 1 from budget_authority_actuals where reservation_key = ?",
+                    (request.reservation_key,),
+                ).fetchone()
+                conn.commit()
+                return BudgetSideEffectFinalizeResponse(
+                    schema_version="1.0",
+                    finalized=existing is not None,
+                    actual_recorded=False,
+                    reservation_released=False,
+                )
+            cursor = conn.execute(
+                """
+                insert into budget_authority_actuals(
+                    reservation_key, schema_version, finalized_at_utc, run_id,
+                    workflow_id, publisher_name, report_id, resource_type, operation,
+                    day_utc, outcome, error_code, actual_tokens, actual_calls,
+                    actual_steps, actual_duration_seconds, actual_retries,
+                    actual_browser_launches, actual_drive_writes, actual_drive_reads,
+                    actual_wordpress_writes, actual_pdfs, actual_mailbox_reads
+                ) values (?, '1.0', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                on conflict(reservation_key) do nothing
+                """,
+                (
+                    request.reservation_key,
+                    now_utc,
+                    str(row[0]),
+                    str(row[1]),
+                    str(row[2]),
+                    str(row[3]),
+                    str(row[4]),
+                    str(row[5]),
+                    str(row[6]),
+                    request.outcome,
+                    request.error_code,
+                    int(actual.tokens),
+                    int(actual.calls),
+                    int(actual.steps),
+                    int(actual.runtime_seconds),
+                    int(actual.retries),
+                    int(actual.browser_launches),
+                    int(actual.drive_writes),
+                    int(actual.drive_reads),
+                    int(actual.wordpress_writes),
+                    int(actual.pdfs),
+                    int(actual.mailbox_reads),
+                ),
+            )
+            actual_recorded = cursor.rowcount == 1
+            reservation_released = (
+                conn.execute(
+                    """
+                    update budget_authority_reservations
+                    set status = 'reconciled', released_at_utc = ?, reconciled_at_utc = ?
+                    where reservation_key = ? and status = 'reserved'
+                    """,
+                    (now_utc, now_utc, request.reservation_key),
+                ).rowcount
+                == 1
+            )
+            conn.commit()
+    except (sqlite3.Error, OSError, ValueError) as exc:
+        raise AppError(
+            code="budget_side_effect_finalize_failed",
+            message="Canonical budget side-effect finalization failed",
+            cause=exc,
+            retryable=False,
+            context={"db_path": str(path), "reservation_key": request.reservation_key},
+        ) from exc
+    response = BudgetSideEffectFinalizeResponse(
+        schema_version="1.0",
+        finalized=True,
+        actual_recorded=actual_recorded,
+        reservation_released=reservation_released,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="side_effect_actual_reconciled",
+            module=logger.name,
+            fields={
+                "reservation_key": request.reservation_key,
+                "resource_type": str(row[4]) if row is not None else "",
+                "operation": str(row[5]) if row is not None else "",
+                "outcome": request.outcome,
+                "error_code": request.error_code,
+                "actual_recorded": response.actual_recorded,
+                "reservation_released": response.reservation_released,
+                **_usage_log_fields("actual", actual),
+            },
+        )
+    )
+    return response
 
 
 def reconcile_budget_reservation(
@@ -1448,9 +1788,9 @@ def reconcile_budget_reservation(
             log_event(
                 ctx,
                 role="service",
-                event="forecast_error",
-                module=logger.name,
-                fields=fields,
+            event="forecast_error",
+            module=logger.name,
+            fields=fields,
             )
         )
     return response
@@ -1560,6 +1900,7 @@ def append_run_budget_side_effect(
     budget = request.budget
     day_utc = _budget_day_utc(budget)
     path = Path(budget.usage_db_path)
+    _apply_budget_authority_migrations(path, ctx)
     logger.info(
         log_event(
             ctx,

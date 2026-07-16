@@ -986,3 +986,39 @@ def test_run_report_pipeline_preflights_before_model_client_construction(
         severity="error",
     )
     assert model_client_calls["count"] == 0
+
+
+def test_pdf_budget_stop_prevents_report_generation_call(tmp_path) -> None:
+    file = DriveFile(
+        schema_version="1.0",
+        file_id="budgeted-pdf",
+        name="budgeted.pdf",
+        modified_time=None,
+        md5_checksum="md5",
+    )
+    settings = replace(
+        _settings(),
+        run_budget_max_pdfs=1,
+        usage_db_path=str(tmp_path / "pdf_budget.sqlite"),
+    )
+    calls = {"count": 0}
+
+    def _generate(*_args, **_kwargs):
+        calls["count"] += 1
+        raise AssertionError("PDF budget must stop before report generation")
+
+    with pytest.raises(AppError) as exc_info:
+        orch.run_report_pipeline(
+            file,
+            local_pdf_path="./cache/budgeted.pdf",
+            settings=settings,
+            md5="md5",
+            ctx=_ctx(),
+            retries=0,
+            generate_report_fn=_generate,
+            execution_plan_mode="disabled",
+        )
+
+    assert exc_info.value.code == "report_pipeline_pdf_budget_stop"
+    assert exc_info.value.retryable is False
+    assert calls["count"] == 0

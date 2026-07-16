@@ -24,8 +24,10 @@ def _load_budget_limits(raw: object) -> RunBudgetLimits | None:
         max_retries=limit("max_retries"),
         max_browser_launches=limit("max_browser_launches"),
         max_drive_writes=limit("max_drive_writes"),
+        max_drive_reads=limit("max_drive_reads"),
         max_wordpress_writes=limit("max_wordpress_writes"),
         max_pdfs=limit("max_pdfs"),
+        max_mailbox_reads=limit("max_mailbox_reads"),
     )
 
 
@@ -631,6 +633,31 @@ def load_browser_download_settings(
             max(_to_int(run_budget_cfg.get("max_drive_writes"), 0), 1)
             if not _is_missing(run_budget_cfg.get("max_drive_writes"))
             else None
+        ),
+        run_budget_max_drive_reads=(
+            max(_to_int(run_budget_cfg.get("max_drive_reads"), 0), 1)
+            if not _is_missing(run_budget_cfg.get("max_drive_reads"))
+            else None
+        ),
+        run_budget_max_mailbox_reads=(
+            max(_to_int(run_budget_cfg.get("max_mailbox_reads"), 0), 1)
+            if not _is_missing(run_budget_cfg.get("max_mailbox_reads"))
+            else None
+        ),
+        run_budget_max_retries=(
+            max(_to_int(run_budget_cfg.get("max_retries"), 0), 0)
+            if not _is_missing(run_budget_cfg.get("max_retries"))
+            else None
+        ),
+        run_budget_max_runtime_seconds=(
+            max(_to_int(run_budget_cfg.get("max_runtime_seconds"), 0), 1)
+            if not _is_missing(run_budget_cfg.get("max_runtime_seconds"))
+            else None
+        ),
+        run_budget_enabled_effect_kinds=tuple(
+            str(kind).strip()
+            for kind in authority_cfg.get("enabled_effect_kinds", [])
+            if str(kind).strip()
         ),
         run_budget_limit_decision=(
             str(run_budget_cfg.get("limit_decision") or "stop").strip().lower()

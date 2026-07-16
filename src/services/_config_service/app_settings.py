@@ -445,6 +445,15 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         cost_ledger_path=analysis_settings["cost_ledger_path"],
         cost_daily_path=analysis_settings["cost_daily_path"],
         usage_db_path=analysis_settings["usage_db_path"],
+        run_budget_max_pdfs=ingest_runtime["run_budget_max_pdfs"],
+        run_budget_max_retries=ingest_runtime["run_budget_max_retries"],
+        run_budget_max_runtime_seconds=ingest_runtime[
+            "run_budget_max_runtime_seconds"
+        ],
+        run_budget_enabled_effect_kinds=ingest_runtime[
+            "run_budget_enabled_effect_kinds"
+        ],
+        run_budget_limit_decision=ingest_runtime["run_budget_limit_decision"],
         model_pricing=analysis_settings["model_pricing"],
         html_tag_acronyms=analysis_settings["html_tag_acronyms"],
         validation_data_gap_policy=validation_settings["validation_data_gap_policy"],
