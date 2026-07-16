@@ -36,6 +36,14 @@ def _events(caplog) -> list[dict[str, object]]:
     return events
 
 
+@pytest.fixture(autouse=True)
+def _isolate_relative_usage_artifacts(
+    tmp_path, external_boundary_mocks_only
+) -> None:
+    """Keep default accounting artifacts isolated to the current test."""
+    external_boundary_mocks_only.chdir(tmp_path)
+
+
 def test_openai_response_with_vector_store_finalizes_compatibility_export(
     tmp_path, fake_openai
 ) -> None:
