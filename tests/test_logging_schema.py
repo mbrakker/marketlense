@@ -1,7 +1,14 @@
 from __future__ import annotations
 
+import hashlib
+
 from src.contracts.run_context import RunContext
-from src.utils.logging import child_context, log_event, new_run_context, validate_log_event_payload
+from src.utils.logging import (
+    child_context,
+    log_event,
+    new_run_context,
+    validate_log_event_payload,
+)
 
 
 def test_log_event_matches_unified_schema() -> None:
@@ -92,3 +99,28 @@ def test_log_event_redacts_sensitive_url_query_values() -> None:
     assert "email=***REDACTED***" in payload
     assert "token=***REDACTED***" in payload
     assert "sig=***REDACTED***" in payload
+
+
+def test_log_event_summarizes_report_and_editorial_text() -> None:
+    source_paragraph = "Source evidence paragraph " + ("with retained detail " * 12)
+    editorial_paragraph = "Generated editorial paragraph " + (
+        "with publishable analysis " * 12
+    )
+    payload = log_event(
+        new_run_context(task_id="content-redaction-test"),
+        role="generator",
+        event="report_generated",
+        module="src.generators.example",
+        fields={
+            "source_text": source_paragraph,
+            "linkedin_post": editorial_paragraph,
+            "unlabeled": source_paragraph,
+            "evidence": [source_paragraph],
+        },
+    )
+
+    assert source_paragraph not in payload
+    assert editorial_paragraph not in payload
+    assert hashlib.sha256(source_paragraph.encode("utf-8")).hexdigest() in payload
+    assert hashlib.sha256(editorial_paragraph.encode("utf-8")).hexdigest() in payload
+    assert '"redaction": "***REDACTED***"' in payload

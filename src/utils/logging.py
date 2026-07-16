@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from datetime import datetime, timezone
@@ -43,7 +44,9 @@ def child_context(
     *,
     task_id: TaskId | str | None = None,
 ) -> RunContext:
-    resolved_task_id = _coerce_task_id(task_id) if task_id is not None else parent.task_id
+    resolved_task_id = (
+        _coerce_task_id(task_id) if task_id is not None else parent.task_id
+    )
     return RunContext(
         schema_version=parent.schema_version,
         run_id=parent.run_id,
@@ -57,6 +60,7 @@ def child_context(
 
 
 REDACTED = "***REDACTED***"
+MAX_LOG_TEXT_CHARACTERS = 120
 SENSITIVE_KEYS = {
     "api_key",
     "app_password",
@@ -67,6 +71,19 @@ SENSITIVE_KEYS = {
     "secret",
     "token",
 }
+CONTENT_FIELD_TOKENS = frozenset(
+    {
+        "body",
+        "commentary",
+        "content",
+        "evidence",
+        "excerpt",
+        "paragraph",
+        "prompt",
+        "response",
+        "text",
+    }
+)
 _OPENAI_KEY_RX = re.compile(r"sk-[A-Za-z0-9]{20,}")
 _BEARER_RX = re.compile(r"(?i)bearer\s+[A-Za-z0-9._-]+")
 _EMAIL_RX = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
@@ -102,6 +119,37 @@ def _redact_value(value: Any) -> Any:
     return value
 
 
+def _text_metadata(value: str) -> Dict[str, Any]:
+    """Retain diagnostic identity without emitting retained report content."""
+
+    return {
+        "redaction": REDACTED,
+        "sha256": hashlib.sha256(value.encode("utf-8")).hexdigest(),
+        "character_count": len(value),
+    }
+
+
+def _is_content_field(key: str) -> bool:
+    return bool(
+        CONTENT_FIELD_TOKENS.intersection(
+            token for token in re.split(r"[^a-z0-9]+", key.casefold()) if token
+        )
+    )
+
+
+def _redact_field_value(key: str, value: Any) -> Any:
+    if isinstance(value, str):
+        safe_value = _redact_value(value)
+        if _is_content_field(key) or len(safe_value) > MAX_LOG_TEXT_CHARACTERS:
+            return _text_metadata(safe_value)
+        return safe_value
+    if isinstance(value, dict):
+        return _redact_fields(value)
+    if isinstance(value, (list, tuple)):
+        return [_redact_field_value(key, item) for item in value]
+    return _redact_value(value)
+
+
 def _redact_fields(fields: Dict[str, Any]) -> Dict[str, Any]:
     redacted: Dict[str, Any] = {}
     for k, v in fields.items():
@@ -109,19 +157,7 @@ def _redact_fields(fields: Dict[str, Any]) -> Dict[str, Any]:
         if key.lower() in SENSITIVE_KEYS:
             redacted[key] = REDACTED
             continue
-        if isinstance(v, dict):
-            redacted[key] = _redact_fields(v)
-            continue
-        if isinstance(v, list):
-            redacted_items = []
-            for item in v:
-                if isinstance(item, dict):
-                    redacted_items.append(_redact_fields(item))
-                else:
-                    redacted_items.append(_redact_value(item))
-            redacted[key] = redacted_items
-            continue
-        redacted[key] = _redact_value(v)
+        redacted[key] = _redact_field_value(key, v)
     return redacted
 
 
