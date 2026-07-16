@@ -17,6 +17,7 @@ from scripts.quality.collect_cto_review_evidence import (
     EvidenceCoverageError,
     EvidencePaths,
     LogContentLeakageError,
+    LogCorpusScopeError,
     RequiredEvidenceDatabaseError,
     RepositoryHeadChangedError,
     RepositoryHeadMismatchError,
@@ -501,6 +502,41 @@ def test_strict_clean_exact_head_snapshots_logs_and_publishes_redacted_bundle(
         "sha256" in item and "byte_count" in item
         for item in manifest["artifact_inventory"]
     )
+
+
+def test_declared_smoke_log_scope_is_explicit_in_public_evidence(
+    tmp_path: Path,
+) -> None:
+    paths, _, _, _ = _strict_paths(tmp_path)
+    paths = EvidencePaths(
+        **{
+            **paths.__dict__,
+            "log_corpus_scope": "post_remediation_smoke_only",
+        }
+    )
+
+    collect(paths)
+
+    manifest = json.loads((paths.output_dir / "evidence_run_manifest.json").read_text())
+    leakage = json.loads((paths.output_dir / "log_content_leakage.json").read_text())
+    expected_scope = "post_remediation_smoke_only"
+    assert manifest["log_corpus"]["operator_declared_scope"] == expected_scope
+    assert leakage["log_corpus"]["operator_declared_scope"] == expected_scope
+    assert (
+        "post_remediation_smoke_only_no_representative_report_processing"
+        in leakage["limitations"]
+    )
+    assert "does not attest" in manifest["log_corpus"]["repository_provenance"]
+
+
+def test_unknown_log_corpus_scope_fails_before_snapshot_work(tmp_path: Path) -> None:
+    paths, _, _, _ = _strict_paths(tmp_path)
+    paths = EvidencePaths(**{**paths.__dict__, "log_corpus_scope": "unknown"})
+
+    with pytest.raises(LogCorpusScopeError):
+        collect(paths)
+
+    assert not paths.output_dir.exists()
 
 
 def test_strict_expected_commit_mismatch_fails_before_snapshot_work(

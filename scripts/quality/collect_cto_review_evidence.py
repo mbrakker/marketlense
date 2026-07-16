@@ -44,6 +44,19 @@ COLLECTOR_VERSION = "3.0"
 COST_TOLERANCE = Decimal("0.000001")
 COMMIT_SHA_RE = re.compile(r"^[0-9a-fA-F]{40}$")
 CANONICAL_LOG_RE = re.compile(r"^market_lense_\d{4}-\d{2}-\d{2}\.log$")
+LOG_CORPUS_SCOPES = frozenset(
+    {
+        "not_declared",
+        "post_remediation_smoke_only",
+        "representative_report_processing",
+    }
+)
+LOG_CORPUS_LIMITATIONS = {
+    "not_declared": "log_corpus_scope_not_declared",
+    "post_remediation_smoke_only": (
+        "post_remediation_smoke_only_no_representative_report_processing"
+    ),
+}
 RETAINED_ARTIFACT_FILENAMES = frozenset(
     {
         "artifacts.json",
@@ -114,6 +127,10 @@ class EvidenceCoverageError(EvidenceConsistencyError):
     """Raised when strict content-leakage coverage is incomplete."""
 
 
+class LogCorpusScopeError(EvidenceConsistencyError):
+    """Raised when an operator-declared log corpus scope is not recognized."""
+
+
 class RetainedArtifactEvidenceError(EvidenceConsistencyError):
     """Raised when a retained artifact needed for evidence cannot be assessed."""
 
@@ -171,6 +188,7 @@ class EvidencePaths:
     require_exact_head: bool = False
     expected_commit_sha: str | None = None
     fresh_after: str | None = None
+    log_corpus_scope: str = "not_declared"
     minimum_source_canaries: int = 5
     minimum_editorial_canaries: int = 5
     maximum_canaries_per_class: int = 25
@@ -1226,6 +1244,7 @@ def _leakage_payload(
     log_snapshot_root: Path,
     log_entries: list[dict[str, object]],
     fresh_after: datetime | None,
+    log_corpus_scope: str,
     minimum_source: int,
     minimum_editorial: int,
     maximum_per_class: int,
@@ -1248,7 +1267,11 @@ def _leakage_payload(
         "editorial_canary_count": len(editorial_canaries),
         **log_coverage,
     }
-    limitations: list[str] = []
+    limitations = (
+        [LOG_CORPUS_LIMITATIONS[log_corpus_scope]]
+        if log_corpus_scope in LOG_CORPUS_LIMITATIONS
+        else []
+    )
     incomplete = False
     if len(source_canaries) < minimum_source:
         incomplete = True
@@ -1273,6 +1296,7 @@ def _leakage_payload(
             "passed": status == "passed",
             "fresh_after": fresh_after.isoformat() if fresh_after else None,
             "fresh_log_seen": fresh_log_seen,
+            "log_corpus": _log_corpus_provenance(log_corpus_scope),
             "coverage": coverage,
             "canaries": [item.public_metadata() for item in canaries],
             "matches": matches,
@@ -1292,6 +1316,20 @@ def _parse_log_timestamp(value: str) -> datetime | None:
     )
 
 
+def _log_corpus_provenance(scope: str) -> dict[str, str]:
+    return {
+        "operator_declared_scope": scope,
+        "scope_attestation": (
+            "The collector verifies the snapshotted corpus and content coverage, "
+            "not whether the declared workflow scope was actually executed."
+        ),
+        "repository_provenance": (
+            "The repository commit identifies the evidence collector revision; it "
+            "does not attest to the producer revision of historical log records."
+        ),
+    }
+
+
 def collect(
     paths: EvidencePaths,
     *,
@@ -1306,6 +1344,10 @@ def collect(
     ):
         raise EvidenceCoverageError(
             "Maximum canaries cannot be below a required minimum"
+        )
+    if paths.log_corpus_scope not in LOG_CORPUS_SCOPES:
+        raise LogCorpusScopeError(
+            "log_corpus_scope must be one of: " + ", ".join(sorted(LOG_CORPUS_SCOPES))
         )
     run_id = paths.evidence_run_id or uuid.uuid4().hex
     _prepare_destination(paths, run_id)
@@ -1354,6 +1396,7 @@ def collect(
                 log_snapshot_root=log_snapshot_root,
                 log_entries=log_entries,
                 fresh_after=fresh_after,
+                log_corpus_scope=paths.log_corpus_scope,
                 minimum_source=paths.minimum_source_canaries,
                 minimum_editorial=paths.minimum_editorial_canaries,
                 maximum_per_class=paths.maximum_canaries_per_class,
@@ -1429,6 +1472,7 @@ def collect(
                 "started_at": started_at,
                 "ended_at": _utc_now(),
                 "fresh_after": fresh_after.isoformat() if fresh_after else None,
+                "log_corpus": _log_corpus_provenance(paths.log_corpus_scope),
                 "configuration": configuration,
                 "configuration_hash": hashlib.sha256(
                     json.dumps(configuration, sort_keys=True).encode("utf-8")
@@ -1518,6 +1562,12 @@ def main() -> int:
     parser.add_argument("--require-exact-head", action="store_true")
     parser.add_argument("--expected-commit-sha", default="")
     parser.add_argument("--fresh-after", default="")
+    parser.add_argument(
+        "--log-corpus-scope",
+        choices=sorted(LOG_CORPUS_SCOPES),
+        default="not_declared",
+        help="Operator-declared scope of the snapshotted standard log corpus.",
+    )
     parser.add_argument("--minimum-source-canaries", type=int, default=5)
     parser.add_argument("--minimum-editorial-canaries", type=int, default=5)
     parser.add_argument("--maximum-canaries-per-class", type=int, default=25)
@@ -1534,6 +1584,7 @@ def main() -> int:
             require_exact_head=args.require_exact_head,
             expected_commit_sha=args.expected_commit_sha or None,
             fresh_after=args.fresh_after or None,
+            log_corpus_scope=args.log_corpus_scope,
             minimum_source_canaries=args.minimum_source_canaries,
             minimum_editorial_canaries=args.minimum_editorial_canaries,
             maximum_canaries_per_class=args.maximum_canaries_per_class,
