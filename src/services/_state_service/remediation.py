@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, replace
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, cast
 
 from src.contracts.remediation import (
     RemediationArtifactReference,
@@ -15,7 +15,9 @@ from src.contracts.remediation import (
     RemediationIdempotencyKey,
     RemediationListRequest,
     RemediationListResponse,
+    RemediationActionCode,
     RemediationRecord,
+    RemediationStatus,
     RemediationTransitionRequest,
     RemediationTransitionResponse,
     RemediationUpsertRequest,
@@ -80,6 +82,30 @@ _ALLOWED_TRANSITIONS: dict[str, set[str]] = {
     "resolved": {"pending", "superseded"},
     "superseded": set(),
 }
+
+
+def _status_from_row(value: object) -> RemediationStatus:
+    status = str(value or "")
+    if status not in _ALLOWED_TRANSITIONS:
+        raise AppError(
+            code="remediation_record_read_invalid",
+            message="Persisted remediation record has an unsupported status",
+            retryable=False,
+            context={"status": status},
+        )
+    return cast(RemediationStatus, status)
+
+
+def _action_from_row(value: object) -> RemediationActionCode:
+    action = str(value or "")
+    if action not in _REMEDIATION_ACTIONS:
+        raise AppError(
+            code="remediation_record_read_invalid",
+            message="Persisted remediation record has an unsupported action",
+            retryable=False,
+            context={"action_code": action},
+        )
+    return cast(RemediationActionCode, action)
 
 
 def _json(value: object) -> str:
@@ -167,7 +193,7 @@ def _record_from_row(row) -> RemediationRecord:
         error_code=str(row[13] or ""),
         error_classification=str(row[14] or "unknown"),
         retry_decision=_retry_decision_from_raw(row[15]),
-        status=str(row[16]),
+        status=_status_from_row(row[16]),
         checkpoint=_checkpoint_from_raw(row[17]),
         reusable_artifacts=_artifact_refs_from_raw(row[18]),
         committed_side_effects=[str(value) for value in _load_list(row[19])],
@@ -183,7 +209,7 @@ def _record_from_row(row) -> RemediationRecord:
         max_attempts=int(row[23] or 1),
         cooldown_seconds=int(row[24] or 0),
         next_eligible_at_utc=str(row[25] or ""),
-        action_code=str(row[26]),
+        action_code=_action_from_row(row[26]),
         operator_next_action=str(row[27] or ""),
         runbook_ref=str(row[28] or ""),
         created_at_utc=str(row[29] or ""),

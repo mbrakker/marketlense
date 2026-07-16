@@ -18,6 +18,7 @@ from src.contracts.remediation import (
     RemediationReaperRequest,
     RemediationReaperResponse,
     RemediationRecord,
+    RemediationStatus,
     RemediationTransitionRequest,
     RemediationUpsertRequest,
 )
@@ -75,7 +76,7 @@ def _action_for_failure(
     error: Exception,
     decision: RetryDecision | None,
     checkpoint: RemediationCheckpointReference | None,
-) -> tuple[RemediationActionCode, str, str]:
+) -> tuple[RemediationActionCode, RemediationStatus, str]:
     code = _failure_code(error).lower()
     if not isinstance(error, AppError):
         return (
@@ -284,7 +285,7 @@ def _transition(
     *,
     state_db: str,
     record: RemediationRecord,
-    status: str,
+    status: RemediationStatus,
     reason: str,
     actor: str,
     ctx: RunContext,
@@ -468,7 +469,7 @@ def run_bounded_remediation_reaper(
                 continue
         executor = _executor_for(deps, record.action_code)
         if executor is None:
-            terminal_status = (
+            terminal_status: RemediationStatus = (
                 "terminal"
                 if record.action_code == "mark_terminal_blocker"
                 else "operator_action_required"
@@ -534,7 +535,9 @@ def run_bounded_remediation_reaper(
             )
             deferred.append(record.remediation_id)
         else:
-            status = "terminal" if outcome == "terminal" else "operator_action_required"
+            status: RemediationStatus = (
+                "terminal" if outcome == "terminal" else "operator_action_required"
+            )
             record = _transition(
                 state_db=request.state_db,
                 record=record,

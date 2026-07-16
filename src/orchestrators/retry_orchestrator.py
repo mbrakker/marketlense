@@ -16,7 +16,9 @@ T = TypeVar("T")
 RetryablePredicate = Callable[[Exception], bool]
 RetryFieldsBuilder = Callable[[Exception, int], dict[str, Any]]
 FailureFieldsBuilder = Callable[[Exception, int, bool], dict[str, Any]]
-TerminalFailureObserver = Callable[[Exception, RetryDecision], None]
+# Observers may return retained remediation evidence; retry control deliberately
+# ignores the value after the terminal callback has run.
+TerminalFailureObserver = Callable[[Exception, RetryDecision], object]
 SleepFn = Callable[[float], None]
 
 
