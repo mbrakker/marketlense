@@ -11,9 +11,11 @@ from uuid import uuid4
 from src.contracts.logging import (
     LOG_EVENT_ROLES,
     LOG_EVENT_SCHEMA_VERSION,
+    MAX_LOG_ARTIFACT_REFERENCE_CHARACTERS,
     MAX_LOG_COLLECTION_ITEMS,
     MAX_LOG_EVENT_BYTES,
     MAX_LOG_FIELD_DEPTH,
+    MAX_LOG_FIELD_KEY_CHARACTERS,
     MAX_LOG_FIELD_NODES,
     REQUIRED_LOG_EVENT_FIELDS,
     LogEventValidationResult,
@@ -172,6 +174,22 @@ def _bounded_non_scalar_metadata(value: Any) -> Dict[str, Any]:
     }
 
 
+def _bounded_field_key(key: Any) -> str:
+    value = str(key)
+    if len(value) <= MAX_LOG_FIELD_KEY_CHARACTERS:
+        return value
+    return "field_sha256_" + hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _artifact_reference_metadata(value: str) -> Dict[str, Any]:
+    return {
+        "redaction": REDACTED,
+        "sha256": hashlib.sha256(value.encode("utf-8")).hexdigest(),
+        "character_count": len(value),
+        "reason": "artifact_reference_too_long",
+    }
+
+
 def _redact_field_value(
     key: str,
     value: Any,
@@ -189,6 +207,8 @@ def _redact_field_value(
     if isinstance(value, str):
         safe_value = _redact_value(value)
         if _is_artifact_reference_field(key):
+            if len(safe_value) > MAX_LOG_ARTIFACT_REFERENCE_CHARACTERS:
+                return _artifact_reference_metadata(safe_value)
             return safe_value
         if _is_content_field(key) or len(safe_value) > MAX_LOG_TEXT_CHARACTERS:
             return _text_metadata(safe_value)
@@ -253,11 +273,11 @@ def _redact_fields(
         item for item in items if not _is_artifact_reference_field(str(item[0]))
     ]
     retained_items = (
-        artifact_items
+        artifact_items[:MAX_LOG_COLLECTION_ITEMS]
         + non_artifact_items[: max(0, MAX_LOG_COLLECTION_ITEMS - len(artifact_items))]
     )
     for k, v in retained_items:
-        key = str(k)
+        key = _bounded_field_key(k)
         if key.lower() in SENSITIVE_KEYS:
             redacted[key] = REDACTED
             continue
@@ -337,6 +357,43 @@ def _reduce_oversized_fields(
     return reduced
 
 
+def _final_reduced_fields(
+    payload: Dict[str, Any],
+    fields: Dict[str, Any],
+    *,
+    attempted_size_bytes: int,
+    original_field_count: int,
+) -> Dict[str, Any]:
+    """Fit retained artifact references under the absolute event-size contract."""
+
+    reduction: Dict[str, Any] = {
+        "attempted_size_bytes": attempted_size_bytes,
+        "maximum_size_bytes": MAX_LOG_EVENT_BYTES,
+        "original_field_count": original_field_count,
+        "hashed_artifact_reference_count": 0,
+        "omitted_artifact_reference_count": 0,
+    }
+    reduced: Dict[str, Any] = {"log_payload_reduced": reduction}
+    for key, value in sorted(fields.items()):
+        if not _is_artifact_reference_field(key):
+            continue
+        candidate = {**reduced, key: value}
+        payload["fields"] = candidate
+        if len(_serialized_payload(payload).encode("utf-8")) <= MAX_LOG_EVENT_BYTES:
+            reduced[key] = value
+            continue
+        metadata = _reduced_value_metadata(value)
+        candidate = {**reduced, key: metadata}
+        payload["fields"] = candidate
+        if len(_serialized_payload(payload).encode("utf-8")) <= MAX_LOG_EVENT_BYTES:
+            reduced[key] = metadata
+            reduction["hashed_artifact_reference_count"] += 1
+            continue
+        reduction["omitted_artifact_reference_count"] += 1
+    payload["fields"] = reduced
+    return reduced
+
+
 def log_event(
     ctx: RunContext,
     *,
@@ -372,19 +429,25 @@ def log_event(
         reduced_serialized = _serialized_payload(payload)
         if len(reduced_serialized.encode("utf-8")) <= MAX_LOG_EVENT_BYTES:
             return reduced_serialized
-        artifact_fields = {
-            key: value
-            for key, value in payload["fields"].items()
-            if _is_artifact_reference_field(key)
-        }
+        payload["fields"] = _final_reduced_fields(
+            payload,
+            payload["fields"],
+            attempted_size_bytes=len(serialized.encode("utf-8")),
+            original_field_count=len(fields or {}),
+        )
+        final_serialized = _serialized_payload(payload)
+        if len(final_serialized.encode("utf-8")) <= MAX_LOG_EVENT_BYTES:
+            return final_serialized
         payload["fields"] = {
             "log_payload_reduced": {
                 "attempted_size_bytes": len(serialized.encode("utf-8")),
                 "maximum_size_bytes": MAX_LOG_EVENT_BYTES,
                 "original_field_count": len(fields or {}),
-                "omitted_field_count": len(payload["fields"]) - len(artifact_fields),
-            },
-            **artifact_fields,
+                "hashed_artifact_reference_count": 0,
+                "omitted_artifact_reference_count": sum(
+                    1 for key in (fields or {}) if _is_artifact_reference_field(key)
+                ),
+            }
         }
         return _serialized_payload(payload)
     except Exception:

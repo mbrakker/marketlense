@@ -178,6 +178,35 @@ def test_log_event_bounds_oversized_nested_fields_deterministically() -> None:
     }
 
 
+def test_log_event_bounds_many_artifact_references_without_silent_loss() -> None:
+    artifact_references = {
+        f"artifact_reference_{index:02d}": f"out/audit/{index:02d}/" + "a" * 480
+        for index in range(32)
+    }
+
+    payload = json.loads(
+        log_event(
+            new_run_context(task_id="bounded-artifact-references"),
+            role="service",
+            event="bounded_artifact_references",
+            module="src.services.example",
+            fields=artifact_references,
+        )
+    )
+
+    assert (
+        len(json.dumps(payload, ensure_ascii=True).encode("utf-8"))
+        <= MAX_LOG_EVENT_BYTES
+    )
+    reduction = payload["fields"]["log_payload_reduced"]
+    assert (
+        reduction["hashed_artifact_reference_count"]
+        + reduction["omitted_artifact_reference_count"]
+        > 0
+    )
+    assert reduction["original_field_count"] == len(artifact_references)
+
+
 def test_log_event_redacts_email_phone_credentials_and_sensitive_url_values() -> None:
     payload = log_event(
         new_run_context(task_id="sensitive-patterns"),
