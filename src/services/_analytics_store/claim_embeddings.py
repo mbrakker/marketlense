@@ -6,7 +6,7 @@ import hashlib
 import json
 import logging
 import sqlite3
-from dataclasses import asdict, replace
+from dataclasses import replace
 from typing import Any, cast
 
 from src.contracts.analytics_projection import (
@@ -497,7 +497,11 @@ def persist_claim_embedding(
             role="service",
             event="claim_embedding_persist_complete",
             module=logger.name,
-            fields={**asdict(response), "embedding_uid": str(response.embedding_uid)},
+            fields={
+                "schema_version": response.schema_version,
+                "embedding_uid": str(response.embedding_uid),
+                "status": response.status,
+            },
         )
     )
     return response

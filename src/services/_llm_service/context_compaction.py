@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
-from dataclasses import asdict, replace
+from dataclasses import replace
 from typing import Any
 
 from src.contracts.llm import LLMContextCompactionPolicy, LLMContextCompactionResult
@@ -13,6 +13,29 @@ from src.utils.logging import log_event
 _ANCHOR_RE = re.compile(
     r"(?i)\b(metric|quote|claim|citation|evidence|validation_anchor|source|figure|table|page)\b|%"
 )
+
+
+def _compaction_log_fields(
+    result: LLMContextCompactionResult,
+    *,
+    operation: str,
+) -> dict[str, object]:
+    return {
+        "operation": operation,
+        "schema_version": result.schema_version,
+        "compacted": result.compacted,
+        "strategy": result.strategy,
+        "trigger_reason": result.trigger_reason,
+        "original_input_tokens_est": result.original_input_tokens_est,
+        "compacted_input_tokens_est": result.compacted_input_tokens_est,
+        "avoided_input_tokens_est": result.avoided_input_tokens_est,
+        "estimated_original_cost_usd": result.estimated_original_cost_usd,
+        "estimated_compacted_cost_usd": result.estimated_compacted_cost_usd,
+        "estimated_avoided_cost_usd": result.estimated_avoided_cost_usd,
+        "retained_anchor_count": result.retained_anchor_count,
+        "original_user_chars": result.original_user_chars,
+        "compacted_user_chars": result.compacted_user_chars,
+    }
 
 
 def compact_prompt_request_if_needed(
@@ -79,7 +102,7 @@ def compact_prompt_request_if_needed(
                 role="service",
                 event="llm_context_compaction_applied",
                 module=logger.name,
-                fields={"operation": operation, **asdict(result)},
+                fields=_compaction_log_fields(result, operation=operation),
             )
         )
         return replace(request, user_prompt=compacted_user_prompt), result
@@ -89,7 +112,7 @@ def compact_prompt_request_if_needed(
             role="service",
             event="llm_context_compaction_skipped",
             module=logger.name,
-            fields={"operation": operation, **asdict(result)},
+            fields=_compaction_log_fields(result, operation=operation),
         )
     )
     return request, result

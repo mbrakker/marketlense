@@ -4,6 +4,7 @@ from __future__ import annotations
 from ._shared import *  # noqa: F401,F403
 from src.services._browser_report_download._browser_runtime import timeout_recovery
 
+
 def test_download_report_with_browser_use_lookup_submission_assist_recovers_lookup_blocked_submit(
     tmp_path: Path,
     run_context,
@@ -961,6 +962,7 @@ def test_browser_worker_main_preserves_candidate_trace(
     )
     assert observed_request.settings.model_pricing == settings.model_pricing
 
+
 def test_browser_worker_main_preserves_identity_option_aliases(
     tmp_path: Path,
     run_context,
@@ -1060,6 +1062,7 @@ def test_browser_worker_main_preserves_identity_option_aliases(
     observed_field = observed_requests[0].settings.identity_profile.fields[0]
     assert observed_field.option_aliases == ["Vienna", "Wien"]
 
+
 def test_browser_worker_main_redacts_identity_values_from_persisted_response(
     tmp_path: Path,
     run_context,
@@ -1157,6 +1160,7 @@ def test_browser_worker_main_redacts_identity_values_from_persisted_response(
     assert delivery_email not in persisted
     assert "***REDACTED***" in persisted
 
+
 def test_browser_worker_subprocess_forces_utf8_and_captures_output(
     tmp_path: Path,
     run_context,
@@ -1243,7 +1247,9 @@ def test_browser_worker_subprocess_forces_utf8_and_captures_output(
     assert len(completion_events) == 1
     completion_fields = completion_events[0]["fields"]
     assert completion_fields["worker_output_captured"] is True
-    assert completion_fields["worker_output_excerpt"] == (
+    worker_output = completion_fields["worker_output_excerpt"]
+    assert worker_output["redaction"] == "***REDACTED***"
+    assert worker_output["character_count"] == len(
         "INFO browser_use.Agent Step 1: click download"
     )
     assert_logs_have_required_fields(_service_events(caplog))
@@ -1338,6 +1344,7 @@ def test_browser_worker_subprocess_discards_sensitive_request_payload_after_run(
     assert response_path.exists()
     assert not payload_path.exists()
 
+
 def test_browser_worker_subprocess_discards_sensitive_request_payload_after_timeout(
     tmp_path: Path,
     run_context,
@@ -1384,6 +1391,7 @@ def test_browser_worker_subprocess_discards_sensitive_request_payload_after_time
 
     assert exc_info.value.code == "browser_download_agent_timeout"
     assert not payload_path.exists()
+
 
 def test_browser_worker_subprocess_sanitizes_failure_output_excerpt(
     tmp_path: Path,
@@ -1442,10 +1450,11 @@ def test_browser_worker_subprocess_sanitizes_failure_output_excerpt(
     ]
     assert len(completion_events) == 1
     completion_fields = completion_events[0]["fields"]
-    assert completion_fields["worker_output_excerpt"] == (
-        "browser_use.Agent\nStep 1 failed"
-    )
+    worker_output = completion_fields["worker_output_excerpt"]
+    assert worker_output["redaction"] == "***REDACTED***"
+    assert worker_output["character_count"] == len("browser_use.Agent\nStep 1 failed")
     assert_logs_have_required_fields(_service_events(caplog))
+
 
 def test_download_report_with_browser_use_cleans_stale_browser_use_temp_dirs_before_launch(
     tmp_path: Path,
@@ -1495,6 +1504,7 @@ def test_download_report_with_browser_use_cleans_stale_browser_use_temp_dirs_bef
     assert not stale_profile_dir.exists()
     assert not stale_download_dir.exists()
 
+
 def test_download_report_with_browser_use_cleans_new_browser_use_temp_dirs_after_run(
     tmp_path: Path,
     run_context,
@@ -1539,6 +1549,7 @@ def test_download_report_with_browser_use_cleans_new_browser_use_temp_dirs_after
 
     assert response.outcome == "downloaded"
     assert not (tmp_path / "browseruse-tmp-created-during-run").exists()
+
 
 __all__ = [
     "test_download_report_with_browser_use_lookup_submission_assist_recovers_lookup_blocked_submit",

@@ -12,7 +12,6 @@ import inspect
 import logging
 import sys
 from contextlib import suppress
-from dataclasses import asdict
 from pathlib import Path
 from threading import Thread
 from typing import Any
@@ -25,6 +24,10 @@ from src.contracts.browser_download import (
 from src.contracts.run_context import RunContext
 from src.services._browser_report_download.cdp import (
     select_browser_download_real_page_target_info,
+)
+from src.services._browser_report_download.logging import (
+    browser_developer_diagnostics_request_log_fields,
+    browser_developer_diagnostics_result_log_fields,
 )
 from src.services._browser_report_download.session_reuse import (
     disabled_browser_session_reuse_decision,
@@ -58,7 +61,7 @@ def run_browser_developer_diagnostics(
             role="service",
             event="browser_developer_diagnostics_start",
             module=logger.name,
-            fields=asdict(request),
+            fields=browser_developer_diagnostics_request_log_fields(request),
         )
     )
     checks: list[BrowserDeveloperDiagnosticCheck] = []
@@ -198,7 +201,7 @@ def run_browser_developer_diagnostics(
             role="service",
             event="browser_developer_diagnostics_complete",
             module=logger.name,
-            fields=asdict(result),
+            fields=browser_developer_diagnostics_result_log_fields(result),
         )
     )
     return result
@@ -310,7 +313,9 @@ async def _run_browser_diagnostic_flow(
                     detail=cleanup_status,
                 )
             )
-        await _await_async_operation(browser_session.start(), timeout_seconds=timeout_seconds)
+        await _await_async_operation(
+            browser_session.start(), timeout_seconds=timeout_seconds
+        )
         cdp_url = _read_cdp_url(browser_session)
         checks.append(
             _check(
@@ -359,7 +364,11 @@ async def _run_browser_diagnostic_flow(
         viewport_height = 0
         attached = False
         if selected_target_id:
-            viewport_width, viewport_height, attached = await _probe_target_viewport_async(
+            (
+                viewport_width,
+                viewport_height,
+                attached,
+            ) = await _probe_target_viewport_async(
                 browser_session=browser_session,
                 client=client,
                 target_id=selected_target_id,

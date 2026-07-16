@@ -3,7 +3,6 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-from dataclasses import asdict
 from urllib.parse import quote, urljoin, urlsplit
 
 import requests
@@ -371,7 +370,6 @@ def _log_detection_complete(
                 "candidate_fingerprints": [
                     candidate.fingerprint for candidate in candidates
                 ],
-                "candidates": [asdict(candidate) for candidate in candidates],
             },
         )
     )

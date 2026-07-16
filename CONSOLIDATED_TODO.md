@@ -49,6 +49,7 @@ All work is listed below in one register. `Active` items have detailed completio
 | Active | R1 | CI/PR release-evidence summaries | Reviewer-surface outcome. |
 | Active | R2 | Role-mixing, import-graph, facade, direct-I/O, mutation-selection, and hygiene enforcement | Architecture enforcement outcome. |
 | Active | R3 | Service-quality coverage recovery | Retained-baseline outcome. |
+| Active | R6 | Bounded-log reduction telemetry and remediation review | Operator feedback outcome for attempted oversized standard events. |
 | Closed | R5 | Hash-verified dependency lock artifacts | Native Ubuntu CPython 3.12 wheelhouse and offline hash-locked install are verified. |
 | Active | S3 | PDF facade, rendering cache, and visual-heuristics simplification | Canonical PDF-boundary outcome. |
 | Active | S4 | Semantic WordPress shortcode ownership | WordPress boundary outcome. |
@@ -75,6 +76,7 @@ All work is listed below in one register. `Active` items have detailed completio
 
 ## Recently Closed
 
+- **Bounded structured logging (2026-07-16):** Standard events now apply deterministic byte, depth, node, collection, and text bounds; report and browser terminal events emit scalar summaries with retained audit references; CI rejects direct `fields=asdict(...)` serialization. Focused report/logging and browser suites passed, as did guarded live browser and OpenAI runs. The remaining broader architecture-enforcement work stays under R2; R6 owns reduction telemetry review.
 - **A7 (2026-07-14):** The retained 15-report corpus is now a required no-provider routing gate across 30 configured prompt routes. It confirms explicit policy selection, same-provider constraints, and zero lost retained evidence IDs; focused routing/compaction/fallback tests and the full suite pass.
 - **R5 (2026-07-15):** The canonical lock records SHA-256 hashes for all 177 active Ubuntu CPython 3.12 artifacts, including `numpy==2.4.2` from its official manylinux wheel. CI installs with `--require-hashes`; a native official-PyPI wheelhouse passed an offline clean install, while a tampered NumPy hash failed before package installation.
 - **R4 (2026-07-15):** Publication reads canonical SQLite usage plus projection status; normal bounded lag is accounted, while missing, invalid, or material lag stops the final public write without triggering a rebuild.
@@ -326,7 +328,7 @@ The original ten-item screenshot baseline is complete in the committed implement
 
 - **Title:** Enforce role boundaries, direct-I/O discipline, and controlled module growth
 - **Impact 4 / effort: 3**
-- **Context:** CI already enforces imports, forbidden patching, coverage, and mutation, but role mixing, direct-I/O drift, service-integration coverage, facade thickness, and long-file growth are not yet uniformly executable.
+- **Context:** CI enforces imports, forbidden patching, direct `fields=asdict(...)` rejection, coverage, and mutation, but role mixing, direct-I/O drift, service-integration coverage, facade thickness, and long-file growth are not yet uniformly executable.
 - **Benefit:** Architectural constraints prevent drift before merge instead of relying on manual review and retrospective refactors.
 - **Risks to avoid:** Use narrow, expiry-owned waivers and avoid noisy generic governance checks.
 - **Success criteria:**
@@ -347,6 +349,19 @@ The original ten-item screenshot baseline is complete in the committed implement
 - New behavior-focused coverage prioritizes ledger recovery, browser-worker lifecycle, and artifact-lineage failure paths.
 - Assertions cover returned contracts or persisted state, not coverage-only paths.
 - The quality baseline is refreshed only by a passing full CI run, records its exact SHA, and demonstrates no reduction in global/generator/orchestrator coverage.
+
+#### R6. Review bounded-log reduction telemetry and remediate recurring callers
+
+- **Title:** Review bounded-log reduction telemetry and remediate recurring callers
+- **Impact 4 / effort: 2**
+- **Context:** Standard structured logging now bounds nested values and emits `log_payload_reduced` only when an event exceeds the byte contract, but operators do not yet aggregate those events to distinguish legitimate high-cardinality summaries from callers that still attempt to serialize domain payloads.
+- **Benefit:** Repeated source/model/browser payload attempts become measurable remediation work, preserving useful operational summaries while reducing log volume and accidental content-retention risk.
+- **Risks to avoid:** Aggregate only bounded metadata, hashes, event/module identifiers, and counts; never reconstruct discarded content or create a second unrestricted log store.
+- **Success criteria:**
+
+- Release evidence reports reduction-event count, event/module grouping, attempted-size percentiles, and zero-content samples.
+- A thresholded review identifies recurring callers and links them to an owner or remediation item without exposing discarded values.
+- Tests prove deterministic aggregation, redaction preservation, and that the scorecard cannot contain source text, prompts, model output, browser terminal text, or credentials.
 
 #### R5. Add hash-verified dependency lock artifacts
 
@@ -418,4 +433,4 @@ Automation may plan, resume, retry, repair, validate, render, draft, hold, and n
 ## Audit Notes
 
 - This register replaces duplicated simplification context, migrated x100 intake, and repeated launch plans with source-neutral status rows. No task is excluded because of its origin.
-- The active backlog contains 30 outcome-owned items. Deferred, closed, and excluded rows remain visible above; any newly discovered work must be merged into an existing outcome or justified as a new one.
+- The active backlog contains 31 outcome-owned items. Deferred, closed, and excluded rows remain visible above; any newly discovered work must be merged into an existing outcome or justified as a new one.

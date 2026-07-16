@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import asdict
-
 import requests
 
 from src.contracts.browser_download import (
@@ -28,6 +26,9 @@ from src.services._browser_report_download._http.html_evidence import (
     _extract_text_excerpt,
     _html_to_text,
     _response_header_value,
+)
+from src.services._browser_report_download.logging import (
+    browser_download_result_log_fields,
 )
 from src.services._http_acquisition import execute_http_acquisition
 from src.utils.errors import AppError
@@ -221,7 +222,7 @@ def try_http_access_challenge_probe(
             role="service",
             event="browser_report_download_access_challenge_probe_complete",
             module=logger.name,
-            fields=asdict(result),
+            fields=browser_download_result_log_fields(result),
         )
     )
     return result
@@ -333,7 +334,7 @@ def try_static_email_gate_probe(
                     role="service",
                     event="browser_report_download_static_email_gate_probe_complete",
                     module=logger.name,
-                    fields=asdict(result),
+                    fields=browser_download_result_log_fields(result),
                 )
             )
             return result
@@ -396,7 +397,7 @@ def try_static_email_gate_probe(
             role="service",
             event="browser_report_download_static_email_gate_probe_complete",
             module=logger.name,
-            fields=asdict(result),
+            fields=browser_download_result_log_fields(result),
         )
     )
     return result
@@ -469,9 +470,10 @@ def _request_has_delivery_email(request: BrowserReportDownloadRequest) -> bool:
         if str(email or "").strip():
             return True
     for field in request.settings.identity_profile.fields:
-        if str(field.key or "").strip() == "work_email" and str(
-            field.value or ""
-        ).strip():
+        if (
+            str(field.key or "").strip() == "work_email"
+            and str(field.value or "").strip()
+        ):
             return True
     return False
 

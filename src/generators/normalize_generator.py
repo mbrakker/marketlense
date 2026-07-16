@@ -13,6 +13,22 @@ from src.services.schema_validator_service import validate_schema
 logger = logging.getLogger("market_lense.normalize_generator")
 
 
+def _payload_log_summary(payload: ReportPayload) -> dict[str, Any]:
+    return {
+        "schema_version": payload.schema_version,
+        "insight_count": len(payload.insights or []),
+        "taxonomy_count": len(payload.taxonomy or []),
+        "category_count": len(payload.categories or []),
+        "figure_asset_count": len(getattr(payload, "_figure_assets", []) or []),
+        "source_present": bool(payload.source),
+        "publisher_present": bool(payload.publisher),
+        "text_char_count": max(
+            0, coerce_int(getattr(payload, "_text_char_count", 0), 0)
+        ),
+        "text_not_available": bool(getattr(payload, "_text_not_available", False)),
+    }
+
+
 def normalize_report(payload: ReportPayload, ctx: RunContext) -> ReportPayload:
     logger.info(
         log_event(
@@ -20,7 +36,7 @@ def normalize_report(payload: ReportPayload, ctx: RunContext) -> ReportPayload:
             role="generator",
             event="normalize_report_start",
             module=logger.name,
-            fields={"payload": payload.to_dict()},
+            fields=_payload_log_summary(payload),
         )
     )
     normalized = _normalize_report_payload(payload)
@@ -30,7 +46,7 @@ def normalize_report(payload: ReportPayload, ctx: RunContext) -> ReportPayload:
             role="generator",
             event="normalize_report_complete",
             module=logger.name,
-            fields={"payload": normalized.to_dict()},
+            fields=_payload_log_summary(normalized),
         )
     )
     return normalized

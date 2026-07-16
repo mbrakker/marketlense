@@ -49,6 +49,8 @@ jobs:
         run: python scripts/ci/check_refactor_movement_evidence.py
       - name: Forbidden patching gate
         run: python scripts/ci/check_forbidden_patching.py
+      - name: Bounded logging gate
+        run: python scripts/ci/check_bounded_logging.py
       - name: Repository hygiene gate
         run: python scripts/ci/check_repository_hygiene.py
       - name: Quality ledger gate

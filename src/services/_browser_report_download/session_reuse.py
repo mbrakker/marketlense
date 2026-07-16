@@ -4,7 +4,6 @@ import json
 import logging
 import shutil
 import time
-from dataclasses import asdict
 from hashlib import sha256
 from pathlib import Path
 from typing import Any
@@ -15,6 +14,9 @@ from src.contracts.browser_download import (
     BrowserDownloadSessionReusePolicy,
 )
 from src.contracts.run_context import RunContext
+from src.services._browser_report_download.logging import (
+    browser_session_reuse_log_fields,
+)
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.browser_report_download_service.session_reuse")
@@ -61,7 +63,9 @@ def resolve_browser_session_reuse(
         default_base_dir=default_base_dir,
     )
     cleanup_removed_count = (
-        _cleanup_expired_session_dirs(base_dir) if normalized_policy.cleanup_expired else 0
+        _cleanup_expired_session_dirs(base_dir)
+        if normalized_policy.cleanup_expired
+        else 0
     )
     mode = _normalize_mode(normalized_policy.mode)
     session_key = str(normalized_policy.session_key or "").strip()
@@ -239,7 +243,9 @@ def _cross_publisher_rejection_reason(
     existing = index.get(key_hash)
     if not isinstance(existing, dict):
         return ""
-    existing_scope = _normalize_publisher_scope(str(existing.get("publisher_scope") or ""))
+    existing_scope = _normalize_publisher_scope(
+        str(existing.get("publisher_scope") or "")
+    )
     if existing_scope and existing_scope != publisher_scope:
         return "cross_publisher_scope_mismatch"
     return ""
@@ -391,9 +397,9 @@ def _log_resolution(
             role="service",
             event="browser_report_download_session_reuse_resolved",
             module=logger.name,
-            fields={
-                "normalized_url": normalized_url,
-                **asdict(decision),
-            },
+            fields=browser_session_reuse_log_fields(
+                normalized_url=normalized_url,
+                decision=decision,
+            ),
         )
     )

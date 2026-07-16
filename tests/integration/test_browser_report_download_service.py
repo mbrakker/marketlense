@@ -15,6 +15,7 @@ from src.contracts.browser_download import (
     BrowserDownloadSettings,
     BrowserReportDownloadRequest,
 )
+from src.contracts.logging import MAX_LOG_EVENT_BYTES
 from src.contracts.run_context import RunContext
 from src.services.browser_report_download_service import (
     download_report_with_browser_use,
@@ -161,5 +162,32 @@ def test_browser_report_download_service_local_guarded(
     assert Path(str(response.downloaded_file_path)).exists()
     events = _events(caplog)
     assert any(event["event"] == "browser_report_download_start" for event in events)
-    assert any(event["event"] == "browser_report_download_complete" for event in events)
+    completion = next(
+        event
+        for event in events
+        if event["event"] == "browser_report_download_complete"
+    )
+    completion_serialized = json.dumps(completion, ensure_ascii=True)
+    assert len(completion_serialized.encode("utf-8")) <= MAX_LOG_EVENT_BYTES
+    assert "ops@example.com" not in completion_serialized
+    assert "terminal_text_excerpt" not in completion["fields"]
+    assert "encountered_form_fields" not in completion["fields"]
+    assert {
+        "outcome",
+        "route_kind",
+        "route_family",
+        "route_status",
+        "normalized_url_sha256",
+        "final_host",
+        "artifact_identity",
+        "artifact_sha256",
+        "artifact_size_bytes",
+        "route_step_count",
+        "confirmation_score",
+        "blocker_code",
+        "html_snapshot_audit_ref",
+        "screenshot_audit_ref",
+    }.issubset(completion["fields"])
+    assert completion["fields"]["artifact_sha256"]
+    assert "log_collection_reduced" not in completion["fields"]
     assert_logs_have_required_fields(events)

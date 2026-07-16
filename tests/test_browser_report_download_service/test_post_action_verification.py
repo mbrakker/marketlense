@@ -81,8 +81,10 @@ def test_browser_use_route_steps_are_enriched_with_post_action_verification(
     assert_logs_have_required_fields(verification_events)
     assert verification_events[-1]["fields"]["validation_result"] == "verified"
     assert verification_events[-1]["fields"]["verification_status"] == "verified"
-    assert verification_events[-1]["fields"]["expected_evidence"] == ["artifact"]
-    assert verification_events[-1]["fields"]["observed_evidence"] == ["artifact"]
+    for field_name in ("expected_evidence", "observed_evidence"):
+        evidence = verification_events[-1]["fields"][field_name]
+        assert evidence[0]["redaction"] == "***REDACTED***"
+        assert evidence[0]["character_count"] == len("artifact")
 
 
 def test_browser_use_route_step_missing_post_action_verification_fails(

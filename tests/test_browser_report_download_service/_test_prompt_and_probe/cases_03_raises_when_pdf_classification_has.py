@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 def test_download_report_with_browser_use_raises_when_pdf_classification_has_no_verifiable_artifact(
     tmp_path: Path,
     run_context,
@@ -45,6 +46,7 @@ def test_download_report_with_browser_use_raises_when_pdf_classification_has_no_
     assert excinfo.value.context["screenshot_path"]
     assert Path(str(excinfo.value.context["screenshot_path"])).exists()
     assert excinfo.value.context["network_event_count"] == 0
+
 
 def test_download_report_with_browser_use_adopts_external_pdf_attachment(
     tmp_path: Path,
@@ -133,6 +135,7 @@ def test_download_report_with_browser_use_adopts_external_pdf_attachment(
     assert str(tmp_path / "downloads") in str(downloaded_path)
     assert downloaded_path.read_bytes().startswith(b"%PDF-")
 
+
 def test_download_report_with_browser_use_materializes_browser_use_temp_pdf_before_cleanup(
     tmp_path: Path,
     run_context,
@@ -214,6 +217,7 @@ def test_download_report_with_browser_use_materializes_browser_use_temp_pdf_befo
     assert downloaded_path.name == "temp-report.pdf"
     assert downloaded_path.read_bytes().startswith(b"%PDF-")
 
+
 def test_download_report_with_browser_use_raises_for_unverified_pdf_claim_with_spurious_blocker(
     tmp_path: Path,
     run_context,
@@ -271,6 +275,7 @@ def test_download_report_with_browser_use_raises_for_unverified_pdf_claim_with_s
         code="browser_download_unverified_pdf_claim",
         retryable=True,
     )
+
 
 def test_download_report_with_browser_use_raises_for_invalid_pdf_stub(
     tmp_path: Path,
@@ -331,6 +336,7 @@ def test_download_report_with_browser_use_raises_for_invalid_pdf_stub(
         retryable=True,
     )
 
+
 def test_download_report_with_browser_use_direct_pdf_skips_browser_config_requirements(
     tmp_path: Path,
     run_context,
@@ -386,6 +392,7 @@ def test_download_report_with_browser_use_direct_pdf_skips_browser_config_requir
     assert response.outcome == "downloaded"
     assert response.downloaded_file_path is not None
 
+
 def test_download_report_with_browser_use_prefers_candidate_pdf_probe(
     tmp_path: Path,
     run_context,
@@ -433,6 +440,7 @@ def test_download_report_with_browser_use_prefers_candidate_pdf_probe(
     assert response.outcome == "downloaded"
     assert response.used_candidate_pdf_url is True
     assert response.route_family == "direct_pdf_probe"
+
 
 def test_download_report_with_browser_use_respects_planned_browser_email_form_after_candidate_pdf_probe_fails(
     tmp_path: Path,
@@ -492,6 +500,7 @@ def test_download_report_with_browser_use_respects_planned_browser_email_form_af
     assert response.route_kind == "email_delivery"
     assert response.route_family == "browser_email_form"
     assert response.used_candidate_pdf_url is False
+
 
 def test_download_report_with_browser_use_salvages_empty_browser_result_from_candidate_pdf(
     tmp_path: Path,
@@ -557,6 +566,7 @@ def test_download_report_with_browser_use_salvages_empty_browser_result_from_can
     assert response.browser_had_structured_result is False
     assert response.used_candidate_pdf_url is True
 
+
 def test_download_report_with_browser_use_logs_discovery_prompt_context(
     tmp_path: Path,
     caplog,
@@ -615,9 +625,9 @@ def test_download_report_with_browser_use_logs_discovery_prompt_context(
     assert fields["candidate_canonical_url"] == candidate_trace.canonical_url
     assert fields["candidate_source_page_urls"] == ["https://example.com/insights"]
     assert fields["publisher_recommended_discovery_route_kind"] == "browser_render"
-    assert "redirect" in fields["rendered_user_prompt"].casefold()
-    assert "https://example.com/insights" in fields["rendered_user_prompt"]
+    assert fields["rendered_user_prompt"]["redaction"] == "***REDACTED***"
     assert fields["prompt_variables"]["route_family_hint"] == "browser_tracker_redirect"
+
 
 def test_download_report_with_browser_use_logs_onsite_prompt_guidance(
     tmp_path: Path,
@@ -693,10 +703,11 @@ def test_download_report_with_browser_use_logs_onsite_prompt_guidance(
     ]
     assert len(prompt_events) == 1
     fields = prompt_events[0]["fields"]
-    assert "on-site content" in fields["rendered_user_prompt"].casefold()
+    assert fields["rendered_user_prompt"]["redaction"] == "***REDACTED***"
     assert fields["prompt_variables"]["route_family_hint"] == "browser_onsite_report"
     assert response.route_kind == "onsite_report"
     assert response.outcome == "captured"
+
 
 def test_download_report_with_browser_use_logs_remembered_route_step_hints(
     tmp_path: Path,
@@ -759,15 +770,9 @@ def test_download_report_with_browser_use_logs_remembered_route_step_hints(
     ]
     assert len(prompt_events) == 1
     rendered_user_prompt = prompt_events[0]["fields"]["rendered_user_prompt"]
-    assert (
-        "Replay these remembered structured route steps before broader exploration:"
-        in rendered_user_prompt
-    )
-    assert "1. click Allow all -> Accepted cookies" in rendered_user_prompt
-    assert (
-        "2. extract report article -> Captured the on-site report body"
-        in rendered_user_prompt
-    )
+    assert rendered_user_prompt["redaction"] == "***REDACTED***"
+    assert rendered_user_prompt["character_count"] > 0
+
 
 __all__ = [
     "test_download_report_with_browser_use_raises_when_pdf_classification_has_no_verifiable_artifact",

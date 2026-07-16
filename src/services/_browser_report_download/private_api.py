@@ -10,7 +10,8 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import asdict, replace
+from dataclasses import replace
+from hashlib import sha256
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote, urljoin, urlsplit
@@ -30,6 +31,9 @@ from src.contracts.http_acquisition import (
 )
 from src.contracts.run_context import RunContext
 from src.services._browser_report_download.http import try_direct_pdf_download
+from src.services._browser_report_download.logging import (
+    browser_download_result_log_fields,
+)
 from src.services._http_acquisition import execute_http_acquisition
 from src.utils.errors import AppError
 from src.utils.logging import log_event
@@ -255,8 +259,8 @@ def _try_private_api_evidence(
             fields={
                 **common_fields,
                 "validation_result": "verified",
-                "selected_pdf_url": pdf_url,
-                "result": asdict(result),
+                "selected_pdf_url_sha256": sha256(pdf_url.encode("utf-8")).hexdigest(),
+                **browser_download_result_log_fields(result),
             },
         )
     )

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
-from dataclasses import asdict, replace
+from dataclasses import replace
 from pathlib import Path
 from urllib.parse import unquote, urljoin, urlsplit
 
@@ -30,6 +30,9 @@ from src.services._browser_report_download._http.html_evidence import (
 )
 from src.services._browser_report_download._http.pdf_transfer import (
     try_direct_pdf_download,
+)
+from src.services._browser_report_download.logging import (
+    browser_download_result_log_fields,
 )
 from src.services._http_acquisition import execute_http_acquisition
 from src.utils.errors import AppError
@@ -253,7 +256,7 @@ def try_report_page_pdf_link_download(
                 role="service",
                 event="browser_report_download_html_pdf_link_probe_complete",
                 module=logger.name,
-                fields=asdict(result),
+                fields=browser_download_result_log_fields(result),
             )
         )
         return result

@@ -305,7 +305,14 @@ def upsert_signal_candidates(
             role="service",
             event="signal_candidate_store_upsert_complete",
             module=logger.name,
-            fields=asdict(response),
+            fields={
+                "schema_version": response.schema_version,
+                "extraction_request_id": response.extraction_request_id,
+                "candidate_count": response.candidate_count,
+                "group_count": response.group_count,
+                "stale_candidate_count": response.stale_candidate_count,
+                "stale_group_count": response.stale_group_count,
+            },
         )
     )
     return response
