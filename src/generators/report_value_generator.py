@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import re
-from dataclasses import asdict
 from statistics import pstdev
 from urllib.parse import urlsplit
 
@@ -252,7 +251,10 @@ def rank_publisher_resources(
             module=logger.name,
             fields={
                 "publisher_name": response.publisher_name,
-                "ranked_resources": [asdict(item) for item in response.items],
+                "ranked_resource_count": len(response.items),
+                "top_rank_score": response.items[0].rank_score
+                if response.items
+                else 0.0,
             },
         )
     )

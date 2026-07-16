@@ -118,6 +118,28 @@ __all__ = [
 ]
 
 
+def _artifact_family_statuses(artifacts_payload: Any) -> dict[str, str]:
+    """Return only durable artifact-family state, never generated artifact content."""
+
+    if not isinstance(artifacts_payload, dict):
+        return {}
+    statuses: dict[str, str] = {}
+    for family, artifact in sorted(
+        artifacts_payload.items(), key=lambda item: str(item[0])
+    ):
+        if isinstance(artifact, dict):
+            status = (
+                artifact.get("status")
+                or artifact.get("validation_status")
+                or artifact.get("state")
+                or "present"
+            )
+        else:
+            status = "present"
+        statuses[str(family)] = str(status)
+    return statuses
+
+
 def run_report_analysis(
     runtime: ReportRuntimeState,
     source: ReportSourceState,
@@ -612,15 +634,6 @@ def run_report_analysis(
     data_dict["regeneration_attempts"] = [
         asdict(item) for item in regeneration_attempts
     ]
-    logger.info(
-        log_event(
-            mode_ctx,
-            role="orchestrator",
-            event="report_payload_ready",
-            module=logger.name,
-            fields={"payload": data_dict},
-        )
-    )
     snapshot_name = f"analysis_{runtime.analysis_mode}"
     snapshot_path = dependencies.analysis_store_pack(
         AnalysisStorePackRequest(
@@ -634,6 +647,31 @@ def run_report_analysis(
         mode_ctx,
     ).output_path
     mode_evidence_paths[snapshot_name] = snapshot_path
+    logger.info(
+        log_event(
+            mode_ctx,
+            role="orchestrator",
+            event="report_payload_ready",
+            module=logger.name,
+            fields={
+                "file_id": runtime.file.file_id,
+                "output_schema_version": normalized_payload.schema_version,
+                "artifact_family_statuses": _artifact_family_statuses(
+                    artifacts_payload
+                ),
+                "evidence_pack_names": sorted(str(name) for name in packs),
+                "evidence_pack_count": len(packs),
+                "validation_status": validation_report.status
+                if validation_report
+                else "not_run",
+                "validation_issue_count": len(validation_report.issues)
+                if validation_report
+                else 0,
+                "category_count": len(category_assignment.categories),
+                "retained_snapshot_path": str(snapshot_path),
+            },
+        )
+    )
 
     return ReportAnalysisState(
         schema_version="1.0",

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 def test_run_report_analysis_polls_vector_store_status_until_ready(
     tmp_path,
     caplog,
@@ -74,6 +75,72 @@ def test_run_report_analysis_polls_vector_store_status_until_ready(
         for event in events
     )
 
+
+def test_report_payload_ready_logs_only_bounded_summary(
+    tmp_path,
+    caplog,
+    assert_logs_have_required_fields,
+):
+    caplog.set_level(logging.INFO, logger="market_lense.report_analysis_orchestrator")
+    runtime = _runtime(tmp_path)
+    source = _source(runtime)
+    source_paragraph = "Known source paragraph that must not enter standard logs. " * 8
+    generated_linkedin = "Generated LinkedIn paragraph that must not enter logs. " * 8
+    source.payload.commentary = source_paragraph
+    selection = _selection(runtime, source)
+    deps = _deps(
+        generate_evidence_packs=lambda **kwargs: {
+            "doc_map": {"docMap": {"title": "Doc Title", "publisher": "Publisher"}}
+        },
+        generate_artifacts=lambda **kwargs: _artifacts(
+            linkedin_post=generated_linkedin
+        ),
+        run_validation=lambda *args, **kwargs: ValidationReport(
+            schema_version="1.1",
+            status="pass",
+            issues=[],
+            severity="pass",
+            source_path=str(tmp_path / "out" / "validation.json"),
+        ),
+    )
+
+    run_report_analysis(
+        runtime,
+        source,
+        selection,
+        VectorStoreIndexingState(
+            vector_store_id="vs_1",
+            openai_file_id="file_1",
+            vector_store_status="completed",
+            indexed_at_utc="2026-01-01T00:00:00Z",
+            last_error=None,
+        ),
+        deps,
+    )
+
+    events = _orchestrator_events(caplog)
+    assert_logs_have_required_fields(events)
+    ready = next(event for event in events if event["event"] == "report_payload_ready")
+    serialized = json.dumps(ready, ensure_ascii=True)
+    assert source_paragraph not in serialized
+    assert generated_linkedin not in serialized
+    assert set(ready["fields"]) == {
+        "artifact_family_statuses",
+        "category_count",
+        "evidence_pack_count",
+        "evidence_pack_names",
+        "file_id",
+        "output_schema_version",
+        "retained_snapshot_path",
+        "validation_issue_count",
+        "validation_status",
+    }
+    assert ready["fields"]["retained_snapshot_path"].endswith(
+        "analysis_vector_store.json"
+    )
+    assert len(serialized.encode("utf-8")) <= MAX_LOG_EVENT_BYTES
+
+
 def test_run_report_analysis_surfaces_vector_store_timeout(
     tmp_path,
     external_boundary_mocks_only,
@@ -120,6 +187,7 @@ def test_run_report_analysis_surfaces_vector_store_timeout(
     )
     assert exc_info.value.context["last_status"] == "in_progress"
     assert exc_info.value.context["poll_schedule_s"] == [0.5, 1.0, 2.0, 5.0]
+
 
 def test_start_vector_store_indexing_reuses_vector_store_by_md5(
     tmp_path,
@@ -188,6 +256,7 @@ def test_start_vector_store_indexing_reuses_vector_store_by_md5(
         for event in events
     )
 
+
 def test_artifact_render_task_contract_round_trip():
     ctx = RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
     task = ArtifactRenderTask(
@@ -203,6 +272,7 @@ def test_artifact_render_task_contract_round_trip():
     assert restored == task
     assert restored.variables["report_title"] == "Report"
     assert restored.ctx.task_id == "t"
+
 
 def test_run_report_analysis_schedules_artifact_batches_with_orchestrator_budget(
     tmp_path,
@@ -321,6 +391,7 @@ def test_run_report_analysis_schedules_artifact_batches_with_orchestrator_budget
     assert schedule_events[0]["fields"]["global_max_in_flight"] == 2
     assert schedule_events[1]["fields"]["max_workers"] == 2
 
+
 def test_run_report_analysis_logs_artifact_scheduler_failure_propagation(
     tmp_path,
     caplog,
@@ -409,6 +480,7 @@ def test_run_report_analysis_logs_artifact_scheduler_failure_propagation(
         for event in events
     )
 
+
 def test_run_report_analysis_falls_back_when_validation_raises(tmp_path):
     runtime = _runtime(tmp_path)
     source = _source(runtime)
@@ -477,6 +549,7 @@ def test_run_report_analysis_falls_back_when_validation_raises(tmp_path):
     assert "validation_regen_attempt_1" in state.evidence_paths
     assert "analysis_vector_store" in stored
 
+
 def test_run_report_analysis_surfaces_doc_map_empty(tmp_path, assert_app_error):
     runtime = _runtime(tmp_path)
     source = _source(runtime)
@@ -517,6 +590,7 @@ def test_run_report_analysis_surfaces_doc_map_empty(tmp_path, assert_app_error):
         severity="error",
     )
     assert exc_info.value.context["sections_count"] == 0
+
 
 def test_run_report_analysis_uses_context_fit_categories_not_taxonomy_tags(tmp_path):
     runtime = _runtime(tmp_path)
@@ -626,6 +700,7 @@ def test_run_report_analysis_uses_context_fit_categories_not_taxonomy_tags(tmp_p
         "ai_automation",
     ]
 
+
 def test_run_report_analysis_returns_complete_report_payload_contract(
     tmp_path,
     assert_no_defaulted_required_fields,
@@ -669,6 +744,7 @@ def test_run_report_analysis_returns_complete_report_payload_contract(
         state.payload.quote, sentinel_values={"Unknown"}
     )
     assert_no_defaulted_required_fields(state.payload.figure)
+
 
 def test_run_report_analysis_fails_on_incomplete_report_payload_contract(
     tmp_path,
@@ -736,6 +812,7 @@ def test_run_report_analysis_fails_on_incomplete_report_payload_contract(
     assert exc_info.value.context["stage"] == "pre_validation"
     assert "insights[0]" in exc_info.value.context["missing_fields"]
     assert "quote.text" in exc_info.value.context["missing_fields"]
+
 
 __all__ = [
     "test_run_report_analysis_polls_vector_store_status_until_ready",

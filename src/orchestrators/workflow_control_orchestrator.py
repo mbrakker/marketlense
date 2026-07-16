@@ -607,7 +607,19 @@ def resolve_run_intent(
             role="orchestrator",
             event="workflow_run_intent_resolved",
             module=logger.name,
-            fields=asdict(resolved),
+            fields={
+                "schema_version": resolved.schema_version,
+                "status": resolved.status,
+                "intent_key": resolved.intent_key,
+                "workflow": resolved.workflow,
+                "preflight_profile": resolved.preflight_profile,
+                "budget_profile": resolved.budget_profile,
+                "resume_stage": resolved.resume_stage,
+                "side_effect_count": len(resolved.side_effect_plan),
+                "alternative_count": len(resolved.alternatives),
+                "blocker_count": len(resolved.blockers),
+                "explanation": resolved.explanation,
+            },
         )
     )
     return resolved
@@ -677,7 +689,22 @@ def build_pipeline_execution_plan(
             role="orchestrator",
             event="workflow_pipeline_execution_plan",
             module=logger.name,
-            fields=asdict(plan),
+            fields={
+                "schema_version": plan.schema_version,
+                "intent_key": plan.intent_key,
+                "workflow": plan.workflow,
+                "profile": plan.profile,
+                "executable": plan.executable,
+                "idempotency_key": plan.idempotency_key,
+                "ordered_step_count": len(plan.ordered_steps),
+                "skipped_step_count": len(plan.skipped_steps),
+                "blocked_step_count": len(plan.blocked_steps),
+                "required_credential_count": len(plan.required_credentials),
+                "expected_artifact_count": len(plan.expected_artifacts),
+                "planned_side_effect_count": len(plan.planned_side_effects),
+                "blocker_count": len(plan.blockers),
+                "budget_boundary_count": len(plan.budget_boundaries),
+            },
         )
     )
     return plan
@@ -818,7 +845,14 @@ def evaluate_publish_policy(
             role="orchestrator",
             event="workflow_publish_policy_decision",
             module=logger.name,
-            fields=asdict(decision),
+            fields={
+                "schema_version": decision.schema_version,
+                "action": decision.action,
+                "reason": decision.reason,
+                "min_confidence": decision.min_confidence,
+                "repair_supported": decision.repair_supported,
+                "override_used": decision.override_used,
+            },
         )
     )
     return decision
@@ -889,7 +923,16 @@ def build_publish_remediation_from_validation(
             role="orchestrator",
             event="workflow_publish_remediation_resolved",
             module=logger.name,
-            fields=asdict(workflow),
+            fields={
+                "schema_version": workflow.schema_version,
+                "decision": workflow.decision,
+                "policy_mode": workflow.policy_mode,
+                "value_band": workflow.value_band,
+                "warning_count": workflow.warning_count,
+                "deferred_grounding_count": workflow.deferred_grounding_count,
+                "hard_fail_count": workflow.hard_fail_count,
+                "target_count": len(workflow.targets),
+            },
         )
     )
     return workflow
@@ -983,7 +1026,18 @@ def evaluate_run_health_gate(
             role="orchestrator",
             event="workflow_run_health_gate_decision",
             module=logger.name,
-            fields=asdict(decision),
+            fields={
+                "schema_version": decision.schema_version,
+                "workflow": decision.workflow,
+                "outcome": decision.outcome,
+                "action": decision.action,
+                "reason": decision.reason,
+                "warning_count": decision.warning_count,
+                "blocker_count": len(decision.blockers),
+                "policy_version": decision.policy_version,
+                "threshold_override_used": decision.threshold_override_used,
+                "scorecard_run_id": decision.scorecard_run_id,
+            },
         )
     )
     return decision
@@ -1045,7 +1099,21 @@ def plan_autonomous_run(
             role="orchestrator",
             event="workflow_autonomous_supervisor_plan",
             module=logger.name,
-            fields=asdict(plan),
+            fields={
+                "schema_version": plan.schema_version,
+                "selected_action": plan.selected_action,
+                "workflow": plan.workflow,
+                "run_id": plan.run_id,
+                "resume_stage": plan.resume_stage,
+                "idempotency_scope": plan.idempotency_scope,
+                "idempotency_key": plan.idempotency_key,
+                "retry_action": plan.retry_action,
+                "health_gate_outcome": plan.health_gate_outcome,
+                "blocker_count": len(plan.blockers),
+                "expected_side_effect_count": len(plan.expected_side_effects),
+                "preflight_passed": plan.preflight_passed,
+                "validation_status": plan.validation_status,
+            },
         )
     )
     return plan
@@ -1119,7 +1187,17 @@ def dispatch_autonomous_run(
             role="orchestrator",
             event="workflow_autonomous_supervisor_dispatched",
             module=logger.name,
-            fields=asdict(execution),
+            fields={
+                "schema_version": execution.schema_version,
+                "selected_action": execution.selected_action,
+                "workflow": execution.workflow,
+                "run_id": execution.run_id,
+                "idempotency_key": execution.idempotency_key,
+                "status": execution.status,
+                "outcome": execution.outcome,
+                "attempt_count": execution.attempt_count,
+                "error_code": execution.error_code,
+            },
         )
     )
     return execution
@@ -1237,7 +1315,14 @@ def evaluate_pre_llm_data_quality(
             role="orchestrator",
             event="workflow_pre_llm_data_quality_decision",
             module=logger.name,
-            fields=asdict(decision),
+            fields={
+                "schema_version": decision.schema_version,
+                "outcome": decision.outcome,
+                "expensive_work_allowed": decision.expensive_work_allowed,
+                "reason": decision.reason,
+                "remediation": decision.remediation,
+                "source_signal_count": len(decision.source_signals),
+            },
         )
     )
     return decision
@@ -1376,7 +1461,14 @@ def run_due_mail_delivery_requests(
             role="orchestrator",
             event="workflow_mail_delivery_run_complete",
             module=logger.name,
-            fields=asdict(run_result),
+            fields={
+                "schema_version": run_result.schema_version,
+                "processed_count": run_result.processed_count,
+                "succeeded_count": run_result.succeeded_count,
+                "deferred_count": run_result.deferred_count,
+                "failed_count": run_result.failed_count,
+                "result_count": len(run_result.results),
+            },
         )
     )
     return run_result

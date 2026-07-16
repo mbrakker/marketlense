@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import asdict
 from pathlib import Path
 
 import yaml
@@ -55,6 +54,7 @@ _SENSITIVE_REQUIRED_SELECT_TOKENS = {
     "newsletter",
 }
 
+
 def upsert_browser_download_identity_fields(
     request: BrowserDownloadIdentityFieldUpsertRequest,
     ctx: RunContext,
@@ -104,7 +104,12 @@ def upsert_browser_download_identity_fields(
             role="service",
             event="browser_download_identity_upsert_complete",
             module=logger.name,
-            fields=asdict(response),
+            fields={
+                "schema_version": response.schema_version,
+                "path": response.path,
+                "added_field_count": len(response.added_field_keys),
+                "total_fields": response.total_fields,
+            },
         )
     )
     return response
@@ -179,7 +184,14 @@ def upsert_browser_download_required_select_overrides(
             role="service",
             event="browser_download_required_select_upsert_complete",
             module=logger.name,
-            fields=asdict(response),
+            fields={
+                "schema_version": response.schema_version,
+                "path": response.path,
+                "proposal_count": len(response.proposals),
+                "applied_count": response.applied_count,
+                "refused_count": response.refused_count,
+                "unchanged_count": response.unchanged_count,
+            },
         )
     )
     return response
@@ -367,7 +379,9 @@ def _required_select_value(
 ) -> tuple[str, str]:
     if not family or not options:
         return "", ""
-    option_by_key = {normalize_browser_download_identity_key(value): value for value in options}
+    option_by_key = {
+        normalize_browser_download_identity_key(value): value for value in options
+    }
     for field in identity_profile.fields:
         if family not in identity_field_match_tokens(field) and field.key != family:
             continue
@@ -375,7 +389,9 @@ def _required_select_value(
             key = normalize_browser_download_identity_key(candidate)
             if key in option_by_key:
                 return option_by_key[key], "identity_fact"
-    default = approved_defaults.get(family) or approved_defaults.get(family.replace("_", " "))
+    default = approved_defaults.get(family) or approved_defaults.get(
+        family.replace("_", " ")
+    )
     default_key = normalize_browser_download_identity_key(default)
     if default_key in option_by_key:
         return option_by_key[default_key], "approved_default"
@@ -446,5 +462,6 @@ def _upsert_host_override(
         )
         changed = True
     return next_overrides, changed, status if not changed else "applied"
+
 
 __all__ = [name for name in globals() if not name.startswith("__")]

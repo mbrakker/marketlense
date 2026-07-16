@@ -2,7 +2,10 @@
 from __future__ import annotations
 
 from pathlib import Path as _SplitPath
-__file__ = str(_SplitPath(__file__).resolve().parent.parent / "test_report_analysis_generator.py")
+
+__file__ = str(
+    _SplitPath(__file__).resolve().parent.parent / "test_report_analysis_generator.py"
+)
 
 import json
 
@@ -56,6 +59,7 @@ from src.generators.report_analysis_generator import (
     start_vector_store_indexing,
     VectorStoreIndexingState,
 )
+from src.contracts.logging import MAX_LOG_EVENT_BYTES
 
 from src.generators.report_generation_dependencies import (
     ReportAnalysisDependencies,
@@ -68,6 +72,7 @@ from src.orchestrators import retry_orchestrator as retry_orch
 from src.orchestrators.report_analysis_orchestrator import run_report_analysis
 
 from src.utils.errors import AppError
+
 
 def _runtime(tmp_path: Path) -> ReportRuntimeState:
     file = DriveFile(
@@ -111,6 +116,7 @@ def _runtime(tmp_path: Path) -> ReportRuntimeState:
         parallel_within_file=False,
     )
 
+
 def _payload() -> ReportPayload:
     return ReportPayload(
         schema_version="1.1",
@@ -123,6 +129,7 @@ def _payload() -> ReportPayload:
         source="https://example.com",
         publisher="",
     )
+
 
 def _artifacts(**overrides) -> dict:
     payload = {
@@ -206,6 +213,7 @@ def _artifacts(**overrides) -> dict:
     payload.update(overrides)
     return payload
 
+
 def _source(runtime: ReportRuntimeState) -> ReportSourceState:
     return ReportSourceState(
         schema_version="1.0",
@@ -235,6 +243,7 @@ def _source(runtime: ReportRuntimeState) -> ReportSourceState:
         pdf_context_for_tasks=None,
     )
 
+
 def _selection(
     runtime: ReportRuntimeState, source: ReportSourceState
 ) -> ReportSelectionState:
@@ -246,6 +255,7 @@ def _selection(
         rank_usage={"prompt_tokens": 1, "completion_tokens": 2, "total_tokens": 3},
         candidate_count=0,
     )
+
 
 def _fit_response(
     *,
@@ -275,6 +285,7 @@ def _fit_response(
         model="gpt-5-mini",
         raw_response="{}",
     )
+
 
 def _deps(
     *,
@@ -317,6 +328,7 @@ def _deps(
     )
     return replace(seeded, **overrides)
 
+
 def _orchestrator_events(caplog) -> list[dict]:
     parsed: list[dict] = []
     for record in caplog.records:
@@ -329,14 +341,20 @@ def _orchestrator_events(caplog) -> list[dict]:
     return parsed
 
 
-
 __all__ = [
     name
     for name in globals()
     if name
     not in {
-        '__name__', '__annotations__', '__doc__', '__spec__',
-        '__file__', '__package__', '__loader__', '__cached__',
-        '__builtins__', '_SplitPath',
+        "__name__",
+        "__annotations__",
+        "__doc__",
+        "__spec__",
+        "__file__",
+        "__package__",
+        "__loader__",
+        "__cached__",
+        "__builtins__",
+        "_SplitPath",
     }
 ]

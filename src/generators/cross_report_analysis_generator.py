@@ -544,10 +544,10 @@ def build_cross_report_publish_package(
     }
     body_html, html_text = build_cross_report_html_document(
         generated=generated,
-            agreement_result=agreement_result,
-            source_metadata=source_metadata,
-            machine_metadata=machine_metadata,
-            file_id=package_id,
+        agreement_result=agreement_result,
+        source_metadata=source_metadata,
+        machine_metadata=machine_metadata,
+        file_id=package_id,
         publish_entity_metadata=publish_entity_metadata,
     )
     package = CrossReportPublishPackage(
@@ -834,7 +834,11 @@ def generate_cross_report_analysis(
                 "evidence_map_keys": sorted(result.evidence_map.keys()),
                 "provider_request_id": response.request_id or "",
                 "validation_status": validation_result.status,
-                "post_processed_output": asdict(result),
+                "output_schema_version": result.schema_version,
+                "selected_source_count": len(result.selected_sources),
+                "evidence_count": len(result.evidence),
+                "raw_metric_count": len(result.raw_metrics),
+                "prompt_hash_count": len(result.prompt_hashes),
             },
         )
     )

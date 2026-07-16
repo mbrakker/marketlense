@@ -4,6 +4,10 @@ from dataclasses import dataclass, field
 
 
 LOG_EVENT_SCHEMA_VERSION = "1.1"
+MAX_LOG_EVENT_BYTES = 16 * 1024
+MAX_LOG_COLLECTION_ITEMS = 32
+MAX_LOG_FIELD_DEPTH = 4
+MAX_LOG_FIELD_NODES = 128
 REQUIRED_LOG_EVENT_FIELDS = frozenset(
     {
         "run_id",

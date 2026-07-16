@@ -7,7 +7,6 @@ import json
 import logging
 import sqlite3
 from collections import Counter
-from dataclasses import asdict
 from datetime import UTC, datetime
 from typing import Any
 
@@ -531,8 +530,11 @@ def reconcile_claim_embedding_queue(
             event="claim_embedding_queue_reconcile_complete",
             module=logger.name,
             fields={
-                **asdict(response),
+                "schema_version": response.schema_version,
+                "run_id": response.run_id,
                 "transition_count": len(changed),
+                "classification_count": len(response.classification_counts),
+                "provider_calls_avoided": response.provider_calls_avoided,
                 "dry_run": request.dry_run,
             },
         )

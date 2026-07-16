@@ -117,7 +117,15 @@ def evaluate_crop_qa_escalation(
             role="generator",
             event="crop_qa_escalation_complete",
             module=logger.name,
-            fields=asdict(response),
+            fields={
+                "schema_version": response.schema_version,
+                "decision_count": len(response.decisions),
+                "eligible_count": response.eligible_count,
+                "model_call_count": response.model_call_count,
+                "repair_count": response.repair_count,
+                "reject_count": response.reject_count,
+                "escalation_rate": response.escalation_rate,
+            },
         )
     )
     return response

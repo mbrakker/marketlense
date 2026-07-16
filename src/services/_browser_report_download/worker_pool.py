@@ -23,6 +23,9 @@ from src.contracts.browser_download import (
 )
 from src.contracts.run_context import RunContext
 from src.services._browser_report_download.models import BrowserAgentRunResult
+from src.services._browser_report_download.logging import (
+    browser_warm_worker_pool_log_fields,
+)
 from src.services._browser_report_download.prompt import BrowserDownloadPromptBundle
 from src.utils.errors import AppError
 from src.utils.logging import log_event
@@ -490,7 +493,10 @@ def _log_decision(
             role="service",
             event="browser_warm_worker_pool_decision",
             module=logger.name,
-            fields={"normalized_url": normalized_url, **asdict(decision)},
+            fields=browser_warm_worker_pool_log_fields(
+                normalized_url=normalized_url,
+                decision=decision,
+            ),
         )
     )
 

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import sqlite3
-from dataclasses import asdict
 from typing import Any, Sequence
 from src.contracts.analytics_projection import (
     AnalyticsProjectionFailureRequest,
@@ -725,7 +724,14 @@ def upsert_projection(
             role="service",
             event="analytics_projection_upsert_complete",
             module=logger.name,
-            fields={**asdict(response), "report_id": str(response.report_id)},
+            fields={
+                "schema_version": response.schema_version,
+                "report_id": str(response.report_id),
+                "projection_status": response.projection_status,
+                "projection_attempt_count": response.projection_attempt_count,
+                "rows_upserted": response.rows_upserted,
+                "vector_queue_count": response.vector_queue_count,
+            },
         )
     )
     return response
@@ -826,7 +832,12 @@ def record_projection_failure(
             role="service",
             event="analytics_projection_failure_record_complete",
             module=logger.name,
-            fields={**asdict(response), "report_id": str(response.report_id)},
+            fields={
+                "schema_version": response.schema_version,
+                "report_id": str(response.report_id),
+                "projection_status": response.projection_status,
+                "projection_attempt_count": response.projection_attempt_count,
+            },
         )
     )
     return response

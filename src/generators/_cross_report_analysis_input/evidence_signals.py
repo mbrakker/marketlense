@@ -12,7 +12,7 @@ import logging
 import math
 import re
 from collections import Counter
-from dataclasses import asdict, replace
+from dataclasses import replace
 from typing import Any
 
 from src.contracts.analytics_projection import ClaimEmbeddingRecord
@@ -28,7 +28,6 @@ from src.contracts.cross_report_analysis import (
     CrossReportRawMetricReference,
     CrossReportSemanticPreselectionSummary,
     CrossReportSelectedSourceReport,
-    CrossReportSelectedTheme,
     CrossReportSignalScore,
     CrossReportSignalScoreResult,
     CrossReportSourceSelectionResult,
@@ -42,7 +41,6 @@ from src.utils.logging import log_event
 from .shared import (
     _DEFAULT_SIGNAL_SCORE_WEIGHTS,
     _RAW_METRIC_POLICY,
-    _clean_values,
     _slug,
     _source_recency_scores,
     _topic_terms,
@@ -910,11 +908,13 @@ def assemble_cross_report_analysis_inputs(
                 "raw_metric_count": len(result.raw_metrics),
                 "prompt_input_chars": result.prompt_input_chars,
                 "dropped_evidence_counts": result.dropped_evidence_counts,
-                "semantic_preselection": (
-                    asdict(result.semantic_preselection)
-                    if result.semantic_preselection is not None
-                    else None
-                ),
+                "semantic_preselection_present": result.semantic_preselection
+                is not None,
+                "semantic_preselection_selected_count": (
+                    result.semantic_preselection.selected_claim_count
+                )
+                if result.semantic_preselection is not None
+                else 0,
             },
         )
     )

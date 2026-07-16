@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import mimetypes
-from dataclasses import asdict
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -32,6 +31,9 @@ from src.services._browser_report_download._http.config import (
 )
 from src.services._browser_report_download._http.html_evidence import (
     _extract_embedded_pdf_url,
+)
+from src.services._browser_report_download.logging import (
+    browser_download_result_log_fields,
 )
 from src.services._http_acquisition import execute_http_acquisition
 from src.utils.errors import AppError
@@ -188,7 +190,7 @@ def try_direct_pdf_download(
             role="service",
             event="browser_report_download_direct_pdf_attempt_complete",
             module=logger.name,
-            fields=asdict(response),
+            fields=browser_download_result_log_fields(response),
         )
     )
     return response

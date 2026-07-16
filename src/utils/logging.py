@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from collections.abc import Mapping
 from datetime import datetime, timezone
 from typing import Any, Dict
 from uuid import uuid4
@@ -10,6 +11,10 @@ from uuid import uuid4
 from src.contracts.logging import (
     LOG_EVENT_ROLES,
     LOG_EVENT_SCHEMA_VERSION,
+    MAX_LOG_COLLECTION_ITEMS,
+    MAX_LOG_EVENT_BYTES,
+    MAX_LOG_FIELD_DEPTH,
+    MAX_LOG_FIELD_NODES,
     REQUIRED_LOG_EVENT_FIELDS,
     LogEventValidationResult,
 )
@@ -79,7 +84,6 @@ CONTENT_FIELD_TOKENS = frozenset(
         "evidence",
         "excerpt",
         "paragraph",
-        "prompt",
         "response",
         "text",
     }
@@ -130,35 +134,207 @@ def _text_metadata(value: str) -> Dict[str, Any]:
 
 
 def _is_content_field(key: str) -> bool:
-    return bool(
-        CONTENT_FIELD_TOKENS.intersection(
-            token for token in re.split(r"[^a-z0-9]+", key.casefold()) if token
+    tokens = {token for token in re.split(r"[^a-z0-9]+", key.casefold()) if token}
+    if "evidence" in tokens and {"pack", "packs"}.intersection(tokens):
+        return False
+    if "prompt" in tokens and not {
+        "namespace",
+        "namespaces",
+        "hash",
+        "id",
+        "count",
+        "token",
+        "tokens",
+    }.intersection(tokens):
+        return True
+    return bool(CONTENT_FIELD_TOKENS.intersection(tokens))
+
+
+def _collection_reduction_metadata(
+    *,
+    original_item_count: int,
+    retained_item_count: int,
+    reason: str,
+) -> Dict[str, Any]:
+    return {
+        "reason": reason,
+        "original_item_count": original_item_count,
+        "retained_item_count": retained_item_count,
+    }
+
+
+def _bounded_non_scalar_metadata(value: Any) -> Dict[str, Any]:
+    """Describe a discarded non-scalar without serializing its contents."""
+
+    return {
+        "redaction": REDACTED,
+        "type": f"{type(value).__module__}.{type(value).__qualname__}",
+    }
+
+
+def _redact_field_value(
+    key: str,
+    value: Any,
+    *,
+    depth: int,
+    node_budget: list[int],
+) -> Any:
+    if node_budget[0] <= 0:
+        return _collection_reduction_metadata(
+            original_item_count=1,
+            retained_item_count=0,
+            reason="node_budget_exceeded",
         )
-    )
-
-
-def _redact_field_value(key: str, value: Any) -> Any:
+    node_budget[0] -= 1
     if isinstance(value, str):
         safe_value = _redact_value(value)
+        if _is_artifact_reference_field(key):
+            return safe_value
         if _is_content_field(key) or len(safe_value) > MAX_LOG_TEXT_CHARACTERS:
             return _text_metadata(safe_value)
         return safe_value
-    if isinstance(value, dict):
-        return _redact_fields(value)
-    if isinstance(value, (list, tuple)):
-        return [_redact_field_value(key, item) for item in value]
-    return _redact_value(value)
+    if isinstance(value, Mapping):
+        if depth >= MAX_LOG_FIELD_DEPTH:
+            return _collection_reduction_metadata(
+                original_item_count=len(value),
+                retained_item_count=0,
+                reason="max_depth_exceeded",
+            )
+        return _redact_fields(value, depth=depth + 1, node_budget=node_budget)
+    if isinstance(value, (list, tuple, set, frozenset)):
+        if depth >= MAX_LOG_FIELD_DEPTH:
+            return _collection_reduction_metadata(
+                original_item_count=len(value),
+                retained_item_count=0,
+                reason="max_depth_exceeded",
+            )
+        items = list(value)
+        if isinstance(value, (set, frozenset)):
+            items.sort(key=lambda item: str(item))
+        retained_items = items[:MAX_LOG_COLLECTION_ITEMS]
+        redacted_items = [
+            _redact_field_value(
+                key,
+                item,
+                depth=depth + 1,
+                node_budget=node_budget,
+            )
+            for item in retained_items
+        ]
+        if len(items) > len(retained_items):
+            redacted_items.append(
+                {
+                    "log_collection_reduced": _collection_reduction_metadata(
+                        original_item_count=len(items),
+                        retained_item_count=len(retained_items),
+                        reason="max_collection_items_exceeded",
+                    )
+                }
+            )
+        return redacted_items
+    if isinstance(value, (int, float, bool)) or value is None:
+        return _redact_value(value)
+    return _bounded_non_scalar_metadata(value)
 
 
-def _redact_fields(fields: Dict[str, Any]) -> Dict[str, Any]:
+def _redact_fields(
+    fields: Mapping[str, Any],
+    *,
+    depth: int = 0,
+    node_budget: list[int] | None = None,
+) -> Dict[str, Any]:
+    budget = node_budget if node_budget is not None else [MAX_LOG_FIELD_NODES]
     redacted: Dict[str, Any] = {}
-    for k, v in fields.items():
+    items = sorted(fields.items(), key=lambda item: str(item[0]))
+    artifact_items = [
+        item for item in items if _is_artifact_reference_field(str(item[0]))
+    ]
+    non_artifact_items = [
+        item for item in items if not _is_artifact_reference_field(str(item[0]))
+    ]
+    retained_items = (
+        artifact_items
+        + non_artifact_items[: max(0, MAX_LOG_COLLECTION_ITEMS - len(artifact_items))]
+    )
+    for k, v in retained_items:
         key = str(k)
         if key.lower() in SENSITIVE_KEYS:
             redacted[key] = REDACTED
             continue
-        redacted[key] = _redact_field_value(key, v)
+        redacted[key] = _redact_field_value(
+            key,
+            v,
+            depth=depth,
+            node_budget=budget,
+        )
+    if len(items) > len(retained_items):
+        redacted["log_collection_reduced"] = _collection_reduction_metadata(
+            original_item_count=len(items),
+            retained_item_count=len(retained_items),
+            reason="max_collection_items_exceeded",
+        )
     return redacted
+
+
+def _serialized_payload(payload: Dict[str, Any]) -> str:
+    return json.dumps(payload, ensure_ascii=True)
+
+
+def _is_artifact_reference_field(key: str) -> bool:
+    key_tokens = {token for token in re.split(r"[^a-z0-9]+", key.casefold()) if token}
+    return bool(
+        key_tokens.intersection(
+            {
+                "artifact",
+                "audit",
+                "hash",
+                "path",
+                "reference",
+                "ref",
+                "retained",
+                "snapshot",
+            }
+        )
+    )
+
+
+def _is_scalar(value: Any) -> bool:
+    return isinstance(value, (str, int, float, bool)) or value is None
+
+
+def _reduced_value_metadata(value: Any) -> Dict[str, Any]:
+    try:
+        serialized = json.dumps(value, ensure_ascii=True, sort_keys=True)
+    except (TypeError, ValueError):
+        return _bounded_non_scalar_metadata(value)
+    return {
+        "redaction": REDACTED,
+        "sha256": hashlib.sha256(serialized.encode("utf-8")).hexdigest(),
+        "type": type(value).__name__,
+    }
+
+
+def _reduce_oversized_fields(
+    fields: Dict[str, Any],
+    *,
+    attempted_size_bytes: int,
+) -> Dict[str, Any]:
+    """Retain scalar operations data and artifact references when size limits trip."""
+
+    reduction = {
+        "attempted_size_bytes": attempted_size_bytes,
+        "maximum_size_bytes": MAX_LOG_EVENT_BYTES,
+        "original_field_count": len(fields),
+    }
+    reduced: Dict[str, Any] = {"log_payload_reduced": reduction}
+    omitted_field_count = 0
+    for key, value in fields.items():
+        if _is_scalar(value) or _is_artifact_reference_field(key):
+            reduced[key] = value
+        else:
+            reduced[key] = _reduced_value_metadata(value)
+    reduction["omitted_field_count"] = omitted_field_count
+    return reduced
 
 
 def log_event(
@@ -171,7 +347,7 @@ def log_event(
 ) -> str:
     trace_id = str(getattr(ctx, "trace_id", "") or ctx.run_id)
     span_name = str(getattr(ctx, "span_name", "") or ctx.task_id)
-    payload = {
+    payload: Dict[str, Any] = {
         "run_id": ctx.run_id,
         "task_id": ctx.task_id,
         "span_id": ctx.span_id,
@@ -186,7 +362,31 @@ def log_event(
         "fields": _redact_fields(fields or {}),
     }
     try:
-        return json.dumps(payload, ensure_ascii=True)
+        serialized = _serialized_payload(payload)
+        if len(serialized.encode("utf-8")) <= MAX_LOG_EVENT_BYTES:
+            return serialized
+        payload["fields"] = _reduce_oversized_fields(
+            payload["fields"],
+            attempted_size_bytes=len(serialized.encode("utf-8")),
+        )
+        reduced_serialized = _serialized_payload(payload)
+        if len(reduced_serialized.encode("utf-8")) <= MAX_LOG_EVENT_BYTES:
+            return reduced_serialized
+        artifact_fields = {
+            key: value
+            for key, value in payload["fields"].items()
+            if _is_artifact_reference_field(key)
+        }
+        payload["fields"] = {
+            "log_payload_reduced": {
+                "attempted_size_bytes": len(serialized.encode("utf-8")),
+                "maximum_size_bytes": MAX_LOG_EVENT_BYTES,
+                "original_field_count": len(fields or {}),
+                "omitted_field_count": len(payload["fields"]) - len(artifact_fields),
+            },
+            **artifact_fields,
+        }
+        return _serialized_payload(payload)
     except Exception:
         fallback = {
             "run_id": ctx.run_id,

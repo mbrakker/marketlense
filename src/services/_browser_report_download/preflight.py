@@ -14,7 +14,7 @@ import logging
 import os
 import re
 import time
-from dataclasses import asdict, replace
+from dataclasses import replace
 from importlib import import_module
 from pathlib import Path
 from threading import Thread
@@ -35,6 +35,9 @@ from src.services._browser_report_download.http import (
     try_direct_pdf_download,
 )
 from src.services._browser_report_download.helpers import browser_helper_js_async
+from src.services._browser_report_download.logging import (
+    browser_preflight_probe_log_fields,
+)
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.browser_report_download_service.preflight")
@@ -602,12 +605,10 @@ def _log_probe_complete(
             role="service",
             event="browser_report_download_browser_preflight_complete",
             module=logger.name,
-            fields={
-                "normalized_url": normalized_url,
-                **asdict(probe),
-                "preflight_duration_seconds": probe.duration_seconds,
-                "candidate_pdf_url_count": len(probe.candidate_pdf_urls),
-            },
+            fields=browser_preflight_probe_log_fields(
+                normalized_url=normalized_url,
+                probe=probe,
+            ),
         )
     )
 

@@ -254,12 +254,12 @@ def test_download_report_with_browser_use_redacts_identity_values_from_prompt_lo
     assert prompt_event["fields"]["prompt_variables"]["delivery_email"] == (
         "***REDACTED***"
     )
-    assert "***REDACTED***" in prompt_event["fields"]["rendered_user_prompt"]
-    assert "***REDACTED***" in request_event["fields"]["task_prompt"]
-    assert (
-        "Do not navigate to public search engines"
-        in prompt_event["fields"]["rendered_system_prompt"]
-    )
+    for field_name in (
+        "rendered_system_prompt",
+        "rendered_user_prompt",
+    ):
+        assert prompt_event["fields"][field_name]["redaction"] == "***REDACTED***"
+    assert request_event["fields"]["task_prompt"]["redaction"] == "***REDACTED***"
 
 
 def test_browser_report_download_prompt_templates_fail_on_missing_variables(

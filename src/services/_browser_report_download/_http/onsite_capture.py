@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -70,6 +70,10 @@ _ONSITE_CAPTURE_BLOCKED_MARKERS = (
     "security checkpoint",
     "enable javascript",
 )
+from src.services._browser_report_download.logging import (
+    browser_download_result_log_fields,
+)
+
 _ONSITE_CAPTURE_HUMAN_VERIFICATION_MARKERS = (
     "not a robot",
     "verify you are human",
@@ -304,7 +308,7 @@ def try_direct_onsite_capture(
             event="browser_report_download_direct_onsite_attempt_complete",
             module=logger.name,
             fields={
-                **asdict(response_result),
+                **browser_download_result_log_fields(response_result),
                 "recovery_class": decision.recovery_class,
                 "recovery_decision": "complete",
             },
@@ -526,8 +530,7 @@ def _looks_like_onsite_capture_html(
     if any(marker in plain_lowered for marker in _ONSITE_CAPTURE_BLOCKED_MARKERS):
         return False
     if "captcha" in plain_lowered and any(
-        marker in plain_lowered
-        for marker in _ONSITE_CAPTURE_HUMAN_VERIFICATION_MARKERS
+        marker in plain_lowered for marker in _ONSITE_CAPTURE_HUMAN_VERIFICATION_MARKERS
     ):
         return False
     if _request_is_planned_email_form(request) and _html_contains_lead_capture_form(
@@ -536,7 +539,9 @@ def _looks_like_onsite_capture_html(
         return False
     if len(plain_text) < 800:
         return False
-    if _request_is_planned_email_form(request) and _email_form_html_looks_like_full_report(
+    if _request_is_planned_email_form(
+        request
+    ) and _email_form_html_looks_like_full_report(
         request=request,
         final_url=final_url,
         title=_extract_html_title(token),
@@ -642,10 +647,12 @@ def _html_contains_lead_capture_form(html: str) -> bool:
             "download",
             "submit",
         )
-        if any(marker in form_lowered or marker in form_text for marker in lead_markers):
+        if any(
+            marker in form_lowered or marker in form_text for marker in lead_markers
+        ):
             return True
         has_search_only_marker = (
-            "type=\"search\"" in form_lowered
+            'type="search"' in form_lowered
             or "type='search'" in form_lowered
             or "search" in form_text
         )

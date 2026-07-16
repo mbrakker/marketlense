@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import hashlib
-from dataclasses import asdict, replace
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -45,6 +45,10 @@ from src.services._browser_report_download.http import try_direct_onsite_capture
 from src.services._browser_report_download.http import try_http_access_challenge_probe
 from src.services._browser_report_download.http import try_report_page_pdf_link_download
 from src.services._browser_report_download.http import try_static_email_gate_probe
+from src.services._browser_report_download.logging import (
+    browser_download_result_log_fields,
+    pre_browser_doc_type_prediction_log_fields,
+)
 from src.services._browser_report_download.prediction import (
     predict_pre_browser_doc_type,
 )
@@ -272,12 +276,12 @@ def _record_artifact_acquisition_cache(
     ctx: RunContext,
     normalized_url: str,
     result: BrowserReportDownloadResult,
-) -> None:
+) -> dict[str, Any]:
     if result.outcome != "downloaded" or not result.downloaded_file_path:
-        return
+        return {}
     path = Path(result.downloaded_file_path)
     if not path.exists() or not path.is_file():
-        return
+        return {}
     try:
         http_runtime.validate_downloaded_pdf_artifact(
             downloaded_path=path,
@@ -285,7 +289,7 @@ def _record_artifact_acquisition_cache(
             normalized_url=normalized_url,
         )
     except AppError:
-        return
+        return {}
     md5, sha256, size = _hash_file(path)
     publisher_scope = _publisher_scope(normalized_url)
     report_title = _normalized_report_title(request)
@@ -324,6 +328,10 @@ def _record_artifact_acquisition_cache(
         ),
         ctx,
     )
+    return {
+        "artifact_sha256": sha256,
+        "artifact_size_bytes": size,
+    }
 
 
 def _complete_browser_download_result(
@@ -333,7 +341,7 @@ def _complete_browser_download_result(
     normalized_url: str,
     result: BrowserReportDownloadResult,
 ) -> BrowserReportDownloadResult:
-    _record_artifact_acquisition_cache(
+    artifact_metadata = _record_artifact_acquisition_cache(
         request=request,
         ctx=ctx,
         normalized_url=normalized_url,
@@ -345,7 +353,10 @@ def _complete_browser_download_result(
             role="service",
             event="browser_report_download_complete",
             module=logger.name,
-            fields=asdict(result),
+            fields=browser_download_result_log_fields(
+                result,
+                **artifact_metadata,
+            ),
         )
     )
     return result
@@ -669,7 +680,7 @@ def _attempt_captcha_manual_handoff(
             role="service",
             event="browser_report_download_captcha_handoff_complete",
             module=logger.name,
-            fields=asdict(response),
+            fields=browser_download_result_log_fields(response),
         )
     )
     return response
@@ -857,7 +868,7 @@ def download_report_with_browser_use(
             role="service",
             event="browser_report_download_doc_type_prediction",
             module=logger.name,
-            fields=asdict(doc_type_prediction),
+            fields=pre_browser_doc_type_prediction_log_fields(doc_type_prediction),
         )
     )
 
@@ -1206,7 +1217,7 @@ def download_report_with_browser_use(
                 role="service",
                 event="browser_report_download_remembered_blocker_complete",
                 module=logger.name,
-                fields=asdict(remembered_blocker_result),
+                fields=browser_download_result_log_fields(remembered_blocker_result),
             )
         )
         return remembered_blocker_result

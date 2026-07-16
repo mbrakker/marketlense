@@ -158,6 +158,8 @@ Operational events SHOULD include available `run_id`, `task_id`, `span_id`, even
 
 Standard logs MUST NOT contain complete rendered prompts, source extracts, raw model responses, email content, credentials, personal data, or complete external payloads. Record prompt namespace/hash, redaction hash, schema version, model and parameters, request ID, token usage, validation outcome, and retained audit-artifact reference instead.
 
+Every standard structured event MUST remain within the canonical byte, collection, and nesting limits. Call sites MUST log explicit scalar/count-based summaries rather than serializing complete first-party request or result contracts; retained artifact references are preserved as paths or hashes. The guard may reduce an oversized event and emit only bounded reduction metadata, never discarded content.
+
 Full prompt or response retention is allowed only through a dedicated access-controlled audit mechanism with explicit configuration, redaction, retention policy, and storage ownership.
 
 Exact reproducibility is required for deterministic code. Model-backed operations must be auditable, replayable from retained approved inputs and metadata, schema validated, grounding validated, and regression evaluated; byte-identical LLM output is not required.
