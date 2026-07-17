@@ -170,6 +170,8 @@ Exact reproducibility is required for deterministic code. Model-backed operation
 
 Tests verify observable behavior: returned contracts, persisted state, generated artifacts, approved external-boundary interactions, high-value events, retry counts, state transitions, idempotency, and validation failures. A test that still passes when its core behavior is removed is invalid.
 
+Every code change MUST update the corresponding test suite in the same change set. Tests MUST cover the changed observable behavior, relevant failure or edge behavior, and any changed side effect; a documentation, policy, or other non-code-only edit is the sole exception.
+
 Use the lowest-cost test that provides credible evidence. Test depth and edge coverage SHOULD be proportional to change risk. New behavior normally needs a positive path and a meaningful failure or edge path; add side-effect assertions when side effects exist.
 
 ### 8.2 Mocking policy
@@ -216,7 +218,7 @@ Coverage, mutation, typing, formatting, architecture, and repository-hygiene thr
 
 ## 9. Documentation ownership
 
-Update the canonical document for behavior, architecture, configuration, operations, or setup that materially changed. The root README is an orientation page, not a change ledger and not the mandatory destination for every change. Generated references MUST be regenerated through their canonical script.
+Every code change MUST be reflected in the corresponding documentation pack under `docs/`, selected through `docs/README.md`, in the same change set. Before coding, identify that pack; update its canonical document to describe the current behavior, boundary, workflow, configuration, validation, or operational consequence, and regenerate derived references through their canonical script when applicable. The root README is an orientation page, not a change ledger and not the mandatory destination for every change.
 
 Do not duplicate a canonical procedure across documents. Link to it. Historical plans and reviews record decisions but do not override current policy.
 
