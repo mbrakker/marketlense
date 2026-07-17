@@ -21,6 +21,7 @@ from src.contracts.minimal_execution_plan import (
     ValidatedReportArtifactReadResponse,
 )
 from src.contracts.prompts import PromptLoadRequest
+from src.contracts.public_editorial_quality import PUBLIC_EDITORIAL_VALIDATOR_VERSION
 from src.contracts.run_context import RunContext
 from src.services import prompt_service
 from src.utils.logging import log_event
@@ -205,7 +206,10 @@ def build_current_report_execution_compatibility(
         processing_versions={"*": "report_generation_checkpoint_v2"},
         prompt_versions=prompt_versions,
         model_policy_versions={"*": model_policy},
-        validator_versions={"validation": "validation:v1"},
+        validator_versions={
+            "validation": ("validation:v1|" + PUBLIC_EDITORIAL_VALIDATOR_VERSION),
+            "public_editorial_quality": PUBLIC_EDITORIAL_VALIDATOR_VERSION,
+        },
         crop_profiles={"*": crop_profile},
         template_render_versions={
             "rendered_html": _sha256_text(template_hashes),

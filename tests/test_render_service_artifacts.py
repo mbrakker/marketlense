@@ -11,6 +11,40 @@ def _ctx():
     return RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
 
 
+def test_render_removes_inline_internal_evidence_tokens_from_public_prose(
+    tmp_path: Path,
+) -> None:
+    response = render_report(
+        RenderRequest(
+            schema_version="1.0",
+            data={
+                "title": "Evidence Token Report",
+                "insights": [],
+                "quote": {"text": "", "author": ""},
+                "artifacts": {
+                    "summary": {
+                        "tldr": "The retained signal is actionable (IC1).",
+                        "executive_summary": "The action follows IC-02.",
+                    },
+                    "expert_comment": "Leaders should act on the signal (IC3).",
+                },
+            },
+            doc_name="evidence-token.pdf",
+            file_id="file-evidence-token",
+            out_dir=str(tmp_path),
+            preview_png=None,
+        ),
+        _ctx(),
+    )
+
+    html = Path(response.html_path).read_text(encoding="utf-8")
+
+    assert "IC1" not in html
+    assert "IC-02" not in html
+    assert "IC3" not in html
+    assert "The retained signal is actionable." in html
+
+
 def test_render_includes_artifact_sections(tmp_path):
     data = {
         "title": "Sample Report",

@@ -447,9 +447,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         usage_db_path=analysis_settings["usage_db_path"],
         run_budget_max_pdfs=ingest_runtime["run_budget_max_pdfs"],
         run_budget_max_retries=ingest_runtime["run_budget_max_retries"],
-        run_budget_max_runtime_seconds=ingest_runtime[
-            "run_budget_max_runtime_seconds"
-        ],
+        run_budget_max_runtime_seconds=ingest_runtime["run_budget_max_runtime_seconds"],
         run_budget_enabled_effect_kinds=ingest_runtime[
             "run_budget_enabled_effect_kinds"
         ],
@@ -459,6 +457,9 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         validation_data_gap_policy=validation_settings["validation_data_gap_policy"],
         validation_regeneration_max_attempts=validation_settings[
             "validation_regeneration_max_attempts"
+        ],
+        public_editorial_quality_disabled_rule_waivers=validation_settings[
+            "public_editorial_quality_disabled_rule_waivers"
         ],
         cross_report_analysis_enabled=cross_report_analysis_settings[
             "cross_report_analysis_enabled"

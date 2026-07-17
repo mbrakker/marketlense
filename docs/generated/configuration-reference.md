@@ -8,7 +8,7 @@ The example file shows supported environment-specific overlay areas. The configu
 | --- | --- |
 | `browser_download` | `captcha_handoff`, `max_tokens`, `model`, `openrouter_model`, `private_api_playbook_min_distinct_source_urls`, `private_api_playbook_min_success_count`, `private_api_playbook_promotion_mode`, `route_memory_ttl_seconds`, `route_playbook_promotion_mode`, `run_budget` |
 | `cost` | `budget_authority`, `usage_db_path` |
-| `ingest` | `candidate_page_gate`, `drive`, `gdrive_folder_id`, `google_sa_path`, `run_budget` |
+| `ingest` | `candidate_page_gate`, `drive`, `gdrive_folder_id`, `google_sa_path`, `run_budget`, `validation` |
 | `mailbox_acquisition` | `gmail_oauth_client_path`, `gmail_oauth_token_path`, `gmail_user_id`, `imap_host`, `imap_mailbox`, `imap_port`, `imap_user`, `max_results`, `output_dir`, `poll_interval_seconds`, `poll_timeout_seconds`, `provider`, `search_window_minutes` |
 | `publish` | `run_budget`, `wp` |
 | `publisher_discovery` | `enable_deferred_candidate_recovery`, `enable_preflight_classifier_and_direct_detail`, `enable_structured_route_reuse`, `model`, `resource_quality_ranking` |

@@ -32,6 +32,13 @@ from src.generators.report_analysis_generator import (
     _resolve_taxonomy,
 )
 from src.generators.report_generation_dependencies import ReportAnalysisDependencies
+from src.generators.report_generation_shared import (
+    merge_artifacts_into_payload,
+    pack_paths,
+    record_state_progress,
+    resolve_doc_map_metadata,
+    resolve_doc_map_primary_contributor,
+)
 from src.orchestrators._report_analysis_orchestrator.artifact_batches import (
     ArtifactTaskRenderer,
     _artifact_batch_workers,
@@ -61,6 +68,8 @@ from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
 )
 from src.orchestrators._report_analysis_orchestrator.shared import logger
 from src.orchestrators._report_analysis_orchestrator.validation import (
+    _evaluate_and_store_public_editorial_quality,
+    _merge_public_editorial_quality,
     _run_validation_regeneration_loop,
     _run_validation_with_fallback,
     _store_validation_snapshot,
@@ -72,13 +81,6 @@ from src.orchestrators._report_analysis_orchestrator.vector_store import (
     VECTOR_STORE_READY_STATUSES,
     _await_vector_store_indexing,
     _is_vector_store_ready,
-)
-from src.generators.report_generation_shared import (
-    merge_artifacts_into_payload,
-    pack_paths,
-    record_state_progress,
-    resolve_doc_map_metadata,
-    resolve_doc_map_primary_contributor,
 )
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
@@ -101,12 +103,14 @@ __all__ = [
     "_build_target",
     "_ensure_report_payload_complete",
     "_execute_artifact_step_batch",
+    "_evaluate_and_store_public_editorial_quality",
     "_extract_rule_id",
     "_is_vector_store_ready",
     "_issue_grounding",
     "_lookup_insight_grounding",
     "_lookup_quote_grounding",
     "_lookup_topic_grounding",
+    "_merge_public_editorial_quality",
     "_normalize_regeneration_issue",
     "_run_validation_regeneration_loop",
     "_run_validation_with_fallback",
@@ -564,6 +568,27 @@ def run_report_analysis(
         pack_name="validation",
         openai_client=validation_openai_client,
     )
+    editorial_validation, editorial_before_path = (
+        _evaluate_and_store_public_editorial_quality(
+            runtime=runtime,
+            dependencies=dependencies,
+            artifacts=artifacts_payload or {},
+            pack_name="public_editorial_quality_before",
+            ctx=mode_ctx,
+        )
+    )
+    validation_report = _merge_public_editorial_quality(
+        validation_report, editorial_validation
+    )
+    _store_validation_snapshot(
+        runtime=runtime,
+        dependencies=dependencies,
+        report=validation_report,
+        pack_name="validation",
+        ctx=mode_ctx,
+    )
+    if editorial_before_path:
+        mode_evidence_paths["public_editorial_quality_before"] = editorial_before_path
     if validation_report.source_path:
         mode_evidence_paths["validation"] = validation_report.source_path
     record_state_progress(
@@ -613,6 +638,16 @@ def run_report_analysis(
             mode_evidence_paths["validation"] = validation_report.source_path
         if regeneration_attempts:
             mode_evidence_paths["artifacts"] = regeneration_attempts[-1].artifacts_path
+
+    _, editorial_after_path = _evaluate_and_store_public_editorial_quality(
+        runtime=runtime,
+        dependencies=dependencies,
+        artifacts=artifacts_payload or {},
+        pack_name="public_editorial_quality_after",
+        ctx=mode_ctx,
+    )
+    if editorial_after_path:
+        mode_evidence_paths["public_editorial_quality_after"] = editorial_after_path
 
     normalized_payload = _attach_payload_analysis_metadata(
         merge_artifacts_into_payload(deepcopy(base_payload), artifacts_payload or {}),

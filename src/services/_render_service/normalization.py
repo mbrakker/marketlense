@@ -25,6 +25,11 @@ _MONTH_PATTERN = re.compile(
 _YEAR_PATTERN = re.compile(r"\b(20\d{2})\b")
 _ISO_DATE_PATTERN = re.compile(r"\b20\d{2}-\d{2}-\d{2}\b")
 _SENTENCE_SPLIT_PATTERN = re.compile(r"(?<=[.!?])\s+")
+_INLINE_INTERNAL_REFERENCE = re.compile(
+    r"(?:\s*[\[(](?:[a-z]{1,4}|finding|insight|claim)[_-]?\d{1,5}[\])]|"
+    r"\b(?:[a-z]{1,4}|finding|insight|claim)[_-]?\d{1,5}\b)",
+    re.IGNORECASE,
+)
 
 
 def _build_tag_acronym_map(acronyms: list[str]) -> dict[str, str]:
@@ -55,6 +60,14 @@ def _pick_first_text(*values: object) -> str:
         if candidate:
             return candidate
     return ""
+
+
+def _sanitize_public_prose(value: object) -> str:
+    """Remove internal evidence tokens from reader-facing prose."""
+    text = _s(value)
+    if not text:
+        return ""
+    return re.sub(r"\s{2,}", " ", _INLINE_INTERNAL_REFERENCE.sub("", text)).strip()
 
 
 def _split_summary_bullets(text: str, *, max_items: int = 5) -> list[str]:
@@ -406,8 +419,10 @@ def _coerce_public_metric_spine(
         unit = _s(item.get("unit"))
         if not label or not value:
             continue
-        metric_value = f"{value}{unit}" if unit in {"%", "pp"} else " ".join(
-            part for part in (value, unit) if part
+        metric_value = (
+            f"{value}{unit}"
+            if unit in {"%", "pp"}
+            else " ".join(part for part in (value, unit) if part)
         )
         context = ", ".join(
             part
@@ -423,9 +438,7 @@ def _coerce_public_metric_spine(
                 "label": label,
                 "value": metric_value,
                 "context": context,
-                "confidence_label": _public_label_from_token(
-                    item.get("confidence")
-                )
+                "confidence_label": _public_label_from_token(item.get("confidence"))
                 or "Source-backed",
             }
         )
@@ -499,10 +512,10 @@ def _coerce_public_topics_covered(
     limit: int = 6,
 ) -> list[dict[str, Any]]:
     topics: list[dict[str, Any]] = []
-    raw_topics = _coerce_list(artifacts.get("topics_covered")) or _coerce_list(
-        artifacts.get("toc_topics_expanded")
-    ) or _coerce_list(
-        artifacts.get("toc_entries")
+    raw_topics = (
+        _coerce_list(artifacts.get("topics_covered"))
+        or _coerce_list(artifacts.get("toc_topics_expanded"))
+        or _coerce_list(artifacts.get("toc_entries"))
     )
     for raw_item in raw_topics:
         item = _coerce_dict(raw_item)
@@ -515,9 +528,7 @@ def _coerce_public_topics_covered(
         if not title:
             continue
         pages = [
-            str(page).strip()
-            for page in _coerce_list(item.get("pages"))
-            if _s(page)
+            str(page).strip() for page in _coerce_list(item.get("pages")) if _s(page)
         ]
         topics.append(
             {
@@ -552,7 +563,9 @@ def _coerce_public_key_figures(
     for raw_item in raw_figures:
         item = _coerce_dict(raw_item)
         value = _pick_first_text(item.get("value"), item.get("figure"))
-        label = _pick_first_text(item.get("label"), item.get("metric"), item.get("name"))
+        label = _pick_first_text(
+            item.get("label"), item.get("metric"), item.get("name")
+        )
         if not value or not label:
             continue
         unit = _s(item.get("unit"))
@@ -649,14 +662,18 @@ def _coerce_insights(
     insights: list[dict[str, str]] = []
     for raw_item in _coerce_list(raw_insights):
         item = _coerce_dict(raw_item)
-        text = _s(item.get("text")) if item else _s(raw_item)
+        text = (
+            _sanitize_public_prose(item.get("text"))
+            if item
+            else _sanitize_public_prose(raw_item)
+        )
         if not text:
             continue
         insights.append(
             {
                 "text": text,
-                "so_what": _s(item.get("so_what")),
-                "now_what": _s(item.get("now_what")),
+                "so_what": _sanitize_public_prose(item.get("so_what")),
+                "now_what": _sanitize_public_prose(item.get("now_what")),
                 "citation_line": _build_citation_micro_line(
                     report_title=report_title,
                     evidence_id=_s(item.get("evidence_id")),
@@ -815,7 +832,9 @@ def _public_citation_label(value: str) -> str:
         return ""
     if lowered.endswith((".json", ".jsonl", ".txt", ".sqlite", ".db")):
         return ""
-    if re.fullmatch(r"[a-z]{1,4}[-_]?\d{1,5}", lowered):
+    if re.fullmatch(
+        r"(?:[a-z]{1,4}|finding|insight|figure|claim)[-_]?\d{1,5}", lowered
+    ):
         return ""
     if "internal" in lowered or "canonical" in lowered:
         return ""
@@ -1082,6 +1101,7 @@ __all__ = [
     "_coerce_list",
     "_coerce_positive_int",
     "_pick_first_text",
+    "_sanitize_public_prose",
     "_split_summary_bullets",
     "_sentence_excerpt",
     "_build_core_signal",

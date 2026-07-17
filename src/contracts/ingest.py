@@ -532,6 +532,12 @@ class IngestSettings:
             "doc": "Maximum validation-driven regeneration attempts after the initial validation failure."
         },
     )
+    public_editorial_quality_disabled_rule_waivers: Dict[str, str] = field(
+        default_factory=dict,
+        metadata={
+            "doc": "Explicit release-waiver reasons keyed by disabled public editorial quality rule ID."
+        },
+    )
 
 
 @dataclass(frozen=True)

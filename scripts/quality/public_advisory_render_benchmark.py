@@ -4,6 +4,7 @@ import argparse
 import json
 import re
 import sys
+from collections import Counter
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -14,6 +15,9 @@ if str(ROOT) not in sys.path:
 
 from src.contracts.report_assets import RenderRequest  # noqa: E402
 from src.contracts.run_context import RunContext  # noqa: E402
+from src.generators.public_editorial_quality_generator import (  # noqa: E402
+    evaluate_public_editorial_quality,
+)
 from src.services.render_service import render_report  # noqa: E402
 
 _INTERNAL_ID_PATTERN = re.compile(
@@ -81,6 +85,12 @@ class PublicAdvisoryRenderBenchmarkRow:
     broken_asset_count: int = field(
         metadata={"doc": "Locally referenced rendered image assets that are absent."}
     )
+    editorial_blocker_count: int = field(
+        metadata={"doc": "Enabled deterministic editorial blocker count."}
+    )
+    editorial_rule_counts: dict[str, int] = field(
+        metadata={"doc": "Enabled deterministic findings grouped by stable rule ID."}
+    )
     remediation_targets: list[dict[str, str]] = field(
         metadata={
             "doc": "Benchmark failures with report, field, rule, and remediation."
@@ -109,6 +119,12 @@ class PublicAdvisoryRenderBenchmarkReport:
     placeholder_count: int = field(metadata={"doc": "Total unresolved placeholders."})
     raw_fragment_count: int = field(metadata={"doc": "Total malformed fragments."})
     broken_asset_count: int = field(metadata={"doc": "Total missing local assets."})
+    editorial_blocker_count: int = field(
+        metadata={"doc": "Total enabled deterministic editorial blockers."}
+    )
+    editorial_rule_counts: dict[str, int] = field(
+        metadata={"doc": "Total enabled findings grouped by stable rule ID."}
+    )
     screenshot_paths: tuple[str, ...] = field(metadata={"doc": "Retained screenshots."})
     rows: list[PublicAdvisoryRenderBenchmarkRow] = field(metadata={"doc": "Rows."})
     remediation_targets: list[dict[str, str]] = field(
@@ -199,6 +215,17 @@ def build_public_advisory_render_benchmark(
         placeholder_count=sum(row.placeholder_count for row in rows),
         raw_fragment_count=sum(row.raw_fragment_count for row in rows),
         broken_asset_count=sum(row.broken_asset_count for row in rows),
+        editorial_blocker_count=sum(row.editorial_blocker_count for row in rows),
+        editorial_rule_counts=dict(
+            sorted(
+                Counter(
+                    rule
+                    for row in rows
+                    for rule, count in row.editorial_rule_counts.items()
+                    for _ in range(count)
+                ).items()
+            )
+        ),
         screenshot_paths=tuple(screenshot_paths),
         rows=rows,
         remediation_targets=remediation_targets,
@@ -218,7 +245,7 @@ def _render_data_from_artifacts(
         artifacts.get("summary") if isinstance(artifacts.get("summary"), dict) else {}
     )
     return {
-        "title": str(artifacts.get("title") or report_id),
+        "title": str(artifacts.get("title") or _safe_public_title(report_id)),
         "publisher": str(artifacts.get("publisher") or "MarketBearing"),
         "region": str(artifacts.get("region") or ""),
         "time_period": str(artifacts.get("time_period") or ""),
@@ -234,6 +261,13 @@ def _render_data_from_artifacts(
         "taxonomy": artifacts.get("taxonomy") or [],
         "artifacts": artifacts,
     }
+
+
+def _safe_public_title(report_id: str) -> str:
+    """Avoid turning a retained storage slug into synthetic reader-facing copy."""
+    value = re.sub(r"(?:[-_.]acig)?[-_.]pdf$", "", str(report_id), flags=re.I)
+    value = re.sub(r"[-_]+", " ", value).strip()
+    return value.title() or "MarketBearing report"
 
 
 def _benchmark_row(
@@ -269,6 +303,13 @@ def _benchmark_row(
         if isinstance(artifacts.get("insights_final"), list)
         else []
     )
+    quality = evaluate_public_editorial_quality(
+        report_id=report_id,
+        artifacts=artifacts,
+        html=html,
+        html_path=html_path,
+    )
+    rule_counts = Counter(issue.rule_id for issue in quality.issues)
     leaks = _INTERNAL_ID_PATTERN.findall(html)
     quality_issues = public_html_quality_issues(html=html, html_path=html_path)
     placeholders = quality_issues["placeholders"]
@@ -276,46 +317,23 @@ def _benchmark_row(
     broken_assets = quality_issues["broken_assets"]
     targets: list[dict[str, str]] = []
     advisory_targets: list[dict[str, str]] = []
-    if leaks:
-        targets.append(
-            {
-                "report_id": report_id,
-                "field": "html",
-                "rule": "public_render.internal_id_leak",
-                "remediation": "Render public source labels instead of internal IDs.",
-            }
-        )
-    if placeholders:
-        targets.append(
-            {
-                "report_id": report_id,
-                "field": "html",
-                "rule": "public_render.unresolved_placeholder",
-                "remediation": "Resolve template placeholders before public rendering.",
-            }
-        )
-    if raw_fragments:
-        targets.append(
-            {
-                "report_id": report_id,
-                "field": "html",
-                "rule": "public_render.raw_extraction_fragment",
-                "remediation": (
-                    "Repair or omit malformed extraction fragments before rendering."
-                ),
-            }
-        )
-    if broken_assets:
-        targets.append(
-            {
-                "report_id": report_id,
-                "field": "html",
-                "rule": "public_render.broken_local_asset",
-                "remediation": (
-                    "Regenerate or remove missing locally referenced public assets."
-                ),
-            }
-        )
+    targets.extend(
+        {
+            "report_id": report_id,
+            "field": issue.affected_field,
+            "rule": issue.rule_id,
+            "remediation": (
+                "Request targeted artifact regeneration from retained evidence."
+                if issue.repair_eligible
+                else (
+                    "Block release and require operator review; retained evidence "
+                    "is insufficient for repair."
+                )
+            ),
+        }
+        for issue in quality.issues
+        if issue.severity == "error"
+    )
     so_what_available = any(
         str(item.get("so_what") or "").strip()
         for item in insights
@@ -327,12 +345,9 @@ def _benchmark_row(
         if isinstance(item, dict)
     )
     insight_rows = [item for item in insights if isinstance(item, dict)]
-    normalized_texts = [
-        " ".join(str(item.get("text") or "").casefold().split())
-        for item in insight_rows
-        if str(item.get("text") or "").strip()
-    ]
-    duplicate_insight_count = len(normalized_texts) - len(set(normalized_texts))
+    duplicate_insight_count = rule_counts.get(
+        "public_editorial_quality.duplicate_insight", 0
+    )
     coverage_roles = {
         str(item.get("coverage_role") or "").strip()
         for item in insight_rows
@@ -387,6 +402,10 @@ def _benchmark_row(
         placeholder_count=len(placeholders),
         raw_fragment_count=len(raw_fragments),
         broken_asset_count=len(broken_assets),
+        editorial_blocker_count=sum(
+            issue.severity == "error" for issue in quality.issues
+        ),
+        editorial_rule_counts=dict(sorted(rule_counts.items())),
         remediation_targets=targets,
         advisory_remediation_targets=advisory_targets,
     )
@@ -400,9 +419,9 @@ def compare_public_advisory_benchmark(
     advisory_delta = round(current.advisory_coverage - baseline.advisory_coverage, 6)
     so_what_delta = round(current.so_what_coverage - baseline.so_what_coverage, 6)
     now_what_delta = round(current.now_what_coverage - baseline.now_what_coverage, 6)
-    duplicate_delta = sum(row.duplicate_insight_count for row in current.rows) - sum(
-        row.duplicate_insight_count for row in baseline.rows
-    )
+    duplicate_delta = int(
+        current.editorial_rule_counts.get("duplicate_insight", 0)
+    ) - int(baseline.editorial_rule_counts.get("duplicate_insight", 0))
     failures = tuple(
         name
         for name, delta in (
@@ -412,6 +431,8 @@ def compare_public_advisory_benchmark(
         )
         if delta < 0
     )
+    if duplicate_delta > 0:
+        failures += ("duplicate_insight_regressed",)
     return PublicAdvisoryBaselineComparison(
         schema_version="1.0",
         advisory_coverage_delta=advisory_delta,
@@ -474,16 +495,9 @@ def build_public_advisory_repair_targets(
             if str(insight.get(target_field) or "").strip():
                 continue
             if evidence_id and source_text:
-                replacement = (
-                    f"Decision relevance: {source_text}"
-                    if target_field == "so_what"
-                    else (
-                        "Review this source-backed finding before committing "
-                        "the related decision."
-                    )
-                )
-                status = "repair_ready"
-                reason = "retained_evidence_available"
+                replacement = ""
+                status = "targeted_regeneration_required"
+                reason = "retained_evidence_and_explicit_id_available"
             else:
                 replacement = ""
                 status = "abstained"

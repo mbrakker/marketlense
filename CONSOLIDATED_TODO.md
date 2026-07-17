@@ -43,7 +43,8 @@ All work is listed below in one register. `Active` items have detailed completio
 | Active | P10 | Correlated public-render failure observability | Hosted release-observability outcome. |
 | Active | P4 | Briefing, correction, and submission CTAs | Implemented; close after hosted smoke proves the live intake routes. |
 | Active | P5 | Archive/search facets, mobile navigation, and responsive workflows | Responsive public-workflow outcome. |
-| Active | P6 | Editorial report cards, exhibits, visual ranking, and premium copy | Public editorial presentation outcome. |
+| Closed | P6 | Editorial report cards, exhibits, visual ranking, and premium copy | Deterministic public editorial release gate, reader-safe rendering, retained pre/post audit, and live report validation passed. |
+| Active | P11 | Route verified acquired reports into governed ingest | Eliminate the manual per-folder handoff from the canonical downloader to live report analysis. |
 | Active | P7 | Hosted latency and public performance | Measured public-performance outcome. |
 | Active | P8 | Readable evidence spans, methodology/source-quality trust, and deterministic related content | Public evidence/discovery outcome. |
 | Active | E1 | Claim-embedding freshness, retention, and cost controls | Embedding operations outcome. |
@@ -83,6 +84,7 @@ All work is listed below in one register. `Active` items have detailed completio
 
 ## Recently Closed
 
+- **P6 — Editorial report cards, exhibits, visual ranking, and premium copy (2026-07-17):** The deterministic public editorial release gate blocks raw figure labels, OCR fragments, generic boilerplate, placeholders, internal identifiers, unsupported numeric claims, duplicate prose, broken assets, and empty implications before WordPress readiness. It retains before/attempt/after audit artifacts and only requests evidence-grounded repairs. The retained 30-report passing corpus had zero blockers, placeholders, raw fragments, internal-ID leaks, or broken assets; a live StackAdapt report completed Drive acquisition, OpenAI/vector-store analysis, rendering, and release validation in 548 seconds with zero gate issues.
 - **A3 — Workflow-wide remediation-ledger rollout (2026-07-17):** The generated 31-workflow matrix is CI-checked. A controlled typed `provider_timeout` persisted one remediation record across two submissions; the bounded reaper inspected it once and held it as `operator_action_required` without an executor or external side effect. The read-only soak reported one created, one deduplicated, zero stale, zero eligible, and one held record with no missing runbook mapping. Strict evidence bundle `21a046e89de64aa3a4fcc73250e74074` passed on exact commit `3da3d70e4b202cd2be4f206347982b9d55c94a13`.
 - **A6 — Budget-manager closeout and operational proof (2026-07-17):** The public vector-store service now forwards a typed `RunBudget` and preserves canonical budget-stop errors. A live Drive list, OpenAI vector-store create/delete, and minimal OpenAI JSON call completed under canonical authority; ledger evidence recorded one Drive read, one vector create, one vector cleanup, and 168 LLM tokens. The next Drive and vector calls were blocked before provider I/O. Temporary vector stores were removed. The strict exact-HEAD bundle passed.
 - **A9 — Canonical report-source identity and publication provenance (2026-07-17):** Reports schema v19 stores immutable, hash-addressed source observations and deterministic resolutions; it preserves v18 compatibility, projects safe source fields to analytics, report cards, and WordPress, and invalidates only rendering/publication when source metadata changes. A live Julius Baer landing page returned HTTP 200 with 218,676 bounded HTML bytes; its existing retained PDF benchmark resolved verified source provenance, while an exact repeat produced no duplicate observation. No LLM call or production write was made.
@@ -254,18 +256,18 @@ The original ten-item screenshot baseline is complete in the committed implement
 - Mobile navigation has accessible open/close and focus behavior with an intentional panel/backdrop.
 - Retained visual-smoke screenshots cover each key view at phone, tablet, and desktop widths and are compared for regressions.
 
-#### P6. Raise report-card and evidence-exhibit editorial quality
+#### P11. Route verified acquired reports into governed ingest
 
-- **Title:** Raise report-card and evidence-exhibit editorial quality
-- **Impact 4 / effort: 3**
-- **Context:** Public cards and detail pages can expose raw OCR/table fragments, generic figure labels, weak thumbnails, duplicate summaries, and internal identifiers without reader-facing context.
-- **Benefit:** High-value research reads as analyst-curated while retaining deterministic evidence provenance and auditability.
-- **Risks to avoid:** Do not fabricate claims, hide evidence provenance, or remove auditability.
+- **Title:** Route verified acquired reports into governed ingest
+- **Impact 5 / effort: 2**
+- **Context:** The canonical downloader now retains verified report PDFs in Drive with route, checksum, and idempotency evidence, but the standard ingest scope does not discover their publisher folders. A live report needs a manual `--folder` handoff despite already being a verified sample.
+- **Benefit:** Newly acquired reports enter the same bounded analysis and editorial-release workflow automatically, reducing manual operations and turning source-acquisition diversity into faster quality coverage.
+- **Risks to avoid:** Reuse the existing report store, Drive service, cursor, idempotency, and budget authority. Do not duplicate PDFs, create a second queue, loosen source verification, or allow automatic WordPress publication.
 - **Success criteria:**
 
-- Public copy rejects raw figure labels, OCR fragments, generic boilerplate, required-field placeholders, and internal identifiers.
-- Blank/low-information thumbnails use deterministic covers or validated source previews.
-- Audit identifiers remain available without being reader-facing labels; regression checks fail known leakage patterns in rendered output.
+- A verified canonical acquisition record is a deterministic, bounded ingest candidate with source-folder provenance and checksum compatibility checks.
+- Default ingest discovers each eligible acquired PDF once, preserves cursor/idempotency behavior, and leaves failed or operator-held records actionable without repeated provider work.
+- Focused tests cover discovery, duplicate suppression, stale/mismatched provenance, budget deferral, and no publication side effect; a bounded Drive-to-analysis live canary proves the handoff.
 
 #### P7. Improve hosted public-site performance without contract loss
 

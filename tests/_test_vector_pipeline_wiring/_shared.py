@@ -76,6 +76,7 @@ from src.contracts.taxonomy import TaxonomyExtractResponse
 from src.contracts.validation import ValidationReport
 
 from src.generators import report_analysis_generator as rag
+from src.generators.public_editorial_quality_generator import BLOCKING_RULE_IDS
 
 from src.generators.report_generation_dependencies import (
     FigureCaptionDependencies,
@@ -150,6 +151,10 @@ def _ingest_settings(tmp_path: Path) -> IngestSettings:
         cost_ledger_path=str(tmp_path / "cost-ledger.jsonl"),
         cost_daily_path=str(tmp_path / "cost-daily.json"),
         model_pricing={},
+        public_editorial_quality_disabled_rule_waivers={
+            rule_id: "test-only non-public artifact fixture"
+            for rule_id in BLOCKING_RULE_IDS
+        },
     )
 
 

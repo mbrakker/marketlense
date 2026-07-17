@@ -13825,6 +13825,12 @@
         "pdf_text_sample_pages": {
           "type": "integer"
         },
+        "public_editorial_quality_disabled_rule_waivers": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
         "publisher_profiles_path": {
           "type": "string"
         },
@@ -19249,6 +19255,12 @@
         },
         "pdf_text_sample_pages": {
           "type": "integer"
+        },
+        "public_editorial_quality_disabled_rule_waivers": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
         },
         "rank_max_candidates": {
           "type": "integer"
@@ -24687,6 +24699,125 @@
         "path",
         "text",
         "sha256"
+      ],
+      "type": "object"
+    },
+    "src.contracts.public_editorial_quality.PublicEditorialQualityIssue": {
+      "additionalProperties": false,
+      "properties": {
+        "affected_artifact": {
+          "type": "string"
+        },
+        "affected_field": {
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "explanation": {
+          "type": "string"
+        },
+        "repair_eligible": {
+          "type": "boolean"
+        },
+        "repair_status": {
+          "type": "string"
+        },
+        "repair_target": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "rule_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string"
+        },
+        "validator_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "report_id",
+        "rule_id",
+        "severity",
+        "affected_artifact",
+        "affected_field"
+      ],
+      "type": "object"
+    },
+    "src.contracts.public_editorial_quality.PublicEditorialQualityMeasurement": {
+      "additionalProperties": false,
+      "properties": {
+        "explanation": {
+          "type": "string"
+        },
+        "rule_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "value": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "rule_id",
+        "value",
+        "unit",
+        "explanation"
+      ],
+      "type": "object"
+    },
+    "src.contracts.public_editorial_quality.PublicEditorialQualityReport": {
+      "additionalProperties": false,
+      "properties": {
+        "disabled_rule_waivers": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "issues": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.public_editorial_quality.PublicEditorialQualityIssue"
+          },
+          "type": "array"
+        },
+        "measurements": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.public_editorial_quality.PublicEditorialQualityMeasurement"
+          },
+          "type": "array"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "validator_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "report_id",
+        "status"
       ],
       "type": "object"
     },
