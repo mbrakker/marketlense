@@ -1,6 +1,15 @@
 from __future__ import annotations
 
-from src.services._config_service.common import *
+from typing import Any
+
+from src.services._config_service.common import (
+    _default_config_value,
+    _resolve_allowed_string,
+    _resolve_scalar_settings,
+    _SettingSpec,
+    _to_int,
+)
+
 
 def _resolve_validation_settings(validation_cfg: dict[str, Any]) -> dict[str, Any]:
     resolved = _resolve_scalar_settings(
@@ -38,6 +47,20 @@ def _resolve_validation_settings(validation_cfg: dict[str, Any]) -> dict[str, An
         ),
         allowed={"warn", "fail"},
     )
+    editorial_cfg = validation_cfg.get("public_editorial_quality", {})
+    waivers = (
+        editorial_cfg.get("disabled_rule_waivers", {})
+        if isinstance(editorial_cfg, dict)
+        else {}
+    )
+    if not isinstance(waivers, dict):
+        waivers = {}
+    resolved["public_editorial_quality_disabled_rule_waivers"] = {
+        str(rule).strip(): str(reason).strip()
+        for rule, reason in waivers.items()
+        if str(rule).strip() and str(reason).strip()
+    }
     return resolved
+
 
 __all__ = [name for name in globals() if not name.startswith("__")]

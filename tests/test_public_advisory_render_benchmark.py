@@ -54,7 +54,11 @@ def test_public_advisory_render_benchmark_uses_retained_artifact_without_id_leak
         if target.get("field") == "so_what"
     ]
     assert repair_targets
-    assert all(target["status"] == "repair_ready" for target in repair_targets)
+    assert all(
+        target["status"] == "targeted_regeneration_required"
+        for target in repair_targets
+    )
+    assert all(not target["replacement"] for target in repair_targets)
     assert report.rows[0].html_path.endswith(
         "ias-industry-pulse-report-2026-acig-pdf.html"
     )

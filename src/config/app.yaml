@@ -68,6 +68,10 @@ ingest:
   validation:
     data_gap_policy: "warn"
     regeneration_max_attempts: 3
+    # A rule can be disabled only by placing its stable ID here with a concrete
+    # release-waiver reason; empty entries do not disable a safety rule.
+    public_editorial_quality:
+      disabled_rule_waivers: {}
   contents_page:
     max_pages: 8
     min_headings: 3

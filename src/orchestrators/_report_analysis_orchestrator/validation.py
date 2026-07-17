@@ -26,6 +26,11 @@ from src.contracts.validation import (
     ValidationReport,
     ValidationRequest,
 )
+from src.generators.public_editorial_quality_generator import (
+    evaluate_public_editorial_quality,
+    merge_public_editorial_quality_validation,
+    quality_report_payload,
+)
 from src.generators.report_generation_dependencies import ReportAnalysisDependencies
 from src.generators.report_generation_shared import merge_artifacts_into_payload
 from src.orchestrators._report_analysis_orchestrator.payload import (
@@ -38,10 +43,128 @@ from src.orchestrators._report_analysis_orchestrator.shared import logger
 from src.utils.logging import child_context, log_event
 
 __all__ = [
+    "_evaluate_and_store_public_editorial_quality",
     "_run_validation_regeneration_loop",
     "_run_validation_with_fallback",
     "_store_validation_snapshot",
 ]
+
+
+def _evaluate_and_store_public_editorial_quality(
+    *,
+    runtime: ReportRuntimeState,
+    dependencies: ReportAnalysisDependencies,
+    artifacts: Dict[str, Any],
+    pack_name: str,
+    ctx,
+) -> tuple[ValidationReport | None, str]:
+    """Persist the private report and adapt blockers for the existing repair loop."""
+    if not isinstance(artifacts, dict):
+        return None, ""
+    quality = evaluate_public_editorial_quality(
+        report_id=str(runtime.file.file_id),
+        artifacts=artifacts,
+        disabled_rule_waivers=getattr(
+            runtime.settings, "public_editorial_quality_disabled_rule_waivers", {}
+        ),
+    )
+    stored = dependencies.analysis_store_pack(
+        AnalysisStorePackRequest(
+            schema_version="1.0",
+            output_dir=runtime.settings.output_dir,
+            report_id=ReportId(runtime.file.file_id),
+            pack_name=pack_name,
+            payload=quality_report_payload(quality),
+            report_slug=runtime.report_name,
+        ),
+        ctx,
+    ).output_path
+    rule_ids = sorted({issue.rule_id for issue in quality.issues})
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="public_editorial_quality_evaluated",
+            module=logger.name,
+            fields={
+                "file_id": runtime.file.file_id,
+                "status": quality.status,
+                "issue_count": len(quality.issues),
+                "rule_ids": rule_ids,
+                "validator_version": quality.validator_version,
+                "quality_report_path": stored,
+            },
+        )
+    )
+    if quality.status == "fail":
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="public_editorial_quality_blocked",
+                module=logger.name,
+                fields={
+                    "file_id": runtime.file.file_id,
+                    "rule_ids": rule_ids,
+                    "repairable_issue_count": sum(
+                        issue.repair_eligible for issue in quality.issues
+                    ),
+                    "abstained_issue_count": sum(
+                        issue.repair_status == "abstained" for issue in quality.issues
+                    ),
+                },
+            )
+        )
+    if quality.disabled_rule_waivers:
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="public_editorial_quality_rule_waived",
+                module=logger.name,
+                fields={
+                    "file_id": runtime.file.file_id,
+                    "rule_ids": sorted(quality.disabled_rule_waivers),
+                    "waiver_count": len(quality.disabled_rule_waivers),
+                },
+            )
+        )
+    issues = merge_public_editorial_quality_validation(
+        ValidationReport(
+            schema_version="1.1",
+            status="pass",
+            issues=[],
+            severity="pass",
+        ),
+        quality,
+    )
+    return issues, stored
+
+
+def _merge_public_editorial_quality(
+    validation: ValidationReport,
+    editorial_validation: ValidationReport | None,
+) -> ValidationReport:
+    if editorial_validation is None:
+        return validation
+    return ValidationReport(
+        schema_version=validation.schema_version,
+        status=(
+            "fail"
+            if validation.status == "fail" or editorial_validation.status == "fail"
+            else "pass"
+        ),
+        issues=list(validation.issues) + list(editorial_validation.issues),
+        severity=(
+            "error"
+            if (
+                validation.severity == "error"
+                or editorial_validation.severity == "error"
+            )
+            else validation.severity
+        ),
+        source_path=validation.source_path,
+    )
 
 
 def _accepts_keyword(callable_obj, keyword: str) -> bool:
@@ -195,6 +318,48 @@ def _run_validation_regeneration_loop(
             artifacts=current_artifacts,
             broad_retry_available=not broad_retry_used,
         )
+        public_issues = [
+            issue
+            for issue in current_validation_report.issues
+            if str(issue.rule_id).startswith("public_editorial_quality.")
+        ]
+        if public_issues:
+            logger.info(
+                log_event(
+                    mode_ctx,
+                    role="orchestrator",
+                    event="public_editorial_repair_requested",
+                    module=logger.name,
+                    fields={
+                        "file_id": runtime.file.file_id,
+                        "attempt_index": attempt_index,
+                        "rule_ids": sorted({issue.rule_id for issue in public_issues}),
+                        "target_sections": [
+                            target.target_section for target in plan.targets
+                        ],
+                    },
+                )
+            )
+        abstained_public_issues = [
+            issue for issue in public_issues if not str(issue.repair_target).strip()
+        ]
+        if abstained_public_issues:
+            logger.info(
+                log_event(
+                    mode_ctx,
+                    role="orchestrator",
+                    event="public_editorial_repair_abstained",
+                    module=logger.name,
+                    fields={
+                        "file_id": runtime.file.file_id,
+                        "attempt_index": attempt_index,
+                        "rule_ids": sorted(
+                            {issue.rule_id for issue in abstained_public_issues}
+                        ),
+                        "issue_count": len(abstained_public_issues),
+                    },
+                )
+            )
         logger.info(
             log_event(
                 mode_ctx,
@@ -322,6 +487,28 @@ def _run_validation_regeneration_loop(
             pack_name="validation",
             openai_client=validation_openai_client,
         )
+        editorial_validation, editorial_path = (
+            _evaluate_and_store_public_editorial_quality(
+                runtime=runtime,
+                dependencies=dependencies,
+                artifacts=current_artifacts,
+                pack_name=f"public_editorial_quality_regen_attempt_{attempt_index}",
+                ctx=attempt_ctx,
+            )
+        )
+        current_validation_report = _merge_public_editorial_quality(
+            current_validation_report, editorial_validation
+        )
+        _store_validation_snapshot(
+            runtime=runtime,
+            dependencies=dependencies,
+            report=current_validation_report,
+            pack_name="validation",
+            ctx=attempt_ctx,
+        )
+        evidence_paths[f"public_editorial_quality_regen_attempt_{attempt_index}"] = (
+            editorial_path
+        )
         validation_snapshot_path = _store_validation_snapshot(
             runtime=runtime,
             dependencies=dependencies,
@@ -367,6 +554,37 @@ def _run_validation_regeneration_loop(
                 },
             )
         )
+        if public_issues:
+            logger.info(
+                log_event(
+                    attempt_ctx,
+                    role="orchestrator",
+                    event="public_editorial_repair_completed",
+                    module=logger.name,
+                    fields={
+                        "file_id": runtime.file.file_id,
+                        "attempt_index": attempt_index,
+                        "regenerated_sections": (
+                            regeneration_response.regenerated_sections
+                        ),
+                    },
+                )
+            )
+        if editorial_validation is not None:
+            logger.info(
+                log_event(
+                    attempt_ctx,
+                    role="orchestrator",
+                    event="public_editorial_repair_revalidated",
+                    module=logger.name,
+                    fields={
+                        "file_id": runtime.file.file_id,
+                        "attempt_index": attempt_index,
+                        "status": current_validation_report.status,
+                        "quality_report_path": editorial_path,
+                    },
+                )
+            )
         if current_validation_report.status == "pass":
             logger.info(
                 log_event(

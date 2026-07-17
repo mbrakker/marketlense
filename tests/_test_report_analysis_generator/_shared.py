@@ -55,6 +55,8 @@ from src.contracts.taxonomy import TaxonomyExtractResponse
 
 from src.contracts.validation import ValidationIssue, ValidationReport
 
+from src.generators.public_editorial_quality_generator import BLOCKING_RULE_IDS
+
 from src.generators.report_analysis_generator import (
     start_vector_store_indexing,
     VectorStoreIndexingState,
@@ -98,6 +100,10 @@ def _runtime(tmp_path: Path) -> ReportRuntimeState:
         ingest_lock_path=str(tmp_path / "lock"),
         temperature=0.0,
         report_worker_limit=1,
+        public_editorial_quality_disabled_rule_waivers={
+            rule_id: "test-only non-public artifact fixture"
+            for rule_id in BLOCKING_RULE_IDS
+        },
     )
     ctx = RunContext(schema_version="1.0", run_id="run", task_id="task", span_id="span")
     return ReportRuntimeState(

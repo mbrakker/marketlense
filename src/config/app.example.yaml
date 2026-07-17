@@ -15,6 +15,12 @@ ingest:
     min_score: 0.2
     min_recall_pages: 12
     min_recall_page_fraction: 0.65
+  validation:
+    data_gap_policy: "warn"
+    regeneration_max_attempts: 3
+    public_editorial_quality:
+      # Each disabled rule requires an explicit, non-empty release-waiver reason.
+      disabled_rule_waivers: {}
   run_budget:
     max_pdfs: 20
     max_retries: 40

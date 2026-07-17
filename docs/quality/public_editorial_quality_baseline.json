@@ -1,0 +1,17 @@
+{
+  "advisory_coverage": 0.0,
+  "advisory_remediation_targets": [],
+  "broken_asset_count": 0,
+  "editorial_blocker_count": 0,
+  "editorial_rule_counts": {},
+  "internal_id_leak_count": 0,
+  "now_what_coverage": 0.0,
+  "placeholder_count": 0,
+  "raw_fragment_count": 0,
+  "remediation_targets": [],
+  "report_count": 15,
+  "rows": [],
+  "schema_version": "1.0",
+  "screenshot_paths": [],
+  "so_what_coverage": 0.0
+}

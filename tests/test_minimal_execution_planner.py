@@ -23,7 +23,10 @@ def _versions() -> ExecutionCompatibilityVersions:
             "report_vs/artifacts/linkedin_post": "linkedin-v1",
         },
         model_policy_versions={"*": "model-policy-v1"},
-        validator_versions={"validation": "validator-v1"},
+        validator_versions={
+            "validation": "validator-v1|public-editorial-quality:v1",
+            "public_editorial_quality": "public-editorial-quality:v1",
+        },
         crop_profiles={"*": "crop-v1"},
         template_render_versions={"rendered_html": "template-v1"},
         parser_version="parser-v1",
@@ -158,6 +161,7 @@ def test_identical_inputs_have_a_stable_hash_and_skip_all_but_render() -> None:
         ("schema", "output_schema_changed"),
         ("model", "model_policy_changed"),
         ("validator", "validator_changed"),
+        ("editorial_validator", "validator_changed"),
         ("crop", "crop_profile_changed"),
         ("template", "template_changed"),
         ("publication", "publication_target_changed"),
@@ -199,6 +203,15 @@ def test_compatibility_matrix_invalidates_only_the_required_family(
         versions = replace(versions, model_policy_versions={"*": "model-policy-v2"})
     elif change == "validator":
         versions = replace(versions, validator_versions={"validation": "validator-v2"})
+    elif change == "editorial_validator":
+        versions = replace(
+            versions,
+            validator_versions={
+                **versions.validator_versions,
+                "validation": "validator-v1|public-editorial-quality:v2",
+                "public_editorial_quality": "public-editorial-quality:v2",
+            },
+        )
     elif change == "crop":
         versions = replace(versions, crop_profiles={"*": "crop-v2"})
         intent = "crop_repair"

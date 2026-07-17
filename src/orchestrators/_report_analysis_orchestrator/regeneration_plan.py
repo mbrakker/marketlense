@@ -65,6 +65,7 @@ def _lookup_insight_grounding(
     insight_id: str,
     artifacts: Dict[str, Any],
 ) -> tuple[List[str], List[int]]:
+    insight_id = str(insight_id or "").split(".", 1)[0].strip()
     evidence_ids: List[str] = []
     pages: List[int] = []
     for key in ("insights_final", "insights_candidates"):
@@ -318,10 +319,20 @@ def _build_regeneration_plan(
 ) -> RegenerationPlan:
     grouped: Dict[str, List[RegenerationIssue]] = {}
     unmappable: List[RegenerationIssue] = []
+    public_editorial_abstention = False
     for issue in issues:
         if str(issue.severity or "").strip().lower() not in REGENERATION_SEVERITY_ORDER:
             continue
         normalized = _normalize_regeneration_issue(issue, artifacts)
+        if (
+            normalized.rule_id.startswith("public_editorial_quality.")
+            and not str(normalized.repair_target).strip()
+        ):
+            # A deterministic blocker without retained grounding must remain
+            # blocked; it must never trigger broad regeneration or invented copy.
+            unmappable.append(normalized)
+            public_editorial_abstention = True
+            continue
         target_keys = _target_keys_for_issue(normalized)
         if target_keys:
             for target_key in target_keys:
@@ -339,6 +350,13 @@ def _build_regeneration_plan(
             targets=targets,
             unmappable_issues=unmappable,
             broad_retry_allowed=broad_retry_available,
+        )
+    if public_editorial_abstention:
+        return RegenerationPlan(
+            mode="skip",
+            targets=[],
+            unmappable_issues=unmappable,
+            broad_retry_allowed=False,
         )
     if unmappable and broad_retry_available:
         return RegenerationPlan(

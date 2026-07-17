@@ -17,9 +17,6 @@ from .normalization import (
     _build_signal_cards,
     _coerce_chapters,
     _coerce_claim_map,
-    _coerce_public_chart_insight_cards,
-    _coerce_public_key_figures,
-    _coerce_public_topics_covered,
     _coerce_contacts,
     _coerce_coverage,
     _coerce_dict,
@@ -30,6 +27,9 @@ from .normalization import (
     _coerce_list,
     _coerce_methodology,
     _coerce_public_advisory,
+    _coerce_public_chart_insight_cards,
+    _coerce_public_key_figures,
+    _coerce_public_topics_covered,
     _coerce_quotes,
     _coerce_topic_briefs,
     _extract_fieldwork_dates,
@@ -37,6 +37,7 @@ from .normalization import (
     _is_visual_candidate_slide,
     _pick_first_text,
     _s,
+    _sanitize_public_prose,
     _split_summary_bullets,
     _unwrap_doc_map,
 )
@@ -199,7 +200,9 @@ def _build_render_view(
         _s(summary.get("executive_summary")),
         _s(doc_map.get("methodology")),
     )
-    tldr_text = _pick_first_text(summary.get("tldr"), data.get("tldr"))
+    tldr_text = _sanitize_public_prose(
+        _pick_first_text(summary.get("tldr"), data.get("tldr"))
+    )
     not_available = bool(
         source_status.get("not_available")
         if "not_available" in source_status
@@ -207,8 +210,8 @@ def _build_render_view(
     )
     if not tldr_text and not_available:
         tldr_text = "Not available from text."
-    executive_summary = _pick_first_text(
-        summary.get("executive_summary"), data.get("commentary")
+    executive_summary = _sanitize_public_prose(
+        _pick_first_text(summary.get("executive_summary"), data.get("commentary"))
     )
     source_url = _s(data.get("source"))
     canonical_url = _pick_first_text(data.get("canonical_url"), source_url)
@@ -382,8 +385,8 @@ def _build_render_view(
         "insights": insights,
         "quotes": quotes,
         "commentary": _s(data.get("commentary")),
-        "expert_comment": _s(artifacts.get("expert_comment")),
-        "linkedin_post": _s(artifacts.get("linkedin_post")),
+        "expert_comment": _sanitize_public_prose(artifacts.get("expert_comment")),
+        "linkedin_post": _sanitize_public_prose(artifacts.get("linkedin_post")),
         "figures": {
             "slides": figure_slides,
             "visual_candidates": visual_candidate_slides,
@@ -409,8 +412,8 @@ def _build_render_view(
             "has_insights": bool(insights),
             "has_quotes": bool(quotes),
             "has_appendix": bool(
-                _s(artifacts.get("expert_comment"))
-                or _s(artifacts.get("linkedin_post"))
+                _sanitize_public_prose(artifacts.get("expert_comment"))
+                or _sanitize_public_prose(artifacts.get("linkedin_post"))
                 or expert_status["status"] == "abstained"
                 or linkedin_status["status"] == "abstained"
             ),
