@@ -1,0 +1,184 @@
+schema_version: "1.0"
+resources:
+  - resource_type: llm_provider
+    operation: openai_chat
+    callsite: src/services/_llm_service/openai_shared.py
+    scope: run, UTC-day, publisher
+    forecast_source: canonical historical median or unavailable zero-cost forecast
+    preflight_gate: evaluate_budget_request before provider client invocation
+    reservation_used: stable spend_reservation_key
+    actual_usage_source: OpenAI response usage and request identifier
+    reconciliation_path: canonical provider usage event reconciles reservation
+    idempotency_source: provider event key plus reservation key
+    blocking_outcomes: defer, pause, stop
+    test_reference: tests/test_budget_authority.py
+    status: covered
+  - resource_type: llm_provider
+    operation: openai_image_chat
+    callsite: src/services/_llm_service/openai_shared.py
+    scope: run, UTC-day, publisher
+    forecast_source: canonical historical median or unavailable zero-cost forecast
+    preflight_gate: evaluate_budget_request before provider client invocation
+    reservation_used: stable spend_reservation_key
+    actual_usage_source: OpenAI response usage and request identifier
+    reconciliation_path: canonical provider usage event reconciles reservation
+    idempotency_source: provider event key plus reservation key
+    blocking_outcomes: defer, pause, stop
+    test_reference: tests/test_budget_authority.py
+    status: covered
+  - resource_type: llm_provider
+    operation: openai_embeddings
+    callsite: src/services/_llm_service/openai_shared.py
+    scope: run, UTC-day, publisher
+    forecast_source: canonical historical median or unavailable zero-cost forecast
+    preflight_gate: evaluate_budget_request before provider client invocation
+    reservation_used: stable spend_reservation_key
+    actual_usage_source: OpenAI embedding response usage and request identifier
+    reconciliation_path: canonical provider usage event reconciles reservation
+    idempotency_source: provider event key plus reservation key
+    blocking_outcomes: defer, pause, stop
+    test_reference: tests/test_budget_authority.py
+    status: covered
+  - resource_type: llm_provider
+    operation: openai_ocr
+    callsite: src/services/_llm_service/openai_shared.py
+    scope: run, UTC-day, publisher
+    forecast_source: canonical historical median or unavailable zero-cost forecast
+    preflight_gate: evaluate_budget_request before provider client invocation
+    reservation_used: stable spend_reservation_key
+    actual_usage_source: OpenAI OCR response usage and request identifier
+    reconciliation_path: canonical provider usage event reconciles reservation
+    idempotency_source: provider event key plus reservation key
+    blocking_outcomes: defer, pause, stop
+    test_reference: tests/test_budget_authority.py
+    status: covered
+  - resource_type: llm_provider
+    operation: openrouter_json
+    callsite: src/services/_llm_service/openai_shared.py
+    scope: run, UTC-day, publisher
+    forecast_source: canonical historical median or unavailable zero-cost forecast
+    preflight_gate: evaluate_budget_request before provider client invocation
+    reservation_used: stable spend_reservation_key
+    actual_usage_source: OpenRouter-compatible provider response usage
+    reconciliation_path: canonical provider usage event reconciles reservation
+    idempotency_source: provider event key plus reservation key
+    blocking_outcomes: defer, pause, stop
+    test_reference: tests/test_budget_authority.py
+    status: covered
+  - resource_type: vector_store
+    operation: openai_vector_store
+    callsite: src/services/_llm_service/vector_store.py
+    scope: run, UTC-day, publisher
+    forecast_source: canonical historical median or unavailable zero-cost forecast
+    preflight_gate: evaluate_budget_request before each OpenAI vector-store request
+    reservation_used: stable operation and run/task/span key
+    actual_usage_source: measured provider request attempt count
+    reconciliation_path: finalize_budget_side_effect records one actual call or releases zero-attempt failure
+    idempotency_source: reservation key
+    blocking_outcomes: defer, pause, stop
+    test_reference: tests/test_openai_vector_store.py
+    status: covered
+  - resource_type: browser_use_model
+    operation: browser_use_llm_call
+    callsite: src/services/_browser_report_download/browser.py
+    scope: run, UTC-day, publisher
+    forecast_source: canonical historical median
+    preflight_gate: evaluate_budget_request before browser-use model construction
+    reservation_used: stable spend_reservation_key
+    actual_usage_source: browser model provider accounting
+    reconciliation_path: reconcile_budget_reservation
+    idempotency_source: reservation key
+    blocking_outcomes: defer, pause, stop
+    test_reference: tests/test_budget_authority.py
+    status: covered
+  - resource_type: browser_launch
+    operation: browser_launch
+    callsite: src/services/_browser_report_download/browser.py
+    scope: run, UTC-day, publisher
+    forecast_source: explicit configured timeout and one launch
+    preflight_gate: evaluate_budget_request immediately before browser startup
+    reservation_used: stable browser launch key
+    actual_usage_source: actual launch-start flag and measured runtime
+    reconciliation_path: finalize_budget_side_effect
+    idempotency_source: reservation key
+    blocking_outcomes: defer, pause, stop
+    test_reference: tests/test_run_budget_side_effects.py
+    status: covered
+  - resource_type: pdf_process
+    operation: process_pdf
+    callsite: src/orchestrators/report_pipeline_orchestrator.py
+    scope: run, UTC-day, publisher
+    forecast_source: explicit one PDF per pipeline attempt
+    preflight_gate: evaluate_budget_request before report attempt
+    reservation_used: report MD5 and run key
+    actual_usage_source: PDF-start flag
+    reconciliation_path: finalize_budget_side_effect
+    idempotency_source: reservation key
+    blocking_outcomes: defer, pause, stop
+    test_reference: tests/test_run_budget_side_effects.py
+    status: covered
+  - resource_type: drive_read
+    operation: drive_listing
+    callsite: src/services/_drive_service/listing.py
+    scope: run, UTC-day, publisher
+    forecast_source: explicit one material Drive read
+    preflight_gate: evaluate_budget_request before credentials or API client I/O
+    reservation_used: operation idempotency key
+    actual_usage_source: completed Drive list operation
+    reconciliation_path: finalize_budget_side_effect
+    idempotency_source: reservation key
+    blocking_outcomes: defer, pause, stop
+    test_reference: tests/test_budget_authority.py
+    status: covered
+  - resource_type: drive_write
+    operation: drive_folder_or_upload_write
+    callsite: src/services/_drive_service/write.py
+    scope: run, UTC-day, publisher
+    forecast_source: explicit requested write count
+    preflight_gate: evaluate_budget_request before Drive mutation
+    reservation_used: operation idempotency key
+    actual_usage_source: successful Drive mutation response
+    reconciliation_path: finalize_budget_side_effect
+    idempotency_source: Drive request idempotency identity and reservation key
+    blocking_outcomes: defer, pause, stop
+    test_reference: tests/test_run_budget_side_effects.py
+    status: covered
+  - resource_type: wordpress_write
+    operation: wordpress_mutation
+    callsite: src/services/_wordpress_service/budget.py
+    scope: run, UTC-day, publisher
+    forecast_source: explicit requested write count
+    preflight_gate: evaluate_budget_request before WordPress HTTP mutation
+    reservation_used: operation idempotency key
+    actual_usage_source: successful WordPress mutation response
+    reconciliation_path: finalize_budget_side_effect
+    idempotency_source: synchronous publication idempotency identity and reservation key
+    blocking_outcomes: defer, pause, stop
+    test_reference: tests/test_run_budget_side_effects.py
+    status: covered
+  - resource_type: mailbox_read
+    operation: search_mailbox_messages
+    callsite: src/services/mailbox_acquisition_service.py
+    scope: run, UTC-day, publisher
+    forecast_source: explicit one material mailbox polling read
+    preflight_gate: evaluate_budget_request before mailbox provider I/O
+    reservation_used: source URL and poll number key
+    actual_usage_source: completed mailbox search
+    reconciliation_path: finalize_budget_side_effect
+    idempotency_source: reservation key
+    blocking_outcomes: defer, pause, stop
+    test_reference: tests/test_run_budget_side_effects.py
+    status: covered
+  - resource_type: retry
+    operation: retry_attempt
+    callsite: src/orchestrators/retry_orchestrator.py
+    scope: run, UTC-day, publisher
+    forecast_source: explicit one retry attempt
+    preflight_gate: evaluate_budget_request before repeat side effect
+    reservation_used: run/task/span/step/attempt key
+    actual_usage_source: retry admission
+    reconciliation_path: finalize_budget_side_effect
+    idempotency_source: reservation key
+    blocking_outcomes: defer, pause, stop
+    test_reference: tests/test_budget_authority.py
+    status: covered

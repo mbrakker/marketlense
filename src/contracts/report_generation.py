@@ -12,6 +12,7 @@ from src.contracts.regeneration import (
     RegenerationLoopState,
 )
 from src.contracts.report_models import ReportPayload
+from src.contracts.report_store import SourcePublicationMetadata
 from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationReport
 from src.utils.errors import AppError
@@ -134,6 +135,12 @@ class ReportRuntimeState:
     source_url: str = field(
         default="",
         metadata={"doc": "Source-backed report URL used for LLM usage attribution."},
+    )
+    source_publication_metadata: SourcePublicationMetadata | None = field(
+        default=None,
+        metadata={
+            "doc": "Persisted source publication provenance consumed by rendering and render-only regeneration."
+        },
     )
     execution_compatibility: Dict[str, object] = field(
         default_factory=dict,

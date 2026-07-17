@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from src.contracts.docpacks import DocPackPathMap
+
 
 @dataclass(frozen=True)
 class ReportMetadataUpsertRequest:
@@ -261,6 +262,209 @@ class ReportSourceIdentityResolveResponse:
     )
     resolution_source: str = field(
         default="",
-        metadata={"doc": "Lookup source used: md5, title, or fallback."},
+        metadata={
+            "doc": "Lookup source used: md5, title_unambiguous, title_publisher_unambiguous, or unresolved."
+        },
     )
 
+
+@dataclass(frozen=True)
+class SourcePublicationObservedValue:
+    """One bounded source-page date observation retained for provenance."""
+
+    schema_version: str = field(
+        metadata={"doc": "Source-publication observation schema version."}
+    )
+    publication_date: str = field(
+        default="",
+        metadata={"doc": "Normalized source date with no invented month or day."},
+    )
+    publication_date_precision: str = field(
+        default="",
+        metadata={"doc": "Observed date precision: day, month, year, or empty."},
+    )
+    source_url: str = field(
+        default="",
+        metadata={"doc": "Publisher page URL that exposed this observation."},
+    )
+    retrieved_at_utc: str = field(
+        default="",
+        metadata={"doc": "UTC instant when the publisher evidence was observed."},
+    )
+    evidence_kind: str = field(
+        default="",
+        metadata={"doc": "Extraction route, such as json_ld_date_published."},
+    )
+    evidence_locator: str = field(
+        default="",
+        metadata={"doc": "Bounded JSON path, meta name, or semantic DOM locator."},
+    )
+    evidence_value_hash: str = field(
+        default="",
+        metadata={"doc": "SHA-256 of the observed source date value."},
+    )
+    evidence_status: str = field(
+        default="unknown",
+        metadata={
+            "doc": "verified, unknown, invalid, or conflicting observation status."
+        },
+    )
+
+
+@dataclass(frozen=True)
+class SourcePublicationMetadata:
+    """Canonical persisted provenance for a report-source publication date."""
+
+    schema_version: str = field(
+        metadata={"doc": "Source-publication metadata schema version."}
+    )
+    source_record_id: int = field(
+        default=0,
+        metadata={"doc": "Canonical report_sources row identifier when resolved."},
+    )
+    source_identity: str = field(
+        default="",
+        metadata={"doc": "Stable report-source identity, never a local artifact path."},
+    )
+    publication_date: str = field(
+        default="",
+        metadata={"doc": "Normalized ISO date, year-month, or year without invention."},
+    )
+    publication_date_precision: str = field(
+        default="",
+        metadata={"doc": "day, month, year, or empty when no valid date exists."},
+    )
+    source_url: str = field(
+        default="",
+        metadata={"doc": "Publisher URL that supports the canonical date."},
+    )
+    retrieved_at_utc: str = field(
+        default="",
+        metadata={
+            "doc": "UTC instant when the supporting publisher evidence was seen."
+        },
+    )
+    evidence_kind: str = field(
+        default="",
+        metadata={"doc": "Canonical extraction route for the selected evidence."},
+    )
+    evidence_locator: str = field(
+        default="",
+        metadata={"doc": "Bounded location of the selected evidence in the source."},
+    )
+    evidence_value_hash: str = field(
+        default="",
+        metadata={"doc": "SHA-256 of the selected publisher-supplied value."},
+    )
+    evidence_status: str = field(
+        default="unknown",
+        metadata={
+            "doc": "verified, unknown, conflicting, invalid, or legacy_unverified."
+        },
+    )
+    contradiction_status: str = field(
+        default="not_applicable",
+        metadata={"doc": "none, conflicting, or not_applicable."},
+    )
+    observed_values: Tuple[SourcePublicationObservedValue, ...] = field(
+        default_factory=tuple,
+        metadata={
+            "doc": "All bounded date observations retained without source-page text."
+        },
+    )
+
+
+@dataclass(frozen=True)
+class SourcePublicationMetadataExtractionRequest:
+    schema_version: str = field(
+        metadata={"doc": "Source-publication extraction request schema version."}
+    )
+    source_url: str = field(
+        metadata={"doc": "Publisher page URL represented by the captured HTML."}
+    )
+    retrieved_at_utc: str = field(
+        metadata={"doc": "UTC instant when the HTML capture was observed."}
+    )
+    html: str = field(
+        default="",
+        metadata={
+            "doc": "Captured publisher HTML; never persisted or logged as standard event data."
+        },
+    )
+
+
+@dataclass(frozen=True)
+class SourcePublicationMetadataExtractionResponse:
+    schema_version: str = field(
+        metadata={"doc": "Source-publication extraction response schema version."}
+    )
+    metadata: SourcePublicationMetadata = field(
+        metadata={"doc": "Deterministically extracted bounded publisher provenance."}
+    )
+
+
+@dataclass(frozen=True)
+class SourcePublicationMetadataUpsertRequest:
+    schema_version: str = field(
+        metadata={"doc": "Source-publication persistence request schema version."}
+    )
+    db_path: str = field(
+        metadata={"doc": "Reports SQLite database containing the source record."}
+    )
+    metadata: SourcePublicationMetadata = field(
+        metadata={"doc": "Canonical metadata observation to merge idempotently."}
+    )
+
+
+@dataclass(frozen=True)
+class SourcePublicationMetadataUpsertResponse:
+    schema_version: str = field(
+        metadata={"doc": "Source-publication persistence response schema version."}
+    )
+    metadata: SourcePublicationMetadata = field(
+        metadata={
+            "doc": "Merged canonical metadata after provenance-preserving persistence."
+        }
+    )
+    changed: bool = field(
+        metadata={"doc": "Whether persistence changed the stored canonical metadata."}
+    )
+
+
+@dataclass(frozen=True)
+class ReportPublicationMetadataGetRequest:
+    schema_version: str = field(
+        metadata={"doc": "Report publication-metadata lookup request schema version."}
+    )
+    db_path: str = field(
+        metadata={"doc": "Reports SQLite database containing source provenance."}
+    )
+    report_title: str = field(
+        default="",
+        metadata={"doc": "Report title used only for constrained source resolution."},
+    )
+    md5: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Preferred source checksum lookup key when available."},
+    )
+    publisher_name: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Publisher used to constrain title fallback resolution."},
+    )
+
+
+@dataclass(frozen=True)
+class ReportPublicationMetadataGetResponse:
+    schema_version: str = field(
+        metadata={"doc": "Report publication-metadata lookup response schema version."}
+    )
+    metadata: SourcePublicationMetadata = field(
+        metadata={
+            "doc": "Resolved canonical metadata or explicit unknown legacy state."
+        }
+    )
+    resolution_source: str = field(
+        metadata={
+            "doc": "md5, title_unambiguous, title_publisher_unambiguous, or unresolved."
+        }
+    )

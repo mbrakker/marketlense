@@ -55,7 +55,7 @@ def _report_source_url_from_store(
     normalized_publisher = publisher.strip().casefold()
     if not normalized_title:
         return ""
-    row = conn.execute(
+    rows = conn.execute(
         """
         SELECT landing_page_url
         FROM report_sources
@@ -63,11 +63,13 @@ def _report_source_url_from_store(
           AND (?='' OR lower(COALESCE(publisher_name, ''))=?)
           AND COALESCE(landing_page_url, '') <> ''
         ORDER BY downloaded_at_utc DESC, updated_at DESC, id DESC
-        LIMIT 1
+        LIMIT 2
         """,
         (normalized_title, normalized_publisher, normalized_publisher),
-    ).fetchone()
-    return str(row[0]).strip() if row and str(row[0] or "").strip() else ""
+    ).fetchall()
+    if len(rows) != 1:
+        return ""
+    return str(rows[0][0]).strip() if str(rows[0][0] or "").strip() else ""
 
 
 def _delete_stale(

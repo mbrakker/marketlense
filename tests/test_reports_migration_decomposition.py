@@ -31,6 +31,7 @@ SCHEMA = {
     "_SIGNAL_CANDIDATES_TABLE_SQL",
     "_SIGNAL_CANDIDATE_GROUPS_TABLE_SQL",
     "_ARTIFACT_EXECUTION_PLAN_RUNS_TABLE_SQL",
+    "_SOURCE_PUBLICATION_METADATA_TABLE_SQL",
 }
 
 CORE = {
@@ -57,6 +58,7 @@ PROJECTIONS = {
     "_reports_db_015_create_artifact_lineage_registry",
     "_reports_db_016_add_claim_embedding_queue_controls",
     "_reports_db_017_add_lineage_execution_planning",
+    "_reports_db_018_create_source_publication_metadata",
 }
 
 

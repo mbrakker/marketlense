@@ -48,6 +48,10 @@ from src.contracts.report_store import (
     ReportDownloadDriveFolderLookupResponse,
     ReportSourceRecordRequest,
     ReportSourceRecordResponse,
+    SourcePublicationMetadataExtractionRequest,
+    SourcePublicationMetadataExtractionResponse,
+    SourcePublicationMetadataUpsertRequest,
+    SourcePublicationMetadataUpsertResponse,
     ReportValueScoreRecordRequest,
     ReportValueScoreRequest,
     ReportValueScoreResponse,
@@ -64,6 +68,7 @@ from src.generators.report_value_generator import score_report_value
 from src.services.browser_report_download_service import (
     detect_private_api_promotion_candidates,
     download_report_with_browser_use,
+    extract_source_publication_metadata,
     promote_private_api_evidence_to_browser_playbook,
     promote_validated_browser_route_result_to_playbook,
 )
@@ -86,6 +91,7 @@ from src.services.report_store_service import (
     record_publisher_download_route,
     record_report_source,
     record_report_value_score,
+    upsert_source_publication_metadata,
     update_publisher_google_folder,
 )
 from src.services.state_service import (
@@ -151,6 +157,14 @@ class ReportDownloadDependencies:
         None,
     ] = record_report_value_score
     read_bytes: Callable[[ReadBytesRequest, RunContext], ReadBytesResponse] = read_bytes
+    extract_source_publication_metadata: Callable[
+        [SourcePublicationMetadataExtractionRequest, RunContext],
+        SourcePublicationMetadataExtractionResponse,
+    ] = extract_source_publication_metadata
+    upsert_source_publication_metadata: Callable[
+        [SourcePublicationMetadataUpsertRequest, RunContext],
+        SourcePublicationMetadataUpsertResponse,
+    ] = upsert_source_publication_metadata
     write_bytes: Callable[[WriteBytesRequest, RunContext], WriteBytesResponse] = (
         write_bytes
     )
@@ -200,6 +214,8 @@ class ReportDownloadDependencies:
             file_md5=file_md5,
             file_stat=file_stat,
             record_report_source=record_report_source,
+            extract_source_publication_metadata=extract_source_publication_metadata,
+            upsert_source_publication_metadata=upsert_source_publication_metadata,
             score_report_value=score_report_value,
             record_report_value_score=record_report_value_score,
             read_bytes=read_bytes,

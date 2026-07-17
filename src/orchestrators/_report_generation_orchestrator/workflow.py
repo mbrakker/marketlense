@@ -14,7 +14,11 @@ from src.contracts.report_generation import (
     ReportGenerationClientBundle,
     require_report_generation_client_bundle,
 )
-from src.contracts.report_store import ReportSourceIdentityResolveRequest
+from src.contracts.report_store import (
+    ReportPublicationMetadataGetRequest,
+    ReportSourceIdentityResolveRequest,
+    SourcePublicationMetadata,
+)
 from src.contracts.run_context import RunContext
 from src.generators.report_analysis_generator import start_vector_store_indexing
 from src.generators.report_generation_dependencies import (
@@ -110,7 +114,7 @@ def _resolve_runtime_source_identity(
     md5: Optional[str],
     ctx: RunContext,
     deps: ReportGenerationDependencies,
-) -> tuple[str, str, str]:
+) -> tuple[str, str, str, SourcePublicationMetadata]:
     fallback_report_name = file.name or file.file_id
     try:
         identity = deps.render.resolve_report_source_identity(
@@ -131,16 +135,56 @@ def _resolve_runtime_source_identity(
                 module=logger.name,
                 fields={
                     "file_id": file.file_id,
-                    "error": str(exc),
+                    "error_type": type(exc).__name__,
+                    "error_code": exc.code if isinstance(exc, AppError) else "",
                 },
             )
         )
-        return "", fallback_report_name, ""
+        return (
+            "",
+            fallback_report_name,
+            "",
+            SourcePublicationMetadata(schema_version="1.0", evidence_status="unknown"),
+        )
     publisher_name = str(getattr(identity, "publisher_name", "") or "").strip()
     source_report_name = (
         str(getattr(identity, "report_name", "") or "").strip() or fallback_report_name
     )
     source_url = str(getattr(identity, "source_url", "") or "").strip()
+    publication_resolution = "unresolved"
+    try:
+        publication_response = deps.render.get_report_publication_metadata(
+            ReportPublicationMetadataGetRequest(
+                schema_version="1.0",
+                db_path=settings.reports_db,
+                report_title=source_report_name,
+                md5=md5,
+                publisher_name=publisher_name or None,
+            ),
+            ctx,
+        )
+        publication_metadata = publication_response.metadata
+        publication_resolution = str(
+            getattr(publication_response, "resolution_source", "unresolved")
+            or "unresolved"
+        )
+    except Exception as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="report_publication_metadata_resolve_failed",
+                module=logger.name,
+                fields={
+                    "file_id": file.file_id,
+                    "error_type": type(exc).__name__,
+                    "error_code": exc.code if isinstance(exc, AppError) else "",
+                },
+            )
+        )
+        publication_metadata = SourcePublicationMetadata(
+            schema_version="1.0", evidence_status="unknown"
+        )
     logger.info(
         log_event(
             ctx,
@@ -155,10 +199,12 @@ def _resolve_runtime_source_identity(
                 "resolution_source": str(
                     getattr(identity, "resolution_source", "") or ""
                 ),
+                "publication_metadata_status": publication_metadata.evidence_status,
+                "publication_metadata_resolution": publication_resolution,
             },
         )
     )
-    return publisher_name, source_report_name, source_url
+    return publisher_name, source_report_name, source_url, publication_metadata
 
 
 def run_report_generation(
@@ -191,7 +237,12 @@ def run_report_generation(
         if dependencies is not None
         else _default_report_generation_dependencies()
     )
-    publisher_name, source_report_name, source_url = _resolve_runtime_source_identity(
+    (
+        publisher_name,
+        source_report_name,
+        source_url,
+        source_publication_metadata,
+    ) = _resolve_runtime_source_identity(
         file=file,
         settings=settings,
         md5=md5,
@@ -207,6 +258,7 @@ def run_report_generation(
         publisher_name=publisher_name,
         source_report_name=source_report_name,
         source_url=source_url,
+        source_publication_metadata=source_publication_metadata,
         execution_compatibility=execution_compatibility,
         execution_plan_hash=(
             minimal_execution_plan.plan_hash

@@ -38,8 +38,10 @@ from src.services._report_store_service.inventory import (
 from src.services._report_store_service.metadata import (
     check_report_db_access,
     get_metadata,
+    get_report_publication_metadata,
     list_metadata,
     resolve_report_source_identity,
+    upsert_source_publication_metadata,
     upsert_metadata,
 )
 from src.services._report_store_service.publishers import (
@@ -64,6 +66,7 @@ __all__ = [
     "backfill_artifact_lineage",
     "check_artifact_reuse",
     "get_metadata",
+    "get_report_publication_metadata",
     "get_artifact_lineage_for_storage",
     "invalidate_artifacts",
     "get_publisher_download_route",
@@ -94,4 +97,5 @@ __all__ = [
     "update_publisher_google_folder",
     "trace_artifact_lineage",
     "upsert_metadata",
+    "upsert_source_publication_metadata",
 ]

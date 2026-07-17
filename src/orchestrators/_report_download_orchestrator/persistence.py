@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -17,7 +17,7 @@ from src.contracts.browser_download import (
     ReportDownloadOrchestratorRequest,
 )
 from src.contracts.drive import DriveFile
-from src.contracts.files import FileHashRequest
+from src.contracts.files import FileHashRequest, ReadBytesRequest
 from src.utils.clock import utc_now_seconds_z as _utc_now_iso
 from src.contracts.idempotency import (
     OrchestratorIdempotencyGetRequest,
@@ -29,6 +29,8 @@ from src.contracts.report_store import (
     ReportSourceRecordResponse,
     ReportValueScoreRecordRequest,
     ReportValueScoreRequest,
+    SourcePublicationMetadataExtractionRequest,
+    SourcePublicationMetadataUpsertRequest,
 )
 from src.contracts.run_context import RunContext
 from src.orchestrators._report_download_orchestrator.dependencies import (
@@ -38,6 +40,7 @@ from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
 from src.services import idempotency_service
 from src.utils.cache_utils import sha256_json
 from src.utils.coercion import coerce_int
+from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.url_utils import normalize_url
 
@@ -48,6 +51,94 @@ _REPORT_DOWNLOAD_IDENTITY_UPDATE_SCOPE = "report_download_orchestrator.identity_
 _REPORT_DOWNLOAD_REQUIRED_SELECT_SCOPE = (
     "report_download_orchestrator.required_select_learning"
 )
+
+
+def _record_source_publication_metadata(
+    *,
+    request: ReportDownloadOrchestratorRequest,
+    result: BrowserReportDownloadResult,
+    source_record: ReportSourceRecordResponse,
+    ctx: RunContext,
+    dependencies: ReportDownloadDependencies,
+) -> None:
+    """Persist deterministic source-page metadata from existing browser evidence."""
+    html = ""
+    snapshot_path = str(result.terminal_evidence.html_snapshot_path or "").strip()
+    if snapshot_path:
+        try:
+            html = dependencies.read_bytes(
+                ReadBytesRequest(schema_version="1.0", path=snapshot_path), ctx
+            ).content.decode("utf-8", errors="ignore")
+        except AppError as exc:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="orchestrator",
+                    event="source_publication_metadata_snapshot_unavailable",
+                    module=logger.name,
+                    fields={
+                        "source_record_id": source_record.record_id,
+                        "error_code": exc.code,
+                    },
+                )
+            )
+    source_url = str(result.final_page_url or result.source_url or "").strip()
+    extraction = dependencies.extract_source_publication_metadata(
+        SourcePublicationMetadataExtractionRequest(
+            schema_version="1.0",
+            source_url=source_url,
+            retrieved_at_utc=_utc_now_iso(),
+            html=html,
+        ),
+        ctx,
+    )
+    metadata = extraction.metadata
+    try:
+        stored = dependencies.upsert_source_publication_metadata(
+            SourcePublicationMetadataUpsertRequest(
+                schema_version="1.0",
+                db_path=request.reports_db,
+                metadata=replace(
+                    metadata,
+                    source_record_id=source_record.record_id,
+                    source_identity=f"report_source:{source_record.record_id}",
+                ),
+            ),
+            ctx,
+        )
+    except AppError as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="source_publication_metadata_persist_failed",
+                module=logger.name,
+                fields={
+                    "source_record_id": source_record.record_id,
+                    "error_code": exc.code,
+                    "retryable": exc.retryable,
+                },
+            )
+        )
+        return
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="source_publication_metadata_recorded",
+            module=logger.name,
+            fields={
+                "source_record_id": source_record.record_id,
+                "evidence_status": stored.metadata.evidence_status,
+                "contradiction_status": stored.metadata.contradiction_status,
+                "evidence_kind": stored.metadata.evidence_kind,
+                "evidence_locator": stored.metadata.evidence_locator,
+                "evidence_value_hash": stored.metadata.evidence_value_hash,
+                "observed_value_count": len(stored.metadata.observed_values),
+                "changed": stored.changed,
+            },
+        )
+    )
 
 
 def _lookup_idempotency_record(
@@ -490,6 +581,13 @@ def record_downloaded_source(
                     "md5": source_record.md5,
                 },
             )
+        )
+        _record_source_publication_metadata(
+            request=request,
+            result=result,
+            source_record=source_record,
+            ctx=ctx,
+            dependencies=dependencies,
         )
         report_value_score = dependencies.score_report_value(
             ReportValueScoreRequest(

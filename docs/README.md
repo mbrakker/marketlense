@@ -15,7 +15,7 @@ This index separates current reference material from executable procedures, hist
 ## Quick routing
 
 - New engineer: [local development](ops/local-development.md), [configuration](ops/configuration.md), then the [report lifecycle](product/report-lifecycle.md).
-- Operator or incident responder: [monitoring](ops/monitoring.md), [recovery](ops/recovery.md), [troubleshooting](ops/troubleshooting.md), and [WordPress operations](ops/wordpress.md).
+- Operator or incident responder: [monitoring](ops/monitoring.md), [recovery](ops/recovery.md), [source publication metadata](ops/source-publication-metadata.md), [budget authority coverage](ops/budget_authority_coverage.md), [troubleshooting](ops/troubleshooting.md), and [WordPress operations](ops/wordpress.md).
 - Architect: [architecture overview](architecture/overview.md), [workflow control](architecture/workflow-control.md), [lineage-driven minimum regeneration](architecture/lineage-minimum-regeneration-planner.md), [external boundaries](architecture/external-system-boundaries.md), and the machine-enforced [architecture policy](quality/architecture-policy.md).
 - Contributor: [testing](quality/testing.md), [release gates](quality/release-gates.md), and [CONSOLIDATED_TODO.md](../CONSOLIDATED_TODO.md).
 

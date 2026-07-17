@@ -8737,6 +8737,65 @@
       ],
       "type": "object"
     },
+    "src.contracts._report_store.metadata.ReportPublicationMetadataGetRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "md5": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "publisher_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "report_title": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.metadata.ReportPublicationMetadataGetResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "metadata": {
+          "$ref": "#/$defs/src.contracts._report_store.metadata.SourcePublicationMetadata"
+        },
+        "resolution_source": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "metadata",
+        "resolution_source"
+      ],
+      "type": "object"
+    },
     "src.contracts._report_store.metadata.ReportSourceIdentityResolveRequest": {
       "additionalProperties": false,
       "properties": {
@@ -8786,6 +8845,172 @@
           "type": "string"
         },
         "resolution_source": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.metadata.SourcePublicationMetadata": {
+      "additionalProperties": false,
+      "properties": {
+        "contradiction_status": {
+          "type": "string"
+        },
+        "evidence_kind": {
+          "type": "string"
+        },
+        "evidence_locator": {
+          "type": "string"
+        },
+        "evidence_status": {
+          "type": "string"
+        },
+        "evidence_value_hash": {
+          "type": "string"
+        },
+        "observed_values": {
+          "items": {
+            "$ref": "#/$defs/src.contracts._report_store.metadata.SourcePublicationObservedValue"
+          },
+          "type": "array"
+        },
+        "publication_date": {
+          "type": "string"
+        },
+        "publication_date_precision": {
+          "type": "string"
+        },
+        "retrieved_at_utc": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_identity": {
+          "type": "string"
+        },
+        "source_record_id": {
+          "type": "integer"
+        },
+        "source_url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.metadata.SourcePublicationMetadataExtractionRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "html": {
+          "type": "string"
+        },
+        "retrieved_at_utc": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "source_url",
+        "retrieved_at_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.metadata.SourcePublicationMetadataExtractionResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "metadata": {
+          "$ref": "#/$defs/src.contracts._report_store.metadata.SourcePublicationMetadata"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "metadata"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.metadata.SourcePublicationMetadataUpsertRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "metadata": {
+          "$ref": "#/$defs/src.contracts._report_store.metadata.SourcePublicationMetadata"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "metadata"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.metadata.SourcePublicationMetadataUpsertResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "changed": {
+          "type": "boolean"
+        },
+        "metadata": {
+          "$ref": "#/$defs/src.contracts._report_store.metadata.SourcePublicationMetadata"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "metadata",
+        "changed"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.metadata.SourcePublicationObservedValue": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_kind": {
+          "type": "string"
+        },
+        "evidence_locator": {
+          "type": "string"
+        },
+        "evidence_status": {
+          "type": "string"
+        },
+        "evidence_value_hash": {
+          "type": "string"
+        },
+        "publication_date": {
+          "type": "string"
+        },
+        "publication_date_precision": {
+          "type": "string"
+        },
+        "retrieved_at_utc": {
           "type": "string"
         },
         "schema_version": {
@@ -22464,6 +22689,16 @@
         "openai_file_id": {
           "type": "string"
         },
+        "run_budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "schema_version": {
           "type": "string"
         },
@@ -22524,6 +22759,16 @@
         "name": {
           "type": "string"
         },
+        "run_budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "schema_version": {
           "type": "string"
         },
@@ -22566,6 +22811,16 @@
       "properties": {
         "api_key": {
           "type": "string"
+        },
+        "run_budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "schema_version": {
           "type": "string"
@@ -22623,6 +22878,16 @@
         "purpose": {
           "type": "string"
         },
+        "run_budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "schema_version": {
           "type": "string"
         },
@@ -22665,6 +22930,16 @@
       "properties": {
         "api_key": {
           "type": "string"
+        },
+        "run_budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "schema_version": {
           "type": "string"
@@ -22741,6 +23016,16 @@
             "type": "string"
           },
           "type": "object"
+        },
+        "run_budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "schema_version": {
           "type": "string"
@@ -27911,6 +28196,16 @@
         },
         "settings": {
           "$ref": "#/$defs/src.contracts.ingest.IngestSettings"
+        },
+        "source_publication_metadata": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts._report_store.metadata.SourcePublicationMetadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "source_report_name": {
           "type": "string"

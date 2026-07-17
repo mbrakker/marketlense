@@ -19,6 +19,7 @@ from src.services._sqlite_migration._reports.projections import (
     _reports_db_015_create_artifact_lineage_registry,
     _reports_db_016_add_claim_embedding_queue_controls,
     _reports_db_017_add_lineage_execution_planning,
+    _reports_db_018_create_source_publication_metadata,
 )
 from src.services._sqlite_migration._reports.routing import (
     _reports_db_006_create_or_upgrade_download_route_history,
@@ -51,6 +52,7 @@ from src.services._sqlite_migration._reports.schema import (
     _REPORTS_REQUIRED_COLUMNS,
     _SIGNAL_CANDIDATE_GROUPS_TABLE_SQL,
     _SIGNAL_CANDIDATES_TABLE_SQL,
+    _SOURCE_PUBLICATION_METADATA_TABLE_SQL,
     _VECTOR_PROJECTION_QUEUE_TABLE_SQL,
 )  # noqa: F401
 from src.services._sqlite_migration.runner import _MigrationSpec
@@ -140,5 +142,10 @@ _REPORTS_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
         migration_id="reports_db_017_add_lineage_execution_planning",
         version=17,
         apply_fn=_reports_db_017_add_lineage_execution_planning,
+    ),
+    _MigrationSpec(
+        migration_id="reports_db_018_create_source_publication_metadata",
+        version=18,
+        apply_fn=_reports_db_018_create_source_publication_metadata,
     ),
 )

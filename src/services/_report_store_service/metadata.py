@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from dataclasses import replace
+from dataclasses import asdict, replace
 from typing import List, Optional
 
 from src.contracts.report_store import (
@@ -12,12 +12,18 @@ from src.contracts.report_store import (
     ReportMetadataGetResponse,
     ReportMetadataListRequest,
     ReportMetadataListResponse,
+    ReportPublicationMetadataGetRequest,
+    ReportPublicationMetadataGetResponse,
     ReportSourceIdentityResolveRequest,
     ReportSourceIdentityResolveResponse,
     ReportMetadataUpsertRequest,
+    SourcePublicationMetadata,
+    SourcePublicationMetadataUpsertRequest,
+    SourcePublicationMetadataUpsertResponse,
+    SourcePublicationObservedValue,
 )
 from src.contracts.run_context import RunContext
-from src.utils.coercion import clean_string_list
+from src.utils.coercion import clean_string_list, coerce_int
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.time_period import normalize_time_period
@@ -33,6 +39,22 @@ from .common import (
 from .connection import _metadata_conn
 
 
+_PUBLICATION_EVIDENCE_STATUSES = {
+    "verified",
+    "unknown",
+    "conflicting",
+    "invalid",
+    "legacy_unverified",
+}
+_PUBLICATION_EVIDENCE_KINDS = {
+    "json_ld_date_published": 0,
+    "open_graph_article_published_time": 1,
+    "html_meta_published_time": 2,
+    "visible_publication_label": 3,
+}
+_PUBLICATION_PRECISION = {"year": 1, "month": 2, "day": 3}
+
+
 def _report_source_url_from_store(
     conn: sqlite3.Connection,
     *,
@@ -40,39 +62,14 @@ def _report_source_url_from_store(
     publisher: Optional[str],
     md5: Optional[str],
 ) -> Optional[str]:
-    if not _table_exists(conn, "report_sources"):
-        return None
-    normalized_title = report_title.strip().casefold()
-    normalized_publisher = str(publisher or "").strip().casefold()
-    if normalized_title:
-        row = conn.execute(
-            """
-            SELECT landing_page_url
-            FROM report_sources
-            WHERE lower(report_name)=?
-              AND (?='' OR lower(COALESCE(publisher_name, ''))=?)
-              AND COALESCE(landing_page_url, '') <> ''
-            ORDER BY downloaded_at_utc DESC, updated_at DESC, id DESC
-            LIMIT 1
-            """,
-            (normalized_title, normalized_publisher, normalized_publisher),
-        ).fetchone()
-        if row and str(row[0] or "").strip():
-            return str(row[0]).strip()
-    clean_md5 = str(md5 or "").strip()
-    if not clean_md5:
-        return None
-    row = conn.execute(
-        """
-        SELECT landing_page_url
-        FROM report_sources
-        WHERE md5=? AND COALESCE(landing_page_url, '') <> ''
-        ORDER BY downloaded_at_utc DESC, updated_at DESC, id DESC
-        LIMIT 1
-        """,
-        (clean_md5,),
-    ).fetchone()
-    return str(row[0]).strip() if row and str(row[0] or "").strip() else None
+    row, _ = _report_source_identity_row(
+        conn,
+        report_title=report_title,
+        publisher=publisher,
+        md5=md5,
+        prefer_title=True,
+    )
+    return str(row[3] or "").strip() if row and str(row[3] or "").strip() else None
 
 
 def _report_source_publisher_from_store(
@@ -81,25 +78,14 @@ def _report_source_publisher_from_store(
     report_title: str,
     md5: Optional[str],
 ) -> Optional[str]:
-    if not _table_exists(conn, "report_sources"):
-        return None
-    normalized_title = report_title.strip().casefold()
-    clean_md5 = str(md5 or "").strip()
-    row = conn.execute(
-        """
-        SELECT publisher_name
-        FROM report_sources
-        WHERE COALESCE(publisher_name, '') <> ''
-          AND (
-            (? <> '' AND lower(report_name)=?)
-            OR (? <> '' AND md5=?)
-          )
-        ORDER BY downloaded_at_utc DESC, updated_at DESC, id DESC
-        LIMIT 1
-        """,
-        (normalized_title, normalized_title, clean_md5, clean_md5),
-    ).fetchone()
-    return str(row[0]).strip() if row and str(row[0] or "").strip() else None
+    row, _ = _report_source_identity_row(
+        conn,
+        report_title=report_title,
+        publisher=None,
+        md5=md5,
+        prefer_title=True,
+    )
+    return str(row[2] or "").strip() if row and str(row[2] or "").strip() else None
 
 
 def _report_source_identity_row(
@@ -108,14 +94,18 @@ def _report_source_identity_row(
     report_title: str,
     publisher: Optional[str],
     md5: Optional[str],
+    prefer_title: bool = False,
 ) -> tuple[Optional[sqlite3.Row], str]:
     if not _table_exists(conn, "report_sources"):
-        return None, "fallback"
-    clean_md5 = str(md5 or "").strip()
-    if clean_md5:
-        row = conn.execute(
+        return None, "unresolved"
+
+    def _md5_row() -> Optional[sqlite3.Row]:
+        clean_md5 = str(md5 or "").strip()
+        if not clean_md5:
+            return None
+        return conn.execute(
             """
-            SELECT report_name, publisher_name, landing_page_url
+            SELECT id, report_name, publisher_name, landing_page_url
             FROM report_sources
             WHERE md5=?
             ORDER BY downloaded_at_utc DESC, updated_at DESC, id DESC
@@ -123,25 +113,44 @@ def _report_source_identity_row(
             """,
             (clean_md5,),
         ).fetchone()
-        if row:
-            return row, "md5"
-    normalized_title = report_title.strip().casefold()
-    normalized_publisher = str(publisher or "").strip().casefold()
-    if normalized_title:
-        row = conn.execute(
+
+    def _title_row() -> Optional[sqlite3.Row]:
+        normalized_title = report_title.strip().casefold()
+        normalized_publisher = str(publisher or "").strip().casefold()
+        if not normalized_title:
+            return None
+        rows = conn.execute(
             """
-            SELECT report_name, publisher_name, landing_page_url
+            SELECT id, report_name, publisher_name, landing_page_url
             FROM report_sources
             WHERE lower(report_name)=?
               AND (?='' OR lower(COALESCE(publisher_name, ''))=?)
             ORDER BY downloaded_at_utc DESC, updated_at DESC, id DESC
-            LIMIT 1
+            LIMIT 2
             """,
             (normalized_title, normalized_publisher, normalized_publisher),
-        ).fetchone()
-        if row:
-            return row, "title"
-    return None, "fallback"
+        ).fetchall()
+        if len(rows) == 1:
+            return rows[0]
+        return None
+
+    normalized_publisher = str(publisher or "").strip().casefold()
+    candidates = (
+        (("title", _title_row), ("md5", _md5_row))
+        if prefer_title
+        else (("md5", _md5_row), ("title", _title_row))
+    )
+    for source, resolver in candidates:
+        row = resolver()
+        if row is not None:
+            if source == "md5":
+                return row, "md5"
+            return row, (
+                "title_publisher_unambiguous"
+                if normalized_publisher
+                else "title_unambiguous"
+            )
+    return None, "unresolved"
 
 
 def resolve_report_source_identity(
@@ -185,11 +194,11 @@ def resolve_report_source_identity(
     else:
         response = ReportSourceIdentityResolveResponse(
             schema_version="1.0",
-            report_name=str(row[0] or "").strip()
+            report_name=str(row[1] or "").strip()
             or str(request.report_title or "").strip(),
-            publisher_name=str(row[1] or "").strip()
+            publisher_name=str(row[2] or "").strip()
             or str(request.publisher_name or "").strip(),
-            source_url=str(row[2] or "").strip(),
+            source_url=str(row[3] or "").strip(),
             resolution_source=source,
         )
     logger.info(
@@ -207,6 +216,379 @@ def resolve_report_source_identity(
         )
     )
     return response
+
+
+def _unknown_publication_metadata(
+    *,
+    source_record_id: int = 0,
+    source_url: str = "",
+    legacy: bool = False,
+) -> SourcePublicationMetadata:
+    return SourcePublicationMetadata(
+        schema_version="1.0",
+        source_record_id=source_record_id,
+        source_identity=(
+            f"report_source:{source_record_id}" if source_record_id else ""
+        ),
+        source_url=source_url,
+        evidence_status="legacy_unverified" if legacy else "unknown",
+        contradiction_status="not_applicable",
+    )
+
+
+def _observations_from_json(raw: object) -> tuple[SourcePublicationObservedValue, ...]:
+    if not isinstance(raw, str) or not raw.strip():
+        return ()
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        return ()
+    if not isinstance(parsed, list):
+        return ()
+    observations: list[SourcePublicationObservedValue] = []
+    for item in parsed:
+        if not isinstance(item, dict):
+            continue
+        try:
+            observations.append(SourcePublicationObservedValue(**item))
+        except TypeError:
+            continue
+    return tuple(observations)
+
+
+def _publication_metadata_from_row(
+    row: tuple[object, ...],
+) -> SourcePublicationMetadata:
+    source_record_id = coerce_int(row[0], min_value=0)
+    return SourcePublicationMetadata(
+        schema_version=str(row[1] or "1.0"),
+        source_record_id=source_record_id,
+        source_identity=f"report_source:{source_record_id}",
+        publication_date=str(row[2] or "").strip(),
+        publication_date_precision=str(row[3] or "").strip(),
+        source_url=str(row[4] or "").strip(),
+        retrieved_at_utc=str(row[5] or "").strip(),
+        evidence_kind=str(row[6] or "").strip(),
+        evidence_locator=str(row[7] or "").strip(),
+        evidence_value_hash=str(row[8] or "").strip(),
+        evidence_status=str(row[9] or "unknown").strip() or "unknown",
+        contradiction_status=str(row[10] or "not_applicable").strip()
+        or "not_applicable",
+        observed_values=_observations_from_json(row[11]),
+    )
+
+
+def _publication_observation_key(
+    observation: SourcePublicationObservedValue,
+) -> tuple[str, ...]:
+    return (
+        observation.publication_date,
+        observation.publication_date_precision,
+        observation.source_url,
+        observation.retrieved_at_utc,
+        observation.evidence_kind,
+        observation.evidence_locator,
+        observation.evidence_value_hash,
+        observation.evidence_status,
+    )
+
+
+def _merged_observations(
+    *values: tuple[SourcePublicationObservedValue, ...],
+) -> tuple[SourcePublicationObservedValue, ...]:
+    unique = {
+        _publication_observation_key(observation): observation
+        for group in values
+        for observation in group
+    }
+    return tuple(unique[key] for key in sorted(unique))
+
+
+def _dates_are_compatible(left: str, right: str) -> bool:
+    return left == right or left.startswith(f"{right}-") or right.startswith(f"{left}-")
+
+
+def _best_publication_observation(
+    observations: tuple[SourcePublicationObservedValue, ...],
+) -> SourcePublicationObservedValue | None:
+    verified = [
+        item
+        for item in observations
+        if item.evidence_status == "verified" and item.publication_date
+    ]
+    if not verified:
+        return None
+    return min(
+        verified,
+        key=lambda item: (
+            _PUBLICATION_EVIDENCE_KINDS.get(item.evidence_kind, 99),
+            -_PUBLICATION_PRECISION.get(item.publication_date_precision, 0),
+            item.publication_date,
+            item.evidence_locator,
+            item.evidence_value_hash,
+        ),
+    )
+
+
+def _merged_publication_metadata(
+    *,
+    existing: SourcePublicationMetadata | None,
+    incoming: SourcePublicationMetadata,
+) -> SourcePublicationMetadata:
+    observations = _merged_observations(
+        existing.observed_values if existing else (), incoming.observed_values
+    )
+    if not observations and incoming.evidence_status in {"unknown", "invalid"}:
+        observations = (
+            SourcePublicationObservedValue(
+                schema_version="1.0",
+                publication_date=incoming.publication_date,
+                publication_date_precision=incoming.publication_date_precision,
+                source_url=incoming.source_url,
+                retrieved_at_utc=incoming.retrieved_at_utc,
+                evidence_kind=incoming.evidence_kind,
+                evidence_locator=incoming.evidence_locator,
+                evidence_value_hash=incoming.evidence_value_hash,
+                evidence_status=incoming.evidence_status,
+            ),
+        )
+    verified_dates = [
+        item.publication_date
+        for item in observations
+        if item.evidence_status == "verified" and item.publication_date
+    ]
+    conflicting = any(
+        not _dates_are_compatible(left, right)
+        for index, left in enumerate(verified_dates)
+        for right in verified_dates[index + 1 :]
+    )
+    best = _best_publication_observation(observations)
+    if conflicting:
+        status = "conflicting"
+        contradiction_status = "conflicting"
+    elif best is not None:
+        status = "verified"
+        contradiction_status = "none"
+    elif any(item.evidence_status == "invalid" for item in observations):
+        status = "invalid"
+        contradiction_status = "not_applicable"
+    elif existing is not None and existing.evidence_status == "legacy_unverified":
+        status = "legacy_unverified"
+        contradiction_status = "not_applicable"
+    else:
+        status = "unknown"
+        contradiction_status = "not_applicable"
+    selected = best or next(
+        (item for item in observations if item.evidence_status == "invalid"), None
+    )
+    return SourcePublicationMetadata(
+        schema_version="1.0",
+        source_record_id=incoming.source_record_id,
+        source_identity=f"report_source:{incoming.source_record_id}",
+        publication_date=selected.publication_date if selected else "",
+        publication_date_precision=(
+            selected.publication_date_precision if selected else ""
+        ),
+        source_url=(selected.source_url if selected else incoming.source_url),
+        retrieved_at_utc=(
+            selected.retrieved_at_utc if selected else incoming.retrieved_at_utc
+        ),
+        evidence_kind=selected.evidence_kind if selected else incoming.evidence_kind,
+        evidence_locator=(
+            selected.evidence_locator if selected else incoming.evidence_locator
+        ),
+        evidence_value_hash=(
+            selected.evidence_value_hash if selected else incoming.evidence_value_hash
+        ),
+        evidence_status=status,
+        contradiction_status=contradiction_status,
+        observed_values=observations,
+    )
+
+
+def upsert_source_publication_metadata(
+    request: SourcePublicationMetadataUpsertRequest,
+    ctx: RunContext,
+) -> SourcePublicationMetadataUpsertResponse:
+    incoming = request.metadata
+    if not request.db_path.strip():
+        raise AppError(
+            code="source_publication_metadata_db_missing",
+            message="Reports database path is required for publication metadata",
+            retryable=False,
+        )
+    if incoming.source_record_id <= 0:
+        raise AppError(
+            code="source_publication_metadata_source_missing",
+            message="Publication metadata requires a persisted report source record",
+            retryable=False,
+        )
+    if incoming.evidence_status not in _PUBLICATION_EVIDENCE_STATUSES:
+        raise AppError(
+            code="source_publication_metadata_status_invalid",
+            message="Publication metadata has an unsupported evidence status",
+            retryable=False,
+            context={"evidence_status": incoming.evidence_status},
+        )
+    with _metadata_conn(request.db_path, ctx) as conn:
+        source_exists = conn.execute(
+            "SELECT 1 FROM report_sources WHERE id=?", (incoming.source_record_id,)
+        ).fetchone()
+        if source_exists is None:
+            raise AppError(
+                code="source_publication_metadata_source_missing",
+                message="Publication metadata source record does not exist",
+                retryable=False,
+                context={"source_record_id": incoming.source_record_id},
+            )
+        row = conn.execute(
+            """
+            SELECT source_record_id, schema_version, publication_date,
+                   publication_date_precision, source_url, retrieved_at_utc,
+                   evidence_kind, evidence_locator, evidence_value_hash,
+                   evidence_status, contradiction_status, observed_values_json
+            FROM source_publication_metadata
+            WHERE source_record_id=?
+            """,
+            (incoming.source_record_id,),
+        ).fetchone()
+        existing = _publication_metadata_from_row(row) if row else None
+        merged = _merged_publication_metadata(existing=existing, incoming=incoming)
+        changed = merged != existing
+        if changed:
+            observed_values_json = json.dumps(
+                [asdict(item) for item in merged.observed_values],
+                ensure_ascii=True,
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+            conn.execute(
+                """
+                INSERT INTO source_publication_metadata(
+                    source_record_id, schema_version, publication_date,
+                    publication_date_precision, source_url, retrieved_at_utc,
+                    evidence_kind, evidence_locator, evidence_value_hash,
+                    evidence_status, contradiction_status, observed_values_json,
+                    created_at_utc, updated_at_utc
+                )
+                VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                       strftime('%Y-%m-%dT%H:%M:%fZ','now'),
+                       strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+                ON CONFLICT(source_record_id) DO UPDATE SET
+                    schema_version=excluded.schema_version,
+                    publication_date=excluded.publication_date,
+                    publication_date_precision=excluded.publication_date_precision,
+                    source_url=excluded.source_url,
+                    retrieved_at_utc=excluded.retrieved_at_utc,
+                    evidence_kind=excluded.evidence_kind,
+                    evidence_locator=excluded.evidence_locator,
+                    evidence_value_hash=excluded.evidence_value_hash,
+                    evidence_status=excluded.evidence_status,
+                    contradiction_status=excluded.contradiction_status,
+                    observed_values_json=excluded.observed_values_json,
+                    updated_at_utc=excluded.updated_at_utc
+                """,
+                (
+                    merged.source_record_id,
+                    merged.schema_version,
+                    merged.publication_date,
+                    merged.publication_date_precision,
+                    merged.source_url,
+                    merged.retrieved_at_utc,
+                    merged.evidence_kind,
+                    merged.evidence_locator,
+                    merged.evidence_value_hash,
+                    merged.evidence_status,
+                    merged.contradiction_status,
+                    observed_values_json,
+                ),
+            )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="source_publication_metadata_upserted",
+            module=logger.name,
+            fields={
+                "source_record_id": merged.source_record_id,
+                "evidence_status": merged.evidence_status,
+                "contradiction_status": merged.contradiction_status,
+                "evidence_kind": merged.evidence_kind,
+                "evidence_locator": merged.evidence_locator,
+                "evidence_value_hash": merged.evidence_value_hash,
+                "observed_value_count": len(merged.observed_values),
+                "changed": changed,
+            },
+        )
+    )
+    return SourcePublicationMetadataUpsertResponse(
+        schema_version="1.0", metadata=merged, changed=changed
+    )
+
+
+def get_report_publication_metadata(
+    request: ReportPublicationMetadataGetRequest,
+    ctx: RunContext,
+) -> ReportPublicationMetadataGetResponse:
+    if not request.db_path.strip():
+        raise AppError(
+            code="source_publication_metadata_db_missing",
+            message="Reports database path is required for publication metadata lookup",
+            retryable=False,
+        )
+    with _metadata_conn(request.db_path, ctx) as conn:
+        row, resolution_source = _report_source_identity_row(
+            conn,
+            report_title=request.report_title,
+            publisher=request.publisher_name,
+            md5=request.md5,
+        )
+        if row is None:
+            metadata = _unknown_publication_metadata()
+        else:
+            source_record_id = int(row[0])
+            metadata_row = conn.execute(
+                """
+                SELECT source_record_id, schema_version, publication_date,
+                       publication_date_precision, source_url, retrieved_at_utc,
+                       evidence_kind, evidence_locator, evidence_value_hash,
+                       evidence_status, contradiction_status, observed_values_json
+                FROM source_publication_metadata
+                WHERE source_record_id=?
+                """,
+                (source_record_id,),
+            ).fetchone()
+            metadata = (
+                _publication_metadata_from_row(metadata_row)
+                if metadata_row
+                else _unknown_publication_metadata(
+                    source_record_id=source_record_id,
+                    source_url=str(row[3] or "").strip(),
+                    legacy=True,
+                )
+            )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="report_publication_metadata_resolved",
+            module=logger.name,
+            fields={
+                "source_record_id": metadata.source_record_id,
+                "resolution_source": resolution_source,
+                "evidence_status": metadata.evidence_status,
+                "contradiction_status": metadata.contradiction_status,
+                "evidence_kind": metadata.evidence_kind,
+                "evidence_locator": metadata.evidence_locator,
+                "evidence_value_hash": metadata.evidence_value_hash,
+            },
+        )
+    )
+    return ReportPublicationMetadataGetResponse(
+        schema_version="1.0",
+        metadata=metadata,
+        resolution_source=resolution_source,
+    )
 
 
 def _row_to_metadata_response(row: tuple, ctx: RunContext) -> ReportMetadataGetResponse:

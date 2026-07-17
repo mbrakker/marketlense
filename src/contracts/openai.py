@@ -462,7 +462,9 @@ class OpenAIResponseRequest:
     )
     same_provider_fallback: bool = field(
         default=False,
-        metadata={"doc": "Whether retry fallback must remain with the selected provider."},
+        metadata={
+            "doc": "Whether retry fallback must remain with the selected provider."
+        },
     )
 
 
@@ -584,7 +586,9 @@ class OpenAIJSONPromptRequest:
     )
     same_provider_fallback: bool = field(
         default=False,
-        metadata={"doc": "Whether retry fallback must remain with the selected provider."},
+        metadata={
+            "doc": "Whether retry fallback must remain with the selected provider."
+        },
     )
 
 
@@ -769,6 +773,10 @@ class OpenAIVectorStoreCreateRequest:
     timeout_seconds: Optional[float] = field(
         default=None, metadata={"doc": "Request timeout in seconds, if set."}
     )
+    run_budget: RunBudget | None = field(
+        default=None,
+        metadata={"doc": "Optional canonical budget for this vector-store call."},
+    )
 
 
 @dataclass(frozen=True)
@@ -794,6 +802,10 @@ class OpenAIVectorStoreFileUploadRequest:
     timeout_seconds: Optional[float] = field(
         default=None, metadata={"doc": "Request timeout in seconds, if set."}
     )
+    run_budget: RunBudget | None = field(
+        default=None,
+        metadata={"doc": "Optional canonical budget for this vector-store call."},
+    )
 
 
 @dataclass(frozen=True)
@@ -814,6 +826,10 @@ class OpenAIVectorStoreAttachFileRequest:
     openai_file_id: str = field(metadata={"doc": "OpenAI file identifier to attach."})
     timeout_seconds: Optional[float] = field(
         default=None, metadata={"doc": "Request timeout in seconds, if set."}
+    )
+    run_budget: RunBudget | None = field(
+        default=None,
+        metadata={"doc": "Optional canonical budget for this vector-store call."},
     )
 
 
@@ -837,6 +853,10 @@ class OpenAIVectorStoreStatusRequest:
     vector_store_id: str = field(metadata={"doc": "Vector store identifier."})
     timeout_seconds: Optional[float] = field(
         default=None, metadata={"doc": "Request timeout in seconds, if set."}
+    )
+    run_budget: RunBudget | None = field(
+        default=None,
+        metadata={"doc": "Optional canonical budget for this vector-store call."},
     )
 
 
@@ -866,6 +886,10 @@ class OpenAIVectorStoreDeleteRequest:
     timeout_seconds: Optional[float] = field(
         default=None, metadata={"doc": "Request timeout in seconds, if set."}
     )
+    run_budget: RunBudget | None = field(
+        default=None,
+        metadata={"doc": "Optional canonical budget for this vector-store call."},
+    )
 
 
 @dataclass(frozen=True)
@@ -892,6 +916,10 @@ class OpenAIVectorStoreUpdateMetadataRequest:
     )
     timeout_seconds: Optional[float] = field(
         default=None, metadata={"doc": "Request timeout in seconds, if set."}
+    )
+    run_budget: RunBudget | None = field(
+        default=None,
+        metadata={"doc": "Optional canonical budget for this vector-store call."},
     )
 
 

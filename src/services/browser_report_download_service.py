@@ -19,6 +19,10 @@ from src.contracts.browser_download import (
     BrowserReportDownloadResult,
     BrowserRoutePrivateApiPromotionRequest,
 )
+from src.contracts.report_store import (
+    SourcePublicationMetadataExtractionRequest,
+    SourcePublicationMetadataExtractionResponse,
+)
 from src.contracts.state import (
     StateArtifactAcquisitionCacheGetRequest,
     StateArtifactAcquisitionCacheRecordRequest,
@@ -61,6 +65,9 @@ from src.services._browser_report_download.private_api import (
 from src.services._browser_report_download.private_api_auto_promotion import (
     detect_private_api_promotion_candidates as _detect_private_api_promotion_candidates,
 )
+from src.services._browser_report_download.publication_metadata import (
+    extract_source_publication_metadata as _extract_source_publication_metadata,
+)
 from src.services._browser_report_download.preflight import (
     observe_browser_preflight_agent_outcome,
     try_browser_preflight_probe,
@@ -90,6 +97,32 @@ from src.utils.logging import log_event
 logger = logging.getLogger("market_lense.browser_report_download_service")
 ARTIFACT_ACQUISITION_CACHE_VERSION = "browser_artifact_cache_v1"
 ARTIFACT_ACQUISITION_CACHE_TTL_DAYS = 30
+
+
+def extract_source_publication_metadata(
+    request: SourcePublicationMetadataExtractionRequest,
+    ctx: RunContext,
+) -> SourcePublicationMetadataExtractionResponse:
+    """Extract bounded source provenance from browser-captured HTML without a model call."""
+    response = _extract_source_publication_metadata(request)
+    metadata = response.metadata
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="source_publication_metadata_extracted",
+            module=logger.name,
+            fields={
+                "evidence_status": metadata.evidence_status,
+                "contradiction_status": metadata.contradiction_status,
+                "evidence_kind": metadata.evidence_kind,
+                "evidence_locator": metadata.evidence_locator,
+                "evidence_value_hash": metadata.evidence_value_hash,
+                "observed_value_count": len(metadata.observed_values),
+            },
+        )
+    )
+    return response
 
 
 def _artifact_cache_key(

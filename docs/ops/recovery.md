@@ -26,6 +26,7 @@ execution window under review:
 
 ```powershell
 python scripts/quality/generate_remediation_coverage.py
+python scripts/quality/generate_budget_authority_coverage.py
 python scripts/ci/check_remediation_runbooks.py
 $stamp = Get-Date -Format "yyyyMMddTHHmmss"
 python -m src.cli remediation-soak | Tee-Object "out/ops/remediation-soak-$stamp.txt"

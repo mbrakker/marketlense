@@ -31,9 +31,6 @@ from src.contracts.report_store import (
     ReportMetadataGetRequest,
     ReportMetadataUpsertRequest,
 )
-from src.generators.report_card_date_remediation_generator import (
-    normalize_source_supported_publication_date,
-)
 from src.generators.report_card_projection import (
     build_cover_fingerprint,
     build_report_card_manifest,
@@ -50,14 +47,12 @@ from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 
 
-def _publication_date(
-    runtime: ReportRuntimeState, artifacts: dict, doc_map: dict | None
-) -> str:
-    normalized, source = normalize_source_supported_publication_date(
-        artifacts_payload=artifacts,
-        doc_map_payload=doc_map,
-    )
-    if normalized:
+def _publication_date(runtime: ReportRuntimeState) -> str:
+    """Return only publisher-provenanced dates for report-card rendering."""
+    metadata = runtime.source_publication_metadata
+    status = str(getattr(metadata, "evidence_status", "unknown") or "unknown")
+    publication_date = str(getattr(metadata, "publication_date", "") or "").strip()
+    if status == "verified" and publication_date:
         logger.info(
             log_event(
                 runtime.ctx,
@@ -66,12 +61,33 @@ def _publication_date(
                 module=logger.name,
                 fields={
                     "file_id": runtime.file.file_id,
-                    "publication_date": normalized,
-                    "source": source,
+                    "source_record_id": int(
+                        getattr(metadata, "source_record_id", 0) or 0
+                    ),
+                    "precision": str(
+                        getattr(metadata, "publication_date_precision", "") or ""
+                    ),
+                    "evidence_kind": str(getattr(metadata, "evidence_kind", "") or ""),
+                    "evidence_locator": str(
+                        getattr(metadata, "evidence_locator", "") or ""
+                    ),
+                    "evidence_value_hash": str(
+                        getattr(metadata, "evidence_value_hash", "") or ""
+                    ),
                 },
             )
         )
-        return normalized
+        return publication_date
+    if status in {"conflicting", "invalid"}:
+        raise AppError(
+            code="source_publication_metadata_not_renderable",
+            message="Publisher publication metadata is invalid or contradictory",
+            retryable=False,
+            context={
+                "evidence_status": status,
+                "source_record_id": int(getattr(metadata, "source_record_id", 0) or 0),
+            },
+        )
     logger.info(
         log_event(
             runtime.ctx,
@@ -81,7 +97,7 @@ def _publication_date(
             fields={
                 "file_id": runtime.file.file_id,
                 "display_state": "omitted",
-                "reason": "source_metadata_absent",
+                "reason": f"source_metadata_{status}",
             },
         )
     )
@@ -619,11 +635,7 @@ def render_report_output(
                     schema_version="1.0",
                     title=cover_title,
                     publisher=cover_publisher,
-                    published_date=_publication_date(
-                        runtime,
-                        artifacts_payload,
-                        analysis.evidence_packs.get("doc_map"),
-                    ),
+                    published_date=_publication_date(runtime),
                     region=cover_region or "",
                     covered_period=cover_time_period or "",
                     tldr_compact=str(summary.get("card_tldr_compact") or ""),
@@ -667,17 +679,20 @@ def render_report_output(
                 )
             )
     except AppError as exc:
-        if exc.retryable:
+        if exc.retryable or exc.code == "source_publication_metadata_not_renderable":
             logger.info(
                 log_event(
                     cover_ctx,
                     role="generator",
-                    event="cover_image_retryable_error_propagated",
+                    event=(
+                        "cover_image_retryable_error_propagated"
+                        if exc.retryable
+                        else "source_publication_metadata_error_propagated"
+                    ),
                     module=logger.name,
                     fields={
                         "file_id": runtime.file.file_id,
                         "code": exc.code,
-                        "error": exc.message,
                     },
                 )
             )

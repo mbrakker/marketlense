@@ -18,7 +18,9 @@ from src.contracts.openai import (
     OpenAIVectorStoreUpdateMetadataRequest,
 )
 from src.contracts.run_context import RunContext
+from src.contracts.run_budget import RunBudget, RunBudgetUsageReadRequest
 from src.services import llm_service as svc
+from src.services.llm_usage_ledger_service import read_run_budget_usage
 
 
 def _ctx() -> RunContext:
@@ -527,6 +529,68 @@ def test_openai_vector_store_create_success(
     ]
     assert fake_openai.calls["vector_stores.create"][0]["name"] == "report"
     assert_logs_have_required_fields(_events(caplog))
+
+
+def test_openai_vector_store_success_reconciles_one_actual_provider_call(
+    fake_openai, tmp_path
+) -> None:
+    fake_openai.add("vector_stores.retrieve", {"status": "completed"})
+    budget = RunBudget(
+        schema_version="1.0",
+        run_id="r",
+        publisher_name="",
+        usage_db_path=str(tmp_path / "vector-usage.sqlite"),
+        max_calls=2,
+    )
+
+    response = svc.openai_vector_store_status(
+        OpenAIVectorStoreStatusRequest(
+            schema_version="1.0",
+            api_key="key",
+            vector_store_id="vs_123",
+            run_budget=budget,
+        ),
+        _ctx(),
+    )
+    usage = read_run_budget_usage(
+        RunBudgetUsageReadRequest(schema_version="1.0", budget=budget), _ctx()
+    ).usage
+
+    assert response.status == "completed"
+    assert usage.calls == 1
+
+
+def test_openai_vector_store_pre_provider_failure_reconciles_zero_actual_calls(
+    assert_app_error, tmp_path
+) -> None:
+    budget = RunBudget(
+        schema_version="1.0",
+        run_id="r",
+        publisher_name="",
+        usage_db_path=str(tmp_path / "vector-usage.sqlite"),
+        max_calls=2,
+    )
+
+    try:
+        svc.openai_vector_store_status(
+            OpenAIVectorStoreStatusRequest(
+                schema_version="1.0",
+                api_key="",
+                vector_store_id="vs_123",
+                run_budget=budget,
+            ),
+            _ctx(),
+        )
+    except Exception as err:
+        assert_app_error(err, code="openai_missing_api_key", retryable=False)
+    else:  # pragma: no cover
+        raise AssertionError("expected AppError")
+
+    usage = read_run_budget_usage(
+        RunBudgetUsageReadRequest(schema_version="1.0", budget=budget), _ctx()
+    ).usage
+
+    assert usage.calls == 0
 
 
 def test_openai_embedding_service_returns_vectors_and_metadata(

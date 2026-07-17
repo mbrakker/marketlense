@@ -516,6 +516,25 @@ CREATE TABLE IF NOT EXISTS artifact_execution_plan_runs (
 );
 """
 
+_SOURCE_PUBLICATION_METADATA_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS source_publication_metadata (
+  source_record_id INTEGER PRIMARY KEY REFERENCES report_sources(id),
+  schema_version TEXT NOT NULL,
+  publication_date TEXT NOT NULL DEFAULT '',
+  publication_date_precision TEXT NOT NULL DEFAULT '',
+  source_url TEXT NOT NULL DEFAULT '',
+  retrieved_at_utc TEXT NOT NULL DEFAULT '',
+  evidence_kind TEXT NOT NULL DEFAULT '',
+  evidence_locator TEXT NOT NULL DEFAULT '',
+  evidence_value_hash TEXT NOT NULL DEFAULT '',
+  evidence_status TEXT NOT NULL,
+  contradiction_status TEXT NOT NULL,
+  observed_values_json TEXT NOT NULL DEFAULT '[]',
+  created_at_utc TEXT NOT NULL,
+  updated_at_utc TEXT NOT NULL
+);
+"""
+
 _SIGNAL_CANDIDATES_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS signal_candidates (
   candidate_id TEXT PRIMARY KEY,

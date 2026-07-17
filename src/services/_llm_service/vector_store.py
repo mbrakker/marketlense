@@ -7,30 +7,38 @@ from typing import Any
 
 from src.services._llm_service.openai_shared import *
 from src.services._llm_service.openai_client import *
-from src.contracts.run_budget import BudgetRequest, RunBudget
+from src.contracts.run_budget import (
+    BudgetDecision,
+    BudgetRequest,
+    BudgetSideEffectFinalizeRequest,
+    RunBudget,
+    RunBudgetUsage,
+)
 from src.contracts.run_context import RunContext
-from src.services.llm_usage_ledger_service import evaluate_budget_request
+from src.services.llm_usage_ledger_service import (
+    evaluate_budget_request,
+    finalize_budget_side_effect,
+)
 
 
 def _require_vector_store_budget(
     request: Any, ctx: RunContext, *, operation: str
-) -> None:
+) -> tuple[RunBudget, BudgetDecision]:
     """Admit every vector-store provider call through the canonical authority."""
+    budget = getattr(request, "run_budget", None) or RunBudget(
+        schema_version="1.0",
+        run_id=ctx.run_id,
+        publisher_name=str(getattr(request, "publisher_name", "") or ""),
+        usage_db_path=str(
+            getattr(request, "usage_db_path", "./state/llm_usage.sqlite")
+        ),
+        max_spend_usd=float(getattr(request, "daily_spend_stop_usd", 6.0) or 6.0),
+        limit_decision="stop",
+    )
     decision = evaluate_budget_request(
         BudgetRequest(
             schema_version="1.0",
-            budget=RunBudget(
-                schema_version="1.0",
-                run_id=ctx.run_id,
-                publisher_name=str(getattr(request, "publisher_name", "") or ""),
-                usage_db_path=str(
-                    getattr(request, "usage_db_path", "./state/llm_usage.sqlite")
-                ),
-                max_spend_usd=float(
-                    getattr(request, "daily_spend_stop_usd", 6.0) or 6.0
-                ),
-                limit_decision="stop",
-            ),
+            budget=budget,
             run_id=ctx.run_id,
             workflow_id="vector_store",
             publisher_id=str(getattr(request, "publisher_name", "") or ""),
@@ -56,12 +64,85 @@ def _require_vector_store_budget(
                 "next_action": decision.next_action,
             },
         )
+    return budget, decision
+
+
+def _finalize_vector_store_budget(
+    *,
+    budget: RunBudget,
+    decision: BudgetDecision,
+    ctx: RunContext,
+    attempted: bool,
+    outcome: str,
+    error_code: str = "",
+) -> None:
+    if not decision.reservation_key:
+        return
+    finalize_budget_side_effect(
+        BudgetSideEffectFinalizeRequest(
+            schema_version="1.0",
+            usage_db_path=budget.usage_db_path,
+            reservation_key=decision.reservation_key,
+            actual_usage=RunBudgetUsage(
+                schema_version="1.0", calls=1 if attempted else 0
+            ),
+            outcome=outcome,
+            error_code=error_code,
+        ),
+        ctx,
+    )
+
+
+def _run_governed_vector_store_request(
+    *,
+    request: Any,
+    ctx: RunContext,
+    operation: str,
+    spec: _VectorStoreOperationSpec,
+    request_fn,
+    error_context: dict[str, Any] | None = None,
+) -> Any:
+    """Reserve before a provider call and reconcile its measured call count once."""
+    budget, decision = _require_vector_store_budget(request, ctx, operation=operation)
+    attempted = False
+
+    def _attempt(client: Any) -> Any:
+        nonlocal attempted
+        attempted = True
+        return request_fn(client)
+
+    try:
+        response = _run_vector_store_request(
+            api_key=request.api_key,
+            timeout_seconds=request.timeout_seconds,
+            spec=spec,
+            ctx=ctx,
+            request_fn=_attempt,
+            error_context=error_context,
+        )
+    except AppError as exc:
+        _finalize_vector_store_budget(
+            budget=budget,
+            decision=decision,
+            ctx=ctx,
+            attempted=attempted,
+            outcome="failed",
+            error_code=exc.code,
+        )
+        raise
+    _finalize_vector_store_budget(
+        budget=budget,
+        decision=decision,
+        ctx=ctx,
+        attempted=attempted,
+        outcome="completed",
+    )
+    return response
 
 
 def openai_vector_store_create(
     request: OpenAIVectorStoreCreateRequest, ctx: RunContext
 ) -> OpenAIVectorStoreCreateResponse:
-    _require_vector_store_budget(request, ctx, operation="openai_vector_store_create")
     _log_vector_store_event(
         ctx,
         event=_VECTOR_STORE_CREATE_OPERATION.start_event,
@@ -71,9 +152,9 @@ def openai_vector_store_create(
             "timeout_seconds": request.timeout_seconds,
         },
     )
-    resp = _run_vector_store_request(
-        api_key=request.api_key,
-        timeout_seconds=request.timeout_seconds,
+    resp = _run_governed_vector_store_request(
+        request=request,
+        operation="openai_vector_store_create",
         spec=_VECTOR_STORE_CREATE_OPERATION,
         ctx=ctx,
         request_fn=lambda client: client.vector_stores.create(
@@ -99,7 +180,6 @@ def openai_vector_store_upload_file(
     request: OpenAIVectorStoreFileUploadRequest,
     ctx: RunContext,
 ) -> OpenAIVectorStoreFileUploadResponse:
-    _require_vector_store_budget(request, ctx, operation="openai_vector_store_upload")
     _log_vector_store_event(
         ctx,
         event=_VECTOR_STORE_UPLOAD_OPERATION.start_event,
@@ -111,9 +191,9 @@ def openai_vector_store_upload_file(
     )
     try:
         with open(request.file_path, "rb") as file_handle:
-            resp = _run_vector_store_request(
-                api_key=request.api_key,
-                timeout_seconds=request.timeout_seconds,
+            resp = _run_governed_vector_store_request(
+                request=request,
+                operation="openai_vector_store_upload",
                 spec=_VECTOR_STORE_UPLOAD_OPERATION,
                 ctx=ctx,
                 request_fn=lambda client: client.files.create(
@@ -153,7 +233,6 @@ def openai_vector_store_attach_file(
     request: OpenAIVectorStoreAttachFileRequest,
     ctx: RunContext,
 ) -> OpenAIVectorStoreAttachFileResponse:
-    _require_vector_store_budget(request, ctx, operation="openai_vector_store_attach")
     _log_vector_store_event(
         ctx,
         event=_VECTOR_STORE_ATTACH_OPERATION.start_event,
@@ -163,9 +242,9 @@ def openai_vector_store_attach_file(
             "timeout_seconds": request.timeout_seconds,
         },
     )
-    resp = _run_vector_store_request(
-        api_key=request.api_key,
-        timeout_seconds=request.timeout_seconds,
+    resp = _run_governed_vector_store_request(
+        request=request,
+        operation="openai_vector_store_attach",
         spec=_VECTOR_STORE_ATTACH_OPERATION,
         ctx=ctx,
         request_fn=lambda client: client.vector_stores.files.create(
@@ -197,7 +276,6 @@ def openai_vector_store_status(
     request: OpenAIVectorStoreStatusRequest,
     ctx: RunContext,
 ) -> OpenAIVectorStoreStatusResponse:
-    _require_vector_store_budget(request, ctx, operation="openai_vector_store_status")
     _log_vector_store_event(
         ctx,
         event=_VECTOR_STORE_STATUS_OPERATION.start_event,
@@ -206,9 +284,9 @@ def openai_vector_store_status(
             "timeout_seconds": request.timeout_seconds,
         },
     )
-    resp = _run_vector_store_request(
-        api_key=request.api_key,
-        timeout_seconds=request.timeout_seconds,
+    resp = _run_governed_vector_store_request(
+        request=request,
+        operation="openai_vector_store_status",
         spec=_VECTOR_STORE_STATUS_OPERATION,
         ctx=ctx,
         request_fn=lambda client: client.vector_stores.retrieve(
@@ -237,7 +315,6 @@ def openai_vector_store_delete(
     request: OpenAIVectorStoreDeleteRequest,
     ctx: RunContext,
 ) -> OpenAIVectorStoreDeleteResponse:
-    _require_vector_store_budget(request, ctx, operation="openai_vector_store_delete")
     _log_vector_store_event(
         ctx,
         event=_VECTOR_STORE_DELETE_OPERATION.start_event,
@@ -246,9 +323,9 @@ def openai_vector_store_delete(
             "timeout_seconds": request.timeout_seconds,
         },
     )
-    resp = _run_vector_store_request(
-        api_key=request.api_key,
-        timeout_seconds=request.timeout_seconds,
+    resp = _run_governed_vector_store_request(
+        request=request,
+        operation="openai_vector_store_delete",
         spec=_VECTOR_STORE_DELETE_OPERATION,
         ctx=ctx,
         request_fn=lambda client: client.vector_stores.delete(request.vector_store_id),
@@ -272,7 +349,6 @@ def openai_vector_store_update_metadata(
     request: OpenAIVectorStoreUpdateMetadataRequest,
     ctx: RunContext,
 ) -> OpenAIVectorStoreUpdateMetadataResponse:
-    _require_vector_store_budget(request, ctx, operation="openai_vector_store_update")
     _log_vector_store_event(
         ctx,
         event=_VECTOR_STORE_UPDATE_METADATA_OPERATION.start_event,
@@ -282,9 +358,9 @@ def openai_vector_store_update_metadata(
             "timeout_seconds": request.timeout_seconds,
         },
     )
-    resp = _run_vector_store_request(
-        api_key=request.api_key,
-        timeout_seconds=request.timeout_seconds,
+    resp = _run_governed_vector_store_request(
+        request=request,
+        operation="openai_vector_store_update",
         spec=_VECTOR_STORE_UPDATE_METADATA_OPERATION,
         ctx=ctx,
         request_fn=lambda client: client.vector_stores.update(

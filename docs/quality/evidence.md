@@ -73,3 +73,25 @@ python scripts/quality/release_evidence_manifest.py \
 ```
 
 Ordinary CI runs the collector and release-evidence unit/contract tests but does not synthesize retained databases, report artifacts, or logs merely to manufacture a passed CTO bundle. The real strict bundle remains an operator/review action against retained state.
+
+## A9/A3/A6 representative operational evidence
+
+Before a strict bundle used to close source provenance, remediation, or budget
+authority work, regenerate the two matrices, retain a read-only remediation
+soak, and run the credential-gated provider smoke when its opt-in is present.
+The provider smoke is a bounded real call; a missing credential or opt-in is a
+blocked validation, never a synthetic substitute.
+
+```powershell
+python scripts/quality/generate_remediation_coverage.py
+python scripts/quality/generate_budget_authority_coverage.py
+python -m src.cli remediation-soak
+$env:RUN_OPENAI_SMOKE_TEST = "1"
+python -m pytest tests/integration/test_openai_smoke.py -m integration -q
+```
+
+Record the run ID, report/source IDs or hashes, decision statuses, reservation
+reconciliation status, and persisted actual-use counts in the evidence notes.
+Do not include source HTML, report paragraphs, prompts, provider responses, or
+credentials. The strict collector remains the exact-head authority for the
+resulting snapshots and log-content assessment.

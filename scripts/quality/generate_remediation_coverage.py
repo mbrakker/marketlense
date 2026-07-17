@@ -8,6 +8,17 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 VALID_COVERAGE = {"covered", "exempt"}
+MATRIX_FIELDS = (
+    "workflow_name",
+    "entrypoint",
+    "failure_boundary",
+    "checkpoint_source",
+    "idempotency_source",
+    "budget_context_available",
+    "current_remediation_status",
+    "required_change",
+    "test_reference",
+)
 
 
 def load_remediation_coverage(path: Path) -> list[dict[str, str]]:
@@ -46,6 +57,37 @@ def load_remediation_coverage(path: Path) -> list[dict[str, str]]:
             raise ValueError(
                 f"covered workflow lacks an explicit ledger hook: {item['workflow']}"
             )
+        item.update(
+            {
+                "workflow_name": item["workflow"],
+                "entrypoint": item["module"],
+                "failure_boundary": (
+                    "record_workflow_failure terminal boundary"
+                    if item["coverage"] == "covered"
+                    else "explicitly exempt: no recoverable execution boundary"
+                ),
+                "checkpoint_source": (
+                    "workflow checkpoint or retained artifact reference when recovery is safe"
+                    if item["coverage"] == "covered"
+                    else "not applicable"
+                ),
+                "idempotency_source": (
+                    "canonical remediation dedupe key plus workflow idempotency evidence"
+                    if item["coverage"] == "covered"
+                    else "not applicable"
+                ),
+                "budget_context_available": (
+                    "canonical RunBudget context when the recovery proposes an expensive or mutating action"
+                    if item["coverage"] == "covered"
+                    else "not applicable"
+                ),
+                "current_remediation_status": (
+                    "covered" if item["coverage"] == "covered" else "exempt by design"
+                ),
+                "required_change": "none; representative evidence remains required for closure",
+                "test_reference": "tests/test_remediation_ledger.py",
+            }
+        )
         seen.add(item["workflow"])
         workflows.append(item)
     return workflows
@@ -63,18 +105,23 @@ def render_remediation_coverage(workflows: list[dict[str, str]]) -> str:
         f"Inventory: {len(workflows)} production workflows — {covered} covered, "
         f"{exempt} explicitly exempted.",
         "",
-        "| Workflow | Coverage | Module | Rationale |",
-        "| --- | --- | --- | --- |",
+        "| Workflow | Entrypoint | Failure boundary | Checkpoint source | Idempotency source | Budget context available | Current remediation status | Required change | Test reference |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for item in workflows:
         lines.append(
             "| "
             + " | ".join(
                 (
-                    item["workflow"],
-                    item["coverage"],
-                    f"`{item['module']}`",
-                    item["reason"],
+                    item["workflow_name"],
+                    f"`{item['entrypoint']}`",
+                    item["failure_boundary"],
+                    item["checkpoint_source"],
+                    item["idempotency_source"],
+                    item["budget_context_available"],
+                    item["current_remediation_status"],
+                    item["required_change"],
+                    f"`{item['test_reference']}`",
                 )
             )
             + " |"

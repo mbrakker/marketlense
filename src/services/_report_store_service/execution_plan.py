@@ -62,15 +62,55 @@ def _sha256_text(value: object) -> str:
 
 def _current_source_metadata_hash(conn, report_id: str) -> str:
     row = conn.execute(
-        "SELECT publisher, title, source_url FROM reports WHERE file_id=?",
+        "SELECT publisher, title, source_url, md5 FROM reports WHERE file_id=?",
         (report_id,),
     ).fetchone()
     if row is None:
         return ""
+    publication_row = conn.execute(
+        """
+        SELECT
+          metadata.source_record_id,
+          metadata.publication_date,
+          metadata.publication_date_precision,
+          metadata.source_url,
+          metadata.retrieved_at_utc,
+          metadata.evidence_kind,
+          metadata.evidence_locator,
+          metadata.evidence_value_hash,
+          metadata.evidence_status,
+          metadata.contradiction_status,
+          metadata.observed_values_json
+        FROM source_publication_metadata AS metadata
+        JOIN report_sources AS source ON source.id = metadata.source_record_id
+        WHERE COALESCE(source.md5, '') <> ''
+          AND source.md5 = COALESCE(?, '')
+        ORDER BY metadata.updated_at_utc DESC, metadata.source_record_id DESC
+        LIMIT 1
+        """,
+        (str(row[3] or "").strip(),),
+    ).fetchone()
     values = {
         "publisher_name": str(row[0] or "").strip(),
         "source_report_name": str(row[1] or "").strip(),
         "source_url": str(row[2] or "").strip(),
+        "source_publication_metadata": (
+            {
+                "source_record_id": int(publication_row[0] or 0),
+                "publication_date": str(publication_row[1] or "").strip(),
+                "publication_date_precision": str(publication_row[2] or "").strip(),
+                "source_url": str(publication_row[3] or "").strip(),
+                "retrieved_at_utc": str(publication_row[4] or "").strip(),
+                "evidence_kind": str(publication_row[5] or "").strip(),
+                "evidence_locator": str(publication_row[6] or "").strip(),
+                "evidence_value_hash": str(publication_row[7] or "").strip(),
+                "evidence_status": str(publication_row[8] or "").strip(),
+                "contradiction_status": str(publication_row[9] or "").strip(),
+                "observed_values_json": str(publication_row[10] or "[]"),
+            }
+            if publication_row is not None
+            else None
+        ),
     }
     return _sha256_text(values) if any(values.values()) else ""
 

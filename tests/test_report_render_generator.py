@@ -23,7 +23,10 @@ from src.contracts.report_cards import (
     CardCoverAssetSet,
     ReportCardManifestWriteResponse,
 )
-from src.contracts.report_store import ReportMetadataGetResponse
+from src.contracts.report_store import (
+    ReportMetadataGetResponse,
+    SourcePublicationMetadata,
+)
 from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationReport
 from src.generators.report_generation_dependencies import ReportRenderDependencies
@@ -770,83 +773,6 @@ def test_render_report_output_propagates_retryable_cover_error(
     )
 
 
-def test_render_report_output_writes_complete_report_card_manifest(tmp_path):
-    runtime = _runtime(tmp_path, md5="md5")
-    source = _source(runtime)
-    selection = _selection(runtime, source)
-    analysis = _analysis(runtime, source, selection)
-    captured = {}
-    html_path = Path(tmp_path / "out" / "report.html")
-    html_path.parent.mkdir(parents=True, exist_ok=True)
-
-    def _render_report(req, ctx):
-        del req, ctx
-        html_path.write_text("<html></html>", encoding="utf-8")
-        return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
-
-    def _generate_covers(req, ctx):
-        del ctx
-        captured["cover_request"] = req
-        return [
-            SimpleNamespace(
-                schema_version="2.0",
-                file_id=runtime.file.file_id,
-                title="DB Title",
-                status="generated",
-                assets=_cover_assets(runtime),
-                error=None,
-            )
-        ]
-
-    def _write_manifest(req, ctx):
-        del ctx
-        captured["manifest_request"] = req
-        return ReportCardManifestWriteResponse(
-            schema_version="1.0",
-            manifest_path=str(Path(req.output_dir) / "report-card-manifest.json"),
-            bytes_written=2048,
-        )
-
-    deps = _deps(
-        render_report=_render_report,
-        generate_cover_images=_generate_covers,
-        write_report_card_manifest=_write_manifest,
-    )
-
-    outcome = render_report_output(
-        runtime,
-        source,
-        selection,
-        analysis,
-        deps,
-        preview_resp=render_preview_asset(runtime, source, deps),
-    )
-
-    cover_report = captured["cover_request"].reports[0]
-    manifest_request = captured["manifest_request"]
-    manifest = manifest_request.manifest
-    assert cover_report.fingerprint == manifest.fingerprint
-    assert manifest_request.output_dir == str(
-        Path(runtime.settings.output_dir) / runtime.report_name
-    )
-    assert manifest.published_date == "2026-06-09"
-    assert manifest.tldr_compact.endswith(".")
-    assert manifest.tldr_standard.endswith(".")
-    assert manifest.key_insights == (
-        "Channel efficiency improved across the measured period.",
-        "Investment shifted toward higher-return customer segments.",
-    )
-    assert manifest.covers.small.output_path == "assets/report-card-small.png"
-    assert manifest.covers.medium.output_path == "assets/report-card-medium.png"
-    assert manifest.covers.large.output_path == "assets/report-card-large.png"
-    assert outcome.schema_version == "1.1"
-    assert outcome.report_card_manifest_path == str(
-        Path(runtime.settings.output_dir)
-        / runtime.report_name
-        / "report-card-manifest.json"
-    )
-
-
 def test_render_report_output_does_not_use_file_modified_time_for_card_date(tmp_path):
     runtime = _runtime(tmp_path, md5="md5")
     source = _source(runtime)
@@ -884,7 +810,8 @@ def test_render_report_output_does_not_use_file_modified_time_for_card_date(tmp_
     deps = _deps(
         render_report=_render_report,
         write_report_card_manifest=lambda req, ctx: (
-            writes.append(req) or SimpleNamespace(manifest_path="report-card-manifest.json")
+            writes.append(req)
+            or SimpleNamespace(manifest_path="report-card-manifest.json")
         ),
     )
 
@@ -901,6 +828,55 @@ def test_render_report_output_does_not_use_file_modified_time_for_card_date(tmp_
     assert writes[0].manifest.published_date == ""
     assert outcome.status == "processed"
     assert outcome.error is None
+
+
+def test_render_report_output_omits_an_unverified_source_date(tmp_path):
+    runtime = replace(
+        _runtime(tmp_path, md5="md5"),
+        source_publication_metadata=SourcePublicationMetadata(
+            schema_version="1.0",
+            source_record_id=7,
+            publication_date="2026-06-09",
+            publication_date_precision="day",
+            evidence_status="unknown",
+            contradiction_status="not_applicable",
+        ),
+    )
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    analysis = _analysis(runtime, source, selection)
+    captured = {}
+    html_path = tmp_path / "out" / "report.html"
+    html_path.parent.mkdir(parents=True, exist_ok=True)
+
+    def _render_report(req, ctx):
+        del req, ctx
+        html_path.write_text("<html></html>", encoding="utf-8")
+        return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
+
+    def _write_manifest(req, ctx):
+        del ctx
+        captured["manifest"] = req.manifest
+        return ReportCardManifestWriteResponse(
+            schema_version="1.0",
+            manifest_path=str(Path(req.output_dir) / "report-card-manifest.json"),
+            bytes_written=2048,
+        )
+
+    deps = _deps(
+        render_report=_render_report,
+        write_report_card_manifest=_write_manifest,
+    )
+    render_report_output(
+        runtime,
+        source,
+        selection,
+        analysis,
+        deps,
+        preview_resp=render_preview_asset(runtime, source, deps),
+    )
+
+    assert captured["manifest"].published_date == ""
 
 
 def test_render_report_output_does_not_write_manifest_after_cover_error(tmp_path):

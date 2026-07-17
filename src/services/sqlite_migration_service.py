@@ -46,6 +46,7 @@ from ._sqlite_migration.reports import (
     _REPORTS_REQUIRED_COLUMNS,
     _SIGNAL_CANDIDATE_GROUPS_TABLE_SQL,
     _SIGNAL_CANDIDATES_TABLE_SQL,
+    _SOURCE_PUBLICATION_METADATA_TABLE_SQL,
     _VECTOR_PROJECTION_QUEUE_TABLE_SQL,
     _reports_db_001_create_reports_core,
     _reports_db_002_create_report_sources_base,
@@ -64,6 +65,7 @@ from ._sqlite_migration.reports import (
     _reports_db_015_create_artifact_lineage_registry,
     _reports_db_016_add_claim_embedding_queue_controls,
     _reports_db_017_add_lineage_execution_planning,
+    _reports_db_018_create_source_publication_metadata,
 )
 from ._sqlite_migration.state import (
     _STATE_ARTIFACT_ACQUISITION_CACHE_TABLE_SQL,

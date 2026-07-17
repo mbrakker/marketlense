@@ -25,6 +25,7 @@ from src.services._sqlite_migration._reports.schema import (
     _REPORTS_REQUIRED_COLUMNS,
     _SIGNAL_CANDIDATE_GROUPS_TABLE_SQL,
     _SIGNAL_CANDIDATES_TABLE_SQL,
+    _SOURCE_PUBLICATION_METADATA_TABLE_SQL,
     _VECTOR_PROJECTION_QUEUE_TABLE_SQL,
 )
 
@@ -258,4 +259,15 @@ def _reports_db_017_add_lineage_execution_planning(conn: sqlite3.Connection) -> 
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_claim_embedding_queue_transitions_run "
         "ON claim_embedding_queue_transitions(run_id, timestamp_utc)"
+    )
+
+
+def _reports_db_018_create_source_publication_metadata(
+    conn: sqlite3.Connection,
+) -> None:
+    """Persist source-backed publication provenance without rewriting legacy rows."""
+    conn.execute(_SOURCE_PUBLICATION_METADATA_TABLE_SQL)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_source_publication_metadata_status "
+        "ON source_publication_metadata(evidence_status, updated_at_utc)"
     )

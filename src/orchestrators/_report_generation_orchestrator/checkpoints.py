@@ -37,6 +37,7 @@ from src.contracts.report_generation import (
     ReportSelectionState,
     ReportSourceState,
 )
+from src.contracts.report_store import SourcePublicationMetadata
 from src.contracts.report_models import Figure, Quote, ReportFigureAsset, ReportPayload
 from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationIssue, ValidationReport
@@ -68,6 +69,7 @@ def _build_runtime_state(
     publisher_name: str = "",
     source_report_name: str = "",
     source_url: str = "",
+    source_publication_metadata: SourcePublicationMetadata | None = None,
     execution_compatibility: Optional[dict[str, object]] = None,
     execution_plan_hash: str = "",
     execution_plan_intent: str = "",
@@ -98,6 +100,7 @@ def _build_runtime_state(
         publisher_name=str(publisher_name or "").strip(),
         source_report_name=str(source_report_name or "").strip(),
         source_url=str(source_url or "").strip(),
+        source_publication_metadata=source_publication_metadata,
         execution_compatibility=dict(execution_compatibility or {}),
         execution_plan_hash=str(execution_plan_hash or "").strip(),
         execution_plan_intent=str(execution_plan_intent or "").strip(),
@@ -401,6 +404,11 @@ def _record_checkpoint_artifact_lineage(
                         "publisher_name": runtime.publisher_name,
                         "source_report_name": runtime.source_report_name,
                         "source_url": runtime.source_url,
+                        "source_publication_metadata": (
+                            asdict(runtime.source_publication_metadata)
+                            if runtime.source_publication_metadata is not None
+                            else None
+                        ),
                     },
                     ensure_ascii=True,
                     sort_keys=True,
