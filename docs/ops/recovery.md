@@ -42,7 +42,9 @@ of the following before an operator approves any execution-enabled change:
    that duplicate current records exist.
 3. There are no stale leases, no missing runbook mappings, and every eligible
    record is understood. Records outside the exact automatic allowlist remain
-   `operator_action_required`.
+   `operator_action_required`. A legacy `pending` record carrying
+   `mark_terminal_blocker` is projected as held by the read-only soak; it is
+   never reported as lease-eligible.
 4. A representative sample proves checkpoint validity, lineage presence,
    attempt/cooldown enforcement, and idempotency proof for every external
    side-effect class. Public publishing, mail submission, and other external

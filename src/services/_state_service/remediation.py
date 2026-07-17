@@ -521,6 +521,7 @@ def read_remediation_soak_report(
             """
             SELECT remediation_id FROM remediation_records
             WHERE status IN ('pending','deferred')
+              AND action_code<>'mark_terminal_blocker'
               AND (next_eligible_at_utc='' OR next_eligible_at_utc<=?)
               AND (lease_expires_at_utc='' OR lease_expires_at_utc<=?)
             ORDER BY next_eligible_at_utc ASC, created_at_utc ASC, remediation_id ASC
@@ -531,6 +532,7 @@ def read_remediation_soak_report(
             """
             SELECT remediation_id FROM remediation_records
             WHERE status IN ('operator_action_required','terminal')
+               OR action_code='mark_terminal_blocker'
             ORDER BY remediation_id ASC
             """
         ).fetchall()

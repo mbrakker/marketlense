@@ -320,7 +320,7 @@ def test_download_report_with_browser_use_salvages_cached_terminal_state_when_ti
 
     class HangingTerminalBrowser(original_browser):
         def get_current_page(self):
-            time.sleep(7.0)
+            time.sleep(1.2)
             return super().get_current_page()
 
     class TimedOutFormAgent(original_runtime):

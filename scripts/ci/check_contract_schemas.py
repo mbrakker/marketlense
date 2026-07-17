@@ -24,6 +24,8 @@ def _contract_dataclasses() -> list[type]:
     for module_info in pkgutil.walk_packages(
         contracts_pkg.__path__, f"{contracts_pkg.__name__}."
     ):
+        if not all(part.isidentifier() for part in module_info.name.split(".")):
+            continue
         module = importlib.import_module(module_info.name)
         for candidate in vars(module).values():
             if (

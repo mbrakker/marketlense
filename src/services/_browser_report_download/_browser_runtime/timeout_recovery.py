@@ -110,6 +110,17 @@ from src.services._browser_report_download._browser_runtime.terminal_state impor
 logger = logging.getLogger("market_lense.browser_report_download_service")
 
 
+def _recovery_operation_timeout_seconds(
+    request: BrowserReportDownloadRequest,
+) -> float:
+    """Bound recovery work by both its safety cap and the caller's timeout."""
+
+    return min(
+        _TIMED_OUT_RECOVERY_OPERATION_TIMEOUT_SECONDS,
+        max(0.01, float(request.settings.timeout_seconds)),
+    )
+
+
 def _salvage_timed_out_browser_run(
     *,
     request: BrowserReportDownloadRequest,
@@ -138,7 +149,8 @@ def _salvage_timed_out_browser_run(
 
     worker = Thread(target=runner, daemon=True)
     worker.start()
-    worker.join(_TIMED_OUT_RECOVERY_OPERATION_TIMEOUT_SECONDS)
+    recovery_timeout_seconds = _recovery_operation_timeout_seconds(request)
+    worker.join(recovery_timeout_seconds)
     if worker.is_alive():
         logger.info(
             log_event(
@@ -149,7 +161,7 @@ def _salvage_timed_out_browser_run(
                 fields={
                     "normalized_url": normalized_url,
                     "operation": "terminal_salvage",
-                    "timeout_seconds": _TIMED_OUT_RECOVERY_OPERATION_TIMEOUT_SECONDS,
+                    "timeout_seconds": recovery_timeout_seconds,
                 },
             )
         )
@@ -807,7 +819,8 @@ def _attempt_lookup_submission_assist_with_timeout(
 
     worker = Thread(target=runner, daemon=True)
     worker.start()
-    worker.join(_TIMED_OUT_RECOVERY_OPERATION_TIMEOUT_SECONDS)
+    recovery_timeout_seconds = _recovery_operation_timeout_seconds(request)
+    worker.join(recovery_timeout_seconds)
     if worker.is_alive():
         logger.info(
             log_event(
@@ -818,7 +831,7 @@ def _attempt_lookup_submission_assist_with_timeout(
                 fields={
                     "normalized_url": normalized_url,
                     "operation": "lookup_submission_assist",
-                    "timeout_seconds": _TIMED_OUT_RECOVERY_OPERATION_TIMEOUT_SECONDS,
+                    "timeout_seconds": recovery_timeout_seconds,
                 },
             )
         )
@@ -845,7 +858,8 @@ def _attempt_standard_form_submit_assist_with_timeout(
 
     worker = Thread(target=runner, daemon=True)
     worker.start()
-    worker.join(_TIMED_OUT_RECOVERY_OPERATION_TIMEOUT_SECONDS)
+    recovery_timeout_seconds = _recovery_operation_timeout_seconds(request)
+    worker.join(recovery_timeout_seconds)
     if worker.is_alive():
         logger.info(
             log_event(
@@ -856,7 +870,7 @@ def _attempt_standard_form_submit_assist_with_timeout(
                 fields={
                     "normalized_url": normalized_url,
                     "operation": "standard_form_submit_assist",
-                    "timeout_seconds": _TIMED_OUT_RECOVERY_OPERATION_TIMEOUT_SECONDS,
+                    "timeout_seconds": recovery_timeout_seconds,
                 },
             )
         )

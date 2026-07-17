@@ -273,11 +273,21 @@ class RemediationSoakReportResponse:
     )
     eligible_record_ids: list[str] = field(
         default_factory=list,
-        metadata={"doc": "Pending or deferred records currently eligible for a lease."},
+        metadata={
+            "doc": (
+                "Pending or deferred records currently eligible for a lease; "
+                "terminal blockers are excluded."
+            )
+        },
     )
     held_record_ids: list[str] = field(
         default_factory=list,
-        metadata={"doc": "Records requiring operator action or marked terminal."},
+        metadata={
+            "doc": (
+                "Records requiring operator action, marked terminal, or carrying "
+                "a terminal-blocker action."
+            )
+        },
     )
     missing_runbook_error_codes: list[str] = field(
         default_factory=list,

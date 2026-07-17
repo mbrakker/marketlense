@@ -183,10 +183,18 @@ def _stabilize_terminal_snapshot(
         raw_model_response=raw_model_response,
         snapshot=stabilized_snapshot,
     )
+    poll_schedule_seconds = policy.poll_schedule_seconds
+    if _skip_email_terminal_stabilization(
+        policy=policy,
+        payload=payload,
+        trigger_reason=trigger_reason,
+    ):
+        poll_schedule_seconds = ()
+        reason = "email_submission_not_completed"
     previous_assessment: TerminalQuorumAssessment | None = None
     stable_repeat_observations = 1
     attempts = 0
-    for poll_delay_seconds in policy.poll_schedule_seconds:
+    for poll_delay_seconds in poll_schedule_seconds:
         if _assessment_meets_terminal_quorum(
             policy=policy,
             assessment=final_assessment,
@@ -247,7 +255,7 @@ def _stabilize_terminal_snapshot(
                 "stable_repeat_observations": stable_repeat_observations,
                 "quorum_network_event_count": final_assessment.network_event_count,
                 "quorum_document_url_count": final_assessment.document_url_count,
-                "poll_schedule_seconds": list(policy.poll_schedule_seconds),
+                "poll_schedule_seconds": list(poll_schedule_seconds),
                 "wait_strategy": "bounded_browser_boundary_polling",
                 "final_url": stabilized_snapshot.url,
                 "final_title": stabilized_snapshot.title,
@@ -256,6 +264,22 @@ def _stabilize_terminal_snapshot(
         )
     )
     return stabilized_snapshot
+
+
+def _skip_email_terminal_stabilization(
+    *,
+    policy: TerminalStabilizationPolicy,
+    payload: dict[str, Any],
+    trigger_reason: str | None,
+) -> bool:
+    """Avoid polling an email route when no submission could have changed it."""
+
+    if policy.route_family != "browser_email_form" or trigger_reason:
+        return False
+    return (
+        normalize_optional_bool_signal(payload.get("email_submission_completed"))
+        is not True
+    )
 
 
 def _terminal_stabilization_reason(

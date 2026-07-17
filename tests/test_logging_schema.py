@@ -207,6 +207,22 @@ def test_log_event_bounds_many_artifact_references_without_silent_loss() -> None
     assert reduction["original_field_count"] == len(artifact_references)
 
 
+def test_log_event_keeps_long_plural_artifacts_root_reference() -> None:
+    artifact_root = "out/" + ("deep/" * 32)
+
+    payload = json.loads(
+        log_event(
+            new_run_context(task_id="plural-artifacts-root"),
+            role="generator",
+            event="artifact_root_observed",
+            module="src.generators.example",
+            fields={"recent_artifacts_root": artifact_root},
+        )
+    )
+
+    assert payload["fields"]["recent_artifacts_root"] == artifact_root
+
+
 def test_log_event_redacts_email_phone_credentials_and_sensitive_url_values() -> None:
     payload = log_event(
         new_run_context(task_id="sensitive-patterns"),

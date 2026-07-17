@@ -628,10 +628,12 @@ def test_download_report_with_browser_use_fetches_real_pdf_from_wrapper(
 
 def test_download_report_with_browser_use_returns_email_required_without_address(
     tmp_path: Path,
+    caplog,
     run_context,
     external_boundary_mocks_only,
     assert_no_defaulted_required_fields,
 ) -> None:
+    caplog.set_level(logging.INFO, logger=service.logger.name)
     runtime = _runtime(
         tmp_path,
         route_kind="email_delivery",
@@ -659,6 +661,13 @@ def test_download_report_with_browser_use_returns_email_required_without_address
     assert response.downloaded_file_path is None
     assert response.encountered_form_fields == []
     assert_no_defaulted_required_fields(response)
+    terminal_event = next(
+        event
+        for event in _service_events(caplog)
+        if event.get("event") == "browser_report_download_terminal_state_assessed"
+    )
+    assert terminal_event["fields"]["stabilization_reason"] == "email_submission_not_completed"
+    assert terminal_event["fields"]["attempts"] == 0
 
 def test_download_report_with_browser_use_returns_encountered_form_fields(
     tmp_path: Path,

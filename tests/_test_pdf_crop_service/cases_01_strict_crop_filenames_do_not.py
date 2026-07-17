@@ -672,7 +672,7 @@ def test_render_preview_and_crop_refine_page_render_create_assets(tmp_path):
 def test_render_preview_compacts_filename_for_long_report_slug(tmp_path):
     pdf_path = tmp_path / "preview.pdf"
     _build_basic_pdf(pdf_path)
-    out_dir = tmp_path.parent / "lp"
+    out_dir = tmp_path / "nested-output-root" / "long-preview-destination"
     report_name = (
         "institute-for-canadian-citizenship-retention-trends-in-highly-skilled-"
         "immigrants-and-in-demand-occupations-acig-pdf"
@@ -694,6 +694,7 @@ def test_render_preview_compacts_filename_for_long_report_slug(tmp_path):
     assert response.image_path is not None
     artifact_path = out_dir / response.image_path
     assert artifact_path.is_file()
+    assert artifact_path.with_name(f"{artifact_path.name}.fingerprint.json").is_file()
     assert artifact_path.name.startswith("preview-contents-")
     assert len(artifact_path.name) <= 96
 

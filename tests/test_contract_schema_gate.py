@@ -12,3 +12,4 @@ def test_contract_schema_snapshot_contains_schema_versions_and_required_fields()
     run_context = snapshot["contracts"]["src.contracts.run_context.RunContext"]
     assert "schema_version" in run_context["properties"]
     assert run_context["required"] == ["schema_version", "run_id", "task_id", "span_id"]
+    assert all(" (" not in name for name in snapshot["contracts"])

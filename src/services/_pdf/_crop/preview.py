@@ -6,6 +6,7 @@ rendering and crop-refine rendering live in their focused owners.
 
 from __future__ import annotations
 
+from hashlib import sha256
 from pathlib import Path
 from typing import Optional
 
@@ -25,6 +26,10 @@ from src.services._pdf.shared import preview_logger
 from src.utils.logging import log_event
 from src.utils.path_utils import bounded_artifact_filename, safe_path_segment
 from src.utils.slugify import slugify
+
+_WINDOWS_SAFE_ARTIFACT_PATH_LENGTH = 240
+_FINGERPRINT_TEMP_SUFFIX_LENGTH = len(".fingerprint.json.tmp-write-") + 10
+_COMPACT_PREVIEW_FILENAME_LENGTH = 33
 
 
 def render_preview(request: PreviewRequest, ctx: RunContext) -> PreviewResponse:
@@ -100,17 +105,24 @@ def _page_png(
     out_root = Path(out_dir)
     out_root.mkdir(parents=True, exist_ok=True)
 
-    safe_report_name = safe_path_segment(report_name, fallback="report")
+    variant_slug = slugify(variant) if variant else ""
+    original_report_name = safe_path_segment(report_name, fallback="report")
+    filename = _preview_filename(original_report_name, variant_slug)
+    if _artifact_cache_temp_path_length(out_root, original_report_name, filename) > (
+        _WINDOWS_SAFE_ARTIFACT_PATH_LENGTH
+    ):
+        filename = _preview_filename(
+            original_report_name,
+            variant_slug,
+            max_length=_COMPACT_PREVIEW_FILENAME_LENGTH,
+        )
+    safe_report_name = _bounded_preview_report_name(
+        out_root,
+        original_report_name,
+        filename,
+    )
     img_dir = out_root / safe_report_name / "assets"
     img_dir.mkdir(parents=True, exist_ok=True)
-
-    variant_slug = slugify(variant) if variant else ""
-    suffix = f"-{variant_slug}" if variant_slug else ""
-    filename = bounded_artifact_filename(
-        f"{safe_report_name}{suffix}",
-        compact_stem=f"preview{suffix}",
-        extension=".png",
-    )
     abs_png = img_dir / filename
 
     local_doc = doc or fitz.open(pdf_path)
@@ -177,6 +189,42 @@ def _page_png(
             local_doc.close()
 
     return rel_png.as_posix()
+
+
+def _preview_filename(
+    report_name: str, variant_slug: str, *, max_length: int = 96
+) -> str:
+    suffix = f"-{variant_slug}" if variant_slug else ""
+    return bounded_artifact_filename(
+        f"{report_name}{suffix}",
+        compact_stem=f"preview{suffix}",
+        extension=".png",
+        max_length=max_length,
+    )
+
+
+def _bounded_preview_report_name(
+    out_root: Path, report_name: str, filename: str
+) -> str:
+    """Keep preview artifacts below the Windows path limit in deep workspaces."""
+    if _artifact_cache_temp_path_length(out_root, report_name, filename) <= (
+        _WINDOWS_SAFE_ARTIFACT_PATH_LENGTH
+    ):
+        return report_name
+    digest = sha256(report_name.encode("utf-8")).hexdigest()[:12]
+    base_length = _artifact_cache_temp_path_length(out_root, digest, filename)
+    prefix_budget = max(0, _WINDOWS_SAFE_ARTIFACT_PATH_LENGTH - base_length - 1)
+    prefix = report_name[:prefix_budget].rstrip(" .-_")
+    return f"{prefix}-{digest}" if prefix else digest
+
+
+def _artifact_cache_temp_path_length(
+    out_root: Path, report_name: str, filename: str
+) -> int:
+    return (
+        len(str(out_root / report_name / "assets" / filename))
+        + _FINGERPRINT_TEMP_SUFFIX_LENGTH
+    )
 
 
 __all__ = ["render_preview", "_page_png"]

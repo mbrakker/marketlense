@@ -182,6 +182,11 @@ def test_read_only_soak_reports_stale_eligible_held_and_missing_runbooks(
             status="operator_action_required",
             action_code="mark_terminal_blocker",
         ),
+        _record(
+            "d-legacy-blocker",
+            dedupe_key="dedupe:d-legacy-blocker",
+            action_code="mark_terminal_blocker",
+        ),
     ):
         upsert_remediation_record(
             RemediationUpsertRequest(
@@ -213,7 +218,7 @@ def test_read_only_soak_reports_stale_eligible_held_and_missing_runbooks(
 
     assert soak.stale_lease_ids == ["a-stale"]
     assert soak.eligible_record_ids == ["b-eligible"]
-    assert soak.held_record_ids == ["c-held"]
+    assert soak.held_record_ids == ["c-held", "d-legacy-blocker"]
     assert soak.missing_runbook_error_codes == ["provider_timeout", "unmapped"]
 
 

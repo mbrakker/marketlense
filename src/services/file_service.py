@@ -80,6 +80,9 @@ _PIPELINE_CHECKPOINT_SCHEMA_VERSION = "1.0"
 _PIPELINE_CHECKPOINT_DIR = ".checkpoints"
 _ATOMIC_WRITE_STALE_SECONDS = 3600.0
 _ATOMIC_WRITE_TEMP_TAG = ".tmp-write-"
+_ATOMIC_REPLACE_MAX_ATTEMPTS = 3
+_ATOMIC_REPLACE_RETRY_DELAY_SECONDS = 0.01
+_WINDOWS_REPLACE_RETRYABLE_ERRORS = {5, 32}
 _WRITE_LOCKS_GUARD = threading.Lock()
 _WRITE_LOCKS: dict[str, threading.Lock] = {}
 
@@ -1068,7 +1071,7 @@ def _atomic_write_bytes(path: Path, content: bytes) -> None:
             file_obj.write(content)
             file_obj.flush()
             os.fsync(file_obj.fileno())
-        os.replace(temp_path, path)
+        _replace_atomic_file(temp_path, path)
     except Exception:
         try:
             temp_path.unlink(missing_ok=True)
@@ -1083,6 +1086,27 @@ def _atomic_write_bytes(path: Path, content: bytes) -> None:
                 },
             )
         raise
+
+
+def _replace_atomic_file(temp_path: Path, path: Path) -> None:
+    """Absorb a bounded Windows sharing violation without retrying writes."""
+
+    for attempt in range(_ATOMIC_REPLACE_MAX_ATTEMPTS):
+        try:
+            os.replace(temp_path, path)
+            return
+        except OSError as exc:
+            if not _is_retryable_windows_replace_error(exc) or (
+                attempt == _ATOMIC_REPLACE_MAX_ATTEMPTS - 1
+            ):
+                raise
+            time.sleep(_ATOMIC_REPLACE_RETRY_DELAY_SECONDS)
+
+
+def _is_retryable_windows_replace_error(error: OSError) -> bool:
+    return os.name == "nt" and getattr(error, "winerror", None) in (
+        _WINDOWS_REPLACE_RETRYABLE_ERRORS
+    )
 
 
 def _atomic_temp_path(path: Path) -> Path:

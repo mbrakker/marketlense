@@ -693,7 +693,10 @@ def test_upload_media_server_error_logs_response_diagnostics(
     assert len(events) == 1
     assert events[0]["fields"]["status_code"] == 503
     assert events[0]["fields"]["reason"] == "Service Unavailable"
-    assert "temporary outage" in events[0]["fields"]["response_body_excerpt"]
+    logged_body = events[0]["fields"]["response_body_excerpt"]
+    assert logged_body["redaction"] == "***REDACTED***"
+    assert logged_body["sha256"]
+    assert logged_body["character_count"] > 0
     assert "Set-Cookie" not in events[0]["fields"]["response_headers"]
     assert_logs_have_required_fields(events)
 

@@ -1,8 +1,6 @@
 # ruff: noqa: B008
 from __future__ import annotations
 
-from pathlib import Path
-
 import typer
 import yaml
 from rich import box
@@ -10,12 +8,15 @@ from rich.table import Table
 
 from src._cli.app import cli_app, console
 from src.contracts.config import ConfigLoadRequest
+from src.contracts.files import ReadTextRequest
 from src.contracts.logging import LoggingSetupRequest
 from src.contracts.remediation import (
     RemediationListRequest,
     RemediationSoakReportRequest,
 )
+from src.contracts.run_context import RunContext
 from src.services.config_service import load_settings
+from src.services.file_service import read_text
 from src.services.logging_service import setup_logging
 from src.services.state_service import (
     list_remediation_records,
@@ -80,8 +81,13 @@ def list_remediations(
     console.print(table)
 
 
-def _runbook_codes(path: str) -> list[str]:
-    payload = yaml.safe_load(Path(path).read_text(encoding="utf-8")) or {}
+def _runbook_codes(path: str, ctx: RunContext) -> list[str]:
+    payload = (
+        yaml.safe_load(
+            read_text(ReadTextRequest(schema_version="1.0", path=path), ctx).content
+        )
+        or {}
+    )
     runbooks = payload.get("runbooks") if isinstance(payload, dict) else []
     if not isinstance(runbooks, list):
         return []
@@ -120,7 +126,7 @@ def remediation_soak(
             schema_version="1.0",
             state_db=resolved_state_db,
             now_utc=str(now_utc or "").strip() or utc_now_seconds_z(),
-            runbook_error_codes=_runbook_codes(registry),
+            runbook_error_codes=_runbook_codes(registry, ctx),
         ),
         ctx,
     )

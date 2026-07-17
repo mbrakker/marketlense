@@ -13,5 +13,7 @@
 | Drive or WordPress authentication failure | Repair local credentials or secrets without logging them | [Credentials](credentials.md) |
 | Publish or public-site issue | Inspect publish validation and WordPress response context | [WordPress operations](wordpress.md) |
 | Stalled or failed UI job | Inspect the persisted run and dead-letter context | [Operator cockpit](../architecture/operator-cockpit.md) |
+| PDF preview missing only in a deep Windows workspace | Use the returned preview artifact reference; preview output compacts its directory segment to stay within the Windows path budget | [Report processing](../workflows/report-processing.md) |
+| Intermittent Windows local-cache write error | Re-run the bounded operation; only native rename sharing/access errors are retried locally, while other write errors remain explicit | [Local development](local-development.md) |
 
 Use `python -m src.cli --help` to confirm available commands. Avoid broad retries and destructive cleanup until the retained evidence identifies the affected workflow and side effect.

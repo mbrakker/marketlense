@@ -306,6 +306,7 @@ def _is_artifact_reference_field(key: str) -> bool:
         key_tokens.intersection(
             {
                 "artifact",
+                "artifacts",
                 "audit",
                 "hash",
                 "path",

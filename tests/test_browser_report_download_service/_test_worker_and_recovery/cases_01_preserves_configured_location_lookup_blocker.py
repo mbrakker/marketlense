@@ -434,7 +434,7 @@ def test_download_report_with_browser_use_bounds_lookup_assist_after_completed_h
                         "selected_count" in script_text
                         and ".lookupFormFieldBlock" in script_text
                     ):
-                        time.sleep(7.0)
+                        time.sleep(1.2)
                         return {"acted": False}
                     if "navigationEntries" in script_text:
                         return []
@@ -516,11 +516,14 @@ def test_download_report_with_browser_use_bounds_lookup_assist_after_completed_h
     assert "Location field could not be successfully filled or submitted" in str(
         response.blocked_reason_detail
     )
-    assert any(
-        event.get("event") == "browser_report_download_timeout_recovery_timed_out"
-        and event.get("fields", {}).get("operation") == "lookup_submission_assist"
+    timeout_events = [
+        event
         for event in _service_events(caplog)
-    )
+        if event.get("event") == "browser_report_download_timeout_recovery_timed_out"
+        and event.get("fields", {}).get("operation") == "lookup_submission_assist"
+    ]
+    assert len(timeout_events) == 1
+    assert timeout_events[0]["fields"]["timeout_seconds"] == 0.05
 
 def test_download_report_with_browser_use_maps_partial_lookup_timeout_to_blocker(
     tmp_path: Path,

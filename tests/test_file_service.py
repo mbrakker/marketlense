@@ -313,6 +313,39 @@ def test_write_bytes_serializes_same_target_concurrent_writes(tmp_path: Path) ->
     assert list(tmp_path.glob("*.tmp-write-*")) == []
 
 
+def test_write_bytes_retries_transient_windows_replace_sharing_violation(
+    external_boundary_mocks_only,
+    tmp_path: Path,
+) -> None:
+    target = tmp_path / "atomic.bin"
+    original_replace = os.replace
+    calls = 0
+
+    def _transient_replace(src, dst):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            error = PermissionError(5, "Access is denied")
+            error.winerror = 5
+            raise error
+        return original_replace(src, dst)
+
+    external_boundary_mocks_only.setattr(os, "replace", _transient_replace)
+
+    response = write_bytes(
+        WriteBytesRequest(
+            schema_version="1.0",
+            path=str(target),
+            content=b"updated",
+        ),
+        _ctx(),
+    )
+
+    assert calls == 2
+    assert response.bytes_written == len(b"updated")
+    assert target.read_bytes() == b"updated"
+
+
 def test_write_bytes_preserves_existing_file_when_replace_fails(
     external_boundary_mocks_only,
     tmp_path: Path,

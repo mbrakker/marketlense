@@ -25,6 +25,12 @@ def _ctx() -> RunContext:
     return RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
 
 
+@pytest.fixture(autouse=True)
+def _isolate_default_usage_storage(tmp_path, external_boundary_mocks_only) -> None:
+    """Keep default usage-accounting artifacts out of shared repository state."""
+    external_boundary_mocks_only.chdir(tmp_path)
+
+
 def _events(caplog) -> list[dict[str, object]]:
     events: list[dict[str, object]] = []
     for record in caplog.records:
