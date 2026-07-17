@@ -15,6 +15,8 @@ from src.contracts.remediation import (
     RemediationIdempotencyKey,
     RemediationListRequest,
     RemediationListResponse,
+    RemediationSoakReportRequest,
+    RemediationSoakReportResponse,
     RemediationActionCode,
     RemediationRecord,
     RemediationStatus,
@@ -413,6 +415,15 @@ def upsert_remediation_record(
                     record.remediation_id,
                 ),
             )
+            _insert_transition(
+                conn,
+                remediation_id=record.remediation_id,
+                from_status=existing.status,
+                to_status=existing.status,
+                reason="remediation_deduplicated",
+                actor="workflow",
+                at_utc=now,
+            )
             created = False
     event = "remediation_created" if created else "remediation_deduplicated"
     logger.info(
@@ -427,6 +438,19 @@ def upsert_remediation_record(
                 "dedupe_key": record.dedupe_key,
                 "workflow": record.workflow,
                 "status": record.status,
+                "failed_stage": record.failed_stage,
+                "error_code": record.error_code,
+                "lease_owner": record.lease_owner,
+                "lease_expires_at_utc": record.lease_expires_at_utc,
+                "cooldown_seconds": record.cooldown_seconds,
+                "attempt_count": record.attempt_count,
+                "max_attempts": record.max_attempts,
+                "checkpoint_status": (
+                    record.checkpoint.validation_status
+                    if record.checkpoint
+                    else "absent"
+                ),
+                "idempotency_key_count": len(record.idempotency_keys),
                 "transition_reason": "remediation_created"
                 if created
                 else "same_failure",
@@ -461,6 +485,97 @@ def list_remediation_records(
     return RemediationListResponse(
         schema_version="1.0", records=[_record_from_row(row) for row in rows]
     )
+
+
+def read_remediation_soak_report(
+    request: RemediationSoakReportRequest,
+    ctx: RunContext,
+) -> RemediationSoakReportResponse:
+    """Return retained remediation evidence without changing records or leases."""
+
+    with _state_conn(request.state_db, ctx) as conn:
+        created_rows = conn.execute(
+            """
+            SELECT DISTINCT remediation_id FROM remediation_transitions
+            WHERE reason='remediation_created'
+            ORDER BY remediation_id ASC
+            """
+        ).fetchall()
+        deduplicated_rows = conn.execute(
+            """
+            SELECT DISTINCT remediation_id FROM remediation_transitions
+            WHERE reason='remediation_deduplicated'
+            ORDER BY remediation_id ASC
+            """
+        ).fetchall()
+        stale_rows = conn.execute(
+            """
+            SELECT remediation_id FROM remediation_records
+            WHERE status IN ('leased','retrying')
+              AND lease_expires_at_utc<>'' AND lease_expires_at_utc<=?
+            ORDER BY remediation_id ASC
+            """,
+            (request.now_utc,),
+        ).fetchall()
+        eligible_rows = conn.execute(
+            """
+            SELECT remediation_id FROM remediation_records
+            WHERE status IN ('pending','deferred')
+              AND (next_eligible_at_utc='' OR next_eligible_at_utc<=?)
+              AND (lease_expires_at_utc='' OR lease_expires_at_utc<=?)
+            ORDER BY next_eligible_at_utc ASC, created_at_utc ASC, remediation_id ASC
+            """,
+            (request.now_utc, request.now_utc),
+        ).fetchall()
+        held_rows = conn.execute(
+            """
+            SELECT remediation_id FROM remediation_records
+            WHERE status IN ('operator_action_required','terminal')
+            ORDER BY remediation_id ASC
+            """
+        ).fetchall()
+        observed_error_rows = conn.execute(
+            """
+            SELECT DISTINCT error_code FROM remediation_records
+            WHERE error_code<>''
+            ORDER BY error_code ASC
+            """
+        ).fetchall()
+    mapped_codes = {
+        code.strip() for code in request.runbook_error_codes if code.strip()
+    }
+    response = RemediationSoakReportResponse(
+        schema_version="1.0",
+        created_record_ids=[str(row[0]) for row in created_rows],
+        deduplicated_record_ids=[str(row[0]) for row in deduplicated_rows],
+        stale_lease_ids=[str(row[0]) for row in stale_rows],
+        eligible_record_ids=[str(row[0]) for row in eligible_rows],
+        held_record_ids=[str(row[0]) for row in held_rows],
+        missing_runbook_error_codes=sorted(
+            str(row[0])
+            for row in observed_error_rows
+            if str(row[0]) not in mapped_codes
+        ),
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="remediation_soak_report_read",
+            module=logger.name,
+            fields={
+                "created_count": len(response.created_record_ids),
+                "deduplicated_count": len(response.deduplicated_record_ids),
+                "stale_lease_count": len(response.stale_lease_ids),
+                "eligible_count": len(response.eligible_record_ids),
+                "held_count": len(response.held_record_ids),
+                "missing_runbook_mapping_count": len(
+                    response.missing_runbook_error_codes
+                ),
+            },
+        )
+    )
+    return response
 
 
 def _lease_expiry(now_utc: str, lease_seconds: int) -> str:
@@ -707,6 +822,7 @@ def release_expired_remediation_leases(
 __all__ = [
     "claim_next_remediation",
     "list_remediation_records",
+    "read_remediation_soak_report",
     "release_expired_remediation_leases",
     "transition_remediation",
     "upsert_remediation_record",

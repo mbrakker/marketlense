@@ -60,6 +60,10 @@ from src.orchestrators.ingest_file_orchestrator import (
 from src.orchestrators.report_pipeline_orchestrator import (
     run_report_pipeline as run_report_pipeline_orchestrator,
 )
+from src.orchestrators.remediation_orchestrator import (
+    record_workflow_failure,
+    remediation_input_checksum,
+)
 from src.orchestrators.retry_orchestrator import run_step_with_default_policy
 from src.orchestrators.vector_store_retention_orchestrator import (
     run_vector_store_retention_cleanup,
@@ -995,6 +999,20 @@ def _process_ingest_batch(
                 TypeError,
             ) as exc:  # pragma: no cover - defensive fallback
                 file_ctx = child_context(root_ctx, task_id=file.file_id)
+                record_workflow_failure(
+                    state_db=settings.state_db,
+                    workflow="ingest",
+                    stage="batch_file_worker",
+                    operation="process_file",
+                    error=exc,
+                    ctx=file_ctx,
+                    input_checksum=file.md5_checksum
+                    or remediation_input_checksum(
+                        {"file_id": file.file_id, "name": file.name}
+                    ),
+                    report_id=file.file_id,
+                    source_id=_cache_pdf_path(settings, file),
+                )
                 logger.info(
                     log_event(
                         file_ctx,
@@ -1263,6 +1281,25 @@ def run_ingest(
             root_ctx=root_ctx,
         )
         return outcomes
+    except Exception as exc:
+        record_workflow_failure(
+            state_db=settings.state_db,
+            workflow="ingest",
+            stage="ingest_batch",
+            operation="run_ingest",
+            error=exc,
+            ctx=root_ctx,
+            input_checksum=remediation_input_checksum(
+                {
+                    "folder_id": folder_id or settings.gdrive_folder_id,
+                    "limit": limit,
+                    "force_report_cards": force_report_cards,
+                    "rescan": rescan,
+                }
+            ),
+            source_id=folder_id or settings.gdrive_folder_id,
+        )
+        raise
     finally:
         _finalize_usage_projection(settings, root_ctx)
         finalize_ingest_run(

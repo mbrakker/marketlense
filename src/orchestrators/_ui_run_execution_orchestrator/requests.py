@@ -109,6 +109,7 @@ def _cross_report_analysis_request(
         retry_backoff_step_seconds=1.0,
         retry_jitter_seconds=0.25,
         publish_target_route="wordpress:ml_briefing",
+        state_db=settings.state_db,
     )
 
 
@@ -198,6 +199,7 @@ def _signal_candidate_request(
         max_evidence_items=max_evidence_items,
         max_signals=max_signals,
         generated_at_utc="",
+        state_db=settings.state_db,
     )
 
 
@@ -244,6 +246,7 @@ def _signal_post_request(
         signal_store_db=payload.signal_store_db
         or settings.signal_store_db
         or settings.reports_db,
+        state_db=settings.state_db,
     )
 
 

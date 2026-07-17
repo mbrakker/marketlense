@@ -2,7 +2,11 @@
 from __future__ import annotations
 
 from pathlib import Path as _SplitPath
-__file__ = str(_SplitPath(__file__).resolve().parent.parent / "test_publisher_inventory_orchestrator.py")
+
+__file__ = str(
+    _SplitPath(__file__).resolve().parent.parent
+    / "test_publisher_inventory_orchestrator.py"
+)
 
 import json
 
@@ -53,6 +57,7 @@ from src.contracts.report_store import (
     ReportSourceQualityHistoryResponse,
     ReportSourceDiscoveryRecordResponse,
 )
+from src.contracts.remediation import RemediationListRequest
 
 from src.contracts.publisher_profiles import PublisherProfileRecord
 
@@ -68,8 +73,10 @@ from src.services.report_store_service import (
     record_publisher_inventory_test_status,
     replace_publishers,
 )
+from src.services.state_service import list_remediation_records
 
 from src.utils.errors import AppError
+
 
 def _settings() -> PublisherInventorySettings:
     reports_db = str(
@@ -102,6 +109,7 @@ def _settings() -> PublisherInventorySettings:
         candidate_screening_prompt_namespace="publisher_inventory/meaningful_candidate_screen",
     )
 
+
 def _publisher_state(
     *,
     with_route: bool = False,
@@ -133,6 +141,7 @@ def _publisher_state(
         inventory_snapshot_sha256=snapshot_sha256 if with_snapshot else None,
         inventory_snapshot_updated_at=1 if with_snapshot else None,
     )
+
 
 def _service_response(
     *, used_route_hint: bool, new_url: str, title: str = "New Report"
@@ -167,6 +176,7 @@ def _service_response(
             )
         ],
     )
+
 
 def _screening_response(
     *, accepted_urls: set[str], request
@@ -203,6 +213,7 @@ def _screening_response(
         request_id="req-screen-1",
         raw_response='{"decisions":[]}',
     )
+
 
 def _quality_response(
     *, accepted_urls: set[str], request
@@ -258,8 +269,10 @@ def _quality_response(
         decisions=decisions,
     )
 
+
 def _snapshot_json(url: str) -> str:
     return _snapshot_json_for_urls([url])
+
 
 def _snapshot_json_for_urls(urls: list[str]) -> str:
     payload = {
@@ -293,6 +306,7 @@ def _snapshot_json_for_urls(urls: list[str]) -> str:
     return json.dumps(
         payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
     )
+
 
 def _snapshot_sha256(url: str, run_context) -> str:
     return (
@@ -331,6 +345,7 @@ def _snapshot_sha256(url: str, run_context) -> str:
         )
         .snapshot_sha256
     )
+
 
 def _snapshot_sha256_for_urls(urls: list[str], run_context) -> str:
     candidates = [
@@ -372,6 +387,7 @@ def _snapshot_sha256_for_urls(urls: list[str], run_context) -> str:
         .snapshot_sha256
     )
 
+
 def _events(caplog, logger_name: str) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
     for record in caplog.records:
@@ -381,6 +397,7 @@ def _events(caplog, logger_name: str) -> list[dict[str, object]]:
         if isinstance(payload, dict):
             rows.append(payload)
     return rows
+
 
 def _dependencies(**overrides) -> PublisherInventoryDependencies:
     defaults = {
@@ -505,6 +522,7 @@ def _dependencies(**overrides) -> PublisherInventoryDependencies:
     defaults.update(overrides)
     return PublisherInventoryDependencies(**defaults)
 
+
 def _request(
     settings: PublisherInventorySettings | None = None,
 ) -> PublisherInventoryDiscoveryRequest:
@@ -517,14 +535,20 @@ def _request(
     )
 
 
-
 __all__ = [
     name
     for name in globals()
     if name
     not in {
-        '__name__', '__annotations__', '__doc__', '__spec__',
-        '__file__', '__package__', '__loader__', '__cached__',
-        '__builtins__', '_SplitPath',
+        "__name__",
+        "__annotations__",
+        "__doc__",
+        "__spec__",
+        "__file__",
+        "__package__",
+        "__loader__",
+        "__cached__",
+        "__builtins__",
+        "_SplitPath",
     }
 ]

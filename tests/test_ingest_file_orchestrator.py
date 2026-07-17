@@ -10,11 +10,13 @@ from src.contracts.file_cache import (
 )
 from src.contracts.files import DeleteFileResponse, FileStatResponse
 from src.contracts.ingest import IngestOutcome
+from src.contracts.remediation import RemediationListRequest
 from src.contracts.pdf_utils import PdfEofCheckResponse
 from src.orchestrators.ingest_file_orchestrator import (
     IngestFileDependencies,
     run_ingest_file,
 )
+from src.services.state_service import list_remediation_records
 
 
 def _drive_file(*, md5_checksum: str | None) -> DriveFile:
@@ -333,6 +335,17 @@ def test_ingest_file_records_pipeline_exception_as_terminal_state(
     assert state_records[0].last_error == (
         "ValueError: Validation issue requested an unsupported repair target"
     )
+    records = list_remediation_records(
+        RemediationListRequest(
+            schema_version="1.0",
+            state_db=ingest_settings.state_db,
+            workflow="ingest_file",
+        ),
+        run_context,
+    ).records
+    assert len(records) == 1
+    assert records[0].error_code == "ValueError"
+    assert records[0].status == "operator_action_required"
 
 
 def test_sidecar_is_written_after_computed_md5(ingest_settings, run_context):

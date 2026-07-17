@@ -14,6 +14,7 @@ from src.contracts.drive import DriveDownloadRequest, DriveListRequest, DriveFil
 from src.contracts.files import FileExistsRequest, FileHashRequest, WriteBytesRequest
 from src.contracts.ingest import IngestSettings
 from src.contracts.pdf_utils import PdfEofCheckRequest
+from src.contracts.remediation import RemediationArtifactReference
 from src.contracts.run_context import RunContext
 from src.contracts.semantic_ids import ReportId
 from src.generators.candidate_extraction_generator import generate_candidate_pack
@@ -21,6 +22,11 @@ from src.services.drive_service import download_pdf, list_pdfs
 from src.services.file_service import file_exists, file_md5, write_bytes
 from src.services.pdf_service import check_pdf_eof
 from src.orchestrators.retry_orchestrator import run_step_with_default_policy
+from src.orchestrators.remediation_orchestrator import (
+    record_workflow_failure,
+    remediation_input_checksum,
+)
+from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.path_utils import safe_pdf_name
 from src.utils.slugify import slugify
@@ -163,7 +169,45 @@ def _download_if_needed(
     return cache_path, md5
 
 
-def run_candidate_extraction(
+def _record_candidate_failure(
+    *,
+    settings: IngestSettings,
+    ctx: RunContext,
+    error: Exception,
+    report_id: str,
+    source_id: str,
+    pdf_path: str = "",
+    input_checksum: str = "",
+) -> None:
+    artifacts = (
+        [
+            RemediationArtifactReference(
+                schema_version="1.0",
+                name="candidate_pdf",
+                reference=pdf_path,
+            )
+        ]
+        if pdf_path
+        else []
+    )
+    record_workflow_failure(
+        state_db=settings.state_db,
+        workflow="candidate_extraction",
+        stage="candidate_pack",
+        operation="generate_candidate_pack",
+        error=error,
+        ctx=ctx,
+        input_checksum=input_checksum
+        or remediation_input_checksum(
+            {"report_id": report_id, "source_id": source_id, "pdf_path": pdf_path}
+        ),
+        report_id=report_id,
+        source_id=source_id,
+        reusable_artifacts=artifacts,
+    )
+
+
+def _run_candidate_extraction(
     settings: IngestSettings,
     *,
     folder_id: Optional[str] = None,
@@ -200,6 +244,20 @@ def run_candidate_extraction(
             FileExistsRequest(schema_version="1.0", path=pdf_path), file_ctx
         )
         if not exists_resp.exists:
+            error = AppError(
+                code="candidate_source_missing",
+                message="Candidate extraction source PDF was not found",
+                retryable=False,
+                context={"report_id": report_id or name},
+            )
+            _record_candidate_failure(
+                settings=settings,
+                ctx=file_ctx,
+                error=error,
+                report_id=report_id or name,
+                source_id=pdf_path,
+                pdf_path=pdf_path,
+            )
             logger.info(
                 log_event(
                     file_ctx,
@@ -242,6 +300,15 @@ def run_candidate_extraction(
             )
             outcomes.append(outcome)
         except Exception as exc:
+            _record_candidate_failure(
+                settings=settings,
+                ctx=file_ctx,
+                error=exc,
+                report_id=resolved_report_id,
+                source_id=pdf_path,
+                pdf_path=pdf_path,
+                input_checksum=md5_resp.md5,
+            )
             logger.info(
                 log_event(
                     file_ctx,
@@ -291,6 +358,7 @@ def run_candidate_extraction(
         if file_id and file.file_id != file_id:
             continue
         file_ctx = child_context(root_ctx, task_id=file.file_id)
+        cache_path = ""
         try:
             cache_path, _ = _download_if_needed(file, settings, file_ctx, deps)
             report_name = _resolve_report_name(file, cache_path)
@@ -307,6 +375,15 @@ def run_candidate_extraction(
             outcomes.append(outcome)
             processed += 1
         except Exception as exc:
+            _record_candidate_failure(
+                settings=settings,
+                ctx=file_ctx,
+                error=exc,
+                report_id=file.file_id,
+                source_id=file.file_id,
+                pdf_path=cache_path,
+                input_checksum=file.md5_checksum or "",
+            )
             logger.info(
                 log_event(
                     file_ctx,
@@ -343,3 +420,40 @@ def run_candidate_extraction(
         )
     )
     return outcomes
+
+
+def run_candidate_extraction(
+    settings: IngestSettings,
+    *,
+    folder_id: Optional[str] = None,
+    limit: Optional[int] = None,
+    file_id: Optional[str] = None,
+    pdf_path: Optional[str] = None,
+    report_id: Optional[str] = None,
+    ctx: Optional[RunContext] = None,
+    dependencies: Optional[CandidateExtractionDependencies] = None,
+) -> List[CandidateExtractOutcome]:
+    """Extract candidates while retaining unexpected batch-level failures."""
+
+    root_ctx = ctx or new_run_context()
+    try:
+        return _run_candidate_extraction(
+            settings,
+            folder_id=folder_id,
+            limit=limit,
+            file_id=file_id,
+            pdf_path=pdf_path,
+            report_id=report_id,
+            ctx=root_ctx,
+            dependencies=dependencies,
+        )
+    except Exception as exc:
+        _record_candidate_failure(
+            settings=settings,
+            ctx=root_ctx,
+            error=exc,
+            report_id=report_id or file_id or "",
+            source_id=pdf_path or folder_id or settings.gdrive_folder_id,
+            pdf_path=pdf_path or "",
+        )
+        raise

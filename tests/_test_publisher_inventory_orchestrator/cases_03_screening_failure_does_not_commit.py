@@ -3,7 +3,9 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 def test_run_publisher_inventory_discovery_screening_failure_does_not_commit_snapshot(
+    tmp_path,
     run_context,
     assert_app_error,
 ):
@@ -45,7 +47,7 @@ def test_run_publisher_inventory_discovery_screening_failure_does_not_commit_sna
 
     with pytest.raises(AppError) as err:
         run_publisher_inventory_discovery(
-            _request(settings),
+            replace(_request(settings), state_db=str(tmp_path / "state.sqlite")),
             ctx=run_context,
             dependencies=deps,
         )
@@ -57,6 +59,18 @@ def test_run_publisher_inventory_discovery_screening_failure_does_not_commit_sna
     )
     assert uploads == []
     assert state_records == []
+    records = list_remediation_records(
+        RemediationListRequest(
+            schema_version="1.0",
+            state_db=str(tmp_path / "state.sqlite"),
+            workflow="publisher_inventory_discovery",
+        ),
+        run_context,
+    ).records
+    assert len(records) == 1
+    assert records[0].error_code == "publisher_inventory_candidate_screen_invalid_json"
+    assert records[0].status == "operator_action_required"
+
 
 def test_run_publisher_inventory_discovery_fails_when_all_screened_candidates_are_unreachable(
     run_context,
@@ -138,6 +152,7 @@ def test_run_publisher_inventory_discovery_fails_when_all_screened_candidates_ar
     assert [record.status for record in status_records] == [
         "failed:publisher_inventory_candidate_quality_unreachable_archive"
     ]
+
 
 def test_run_publisher_inventory_discovery_tolerates_unreachable_delta_when_previous_snapshot_exists(
     tmp_path,
@@ -272,6 +287,7 @@ def test_run_publisher_inventory_discovery_tolerates_unreachable_delta_when_prev
     assert len(state_records) == 1
     assert state_records[0].snapshot_drive_file_id == "snapshot-1"
     assert [record.status for record in status_records] == ["passed"]
+
 
 __all__ = [
     "test_run_publisher_inventory_discovery_screening_failure_does_not_commit_snapshot",

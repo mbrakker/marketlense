@@ -5,7 +5,7 @@ import json
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Callable
+from typing import Any, Callable
 
 from src.contracts.remediation import (
     RemediationActionCode,
@@ -38,6 +38,25 @@ _SIDE_EFFECTING_ACTIONS = {
     "revalidate_replaced_source",
 }
 
+# This is intentionally narrow.  Adding an action requires an explicit
+# workflow/error pair and still does not enable execution without the reaper
+# feature gate, an executor, and idempotency evidence where applicable.
+_AUTO_REPAIR_ALLOWLIST: dict[tuple[str, str], set[RemediationActionCode]] = {
+    ("report_generation", "provider_timeout"): {
+        "resume_valid_checkpoint",
+        "retry_transient_service_call",
+    },
+    ("report_download", "browser_download_timeout"): {
+        "retry_transient_service_call",
+    },
+    ("mail_report_acquisition", "mail_report_not_arrived_yet"): {
+        "poll_mailbox_delivery",
+    },
+    ("claim_embedding", "claim_embedding_provider_count_mismatch"): {
+        "retry_transient_service_call",
+    },
+}
+
 
 def _utc_after(now_utc: str, seconds: int) -> str:
     if seconds <= 0:
@@ -60,14 +79,69 @@ def _failure_code(error: Exception) -> str:
     return error.code if isinstance(error, AppError) else error.__class__.__name__
 
 
+def remediation_input_checksum(material: dict[str, Any]) -> str:
+    """Return a stable checksum without retaining workflow input content."""
+
+    encoded = json.dumps(
+        material, ensure_ascii=True, sort_keys=True, separators=(",", ":"), default=str
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def remediation_budget_summary(budget: Any | None) -> RemediationBudgetSummary:
+    """Project configured budget limits without reading or retaining raw inputs."""
+
+    if budget is None:
+        return RemediationBudgetSummary(schema_version="1.0")
+    remaining: dict[str, float | int] = {}
+    for field_name in (
+        "max_spend_usd",
+        "max_tokens",
+        "max_calls",
+        "max_steps",
+        "max_runtime_seconds",
+        "max_retries",
+        "max_browser_launches",
+        "max_drive_writes",
+        "max_drive_reads",
+        "max_wordpress_writes",
+        "max_pdfs",
+        "max_mailbox_reads",
+    ):
+        value = getattr(budget, field_name, None)
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            remaining[field_name] = value
+    return RemediationBudgetSummary(schema_version="1.0", remaining=remaining)
+
+
 def _failure_diagnostics(error: Exception) -> dict[str, object]:
     if not isinstance(error, AppError):
         return {"error_type": error.__class__.__name__}
-    return {
+    diagnostics: dict[str, object] = {
         "severity": error.severity,
         "retryable": error.retryable,
         "context_keys": sorted(str(key) for key in error.context),
     }
+    if error.cause is not None:
+        diagnostics["cause_type"] = error.cause.__class__.__name__
+        if isinstance(error.cause, AppError):
+            diagnostics["cause_code"] = error.cause.code
+            diagnostics["cause_retryable"] = error.cause.retryable
+    return diagnostics
+
+
+def _allowlisted_actions(workflow: str, error_code: str) -> set[RemediationActionCode]:
+    return _AUTO_REPAIR_ALLOWLIST.get(
+        (workflow.strip().lower(), error_code.strip().lower()), set()
+    )
+
+
+def is_automatically_repairable(record: RemediationRecord) -> bool:
+    """Fail closed unless this exact workflow/error/action triple is approved."""
+
+    return record.action_code in _allowlisted_actions(
+        record.workflow, record.error_code
+    )
 
 
 def _action_for_failure(
@@ -81,7 +155,7 @@ def _action_for_failure(
     if not isinstance(error, AppError):
         return (
             "mark_terminal_blocker",
-            "terminal",
+            "operator_action_required",
             "Inspect the unexpected failure before retrying.",
         )
     if decision is not None and decision.action == "user_action_required":
@@ -96,22 +170,30 @@ def _action_for_failure(
         )
     if decision is not None and decision.action == "defer":
         return "defer_for_budget", "deferred", decision.next_action
-    if code == "mail_report_not_arrived_yet":
+    allowed_actions = _allowlisted_actions(workflow, code)
+    if (
+        code == "mail_report_not_arrived_yet"
+        and "poll_mailbox_delivery" in allowed_actions
+    ):
         return (
             "poll_mailbox_delivery",
             "pending",
             "Wait for and poll the requested mailbox delivery.",
         )
-    if "source" in code and any(
-        token in code for token in ("stale", "replaced", "changed")
+    if (
+        "revalidate_replaced_source" in allowed_actions
+        and "source" in code
+        and any(token in code for token in ("stale", "replaced", "changed"))
     ):
         return (
             "revalidate_replaced_source",
             "pending",
             "Verify the replacement source before retrying.",
         )
-    if "artifact" in code and any(
-        token in code for token in ("invalid", "missing", "validation")
+    if (
+        "rerun_targeted_artifact_family" in allowed_actions
+        and "artifact" in code
+        and any(token in code for token in ("invalid", "missing", "validation"))
     ):
         return (
             "rerun_targeted_artifact_family",
@@ -119,7 +201,7 @@ def _action_for_failure(
             "Rerun only the invalid artifact family.",
         )
     if (
-        workflow in {"publish", "publishing"}
+        "retry_idempotent_publication" in allowed_actions
         and decision is not None
         and decision.action == "retry"
     ):
@@ -128,13 +210,21 @@ def _action_for_failure(
             "pending",
             "Retry publication only after idempotency verification.",
         )
-    if checkpoint is not None and checkpoint.validation_status == "validated":
+    if (
+        "resume_valid_checkpoint" in allowed_actions
+        and checkpoint is not None
+        and checkpoint.validation_status == "validated"
+    ):
         return (
             "resume_valid_checkpoint",
             "pending",
             "Resume from the validated checkpoint.",
         )
-    if error.retryable and (decision is None or decision.action == "retry"):
+    if (
+        "retry_transient_service_call" in allowed_actions
+        and error.retryable
+        and (decision is None or decision.action == "retry")
+    ):
         return (
             "retry_transient_service_call",
             "pending",
@@ -144,8 +234,8 @@ def _action_for_failure(
         )
     return (
         "mark_terminal_blocker",
-        "terminal",
-        "Resolve the blocker before another workflow attempt.",
+        "operator_action_required",
+        "Operator review is required; the workflow/error combination is not allowlisted.",
     )
 
 
@@ -192,11 +282,7 @@ def record_workflow_failure(
         "source_id": source_id,
         "publisher_id": publisher_id,
     }
-    digest = hashlib.sha256(
-        json.dumps(
-            fingerprint, ensure_ascii=True, sort_keys=True, separators=(",", ":")
-        ).encode("utf-8")
-    ).hexdigest()
+    digest = remediation_input_checksum(fingerprint)
     delay = max(0, int(retry_decision.delay_seconds)) if retry_decision else 0
     record = RemediationRecord(
         schema_version="1.0",
@@ -237,6 +323,37 @@ def record_workflow_failure(
             schema_version="1.0", state_db=state_db, record=record
         ),
         child_context(ctx, task_id="remediation:record_failure"),
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="remediation_failure_recorded",
+            module=logger.name,
+            fields={
+                "remediation_id": response.record.remediation_id,
+                "workflow": response.record.workflow,
+                "step": response.record.failed_stage,
+                "error_code": response.record.error_code,
+                "state_transition": response.record.status,
+                "lease_owner": response.record.lease_owner,
+                "lease_expires_at_utc": response.record.lease_expires_at_utc,
+                "cooldown_seconds": response.record.cooldown_seconds,
+                "attempt_count": response.record.attempt_count,
+                "max_attempts": response.record.max_attempts,
+                "checkpoint_status": (
+                    response.record.checkpoint.validation_status
+                    if response.record.checkpoint
+                    else "absent"
+                ),
+                "idempotency_status": (
+                    "recorded" if response.record.idempotency_keys else "absent"
+                ),
+                "operator_action": response.record.operator_next_action,
+                "created": response.created,
+                "deduplicated": response.deduplicated,
+            },
+        )
     )
     return response.record
 
@@ -321,9 +438,23 @@ def _log_reaper_event(
                 "workflow": record.workflow,
                 "action_code": record.action_code,
                 "status": record.status,
+                "step": record.failed_stage,
+                "error_code": record.error_code,
                 "transition_reason": reason,
                 "attempt_count": record.attempt_count,
                 "max_attempts": record.max_attempts,
+                "lease_owner": record.lease_owner,
+                "lease_expires_at_utc": record.lease_expires_at_utc,
+                "cooldown_seconds": record.cooldown_seconds,
+                "checkpoint_status": (
+                    record.checkpoint.validation_status
+                    if record.checkpoint
+                    else "absent"
+                ),
+                "idempotency_status": (
+                    "recorded" if record.idempotency_keys else "absent"
+                ),
+                "operator_action": record.operator_next_action,
             },
         )
     )
@@ -404,6 +535,23 @@ def run_bounded_remediation_reaper(
                 "budget_prevented_retry",
             )
             deferred.append(record.remediation_id)
+            continue
+        if not is_automatically_repairable(record):
+            record = _transition(
+                state_db=request.state_db,
+                record=record,
+                status="operator_action_required",
+                reason="workflow_error_not_allowlisted",
+                actor=request.worker_id,
+                ctx=work_ctx,
+            )
+            _log_reaper_event(
+                work_ctx,
+                "remediation_operator_action_required",
+                record,
+                "workflow_error_not_allowlisted",
+            )
+            held.append(record.remediation_id)
             continue
         if record.action_code == "resume_valid_checkpoint":
             valid = bool(
@@ -567,6 +715,9 @@ def run_bounded_remediation_reaper(
 
 __all__ = [
     "RemediationReaperDependencies",
+    "is_automatically_repairable",
+    "remediation_budget_summary",
+    "remediation_input_checksum",
     "record_workflow_failure",
     "run_bounded_remediation_reaper",
 ]

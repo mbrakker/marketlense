@@ -1140,6 +1140,12 @@
         "run_budget_enabled": {
           "type": "boolean"
         },
+        "run_budget_enabled_effect_kinds": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "run_budget_limit_decision": {
           "type": "string"
         },
@@ -1183,6 +1189,16 @@
             }
           ]
         },
+        "run_budget_max_drive_reads": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "run_budget_max_drive_writes": {
           "anyOf": [
             {
@@ -1193,7 +1209,37 @@
             }
           ]
         },
+        "run_budget_max_mailbox_reads": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "run_budget_max_pdfs": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_budget_max_retries": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_budget_max_runtime_seconds": {
           "anyOf": [
             {
               "type": "integer"
@@ -4275,7 +4321,20 @@
         "retry_retries": {
           "type": "integer"
         },
+        "run_budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "schema_version": {
+          "type": "string"
+        },
+        "state_db": {
           "type": "string"
         }
       },
@@ -4345,6 +4404,16 @@
         },
         "request_id": {
           "type": "string"
+        },
+        "run_budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "schema_version": {
           "type": "string"
@@ -5383,6 +5452,9 @@
         },
         "settings": {
           "$ref": "#/$defs/src.contracts._publisher_inventory.settings.PublisherInventorySettings"
+        },
+        "state_db": {
+          "type": "string"
         }
       },
       "required": [
@@ -11071,6 +11143,9 @@
         "schema_version": {
           "type": "string"
         },
+        "state_db": {
+          "type": "string"
+        },
         "timeout_seconds": {
           "anyOf": [
             {
@@ -13277,6 +13352,45 @@
         "reports_db": {
           "type": "string"
         },
+        "run_budget_enabled_effect_kinds": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "run_budget_limit_decision": {
+          "type": "string"
+        },
+        "run_budget_max_pdfs": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_budget_max_retries": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_budget_max_runtime_seconds": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "schema_version": {
           "type": "string"
         },
@@ -15444,6 +15558,16 @@
             }
           ]
         },
+        "run_budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "schema_version": {
           "type": "string"
         },
@@ -15528,6 +15652,16 @@
         },
         "output_path": {
           "type": "string"
+        },
+        "run_budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "schema_version": {
           "type": "string"
@@ -15661,6 +15795,16 @@
           "anyOf": [
             {
               "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
             },
             {
               "type": "null"
@@ -15885,6 +16029,16 @@
             }
           ]
         },
+        "run_budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "schema_version": {
           "type": "string"
         },
@@ -15994,6 +16148,16 @@
           "anyOf": [
             {
               "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
             },
             {
               "type": "null"
@@ -18610,6 +18774,45 @@
         "reports_db": {
           "type": "string"
         },
+        "run_budget_enabled_effect_kinds": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "run_budget_limit_decision": {
+          "type": "string"
+        },
+        "run_budget_max_pdfs": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_budget_max_retries": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_budget_max_runtime_seconds": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "schema_version": {
           "type": "string"
         },
@@ -20436,6 +20639,9 @@
             }
           ]
         },
+        "poll_number": {
+          "type": "integer"
+        },
         "publisher_name": {
           "type": "string"
         },
@@ -20447,6 +20653,16 @@
         },
         "report_title": {
           "type": "string"
+        },
+        "run_budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "schema_version": {
           "type": "string"
@@ -21525,6 +21741,16 @@
             }
           ]
         },
+        "run_budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "same_provider_fallback": {
           "type": "boolean"
         },
@@ -21564,6 +21790,9 @@
           "type": "string"
         },
         "user_prompt": {
+          "type": "string"
+        },
+        "workflow_id": {
           "type": "string"
         }
       },
@@ -24393,6 +24622,12 @@
         "run_budget_enabled": {
           "type": "boolean"
         },
+        "run_budget_enabled_effect_kinds": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "run_budget_limit_decision": {
           "type": "string"
         },
@@ -25501,6 +25736,80 @@
         "run_id",
         "task_id",
         "span_id"
+      ],
+      "type": "object"
+    },
+    "src.contracts.remediation.RemediationSoakReportRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "now_utc": {
+          "type": "string"
+        },
+        "runbook_error_codes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "state_db": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "state_db",
+        "now_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts.remediation.RemediationSoakReportResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "created_record_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "deduplicated_record_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "eligible_record_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "held_record_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "missing_runbook_error_codes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "stale_lease_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version"
       ],
       "type": "object"
     },
@@ -26936,6 +27245,9 @@
           "type": "string"
         },
         "source_id": {
+          "type": "string"
+        },
+        "state_db": {
           "type": "string"
         }
       },
@@ -28390,7 +28702,13 @@
             }
           ]
         },
+        "estimated_drive_reads": {
+          "type": "integer"
+        },
         "estimated_duration_seconds": {
+          "type": "integer"
+        },
+        "estimated_mailbox_reads": {
           "type": "integer"
         },
         "estimated_pdfs": {
@@ -28519,6 +28837,60 @@
       ],
       "type": "object"
     },
+    "src.contracts.run_budget.BudgetSideEffectFinalizeRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "actual_usage": {
+          "$ref": "#/$defs/src.contracts.run_budget.RunBudgetUsage"
+        },
+        "error_code": {
+          "type": "string"
+        },
+        "outcome": {
+          "type": "string"
+        },
+        "reservation_key": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "usage_db_path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "usage_db_path",
+        "reservation_key",
+        "actual_usage"
+      ],
+      "type": "object"
+    },
+    "src.contracts.run_budget.BudgetSideEffectFinalizeResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "actual_recorded": {
+          "type": "boolean"
+        },
+        "finalized": {
+          "type": "boolean"
+        },
+        "reservation_released": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "finalized",
+        "actual_recorded",
+        "reservation_released"
+      ],
+      "type": "object"
+    },
     "src.contracts.run_budget.RunBudget": {
       "additionalProperties": false,
       "properties": {
@@ -28534,6 +28906,12 @@
         },
         "day_utc": {
           "type": "string"
+        },
+        "enabled_effect_kinds": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "limit_decision": {
           "type": "string"
@@ -28558,7 +28936,27 @@
             }
           ]
         },
+        "max_drive_reads": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "max_drive_writes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_mailbox_reads": {
           "anyOf": [
             {
               "type": "integer"
@@ -28822,7 +29220,27 @@
             }
           ]
         },
+        "max_drive_reads": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "max_drive_writes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_mailbox_reads": {
           "anyOf": [
             {
               "type": "integer"
@@ -28920,7 +29338,13 @@
         "calls": {
           "type": "integer"
         },
+        "drive_reads": {
+          "type": "integer"
+        },
         "drive_writes": {
+          "type": "integer"
+        },
+        "mailbox_reads": {
           "type": "integer"
         },
         "pdfs": {
@@ -29300,6 +29724,9 @@
           "$ref": "#/$defs/src.contracts._cross_report_analysis.requests.CrossReportProjectedDataReadRequest"
         },
         "schema_version": {
+          "type": "string"
+        },
+        "state_db": {
           "type": "string"
         }
       },
@@ -36490,6 +36917,9 @@
         },
         "signal_store_db": {
           "type": "string"
+        },
+        "state_db": {
+          "type": "string"
         }
       },
       "required": [
@@ -36943,6 +37373,9 @@
         },
         "source_request": {
           "$ref": "#/$defs/src.contracts.wordpress_intelligence_projection.WordPressIntelligenceSourceReadRequest"
+        },
+        "state_db": {
+          "type": "string"
         }
       },
       "required": [

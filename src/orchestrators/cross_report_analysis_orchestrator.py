@@ -41,6 +41,7 @@ from src.contracts.idempotency import (
     OrchestratorIdempotencyGetRequest,
     OrchestratorIdempotencyRecordRequest,
 )
+from src.contracts.remediation import RemediationArtifactReference
 from src.contracts.prompts import PromptLoadRequest
 from src.contracts.run_context import RunContext
 from src.generators.cross_report_analysis_generator import (
@@ -59,6 +60,11 @@ from src.generators.cross_report_analysis_input_generator import (
     validate_cross_report_publishability,
 )
 from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
+from src.orchestrators.remediation_orchestrator import (
+    record_workflow_failure,
+    remediation_budget_summary,
+    remediation_input_checksum,
+)
 from src.services import (
     analytics_store_service,
     file_service,
@@ -545,7 +551,7 @@ def _embedding_topics(request: CrossReportAnalysisRequest) -> list[str]:
     return topics
 
 
-def run_cross_report_analysis(
+def _run_cross_report_analysis(
     request: CrossReportAnalysisOrchestratorRequest,
     settings: Any,
     ctx: RunContext,
@@ -1105,3 +1111,70 @@ def run_cross_report_analysis(
         )
     )
     return outcome
+
+
+def run_cross_report_analysis(
+    request: CrossReportAnalysisOrchestratorRequest,
+    settings: Any,
+    ctx: RunContext,
+    *,
+    read_projected_data_fn: Callable[
+        [CrossReportProjectedDataReadRequest, RunContext], Any
+    ] = analytics_store_service.read_cross_report_projected_data,
+    read_claim_embeddings_fn: Callable[
+        [ClaimEmbeddingReadRequest, RunContext], ClaimEmbeddingReadResponse
+    ] = analytics_store_service.read_claim_embeddings,
+    write_bytes_fn: Callable[
+        [WriteBytesRequest, RunContext], Any
+    ] = file_service.write_bytes,
+    prompt_client: Any = prompt_service,
+    openai_client: Any | None = None,
+    publish_settings: Any | None = None,
+    publish_cross_report_package_fn: Callable[
+        ..., CrossReportPublishResultSummary
+    ] = publish_cross_report_package,
+    sleep_fn: Callable[[float], None] = time.sleep,
+) -> CrossReportOrchestratorOutcome:
+    """Run the workflow and explicitly observe terminal failures in the ledger."""
+
+    try:
+        return _run_cross_report_analysis(
+            request,
+            settings,
+            ctx,
+            read_projected_data_fn=read_projected_data_fn,
+            read_claim_embeddings_fn=read_claim_embeddings_fn,
+            write_bytes_fn=write_bytes_fn,
+            prompt_client=prompt_client,
+            openai_client=openai_client,
+            publish_settings=publish_settings,
+            publish_cross_report_package_fn=publish_cross_report_package_fn,
+            sleep_fn=sleep_fn,
+        )
+    except Exception as exc:
+        record_workflow_failure(
+            state_db=request.state_db,
+            workflow="cross_report_analysis",
+            stage="workflow",
+            operation="run_cross_report_analysis",
+            error=exc,
+            ctx=ctx,
+            input_checksum=remediation_input_checksum(
+                {
+                    "request_id": request.analysis_request.request_id,
+                    "publication_mode": request.analysis_request.publication_mode,
+                    "projected_data_db": request.projected_data_request.db_path,
+                    "output_root": request.output_root,
+                }
+            ),
+            source_id=request.projected_data_request.db_path,
+            reusable_artifacts=[
+                RemediationArtifactReference(
+                    schema_version="1.0",
+                    name="cross_report_output_root",
+                    reference=request.output_root,
+                )
+            ],
+            budget=remediation_budget_summary(request.run_budget),
+        )
+        raise

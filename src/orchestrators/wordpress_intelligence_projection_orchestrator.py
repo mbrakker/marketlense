@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from typing import Callable
 
 from src.contracts.run_context import RunContext
+from src.contracts.remediation import RemediationArtifactReference
 from src.contracts.wordpress_intelligence_projection import (
     WORDPRESS_INTELLIGENCE_SCHEMA_VERSION,
     WordPressIntelligenceBuildRequest,
@@ -21,6 +22,10 @@ from src.contracts.wordpress_intelligence_projection import (
 )
 from src.generators.wordpress_intelligence_projection_generator import (
     build_wordpress_intelligence_projection,
+)
+from src.orchestrators.remediation_orchestrator import (
+    record_workflow_failure,
+    remediation_input_checksum,
 )
 from src.services.wordpress_service import (
     read_published_intelligence_source,
@@ -58,7 +63,7 @@ class WordPressIntelligenceProjectionDependencies:
         )
 
 
-def sync_wordpress_intelligence_projection(
+def _sync_wordpress_intelligence_projection(
     request: WordPressIntelligenceSyncRequest,
     ctx: RunContext,
     *,
@@ -116,3 +121,41 @@ def sync_wordpress_intelligence_projection(
         )
     )
     return response
+
+
+def sync_wordpress_intelligence_projection(
+    request: WordPressIntelligenceSyncRequest,
+    ctx: RunContext,
+    *,
+    dependencies: WordPressIntelligenceProjectionDependencies | None = None,
+) -> WordPressIntelligenceSyncResponse:
+    """Synchronize once and retain terminal failure evidence in the ledger."""
+
+    try:
+        return _sync_wordpress_intelligence_projection(
+            request, ctx, dependencies=dependencies
+        )
+    except Exception as exc:
+        record_workflow_failure(
+            state_db=request.state_db,
+            workflow="wordpress_intelligence_projection",
+            stage="projection_sync",
+            operation="sync_wordpress_intelligence_projection",
+            error=exc,
+            ctx=ctx,
+            input_checksum=remediation_input_checksum(
+                {
+                    "site_url": request.source_request.base_url,
+                    "generated_at_utc": request.generated_at_utc,
+                }
+            ),
+            source_id=request.source_request.base_url,
+            reusable_artifacts=[
+                RemediationArtifactReference(
+                    schema_version="1.0",
+                    name="wordpress_intelligence_projection",
+                    reference=request.source_request.base_url,
+                )
+            ],
+        )
+        raise

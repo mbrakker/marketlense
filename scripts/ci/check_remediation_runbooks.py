@@ -8,7 +8,6 @@ from typing import Any
 
 import yaml
 
-
 ROOT = Path(__file__).resolve().parents[2]
 REQUIRED_RUNBOOK_FIELDS = (
     "failure_code",
@@ -90,6 +89,29 @@ def validate_remediation_runbooks(path: Path) -> list[str]:
             if raw_hook.get("dry_run") is not True:
                 raise ValueError(f"{hook_label} must be dry_run: true")
         validated.append(failure_code)
+    automatic = payload.get("automatic_execution")
+    if not isinstance(automatic, dict):
+        raise ValueError("remediation registry requires automatic_execution policy")
+    if automatic.get("execution_enabled") is not False:
+        raise ValueError(
+            "automatic remediation execution must remain disabled by default"
+        )
+    _require_text(automatic, "activation_gate", "automatic_execution")
+    allowlist = automatic.get("allowlist")
+    if not isinstance(allowlist, list) or not allowlist:
+        raise ValueError("automatic_execution requires a non-empty allowlist")
+    for index, raw_entry in enumerate(allowlist, start=1):
+        if not isinstance(raw_entry, dict):
+            raise ValueError(f"automatic allowlist entry {index} must be a mapping")
+        label = f"automatic allowlist entry {index}"
+        _require_text(raw_entry, "workflow", label)
+        failure_code = _require_text(raw_entry, "failure_code", label)
+        _require_text(raw_entry, "action", label)
+        if failure_code not in codes:
+            raise ValueError(
+                "automatic allowlist failure_code lacks a runbook mapping: "
+                f"{failure_code}"
+            )
     return validated
 
 

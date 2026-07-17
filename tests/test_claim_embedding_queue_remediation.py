@@ -14,6 +14,7 @@ from src.contracts.analytics_projection import (
     PROJECTION_SCHEMA_VERSION,
 )
 from src.contracts.openai import OpenAIEmbeddingResponse
+from src.contracts.remediation import RemediationListRequest
 from src.orchestrators.claim_embedding_orchestrator import (
     ClaimEmbeddingDependencies,
     run_claim_embedding_workflow,
@@ -24,6 +25,7 @@ from src.services.analytics_store_service import (
     reconcile_claim_embedding_queue,
     upsert_projection,
 )
+from src.services.state_service import list_remediation_records
 from src.utils.errors import AppError
 from tests.test_analytics_projection_foundation import _batch
 
@@ -473,7 +475,12 @@ def test_terminal_provider_failure_is_not_retried(ingest_settings, run_context) 
 
     deps = ClaimEmbeddingDependencies(create_embeddings=_fail)
     first = run_claim_embedding_workflow(
-        _workflow_request(ingest_settings.reports_db, run_context), dependencies=deps
+        _workflow_request(
+            ingest_settings.reports_db,
+            run_context,
+            state_db=ingest_settings.state_db,
+        ),
+        dependencies=deps,
     )
     second = run_claim_embedding_workflow(
         _workflow_request(ingest_settings.reports_db, run_context), dependencies=deps
@@ -482,6 +489,18 @@ def test_terminal_provider_failure_is_not_retried(ingest_settings, run_context) 
     assert first.failed_count == 1
     assert second.processed_entity_uids == []
     assert calls == [1]
+    records = list_remediation_records(
+        RemediationListRequest(
+            schema_version="1.0",
+            state_db=ingest_settings.state_db,
+            workflow="claim_embedding",
+        ),
+        run_context,
+    ).records
+    assert len(records) == 1
+    assert records[0].error_code == "claim_embedding_retry_budget_exhausted"
+    assert records[0].diagnostics["cause_code"] == "openai_embedding_invalid_input"
+    assert records[0].status == "operator_action_required"
 
 
 def test_concurrent_runs_have_one_successful_embedding_and_one_provider_call(

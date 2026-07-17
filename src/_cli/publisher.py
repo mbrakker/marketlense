@@ -81,6 +81,9 @@ def discover_publisher_inventory(
                 insights_url=insights_url,
                 reports_db=settings.reports_db,
                 settings=settings,
+                state_db=load_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=""), ctx
+                ).state_db,
             ),
             ctx=ctx,
         )

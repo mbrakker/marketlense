@@ -13,6 +13,7 @@ from src.contracts.cross_report_analysis import (
     CrossReportProjectedDataReadResponse,
 )
 from src.contracts.run_context import RunContext
+from src.contracts.remediation import RemediationArtifactReference
 from src.contracts.signal_candidates import (
     SIGNAL_CANDIDATE_SCHEMA_VERSION,
     SignalCandidateExtractionOutcome,
@@ -29,6 +30,10 @@ from src.generators.cross_report_analysis_input_generator import (
     select_cross_report_theme,
 )
 from src.generators.signal_candidate_generator import build_signal_candidate_batch
+from src.orchestrators.remediation_orchestrator import (
+    record_workflow_failure,
+    remediation_input_checksum,
+)
 from src.services import analytics_store_service
 from src.utils.clock import utc_now_iso as _utc_now
 from src.utils.logging import log_event
@@ -79,7 +84,7 @@ def _embedding_topics(request: SignalCandidateExtractionRequest) -> list[str]:
     return topics
 
 
-def run_signal_candidate_extraction(
+def _run_signal_candidate_extraction(
     request: SignalCandidateExtractionRequest,
     ctx: RunContext,
     *,
@@ -221,3 +226,56 @@ def run_signal_candidate_extraction(
         )
     )
     return outcome
+
+
+def run_signal_candidate_extraction(
+    request: SignalCandidateExtractionRequest,
+    ctx: RunContext,
+    *,
+    read_projected_data_fn: Callable[
+        [CrossReportProjectedDataReadRequest, RunContext],
+        CrossReportProjectedDataReadResponse,
+    ] = analytics_store_service.read_cross_report_projected_data,
+    read_claim_embeddings_fn: Callable[
+        [ClaimEmbeddingReadRequest, RunContext],
+        ClaimEmbeddingReadResponse,
+    ] = analytics_store_service.read_claim_embeddings,
+    upsert_signal_candidates_fn: Callable[
+        [SignalCandidateStoreRequest, RunContext], SignalCandidateStoreResponse
+    ] = analytics_store_service.upsert_signal_candidates,
+) -> SignalCandidateExtractionOutcome:
+    """Run candidate extraction with an explicit terminal-failure ledger hook."""
+
+    try:
+        return _run_signal_candidate_extraction(
+            request,
+            ctx,
+            read_projected_data_fn=read_projected_data_fn,
+            read_claim_embeddings_fn=read_claim_embeddings_fn,
+            upsert_signal_candidates_fn=upsert_signal_candidates_fn,
+        )
+    except Exception as exc:
+        record_workflow_failure(
+            state_db=request.state_db,
+            workflow="signal_candidate_extraction",
+            stage="workflow",
+            operation="run_signal_candidate_extraction",
+            error=exc,
+            ctx=ctx,
+            input_checksum=remediation_input_checksum(
+                {
+                    "extraction_request_id": request.extraction_request_id,
+                    "projected_data_db": request.projected_data_request.db_path,
+                    "signal_store_db": request.db_path,
+                }
+            ),
+            source_id=request.projected_data_request.db_path,
+            reusable_artifacts=[
+                RemediationArtifactReference(
+                    schema_version="1.0",
+                    name="signal_candidate_store",
+                    reference=request.db_path,
+                )
+            ],
+        )
+        raise

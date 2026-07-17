@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import replace
 from pathlib import Path
 
+import pytest
+
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
     CrossReportEvidenceReference,
@@ -28,8 +30,11 @@ from src.contracts.signal_candidates import (
     SignalCandidateReadResponse,
     SignalCandidateSourceRef,
 )
+from src.contracts.remediation import RemediationListRequest
 from src.orchestrators.publish_orchestrator import publish_signal_projection
 from src.orchestrators.signal_post_orchestrator import run_signal_post_workflow
+from src.services.state_service import list_remediation_records
+from src.utils.errors import AppError
 
 
 def _candidate(report_id: str, publisher: str) -> CrossReportSourceReportCandidate:
@@ -233,6 +238,42 @@ def test_signal_workflow_reads_candidates_from_separate_signal_store(
 
     assert projected_requests[0].db_path == str(tmp_path / "analytics.sqlite")
     assert signal_candidate_requests[0].db_path == str(tmp_path / "signals.sqlite")
+
+
+def test_signal_post_failure_creates_operator_held_remediation(
+    tmp_path,
+    run_context,
+) -> None:
+    request = replace(
+        _workflow_request(tmp_path, "generate_only"),
+        state_db=str(tmp_path / "state.sqlite"),
+    )
+
+    with pytest.raises(AppError, match="projected data unavailable"):
+        run_signal_post_workflow(
+            request,
+            run_context,
+            read_projected_data_fn=lambda _request, _ctx: (_ for _ in ()).throw(
+                AppError(
+                    code="signal_post_projected_data_unavailable",
+                    message="projected data unavailable",
+                    retryable=True,
+                    severity="error",
+                )
+            ),
+        )
+
+    records = list_remediation_records(
+        RemediationListRequest(
+            schema_version="1.0",
+            state_db=request.state_db,
+            workflow="signal_post",
+        ),
+        run_context,
+    ).records
+    assert len(records) == 1
+    assert records[0].error_code == "signal_post_projected_data_unavailable"
+    assert records[0].status == "operator_action_required"
 
 
 def test_signal_workflow_reads_stored_signal_candidates_before_publish(

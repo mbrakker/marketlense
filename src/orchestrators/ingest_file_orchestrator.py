@@ -15,8 +15,10 @@ from src.contracts.file_cache import (
 from src.contracts.files import DeleteFileRequest, FileStatRequest
 from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.pdf_utils import PdfEofCheckRequest
+from src.contracts.remediation import RemediationArtifactReference
 from src.contracts.run_context import RunContext
 from src.contracts.state import StateRecordRequest
+from src.orchestrators.remediation_orchestrator import record_workflow_failure
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 
@@ -118,6 +120,35 @@ class _IngestFileRuntime:
     drive_md5: str | None
     state_checked_md5: str | None
     report_checked_md5: str | None
+
+
+def _record_ingest_file_failure(
+    *,
+    runtime: _IngestFileRuntime,
+    settings: IngestSettings,
+    error: Exception,
+    ctx: RunContext,
+) -> None:
+    record_workflow_failure(
+        state_db=settings.state_db,
+        workflow="ingest_file",
+        stage="file_processing",
+        operation="run_report_pipeline",
+        error=error,
+        ctx=ctx,
+        input_checksum=runtime.md5 or runtime.drive_md5 or runtime.file.file_id,
+        report_id=runtime.file.file_id,
+        source_id=runtime.cache_path,
+        reusable_artifacts=[
+            RemediationArtifactReference(
+                schema_version="1.0",
+                name="cached_pdf",
+                reference=runtime.cache_path,
+            )
+        ]
+        if runtime.cache_path
+        else [],
+    )
 
 
 def _file_result(
@@ -766,6 +797,17 @@ def run_ingest_file(
                 )
             )
         if outcome.status == "error":
+            _record_ingest_file_failure(
+                runtime=runtime,
+                settings=settings,
+                error=AppError(
+                    code="ingest_file_report_pipeline_failed",
+                    message=outcome.error
+                    or "The report pipeline returned an error outcome",
+                    retryable=False,
+                ),
+                ctx=file_ctx,
+            )
             logger.info(
                 log_event(
                     file_ctx,
@@ -833,6 +875,12 @@ def run_ingest_file(
             had_error=had_errors,
         )
     except Exception as exc:
+        _record_ingest_file_failure(
+            runtime=runtime,
+            settings=settings,
+            error=exc,
+            ctx=file_ctx,
+        )
         recorded_source_failure = False
         if isinstance(exc, AppError):
             recorded_source_failure = _record_permanent_source_failure(

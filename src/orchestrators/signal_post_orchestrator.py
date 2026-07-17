@@ -14,6 +14,7 @@ from src.contracts.cross_report_analysis import (
 )
 from src.contracts.cover_images import CoverImageGenerationRequest, CoverImageReport
 from src.contracts.publish import PublishSettings
+from src.contracts.remediation import RemediationArtifactReference
 from src.contracts.run_context import RunContext
 from src.contracts.signal_candidates import (
     SIGNAL_CANDIDATE_SCHEMA_VERSION,
@@ -30,6 +31,10 @@ from src.contracts.wordpress_entities import (
 from src.generators.signal_post_generator import build_signal_publish_projection
 from src.generators.cover_image_generator import generate_cover_images
 from src.orchestrators.publish_orchestrator import publish_signal_projection
+from src.orchestrators.remediation_orchestrator import (
+    record_workflow_failure,
+    remediation_input_checksum,
+)
 from src.services import analytics_store_service
 from src.utils.errors import AppError
 from src.utils.logging import log_event
@@ -161,7 +166,7 @@ def _signal_card_payload(
     }
 
 
-def run_signal_post_workflow(
+def _run_signal_post_workflow(
     request: SignalPostWorkflowRequest,
     ctx: RunContext,
     *,
@@ -271,3 +276,56 @@ def run_signal_post_workflow(
         )
     )
     return result
+
+
+def run_signal_post_workflow(
+    request: SignalPostWorkflowRequest,
+    ctx: RunContext,
+    *,
+    publish_settings: PublishSettings | None = None,
+    read_projected_data_fn: Callable[
+        [CrossReportProjectedDataReadRequest, RunContext],
+        CrossReportProjectedDataReadResponse,
+    ] = analytics_store_service.read_cross_report_projected_data,
+    read_signal_candidates_fn: Callable[
+        [SignalCandidateReadRequest, RunContext], SignalCandidateReadResponse
+    ] = analytics_store_service.read_signal_candidates,
+    publish_signal_fn: _PublishSignalFn = publish_signal_projection,
+) -> SignalPostWorkflowResult:
+    """Run Signal publishing with an explicit terminal-failure ledger hook."""
+
+    try:
+        return _run_signal_post_workflow(
+            request,
+            ctx,
+            publish_settings=publish_settings,
+            read_projected_data_fn=read_projected_data_fn,
+            read_signal_candidates_fn=read_signal_candidates_fn,
+            publish_signal_fn=publish_signal_fn,
+        )
+    except Exception as exc:
+        record_workflow_failure(
+            state_db=request.state_db,
+            workflow="signal_post",
+            stage="workflow",
+            operation="run_signal_post_workflow",
+            error=exc,
+            ctx=ctx,
+            input_checksum=remediation_input_checksum(
+                {
+                    "request_id": request.request_id,
+                    "publication_mode": request.publication_mode,
+                    "db_path": request.db_path,
+                    "signal_store_db": request.signal_store_db,
+                }
+            ),
+            source_id=request.db_path,
+            reusable_artifacts=[
+                RemediationArtifactReference(
+                    schema_version="1.0",
+                    name="signal_output_root",
+                    reference=request.output_root,
+                )
+            ],
+        )
+        raise

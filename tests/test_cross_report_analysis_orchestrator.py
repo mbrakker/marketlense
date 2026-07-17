@@ -22,9 +22,11 @@ from src.contracts.cross_report_analysis import (
 from src.contracts.analytics_projection import ClaimEmbeddingReadResponse
 from src.contracts.openai import OpenAIResponseResult
 from src.contracts.prompts import PromptRenderResponse, PromptSet, PromptTemplate
+from src.contracts.remediation import RemediationListRequest
 from src.orchestrators.cross_report_analysis_orchestrator import (
     run_cross_report_analysis,
 )
+from src.services.state_service import list_remediation_records
 from src.utils.errors import AppError
 
 
@@ -293,7 +295,10 @@ def test_cross_report_orchestrator_blocks_when_feature_disabled(
 
     with pytest.raises(AppError) as exc_info:
         run_cross_report_analysis(
-            _orchestrator_request(tmp_path),
+            replace(
+                _orchestrator_request(tmp_path),
+                state_db=str(tmp_path / "state.sqlite"),
+            ),
             settings,
             run_context,
             read_projected_data_fn=lambda request, ctx: read_calls.append(request),
@@ -309,6 +314,17 @@ def test_cross_report_orchestrator_blocks_when_feature_disabled(
         severity="error",
     )
     assert read_calls == []
+    records = list_remediation_records(
+        RemediationListRequest(
+            schema_version="1.0",
+            state_db=str(tmp_path / "state.sqlite"),
+            workflow="cross_report_analysis",
+        ),
+        run_context,
+    ).records
+    assert len(records) == 1
+    assert records[0].error_code == "cross_report_analysis_disabled"
+    assert records[0].status == "operator_action_required"
 
 
 def test_cross_report_orchestrator_rejects_auto_theme_when_disabled(

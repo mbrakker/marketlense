@@ -4,6 +4,8 @@ import json
 import logging
 from dataclasses import replace
 
+import pytest
+
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
     CrossReportAnalysisRequest,
@@ -21,9 +23,12 @@ from src.contracts.signal_candidates import (
     SIGNAL_CANDIDATE_SCHEMA_VERSION,
     SignalCandidateExtractionRequest,
 )
+from src.contracts.remediation import RemediationListRequest
 from src.orchestrators.signal_candidate_orchestrator import (
     run_signal_candidate_extraction,
 )
+from src.services.state_service import list_remediation_records
+from src.utils.errors import AppError
 
 
 def _analysis_request() -> CrossReportAnalysisRequest:
@@ -279,3 +284,36 @@ def test_signal_candidate_orchestrator_reads_claim_embeddings_for_preselection(
     assert embedding_request.statuses == ["embedded"]
     assert embedding_request.limit == 4
     assert outcome.candidate_count >= 1
+
+
+def test_signal_candidate_failure_creates_operator_held_remediation(
+    tmp_path,
+    run_context,
+) -> None:
+    request = replace(_request(tmp_path), state_db=str(tmp_path / "state.sqlite"))
+
+    with pytest.raises(AppError, match="projection unavailable"):
+        run_signal_candidate_extraction(
+            request,
+            run_context,
+            read_projected_data_fn=lambda _request, _ctx: (_ for _ in ()).throw(
+                AppError(
+                    code="signal_candidate_projection_unavailable",
+                    message="projection unavailable",
+                    retryable=True,
+                    severity="error",
+                )
+            ),
+        )
+
+    records = list_remediation_records(
+        RemediationListRequest(
+            schema_version="1.0",
+            state_db=request.state_db,
+            workflow="signal_candidate_extraction",
+        ),
+        run_context,
+    ).records
+    assert len(records) == 1
+    assert records[0].error_code == "signal_candidate_projection_unavailable"
+    assert records[0].status == "operator_action_required"

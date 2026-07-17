@@ -113,6 +113,7 @@ def sync_wordpress_intelligence() -> None:
                 ca_bundle_path=settings.wp.ca_bundle_path,
             ),
             generated_at_utc=utc_now_iso(),
+            state_db=settings.state_db,
         ),
         ctx,
     )

@@ -234,6 +234,58 @@ class RemediationListResponse:
 
 
 @dataclass(frozen=True)
+class RemediationSoakReportRequest:
+    """Read-only operational summary of canonical remediation state."""
+
+    schema_version: str = field(
+        metadata={"doc": "Remediation soak-report request schema version."}
+    )
+    state_db: str = field(metadata={"doc": "Canonical state database path."})
+    now_utc: str = field(
+        metadata={"doc": "UTC observation time used for lease eligibility."}
+    )
+    runbook_error_codes: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Failure codes with an approved operator runbook mapping."},
+    )
+
+
+@dataclass(frozen=True)
+class RemediationSoakReportResponse:
+    """Read-only evidence used to decide whether the reaper may be activated."""
+
+    schema_version: str = field(
+        metadata={"doc": "Remediation soak-report response schema version."}
+    )
+    created_record_ids: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Records created in the retained remediation history."},
+    )
+    deduplicated_record_ids: list[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Retained duplicate-observation record IDs; repeats are events."
+        },
+    )
+    stale_lease_ids: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Expired leased or retrying records; no lease is released."},
+    )
+    eligible_record_ids: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Pending or deferred records currently eligible for a lease."},
+    )
+    held_record_ids: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Records requiring operator action or marked terminal."},
+    )
+    missing_runbook_error_codes: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Observed error codes without an approved runbook mapping."},
+    )
+
+
+@dataclass(frozen=True)
 class RemediationClaimRequest:
     schema_version: str = field(
         metadata={"doc": "Remediation lease-claim request schema version."}

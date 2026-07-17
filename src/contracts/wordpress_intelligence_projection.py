@@ -191,6 +191,10 @@ class WordPressIntelligenceSyncRequest:
         metadata={"doc": "Raw WordPress source request."}
     )
     generated_at_utc: str = field(metadata={"doc": "UTC timestamp for the projection."})
+    state_db: str = field(
+        default="",
+        metadata={"doc": "Optional canonical remediation-ledger state database."},
+    )
 
 
 @dataclass(frozen=True)

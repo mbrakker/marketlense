@@ -15,6 +15,7 @@ from src.contracts.wordpress_intelligence_projection import (
     WordPressIntelligenceSyncRequest,
     WordPressIntelligenceTerm,
 )
+from src.contracts.remediation import RemediationListRequest
 from src.generators.wordpress_intelligence_projection_generator import (
     build_wordpress_intelligence_projection,
 )
@@ -22,6 +23,7 @@ from src.orchestrators.wordpress_intelligence_projection_orchestrator import (
     WordPressIntelligenceProjectionDependencies,
     sync_wordpress_intelligence_projection,
 )
+from src.services.state_service import list_remediation_records
 from src.utils.errors import AppError
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -153,6 +155,57 @@ def test_orchestrator_writes_the_projection_built_from_its_read_source(
     assert response.entity_count == 1
     assert len(writes) == 1
     assert writes[0].projection == response.projection
+
+
+def test_wordpress_projection_failure_creates_operator_held_remediation(
+    tmp_path,
+    run_context,
+) -> None:
+    def _read_source(_request, _ctx):
+        raise AppError(
+            code="wordpress_intelligence_source_unavailable",
+            message="source endpoint unavailable",
+            retryable=True,
+            severity="error",
+        )
+
+    request = WordPressIntelligenceSyncRequest(
+        schema_version=WORDPRESS_INTELLIGENCE_SCHEMA_VERSION,
+        source_request=WordPressIntelligenceSourceReadRequest(
+            schema_version=WORDPRESS_INTELLIGENCE_SCHEMA_VERSION,
+            base_url="https://marketlense.local",
+            auth_header="Basic redacted",
+            ssl_verify=True,
+            ca_bundle_path=None,
+        ),
+        generated_at_utc="2026-07-13T12:00:00Z",
+        state_db=str(tmp_path / "state.sqlite"),
+    )
+
+    with pytest.raises(AppError, match="source endpoint unavailable"):
+        sync_wordpress_intelligence_projection(
+            request,
+            run_context,
+            dependencies=WordPressIntelligenceProjectionDependencies(
+                read_source=_read_source,
+                build_projection=build_wordpress_intelligence_projection,
+                write_projection=lambda _request, _ctx: pytest.fail(
+                    "write must not run after source failure"
+                ),
+            ),
+        )
+
+    records = list_remediation_records(
+        RemediationListRequest(
+            schema_version="1.0",
+            state_db=request.state_db,
+            workflow="wordpress_intelligence_projection",
+        ),
+        run_context,
+    ).records
+    assert len(records) == 1
+    assert records[0].error_code == "wordpress_intelligence_source_unavailable"
+    assert records[0].status == "operator_action_required"
 
 
 def test_wordpress_renders_only_validated_pipeline_projections() -> None:

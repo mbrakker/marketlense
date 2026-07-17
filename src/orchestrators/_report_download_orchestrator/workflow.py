@@ -543,7 +543,11 @@ def _run_download_attempt(
                 )
         try:
             result = dependencies.download_report_with_browser_use(attempt_request, ctx)
-            if pdf_decision is not None and pdf_decision.reservation_key:
+            if (
+                run_budget is not None
+                and pdf_decision is not None
+                and pdf_decision.reservation_key
+            ):
                 finalize_budget_side_effect(
                     BudgetSideEffectFinalizeRequest(
                         schema_version="1.0",
@@ -558,7 +562,11 @@ def _run_download_attempt(
                 )
             return result
         except AppError as exc:
-            if pdf_decision is not None and pdf_decision.reservation_key:
+            if (
+                run_budget is not None
+                and pdf_decision is not None
+                and pdf_decision.reservation_key
+            ):
                 finalize_budget_side_effect(
                     BudgetSideEffectFinalizeRequest(
                         schema_version="1.0",
@@ -746,11 +754,14 @@ def _should_avoid_mailbox_preflight_for_remembered_blocker(
     """Skip mailbox work only for fresh exact hard-blocker evidence."""
     if revalidate_route_policy or remembered_route is None:
         return False
-    if _remembered_route_memory(
-        remembered_route,
-        ttl_seconds=ttl_seconds,
-        now_seconds=now_seconds,
-    ) is None:
+    if (
+        _remembered_route_memory(
+            remembered_route,
+            ttl_seconds=ttl_seconds,
+            now_seconds=now_seconds,
+        )
+        is None
+    ):
         return False
     evidence_labels = {
         str(label or "").strip().casefold()
@@ -759,8 +770,7 @@ def _should_avoid_mailbox_preflight_for_remembered_blocker(
     blocker_reason = str(remembered_route.blocked_reason or "").strip().casefold()
     return bool(
         remembered_route.exact_route_found
-        and str(remembered_route.route_family or "").strip()
-        == "browser_email_form"
+        and str(remembered_route.route_family or "").strip() == "browser_email_form"
         and (
             blocker_reason in {"blocked_captcha", "blocked_email_domain"}
             or {"blocked_captcha", "blocked_email_domain"} & evidence_labels

@@ -357,6 +357,9 @@ def _execute_ui_run_action(
                 ConfigLoadRequest(schema_version="1.0", path=""),
                 ctx,
             )
+            app_settings = load_settings(
+                ConfigLoadRequest(schema_version="1.0", path=""), ctx
+            )
             config_snapshot = {
                 "run_type": run_type,
                 "settings": _sanitize_snapshot(inventory_settings),
@@ -367,6 +370,7 @@ def _execute_ui_run_action(
                     insights_url=validated_payload.insights_url,
                     reports_db=inventory_settings.reports_db,
                     settings=inventory_settings,
+                    state_db=app_settings.state_db,
                 ),
                 ctx=ctx,
             )

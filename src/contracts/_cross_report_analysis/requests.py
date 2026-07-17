@@ -10,6 +10,7 @@ from src.contracts._cross_report_analysis import (
 )
 from src.contracts.run_budget import RunBudget
 
+
 @dataclass(frozen=True)
 class CrossReportAnalysisRequest:
     schema_version: str = field(metadata={"doc": "Request contract schema version."})
@@ -175,4 +176,8 @@ class CrossReportAnalysisOrchestratorRequest:
     run_budget: RunBudget | None = field(
         default=None,
         metadata={"doc": "Optional scoped budget for cross-report retries and models."},
+    )
+    state_db: str = field(
+        default="",
+        metadata={"doc": "Optional canonical remediation-ledger state database."},
     )

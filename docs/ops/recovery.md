@@ -13,4 +13,47 @@
 
 The [top failure runbooks](top_failure_runbooks.md) contain typed failure-specific checks and bounded remediation commands. `docs/ops/failure_remediation.yaml` is the machine-validated runbook registry.
 
+## Read-only remediation soak and activation gate
+
+The remediation ledger is the canonical workflow-wide failure backlog. UI
+dead-letter rows remain compatibility data until an explicit migration is
+approved. A soak observes the ledger only: it does not claim a lease, release
+a lease, execute a repair, or alter historical transitions.
+
+Before considering execution, generate the coverage inventory and runbook
+validation, then retain the command output for each normal production
+execution window under review:
+
+```powershell
+python scripts/quality/generate_remediation_coverage.py
+python scripts/ci/check_remediation_runbooks.py
+$stamp = Get-Date -Format "yyyyMMddTHHmmss"
+python -m src.cli remediation-soak | Tee-Object "out/ops/remediation-soak-$stamp.txt"
+```
+
+The retained evidence must identify the repository revision, observed state
+database, UTC observation time, and coverage report. It must demonstrate all
+of the following before an operator approves any execution-enabled change:
+
+1. The generated coverage report lists every production workflow as covered or
+   explicitly exempted.
+2. Current remediation IDs are unique. A nonzero `deduplicated records` count
+   is evidence that repeated observations converged on an existing record, not
+   that duplicate current records exist.
+3. There are no stale leases, no missing runbook mappings, and every eligible
+   record is understood. Records outside the exact automatic allowlist remain
+   `operator_action_required`.
+4. A representative sample proves checkpoint validity, lineage presence,
+   attempt/cooldown enforcement, and idempotency proof for every external
+   side-effect class. Public publishing, mail submission, and other external
+   writes remain held without proof.
+5. The activation decision, exact allowlisted workflow/error/action triples,
+   review date, and rollback owner are retained with the soak output.
+
+`workflow_control.remediation_reaper.execution_enabled` remains `false` by
+default. Turning it on requires an explicit, reviewed configuration change
+after this gate; it authorizes only the documented allowlist. Roll back by
+setting it back to `false`, which leaves recording and operator visibility
+active.
+
 For report processing, checkpoint resume is orchestrator-owned and validates retained artifacts and lineage. Do not manually edit checkpoint state to bypass validation. For publication recovery or rollback, use [WordPress operations](wordpress.md).

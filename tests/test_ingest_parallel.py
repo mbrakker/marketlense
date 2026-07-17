@@ -7,12 +7,15 @@ from pathlib import Path
 from threading import Barrier, Lock, get_ident
 from types import SimpleNamespace
 
+import pytest
+
 from src.contracts.drive import DriveDownloadToPathResponse, DriveFile
 from src.contracts.file_cache import (
     FileCacheMd5SidecarResolveResponse,
     FileCacheMd5SidecarWriteResponse,
 )
 from src.contracts.ingest import IngestOutcome
+from src.contracts.remediation import RemediationListRequest
 from src.contracts.state import (
     StateIngestCursorSetRequest,
     StateProcessedListRequest,
@@ -27,6 +30,8 @@ from src.services.file_service import delete_file, file_stat
 from src.services.pdf_service import check_pdf_eof
 from src.services.state_service import list_processed
 from src.services.state_service import record as state_record
+from src.services.state_service import list_remediation_records
+from src.utils.errors import AppError
 
 
 class _DummyExecutor:
@@ -937,6 +942,43 @@ def test_report_cards_force_mode_reprocesses_invalid_manifest(
     )
 
     assert processed == [("file-card", True)]
+
+
+def test_ingest_batch_failure_creates_operator_held_remediation(
+    ingest_settings,
+    run_context,
+) -> None:
+    dependencies = _batch_dependencies(
+        list_pdfs=lambda _request, _ctx: (_ for _ in ()).throw(
+            AppError(
+                code="drive_listing_unavailable",
+                message="drive listing unavailable",
+                retryable=False,
+                severity="error",
+            )
+        ),
+        vector_store_retention_cleanup=lambda _settings, _ctx: None,
+    )
+
+    with pytest.raises(AppError, match="drive listing unavailable"):
+        orch.run_ingest(
+            ingest_settings,
+            limit=1,
+            ctx=run_context,
+            dependencies=dependencies,
+        )
+
+    records = list_remediation_records(
+        RemediationListRequest(
+            schema_version="1.0",
+            state_db=ingest_settings.state_db,
+            workflow="ingest",
+        ),
+        run_context,
+    ).records
+    assert len(records) == 1
+    assert records[0].error_code == "drive_listing_unavailable"
+    assert records[0].status == "operator_action_required"
 
 
 def test_report_cards_force_mode_skips_valid_manifest(ingest_settings) -> None:

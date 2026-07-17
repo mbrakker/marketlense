@@ -3,9 +3,19 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-from .routing import PublisherInventoryRouteTrace, PublisherInventoryRunQualitySummary, PublisherInventoryScenarioSummary
+from .routing import (
+    PublisherInventoryRouteTrace,
+    PublisherInventoryRunQualitySummary,
+    PublisherInventoryScenarioSummary,
+)
 from .settings import PublisherInventorySettings
-from .snapshot import PublisherInventoryCandidateTrace, PublisherInventoryDiffItem, PublisherInventoryPage, PublisherInventoryRawCandidate
+from .snapshot import (
+    PublisherInventoryCandidateTrace,
+    PublisherInventoryDiffItem,
+    PublisherInventoryPage,
+    PublisherInventoryRawCandidate,
+)
+
 
 @dataclass(frozen=True)
 class PublisherInventoryDiscoveryRequest:
@@ -22,6 +32,10 @@ class PublisherInventoryDiscoveryRequest:
     )
     settings: PublisherInventorySettings = field(
         metadata={"doc": "Loaded publisher inventory discovery settings."}
+    )
+    state_db: str = field(
+        default="",
+        metadata={"doc": "Optional canonical remediation-ledger state database."},
     )
 
 
@@ -143,4 +157,3 @@ class PublisherInventoryServiceResponse:
             "doc": "Optional scenario summary describing the discovery surface encountered during the run."
         },
     )
-

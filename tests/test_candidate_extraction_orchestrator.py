@@ -9,7 +9,9 @@ from pathlib import Path
 from pypdf import PdfWriter
 
 from src.contracts.drive import DriveDownloadResponse, DriveFile
+from src.contracts.remediation import RemediationListRequest
 from src.orchestrators import candidate_extraction_orchestrator as orch
+from src.services.state_service import list_remediation_records
 from src.utils.errors import AppError
 
 
@@ -151,6 +153,18 @@ def test_candidate_extract_stops_on_non_retryable_download_error(
     assert outcome.candidates_path == ""
     assert attempts["download"] == 1
     assert sleep_calls == []
+
+    records = list_remediation_records(
+        RemediationListRequest(
+            schema_version="1.0",
+            state_db=ingest_settings.state_db,
+            workflow="candidate_extraction",
+        ),
+        run_context,
+    ).records
+    assert len(records) == 1
+    assert records[0].error_code == "drive_file_id_missing"
+    assert records[0].status == "operator_action_required"
 
     events = _json_events(caplog, "market_lense.candidate_extraction_orchestrator")
     assert_logs_have_required_fields(events)

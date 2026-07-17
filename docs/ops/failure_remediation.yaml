@@ -68,3 +68,141 @@ runbooks:
         dry_run: true
         command: "python -m src.cli discover-publisher-inventory \"https://example.com/insights\""
         safety: "Replace the example URL with the affected publisher insights URL before execution."
+  - failure_code: "provider_timeout"
+    owner: "pipeline"
+    severity: "warning"
+    runbook_path: "docs/ops/top_failure_runbooks.md"
+    dashboard_link: "local://logs?event=remediation_failure_recorded"
+    alert_labels:
+      stage: "report_generation"
+      family: "provider"
+    detector_log_events:
+      - "report_pipeline_failed"
+      - "remediation_failure_recorded"
+    remediation_hooks:
+      - name: "verify_checkpoint_before_targeted_resume"
+        trigger: "operator_approved"
+        dry_run: true
+        command: "python -m src.cli plan repair report"
+        safety: "Verify the checkpoint checksum, lineage, and current budget before any resume."
+  - failure_code: "mail_report_not_arrived_yet"
+    owner: "acquisition"
+    severity: "warning"
+    runbook_path: "docs/ops/top_failure_runbooks.md"
+    dashboard_link: "local://logs?event=mail_report_poll_not_arrived"
+    alert_labels:
+      stage: "mailbox_poll"
+      family: "mailbox"
+    detector_log_events:
+      - "mail_report_poll_not_arrived"
+      - "remediation_failure_recorded"
+    remediation_hooks:
+      - name: "inspect_single_mail_delivery_request"
+        trigger: "operator_approved"
+        dry_run: true
+        command: "python -m src.cli plan acquire report"
+        safety: "Confirm the intended mailbox and source identity before another poll."
+  - failure_code: "claim_embedding_provider_count_mismatch"
+    owner: "analytics"
+    severity: "error"
+    runbook_path: "docs/ops/top_failure_runbooks.md"
+    dashboard_link: "local://logs?event=claim_embedding_workflow_complete"
+    alert_labels:
+      stage: "claim_embedding"
+      family: "embedding"
+    detector_log_events:
+      - "claim_embedding_workflow_complete"
+      - "remediation_failure_recorded"
+    remediation_hooks:
+      - name: "inspect_one_claim_embedding_queue_item"
+        trigger: "operator_approved"
+        dry_run: true
+        command: "python -m src.cli embedding-queue-run --dry-run --max-rows 1"
+        safety: "Confirm the deterministic claim key and prior queue state before another provider call."
+  - failure_code: "openai_request_failed"
+    owner: "pipeline"
+    severity: "error"
+    runbook_path: "docs/ops/top_failure_runbooks.md"
+    dashboard_link: "local://logs?event=remediation_failure_recorded"
+    alert_labels:
+      stage: "report_generation"
+      family: "provider_request"
+    detector_log_events:
+      - "report_pipeline_failed"
+      - "remediation_failure_recorded"
+    remediation_hooks:
+      - name: "verify_provider_failure_before_targeted_resume"
+        trigger: "operator_approved"
+        dry_run: true
+        command: "python -m src.cli plan repair report"
+        safety: "Keep the record operator-held until the provider error, checkpoint lineage, and idempotency evidence are reviewed."
+  - failure_code: "publisher_inventory_browser_timeout"
+    owner: "acquisition"
+    severity: "warning"
+    runbook_path: "docs/ops/top_failure_runbooks.md"
+    dashboard_link: "local://logs?event=publisher_inventory_browser_timeout"
+    alert_labels:
+      stage: "publisher_inventory"
+      family: "browser_discovery"
+    detector_log_events:
+      - "publisher_inventory_browser_timeout"
+      - "remediation_failure_recorded"
+    remediation_hooks:
+      - name: "audit_one_publisher_inventory_route"
+        trigger: "operator_approved"
+        dry_run: true
+        command: "python -m src.cli discover-publisher-inventory \"https://example.com/insights\""
+        safety: "Replace the example URL only after verifying the affected publisher and browser evidence; do not replay a prior write."
+  - failure_code: "report_pipeline_checkpoint_lineage_not_reusable"
+    owner: "pipeline"
+    severity: "error"
+    runbook_path: "docs/ops/top_failure_runbooks.md"
+    dashboard_link: "local://logs?event=report_pipeline_checkpoint_artifact_validation_complete"
+    alert_labels:
+      stage: "report_generation"
+      family: "checkpoint_lineage"
+    detector_log_events:
+      - "report_pipeline_checkpoint_artifact_validation_complete"
+      - "remediation_failure_recorded"
+    remediation_hooks:
+      - name: "inspect_checkpoint_lineage_before_new_run"
+        trigger: "operator_approved"
+        dry_run: true
+        command: "python -m src.cli plan repair report"
+        safety: "Do not resume automatically; reconcile the retained artifact checksum and lineage before creating a new run."
+  - failure_code: "report_pipeline_outcome_error"
+    owner: "pipeline"
+    severity: "error"
+    runbook_path: "docs/ops/top_failure_runbooks.md"
+    dashboard_link: "local://logs?event=report_pipeline_failed"
+    alert_labels:
+      stage: "report_generation"
+      family: "workflow_outcome"
+    detector_log_events:
+      - "report_pipeline_failed"
+      - "remediation_failure_recorded"
+    remediation_hooks:
+      - name: "inspect_report_outcome_before_retry_decision"
+        trigger: "operator_approved"
+        dry_run: true
+        command: "python -m src.cli plan repair report"
+        safety: "Keep the outcome operator-held until checkpoint, budget, and committed-side-effect evidence are reconciled."
+automatic_execution:
+  execution_enabled: false
+  activation_gate: "Retained read-only soak evidence must show no duplicate records, no unexplained eligible records, no stale leases, and no missing runbook mappings before an operator reviews activation."
+  allowlist:
+    - workflow: "report_generation"
+      failure_code: "provider_timeout"
+      action: "resume_valid_checkpoint"
+    - workflow: "report_generation"
+      failure_code: "provider_timeout"
+      action: "retry_transient_service_call"
+    - workflow: "report_download"
+      failure_code: "browser_download_timeout"
+      action: "retry_transient_service_call"
+    - workflow: "mail_report_acquisition"
+      failure_code: "mail_report_not_arrived_yet"
+      action: "poll_mailbox_delivery"
+    - workflow: "claim_embedding"
+      failure_code: "claim_embedding_provider_count_mismatch"
+      action: "retry_transient_service_call"

@@ -12,6 +12,7 @@ def test_remediation_runbooks_validate_committed_registry() -> None:
 
     assert "pdf_text_unextractable" in codes
     assert "browser_download_timeout" in codes
+    assert "claim_embedding_provider_count_mismatch" in codes
 
 
 def test_remediation_runbooks_require_dry_run_hooks(tmp_path: Path) -> None:

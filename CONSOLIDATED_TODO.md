@@ -27,10 +27,10 @@ All work is listed below in one register. `Active` items have detailed completio
 | --- | --- | --- | --- |
 | Closed | A1 | Single autonomous supervisor, read-only `PipelinePlan`, and mandatory workflow-control authority | Plan authorization is enforced by CLI/UI control payloads; retained plan run and full regression passed. |
 | Active | A2 | `fast_ingest` and other config-driven autopilot profiles | One typed profile outcome. |
-| Active | A3 | Durable dead letters, scheduled actions, full autonomous smoke, and side-effect idempotency | One recovery/remediation outcome. |
 | Active | A4 | Malformed-Drive-PDF quarantine | Standalone bounded source-recovery outcome. |
 | Closed | A5 | Business-email, CAPTCHA, anti-bot, terminal-evidence, and avoided-browser-spend route policy | TTL-bound route policy now avoids browser/mailbox work for retained hard blockers and allows explicit revalidation. |
 | Active | A10 | Budget-deferred-work recovery and operator requeue | Turn durable budget deferrals into safe, visible, idempotent resumption. |
+| Active | A11 | Ledger-driven recurring-failure prevention and operator prioritization | Turn canonical remediation evidence into bounded root-cause and avoided-work decisions. |
 | Closed | A7 | Budget-aware model routing, compaction, and failure-class fallback | YAML routing, anchor-preserving compaction, same-provider fallback, retained-corpus evidence gate, and regression coverage are active. |
 | Active | A8 | Model-call replay drift comparison | Standalone read-only regression outcome. |
 | Active | A9 | Source publication-metadata capture for retained regeneration | Source-supported render metadata outcome. |
@@ -76,6 +76,7 @@ All work is listed below in one register. `Active` items have detailed completio
 
 ## Recently Closed
 
+- **A3 (2026-07-17):** The remediation ledger is now the canonical workflow-wide failure backlog. A generated 31-workflow inventory marks every production workflow covered or explicitly exempted; remaining stateful boundaries persist typed failures with checkpoint, lineage, artifact, committed-side-effect, budget, input-checksum, and idempotency evidence where available. The read-only soak reports created/deduplicated records, stale leases, eligible records, held records, and missing runbook mappings. Execution remains disabled by default and fails closed outside the exact allowlist. 103 focused recovery/workflow tests passed. A bounded live OpenAI run embedded two distinct existing claims (148 total input tokens, $0.000003 actual estimated cost); the first batch avoided 382 provider calls. The final live soak found five records, one retained deduplication transition (no duplicate current record), zero stale leases, and zero missing runbook mappings; activation remains blocked by one explained legacy UI-publication record that is pending in compatibility data but outside the automatic allowlist.
 - **A6 (2026-07-16):** The canonical SQLite ledger now owns typed pre-side-effect decisions and TTL-bound reservations for provider calls, browser launches and browser-vendor model calls, material Drive reads/writes, WordPress writes, PDF processing, retry attempts, and mailbox polls. Actual non-monetary use finalizes in the same ledger; provider monetary actuals remain in canonical LLM usage events. Run/day/publisher limits, expiry-bound override audit, independent category gates, avoided-effect telemetry, and durable deferred-work records are covered by focused tests. A guarded live Drive list passed; the guarded OpenAI smoke attempt reached the real API but exceeded the surrounding process deadline and was terminated without a completion claim.
 - **Bounded structured logging (2026-07-16):** Standard events now apply deterministic byte, depth, node, collection, and text bounds; report and browser terminal events emit scalar summaries with retained audit references; CI rejects direct `fields=asdict(...)` serialization. Focused report/logging and browser suites passed, as did guarded live browser and OpenAI runs. The remaining broader architecture-enforcement work stays under R2; R6 owns reduction telemetry review.
 - **A7 (2026-07-14):** The retained 15-report corpus is now a required no-provider routing gate across 30 configured prompt routes. It confirms explicit policy selection, same-provider constraints, and zero lost retained evidence IDs; focused routing/compaction/fallback tests and the full suite pass.
@@ -94,7 +95,7 @@ All work is listed below in one register. `Active` items have detailed completio
 The original ten-item screenshot baseline is complete in the committed implementation. Its broader successor work remains Active above only where it adds new scope beyond that baseline (for example hosted HTTPS in P3, full intake flows in P4, or visual screenshot comparison plus accessible mobile-menu interaction in P5).
 
 - **Public quality gate (2026-07-14):** The real local Studio site passed the new Playwright-backed responsive gate on the homepage, reports archive, and a retained report detail at 390px, 768px, and 1440px: 9/9 checks had no horizontal overflow and no visible broken image. The same live site passed the public SEO/performance gate across seven public routes with HTTP 200, complete canonical/social metadata, and no configured threshold violations.
-- **Core safety, budget, recovery, route-memory, lineage, retained-benchmark, WordPress projection, LLM routing, and publication-gate baseline (2026-07-14):** The implementation is covered by the committed typed contracts and control paths. A focused regression run passed 50 tests across run budgets, canonical LLM accounting, UI-run recovery, artifact lineage, publication, and retained report quality. The remaining A3, A6, and E3 entries retain their explicitly broader workflow-wide rollout/reporting scope.
+- **Core safety, budget, recovery, route-memory, lineage, retained-benchmark, WordPress projection, LLM routing, and publication-gate baseline (2026-07-14):** The implementation is covered by the committed typed contracts and control paths. A focused regression run passed 50 tests across run budgets, canonical LLM accounting, UI-run recovery, artifact lineage, publication, and retained report quality. The former A3/A6/E3 rollout work is now recorded in **Recently Closed**; current follow-up scope remains in the active register.
 
 ## Active Backlog
 
@@ -112,19 +113,6 @@ The original ten-item screenshot baseline is complete in the committed implement
 - YAML profiles cover `safe_default`, `fast_cached`, `repair_failed`, `publish_ready`, `browser_acquisition`, `cost_saver`, and `high_quality`.
 - Profile resolution is typed, deterministic, logs effective settings, preserves override precedence, and never stores secrets in YAML.
 - The plan-first interface can recommend or apply a profile, with tests proving deterministic resolution and invalid-profile failure.
-
-#### A3. Durable autonomous remediation
-
-- **Title:** Durable autonomous remediation
-- **Impact 5 / effort: 3**
-- **Context:** UI-run dead letters and typed failure classifications exist, but autonomous failures are not durable workflow-wide remediation records with checkpoint, budget, and idempotency context.
-- **Benefit:** Operators do not need to reconstruct failure context, and the system can safely resume repairable work without repeatedly rerunning irreparable work.
-- **Risks to avoid:** Enforce cooldowns, attempt budgets, and idempotency so recovery cannot create expensive loops.
-- **Success criteria:**
-
-- Records retain run/workflow/step IDs, `AppError` taxonomy, checkpoint, input checksum, artifact references, remediation code, and runbook link.
-- A bounded reaper retries transient failures after cooldown, resumes valid checkpoints, invokes targeted repair, and escalates terminal blockers.
-- Tests prove retry budget, state transitions, duplicate suppression, stale-checkpoint behavior, operator-facing remediation, and no duplicate side effect on replay.
 
 #### A4. Quarantine irreparably malformed Drive PDFs
 
@@ -151,6 +139,19 @@ The original ten-item screenshot baseline is complete in the committed implement
 - Workflow control lists pending budget deferrals with scopes, breached metrics, and actionable next steps in the operator surface.
 - A bounded explicit reaper re-evaluates only eligible deferred records, claims them idempotently, and records completion, continued deferral, or terminal operator action.
 - Tests prove day rollover, released reservation capacity, duplicate reaper suppression, failed requeue recovery, and zero public WordPress/mail side effects without their existing authorization gates.
+
+#### A11. Ledger-driven recurring-failure prevention and operator prioritization
+
+- **Title:** Ledger-driven recurring-failure prevention and operator prioritization
+- **Impact 5 / effort: 2**
+- **Context:** The canonical ledger now retains deduplication, held/eligible state, runbook coverage, and bounded side-effect evidence, but recurring root causes still require manual cross-record review.
+- **Benefit:** Operators can prioritize the few failure classes that repeatedly consume time or provider capacity, and prevent known bad work before it enters expensive processing.
+- **Risks to avoid:** Keep aggregation deterministic and redacted; do not create a scheduler, auto-resolve records, or suppress a source without a typed approval and expiry.
+- **Success criteria:**
+
+- A bounded read-only report groups retained remediation records by workflow, error code, action, and runbook status with scalar counts, age, and deduplication trend.
+- The operator surface produces explicit prevention recommendations linked only to record IDs and retained evidence references; it never exposes source payloads or provider responses.
+- Tests prove deterministic ordering, no cross-tenant/source leakage, threshold behavior, and that recommendations cannot trigger execution or hide historical transitions.
 
 #### A8. Compare retained model-call replay bundles
 

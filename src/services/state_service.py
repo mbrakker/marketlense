@@ -31,6 +31,7 @@ from src.services._state_service.publish import (
 from src.services._state_service.remediation import (
     claim_next_remediation,
     list_remediation_records,
+    read_remediation_soak_report,
     release_expired_remediation_leases,
     transition_remediation,
     upsert_remediation_record,
@@ -61,6 +62,7 @@ __all__ = [
     "list_processed",
     "list_published",
     "list_remediation_records",
+    "read_remediation_soak_report",
     "list_workflow_control_observations",
     "mark_mail_delivery_request_attempt",
     "record",

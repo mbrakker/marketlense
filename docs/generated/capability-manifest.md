@@ -85,6 +85,7 @@ Generated from CLI registrations, configuration example, architecture policy, or
 - `publish-wp`
 - `reap-ui-dead-letters`
 - `recategorize`
+- `remediation-soak`
 - `remediations`
 - `replay-run`
 - `sync-publishers`

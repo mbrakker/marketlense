@@ -213,6 +213,7 @@ def embedding_queue_run(
     ctx = _ctx("cli_embedding_queue_run")
     api_key = ""
     model_pricing: dict[str, Any] = {}
+    state_db = ""
     if not dry_run:
         settings = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
         if not settings.openai_api_key:
@@ -221,6 +222,7 @@ def embedding_queue_run(
             )
         api_key = settings.openai_api_key
         model_pricing = getattr(settings, "model_pricing", {})
+        state_db = settings.state_db
     response = run_claim_embedding_workflow(
         ClaimEmbeddingWorkflowRequest(
             schema_version=PROJECTION_SCHEMA_VERSION,
@@ -243,6 +245,7 @@ def embedding_queue_run(
             report_ids=report_id or [],
             publishers=publisher or [],
             dry_run=dry_run,
+            state_db=state_db,
         )
     )
     _write_json_artifact(output, asdict(response), ctx)

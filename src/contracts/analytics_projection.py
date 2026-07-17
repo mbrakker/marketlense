@@ -519,6 +519,10 @@ class ClaimEmbeddingWorkflowRequest:
         default=False,
         metadata={"doc": "When true, admission is reported without writes or calls."},
     )
+    state_db: str = field(
+        default="",
+        metadata={"doc": "Optional canonical remediation-ledger state database."},
+    )
 
 
 @dataclass(frozen=True)

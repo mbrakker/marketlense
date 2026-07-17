@@ -1,0 +1,126 @@
+schema_version: "1.0"
+workflows:
+  - workflow: acquisition_audit
+    module: src/orchestrators/acquisition_audit_orchestrator.py
+    coverage: exempt
+    reason: "Diagnostic audit composes already-covered discovery and download workflows; it must not create an independent repair loop."
+  - workflow: analytics_projection
+    module: src/orchestrators/analytics_projection_orchestrator.py
+    coverage: exempt
+    reason: "A child of report_generation with its own durable failure record; the parent workflow owns remediation-ledger recovery."
+  - workflow: candidate_extraction
+    module: src/orchestrators/candidate_extraction_orchestrator.py
+    coverage: covered
+    reason: "Per-file and batch terminal failures are recorded in the canonical state ledger."
+  - workflow: claim_embedding
+    module: src/orchestrators/claim_embedding_orchestrator.py
+    coverage: covered
+    reason: "Terminal queue failures and unexpected batch failures are recorded with lease and idempotency evidence."
+  - workflow: cost_reporting
+    module: src/orchestrators/cost_reporting_orchestrator.py
+    coverage: exempt
+    reason: "Read-only reporting has no recoverable workflow side effect."
+  - workflow: cover_image_generation
+    module: src/orchestrators/cover_image_orchestrator.py
+    coverage: exempt
+    reason: "A child artifact step; report_generation, cross_report_analysis, or signal_post owns its terminal workflow record."
+  - workflow: cross_report_analysis
+    module: src/orchestrators/cross_report_analysis_orchestrator.py
+    coverage: covered
+    reason: "The public workflow boundary records terminal generation, validation, artifact, and publication-path failures."
+  - workflow: ingest
+    module: src/orchestrators/ingest_orchestrator.py
+    coverage: covered
+    reason: "Batch-level and defensive worker failures are recorded."
+  - workflow: ingest_file
+    module: src/orchestrators/ingest_file_orchestrator.py
+    coverage: covered
+    reason: "Per-file terminal outcomes and exceptions are recorded with cached-artifact evidence."
+  - workflow: mail_report_acquisition
+    module: src/orchestrators/mail_report_acquisition_orchestrator.py
+    coverage: covered
+    reason: "Existing explicit terminal mailbox-poll observation writes the canonical ledger."
+  - workflow: ops_dashboard
+    module: src/orchestrators/ops_dashboard_orchestrator.py
+    coverage: exempt
+    reason: "Read-only operator dashboard projection has no recoverable workflow side effect."
+  - workflow: pipeline_preflight
+    module: src/orchestrators/pipeline_preflight_orchestrator.py
+    coverage: exempt
+    reason: "Preflight only validates readiness and deliberately leaves fixes to an operator."
+  - workflow: publisher_inventory_discovery
+    module: src/orchestrators/publisher_inventory_orchestrator.py
+    coverage: covered
+    reason: "The public discovery boundary records terminal route, model, snapshot, and persistence failures."
+  - workflow: publisher_sync
+    module: src/orchestrators/publisher_sync_orchestrator.py
+    coverage: exempt
+    reason: "Operator-invoked local publisher replacement has no retry or recovery policy; failures remain explicit and non-automatic."
+  - workflow: publishing
+    module: src/orchestrators/publish_orchestrator.py
+    coverage: covered
+    reason: "Existing explicit publication hooks record idempotency evidence and hold unsafe retries."
+  - workflow: publish_readiness
+    module: src/orchestrators/publish_queue_orchestrator.py
+    coverage: exempt
+    reason: "Read-only queue projection performs no publication or recovery action."
+  - workflow: recategorize
+    module: src/orchestrators/recategorize_orchestrator.py
+    coverage: exempt
+    reason: "One-off operator-directed taxonomy maintenance has no durable retry contract and is intentionally held outside automatic remediation."
+  - workflow: report_analysis
+    module: src/orchestrators/report_analysis_orchestrator.py
+    coverage: exempt
+    reason: "A child of report_generation; the parent pipeline owns checkpoint and ledger recovery."
+  - workflow: report_card_date_remediation
+    module: src/orchestrators/report_card_date_remediation_orchestrator.py
+    coverage: covered
+    reason: "The checkpoint repair boundary records terminal failures and retained artifact references."
+  - workflow: report_download
+    module: src/orchestrators/_report_download_orchestrator/workflow.py
+    coverage: covered
+    reason: "Existing route-plan failure hooks record the canonical ledger."
+  - workflow: report_generation
+    module: src/orchestrators/report_pipeline_orchestrator.py
+    coverage: covered
+    reason: "Existing retry terminal observer records checkpoint-capable report failures."
+  - workflow: signal_candidate_extraction
+    module: src/orchestrators/signal_candidate_orchestrator.py
+    coverage: covered
+    reason: "The public extraction boundary records terminal read, generation, and store failures."
+  - workflow: signal_post
+    module: src/orchestrators/signal_post_orchestrator.py
+    coverage: covered
+    reason: "The public Signal boundary records terminal failures; live publication remains operator-held."
+  - workflow: retry_policy
+    module: src/orchestrators/retry_orchestrator.py
+    coverage: exempt
+    reason: "Shared bounded retry-policy utility is not a workflow owner; terminal owners record after retry exhaustion."
+  - workflow: ui_run_execution
+    module: src/_cli/ui_runs.py
+    coverage: covered
+    reason: "Existing UI-run terminal observation writes the canonical ledger."
+  - workflow: ui_run_control
+    module: src/orchestrators/ui_run_control_orchestrator.py
+    coverage: exempt
+    reason: "Existing UI dead-letter records remain compatibility data until an explicit migration is approved."
+  - workflow: ui_run_replay
+    module: src/orchestrators/ui_run_replay_orchestrator.py
+    coverage: exempt
+    reason: "Replay is an operator evidence and drift-analysis action, not a new recoverable execution workflow."
+  - workflow: vector_store_retention
+    module: src/orchestrators/vector_store_retention_orchestrator.py
+    coverage: exempt
+    reason: "Retention is a bounded maintenance action with explicit vector-store service outcomes, not a replayable workflow."
+  - workflow: wordpress_intelligence_projection
+    module: src/orchestrators/wordpress_intelligence_projection_orchestrator.py
+    coverage: covered
+    reason: "The public projection boundary records terminal read/build/write failures while automatic writes remain disabled."
+  - workflow: wp_category_update
+    module: src/orchestrators/wp_category_update_orchestrator.py
+    coverage: exempt
+    reason: "Operator-invoked WordPress mutation has no idempotency proof contract and is explicitly never auto-repaired."
+  - workflow: workflow_control
+    module: src/orchestrators/workflow_control_orchestrator.py
+    coverage: exempt
+    reason: "Planning and control decisions are not execution failures; mail delivery execution is covered by mail_report_acquisition."

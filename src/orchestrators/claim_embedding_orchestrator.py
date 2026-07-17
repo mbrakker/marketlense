@@ -22,9 +22,18 @@ from src.contracts.analytics_projection import (
     PROJECTION_SCHEMA_VERSION,
 )
 from src.contracts.openai import OpenAIEmbeddingRequest, OpenAIEmbeddingResponse
+from src.contracts.remediation import (
+    RemediationArtifactReference,
+    RemediationBudgetSummary,
+    RemediationIdempotencyKey,
+)
 from src.contracts.run_context import RunContext
 from src.contracts.semantic_ids import EntityUid
 from src.services import analytics_store_service, llm_service
+from src.orchestrators.remediation_orchestrator import (
+    record_workflow_failure,
+    remediation_input_checksum,
+)
 from src.utils.costing import estimate_cost_usd
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
@@ -263,7 +272,7 @@ def _retry_timestamp(generated_at_utc: str, attempt_count: int) -> str:
     return (base + timedelta(seconds=seconds)).isoformat()
 
 
-def run_claim_embedding_workflow(
+def _run_claim_embedding_workflow(
     request: ClaimEmbeddingWorkflowRequest,
     *,
     dependencies: ClaimEmbeddingDependencies | None = None,
@@ -418,6 +427,7 @@ def run_claim_embedding_workflow(
                     error=AppError(
                         code=reason,
                         message=exc.message,
+                        cause=exc,
                         retryable=retryable,
                         severity=exc.severity,
                     ),
@@ -435,6 +445,51 @@ def run_claim_embedding_workflow(
                 ),
                 execution_lease_id=lease_id,
             )
+            if not retryable:
+                record_workflow_failure(
+                    state_db=request.state_db,
+                    workflow="claim_embedding",
+                    stage="provider_embedding",
+                    operation="create_embeddings",
+                    error=AppError(
+                        code="claim_embedding_retry_budget_exhausted",
+                        message="Claim embedding retry budget was exhausted",
+                        cause=exc,
+                        retryable=False,
+                        severity=exc.severity,
+                    ),
+                    ctx=root_ctx,
+                    input_checksum=row.content_hash,
+                    report_id=str(row.report_id),
+                    source_id=str(row.claim_uid),
+                    publisher_id=str(row.metadata.get("publisher") or ""),
+                    reusable_artifacts=[
+                        RemediationArtifactReference(
+                            schema_version="1.0",
+                            name="claim_embedding_store",
+                            reference=request.db_path,
+                        )
+                    ],
+                    committed_side_effects=[
+                        f"analytics_store:claim_embedding_failure:{_embedding_uid(deps, row, request)}"
+                    ],
+                    idempotency_keys=[
+                        RemediationIdempotencyKey(
+                            schema_version="1.0",
+                            scope="claim_embedding.persist",
+                            key=str(_embedding_uid(deps, row, request)),
+                            input_checksum=row.content_hash,
+                        )
+                    ],
+                    budget=RemediationBudgetSummary(
+                        schema_version="1.0",
+                        consumed={"attempts": next_attempt},
+                        remaining={
+                            "max_estimated_tokens": request.max_estimated_tokens,
+                            "max_estimated_cost_usd": request.max_estimated_cost_usd,
+                        },
+                    ),
+                )
             failed_count += 1
             continue
         actual_input_tokens += int(
@@ -509,3 +564,48 @@ def run_claim_embedding_workflow(
         )
     )
     return response
+
+
+def run_claim_embedding_workflow(
+    request: ClaimEmbeddingWorkflowRequest,
+    *,
+    dependencies: ClaimEmbeddingDependencies | None = None,
+) -> ClaimEmbeddingWorkflowResponse:
+    """Run a bounded batch and record unexpected terminal workflow failures."""
+
+    try:
+        return _run_claim_embedding_workflow(request, dependencies=dependencies)
+    except Exception as exc:
+        record_workflow_failure(
+            state_db=request.state_db,
+            workflow="claim_embedding",
+            stage="workflow",
+            operation="run_claim_embedding_workflow",
+            error=exc,
+            ctx=request.ctx,
+            input_checksum=remediation_input_checksum(
+                {
+                    "db_path": request.db_path,
+                    "embedding_version": request.embedding_version,
+                    "provider": request.provider,
+                    "model": request.model,
+                    "report_ids": sorted(request.report_ids),
+                }
+            ),
+            source_id=request.db_path,
+            reusable_artifacts=[
+                RemediationArtifactReference(
+                    schema_version="1.0",
+                    name="claim_embedding_store",
+                    reference=request.db_path,
+                )
+            ],
+            budget=RemediationBudgetSummary(
+                schema_version="1.0",
+                remaining={
+                    "max_estimated_tokens": request.max_estimated_tokens,
+                    "max_estimated_cost_usd": request.max_estimated_cost_usd,
+                },
+            ),
+        )
+        raise

@@ -296,6 +296,10 @@ class SignalCandidateExtractionRequest:
             "required": False,
         },
     )
+    state_db: str = field(
+        default="",
+        metadata={"doc": "Optional canonical remediation-ledger state database."},
+    )
 
 
 @dataclass(frozen=True)

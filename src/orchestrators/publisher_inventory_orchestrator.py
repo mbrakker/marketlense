@@ -40,6 +40,7 @@ from src.contracts.report_store import (
     PublisherInventoryRunQualityRecordRequest,
     PublisherInventoryStateRecordRequest,
 )
+from src.contracts.remediation import RemediationArtifactReference
 from src.contracts.run_context import RunContext
 from src.orchestrators._publisher_inventory_orchestrator.candidate_flow import (
     _candidate_provenance_counts,
@@ -102,6 +103,10 @@ from src.orchestrators.retry_orchestrator import (
     is_retryable_app_error,
     run_with_retry,
 )
+from src.orchestrators.remediation_orchestrator import (
+    record_workflow_failure,
+    remediation_input_checksum,
+)
 from src.services import llm_service
 from src.utils.drive_utils import extract_drive_folder_id
 from src.utils.errors import AppError
@@ -122,7 +127,7 @@ def _accepts_keyword(callable_obj, keyword: str) -> bool:
     )
 
 
-def run_publisher_inventory_discovery(
+def _run_publisher_inventory_discovery(
     request: PublisherInventoryDiscoveryRequest,
     *,
     ctx: RunContext,
@@ -728,6 +733,44 @@ def run_publisher_inventory_discovery(
             code=exc.code,
             ctx=ctx,
             dependencies=deps,
+        )
+        raise
+
+
+def run_publisher_inventory_discovery(
+    request: PublisherInventoryDiscoveryRequest,
+    *,
+    ctx: RunContext,
+    dependencies: PublisherInventoryDependencies | None = None,
+) -> PublisherInventoryDiscoveryResult:
+    """Discover publisher inventory with an explicit terminal-failure ledger hook."""
+
+    try:
+        return _run_publisher_inventory_discovery(
+            request, ctx=ctx, dependencies=dependencies
+        )
+    except Exception as exc:
+        record_workflow_failure(
+            state_db=request.state_db,
+            workflow="publisher_inventory_discovery",
+            stage="workflow",
+            operation="run_publisher_inventory_discovery",
+            error=exc,
+            ctx=ctx,
+            input_checksum=remediation_input_checksum(
+                {
+                    "insights_url": request.insights_url,
+                    "reports_db": request.reports_db,
+                }
+            ),
+            source_id=request.insights_url,
+            reusable_artifacts=[
+                RemediationArtifactReference(
+                    schema_version="1.0",
+                    name="publisher_inventory_reports_db",
+                    reference=request.reports_db,
+                )
+            ],
         )
         raise
 
