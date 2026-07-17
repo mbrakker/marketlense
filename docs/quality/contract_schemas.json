@@ -35589,6 +35589,16 @@
         "openai_file_id": {
           "type": "string"
         },
+        "run_budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "schema_version": {
           "type": "string"
         },
@@ -35632,6 +35642,16 @@
         "name": {
           "type": "string"
         },
+        "run_budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "schema_version": {
           "type": "string"
         }
@@ -35664,6 +35684,16 @@
       "properties": {
         "missing_ok": {
           "type": "boolean"
+        },
+        "run_budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "schema_version": {
           "type": "string"
@@ -35774,6 +35804,16 @@
         "missing_ok": {
           "type": "boolean"
         },
+        "run_budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "schema_version": {
           "type": "string"
         }
@@ -35855,6 +35895,16 @@
     "src.contracts.vector_store.VectorStoreStatusRequest": {
       "additionalProperties": false,
       "properties": {
+        "run_budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "schema_version": {
           "type": "string"
         },
@@ -35914,6 +35964,16 @@
         "metadata": {
           "$ref": "#/$defs/src.contracts.vector_store.VectorStoreMetadata"
         },
+        "run_budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "schema_version": {
           "type": "string"
         },
@@ -35949,6 +36009,16 @@
       "properties": {
         "file_path": {
           "type": "string"
+        },
+        "run_budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "schema_version": {
           "type": "string"

@@ -31,6 +31,7 @@ from src.contracts.vector_store import (
     VectorStoreUploadFileResponse,
 )
 from src.contracts.config import OpenAICredentialResolveResponse
+from src.contracts.run_budget import RunBudget
 from src.services import vector_store_service as svc
 from src.utils.errors import AppError
 
@@ -88,8 +89,16 @@ def test_missing_openai_credential_is_typed_and_sanitized(
 
 def test_create_vector_store(external_boundary_mocks_only: ExternalBoundaryMocksOnly):
     _install_api_key(external_boundary_mocks_only)
+    budget = RunBudget(
+        schema_version="1.0",
+        run_id="vector-store-forward-budget",
+        publisher_name="",
+        usage_db_path="state/test-vector-store-forward-budget.sqlite",
+        max_calls=1,
+    )
 
     def _create(req, ctx):
+        assert req.run_budget is budget
         return OpenAIVectorStoreCreateResponse(
             schema_version="1.0", vector_store_id="vs_123"
         )
@@ -110,6 +119,7 @@ def test_create_vector_store(external_boundary_mocks_only: ExternalBoundaryMocks
                 region="US",
                 time_period="2024",
             ),
+            run_budget=budget,
         )
     )
     assert isinstance(resp, VectorStoreCreateResponse)
@@ -189,6 +199,36 @@ def test_get_vector_store_status(
     )
     assert isinstance(resp, VectorStoreStatusResponse)
     assert resp.status == "completed"
+
+
+def test_get_vector_store_status_preserves_canonical_budget_stop(
+    external_boundary_mocks_only: ExternalBoundaryMocksOnly,
+    assert_app_error,
+) -> None:
+    _install_api_key(external_boundary_mocks_only)
+
+    def _status(req, ctx):
+        raise AppError(
+            code="openai_vector_store_status_budget_stop",
+            message="blocked by canonical budget",
+            retryable=False,
+        )
+
+    external_boundary_mocks_only.setattr(
+        svc.llm_service, "openai_vector_store_status", _status
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        svc.get_vector_store_status(
+            VectorStoreStatusRequest(schema_version="1.0", vector_store_id="vs_123")
+        )
+
+    assert_app_error(
+        exc_info.value,
+        code="openai_vector_store_status_budget_stop",
+        retryable=False,
+        severity="error",
+    )
 
 
 def test_delete_vector_store_handles_missing_remote_asset(

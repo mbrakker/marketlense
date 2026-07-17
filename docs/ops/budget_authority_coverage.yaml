@@ -70,13 +70,13 @@ resources:
     callsite: src/services/_llm_service/vector_store.py
     scope: run, UTC-day, publisher
     forecast_source: canonical historical median or unavailable zero-cost forecast
-    preflight_gate: evaluate_budget_request before each OpenAI vector-store request
+    preflight_gate: public vector-store contracts forward optional RunBudget to evaluate_budget_request before each OpenAI request
     reservation_used: stable operation and run/task/span key
     actual_usage_source: measured provider request attempt count
     reconciliation_path: finalize_budget_side_effect records one actual call or releases zero-attempt failure
     idempotency_source: reservation key
-    blocking_outcomes: defer, pause, stop
-    test_reference: tests/test_openai_vector_store.py
+    blocking_outcomes: defer, pause, stop preserved through the public vector-store service
+    test_reference: tests/test_vector_store_service.py
     status: covered
   - resource_type: browser_use_model
     operation: browser_use_llm_call

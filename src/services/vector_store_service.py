@@ -52,6 +52,8 @@ def _resolve_api_key(ctx: RunContext) -> str:
 
 
 def _raise_vector_store_error(exc: AppError, *, code: str, message: str) -> NoReturn:
+    if "_budget_" in exc.code:
+        raise exc
     raise AppError(
         code=code,
         message=message,
@@ -142,6 +144,7 @@ def create_vector_store(
                 api_key=api_key,
                 name=name,
                 metadata=metadata_payload,
+                run_budget=request.run_budget,
             ),
             ctx,
         ),
@@ -190,6 +193,7 @@ def upload_file(
                 api_key=api_key,
                 file_path=file_path,
                 purpose="assistants",
+                run_budget=request.run_budget,
             ),
             ctx,
         )
@@ -254,6 +258,7 @@ def attach_file(
                 api_key=api_key,
                 vector_store_id=vector_store_id,
                 openai_file_id=file_id,
+                run_budget=request.run_budget,
             ),
             ctx,
         ),
@@ -300,6 +305,7 @@ def get_vector_store_status(
                 schema_version="1.0",
                 api_key=api_key,
                 vector_store_id=vector_store_id,
+                run_budget=request.run_budget,
             ),
             ctx,
         ),
@@ -351,6 +357,7 @@ def delete_vector_store(
                 schema_version="1.0",
                 api_key=api_key,
                 vector_store_id=vector_store_id,
+                run_budget=request.run_budget,
             ),
             ctx,
         )
@@ -427,6 +434,7 @@ def prune_vector_stores(
                 schema_version="1.0",
                 vector_store_id=vector_store_id,
                 missing_ok=request.missing_ok,
+                run_budget=request.run_budget,
             ),
             ctx,
         )
@@ -486,6 +494,7 @@ def update_metadata(
                 api_key=api_key,
                 vector_store_id=vector_store_id,
                 metadata=metadata_payload,
+                run_budget=request.run_budget,
             ),
             ctx,
         ),

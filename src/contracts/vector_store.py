@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import List, Optional
 
+from src.contracts.run_budget import RunBudget
 from src.contracts.semantic_ids import ReportId, SemanticIdContract
 
 
@@ -42,6 +43,10 @@ class VectorStoreCreateRequest:
     metadata: VectorStoreMetadata = field(
         metadata={"doc": "Metadata to attach to the vector store."}
     )
+    run_budget: RunBudget | None = field(
+        default=None,
+        metadata={"doc": "Optional canonical budget governing this provider call."},
+    )
 
 
 @dataclass(frozen=True)
@@ -61,6 +66,10 @@ class VectorStoreUploadFileRequest:
     )
     vector_store_id: str = field(metadata={"doc": "Target vector store identifier."})
     file_path: str = field(metadata={"doc": "Path to the file to upload."})
+    run_budget: RunBudget | None = field(
+        default=None,
+        metadata={"doc": "Optional canonical budget governing this provider call."},
+    )
 
 
 @dataclass(frozen=True)
@@ -81,6 +90,10 @@ class VectorStoreAttachFileRequest:
     openai_file_id: str = field(
         metadata={"doc": "Provider-specific file identifier to attach."}
     )
+    run_budget: RunBudget | None = field(
+        default=None,
+        metadata={"doc": "Optional canonical budget governing this provider call."},
+    )
 
 
 @dataclass(frozen=True)
@@ -100,6 +113,10 @@ class VectorStoreStatusRequest:
         metadata={"doc": "Vector store status request schema version."}
     )
     vector_store_id: str = field(metadata={"doc": "Vector store identifier."})
+    run_budget: RunBudget | None = field(
+        default=None,
+        metadata={"doc": "Optional canonical budget governing this provider call."},
+    )
 
 
 @dataclass(frozen=True)
@@ -131,6 +148,10 @@ class VectorStoreDeleteRequest:
         metadata={
             "doc": "When true, missing remote vector stores are treated as already cleaned up."
         },
+    )
+    run_budget: RunBudget | None = field(
+        default=None,
+        metadata={"doc": "Optional canonical budget governing this provider call."},
     )
 
 
@@ -173,6 +194,10 @@ class VectorStorePruneRequest:
             "doc": "When true, missing remote vector stores are treated as already cleaned up."
         },
     )
+    run_budget: RunBudget | None = field(
+        default=None,
+        metadata={"doc": "Optional canonical budget governing each provider delete."},
+    )
 
 
 @dataclass(frozen=True)
@@ -213,6 +238,10 @@ class VectorStoreUpdateMetadataRequest:
     vector_store_id: str = field(metadata={"doc": "Vector store identifier to update."})
     metadata: VectorStoreMetadata = field(
         metadata={"doc": "Updated metadata for the vector store."}
+    )
+    run_budget: RunBudget | None = field(
+        default=None,
+        metadata={"doc": "Optional canonical budget governing this provider call."},
     )
 
 
