@@ -27,15 +27,16 @@ All work is listed below in one register. `Active` items have detailed completio
 | --- | --- | --- | --- |
 | Closed | A1 | Single autonomous supervisor, read-only `PipelinePlan`, and mandatory workflow-control authority | Plan authorization is enforced by CLI/UI control payloads; retained plan run and full regression passed. |
 | Active | A2 | `fast_ingest` and other config-driven autopilot profiles | One typed profile outcome. |
-| Active | A3 | Workflow-wide remediation-ledger rollout | Extend the proven remediation ledger to every eligible workflow under explicit safety gates. |
+| Closed | A3 | Workflow-wide remediation-ledger rollout | The 31-workflow coverage matrix, fail-closed bounded reaper, read-only soak, and strict retained evidence bundle passed. |
 | Active | A4 | Malformed-Drive-PDF quarantine | Standalone bounded source-recovery outcome. |
-| Active | A6 | Budget-manager closeout and operational proof | Implementation is complete; collect bounded representative operational proof before closure. |
+| Closed | A6 | Budget-manager closeout and operational proof | Live Drive, OpenAI vector-store, and LLM calls recorded actual use; next governed calls were stopped before provider I/O and strict evidence passed. |
 | Closed | A5 | Business-email, CAPTCHA, anti-bot, terminal-evidence, and avoided-browser-spend route policy | TTL-bound route policy now avoids browser/mailbox work for retained hard blockers and allows explicit revalidation. |
 | Active | A10 | Budget-deferred-work recovery and operator requeue | Turn durable budget deferrals into safe, visible, idempotent resumption. |
 | Active | A11 | Ledger-driven recurring-failure prevention and operator prioritization | Turn canonical remediation evidence into bounded root-cause and avoided-work decisions. |
+| Active | A12 | Complete configured model-pricing coverage for spend budgets | Make configured provider spend limits effective for the selected production model families. |
 | Closed | A7 | Budget-aware model routing, compaction, and failure-class fallback | YAML routing, anchor-preserving compaction, same-provider fallback, retained-corpus evidence gate, and regression coverage are active. |
 | Active | A8 | Model-call replay drift comparison | Standalone read-only regression outcome. |
-| Active | A9 | Source publication metadata and identity fallback for retained regeneration | Source-supported render metadata and deterministic identity-fallback outcome. |
+| Closed | A9 | Source publication metadata and identity fallback for retained regeneration | Schema v18 provenance, MD5-first identity resolution, fail-closed rendering, and live idempotent source capture passed. |
 | Closed | P1 | Publish snapshot naming and synchronous idempotent publishing | Public/UI terminology now says Publish Readiness; the compatibility alias preserves callers and synchronous review-gated publishing remains unchanged. |
 | Active | P2 | Bounded public-observability events | Narrow log-event size-bound hardening for public-facing boundaries. |
 | Active | P3 | Hosted HTTPS, sitemap, and public trust checks | Safe-error boundary completed; hosted trust outcome remains. |
@@ -82,6 +83,9 @@ All work is listed below in one register. `Active` items have detailed completio
 
 ## Recently Closed
 
+- **A3 — Workflow-wide remediation-ledger rollout (2026-07-17):** The generated 31-workflow matrix is CI-checked. A controlled typed `provider_timeout` persisted one remediation record across two submissions; the bounded reaper inspected it once and held it as `operator_action_required` without an executor or external side effect. The read-only soak reported one created, one deduplicated, zero stale, zero eligible, and one held record with no missing runbook mapping. Strict evidence bundle `21a046e89de64aa3a4fcc73250e74074` passed on exact commit `3da3d70e4b202cd2be4f206347982b9d55c94a13`.
+- **A6 — Budget-manager closeout and operational proof (2026-07-17):** The public vector-store service now forwards a typed `RunBudget` and preserves canonical budget-stop errors. A live Drive list, OpenAI vector-store create/delete, and minimal OpenAI JSON call completed under canonical authority; ledger evidence recorded one Drive read, one vector create, one vector cleanup, and 168 LLM tokens. The next Drive and vector calls were blocked before provider I/O. Temporary vector stores were removed. The strict exact-HEAD bundle passed.
+- **A9 — Source publication metadata and identity fallback (2026-07-17):** Reports schema v18 stores bounded source provenance; deterministic extraction, MD5-first identity resolution, and fail-closed rendering are covered by tests. A real retained Drive source page returned HTTP 200 and persisted an explicit `unknown` provenance state without inventing a date; a repeat upsert was idempotent. The strict exact-HEAD bundle passed.
 - **C8 — CTO evidence-collector integrity (2026-07-17):** The strict collector snapshots retained inputs, validates exact repository HEAD, checks log-content coverage, run IDs, provenance, summary consistency, and every inventoried file hash before publishing. It fails closed without a partial final bundle. R1 owns expansion of the retained runtime corpus, not collector integrity.
 - **C7 — Logging content exposure (2026-07-16):** Standard events apply deterministic byte, depth, node, collection, and text bounds; report and browser terminal events emit scalar summaries with retained audit references; CI rejects direct `fields=asdict(...)` serialization. Focused report/logging and browser suites passed, as did guarded live browser and OpenAI runs. P2 retains the narrow public-boundary size-limit hardening and R6 owns ongoing reduction-telemetry review.
 - **A7 (2026-07-14):** The retained 15-report corpus is now a required no-provider routing gate across 30 configured prompt routes. It confirms explicit policy selection, same-provider constraints, and zero lost retained evidence IDs; focused routing/compaction/fallback tests and the full suite pass.
@@ -119,19 +123,6 @@ The original ten-item screenshot baseline is complete in the committed implement
 - Profile resolution is typed, deterministic, logs effective settings, preserves override precedence, and never stores secrets in YAML.
 - The plan-first interface can recommend or apply a profile, with tests proving deterministic resolution and invalid-profile failure.
 
-#### A3. Roll out remediation-ledger coverage across workflows
-
-- **Title:** Roll out remediation-ledger coverage across workflows
-- **Impact 5 / effort: 2**
-- **Context:** The remediation ledger is the canonical failure backlog. A 31-workflow inventory records coverage or explicit exemption, stateful boundaries retain typed recovery evidence, and execution fails closed outside the current allowlist. The remaining work is a controlled workflow-wide rollout, not greenfield ledger design.
-- **Benefit:** Eligible workflows receive one inspectable, deduplicated recovery path without widening automatic execution or losing workflow-specific safety controls.
-- **Risks to avoid:** Do not enable a workflow without its checkpoint, lineage, committed-side-effect, budget, input-checksum, idempotency, and runbook evidence. Preserve fail-closed behavior and existing public-write authorization gates.
-- **Success criteria:**
-
-- The generated inventory remains complete as production workflows change, and CI rejects an unclassified workflow or an expired exemption.
-- Each newly eligible workflow passes a bounded read-only soak covering creation, deduplication, held/eligible transitions, and runbook linkage before it is added to the execution allowlist.
-- Release evidence records the workflow coverage, allowed execution scope, and any held compatibility record without exposing source payloads or provider responses.
-
 #### A4. Quarantine irreparably malformed Drive PDFs
 
 - **Title:** Quarantine irreparably malformed Drive PDFs
@@ -144,19 +135,6 @@ The original ten-item screenshot baseline is complete in the committed implement
 - State records file identity, checksum/size, typed error, and next action after PDF-integrity failure.
 - Default ingest skips quarantined files; explicit rescan/revalidation clears only a valid replacement.
 - CLI or dashboard exposes quarantined inputs and remediation guidance, with tests for write, skip, revalidation, and valid-replacement transitions.
-
-#### A6. Complete budget-manager operational proof
-
-- **Title:** Complete budget-manager operational proof
-- **Impact 5 / effort: 2**
-- **Context:** The canonical SQLite ledger already owns typed pre-side-effect decisions, TTL-bound reservations, actual-use finalization, deferrals, and avoided-effect telemetry for the configured costed operations. Focused tests and a guarded Drive list passed; the prior guarded OpenAI smoke reached the provider but exceeded its surrounding process deadline. The remaining work is operational closeout, not budget-manager implementation.
-- **Benefit:** Operators can close the budget authority with representative evidence that reservations, reconciliation, deferral, and recovery hold under its real configured limits.
-- **Risks to avoid:** Keep probes bounded, credential-gated, and non-publishing. Do not raise limits, bypass a pre-side-effect decision, or introduce a second accounting ledger merely to collect proof.
-- **Success criteria:**
-
-- A bounded, credential-gated operational run records one permitted decision and one safely denied or deferred decision, including reservation/actual reconciliation and the retained idempotency key.
-- The evidence records configured request, token, duration, and cost ceilings; an unavailable credential or exhausted ceiling skips or fails safely without a completion claim.
-- Release evidence links the operational result to the exact ledger schema/configuration and shows no unauthorized WordPress, mailbox, or browser side effect.
 
 #### A10. Budget-deferred-work recovery and operator requeue
 
@@ -184,6 +162,19 @@ The original ten-item screenshot baseline is complete in the committed implement
 - The operator surface produces explicit prevention recommendations linked only to record IDs and retained evidence references; it never exposes source payloads or provider responses.
 - Tests prove deterministic ordering, no cross-tenant/source leakage, threshold behavior, and that recommendations cannot trigger execution or hide historical transitions.
 
+#### A12. Complete configured model-pricing coverage for spend budgets
+
+- **Title:** Complete configured model-pricing coverage for spend budgets
+- **Impact 5 / effort: 1**
+- **Context:** The bounded live OpenAI JSON call completed with 168 recorded tokens, but the selected `gpt-5-mini` model had no configured pricing entry, so the canonical usage event recorded zero estimated spend. Call and token limits still apply, but an operator-set spend ceiling cannot be measured accurately for that model family.
+- **Benefit:** The newly proven canonical budget authority can enforce real spend ceilings as well as call and token ceilings, improving cost control for production routing without a second ledger.
+- **Risks to avoid:** Do not hard-code prices in call sites or infer billable rates from responses. Keep rates in canonical operator configuration with an explicit version/source and fail visibly when a cost-governed model has no approved rate.
+- **Success criteria:**
+
+- Canonical operator pricing covers every configured production model route, including `gpt-5-mini`, with versioned provenance.
+- A bounded provider smoke records non-zero estimated spend when the provider returns metered usage; an unpriced model produces an explicit cost-governance decision rather than silently recording zero.
+- Focused accounting and budget tests cover priced, unpriced, stale, and changed-rate cases without provider calls.
+
 #### A8. Compare retained model-call replay bundles
 
 - **Title:** Compare retained model-call replay bundles
@@ -196,20 +187,6 @@ The original ten-item screenshot baseline is complete in the committed implement
 - The command compares deterministic fields, schema validity, prompt hashes, and selected evidence without provider calls by default.
 - Output is bounded, reproducible, and links regressions to artifact family and remediation.
 - Tests cover equivalent, changed, missing, and malformed bundles, including deterministic output ordering and zero-provider-call default execution.
-
-#### A9. Capture source-backed publication metadata and identity fallback at acquisition
-
-- **Title:** Capture source-backed publication metadata and identity fallback at acquisition
-- **Impact 5 / effort: 2**
-- **Context:** Retained report regeneration can safely reuse PDF, model, and render checkpoints, but older acquisitions may lack a source-supported publication date or a durable source identity and therefore fail the report-card gate during an otherwise render-only recovery. Runtime resolution can use an MD5 match and a constrained title/publisher fallback today; acquisition must make the selected source identity explicit and durable.
-- **Benefit:** Acquisition provenance directly enables reliable low-cost regeneration and avoids broad reruns caused solely by absent public-card metadata or a lost source identity.
-- **Risks to avoid:** Persist only source-page evidence with its URL and retrieval timestamp. Never infer a date from a filename, file mtime, or report title, and never turn an identity fallback into an ungrounded identity claim.
-- **Success criteria:**
-
-- Acquisition records normalized source publication date, source URL, retrieval timestamp, and evidence locator when the publisher exposes them.
-- The selected source identity records its resolution source. Consumers prefer a checksum match, permit the constrained title/publisher fallback only when it is unambiguous, and retain an explicit unresolved outcome otherwise.
-- Render and regeneration consume the persisted source-backed metadata and identity without an operator override; missing or contradictory evidence still fails closed.
-- Retained-source tests cover metadata extraction, identity resolution, persistence, render-only recovery, absent evidence, ambiguous fallback, and conflicting dates.
 
 ### 2. Public Trust and Publishing
 
