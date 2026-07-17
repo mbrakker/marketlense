@@ -6,7 +6,6 @@ from pathlib import Path
 
 import pytest
 
-
 ROOT = Path(__file__).resolve().parents[1]
 HARNESS = ROOT / "tests" / "wordpress_runtime" / "report_view_model_harness.php"
 
@@ -87,6 +86,10 @@ def test_report_card_meta_fields_register_explicit_rest_contracts() -> None:
         "ml_card_cover_small_id",
         "ml_card_cover_medium_id",
         "ml_card_cover_large_id",
+        "ml_source_title",
+        "ml_source_url",
+        "ml_source_note",
+        "ml_source_publication_date",
     }
     assert expected_keys <= set(registrations)
     assert registrations["ml_card_key_insights"]["type"] == "array"

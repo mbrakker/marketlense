@@ -18,7 +18,6 @@ from src.contracts.browser_download import (
 )
 from src.contracts.drive import DriveFile
 from src.contracts.files import FileHashRequest, ReadBytesRequest
-from src.utils.clock import utc_now_seconds_z as _utc_now_iso
 from src.contracts.idempotency import (
     OrchestratorIdempotencyGetRequest,
     OrchestratorIdempotencyRecordRequest,
@@ -29,6 +28,9 @@ from src.contracts.report_store import (
     ReportSourceRecordResponse,
     ReportValueScoreRecordRequest,
     ReportValueScoreRequest,
+    SourceIdentityObservation,
+    SourceIdentityObservationRecordRequest,
+    SourcePublicationMetadata,
     SourcePublicationMetadataExtractionRequest,
     SourcePublicationMetadataUpsertRequest,
 )
@@ -39,6 +41,7 @@ from src.orchestrators._report_download_orchestrator.dependencies import (
 from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
 from src.services import idempotency_service
 from src.utils.cache_utils import sha256_json
+from src.utils.clock import utc_now_seconds_z as _utc_now_iso
 from src.utils.coercion import coerce_int
 from src.utils.errors import AppError
 from src.utils.logging import log_event
@@ -60,7 +63,7 @@ def _record_source_publication_metadata(
     source_record: ReportSourceRecordResponse,
     ctx: RunContext,
     dependencies: ReportDownloadDependencies,
-) -> None:
+) -> SourcePublicationMetadata:
     """Persist deterministic source-page metadata from existing browser evidence."""
     html = ""
     snapshot_path = str(result.terminal_evidence.html_snapshot_path or "").strip()
@@ -120,7 +123,7 @@ def _record_source_publication_metadata(
                 },
             )
         )
-        return
+        return metadata
     logger.info(
         log_event(
             ctx,
@@ -136,6 +139,104 @@ def _record_source_publication_metadata(
                 "evidence_value_hash": stored.metadata.evidence_value_hash,
                 "observed_value_count": len(stored.metadata.observed_values),
                 "changed": stored.changed,
+            },
+        )
+    )
+    return stored.metadata
+
+
+def _safe_external_url(value: object) -> str:
+    url = str(value or "").strip()
+    parsed = urlsplit(url)
+    return url if parsed.scheme in {"http", "https"} and parsed.netloc else ""
+
+
+def _record_source_identity_observation(
+    *,
+    request: ReportDownloadOrchestratorRequest,
+    result: BrowserReportDownloadResult,
+    source_record: ReportSourceRecordResponse,
+    publication_metadata: SourcePublicationMetadata,
+    ctx: RunContext,
+    dependencies: ReportDownloadDependencies,
+) -> None:
+    """Attach immutable route and retrieval evidence to the downloaded source."""
+    if dependencies.record_source_identity_observation is None:
+        return
+    terminal = result.terminal_evidence
+    terminal_title = str(getattr(terminal, "final_page_title", "") or "").strip()
+    canonical_title = terminal_title or source_record.report_name
+    title_locator = (
+        "terminal_evidence.final_page_title"
+        if terminal_title
+        else "report_sources.report_name"
+    )
+    landing_url = _safe_external_url(result.final_page_url) or _safe_external_url(
+        source_record.landing_page_url
+    )
+    source_page_url = landing_url or _safe_external_url(result.source_url)
+    artifact_url = _safe_external_url(getattr(terminal, "artifact_url", ""))
+    publication_verified = publication_metadata.evidence_status == "verified"
+    issues = []
+    if not publication_verified:
+        issues.append(
+            f"publication_metadata_{publication_metadata.evidence_status or 'unknown'}"
+        )
+    if not terminal_title:
+        issues.append("canonical_title_from_download_record")
+    response = dependencies.record_source_identity_observation(
+        SourceIdentityObservationRecordRequest(
+            schema_version="1.0",
+            db_path=request.reports_db,
+            observation=SourceIdentityObservation(
+                schema_version="1.0",
+                source_record_id=source_record.record_id,
+                canonical_title=canonical_title,
+                title_evidence_locator=title_locator,
+                canonical_landing_page_url=landing_url,
+                acquired_artifact_url=artifact_url,
+                source_page_url=source_page_url,
+                publication_date=(
+                    publication_metadata.publication_date if publication_verified else ""
+                ),
+                publication_date_status="verified" if publication_verified else "unknown",
+                publication_date_evidence_locator=(
+                    publication_metadata.evidence_locator if publication_verified else ""
+                ),
+                discovered_at_utc=source_record.downloaded_at_utc,
+                retrieved_at_utc=(
+                    publication_metadata.retrieved_at_utc
+                    or source_record.downloaded_at_utc
+                ),
+                acquisition_route=(
+                    str(result.route_kind or "").strip()
+                    or str(result.route_family or "").strip()
+                    or "browser_download"
+                ),
+                content_hash=f"md5:{source_record.md5}",
+                resolution_method=(
+                    "browser_terminal_evidence"
+                    if terminal_title
+                    else "downloaded_source_record"
+                ),
+                identity_confidence="medium" if terminal_title else "low",
+                identity_issues=tuple(sorted(issues)),
+            ),
+        ),
+        ctx,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="report_download_source_identity_recorded",
+            module=logger.name,
+            fields={
+                "source_record_id": source_record.record_id,
+                "created": response.created,
+                "identity_status": response.resolution.identity_status,
+                "publication_date_status": response.resolution.publication_date_status,
+                "source_metadata_hash": response.resolution.source_metadata_hash,
             },
         )
     )
@@ -582,10 +683,18 @@ def record_downloaded_source(
                 },
             )
         )
-        _record_source_publication_metadata(
+        publication_metadata = _record_source_publication_metadata(
             request=request,
             result=result,
             source_record=source_record,
+            ctx=ctx,
+            dependencies=dependencies,
+        )
+        _record_source_identity_observation(
+            request=request,
+            result=result,
+            source_record=source_record,
+            publication_metadata=publication_metadata,
             ctx=ctx,
             dependencies=dependencies,
         )

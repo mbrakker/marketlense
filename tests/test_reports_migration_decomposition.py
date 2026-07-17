@@ -3,7 +3,6 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / "src" / "services" / "_sqlite_migration" / "_reports"
 FACADE = PACKAGE.parent / "reports.py"
@@ -59,6 +58,7 @@ PROJECTIONS = {
     "_reports_db_016_add_claim_embedding_queue_controls",
     "_reports_db_017_add_lineage_execution_planning",
     "_reports_db_018_create_source_publication_metadata",
+    "_reports_db_019_create_source_identity_observations",
 }
 
 

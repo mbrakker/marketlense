@@ -913,6 +913,10 @@ def _report_card_post_meta(
         "ml_card_cover_small_id": media_ids["small"],
         "ml_card_cover_medium_id": media_ids["medium"],
         "ml_card_cover_large_id": media_ids["large"],
+        "ml_source_title": manifest.source_title,
+        "ml_source_url": manifest.source_url,
+        "ml_source_note": manifest.source_note,
+        "ml_source_publication_date": manifest.published_date,
     }
 
 

@@ -5,7 +5,6 @@ from typing import Dict, Mapping, Tuple
 
 from src.utils.errors import AppError
 
-
 CARD_SIZES = ("small", "medium", "large")
 GEOGRAPHY_SCOPES = ("global", "regional", "country", "unknown")
 EVIDENCE_SHAPES = (
@@ -303,6 +302,24 @@ class ReportCardManifestRequest:
     covers: CardCoverAssetSet = field(
         metadata={"doc": "Completed three-size cover asset set."}
     )
+    source_title: str = field(
+        default="", metadata={"doc": "Public canonical source title, when available."}
+    )
+    source_url: str = field(
+        default="", metadata={"doc": "Public canonical source URL, when available."}
+    )
+    source_note: str = field(
+        default="", metadata={"doc": "Public source note without diagnostic details."}
+    )
+    source_metadata_hash: str = field(
+        default="", metadata={"doc": "Resolved source-metadata compatibility hash."}
+    )
+    source_identity_status: str = field(
+        default="unknown", metadata={"doc": "Canonical source identity status."}
+    )
+    source_publication_date_status: str = field(
+        default="unknown", metadata={"doc": "Canonical publication-date status."}
+    )
 
 
 @dataclass(frozen=True)
@@ -332,6 +349,24 @@ class ReportCardManifest:
         metadata={"doc": "Semantic cover fingerprint."}
     )
     covers: CardCoverAssetSet = field(metadata={"doc": "Three canonical cover assets."})
+    source_title: str = field(
+        default="", metadata={"doc": "Public canonical source title, when available."}
+    )
+    source_url: str = field(
+        default="", metadata={"doc": "Public canonical source URL, when available."}
+    )
+    source_note: str = field(
+        default="", metadata={"doc": "Public source note without diagnostic details."}
+    )
+    source_metadata_hash: str = field(
+        default="", metadata={"doc": "Resolved source-metadata compatibility hash."}
+    )
+    source_identity_status: str = field(
+        default="unknown", metadata={"doc": "Canonical source identity status."}
+    )
+    source_publication_date_status: str = field(
+        default="unknown", metadata={"doc": "Canonical publication-date status."}
+    )
 
     @classmethod
     def from_dict(cls, payload: Mapping[str, object]) -> "ReportCardManifest":
@@ -430,6 +465,40 @@ class ReportCardManifest:
             key_insights=(insights[0], insights[1]),
             fingerprint=CoverFingerprint.from_dict(fingerprint_payload),
             covers=CardCoverAssetSet.from_dict(covers_payload),
+            source_title=_text(
+                payload.get("source_title"),
+                code="cover_fingerprint_invalid",
+                field_name="source_title",
+                allow_empty=True,
+            ),
+            source_url=_text(
+                payload.get("source_url"),
+                code="cover_fingerprint_invalid",
+                field_name="source_url",
+                allow_empty=True,
+            ),
+            source_note=_text(
+                payload.get("source_note"),
+                code="cover_fingerprint_invalid",
+                field_name="source_note",
+                allow_empty=True,
+            ),
+            source_metadata_hash=_text(
+                payload.get("source_metadata_hash"),
+                code="cover_fingerprint_invalid",
+                field_name="source_metadata_hash",
+                allow_empty=True,
+            ),
+            source_identity_status=_text(
+                payload.get("source_identity_status") or "unknown",
+                code="cover_fingerprint_invalid",
+                field_name="source_identity_status",
+            ),
+            source_publication_date_status=_text(
+                payload.get("source_publication_date_status") or "unknown",
+                code="cover_fingerprint_invalid",
+                field_name="source_publication_date_status",
+            ),
         )
 
 

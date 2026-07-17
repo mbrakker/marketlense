@@ -25,6 +25,8 @@ from src.services._sqlite_migration._reports.schema import (
     _REPORTS_REQUIRED_COLUMNS,
     _SIGNAL_CANDIDATE_GROUPS_TABLE_SQL,
     _SIGNAL_CANDIDATES_TABLE_SQL,
+    _SOURCE_IDENTITY_OBSERVATIONS_TABLE_SQL,
+    _SOURCE_IDENTITY_RESOLUTIONS_TABLE_SQL,
     _SOURCE_PUBLICATION_METADATA_TABLE_SQL,
     _VECTOR_PROJECTION_QUEUE_TABLE_SQL,
 )
@@ -271,3 +273,39 @@ def _reports_db_018_create_source_publication_metadata(
         "CREATE INDEX IF NOT EXISTS idx_source_publication_metadata_status "
         "ON source_publication_metadata(evidence_status, updated_at_utc)"
     )
+
+
+def _reports_db_019_create_source_identity_observations(
+    conn: sqlite3.Connection,
+) -> None:
+    """Add immutable source identity evidence and deterministic resolutions."""
+    conn.execute(_SOURCE_IDENTITY_OBSERVATIONS_TABLE_SQL)
+    conn.execute(_SOURCE_IDENTITY_RESOLUTIONS_TABLE_SQL)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_source_identity_observations_source "
+        "ON source_identity_observations(source_record_id, created_at_utc)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_source_identity_observations_content "
+        "ON source_identity_observations(content_hash)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_source_identity_resolutions_identity "
+        "ON source_identity_resolutions(source_identity_id)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_source_identity_resolutions_hash "
+        "ON source_identity_resolutions(source_metadata_hash)"
+    )
+    for column_name, column_type in (
+        ("source_identity_id", "TEXT"),
+        ("source_metadata_hash", "TEXT"),
+        ("source_identity_status", "TEXT"),
+        ("source_publication_date_status", "TEXT"),
+    ):
+        _add_column_if_missing(
+            conn,
+            table_name="reports",
+            column_name=column_name,
+            column_type=column_type,
+        )

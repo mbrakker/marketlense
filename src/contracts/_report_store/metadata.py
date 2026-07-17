@@ -78,6 +78,18 @@ class ReportMetadataUpsertRequest:
         default_factory=dict,
         metadata={"doc": "Mapping of evidence-pack names to stored JSON paths."},
     )
+    source_identity_id: str = field(
+        default="", metadata={"doc": "Resolved canonical source identity, when available."}
+    )
+    source_metadata_hash: str = field(
+        default="", metadata={"doc": "Resolved source-metadata compatibility hash."}
+    )
+    source_identity_status: str = field(
+        default="unknown", metadata={"doc": "Resolved source identity status."}
+    )
+    source_publication_date_status: str = field(
+        default="unknown", metadata={"doc": "Resolved publication-date status."}
+    )
 
 
 @dataclass(frozen=True)
@@ -199,6 +211,18 @@ class ReportMetadataGetResponse:
         default_factory=dict,
         metadata={"doc": "Mapping of evidence-pack names to stored JSON paths."},
     )
+    source_identity_id: str = field(
+        default="", metadata={"doc": "Resolved canonical source identity, when available."}
+    )
+    source_metadata_hash: str = field(
+        default="", metadata={"doc": "Resolved source-metadata compatibility hash."}
+    )
+    source_identity_status: str = field(
+        default="unknown", metadata={"doc": "Resolved source identity status."}
+    )
+    source_publication_date_status: str = field(
+        default="unknown", metadata={"doc": "Resolved publication-date status."}
+    )
 
 
 @dataclass(frozen=True)
@@ -264,6 +288,12 @@ class ReportSourceIdentityResolveResponse:
         default="",
         metadata={
             "doc": "Lookup source used: md5, title_unambiguous, title_publisher_unambiguous, or unresolved."
+        },
+    )
+    source_identity: SourceIdentityResolution | None = field(
+        default=None,
+        metadata={
+            "doc": "Resolved canonical source identity when observations are available."
         },
     )
 
@@ -428,6 +458,186 @@ class SourcePublicationMetadataUpsertResponse:
     )
     changed: bool = field(
         metadata={"doc": "Whether persistence changed the stored canonical metadata."}
+    )
+
+
+@dataclass(frozen=True)
+class SourceIdentityObservation:
+    """An immutable, bounded observation used to resolve report-source identity."""
+
+    schema_version: str = field(
+        metadata={"doc": "Source-identity observation schema version."}
+    )
+    source_record_id: int = field(
+        metadata={"doc": "Existing report_sources row that produced this observation."}
+    )
+    canonical_title: str = field(
+        default="", metadata={"doc": "Observed canonical source title, when available."}
+    )
+    title_evidence_locator: str = field(
+        default="",
+        metadata={"doc": "Bounded location that supports the observed canonical title."},
+    )
+    publisher_id: str = field(
+        default="", metadata={"doc": "Stable publisher identifier, when already known."}
+    )
+    publisher_name: str = field(
+        default="", metadata={"doc": "Observed publisher display name, when known."}
+    )
+    canonical_landing_page_url: str = field(
+        default="", metadata={"doc": "Canonical publisher landing-page URL."}
+    )
+    acquired_artifact_url: str = field(
+        default="",
+        metadata={"doc": "Safe-to-retain URL used to acquire the source artifact."},
+    )
+    source_page_url: str = field(
+        default="", metadata={"doc": "Publisher page on which the source was observed."}
+    )
+    publication_date: str = field(
+        default="", metadata={"doc": "Observed publication date without invented precision."}
+    )
+    publication_date_status: str = field(
+        default="unknown",
+        metadata={
+            "doc": "verified, publisher_inferred, document_inferred, or unknown."
+        },
+    )
+    publication_date_evidence_locator: str = field(
+        default="", metadata={"doc": "Bounded location supporting the publication date."}
+    )
+    discovered_at_utc: str = field(
+        default="", metadata={"doc": "UTC instant when the source was discovered."}
+    )
+    retrieved_at_utc: str = field(
+        default="", metadata={"doc": "UTC instant when source evidence was retrieved."}
+    )
+    acquisition_route: str = field(
+        default="", metadata={"doc": "Observed acquisition route or route family."}
+    )
+    content_hash: str = field(
+        default="", metadata={"doc": "Algorithm-prefixed immutable source-content hash."}
+    )
+    resolution_method: str = field(
+        default="", metadata={"doc": "Method that produced this identity observation."}
+    )
+    identity_confidence: str = field(
+        default="unknown", metadata={"doc": "high, medium, low, or unknown."}
+    )
+    identity_issues: Tuple[str, ...] = field(
+        default_factory=tuple,
+        metadata={"doc": "Stable, bounded identity limitations for operator inspection."},
+    )
+    supersedes_source_identity_id: str = field(
+        default="",
+        metadata={"doc": "Prior canonical source identity superseded by this observation."},
+    )
+
+
+@dataclass(frozen=True)
+class SourceIdentityResolution:
+    """Deterministic canonical identity selected from immutable observations."""
+
+    schema_version: str = field(
+        metadata={"doc": "Resolved source-identity schema version."}
+    )
+    source_record_id: int = field(
+        default=0, metadata={"doc": "Resolved report_sources row identifier."}
+    )
+    source_identity_id: str = field(
+        default="", metadata={"doc": "Stable canonical identity derived from source content."}
+    )
+    canonical_title: str = field(default="", metadata={"doc": "Resolved canonical title."})
+    title_evidence_locator: str = field(
+        default="", metadata={"doc": "Evidence location supporting the resolved title."}
+    )
+    publisher_id: str = field(default="", metadata={"doc": "Resolved publisher identifier."})
+    publisher_name: str = field(default="", metadata={"doc": "Resolved publisher name."})
+    canonical_landing_page_url: str = field(
+        default="", metadata={"doc": "Resolved canonical landing-page URL."}
+    )
+    acquired_artifact_url: str = field(
+        default="", metadata={"doc": "Resolved safe acquisition-artifact URL."}
+    )
+    source_page_url: str = field(default="", metadata={"doc": "Resolved source-page URL."})
+    publication_date: str = field(
+        default="", metadata={"doc": "Resolved date, blank when unknown or conflicting."}
+    )
+    publication_date_status: str = field(
+        default="unknown", metadata={"doc": "Resolved publication-date evidence status."}
+    )
+    publication_date_evidence_locator: str = field(
+        default="", metadata={"doc": "Evidence location supporting the resolved date."}
+    )
+    discovered_at_utc: str = field(default="", metadata={"doc": "Resolved discovery instant."})
+    retrieved_at_utc: str = field(default="", metadata={"doc": "Resolved retrieval instant."})
+    acquisition_route: str = field(default="", metadata={"doc": "Resolved acquisition route."})
+    content_hash: str = field(default="", metadata={"doc": "Resolved source-content hash."})
+    resolution_method: str = field(default="", metadata={"doc": "Deterministic resolver method."})
+    identity_confidence: str = field(default="unknown", metadata={"doc": "Resolved confidence label."})
+    identity_issues: Tuple[str, ...] = field(
+        default_factory=tuple, metadata={"doc": "Retained deterministic conflict and gap reasons."}
+    )
+    supersedes_source_identity_id: str = field(
+        default="", metadata={"doc": "Resolved supersession identity, when applicable."}
+    )
+    identity_status: str = field(
+        default="unknown", metadata={"doc": "resolved, legacy_unverified, unknown, or conflicting."}
+    )
+    source_metadata_hash: str = field(
+        default="", metadata={"doc": "Stable hash of the resolved public source metadata."}
+    )
+    observation_count: int = field(
+        default=0, metadata={"doc": "Number of immutable observations considered."}
+    )
+
+
+@dataclass(frozen=True)
+class SourceIdentityObservationRecordRequest:
+    schema_version: str = field(
+        metadata={"doc": "Source-identity observation persistence request schema version."}
+    )
+    db_path: str = field(metadata={"doc": "Reports SQLite database path."})
+    observation: SourceIdentityObservation = field(
+        metadata={"doc": "Immutable source observation to record idempotently."}
+    )
+
+
+@dataclass(frozen=True)
+class SourceIdentityObservationRecordResponse:
+    schema_version: str = field(
+        metadata={"doc": "Source-identity observation persistence response schema version."}
+    )
+    observation_id: str = field(metadata={"doc": "Stable immutable observation identifier."})
+    created: bool = field(metadata={"doc": "Whether a new immutable observation was stored."})
+    resolution: SourceIdentityResolution = field(
+        metadata={"doc": "Current deterministic canonical resolution after persistence."}
+    )
+
+
+@dataclass(frozen=True)
+class ReportSourceIdentityGetRequest:
+    schema_version: str = field(
+        metadata={"doc": "Canonical source-identity lookup request schema version."}
+    )
+    db_path: str = field(metadata={"doc": "Reports SQLite database path."})
+    report_title: str = field(default="", metadata={"doc": "Title fallback lookup key."})
+    md5: Optional[str] = field(default=None, metadata={"doc": "Preferred MD5 lookup key."})
+    publisher_name: Optional[str] = field(
+        default=None, metadata={"doc": "Optional title lookup disambiguator."}
+    )
+
+
+@dataclass(frozen=True)
+class ReportSourceIdentityGetResponse:
+    schema_version: str = field(
+        metadata={"doc": "Canonical source-identity lookup response schema version."}
+    )
+    resolution: SourceIdentityResolution = field(
+        metadata={"doc": "Resolved canonical identity or explicit legacy/unknown state."}
+    )
+    resolution_source: str = field(
+        metadata={"doc": "md5, title_unambiguous, title_publisher_unambiguous, or unresolved."}
     )
 
 

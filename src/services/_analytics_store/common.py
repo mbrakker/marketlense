@@ -8,15 +8,16 @@ import threading
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterable
+
 from src.contracts.cross_report_analysis import (
     CrossReportReadContentClass,
 )
 from src.contracts.run_context import RunContext
 from src.contracts.sqlite_migration import SqliteMigrationApplyRequest
-from src.services.sqlite_migration_service import apply_reports_db_migrations
 from src.services._sqlite_common import (
     configure_sqlite_connection,
 )
+from src.services.sqlite_migration_service import apply_reports_db_migrations
 from src.utils.errors import AppError
 
 DEFAULT_BUSY_TIMEOUT_SECONDS = 5.0
@@ -324,7 +325,7 @@ def _analytics_conn(path: str, ctx: RunContext):
                     schema_version="1.0",
                     database_key="reports_db",
                     db_path=db_path,
-                    target_version=18,
+                    target_version=19,
                     ctx=ctx,
                 ),
                 conn,

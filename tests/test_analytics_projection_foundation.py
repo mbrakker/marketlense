@@ -6,12 +6,12 @@ from dataclasses import asdict, replace
 import pytest
 
 from src.contracts.analytics_projection import (
+    PROJECTION_SCHEMA_VERSION,
+    PROJECTION_VERSION,
     AnalyticsProjectionBuildRequest,
     AnalyticsProjectionFailureRequest,
     AnalyticsProjectionRunRequest,
     AnalyticsProjectionUpsertRequest,
-    PROJECTION_SCHEMA_VERSION,
-    PROJECTION_VERSION,
 )
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestSettings
@@ -24,6 +24,11 @@ from src.contracts.report_generation import (
     ReportSourceState,
 )
 from src.contracts.report_models import Figure, Quote, ReportFigureAsset, ReportPayload
+from src.contracts.report_store import (
+    ReportSourceRecordRequest,
+    SourceIdentityObservation,
+    SourceIdentityObservationRecordRequest,
+)
 from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationReport
 from src.generators.analytics_projection_generator import build_projection
@@ -35,6 +40,10 @@ from src.orchestrators.analytics_projection_orchestrator import (
 from src.services.analytics_store_service import (
     record_projection_failure,
     upsert_projection,
+)
+from src.services.report_store_service import (
+    record_report_source,
+    record_source_identity_observation,
 )
 from src.utils.errors import AppError
 
@@ -464,6 +473,71 @@ def test_projection_store_uses_existing_report_source_url_when_payload_is_blank(
     assert report["source_url"] == "https://example.com/original-market-report"
 
 
+def test_projection_store_persists_resolved_source_identity(
+    ingest_settings: IngestSettings,
+    run_context: RunContext,
+) -> None:
+    source = record_report_source(
+        ReportSourceRecordRequest(
+            schema_version="1.0",
+            db_path=ingest_settings.reports_db,
+            source_domain="example.com",
+            report_name="Future Markets 2026",
+            landing_page_url="https://publisher.example/future-markets",
+            downloaded_at_utc="2026-07-17T08:30:00Z",
+            md5="source-md5",
+            publisher_name="Acme Research",
+        ),
+        run_context,
+    )
+    record_source_identity_observation(
+        SourceIdentityObservationRecordRequest(
+            schema_version="1.0",
+            db_path=ingest_settings.reports_db,
+            observation=SourceIdentityObservation(
+                schema_version="1.0",
+                source_record_id=source.record_id,
+                canonical_title="Future Markets 2026",
+                title_evidence_locator="terminal_evidence.final_page_title",
+                publisher_name="Acme Research",
+                canonical_landing_page_url="https://publisher.example/future-markets",
+                source_page_url="https://publisher.example/future-markets",
+                publication_date_status="unknown",
+                discovered_at_utc="2026-07-17T08:00:00Z",
+                retrieved_at_utc="2026-07-17T08:30:00Z",
+                acquisition_route="browser_direct_pdf",
+                content_hash="md5:source-md5",
+                resolution_method="browser_terminal_evidence",
+                identity_confidence="high",
+            ),
+        ),
+        run_context,
+    )
+    upsert_projection(
+        AnalyticsProjectionUpsertRequest(
+            schema_version=PROJECTION_SCHEMA_VERSION,
+            db_path=ingest_settings.reports_db,
+            batch=_batch(ingest_settings, run_context),
+        ),
+        run_context,
+    )
+
+    report = _fetch_one(
+        ingest_settings.reports_db,
+        """
+        SELECT source_identity_id, source_metadata_hash, source_identity_status,
+               source_publication_date_status, source_url
+        FROM reports WHERE file_id=?
+        """,
+        ("drive-file-1",),
+    )
+    assert str(report["source_identity_id"]).startswith("source:")
+    assert len(str(report["source_metadata_hash"])) == 64
+    assert report["source_identity_status"] == "resolved"
+    assert report["source_publication_date_status"] == "unknown"
+    assert report["source_url"] == "https://example.com/report"
+
+
 def test_projection_readback_exposes_original_source_url_and_page_metadata(
     ingest_settings: IngestSettings,
     run_context: RunContext,
@@ -627,8 +701,8 @@ def test_projection_store_migrates_legacy_reports_schema_and_records_ledger(
                 """
             ).fetchall()
         }
-    assert schema_version == (18,)
-    assert ledger_count == 18
+    assert schema_version == (19,)
+    assert ledger_count == 19
     assert analytics_tables == {
         "report_sections",
         "report_findings",

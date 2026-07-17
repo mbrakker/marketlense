@@ -67,6 +67,20 @@ def _current_source_metadata_hash(conn, report_id: str) -> str:
     ).fetchone()
     if row is None:
         return ""
+    identity_row = conn.execute(
+        """
+        SELECT resolution.source_metadata_hash
+        FROM source_identity_resolutions AS resolution
+        JOIN report_sources AS source ON source.id = resolution.source_record_id
+        WHERE COALESCE(source.md5, '') <> ''
+          AND source.md5 = COALESCE(?, '')
+        ORDER BY source.downloaded_at_utc DESC, source.updated_at DESC, source.id DESC
+        LIMIT 1
+        """,
+        (str(row[3] or "").strip(),),
+    ).fetchone()
+    if identity_row and str(identity_row[0] or "").strip():
+        return str(identity_row[0]).strip()
     publication_row = conn.execute(
         """
         SELECT

@@ -198,6 +198,7 @@ def test_run_report_download_uses_memory_and_records_route(
     settings = _settings(tmp_path)
     saved_records = []
     saved_sources = []
+    saved_source_identity_observations = []
 
     def _download(req, ctx):
         assert req.route_hint == "Use the first Download report button."
@@ -295,6 +296,17 @@ def test_run_report_download_uses_memory_and_records_route(
             },
         )()
 
+    def _record_source_identity_observation(req, ctx):
+        saved_source_identity_observations.append(req)
+        return SimpleNamespace(
+            created=True,
+            resolution=SimpleNamespace(
+                identity_status="complete",
+                publication_date_status="unknown",
+                source_metadata_hash="source-metadata-hash",
+            ),
+        )
+
     deps = ReportDownloadDependencies(
         download_report_with_browser_use=_download,
         get_publisher_download_route=_get_route,
@@ -302,6 +314,7 @@ def test_run_report_download_uses_memory_and_records_route(
         file_md5=_file_md5,
         record_report_source=_record_source,
         upsert_browser_download_identity_fields=_upsert_identity,
+        record_source_identity_observation=_record_source_identity_observation,
         record_report_value_score=lambda req, ctx: None,
         sleep_fn=lambda seconds: None,
     )
@@ -328,6 +341,12 @@ def test_run_report_download_uses_memory_and_records_route(
     assert saved_sources[0].report_name == "report"
     assert saved_sources[0].landing_page_url == "https://example.com/report"
     assert saved_sources[0].md5 == "abc123"
+    assert len(saved_source_identity_observations) == 1
+    observation = saved_source_identity_observations[0].observation
+    assert observation.source_record_id == 1
+    assert observation.acquisition_route == "pdf_download"
+    assert observation.content_hash == "md5:abc123"
+    assert observation.publication_date_status == "unknown"
     assert_no_defaulted_required_fields(response)
     assert_logs_have_required_fields(
         _events(caplog, "market_lense.report_download_orchestrator")

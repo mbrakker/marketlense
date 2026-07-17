@@ -237,5 +237,11 @@ def build_report_card_manifest(
             "key_insights": insights,
             "fingerprint": asdict(request.fingerprint),
             "covers": asdict(request.covers),
+            "source_title": " ".join(request.source_title.split()),
+            "source_url": " ".join(request.source_url.split()),
+            "source_note": " ".join(request.source_note.split()),
+            "source_metadata_hash": request.source_metadata_hash,
+            "source_identity_status": request.source_identity_status,
+            "source_publication_date_status": request.source_publication_date_status,
         }
     )
