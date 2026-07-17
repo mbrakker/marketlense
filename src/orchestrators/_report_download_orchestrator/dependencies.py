@@ -11,19 +11,19 @@ from src.contracts.browser_download import (
     BrowserDownloadRequiredSelectOverrideResponse,
     BrowserReportDownloadRequest,
     BrowserReportDownloadResult,
+    BrowserRoutePlaybookPromotionResponse,
     BrowserRoutePrivateApiAutoPromotionDetectionRequest,
     BrowserRoutePrivateApiAutoPromotionDetectionResponse,
-    BrowserRoutePlaybookPromotionResponse,
 )
 from src.contracts.drive import (
     DriveFolderEnsureRequest,
     DriveFolderEnsureResponse,
     DriveFolderFileListRequest,
     DriveFolderFileListResponse,
-    DriveWritePreflightRequest,
-    DriveWritePreflightResponse,
     DriveUploadLocalFileRequest,
     DriveUploadLocalFileResponse,
+    DriveWritePreflightRequest,
+    DriveWritePreflightResponse,
 )
 from src.contracts.files import (
     FileHashRequest,
@@ -35,35 +35,37 @@ from src.contracts.files import (
     WriteBytesRequest,
     WriteBytesResponse,
 )
+from src.contracts.mailbox_acquisition import MailboxSearchRequest, MailboxSearchResult
 from src.contracts.report_store import (
-    PublisherPrivateApiCandidateObservationRecordRequest,
-    PublisherPrivateApiCandidateObservationRecordResponse,
-    PublisherGoogleFolderUpdateRequest,
-    PublisherGoogleFolderUpdateResponse,
-    PublisherPrivateApiCandidatePromotedRequest,
     PublisherDownloadRouteGetRequest,
     PublisherDownloadRouteRecordRequest,
     PublisherDownloadRouteResponse,
+    PublisherGoogleFolderUpdateRequest,
+    PublisherGoogleFolderUpdateResponse,
+    PublisherPrivateApiCandidateObservationRecordRequest,
+    PublisherPrivateApiCandidateObservationRecordResponse,
+    PublisherPrivateApiCandidatePromotedRequest,
     ReportDownloadDriveFolderLookupRequest,
     ReportDownloadDriveFolderLookupResponse,
     ReportSourceRecordRequest,
     ReportSourceRecordResponse,
+    ReportValueScoreRecordRequest,
+    ReportValueScoreRequest,
+    ReportValueScoreResponse,
+    SourceIdentityObservationRecordRequest,
+    SourceIdentityObservationRecordResponse,
     SourcePublicationMetadataExtractionRequest,
     SourcePublicationMetadataExtractionResponse,
     SourcePublicationMetadataUpsertRequest,
     SourcePublicationMetadataUpsertResponse,
-    ReportValueScoreRecordRequest,
-    ReportValueScoreRequest,
-    ReportValueScoreResponse,
 )
+from src.contracts.run_context import RunContext
 from src.contracts.state import (
     MailDeliveryRequestUpsertRequest,
     MailDeliveryRequestUpsertResponse,
     WorkflowControlObservationWriteRequest,
     WorkflowControlObservationWriteResponse,
 )
-from src.contracts.mailbox_acquisition import MailboxSearchRequest, MailboxSearchResult
-from src.contracts.run_context import RunContext
 from src.generators.report_value_generator import score_report_value
 from src.services.browser_report_download_service import (
     detect_private_api_promotion_candidates,
@@ -83,22 +85,23 @@ from src.services.drive_service import (
     upload_local_file,
 )
 from src.services.file_service import file_md5, file_stat, read_bytes, write_bytes
+from src.services.mailbox_acquisition_service import preflight_mailbox_search
 from src.services.report_store_service import (
-    get_report_download_drive_folder,
     get_publisher_download_route,
+    get_report_download_drive_folder,
     mark_publisher_private_api_candidate_promoted,
-    record_publisher_private_api_candidate_observation,
     record_publisher_download_route,
+    record_publisher_private_api_candidate_observation,
     record_report_source,
     record_report_value_score,
-    upsert_source_publication_metadata,
+    record_source_identity_observation,
     update_publisher_google_folder,
+    upsert_source_publication_metadata,
 )
 from src.services.state_service import (
     upsert_mail_delivery_request,
     write_workflow_control_observation,
 )
-from src.services.mailbox_acquisition_service import preflight_mailbox_search
 
 
 @dataclass(frozen=True)
@@ -165,6 +168,12 @@ class ReportDownloadDependencies:
         [SourcePublicationMetadataUpsertRequest, RunContext],
         SourcePublicationMetadataUpsertResponse,
     ] = upsert_source_publication_metadata
+    record_source_identity_observation: Optional[
+        Callable[
+            [SourceIdentityObservationRecordRequest, RunContext],
+            SourceIdentityObservationRecordResponse,
+        ]
+    ] = None
     write_bytes: Callable[[WriteBytesRequest, RunContext], WriteBytesResponse] = (
         write_bytes
     )
@@ -216,6 +225,7 @@ class ReportDownloadDependencies:
             record_report_source=record_report_source,
             extract_source_publication_metadata=extract_source_publication_metadata,
             upsert_source_publication_metadata=upsert_source_publication_metadata,
+            record_source_identity_observation=record_source_identity_observation,
             score_report_value=score_report_value,
             record_report_value_score=record_report_value_score,
             read_bytes=read_bytes,

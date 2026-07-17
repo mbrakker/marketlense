@@ -17,6 +17,10 @@ $meta_keys = [
     'ml_time_period',
     'ml_region',
     'ml_public_intelligence',
+    'ml_source_title',
+    'ml_source_url',
+    'ml_source_note',
+    'ml_source_publication_date',
 ];
 
 foreach ($meta_keys as $meta_key) {

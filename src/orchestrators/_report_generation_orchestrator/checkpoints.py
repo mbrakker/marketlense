@@ -37,8 +37,11 @@ from src.contracts.report_generation import (
     ReportSelectionState,
     ReportSourceState,
 )
-from src.contracts.report_store import SourcePublicationMetadata
 from src.contracts.report_models import Figure, Quote, ReportFigureAsset, ReportPayload
+from src.contracts.report_store import (
+    SourceIdentityResolution,
+    SourcePublicationMetadata,
+)
 from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationIssue, ValidationReport
 from src.generators.report_analysis_generator import VectorStoreIndexingState
@@ -70,6 +73,7 @@ def _build_runtime_state(
     source_report_name: str = "",
     source_url: str = "",
     source_publication_metadata: SourcePublicationMetadata | None = None,
+    source_identity: SourceIdentityResolution | None = None,
     execution_compatibility: Optional[dict[str, object]] = None,
     execution_plan_hash: str = "",
     execution_plan_intent: str = "",
@@ -101,6 +105,7 @@ def _build_runtime_state(
         source_report_name=str(source_report_name or "").strip(),
         source_url=str(source_url or "").strip(),
         source_publication_metadata=source_publication_metadata,
+        source_identity=source_identity,
         execution_compatibility=dict(execution_compatibility or {}),
         execution_plan_hash=str(execution_plan_hash or "").strip(),
         execution_plan_intent=str(execution_plan_intent or "").strip(),
@@ -397,8 +402,12 @@ def _record_checkpoint_artifact_lineage(
             **dict(runtime.execution_compatibility),
             **compatibility,
         }
+        source_metadata_hash = str(
+            getattr(runtime.source_identity, "source_metadata_hash", "") or ""
+        ).strip()
         compatibility["source_metadata_hash"] = {
-            "rendered_html": hashlib.sha256(
+            "rendered_html": source_metadata_hash
+            or hashlib.sha256(
                 json.dumps(
                     {
                         "publisher_name": runtime.publisher_name,

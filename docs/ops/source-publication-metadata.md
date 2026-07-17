@@ -1,4 +1,4 @@
-# Source-supported publication metadata
+# Canonical report-source identity and publication provenance
 
 > **Documentation type:** Current operational reference
 > **Canonical topic:** Source publication provenance
@@ -6,12 +6,22 @@
 
 ## Ownership and flow
 
-The canonical record is `SourcePublicationMetadata` in the report-store
-contract family. Browser acquisition reads only the existing terminal HTML
-snapshot, invokes the deterministic browser-download service parser, and
-persists the bounded provenance against the existing `report_sources` row in
-the reports SQLite database. It never stores page text in the provenance row
-or standard logs.
+Reports migration 19 adds an additive evidence model to the existing reports
+SQLite database. `SourceIdentityObservation` is an immutable, hash-addressed
+observation against an existing `report_sources` row. `SourceIdentityResolution`
+is its current deterministic resolution. The old `SourcePublicationMetadata`
+record remains the date-extraction input and legacy compatibility boundary; it
+is not a substitute for the canonical source identity.
+
+Browser acquisition reads only its terminal HTML snapshot, invokes the
+deterministic browser-download service parser, and records a source observation
+after a completed download. It stores canonical title and evidence locator,
+publisher identifier/name when available, canonical landing/source/artifact
+URLs, publication date/status/evidence locator, discovery/retrieval instants,
+route, content hash, resolution method/confidence, issues, and supersession
+reference. It never stores page text in provenance tables or standard logs.
+New observations accept only absolute HTTP(S) URLs; unsafe URLs from historic
+rows are suppressed before any public projection.
 
 The current implemented extraction order is JSON-LD `datePublished`, Open
 Graph `article:published_time`, named publication-date metadata, then a
@@ -20,34 +30,45 @@ precision supplied by the source: `YYYY-MM-DD`, `YYYY-MM`, or `YYYY`. The
 parser never considers filenames, local timestamps, download time, Drive
 timestamps, title text, generic page text, or an LLM.
 
-The record retains the source URL, retrieval instant, extraction kind and
-locator, SHA-256 of the observed value, status, contradiction state, and all
-bounded observations. Repeating the same observation is idempotent. A valid
-observation remains selected over a weaker unknown or invalid observation;
-incompatible valid values are retained and set `conflicting` rather than being
-silently replaced.
+Observation IDs are stable hashes of the bounded contract. Repeating an exact
+observation is idempotent; a contradictory later observation is retained rather
+than overwritten. The resolver prefers publisher-verifiable dates, then the
+highest confidence evidence, with stable deterministic tie-breakers. A verified
+date disagreement makes the resolution `conflicting`, clears its public date,
+and retains `publication_date_conflict`. Unknown dates remain `unknown`—they
+are never inferred from filenames, timestamps, Drive metadata, generic page
+text, or an LLM. Legacy v18 records resolve as `legacy_unverified` until a new
+observation is recorded.
+
+The resolution's `source_metadata_hash` covers only public identity/provenance
+fields, not observation insertion time. It is persisted on report metadata,
+analytics projections, and the report-card manifest. The public package and
+WordPress receive only source title, safe URL, publication date, and a short
+publisher/title note; evidence locators, confidence, routes, issues, and
+retrieval details remain private.
 
 ## Rendering and recovery policy
 
-Report generation resolves this record through `report_store_service` before
-rendering. A verified date is the only date supplied to a report-card manifest.
-`unknown` and `legacy_unverified` are rendered without a date, so private
-report processing remains possible. `invalid` and `conflicting` provenance
-raises `source_publication_metadata_not_renderable`; the existing
-report-generation terminal failure boundary writes the durable remediation
-record and prevents public use of an invented date.
+Report generation resolves canonical source identity through
+`report_store_service` before rendering. A verified date is the only date
+supplied to a report-card manifest. `unknown` and `legacy_unverified` are
+rendered without a date, so private report processing remains possible.
+Conflicting date provenance is fail-closed at the existing publication-metadata
+boundary: it writes durable remediation evidence and prevents public use of an
+invented date.
 
-The render-only lineage compatibility hash includes the full persisted
-publication provenance. Changing it invalidates rendered HTML and downstream
-publication only; it does not require source parsing, OCR, selection, report
-analysis, artifact generation, validation, or a provider call.
+The render-only lineage compatibility hash now uses the resolved v19 source
+metadata hash, falling back to v18 only for historic rows. A metadata-only
+change invalidates rendered HTML and downstream publication only; it does not
+require source parsing, OCR, selection, report analysis, artifact generation,
+validation, or a provider call.
 
 ## Operator validation and rollback
 
 Run the focused checks after a source-provenance change:
 
 ```powershell
-python -m pytest tests/test_source_publication_metadata.py tests/test_report_render_generator.py tests/test_minimal_execution_planner.py
+python -m pytest -q tests/test_source_identity_provenance.py tests/test_source_publication_metadata.py tests/test_report_render_generator_publication_metadata.py tests/test_minimal_execution_planner.py tests/test_wordpress_report_card_contract.py
 python scripts/ci/check_contract_schemas.py --snapshot docs/quality/contract_schemas.json
 ```
 
@@ -59,8 +80,11 @@ command reports any terminal render hold without executing a repair:
 python -m src.cli remediation-soak
 ```
 
-The migration is additive. A rollback to an earlier application revision
-leaves the provenance table unused without rewriting legacy records. To stop a
-bad source from becoming public, retain the resulting remediation record and
-correct or remove the supporting publisher evidence before a render-only
-repair.
+The migration is additive: it creates `source_identity_observations` and
+`source_identity_resolutions` plus nullable report/projection columns, and
+does not rewrite legacy source rows. To disable consumption of resolved
+identity while preserving observations, deploy the prior v18-compatible
+application revision; it ignores the v19 tables and retains the old bounded
+publication behavior. Do not drop v19 tables as part of rollback. To stop a
+bad source becoming public, retain the remediation record and correct or
+supersede its supporting publisher evidence before a render-only repair.

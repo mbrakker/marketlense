@@ -12,7 +12,10 @@ from src.contracts.regeneration import (
     RegenerationLoopState,
 )
 from src.contracts.report_models import ReportPayload
-from src.contracts.report_store import SourcePublicationMetadata
+from src.contracts.report_store import (
+    SourceIdentityResolution,
+    SourcePublicationMetadata,
+)
 from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationReport
 from src.utils.errors import AppError
@@ -140,6 +143,12 @@ class ReportRuntimeState:
         default=None,
         metadata={
             "doc": "Persisted source publication provenance consumed by rendering and render-only regeneration."
+        },
+    )
+    source_identity: SourceIdentityResolution | None = field(
+        default=None,
+        metadata={
+            "doc": "Resolved source identity used by public packaging and metadata-only regeneration."
         },
     )
     execution_compatibility: Dict[str, object] = field(

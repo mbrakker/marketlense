@@ -6,8 +6,11 @@ from types import SimpleNamespace
 
 import pytest
 
-from src.contracts.report_store import SourcePublicationMetadata
 from src.contracts.report_cards import ReportCardManifestWriteResponse
+from src.contracts.report_store import (
+    SourceIdentityResolution,
+    SourcePublicationMetadata,
+)
 from src.generators.report_render_generator import (
     render_preview_asset,
     render_report_output,
@@ -40,6 +43,23 @@ def test_render_report_output_writes_verified_source_date_to_complete_manifest(
             evidence_value_hash="source-date-sha",
             evidence_status="verified",
             contradiction_status="none",
+        ),
+        source_identity=SourceIdentityResolution(
+            schema_version="1.0",
+            source_record_id=7,
+            source_identity_id="source:verified",
+            canonical_title="Publisher Evidence Report",
+            publisher_name="Publisher Example",
+            canonical_landing_page_url="https://publisher.example/report",
+            publication_date="2026-06-09",
+            publication_date_status="verified",
+            retrieved_at_utc="2026-06-10T08:30:00Z",
+            content_hash="md5:md5",
+            resolution_method="publisher_evidence_preferred",
+            identity_confidence="high",
+            identity_status="resolved",
+            source_metadata_hash="source-metadata-hash",
+            observation_count=1,
         ),
     )
     source = _source(runtime)
@@ -107,6 +127,12 @@ def test_render_report_output_writes_verified_source_date_to_complete_manifest(
     assert manifest.covers.small.output_path == "assets/report-card-small.png"
     assert manifest.covers.medium.output_path == "assets/report-card-medium.png"
     assert manifest.covers.large.output_path == "assets/report-card-large.png"
+    assert manifest.source_title == "Publisher Evidence Report"
+    assert manifest.source_url == "https://publisher.example/report"
+    assert manifest.source_note == "Source: Publisher Example — Publisher Evidence Report"
+    assert manifest.source_metadata_hash == "source-metadata-hash"
+    assert manifest.source_identity_status == "resolved"
+    assert manifest.source_publication_date_status == "verified"
     assert outcome.schema_version == "1.1"
     assert outcome.report_card_manifest_path == str(
         Path(runtime.settings.output_dir)

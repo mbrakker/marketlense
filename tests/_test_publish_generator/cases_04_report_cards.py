@@ -106,6 +106,12 @@ def test_publish_html_uploads_three_card_covers_and_sends_registered_meta(
         "ml_card_cover_small_id": 301,
         "ml_card_cover_medium_id": 302,
         "ml_card_cover_large_id": 303,
+        "ml_source_title": "Global Economic Conditions Quarterly Update",
+        "ml_source_url": "https://publisher.example/reports/global-economic-conditions",
+        "ml_source_note": (
+            "Source: McKinsey & Company — Global Economic Conditions Quarterly Update"
+        ),
+        "ml_source_publication_date": "2026-06-09",
     }
 
 

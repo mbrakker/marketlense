@@ -22,6 +22,7 @@ from src.contracts.report_store import (
     ReportMetadataGetRequest,
     ReportMetadataUpsertRequest,
     ReportPublicationMetadataGetRequest,
+    ReportSourceIdentityGetRequest,
     ReportSourceIdentityResolveRequest,
 )
 from src.contracts.run_context import RunContext
@@ -40,9 +41,10 @@ from src.services.pdf_service import render_preview as render_preview_service
 from src.services.render_service import render_report as render_report_service
 from src.services.report_store_service import (
     get_metadata as get_report_metadata,
-    get_report_publication_metadata,
 )
 from src.services.report_store_service import (
+    get_report_publication_metadata,
+    get_report_source_identity,
     resolve_report_source_identity,
 )
 from src.services.report_store_service import (
@@ -79,6 +81,9 @@ class ReportRenderDependencies:
     get_report_publication_metadata: Callable[
         [ReportPublicationMetadataGetRequest, RunContext], Any
     ] = get_report_publication_metadata
+    get_report_source_identity: Callable[
+        [ReportSourceIdentityGetRequest, RunContext], Any
+    ] = get_report_source_identity
 
     @classmethod
     def default(cls) -> "ReportRenderDependencies":
@@ -98,4 +103,5 @@ class ReportRenderDependencies:
             write_json_object_cache=write_json_object_cache,
             hash_file_bundle=hash_file_bundle,
             get_report_publication_metadata=get_report_publication_metadata,
+            get_report_source_identity=get_report_source_identity,
         )

@@ -5,7 +5,7 @@ import re
 from copy import deepcopy
 from dataclasses import asdict
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 
 from src.contracts.cover_images import CoverImageGenerationRequest, CoverImageReport
 from src.contracts.files import (
@@ -104,6 +104,24 @@ def _publication_date(runtime: ReportRuntimeState) -> str:
     return ""
 
 
+def _public_source_note(runtime: ReportRuntimeState) -> str:
+    """Build concise public attribution without exposing confidence mechanics."""
+    identity = runtime.source_identity
+    title = str(getattr(identity, "canonical_title", "") or "").strip()
+    publisher = str(getattr(identity, "publisher_name", "") or "").strip()
+    if publisher and title:
+        return f"Source: {publisher} — {title}"
+    if title:
+        return f"Source: {title}"
+    return ""
+
+
+def _safe_public_source_url(value: object) -> str:
+    url = str(value or "").strip()
+    parsed = urlsplit(url)
+    return url if parsed.scheme in {"http", "https"} and parsed.netloc else ""
+
+
 def _relative_cover_assets(
     assets: CardCoverAssetSet,
     report_output_dir: Path,
@@ -194,6 +212,21 @@ def _build_metadata_upsert_request(
         analysis_mode=runtime.analysis_mode,
         vector_store_id=analysis.vector_store_id,
         evidence_pack_paths=analysis.evidence_paths,
+        source_identity_id=str(
+            getattr(runtime.source_identity, "source_identity_id", "") or ""
+        ).strip(),
+        source_metadata_hash=str(
+            getattr(runtime.source_identity, "source_metadata_hash", "") or ""
+        ).strip(),
+        source_identity_status=str(
+            getattr(runtime.source_identity, "identity_status", "unknown") or "unknown"
+        ).strip(),
+        source_publication_date_status=str(
+            getattr(
+                runtime.source_identity, "publication_date_status", "unknown"
+            )
+            or "unknown"
+        ).strip(),
     )
 
 
@@ -646,6 +679,33 @@ def render_report_output(
                         cover_assets,
                         report_output_dir,
                     ),
+                    source_title=str(
+                        getattr(runtime.source_identity, "canonical_title", "") or ""
+                    ).strip(),
+                    source_url=_safe_public_source_url(
+                        getattr(
+                            runtime.source_identity,
+                            "canonical_landing_page_url",
+                            runtime.source_url,
+                        )
+                        or runtime.source_url
+                    ),
+                    source_note=_public_source_note(runtime),
+                    source_metadata_hash=str(
+                        getattr(runtime.source_identity, "source_metadata_hash", "") or ""
+                    ).strip(),
+                    source_identity_status=str(
+                        getattr(runtime.source_identity, "identity_status", "unknown")
+                        or "unknown"
+                    ).strip(),
+                    source_publication_date_status=str(
+                        getattr(
+                            runtime.source_identity,
+                            "publication_date_status",
+                            "unknown",
+                        )
+                        or "unknown"
+                    ).strip(),
                 )
             )
             manifest_response = dependencies.write_report_card_manifest(

@@ -36,7 +36,7 @@ All work is listed below in one register. `Active` items have detailed completio
 | Active | A12 | Complete configured model-pricing coverage for spend budgets | Make configured provider spend limits effective for the selected production model families. |
 | Closed | A7 | Budget-aware model routing, compaction, and failure-class fallback | YAML routing, anchor-preserving compaction, same-provider fallback, retained-corpus evidence gate, and regression coverage are active. |
 | Active | A8 | Model-call replay drift comparison | Standalone read-only regression outcome. |
-| Closed | A9 | Source publication metadata and identity fallback for retained regeneration | Schema v18 provenance, MD5-first identity resolution, fail-closed rendering, and live idempotent source capture passed. |
+| Closed | A9 | Canonical report-source identity and publication provenance | Schema v19 immutable observations, deterministic source resolution, safe public projection, render-only invalidation, and live idempotent source capture passed. |
 | Closed | P1 | Publish snapshot naming and synchronous idempotent publishing | Public/UI terminology now says Publish Readiness; the compatibility alias preserves callers and synchronous review-gated publishing remains unchanged. |
 | Active | P2 | Bounded public-observability events | Narrow log-event size-bound hardening for public-facing boundaries. |
 | Active | P3 | Hosted HTTPS, sitemap, and public trust checks | Safe-error boundary completed; hosted trust outcome remains. |
@@ -85,7 +85,7 @@ All work is listed below in one register. `Active` items have detailed completio
 
 - **A3 — Workflow-wide remediation-ledger rollout (2026-07-17):** The generated 31-workflow matrix is CI-checked. A controlled typed `provider_timeout` persisted one remediation record across two submissions; the bounded reaper inspected it once and held it as `operator_action_required` without an executor or external side effect. The read-only soak reported one created, one deduplicated, zero stale, zero eligible, and one held record with no missing runbook mapping. Strict evidence bundle `21a046e89de64aa3a4fcc73250e74074` passed on exact commit `3da3d70e4b202cd2be4f206347982b9d55c94a13`.
 - **A6 — Budget-manager closeout and operational proof (2026-07-17):** The public vector-store service now forwards a typed `RunBudget` and preserves canonical budget-stop errors. A live Drive list, OpenAI vector-store create/delete, and minimal OpenAI JSON call completed under canonical authority; ledger evidence recorded one Drive read, one vector create, one vector cleanup, and 168 LLM tokens. The next Drive and vector calls were blocked before provider I/O. Temporary vector stores were removed. The strict exact-HEAD bundle passed.
-- **A9 — Source publication metadata and identity fallback (2026-07-17):** Reports schema v18 stores bounded source provenance; deterministic extraction, MD5-first identity resolution, and fail-closed rendering are covered by tests. A real retained Drive source page returned HTTP 200 and persisted an explicit `unknown` provenance state without inventing a date; a repeat upsert was idempotent. The strict exact-HEAD bundle passed.
+- **A9 — Canonical report-source identity and publication provenance (2026-07-17):** Reports schema v19 stores immutable, hash-addressed source observations and deterministic resolutions; it preserves v18 compatibility, projects safe source fields to analytics, report cards, and WordPress, and invalidates only rendering/publication when source metadata changes. A live Julius Baer landing page returned HTTP 200 with 218,676 bounded HTML bytes; its existing retained PDF benchmark resolved verified source provenance, while an exact repeat produced no duplicate observation. No LLM call or production write was made.
 - **C8 — CTO evidence-collector integrity (2026-07-17):** The strict collector snapshots retained inputs, validates exact repository HEAD, checks log-content coverage, run IDs, provenance, summary consistency, and every inventoried file hash before publishing. It fails closed without a partial final bundle. R1 owns expansion of the retained runtime corpus, not collector integrity.
 - **C7 — Logging content exposure (2026-07-16):** Standard events apply deterministic byte, depth, node, collection, and text bounds; report and browser terminal events emit scalar summaries with retained audit references; CI rejects direct `fields=asdict(...)` serialization. Focused report/logging and browser suites passed, as did guarded live browser and OpenAI runs. P2 retains the narrow public-boundary size-limit hardening and R6 owns ongoing reduction-telemetry review.
 - **A7 (2026-07-14):** The retained 15-report corpus is now a required no-provider routing gate across 30 configured prompt routes. It confirms explicit policy selection, same-provider constraints, and zero lost retained evidence IDs; focused routing/compaction/fallback tests and the full suite pass.
@@ -327,6 +327,19 @@ The original ten-item screenshot baseline is complete in the committed implement
 - Shadow audits provide retained-fixture and live evidence for crop, prompt-family, validator, and publication plans, including zero unplanned calls for each candidate executor.
 - Crop repair is enabled only after it reuses validated analysis artifacts; targeted prompt repair preserves unaffected artifact families; publication repair verifies the current target without a public write when provenance is incomplete.
 - Each family has an explicit rollback switch, bounded live canary, plan/actual divergence threshold, and regression coverage before enforcement.
+
+#### E8. Use canonical source identity to suppress duplicate research work
+
+- **Title:** Use canonical source identity to suppress duplicate research work
+- **Impact 5 / effort: 2**
+- **Context:** Schema v19 now produces stable canonical source IDs and metadata hashes for the same report observed through different routes, but selection, analytics, and cross-report retrieval do not yet consume that identity as a deduplication and filter key.
+- **Benefit:** Equivalent publisher URLs and repeated downloads can reuse validated evidence and avoid duplicate parsing, embedding, and model work while making source/publisher/date filters precise.
+- **Risks to avoid:** Never merge merely similar titles; require a canonical identity backed by content hash or publisher-verifiable evidence, retain all observations, and leave conflicts visible for operator review.
+- **Success criteria:**
+
+- Selection and cross-report retrieval can filter by canonical source ID, publisher, and verified publication date without exposing private provenance.
+- Equivalent identities reuse validated retained artifacts and record avoided parsing/embedding/model calls; conflicting or unknown identity remains non-reusable.
+- Retained-corpus and bounded live evidence measure duplicate-work suppression, false-merge prevention, and zero unintended public writes.
 
 ### 4. Release Integrity and Architectural Enforcement
 

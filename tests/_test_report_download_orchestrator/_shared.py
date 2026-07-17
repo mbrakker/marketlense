@@ -8,24 +8,17 @@ __file__ = str(
     / "test_report_download_orchestrator.py"
 )
 
-import json
-
-import logging
-
 import hashlib
-
+import json
+import logging
 import sqlite3
-
 import time
-
 from dataclasses import replace
-
 from pathlib import Path
-
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
-
 import yaml
 
 from src.contracts.browser_download import (
@@ -35,69 +28,57 @@ from src.contracts.browser_download import (
     BrowserDownloadRouteStep,
     BrowserDownloadSettings,
     BrowserReportDownloadResult,
+    BrowserRoutePlaybookPromotionResponse,
     BrowserRoutePrivateApiAutoPromotionDetectionResponse,
     BrowserRoutePrivateApiPromotionCandidate,
-    BrowserRoutePlaybookPromotionResponse,
     DownloadTerminalEvidence,
     ReportDownloadOrchestratorRequest,
     ReportDownloadRoutePlanRequest,
 )
-
 from src.contracts.drive import (
     DriveFile,
     DriveFolderEnsureResponse,
     DriveFolderFileListResponse,
-    DriveWritePreflightResponse,
     DriveUploadLocalFileResponse,
+    DriveWritePreflightResponse,
 )
-
 from src.contracts.files import FileHashResponse
-
-from src.contracts.publisher_inventory import PublisherInventoryCandidateTrace
 from src.contracts.mailbox_acquisition import (
     MailboxAcquisitionSettings,
     MailboxSearchResult,
 )
-
+from src.contracts.publisher_inventory import PublisherInventoryCandidateTrace
 from src.contracts.report_store import (
-    PublisherPrivateApiCandidateObservationRecordResponse,
     PublisherDownloadRouteResponse,
+    PublisherGoogleFolderUpdateResponse,
+    PublisherPrivateApiCandidateObservationRecordResponse,
     ReportDownloadDriveFolderLookupResponse,
     ReportSourceRecordResponse,
-    PublisherGoogleFolderUpdateResponse,
-)
-
-from src.orchestrators.report_download_orchestrator import (
-    ReportDownloadDependencies,
-    run_report_download,
-)
-
-from src.orchestrators._report_download_orchestrator.promotions import (
-    evaluate_private_api_playbook_auto_promotion,
-)
-
-from src.orchestrators._report_download_orchestrator.route_planner import (
-    plan_report_download_routes,
-)
-
-from src.services._browser_report_download import request as request_runtime
-
-from src.services.report_store_service import (
-    get_publisher_download_route,
-    record_publisher_download_route,
 )
 from src.contracts.state import (
     MailDeliveryRequestListDueRequest,
     WorkflowControlObservationListRequest,
 )
-
+from src.orchestrators._report_download_orchestrator.promotions import (
+    evaluate_private_api_playbook_auto_promotion,
+)
+from src.orchestrators._report_download_orchestrator.route_planner import (
+    plan_report_download_routes,
+)
+from src.orchestrators.report_download_orchestrator import (
+    ReportDownloadDependencies,
+    run_report_download,
+)
+from src.services._browser_report_download import request as request_runtime
+from src.services.config_service import upsert_browser_download_identity_fields
+from src.services.report_store_service import (
+    get_publisher_download_route,
+    record_publisher_download_route,
+)
 from src.services.state_service import (
     list_due_mail_delivery_requests,
     list_workflow_control_observations,
 )
-
-from src.services.config_service import upsert_browser_download_identity_fields
-
 from src.utils.errors import AppError
 
 

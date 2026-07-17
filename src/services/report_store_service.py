@@ -14,18 +14,18 @@ from src.services._report_store_service.artifact_lineage import (
     record_artifact_lineage,
     trace_artifact_lineage,
 )
+from src.services._report_store_service.download_routes import (
+    get_publisher_download_route,
+    mark_publisher_private_api_candidate_promoted,
+    record_publisher_download_route,
+    record_publisher_private_api_candidate_observation,
+)
 from src.services._report_store_service.execution_plan import (
     build_current_report_execution_compatibility,
     build_minimal_execution_plan,
     read_validated_report_artifacts,
     record_minimal_execution_plan,
     record_minimal_execution_plan_result,
-)
-from src.services._report_store_service.download_routes import (
-    get_publisher_download_route,
-    mark_publisher_private_api_candidate_promoted,
-    record_publisher_download_route,
-    record_publisher_private_api_candidate_observation,
 )
 from src.services._report_store_service.inventory import (
     get_publisher_inventory_recovery_cache_record,
@@ -39,10 +39,12 @@ from src.services._report_store_service.metadata import (
     check_report_db_access,
     get_metadata,
     get_report_publication_metadata,
+    get_report_source_identity,
     list_metadata,
+    record_source_identity_observation,
     resolve_report_source_identity,
-    upsert_source_publication_metadata,
     upsert_metadata,
+    upsert_source_publication_metadata,
 )
 from src.services._report_store_service.publishers import (
     list_publishers,
@@ -67,6 +69,7 @@ __all__ = [
     "check_artifact_reuse",
     "get_metadata",
     "get_report_publication_metadata",
+    "get_report_source_identity",
     "get_artifact_lineage_for_storage",
     "invalidate_artifacts",
     "get_publisher_download_route",
@@ -92,6 +95,7 @@ __all__ = [
     "record_publisher_inventory_state",
     "record_publisher_inventory_test_status",
     "record_report_source",
+    "record_source_identity_observation",
     "replace_publishers",
     "resolve_report_source_identity",
     "update_publisher_google_folder",

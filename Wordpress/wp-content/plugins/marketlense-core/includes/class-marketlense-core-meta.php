@@ -51,6 +51,14 @@ final class Meta
 
     public const META_CARD_COVER_LARGE_ID = 'ml_card_cover_large_id';
 
+    public const META_SOURCE_TITLE = 'ml_source_title';
+
+    public const META_SOURCE_URL = 'ml_source_url';
+
+    public const META_SOURCE_NOTE = 'ml_source_note';
+
+    public const META_SOURCE_PUBLICATION_DATE = 'ml_source_publication_date';
+
     private Content_Parser $parser;
 
     public function __construct(Content_Parser $parser)
@@ -93,6 +101,9 @@ final class Meta
                     self::META_CARD_TLDR_COMPACT,
                     self::META_CARD_TLDR_STANDARD,
                     self::META_CARD_GEOGRAPHY_SCOPE,
+                    self::META_SOURCE_TITLE,
+                    self::META_SOURCE_NOTE,
+                    self::META_SOURCE_PUBLICATION_DATE,
                 ] as $key
             ) {
                 register_post_meta(
@@ -107,6 +118,18 @@ final class Meta
                     ]
                 );
             }
+
+            register_post_meta(
+                $post_type,
+                self::META_SOURCE_URL,
+                [
+                    'single' => true,
+                    'type' => 'string',
+                    'show_in_rest' => true,
+                    'sanitize_callback' => 'esc_url_raw',
+                    'auth_callback' => static fn (): bool => current_user_can('edit_posts'),
+                ]
+            );
 
             register_post_meta(
                 $post_type,

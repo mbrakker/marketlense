@@ -5,18 +5,16 @@ from __future__ import annotations
 import logging
 import sqlite3
 from typing import Any, Sequence
+
 from src.contracts.analytics_projection import (
+    PROJECTION_SCHEMA_VERSION,
     AnalyticsProjectionFailureRequest,
     AnalyticsProjectionFailureResponse,
     AnalyticsProjectionUpsertRequest,
     AnalyticsProjectionUpsertResponse,
-    PROJECTION_SCHEMA_VERSION,
 )
 from src.contracts.run_context import RunContext
 from src.contracts.semantic_ids import ReportId
-from src.utils.errors import AppError
-from src.utils.logging import log_event
-
 from src.services._analytics_store.common import (
     _EMBEDDING_STATUSES,
     _analytics_conn,
@@ -25,6 +23,8 @@ from src.services._analytics_store.common import (
     _table_exists,
     _uid_set,
 )
+from src.utils.errors import AppError
+from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.analytics_store_service")
 
@@ -72,6 +72,54 @@ def _report_source_url_from_store(
     return str(rows[0][0]).strip() if str(rows[0][0] or "").strip() else ""
 
 
+def _report_source_identity_from_store(
+    conn: sqlite3.Connection,
+    *,
+    report_title: str,
+    publisher: str,
+    source_md5: str,
+) -> dict[str, str]:
+    if not (
+        _table_exists(conn, "report_sources")
+        and _table_exists(conn, "source_identity_resolutions")
+    ):
+        return {}
+    where = "s.md5=?" if source_md5 else "lower(s.report_name)=?"
+    params: tuple[str, ...]
+    if source_md5:
+        params = (source_md5,)
+    else:
+        normalized_title = report_title.strip().casefold()
+        normalized_publisher = publisher.strip().casefold()
+        if not normalized_title:
+            return {}
+        where += " AND (?='' OR lower(COALESCE(s.publisher_name, ''))=?)"
+        params = (normalized_title, normalized_publisher, normalized_publisher)
+    rows = conn.execute(
+        f"""
+        SELECT r.source_identity_id, r.source_metadata_hash, r.identity_status,
+               r.publication_date_status, r.canonical_landing_page_url
+        FROM source_identity_resolutions r
+        JOIN report_sources s ON s.id=r.source_record_id
+        WHERE {where}
+        ORDER BY s.downloaded_at_utc DESC, s.updated_at DESC, s.id DESC
+        LIMIT 2
+        """,
+        params,
+    ).fetchall()
+    if len(rows) != 1:
+        return {}
+    row = rows[0]
+    return {
+        "source_identity_id": str(row[0] or "").strip(),
+        "source_metadata_hash": str(row[1] or "").strip(),
+        "source_identity_status": str(row[2] or "unknown").strip() or "unknown",
+        "source_publication_date_status": str(row[3] or "unknown").strip()
+        or "unknown",
+        "source_url": str(row[4] or "").strip(),
+    }
+
+
 def _delete_stale(
     conn: sqlite3.Connection,
     *,
@@ -98,7 +146,15 @@ def _upsert_report(
     title = report.title.strip()
     publisher = report.publisher.strip()
     source_md5 = str(report.source_md5 or "").strip()
-    source_url = report.source_url.strip() or _report_source_url_from_store(
+    source_identity = _report_source_identity_from_store(
+        conn,
+        report_title=title,
+        publisher=publisher,
+        source_md5=source_md5,
+    )
+    source_url = report.source_url.strip() or source_identity.get(
+        "source_url", ""
+    ) or _report_source_url_from_store(
         conn,
         report_title=title,
         publisher=publisher,
@@ -126,6 +182,10 @@ def _upsert_report(
             publisher_id,
             source_md5,
             source_url,
+            source_identity_id,
+            source_metadata_hash,
+            source_identity_status,
+            source_publication_date_status,
             ingest_run_id,
             analysis_run_id,
             validation_status,
@@ -144,7 +204,7 @@ def _upsert_report(
             created_at,
             updated_at
         )
-        VALUES(?, ?, ?, ?, '[]', '[]', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'projected', 1, NULL, NULL, NULL, ?, ?, strftime('%s','now'), strftime('%s','now'))
+        VALUES(?, ?, ?, ?, '[]', '[]', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'projected', 1, NULL, NULL, NULL, ?, ?, strftime('%s','now'), strftime('%s','now'))
         ON CONFLICT(file_id) DO UPDATE SET
             title=excluded.title,
             publisher=excluded.publisher,
@@ -154,6 +214,10 @@ def _upsert_report(
             publisher_id=excluded.publisher_id,
             source_md5=excluded.source_md5,
             source_url=excluded.source_url,
+            source_identity_id=excluded.source_identity_id,
+            source_metadata_hash=excluded.source_metadata_hash,
+            source_identity_status=excluded.source_identity_status,
+            source_publication_date_status=excluded.source_publication_date_status,
             ingest_run_id=excluded.ingest_run_id,
             analysis_run_id=excluded.analysis_run_id,
             validation_status=excluded.validation_status,
@@ -181,6 +245,10 @@ def _upsert_report(
             str(report.publisher_id) if report.publisher_id else None,
             source_md5 or None,
             source_url or None,
+            source_identity.get("source_identity_id") or None,
+            source_identity.get("source_metadata_hash") or None,
+            source_identity.get("source_identity_status") or "unknown",
+            source_identity.get("source_publication_date_status") or "unknown",
             report.ingest_run_id,
             report.analysis_run_id,
             report.validation_status,

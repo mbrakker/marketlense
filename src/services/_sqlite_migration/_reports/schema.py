@@ -535,6 +535,63 @@ CREATE TABLE IF NOT EXISTS source_publication_metadata (
 );
 """
 
+_SOURCE_IDENTITY_OBSERVATIONS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS source_identity_observations (
+  observation_id TEXT PRIMARY KEY,
+  source_record_id INTEGER NOT NULL REFERENCES report_sources(id),
+  schema_version TEXT NOT NULL,
+  canonical_title TEXT NOT NULL DEFAULT '',
+  title_evidence_locator TEXT NOT NULL DEFAULT '',
+  publisher_id TEXT NOT NULL DEFAULT '',
+  publisher_name TEXT NOT NULL DEFAULT '',
+  canonical_landing_page_url TEXT NOT NULL DEFAULT '',
+  acquired_artifact_url TEXT NOT NULL DEFAULT '',
+  source_page_url TEXT NOT NULL DEFAULT '',
+  publication_date TEXT NOT NULL DEFAULT '',
+  publication_date_status TEXT NOT NULL DEFAULT 'unknown',
+  publication_date_evidence_locator TEXT NOT NULL DEFAULT '',
+  discovered_at_utc TEXT NOT NULL DEFAULT '',
+  retrieved_at_utc TEXT NOT NULL DEFAULT '',
+  acquisition_route TEXT NOT NULL DEFAULT '',
+  content_hash TEXT NOT NULL DEFAULT '',
+  resolution_method TEXT NOT NULL DEFAULT '',
+  identity_confidence TEXT NOT NULL DEFAULT 'unknown',
+  identity_issues_json TEXT NOT NULL DEFAULT '[]',
+  supersedes_source_identity_id TEXT NOT NULL DEFAULT '',
+  created_at_utc TEXT NOT NULL
+);
+"""
+
+_SOURCE_IDENTITY_RESOLUTIONS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS source_identity_resolutions (
+  source_record_id INTEGER PRIMARY KEY REFERENCES report_sources(id),
+  schema_version TEXT NOT NULL,
+  source_identity_id TEXT NOT NULL,
+  canonical_title TEXT NOT NULL DEFAULT '',
+  title_evidence_locator TEXT NOT NULL DEFAULT '',
+  publisher_id TEXT NOT NULL DEFAULT '',
+  publisher_name TEXT NOT NULL DEFAULT '',
+  canonical_landing_page_url TEXT NOT NULL DEFAULT '',
+  acquired_artifact_url TEXT NOT NULL DEFAULT '',
+  source_page_url TEXT NOT NULL DEFAULT '',
+  publication_date TEXT NOT NULL DEFAULT '',
+  publication_date_status TEXT NOT NULL DEFAULT 'unknown',
+  publication_date_evidence_locator TEXT NOT NULL DEFAULT '',
+  discovered_at_utc TEXT NOT NULL DEFAULT '',
+  retrieved_at_utc TEXT NOT NULL DEFAULT '',
+  acquisition_route TEXT NOT NULL DEFAULT '',
+  content_hash TEXT NOT NULL DEFAULT '',
+  resolution_method TEXT NOT NULL DEFAULT '',
+  identity_confidence TEXT NOT NULL DEFAULT 'unknown',
+  identity_issues_json TEXT NOT NULL DEFAULT '[]',
+  supersedes_source_identity_id TEXT NOT NULL DEFAULT '',
+  identity_status TEXT NOT NULL DEFAULT 'unknown',
+  source_metadata_hash TEXT NOT NULL DEFAULT '',
+  observation_count INTEGER NOT NULL DEFAULT 0,
+  resolved_at_utc TEXT NOT NULL
+);
+"""
+
 _SIGNAL_CANDIDATES_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS signal_candidates (
   candidate_id TEXT PRIMARY KEY,

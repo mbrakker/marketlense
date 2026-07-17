@@ -4,6 +4,7 @@ import json
 import sqlite3
 from dataclasses import asdict, replace
 from typing import List, Optional
+from urllib.parse import urlsplit
 
 from src.contracts.report_store import (
     ReportMetadataDbAccessRequest,
@@ -12,32 +13,38 @@ from src.contracts.report_store import (
     ReportMetadataGetResponse,
     ReportMetadataListRequest,
     ReportMetadataListResponse,
+    ReportMetadataUpsertRequest,
     ReportPublicationMetadataGetRequest,
     ReportPublicationMetadataGetResponse,
+    ReportSourceIdentityGetRequest,
+    ReportSourceIdentityGetResponse,
     ReportSourceIdentityResolveRequest,
     ReportSourceIdentityResolveResponse,
-    ReportMetadataUpsertRequest,
+    SourceIdentityObservation,
+    SourceIdentityObservationRecordRequest,
+    SourceIdentityObservationRecordResponse,
+    SourceIdentityResolution,
     SourcePublicationMetadata,
     SourcePublicationMetadataUpsertRequest,
     SourcePublicationMetadataUpsertResponse,
     SourcePublicationObservedValue,
 )
 from src.contracts.run_context import RunContext
+from src.services._sqlite_common import table_exists as _table_exists
+from src.utils.cache_utils import sha256_json
 from src.utils.coercion import clean_string_list, coerce_int
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.time_period import normalize_time_period
-from src.services._sqlite_common import table_exists as _table_exists
 
 from .common import (
     ACCESS_TIMEOUT_SECONDS,
-    logger,
     _clean_metadata,
     _configure_sqlite_connection,
     _is_lock_error,
+    logger,
 )
 from .connection import _metadata_conn
-
 
 _PUBLICATION_EVIDENCE_STATUSES = {
     "verified",
@@ -53,6 +60,42 @@ _PUBLICATION_EVIDENCE_KINDS = {
     "visible_publication_label": 3,
 }
 _PUBLICATION_PRECISION = {"year": 1, "month": 2, "day": 3}
+_IDENTITY_PUBLICATION_STATUSES = {
+    "verified",
+    "publisher_inferred",
+    "document_inferred",
+    "unknown",
+}
+_IDENTITY_CONFIDENCE = {"high", "medium", "low", "unknown"}
+_IDENTITY_CONFIDENCE_RANK = {"high": 0, "medium": 1, "low": 2, "unknown": 3}
+_IDENTITY_PUBLICATION_RANK = {
+    "verified": 0,
+    "publisher_inferred": 1,
+    "document_inferred": 2,
+    "unknown": 3,
+}
+
+
+def _safe_identity_url(value: object) -> str:
+    url = str(value or "").strip()
+    parsed = urlsplit(url)
+    return url if parsed.scheme in {"http", "https"} and parsed.netloc else ""
+
+
+def _validate_identity_observation_urls(observation: SourceIdentityObservation) -> None:
+    for field_name in (
+        "canonical_landing_page_url",
+        "acquired_artifact_url",
+        "source_page_url",
+    ):
+        raw_value = str(getattr(observation, field_name) or "").strip()
+        if raw_value and not _safe_identity_url(raw_value):
+            raise AppError(
+                code="source_identity_url_invalid",
+                message="Source identity observation contains an unsafe URL",
+                retryable=False,
+                context={"field_name": field_name},
+            )
 
 
 def _report_source_url_from_store(
@@ -69,7 +112,8 @@ def _report_source_url_from_store(
         md5=md5,
         prefer_title=True,
     )
-    return str(row[3] or "").strip() if row and str(row[3] or "").strip() else None
+    value = _safe_identity_url(row[3]) if row is not None else ""
+    return value or None
 
 
 def _report_source_publisher_from_store(
@@ -198,7 +242,7 @@ def resolve_report_source_identity(
             or str(request.report_title or "").strip(),
             publisher_name=str(row[2] or "").strip()
             or str(request.publisher_name or "").strip(),
-            source_url=str(row[3] or "").strip(),
+            source_url=_safe_identity_url(row[3]),
             resolution_source=source,
         )
     logger.info(
@@ -216,6 +260,554 @@ def resolve_report_source_identity(
         )
     )
     return response
+
+
+def _identity_issues_from_json(raw: object) -> tuple[str, ...]:
+    if not isinstance(raw, str) or not raw.strip():
+        return ()
+    try:
+        values = json.loads(raw)
+    except json.JSONDecodeError:
+        return ()
+    if not isinstance(values, list):
+        return ()
+    return tuple(sorted({str(item).strip() for item in values if str(item).strip()}))
+
+
+def _identity_observation_from_row(row: tuple[object, ...]) -> SourceIdentityObservation:
+    return SourceIdentityObservation(
+        schema_version=str(row[2] or "1.0"),
+        source_record_id=coerce_int(row[1], min_value=0),
+        canonical_title=str(row[3] or "").strip(),
+        title_evidence_locator=str(row[4] or "").strip(),
+        publisher_id=str(row[5] or "").strip(),
+        publisher_name=str(row[6] or "").strip(),
+        canonical_landing_page_url=_safe_identity_url(row[7]),
+        acquired_artifact_url=_safe_identity_url(row[8]),
+        source_page_url=_safe_identity_url(row[9]),
+        publication_date=str(row[10] or "").strip(),
+        publication_date_status=str(row[11] or "unknown").strip() or "unknown",
+        publication_date_evidence_locator=str(row[12] or "").strip(),
+        discovered_at_utc=str(row[13] or "").strip(),
+        retrieved_at_utc=str(row[14] or "").strip(),
+        acquisition_route=str(row[15] or "").strip(),
+        content_hash=str(row[16] or "").strip(),
+        resolution_method=str(row[17] or "").strip(),
+        identity_confidence=str(row[18] or "unknown").strip() or "unknown",
+        identity_issues=_identity_issues_from_json(row[19]),
+        supersedes_source_identity_id=str(row[20] or "").strip(),
+    )
+
+
+def _identity_resolution_hash(resolution: SourceIdentityResolution) -> str:
+    return sha256_json(
+        {
+            "schema_version": resolution.schema_version,
+            "source_identity_id": resolution.source_identity_id,
+            "canonical_title": resolution.canonical_title,
+            "publisher_id": resolution.publisher_id,
+            "publisher_name": resolution.publisher_name,
+            "canonical_landing_page_url": resolution.canonical_landing_page_url,
+            "acquired_artifact_url": resolution.acquired_artifact_url,
+            "source_page_url": resolution.source_page_url,
+            "publication_date": resolution.publication_date,
+            "publication_date_status": resolution.publication_date_status,
+            "publication_date_evidence_locator": resolution.publication_date_evidence_locator,
+            "acquisition_route": resolution.acquisition_route,
+            "content_hash": resolution.content_hash,
+            "resolution_method": resolution.resolution_method,
+            "identity_status": resolution.identity_status,
+            "identity_issues": list(resolution.identity_issues),
+            "supersedes_source_identity_id": resolution.supersedes_source_identity_id,
+        }
+    )
+
+
+def _identity_resolution_from_row(row: tuple[object, ...]) -> SourceIdentityResolution:
+    resolution = SourceIdentityResolution(
+        schema_version=str(row[1] or "1.0"),
+        source_record_id=coerce_int(row[0], min_value=0),
+        source_identity_id=str(row[2] or "").strip(),
+        canonical_title=str(row[3] or "").strip(),
+        title_evidence_locator=str(row[4] or "").strip(),
+        publisher_id=str(row[5] or "").strip(),
+        publisher_name=str(row[6] or "").strip(),
+        canonical_landing_page_url=_safe_identity_url(row[7]),
+        acquired_artifact_url=_safe_identity_url(row[8]),
+        source_page_url=_safe_identity_url(row[9]),
+        publication_date=str(row[10] or "").strip(),
+        publication_date_status=str(row[11] or "unknown").strip() or "unknown",
+        publication_date_evidence_locator=str(row[12] or "").strip(),
+        discovered_at_utc=str(row[13] or "").strip(),
+        retrieved_at_utc=str(row[14] or "").strip(),
+        acquisition_route=str(row[15] or "").strip(),
+        content_hash=str(row[16] or "").strip(),
+        resolution_method=str(row[17] or "").strip(),
+        identity_confidence=str(row[18] or "unknown").strip() or "unknown",
+        identity_issues=_identity_issues_from_json(row[19]),
+        supersedes_source_identity_id=str(row[20] or "").strip(),
+        identity_status=str(row[21] or "unknown").strip() or "unknown",
+        source_metadata_hash=str(row[22] or "").strip(),
+        observation_count=coerce_int(row[23], min_value=0),
+    )
+    return (
+        resolution
+        if resolution.source_metadata_hash
+        else replace(resolution, source_metadata_hash=_identity_resolution_hash(resolution))
+    )
+
+
+def _observation_sort_key(observation: SourceIdentityObservation) -> tuple[object, ...]:
+    return (
+        _IDENTITY_PUBLICATION_RANK.get(observation.publication_date_status, 99),
+        _IDENTITY_CONFIDENCE_RANK.get(observation.identity_confidence, 99),
+        0 if observation.title_evidence_locator else 1,
+        0 if observation.canonical_landing_page_url else 1,
+        observation.resolution_method,
+        observation.canonical_title.casefold(),
+        observation.publisher_name.casefold(),
+        observation.content_hash,
+    )
+
+
+def _first_identity_value(
+    observations: tuple[SourceIdentityObservation, ...], field_name: str
+) -> str:
+    for observation in sorted(observations, key=_observation_sort_key):
+        value = str(getattr(observation, field_name) or "").strip()
+        if value:
+            return value
+    return ""
+
+
+def _identity_conflict_issues(
+    observations: tuple[SourceIdentityObservation, ...]
+) -> tuple[str, ...]:
+    issues = {
+        issue
+        for observation in observations
+        for issue in observation.identity_issues
+        if issue
+    }
+    for field_name, issue in (
+        ("canonical_title", "canonical_title_conflict"),
+        ("publisher_name", "publisher_name_conflict"),
+        ("canonical_landing_page_url", "canonical_landing_page_url_conflict"),
+    ):
+        values = {
+            str(getattr(observation, field_name) or "").strip().casefold()
+            for observation in observations
+            if str(getattr(observation, field_name) or "").strip()
+        }
+        if len(values) > 1:
+            issues.add(issue)
+    dates = {
+        observation.publication_date
+        for observation in observations
+        if observation.publication_date_status == "verified"
+        and observation.publication_date
+    }
+    if len(dates) > 1:
+        issues.add("publication_date_conflict")
+    if not _first_identity_value(observations, "canonical_landing_page_url"):
+        issues.add("canonical_landing_page_url_missing")
+    if not _first_identity_value(observations, "canonical_title"):
+        issues.add("canonical_title_missing")
+    return tuple(sorted(issues))
+
+
+def _resolve_identity_observations(
+    observations: tuple[SourceIdentityObservation, ...],
+) -> SourceIdentityResolution:
+    if not observations:
+        resolution = SourceIdentityResolution(
+            schema_version="1.0",
+            identity_status="unknown",
+            identity_issues=("identity_observation_missing",),
+        )
+        return replace(resolution, source_metadata_hash=_identity_resolution_hash(resolution))
+    chosen = min(observations, key=_observation_sort_key)
+    issues = _identity_conflict_issues(observations)
+    content_hash = _first_identity_value(observations, "content_hash")
+    identity_material = content_hash or "|".join(
+        (
+            _first_identity_value(observations, "canonical_landing_page_url"),
+            _first_identity_value(observations, "publisher_name").casefold(),
+            _first_identity_value(observations, "canonical_title").casefold(),
+        )
+    )
+    source_identity_id = (
+        f"source:{sha256_json({'identity': identity_material})[:32]}"
+        if identity_material
+        else ""
+    )
+    date_conflict = "publication_date_conflict" in issues
+    publication_date = "" if date_conflict else chosen.publication_date
+    publication_status = "unknown" if date_conflict else chosen.publication_date_status
+    identity_status = "resolved" if source_identity_id else "unknown"
+    if date_conflict:
+        identity_status = "conflicting"
+    confidence = chosen.identity_confidence
+    if issues and confidence == "high":
+        confidence = "medium"
+    resolution = SourceIdentityResolution(
+        schema_version="1.0",
+        source_record_id=chosen.source_record_id,
+        source_identity_id=source_identity_id,
+        canonical_title=_first_identity_value(observations, "canonical_title"),
+        title_evidence_locator=_first_identity_value(
+            observations, "title_evidence_locator"
+        ),
+        publisher_id=_first_identity_value(observations, "publisher_id"),
+        publisher_name=_first_identity_value(observations, "publisher_name"),
+        canonical_landing_page_url=_first_identity_value(
+            observations, "canonical_landing_page_url"
+        ),
+        acquired_artifact_url=_first_identity_value(
+            observations, "acquired_artifact_url"
+        ),
+        source_page_url=_first_identity_value(observations, "source_page_url"),
+        publication_date=publication_date,
+        publication_date_status=publication_status,
+        publication_date_evidence_locator=(
+            "" if date_conflict else chosen.publication_date_evidence_locator
+        ),
+        discovered_at_utc=_first_identity_value(observations, "discovered_at_utc"),
+        retrieved_at_utc=_first_identity_value(observations, "retrieved_at_utc"),
+        acquisition_route=_first_identity_value(observations, "acquisition_route"),
+        content_hash=content_hash,
+        resolution_method=(
+            "publisher_evidence_preferred"
+            if chosen.publication_date_status == "verified"
+            else chosen.resolution_method or "deterministic_observation_resolver"
+        ),
+        identity_confidence=confidence,
+        identity_issues=issues,
+        supersedes_source_identity_id=_first_identity_value(
+            observations, "supersedes_source_identity_id"
+        ),
+        identity_status=identity_status,
+        observation_count=len(observations),
+    )
+    return replace(resolution, source_metadata_hash=_identity_resolution_hash(resolution))
+
+
+def _legacy_identity_resolution(
+    conn: sqlite3.Connection, source_record_id: int
+) -> SourceIdentityResolution:
+    row = conn.execute(
+        """
+        SELECT id, report_name, publisher_name, landing_page_url, source_page_url,
+               discovered_at_utc, downloaded_at_utc, md5
+        FROM report_sources WHERE id=?
+        """,
+        (source_record_id,),
+    ).fetchone()
+    if row is None:
+        return _resolve_identity_observations(())
+    md5 = str(row[7] or "").strip().lower()
+    content_hash = f"md5:{md5}" if md5 else ""
+    source_identity_id = (
+        f"source:{sha256_json({'identity': content_hash})[:32]}" if content_hash else ""
+    )
+    resolution = SourceIdentityResolution(
+        schema_version="1.0",
+        source_record_id=coerce_int(row[0], min_value=0),
+        source_identity_id=source_identity_id,
+        canonical_title=str(row[1] or "").strip(),
+        title_evidence_locator="legacy_report_sources.report_name",
+        publisher_name=str(row[2] or "").strip(),
+        canonical_landing_page_url=_safe_identity_url(row[3]),
+        source_page_url=_safe_identity_url(row[4] or row[3]),
+        discovered_at_utc=str(row[5] or "").strip(),
+        retrieved_at_utc=str(row[6] or "").strip(),
+        acquisition_route="legacy_report_source",
+        content_hash=content_hash,
+        resolution_method="legacy_report_sources",
+        identity_confidence="low",
+        identity_issues=("identity_observation_missing", "legacy_source_unverified"),
+        identity_status="legacy_unverified",
+    )
+    return replace(resolution, source_metadata_hash=_identity_resolution_hash(resolution))
+
+
+def _identity_observations_for_source(
+    conn: sqlite3.Connection, source_record_id: int
+) -> tuple[SourceIdentityObservation, ...]:
+    rows = conn.execute(
+        """
+        SELECT observation_id, source_record_id, schema_version, canonical_title,
+               title_evidence_locator, publisher_id, publisher_name,
+               canonical_landing_page_url, acquired_artifact_url, source_page_url,
+               publication_date, publication_date_status,
+               publication_date_evidence_locator, discovered_at_utc,
+               retrieved_at_utc, acquisition_route, content_hash,
+               resolution_method, identity_confidence, identity_issues_json,
+               supersedes_source_identity_id
+        FROM source_identity_observations
+        WHERE source_record_id=?
+        ORDER BY observation_id ASC
+        """,
+        (source_record_id,),
+    ).fetchall()
+    return tuple(_identity_observation_from_row(row) for row in rows)
+
+
+def _store_identity_resolution(
+    conn: sqlite3.Connection, resolution: SourceIdentityResolution
+) -> None:
+    columns = (
+        "source_record_id", "schema_version", "source_identity_id", "canonical_title",
+        "title_evidence_locator", "publisher_id", "publisher_name",
+        "canonical_landing_page_url", "acquired_artifact_url", "source_page_url",
+        "publication_date", "publication_date_status",
+        "publication_date_evidence_locator", "discovered_at_utc", "retrieved_at_utc",
+        "acquisition_route", "content_hash", "resolution_method",
+        "identity_confidence", "identity_issues_json", "supersedes_source_identity_id",
+        "identity_status", "source_metadata_hash", "observation_count", "resolved_at_utc",
+    )
+    values = (
+        resolution.source_record_id, resolution.schema_version, resolution.source_identity_id,
+        resolution.canonical_title, resolution.title_evidence_locator, resolution.publisher_id,
+        resolution.publisher_name, resolution.canonical_landing_page_url,
+        resolution.acquired_artifact_url, resolution.source_page_url,
+        resolution.publication_date, resolution.publication_date_status,
+        resolution.publication_date_evidence_locator, resolution.discovered_at_utc,
+        resolution.retrieved_at_utc, resolution.acquisition_route, resolution.content_hash,
+        resolution.resolution_method, resolution.identity_confidence,
+        json.dumps(list(resolution.identity_issues), ensure_ascii=True, separators=(",", ":")),
+        resolution.supersedes_source_identity_id, resolution.identity_status,
+        resolution.source_metadata_hash, resolution.observation_count,
+        "strftime('%Y-%m-%dT%H:%M:%fZ','now')",
+    )
+    placeholders = ", ".join("?" for _ in columns[:-1]) + ", " + values[-1]
+    update_columns = [column for column in columns[1:] if column != "resolved_at_utc"]
+    update_clause = ", ".join(f"{column}=excluded.{column}" for column in update_columns)
+    conn.execute(
+        f"INSERT INTO source_identity_resolutions({', '.join(columns)}) "
+        f"VALUES({placeholders}) ON CONFLICT(source_record_id) DO UPDATE SET {update_clause}, "
+        "resolved_at_utc=strftime('%Y-%m-%dT%H:%M:%fZ','now')",
+        values[:-1],
+    )
+
+
+def record_source_identity_observation(
+    request: SourceIdentityObservationRecordRequest, ctx: RunContext
+) -> SourceIdentityObservationRecordResponse:
+    observation = request.observation
+    if not request.db_path.strip():
+        raise AppError(
+            code="source_identity_db_missing",
+            message="Reports database path is required for source identity persistence",
+            retryable=False,
+        )
+    if observation.source_record_id <= 0:
+        raise AppError(
+            code="source_identity_source_missing",
+            message="Source identity observation requires a persisted source record",
+            retryable=False,
+        )
+    if observation.publication_date_status not in _IDENTITY_PUBLICATION_STATUSES:
+        raise AppError(
+            code="source_identity_publication_status_invalid",
+            message="Source identity observation has an unsupported publication-date status",
+            retryable=False,
+            context={"publication_date_status": observation.publication_date_status},
+        )
+    if observation.identity_confidence not in _IDENTITY_CONFIDENCE:
+        raise AppError(
+            code="source_identity_confidence_invalid",
+            message="Source identity observation has an unsupported confidence",
+            retryable=False,
+            context={"identity_confidence": observation.identity_confidence},
+        )
+    _validate_identity_observation_urls(observation)
+    observation_id = sha256_json(asdict(observation))
+    with _metadata_conn(request.db_path, ctx) as conn:
+        source_exists = conn.execute(
+            "SELECT 1 FROM report_sources WHERE id=?", (observation.source_record_id,)
+        ).fetchone()
+        if source_exists is None:
+            raise AppError(
+                code="source_identity_source_missing",
+                message="Source identity observation references no report source",
+                retryable=False,
+                context={"source_record_id": observation.source_record_id},
+            )
+        existing = conn.execute(
+            "SELECT source_metadata_hash FROM source_identity_resolutions WHERE source_record_id=?",
+            (observation.source_record_id,),
+        ).fetchone()
+        cur = conn.execute(
+            """
+            INSERT OR IGNORE INTO source_identity_observations(
+                observation_id, source_record_id, schema_version, canonical_title,
+                title_evidence_locator, publisher_id, publisher_name,
+                canonical_landing_page_url, acquired_artifact_url, source_page_url,
+                publication_date, publication_date_status,
+                publication_date_evidence_locator, discovered_at_utc, retrieved_at_utc,
+                acquisition_route, content_hash, resolution_method, identity_confidence,
+                identity_issues_json, supersedes_source_identity_id, created_at_utc
+            ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                     strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+            """,
+            (
+                observation_id, observation.source_record_id, observation.schema_version,
+                observation.canonical_title, observation.title_evidence_locator,
+                observation.publisher_id, observation.publisher_name,
+                observation.canonical_landing_page_url, observation.acquired_artifact_url,
+                observation.source_page_url, observation.publication_date,
+                observation.publication_date_status,
+                observation.publication_date_evidence_locator, observation.discovered_at_utc,
+                observation.retrieved_at_utc, observation.acquisition_route,
+                observation.content_hash, observation.resolution_method,
+                observation.identity_confidence,
+                json.dumps(list(observation.identity_issues), ensure_ascii=True, separators=(",", ":")),
+                observation.supersedes_source_identity_id,
+            ),
+        )
+        resolution = _resolve_identity_observations(
+            _identity_observations_for_source(conn, observation.source_record_id)
+        )
+        _store_identity_resolution(conn, resolution)
+    created = cur.rowcount > 0
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="source_identity_observation_recorded",
+            module=logger.name,
+            fields={
+                "source_record_id": observation.source_record_id,
+                "observation_id": observation_id,
+                "created": created,
+                "publication_date_status": observation.publication_date_status,
+                "acquisition_route": observation.acquisition_route,
+            },
+        )
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="source_identity_resolved",
+            module=logger.name,
+            fields={
+                "source_record_id": resolution.source_record_id,
+                "source_identity_id": resolution.source_identity_id,
+                "identity_status": resolution.identity_status,
+                "publication_date_status": resolution.publication_date_status,
+                "observation_count": resolution.observation_count,
+            },
+        )
+    )
+    if resolution.identity_status == "conflicting" or any(
+        issue.endswith("_conflict") for issue in resolution.identity_issues
+    ):
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="source_identity_conflict",
+                module=logger.name,
+                fields={
+                    "source_record_id": resolution.source_record_id,
+                    "identity_status": resolution.identity_status,
+                    "issue_count": len(resolution.identity_issues),
+                },
+            )
+        )
+    if resolution.publication_date_status == "unknown":
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="source_identity_unknown_publication_date",
+                module=logger.name,
+                fields={"source_record_id": resolution.source_record_id},
+            )
+        )
+    old_hash = str(existing[0] or "").strip() if existing else ""
+    if old_hash and old_hash != resolution.source_metadata_hash:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="source_metadata_hash_changed",
+                module=logger.name,
+                fields={
+                    "source_record_id": resolution.source_record_id,
+                    "source_identity_id": resolution.source_identity_id,
+                },
+            )
+        )
+    return SourceIdentityObservationRecordResponse(
+        schema_version="1.0",
+        observation_id=observation_id,
+        created=created,
+        resolution=resolution,
+    )
+
+
+def get_report_source_identity(
+    request: ReportSourceIdentityGetRequest, ctx: RunContext
+) -> ReportSourceIdentityGetResponse:
+    if not request.db_path.strip():
+        raise AppError(
+            code="source_identity_db_missing",
+            message="Reports database path is required for source identity lookup",
+            retryable=False,
+        )
+    with _metadata_conn(request.db_path, ctx) as conn:
+        row, resolution_source = _report_source_identity_row(
+            conn,
+            report_title=request.report_title,
+            publisher=request.publisher_name,
+            md5=request.md5,
+        )
+        if row is None:
+            resolution = _resolve_identity_observations(())
+        else:
+            source_record_id = coerce_int(row[0], min_value=0)
+            resolution_row = conn.execute(
+                """
+                SELECT source_record_id, schema_version, source_identity_id,
+                       canonical_title, title_evidence_locator, publisher_id,
+                       publisher_name, canonical_landing_page_url,
+                       acquired_artifact_url, source_page_url, publication_date,
+                       publication_date_status, publication_date_evidence_locator,
+                       discovered_at_utc, retrieved_at_utc, acquisition_route,
+                       content_hash, resolution_method, identity_confidence,
+                       identity_issues_json, supersedes_source_identity_id,
+                       identity_status, source_metadata_hash, observation_count
+                FROM source_identity_resolutions WHERE source_record_id=?
+                """,
+                (source_record_id,),
+            ).fetchone()
+            resolution = (
+                _identity_resolution_from_row(resolution_row)
+                if resolution_row is not None
+                else _legacy_identity_resolution(conn, source_record_id)
+            )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="source_identity_resolved",
+            module=logger.name,
+            fields={
+                "source_record_id": resolution.source_record_id,
+                "source_identity_id": resolution.source_identity_id,
+                "identity_status": resolution.identity_status,
+                "resolution_source": resolution_source,
+            },
+        )
+    )
+    return ReportSourceIdentityGetResponse(
+        schema_version="1.0",
+        resolution=resolution,
+        resolution_source=resolution_source,
+    )
 
 
 def _unknown_publication_metadata(
@@ -703,6 +1295,11 @@ def _row_to_metadata_response(row: tuple, ctx: RunContext) -> ReportMetadataGetR
         analysis_mode=str(analysis_mode),
         vector_store_id=vector_store_id,
         evidence_pack_paths=evidence_pack_paths,
+        source_identity_id=str(row[19] or "").strip(),
+        source_metadata_hash=str(row[20] or "").strip(),
+        source_identity_status=str(row[21] or "unknown").strip() or "unknown",
+        source_publication_date_status=str(row[22] or "unknown").strip()
+        or "unknown",
     )
 
 
@@ -921,6 +1518,12 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
     )
     evidence_packs = request.evidence_pack_paths or {}
     evidence_packs_json = json.dumps(evidence_packs, ensure_ascii=False)
+    source_identity_id = request.source_identity_id.strip()
+    source_metadata_hash = request.source_metadata_hash.strip()
+    source_identity_status = request.source_identity_status.strip() or "unknown"
+    source_publication_date_status = (
+        request.source_publication_date_status.strip() or "unknown"
+    )
 
     logger.info(
         log_event(
@@ -959,8 +1562,8 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
         )
         conn.execute(
             """
-            INSERT INTO reports(file_id, file_name, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, page_count, contents_page, pdf_metadata_json, analysis_mode, vector_store_id, evidence_packs_json, created_at, updated_at)
-            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%s','now'), strftime('%s','now'))
+            INSERT INTO reports(file_id, file_name, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, page_count, contents_page, pdf_metadata_json, analysis_mode, vector_store_id, evidence_packs_json, source_identity_id, source_metadata_hash, source_identity_status, source_publication_date_status, created_at, updated_at)
+            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%s','now'), strftime('%s','now'))
             ON CONFLICT(file_id) DO UPDATE SET
                 file_name=COALESCE(excluded.file_name, reports.file_name),
                 title=excluded.title,
@@ -978,6 +1581,10 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
                 analysis_mode=excluded.analysis_mode,
                 vector_store_id=excluded.vector_store_id,
                 evidence_packs_json=excluded.evidence_packs_json,
+                source_identity_id=COALESCE(NULLIF(excluded.source_identity_id, ''), reports.source_identity_id),
+                source_metadata_hash=COALESCE(NULLIF(excluded.source_metadata_hash, ''), reports.source_metadata_hash),
+                source_identity_status=COALESCE(NULLIF(excluded.source_identity_status, ''), reports.source_identity_status),
+                source_publication_date_status=COALESCE(NULLIF(excluded.source_publication_date_status, ''), reports.source_publication_date_status),
                 updated_at=strftime('%s','now')
             """,
             (
@@ -998,6 +1605,10 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
                 analysis_mode,
                 vector_store_id,
                 evidence_packs_json,
+                source_identity_id,
+                source_metadata_hash,
+                source_identity_status,
+                source_publication_date_status,
             ),
         )
     logger.info(
@@ -1026,7 +1637,7 @@ def get_metadata(
     with _metadata_conn(request.db_path, ctx) as conn:
         cur = conn.execute(
             """
-            SELECT file_id, file_name, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, page_count, contents_page, pdf_metadata_json, analysis_mode, vector_store_id, evidence_packs_json, created_at, updated_at
+            SELECT file_id, file_name, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, page_count, contents_page, pdf_metadata_json, analysis_mode, vector_store_id, evidence_packs_json, created_at, updated_at, source_identity_id, source_metadata_hash, source_identity_status, source_publication_date_status
             FROM reports
             WHERE file_id=?
             """,
@@ -1096,7 +1707,7 @@ def list_metadata(
     with _metadata_conn(request.db_path, ctx) as conn:
         cur = conn.execute(
             """
-            SELECT file_id, file_name, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, page_count, contents_page, pdf_metadata_json, analysis_mode, vector_store_id, evidence_packs_json, created_at, updated_at
+            SELECT file_id, file_name, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, page_count, contents_page, pdf_metadata_json, analysis_mode, vector_store_id, evidence_packs_json, created_at, updated_at, source_identity_id, source_metadata_hash, source_identity_status, source_publication_date_status
             FROM reports
             ORDER BY created_at ASC
             """

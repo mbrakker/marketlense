@@ -8506,6 +8506,18 @@
         "schema_version": {
           "type": "string"
         },
+        "source_identity_id": {
+          "type": "string"
+        },
+        "source_identity_status": {
+          "type": "string"
+        },
+        "source_metadata_hash": {
+          "type": "string"
+        },
+        "source_publication_date_status": {
+          "type": "string"
+        },
         "source_url": {
           "anyOf": [
             {
@@ -8689,6 +8701,18 @@
         "schema_version": {
           "type": "string"
         },
+        "source_identity_id": {
+          "type": "string"
+        },
+        "source_identity_status": {
+          "type": "string"
+        },
+        "source_metadata_hash": {
+          "type": "string"
+        },
+        "source_publication_date_status": {
+          "type": "string"
+        },
         "source_url": {
           "anyOf": [
             {
@@ -8796,6 +8820,65 @@
       ],
       "type": "object"
     },
+    "src.contracts._report_store.metadata.ReportSourceIdentityGetRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "md5": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "publisher_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "report_title": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.metadata.ReportSourceIdentityGetResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "resolution": {
+          "$ref": "#/$defs/src.contracts._report_store.metadata.SourceIdentityResolution"
+        },
+        "resolution_source": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "resolution",
+        "resolution_source"
+      ],
+      "type": "object"
+    },
     "src.contracts._report_store.metadata.ReportSourceIdentityResolveRequest": {
       "additionalProperties": false,
       "properties": {
@@ -8850,7 +8933,218 @@
         "schema_version": {
           "type": "string"
         },
+        "source_identity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts._report_store.metadata.SourceIdentityResolution"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "source_url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.metadata.SourceIdentityObservation": {
+      "additionalProperties": false,
+      "properties": {
+        "acquired_artifact_url": {
+          "type": "string"
+        },
+        "acquisition_route": {
+          "type": "string"
+        },
+        "canonical_landing_page_url": {
+          "type": "string"
+        },
+        "canonical_title": {
+          "type": "string"
+        },
+        "content_hash": {
+          "type": "string"
+        },
+        "discovered_at_utc": {
+          "type": "string"
+        },
+        "identity_confidence": {
+          "type": "string"
+        },
+        "identity_issues": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "publication_date": {
+          "type": "string"
+        },
+        "publication_date_evidence_locator": {
+          "type": "string"
+        },
+        "publication_date_status": {
+          "type": "string"
+        },
+        "publisher_id": {
+          "type": "string"
+        },
+        "publisher_name": {
+          "type": "string"
+        },
+        "resolution_method": {
+          "type": "string"
+        },
+        "retrieved_at_utc": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_page_url": {
+          "type": "string"
+        },
+        "source_record_id": {
+          "type": "integer"
+        },
+        "supersedes_source_identity_id": {
+          "type": "string"
+        },
+        "title_evidence_locator": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "source_record_id"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.metadata.SourceIdentityObservationRecordRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "observation": {
+          "$ref": "#/$defs/src.contracts._report_store.metadata.SourceIdentityObservation"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "observation"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.metadata.SourceIdentityObservationRecordResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "created": {
+          "type": "boolean"
+        },
+        "observation_id": {
+          "type": "string"
+        },
+        "resolution": {
+          "$ref": "#/$defs/src.contracts._report_store.metadata.SourceIdentityResolution"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "observation_id",
+        "created",
+        "resolution"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.metadata.SourceIdentityResolution": {
+      "additionalProperties": false,
+      "properties": {
+        "acquired_artifact_url": {
+          "type": "string"
+        },
+        "acquisition_route": {
+          "type": "string"
+        },
+        "canonical_landing_page_url": {
+          "type": "string"
+        },
+        "canonical_title": {
+          "type": "string"
+        },
+        "content_hash": {
+          "type": "string"
+        },
+        "discovered_at_utc": {
+          "type": "string"
+        },
+        "identity_confidence": {
+          "type": "string"
+        },
+        "identity_issues": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "identity_status": {
+          "type": "string"
+        },
+        "observation_count": {
+          "type": "integer"
+        },
+        "publication_date": {
+          "type": "string"
+        },
+        "publication_date_evidence_locator": {
+          "type": "string"
+        },
+        "publication_date_status": {
+          "type": "string"
+        },
+        "publisher_id": {
+          "type": "string"
+        },
+        "publisher_name": {
+          "type": "string"
+        },
+        "resolution_method": {
+          "type": "string"
+        },
+        "retrieved_at_utc": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_identity_id": {
+          "type": "string"
+        },
+        "source_metadata_hash": {
+          "type": "string"
+        },
+        "source_page_url": {
+          "type": "string"
+        },
+        "source_record_id": {
+          "type": "integer"
+        },
+        "supersedes_source_identity_id": {
+          "type": "string"
+        },
+        "title_evidence_locator": {
           "type": "string"
         }
       },
@@ -27827,6 +28121,24 @@
         "schema_version": {
           "type": "string"
         },
+        "source_identity_status": {
+          "type": "string"
+        },
+        "source_metadata_hash": {
+          "type": "string"
+        },
+        "source_note": {
+          "type": "string"
+        },
+        "source_publication_date_status": {
+          "type": "string"
+        },
+        "source_title": {
+          "type": "string"
+        },
+        "source_url": {
+          "type": "string"
+        },
         "title": {
           "type": "string"
         },
@@ -27886,6 +28198,24 @@
           "type": "string"
         },
         "schema_version": {
+          "type": "string"
+        },
+        "source_identity_status": {
+          "type": "string"
+        },
+        "source_metadata_hash": {
+          "type": "string"
+        },
+        "source_note": {
+          "type": "string"
+        },
+        "source_publication_date_status": {
+          "type": "string"
+        },
+        "source_title": {
+          "type": "string"
+        },
+        "source_url": {
           "type": "string"
         },
         "title": {
@@ -28196,6 +28526,16 @@
         },
         "settings": {
           "$ref": "#/$defs/src.contracts.ingest.IngestSettings"
+        },
+        "source_identity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts._report_store.metadata.SourceIdentityResolution"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "source_publication_metadata": {
           "anyOf": [
