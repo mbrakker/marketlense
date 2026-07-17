@@ -1,6 +1,6 @@
 # Consolidated TODO
 
-Last audited: 2026-07-16
+Last audited: 2026-07-17
 
 This is the repository's single, source-neutral work register. Every task is evaluated by its current codebase evidence and project decision—not by where it was first proposed. Equivalent tasks are merged under one owner; deferred, closed, and excluded work stays visible in the same register.
 
@@ -27,17 +27,20 @@ All work is listed below in one register. `Active` items have detailed completio
 | --- | --- | --- | --- |
 | Closed | A1 | Single autonomous supervisor, read-only `PipelinePlan`, and mandatory workflow-control authority | Plan authorization is enforced by CLI/UI control payloads; retained plan run and full regression passed. |
 | Active | A2 | `fast_ingest` and other config-driven autopilot profiles | One typed profile outcome. |
+| Active | A3 | Workflow-wide remediation-ledger rollout | Extend the proven remediation ledger to every eligible workflow under explicit safety gates. |
 | Active | A4 | Malformed-Drive-PDF quarantine | Standalone bounded source-recovery outcome. |
+| Active | A6 | Budget-manager closeout and operational proof | Implementation is complete; collect bounded representative operational proof before closure. |
 | Closed | A5 | Business-email, CAPTCHA, anti-bot, terminal-evidence, and avoided-browser-spend route policy | TTL-bound route policy now avoids browser/mailbox work for retained hard blockers and allows explicit revalidation. |
 | Active | A10 | Budget-deferred-work recovery and operator requeue | Turn durable budget deferrals into safe, visible, idempotent resumption. |
 | Active | A11 | Ledger-driven recurring-failure prevention and operator prioritization | Turn canonical remediation evidence into bounded root-cause and avoided-work decisions. |
 | Closed | A7 | Budget-aware model routing, compaction, and failure-class fallback | YAML routing, anchor-preserving compaction, same-provider fallback, retained-corpus evidence gate, and regression coverage are active. |
 | Active | A8 | Model-call replay drift comparison | Standalone read-only regression outcome. |
-| Active | A9 | Source publication-metadata capture for retained regeneration | Source-supported render metadata outcome. |
+| Active | A9 | Source publication metadata and identity fallback for retained regeneration | Source-supported render metadata and deterministic identity-fallback outcome. |
 | Closed | P1 | Publish snapshot naming and synchronous idempotent publishing | Public/UI terminology now says Publish Readiness; the compatibility alias preserves callers and synchronous review-gated publishing remains unchanged. |
+| Active | P2 | Bounded public-observability events | Narrow log-event size-bound hardening for public-facing boundaries. |
 | Active | P3 | Hosted HTTPS, sitemap, and public trust checks | Safe-error boundary completed; hosted trust outcome remains. |
 | Active | P10 | Correlated public-render failure observability | Hosted release-observability outcome. |
-| Active | P4 | Briefing, correction, and submission CTAs | Public intake outcome. |
+| Active | P4 | Briefing, correction, and submission CTAs | Implemented; close after hosted smoke proves the live intake routes. |
 | Active | P5 | Archive/search facets, mobile navigation, and responsive workflows | Responsive public-workflow outcome. |
 | Active | P6 | Editorial report cards, exhibits, visual ranking, and premium copy | Public editorial presentation outcome. |
 | Active | P7 | Hosted latency and public performance | Measured public-performance outcome. |
@@ -45,8 +48,9 @@ All work is listed below in one register. `Active` items have detailed completio
 | Active | E1 | Claim-embedding freshness, retention, and cost controls | Embedding operations outcome. |
 | Active | E6 | Retain a hash-pinned claim-embedding benchmark export | Semantic benchmark coverage outcome. |
 | Active | E7 | Expand planner-enforced artifact-family reuse beyond rendered HTML | Measured shadow-to-enforce rollout outcome. |
+| Closed | E3 | Lineage-driven minimum regeneration | Remains closed; E7 owns expansion beyond the proven rendered-HTML family. |
 | Closed | E4 | Executable retained PDF benchmark corpus in CI | Retained corpus is hash-pinned and CI-gated; local release-equivalent run passed. |
-| Active | R1 | CI/PR release-evidence summaries | Reviewer-surface outcome. |
+| Active | R1 | CI/PR release-evidence summaries | Reviewer-surface outcome, including exact-tested-HEAD linkage and runtime-corpus expansion. |
 | Active | R2 | Role-mixing, import-graph, facade, direct-I/O, mutation-selection, and hygiene enforcement | Architecture enforcement outcome. |
 | Active | R3 | Service-quality coverage recovery | Retained-baseline outcome. |
 | Active | R6 | Bounded-log reduction telemetry and remediation review | Operator feedback outcome for attempted oversized standard events. |
@@ -70,20 +74,21 @@ All work is listed below in one register. `Active` items have detailed completio
 | Closed | C4 | Capability maps and autonomous release/remediation summaries | Generated capability maps and autonomous smoke evidence are present. |
 | Closed | C5 | Prompt partials/schema snippets and prompt fixture regression | Landed with dry-run and corpus validation. |
 | Closed | C6 | Core discovery, mailbox acquisition, signal persistence, and claim-embedding persistence | Durable paths, fallback behavior, and focused tests are present. |
+| Closed | C7 | Logging content-exposure controls | Redaction, deterministic bounds, retained-content checks, and regression coverage are active; P2 and R6 retain hardening and monitoring. |
+| Closed | C8 | CTO evidence-collector integrity | Snapshot, exact-HEAD, provenance, consistency, and inventory validation are implemented; R1 owns runtime-corpus expansion. |
 | Excluded | X1 | Draft HTML published before enrichment | Public progressive enrichment is not permitted. |
 | Excluded | X2 | Automatic lower private-API promotion thresholds | Conservative thresholds remain mandatory. |
 | Excluded | X3 | Invented acquisition-form identity facts or public pipeline diagnostics | Only verified identity facts may be mapped; diagnostics remain operator-only. |
 
 ## Recently Closed
 
-- **A3 (2026-07-17):** The remediation ledger is now the canonical workflow-wide failure backlog. A generated 31-workflow inventory marks every production workflow covered or explicitly exempted; remaining stateful boundaries persist typed failures with checkpoint, lineage, artifact, committed-side-effect, budget, input-checksum, and idempotency evidence where available. The read-only soak reports created/deduplicated records, stale leases, eligible records, held records, and missing runbook mappings. Execution remains disabled by default and fails closed outside the exact allowlist. 103 focused recovery/workflow tests passed. A bounded live OpenAI run embedded two distinct existing claims (148 total input tokens, $0.000003 actual estimated cost); the first batch avoided 382 provider calls. The final live soak found five records, one retained deduplication transition (no duplicate current record), zero stale leases, and zero missing runbook mappings; activation remains blocked by one explained legacy UI-publication record that is pending in compatibility data but outside the automatic allowlist.
-- **A6 (2026-07-16):** The canonical SQLite ledger now owns typed pre-side-effect decisions and TTL-bound reservations for provider calls, browser launches and browser-vendor model calls, material Drive reads/writes, WordPress writes, PDF processing, retry attempts, and mailbox polls. Actual non-monetary use finalizes in the same ledger; provider monetary actuals remain in canonical LLM usage events. Run/day/publisher limits, expiry-bound override audit, independent category gates, avoided-effect telemetry, and durable deferred-work records are covered by focused tests. A guarded live Drive list passed; the guarded OpenAI smoke attempt reached the real API but exceeded the surrounding process deadline and was terminated without a completion claim.
-- **Bounded structured logging (2026-07-16):** Standard events now apply deterministic byte, depth, node, collection, and text bounds; report and browser terminal events emit scalar summaries with retained audit references; CI rejects direct `fields=asdict(...)` serialization. Focused report/logging and browser suites passed, as did guarded live browser and OpenAI runs. The remaining broader architecture-enforcement work stays under R2; R6 owns reduction telemetry review.
+- **C8 — CTO evidence-collector integrity (2026-07-17):** The strict collector snapshots retained inputs, validates exact repository HEAD, checks log-content coverage, run IDs, provenance, summary consistency, and every inventoried file hash before publishing. It fails closed without a partial final bundle. R1 owns expansion of the retained runtime corpus, not collector integrity.
+- **C7 — Logging content exposure (2026-07-16):** Standard events apply deterministic byte, depth, node, collection, and text bounds; report and browser terminal events emit scalar summaries with retained audit references; CI rejects direct `fields=asdict(...)` serialization. Focused report/logging and browser suites passed, as did guarded live browser and OpenAI runs. P2 retains the narrow public-boundary size-limit hardening and R6 owns ongoing reduction-telemetry review.
 - **A7 (2026-07-14):** The retained 15-report corpus is now a required no-provider routing gate across 30 configured prompt routes. It confirms explicit policy selection, same-provider constraints, and zero lost retained evidence IDs; focused routing/compaction/fallback tests and the full suite pass.
 - **R5 (2026-07-15):** The canonical lock records SHA-256 hashes for all 177 active Ubuntu CPython 3.12 artifacts, including `numpy==2.4.2` from its official manylinux wheel. CI installs with `--require-hashes`; a native official-PyPI wheelhouse passed an offline clean install, while a tampered NumPy hash failed before package installation.
 - **R4 (2026-07-15):** Publication reads canonical SQLite usage plus projection status; normal bounded lag is accounted, while missing, invalid, or material lag stops the final public write without triggering a rebuild.
 - **E5 (2026-07-15):** Retained crop-QA sidecars now form operator-only scorecards and selection telemetry, including deterministic quality/clipping/storage comparisons with no public diagnostic rendering.
-- **E3 (2026-07-16):** Lineage-driven minimum regeneration is now the deterministic authority for report and publication repair. It captures current compatibility, persists plan/actual audits, fails historic provenance closed, exposes validated cross-report claim/evidence/summary/chart/metadata reads, and has a render-only enforcement path. A retained provider-backed full run completed in 208.51 seconds; the subsequent enforced render-only replay completed in 0.87 seconds with source, selection, analysis, model, projection, and WordPress work avoided.
+- **E3 (2026-07-16):** Lineage-driven minimum regeneration is now the deterministic authority for report and publication repair. It captures current compatibility, persists plan/actual audits, fails historic provenance closed, exposes validated cross-report claim/evidence/summary/chart/metadata reads, and has a render-only enforcement path. A retained provider-backed full run completed in 208.51 seconds; the subsequent enforced render-only replay completed in 0.87 seconds with source, selection, analysis, model, projection, and WordPress work avoided. E3 remains closed; E7 owns all further artifact-family reuse expansion.
 - **E2 (2026-07-15):** The retained-artifact benchmark reports Briefing and Signal prompt/token deltas, overlap, source/citation coverage, and explicitly records the deterministic fallback when no retained embedding export exists.
 - **P9 (2026-07-15):** The retained public-advisory benchmark now compares a saved baseline and emits typed per-insight source-grounded repair proposals or explicit abstentions without altering public rendering.
 - **S1/S2 (2026-07-15):** Canonical service-boundary and publish/ingest facade audits remain CI-enforced; focused decomposition regression coverage preserves the existing routing, retries, state transitions, and external-effect contracts.
@@ -95,7 +100,7 @@ All work is listed below in one register. `Active` items have detailed completio
 The original ten-item screenshot baseline is complete in the committed implementation. Its broader successor work remains Active above only where it adds new scope beyond that baseline (for example hosted HTTPS in P3, full intake flows in P4, or visual screenshot comparison plus accessible mobile-menu interaction in P5).
 
 - **Public quality gate (2026-07-14):** The real local Studio site passed the new Playwright-backed responsive gate on the homepage, reports archive, and a retained report detail at 390px, 768px, and 1440px: 9/9 checks had no horizontal overflow and no visible broken image. The same live site passed the public SEO/performance gate across seven public routes with HTTP 200, complete canonical/social metadata, and no configured threshold violations.
-- **Core safety, budget, recovery, route-memory, lineage, retained-benchmark, WordPress projection, LLM routing, and publication-gate baseline (2026-07-14):** The implementation is covered by the committed typed contracts and control paths. A focused regression run passed 50 tests across run budgets, canonical LLM accounting, UI-run recovery, artifact lineage, publication, and retained report quality. The former A3/A6/E3 rollout work is now recorded in **Recently Closed**; current follow-up scope remains in the active register.
+- **Core safety, budget, recovery, route-memory, lineage, retained-benchmark, WordPress projection, LLM routing, and publication-gate baseline (2026-07-14):** The implementation is covered by the committed typed contracts and control paths. A focused regression run passed 50 tests across run budgets, canonical LLM accounting, UI-run recovery, artifact lineage, publication, and retained report quality. The underlying A3/A6/E3 implementation evidence remains retained; A3 and A6 are active only for bounded rollout and operational proof, while E7 owns any E3 expansion.
 
 ## Active Backlog
 
@@ -114,6 +119,19 @@ The original ten-item screenshot baseline is complete in the committed implement
 - Profile resolution is typed, deterministic, logs effective settings, preserves override precedence, and never stores secrets in YAML.
 - The plan-first interface can recommend or apply a profile, with tests proving deterministic resolution and invalid-profile failure.
 
+#### A3. Roll out remediation-ledger coverage across workflows
+
+- **Title:** Roll out remediation-ledger coverage across workflows
+- **Impact 5 / effort: 2**
+- **Context:** The remediation ledger is the canonical failure backlog. A 31-workflow inventory records coverage or explicit exemption, stateful boundaries retain typed recovery evidence, and execution fails closed outside the current allowlist. The remaining work is a controlled workflow-wide rollout, not greenfield ledger design.
+- **Benefit:** Eligible workflows receive one inspectable, deduplicated recovery path without widening automatic execution or losing workflow-specific safety controls.
+- **Risks to avoid:** Do not enable a workflow without its checkpoint, lineage, committed-side-effect, budget, input-checksum, idempotency, and runbook evidence. Preserve fail-closed behavior and existing public-write authorization gates.
+- **Success criteria:**
+
+- The generated inventory remains complete as production workflows change, and CI rejects an unclassified workflow or an expired exemption.
+- Each newly eligible workflow passes a bounded read-only soak covering creation, deduplication, held/eligible transitions, and runbook linkage before it is added to the execution allowlist.
+- Release evidence records the workflow coverage, allowed execution scope, and any held compatibility record without exposing source payloads or provider responses.
+
 #### A4. Quarantine irreparably malformed Drive PDFs
 
 - **Title:** Quarantine irreparably malformed Drive PDFs
@@ -126,6 +144,19 @@ The original ten-item screenshot baseline is complete in the committed implement
 - State records file identity, checksum/size, typed error, and next action after PDF-integrity failure.
 - Default ingest skips quarantined files; explicit rescan/revalidation clears only a valid replacement.
 - CLI or dashboard exposes quarantined inputs and remediation guidance, with tests for write, skip, revalidation, and valid-replacement transitions.
+
+#### A6. Complete budget-manager operational proof
+
+- **Title:** Complete budget-manager operational proof
+- **Impact 5 / effort: 2**
+- **Context:** The canonical SQLite ledger already owns typed pre-side-effect decisions, TTL-bound reservations, actual-use finalization, deferrals, and avoided-effect telemetry for the configured costed operations. Focused tests and a guarded Drive list passed; the prior guarded OpenAI smoke reached the provider but exceeded its surrounding process deadline. The remaining work is operational closeout, not budget-manager implementation.
+- **Benefit:** Operators can close the budget authority with representative evidence that reservations, reconciliation, deferral, and recovery hold under its real configured limits.
+- **Risks to avoid:** Keep probes bounded, credential-gated, and non-publishing. Do not raise limits, bypass a pre-side-effect decision, or introduce a second accounting ledger merely to collect proof.
+- **Success criteria:**
+
+- A bounded, credential-gated operational run records one permitted decision and one safely denied or deferred decision, including reservation/actual reconciliation and the retained idempotency key.
+- The evidence records configured request, token, duration, and cost ceilings; an unavailable credential or exhausted ceiling skips or fails safely without a completion claim.
+- Release evidence links the operational result to the exact ledger schema/configuration and shows no unauthorized WordPress, mailbox, or browser side effect.
 
 #### A10. Budget-deferred-work recovery and operator requeue
 
@@ -166,20 +197,34 @@ The original ten-item screenshot baseline is complete in the committed implement
 - Output is bounded, reproducible, and links regressions to artifact family and remediation.
 - Tests cover equivalent, changed, missing, and malformed bundles, including deterministic output ordering and zero-provider-call default execution.
 
-#### A9. Capture source-supported publication metadata at acquisition
+#### A9. Capture source-backed publication metadata and identity fallback at acquisition
 
-- **Title:** Capture source-supported publication metadata at acquisition
+- **Title:** Capture source-backed publication metadata and identity fallback at acquisition
 - **Impact 5 / effort: 2**
-- **Context:** Retained report regeneration can safely reuse PDF, model, and render checkpoints, but older acquisitions may lack a source-supported publication date and therefore fail the report-card gate during an otherwise render-only recovery.
-- **Benefit:** Acquisition provenance directly enables reliable low-cost regeneration and avoids broad reruns caused solely by absent public-card metadata.
-- **Risks to avoid:** Persist only source-page evidence with its URL and retrieval timestamp; never infer a date from a filename, file mtime, or report title.
+- **Context:** Retained report regeneration can safely reuse PDF, model, and render checkpoints, but older acquisitions may lack a source-supported publication date or a durable source identity and therefore fail the report-card gate during an otherwise render-only recovery. Runtime resolution can use an MD5 match and a constrained title/publisher fallback today; acquisition must make the selected source identity explicit and durable.
+- **Benefit:** Acquisition provenance directly enables reliable low-cost regeneration and avoids broad reruns caused solely by absent public-card metadata or a lost source identity.
+- **Risks to avoid:** Persist only source-page evidence with its URL and retrieval timestamp. Never infer a date from a filename, file mtime, or report title, and never turn an identity fallback into an ungrounded identity claim.
 - **Success criteria:**
 
 - Acquisition records normalized source publication date, source URL, retrieval timestamp, and evidence locator when the publisher exposes them.
-- Render and regeneration consume the persisted source-backed metadata without an operator override; missing or contradictory evidence still fails closed.
-- Retained-source tests cover metadata extraction, persistence, render-only recovery, absent evidence, and conflicting dates.
+- The selected source identity records its resolution source. Consumers prefer a checksum match, permit the constrained title/publisher fallback only when it is unambiguous, and retain an explicit unresolved outcome otherwise.
+- Render and regeneration consume the persisted source-backed metadata and identity without an operator override; missing or contradictory evidence still fails closed.
+- Retained-source tests cover metadata extraction, identity resolution, persistence, render-only recovery, absent evidence, ambiguous fallback, and conflicting dates.
 
 ### 2. Public Trust and Publishing
+
+#### P2. Harden bounded public-observability events
+
+- **Title:** Harden bounded public-observability events
+- **Impact 4 / effort: 1**
+- **Context:** Shared structured logging already has deterministic event-size limits and generic regression coverage, but public intake and public-render boundary events need a narrow contract check as their fields evolve. R6 owns aggregate reduction telemetry; this item owns the per-event size and content-safety guard at those public boundaries.
+- **Benefit:** Public-facing workflows retain useful correlation and outcome signals without allowing a new high-cardinality field, user submission, or exception detail to make a standard event oversized or content-bearing.
+- **Risks to avoid:** Do not create a second logger, retain dropped content, or expose private diagnostics in a public artifact. Use the canonical log schema and scalar summaries, hashes, or retained-artifact references.
+- **Success criteria:**
+
+- Public intake and public-render success/failure events remain at or below the canonical byte limit with maximum-size representative fields.
+- Focused tests prove that oversized submissions and exception-like inputs preserve the correlation/outcome summary while omitting user text, paths, stack details, and discarded values.
+- A bounded reduction remains visible to R6 without duplicating telemetry storage or changing the public response contract.
 
 #### P3. Resolve hosted-site trust blockers
 
@@ -206,18 +251,18 @@ The original ten-item screenshot baseline is complete in the committed implement
 - Release evidence distinguishes zero failures, expected injected failures, and unexpected render failures by route/entity type.
 - Tests prove log redaction, deterministic aggregation, and that no public response or public artifact contains a stack/path signature.
 
-#### P4. Implement public briefing, correction, and submission intake
+#### P4. Close public briefing, correction, and submission intake
 
-- **Title:** Implement public briefing, correction, and submission intake
+- **Title:** Close public briefing, correction, and submission intake
 - **Impact 5 / effort: 2**
-- **Context:** `Request a briefing`, `Send a correction`, and submission CTAs currently loop to information pages instead of collecting actionable structured requests.
-- **Benefit:** Visitors can convert, correct, or submit sources through a trustworthy route that gives operators usable context.
-- **Risks to avoid:** Collect only necessary data and do not create a new external boundary without explicit review.
+- **Context:** `Request a briefing`, `Send a correction`, and submission CTAs now collect structured requests through the approved boundary. The remaining closeout is hosted smoke evidence for the live routes, validation, delivery/persistence, and confirmation behavior.
+- **Benefit:** Visitors can convert, correct, or submit sources through a trustworthy route that gives operators usable context, with closure based on the deployed behavior rather than implementation alone.
+- **Risks to avoid:** Collect only necessary data, preserve redacted logging, and do not treat a local or simulated result as hosted proof.
 - **Success criteria:**
 
 - Correction and submission forms collect only the documented, necessary fields and present confirmation/error states.
 - Requests use an approved service boundary with redacted structured logging.
-- Browser or hosted smoke checks prove CTA route, validation, empty/spam rejection, successful persistence/delivery, and confirmation state.
+- Hosted smoke checks prove each CTA route, validation, empty/spam rejection, successful persistence/delivery, and confirmation state in the deployed environment; then move P4 to Recently Closed.
 
 #### P5. Finish responsive search and navigation
 
@@ -312,14 +357,15 @@ The original ten-item screenshot baseline is complete in the committed implement
 
 - **Title:** Publish release-evidence reviews where reviewers work
 - **Impact 3 / effort: 2**
-- **Context:** Release-evidence review Markdown is generated and archived, but reviewers must open the artifact bundle to learn approval status, owners, expiry dates, and unwaived issues.
-- **Benefit:** Release readiness is visible where reviewers already work, reducing missed evidence and review latency.
-- **Risks to avoid:** Keep summaries bounded and links stable while preserving all unwaived issue detail.
+- **Context:** Release-evidence review Markdown is generated and archived, but reviewers must open the artifact bundle to learn approval status, owners, expiry dates, and unwaived issues. Strict CTO evidence already validates a clean, exact repository HEAD; that exact-tested-HEAD linkage and the expansion of its retained runtime corpus are not yet consistently surfaced in CI/PR review.
+- **Benefit:** Release readiness, the exact tested revision, and the scope of runtime evidence are visible where reviewers already work, reducing missed evidence and review latency.
+- **Risks to avoid:** Keep summaries bounded and links stable while preserving all unwaived issue detail. Do not imply that a smoke-only corpus proves representative report processing.
 - **Success criteria:**
 
-- CI appends bounded review Markdown after approval gating.
-- PR/release automation links the bundle and final approval status.
-- README distinguishes inline review from full archived evidence, and tests cover bounded summaries with unwaived detail retained.
+- CI appends bounded review Markdown after approval gating, including the exact tested HEAD or an explicit unavailable/mismatch result.
+- PR/release automation links the bundle, final approval status, and exact tested HEAD to the reviewed commit.
+- The retained runtime corpus expands under the existing strict collector with declared scope/provenance; inline review distinguishes representative processing from smoke-only evidence.
+- README distinguishes inline review from full archived evidence, and tests cover bounded summaries, exact-HEAD mismatch, runtime-corpus scope, and unwaived detail retention.
 
 #### R2. Enforce role boundaries, direct-I/O discipline, and controlled module growth
 
@@ -359,19 +405,6 @@ The original ten-item screenshot baseline is complete in the committed implement
 - Release evidence reports reduction-event count, event/module grouping, attempted-size percentiles, and zero-content samples.
 - A thresholded review identifies recurring callers and links them to an owner or remediation item without exposing discarded values.
 - Tests prove deterministic aggregation, redaction preservation, and that the scorecard cannot contain source text, prompts, model output, browser terminal text, or credentials.
-
-#### R5. Add hash-verified dependency lock artifacts
-
-- **Title:** Add hash-verified dependency lock artifacts
-- **Impact 4 / effort: 2**
-- **Context:** The canonical lock now prevents version drift across runtime, development, vendored browser-use, and documented security pins, but it does not yet verify downloaded artifact hashes.
-- **Benefit:** Clean installations become resistant to a substituted distribution artifact while retaining the single-lock workflow and the current exact-version convergence gate.
-- **Risks to avoid:** Preserve Python 3.12 and the one canonical lock; do not introduce a dependency-manager migration or broaden package upgrades.
-- **Success criteria:**
-
-- Lock generation records valid hashes for every resolved distribution selected on supported CI platforms.
-- CI installs with `--require-hashes` and proves a changed hash fails before execution.
-- Documentation retains the approved no-unrelated-upgrade regeneration flow and records any platform-wheel constraints.
 
 ### 5. Boundary Simplification
 
@@ -430,4 +463,4 @@ Automation may plan, resume, retry, repair, validate, render, draft, hold, and n
 ## Audit Notes
 
 - This register replaces duplicated simplification context, migrated x100 intake, and repeated launch plans with source-neutral status rows. No task is excluded because of its origin.
-- The active backlog contains 31 outcome-owned items. Deferred, closed, and excluded rows remain visible above; any newly discovered work must be merged into an existing outcome or justified as a new one.
+- The active backlog contains 25 outcome-owned items. Deferred, closed, and excluded rows remain visible above; any newly discovered work must be merged into an existing outcome or justified as a new one.
