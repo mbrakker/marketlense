@@ -6,6 +6,7 @@ from src.contracts.workflow_queue import (
     MaintenancePayload,
     PublicationReadinessPayload,
     PublisherDiscoveryPayload,
+    SignalCandidatePayload,
     WorkflowJobSubmission,
 )
 from src.orchestrators.workflow_queue_orchestrator import (
@@ -163,6 +164,41 @@ def test_briefing_opportunity_requires_a_publisher_id_list(tmp_path) -> None:
     assert outcome.terminal_status == "dead_letter"
     assert get_workflow_job(db, job.job_id, _ctx()).error_code == (
         "workflow_queue_briefing_publishers_invalid"
+    )
+
+
+def test_signal_candidate_rejects_invalid_bounded_numeric_attributes(tmp_path) -> None:
+    db = str(tmp_path / "state.sqlite")
+    job, _ = enqueue_workflow_job(
+        db,
+        WorkflowJobSubmission(
+            schema_version="1.0",
+            queue_name="signal_candidate",
+            job_type="signal_candidate.v1",
+            payload=SignalCandidatePayload(
+                report_id="report-1",
+                projection_reference="projection:report-1",
+                signal_selection_policy_version="v1",
+                input_reference="projection:report-1",
+                input_content_hash="projection-hash",
+                attributes={"topic": "rates", "max_signals": "not-an-int"},
+            ),
+            idempotency_key="signal-invalid-limit",
+            deduplication_scope="signal-candidate",
+        ),
+        _ctx(),
+    )
+
+    outcome = run_workflow_worker_once(
+        state_db=db,
+        queue_name="signal_candidate",
+        worker_id="worker-1",
+        ctx=_ctx(),
+    )
+
+    assert outcome.terminal_status == "dead_letter"
+    assert get_workflow_job(db, job.job_id, _ctx()).error_code == (
+        "workflow_queue_attribute_invalid"
     )
 
 
