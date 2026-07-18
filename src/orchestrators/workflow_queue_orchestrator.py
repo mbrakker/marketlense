@@ -485,6 +485,7 @@ def _briefing_opportunity_handler(
         minimum_publisher_diversity=int(payload.attributes.get("minimum_publisher_diversity", 2)),
         ctx=ctx,
     )
+
     if opportunity.status == "eligible":
         source_set_hash = _digest(*opportunity.source_hashes)
         submission = WorkflowJobSubmission(
