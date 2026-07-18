@@ -13,3 +13,4 @@ The example file shows supported environment-specific overlay areas. The configu
 | `publish` | `run_budget`, `wp` |
 | `publisher_discovery` | `enable_deferred_candidate_recovery`, `enable_preflight_classifier_and_direct_detail`, `enable_structured_route_reuse`, `model`, `resource_quality_ranking` |
 | `workflow_control` | `concurrency`, `deferred_work_reaper`, `operational_memory`, `preflight_profiles`, `remediation_reaper`, `retry_policies`, `workflow_contracts` |
+| `workflow_queues` | `briefing_generation`, `publisher_discovery`, `report_acquisition`, `report_analysis`, `source_ingest`, `wordpress_publish` |

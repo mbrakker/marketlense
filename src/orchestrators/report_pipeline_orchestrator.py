@@ -106,7 +106,10 @@ def _enforced_resume_stage(plan: MinimalExecutionPlan) -> str | None:
     if stages not in _ENFORCED_RESUME_STAGES:
         raise AppError(
             code="minimal_execution_plan_enforcement_unavailable",
-            message="The planned stages are not supported by the report-generation entrypoint",
+            message=(
+                "The planned stages are not supported by the report-generation "
+                "entrypoint"
+            ),
             retryable=False,
             context={"plan_hash": plan.plan_hash, "required_stages": list(stages)},
         )
@@ -211,6 +214,8 @@ def _invoke_report_fn(
     execution_compatibility: dict[str, object] | None = None,
     minimal_execution_plan: MinimalExecutionPlan | None = None,
     enforce_minimal_execution: bool = False,
+    stop_after_stage: str | None = None,
+    projection_only: bool = False,
 ) -> IngestOutcome:
     arguments: dict[str, object] = {"resume_from_stage": resume_from_stage}
     if client_bundle is not None:
@@ -244,6 +249,19 @@ def _invoke_report_fn(
     )
     if supports_enforcement:
         arguments["enforce_minimal_execution"] = enforce_minimal_execution
+    supports_stop_boundary = any(
+        parameter.kind == Parameter.VAR_KEYWORD or parameter.name == "stop_after_stage"
+        for parameter in parameters
+    )
+    if supports_stop_boundary:
+        arguments["stop_after_stage"] = stop_after_stage
+    supports_projection_only = any(
+        parameter.kind == Parameter.VAR_KEYWORD
+        or parameter.name == "projection_only"
+        for parameter in parameters
+    )
+    if supports_projection_only:
+        arguments["projection_only"] = projection_only
     return report_fn(
         file,
         local_pdf_path,
@@ -384,6 +402,8 @@ def run_report_pipeline(
     lineage_change_kind: str = "",
     lineage_available: bool = False,
     execution_plan_mode: str = "shadow",
+    stop_after_stage: str | None = None,
+    projection_only: bool = False,
 ) -> IngestOutcome:
     report_fn = generate_report_fn or generate_report_orchestrator
     preflight_report = (
@@ -727,6 +747,8 @@ def run_report_pipeline(
                 execution_compatibility=execution_compatibility,
                 minimal_execution_plan=minimal_plan,
                 enforce_minimal_execution=normalized_plan_mode == "enforce",
+                stop_after_stage=stop_after_stage,
+                projection_only=projection_only,
             )
         except AppError as exc:
             if (
@@ -759,6 +781,8 @@ def run_report_pipeline(
                     execution_compatibility=execution_compatibility,
                     minimal_execution_plan=minimal_plan,
                     enforce_minimal_execution=False,
+                    stop_after_stage=stop_after_stage,
+                    projection_only=projection_only,
                 )
             else:
                 raise

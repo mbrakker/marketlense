@@ -7,6 +7,7 @@ from src.contracts.browser_download import (
     BrowserDownloadIdentityFieldUpsertResponse,
     BrowserDownloadRequiredSelectOverrideRequest,
     BrowserDownloadRequiredSelectOverrideResponse,
+    BrowserDownloadSettings,
 )
 from src.contracts.config import (
     AppSettings,
@@ -15,11 +16,11 @@ from src.contracts.config import (
     OpenAICredentialResolveResponse,
 )
 from src.contracts.mailbox_acquisition import MailboxAcquisitionSettings
-from src.contracts.browser_download import BrowserDownloadSettings
 from src.contracts.publish import PublishSettings
 from src.contracts.publisher_inventory import PublisherInventorySettings
 from src.contracts.run_context import RunContext
 from src.contracts.workflow_control import WorkflowControlSettings
+from src.contracts.workflow_queue import WorkflowQueuePolicy
 from src.services._config_service import app_settings as _app_settings
 from src.services._config_service import browser_download as _browser_download
 from src.services._config_service import common as _common
@@ -28,14 +29,15 @@ from src.services._config_service import mailbox_acquisition as _mailbox_acquisi
 from src.services._config_service import publish as _publish
 from src.services._config_service import publisher_discovery as _publisher_discovery
 from src.services._config_service import workflow_control as _workflow_control
+from src.services._config_service import workflow_queue as _workflow_queue
 from src.services._config_service.app_settings import build_ingest_settings
 from src.services._config_service.common import (
     CONFIG_PATH,
     CONFIG_PATH_ENV_KEY,
     CONFIG_PROFILE_ENV_KEY,
-    DEFAULT_LLM_COSTS_PATH,
     DEFAULT_BROWSER_DOWNLOAD_IDENTITY_PATH,
     DEFAULT_HTML_TAG_ACRONYMS_PATH,
+    DEFAULT_LLM_COSTS_PATH,
     DEFAULT_PUBLISHER_INVENTORY_CANDIDATE_SCREENING_PROMPT_NAMESPACE,
     DEFAULT_PUBLISHER_INVENTORY_PROMPT_NAMESPACE,
     load_model_pricing,
@@ -53,9 +55,10 @@ def _sync_runtime_patch_points() -> None:
         _mailbox_acquisition,
         _publisher_discovery,
         _workflow_control,
+        _workflow_queue,
     ):
-        setattr(module, "load_dotenv", load_dotenv)
-        setattr(module, "find_dotenv", find_dotenv)
+        module.load_dotenv = load_dotenv
+        module.find_dotenv = find_dotenv
 
 
 def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
@@ -98,6 +101,14 @@ def load_workflow_control_settings(
     return _workflow_control.load_workflow_control_settings(request, ctx)
 
 
+def load_workflow_queue_policies(
+    request: ConfigLoadRequest,
+    ctx: RunContext,
+) -> dict[str, WorkflowQueuePolicy]:
+    _sync_runtime_patch_points()
+    return _workflow_queue.load_workflow_queue_policies(request, ctx)
+
+
 def upsert_browser_download_identity_fields(
     request: BrowserDownloadIdentityFieldUpsertRequest,
     ctx: RunContext,
@@ -137,6 +148,7 @@ __all__ = [
     "load_publish_settings",
     "load_publisher_inventory_settings",
     "load_workflow_control_settings",
+    "load_workflow_queue_policies",
     "load_model_pricing",
     "load_settings",
     "read_app_config",

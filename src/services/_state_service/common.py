@@ -11,11 +11,13 @@ from typing import Optional
 from src.contracts.run_context import RunContext
 from src.contracts.sqlite_migration import SqliteMigrationApplyRequest
 from src.contracts.state import StateBatchCheckItem
-from src.services.sqlite_migration_service import apply_state_db_migrations
 from src.services._sqlite_common import (
     configure_sqlite_connection as _configure_sqlite_connection,
+)
+from src.services._sqlite_common import (
     is_sqlite_lock_error as _is_lock_error,  # noqa: F401
 )
+from src.services.sqlite_migration_service import apply_state_db_migrations
 from src.utils.errors import AppError
 
 logger = logging.getLogger("market_lense.state_service")
@@ -48,17 +50,20 @@ def _state_conn(path: str, ctx: RunContext):
             context={"state_db": path},
         ) from exc
     try:
-        _configure_sqlite_connection(
-            conn,
-            busy_timeout_seconds=DEFAULT_BUSY_TIMEOUT_SECONDS,
-        )
         with _STATE_CONN_LOCK:
+            # journal_mode changes need an exclusive SQLite lock on first use;
+            # serialize setup so concurrent queue workers do not fail before
+            # their bounded transactional claim can begin.
+            _configure_sqlite_connection(
+                conn,
+                busy_timeout_seconds=DEFAULT_BUSY_TIMEOUT_SECONDS,
+            )
             apply_state_db_migrations(
                 SqliteMigrationApplyRequest(
                     schema_version="1.0",
                     database_key="state_db",
                     db_path=path,
-                    target_version=10,
+                    target_version=12,
                     ctx=ctx,
                 ),
                 conn,

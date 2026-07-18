@@ -35,7 +35,7 @@ def test_state_db_migrations_create_schema_version_and_ledger_on_fresh_db(
                 schema_version="1.0",
                 database_key="state_db",
                 db_path=str(db_path),
-                target_version=10,
+                target_version=12,
                 ctx=_ctx(),
             ),
             conn,
@@ -89,7 +89,7 @@ def test_state_db_migrations_create_schema_version_and_ledger_on_fresh_db(
             """
         ).fetchone()
 
-    assert response.current_version == 10
+    assert response.current_version == 12
     assert [step.migration_id for step in response.applied_steps] == [
         "state_db_001_create_base_tables",
         "state_db_002_add_processed_vector_columns",
@@ -101,7 +101,9 @@ def test_state_db_migrations_create_schema_version_and_ledger_on_fresh_db(
         "state_db_008_create_mailbox_candidate_rejections",
         "state_db_009_create_artifact_acquisition_cache",
         "state_db_010_create_remediation_ledger",
-    ]
+        "state_db_011_create_workflow_queue",
+        "state_db_012_create_queue_publication_and_briefing_state",
+        ]
     assert ledger_rows == [
         ("state_db_001_create_base_tables", 1),
         ("state_db_002_add_processed_vector_columns", 2),
@@ -113,8 +115,10 @@ def test_state_db_migrations_create_schema_version_and_ledger_on_fresh_db(
         ("state_db_008_create_mailbox_candidate_rejections", 8),
         ("state_db_009_create_artifact_acquisition_cache", 9),
         ("state_db_010_create_remediation_ledger", 10),
+        ("state_db_011_create_workflow_queue", 11),
+        ("state_db_012_create_queue_publication_and_briefing_state", 12),
     ]
-    assert version_row == (10,)
+    assert version_row == (12,)
     assert workflow_table == ("workflow_control_observations",)
     assert mail_table == ("mail_delivery_requests",)
     assert rejection_table == ("mailbox_candidate_rejections",)
@@ -134,25 +138,24 @@ def test_sqlite_migration_failure_rolls_back_schema_changes(
         conn.execute("INSERT INTO broken_table(id) VALUES(1)")
         raise RuntimeError("boom")
 
-    with sqlite3.connect(db_path) as conn:
-        with pytest.raises(AppError) as exc_info:
-            _apply_migration_plan(
-                SqliteMigrationApplyRequest(
-                    schema_version="1.0",
-                    database_key="broken_db",
-                    db_path=str(db_path),
-                    target_version=1,
-                    ctx=_ctx(),
+    with sqlite3.connect(db_path) as conn, pytest.raises(AppError) as exc_info:
+        _apply_migration_plan(
+            SqliteMigrationApplyRequest(
+                schema_version="1.0",
+                database_key="broken_db",
+                db_path=str(db_path),
+                target_version=1,
+                ctx=_ctx(),
+            ),
+            conn,
+            (
+                _MigrationSpec(
+                    migration_id="broken_db_001_fail",
+                    version=1,
+                    apply_fn=_failing_migration,
                 ),
-                conn,
-                (
-                    _MigrationSpec(
-                        migration_id="broken_db_001_fail",
-                        version=1,
-                        apply_fn=_failing_migration,
-                    ),
-                ),
-            )
+            ),
+        )
 
     assert_app_error(
         exc_info.value,
@@ -203,7 +206,9 @@ def test_ui_run_registry_migrations_are_idempotent_on_rerun(tmp_path: Path) -> N
             """
             SELECT name
             FROM sqlite_master
-            WHERE type='table' AND name IN ('ui_run_dead_letters', 'ui_run_dead_letter_actions')
+            WHERE type='table' AND name IN (
+                'ui_run_dead_letters', 'ui_run_dead_letter_actions'
+            )
             ORDER BY name ASC
             """
         ).fetchall()

@@ -70,6 +70,20 @@ from src._cli.ui_runs import (
     replay_run,
     ui_run_worker,
 )
+from src._cli.workflow_queue import (  # noqa: F401
+    queue_cancel,
+    queue_drain,
+    queue_health,
+    queue_inspect_job,
+    queue_list,
+    queue_materialize_outbox,
+    queue_pause,
+    queue_reconcile,
+    queue_release_expired_leases,
+    queue_requeue,
+    queue_resume,
+    workflow_worker,
+)
 from src.contracts.acquisition_audit import AcquisitionAuditBatchRequest
 from src.contracts.browser_download import (
     BrowserDeveloperDiagnosticsRequest,

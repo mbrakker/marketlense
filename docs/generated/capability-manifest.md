@@ -61,6 +61,8 @@ Generated from CLI registrations, configuration example, architecture policy, or
 - `src/orchestrators/vector_store_retention_orchestrator.py`
 - `src/orchestrators/wordpress_intelligence_projection_orchestrator.py`
 - `src/orchestrators/workflow_control_orchestrator.py`
+- `src/orchestrators/workflow_queue_orchestrator.py`
+- `src/orchestrators/workflow_worker_orchestrator.py`
 - `src/orchestrators/wp_category_update_orchestrator.py`
 
 ## Registered CLI commands
@@ -86,6 +88,17 @@ Generated from CLI registrations, configuration example, architecture policy, or
 - `poll-mail-report`
 - `promote-private-api-playbook`
 - `publish-wp`
+- `queue-cancel`
+- `queue-drain`
+- `queue-health`
+- `queue-inspect-job`
+- `queue-list`
+- `queue-materialize-outbox`
+- `queue-pause`
+- `queue-reconcile`
+- `queue-release-expired-leases`
+- `queue-requeue`
+- `queue-resume`
 - `reap-ui-dead-letters`
 - `recategorize`
 - `remediation-soak`
@@ -96,6 +109,7 @@ Generated from CLI registrations, configuration example, architecture policy, or
 - `trace-run`
 - `ui-run-worker`
 - `update-wp-categories`
+- `workflow-worker`
 
 ## JSON schemas
 

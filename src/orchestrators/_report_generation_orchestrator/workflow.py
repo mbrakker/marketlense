@@ -54,6 +54,7 @@ from .checkpoints import (
 )
 from .resume import (
     _analysis_with_report_value_score,
+    _checkpoint_stage_outcome,
     _cleanup_transient_vector_store,
     _doc_map_empty_outcome,
     _pdf_text_ocr_failed_outcome,
@@ -286,6 +287,8 @@ def run_report_generation(
     execution_compatibility: Optional[dict[str, object]] = None,
     minimal_execution_plan: Optional[MinimalExecutionPlan] = None,
     enforce_minimal_execution: bool = False,
+    stop_after_stage: Optional[str] = None,
+    projection_only: bool = False,
 ) -> IngestOutcome:
     deps = (
         _with_signal_candidate_orchestrator(dependencies)
@@ -349,6 +352,25 @@ def run_report_generation(
             )
         )
     requested_resume_stage = str(resume_from_stage or "").strip()
+    requested_stop_stage = str(stop_after_stage or "").strip()
+    if projection_only and requested_resume_stage != STAGE_ANALYSIS_COMPLETE:
+        raise AppError(
+            code="report_pipeline_projection_stage_invalid",
+            message="Analytics projection requires the validated analysis checkpoint",
+            retryable=False,
+        )
+    if requested_stop_stage and requested_stop_stage not in {
+        STAGE_SOURCE_PREPARED,
+        STAGE_SELECTION_COMPLETE,
+        STAGE_ANALYSIS_COMPLETE,
+        STAGE_RENDER_COMPLETE,
+    }:
+        raise AppError(
+            code="report_pipeline_stop_stage_invalid",
+            message="Queue stage stop boundary is not supported",
+            retryable=False,
+            context={"stop_after_stage": requested_stop_stage},
+        )
     enforced_render_only = (
         enforce_minimal_execution
         and minimal_execution_plan is not None
@@ -397,6 +419,8 @@ def run_report_generation(
             requested_resume_stage=requested_resume_stage,
             require_artifact_lineage=require_artifact_lineage,
             skip_post_render_projection=enforced_render_only,
+            stop_after_stage=requested_stop_stage,
+            projection_only=projection_only,
         )
     if enforced_crop_only:
         return _resume_crop_from_source_checkpoint(
@@ -478,6 +502,8 @@ def run_report_generation(
             skip_post_render_projection=(
                 enforce_minimal_execution and minimal_execution_plan is not None
             ),
+            stop_after_stage=requested_stop_stage,
+            projection_only=projection_only,
         )
     logger.info(
         log_event(
@@ -526,6 +552,8 @@ def run_report_generation(
                 "source": _source_checkpoint_payload(source),
             },
         )
+        if requested_stop_stage == STAGE_SOURCE_PREPARED:
+            return _checkpoint_stage_outcome(runtime, STAGE_SOURCE_PREPARED)
         vector_state = start_vector_store_indexing(runtime, source, deps.analysis)
         selection = select_report_figures(
             runtime,
@@ -547,6 +575,8 @@ def run_report_generation(
                 "vector_indexing": _vector_indexing_checkpoint_payload(vector_state),
             },
         )
+        if requested_stop_stage == STAGE_SELECTION_COMPLETE:
+            return _checkpoint_stage_outcome(runtime, STAGE_SELECTION_COMPLETE)
         preview_resp = render_preview_asset(runtime, source, deps.render)
         analysis = run_report_analysis(
             runtime,
@@ -572,6 +602,8 @@ def run_report_generation(
                 source, selection, analysis, preview_resp
             ),
         )
+        if requested_stop_stage == STAGE_ANALYSIS_COMPLETE:
+            return _checkpoint_stage_outcome(runtime, STAGE_ANALYSIS_COMPLETE)
         report_value_score = _score_ingested_report_source(runtime, analysis, deps)
         analysis = _analysis_with_report_value_score(analysis, report_value_score)
         try:
@@ -613,6 +645,8 @@ def run_report_generation(
                 source, selection, analysis, preview_resp, outcome
             ),
         )
+        if requested_stop_stage == STAGE_RENDER_COMPLETE:
+            return _cleanup_transient_vector_store(outcome, runtime, deps)
         if (
             not (enforce_minimal_execution and minimal_execution_plan is not None)
             and _run_projection(runtime, analysis, outcome, analytics_projection_fn)

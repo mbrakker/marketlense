@@ -78,3 +78,24 @@ new pending retry. Set the feature flag back to `false` for rollback: queued
 records remain intact for inspection and manual recovery.
 
 For report processing, checkpoint resume is orchestrator-owned and validates retained artifacts and lineage. Do not manually edit checkpoint state to bypass validation. For publication recovery or rollback, use [WordPress operations](wordpress.md).
+
+## Durable workflow queue recovery
+
+Use the queue control plane for accepted asynchronous work. It is separate from
+the remediation ledger: the queue owns normal due work, retries, leases, and
+outbox materialisation; remediation remains the terminal/operator boundary.
+
+```powershell
+python -m src.cli queue-health
+python -m src.cli queue-inspect-job <job-id>
+python -m src.cli queue-release-expired-leases
+python -m src.cli queue-reconcile
+python -m src.cli queue-materialize-outbox
+```
+
+Pause a queue with a reason before an incident investigation. Drain mode stops
+new claims while preserving durable work. `queue-requeue --yes` is only for a
+blocked or dead-letter job after its retained input and idempotency proof have
+been checked; it never resets product-domain state. See [asynchronous workflow
+queue](../architecture/asynchronous-workflow-queue.md) for the state machine
+and approval-to-publication rules.

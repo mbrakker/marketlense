@@ -122,8 +122,8 @@ def test_migration_adds_vector_columns_and_preserves_data(tmp_path: Path) -> Non
     assert resp.last_error is None
     assert resp.openai_file_id == "of_123"
     assert resp.doc_map_summary is None
-    assert schema_version == (10,)
-    assert ledger_count == 10
+    assert schema_version == (12,)
+    assert ledger_count == 12
 
 
 def test_record_and_get_with_defaults(tmp_path: Path) -> None:

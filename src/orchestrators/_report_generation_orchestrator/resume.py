@@ -84,6 +84,23 @@ STAGE_ANALYSIS_COMPLETE = "analysis_complete"
 STAGE_RENDER_COMPLETE = "render_complete"
 
 
+def _checkpoint_stage_outcome(
+    runtime: ReportRuntimeState,
+    stage_name: str,
+) -> IngestOutcome:
+    """Return a checkpoint boundary without silently invoking the next stage."""
+    return IngestOutcome(
+        schema_version="1.0",
+        file_id=runtime.file.file_id,
+        name=runtime.file_name,
+        md5=runtime.md5,
+        html_path=None,
+        status="checkpointed",
+        error=None,
+        evidence_packs={"checkpoint": stage_name},
+    )
+
+
 def _run_projection(
     runtime: ReportRuntimeState,
     analysis: ReportAnalysisState,
@@ -843,6 +860,8 @@ def _resume_from_analysis_checkpoint(
     ],
     *,
     skip_post_render_projection: bool = False,
+    stop_after_stage: str = "",
+    projection_only: bool = False,
 ) -> IngestOutcome:
     checkpoint, checkpoint_path = _read_validated_checkpoint(
         runtime, stage_name=STAGE_ANALYSIS_COMPLETE
@@ -857,6 +876,12 @@ def _resume_from_analysis_checkpoint(
         runtime, source, selection, checkpoint_payload.get("analysis")
     )
     preview_resp = _preview_from_checkpoint(checkpoint_payload.get("preview"))
+    if stop_after_stage == STAGE_ANALYSIS_COMPLETE:
+        return _checkpoint_stage_outcome(runtime, STAGE_ANALYSIS_COMPLETE)
+    if projection_only:
+        outcome = _resume_from_render_checkpoint(runtime)
+        _run_projection(runtime, analysis, outcome, analytics_projection_fn)
+        return outcome
     return _render_project_and_cleanup(
         runtime,
         source,
@@ -943,6 +968,7 @@ def _resume_from_source_checkpoint(
     validation_openai_client=None,
     regeneration_openai_client=None,
     figure_caption_openai_client=None,
+    stop_after_stage: str = "",
 ) -> IngestOutcome:
     checkpoint, checkpoint_path = _read_validated_checkpoint(
         runtime, stage_name=STAGE_SOURCE_PREPARED
@@ -971,6 +997,8 @@ def _resume_from_source_checkpoint(
             "vector_indexing": _vector_indexing_checkpoint_payload(vector_state),
         },
     )
+    if stop_after_stage == STAGE_SELECTION_COMPLETE:
+        return _checkpoint_stage_outcome(runtime, STAGE_SELECTION_COMPLETE)
     preview_resp = render_preview_asset(runtime, source, dependencies.render)
     analysis = run_report_analysis(
         runtime,
@@ -994,6 +1022,8 @@ def _resume_from_source_checkpoint(
         ),
         payload=_analysis_checkpoint_payload(source, selection, analysis, preview_resp),
     )
+    if stop_after_stage == STAGE_ANALYSIS_COMPLETE:
+        return _checkpoint_stage_outcome(runtime, STAGE_ANALYSIS_COMPLETE)
     return _render_project_and_cleanup(
         runtime,
         source,
@@ -1022,6 +1052,7 @@ def _resume_from_selection_checkpoint(
     validation_openai_client=None,
     regeneration_openai_client=None,
     figure_caption_openai_client=None,
+    stop_after_stage: str = "",
 ) -> IngestOutcome:
     checkpoint, checkpoint_path = _read_validated_checkpoint(
         runtime, stage_name=STAGE_SELECTION_COMPLETE
@@ -1065,6 +1096,8 @@ def _resume_from_selection_checkpoint(
         artifact_refs=analysis_refs,
         payload=_analysis_checkpoint_payload(source, selection, analysis, preview_resp),
     )
+    if stop_after_stage == STAGE_ANALYSIS_COMPLETE:
+        return _checkpoint_stage_outcome(runtime, STAGE_ANALYSIS_COMPLETE)
     return _render_project_and_cleanup(
         runtime,
         source,
@@ -1151,6 +1184,8 @@ def _resume_from_checkpoint_stage(
     regeneration_openai_client=None,
     figure_caption_openai_client=None,
     skip_post_render_projection: bool = False,
+    stop_after_stage: str = "",
+    projection_only: bool = False,
 ) -> IngestOutcome:
     stage_name = str(requested_resume_stage or "").strip()
     if stage_name == LATEST_SAFE_RESTART_STAGE:
@@ -1187,6 +1222,7 @@ def _resume_from_checkpoint_stage(
             validation_openai_client=validation_openai_client,
             regeneration_openai_client=regeneration_openai_client,
             figure_caption_openai_client=figure_caption_openai_client,
+            stop_after_stage=stop_after_stage,
         )
     if stage_name == STAGE_SELECTION_COMPLETE:
         return _resume_from_selection_checkpoint(
@@ -1200,6 +1236,7 @@ def _resume_from_checkpoint_stage(
             validation_openai_client=validation_openai_client,
             regeneration_openai_client=regeneration_openai_client,
             figure_caption_openai_client=figure_caption_openai_client,
+            stop_after_stage=stop_after_stage,
         )
     if stage_name == STAGE_ANALYSIS_COMPLETE:
         return _resume_from_analysis_checkpoint(
@@ -1207,6 +1244,8 @@ def _resume_from_checkpoint_stage(
             dependencies,
             analytics_projection_fn,
             skip_post_render_projection=skip_post_render_projection,
+            stop_after_stage=stop_after_stage,
+            projection_only=projection_only,
         )
     return _resume_from_render_checkpoint(runtime)
 

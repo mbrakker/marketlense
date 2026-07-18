@@ -198,6 +198,138 @@ CREATE TABLE IF NOT EXISTS remediation_transitions (
 );
 """
 
+_STATE_WORKFLOW_JOBS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS workflow_jobs (
+  job_id TEXT PRIMARY KEY,
+  schema_version TEXT NOT NULL,
+  queue_name TEXT NOT NULL,
+  job_type TEXT NOT NULL,
+  job_schema_version TEXT NOT NULL,
+  workflow_version TEXT NOT NULL,
+  root_workflow_id TEXT NOT NULL,
+  parent_job_id TEXT NOT NULL DEFAULT '',
+  trigger_event_id TEXT NOT NULL DEFAULT '',
+  correlation_id TEXT NOT NULL DEFAULT '',
+  entity_type TEXT NOT NULL DEFAULT '',
+  entity_id TEXT NOT NULL DEFAULT '',
+  publisher_id TEXT NOT NULL DEFAULT '',
+  source_identity_id TEXT NOT NULL DEFAULT '',
+  report_id TEXT NOT NULL DEFAULT '',
+  input_reference TEXT NOT NULL DEFAULT '',
+  input_content_hash TEXT NOT NULL DEFAULT '',
+  required_artifact_references_json TEXT NOT NULL DEFAULT '[]',
+  payload_json TEXT NOT NULL DEFAULT '{}',
+  output_reference TEXT NOT NULL DEFAULT '',
+  output_content_hash TEXT NOT NULL DEFAULT '',
+  idempotency_key TEXT NOT NULL,
+  deduplication_scope TEXT NOT NULL,
+  priority INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL,
+  available_at_utc TEXT NOT NULL,
+  attempt_count INTEGER NOT NULL DEFAULT 0,
+  max_attempts INTEGER NOT NULL,
+  lease_owner TEXT NOT NULL DEFAULT '',
+  lease_expires_at_utc TEXT NOT NULL DEFAULT '',
+  heartbeat_at_utc TEXT NOT NULL DEFAULT '',
+  budget_profile TEXT NOT NULL DEFAULT '',
+  execution_plan_hash TEXT NOT NULL DEFAULT '',
+  prompt_policy_version TEXT NOT NULL DEFAULT '',
+  processing_version TEXT NOT NULL DEFAULT '',
+  created_at_utc TEXT NOT NULL,
+  updated_at_utc TEXT NOT NULL,
+  started_at_utc TEXT NOT NULL DEFAULT '',
+  completed_at_utc TEXT NOT NULL DEFAULT '',
+  error_code TEXT NOT NULL DEFAULT '',
+  error_message_summary TEXT NOT NULL DEFAULT '',
+  error_retryable INTEGER NOT NULL DEFAULT 0,
+  terminal_reason TEXT NOT NULL DEFAULT '',
+  remediation_id TEXT NOT NULL DEFAULT '',
+  CHECK(status IN (
+    'pending','leased','running','succeeded','retry_wait','budget_deferred',
+    'blocked','dead_letter','cancelled'
+  )),
+  UNIQUE(deduplication_scope, idempotency_key)
+);
+"""
+
+_STATE_WORKFLOW_JOB_ATTEMPTS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS workflow_job_attempts (
+  attempt_id TEXT PRIMARY KEY,
+  job_id TEXT NOT NULL,
+  attempt_number INTEGER NOT NULL,
+  worker_id TEXT NOT NULL,
+  started_at_utc TEXT NOT NULL,
+  completed_at_utc TEXT NOT NULL DEFAULT '',
+  input_content_hash TEXT NOT NULL DEFAULT '',
+  output_content_hash TEXT NOT NULL DEFAULT '',
+  execution_plan_hash TEXT NOT NULL DEFAULT '',
+  budget_decision TEXT NOT NULL DEFAULT '',
+  provider_usage_json TEXT NOT NULL DEFAULT '{}',
+  external_effects_json TEXT NOT NULL DEFAULT '[]',
+  outcome TEXT NOT NULL DEFAULT '',
+  error_code TEXT NOT NULL DEFAULT '',
+  FOREIGN KEY(job_id) REFERENCES workflow_jobs(job_id),
+  UNIQUE(job_id, attempt_number)
+);
+"""
+
+_STATE_WORKFLOW_JOB_TRANSITIONS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS workflow_job_transitions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  job_id TEXT NOT NULL,
+  from_status TEXT NOT NULL,
+  to_status TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  actor TEXT NOT NULL,
+  created_at_utc TEXT NOT NULL,
+  details_json TEXT NOT NULL DEFAULT '{}',
+  FOREIGN KEY(job_id) REFERENCES workflow_jobs(job_id)
+);
+"""
+
+_STATE_WORKFLOW_OUTBOX_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS workflow_outbox (
+  event_id TEXT PRIMARY KEY,
+  event_key TEXT NOT NULL UNIQUE,
+  parent_job_id TEXT NOT NULL,
+  root_workflow_id TEXT NOT NULL,
+  queue_name TEXT NOT NULL,
+  job_type TEXT NOT NULL,
+  submission_json TEXT NOT NULL,
+  available_at_utc TEXT NOT NULL,
+  attempt_count INTEGER NOT NULL DEFAULT 0,
+  max_attempts INTEGER NOT NULL DEFAULT 20,
+  status TEXT NOT NULL DEFAULT 'pending',
+  lease_owner TEXT NOT NULL DEFAULT '',
+  lease_expires_at_utc TEXT NOT NULL DEFAULT '',
+  materialised_job_id TEXT NOT NULL DEFAULT '',
+  error_code TEXT NOT NULL DEFAULT '',
+  remediation_id TEXT NOT NULL DEFAULT '',
+  created_at_utc TEXT NOT NULL,
+  updated_at_utc TEXT NOT NULL,
+  CHECK(status IN ('pending','leased','materialised','retry_wait','dead_letter'))
+);
+"""
+
+_STATE_WORKFLOW_QUEUE_CONTROLS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS workflow_queue_controls (
+  queue_name TEXT PRIMARY KEY,
+  schema_version TEXT NOT NULL,
+  mode TEXT NOT NULL DEFAULT 'active',
+  enabled INTEGER NOT NULL DEFAULT 1,
+  worker_concurrency_limit INTEGER NOT NULL DEFAULT 1,
+  maximum_pending INTEGER NOT NULL DEFAULT 100,
+  maximum_fanout INTEGER NOT NULL DEFAULT 10,
+  max_attempts INTEGER NOT NULL DEFAULT 3,
+  lease_seconds INTEGER NOT NULL DEFAULT 900,
+  budget_profile TEXT NOT NULL DEFAULT '',
+  retry_delay_seconds INTEGER NOT NULL DEFAULT 60,
+  emergency_stop_reason TEXT NOT NULL DEFAULT '',
+  updated_at_utc TEXT NOT NULL,
+  updated_by TEXT NOT NULL DEFAULT ''
+);
+"""
+
 
 def _state_db_001_create_base_tables(conn: sqlite3.Connection) -> None:
     conn.execute(_STATE_PROCESSED_TABLE_SQL)
@@ -329,6 +461,110 @@ def _state_db_010_create_remediation_ledger(conn: sqlite3.Connection) -> None:
     )
 
 
+def _state_db_011_create_workflow_queue(conn: sqlite3.Connection) -> None:
+    """Create the single durable queue platform beside existing state truth."""
+    conn.execute(_STATE_WORKFLOW_JOBS_TABLE_SQL)
+    conn.execute(_STATE_WORKFLOW_JOB_ATTEMPTS_TABLE_SQL)
+    conn.execute(_STATE_WORKFLOW_JOB_TRANSITIONS_TABLE_SQL)
+    conn.execute(_STATE_WORKFLOW_OUTBOX_TABLE_SQL)
+    conn.execute(_STATE_WORKFLOW_QUEUE_CONTROLS_TABLE_SQL)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_workflow_jobs_queue_due "
+        "ON workflow_jobs("
+        "queue_name, status, available_at_utc, priority DESC, created_at_utc)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_workflow_jobs_lease_expiry "
+        "ON workflow_jobs(status, lease_expires_at_utc)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_workflow_jobs_entity "
+        "ON workflow_jobs(entity_type, entity_id, updated_at_utc DESC)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_workflow_jobs_root "
+        "ON workflow_jobs(root_workflow_id, correlation_id, created_at_utc)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_workflow_outbox_due "
+        "ON workflow_outbox(status, available_at_utc, created_at_utc)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_workflow_transitions_job "
+        "ON workflow_job_transitions(job_id, id DESC)"
+    )
+
+
+def _state_db_012_create_queue_publication_and_briefing_state(
+    conn: sqlite3.Connection,
+) -> None:
+    """Keep queue-owned approval and Briefing aggregation state out of job rows."""
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS workflow_publication_readiness (
+          package_checksum TEXT PRIMARY KEY,
+          entity_type TEXT NOT NULL,
+          package_reference TEXT NOT NULL,
+          validation_reference TEXT NOT NULL DEFAULT '',
+          lineage_reference TEXT NOT NULL DEFAULT '',
+          required_asset_status TEXT NOT NULL DEFAULT '',
+          readiness_status TEXT NOT NULL,
+          reason TEXT NOT NULL DEFAULT '',
+          created_at_utc TEXT NOT NULL,
+          updated_at_utc TEXT NOT NULL,
+          CHECK(readiness_status IN (
+            'awaiting_review','approved','rejected','repair_required','not_publishable'
+          ))
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS workflow_publication_approvals (
+          approval_id TEXT PRIMARY KEY,
+          package_checksum TEXT NOT NULL,
+          actor_id TEXT NOT NULL,
+          note TEXT NOT NULL DEFAULT '',
+          action TEXT NOT NULL,
+          created_at_utc TEXT NOT NULL,
+          FOREIGN KEY(package_checksum)
+            REFERENCES workflow_publication_readiness(package_checksum),
+          UNIQUE(package_checksum, action, actor_id, created_at_utc)
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS workflow_briefing_opportunities (
+          opportunity_id TEXT PRIMARY KEY,
+          opportunity_key TEXT NOT NULL UNIQUE,
+          topic TEXT NOT NULL,
+          geography TEXT NOT NULL DEFAULT '',
+          rolling_window TEXT NOT NULL,
+          briefing_policy_version TEXT NOT NULL,
+          source_hashes_json TEXT NOT NULL DEFAULT '[]',
+          publisher_ids_json TEXT NOT NULL DEFAULT '[]',
+          frozen_source_manifest TEXT NOT NULL DEFAULT '',
+          frozen_source_hashes_json TEXT NOT NULL DEFAULT '[]',
+          status TEXT NOT NULL,
+          generation_job_id TEXT NOT NULL DEFAULT '',
+          last_generated_at_utc TEXT NOT NULL DEFAULT '',
+          created_at_utc TEXT NOT NULL,
+          updated_at_utc TEXT NOT NULL,
+          CHECK(status IN ('collecting','eligible','frozen','generated','blocked'))
+        )
+        """
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_workflow_readiness_status "
+        "ON workflow_publication_readiness(readiness_status, updated_at_utc)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_workflow_briefing_status "
+        "ON workflow_briefing_opportunities(status, updated_at_utc)"
+    )
+
+
 _STATE_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
     _MigrationSpec(
         migration_id="state_db_001_create_base_tables",
@@ -379,5 +615,15 @@ _STATE_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
         migration_id="state_db_010_create_remediation_ledger",
         version=10,
         apply_fn=_state_db_010_create_remediation_ledger,
+    ),
+    _MigrationSpec(
+        migration_id="state_db_011_create_workflow_queue",
+        version=11,
+        apply_fn=_state_db_011_create_workflow_queue,
+    ),
+    _MigrationSpec(
+        migration_id="state_db_012_create_queue_publication_and_briefing_state",
+        version=12,
+        apply_fn=_state_db_012_create_queue_publication_and_briefing_state,
     ),
 )

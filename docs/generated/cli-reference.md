@@ -27,6 +27,17 @@ For command options and help text, run `python -m src.cli <command> --help`.
 | `poll-mail-report` | [`src/_cli/browser.py`](../../src/_cli/browser.py) | Public |
 | `promote-private-api-playbook` | [`src/_cli/private_api.py`](../../src/_cli/private_api.py) | Public |
 | `publish-wp` | [`src/_cli/pipeline.py`](../../src/_cli/pipeline.py) | Public |
+| `queue-cancel` | [`src/_cli/workflow_queue.py`](../../src/_cli/workflow_queue.py) | Public |
+| `queue-drain` | [`src/_cli/workflow_queue.py`](../../src/_cli/workflow_queue.py) | Public |
+| `queue-health` | [`src/_cli/workflow_queue.py`](../../src/_cli/workflow_queue.py) | Public |
+| `queue-inspect-job` | [`src/_cli/workflow_queue.py`](../../src/_cli/workflow_queue.py) | Public |
+| `queue-list` | [`src/_cli/workflow_queue.py`](../../src/_cli/workflow_queue.py) | Public |
+| `queue-materialize-outbox` | [`src/_cli/workflow_queue.py`](../../src/_cli/workflow_queue.py) | Public |
+| `queue-pause` | [`src/_cli/workflow_queue.py`](../../src/_cli/workflow_queue.py) | Public |
+| `queue-reconcile` | [`src/_cli/workflow_queue.py`](../../src/_cli/workflow_queue.py) | Public |
+| `queue-release-expired-leases` | [`src/_cli/workflow_queue.py`](../../src/_cli/workflow_queue.py) | Public |
+| `queue-requeue` | [`src/_cli/workflow_queue.py`](../../src/_cli/workflow_queue.py) | Public |
+| `queue-resume` | [`src/_cli/workflow_queue.py`](../../src/_cli/workflow_queue.py) | Public |
 | `reap-ui-dead-letters` | [`src/_cli/ui_runs.py`](../../src/_cli/ui_runs.py) | Public |
 | `recategorize` | [`src/_cli/pipeline.py`](../../src/_cli/pipeline.py) | Public |
 | `remediation-soak` | [`src/_cli/remediation.py`](../../src/_cli/remediation.py) | Public |
@@ -37,3 +48,4 @@ For command options and help text, run `python -m src.cli <command> --help`.
 | `trace-run` | [`src/_cli/trace.py`](../../src/_cli/trace.py) | Public |
 | `ui-run-worker` | [`src/_cli/ui_runs.py`](../../src/_cli/ui_runs.py) | Hidden |
 | `update-wp-categories` | [`src/_cli/pipeline.py`](../../src/_cli/pipeline.py) | Public |
+| `workflow-worker` | [`src/_cli/workflow_queue.py`](../../src/_cli/workflow_queue.py) | Public |

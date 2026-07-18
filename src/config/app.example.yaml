@@ -114,6 +114,16 @@ publisher_discovery:
     confidence_weight: 0.15
     low_score_demotion_threshold: 45.0
 
+workflow_queues:
+  # Durable controls seed from these conservative defaults. Operators pause,
+  # drain, and resume queues through the queue CLI without editing this file.
+  publisher_discovery: {enabled: true, max_workers: 1, max_attempts: 3, lease_seconds: 900, maximum_pending: 200, maximum_fanout: 100, budget_profile: publisher_inventory}
+  report_acquisition: {enabled: true, max_workers: 2, max_attempts: 3, lease_seconds: 1200, maximum_pending: 500, maximum_fanout: 5, budget_profile: browser_acquisition}
+  source_ingest: {enabled: true, max_workers: 1, max_attempts: 3, lease_seconds: 1800, maximum_pending: 300, maximum_fanout: 3, budget_profile: report_ingest}
+  report_analysis: {enabled: true, max_workers: 1, max_attempts: 2, lease_seconds: 3600, maximum_pending: 100, maximum_fanout: 5, budget_profile: high_quality}
+  briefing_generation: {enabled: true, max_workers: 1, max_attempts: 2, lease_seconds: 3600, maximum_pending: 25, maximum_fanout: 5, budget_profile: cross_report_analysis}
+  wordpress_publish: {enabled: true, max_workers: 1, max_attempts: 3, lease_seconds: 900, maximum_pending: 100, maximum_fanout: 10, budget_profile: publishing}
+
 workflow_control:
   remediation_reaper:
     schema_version: "1.0"

@@ -90,6 +90,8 @@ from ._sqlite_migration.state import (
     _state_db_008_create_mailbox_candidate_rejections,
     _state_db_009_create_artifact_acquisition_cache,
     _state_db_010_create_remediation_ledger,
+    _state_db_011_create_workflow_queue,
+    _state_db_012_create_queue_publication_and_briefing_state,
 )
 from ._sqlite_migration.ui_runs import (
     _UI_RUN_DEAD_LETTER_ACTIONS_TABLE_SQL,
