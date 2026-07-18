@@ -34,6 +34,7 @@ For command options and help text, run `python -m src.cli <command> --help`.
 | `queue-inspect-job` | [`src/_cli/workflow_queue.py`](../../src/_cli/workflow_queue.py) | Public |
 | `queue-list` | [`src/_cli/workflow_queue.py`](../../src/_cli/workflow_queue.py) | Public |
 | `queue-materialize-outbox` | [`src/_cli/workflow_queue.py`](../../src/_cli/workflow_queue.py) | Public |
+| `queue-migrate-deferred-work` | [`src/_cli/workflow_queue.py`](../../src/_cli/workflow_queue.py) | Public |
 | `queue-pause` | [`src/_cli/workflow_queue.py`](../../src/_cli/workflow_queue.py) | Public |
 | `queue-reconcile` | [`src/_cli/workflow_queue.py`](../../src/_cli/workflow_queue.py) | Public |
 | `queue-release-expired-leases` | [`src/_cli/workflow_queue.py`](../../src/_cli/workflow_queue.py) | Public |

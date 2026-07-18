@@ -16,12 +16,21 @@ from typing import Callable
 
 from src.contracts.browser_download import ReportDownloadOrchestratorRequest
 from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
+from src.contracts.cross_report_analysis import (
+    CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+    CrossReportAnalysisRequest,
+    CrossReportProjectedDataReadRequest,
+)
 from src.contracts.drive import DriveFile
 from src.contracts.files import FileStatRequest
 from src.contracts.mailbox_acquisition import MailReportAcquisitionRequest
 from src.contracts.publisher_inventory import PublisherInventoryDiscoveryRequest
 from src.contracts.run_budget import BudgetOverrideContext
 from src.contracts.run_context import RunContext
+from src.contracts.signal_candidates import (
+    SIGNAL_CANDIDATE_SCHEMA_VERSION,
+    SignalCandidateExtractionRequest,
+)
 from src.contracts.workflow_queue import (
     AnalyticsProjectionPayload,
     AnalyticsProjectionResult,
@@ -71,6 +80,9 @@ from src.orchestrators.publisher_inventory_orchestrator import (
 )
 from src.orchestrators.report_download_orchestrator import run_report_download
 from src.orchestrators.report_pipeline_orchestrator import run_report_pipeline
+from src.orchestrators.signal_candidate_orchestrator import (
+    run_signal_candidate_extraction,
+)
 from src.services.config_service import (
     build_ingest_settings,
     load_browser_download_settings,
@@ -535,6 +547,129 @@ def _briefing_opportunity_handler(
             summary={"opportunity_status": opportunity.status, "source_count": len(opportunity.source_hashes)},
         )
     )
+
+
+def _string_list_attribute(payload: QueuePayload, name: str) -> list[str]:
+    value = payload.attributes.get(name, [])
+    if not isinstance(value, list):
+        raise AppError(
+            code="workflow_queue_attribute_invalid",
+            message="Workflow queue list attributes must be lists of strings",
+            retryable=False,
+            context={"attribute": name},
+        )
+    return [str(item).strip() for item in value if str(item).strip()]
+
+
+def _signal_candidate_handler(
+    job: WorkflowJob, payload: QueuePayload, ctx: RunContext
+) -> WorkflowQueueHandlerResult:
+    """Create canonical Signal candidates from existing projected evidence."""
+
+    assert isinstance(payload, SignalCandidatePayload)
+    app = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+    topic = str(payload.attributes.get("topic", "")).strip()
+    if not topic:
+        raise AppError(
+            code="workflow_queue_signal_topic_missing",
+            message="Signal candidate extraction requires an explicit topic",
+            retryable=False,
+        )
+    request_id = _digest(
+        "signal-candidate",
+        payload.report_id or job.report_id,
+        payload.projection_reference or payload.input_reference,
+        payload.signal_selection_policy_version,
+        topic,
+    )
+    publisher_filters = _string_list_attribute(payload, "publisher_filters")
+    if job.publisher_id and job.publisher_id not in publisher_filters:
+        publisher_filters.append(job.publisher_id)
+    analysis_request = CrossReportAnalysisRequest(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        request_id=request_id,
+        topic=topic,
+        auto_theme=False,
+        category_filters=_string_list_attribute(payload, "category_filters"),
+        tag_filters=_string_list_attribute(payload, "tag_filters"),
+        publisher_filters=publisher_filters,
+        date_range_start=str(payload.attributes.get("date_range_start", "")) or None,
+        date_range_end=str(payload.attributes.get("date_range_end", "")) or None,
+        max_source_reports=max(1, int(payload.attributes.get("max_source_reports", 6))),
+        diagnostic=False,
+        override_publishability=True,
+        publication_mode="generate_only",
+    )
+    outcome = run_signal_candidate_extraction(
+        SignalCandidateExtractionRequest(
+            schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+            extraction_request_id=request_id,
+            analysis_request=analysis_request,
+            projected_data_request=CrossReportProjectedDataReadRequest(
+                schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+                db_path=app.reports_db,
+                publisher_filters=publisher_filters,
+                date_range_start=analysis_request.date_range_start,
+                date_range_end=analysis_request.date_range_end,
+                category_filters=analysis_request.category_filters,
+                tag_filters=analysis_request.tag_filters,
+                content_classes=["claim", "finding", "quote", "metric"],
+                minimum_projection_status="projected",
+            ),
+            db_path=app.signal_store_db or app.reports_db,
+            max_evidence_items=max(1, int(payload.attributes.get("max_evidence_items", 48))),
+            max_signals=max(1, int(payload.attributes.get("max_signals", 8))),
+            state_db=app.state_db,
+        ),
+        ctx,
+    )
+    downstream = [
+        WorkflowJobSubmission(
+            schema_version="1.0",
+            queue_name="signal_generation",
+            job_type="signal_generation.v1",
+            payload=SignalGenerationPayload(
+                candidate_group_id=group.group_id,
+                frozen_evidence_manifest=f"signal-candidates:{outcome.extraction_request_id}:{group.group_id}",
+                model_routing_policy_version=payload.signal_selection_policy_version,
+                input_reference=app.signal_store_db or app.reports_db,
+                input_content_hash=_digest(*group.evidence_ids),
+                processing_version=payload.processing_version,
+                attributes={"topic": topic, "source_report_ids": group.source_report_ids},
+            ),
+            idempotency_key=_digest(
+                "signal-generation", outcome.extraction_request_id, group.group_id
+            ),
+            deduplication_scope="signal-candidate-group",
+            root_workflow_id=job.root_workflow_id or job.job_id,
+            parent_job_id=job.job_id,
+            trigger_event_id=job.trigger_event_id or job.job_id,
+            correlation_id=job.correlation_id or job.root_workflow_id or job.job_id,
+            entity_type="signal",
+            entity_id=group.group_id,
+            budget_profile="high_quality",
+        )
+        for group in outcome.batch.groups
+        if group.validation_status == "approved"
+    ]
+    return WorkflowQueueHandlerResult(
+        result=WorkflowStageResult(
+            output_reference=f"signal-candidates:{outcome.extraction_request_id}",
+            output_content_hash=_digest(
+                outcome.extraction_request_id,
+                *[group.group_id for group in outcome.batch.groups],
+            ),
+            execution_plan_hash=job.execution_plan_hash,
+            output_verified=outcome.status == "stored",
+            summary={
+                "candidate_count": outcome.candidate_count,
+                "group_count": outcome.group_count,
+            },
+        ),
+        downstream=downstream,
+    )
+
+
 def _stage_child_submission(
     *,
     job: WorkflowJob,
@@ -828,6 +963,7 @@ def default_workflow_queue_registry() -> dict[
             "signal_candidate",
             SignalCandidatePayload,
             SignalCandidateResult,
+            handler=_signal_candidate_handler,
             downstream=("signal_generation.v1",),
             budget_profile="signal_candidate",
         ),

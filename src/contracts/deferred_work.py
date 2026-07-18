@@ -211,3 +211,55 @@ class DeferredWorkReaperResponse:
     deferred_work_keys: list[str] = field(default_factory=list)
     remediation_work_keys: list[str] = field(default_factory=list)
     released_lease_work_keys: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class DeferredWorkQueueMigrationRequest:
+    """Bounded request to hand legacy due work to the canonical workflow queue.
+
+    Legacy rows remain readable in the usage ledger.  The adapter deliberately
+    migrates only workflows whose retained inputs can be verified and whose
+    queue mapping is code-reviewed; it never invents a generic scheduler.
+    """
+
+    schema_version: str = field(
+        metadata={"doc": "Deferred-work queue-migration request schema version."}
+    )
+    usage_db_path: str = field(metadata={"doc": "Canonical usage-ledger path."})
+    state_db: str = field(metadata={"doc": "Canonical workflow-state database path."})
+    limit: int = field(default=100, metadata={"doc": "Maximum legacy rows inspected."})
+
+
+@dataclass(frozen=True)
+class DeferredWorkQueueMigrationRecord:
+    """One retained legacy row and its effective workflow-queue handoff."""
+
+    schema_version: str = field(
+        default="1.0", metadata={"doc": "Contract schema version."}
+    )
+    work_key: str = field(default="", metadata={"doc": "Legacy durable work key."})
+    workflow_job_id: str = field(
+        default="", metadata={"doc": "Canonical queue job when materialised."}
+    )
+    outcome: str = field(
+        default="", metadata={"doc": "submitted, deduplicated, or unresolved."}
+    )
+    reason: str = field(
+        default="", metadata={"doc": "Bounded non-sensitive handoff reason."}
+    )
+
+
+@dataclass(frozen=True)
+class DeferredWorkQueueMigrationResponse:
+    """Observable result of one explicit, non-destructive legacy handoff pass."""
+
+    schema_version: str = field(
+        default="1.0", metadata={"doc": "Contract schema version."}
+    )
+    inspected_count: int = field(
+        default=0, metadata={"doc": "Legacy pending rows inspected."}
+    )
+    records: list[DeferredWorkQueueMigrationRecord] = field(
+        default_factory=list,
+        metadata={"doc": "One outcome per inspected durable legacy record."},
+    )

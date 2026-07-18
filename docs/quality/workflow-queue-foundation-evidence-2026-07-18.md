@@ -59,3 +59,14 @@ domain-specific adapters, UI submission migration, deferred-work migration,
 and direct-chaining enforcement are implemented. Accordingly, backlog items
 remain open for Signal/Briefing production work and WordPress publication
 migration.
+
+## Follow-on evidence — 2026-07-18
+
+The later compatibility handoff (`queue-migrate-deferred-work --yes`) reads
+pending legacy ledger records, verifies a retained report PDF, and creates a
+deduplicated `source_ingest` job with the legacy due time, plan hash, remaining
+attempt allowance, root workflow correlation, and work-key trigger. The ledger
+row remains readable; unsupported workflows and missing inputs are surfaced as
+unresolved. Focused adapter, legacy-recovery, and queue-service tests passed
+(`17 passed`). This is a migration adapter, not evidence that all legacy
+workflows or the remaining production queue adapters have been completed.

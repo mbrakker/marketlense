@@ -61,13 +61,28 @@ active.
 
 ## Budget-deferred work recovery
 
-Budget deferrals are visible through `python -m src.cli deferred-work`. They
-are not remediation failures unless automatic resumption reaches a bounded
-terminal outcome. Before enabling automatic recovery, inspect queue depth,
-due records, repeated deferrals, active leases, and terminal count. Enable
-only `workflow_control.deferred_work_reaper.execution_enabled`, then invoke
-`python -m src.cli deferred-work-reap` once from the existing external worker
-or hourly scheduler. The command does not poll or install a scheduler.
+Budget deferrals are visible through `python -m src.cli deferred-work`. New
+queue-worker deferrals use the canonical `budget_deferred` job state; the
+legacy ledger is retained only for historical records and compatibility.
+Hand off supported legacy report-generation rows explicitly before running
+workers:
+
+```powershell
+python -m src.cli queue-migrate-deferred-work --yes
+```
+
+The handoff verifies the retained PDF, creates a deterministic `source_ingest`
+job with the original due time, remaining attempt budget, plan hash and lineage
+key, and leaves the old ledger row readable. Repeating the command returns the
+same effective job. Rows for an unsupported legacy workflow, missing retained
+artifact, or exhausted legacy attempt budget remain visible as `unresolved` in
+the command output; they are never silently discarded or guessed into another
+workflow.
+
+The old `deferred-work-reap` command remains an emergency compatibility path
+while legacy rows are being handed off. Do not enable it alongside normal queue
+workers for a migrated record; use the canonical queue controls, retry state,
+and remediation flow for all new work.
 
 Every invocation first rechecks the canonical budget, then rebuilds the
 minimal plan and validates reusable artifacts. It preserves the original

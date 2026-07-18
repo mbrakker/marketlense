@@ -95,6 +95,7 @@ Generated from CLI registrations, configuration example, architecture policy, or
 - `queue-inspect-job`
 - `queue-list`
 - `queue-materialize-outbox`
+- `queue-migrate-deferred-work`
 - `queue-pause`
 - `queue-reconcile`
 - `queue-release-expired-leases`

@@ -177,6 +177,7 @@ python -m src.cli queue-inspect-job <job-id>
 python -m src.cli queue-release-expired-leases
 python -m src.cli queue-materialize-outbox
 python -m src.cli queue-reconcile
+python -m src.cli queue-migrate-deferred-work --yes
 python -m src.cli workflow-worker --queue publisher_discovery --limit 1
 ```
 
@@ -189,3 +190,15 @@ SQLite remains appropriate for the current one-host, conservative-worker
 deployment. Reassess PostgreSQL or a broker only after measured sustained lock
 contention, queue-health query latency, or required independent multi-host
 concurrency exceeds the bounded SQLite worker limits.
+
+## Legacy budget-deferred compatibility
+
+New queue-worker budget decisions use the canonical `budget_deferred` state;
+there is no second due-work scheduler for new work. The retained usage-ledger
+rows remain readable while `queue-migrate-deferred-work --yes` hands off the
+currently supported `report_generation` records. The adapter verifies the
+retained local PDF and creates a single `source_ingest` job with deterministic
+legacy-work lineage, original due time, remaining attempt budget and plan hash.
+It does not delete or mutate the historical row. Unsupported workflows, missing
+artifacts and exhausted legacy retries are reported as unresolved for operator
+action rather than being silently retried by a parallel scheduler.

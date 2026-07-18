@@ -12,6 +12,7 @@ import typer
 
 from src._cli.app import cli_app, console
 from src.contracts.config import ConfigLoadRequest
+from src.contracts.deferred_work import DeferredWorkQueueMigrationRequest
 from src.contracts.files import FileStatRequest
 from src.contracts.logging import LoggingSetupRequest
 from src.contracts.workflow_queue import (
@@ -21,6 +22,9 @@ from src.contracts.workflow_queue import (
     WordPressPublishPayload,
     WorkflowJobSubmission,
     WorkflowQueueControl,
+)
+from src.orchestrators.deferred_work_queue_adapter import (
+    migrate_deferred_work_to_workflow_queue,
 )
 from src.orchestrators.workflow_worker_orchestrator import run_workflow_worker_once
 from src.services.config_service import (
@@ -200,6 +204,34 @@ def queue_submit_source_ingest(
         ctx,
     )
     console.print_json(data={"job_id": job.job_id, "created": created})
+
+
+@cli_app.command("queue-migrate-deferred-work")
+def queue_migrate_deferred_work(
+    limit: int = typer.Option(100, min=1, max=500),
+    yes: bool = typer.Option(False, "--yes", help="Confirm legacy-work handoff"),
+) -> None:
+    """Submit supported legacy budget deferrals to the canonical queue.
+
+    The source ledger is deliberately not deleted or rewritten.  Each retained
+    work key produces at most one effective queue job, and rows lacking a safe
+    mapping are returned for operator action.
+    """
+    if not yes:
+        raise typer.BadParameter("--yes is required to hand off legacy deferred work")
+    ctx = _ctx("cli_queue_migrate_deferred_work")
+    state_db = _state_db(ctx)
+    settings = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+    response = migrate_deferred_work_to_workflow_queue(
+        DeferredWorkQueueMigrationRequest(
+            schema_version="1.0",
+            usage_db_path=settings.usage_db_path,
+            state_db=state_db,
+            limit=limit,
+        ),
+        ctx,
+    )
+    console.print_json(data=asdict(response))
 
 
 @cli_app.command("queue-approve-publication")
