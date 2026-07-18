@@ -123,6 +123,49 @@ def _get_record(
     return _row_to_record(row) if row else None
 
 
+def _make_storage_record_canonical(
+    conn: sqlite3.Connection,
+    *,
+    artifact_id: str,
+    report_id: str,
+    artifact_kind: str,
+    storage_ref: str,
+) -> None:
+    """Keep one active lineage observation for a materialized artifact path."""
+    conn.execute(
+        """
+        UPDATE artifact_lineage_states
+        SET state='active', invalidation_reason='', superseded_by='',
+            updated_at_utc=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+        WHERE artifact_id=?
+        """,
+        (artifact_id,),
+    )
+    conn.execute(
+        """
+        WITH RECURSIVE superseded_artifacts(artifact_id) AS (
+            SELECT r.artifact_id
+            FROM artifact_lineage_records r
+            WHERE r.report_id=? AND r.artifact_kind=? AND r.storage_ref=?
+              AND r.artifact_id<>?
+            UNION
+            SELECT dependency.artifact_id
+            FROM artifact_lineage_dependencies dependency
+            JOIN superseded_artifacts parent
+              ON parent.artifact_id=dependency.dependency_artifact_id
+            JOIN artifact_lineage_states child
+              ON child.artifact_id=dependency.artifact_id
+            WHERE child.state='active'
+        )
+        UPDATE artifact_lineage_states
+        SET state='superseded', invalidation_reason='', superseded_by=?,
+            updated_at_utc=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+        WHERE state='active' AND artifact_id IN (SELECT artifact_id FROM superseded_artifacts)
+        """,
+        (report_id, artifact_kind, storage_ref, artifact_id, artifact_id),
+    )
+
+
 def record_artifact_lineage(
     request: ArtifactLineageRegistrationRequest, ctx: RunContext
 ) -> ArtifactLineageRegistrationResponse:
@@ -165,6 +208,15 @@ def record_artifact_lineage(
     with _metadata_conn(request.db_path.strip(), ctx) as conn:
         existing = _get_record(conn, artifact_id)
         if existing is not None:
+            _make_storage_record_canonical(
+                conn,
+                artifact_id=artifact_id,
+                report_id=request.report_id.strip(),
+                artifact_kind=request.artifact_kind.strip(),
+                storage_ref=storage_ref,
+            )
+            existing = _get_record(conn, artifact_id)
+            assert existing is not None
             return ArtifactLineageRegistrationResponse(
                 schema_version=ARTIFACT_LINEAGE_SCHEMA_VERSION,
                 record=existing,
@@ -208,6 +260,18 @@ def record_artifact_lineage(
         conn.execute(
             "INSERT INTO artifact_lineage_states(artifact_id,state,invalidation_reason,superseded_by,updated_at_utc) VALUES(?, 'active', '', '', strftime('%Y-%m-%dT%H:%M:%fZ','now'))",
             (artifact_id,),
+        )
+        # A materialization path is the canonical identity of one artifact
+        # family for a report.  Keep immutable prior observations, but remove
+        # them from the active graph once a newer version occupies that path.
+        # Otherwise an old incompatible record would make every later minimal
+        # plan regenerate work that the current record already satisfies.
+        _make_storage_record_canonical(
+            conn,
+            artifact_id=artifact_id,
+            report_id=request.report_id.strip(),
+            artifact_kind=request.artifact_kind.strip(),
+            storage_ref=storage_ref,
         )
         for dependency in dependencies:
             conn.execute(

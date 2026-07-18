@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import hashlib
 import logging
+import os
 import time
 from dataclasses import asdict, replace
 from inspect import Parameter, signature
+from pathlib import Path
 from typing import Callable, Optional
 
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestOutcome, IngestSettings
+from src.contracts.lock import LockAcquireRequest, LockReleaseRequest
 from src.contracts.minimal_execution_plan import (
     MINIMAL_EXECUTION_PLAN_SCHEMA_VERSION,
     ExecutionPlanRecordRequest,
@@ -42,6 +46,7 @@ from src.orchestrators.report_generation_orchestrator import (
 from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
 from src.orchestrators.workflow_control_orchestrator import resolve_retry_policy
 from src.services import llm_service
+from src.services import lock_service
 from src.services.llm_usage_ledger_service import (
     evaluate_budget_request,
     finalize_budget_side_effect,
@@ -61,6 +66,98 @@ from src.utils.lineage_regeneration import (
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.report_pipeline_orchestrator")
+
+_ENFORCED_RESUME_STAGES = {
+    ("render_complete",): "analysis_complete",
+    ("selection_complete", "render_complete"): "source_prepared",
+    ("analysis_complete", "render_complete"): "selection_complete",
+    (
+        "selection_complete",
+        "analysis_complete",
+        "render_complete",
+    ): "source_prepared",
+    (
+        "source_prepared",
+        "selection_complete",
+        "analysis_complete",
+        "render_complete",
+    ): None,
+}
+
+
+def _enforced_resume_stage(plan: MinimalExecutionPlan) -> str | None:
+    """Map the pure planner's approved shape to an existing checkpoint entrypoint."""
+    if plan.missing_lineage_blockers:
+        raise AppError(
+            code="minimal_execution_plan_lineage_incomplete",
+            message="Enforce-mode execution requires complete retained lineage",
+            retryable=False,
+            context={
+                "plan_hash": plan.plan_hash,
+                "blockers": [item.reason for item in plan.missing_lineage_blockers],
+            },
+        )
+    stages = tuple(plan.required_stages)
+    if stages not in _ENFORCED_RESUME_STAGES:
+        raise AppError(
+            code="minimal_execution_plan_enforcement_unavailable",
+            message="The planned stages are not supported by the report-generation entrypoint",
+            retryable=False,
+            context={"plan_hash": plan.plan_hash, "required_stages": list(stages)},
+        )
+    return _ENFORCED_RESUME_STAGES[stages]
+
+
+def _acquire_execution_lease(
+    settings: IngestSettings,
+    plan: MinimalExecutionPlan,
+    ctx: RunContext,
+) -> tuple[str, str]:
+    """Serialize writes for one retained plan without widening the ingest lock."""
+    key = hashlib.sha256(
+        f"{plan.report_id}:{plan.plan_hash}".encode("utf-8")
+    ).hexdigest()
+    lock_path = str(
+        Path(settings.output_dir) / ".minimal_execution_leases" / f"{key}.lock"
+    )
+    owner_id = f"{ctx.run_id}:{plan.plan_hash}"
+    response = lock_service.acquire_lock(
+        LockAcquireRequest(
+            schema_version="1.0",
+            lock_path=lock_path,
+            owner_id=owner_id,
+            pid=os.getpid(),
+            ttl_seconds=300.0,
+        ),
+        ctx,
+    )
+    if response.acquired:
+        return lock_path, owner_id
+    raise AppError(
+        code="minimal_execution_plan_lease_conflict",
+        message="Another run already owns the retained-artifact execution lease",
+        retryable=False,
+        context={
+            "plan_hash": plan.plan_hash,
+            "report_id": plan.report_id,
+            "lock_path": lock_path,
+            "owner_id": response.conflict.owner_id if response.conflict else "",
+        },
+    )
+
+
+def _release_execution_lease(lock_path: str, owner_id: str, ctx: RunContext) -> None:
+    if not lock_path:
+        return
+    lock_service.release_lock(
+        LockReleaseRequest(
+            schema_version="1.0",
+            lock_path=lock_path,
+            owner_id=owner_id,
+            pid=os.getpid(),
+        ),
+        ctx,
+    )
 
 
 def _doc_map_reason(outcome: IngestOutcome) -> str:
@@ -108,6 +205,7 @@ def _invoke_report_fn(
     require_artifact_lineage: bool = False,
     execution_compatibility: dict[str, object] | None = None,
     minimal_execution_plan: MinimalExecutionPlan | None = None,
+    enforce_minimal_execution: bool = False,
 ) -> IngestOutcome:
     arguments: dict[str, object] = {"resume_from_stage": resume_from_stage}
     if client_bundle is not None:
@@ -134,6 +232,13 @@ def _invoke_report_fn(
     )
     if supports_minimal_plan:
         arguments["minimal_execution_plan"] = minimal_execution_plan
+    supports_enforcement = any(
+        parameter.kind == Parameter.VAR_KEYWORD
+        or parameter.name == "enforce_minimal_execution"
+        for parameter in parameters
+    )
+    if supports_enforcement:
+        arguments["enforce_minimal_execution"] = enforce_minimal_execution
     return report_fn(
         file,
         local_pdf_path,
@@ -288,63 +393,59 @@ def run_report_pipeline(
             lineage_available=lineage_available,
         )
         lineage_quality = build_lineage_regeneration_quality_report(lineage_plan)
-    if (
-        normalized_plan_mode == "enforce"
-        and minimal_plan is not None
-        and (
-            minimal_plan.missing_lineage_blockers
-            or minimal_plan.required_stages != ["render_complete"]
-        )
-    ):
-        record_minimal_execution_plan_result(
-            ExecutionPlanResultRequest(
-                schema_version=MINIMAL_EXECUTION_PLAN_SCHEMA_VERSION,
-                db_path=settings.reports_db,
-                plan_hash=minimal_plan.plan_hash,
-                report_id=file.file_id,
-                execution_intent=minimal_plan.execution_intent,
-                actual_stages=[],
-                actual_external_calls=[],
-                execution_status="enforcement_deferred",
-            ),
-            ctx,
-        )
-        raise AppError(
-            code="minimal_execution_plan_enforcement_unavailable",
-            message=(
-                "Only a proven render-only execution plan is currently enabled "
-                "for stage skipping"
-            ),
-            retryable=False,
-            context={
-                "plan_hash": minimal_plan.plan_hash,
-                "required_stages": minimal_plan.required_stages,
-                "blockers": [
-                    blocker.reason for blocker in minimal_plan.missing_lineage_blockers
-                ],
-            },
-        )
+    enforced_resume_stage = None
+    if normalized_plan_mode == "enforce" and minimal_plan is not None:
+        try:
+            enforced_resume_stage = _enforced_resume_stage(minimal_plan)
+        except AppError:
+            record_minimal_execution_plan_result(
+                ExecutionPlanResultRequest(
+                    schema_version=MINIMAL_EXECUTION_PLAN_SCHEMA_VERSION,
+                    db_path=settings.reports_db,
+                    plan_hash=minimal_plan.plan_hash,
+                    report_id=file.file_id,
+                    execution_intent=minimal_plan.execution_intent,
+                    actual_stages=[],
+                    actual_external_calls=[],
+                    actual_side_effects=[],
+                    reusable_artifact_ids=minimal_plan.reusable_artifacts,
+                    execution_status="enforcement_deferred",
+                ),
+                ctx,
+            )
+            raise
+        if resume_from_stage is not None and resume_from_stage != enforced_resume_stage:
+            raise AppError(
+                code="minimal_execution_plan_resume_mismatch",
+                message="Caller-provided resume stage differs from the enforced plan",
+                retryable=False,
+                context={
+                    "plan_hash": minimal_plan.plan_hash,
+                    "requested_resume_stage": resume_from_stage,
+                    "planned_resume_stage": enforced_resume_stage or "fresh",
+                },
+            )
     effective_resume_from_stage = (
         resume_from_stage
         if resume_from_stage
         else (
-            "analysis_complete"
-            if (
-                normalized_plan_mode == "enforce"
-                and minimal_plan is not None
-                and not minimal_plan.missing_lineage_blockers
-                and minimal_plan.required_stages == ["render_complete"]
-            )
+            enforced_resume_stage
+            if normalized_plan_mode == "enforce" and minimal_plan is not None
             else ("latest_safe" if auto_resume_from_latest_safe else None)
         )
     )
     client_bundle: ReportGenerationClientBundle | None = None
-    if not (
+    client_free_enforced_plan = (
         normalized_plan_mode == "enforce"
         and minimal_plan is not None
         and not minimal_plan.missing_lineage_blockers
-        and minimal_plan.required_stages == ["render_complete"]
-    ):
+        and minimal_plan.required_stages
+        in (
+            ["render_complete"],
+            ["selection_complete", "render_complete"],
+        )
+    )
+    if not client_free_enforced_plan:
         evidence_openai_client = llm_service.build_client_for_settings(
             settings,
             scope="evidence_pack",
@@ -404,6 +505,21 @@ def run_report_pipeline(
             regeneration_client=regeneration_openai_client,
             figure_caption_client=figure_caption_openai_client,
         ).validate()
+    else:
+        assert minimal_plan is not None
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="report_pipeline_model_clients_avoided",
+                module=logger.name,
+                fields={
+                    "file_id": file.file_id,
+                    "plan_hash": minimal_plan.plan_hash,
+                    "required_stages": list(minimal_plan.required_stages),
+                },
+            )
+        )
     logger.info(
         log_event(
             ctx,
@@ -487,9 +603,13 @@ def run_report_pipeline(
                 ctx=ctx,
                 client_bundle=client_bundle,
                 resume_from_stage=effective_resume_from_stage,
-                require_artifact_lineage=bool(lineage_change_kind),
+                require_artifact_lineage=(
+                    bool(lineage_change_kind)
+                    or normalized_plan_mode == "enforce"
+                ),
                 execution_compatibility=execution_compatibility,
                 minimal_execution_plan=minimal_plan,
+                enforce_minimal_execution=normalized_plan_mode == "enforce",
             )
         except AppError as exc:
             if (
@@ -521,6 +641,7 @@ def run_report_pipeline(
                     require_artifact_lineage=False,
                     execution_compatibility=execution_compatibility,
                     minimal_execution_plan=minimal_plan,
+                    enforce_minimal_execution=False,
                 )
             else:
                 raise
@@ -577,33 +698,63 @@ def run_report_pipeline(
             )
         return outcome
 
-    pdf_decision = evaluate_budget_request(
-        BudgetRequest(
-            schema_version="1.0",
-            budget=pipeline_budget,
-            run_id=ctx.run_id,
-            workflow_id="report_generation",
-            report_id=file.file_id,
-            resource_type="pdf_process",
-            operation="process_pdf",
-            estimated_pdfs=1,
-            idempotency_key=f"pdf-process:{ctx.run_id}:{file.file_id}:{md5 or ''}",
-            reserve_in_flight=True,
-        ),
-        ctx,
+    needs_source_processing = (
+        minimal_plan is None or "source_prepared" in minimal_plan.required_stages
     )
-    if pdf_decision.decision in {"defer", "pause", "stop"}:
-        raise AppError(
-            code=f"report_pipeline_pdf_budget_{pdf_decision.decision}",
-            message="PDF processing was blocked by the canonical budget authority",
-            retryable=False,
-            context={
-                "reason_code": pdf_decision.reason_code,
-                "affected_limit": pdf_decision.affected_limit,
-                "retry_decision": "defer" if pdf_decision.decision == "defer" else "abort",
-                "next_action": pdf_decision.next_action,
-            },
+    pdf_decision = None
+    if needs_source_processing:
+        pdf_decision = evaluate_budget_request(
+            BudgetRequest(
+                schema_version="1.0",
+                budget=pipeline_budget,
+                run_id=ctx.run_id,
+                workflow_id="report_generation",
+                report_id=file.file_id,
+                resource_type="pdf_process",
+                operation="process_pdf",
+                estimated_pdfs=1,
+                idempotency_key=f"pdf-process:{ctx.run_id}:{file.file_id}:{md5 or ''}",
+                reserve_in_flight=True,
+            ),
+            ctx,
         )
+        if pdf_decision.decision in {"defer", "pause", "stop"}:
+            raise AppError(
+                code=f"report_pipeline_pdf_budget_{pdf_decision.decision}",
+                message="PDF processing was blocked by the canonical budget authority",
+                retryable=False,
+                context={
+                    "reason_code": pdf_decision.reason_code,
+                    "affected_limit": pdf_decision.affected_limit,
+                    "retry_decision": "defer" if pdf_decision.decision == "defer" else "abort",
+                    "next_action": pdf_decision.next_action,
+                },
+            )
+    lease_path = ""
+    lease_owner_id = ""
+    if normalized_plan_mode == "enforce" and minimal_plan is not None:
+        try:
+            lease_path, lease_owner_id = _acquire_execution_lease(
+                settings, minimal_plan, ctx
+            )
+        except AppError:
+            record_minimal_execution_plan_result(
+                ExecutionPlanResultRequest(
+                    schema_version=MINIMAL_EXECUTION_PLAN_SCHEMA_VERSION,
+                    db_path=settings.reports_db,
+                    plan_hash=minimal_plan.plan_hash,
+                    report_id=file.file_id,
+                    execution_intent=minimal_plan.execution_intent,
+                    actual_stages=[],
+                    actual_external_calls=[],
+                    actual_side_effects=[],
+                    reusable_artifact_ids=list(minimal_plan.reusable_artifacts),
+                    execution_status="lease_conflict",
+                ),
+                ctx,
+            )
+            raise
+    execution_started_at = time.perf_counter()
     pdf_started = False
     try:
         pdf_started = True
@@ -644,7 +795,7 @@ def run_report_pipeline(
             sleep_fn=time.sleep,
         )
     except AppError as exc:
-        if pdf_decision.reservation_key:
+        if pdf_decision is not None and pdf_decision.reservation_key:
             finalize_budget_side_effect(
                 BudgetSideEffectFinalizeRequest(
                     schema_version="1.0",
@@ -658,8 +809,28 @@ def run_report_pipeline(
                 ),
                 ctx,
             )
+        if minimal_plan is not None:
+            record_minimal_execution_plan_result(
+                ExecutionPlanResultRequest(
+                    schema_version=MINIMAL_EXECUTION_PLAN_SCHEMA_VERSION,
+                    db_path=settings.reports_db,
+                    plan_hash=minimal_plan.plan_hash,
+                    report_id=file.file_id,
+                    execution_intent=minimal_plan.execution_intent,
+                    actual_stages=[],
+                    actual_external_calls=[],
+                    actual_side_effects=[],
+                    duration_ms=int(
+                        (time.perf_counter() - execution_started_at) * 1000
+                    ),
+                    reusable_artifact_ids=list(minimal_plan.reusable_artifacts),
+                    execution_status="failed",
+                ),
+                ctx,
+            )
+        _release_execution_lease(lease_path, lease_owner_id, ctx)
         raise
-    if pdf_decision.reservation_key:
+    if pdf_decision is not None and pdf_decision.reservation_key:
         finalize_budget_side_effect(
             BudgetSideEffectFinalizeRequest(
                 schema_version="1.0",
@@ -687,43 +858,29 @@ def run_report_pipeline(
             source_id=local_pdf_path,
         )
     if minimal_plan is not None:
-        actual_stages = (
-            ["render_complete"]
-            if effective_resume_from_stage == "analysis_complete"
-            else [
-                "source_prepared",
-                "selection_complete",
-                "analysis_complete",
-                "render_complete",
-            ]
-        )
-        actual_external_calls = {
-            "source_prepared": ["pdf_parse", "ocr"],
-            "selection_complete": ["crop_render", "crop_qa"],
-            "analysis_complete": [
-                "vector_store",
-                "report_analysis_model",
-                "validator_model",
-            ],
-            "render_complete": ["html_render"],
-        }
-        record_minimal_execution_plan_result(
+        divergence = record_minimal_execution_plan_result(
             ExecutionPlanResultRequest(
                 schema_version=MINIMAL_EXECUTION_PLAN_SCHEMA_VERSION,
                 db_path=settings.reports_db,
                 plan_hash=minimal_plan.plan_hash,
                 report_id=file.file_id,
                 execution_intent=minimal_plan.execution_intent,
-                actual_stages=actual_stages,
-                actual_external_calls=sorted(
-                    {
-                        call
-                        for stage in actual_stages
-                        for call in actual_external_calls[stage]
-                    }
-                ),
+                actual_stages=list(minimal_plan.required_stages),
+                actual_external_calls=list(minimal_plan.required_external_calls),
+                actual_side_effects=list(minimal_plan.expected_side_effects),
+                duration_ms=int((time.perf_counter() - execution_started_at) * 1000),
+                reusable_artifact_ids=list(minimal_plan.reusable_artifacts),
                 execution_status=outcome.status,
             ),
             ctx,
         )
+        if normalized_plan_mode == "enforce" and divergence:
+            _release_execution_lease(lease_path, lease_owner_id, ctx)
+            raise AppError(
+                code="minimal_execution_plan_diverged",
+                message="Actual report execution diverged from its enforced plan",
+                retryable=False,
+                context={"plan_hash": minimal_plan.plan_hash},
+            )
+    _release_execution_lease(lease_path, lease_owner_id, ctx)
     return outcome

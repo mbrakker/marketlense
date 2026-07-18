@@ -123,6 +123,147 @@ def test_lineage_persists_immutable_identity_edges_and_compatible_reuse(
     assert changed.reason == "content_changed"
 
 
+def test_new_materialization_supersedes_active_record_at_the_same_path(
+    tmp_path: Path, run_context
+) -> None:
+    db_path = tmp_path / "reports.sqlite"
+    html_path = tmp_path / "report.html"
+    html_path.write_text("<h1>canonical report</h1>", encoding="utf-8")
+
+    original = _register(
+        db_path,
+        html_path,
+        run_context,
+        kind="rendered_html",
+        metadata={"template_hash": "template-v1"},
+    )
+    replacement = _register(
+        db_path,
+        html_path,
+        run_context,
+        kind="rendered_html",
+        metadata={"template_hash": "template-v2"},
+    )
+
+    old_reuse = check_artifact_reuse(
+        ArtifactReuseCheckRequest(
+            schema_version=ARTIFACT_LINEAGE_SCHEMA_VERSION,
+            db_path=str(db_path),
+            artifact_id=original.record.artifact_id,
+            expected_schema_version="1.0",
+            expected_processing_version="test-v1",
+            expected_validation_status="pass",
+        ),
+        run_context,
+    )
+    new_reuse = check_artifact_reuse(
+        ArtifactReuseCheckRequest(
+            schema_version=ARTIFACT_LINEAGE_SCHEMA_VERSION,
+            db_path=str(db_path),
+            artifact_id=replacement.record.artifact_id,
+            expected_schema_version="1.0",
+            expected_processing_version="test-v1",
+            expected_validation_status="pass",
+        ),
+        run_context,
+    )
+
+    assert original.record.artifact_id != replacement.record.artifact_id
+    assert old_reuse.reusable is False
+    assert old_reuse.reason == "not_active"
+    assert old_reuse.record is not None
+    assert old_reuse.record.state == "superseded"
+    assert old_reuse.record.superseded_by == replacement.record.artifact_id
+    assert new_reuse.reusable is True
+
+    restored = _register(
+        db_path,
+        html_path,
+        run_context,
+        kind="rendered_html",
+        metadata={"template_hash": "template-v1"},
+    )
+    restored_reuse = check_artifact_reuse(
+        ArtifactReuseCheckRequest(
+            schema_version=ARTIFACT_LINEAGE_SCHEMA_VERSION,
+            db_path=str(db_path),
+            artifact_id=restored.record.artifact_id,
+            expected_schema_version="1.0",
+            expected_processing_version="test-v1",
+            expected_validation_status="pass",
+        ),
+        run_context,
+    )
+    replaced_reuse = check_artifact_reuse(
+        ArtifactReuseCheckRequest(
+            schema_version=ARTIFACT_LINEAGE_SCHEMA_VERSION,
+            db_path=str(db_path),
+            artifact_id=replacement.record.artifact_id,
+            expected_schema_version="1.0",
+            expected_processing_version="test-v1",
+            expected_validation_status="pass",
+        ),
+        run_context,
+    )
+
+    assert restored.created is False
+    assert restored_reuse.reusable is True
+    assert replaced_reuse.reusable is False
+    assert replaced_reuse.record is not None
+    assert replaced_reuse.record.state == "superseded"
+    assert replaced_reuse.record.superseded_by == original.record.artifact_id
+
+
+def test_superseding_materialization_supersedes_active_descendants(
+    tmp_path: Path, run_context
+) -> None:
+    db_path = tmp_path / "reports.sqlite"
+    source_path = tmp_path / "source.pdf"
+    html_path = tmp_path / "report.html"
+    source_path.write_bytes(b"canonical source")
+    html_path.write_text("<h1>canonical report</h1>", encoding="utf-8")
+
+    source = _register(
+        db_path,
+        source_path,
+        run_context,
+        kind="source_pdf",
+        metadata={"parser_hash": "parser-v1"},
+    )
+    rendered = _register(
+        db_path,
+        html_path,
+        run_context,
+        kind="rendered_html",
+        dependencies=[source.record.artifact_id],
+    )
+    replacement = _register(
+        db_path,
+        source_path,
+        run_context,
+        kind="source_pdf",
+        metadata={"parser_hash": "parser-v2"},
+    )
+
+    rendered_reuse = check_artifact_reuse(
+        ArtifactReuseCheckRequest(
+            schema_version=ARTIFACT_LINEAGE_SCHEMA_VERSION,
+            db_path=str(db_path),
+            artifact_id=rendered.record.artifact_id,
+            expected_schema_version="1.0",
+            expected_processing_version="test-v1",
+            expected_validation_status="pass",
+        ),
+        run_context,
+    )
+
+    assert replacement.created is True
+    assert rendered_reuse.reusable is False
+    assert rendered_reuse.record is not None
+    assert rendered_reuse.record.state == "superseded"
+    assert rendered_reuse.record.superseded_by == replacement.record.artifact_id
+
+
 def test_selective_invalidation_preserves_analysis_for_render_only_changes(
     tmp_path: Path, run_context
 ) -> None:

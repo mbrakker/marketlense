@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import asdict, replace
+from dataclasses import replace
 from typing import Callable, Optional
 
 from src.contracts.analytics_projection import (
@@ -45,6 +45,7 @@ from .checkpoints import (
     _analysis_checkpoint_payload,
     _analysis_checkpoint_refs,
     _build_runtime_state,
+    _render_checkpoint_payload,
     _render_checkpoint_refs,
     _selection_checkpoint_payload,
     _source_checkpoint_payload,
@@ -57,6 +58,7 @@ from .resume import (
     _doc_map_empty_outcome,
     _pdf_text_ocr_failed_outcome,
     _pdf_text_unextractable_outcome,
+    _resume_crop_from_source_checkpoint,
     _resume_from_checkpoint_stage,
     _run_projection,
     _run_signal_artifact_generation,
@@ -283,6 +285,7 @@ def run_report_generation(
     require_artifact_lineage: bool = False,
     execution_compatibility: Optional[dict[str, object]] = None,
     minimal_execution_plan: Optional[MinimalExecutionPlan] = None,
+    enforce_minimal_execution: bool = False,
 ) -> IngestOutcome:
     deps = (
         _with_signal_candidate_orchestrator(dependencies)
@@ -347,10 +350,20 @@ def run_report_generation(
         )
     requested_resume_stage = str(resume_from_stage or "").strip()
     enforced_render_only = (
+        enforce_minimal_execution
+        and
         minimal_execution_plan is not None
         and minimal_execution_plan.required_stages == [STAGE_RENDER_COMPLETE]
     )
+    enforced_crop_only = (
+        enforce_minimal_execution
+        and minimal_execution_plan is not None
+        and minimal_execution_plan.required_stages
+        == [STAGE_SELECTION_COMPLETE, STAGE_RENDER_COMPLETE]
+    )
     if (
+        enforce_minimal_execution
+        and
         requested_resume_stage in {STAGE_ANALYSIS_COMPLETE, STAGE_RENDER_COMPLETE}
         and client_bundle is None
         and all(
@@ -387,6 +400,12 @@ def run_report_generation(
             require_artifact_lineage=require_artifact_lineage,
             skip_post_render_projection=enforced_render_only,
         )
+    if enforced_crop_only:
+        return _resume_crop_from_source_checkpoint(
+            runtime,
+            deps,
+            analytics_projection_fn,
+        )
     if client_bundle is not None:
         bundle = require_report_generation_client_bundle(client_bundle)
         source_openai_client = bundle.source_ocr_client
@@ -398,50 +417,52 @@ def run_report_generation(
         regeneration_openai_client = bundle.regeneration_client
         figure_caption_openai_client = bundle.figure_caption_client
     else:
-        source_openai_client = _build_model_client(
-            settings,
-            scope="pdf_text_ocr",
-            provided_client=source_openai_client,
-            openai_ocr_pdf=deps.source.openai_ocr_pdf,
-        )
-        taxonomy_openai_client = _build_model_client(
-            settings,
-            scope="taxonomy",
-            provided_client=taxonomy_openai_client,
-        )
-        category_fit_openai_client = _build_model_client(
-            settings,
-            scope="context_category_fit",
-            provided_client=category_fit_openai_client,
-        )
-        evidence_pack_openai_client = _build_model_client(
-            settings,
-            scope="evidence_pack_generator",
-            provided_client=evidence_pack_openai_client,
-        )
-        artifact_openai_client = _build_model_client(
-            settings,
-            scope="artifact_generator",
-            provided_client=artifact_openai_client,
-        )
-        validation_openai_client = _build_model_client(
-            settings,
-            scope="validation",
-            provided_client=validation_openai_client,
-        )
-        regeneration_openai_client = _build_model_client(
-            settings,
-            scope="artifact_regeneration",
-            provided_client=regeneration_openai_client,
-        )
-        figure_caption_openai_client = _build_model_client(
-            settings,
-            scope="figure_caption",
-            provided_client=figure_caption_openai_client,
-            openai_chat_json_with_images=(
-                deps.analysis.figure_caption.openai_chat_json_with_images
-            ),
-        )
+        if not requested_resume_stage:
+            source_openai_client = _build_model_client(
+                settings,
+                scope="pdf_text_ocr",
+                provided_client=source_openai_client,
+                openai_ocr_pdf=deps.source.openai_ocr_pdf,
+            )
+        if requested_resume_stage != STAGE_RENDER_COMPLETE:
+            taxonomy_openai_client = _build_model_client(
+                settings,
+                scope="taxonomy",
+                provided_client=taxonomy_openai_client,
+            )
+            category_fit_openai_client = _build_model_client(
+                settings,
+                scope="context_category_fit",
+                provided_client=category_fit_openai_client,
+            )
+            evidence_pack_openai_client = _build_model_client(
+                settings,
+                scope="evidence_pack_generator",
+                provided_client=evidence_pack_openai_client,
+            )
+            artifact_openai_client = _build_model_client(
+                settings,
+                scope="artifact_generator",
+                provided_client=artifact_openai_client,
+            )
+            validation_openai_client = _build_model_client(
+                settings,
+                scope="validation",
+                provided_client=validation_openai_client,
+            )
+            regeneration_openai_client = _build_model_client(
+                settings,
+                scope="artifact_regeneration",
+                provided_client=regeneration_openai_client,
+            )
+            figure_caption_openai_client = _build_model_client(
+                settings,
+                scope="figure_caption",
+                provided_client=figure_caption_openai_client,
+                openai_chat_json_with_images=(
+                    deps.analysis.figure_caption.openai_chat_json_with_images
+                ),
+            )
     if requested_resume_stage:
         return _resume_from_checkpoint_stage(
             runtime,
@@ -456,6 +477,9 @@ def run_report_generation(
             validation_openai_client=validation_openai_client,
             regeneration_openai_client=regeneration_openai_client,
             figure_caption_openai_client=figure_caption_openai_client,
+            skip_post_render_projection=(
+                enforce_minimal_execution and minimal_execution_plan is not None
+            ),
         )
     logger.info(
         log_event(
@@ -587,9 +611,13 @@ def run_report_generation(
                 preview_resp,
                 outcome,
             ),
-            payload={"schema_version": "1.0", "outcome": asdict(outcome)},
+            payload=_render_checkpoint_payload(
+                source, selection, analysis, preview_resp, outcome
+            ),
         )
         if (
+            not (enforce_minimal_execution and minimal_execution_plan is not None)
+            and
             _run_projection(runtime, analysis, outcome, analytics_projection_fn)
             is not None
         ):
@@ -604,7 +632,9 @@ def run_report_generation(
                     preview_resp,
                     outcome,
                 ),
-                payload={"schema_version": "1.0", "outcome": asdict(outcome)},
+                payload=_render_checkpoint_payload(
+                    source, selection, analysis, preview_resp, outcome
+                ),
             )
         return _cleanup_transient_vector_store(outcome, runtime, deps)
     except AppError as exc:

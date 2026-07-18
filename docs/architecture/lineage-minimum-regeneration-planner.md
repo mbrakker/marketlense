@@ -38,7 +38,7 @@ but cannot silently upgrade them to complete provenance.
 | Source bytes, parser, OCR, missing retained file, hash mismatch, or dependency edge | Changed artifact and descendants | Existing stage order from the earliest affected stage |
 | Resolved canonical source metadata (v19) or template | Rendered HTML and downstream publication | Render only; no OCR, source parsing, analysis, artifacts, validation, or model client |
 | Crop profile | Crop/preview and rendered HTML | Selection plus render; no report analysis |
-| Prompt, schema, model policy, or validator | Affected analysis family and downstream outputs | Analysis plus render, preserving family-level evidence where available |
+| Prompt, schema, model policy, or validator | Affected analysis family and downstream outputs | Resume from selection plus analysis/render; preserve source PDF and selected crops |
 | Publication target | Publication record | Publication only |
 
 The compatibility matrix in `tests/test_minimal_execution_planner.py` covers
@@ -49,23 +49,48 @@ It makes no provider calls.
 ## Integration and rollout
 
 `run_report_pipeline` creates and persists a plan in `shadow` mode by default
-before constructing model clients. Its first enforceable family is a proven
-render-only plan: it resumes at `analysis_complete` without constructing the
-OCR, analysis, validation, or artifact clients. The report-generation and
-analysis orchestrators record the consumed plan hash and stages. Other plans
-remain shadowed until their actual executor can preserve the existing stage
-contracts.
+before constructing model clients. Enforce mode now consumes these proven
+checkpoint shapes:
+
+- rendered HTML only resumes at `analysis_complete` and constructs no model
+  clients;
+- crop/preview plus render resumes at `source_prepared`, retaining source and
+  analysis checkpoints and constructing no model clients;
+- analysis/validator plus render resumes at `selection_complete`, retaining
+  the source and selected crops; and
+- a combined crop-and-analysis plan resumes at `source_prepared`, which still
+  avoids source parsing and OCR.
+
+Unsupported shapes and incomplete lineage fail before provider work. The
+report pipeline acquires an artifact-scoped, 300-second lease for enforce-mode
+work and releases it on success and expected failure. Its plan/actual audit
+rejects any unplanned stage, external-call category, or side effect.
+
+Legacy checkpoints that represent optional vector state as `null` are resumed
+by re-establishing that vector resource from the retained source checkpoint;
+they never fall back to PDF extraction or crop selection. A new immutable
+lineage materialization supersedes prior records at the same report/family/path
+and their active descendants, so the planner sees only the canonical active
+graph rather than stale historical observations. Checkpoint lineage registers
+dependencies before their dependents even when JSON serialization changes ref
+order; source-publication metadata compatibility applies only to rendered HTML
+and its downstream publication, never to retained source or analysis inputs.
+Planning validates the requested output family and its transitive retained
+dependencies; incomplete unrelated projections cannot block a safe repair.
 
 `run_publish` creates a publication-repair plan before WordPress preflight.
 In enforce mode, incomplete validated rendered lineage prevents preflight and
-the WordPress write. Plan/audit rows retain planned stages and calls, actual
-stages and calls, and deterministic divergence.
+the WordPress write. Existing stable publication idempotency remains the
+duplicate-write protection. Plan/audit rows retain planned stages, calls and
+side effects; actual stages, calls, side effects, duration, reuse identities,
+and deterministic reconciliation are recorded on completion.
 
 The policy switch remains `shadow`, `enforce`, or `disabled`. Rollout is:
 
 1. collect shadow plans and compare planned and actual work;
-2. enforce rendered-HTML-only reuse;
-3. enable the next artifact family only after retained-fixture evidence;
+2. enforce the retained render, crop, and checkpointed-analysis families;
+3. retain `shadow` as the rollback/observation mode and enable later families
+   only after retained-fixture and bounded live evidence;
 4. revert to the existing latest-safe checkpoint behavior with `disabled` if
    needed. Plan/audit records remain available after rollback.
 
@@ -88,7 +113,9 @@ planned-versus-actual-divergence events. Reuse logs include the content hash,
 direct dependency proof, compatibility profile, and consumer stage.
 
 `artifact_execution_plan_runs` is the durable plan/audit projection added by
-reports migration 17. Reports migration 18 adds bounded source-publication
+reports migration 17 and expanded by migration 20 with planned/actual side
+effects, duration, actual and avoided cost fields, and reusable artifact
+identities. Reports migration 18 adds bounded source-publication
 provenance and migration 19 adds immutable canonical source-identity
 observations plus their deterministic resolutions. The rendered-HTML
 compatibility hash uses the v19 resolution (with a v18 fallback) so only

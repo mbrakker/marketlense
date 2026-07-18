@@ -387,6 +387,33 @@ def _canonical_graph(
     return artifacts, edges
 
 
+def _requested_artifact_ids(
+    artifacts: list[RetainedArtifact],
+    edges: list[tuple[str, str]],
+    requested_families: set[str],
+) -> set[str]:
+    """Return requested outputs and every retained artifact they consume."""
+    if not requested_families:
+        return {artifact.artifact_id for artifact in artifacts}
+    dependencies_by_child: dict[str, list[str]] = {}
+    for child, dependency in edges:
+        dependencies_by_child.setdefault(child, []).append(dependency)
+    required = {
+        artifact.artifact_id
+        for artifact in artifacts
+        if artifact.artifact_kind in requested_families
+        or _family_for(artifact) in requested_families
+    }
+    pending = list(required)
+    while pending:
+        artifact_id = pending.pop()
+        for dependency in dependencies_by_child.get(artifact_id, []):
+            if dependency not in required:
+                required.add(dependency)
+                pending.append(dependency)
+    return required
+
+
 def plan_minimal_execution(
     input_value: MinimalExecutionPlanInput,
 ) -> MinimalExecutionPlan:
@@ -409,7 +436,16 @@ def plan_minimal_execution(
     for children in child_ids.values():
         children.sort()
 
+    requested = {
+        str(value).strip()
+        for value in input_value.requested_output_families
+        if str(value).strip()
+    }
+    relevant_artifact_ids = _requested_artifact_ids(artifacts, edges, requested)
+
     for artifact in artifacts:
+        if artifact.artifact_id not in relevant_artifact_ids:
+            continue
         if artifact.report_id != input_value.report_id:
             blockers_by_id[(artifact.artifact_id, "report_scope_mismatch")] = (
                 MissingLineageBlocker(
@@ -467,7 +503,11 @@ def plan_minimal_execution(
     while queue:
         dependency = queue.pop(0)
         for child in child_ids.get(dependency, []):
-            if child not in invalid_by_id and child in by_id:
+            if (
+                child in relevant_artifact_ids
+                and child not in invalid_by_id
+                and child in by_id
+            ):
                 item = by_id[child]
                 invalid_by_id[child] = ArtifactInvalidation(
                     artifact_id=child,
@@ -481,11 +521,6 @@ def plan_minimal_execution(
         blockers_by_id.values(), key=lambda item: (item.artifact_id, item.reason)
     )
     invalid = sorted(invalid_by_id.values(), key=lambda item: item.artifact_id)
-    requested = {
-        str(value).strip()
-        for value in input_value.requested_output_families
-        if str(value).strip()
-    }
     available_families = {
         value for item in artifacts for value in (item.artifact_kind, _family_for(item))
     }

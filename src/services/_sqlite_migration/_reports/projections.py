@@ -309,3 +309,22 @@ def _reports_db_019_create_source_identity_observations(
             column_name=column_name,
             column_type=column_type,
         )
+
+
+def _reports_db_020_expand_execution_plan_audit(conn: sqlite3.Connection) -> None:
+    """Retain plan/actual side effects, timing, cost, and reuse evidence."""
+    conn.execute(_ARTIFACT_EXECUTION_PLAN_RUNS_TABLE_SQL)
+    for column_name, column_type in (
+        ("planned_side_effects_json", "TEXT NOT NULL DEFAULT '[]'"),
+        ("reusable_artifact_ids_json", "TEXT NOT NULL DEFAULT '[]'"),
+        ("actual_side_effects_json", "TEXT NOT NULL DEFAULT '[]'"),
+        ("duration_ms", "INTEGER NOT NULL DEFAULT 0"),
+        ("actual_cost_usd", "REAL"),
+        ("estimated_avoided_cost_usd", "REAL"),
+    ):
+        _add_column_if_missing(
+            conn,
+            table_name="artifact_execution_plan_runs",
+            column_name=column_name,
+            column_type=column_type,
+        )

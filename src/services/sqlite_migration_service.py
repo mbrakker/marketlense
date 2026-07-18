@@ -67,6 +67,7 @@ from ._sqlite_migration.reports import (
     _reports_db_017_add_lineage_execution_planning,
     _reports_db_018_create_source_publication_metadata,
     _reports_db_019_create_source_identity_observations,
+    _reports_db_020_expand_execution_plan_audit,
 )
 from ._sqlite_migration.state import (
     _STATE_ARTIFACT_ACQUISITION_CACHE_TABLE_SQL,

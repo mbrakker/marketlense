@@ -367,10 +367,8 @@ def _record_checkpoint_artifact_lineage(
     if not isinstance(refs, list):
         return lineage_ids
     validation_status = _checkpoint_validation_status(payload)
-    for raw_ref in refs:
-        if not isinstance(raw_ref, dict):
-            continue
-        artifact_name = str(raw_ref.get("artifact_id") or "").strip()
+    for raw_ref in _checkpoint_lineage_registration_order(refs):
+        artifact_name = str(raw_ref["artifact_id"]).strip()
         storage_ref = _resolve_retained_artifact_path(
             runtime, str(raw_ref.get("path") or "").strip()
         )
@@ -402,29 +400,30 @@ def _record_checkpoint_artifact_lineage(
             **dict(runtime.execution_compatibility),
             **compatibility,
         }
-        source_metadata_hash = str(
-            getattr(runtime.source_identity, "source_metadata_hash", "") or ""
-        ).strip()
-        compatibility["source_metadata_hash"] = {
-            "rendered_html": source_metadata_hash
-            or hashlib.sha256(
-                json.dumps(
-                    {
-                        "publisher_name": runtime.publisher_name,
-                        "source_report_name": runtime.source_report_name,
-                        "source_url": runtime.source_url,
-                        "source_publication_metadata": (
-                            asdict(runtime.source_publication_metadata)
-                            if runtime.source_publication_metadata is not None
-                            else None
-                        ),
-                    },
-                    ensure_ascii=True,
-                    sort_keys=True,
-                    separators=(",", ":"),
-                ).encode("utf-8")
-            ).hexdigest()
-        }
+        if artifact_name == "rendered_html":
+            source_metadata_hash = str(
+                getattr(runtime.source_identity, "source_metadata_hash", "") or ""
+            ).strip()
+            compatibility["source_metadata_hash"] = {
+                "rendered_html": source_metadata_hash
+                or hashlib.sha256(
+                    json.dumps(
+                        {
+                            "publisher_name": runtime.publisher_name,
+                            "source_report_name": runtime.source_report_name,
+                            "source_url": runtime.source_url,
+                            "source_publication_metadata": (
+                                asdict(runtime.source_publication_metadata)
+                                if runtime.source_publication_metadata is not None
+                                else None
+                            ),
+                        },
+                        ensure_ascii=True,
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    ).encode("utf-8")
+                ).hexdigest()
+            }
         response = record_artifact_lineage(
             ArtifactLineageRegistrationRequest(
                 schema_version=ARTIFACT_LINEAGE_SCHEMA_VERSION,
@@ -456,6 +455,40 @@ def _record_checkpoint_artifact_lineage(
         )
         lineage_ids[artifact_name] = response.record.artifact_id
     return lineage_ids
+
+
+def _checkpoint_lineage_registration_order(refs: list[object]) -> list[dict]:
+    """Order persisted checkpoint artifacts so lineage dependencies exist first.
+
+    Checkpoints are JSON resources and their object keys may be serialized in
+    a different order than the workflow assembled them.  Dependency-based
+    registration keeps the resulting immutable identities stable across that
+    representation change.
+    """
+    refs_by_name: dict[str, dict] = {}
+    for raw_ref in refs:
+        if not isinstance(raw_ref, dict):
+            continue
+        artifact_name = str(raw_ref.get("artifact_id") or "").strip()
+        if artifact_name:
+            refs_by_name[artifact_name] = raw_ref
+
+    ordered_names: list[str] = []
+    visiting: set[str] = set()
+
+    def visit(artifact_name: str) -> None:
+        if artifact_name in ordered_names or artifact_name in visiting:
+            return
+        visiting.add(artifact_name)
+        for dependency in _checkpoint_dependency_names(artifact_name):
+            if dependency in refs_by_name:
+                visit(dependency)
+        visiting.remove(artifact_name)
+        ordered_names.append(artifact_name)
+
+    for artifact_name in refs_by_name:
+        visit(artifact_name)
+    return [refs_by_name[artifact_name] for artifact_name in ordered_names]
 
 
 def _resolve_retained_artifact_path(
@@ -716,6 +749,26 @@ def _analysis_checkpoint_payload(
     }
 
 
+def _render_checkpoint_payload(
+    source: ReportSourceState,
+    selection: ReportSelectionState,
+    analysis: ReportAnalysisState,
+    preview_resp,
+    outcome: IngestOutcome,
+) -> dict:
+    """Retain analysis provenance alongside a render outcome.
+
+    Render checkpoints reference the same evidence and validation artifacts as
+    analysis checkpoints.  Keeping their provenance prevents a downstream
+    checkpoint write from replacing a valid lineage record with an incomplete
+    observation of the same materialized file.
+    """
+    return {
+        **_analysis_checkpoint_payload(source, selection, analysis, preview_resp),
+        "outcome": asdict(outcome),
+    }
+
+
 def _analysis_checkpoint_refs(
     runtime: ReportRuntimeState,
     source: ReportSourceState,
@@ -875,6 +928,17 @@ def _analysis_state_from_checkpoint(
 def _vector_indexing_state_from_checkpoint(
     raw_state: object,
 ) -> VectorStoreIndexingState:
+    # Legacy selection checkpoints predate vector-state persistence.  They
+    # retain ``null`` rather than an object and are still safe to resume: no
+    # vector resource is represented by the empty state.
+    if raw_state is None:
+        return VectorStoreIndexingState(
+            vector_store_id=None,
+            openai_file_id=None,
+            vector_store_status=None,
+            indexed_at_utc=None,
+            last_error=None,
+        )
     if not isinstance(raw_state, dict):
         raise AppError(
             code="report_pipeline_checkpoint_invalid",
@@ -911,6 +975,7 @@ __all__ = [
     "_regeneration_loop_from_dict",
     "_regeneration_attempts_from_list",
     "_write_stage_checkpoint",
+    "_checkpoint_lineage_registration_order",
     "_artifact_registry_payload",
     "_artifact_integrity_payload",
     "_source_checkpoint_payload",
@@ -920,6 +985,7 @@ __all__ = [
     "_source_text_payload",
     "_preview_checkpoint_payload",
     "_analysis_checkpoint_payload",
+    "_render_checkpoint_payload",
     "_analysis_checkpoint_refs",
     "_render_checkpoint_refs",
     "_source_state_from_checkpoint",

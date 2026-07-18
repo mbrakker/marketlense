@@ -14,6 +14,9 @@ from src.contracts.artifact_lineage import (
 from src.contracts.drive import DriveFile
 from src.contracts.files import PipelineStageCheckpoint
 from src.contracts.report_generation import ReportRuntimeState
+from src.orchestrators._report_generation_orchestrator.checkpoints import (
+    _vector_indexing_state_from_checkpoint,
+)
 from src.orchestrators._report_generation_orchestrator.resume import (
     _validate_checkpoint_artifact_lineage,
 )
@@ -168,3 +171,12 @@ def test_selective_regeneration_requires_complete_lineage(tmp_path: Path) -> Non
 
     assert exc_info.value.code == "report_pipeline_checkpoint_lineage_not_reusable"
     assert exc_info.value.context["reason"] == "lineage_incomplete"
+
+
+def test_selection_checkpoint_without_vector_state_remains_resumable() -> None:
+    """Retained pre-vector checkpoints represent the optional state as null."""
+    state = _vector_indexing_state_from_checkpoint(None)
+
+    assert state.vector_store_id is None
+    assert state.openai_file_id is None
+    assert state.vector_store_status is None

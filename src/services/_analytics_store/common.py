@@ -325,7 +325,7 @@ def _analytics_conn(path: str, ctx: RunContext):
                     schema_version="1.0",
                     database_key="reports_db",
                     db_path=db_path,
-                    target_version=19,
+                    target_version=20,
                     ctx=ctx,
                 ),
                 conn,

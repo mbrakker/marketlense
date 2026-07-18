@@ -149,6 +149,21 @@ def test_identical_inputs_have_a_stable_hash_and_skip_all_but_render() -> None:
     ]
 
 
+def test_render_repair_ignores_unrelated_incomplete_artifact_branches() -> None:
+    input_value = _input(intent="render_repair")
+    signal = _artifact("signal", "signals", dependencies=["missing"])
+    graph = RetainedArtifactGraph(
+        artifacts=[*input_value.retained_graph.artifacts, signal],
+        edges=[*input_value.retained_graph.edges],
+    )
+
+    plan = plan_minimal_execution(replace(input_value, retained_graph=graph))
+
+    assert plan.required_stages == ["render_complete"]
+    assert plan.missing_lineage_blockers == []
+    assert all(item.artifact_id != "signal" for item in plan.invalid_artifacts)
+
+
 @pytest.mark.parametrize(
     ("change", "assertion"),
     [

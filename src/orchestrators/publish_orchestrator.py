@@ -691,6 +691,7 @@ def run_publish(
     if auto_discovery and limit is not None:
         candidates = candidates[:limit]
     publication_plans: dict[str, MinimalExecutionPlan] = {}
+    publication_plan_started_at: dict[str, float] = {}
     blocked_paths: set[str] = set()
     if normalized_plan_mode != "disabled":
         publication_target = f"{base_url}|{settings.wp.post_status}"
@@ -717,6 +718,7 @@ def run_publish(
                 root_ctx,
             ).plan
             publication_plans[candidate.html_path] = plan
+            publication_plan_started_at[candidate.html_path] = time.perf_counter()
             record_minimal_execution_plan(
                 ExecutionPlanRecordRequest(
                     schema_version=MINIMAL_EXECUTION_PLAN_SCHEMA_VERSION,
@@ -1173,6 +1175,8 @@ def run_publish(
                 error=exc.message,
             )
             outcome = _with_validation(outcome, validation_status, validation_issues)
+        except AppError:
+            raise
         except Exception as exc:
             logger.info(
                 log_event(
@@ -1241,7 +1245,7 @@ def run_publish(
             ["wordpress_write"] if outcome and outcome.status == "published" else []
         )
         try:
-            record_minimal_execution_plan_result(
+            divergence = record_minimal_execution_plan_result(
                 ExecutionPlanResultRequest(
                     schema_version=MINIMAL_EXECUTION_PLAN_SCHEMA_VERSION,
                     db_path=settings.reports_db,
@@ -1250,10 +1254,30 @@ def run_publish(
                     execution_intent=plan.execution_intent,
                     actual_stages=actual_stages,
                     actual_external_calls=actual_calls,
+                    actual_side_effects=(
+                        list(plan.expected_side_effects)
+                        if outcome and outcome.status == "published"
+                        else []
+                    ),
+                    duration_ms=int(
+                        (
+                            time.perf_counter()
+                            - publication_plan_started_at.get(html_path, time.perf_counter())
+                        )
+                        * 1000
+                    ),
+                    reusable_artifact_ids=list(plan.reusable_artifacts),
                     execution_status=outcome.status if outcome else "not_attempted",
                 ),
                 root_ctx,
             )
+            if normalized_plan_mode == "enforce" and divergence:
+                raise AppError(
+                    code="minimal_execution_plan_diverged",
+                    message="Actual publication work diverged from its enforced plan",
+                    retryable=False,
+                    context={"plan_hash": plan.plan_hash, "html_path": html_path},
+                )
         except Exception as exc:
             logger.info(
                 log_event(

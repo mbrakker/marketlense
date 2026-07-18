@@ -24,6 +24,7 @@ from src.contracts.prompts import PromptLoadRequest
 from src.contracts.public_editorial_quality import PUBLIC_EDITORIAL_VALIDATOR_VERSION
 from src.contracts.run_context import RunContext
 from src.services import prompt_service
+from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.minimal_execution_planner import plan_minimal_execution
 
@@ -531,8 +532,9 @@ def record_minimal_execution_plan(
         conn.execute(
             """INSERT INTO artifact_execution_plan_runs(
             plan_hash,report_id,execution_intent,execution_mode,planned_stages_json,
-            planned_external_calls_json,created_at_utc)
-            VALUES(?,?,?,?,?,?,strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+            planned_external_calls_json,planned_side_effects_json,
+            reusable_artifact_ids_json,created_at_utc)
+            VALUES(?,?,?,?,?,?,?, ?,strftime('%Y-%m-%dT%H:%M:%fZ','now'))
             ON CONFLICT(plan_hash) DO NOTHING""",
             (
                 plan.plan_hash,
@@ -541,21 +543,25 @@ def record_minimal_execution_plan(
                 request.execution_mode,
                 _canonical_json(plan.required_stages),
                 _canonical_json(plan.required_external_calls),
+                _canonical_json(plan.expected_side_effects),
+                _canonical_json(plan.reusable_artifacts),
             ),
         )
 
 
 def record_minimal_execution_plan_result(
     request: ExecutionPlanResultRequest, ctx: RunContext
-) -> None:
+) -> bool:
     with _metadata_conn(request.db_path, ctx) as conn:
         row = conn.execute(
-            """SELECT planned_stages_json, planned_external_calls_json
+            """SELECT planned_stages_json, planned_external_calls_json,
+            planned_side_effects_json
             FROM artifact_execution_plan_runs WHERE plan_hash=?""",
             (request.plan_hash,),
         ).fetchone()
         planned_stages = json.loads(str(row[0])) if row else []
         planned_calls = json.loads(str(row[1])) if row else []
+        planned_side_effects = json.loads(str(row[2])) if row else []
         divergence = {
             "unplanned_stages": sorted(
                 set(request.actual_stages) - set(planned_stages)
@@ -569,15 +575,39 @@ def record_minimal_execution_plan_result(
             "avoided_planned_external_calls": sorted(
                 set(planned_calls) - set(request.actual_external_calls)
             ),
+            "unplanned_side_effects": sorted(
+                set(request.actual_side_effects) - set(planned_side_effects)
+            ),
+            "avoided_planned_side_effects": sorted(
+                set(planned_side_effects) - set(request.actual_side_effects)
+            ),
+            "duration_ms": max(0, int(request.duration_ms)),
+            "actual_cost_usd": request.actual_cost_usd,
+            "estimated_avoided_cost_usd": request.estimated_avoided_cost_usd,
+            "reusable_artifact_ids": sorted(set(request.reusable_artifact_ids)),
         }
+        diverged = any(
+            divergence[key]
+            for key in (
+                "unplanned_stages",
+                "unplanned_external_calls",
+                "unplanned_side_effects",
+            )
+        )
+        divergence["reconciliation_status"] = "diverged" if diverged else "matched"
         conn.execute(
             """UPDATE artifact_execution_plan_runs SET actual_stages_json=?,
-            actual_external_calls_json=?,execution_status=?,divergence_json=?,
+            actual_external_calls_json=?,actual_side_effects_json=?,duration_ms=?,
+            actual_cost_usd=?,estimated_avoided_cost_usd=?,execution_status=?,divergence_json=?,
             completed_at_utc=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE plan_hash=?""",
             (
                 _canonical_json(sorted(set(request.actual_stages))),
                 _canonical_json(sorted(set(request.actual_external_calls))),
-                request.execution_status,
+                _canonical_json(sorted(set(request.actual_side_effects))),
+                max(0, int(request.duration_ms)),
+                request.actual_cost_usd,
+                request.estimated_avoided_cost_usd,
+                "diverged" if diverged else request.execution_status,
                 _canonical_json(divergence),
                 request.plan_hash,
             ),
@@ -596,6 +626,7 @@ def record_minimal_execution_plan_result(
             },
         )
     )
+    return diverged
 
 
 def read_validated_report_artifacts(
@@ -628,7 +659,31 @@ def read_validated_report_artifacts(
         ),
         ctx,
     )
+    record_minimal_execution_plan(
+        ExecutionPlanRecordRequest(
+            schema_version=MINIMAL_EXECUTION_PLAN_SCHEMA_VERSION,
+            db_path=request.db_path,
+            plan=response.plan,
+            execution_mode="enforce",
+        ),
+        ctx,
+    )
     if response.plan.invalid_artifacts or response.plan.missing_lineage_blockers:
+        record_minimal_execution_plan_result(
+            ExecutionPlanResultRequest(
+                schema_version=MINIMAL_EXECUTION_PLAN_SCHEMA_VERSION,
+                db_path=request.db_path,
+                plan_hash=response.plan.plan_hash,
+                report_id=request.report_id,
+                execution_intent=response.plan.execution_intent,
+                actual_stages=[],
+                actual_external_calls=[],
+                actual_side_effects=[],
+                reusable_artifact_ids=[],
+                execution_status="blocked",
+            ),
+            ctx,
+        )
         return ValidatedReportArtifactReadResponse(
             schema_version=MINIMAL_EXECUTION_PLAN_SCHEMA_VERSION,
             artifacts=[],
@@ -646,6 +701,28 @@ def read_validated_report_artifacts(
     artifacts = [
         selected[key] for key in sorted(selected, key=lambda item: (item[0], item[1]))
     ]
+    divergence = record_minimal_execution_plan_result(
+        ExecutionPlanResultRequest(
+            schema_version=MINIMAL_EXECUTION_PLAN_SCHEMA_VERSION,
+            db_path=request.db_path,
+            plan_hash=response.plan.plan_hash,
+            report_id=request.report_id,
+            execution_intent=response.plan.execution_intent,
+            actual_stages=[],
+            actual_external_calls=[],
+            actual_side_effects=[],
+            reusable_artifact_ids=[item.artifact_id for item in artifacts],
+            execution_status="completed",
+        ),
+        ctx,
+    )
+    if divergence:
+        raise AppError(
+            code="minimal_execution_plan_diverged",
+            message="Cross-report retained-artifact read diverged from its plan",
+            retryable=False,
+            context={"plan_hash": response.plan.plan_hash},
+        )
     return ValidatedReportArtifactReadResponse(
         schema_version=MINIMAL_EXECUTION_PLAN_SCHEMA_VERSION,
         artifacts=artifacts,

@@ -65,6 +65,7 @@ from .checkpoints import (
     _analysis_checkpoint_refs,
     _analysis_state_from_checkpoint,
     _preview_from_checkpoint,
+    _render_checkpoint_payload,
     _render_checkpoint_refs,
     _selection_checkpoint_payload,
     _selection_state_from_checkpoint,
@@ -780,7 +781,9 @@ def _render_project_and_cleanup(
                 outcome,
             ),
         },
-        payload={"schema_version": "1.0", "outcome": asdict(outcome)},
+        payload=_render_checkpoint_payload(
+            source, selection, analysis, preview_resp, outcome
+        ),
     )
     if (
         not skip_post_render_projection
@@ -806,7 +809,9 @@ def _render_project_and_cleanup(
                     outcome,
                 ),
             },
-            payload={"schema_version": "1.0", "outcome": asdict(outcome)},
+            payload=_render_checkpoint_payload(
+                source, selection, analysis, preview_resp, outcome
+            ),
         )
     if skip_post_render_projection:
         return outcome
@@ -863,6 +868,63 @@ def _resume_from_analysis_checkpoint(
         analytics_projection_fn,
         existing_artifact_refs=dict(checkpoint.artifact_refs),
         skip_post_render_projection=skip_post_render_projection,
+    )
+
+
+def _resume_crop_from_source_checkpoint(
+    runtime: ReportRuntimeState,
+    dependencies: ReportGenerationDependencies,
+    analytics_projection_fn: Optional[
+        Callable[[AnalyticsProjectionRunRequest], object]
+    ],
+) -> IngestOutcome:
+    """Regenerate crop-dependent presentation from proven source and analysis state.
+
+    Crop profiles alter selection and rendering, not report analysis.  The
+    source and analysis checkpoints are both validated before their data is
+    consumed, so this path never creates a vector store or an analysis client.
+    """
+    source_checkpoint, source_checkpoint_path = _read_validated_checkpoint(
+        runtime, stage_name=STAGE_SOURCE_PREPARED, require_artifact_lineage=True
+    )
+    analysis_checkpoint, analysis_checkpoint_path = _read_validated_checkpoint(
+        runtime, stage_name=STAGE_ANALYSIS_COMPLETE, require_artifact_lineage=True
+    )
+    _log_semantic_restart(runtime, source_checkpoint, source_checkpoint_path)
+    _log_semantic_restart(runtime, analysis_checkpoint, analysis_checkpoint_path)
+    source = _source_state_from_checkpoint(runtime, source_checkpoint.payload.get("source"))
+    selection = select_report_figures(runtime, source, dependencies.selection)
+    _write_stage_checkpoint(
+        runtime,
+        stage_name=STAGE_SELECTION_COMPLETE,
+        artifact_refs={
+            **dict(source_checkpoint.artifact_refs),
+            "source_pdf": runtime.local_pdf_path,
+            "analysis_pdf": source.analysis_pdf_path or runtime.local_pdf_path,
+        },
+        payload={
+            "schema_version": "1.0",
+            "source": _source_checkpoint_payload(source),
+            "selection": _selection_checkpoint_payload(selection),
+        },
+    )
+    analysis = _analysis_state_from_checkpoint(
+        runtime,
+        source,
+        selection,
+        analysis_checkpoint.payload.get("analysis"),
+    )
+    preview_resp = render_preview_asset(runtime, source, dependencies.render)
+    return _render_project_and_cleanup(
+        runtime,
+        source,
+        selection,
+        analysis,
+        preview_resp,
+        dependencies,
+        analytics_projection_fn,
+        existing_artifact_refs=dict(analysis_checkpoint.artifact_refs),
+        skip_post_render_projection=True,
     )
 
 
@@ -972,6 +1034,14 @@ def _resume_from_selection_checkpoint(
     vector_state = _vector_indexing_state_from_checkpoint(
         checkpoint_payload.get("vector_indexing")
     )
+    if not vector_state.vector_store_id:
+        # Older, otherwise complete selection checkpoints did not retain the
+        # optional vector state.  Re-establish that external analysis resource
+        # from the retained source rather than falling back to PDF extraction
+        # or crop selection.
+        vector_state = start_vector_store_indexing(
+            runtime, source, dependencies.analysis
+        )
     preview_resp = render_preview_asset(runtime, source, dependencies.render)
     analysis = run_report_analysis(
         runtime,
@@ -1285,6 +1355,7 @@ __all__ = [
     "_resume_from_source_checkpoint",
     "_resume_from_selection_checkpoint",
     "_resume_from_analysis_checkpoint",
+    "_resume_crop_from_source_checkpoint",
     "_resume_from_render_checkpoint",
     "_pdf_text_unextractable_outcome",
     "_pdf_text_ocr_failed_outcome",

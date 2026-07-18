@@ -21394,7 +21394,23 @@
     "src.contracts.minimal_execution_plan.ExecutionPlanResultRequest": {
       "additionalProperties": false,
       "properties": {
+        "actual_cost_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "actual_external_calls": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "actual_side_effects": {
           "items": {
             "type": "string"
           },
@@ -21409,6 +21425,19 @@
         "db_path": {
           "type": "string"
         },
+        "duration_ms": {
+          "type": "integer"
+        },
+        "estimated_avoided_cost_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "execution_intent": {
           "type": "string"
         },
@@ -21420,6 +21449,12 @@
         },
         "report_id": {
           "type": "string"
+        },
+        "reusable_artifact_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "schema_version": {
           "type": "string"
