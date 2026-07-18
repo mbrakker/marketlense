@@ -10,6 +10,9 @@ Use the repository scripts `scripts/quality/release_evidence_manifest.py` and `s
 
 For operational diagnostics, use structured logs and retained workflow artifacts first. See [monitoring](../ops/monitoring.md) and [recovery](../ops/recovery.md).
 
+The bounded workflow-queue foundation record is retained in
+[workflow-queue-foundation-evidence-2026-07-18.md](workflow-queue-foundation-evidence-2026-07-18.md).
+
 ## CTO Review Evidence Bundles
 
 `scripts/quality/collect_cto_review_evidence.py` creates a point-in-time CTO-review bundle from retained state. A strict CTO review uses an exact repository HEAD, not merely the best-effort Git marker retained by legacy collection.
