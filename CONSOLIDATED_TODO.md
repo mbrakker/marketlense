@@ -33,7 +33,6 @@ All work is listed below in one register. `Active` items have detailed completio
 | Closed | A5 | Business-email, CAPTCHA, anti-bot, terminal-evidence, and avoided-browser-spend route policy | TTL-bound route policy now avoids browser/mailbox work for retained hard blockers and allows explicit revalidation. |
 | Active | A10 | Budget-deferred-work recovery and operator requeue | Turn durable budget deferrals into safe, visible, idempotent resumption. |
 | Active | A11 | Ledger-driven recurring-failure prevention and operator prioritization | Turn canonical remediation evidence into bounded root-cause and avoided-work decisions. |
-| Active | A12 | Complete configured model-pricing coverage for spend budgets | Make configured provider spend limits effective for the selected production model families. |
 | Closed | A7 | Budget-aware model routing, compaction, and failure-class fallback | YAML routing, anchor-preserving compaction, same-provider fallback, retained-corpus evidence gate, and regression coverage are active. |
 | Active | A8 | Model-call replay drift comparison | Standalone read-only regression outcome. |
 | Closed | A9 | Canonical report-source identity and publication provenance | Schema v19 immutable observations, deterministic source resolution, safe public projection, render-only invalidation, and live idempotent source capture passed. |
@@ -47,8 +46,8 @@ All work is listed below in one register. `Active` items have detailed completio
 | Active | P11 | Route verified acquired reports into governed ingest | Eliminate the manual per-folder handoff from the canonical downloader to live report analysis. |
 | Active | P7 | Hosted latency and public performance | Measured public-performance outcome. |
 | Active | P8 | Readable evidence spans, methodology/source-quality trust, and deterministic related content | Public evidence/discovery outcome. |
-| Active | E1 | Claim-embedding freshness, retention, and cost controls | Embedding operations outcome. |
 | Active | E6 | Retain a hash-pinned claim-embedding benchmark export | Semantic benchmark coverage outcome. |
+| Active | E9 | Attest active model-pricing rates before they become stale | Keep cost attribution and spend enforcement trustworthy as provider pricing changes. |
 | Closed | E3 | Lineage-driven minimum regeneration | Remains closed; E7 owns expansion beyond the proven rendered-HTML family. |
 | Closed | E4 | Executable retained PDF benchmark corpus in CI | Retained corpus is hash-pinned and CI-gated; local release-equivalent run passed. |
 | Active | R1 | CI/PR release-evidence summaries | Reviewer-surface outcome, including exact-tested-HEAD linkage and runtime-corpus expansion. |
@@ -87,6 +86,8 @@ All work is listed below in one register. `Active` items have detailed completio
 - **A3 — Workflow-wide remediation-ledger rollout (2026-07-17):** The generated 31-workflow matrix is CI-checked. A controlled typed `provider_timeout` persisted one remediation record across two submissions; the bounded reaper inspected it once and held it as `operator_action_required` without an executor or external side effect. The read-only soak reported one created, one deduplicated, zero stale, zero eligible, and one held record with no missing runbook mapping. Strict evidence bundle `21a046e89de64aa3a4fcc73250e74074` passed on exact commit `3da3d70e4b202cd2be4f206347982b9d55c94a13`.
 - **A6 — Budget-manager closeout and operational proof (2026-07-17):** The public vector-store service now forwards a typed `RunBudget` and preserves canonical budget-stop errors. A live Drive list, OpenAI vector-store create/delete, and minimal OpenAI JSON call completed under canonical authority; ledger evidence recorded one Drive read, one vector create, one vector cleanup, and 168 LLM tokens. The next Drive and vector calls were blocked before provider I/O. Temporary vector stores were removed. The strict exact-HEAD bundle passed.
 - **A9 — Canonical report-source identity and publication provenance (2026-07-17):** Reports schema v19 stores immutable, hash-addressed source observations and deterministic resolutions; it preserves v18 compatibility, projects safe source fields to analytics, report cards, and WordPress, and invalidates only rendering/publication when source metadata changes. A live Julius Baer landing page returned HTTP 200 with 218,676 bounded HTML bytes; its existing retained PDF benchmark resolved verified source provenance, while an exact repeat produced no duplicate observation. No LLM call or production write was made.
+- **A12 — Complete configured model-pricing coverage for spend budgets (2026-07-18):** The canonical rate card now pins active OpenAI routes to an effective version/source, separately bills cached input, and holds unpriced or unapproved routes before provider I/O. Usage events project cost by report, workflow, prompt namespace, artifact family, and publisher. A bounded live OpenAI embedding recorded 49 input tokens, $0.000001 estimated spend, and complete claim-embedding attribution; the SQLite ledger and JSONL/daily projections reconciled exactly across 1,206 events.
+- **E1 — Claim-embedding freshness, retention, and cost controls (2026-07-18):** The existing queue now uses deterministic due-work selection, expiring atomic leases, rechecks before provider I/O, bounded retries/budgets, and a health surface with age percentiles, throughput, drain estimate, failure reasons, model drift, and avoided calls. A live one-row OpenAI canary embedded one valid claim with no duplicate work; queue depth fell from 2,648 to 2,647 and content-hash skips rose from four to five. Historic non-claim rows remain explicitly `unknown_requires_review`, not silently embedded.
 - **C8 — CTO evidence-collector integrity (2026-07-17):** The strict collector snapshots retained inputs, validates exact repository HEAD, checks log-content coverage, run IDs, provenance, summary consistency, and every inventoried file hash before publishing. It fails closed without a partial final bundle. R1 owns expansion of the retained runtime corpus, not collector integrity.
 - **C7 — Logging content exposure (2026-07-16):** Standard events apply deterministic byte, depth, node, collection, and text bounds; report and browser terminal events emit scalar summaries with retained audit references; CI rejects direct `fields=asdict(...)` serialization. Focused report/logging and browser suites passed, as did guarded live browser and OpenAI runs. P2 retains the narrow public-boundary size-limit hardening and R6 owns ongoing reduction-telemetry review.
 - **A7 (2026-07-14):** The retained 15-report corpus is now a required no-provider routing gate across 30 configured prompt routes. It confirms explicit policy selection, same-provider constraints, and zero lost retained evidence IDs; focused routing/compaction/fallback tests and the full suite pass.
@@ -149,19 +150,6 @@ The original ten-item screenshot baseline is complete in the committed implement
 - A bounded read-only report groups retained remediation records by workflow, error code, action, and runbook status with scalar counts, age, and deduplication trend.
 - The operator surface produces explicit prevention recommendations linked only to record IDs and retained evidence references; it never exposes source payloads or provider responses.
 - Tests prove deterministic ordering, no cross-tenant/source leakage, threshold behavior, and that recommendations cannot trigger execution or hide historical transitions.
-
-#### A12. Complete configured model-pricing coverage for spend budgets
-
-- **Title:** Complete configured model-pricing coverage for spend budgets
-- **Impact 5 / effort: 1**
-- **Context:** The bounded live OpenAI JSON call completed with 168 recorded tokens, but the selected `gpt-5-mini` model had no configured pricing entry, so the canonical usage event recorded zero estimated spend. Call and token limits still apply, but an operator-set spend ceiling cannot be measured accurately for that model family.
-- **Benefit:** The newly proven canonical budget authority can enforce real spend ceilings as well as call and token ceilings, improving cost control for production routing without a second ledger.
-- **Risks to avoid:** Do not hard-code prices in call sites or infer billable rates from responses. Keep rates in canonical operator configuration with an explicit version/source and fail visibly when a cost-governed model has no approved rate.
-- **Success criteria:**
-
-- Canonical operator pricing covers every configured production model route, including `gpt-5-mini`, with versioned provenance.
-- A bounded provider smoke records non-zero estimated spend when the provider returns metered usage; an unpriced model produces an explicit cost-governance decision rather than silently recording zero.
-- Focused accounting and budget tests cover priced, unpriced, stale, and changed-rate cases without provider calls.
 
 #### A13. Add approved deferred-work resume adapters for acquisition workflows
 
@@ -310,25 +298,25 @@ The original ten-item screenshot baseline is complete in the committed implement
 
 ### 3. Evidence Quality and Reuse
 
-#### E1. Operate claim embeddings with freshness, retention, and cost visibility
-
-- **Title:** Operate claim embeddings with freshness, retention, and cost visibility
-- **Impact 4 / effort: 2**
-- **Context:** Claim embeddings persist locally with status and provider metadata, but operators cannot yet see stale content, failed attempts, model-version drift, retention state, or avoidable re-embedding spend in one actionable view.
-- **Benefit:** Embedding drift becomes visible before it degrades evidence selection or cost, and unchanged content avoids unnecessary provider calls.
-- **Risks to avoid:** Keep reporting lightweight and do not create another dashboard surface without an action path.
-- **Success criteria:**
-
-- A concise report groups embedded, pending, failed, stale, and model-mismatched claims by publisher/report/topic.
-- Retention/pruning policy is documented and tested.
-- Unchanged rows are skipped with cost-avoidance telemetry; failures retain retry visibility; tests cover reporting, pruning, retries, and skip accounting.
-
 #### E6. Retain a hash-pinned claim-embedding benchmark export
 
 - **Impact 4 / effort: 2**
 - **Context:** The semantic-selection benchmark correctly falls back when a retained corpus has no persisted vectors, so it cannot yet measure real semantic ranking on the fixed corpus.
 - **Benefit:** A bounded, redacted export makes semantic quality and prompt savings reproducible without live embedding calls.
 - **Success criteria:** Persist a hash-pinned, retention-governed benchmark export containing only approved vector IDs/content hashes/vectors; benchmark it in CI and compare semantic coverage against lexical fallback without provider calls.
+
+#### E9. Attest active model-pricing rates before they become stale
+
+- **Title:** Attest active model-pricing rates before they become stale
+- **Impact 5 / effort: 1**
+- **Context:** Cost-governed routes now fail closed when their canonical pricing is missing, stale, invalid, or explicitly held, but price-source review and expiry remain a manual operator responsibility.
+- **Benefit:** Spend estimates and report-level attribution remain trustworthy as providers update model pricing, without restoring silent zero-cost execution.
+- **Risks to avoid:** Do not scrape or activate a provider rate automatically; preserve explicit operator approval, effective dates, source provenance, and the existing hold-before-I/O behavior.
+- **Success criteria:**
+
+- A bounded read-only check reports active, expiring, stale, held, and missing route rates against configured production routes with version/source metadata only.
+- Operator acknowledgement creates a reviewed rate-card transition with before/after estimates for recent canonical usage; activation remains an explicit configuration change.
+- Tests prove unknown, expired, held, and changed-rate routes cannot silently bypass canonical spend authority.
 
 #### E8. Use canonical source identity to suppress duplicate research work
 

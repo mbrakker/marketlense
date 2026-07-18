@@ -23,6 +23,15 @@ Use the generated [configuration reference](../generated/configuration-reference
 
 `cost.budget_authority` configures the single SQLite-backed authority used before provider calls, browser launches and Browser Use model calls, material Drive reads and writes, WordPress writes, PDF processing, retry attempts, and mailbox polls. Its `run`, `day`, and `publisher` sections accept the typed limits in `RunBudgetLimits`, including spend, calls, runtime, retries, browser launches, Drive reads/writes, WordPress writes, PDFs, and mailbox reads.
 
+`cost.pricing_path` points to the versioned operator rate card. Each active
+model entry records its provider, exact model key, effective date, pricing
+version, source note, input/cached-input/output rates, and any fixed tool
+charge. The `__policy__` record holds unpriced configured routes before
+provider I/O; do not use a zero rate as a substitute. Usage events retain the
+selected pricing version and explicit report, workflow, prompt, publisher, and
+artifact-family context when the caller has it. Historical events remain in an
+`unknown` attribution bucket.
+
 `enabled_effect_kinds` is an independent additive feature gate for each effect category. Removing a kind rolls back its pre-effect enforcement while retaining all earlier reservations, decisions, and actual-use records. Reservations expire after `reservation_ttl_seconds` (one hour maximum); completed effects finalize observed non-monetary use and release unused capacity. Provider monetary actuals remain in the existing LLM usage events and only reconcile their reservation.
 
 `ingest.run_budget` sets the report-generation PDF, retry, and elapsed-runtime ceilings. `browser_download.run_budget` and `publish.run_budget` remain the scoped acquisition and publication controls; all use the same `cost.usage_db_path` authority.

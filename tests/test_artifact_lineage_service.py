@@ -5,6 +5,7 @@ from pathlib import Path
 from src.contracts.artifact_lineage import (
     ARTIFACT_LINEAGE_SCHEMA_VERSION,
     ArtifactInvalidationRequest,
+    ArtifactLineageAuditRequest,
     ArtifactLineageBackfillRequest,
     ArtifactLineageRegistrationRequest,
     ArtifactLineageTraceRequest,
@@ -12,6 +13,7 @@ from src.contracts.artifact_lineage import (
 )
 from src.services.report_store_service import (
     backfill_artifact_lineage,
+    audit_artifact_lineage,
     check_artifact_reuse,
     invalidate_artifacts,
     record_artifact_lineage,
@@ -46,6 +48,7 @@ def _register(
             prompt_hash=prompt_hash,
             validation_status="pass",
             metadata=metadata or {},
+            lineage_status="complete",
         ),
         run_context,
     )
@@ -422,3 +425,58 @@ def test_backfill_reads_legacy_checkpoint_artifact_refs_from_workspace_root(
     assert result.created_artifacts == 3
     assert result.skipped_artifacts == 0
     assert result.incomplete_artifacts == 3
+
+
+def test_lineage_audit_and_backfill_promote_only_explicit_checkpoint_proof(
+    tmp_path: Path, run_context
+) -> None:
+    workspace = tmp_path / "workspace"
+    checkpoint_root = workspace / "out" / ".checkpoints" / "report_generation"
+    checkpoint_dir = checkpoint_root / "report-1"
+    checkpoint_dir.mkdir(parents=True)
+    source_path = workspace / "cache" / "report-1.pdf"
+    source_path.parent.mkdir(parents=True)
+    source_path.write_bytes(b"source")
+    analysis_path = workspace / "out" / "report-1" / "analysis.pdf"
+    analysis_path.parent.mkdir(parents=True)
+    analysis_path.write_bytes(b"analysis")
+    (checkpoint_dir / "analysis_complete.json").write_text(
+        """{
+          "file_id":"report-1",
+          "source_id":"source-sha256-1",
+          "stage_name":"analysis_complete",
+          "payload":{
+            "processing_version":"checkpoint-v2",
+            "artifact_registry":{"refs":[
+              {"artifact_id":"source_pdf","path":"%s","producer_step":"source_prepared","schema_version":"1.0","processing_version":"checkpoint-v2"},
+              {"artifact_id":"analysis_pdf","path":"%s","producer_step":"analysis_complete","schema_version":"1.0","processing_version":"checkpoint-v2"}
+            ]}
+          }
+        }"""
+        % (source_path.as_posix(), analysis_path.as_posix()),
+        encoding="utf-8",
+    )
+    request = ArtifactLineageBackfillRequest(
+        schema_version=ARTIFACT_LINEAGE_SCHEMA_VERSION,
+        db_path=str(workspace / "state" / "reports.sqlite"),
+        checkpoint_root=str(checkpoint_root),
+        dry_run=False,
+    )
+
+    first = backfill_artifact_lineage(request, run_context)
+    second = backfill_artifact_lineage(request, run_context)
+    audit = audit_artifact_lineage(
+        ArtifactLineageAuditRequest(
+            schema_version=ARTIFACT_LINEAGE_SCHEMA_VERSION,
+            db_path=request.db_path,
+            report_id="report-1",
+        ),
+        run_context,
+    )
+
+    assert first.created_artifacts == 2
+    assert first.incomplete_artifacts == 0
+    assert second.created_artifacts == 0
+    assert audit.status_counts == {"complete": 2}
+    assert all(item.hash_state == "verified" for item in audit.items)
+    assert all(item.missing_field_codes == () for item in audit.items)

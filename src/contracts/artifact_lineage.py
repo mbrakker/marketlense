@@ -284,3 +284,60 @@ class ArtifactLineageBackfillResponse:
             "doc": "Legacy records retained but unavailable for planner-safe reuse."
         },
     )
+
+
+@dataclass(frozen=True)
+class ArtifactLineageAuditRequest:
+    """Read-only completeness audit for durable retained-artifact lineage."""
+
+    schema_version: str = field(
+        metadata={"doc": "Artifact-lineage audit schema version."}
+    )
+    db_path: str = field(metadata={"doc": "Reports SQLite database path."})
+    report_id: str = field(
+        default="", metadata={"doc": "Optional report scope; empty audits all reports."}
+    )
+
+
+@dataclass(frozen=True)
+class ArtifactLineageAuditItem:
+    """Bounded per-artifact audit evidence without source bytes or paths."""
+
+    schema_version: str = field(
+        metadata={"doc": "Artifact-lineage audit item schema version."}
+    )
+    artifact_id: str = field(metadata={"doc": "Canonical immutable artifact ID."})
+    report_id: str = field(metadata={"doc": "Owning report ID, if retained."})
+    artifact_family: str = field(metadata={"doc": "Artifact family identifier."})
+    producer: str = field(metadata={"doc": "Recorded producer identity."})
+    processing_version: str = field(
+        metadata={"doc": "Recorded processing compatibility version."}
+    )
+    state: str = field(
+        metadata={"doc": "Current active, superseded, or invalidated state."}
+    )
+    lineage_status: str = field(
+        metadata={"doc": "Retained lineage completeness state."}
+    )
+    missing_field_codes: tuple[str, ...] = field(
+        metadata={"doc": "Deterministic bounded codes for missing or invalid proof."}
+    )
+    hash_state: str = field(
+        metadata={"doc": "verified, missing_storage, or hash_mismatch."}
+    )
+    created_at_utc: str = field(
+        metadata={"doc": "Retained creation time, if available."}
+    )
+
+
+@dataclass(frozen=True)
+class ArtifactLineageAuditResponse:
+    schema_version: str = field(
+        metadata={"doc": "Artifact-lineage audit response schema version."}
+    )
+    items: list[ArtifactLineageAuditItem] = field(
+        metadata={"doc": "Deterministically ordered per-artifact audit rows."}
+    )
+    status_counts: dict[str, int] = field(
+        metadata={"doc": "Counts by lineage state/status classification."}
+    )

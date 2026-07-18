@@ -57,6 +57,7 @@ from src.services.llm_usage_ledger_service import (
     evaluate_budget_request,
 )
 from src.utils.errors import AppError
+from src.utils.costing import resolve_model_pricing
 from src.utils.json_recovery import parse_json_from_text, strip_json_fence
 from src.utils.logging import log_event
 
@@ -98,6 +99,44 @@ def _openai_client_factory() -> Any | None:
 def enforce_daily_spend_guardrail(
     request: Any, ctx: RunContext, *, operation: str, provider: str = "openai"
 ) -> None:
+    pricing = getattr(request, "model_pricing", None) or {}
+    policy = pricing.get("__policy__") if isinstance(pricing, dict) else None
+    pricing_policy = policy if isinstance(policy, dict) else {}
+    pricing_enabled = bool(pricing_policy.get("enabled", False))
+    if pricing_enabled:
+        resolution = resolve_model_pricing(str(getattr(request, "model", "")), pricing)
+        if resolution.status in {"missing", "invalid", "stale", "held"}:
+            decision = (
+                str(pricing_policy.get("unpriced_action") or "block").strip().lower()
+            )
+            if decision not in {"block", "hold"}:
+                decision = "block"
+            logger.warning(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="model_pricing_governance_blocked",
+                    module=logger.name,
+                    fields={
+                        "provider": provider,
+                        "model": str(getattr(request, "model", "")),
+                        "operation": operation,
+                        "pricing_status": resolution.status,
+                        "pricing_key": resolution.key,
+                        "decision": decision,
+                    },
+                )
+            )
+            raise AppError(
+                code=f"{provider}_model_pricing_{decision}",
+                message="Spend-governed provider call lacks an active configured price",
+                retryable=False,
+                context={
+                    "operation": operation,
+                    "pricing_status": resolution.status,
+                    "next_action": "configure_current_model_pricing",
+                },
+            )
     prompt_namespace = str(getattr(request, "prompt_namespace", "") or "").strip()
     namespace_parts = [part for part in prompt_namespace.split("/") if part]
     if namespace_parts[:1] == ["report_vs"]:
@@ -107,7 +146,8 @@ def enforce_daily_spend_guardrail(
     authority = evaluate_budget_request(
         BudgetRequest(
             schema_version="1.0",
-            budget=getattr(request, "run_budget", None) or RunBudget(
+            budget=getattr(request, "run_budget", None)
+            or RunBudget(
                 schema_version="1.0",
                 run_id=ctx.run_id,
                 publisher_name=str(getattr(request, "publisher_name", "") or ""),

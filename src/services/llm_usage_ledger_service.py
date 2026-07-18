@@ -268,6 +268,13 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
             schema_validation_status text not null default 'not_applicable',
             error_stage text not null default '',
             error_code text not null default '',
+            report_id text not null default '',
+            workflow text not null default '',
+            stage text not null default '',
+            plan_hash text not null default '',
+            artifact_family text not null default '',
+            pricing_version text not null default '',
+            pricing_status text not null default '',
             metadata_json text not null
         )
         """
@@ -284,6 +291,13 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
         "error_stage": "text not null default ''",
         "error_code": "text not null default ''",
         "semantic_task": "text not null default ''",
+        "report_id": "text not null default ''",
+        "workflow": "text not null default ''",
+        "stage": "text not null default ''",
+        "plan_hash": "text not null default ''",
+        "artifact_family": "text not null default ''",
+        "pricing_version": "text not null default ''",
+        "pricing_status": "text not null default ''",
     }
     for column, definition in migrations.items():
         if column not in existing_columns:
@@ -329,6 +343,12 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
         """
         create index if not exists idx_llm_usage_events_run
         on llm_usage_events(run_id, task_id)
+        """
+    )
+    conn.execute(
+        """
+        create index if not exists idx_llm_usage_events_attribution
+        on llm_usage_events(report_id, workflow, artifact_family)
         """
     )
     conn.execute(
@@ -801,9 +821,9 @@ def _deferred_work_times(request: BudgetRequest, *, now: datetime) -> tuple[str,
         if request.deferred_deadline_at_utc.strip()
         else (now + timedelta(seconds=_DEFERRED_WORK_DEADLINE_SECONDS)).isoformat()
     )
-    if _parse_deferred_work_time(deadline, field_name="deadline_at_utc") <= _parse_deferred_work_time(
-        earliest, field_name="earliest_run_at_utc"
-    ):
+    if _parse_deferred_work_time(
+        deadline, field_name="deadline_at_utc"
+    ) <= _parse_deferred_work_time(earliest, field_name="earliest_run_at_utc"):
         raise AppError(
             code="deferred_work_deadline_invalid",
             message="Deferred-work deadline must be later than its earliest run time",
@@ -840,13 +860,20 @@ def _deferred_artifacts_from_request(
             continue
         seen.add((kind, reference, checksum))
         artifacts.append(
-            {"schema_version": "1.0", "kind": kind, "reference": reference, "checksum": checksum}
+            {
+                "schema_version": "1.0",
+                "kind": kind,
+                "reference": reference,
+                "checksum": checksum,
+            }
         )
     return artifacts
 
 
 def _serialized_budget_request(request: BudgetRequest) -> str:
-    return json.dumps(asdict(request), ensure_ascii=True, sort_keys=True, separators=(",", ":"))
+    return json.dumps(
+        asdict(request), ensure_ascii=True, sort_keys=True, separators=(",", ":")
+    )
 
 
 def _upsert_deferred_work(
@@ -1361,8 +1388,7 @@ def evaluate_budget_request(request: BudgetRequest, ctx: RunContext) -> BudgetDe
     day_utc = _budget_day_utc(request.budget)
     proposed = _request_usage(request)
     effect_enabled = not request.budget.enabled_effect_kinds or (
-        str(request.resource_type).strip()
-        in set(request.budget.enabled_effect_kinds)
+        str(request.resource_type).strip() in set(request.budget.enabled_effect_kinds)
     )
     logger.info(
         log_event(
@@ -1570,9 +1596,7 @@ def evaluate_budget_request(request: BudgetRequest, ctx: RunContext) -> BudgetDe
                 conn, request=request, decision=decision, now_utc=now_utc
             )
             if decision.decision == "defer":
-                _upsert_deferred_work(
-                    conn, request=request, decision=decision, now=now
-                )
+                _upsert_deferred_work(conn, request=request, decision=decision, now=now)
             conn.commit()
     except (sqlite3.Error, OSError, ValueError) as exc:
         raise AppError(
@@ -1658,15 +1682,15 @@ def evaluate_budget_request(request: BudgetRequest, ctx: RunContext) -> BudgetDe
         logger.info(
             log_event(
                 ctx,
-            role="service",
-            event="side_effect_prevented",
-            module=logger.name,
-            fields={
-                **fields,
-                "avoided_effect": True,
-                "avoided_calls": _request_usage(request).calls,
-                "avoided_estimated_cost_usd": request.estimated_cost_usd or 0.0,
-            },
+                role="service",
+                event="side_effect_prevented",
+                module=logger.name,
+                fields={
+                    **fields,
+                    "avoided_effect": True,
+                    "avoided_calls": _request_usage(request).calls,
+                    "avoided_estimated_cost_usd": request.estimated_cost_usd or 0.0,
+                },
             )
         )
         if decision.decision == "defer":
@@ -1780,7 +1804,11 @@ def list_deferred_work(
     """List durable budget-deferred work without leasing or modifying it."""
 
     path = _deferred_work_path(request.usage_db_path, ctx)
-    statuses = [str(value) for value in request.statuses if str(value) in _DEFERRED_WORK_STATUSES]
+    statuses = [
+        str(value)
+        for value in request.statuses
+        if str(value) in _DEFERRED_WORK_STATUSES
+    ]
     clauses: list[str] = []
     params: list[object] = []
     if statuses:
@@ -1815,7 +1843,10 @@ def list_deferred_work(
             role="service",
             event="deferred_work_listed",
             module=logger.name,
-            fields={"record_count": len(response.records), "workflow": request.workflow},
+            fields={
+                "record_count": len(response.records),
+                "workflow": request.workflow,
+            },
         )
     )
     return response
@@ -1922,7 +1953,9 @@ def transition_deferred_work(
     now_utc = _normalized_deferred_work_time(request.now_utc, field_name="now_utc")
     keep_lease = request.status == "leased"
     artifacts_json = (
-        json.dumps([asdict(item) for item in request.reusable_artifacts], sort_keys=True)
+        json.dumps(
+            [asdict(item) for item in request.reusable_artifacts], sort_keys=True
+        )
         if request.reusable_artifacts is not None
         else None
     )
@@ -1953,10 +1986,17 @@ def transition_deferred_work(
                 "terminal": request.terminal_status or current.terminal_status,
                 "remediation": request.remediation_id or current.remediation_id,
                 "plan_hash": request.plan_hash or current.plan_hash,
-                "artifacts": artifacts_json if artifacts_json is not None else json.dumps([asdict(item) for item in current.reusable_artifacts], sort_keys=True),
+                "artifacts": artifacts_json
+                if artifacts_json is not None
+                else json.dumps(
+                    [asdict(item) for item in current.reusable_artifacts],
+                    sort_keys=True,
+                ),
                 "owner": current.lease_owner if keep_lease else "",
                 "expiry": current.lease_expires_at_utc if keep_lease else "",
-                "completed": now_utc if request.status == "completed" else current.completed_at_utc,
+                "completed": now_utc
+                if request.status == "completed"
+                else current.completed_at_utc,
             }
             updated = conn.execute(
                 """
@@ -1968,11 +2008,19 @@ def transition_deferred_work(
                 WHERE work_key=? AND status='leased' AND lease_owner=?
                 """,
                 (
-                    values["status"], values["earliest"], values["terminal"],
-                    values["remediation"], values["plan_hash"], values["artifacts"],
-                    values["owner"], values["expiry"], values["completed"], now_utc,
+                    values["status"],
+                    values["earliest"],
+                    values["terminal"],
+                    values["remediation"],
+                    values["plan_hash"],
+                    values["artifacts"],
+                    values["owner"],
+                    values["expiry"],
+                    values["completed"],
+                    now_utc,
                     1 if request.increment_defer_count else 0,
-                    request.work_key, request.worker_id,
+                    request.work_key,
+                    request.worker_id,
                 ),
             )
             if updated.rowcount != 1:
@@ -2128,7 +2176,14 @@ def deferred_work_metrics(
     if oldest and str(oldest[0] or ""):
         oldest_age = max(
             0,
-            int((now - _parse_deferred_work_time(str(oldest[0]), field_name="deferred_at_utc")).total_seconds()),
+            int(
+                (
+                    now
+                    - _parse_deferred_work_time(
+                        str(oldest[0]), field_name="deferred_at_utc"
+                    )
+                ).total_seconds()
+            ),
         )
     completed = int(counts[5] or 0)
     terminal_decisions = int(counts[6] or 0)
@@ -2182,7 +2237,9 @@ def _budget_request_from_deferred_work(item: DeferredWorkItem) -> BudgetRequest:
         if isinstance(budget_payload.get(name), dict):
             budget_payload[name] = RunBudgetLimits(**budget_payload[name])
     if isinstance(budget_payload.get("enabled_effect_kinds"), list):
-        budget_payload["enabled_effect_kinds"] = tuple(budget_payload["enabled_effect_kinds"])
+        budget_payload["enabled_effect_kinds"] = tuple(
+            budget_payload["enabled_effect_kinds"]
+        )
     payload["budget"] = RunBudget(**budget_payload)
     override = payload.get("requested_override")
     if isinstance(override, dict):
@@ -2211,7 +2268,9 @@ def _budget_request_from_deferred_work(item: DeferredWorkItem) -> BudgetRequest:
     )
 
 
-def recheck_deferred_work_budget(item: DeferredWorkItem, ctx: RunContext) -> BudgetDecision:
+def recheck_deferred_work_budget(
+    item: DeferredWorkItem, ctx: RunContext
+) -> BudgetDecision:
     """Re-evaluate a leased item without reserving capacity or starting work."""
 
     return evaluate_budget_request(_budget_request_from_deferred_work(item), ctx)
@@ -2468,9 +2527,9 @@ def reconcile_budget_reservation(
             log_event(
                 ctx,
                 role="service",
-            event="forecast_error",
-            module=logger.name,
-            fields=fields,
+                event="forecast_error",
+                module=logger.name,
+                fields=fields,
             )
         )
     return response
@@ -3102,10 +3161,11 @@ def append_usage(
                     provider_decision, cache_decision, temperature, seed,
                     timeout_seconds, event_key, call_ordinal, provider_call_status,
                     parse_status, schema_validation_status, error_stage, error_code,
-                    semantic_task, metadata_json
+                    semantic_task, report_id, workflow, stage, plan_hash,
+                    artifact_family, pricing_version, pricing_status, metadata_json
                 ) values (
                     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
                 )
                 on conflict(event_key) do nothing
                 """,
@@ -3144,6 +3204,13 @@ def append_usage(
                     entry.error_stage,
                     entry.error_code,
                     _semantic_task(str(entry.task_id), entry.action),
+                    entry.report_id,
+                    entry.workflow,
+                    entry.stage,
+                    entry.plan_hash,
+                    entry.artifact_family,
+                    entry.pricing_version,
+                    entry.pricing_status,
                     _metadata_json(entry.metadata),
                 ),
             )
@@ -3337,14 +3404,15 @@ def _canonical_export_rows(
                report_name, source_url, prompt_namespace, prompt_hash,
                provider_decision, cache_decision, call_ordinal,
                provider_call_status, parse_status, schema_validation_status,
-               error_stage, error_code, event_key, metadata_json
+               error_stage, error_code, event_key, report_id, workflow, stage,
+               plan_hash, artifact_family, pricing_version, pricing_status, metadata_json
         from llm_usage_events where id > ? order by id
         """,
         (after_event_id,),
     ).fetchall()
     export_rows: list[dict[str, Any]] = []
     for row in rows:
-        metadata = _safe_metadata(str(row[28]))
+        metadata = _safe_metadata(str(row[35]))
         export_rows.append(
             {
                 "schema_version": "1.0",
@@ -3379,6 +3447,17 @@ def _canonical_export_rows(
                         "schema_validation_status": str(row[24]),
                         "error_stage": str(row[25]) or None,
                         "error_code": str(row[26]) or None,
+                    },
+                    "usage_context": {
+                        "report_id": str(row[28]) or "unknown",
+                        "workflow": str(row[29]) or "unknown",
+                        "stage": str(row[30]) or "unknown",
+                        "plan_hash": str(row[31]) or "unknown",
+                        "artifact_family": str(row[32]) or "unknown",
+                        "pricing_version": str(row[33]) or "unknown",
+                        "pricing_status": str(row[34]) or "unknown",
+                        "prompt_namespace": str(row[17]) or "unknown",
+                        "publisher_name": str(row[14]) or "unknown",
                     },
                     "metadata": metadata,
                 },
@@ -3605,6 +3684,24 @@ def _rollup_metrics(
     return totals
 
 
+def _rollup_usage_context(
+    rows: list[dict[str, Any]], key: str
+) -> dict[str, dict[str, float | int]]:
+    """Aggregate canonical events by an explicit context dimension.
+
+    Historical events have no new columns, so their safe, queryable bucket is
+    ``unknown`` rather than a guessed report or artifact family.
+    """
+    normalized_rows: list[dict[str, Any]] = []
+    for row in rows:
+        extra = row.get("extra")
+        context = (
+            dict(extra.get("usage_context") or {}) if isinstance(extra, dict) else {}
+        )
+        normalized_rows.append({**row, key: str(context.get(key) or "unknown")})
+    return _rollup_metrics(normalized_rows, key)
+
+
 def _cost_total(metrics: dict[str, float | int]) -> dict[str, Any]:
     return {
         "schema_version": "1.0",
@@ -3638,6 +3735,11 @@ def _daily_export_payload(
     by_date = _rollup_metrics(rows, "date")
     by_run = _rollup_metrics(rows, "run_id")
     by_task = _rollup_metrics(rows, "task_id")
+    by_report = _rollup_usage_context(rows, "report_id")
+    by_workflow = _rollup_usage_context(rows, "workflow")
+    by_prompt = _rollup_usage_context(rows, "prompt_namespace")
+    by_artifact_family = _rollup_usage_context(rows, "artifact_family")
+    by_publisher = _rollup_usage_context(rows, "publisher_name")
     totals_by_date = {
         day: _daily_total(day, metrics) for day, metrics in sorted(by_date.items())
     }
@@ -3662,6 +3764,22 @@ def _daily_export_payload(
         "totals_by_task": {
             task_id: _cost_total(metrics)
             for task_id, metrics in sorted(by_task.items())
+        },
+        "totals_by_report": {
+            key: _cost_total(metrics) for key, metrics in sorted(by_report.items())
+        },
+        "totals_by_workflow": {
+            key: _cost_total(metrics) for key, metrics in sorted(by_workflow.items())
+        },
+        "totals_by_prompt_namespace": {
+            key: _cost_total(metrics) for key, metrics in sorted(by_prompt.items())
+        },
+        "totals_by_artifact_family": {
+            key: _cost_total(metrics)
+            for key, metrics in sorted(by_artifact_family.items())
+        },
+        "totals_by_publisher": {
+            key: _cost_total(metrics) for key, metrics in sorted(by_publisher.items())
         },
     }
 
@@ -3721,6 +3839,38 @@ def _increment_daily_export_payload(
         str(key): dict(value)
         for key, value in dict(existing_payload.get("totals_by_task") or {}).items()
     }
+    context_totals = {
+        "report_id": {
+            str(key): dict(value)
+            for key, value in dict(
+                existing_payload.get("totals_by_report") or {}
+            ).items()
+        },
+        "workflow": {
+            str(key): dict(value)
+            for key, value in dict(
+                existing_payload.get("totals_by_workflow") or {}
+            ).items()
+        },
+        "prompt_namespace": {
+            str(key): dict(value)
+            for key, value in dict(
+                existing_payload.get("totals_by_prompt_namespace") or {}
+            ).items()
+        },
+        "artifact_family": {
+            str(key): dict(value)
+            for key, value in dict(
+                existing_payload.get("totals_by_artifact_family") or {}
+            ).items()
+        },
+        "publisher_name": {
+            str(key): dict(value)
+            for key, value in dict(
+                existing_payload.get("totals_by_publisher") or {}
+            ).items()
+        },
+    }
     for row in rows:
         date_key = str(row["timestamp_utc"])[:10] or "unknown"
         date_total = totals_by_date.setdefault(
@@ -3739,6 +3889,23 @@ def _increment_daily_export_payload(
             (str(row["run_id"] or "unknown"), totals_by_run),
             (str(row["task_id"] or "unknown"), totals_by_task),
         ):
+            cost_total = totals.setdefault(
+                key,
+                {
+                    "schema_version": "1.0",
+                    "total_input_tokens": 0,
+                    "total_output_tokens": 0,
+                    "total_tool_calls": 0,
+                    "estimated_cost_usd": 0.0,
+                },
+            )
+            _increment_cost_total(cost_total, row)
+        extra = row.get("extra")
+        usage_context = (
+            dict(extra.get("usage_context") or {}) if isinstance(extra, dict) else {}
+        )
+        for dimension, totals in context_totals.items():
+            key = str(usage_context.get(dimension) or "unknown")
             cost_total = totals.setdefault(
                 key,
                 {
@@ -3771,6 +3938,15 @@ def _increment_daily_export_payload(
         "totals_by_date": dict(sorted(totals_by_date.items())),
         "totals_by_run": dict(sorted(totals_by_run.items())),
         "totals_by_task": dict(sorted(totals_by_task.items())),
+        "totals_by_report": dict(sorted(context_totals["report_id"].items())),
+        "totals_by_workflow": dict(sorted(context_totals["workflow"].items())),
+        "totals_by_prompt_namespace": dict(
+            sorted(context_totals["prompt_namespace"].items())
+        ),
+        "totals_by_artifact_family": dict(
+            sorted(context_totals["artifact_family"].items())
+        ),
+        "totals_by_publisher": dict(sorted(context_totals["publisher_name"].items())),
     }
 
 

@@ -7,6 +7,7 @@ The public report-store API stays singular here, while semantic families live in
 from __future__ import annotations
 
 from src.services._report_store_service.artifact_lineage import (
+    audit_artifact_lineage,
     backfill_artifact_lineage,
     check_artifact_reuse,
     get_artifact_lineage_for_storage,
@@ -65,6 +66,7 @@ __all__ = [
     "check_report_db_access",
     "build_current_report_execution_compatibility",
     "build_minimal_execution_plan",
+    "audit_artifact_lineage",
     "backfill_artifact_lineage",
     "check_artifact_reuse",
     "get_metadata",

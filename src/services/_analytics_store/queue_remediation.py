@@ -7,7 +7,7 @@ import json
 import logging
 import sqlite3
 from collections import Counter
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from src.contracts.analytics_projection import (
@@ -157,6 +157,17 @@ def _classification(
         return (
             "already_satisfied",
             "durable_embedding_exists",
+            estimated_tokens,
+            estimated_cost,
+            metadata,
+        )
+    if (
+        str(row["execution_lease_id"] or "")
+        and _parse_utc(row["execution_lease_expires_at_utc"], now) > now
+    ):
+        return (
+            "leased",
+            "active_execution_lease",
             estimated_tokens,
             estimated_cost,
             metadata,
@@ -355,6 +366,11 @@ def read_claim_embedding_queue_health(
     try:
         with _analytics_conn(request.db_path, ctx) as conn:
             items = [_item(row, request, now) for row in _rows(conn, request)]
+            transition_rows = conn.execute(
+                """SELECT new_status,timestamp_utc FROM claim_embedding_queue_transitions
+                WHERE timestamp_utc >= ?""",
+                ((now - timedelta(hours=24)).isoformat(),),
+            ).fetchall()
     except sqlite3.Error as exc:
         raise AppError(
             code="claim_embedding_queue_health_failed",
@@ -371,6 +387,33 @@ def read_claim_embedding_queue_health(
         for item in items
         if item.classification in _READY
     ]
+    sorted_ages = sorted(pending_ages)
+
+    def _percentile(percent: float) -> int:
+        if not sorted_ages:
+            return 0
+        index = max(0, min(len(sorted_ages) - 1, int((len(sorted_ages) - 1) * percent)))
+        return sorted_ages[index]
+
+    completed_last_day = sum(str(row[0] or "") == "embedded" for row in transition_rows)
+    throughput = round(completed_last_day / 24.0, 6)
+    terminal = sum(
+        1
+        for item in items
+        if item.classification in {"already_satisfied", "terminal_failure"}
+        or item.embedding_status == "embedded"
+    )
+    retry_reasons = Counter(
+        item.classification_reason
+        for item in items
+        if item.classification == "retryable_failure"
+    )
+    terminal_reasons = Counter(
+        item.classification_reason
+        for item in items
+        if item.classification
+        in {"terminal_failure", "invalid_payload", "orphaned_report"}
+    )
     response = ClaimEmbeddingQueueHealthResponse(
         schema_version=PROJECTION_SCHEMA_VERSION,
         items=items,
@@ -378,6 +421,24 @@ def read_claim_embedding_queue_health(
         status_counts=dict(sorted(status_counts.items())),
         total_pending=sum(1 for item in items if item.embedding_status == "pending"),
         oldest_pending_age_seconds=max(pending_ages, default=0),
+        age_percentiles_seconds={
+            "p50": _percentile(0.50),
+            "p95": _percentile(0.95),
+            "p99": _percentile(0.99),
+        },
+        observed_throughput_per_hour=throughput,
+        completion_rate=(round(terminal / len(items), 6) if items else None),
+        estimated_drain_seconds=(
+            round(len(pending_ages) / throughput * 3600.0, 3) if throughput else None
+        ),
+        retry_reason_counts=dict(sorted(retry_reasons.items())),
+        terminal_reason_counts=dict(sorted(terminal_reasons.items())),
+        content_hash_skip_count=sum(
+            1 for item in items if item.classification == "already_satisfied"
+        ),
+        model_version_mismatch_count=sum(
+            1 for item in items if item.classification == "obsolete_version"
+        ),
     )
     logger.info(
         log_event(
@@ -388,6 +449,8 @@ def read_claim_embedding_queue_health(
             fields={
                 "row_count": len(items),
                 "classification_counts": response.classification_counts,
+                "oldest_pending_age_seconds": response.oldest_pending_age_seconds,
+                "observed_throughput_per_hour": response.observed_throughput_per_hour,
             },
         )
     )

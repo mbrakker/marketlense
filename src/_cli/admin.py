@@ -12,6 +12,7 @@ from src._cli.app import cli_app, console, logger
 from src._cli.runtime import sync_cli_patch_points
 from src.contracts.artifact_lineage import (
     ARTIFACT_LINEAGE_SCHEMA_VERSION,
+    ArtifactLineageAuditRequest,
     ArtifactLineageBackfillRequest,
 )
 from src.contracts.config import ConfigLoadRequest
@@ -24,7 +25,10 @@ from src.services.config_service import (
 )
 from src.services.drive_service import authorize_oauth_user
 from src.services.logging_service import setup_logging
-from src.services.report_store_service import backfill_artifact_lineage
+from src.services.report_store_service import (
+    audit_artifact_lineage,
+    backfill_artifact_lineage,
+)
 from src.utils.logging import log_event, new_run_context
 
 _CLI_PATCH_POINTS = (
@@ -202,3 +206,15 @@ def backfill_artifact_lineage_command(
     table.add_row("Skipped", str(result.skipped_artifacts))
     table.add_row("Planner-unverified", str(result.incomplete_artifacts))
     console.print(table)
+    if not dry_run:
+        audit = audit_artifact_lineage(
+            ArtifactLineageAuditRequest(
+                schema_version=ARTIFACT_LINEAGE_SCHEMA_VERSION,
+                db_path=reports_db,
+            ),
+            ctx,
+        )
+        console.print(
+            "Lineage audit: "
+            f"{len(audit.items)} records; status counts {audit.status_counts}"
+        )

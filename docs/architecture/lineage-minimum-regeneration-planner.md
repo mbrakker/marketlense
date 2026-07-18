@@ -30,8 +30,12 @@ proven:
 
 Missing provenance is a blocker, not an optimistic cache hit. Historic rows
 created before complete compatibility capture are explicitly
-`legacy_unverified`; the bounded existing backfill can register missing rows,
-but cannot silently upgrade them to complete provenance.
+`legacy_unverified` or `legacy_incomplete`. The bounded backfill first audits
+the retained record, hash, report/source identity, producer/schema/processing
+versions, and deterministic dependencies. It promotes only checkpoints that
+already retain every proof field; all other rows remain non-reusable, with a
+bounded missing-field code rather than fabricated provenance. Repeating the
+same backfill is idempotent.
 
 | Change or observation | Invalidated family | Minimum required work |
 | --- | --- | --- |

@@ -5,8 +5,13 @@ import sqlite3
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 from src.contracts.run_context import RunContext
 from src.services._llm_service import openrouter
+from src.services._llm_service.openai_shared import enforce_daily_spend_guardrail
+from src.utils.costing import estimate_cost_usd
+from src.utils.errors import AppError
 
 
 def _ctx() -> RunContext:
@@ -94,3 +99,40 @@ def test_openrouter_chat_json_records_provider_usage_to_sqlite(
     assert row["output_tokens"] == 7
     assert row["total_tokens"] == 18
     assert row["provider_decision"] == "openrouter_fallback"
+
+
+def test_cached_input_pricing_and_unpriced_governance_are_not_zero_cost() -> None:
+    pricing = {
+        "gpt-5-mini": {
+            "input_tokens_per_1k_usd": 0.25,
+            "cached_input_tokens_per_1k_usd": 0.025,
+            "output_tokens_per_1k_usd": 2.0,
+            "tool_call_usd": 0.0,
+        }
+    }
+
+    assert (
+        estimate_cost_usd(
+            "gpt-5-mini",
+            1_000,
+            100,
+            0,
+            pricing,
+            cached_input_tokens=500,
+        )
+        == 0.3375
+    )
+    with pytest.raises(AppError) as exc_info:
+        enforce_daily_spend_guardrail(
+            SimpleNamespace(
+                model="unpriced-model",
+                model_pricing={
+                    "__policy__": {"enabled": True, "unpriced_action": "hold"}
+                },
+            ),
+            _ctx(),
+            operation="pricing-test",
+        )
+
+    assert exc_info.value.code == "openai_model_pricing_hold"
+    assert exc_info.value.context["next_action"] == "configure_current_model_pricing"

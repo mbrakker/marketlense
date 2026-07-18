@@ -36,6 +36,7 @@ from src.generators.report_generation_shared import (
     report_slug,
 )
 from src.generators.report_render_generator import (
+    _public_source_note,
     render_preview_asset,
     render_report_output,
 )
@@ -292,6 +293,18 @@ def _cover_assets(runtime: ReportRuntimeState) -> CardCoverAssetSet:
     return _card_cover_assets(
         Path(runtime.settings.output_dir) / runtime.report_name / "assets"
     )
+
+
+def test_public_source_note_keeps_title_when_publisher_is_absent(tmp_path) -> None:
+    runtime = replace(
+        _runtime(tmp_path, md5="md5"),
+        source_identity=SimpleNamespace(
+            canonical_title="Publisher Evidence Report",
+            publisher_name="",
+        ),
+    )
+
+    assert _public_source_note(runtime) == "Source: Publisher Evidence Report"
 
 
 def test_render_report_output_sources_metadata_from_db_and_returns_complete_outcome(

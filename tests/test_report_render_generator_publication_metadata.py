@@ -129,7 +129,9 @@ def test_render_report_output_writes_verified_source_date_to_complete_manifest(
     assert manifest.covers.large.output_path == "assets/report-card-large.png"
     assert manifest.source_title == "Publisher Evidence Report"
     assert manifest.source_url == "https://publisher.example/report"
-    assert manifest.source_note == "Source: Publisher Example — Publisher Evidence Report"
+    assert (
+        manifest.source_note == "Source: Publisher Example — Publisher Evidence Report"
+    )
     assert manifest.source_metadata_hash == "source-metadata-hash"
     assert manifest.source_identity_status == "resolved"
     assert manifest.source_publication_date_status == "verified"

@@ -143,7 +143,8 @@ def test_checkpoint_remediation_projects_source_date_and_refreshes_lineage(
         ),
         _ctx(),
     )
-    assert reuse.reusable is True
+    assert reuse.reusable is False
+    assert reuse.reason == "legacy_incomplete"
 
 
 def test_missing_checkpoint_creates_operator_held_remediation(tmp_path: Path) -> None:
