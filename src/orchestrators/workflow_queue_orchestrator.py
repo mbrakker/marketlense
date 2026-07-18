@@ -561,6 +561,28 @@ def _string_list_attribute(payload: QueuePayload, name: str) -> list[str]:
     return [str(item).strip() for item in value if str(item).strip()]
 
 
+def _positive_int_attribute(payload: QueuePayload, name: str, default: int) -> int:
+    raw = payload.attributes.get(name, default)
+    try:
+        value = int(raw)
+    except (TypeError, ValueError) as exc:
+        raise AppError(
+            code="workflow_queue_attribute_invalid",
+            message="Workflow queue numeric attributes must be positive integers",
+            cause=exc,
+            retryable=False,
+            context={"attribute": name},
+        ) from exc
+    if value < 1:
+        raise AppError(
+            code="workflow_queue_attribute_invalid",
+            message="Workflow queue numeric attributes must be positive integers",
+            retryable=False,
+            context={"attribute": name},
+        )
+    return value
+
+
 def _signal_candidate_handler(
     job: WorkflowJob, payload: QueuePayload, ctx: RunContext
 ) -> WorkflowQueueHandlerResult:
@@ -595,7 +617,7 @@ def _signal_candidate_handler(
         publisher_filters=publisher_filters,
         date_range_start=str(payload.attributes.get("date_range_start", "")) or None,
         date_range_end=str(payload.attributes.get("date_range_end", "")) or None,
-        max_source_reports=max(1, int(payload.attributes.get("max_source_reports", 6))),
+        max_source_reports=_positive_int_attribute(payload, "max_source_reports", 6),
         diagnostic=False,
         override_publishability=True,
         publication_mode="generate_only",
@@ -617,8 +639,10 @@ def _signal_candidate_handler(
                 minimum_projection_status="projected",
             ),
             db_path=app.signal_store_db or app.reports_db,
-            max_evidence_items=max(1, int(payload.attributes.get("max_evidence_items", 48))),
-            max_signals=max(1, int(payload.attributes.get("max_signals", 8))),
+            max_evidence_items=_positive_int_attribute(
+                payload, "max_evidence_items", 48
+            ),
+            max_signals=_positive_int_attribute(payload, "max_signals", 8),
             state_db=app.state_db,
         ),
         ctx,
