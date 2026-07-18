@@ -108,20 +108,38 @@ python scripts/ci/check_documentation.py --check-generated
 
 See [testing](docs/quality/testing.md), [release gates](docs/quality/release-gates.md), [benchmarks](docs/quality/benchmarks.md), and [evidence process](docs/quality/evidence.md).
 
-## Documentation map
+## Documentation directory
 
-| Need | Canonical location |
-| --- | --- |
-| Product behavior | [docs/product](docs/product/overview.md) |
-| Architecture and boundaries | [docs/architecture](docs/architecture/overview.md) |
-| Workflow stages | [docs/workflows](docs/workflows/report-processing.md) |
-| Setup, deployment, recovery, and troubleshooting | [docs/ops](docs/ops/local-development.md) |
-| WordPress front-end contract | [README_WORDPRESS.md](README_WORDPRESS.md) |
-| Quality and release evidence process | [docs/quality](docs/quality/testing.md) |
-| Historical summaries | [docs/releases](docs/releases/README.md) |
-| Generated command and configuration inventories | [docs/generated](docs/generated/capability-manifest.md) |
+[docs/README.md](docs/README.md) is the complete, status-aware documentation
+index. It distinguishes current reference and operational procedures from
+generated inventories, point-in-time evidence, and historical records. The
+following map links every documentation set and explains what belongs there.
 
-The full documentation index includes status types and update triggers: [docs/README.md](docs/README.md).
+| Documentation set | What it contains | Start here |
+| --- | --- | --- |
+| Documentation index | The canonical inventory, ownership, status, and update triggers for every documentation set | [docs/README.md](docs/README.md) |
+| Product | Supported product model, report lifecycle, and public editorial-output semantics | [docs/product](docs/product/overview.md) |
+| Architecture | Current system boundaries, artifacts, workflow control, external-system ownership, and repository structure | [docs/architecture](docs/architecture/overview.md) |
+| Workflow procedures | Discovery, acquisition, processing, validation, regeneration, publication, mailbox, and cross-report workflows | [docs/workflows](docs/workflows/report-processing.md) |
+| Operations | Local setup, configuration, credentials, deployment, monitoring, recovery, troubleshooting, source metadata, budgets, and WordPress operations | [docs/ops](docs/ops/local-development.md) |
+| Quality | Testing, release gates, architecture policy, benchmarks, public-editorial quality, enforcement configuration, and quality baselines | [docs/quality](docs/quality/testing.md) |
+| Generated reference | Source-derived inventories for public CLI commands, configuration sections, external-system ownership, orchestrators, and schemas | [docs/generated](docs/generated/capability-manifest.md) |
+| CTO evidence | Generated, commit-bound evidence manifests, telemetry, metrics, and audit snapshots; these are not hand-edited reference prose | [docs/CTO_evidence](docs/CTO_evidence/README.md) |
+| Release history | Curated historical release and review summaries; Git remains the commit-level chronology | [docs/releases](docs/releases/README.md) |
+| Docpack guidance | Evidence-pack schemas, persistence, validation, and prompt-authoring rules | [docs/docpacks](docs/docpacks/pack-specs.md) |
+| Historical plans and specifications | Archived design and implementation records that explain past decisions but do not override current reference | [docs/superpowers](docs/superpowers) |
+| Brand and publisher records | The Market Bearing visual specification and observed publisher-discovery edge cases | [brand specification](docs/brand-spec.md) and [publisher inventory edge cases](docs/publisher_inventory_edge_cases.md) |
+| Browser route playbooks | Reviewable, file-based browser and private-API route guidance, including stale handling and promotion rules | [playbook guide](src/playbooks/browser_routes/README.md) |
+| Engineering guidance | Repository policy, Copilot orientation, and the pull-request review checklist | [AGENTS.md](AGENTS.md), [Copilot guide](.github/copilot-instructions.md), and [PR template](.github/pull_request_template.md) |
+| Test-fixture guides | Retained benchmark and crop-quality corpora, their integrity rules, and the baselines that consume them | [candidate fixtures](tests/fixtures/candidate_extraction/golden/crop_quality_v1/README.md), [PDF benchmark fixtures](tests/fixtures/pdf_benchmark/golden/README.md), and [crop-refinement fixtures](tests/fixtures/pdf_crop_refine/golden/README.md) |
+| Vendored Browser Use reference | The preserved upstream tool documentation; it is not MarketLense’s canonical workflow documentation | [tools/browser-use README](tools/browser-use/README.md) |
+| WordPress front end | The public rendering contract, shortcodes, card variants, and verification procedure for the WordPress subproject | [README_WORDPRESS.md](README_WORDPRESS.md) |
+| Active backlog | The sole current prioritised work list; historical plans are not a backlog | [CONSOLIDATED_TODO.md](CONSOLIDATED_TODO.md) |
+
+Use the complete [documentation index](docs/README.md) to locate an individual
+file within these sets. Keep this README as stable orientation and keep
+implementation, operational, generated, and historical detail in its
+canonical documentation pack.
 
 ## Current project status
 
