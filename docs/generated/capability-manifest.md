@@ -34,6 +34,7 @@ Generated from CLI registrations, configuration example, architecture policy, or
 - `src/orchestrators/cost_reporting_orchestrator.py`
 - `src/orchestrators/cover_image_orchestrator.py`
 - `src/orchestrators/cross_report_analysis_orchestrator.py`
+- `src/orchestrators/deferred_work_orchestrator.py`
 - `src/orchestrators/ingest_file_orchestrator.py`
 - `src/orchestrators/ingest_orchestrator.py`
 - `src/orchestrators/mail_report_acquisition_orchestrator.py`
@@ -68,6 +69,8 @@ Generated from CLI registrations, configuration example, architecture policy, or
 - `backfill-artifact-lineage`
 - `browser-doctor`
 - `cost-report`
+- `deferred-work`
+- `deferred-work-reap`
 - `discover-publisher-inventory`
 - `download-report`
 - `drive-oauth-login`

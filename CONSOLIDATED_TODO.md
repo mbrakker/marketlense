@@ -137,19 +137,6 @@ The original ten-item screenshot baseline is complete in the committed implement
 - Default ingest skips quarantined files; explicit rescan/revalidation clears only a valid replacement.
 - CLI or dashboard exposes quarantined inputs and remediation guidance, with tests for write, skip, revalidation, and valid-replacement transitions.
 
-#### A10. Budget-deferred-work recovery and operator requeue
-
-- **Title:** Budget-deferred-work recovery and operator requeue
-- **Impact 5 / effort: 2**
-- **Context:** The budget authority now persists actionable deferred work with its run, publisher, workflow, effect kind, limit, and next action. Operators can inspect that evidence, but there is no bounded reaper that rechecks capacity and idempotently requeues eligible work.
-- **Benefit:** Capacity recovered through actual-use reconciliation or a new UTC day can turn into completed work without manual ledger archaeology, while preserving the same idempotency and side-effect ceilings.
-- **Risks to avoid:** Do not create a generic queue or distributed scheduler. Reuse workflow control, require a fresh pre-side-effect decision, preserve original idempotency keys, and keep public writes review-gated.
-- **Success criteria:**
-
-- Workflow control lists pending budget deferrals with scopes, breached metrics, and actionable next steps in the operator surface.
-- A bounded explicit reaper re-evaluates only eligible deferred records, claims them idempotently, and records completion, continued deferral, or terminal operator action.
-- Tests prove day rollover, released reservation capacity, duplicate reaper suppression, failed requeue recovery, and zero public WordPress/mail side effects without their existing authorization gates.
-
 #### A11. Ledger-driven recurring-failure prevention and operator prioritization
 
 - **Title:** Ledger-driven recurring-failure prevention and operator prioritization
@@ -175,6 +162,19 @@ The original ten-item screenshot baseline is complete in the committed implement
 - Canonical operator pricing covers every configured production model route, including `gpt-5-mini`, with versioned provenance.
 - A bounded provider smoke records non-zero estimated spend when the provider returns metered usage; an unpriced model produces an explicit cost-governance decision rather than silently recording zero.
 - Focused accounting and budget tests cover priced, unpriced, stale, and changed-rate cases without provider calls.
+
+#### A13. Add approved deferred-work resume adapters for acquisition workflows
+
+- **Title:** Add approved deferred-work resume adapters for report download and publisher inventory
+- **Impact 5 / effort: 2**
+- **Context:** Durable budget-deferred recovery now safely resumes report generation through a fresh minimal plan. Budget decisions from acquisition workflows are recorded and visible, but workflows without a typed resume adapter deliberately hand off to remediation rather than guessing their source state.
+- **Benefit:** Recovering Drive, browser, and acquisition capacity can complete retained report-download and publisher-inventory work automatically while reusing route evidence, artifact caches, and existing public-write gates.
+- **Risks to avoid:** Do not replay browser, Drive, mailbox, or public-write work without a fresh canonical budget decision, typed route/checkpoint validation, original idempotency proof, and the existing review gate.
+- **Success criteria:**
+
+- Approved adapters rebuild the workflow-specific minimum plan from retained route and artifact evidence, fail closed on missing source state, and resume only the latest safe stage.
+- A single bounded invocation proves release-capacity and UTC-day recovery for each adapter, with duplicate worker suppression and no bypass of publishing/mail authorization.
+- Dashboard projections distinguish supported auto-resume workflows from remediation-only deferred records with bounded scalar counts.
 
 #### A8. Compare retained model-call replay bundles
 

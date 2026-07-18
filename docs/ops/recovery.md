@@ -59,4 +59,22 @@ after this gate; it authorizes only the documented allowlist. Roll back by
 setting it back to `false`, which leaves recording and operator visibility
 active.
 
+## Budget-deferred work recovery
+
+Budget deferrals are visible through `python -m src.cli deferred-work`. They
+are not remediation failures unless automatic resumption reaches a bounded
+terminal outcome. Before enabling automatic recovery, inspect queue depth,
+due records, repeated deferrals, active leases, and terminal count. Enable
+only `workflow_control.deferred_work_reaper.execution_enabled`, then invoke
+`python -m src.cli deferred-work-reap` once from the existing external worker
+or hourly scheduler. The command does not poll or install a scheduler.
+
+Every invocation first rechecks the canonical budget, then rebuilds the
+minimal plan and validates reusable artifacts. It preserves the original
+idempotency key and uses a SQLite lease, so a second worker cannot execute the
+same record. A continued `defer` is rescheduled after the configured delay;
+`pause` and `stop` always enter actionable remediation rather than becoming a
+new pending retry. Set the feature flag back to `false` for rollback: queued
+records remain intact for inspection and manual recovery.
+
 For report processing, checkpoint resume is orchestrator-owned and validates retained artifacts and lineage. Do not manually edit checkpoint state to bypass validation. For publication recovery or rollback, use [WordPress operations](wordpress.md).

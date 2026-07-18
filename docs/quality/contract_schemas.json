@@ -15613,6 +15613,539 @@
       ],
       "type": "object"
     },
+    "src.contracts.deferred_work.DeferredWorkArtifactReference": {
+      "additionalProperties": false,
+      "properties": {
+        "checksum": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "reference": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "kind",
+        "reference"
+      ],
+      "type": "object"
+    },
+    "src.contracts.deferred_work.DeferredWorkClaimRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "lease_seconds": {
+          "type": "integer"
+        },
+        "now_utc": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "usage_db_path": {
+          "type": "string"
+        },
+        "worker_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "usage_db_path",
+        "worker_id",
+        "now_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts.deferred_work.DeferredWorkClaimResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "record": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.deferred_work.DeferredWorkItem"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts.deferred_work.DeferredWorkItem": {
+      "additionalProperties": false,
+      "properties": {
+        "affected_limit": {
+          "type": "string"
+        },
+        "attempt_count": {
+          "type": "integer"
+        },
+        "budget_request_json": {
+          "type": "string"
+        },
+        "completed_at_utc": {
+          "type": "string"
+        },
+        "deadline_at_utc": {
+          "type": "string"
+        },
+        "defer_count": {
+          "type": "integer"
+        },
+        "deferred_at_utc": {
+          "type": "string"
+        },
+        "earliest_run_at_utc": {
+          "type": "string"
+        },
+        "idempotency_key": {
+          "type": "string"
+        },
+        "lease_expires_at_utc": {
+          "type": "string"
+        },
+        "lease_owner": {
+          "type": "string"
+        },
+        "max_attempts": {
+          "type": "integer"
+        },
+        "operation": {
+          "type": "string"
+        },
+        "plan_hash": {
+          "type": "string"
+        },
+        "publisher_id": {
+          "type": "string"
+        },
+        "reason_code": {
+          "type": "string"
+        },
+        "remediation_id": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "resource_type": {
+          "type": "string"
+        },
+        "reusable_artifacts": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.deferred_work.DeferredWorkArtifactReference"
+          },
+          "type": "array"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "stage": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "pending",
+            "leased",
+            "completed",
+            "remediation",
+            "terminal"
+          ]
+        },
+        "terminal_status": {
+          "type": "string"
+        },
+        "updated_at_utc": {
+          "type": "string"
+        },
+        "work_key": {
+          "type": "string"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "work_key",
+        "workflow",
+        "stage",
+        "run_id",
+        "resource_type",
+        "operation",
+        "reason_code",
+        "affected_limit",
+        "earliest_run_at_utc",
+        "deadline_at_utc",
+        "attempt_count",
+        "max_attempts",
+        "deferred_at_utc",
+        "updated_at_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts.deferred_work.DeferredWorkLeaseReleaseRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "now_utc": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "usage_db_path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "usage_db_path",
+        "now_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts.deferred_work.DeferredWorkLeaseReleaseResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "released_work_keys": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts.deferred_work.DeferredWorkListRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "statuses": {
+          "items": {
+            "enum": [
+              "pending",
+              "leased",
+              "completed",
+              "remediation",
+              "terminal"
+            ]
+          },
+          "type": "array"
+        },
+        "usage_db_path": {
+          "type": "string"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "usage_db_path"
+      ],
+      "type": "object"
+    },
+    "src.contracts.deferred_work.DeferredWorkListResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "records": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.deferred_work.DeferredWorkItem"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts.deferred_work.DeferredWorkMetrics": {
+      "additionalProperties": false,
+      "properties": {
+        "completion_rate": {
+          "type": "number"
+        },
+        "due_count": {
+          "type": "integer"
+        },
+        "lease_count": {
+          "type": "integer"
+        },
+        "oldest_age_seconds": {
+          "type": "integer"
+        },
+        "queue_depth": {
+          "type": "integer"
+        },
+        "repeated_deferral_count": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "terminal_count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "queue_depth",
+        "oldest_age_seconds",
+        "due_count",
+        "lease_count",
+        "completion_rate",
+        "repeated_deferral_count",
+        "terminal_count"
+      ],
+      "type": "object"
+    },
+    "src.contracts.deferred_work.DeferredWorkMetricsRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "now_utc": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "usage_db_path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "usage_db_path",
+        "now_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts.deferred_work.DeferredWorkReaperRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "execution_enabled": {
+          "type": "boolean"
+        },
+        "lease_seconds": {
+          "type": "integer"
+        },
+        "limit": {
+          "type": "integer"
+        },
+        "now_utc": {
+          "type": "string"
+        },
+        "retry_delay_seconds": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "state_db": {
+          "type": "string"
+        },
+        "usage_db_path": {
+          "type": "string"
+        },
+        "worker_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "usage_db_path",
+        "state_db",
+        "worker_id",
+        "now_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts.deferred_work.DeferredWorkReaperResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "completed_work_keys": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "deferred_work_keys": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "inspected_count": {
+          "type": "integer"
+        },
+        "released_lease_work_keys": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "remediation_work_keys": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "inspected_count"
+      ],
+      "type": "object"
+    },
+    "src.contracts.deferred_work.DeferredWorkResumePlan": {
+      "additionalProperties": false,
+      "properties": {
+        "plan_hash": {
+          "type": "string"
+        },
+        "resume_stage": {
+          "type": "string"
+        },
+        "reusable_artifacts": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.deferred_work.DeferredWorkArtifactReference"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "plan_hash",
+        "resume_stage"
+      ],
+      "type": "object"
+    },
+    "src.contracts.deferred_work.DeferredWorkTransitionRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "earliest_run_at_utc": {
+          "type": "string"
+        },
+        "increment_defer_count": {
+          "type": "boolean"
+        },
+        "now_utc": {
+          "type": "string"
+        },
+        "plan_hash": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "remediation_id": {
+          "type": "string"
+        },
+        "reusable_artifacts": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/src.contracts.deferred_work.DeferredWorkArtifactReference"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "pending",
+            "leased",
+            "completed",
+            "remediation",
+            "terminal"
+          ]
+        },
+        "terminal_status": {
+          "type": "string"
+        },
+        "usage_db_path": {
+          "type": "string"
+        },
+        "work_key": {
+          "type": "string"
+        },
+        "worker_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "usage_db_path",
+        "work_key",
+        "worker_id",
+        "status",
+        "reason",
+        "now_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts.deferred_work.DeferredWorkTransitionResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "record": {
+          "$ref": "#/$defs/src.contracts.deferred_work.DeferredWorkItem"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "record"
+      ],
+      "type": "object"
+    },
     "src.contracts.docpacks.ContradictionEntry": {
       "additionalProperties": false,
       "properties": {
@@ -23437,6 +23970,9 @@
         },
         "state_db": {
           "type": "string"
+        },
+        "usage_db_path": {
+          "type": "string"
         }
       },
       "required": [
@@ -23452,6 +23988,25 @@
     "src.contracts.ops.OpsDashboardSnapshotResponse": {
       "additionalProperties": false,
       "properties": {
+        "deferred_work": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "deferred_work_metrics": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              }
+            ]
+          },
+          "type": "object"
+        },
         "lock": {
           "$ref": "#/$defs/src.contracts.ops.OpsLockSnapshot"
         },
@@ -29490,6 +30045,15 @@
         "budget": {
           "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
         },
+        "deferred_deadline_at_utc": {
+          "type": "string"
+        },
+        "deferred_earliest_run_at_utc": {
+          "type": "string"
+        },
+        "deferred_max_attempts": {
+          "type": "integer"
+        },
         "estimated_calls": {
           "type": "integer"
         },
@@ -29539,6 +30103,9 @@
         "operation": {
           "type": "string"
         },
+        "plan_hash": {
+          "type": "string"
+        },
         "prompt_namespace": {
           "type": "string"
         },
@@ -29570,10 +30137,35 @@
         "resource_type": {
           "type": "string"
         },
+        "reusable_artifact_references": {
+          "items": {
+            "maxItems": 3,
+            "minItems": 3,
+            "prefixItems": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "type": "array"
+          },
+          "type": "array"
+        },
         "run_id": {
           "type": "string"
         },
         "schema_version": {
+          "type": "string"
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "stage": {
           "type": "string"
         },
         "workflow_id": {
@@ -38645,6 +39237,30 @@
       ],
       "type": "object"
     },
+    "src.contracts.workflow_control.DeferredWorkReaperSettings": {
+      "additionalProperties": false,
+      "properties": {
+        "execution_enabled": {
+          "type": "boolean"
+        },
+        "lease_seconds": {
+          "type": "integer"
+        },
+        "max_records_per_run": {
+          "type": "integer"
+        },
+        "retry_delay_seconds": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
     "src.contracts.workflow_control.MailDeliveryWorkflowItemResult": {
       "additionalProperties": false,
       "properties": {
@@ -39973,6 +40589,9 @@
             "$ref": "#/$defs/src.contracts.workflow_control.ConcurrencyLimit"
           },
           "type": "object"
+        },
+        "deferred_work_reaper": {
+          "$ref": "#/$defs/src.contracts.workflow_control.DeferredWorkReaperSettings"
         },
         "operational_memory_min_observations": {
           "type": "integer"

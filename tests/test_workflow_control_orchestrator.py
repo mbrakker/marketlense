@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import logging
-
 from dataclasses import asdict
 
 import pytest
@@ -13,8 +12,12 @@ from src.contracts.browser_download import (
 )
 from src.contracts.config import ConfigLoadRequest
 from src.contracts.mailbox_acquisition import (
-    MailReportAcquisitionResult,
     MailboxAcquisitionSettings,
+    MailReportAcquisitionResult,
+)
+from src.contracts.pipeline_preflight import (
+    PipelinePreflightCheck,
+    PipelinePreflightReport,
 )
 from src.contracts.retry_telemetry import (
     RetryDecisionTelemetryReport,
@@ -22,10 +25,6 @@ from src.contracts.retry_telemetry import (
 )
 from src.contracts.run_context import RunContext
 from src.contracts.state import MailDeliveryRequestUpsertRequest
-from src.contracts.pipeline_preflight import (
-    PipelinePreflightCheck,
-    PipelinePreflightReport,
-)
 from src.orchestrators import workflow_control_orchestrator as workflow
 from src.services import config_service
 from src.services.state_service import upsert_mail_delivery_request
@@ -97,6 +96,11 @@ def test_workflow_control_config_loads_yaml_profiles_and_policy_map(
 schema_version: "1.0"
 workflow_control:
   schema_version: "1.0"
+  deferred_work_reaper:
+    execution_enabled: true
+    max_records_per_run: 4
+    lease_seconds: 45
+    retry_delay_seconds: 120
   preflight_profiles:
     report_generation:
       workflow: "report_generation"
@@ -155,6 +159,9 @@ workflow_control:
     assert retry_policy.policy_id == "report_generation.report_pipeline.v1"
     assert retry_policy.retries == 2
     assert settings.concurrency["model"].max_limit == 4
+    assert settings.deferred_work_reaper.execution_enabled is True
+    assert settings.deferred_work_reaper.max_records_per_run == 4
+    assert settings.deferred_work_reaper.retry_delay_seconds == 120
     assert_no_defaulted_required_fields(report_download)
     assert_no_defaulted_required_fields(retry_policy)
 

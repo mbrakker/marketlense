@@ -307,6 +307,8 @@ def render_cockpit_overview() -> None:
     lock = asdict(snapshot.lock)
     health = [asdict(item) for item in snapshot.storage_health]
     remediations = list(snapshot.remediations)
+    deferred_work = list(snapshot.deferred_work)
+    deferred_work_metrics = dict(snapshot.deferred_work_metrics)
     logs = _discover_log_files()
     recent_paths = [row["path"] for row in logs[:2]]
     events = _load_log_events(recent_paths)
@@ -426,6 +428,29 @@ def render_cockpit_overview() -> None:
                     "attempts": "Attempts",
                     "checkpoint": "Checkpoint",
                     "blocker": "Runbook",
+                },
+            )
+        with st.container(border=True):
+            st.subheader("Budget-deferred work")
+            metric_cols = st.columns(4)
+            metric_cols[0].metric("Queue depth", deferred_work_metrics.get("queue_depth", 0))
+            metric_cols[1].metric("Due", deferred_work_metrics.get("due_count", 0))
+            metric_cols[2].metric("Leased", deferred_work_metrics.get("lease_count", 0))
+            metric_cols[3].metric("Terminal", deferred_work_metrics.get("terminal_count", 0))
+            _render_table_card(
+                "Deferred recovery queue",
+                deferred_work[:10],
+                empty_title="No budget-deferred work",
+                empty_detail="Budget deferrals will appear here with their earliest safe retry and terminal handoff state.",
+                column_config={
+                    "workflow": "Workflow",
+                    "stage": "Safe stage",
+                    "status": "State",
+                    "affected_limit": "Budget limit",
+                    "attempts": "Attempts",
+                    "defer_count": "Deferrals",
+                    "earliest_run_at_utc": "Earliest UTC",
+                    "terminal_status": "Terminal / handoff",
                 },
             )
         with st.container(border=True):

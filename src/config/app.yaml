@@ -384,6 +384,13 @@ workflow_control:
     execution_enabled: false
     max_records_per_run: 10
     lease_seconds: 60
+  deferred_work_reaper:
+    schema_version: "1.0"
+    # Rollback switch: false preserves records but prevents automatic leasing.
+    execution_enabled: false
+    max_records_per_run: 10
+    lease_seconds: 60
+    retry_delay_seconds: 3600
   preflight_profiles:
     report_generation:
       workflow: "report_generation"

@@ -430,6 +430,7 @@ def _load_ops_dashboard_snapshot(settings: Any) -> Any:
             settings.state_db,
             settings.reports_db,
             settings.ingest_lock_path,
+            settings.usage_db_path,
         ),
         loader=lambda: collect_ops_dashboard_snapshot(
             OpsDashboardSnapshotRequest(
@@ -439,6 +440,7 @@ def _load_ops_dashboard_snapshot(settings: Any) -> Any:
                 state_db=settings.state_db,
                 reports_db=settings.reports_db,
                 ingest_lock_path=settings.ingest_lock_path,
+                usage_db_path=settings.usage_db_path,
             ),
             _ctx("ops_snapshot"),
         ),

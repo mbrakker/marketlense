@@ -7,13 +7,28 @@ import threading
 import uuid
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import replace
+from dataclasses import asdict, replace
 from datetime import datetime, timedelta, timezone
 from hashlib import sha256
 from pathlib import Path
 from statistics import median
 from typing import Any, cast
 
+from src.contracts.deferred_work import (
+    DeferredWorkArtifactReference,
+    DeferredWorkClaimRequest,
+    DeferredWorkClaimResponse,
+    DeferredWorkItem,
+    DeferredWorkLeaseReleaseRequest,
+    DeferredWorkLeaseReleaseResponse,
+    DeferredWorkListRequest,
+    DeferredWorkListResponse,
+    DeferredWorkMetrics,
+    DeferredWorkMetricsRequest,
+    DeferredWorkStatus,
+    DeferredWorkTransitionRequest,
+    DeferredWorkTransitionResponse,
+)
 from src.contracts.files import AppendBytesRequest, WriteBytesRequest
 from src.contracts.llm_usage import (
     LLMUsageExportRebuildRequest,
@@ -35,17 +50,18 @@ from src.contracts.llm_usage import (
     LLMUsageSpendReservationReleaseResponse,
 )
 from src.contracts.run_budget import (
-    BudgetDecision,
     BudgetAuthorityReport,
-    BudgetSideEffectFinalizeRequest,
-    BudgetSideEffectFinalizeResponse,
+    BudgetDecision,
+    BudgetOverrideContext,
     BudgetRequest,
     BudgetReservationReconcileRequest,
     BudgetReservationReconcileResponse,
+    BudgetSideEffectFinalizeRequest,
+    BudgetSideEffectFinalizeResponse,
     RunBudget,
-    RunBudgetLimits,
     RunBudgetEventAppendRequest,
     RunBudgetEventAppendResponse,
+    RunBudgetLimits,
     RunBudgetUsage,
     RunBudgetUsageReadRequest,
     RunBudgetUsageReadResponse,
@@ -53,7 +69,6 @@ from src.contracts.run_budget import (
 from src.contracts.run_context import RunContext
 from src.contracts.sqlite_migration import SqliteMigrationApplyRequest
 from src.services import file_service
-from src.services.sqlite_migration_service import apply_llm_usage_ledger_migrations
 from src.services._llm_usage_ledger.projection_state import (
     allocate_projection_generation,
     ensure_projection_state_schema,
@@ -62,6 +77,7 @@ from src.services._llm_usage_ledger.projection_state import (
     increment_semantic_task_count,
     semantic_task_count,
 )
+from src.services.sqlite_migration_service import apply_llm_usage_ledger_migrations
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -76,6 +92,10 @@ _MEDIAN_REBUILD_EVENT_INTERVAL = 20
 _USAGE_EXPORT_PROJECTION_INTERVAL = 20
 _PROJECTION_LEASE_SECONDS = 120
 _MAX_BUDGET_RESERVATION_TTL_SECONDS = 3600
+_DEFERRED_WORK_RETRY_DELAY_SECONDS = 3600
+_DEFERRED_WORK_DEADLINE_SECONDS = 72 * 3600
+_DEFERRED_WORK_MAX_ATTEMPTS = 10
+_DEFERRED_WORK_STATUSES = {"pending", "leased", "completed", "remediation", "terminal"}
 _OUTCOME_STATUSES = {"valid", "invalid", "not_validated", "not_applicable"}
 _PROVIDER_CALL_STATUSES = {"completed", "failed"}
 _ERROR_CODE_STAGES = {
@@ -731,11 +751,174 @@ def _apply_budget_authority_migrations(path: Path, ctx: RunContext) -> None:
                 schema_version="1.0",
                 database_key="llm_usage_ledger",
                 db_path=str(path),
-                target_version=2,
+                target_version=3,
                 ctx=ctx,
             ),
             conn,
         )
+
+
+def _parse_deferred_work_time(value: str, *, field_name: str) -> datetime:
+    normalized = str(value or "").strip()
+    if normalized.endswith("Z"):
+        normalized = normalized[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError as exc:
+        raise AppError(
+            code="deferred_work_time_invalid",
+            message="Deferred-work timestamps must be ISO-8601 UTC values",
+            cause=exc,
+            retryable=False,
+            context={"field": field_name},
+        ) from exc
+    if parsed.tzinfo is None:
+        raise AppError(
+            code="deferred_work_time_invalid",
+            message="Deferred-work timestamps must include a UTC offset",
+            retryable=False,
+            context={"field": field_name},
+        )
+    return parsed.astimezone(timezone.utc)
+
+
+def _normalized_deferred_work_time(value: str, *, field_name: str) -> str:
+    return _parse_deferred_work_time(value, field_name=field_name).isoformat()
+
+
+def _deferred_work_times(request: BudgetRequest, *, now: datetime) -> tuple[str, str]:
+    earliest = (
+        _normalized_deferred_work_time(
+            request.deferred_earliest_run_at_utc, field_name="earliest_run_at_utc"
+        )
+        if request.deferred_earliest_run_at_utc.strip()
+        else (now + timedelta(seconds=_DEFERRED_WORK_RETRY_DELAY_SECONDS)).isoformat()
+    )
+    deadline = (
+        _normalized_deferred_work_time(
+            request.deferred_deadline_at_utc, field_name="deadline_at_utc"
+        )
+        if request.deferred_deadline_at_utc.strip()
+        else (now + timedelta(seconds=_DEFERRED_WORK_DEADLINE_SECONDS)).isoformat()
+    )
+    if _parse_deferred_work_time(deadline, field_name="deadline_at_utc") <= _parse_deferred_work_time(
+        earliest, field_name="earliest_run_at_utc"
+    ):
+        raise AppError(
+            code="deferred_work_deadline_invalid",
+            message="Deferred-work deadline must be later than its earliest run time",
+            retryable=False,
+        )
+    return earliest, deadline
+
+
+def _deferred_work_key(request: BudgetRequest) -> str:
+    material = request.idempotency_key or "|".join(
+        (
+            request.run_id,
+            request.workflow_id,
+            request.publisher_id,
+            request.report_id,
+            request.source_id,
+            request.resource_type,
+            request.operation,
+        )
+    )
+    return sha256(material.encode("utf-8")).hexdigest()
+
+
+def _deferred_artifacts_from_request(
+    request: BudgetRequest,
+) -> list[dict[str, str]]:
+    artifacts: list[dict[str, str]] = []
+    seen: set[tuple[str, str, str]] = set()
+    for raw in request.reusable_artifact_references:
+        if not isinstance(raw, (tuple, list)) or len(raw) != 3:
+            continue
+        kind, reference, checksum = (str(value or "").strip() for value in raw)
+        if not kind or not reference or (kind, reference, checksum) in seen:
+            continue
+        seen.add((kind, reference, checksum))
+        artifacts.append(
+            {"schema_version": "1.0", "kind": kind, "reference": reference, "checksum": checksum}
+        )
+    return artifacts
+
+
+def _serialized_budget_request(request: BudgetRequest) -> str:
+    return json.dumps(asdict(request), ensure_ascii=True, sort_keys=True, separators=(",", ":"))
+
+
+def _upsert_deferred_work(
+    conn: sqlite3.Connection,
+    *,
+    request: BudgetRequest,
+    decision: BudgetDecision,
+    now: datetime,
+) -> None:
+    max_attempts = int(request.deferred_max_attempts)
+    if not 1 <= max_attempts <= _DEFERRED_WORK_MAX_ATTEMPTS:
+        raise AppError(
+            code="deferred_work_max_attempts_invalid",
+            message="Deferred-work maximum attempts must be within the bounded policy range",
+            retryable=False,
+            context={"max_attempts": max_attempts},
+        )
+    earliest, deadline = _deferred_work_times(request, now=now)
+    now_utc = now.isoformat()
+    conn.execute(
+        """
+        INSERT INTO budget_authority_deferred_work(
+            work_key, schema_version, deferred_at_utc, run_id, workflow_id,
+            publisher_name, report_id, resource_type, operation, idempotency_key,
+            next_action, affected_limit, policy_version, status, stage, source_id,
+            plan_hash, reason_code, earliest_run_at_utc, deadline_at_utc,
+            attempt_count, max_attempts, reusable_artifacts_json, lease_owner,
+            lease_expires_at_utc, terminal_status, remediation_id, updated_at_utc,
+            completed_at_utc, defer_count, budget_request_json
+        ) VALUES (?, '2.0', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, 0, ?, ?, '', '', '', '', ?, '', 1, ?)
+        ON CONFLICT(work_key) DO UPDATE SET
+            schema_version=CASE WHEN status='pending' THEN excluded.schema_version ELSE schema_version END,
+            stage=CASE WHEN status='pending' THEN excluded.stage ELSE stage END,
+            source_id=CASE WHEN status='pending' THEN excluded.source_id ELSE source_id END,
+            plan_hash=CASE WHEN status='pending' THEN excluded.plan_hash ELSE plan_hash END,
+            reason_code=CASE WHEN status='pending' THEN excluded.reason_code ELSE reason_code END,
+            earliest_run_at_utc=CASE WHEN status='pending' THEN excluded.earliest_run_at_utc ELSE earliest_run_at_utc END,
+            deadline_at_utc=CASE WHEN status='pending' THEN excluded.deadline_at_utc ELSE deadline_at_utc END,
+            max_attempts=CASE WHEN status='pending' THEN excluded.max_attempts ELSE max_attempts END,
+            reusable_artifacts_json=CASE WHEN status='pending' THEN excluded.reusable_artifacts_json ELSE reusable_artifacts_json END,
+            budget_request_json=CASE WHEN status='pending' THEN excluded.budget_request_json ELSE budget_request_json END,
+            next_action=CASE WHEN status IN ('pending','leased') THEN excluded.next_action ELSE next_action END,
+            affected_limit=CASE WHEN status IN ('pending','leased') THEN excluded.affected_limit ELSE affected_limit END,
+            policy_version=CASE WHEN status IN ('pending','leased') THEN excluded.policy_version ELSE policy_version END,
+            updated_at_utc=CASE WHEN status IN ('pending','leased') THEN excluded.updated_at_utc ELSE updated_at_utc END,
+            defer_count=defer_count
+        """,
+        (
+            _deferred_work_key(request),
+            now_utc,
+            request.run_id,
+            request.workflow_id,
+            request.publisher_id,
+            request.report_id,
+            request.resource_type,
+            request.operation,
+            request.idempotency_key,
+            decision.next_action,
+            decision.affected_limit,
+            decision.policy_version,
+            request.stage,
+            request.source_id,
+            request.plan_hash,
+            decision.reason_code,
+            earliest,
+            deadline,
+            max_attempts,
+            json.dumps(_deferred_artifacts_from_request(request), sort_keys=True),
+            now_utc,
+            _serialized_budget_request(request),
+        ),
+    )
 
 
 def _empty_budget_usage() -> RunBudgetUsage:
@@ -1387,46 +1570,8 @@ def evaluate_budget_request(request: BudgetRequest, ctx: RunContext) -> BudgetDe
                 conn, request=request, decision=decision, now_utc=now_utc
             )
             if decision.decision == "defer":
-                work_key_material = request.idempotency_key or "|".join(
-                    (
-                        request.run_id,
-                        request.workflow_id,
-                        request.publisher_id,
-                        request.report_id,
-                        request.resource_type,
-                        request.operation,
-                        str(request.attempt_number),
-                    )
-                )
-                work_key = sha256(work_key_material.encode("utf-8")).hexdigest()
-                conn.execute(
-                    """
-                    insert into budget_authority_deferred_work(
-                        work_key, schema_version, deferred_at_utc, run_id, workflow_id,
-                        publisher_name, report_id, resource_type, operation,
-                        idempotency_key, next_action, affected_limit, policy_version
-                    ) values (?, '1.0', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    on conflict(work_key) do update set
-                        deferred_at_utc=excluded.deferred_at_utc,
-                        next_action=excluded.next_action,
-                        affected_limit=excluded.affected_limit,
-                        policy_version=excluded.policy_version,
-                        status='pending'
-                    """,
-                    (
-                        work_key,
-                        now_utc,
-                        request.run_id,
-                        request.workflow_id,
-                        request.publisher_id,
-                        request.report_id,
-                        request.resource_type,
-                        request.operation,
-                        request.idempotency_key,
-                        decision.next_action,
-                        decision.affected_limit,
-                        decision.policy_version,
-                    ),
+                _upsert_deferred_work(
+                    conn, request=request, decision=decision, now=now
                 )
             conn.commit()
     except (sqlite3.Error, OSError, ValueError) as exc:
@@ -1535,6 +1680,541 @@ def evaluate_budget_request(request: BudgetRequest, ctx: RunContext) -> BudgetDe
                 )
             )
     return decision
+
+
+_DEFERRED_WORK_SELECT = """
+SELECT work_key, schema_version, deferred_at_utc, run_id, workflow_id,
+       publisher_name, report_id, resource_type, operation, idempotency_key,
+       affected_limit, status, stage, source_id, plan_hash, reason_code,
+       earliest_run_at_utc, deadline_at_utc, attempt_count, max_attempts,
+       reusable_artifacts_json, lease_owner, lease_expires_at_utc,
+       terminal_status, remediation_id, updated_at_utc, completed_at_utc,
+       defer_count, budget_request_json
+FROM budget_authority_deferred_work
+"""
+
+
+def _deferred_artifacts_from_json(raw: object) -> list[DeferredWorkArtifactReference]:
+    try:
+        payload = json.loads(str(raw or "[]"))
+    except json.JSONDecodeError:
+        payload = []
+    artifacts: list[DeferredWorkArtifactReference] = []
+    for item in payload if isinstance(payload, list) else []:
+        if not isinstance(item, dict):
+            continue
+        kind = str(item.get("kind") or "").strip()
+        reference = str(item.get("reference") or "").strip()
+        if not kind or not reference:
+            continue
+        artifacts.append(
+            DeferredWorkArtifactReference(
+                schema_version=str(item.get("schema_version") or "1.0"),
+                kind=kind,
+                reference=reference,
+                checksum=str(item.get("checksum") or ""),
+            )
+        )
+    return artifacts
+
+
+def _deferred_work_item_from_row(row: tuple[object, ...]) -> DeferredWorkItem:
+    status = str(row[11] or "")
+    if status not in _DEFERRED_WORK_STATUSES:
+        raise AppError(
+            code="deferred_work_record_read_invalid",
+            message="Persisted deferred work has an unsupported status",
+            retryable=False,
+            context={"status": status},
+        )
+    return DeferredWorkItem(
+        schema_version=str(row[1] or "1.0"),
+        work_key=str(row[0]),
+        workflow=str(row[4]),
+        stage=str(row[12]),
+        run_id=str(row[3]),
+        resource_type=str(row[7]),
+        operation=str(row[8]),
+        reason_code=str(row[15]),
+        affected_limit=str(row[10]),
+        earliest_run_at_utc=str(row[16]),
+        deadline_at_utc=str(row[17]),
+        attempt_count=max(0, int(str(row[18] or 0))),
+        max_attempts=max(1, int(str(row[19] or 1))),
+        deferred_at_utc=str(row[2]),
+        updated_at_utc=str(row[25]),
+        report_id=str(row[6]),
+        source_id=str(row[13]),
+        publisher_id=str(row[5]),
+        plan_hash=str(row[14]),
+        reusable_artifacts=_deferred_artifacts_from_json(row[20]),
+        idempotency_key=str(row[9]),
+        status=cast(DeferredWorkStatus, status),
+        lease_owner=str(row[21]),
+        lease_expires_at_utc=str(row[22]),
+        terminal_status=str(row[23]),
+        remediation_id=str(row[24]),
+        completed_at_utc=str(row[26]),
+        defer_count=max(1, int(str(row[27] or 1))),
+        budget_request_json=str(row[28] or "{}"),
+    )
+
+
+def _deferred_work_path(usage_db_path: str, ctx: RunContext) -> Path:
+    raw_path = str(usage_db_path or "").strip()
+    if not raw_path:
+        raise AppError(
+            code="deferred_work_usage_db_missing",
+            message="Deferred-work operations require a canonical usage ledger path",
+            retryable=False,
+        )
+    path = Path(raw_path)
+    _apply_budget_authority_migrations(path, ctx)
+    return path
+
+
+def list_deferred_work(
+    request: DeferredWorkListRequest,
+    ctx: RunContext,
+) -> DeferredWorkListResponse:
+    """List durable budget-deferred work without leasing or modifying it."""
+
+    path = _deferred_work_path(request.usage_db_path, ctx)
+    statuses = [str(value) for value in request.statuses if str(value) in _DEFERRED_WORK_STATUSES]
+    clauses: list[str] = []
+    params: list[object] = []
+    if statuses:
+        clauses.append("status IN (" + ",".join("?" for _ in statuses) + ")")
+        params.extend(statuses)
+    if request.workflow.strip():
+        clauses.append("workflow_id=?")
+        params.append(request.workflow.strip())
+    query = _DEFERRED_WORK_SELECT
+    if clauses:
+        query += " WHERE " + " AND ".join(clauses)
+    query += " ORDER BY deferred_at_utc ASC, work_key ASC LIMIT ?"
+    params.append(max(1, min(500, int(request.limit))))
+    try:
+        with _LOCK, sqlite3.connect(path) as conn:
+            rows = conn.execute(query, tuple(params)).fetchall()
+    except sqlite3.Error as exc:
+        raise AppError(
+            code="deferred_work_list_failed",
+            message="Could not list durable deferred work",
+            cause=exc,
+            retryable=False,
+            context={"db_path": str(path)},
+        ) from exc
+    response = DeferredWorkListResponse(
+        schema_version="1.0",
+        records=[_deferred_work_item_from_row(row) for row in rows],
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="deferred_work_listed",
+            module=logger.name,
+            fields={"record_count": len(response.records), "workflow": request.workflow},
+        )
+    )
+    return response
+
+
+def _deferred_work_lease_expiry(now_utc: str, lease_seconds: int) -> str:
+    now = _parse_deferred_work_time(now_utc, field_name="now_utc")
+    return (now + timedelta(seconds=max(1, min(3600, int(lease_seconds))))).isoformat()
+
+
+def claim_next_deferred_work(
+    request: DeferredWorkClaimRequest,
+    ctx: RunContext,
+) -> DeferredWorkClaimResponse:
+    """Atomically lease exactly one due item; concurrent claimers cannot overlap."""
+
+    if not request.worker_id.strip():
+        raise AppError(
+            code="deferred_work_worker_id_missing",
+            message="Deferred-work leasing requires a stable worker ID",
+            retryable=False,
+        )
+    path = _deferred_work_path(request.usage_db_path, ctx)
+    now_utc = _normalized_deferred_work_time(request.now_utc, field_name="now_utc")
+    expiry = _deferred_work_lease_expiry(now_utc, request.lease_seconds)
+    record: DeferredWorkItem | None = None
+    try:
+        with _LOCK, sqlite3.connect(path) as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                _DEFERRED_WORK_SELECT
+                + """
+                WHERE status='pending'
+                  AND earliest_run_at_utc<=?
+                  AND (lease_expires_at_utc='' OR lease_expires_at_utc<=?)
+                ORDER BY earliest_run_at_utc ASC, deferred_at_utc ASC, work_key ASC
+                LIMIT 1
+                """,
+                (now_utc, now_utc),
+            ).fetchone()
+            if row is not None:
+                candidate = _deferred_work_item_from_row(row)
+                updated = conn.execute(
+                    """
+                    UPDATE budget_authority_deferred_work
+                    SET status='leased', lease_owner=?, lease_expires_at_utc=?,
+                        attempt_count=attempt_count+1, updated_at_utc=?
+                    WHERE work_key=? AND status='pending'
+                      AND (lease_expires_at_utc='' OR lease_expires_at_utc<=?)
+                    """,
+                    (request.worker_id, expiry, now_utc, candidate.work_key, now_utc),
+                )
+                if updated.rowcount == 1:
+                    record = replace(
+                        candidate,
+                        status="leased",
+                        lease_owner=request.worker_id,
+                        lease_expires_at_utc=expiry,
+                        attempt_count=candidate.attempt_count + 1,
+                        updated_at_utc=now_utc,
+                    )
+            conn.commit()
+    except sqlite3.Error as exc:
+        raise AppError(
+            code="deferred_work_claim_failed",
+            message="Could not atomically lease durable deferred work",
+            cause=exc,
+            retryable=True,
+            context={"db_path": str(path)},
+        ) from exc
+    if record is not None:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="deferred_work_lease_acquired",
+                module=logger.name,
+                fields={
+                    "work_key": record.work_key,
+                    "workflow": record.workflow,
+                    "worker_id": request.worker_id,
+                    "attempt_count": record.attempt_count,
+                    "lease_expires_at_utc": record.lease_expires_at_utc,
+                },
+            )
+        )
+    return DeferredWorkClaimResponse(schema_version="1.0", record=record)
+
+
+def transition_deferred_work(
+    request: DeferredWorkTransitionRequest,
+    ctx: RunContext,
+) -> DeferredWorkTransitionResponse:
+    """Finish, reschedule, or hand off only the caller's current lease."""
+
+    if request.status not in _DEFERRED_WORK_STATUSES:
+        raise AppError(
+            code="deferred_work_transition_invalid",
+            message="Deferred-work transition uses an unsupported status",
+            retryable=False,
+            context={"status": request.status},
+        )
+    path = _deferred_work_path(request.usage_db_path, ctx)
+    now_utc = _normalized_deferred_work_time(request.now_utc, field_name="now_utc")
+    keep_lease = request.status == "leased"
+    artifacts_json = (
+        json.dumps([asdict(item) for item in request.reusable_artifacts], sort_keys=True)
+        if request.reusable_artifacts is not None
+        else None
+    )
+    try:
+        with _LOCK, sqlite3.connect(path) as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                _DEFERRED_WORK_SELECT + " WHERE work_key=?", (request.work_key,)
+            ).fetchone()
+            if row is None:
+                raise AppError(
+                    code="deferred_work_not_found",
+                    message="Deferred-work item was not found",
+                    retryable=False,
+                    context={"work_key": request.work_key},
+                )
+            current = _deferred_work_item_from_row(row)
+            if current.status != "leased" or current.lease_owner != request.worker_id:
+                raise AppError(
+                    code="deferred_work_lease_not_owned",
+                    message="Deferred-work transition requires the current lease owner",
+                    retryable=False,
+                    context={"work_key": request.work_key, "status": current.status},
+                )
+            values = {
+                "status": request.status,
+                "earliest": request.earliest_run_at_utc or current.earliest_run_at_utc,
+                "terminal": request.terminal_status or current.terminal_status,
+                "remediation": request.remediation_id or current.remediation_id,
+                "plan_hash": request.plan_hash or current.plan_hash,
+                "artifacts": artifacts_json if artifacts_json is not None else json.dumps([asdict(item) for item in current.reusable_artifacts], sort_keys=True),
+                "owner": current.lease_owner if keep_lease else "",
+                "expiry": current.lease_expires_at_utc if keep_lease else "",
+                "completed": now_utc if request.status == "completed" else current.completed_at_utc,
+            }
+            updated = conn.execute(
+                """
+                UPDATE budget_authority_deferred_work
+                SET status=?, earliest_run_at_utc=?, terminal_status=?, remediation_id=?,
+                    plan_hash=?, reusable_artifacts_json=?, lease_owner=?,
+                    lease_expires_at_utc=?, completed_at_utc=?, updated_at_utc=?,
+                    defer_count=defer_count+?
+                WHERE work_key=? AND status='leased' AND lease_owner=?
+                """,
+                (
+                    values["status"], values["earliest"], values["terminal"],
+                    values["remediation"], values["plan_hash"], values["artifacts"],
+                    values["owner"], values["expiry"], values["completed"], now_utc,
+                    1 if request.increment_defer_count else 0,
+                    request.work_key, request.worker_id,
+                ),
+            )
+            if updated.rowcount != 1:
+                raise AppError(
+                    code="deferred_work_lease_lost",
+                    message="Deferred-work lease changed before its transition completed",
+                    retryable=False,
+                    context={"work_key": request.work_key},
+                )
+            conn.commit()
+    except sqlite3.Error as exc:
+        raise AppError(
+            code="deferred_work_transition_failed",
+            message="Could not persist deferred-work transition",
+            cause=exc,
+            retryable=True,
+            context={"db_path": str(path), "work_key": request.work_key},
+        ) from exc
+    record = replace(
+        current,
+        status=request.status,
+        earliest_run_at_utc=str(values["earliest"]),
+        terminal_status=str(values["terminal"]),
+        remediation_id=str(values["remediation"]),
+        plan_hash=str(values["plan_hash"]),
+        reusable_artifacts=(
+            request.reusable_artifacts
+            if request.reusable_artifacts is not None
+            else current.reusable_artifacts
+        ),
+        lease_owner=str(values["owner"]),
+        lease_expires_at_utc=str(values["expiry"]),
+        completed_at_utc=str(values["completed"]),
+        updated_at_utc=now_utc,
+        defer_count=current.defer_count + (1 if request.increment_defer_count else 0),
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="deferred_work_transition",
+            module=logger.name,
+            fields={
+                "work_key": record.work_key,
+                "workflow": record.workflow,
+                "status": record.status,
+                "reason": request.reason,
+                "attempt_count": record.attempt_count,
+                "terminal_status": record.terminal_status,
+            },
+        )
+    )
+    return DeferredWorkTransitionResponse(schema_version="1.0", record=record)
+
+
+def release_expired_deferred_work_leases(
+    request: DeferredWorkLeaseReleaseRequest,
+    ctx: RunContext,
+) -> DeferredWorkLeaseReleaseResponse:
+    path = _deferred_work_path(request.usage_db_path, ctx)
+    now_utc = _normalized_deferred_work_time(request.now_utc, field_name="now_utc")
+    released: list[str] = []
+    try:
+        with _LOCK, sqlite3.connect(path) as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            rows = conn.execute(
+                """
+                SELECT work_key FROM budget_authority_deferred_work
+                WHERE status='leased' AND lease_expires_at_utc<>''
+                  AND lease_expires_at_utc<=?
+                ORDER BY work_key ASC
+                """,
+                (now_utc,),
+            ).fetchall()
+            released = [str(row[0]) for row in rows]
+            if released:
+                conn.execute(
+                    """
+                    UPDATE budget_authority_deferred_work
+                    SET status='pending', lease_owner='', lease_expires_at_utc='',
+                        updated_at_utc=?
+                    WHERE status='leased' AND lease_expires_at_utc<>''
+                      AND lease_expires_at_utc<=?
+                    """,
+                    (now_utc, now_utc),
+                )
+            conn.commit()
+    except sqlite3.Error as exc:
+        raise AppError(
+            code="deferred_work_lease_release_failed",
+            message="Could not release expired deferred-work leases",
+            cause=exc,
+            retryable=True,
+            context={"db_path": str(path)},
+        ) from exc
+    for work_key in released:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="deferred_work_lease_expired",
+                module=logger.name,
+                fields={"work_key": work_key},
+            )
+        )
+    return DeferredWorkLeaseReleaseResponse(
+        schema_version="1.0", released_work_keys=released
+    )
+
+
+def deferred_work_metrics(
+    request: DeferredWorkMetricsRequest,
+    ctx: RunContext,
+) -> DeferredWorkMetrics:
+    """Read bounded queue health metrics without leasing or executing work."""
+
+    path = _deferred_work_path(request.usage_db_path, ctx)
+    now = _parse_deferred_work_time(request.now_utc, field_name="now_utc")
+    now_utc = now.isoformat()
+    try:
+        with _LOCK, sqlite3.connect(path) as conn:
+            counts = conn.execute(
+                """
+                SELECT
+                    SUM(CASE WHEN status IN ('pending','leased') THEN 1 ELSE 0 END),
+                    SUM(CASE WHEN status='pending' AND earliest_run_at_utc<=?
+                              AND (deadline_at_utc='' OR deadline_at_utc>?) THEN 1 ELSE 0 END),
+                    SUM(CASE WHEN status='leased' AND lease_expires_at_utc>? THEN 1 ELSE 0 END),
+                    SUM(CASE WHEN defer_count>1 THEN 1 ELSE 0 END),
+                    SUM(CASE WHEN status IN ('remediation','terminal') THEN 1 ELSE 0 END),
+                    SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END),
+                    SUM(CASE WHEN status IN ('completed','remediation','terminal') THEN 1 ELSE 0 END)
+                FROM budget_authority_deferred_work
+                """,
+                (now_utc, now_utc, now_utc),
+            ).fetchone()
+            oldest = conn.execute(
+                """
+                SELECT deferred_at_utc FROM budget_authority_deferred_work
+                WHERE status IN ('pending','leased')
+                ORDER BY deferred_at_utc ASC LIMIT 1
+                """
+            ).fetchone()
+    except sqlite3.Error as exc:
+        raise AppError(
+            code="deferred_work_metrics_failed",
+            message="Could not read deferred-work metrics",
+            cause=exc,
+            retryable=False,
+            context={"db_path": str(path)},
+        ) from exc
+    oldest_age = 0
+    if oldest and str(oldest[0] or ""):
+        oldest_age = max(
+            0,
+            int((now - _parse_deferred_work_time(str(oldest[0]), field_name="deferred_at_utc")).total_seconds()),
+        )
+    completed = int(counts[5] or 0)
+    terminal_decisions = int(counts[6] or 0)
+    response = DeferredWorkMetrics(
+        schema_version="1.0",
+        queue_depth=int(counts[0] or 0),
+        oldest_age_seconds=oldest_age,
+        due_count=int(counts[1] or 0),
+        lease_count=int(counts[2] or 0),
+        completion_rate=(completed / terminal_decisions if terminal_decisions else 0.0),
+        repeated_deferral_count=int(counts[3] or 0),
+        terminal_count=int(counts[4] or 0),
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="deferred_work_metrics_read",
+            module=logger.name,
+            fields={
+                "queue_depth": response.queue_depth,
+                "due_count": response.due_count,
+                "lease_count": response.lease_count,
+                "terminal_count": response.terminal_count,
+            },
+        )
+    )
+    return response
+
+
+def _budget_request_from_deferred_work(item: DeferredWorkItem) -> BudgetRequest:
+    try:
+        payload = json.loads(item.budget_request_json)
+    except json.JSONDecodeError as exc:
+        raise AppError(
+            code="deferred_work_budget_request_invalid",
+            message="Deferred work cannot be re-evaluated because its request is invalid",
+            cause=exc,
+            retryable=False,
+            context={"work_key": item.work_key},
+        ) from exc
+    if not isinstance(payload, dict) or not isinstance(payload.get("budget"), dict):
+        raise AppError(
+            code="deferred_work_budget_request_invalid",
+            message="Deferred work is missing its canonical budget request",
+            retryable=False,
+            context={"work_key": item.work_key},
+        )
+    budget_payload = dict(payload["budget"])
+    for name in ("run_limits", "day_limits", "publisher_limits"):
+        if isinstance(budget_payload.get(name), dict):
+            budget_payload[name] = RunBudgetLimits(**budget_payload[name])
+    if isinstance(budget_payload.get("enabled_effect_kinds"), list):
+        budget_payload["enabled_effect_kinds"] = tuple(budget_payload["enabled_effect_kinds"])
+    payload["budget"] = RunBudget(**budget_payload)
+    override = payload.get("requested_override")
+    if isinstance(override, dict):
+        payload["requested_override"] = BudgetOverrideContext(**override)
+    if isinstance(payload.get("reusable_artifact_references"), list):
+        payload["reusable_artifact_references"] = tuple(
+            tuple(str(value or "") for value in entry)
+            for entry in payload["reusable_artifact_references"]
+            if isinstance(entry, list) and len(entry) == 3
+        )
+    try:
+        request = BudgetRequest(**payload)
+    except TypeError as exc:
+        raise AppError(
+            code="deferred_work_budget_request_invalid",
+            message="Deferred work has an incompatible canonical budget request",
+            cause=exc,
+            retryable=False,
+            context={"work_key": item.work_key},
+        ) from exc
+    return replace(
+        request,
+        attempt_number=item.attempt_count,
+        idempotency_key=item.idempotency_key or request.idempotency_key,
+        reserve_in_flight=False,
+    )
+
+
+def recheck_deferred_work_budget(item: DeferredWorkItem, ctx: RunContext) -> BudgetDecision:
+    """Re-evaluate a leased item without reserving capacity or starting work."""
+
+    return evaluate_budget_request(_budget_request_from_deferred_work(item), ctx)
 
 
 def finalize_budget_side_effect(

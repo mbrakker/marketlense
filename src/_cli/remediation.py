@@ -1,13 +1,20 @@
 # ruff: noqa: B008
 from __future__ import annotations
 
+import os
+
 import typer
 import yaml
 from rich import box
 from rich.table import Table
 
 from src._cli.app import cli_app, console
-from src.contracts.config import ConfigLoadRequest
+from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
+from src.contracts.deferred_work import (
+    DeferredWorkListRequest,
+    DeferredWorkMetricsRequest,
+    DeferredWorkReaperRequest,
+)
 from src.contracts.files import ReadTextRequest
 from src.contracts.logging import LoggingSetupRequest
 from src.contracts.remediation import (
@@ -15,8 +22,24 @@ from src.contracts.remediation import (
     RemediationSoakReportRequest,
 )
 from src.contracts.run_context import RunContext
-from src.services.config_service import load_settings
+from src.orchestrators.deferred_work_orchestrator import (
+    DeferredWorkReaperDependencies,
+    run_bounded_deferred_work_reaper,
+)
+from src.orchestrators.report_pipeline_orchestrator import (
+    build_report_pipeline_deferred_work_plan,
+    resume_deferred_report_pipeline,
+)
+from src.services.config_service import (
+    build_ingest_settings,
+    load_settings,
+    load_workflow_control_settings,
+)
 from src.services.file_service import read_text
+from src.services.llm_usage_ledger_service import (
+    deferred_work_metrics,
+    list_deferred_work,
+)
 from src.services.logging_service import setup_logging
 from src.services.state_service import (
     list_remediation_records,
@@ -146,4 +169,116 @@ def remediation_soak(
     console.print(table)
 
 
-__all__ = ["list_remediations", "remediation_soak"]
+@cli_app.command("deferred-work")
+def list_deferred_work_items(
+    usage_db: str | None = typer.Option(
+        None, help="Optional usage-ledger path; defaults to application settings."
+    ),
+    limit: int = typer.Option(50, min=1, max=500, help="Maximum items to display."),
+) -> None:
+    """Show durable budget-deferred work and bounded queue health metrics."""
+
+    ctx = new_run_context(task_id="cli_deferred_work")
+    setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
+    settings = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+    usage_db_path = str(usage_db or settings.usage_db_path).strip()
+    now_utc = utc_now_seconds_z()
+    metrics = deferred_work_metrics(
+        DeferredWorkMetricsRequest(
+            schema_version="1.0", usage_db_path=usage_db_path, now_utc=now_utc
+        ),
+        ctx,
+    )
+    records = list_deferred_work(
+        DeferredWorkListRequest(
+            schema_version="1.0", usage_db_path=usage_db_path, limit=limit
+        ),
+        ctx,
+    ).records
+    console.print(
+        "Deferred work: "
+        f"depth={metrics.queue_depth}, due={metrics.due_count}, leased={metrics.lease_count}, "
+        f"terminal={metrics.terminal_count}, completion_rate={metrics.completion_rate:.0%}"
+    )
+    table = Table(title="Durable Budget-Deferred Work", box=box.SIMPLE_HEAVY)
+    for heading in ("Workflow", "Stage", "State", "Limit", "Attempts", "Earliest UTC", "Terminal"):
+        table.add_column(heading)
+    for item in records:
+        table.add_row(
+            item.workflow,
+            item.stage,
+            item.status,
+            item.affected_limit,
+            f"{item.attempt_count}/{item.max_attempts}",
+            item.earliest_run_at_utc,
+            item.terminal_status,
+        )
+    console.print(table)
+
+
+@cli_app.command("deferred-work-reap")
+def reap_deferred_work(
+    worker_id: str = typer.Option(
+        "", help="Stable worker identity; defaults to the current process."
+    ),
+    now_utc: str | None = typer.Option(
+        None, help="Optional ISO-8601 UTC time for reproducible invocation."
+    ),
+) -> None:
+    """Run one feature-gated bounded deferred-work recovery pass; never poll."""
+
+    ctx = new_run_context(task_id="cli_deferred_work_reap")
+    setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
+    app_settings = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+    ingest_settings = build_ingest_settings(
+        IngestSettingsBuildRequest(schema_version="1.0", app_settings=app_settings), ctx
+    )
+    control = load_workflow_control_settings(
+        ConfigLoadRequest(schema_version="1.0", path=""), ctx
+    )
+    reaper = control.deferred_work_reaper
+    dependencies = DeferredWorkReaperDependencies(
+        plan_builders={
+            "report_generation": lambda item, work_ctx: build_report_pipeline_deferred_work_plan(
+                item, ingest_settings, work_ctx
+            )
+        },
+        resumers={
+            "report_generation": lambda item, plan, work_ctx: resume_deferred_report_pipeline(
+                item,
+                plan,
+                ingest_settings,
+                work_ctx,
+                workflow_control_settings=control,
+            )
+        },
+    )
+    response = run_bounded_deferred_work_reaper(
+        DeferredWorkReaperRequest(
+            schema_version="1.0",
+            usage_db_path=ingest_settings.usage_db_path,
+            state_db=ingest_settings.state_db,
+            worker_id=str(worker_id or f"cli-deferred-work:{os.getpid()}"),
+            now_utc=str(now_utc or "").strip() or utc_now_seconds_z(),
+            execution_enabled=reaper.execution_enabled,
+            limit=reaper.max_records_per_run,
+            lease_seconds=reaper.lease_seconds,
+            retry_delay_seconds=reaper.retry_delay_seconds,
+        ),
+        ctx,
+        dependencies=dependencies,
+    )
+    console.print(
+        "Deferred-work reaper: "
+        f"inspected={response.inspected_count}, completed={len(response.completed_work_keys)}, "
+        f"deferred={len(response.deferred_work_keys)}, remediation={len(response.remediation_work_keys)}, "
+        f"released_leases={len(response.released_lease_work_keys)}"
+    )
+
+
+__all__ = [
+    "list_deferred_work_items",
+    "list_remediations",
+    "reap_deferred_work",
+    "remediation_soak",
+]

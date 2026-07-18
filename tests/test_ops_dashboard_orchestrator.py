@@ -57,6 +57,38 @@ def test_collect_ops_dashboard_snapshot(
         ),
     )
     external_boundary_mocks_only.setattr(
+        orch,
+        "deferred_work_metrics",
+        lambda req, ctx: SimpleNamespace(
+            queue_depth=2,
+            oldest_age_seconds=3600,
+            due_count=1,
+            lease_count=1,
+            completion_rate=0.5,
+            repeated_deferral_count=1,
+            terminal_count=0,
+        ),
+    )
+    external_boundary_mocks_only.setattr(
+        orch,
+        "list_deferred_work",
+        lambda req, ctx: SimpleNamespace(
+            records=[
+                SimpleNamespace(
+                    workflow="report_generation",
+                    stage="source_prepared",
+                    status="pending",
+                    affected_limit="day.calls",
+                    attempt_count=1,
+                    max_attempts=3,
+                    defer_count=2,
+                    earliest_run_at_utc="2026-07-18T13:00:00Z",
+                    terminal_status="",
+                )
+            ]
+        ),
+    )
+    external_boundary_mocks_only.setattr(
         orch.lock_service,
         "get_lock",
         lambda req, ctx: SimpleNamespace(
@@ -77,6 +109,7 @@ def test_collect_ops_dashboard_snapshot(
             state_db="state.sqlite",
             reports_db="reports.sqlite",
             ingest_lock_path="state/ingest.lock",
+            usage_db_path="state/usage.sqlite",
         ),
         _ctx(),
     )
@@ -99,6 +132,19 @@ def test_collect_ops_dashboard_snapshot(
             "attempts": "1/2",
             "checkpoint": "",
             "blocker": "docs/ops/recovery.md",
+        }
+    ]
+    assert response.deferred_work_metrics["queue_depth"] == 2
+    assert response.deferred_work == [
+        {
+            "workflow": "report_generation",
+            "stage": "source_prepared",
+            "status": "pending",
+            "affected_limit": "day.calls",
+            "attempts": "1/3",
+            "defer_count": 2,
+            "earliest_run_at_utc": "2026-07-18T13:00:00Z",
+            "terminal_status": "",
         }
     ]
     assert_logs_have_required_fields(caplog.records)

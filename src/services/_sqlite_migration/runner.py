@@ -11,11 +11,11 @@ from src.contracts.sqlite_migration import (
     SqliteMigrationApplyRequest,
     SqliteMigrationApplyResponse,
 )
+from src.services._sqlite_common import table_exists as _table_exists
 from src.utils.clock import utc_now_seconds_iso as _utc_now
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.url_utils import normalize_url
-from src.services._sqlite_common import table_exists as _table_exists
 
 logger = logging.getLogger("market_lense.sqlite_migration_service")
 
@@ -410,6 +410,71 @@ def _llm_usage_002_add_side_effect_actuals_and_deferred_work(
     )
 
 
+def _llm_usage_003_expand_deferred_work_recovery_state(
+    conn: sqlite3.Connection,
+) -> None:
+    """Upgrade budget-deferral audit rows into leaseable recovery work.
+
+    The table deliberately stays in the canonical usage ledger: a budget decision
+    and its durable recovery record must commit together, without a second queue
+    or cross-database best-effort handoff.
+    """
+    required = {
+        "stage": "TEXT NOT NULL DEFAULT ''",
+        "source_id": "TEXT NOT NULL DEFAULT ''",
+        "plan_hash": "TEXT NOT NULL DEFAULT ''",
+        "reason_code": "TEXT NOT NULL DEFAULT 'budget_limit_reached'",
+        "earliest_run_at_utc": "TEXT NOT NULL DEFAULT ''",
+        "deadline_at_utc": "TEXT NOT NULL DEFAULT ''",
+        "attempt_count": "INTEGER NOT NULL DEFAULT 0",
+        "max_attempts": "INTEGER NOT NULL DEFAULT 3",
+        "reusable_artifacts_json": "TEXT NOT NULL DEFAULT '[]'",
+        "lease_owner": "TEXT NOT NULL DEFAULT ''",
+        "lease_expires_at_utc": "TEXT NOT NULL DEFAULT ''",
+        "terminal_status": "TEXT NOT NULL DEFAULT ''",
+        "remediation_id": "TEXT NOT NULL DEFAULT ''",
+        "updated_at_utc": "TEXT NOT NULL DEFAULT ''",
+        "completed_at_utc": "TEXT NOT NULL DEFAULT ''",
+        "defer_count": "INTEGER NOT NULL DEFAULT 1",
+        "budget_request_json": "TEXT NOT NULL DEFAULT '{}'",
+    }
+    for column_name, column_type in required.items():
+        _add_column_if_missing(
+            conn,
+            table_name="budget_authority_deferred_work",
+            column_name=column_name,
+            column_type=column_type,
+        )
+    conn.execute(
+        """
+        UPDATE budget_authority_deferred_work
+        SET earliest_run_at_utc=deferred_at_utc
+        WHERE earliest_run_at_utc=''
+        """
+    )
+    conn.execute(
+        """
+        UPDATE budget_authority_deferred_work
+        SET updated_at_utc=deferred_at_utc
+        WHERE updated_at_utc=''
+        """
+    )
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_budget_authority_deferred_work_due
+        ON budget_authority_deferred_work(
+            status, earliest_run_at_utc, lease_expires_at_utc, deferred_at_utc
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_budget_authority_deferred_work_workflow
+        ON budget_authority_deferred_work(workflow_id, status, updated_at_utc DESC)
+        """
+    )
+
+
 _LLM_USAGE_LEDGER_MIGRATIONS: tuple[_MigrationSpec, ...] = (
     _MigrationSpec(
         migration_id="llm_usage_ledger_001_create_budget_authority_tables",
@@ -420,5 +485,10 @@ _LLM_USAGE_LEDGER_MIGRATIONS: tuple[_MigrationSpec, ...] = (
         migration_id="llm_usage_ledger_002_add_side_effect_actuals_and_deferred_work",
         version=2,
         apply_fn=_llm_usage_002_add_side_effect_actuals_and_deferred_work,
+    ),
+    _MigrationSpec(
+        migration_id="llm_usage_ledger_003_expand_deferred_work_recovery_state",
+        version=3,
+        apply_fn=_llm_usage_003_expand_deferred_work_recovery_state,
     ),
 )

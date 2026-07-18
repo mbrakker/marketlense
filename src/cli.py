@@ -56,7 +56,12 @@ from src._cli.private_api import (
     promote_private_api_playbook,
 )
 from src._cli.publisher import audit_acquisition_paths, discover_publisher_inventory
-from src._cli.remediation import list_remediations
+from src._cli.remediation import (
+    list_deferred_work_items,
+    list_remediations,
+    reap_deferred_work,
+    remediation_soak,
+)
 from src._cli.trace import _load_structured_log_events, _trace_depths, trace_run
 from src._cli.ui_runs import (
     _load_ui_run_worker_request,

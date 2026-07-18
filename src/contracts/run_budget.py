@@ -91,6 +91,30 @@ class BudgetRequest:
     report_id: str = field(
         default="", metadata={"doc": "Report or source scope when known."}
     )
+    source_id: str = field(
+        default="", metadata={"doc": "Canonical source identity when known."}
+    )
+    stage: str = field(
+        default="", metadata={"doc": "Latest safe workflow stage before this operation."}
+    )
+    plan_hash: str = field(
+        default="", metadata={"doc": "Minimal execution plan hash when one governs work."}
+    )
+    reusable_artifact_references: tuple[tuple[str, str, str], ...] = field(
+        default_factory=tuple,
+        metadata={
+            "doc": "Bounded (kind, reference, checksum) artifacts reusable after a defer."
+        },
+    )
+    deferred_earliest_run_at_utc: str = field(
+        default="", metadata={"doc": "Optional inclusive UTC time for durable resume."}
+    )
+    deferred_deadline_at_utc: str = field(
+        default="", metadata={"doc": "Optional exclusive UTC deadline for automatic resume."}
+    )
+    deferred_max_attempts: int = field(
+        default=3, metadata={"doc": "Bounded durable auto-resume attempt count."}
+    )
     provider: str = field(
         default="", metadata={"doc": "Provider used for historical cost forecasting."}
     )

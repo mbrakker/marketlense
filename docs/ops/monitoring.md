@@ -34,3 +34,9 @@ operational review:
 python scripts/quality/generate_remediation_coverage.py
 python scripts/quality/generate_budget_authority_coverage.py
 ```
+
+Use `python -m src.cli deferred-work` to inspect the durable budget-deferred
+backlog without leasing it. The Cockpit also shows queue depth, oldest age,
+due count, active lease count, completion rate, repeated-deferral count, and
+terminal/remediation count, followed by redacted item state. These are scalar
+operational signals; they do not expose source content or model responses.

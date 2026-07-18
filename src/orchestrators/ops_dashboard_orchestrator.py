@@ -3,6 +3,10 @@ from __future__ import annotations
 import logging
 from typing import List
 
+from src.contracts.deferred_work import (
+    DeferredWorkListRequest,
+    DeferredWorkMetricsRequest,
+)
 from src.contracts.files import FileStatRequest
 from src.contracts.lock import LockGetRequest
 from src.contracts.ops import (
@@ -16,6 +20,11 @@ from src.contracts.report_store import ReportMetadataListRequest
 from src.contracts.run_context import RunContext
 from src.contracts.state import StateProcessedListRequest, StatePublishedListRequest
 from src.services import file_service, lock_service, report_store_service, state_service
+from src.services.llm_usage_ledger_service import (
+    deferred_work_metrics,
+    list_deferred_work,
+)
+from src.utils.clock import utc_now_seconds_z
 from src.utils.errors import AppError
 from src.utils.gui_utils import row_dicts
 from src.utils.logging import child_context, log_event
@@ -99,6 +108,41 @@ def collect_ops_dashboard_snapshot(
         }
         for record in remediation_resp.records
     ]
+    deferred_work: list[dict] = []
+    deferred_metrics: dict[str, float | int] = {}
+    if request.usage_db_path:
+        deferred_ctx = child_context(ctx, task_id="ops:list_deferred_work")
+        now_utc = utc_now_seconds_z()
+        deferred_metrics = dict(
+            deferred_work_metrics(
+                DeferredWorkMetricsRequest(
+                    schema_version="1.0",
+                    usage_db_path=request.usage_db_path,
+                    now_utc=now_utc,
+                ),
+                deferred_ctx,
+            ).__dict__
+        )
+        deferred_work = [
+            {
+                "workflow": item.workflow,
+                "stage": item.stage,
+                "status": item.status,
+                "affected_limit": item.affected_limit,
+                "attempts": f"{item.attempt_count}/{item.max_attempts}",
+                "defer_count": item.defer_count,
+                "earliest_run_at_utc": item.earliest_run_at_utc,
+                "terminal_status": item.terminal_status,
+            }
+            for item in list_deferred_work(
+                DeferredWorkListRequest(
+                    schema_version="1.0",
+                    usage_db_path=request.usage_db_path,
+                    limit=100,
+                ),
+                deferred_ctx,
+            ).records
+        ]
 
     lock_ctx = child_context(ctx, task_id="ops:get_lock")
     try:
@@ -173,6 +217,8 @@ def collect_ops_dashboard_snapshot(
                 "processed": len(processed),
                 "published": len(published),
                 "remediations": len(remediations),
+                "deferred_work": len(deferred_work),
+                "deferred_work_queue_depth": int(deferred_metrics.get("queue_depth", 0)),
                 "lock_found": lock.found,
                 "storage_targets": len(storage_health),
             },
@@ -186,4 +232,6 @@ def collect_ops_dashboard_snapshot(
         lock=lock,
         storage_health=storage_health,
         remediations=remediations,
+        deferred_work=deferred_work,
+        deferred_work_metrics=deferred_metrics,
     )

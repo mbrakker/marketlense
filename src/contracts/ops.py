@@ -54,6 +54,9 @@ class OpsDashboardSnapshotRequest:
     report_limit: int = field(
         default=2000, metadata={"doc": "Maximum report metadata rows to retrieve."}
     )
+    usage_db_path: str = field(
+        default="", metadata={"doc": "Optional canonical ledger path for deferred-work health."}
+    )
 
 
 @dataclass(frozen=True)
@@ -77,4 +80,12 @@ class OpsDashboardSnapshotResponse:
     remediations: List[dict] = field(
         default_factory=list,
         metadata={"doc": "Concise canonical remediation rows for operators."},
+    )
+    deferred_work: List[dict] = field(
+        default_factory=list,
+        metadata={"doc": "Concise durable budget-deferred rows for operators."},
+    )
+    deferred_work_metrics: dict[str, float | int] = field(
+        default_factory=dict,
+        metadata={"doc": "Bounded deferred-work queue health metrics."},
     )

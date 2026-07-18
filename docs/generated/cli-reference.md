@@ -10,6 +10,8 @@ For command options and help text, run `python -m src.cli <command> --help`.
 | `backfill-artifact-lineage` | [`src/_cli/admin.py`](../../src/_cli/admin.py) | Public |
 | `browser-doctor` | [`src/_cli/browser.py`](../../src/_cli/browser.py) | Public |
 | `cost-report` | [`src/_cli/pipeline.py`](../../src/_cli/pipeline.py) | Public |
+| `deferred-work` | [`src/_cli/remediation.py`](../../src/_cli/remediation.py) | Public |
+| `deferred-work-reap` | [`src/_cli/remediation.py`](../../src/_cli/remediation.py) | Public |
 | `discover-publisher-inventory` | [`src/_cli/publisher.py`](../../src/_cli/publisher.py) | Public |
 | `download-report` | [`src/_cli/browser.py`](../../src/_cli/browser.py) | Public |
 | `drive-oauth-login` | [`src/_cli/admin.py`](../../src/_cli/admin.py) | Public |

@@ -7,9 +7,14 @@ import time
 from dataclasses import asdict, replace
 from inspect import Parameter, signature
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable, Optional, cast
 
+from src.contracts.deferred_work import (
+    DeferredWorkItem,
+    DeferredWorkResumePlan,
+)
 from src.contracts.drive import DriveFile
+from src.contracts.files import FileStatRequest
 from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.lock import LockAcquireRequest, LockReleaseRequest
 from src.contracts.minimal_execution_plan import (
@@ -34,6 +39,7 @@ from src.contracts.run_budget import (
     RunBudgetUsage,
 )
 from src.contracts.run_context import RunContext
+from src.contracts.semantic_ids import RunId
 from src.contracts.workflow_control import WorkflowControlSettings
 from src.orchestrators.pipeline_preflight_orchestrator import (
     assert_expensive_side_effects_allowed,
@@ -45,8 +51,7 @@ from src.orchestrators.report_generation_orchestrator import (
 )
 from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
 from src.orchestrators.workflow_control_orchestrator import resolve_retry_policy
-from src.services import llm_service
-from src.services import lock_service
+from src.services import file_service, llm_service, lock_service
 from src.services.llm_usage_ledger_service import (
     evaluate_budget_request,
     finalize_budget_side_effect,
@@ -247,6 +252,118 @@ def _invoke_report_fn(
         ctx,
         **arguments,
     )
+
+
+def _deferred_local_pdf(item: DeferredWorkItem) -> str:
+    for artifact in item.reusable_artifacts:
+        if artifact.kind == "local_pdf" and artifact.reference:
+            return artifact.reference
+    raise AppError(
+        code="deferred_work_required_artifact_missing",
+        message="Deferred report work is missing its retained local PDF reference",
+        retryable=False,
+        context={"work_key": item.work_key, "report_id": item.report_id},
+    )
+
+
+def build_report_pipeline_deferred_work_plan(
+    item: DeferredWorkItem,
+    settings: IngestSettings,
+    ctx: RunContext,
+) -> DeferredWorkResumePlan:
+    """Rebuild and validate the minimum plan before resuming report work."""
+
+    local_pdf_path = _deferred_local_pdf(item)
+    stat = file_service.file_stat(
+        FileStatRequest(schema_version="1.0", path=local_pdf_path), ctx
+    )
+    if not stat.exists:
+        raise AppError(
+            code="deferred_work_required_artifact_missing",
+            message="Deferred report work cannot reuse its missing local PDF",
+            retryable=False,
+            context={"work_key": item.work_key, "report_id": item.report_id},
+        )
+    current_compatibility = build_current_report_execution_compatibility(settings, ctx)
+    response = build_minimal_execution_plan(
+        MinimalExecutionPlanBuildRequest(
+            schema_version=MINIMAL_EXECUTION_PLAN_SCHEMA_VERSION,
+            db_path=settings.reports_db,
+            source_path=local_pdf_path,
+            execution_input=MinimalExecutionPlanInput(
+                schema_version=MINIMAL_EXECUTION_PLAN_SCHEMA_VERSION,
+                execution_intent="report_generation",
+                report_id=item.report_id,
+                source_id=item.source_id,
+                current_source_content_hashes={},
+                retained_graph=RetainedArtifactGraph(),
+                requested_output_families=["rendered_html"],
+                current_compatibility=current_compatibility,
+            ),
+        ),
+        ctx,
+    )
+    _enforced_resume_stage(response.plan)
+    record_minimal_execution_plan(
+        ExecutionPlanRecordRequest(
+            schema_version=MINIMAL_EXECUTION_PLAN_SCHEMA_VERSION,
+            db_path=settings.reports_db,
+            plan=response.plan,
+            execution_mode="enforce",
+        ),
+        ctx,
+    )
+    return DeferredWorkResumePlan(
+        schema_version="1.0",
+        plan_hash=response.plan.plan_hash,
+        resume_stage="latest_safe",
+        reusable_artifacts=list(item.reusable_artifacts),
+    )
+
+
+def resume_deferred_report_pipeline(
+    item: DeferredWorkItem,
+    plan: DeferredWorkResumePlan,
+    settings: IngestSettings,
+    ctx: RunContext,
+    *,
+    generate_report_fn: Callable[..., IngestOutcome] | None = None,
+    preflight_fn: Callable[..., PipelinePreflightReport] | None = None,
+    workflow_control_settings: WorkflowControlSettings | None = None,
+) -> str:
+    """Resume one validated report plan using its original budget run identity."""
+
+    local_pdf_path = _deferred_local_pdf(item)
+    file = DriveFile(
+        schema_version="1.0",
+        file_id=item.report_id,
+        name=Path(local_pdf_path).name,
+        modified_time=None,
+        md5_checksum=item.source_id or None,
+        mime_type="application/pdf",
+    )
+    resume_ctx = replace(ctx, run_id=cast(RunId, item.run_id))
+    outcome = run_report_pipeline(
+        file,
+        local_pdf_path,
+        settings,
+        item.source_id or None,
+        resume_ctx,
+        retries=0,
+        generate_report_fn=generate_report_fn,
+        resume_from_stage=plan.resume_stage,
+        preflight_fn=preflight_fn,
+        workflow_control_settings=workflow_control_settings,
+        auto_resume_from_latest_safe=True,
+        execution_plan_mode="enforce",
+    )
+    if outcome.status == "error":
+        raise AppError(
+            code="deferred_work_report_pipeline_error",
+            message=outcome.error or "Deferred report pipeline returned an error outcome",
+            retryable=False,
+        )
+    return "completed"
 
 
 def run_report_pipeline(
@@ -710,6 +827,16 @@ def run_report_pipeline(
                 run_id=ctx.run_id,
                 workflow_id="report_generation",
                 report_id=file.file_id,
+                source_id=str(md5 or "").strip(),
+                stage="source_prepared",
+                plan_hash=minimal_plan.plan_hash if minimal_plan is not None else "",
+                reusable_artifact_references=(
+                    (
+                        "local_pdf",
+                        local_pdf_path,
+                        str(md5 or "").strip(),
+                    ),
+                ),
                 resource_type="pdf_process",
                 operation="process_pdf",
                 estimated_pdfs=1,

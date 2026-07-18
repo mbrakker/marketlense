@@ -4,6 +4,7 @@ from src.contracts.config import ConfigLoadRequest
 from src.contracts.run_context import RunContext
 from src.contracts.workflow_control import (
     ConcurrencyLimit,
+    DeferredWorkReaperSettings,
     RemediationReaperSettings,
     WorkflowContract,
     WorkflowControlSettings,
@@ -74,6 +75,9 @@ def load_workflow_control_settings(
         ),
         remediation_reaper=_parse_remediation_reaper(
             raw_control.get("remediation_reaper")
+        ),
+        deferred_work_reaper=_parse_deferred_work_reaper(
+            raw_control.get("deferred_work_reaper")
         ),
     )
     logger.info(
@@ -213,6 +217,17 @@ def _parse_remediation_reaper(raw_reaper: object) -> RemediationReaperSettings:
         execution_enabled=_to_bool(reaper.get("execution_enabled"), False),
         max_records_per_run=max(1, _to_int(reaper.get("max_records_per_run"), 10)),
         lease_seconds=max(1, _to_int(reaper.get("lease_seconds"), 60)),
+    )
+
+
+def _parse_deferred_work_reaper(raw_reaper: object) -> DeferredWorkReaperSettings:
+    reaper = _mapping(raw_reaper)
+    return DeferredWorkReaperSettings(
+        schema_version=str(reaper.get("schema_version") or "1.0"),
+        execution_enabled=_to_bool(reaper.get("execution_enabled"), False),
+        max_records_per_run=max(1, _to_int(reaper.get("max_records_per_run"), 10)),
+        lease_seconds=max(1, _to_int(reaper.get("lease_seconds"), 60)),
+        retry_delay_seconds=max(1, _to_int(reaper.get("retry_delay_seconds"), 3600)),
     )
 
 

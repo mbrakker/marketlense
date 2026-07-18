@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-
 MAX_TEST_FILE_LINES = 1000
 LONG_TEST_FILE_ALLOWLIST = {
     "tests/_test_report_download_orchestrator/cases_03_run_report_download_is_idempotent.py": {
@@ -22,6 +21,18 @@ LONG_TEST_FILE_ALLOWLIST = {
         "reason": "Pre-existing route-planner case split remains pending.",
         "expires_on": "2026-08-31",
         "max_lines": 1085,
+    },
+    "tests/test_ingest_parallel.py": {
+        "owner": "quality/repository-hygiene",
+        "reason": "Pre-existing ingest parallelism and report-card cases remain colocated.",
+        "expires_on": "2026-08-31",
+        "max_lines": 1040,
+    },
+    "tests/test_report_pipeline_orchestrator.py": {
+        "owner": "quality/repository-hygiene",
+        "reason": "Pipeline retry, planning, and durable budget-defer cases remain colocated.",
+        "expires_on": "2026-08-31",
+        "max_lines": 1090,
     },
 }
 

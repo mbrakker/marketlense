@@ -10,17 +10,19 @@ from types import SimpleNamespace
 
 import pytest
 
+from src.contracts.deferred_work import DeferredWorkListRequest
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestOutcome, IngestSettings
+from src.contracts.pipeline_preflight import (
+    PipelinePreflightCheck,
+    PipelinePreflightReport,
+)
 from src.contracts.report_generation import ReportGenerationClientBundle
 from src.contracts.run_context import RunContext
 from src.orchestrators import report_pipeline_orchestrator as orch
 from src.orchestrators import retry_orchestrator as retry_orch
 from src.orchestrators import workflow_control_orchestrator as workflow_control
-from src.contracts.pipeline_preflight import (
-    PipelinePreflightReport,
-    PipelinePreflightCheck,
-)
+from src.services.llm_usage_ledger_service import list_deferred_work
 from src.utils.errors import AppError
 
 
@@ -1022,3 +1024,53 @@ def test_pdf_budget_stop_prevents_report_generation_call(tmp_path) -> None:
     assert exc_info.value.code == "report_pipeline_pdf_budget_stop"
     assert exc_info.value.retryable is False
     assert calls["count"] == 0
+
+
+def test_pdf_budget_defer_persists_resumable_report_work_without_generation(tmp_path) -> None:
+    file = DriveFile(
+        schema_version="1.0",
+        file_id="deferred-pdf",
+        name="deferred.pdf",
+        modified_time=None,
+        md5_checksum="md5",
+    )
+    settings = replace(
+        _settings(),
+        state_db=str(tmp_path / "state.sqlite"),
+        run_budget_max_pdfs=1,
+        run_budget_limit_decision="defer",
+        usage_db_path=str(tmp_path / "pdf_budget.sqlite"),
+    )
+    calls = {"count": 0}
+
+    def _generate(*_args, **_kwargs):
+        calls["count"] += 1
+        raise AssertionError("Deferred PDF work must not start report generation")
+
+    with pytest.raises(AppError) as exc_info:
+        orch.run_report_pipeline(
+            file,
+            local_pdf_path=str(tmp_path / "retained.pdf"),
+            settings=settings,
+            md5="md5",
+            ctx=_ctx(),
+            retries=0,
+            generate_report_fn=_generate,
+            execution_plan_mode="disabled",
+        )
+
+    assert exc_info.value.code == "report_pipeline_pdf_budget_defer"
+    assert exc_info.value.context["retry_decision"] == "defer"
+    assert calls["count"] == 0
+    records = list_deferred_work(
+        DeferredWorkListRequest(
+            schema_version="1.0", usage_db_path=settings.usage_db_path, limit=10
+        ),
+        _ctx(),
+    ).records
+    assert len(records) == 1
+    assert records[0].status == "pending"
+    assert records[0].stage == "source_prepared"
+    assert records[0].report_id == file.file_id
+    assert records[0].source_id == "md5"
+    assert records[0].reusable_artifacts[0].reference == str(tmp_path / "retained.pdf")

@@ -5,7 +5,11 @@ from typing import Any, Callable, Literal
 
 from src.contracts.browser_download import BrowserDownloadSettings
 from src.contracts.mailbox_acquisition import MailboxAcquisitionSettings
-from src.contracts.run_budget import RunBudget, RunBudgetDecision, RunBudgetUsage  # noqa: F401
+from src.contracts.run_budget import (  # noqa: F401
+    RunBudget,
+    RunBudgetDecision,
+    RunBudgetUsage,
+)
 
 WorkflowGateOutcome = Literal[
     "proceed",
@@ -227,6 +231,26 @@ class RemediationReaperSettings:
 
 
 @dataclass(frozen=True)
+class DeferredWorkReaperSettings:
+    schema_version: str = field(
+        metadata={"doc": "Deferred-work reaper settings version."}
+    )
+    execution_enabled: bool = field(
+        default=False,
+        metadata={"doc": "Feature gate; false preserves queued records without leasing."},
+    )
+    max_records_per_run: int = field(
+        default=10, metadata={"doc": "Bounded deferred records handled per invocation."}
+    )
+    lease_seconds: int = field(
+        default=60, metadata={"doc": "Bounded deferred-work lease duration."}
+    )
+    retry_delay_seconds: int = field(
+        default=3600, metadata={"doc": "Minimum delay after another defer decision."}
+    )
+
+
+@dataclass(frozen=True)
 class WorkflowControlSettings:
     schema_version: str = field(metadata={"doc": "Workflow control settings version."})
     preflight_profiles: dict[str, WorkflowPreflightProfile] = field(
@@ -250,6 +274,10 @@ class WorkflowControlSettings:
     remediation_reaper: RemediationReaperSettings = field(
         default_factory=lambda: RemediationReaperSettings(schema_version="1.0"),
         metadata={"doc": "Durable remediation reaper feature gate and bounds."},
+    )
+    deferred_work_reaper: DeferredWorkReaperSettings = field(
+        default_factory=lambda: DeferredWorkReaperSettings(schema_version="1.0"),
+        metadata={"doc": "Budget-deferred work recovery feature gate and bounds."},
     )
 
 
