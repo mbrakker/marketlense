@@ -12,6 +12,7 @@ from src.contracts.deferred_work import (
     DeferredWorkReaperRequest,
     DeferredWorkReaperResponse,
     DeferredWorkResumePlan,
+    DeferredWorkStatus,
     DeferredWorkTransitionRequest,
 )
 from src.contracts.run_budget import BudgetDecision
@@ -28,8 +29,12 @@ from src.utils.logging import child_context, log_event
 
 logger = logging.getLogger("market_lense.deferred_work_orchestrator")
 
-DeferredWorkPlanBuilder = Callable[[DeferredWorkItem, RunContext], DeferredWorkResumePlan]
-DeferredWorkResumer = Callable[[DeferredWorkItem, DeferredWorkResumePlan, RunContext], str]
+DeferredWorkPlanBuilder = Callable[
+    [DeferredWorkItem, RunContext], DeferredWorkResumePlan
+]
+DeferredWorkResumer = Callable[
+    [DeferredWorkItem, DeferredWorkResumePlan, RunContext], str
+]
 DeferredWorkBudgetCheck = Callable[[DeferredWorkItem, RunContext], BudgetDecision | str]
 
 
@@ -72,7 +77,7 @@ def _transition(
     request: DeferredWorkReaperRequest,
     item: DeferredWorkItem,
     *,
-    status: str,
+    status: DeferredWorkStatus,
     reason: str,
     ctx: RunContext,
     earliest_run_at_utc: str = "",
@@ -225,7 +230,12 @@ def run_bounded_deferred_work_reaper(
                 ),
                 ctx=work_ctx,
             )
-            _log(work_ctx, "deferred_work_attempts_exhausted", held, "attempt_budget_exhausted")
+            _log(
+                work_ctx,
+                "deferred_work_attempts_exhausted",
+                held,
+                "attempt_budget_exhausted",
+            )
             remediation.append(item.work_key)
             continue
         try:
@@ -243,7 +253,12 @@ def run_bounded_deferred_work_reaper(
                 error=exc,
                 ctx=work_ctx,
             )
-            _log(work_ctx, "deferred_work_budget_recheck_failed", held, "budget_recheck_failed")
+            _log(
+                work_ctx,
+                "deferred_work_budget_recheck_failed",
+                held,
+                "budget_recheck_failed",
+            )
             remediation.append(item.work_key)
             continue
         if decision == "defer":
@@ -252,11 +267,18 @@ def run_bounded_deferred_work_reaper(
                 item,
                 status="pending",
                 reason="budget_still_deferred",
-                earliest_run_at_utc=_after(request.now_utc, request.retry_delay_seconds),
+                earliest_run_at_utc=_after(
+                    request.now_utc, request.retry_delay_seconds
+                ),
                 increment_defer_count=True,
                 ctx=work_ctx,
             )
-            _log(work_ctx, "deferred_work_still_deferred", waiting, "budget_still_deferred")
+            _log(
+                work_ctx,
+                "deferred_work_still_deferred",
+                waiting,
+                "budget_still_deferred",
+            )
             deferred.append(item.work_key)
             continue
         if decision in {"pause", "stop"}:
@@ -286,7 +308,12 @@ def run_bounded_deferred_work_reaper(
                 ),
                 ctx=work_ctx,
             )
-            _log(work_ctx, "deferred_work_budget_terminal", held, "budget_recheck_invalid")
+            _log(
+                work_ctx,
+                "deferred_work_budget_terminal",
+                held,
+                "budget_recheck_invalid",
+            )
             remediation.append(item.work_key)
             continue
         plan_builder = dependencies.plan_builders.get(item.workflow)
@@ -303,7 +330,12 @@ def run_bounded_deferred_work_reaper(
                 ),
                 ctx=work_ctx,
             )
-            _log(work_ctx, "deferred_work_handler_missing", held, "workflow_resume_handler_missing")
+            _log(
+                work_ctx,
+                "deferred_work_handler_missing",
+                held,
+                "workflow_resume_handler_missing",
+            )
             remediation.append(item.work_key)
             continue
         try:
@@ -335,11 +367,18 @@ def run_bounded_deferred_work_reaper(
                     item,
                     status="pending",
                     reason="resume_budget_deferred",
-                    earliest_run_at_utc=_after(request.now_utc, request.retry_delay_seconds),
+                    earliest_run_at_utc=_after(
+                        request.now_utc, request.retry_delay_seconds
+                    ),
                     increment_defer_count=True,
                     ctx=work_ctx,
                 )
-                _log(work_ctx, "deferred_work_resume_deferred", waiting, "resume_budget_deferred")
+                _log(
+                    work_ctx,
+                    "deferred_work_resume_deferred",
+                    waiting,
+                    "resume_budget_deferred",
+                )
                 deferred.append(item.work_key)
             else:
                 held = _handoff_to_remediation(
@@ -349,12 +388,21 @@ def run_bounded_deferred_work_reaper(
                     error=exc,
                     ctx=work_ctx,
                 )
-                _log(work_ctx, "deferred_work_resume_failed", held, "plan_or_resume_failed")
+                _log(
+                    work_ctx,
+                    "deferred_work_resume_failed",
+                    held,
+                    "plan_or_resume_failed",
+                )
                 remediation.append(item.work_key)
             continue
         if outcome == "completed":
             done = _transition(
-                request, item, status="completed", reason="resume_completed", ctx=work_ctx
+                request,
+                item,
+                status="completed",
+                reason="resume_completed",
+                ctx=work_ctx,
             )
             _log(work_ctx, "deferred_work_completed", done, "resume_completed")
             completed.append(item.work_key)
@@ -364,7 +412,9 @@ def run_bounded_deferred_work_reaper(
                 item,
                 status="pending",
                 reason="resume_deferred",
-                earliest_run_at_utc=_after(request.now_utc, request.retry_delay_seconds),
+                earliest_run_at_utc=_after(
+                    request.now_utc, request.retry_delay_seconds
+                ),
                 increment_defer_count=True,
                 ctx=work_ctx,
             )
@@ -382,7 +432,12 @@ def run_bounded_deferred_work_reaper(
                 ),
                 ctx=work_ctx,
             )
-            _log(work_ctx, "deferred_work_resume_failed", held, "resume_requires_remediation")
+            _log(
+                work_ctx,
+                "deferred_work_resume_failed",
+                held,
+                "resume_requires_remediation",
+            )
             remediation.append(item.work_key)
     return DeferredWorkReaperResponse(
         schema_version="1.0",

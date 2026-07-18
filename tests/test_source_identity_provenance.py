@@ -254,7 +254,9 @@ def test_source_identity_rejects_unsafe_public_urls(tmp_path) -> None:
 
     assert exc_info.value.code == "source_identity_url_invalid"
     with sqlite3.connect(db_path) as conn:
-        count = conn.execute("SELECT COUNT(*) FROM source_identity_observations").fetchone()[0]
+        count = conn.execute(
+            "SELECT COUNT(*) FROM source_identity_observations"
+        ).fetchone()[0]
     assert count == 0
 
     legacy_source = _record_source(

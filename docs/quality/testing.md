@@ -14,6 +14,8 @@ Default test runs exclude the `integration` marker. Controlled real provider cal
 
 Tests that exercise a request's default relative accounting, ledger, cache, or state paths must isolate them under `tmp_path` (for example, with the existing `external_boundary_mocks_only.chdir(tmp_path)` fixture) or pass explicit test paths. They must not share repository-root state artifacts: accumulated local ledgers can turn a small unit case into an unbounded projection or lease-recovery operation.
 
+CLI unit tests must inject the canonical configuration service whenever the command needs application settings. The default suite must not depend on developer credentials or a local `.env` file.
+
 When diagnosing an apparently stalled run, use verbose progress, `--durations`, and (where needed) `-o faulthandler_timeout=<seconds>` before interrupting it. Quiet output alone is not evidence of a deadlock; the diagnostic command must identify the active test and stack before a timeout remediation is made.
 
 Windows atomic-write tests exercise same-target thread serialization and the only permitted local retry guard: at most two re-attempts of the final rename for native access/sharing errors (`5` or `32`). This is not a workflow retry; all other write failures propagate as typed errors.

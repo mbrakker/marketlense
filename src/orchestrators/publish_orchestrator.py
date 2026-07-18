@@ -1262,7 +1262,9 @@ def run_publish(
                     duration_ms=int(
                         (
                             time.perf_counter()
-                            - publication_plan_started_at.get(html_path, time.perf_counter())
+                            - publication_plan_started_at.get(
+                                html_path, time.perf_counter()
+                            )
                         )
                         * 1000
                     ),

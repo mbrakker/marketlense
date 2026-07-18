@@ -360,7 +360,8 @@ def resume_deferred_report_pipeline(
     if outcome.status == "error":
         raise AppError(
             code="deferred_work_report_pipeline_error",
-            message=outcome.error or "Deferred report pipeline returned an error outcome",
+            message=outcome.error
+            or "Deferred report pipeline returned an error outcome",
             retryable=False,
         )
     return "completed"
@@ -721,8 +722,7 @@ def run_report_pipeline(
                 client_bundle=client_bundle,
                 resume_from_stage=effective_resume_from_stage,
                 require_artifact_lineage=(
-                    bool(lineage_change_kind)
-                    or normalized_plan_mode == "enforce"
+                    bool(lineage_change_kind) or normalized_plan_mode == "enforce"
                 ),
                 execution_compatibility=execution_compatibility,
                 minimal_execution_plan=minimal_plan,
@@ -853,7 +853,9 @@ def run_report_pipeline(
                 context={
                     "reason_code": pdf_decision.reason_code,
                     "affected_limit": pdf_decision.affected_limit,
-                    "retry_decision": "defer" if pdf_decision.decision == "defer" else "abort",
+                    "retry_decision": "defer"
+                    if pdf_decision.decision == "defer"
+                    else "abort",
                     "next_action": pdf_decision.next_action,
                 },
             )

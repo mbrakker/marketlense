@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 class TestCli02PromotePrivateApiPlaybook(unittest.TestCase):
     def test_promote_private_api_playbook_accepts_typed_request_and_writes_file(
         self,
@@ -345,18 +346,25 @@ class TestCli02PromotePrivateApiPlaybook(unittest.TestCase):
             cli, "load_publisher_inventory_settings", return_value=settings
         ) as load_mock:
             with patch.object(
-                cli, "run_publisher_inventory_discovery", return_value=result
-            ) as discover_mock:
-                with patch.object(cli.console, "print"):
-                    cli.discover_publisher_inventory(
-                        insights_url="https://www.activate.com/insights"
-                    )
+                cli,
+                "load_settings",
+                return_value=types.SimpleNamespace(state_db="./state/index.sqlite"),
+            ) as load_app_mock:
+                with patch.object(
+                    cli, "run_publisher_inventory_discovery", return_value=result
+                ) as discover_mock:
+                    with patch.object(cli.console, "print"):
+                        cli.discover_publisher_inventory(
+                            insights_url="https://www.activate.com/insights"
+                        )
 
         load_mock.assert_called_once()
+        load_app_mock.assert_called_once()
         discover_mock.assert_called_once()
         request = discover_mock.call_args.args[0]
         self.assertEqual("https://www.activate.com/insights", request.insights_url)
         self.assertEqual("./state/reports.sqlite", request.reports_db)
+        self.assertEqual("./state/index.sqlite", request.state_db)
         self.assertEqual("gpt-5-mini", request.settings.model)
 
     def test_discover_publisher_inventory_treats_pagination_limit_as_bounded(
@@ -396,20 +404,26 @@ class TestCli02PromotePrivateApiPlaybook(unittest.TestCase):
         ) as load_mock:
             with patch.object(
                 cli,
-                "run_publisher_inventory_discovery",
-                side_effect=AppError(
-                    code="publisher_inventory_browser_pagination_limit",
-                    message="bounded crawl limit reached",
-                    retryable=False,
-                    severity="warning",
-                ),
-            ) as discover_mock:
-                with patch.object(cli.console, "print") as print_mock:
-                    cli.discover_publisher_inventory(
-                        insights_url="https://www.askattest.com/insights-teams"
-                    )
+                "load_settings",
+                return_value=types.SimpleNamespace(state_db="./state/index.sqlite"),
+            ) as load_app_mock:
+                with patch.object(
+                    cli,
+                    "run_publisher_inventory_discovery",
+                    side_effect=AppError(
+                        code="publisher_inventory_browser_pagination_limit",
+                        message="bounded crawl limit reached",
+                        retryable=False,
+                        severity="warning",
+                    ),
+                ) as discover_mock:
+                    with patch.object(cli.console, "print") as print_mock:
+                        cli.discover_publisher_inventory(
+                            insights_url="https://www.askattest.com/insights-teams"
+                        )
 
         load_mock.assert_called_once()
+        load_app_mock.assert_called_once()
         discover_mock.assert_called_once()
         self.assertGreaterEqual(print_mock.call_count, 1)
 
@@ -616,9 +630,14 @@ class TestCli02PromotePrivateApiPlaybook(unittest.TestCase):
                     error_severity="error",
                 ),
             ):
-                with patch.object(cli, "setup_logging"):
-                    with self.assertRaises(typer.Exit) as exc_info:
-                        cli.ui_run_worker(request_json=str(request_path))
+                with patch.object(
+                    cli,
+                    "load_settings",
+                    side_effect=RuntimeError("configuration is unavailable"),
+                ):
+                    with patch.object(cli, "setup_logging"):
+                        with self.assertRaises(typer.Exit) as exc_info:
+                            cli.ui_run_worker(request_json=str(request_path))
 
             self.assertEqual(1, exc_info.exception.exit_code)
             stored = cli.get_ui_run_record(
@@ -712,5 +731,6 @@ class TestCli02PromotePrivateApiPlaybook(unittest.TestCase):
         self.assertEqual(5.0, request.mailbox_settings.poll_timeout_seconds)
         self.assertEqual(1.0, request.mailbox_settings.poll_interval_seconds)
         self.assertEqual(900.0, mailbox_settings.poll_timeout_seconds)
+
 
 __all__ = ["TestCli02PromotePrivateApiPlaybook"]

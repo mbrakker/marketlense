@@ -892,7 +892,9 @@ def _resume_crop_from_source_checkpoint(
     )
     _log_semantic_restart(runtime, source_checkpoint, source_checkpoint_path)
     _log_semantic_restart(runtime, analysis_checkpoint, analysis_checkpoint_path)
-    source = _source_state_from_checkpoint(runtime, source_checkpoint.payload.get("source"))
+    source = _source_state_from_checkpoint(
+        runtime, source_checkpoint.payload.get("source")
+    )
     selection = select_report_figures(runtime, source, dependencies.selection)
     _write_stage_checkpoint(
         runtime,

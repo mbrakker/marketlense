@@ -351,8 +351,7 @@ def run_report_generation(
     requested_resume_stage = str(resume_from_stage or "").strip()
     enforced_render_only = (
         enforce_minimal_execution
-        and
-        minimal_execution_plan is not None
+        and minimal_execution_plan is not None
         and minimal_execution_plan.required_stages == [STAGE_RENDER_COMPLETE]
     )
     enforced_crop_only = (
@@ -363,8 +362,7 @@ def run_report_generation(
     )
     if (
         enforce_minimal_execution
-        and
-        requested_resume_stage in {STAGE_ANALYSIS_COMPLETE, STAGE_RENDER_COMPLETE}
+        and requested_resume_stage in {STAGE_ANALYSIS_COMPLETE, STAGE_RENDER_COMPLETE}
         and client_bundle is None
         and all(
             client is None
@@ -617,8 +615,7 @@ def run_report_generation(
         )
         if (
             not (enforce_minimal_execution and minimal_execution_plan is not None)
-            and
-            _run_projection(runtime, analysis, outcome, analytics_projection_fn)
+            and _run_projection(runtime, analysis, outcome, analytics_projection_fn)
             is not None
         ):
             outcome = _run_signal_artifact_generation(runtime, analysis, outcome, deps)

@@ -231,7 +231,17 @@ def _update_ui_run_record(
                 input_checksum=str(existing.run_id),
                 report_id=str(existing.run_id),
             )
-        except AppError as remediation_error:
+        except (AppError, RuntimeError) as remediation_error:
+            remediation_error_code = (
+                remediation_error.code
+                if isinstance(remediation_error, AppError)
+                else "remediation_configuration_unavailable"
+            )
+            remediation_error_retryable = (
+                remediation_error.retryable
+                if isinstance(remediation_error, AppError)
+                else False
+            )
             logger.info(
                 log_event(
                     run_ctx,
@@ -240,8 +250,8 @@ def _update_ui_run_record(
                     module=logger.name,
                     fields={
                         "run_id": str(existing.run_id),
-                        "error_code": remediation_error.code,
-                        "error_retryable": remediation_error.retryable,
+                        "error_code": remediation_error_code,
+                        "error_retryable": remediation_error_retryable,
                     },
                 )
             )
