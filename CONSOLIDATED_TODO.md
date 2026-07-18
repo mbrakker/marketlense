@@ -49,7 +49,6 @@ All work is listed below in one register. `Active` items have detailed completio
 | Active | P8 | Readable evidence spans, methodology/source-quality trust, and deterministic related content | Public evidence/discovery outcome. |
 | Active | E1 | Claim-embedding freshness, retention, and cost controls | Embedding operations outcome. |
 | Active | E6 | Retain a hash-pinned claim-embedding benchmark export | Semantic benchmark coverage outcome. |
-| Active | E7 | Expand planner-enforced artifact-family reuse beyond rendered HTML | Measured shadow-to-enforce rollout outcome. |
 | Closed | E3 | Lineage-driven minimum regeneration | Remains closed; E7 owns expansion beyond the proven rendered-HTML family. |
 | Closed | E4 | Executable retained PDF benchmark corpus in CI | Retained corpus is hash-pinned and CI-gated; local release-equivalent run passed. |
 | Active | R1 | CI/PR release-evidence summaries | Reviewer-surface outcome, including exact-tested-HEAD linkage and runtime-corpus expansion. |
@@ -84,6 +83,7 @@ All work is listed below in one register. `Active` items have detailed completio
 
 ## Recently Closed
 
+- **E7 — Planner-enforced artifact-family reuse (2026-07-17):** Enforce mode now covers retained render, crop, checkpointed analysis/validator, combined crop-plus-analysis, publication preflight, and cross-report reads with a persisted plan/actual reconciliation, report-artifact lease, canonical lineage replacement, and requested-family dependency scoping. Real retained-report replays matched every planned stage/call/side effect: the final post-fix render-only canary completed in 1.190 s (1.190 s audited) with exactly `render_complete`, `html_render`, and checkpoint/HTML writes; crop-only completed in 15.760 s (15.513 s audited) with only crop QA/render and HTML render; and a real model-policy repair issued 17 LLM calls (134,969 input / 40,241 output tokens, estimated $0.114225) while retaining source extraction. The final HTML was complete (77,911 bytes, 469 tags, five images, no `undefined`). A temporary normal-policy replay rejected an incomplete payload before rendering or publication, and a later normal-policy repair completed in 245.980 s with a matched audit. A final full fresh rebuild was correctly stopped by canonical PDF budget authority before provider I/O; no budget bypass was attempted.
 - **A3 — Workflow-wide remediation-ledger rollout (2026-07-17):** The generated 31-workflow matrix is CI-checked. A controlled typed `provider_timeout` persisted one remediation record across two submissions; the bounded reaper inspected it once and held it as `operator_action_required` without an executor or external side effect. The read-only soak reported one created, one deduplicated, zero stale, zero eligible, and one held record with no missing runbook mapping. Strict evidence bundle `21a046e89de64aa3a4fcc73250e74074` passed on exact commit `3da3d70e4b202cd2be4f206347982b9d55c94a13`.
 - **A6 — Budget-manager closeout and operational proof (2026-07-17):** The public vector-store service now forwards a typed `RunBudget` and preserves canonical budget-stop errors. A live Drive list, OpenAI vector-store create/delete, and minimal OpenAI JSON call completed under canonical authority; ledger evidence recorded one Drive read, one vector create, one vector cleanup, and 168 LLM tokens. The next Drive and vector calls were blocked before provider I/O. Temporary vector stores were removed. The strict exact-HEAD bundle passed.
 - **A9 — Canonical report-source identity and publication provenance (2026-07-17):** Reports schema v19 stores immutable, hash-addressed source observations and deterministic resolutions; it preserves v18 compatibility, projects safe source fields to analytics, report cards, and WordPress, and invalidates only rendering/publication when source metadata changes. A live Julius Baer landing page returned HTTP 200 with 218,676 bounded HTML bytes; its existing retained PDF benchmark resolved verified source provenance, while an exact repeat produced no duplicate observation. No LLM call or production write was made.
@@ -330,19 +330,6 @@ The original ten-item screenshot baseline is complete in the committed implement
 - **Benefit:** A bounded, redacted export makes semantic quality and prompt savings reproducible without live embedding calls.
 - **Success criteria:** Persist a hash-pinned, retention-governed benchmark export containing only approved vector IDs/content hashes/vectors; benchmark it in CI and compare semantic coverage against lexical fallback without provider calls.
 
-#### E7. Expand planner-enforced artifact-family reuse beyond rendered HTML
-
-- **Title:** Expand planner-enforced artifact-family reuse beyond rendered HTML
-- **Impact 5 / effort: 3**
-- **Context:** The lineage planner now produces fail-closed plans for crop, targeted analysis, and publication repair, while only the proven rendered-HTML family is enabled for stage skipping. The remaining families stay in shadow to preserve current stage contracts.
-- **Benefit:** Measured evidence can safely extend avoided provider calls, crop work, and WordPress preflight/write work without introducing a general DAG scheduler.
-- **Risks to avoid:** Do not enable a family from synthetic evidence, downgrade missing-lineage blockers, or permit a plan to fall back to unplanned provider work.
-- **Success criteria:**
-
-- Shadow audits provide retained-fixture and live evidence for crop, prompt-family, validator, and publication plans, including zero unplanned calls for each candidate executor.
-- Crop repair is enabled only after it reuses validated analysis artifacts; targeted prompt repair preserves unaffected artifact families; publication repair verifies the current target without a public write when provenance is incomplete.
-- Each family has an explicit rollback switch, bounded live canary, plan/actual divergence threshold, and regression coverage before enforcement.
-
 #### E8. Use canonical source identity to suppress duplicate research work
 
 - **Title:** Use canonical source identity to suppress duplicate research work
@@ -355,6 +342,19 @@ The original ten-item screenshot baseline is complete in the committed implement
 - Selection and cross-report retrieval can filter by canonical source ID, publisher, and verified publication date without exposing private provenance.
 - Equivalent identities reuse validated retained artifacts and record avoided parsing/embedding/model calls; conflicting or unknown identity remains non-reusable.
 - Retained-corpus and bounded live evidence measure duplicate-work suppression, false-merge prevention, and zero unintended public writes.
+
+#### E9. Materialize prompt families for single-family repair
+
+- **Title:** Materialize prompt-family outputs and route only their required model calls
+- **Impact 5 / effort: 3**
+- **Context:** E7 now safely reuses source and crop checkpoints and records exact stage/call categories, but the retained analysis payload is still a composite. A real model-policy repair therefore invoked 17 LLM calls even though only the analysis family changed.
+- **Benefit:** Prompt, validator, and advisory changes can regenerate the one affected family plus deterministic downstream assembly, reducing LLM time and spend while retaining E7's plan/actual enforcement.
+- **Risks to avoid:** Preserve immutable evidence, validation, claims, and rendered-HTML dependency edges; do not duplicate model routing, bypass the LLM ledger, or treat an incomplete family as reusable.
+- **Success criteria:**
+
+- Persist typed, hash-pinned per-family materializations and their direct dependencies under the current report-analysis boundary.
+- Planner output names the exact family call set; executor constructs only those scoped clients and reconciles actual ledger calls against the plan.
+- Retained-corpus and bounded live comparisons show a material call/time/cost reduction from the observed 17-call composite repair while preserving semantic validation and zero unplanned side effects.
 
 ### 4. Release Integrity and Architectural Enforcement
 

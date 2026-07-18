@@ -21,6 +21,7 @@ from src.services._sqlite_migration._reports.projections import (
     _reports_db_017_add_lineage_execution_planning,
     _reports_db_018_create_source_publication_metadata,
     _reports_db_019_create_source_identity_observations,
+    _reports_db_020_expand_execution_plan_audit,
 )
 from src.services._sqlite_migration._reports.routing import (
     _reports_db_006_create_or_upgrade_download_route_history,
@@ -155,5 +156,10 @@ _REPORTS_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
         migration_id="reports_db_019_create_source_identity_observations",
         version=19,
         apply_fn=_reports_db_019_create_source_identity_observations,
+    ),
+    _MigrationSpec(
+        migration_id="reports_db_020_expand_execution_plan_audit",
+        version=20,
+        apply_fn=_reports_db_020_expand_execution_plan_audit,
     ),
 )

@@ -102,15 +102,17 @@ def test_source_identity_migrates_v18_and_preserves_conflicting_observations(
         ctx=ctx,
     )
 
-    # Simulate a v18 database: the additive v19 tables and ledger entry are absent.
+    # Simulate a v18 database: later additive tables and ledger entries are absent.
     with sqlite3.connect(db_path) as conn:
         conn.execute("DROP TABLE source_identity_resolutions")
         conn.execute("DROP TABLE source_identity_observations")
         conn.execute(
-            "DELETE FROM schema_migration_ledger WHERE database_key='reports_db' AND version=19"
+            "DELETE FROM schema_migration_ledger "
+            "WHERE database_key='reports_db' AND version IN (19, 20)"
         )
         conn.execute(
-            "UPDATE schema_version SET current_version=18 WHERE database_key='reports_db'"
+            "UPDATE schema_version SET current_version=18 "
+            "WHERE database_key='reports_db'"
         )
 
     legacy = get_report_source_identity(
@@ -186,7 +188,7 @@ def test_source_identity_migrates_v18_and_preserves_conflicting_observations(
             "SELECT current_version FROM schema_version WHERE database_key='reports_db'"
         ).fetchone()
     assert observation_count == 2
-    assert version == (19,)
+    assert version == (20,)
 
 
 def test_source_identity_keeps_unknown_dates_unknown(tmp_path) -> None:

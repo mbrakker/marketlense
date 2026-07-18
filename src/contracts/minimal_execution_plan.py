@@ -189,6 +189,11 @@ class ExecutionPlanResultRequest:
     actual_stages: list[str]
     actual_external_calls: list[str]
     execution_status: str
+    actual_side_effects: list[str] = field(default_factory=list)
+    duration_ms: int = 0
+    actual_cost_usd: float | None = None
+    estimated_avoided_cost_usd: float | None = None
+    reusable_artifact_ids: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
