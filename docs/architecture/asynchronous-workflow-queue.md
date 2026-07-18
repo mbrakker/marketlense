@@ -91,6 +91,8 @@ flowchart LR
 Opportunity membership uses sorted source hashes and distinct publisher IDs.
 Frozen or generated opportunities are immutable; later source changes collect
 in a later opportunity. No cross-publisher metric normalization is performed.
+The `briefing_opportunity` worker now owns this aggregation and writes the
+single frozen-generation outbox event; it performs no model generation itself.
 
 ## Approval and WordPress publication
 

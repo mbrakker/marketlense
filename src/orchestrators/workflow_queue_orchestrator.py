@@ -78,7 +78,11 @@ from src.services.config_service import (
     load_settings,
 )
 from src.services.file_service import file_stat
-from src.services.workflow_queue_service import record_publication_readiness
+from src.services.workflow_queue_service import (
+    freeze_briefing_opportunity,
+    record_publication_readiness,
+    upsert_briefing_opportunity,
+)
 from src.utils.errors import AppError
 
 WorkflowQueueHandler = Callable[
@@ -431,6 +435,80 @@ def _publication_readiness_handler(
             summary={"readiness_status": readiness.readiness_status},
         )
     )
+
+
+def _briefing_opportunity_handler(
+    job: WorkflowJob, payload: QueuePayload, ctx: RunContext
+) -> WorkflowQueueHandlerResult:
+    assert isinstance(payload, BriefingOpportunityPayload)
+    publisher_ids = payload.attributes.get("publisher_ids", [])
+    if not isinstance(publisher_ids, list):
+        raise AppError(
+            code="workflow_queue_briefing_publishers_invalid",
+            message="Briefing opportunity publisher IDs must be a bounded list",
+            retryable=False,
+        )
+    opportunity = upsert_briefing_opportunity(
+        load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx).state_db,
+        topic=payload.topic,
+        geography=payload.geography,
+        rolling_window=payload.rolling_window,
+        briefing_policy_version=payload.briefing_policy_version,
+        source_hashes=payload.source_hashes,
+        publisher_ids=[str(item) for item in publisher_ids],
+        minimum_distinct_reports=int(payload.attributes.get("minimum_distinct_reports", 2)),
+        minimum_publisher_diversity=int(payload.attributes.get("minimum_publisher_diversity", 2)),
+        ctx=ctx,
+    )
+    if opportunity.status == "eligible":
+        source_set_hash = _digest(*opportunity.source_hashes)
+        submission = WorkflowJobSubmission(
+            schema_version="1.0",
+            queue_name="briefing_generation",
+            job_type="briefing_generation.v1",
+            payload=BriefingGenerationPayload(
+                opportunity_id=opportunity.opportunity_id,
+                frozen_source_manifest=f"workflow-opportunity:{opportunity.opportunity_id}",
+                selected_topic=opportunity.topic,
+                sorted_source_hashes=opportunity.source_hashes,
+                model_routing_policy_version=payload.prompt_policy_version,
+                generation_configuration_hash=payload.processing_version,
+                input_reference=f"workflow-opportunity:{opportunity.opportunity_id}",
+                input_content_hash=source_set_hash,
+                processing_version=payload.processing_version,
+                prompt_policy_version=payload.prompt_policy_version,
+            ),
+            idempotency_key=_digest(
+                opportunity.topic,
+                *opportunity.source_hashes,
+                payload.prompt_policy_version,
+                payload.processing_version,
+            ),
+            deduplication_scope="briefing-frozen-source-set",
+            root_workflow_id=job.root_workflow_id or job.job_id,
+            parent_job_id=job.job_id,
+            trigger_event_id=job.trigger_event_id or job.job_id,
+            correlation_id=job.correlation_id or job.root_workflow_id or job.job_id,
+            entity_type="briefing",
+            entity_id=opportunity.opportunity_id,
+            budget_profile="cross_report_analysis",
+        )
+        opportunity = freeze_briefing_opportunity(
+            load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx).state_db,
+            opportunity_id=opportunity.opportunity_id,
+            frozen_source_manifest=f"workflow-opportunity:{opportunity.opportunity_id}",
+            generation_submission=submission,
+            ctx=ctx,
+        )
+    return WorkflowQueueHandlerResult(
+        result=WorkflowStageResult(
+            output_reference=f"workflow-opportunity:{opportunity.opportunity_id}",
+            output_content_hash=_digest(*opportunity.source_hashes),
+            execution_plan_hash=job.execution_plan_hash,
+            output_verified=opportunity.status in {"collecting", "frozen", "generated"},
+            summary={"opportunity_status": opportunity.status, "source_count": len(opportunity.source_hashes)},
+        )
+    )
 def _stage_child_submission(
     *,
     job: WorkflowJob,
@@ -739,6 +817,7 @@ def default_workflow_queue_registry() -> dict[
             "briefing_opportunity",
             BriefingOpportunityPayload,
             BriefingOpportunityResult,
+            handler=_briefing_opportunity_handler,
             downstream=("briefing_generation.v1",),
             budget_profile="briefing_opportunity",
         ),

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from src.contracts.workflow_queue import (
     WORKFLOW_QUEUE_NAMES,
+    BriefingOpportunityPayload,
     MaintenancePayload,
     PublicationReadinessPayload,
     PublisherDiscoveryPayload,
@@ -130,6 +131,38 @@ def test_publication_readiness_handler_fails_closed_without_lineage(tmp_path) ->
     assert outcome.terminal_status == "dead_letter"
     assert get_workflow_job(db, job.job_id, _ctx()).error_code == (
         "workflow_queue_publication_readiness_incomplete"
+    )
+
+
+def test_briefing_opportunity_requires_a_publisher_id_list(tmp_path) -> None:
+    db = str(tmp_path / "state.sqlite")
+    job, _ = enqueue_workflow_job(
+        db,
+        WorkflowJobSubmission(
+            schema_version="1.0",
+            queue_name="briefing_opportunity",
+            job_type="briefing_opportunity.v1",
+            payload=BriefingOpportunityPayload(
+                topic="rates",
+                rolling_window="2026-W29",
+                source_hashes=["source-a"],
+                briefing_policy_version="v1",
+                attributes={"publisher_ids": "not-a-list"},  # type: ignore[dict-item]
+            ),
+            idempotency_key="rates:invalid",
+            deduplication_scope="briefing-opportunity",
+        ),
+        _ctx(),
+    )
+    outcome = run_workflow_worker_once(
+        state_db=db,
+        queue_name="briefing_opportunity",
+        worker_id="worker-1",
+        ctx=_ctx(),
+    )
+    assert outcome.terminal_status == "dead_letter"
+    assert get_workflow_job(db, job.job_id, _ctx()).error_code == (
+        "workflow_queue_briefing_publishers_invalid"
     )
 
 
