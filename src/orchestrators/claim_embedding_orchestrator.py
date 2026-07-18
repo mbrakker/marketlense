@@ -400,6 +400,11 @@ def _run_claim_embedding_workflow(
                     cost_ledger_path=request.cost_ledger_path,
                     cost_daily_path=request.cost_daily_path,
                     model_pricing=request.model_pricing,
+                    publisher_name=str(row.metadata.get("publisher") or ""),
+                    report_id=str(row.report_id),
+                    workflow="claim_embedding",
+                    stage="provider_embedding",
+                    artifact_family="claim",
                 ),
                 root_ctx,
             )

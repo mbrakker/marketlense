@@ -4,6 +4,8 @@ import json
 import sqlite3
 import threading
 import time
+
+import pytest
 from dataclasses import replace
 
 from src.contracts.analytics_projection import (
@@ -21,6 +23,7 @@ from src.orchestrators.claim_embedding_orchestrator import (
 )
 from src.generators._analytics_projection.common import _hash_payload
 from src.services.analytics_store_service import (
+    acquire_claim_embedding_execution_lease,
     read_claim_embedding_queue_health,
     reconcile_claim_embedding_queue,
     upsert_projection,
@@ -503,6 +506,135 @@ def test_terminal_provider_failure_is_not_retried(ingest_settings, run_context) 
     assert records[0].status == "operator_action_required"
 
 
+def test_provider_count_mismatch_is_retained_as_a_retryable_queue_failure(
+    ingest_settings, run_context
+) -> None:
+    _seed_projection(ingest_settings, run_context)
+
+    def _wrong_count(request, _ctx):
+        return OpenAIEmbeddingResponse(
+            schema_version="1.0",
+            embeddings=[],
+            model=request.model,
+            dimensions=2,
+            request_id="wrong-count-test",
+            input_tokens=0,
+            total_tokens=0,
+        )
+
+    response = run_claim_embedding_workflow(
+        _workflow_request(ingest_settings.reports_db, run_context),
+        dependencies=ClaimEmbeddingDependencies(create_embeddings=_wrong_count),
+    )
+
+    assert response.embedded_count == 0
+    assert response.failed_count == 1
+    assert _queue_state(ingest_settings.reports_db)["queue_error_retryable"] == 1
+
+
+@pytest.mark.parametrize(
+    ("request_overrides", "additional_claims"),
+    [
+        (
+            {"max_reports": 1},
+            [
+                ("drive-file-2:claim:other", "drive-file-2", "Other Publisher"),
+            ],
+        ),
+        (
+            {"publisher_fairness_limit": 1},
+            [
+                ("drive-file-1:claim:second", "drive-file-1", "Existing Publisher"),
+            ],
+        ),
+        ({"max_estimated_tokens": 1}, []),
+        (
+            {
+                "max_estimated_cost_usd": 0.000000001,
+                "model_pricing": {
+                    "text-embedding-3-small": {
+                        "input_tokens_per_1k_usd": 1.0,
+                        "output_tokens_per_1k_usd": 0.0,
+                        "tool_call_usd": 0.0,
+                    }
+                },
+            },
+            [],
+        ),
+    ],
+)
+def test_queue_admission_limits_avoid_provider_calls_before_embedding(
+    ingest_settings,
+    run_context,
+    request_overrides,
+    additional_claims,
+) -> None:
+    _seed_projection(ingest_settings, run_context)
+    for entity_uid, report_id, publisher in additional_claims:
+        _add_current_claim(
+            ingest_settings.reports_db,
+            entity_uid=entity_uid,
+            report_id=report_id,
+            claim="Additional claim",
+            evidence="Additional evidence",
+            publisher=publisher,
+            created_at_utc="2026-04-02T00:00:00Z",
+        )
+    calls: list[str] = []
+
+    def _embed(request, _ctx):
+        calls.extend(request.inputs)
+        return OpenAIEmbeddingResponse(
+            schema_version="1.0",
+            embeddings=[[0.1, 0.2]],
+            model=request.model,
+            dimensions=2,
+            request_id="admission-limit-test",
+            input_tokens=2,
+            total_tokens=2,
+        )
+
+    response = run_claim_embedding_workflow(
+        _workflow_request(
+            ingest_settings.reports_db,
+            run_context,
+            limit=10,
+            **request_overrides,
+        ),
+        dependencies=ClaimEmbeddingDependencies(create_embeddings=_embed),
+    )
+
+    assert response.provider_calls_avoided >= 1
+    assert response.embedded_count == len(calls)
+
+
+def test_retry_backoff_normalizes_a_naive_operator_clock(
+    ingest_settings, run_context
+) -> None:
+    _seed_projection(ingest_settings, run_context)
+
+    def _retryable_failure(_request, _ctx):
+        raise AppError(
+            code="openai_embedding_request_failed",
+            message="provider unavailable",
+            retryable=True,
+            severity="error",
+        )
+
+    response = run_claim_embedding_workflow(
+        _workflow_request(ingest_settings.reports_db, run_context),
+        dependencies=ClaimEmbeddingDependencies(
+            create_embeddings=_retryable_failure,
+            utc_now=lambda: "2030-04-22T13:00:00",
+        ),
+    )
+
+    assert response.failed_count == 1
+    assert _queue_state(ingest_settings.reports_db)["next_eligible_at_utc"].endswith(
+        "+00:00"
+    )
+
+
 def test_concurrent_runs_have_one_successful_embedding_and_one_provider_call(
     ingest_settings, run_context
 ) -> None:
@@ -545,6 +677,31 @@ def test_concurrent_runs_have_one_successful_embedding_and_one_provider_call(
 
     assert len(calls) == 1
     assert successful == 1
+
+
+def test_active_lease_is_observable_and_excluded_from_new_admission(
+    ingest_settings, run_context
+) -> None:
+    _seed_projection(ingest_settings, run_context)
+    request = _health_request(ingest_settings.reports_db)
+    item = read_claim_embedding_queue_health(request, run_context).items[0]
+
+    assert acquire_claim_embedding_execution_lease(
+        db_path=ingest_settings.reports_db,
+        item=item,
+        embedding_version=request.embedding_version,
+        provider=request.provider,
+        model=request.model,
+        lease_id="observability-lease",
+        lease_expires_at_utc="2030-04-22T13:00:00+00:00",
+        ctx=run_context,
+    )
+    health = read_claim_embedding_queue_health(request, run_context)
+
+    assert health.classification_counts == {"leased": 1}
+    assert health.oldest_pending_age_seconds == 0
+    assert health.age_percentiles_seconds == {"p50": 0, "p95": 0, "p99": 0}
+    assert health.estimated_drain_seconds is None
 
 
 def test_queue_transitions_reconcile_with_detailed_audit_rows(

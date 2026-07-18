@@ -533,7 +533,7 @@ flowchart TD
         SUCCESS["Persist embedded vector,<br/>model, dimensions, cost metadata"]
         EFAIL["Persist retryable/terminal failure,<br/>next-eligible time and attempt count"]
         EXHAUST["Remediation record when retry budget exhausted"]
-        AFTER["Re-read queue health and emit<br/>burndown, latency and cost telemetry"]
+        AFTER["Re-read queue health and emit<br/>burndown, latency, cost, age percentile,<br/>throughput, and drain telemetry"]
 
         HEALTH --> SELECT --> DRY
         DRY -- yes --> EDRY["Return avoided calls/cost"]

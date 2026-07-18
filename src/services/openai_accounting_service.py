@@ -123,8 +123,18 @@ def record_usage(
     )
     action = request.action or request.step_name
     pricing_resolution = resolve_model_pricing(request.model, request.model_pricing)
+    matched_rate_card = (
+        request.model_pricing.get(pricing_resolution.key, {})
+        if pricing_resolution.key
+        else {}
+    )
     pricing_version = str(
         (request.extra or {}).get("pricing_version")
+        or (
+            matched_rate_card.get("pricing_version", "")
+            if isinstance(matched_rate_card, dict)
+            else ""
+        )
         or request.model_pricing.get("schema_version", "")
     )
     estimated_cost = estimate_cost_usd(
@@ -133,6 +143,7 @@ def record_usage(
         output_tokens,
         tool_calls,
         pricing=request.model_pricing or {},
+        cached_input_tokens=request.cached_input_tokens,
     )
     if pricing_resolution.status in {"missing", "invalid"}:
         logger.warning(
@@ -197,6 +208,7 @@ def record_usage(
                     request_id=request.request_id,
                     publisher_name=request.publisher_name,
                     report_name=request.report_name,
+                    report_id=request.report_id,
                     source_url=request.source_url,
                     input_tokens=input_tokens,
                     output_tokens=output_tokens,
@@ -219,6 +231,12 @@ def record_usage(
                     schema_validation_status=request.schema_validation_status,
                     error_stage=request.error_stage,
                     error_code=request.error_code,
+                    workflow=request.workflow,
+                    stage=request.stage,
+                    plan_hash=request.plan_hash,
+                    artifact_family=request.artifact_family,
+                    pricing_version=pricing_version,
+                    pricing_status=pricing_resolution.status,
                     metadata=_usage_metadata(
                         request,
                         pricing_status=pricing_resolution.status,

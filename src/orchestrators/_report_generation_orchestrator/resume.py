@@ -599,8 +599,7 @@ def _validate_checkpoint_artifact_lineage(
                 "artifact_id": str(artifact_id or ""),
                 "reason": (
                     "lineage_incomplete"
-                    if reuse.reusable
-                    and require_artifact_lineage
+                    if require_artifact_lineage
                     and reuse.record is not None
                     and reuse.record.lineage_status != "complete"
                     else reuse.reason

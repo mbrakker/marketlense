@@ -166,6 +166,13 @@ def _remediate_report_card_date_checkpoint(
                 "idempotency_key": result.idempotency_key,
                 "date_source": result.date_source,
             },
+            compatibility={
+                "schema_versions": {"artifacts": "1.0"},
+                "processing_versions": {"artifacts": "report_generation_checkpoint_v1"},
+            },
+            lineage_status=(
+                "complete" if request.source_id.strip() else "legacy_incomplete"
+            ),
         ),
         ctx,
     )

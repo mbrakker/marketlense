@@ -447,8 +447,13 @@ def _record_checkpoint_artifact_lineage(
                 compatibility=compatibility,
                 lineage_status=(
                     "complete"
-                    if runtime.execution_compatibility
-                    else "legacy_unverified"
+                    if (
+                        runtime.file.file_id.strip()
+                        and str(runtime.md5 or "").strip()
+                        and stage_name.strip()
+                        and str(raw_ref.get("schema_version") or "1.0").strip()
+                    )
+                    else "legacy_incomplete"
                 ),
             ),
             runtime.ctx,

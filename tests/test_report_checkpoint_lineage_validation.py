@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import hashlib
 from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -14,10 +16,18 @@ from src.contracts.artifact_lineage import (
 from src.contracts.drive import DriveFile
 from src.contracts.files import PipelineStageCheckpoint
 from src.contracts.report_generation import ReportRuntimeState
+from src.generators.report_generation_dependencies import ReportGenerationDependencies
+from src.generators.report_render_generator import render_preview_asset
 from src.orchestrators._report_generation_orchestrator.checkpoints import (
     _vector_indexing_state_from_checkpoint,
 )
 from src.orchestrators._report_generation_orchestrator.resume import (
+    _outcome_from_render_checkpoint,
+    _read_validated_checkpoint,
+    _render_project_and_cleanup,
+    _resume_from_checkpoint_stage,
+    _select_latest_safe_restart_stage,
+    _validate_checkpoint_artifacts,
     _validate_checkpoint_artifact_lineage,
 )
 from src.services.report_store_service import (
@@ -26,6 +36,12 @@ from src.services.report_store_service import (
 )
 from src.utils.errors import AppError
 from tests.test_report_pipeline_orchestrator import _ctx, _settings
+from tests.test_report_render_generator import (
+    _analysis,
+    _deps as _render_dependencies,
+    _selection,
+    _source,
+)
 
 
 def _runtime(tmp_path: Path) -> ReportRuntimeState:
@@ -98,7 +114,7 @@ def test_checkpoint_lineage_validation_accepts_active_content(tmp_path: Path) ->
     runtime = _runtime(tmp_path)
     html_path = tmp_path / "report.html"
     html_path.write_text("<h1>Report</h1>", encoding="utf-8")
-    record = _record_rendered_html(runtime, html_path)
+    record = _record_rendered_html(runtime, html_path, lineage_status="complete")
 
     _validate_checkpoint_artifact_lineage(
         runtime,
@@ -180,3 +196,182 @@ def test_selection_checkpoint_without_vector_state_remains_resumable() -> None:
     assert state.vector_store_id is None
     assert state.openai_file_id is None
     assert state.vector_store_status is None
+
+
+def _integrity_checkpoint(
+    artifact_path: Path,
+    *,
+    artifact_ref: str | None = None,
+    artifact_entry: object | None = None,
+) -> PipelineStageCheckpoint:
+    payload_entry = artifact_entry
+    if payload_entry is None:
+        payload_entry = {
+            "path": str(artifact_path),
+            "md5": hashlib.md5(artifact_path.read_bytes()).hexdigest(),
+        }
+    return replace(
+        _checkpoint(artifact_id=""),
+        artifact_refs={"rendered_html": artifact_ref or str(artifact_path)},
+        payload={"artifact_integrity": {"files": {"rendered_html": payload_entry}}},
+    )
+
+
+def test_checkpoint_artifact_integrity_accepts_retained_file(tmp_path: Path) -> None:
+    runtime = _runtime(tmp_path)
+    artifact_path = tmp_path / "report.html"
+    artifact_path.write_text("<h1>Report</h1>", encoding="utf-8")
+
+    _validate_checkpoint_artifacts(
+        runtime,
+        _integrity_checkpoint(artifact_path),
+        "checkpoint.json",
+    )
+
+
+@pytest.mark.parametrize(
+    ("checkpoint_factory", "expected_code"),
+    [
+        (
+            lambda artifact: replace(
+                _checkpoint(artifact_id=""),
+                payload={"artifact_integrity": {"files": []}},
+            ),
+            "report_pipeline_checkpoint_invalid",
+        ),
+        (
+            lambda artifact: _integrity_checkpoint(
+                artifact,
+                artifact_entry="not-an-object",
+            ),
+            "report_pipeline_checkpoint_invalid",
+        ),
+        (
+            lambda artifact: _integrity_checkpoint(
+                artifact,
+                artifact_ref=str(artifact.with_name("other.html")),
+            ),
+            "report_pipeline_checkpoint_artifact_missing",
+        ),
+        (
+            lambda artifact: _integrity_checkpoint(
+                artifact,
+                artifact_entry={"path": str(artifact), "md5": "not-the-hash"},
+            ),
+            "report_pipeline_checkpoint_artifact_hash_mismatch",
+        ),
+        (
+            lambda artifact: replace(
+                _checkpoint(artifact_id=""),
+                artifact_refs={
+                    "rendered_html": str(artifact.with_name("missing.html"))
+                },
+                payload={
+                    "artifact_integrity": {
+                        "files": {
+                            "rendered_html": {
+                                "path": str(artifact.with_name("missing.html")),
+                                "md5": "",
+                            }
+                        }
+                    }
+                },
+            ),
+            "report_pipeline_checkpoint_artifact_missing",
+        ),
+    ],
+)
+def test_checkpoint_artifact_integrity_rejects_invalid_or_changed_artifact(
+    tmp_path: Path,
+    checkpoint_factory,
+    expected_code: str,
+) -> None:
+    runtime = _runtime(tmp_path)
+    artifact_path = tmp_path / "report.html"
+    artifact_path.write_text("<h1>Report</h1>", encoding="utf-8")
+
+    with pytest.raises(AppError) as exc_info:
+        _validate_checkpoint_artifacts(
+            runtime,
+            checkpoint_factory(artifact_path),
+            "checkpoint.json",
+        )
+
+    assert exc_info.value.code == expected_code
+
+
+@pytest.mark.parametrize("raw_outcome", [None, {"schema_version": "1.0"}])
+def test_render_checkpoint_outcome_rejects_invalid_or_incomplete_payload(
+    raw_outcome: object,
+) -> None:
+    with pytest.raises(AppError) as exc_info:
+        _outcome_from_render_checkpoint(raw_outcome)
+
+    assert exc_info.value.code == "report_pipeline_checkpoint_invalid"
+
+
+def test_checkpoint_resume_rejects_unknown_stage_without_side_effects(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(AppError) as exc_info:
+        _resume_from_checkpoint_stage(
+            _runtime(tmp_path),
+            ReportGenerationDependencies.default(),
+            None,
+            requested_resume_stage="not-a-stage",
+        )
+
+    assert exc_info.value.code == "report_pipeline_restart_stage_invalid"
+
+
+def test_read_validated_checkpoint_and_latest_safe_restart_fail_closed_when_missing(
+    tmp_path: Path,
+) -> None:
+    base_runtime = _runtime(tmp_path)
+    runtime = replace(
+        base_runtime,
+        settings=replace(
+            base_runtime.settings,
+            output_dir=str(tmp_path / "no-checkpoints"),
+        ),
+    )
+
+    with pytest.raises(AppError) as read_error:
+        _read_validated_checkpoint(runtime, stage_name="render_complete")
+    with pytest.raises(AppError) as restart_error:
+        _select_latest_safe_restart_stage(runtime)
+
+    assert read_error.value.code == "report_pipeline_checkpoint_missing"
+    assert restart_error.value.code == "report_pipeline_checkpoint_missing"
+
+
+def test_render_only_resume_avoids_post_render_side_effects(tmp_path: Path) -> None:
+    runtime = _runtime(tmp_path)
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    analysis = _analysis(runtime, source, selection)
+    html_path = tmp_path / "out" / "report.html"
+    html_path.parent.mkdir(parents=True, exist_ok=True)
+
+    def _render_report(req, ctx):
+        del req, ctx
+        html_path.write_text("<html></html>", encoding="utf-8")
+        return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
+
+    render_dependencies = _render_dependencies(render_report=_render_report)
+    dependencies = replace(
+        ReportGenerationDependencies.default(), render=render_dependencies
+    )
+    outcome = _render_project_and_cleanup(
+        runtime,
+        source,
+        selection,
+        analysis,
+        render_preview_asset(runtime, source, render_dependencies),
+        dependencies,
+        None,
+        existing_artifact_refs={},
+        skip_post_render_projection=True,
+    )
+
+    assert outcome.html_path == str(html_path)

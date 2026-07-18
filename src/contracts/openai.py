@@ -42,6 +42,10 @@ class OpenAIEmbeddingRequest:
     report_name: str = field(
         default="", metadata={"doc": "Report context for usage reporting, if known."}
     )
+    report_id: str = field(
+        default="",
+        metadata={"doc": "Canonical report identifier for usage reporting, if known."},
+    )
     source_url: str = field(
         default="",
         metadata={"doc": "Source/report URL context for usage reporting, if known."},
@@ -55,6 +59,16 @@ class OpenAIEmbeddingRequest:
     usage_db_path: str = field(
         default="./state/llm_usage.sqlite",
         metadata={"doc": "Canonical SQLite usage ledger path for this provider call."},
+    )
+    workflow: str = field(
+        default="", metadata={"doc": "Owning workflow identifier, if known."}
+    )
+    stage: str = field(default="", metadata={"doc": "Owning workflow stage, if known."})
+    plan_hash: str = field(
+        default="", metadata={"doc": "Minimal-execution plan hash, if known."}
+    )
+    artifact_family: str = field(
+        default="", metadata={"doc": "Produced or consumed artifact family, if known."}
     )
 
 
@@ -146,6 +160,10 @@ class OpenAIUsageAccountingRequest:
     report_name: str = field(
         default="", metadata={"doc": "Report context for usage reporting, if known."}
     )
+    report_id: str = field(
+        default="",
+        metadata={"doc": "Canonical report identifier for usage reporting, if known."},
+    )
     source_url: str = field(
         default="",
         metadata={"doc": "Source/report URL context for usage reporting, if known."},
@@ -199,6 +217,16 @@ class OpenAIUsageAccountingRequest:
     error_code: str = field(
         default="",
         metadata={"doc": "Bounded terminal application error code, when any."},
+    )
+    workflow: str = field(
+        default="", metadata={"doc": "Owning workflow identifier, if known."}
+    )
+    stage: str = field(default="", metadata={"doc": "Owning workflow stage, if known."})
+    plan_hash: str = field(
+        default="", metadata={"doc": "Minimal-execution plan hash, if known."}
+    )
+    artifact_family: str = field(
+        default="", metadata={"doc": "Produced or consumed artifact family, if known."}
     )
     extra: Dict[str, Any] = field(
         default_factory=dict, metadata={"doc": "Additional non-secret usage metadata."}

@@ -126,6 +126,27 @@ class LLMUsageLedgerEntry(SemanticIdContract):
         default="",
         metadata={"doc": "Bounded terminal application error code, when any."},
     )
+    report_id: str = field(
+        default="", metadata={"doc": "Canonical report identifier, if known."}
+    )
+    workflow: str = field(
+        default="", metadata={"doc": "Owning workflow identifier, if known."}
+    )
+    stage: str = field(default="", metadata={"doc": "Owning workflow stage, if known."})
+    plan_hash: str = field(
+        default="", metadata={"doc": "Minimal-execution plan hash, if known."}
+    )
+    artifact_family: str = field(
+        default="", metadata={"doc": "Produced or consumed artifact family, if known."}
+    )
+    pricing_version: str = field(
+        default="",
+        metadata={"doc": "Immutable pricing-card version used for this event."},
+    )
+    pricing_status: str = field(
+        default="",
+        metadata={"doc": "Pricing resolution: matched, missing, held, or stale."},
+    )
     metadata: Dict[str, Any] = field(
         default_factory=dict, metadata={"doc": "Additional non-secret usage metadata."}
     )

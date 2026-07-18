@@ -128,6 +128,67 @@ def _json_mapping(value: object) -> dict[str, object]:
     return parsed if isinstance(parsed, dict) else {}
 
 
+def _json_list_with_validity(value: object) -> tuple[list[str], bool]:
+    """Read a persisted call-category array without treating corruption as empty.
+
+    The production execution-plan writer persists canonical JSON arrays.  Older
+    rows are read defensively here because evidence must distinguish a valid
+    historical "no calls" record from unavailable reconciliation evidence.
+    """
+    if isinstance(value, list):
+        parsed = value
+    elif isinstance(value, str) and value.strip():
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            return [], False
+    else:
+        return [], False
+    if not isinstance(parsed, list):
+        return [], False
+    normalized: list[str] = []
+    for item in parsed:
+        if not isinstance(item, str) or not item.strip():
+            return [], False
+        token = item.strip()
+        if token not in normalized:
+            normalized.append(token)
+    return sorted(normalized), True
+
+
+def _execution_plan_reconciliation_status(plan: dict[str, Any]) -> str:
+    """Return the canonical result, or fail closed for incomplete old rows.
+
+    ``record_minimal_execution_plan_result`` intentionally writes a populated
+    reconciliation object for *both* matched and divergent executions.  Its
+    ``reconciliation_status`` is therefore authoritative whenever present.
+    Rows predating that field use the same set-based unplanned-work rule as the
+    writer: avoided planned work remains a match; only unplanned stages, calls,
+    or side effects diverge.
+    """
+    raw_divergence = plan.get("divergence_json")
+    declared = _json_mapping(raw_divergence)
+    raw_status = str(declared.get("reconciliation_status") or "").strip().lower()
+    if raw_status in {"matched", "diverged"}:
+        return raw_status
+    if raw_status:
+        return "unreconciled"
+
+    comparisons = (
+        ("planned_stages_json", "actual_stages_json"),
+        ("planned_external_calls_json", "actual_external_calls_json"),
+        ("planned_side_effects_json", "actual_side_effects_json"),
+    )
+    for planned_key, actual_key in comparisons:
+        planned, planned_valid = _json_list_with_validity(plan.get(planned_key))
+        actual, actual_valid = _json_list_with_validity(plan.get(actual_key))
+        if not planned_valid or not actual_valid:
+            return "unreconciled"
+        if set(actual) - set(planned):
+            return "diverged"
+    return "matched"
+
+
 def _ratio(numerator: int | float, denominator: int | float) -> float | None:
     if not denominator:
         return None
@@ -688,6 +749,8 @@ def _runtime_telemetry(
             "plan_count": 0,
             "matching_plan_count": 0,
             "divergent_plan_count": 0,
+            "unreconciled_plan_count": 0,
+            "enforcement_deferred_or_blocked_count": 0,
             "planned_call_count": 0,
             "actual_call_count": 0,
         }
@@ -698,14 +761,30 @@ def _runtime_telemetry(
             str(plan.get("execution_mode") or "unknown"),
         )
         entry = divergence[key]
-        planned = _json_list(plan.get("planned_external_calls_json"))
-        actual = _json_list(plan.get("actual_external_calls_json"))
-        declared = _json_mapping(plan.get("divergence_json"))
-        matched = planned == actual and not declared
+        planned, planned_valid = _json_list_with_validity(
+            plan.get("planned_external_calls_json")
+        )
+        actual, actual_valid = _json_list_with_validity(
+            plan.get("actual_external_calls_json")
+        )
+        status = _execution_plan_reconciliation_status(plan)
         entry["plan_count"] += 1
-        entry["matching_plan_count" if matched else "divergent_plan_count"] += 1
-        entry["planned_call_count"] += len(planned)
-        entry["actual_call_count"] += len(actual)
+        entry[
+            {
+                "matched": "matching_plan_count",
+                "diverged": "divergent_plan_count",
+                "unreconciled": "unreconciled_plan_count",
+            }[status]
+        ] += 1
+        if str(plan.get("execution_status") or "").strip().lower() in {
+            "blocked",
+            "deferred",
+        }:
+            entry["enforcement_deferred_or_blocked_count"] += 1
+        if planned_valid:
+            entry["planned_call_count"] += len(planned)
+        if actual_valid:
+            entry["actual_call_count"] += len(actual)
 
     deferred_ages = _ages_seconds(deferred, "deferred_at_utc")
     remediation_transition_counts = Counter(

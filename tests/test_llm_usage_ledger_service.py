@@ -126,6 +126,65 @@ def test_llm_usage_ledger_appends_sqlite_row(
     assert_logs_have_required_fields(records)
 
 
+def test_usage_attribution_dimensions_project_from_canonical_events(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "usage.sqlite"
+    ledger_path = tmp_path / "ledger.jsonl"
+    daily_path = tmp_path / "daily.json"
+    svc.append_usage(
+        LLMUsageLedgerAppendRequest(
+            schema_version="1.0",
+            db_path=str(db_path),
+            entry=replace(
+                _entry(),
+                report_id="report-1",
+                workflow="report_generation",
+                stage="analysis",
+                plan_hash="plan-1",
+                artifact_family="findings",
+                pricing_version="card-1",
+                pricing_status="matched",
+            ),
+        ),
+        _ctx(),
+    )
+    svc.rebuild_usage_exports(
+        LLMUsageExportRebuildRequest(
+            schema_version="1.0",
+            db_path=str(db_path),
+            ledger_path=str(ledger_path),
+            daily_path=str(daily_path),
+        ),
+        _ctx(),
+    )
+
+    payload = json.loads(daily_path.read_text(encoding="utf-8"))
+    assert payload["totals_by_report"]["report-1"]["estimated_cost_usd"] == 0.001
+    assert (
+        payload["totals_by_workflow"]["report_generation"]["total_input_tokens"] == 10
+    )
+    assert (
+        payload["totals_by_prompt_namespace"]["report/example"]["total_output_tokens"]
+        == 5
+    )
+    assert payload["totals_by_artifact_family"]["findings"]["total_tool_calls"] == 0
+    with sqlite3.connect(db_path) as conn:
+        row = conn.execute(
+            "SELECT report_id,workflow,stage,plan_hash,artifact_family,pricing_version,pricing_status "
+            "FROM llm_usage_events"
+        ).fetchone()
+    assert row == (
+        "report-1",
+        "report_generation",
+        "analysis",
+        "plan-1",
+        "findings",
+        "card-1",
+        "matched",
+    )
+
+
 def test_llm_usage_ledger_schedules_median_rebuild_on_twentieth_task_event(
     tmp_path: Path,
 ) -> None:

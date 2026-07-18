@@ -15,6 +15,9 @@ from scripts.quality._cto_review_evidence.log_content_leakage import (
     Canary,
     _build_matcher,
 )
+from scripts.quality._cto_review_evidence.cto_evidence import (
+    _execution_plan_reconciliation_status,
+)
 from scripts.quality.collect_cto_review_evidence import (
     ROOT,
     ArtifactIntegrityError,
@@ -279,16 +282,22 @@ def test_collect_writes_named_cto_evidence_artifacts_from_snapshots(
             """
             CREATE TABLE artifact_execution_plan_runs (
               plan_hash, report_id, execution_intent, execution_mode,
+              planned_stages_json, actual_stages_json,
               planned_external_calls_json, actual_external_calls_json,
-              reusable_artifact_ids_json, divergence_json, actual_cost_usd
+              planned_side_effects_json, actual_side_effects_json,
+              reusable_artifact_ids_json, divergence_json, actual_cost_usd,
+              execution_status
             )
             """
         )
         db.execute(
             """
             INSERT INTO artifact_execution_plan_runs VALUES
-            ('plan-1','report-1','render','enforce','["html_render"]',
-             '["html_render"]','["a"]','{}',0.2)
+            ('plan-1','report-1','render','enforce','["render"]','["render"]',
+             '["html_render"]','["html_render"]','["filesystem"]',
+             '["filesystem"]','["a"]',
+             '{"reconciliation_status":"matched","avoided_planned_external_calls":[]}',
+             0.2,'completed')
             """
         )
     paths = _paths(tmp_path, state, output_name="CTO_evidence")
@@ -339,11 +348,13 @@ def test_collect_writes_named_cto_evidence_artifacts_from_snapshots(
         {
             "actual_call_count": 1,
             "divergent_plan_count": 0,
+            "enforcement_deferred_or_blocked_count": 0,
             "execution_intent": "render",
             "execution_mode": "enforce",
             "matching_plan_count": 1,
             "plan_count": 1,
             "planned_call_count": 1,
+            "unreconciled_plan_count": 0,
         }
     ]
     assert (
@@ -351,6 +362,48 @@ def test_collect_writes_named_cto_evidence_artifacts_from_snapshots(
             (paths.output_dir / "github_main_status.json").read_text(encoding="utf-8")
         )["reason"]
         == "github_status_not_requested"
+    )
+
+
+def test_execution_plan_reconciliation_prefers_production_status_and_falls_back_safely() -> (
+    None
+):
+    matched = {
+        "planned_stages_json": '["render"]',
+        "actual_stages_json": '["render"]',
+        "planned_external_calls_json": '["html_render", "model"]',
+        "actual_external_calls_json": '["html_render"]',
+        "planned_side_effects_json": '["filesystem"]',
+        "actual_side_effects_json": '["filesystem"]',
+        "divergence_json": json.dumps(
+            {
+                "reconciliation_status": "matched",
+                "avoided_planned_external_calls": ["model"],
+            }
+        ),
+    }
+    reordered_historical = {
+        "planned_stages_json": '["analysis", "render"]',
+        "actual_stages_json": '["render", "analysis"]',
+        "planned_external_calls_json": '["model", "filesystem"]',
+        "actual_external_calls_json": '["filesystem", "model"]',
+        "planned_side_effects_json": '["filesystem"]',
+        "actual_side_effects_json": '["filesystem"]',
+        "divergence_json": "{}",
+    }
+    unplanned = {
+        **reordered_historical,
+        "actual_external_calls_json": '["filesystem", "model", "network"]',
+    }
+
+    assert _execution_plan_reconciliation_status(matched) == "matched"
+    assert _execution_plan_reconciliation_status(reordered_historical) == "matched"
+    assert _execution_plan_reconciliation_status(unplanned) == "diverged"
+    assert (
+        _execution_plan_reconciliation_status(
+            {**reordered_historical, "actual_external_calls_json": "not-json"}
+        )
+        == "unreconciled"
     )
 
 
@@ -612,7 +665,10 @@ def test_strict_clean_exact_head_snapshots_logs_and_publishes_redacted_bundle(
     assert snapshots["log_snapshots"][0]["source_path"] == "market_lense_2026-07-16.log"
     assert len(snapshots["log_snapshots"]) == 1
     assert snapshots["log_snapshots"][0]["snapshot_path"].startswith("standard_logs/")
-    assert snapshots["log_snapshots"][0]["structured_event_metadata_mode"] == "matches_only"
+    assert (
+        snapshots["log_snapshots"][0]["structured_event_metadata_mode"]
+        == "matches_only"
+    )
     assert leakage["status"] == "passed"
     assert leakage["coverage"]["source_canary_count"] == 5
     assert leakage["coverage"]["editorial_canary_count"] == 5

@@ -11107,6 +11107,7 @@
             "invalid_payload",
             "orphaned_report",
             "blocked_by_budget",
+            "leased",
             "unknown_requires_review"
           ]
         },
@@ -11266,11 +11267,40 @@
     "src.contracts.analytics_projection.ClaimEmbeddingQueueHealthResponse": {
       "additionalProperties": false,
       "properties": {
+        "age_percentiles_seconds": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
+        },
         "classification_counts": {
           "additionalProperties": {
             "type": "integer"
           },
           "type": "object"
+        },
+        "completion_rate": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "content_hash_skip_count": {
+          "type": "integer"
+        },
+        "estimated_drain_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "items": {
           "items": {
@@ -11278,13 +11308,31 @@
           },
           "type": "array"
         },
+        "model_version_mismatch_count": {
+          "type": "integer"
+        },
+        "observed_throughput_per_hour": {
+          "type": "number"
+        },
         "oldest_pending_age_seconds": {
           "type": "integer"
+        },
+        "retry_reason_counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
         },
         "schema_version": {
           "type": "string"
         },
         "status_counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "terminal_reason_counts": {
           "additionalProperties": {
             "type": "integer"
           },
@@ -12326,6 +12374,106 @@
         "root_artifact_ids",
         "invalidated_artifact_ids",
         "dry_run"
+      ],
+      "type": "object"
+    },
+    "src.contracts.artifact_lineage.ArtifactLineageAuditItem": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_family": {
+          "type": "string"
+        },
+        "artifact_id": {
+          "type": "string"
+        },
+        "created_at_utc": {
+          "type": "string"
+        },
+        "hash_state": {
+          "type": "string"
+        },
+        "lineage_status": {
+          "type": "string"
+        },
+        "missing_field_codes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "processing_version": {
+          "type": "string"
+        },
+        "producer": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "artifact_id",
+        "report_id",
+        "artifact_family",
+        "producer",
+        "processing_version",
+        "state",
+        "lineage_status",
+        "missing_field_codes",
+        "hash_state",
+        "created_at_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts.artifact_lineage.ArtifactLineageAuditRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path"
+      ],
+      "type": "object"
+    },
+    "src.contracts.artifact_lineage.ArtifactLineageAuditResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.artifact_lineage.ArtifactLineageAuditItem"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status_counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "schema_version",
+        "items",
+        "status_counts"
       ],
       "type": "object"
     },
@@ -20439,6 +20587,9 @@
         "action": {
           "type": "string"
         },
+        "artifact_family": {
+          "type": "string"
+        },
         "cache_decision": {
           "type": "string"
         },
@@ -20487,6 +20638,15 @@
         "parse_status": {
           "type": "string"
         },
+        "plan_hash": {
+          "type": "string"
+        },
+        "pricing_status": {
+          "type": "string"
+        },
+        "pricing_version": {
+          "type": "string"
+        },
         "prompt_hash": {
           "type": "string"
         },
@@ -20503,6 +20663,9 @@
           "type": "string"
         },
         "publisher_name": {
+          "type": "string"
+        },
+        "report_id": {
           "type": "string"
         },
         "report_name": {
@@ -20543,6 +20706,9 @@
         "span_id": {
           "type": "string"
         },
+        "stage": {
+          "type": "string"
+        },
         "task_id": {
           "type": "string"
         },
@@ -20576,6 +20742,9 @@
           "type": "integer"
         },
         "trace_id": {
+          "type": "string"
+        },
+        "workflow": {
           "type": "string"
         }
       },
@@ -22553,6 +22722,9 @@
         "api_key": {
           "type": "string"
         },
+        "artifact_family": {
+          "type": "string"
+        },
         "context_compaction_policy": {
           "$ref": "#/$defs/src.contracts.llm.LLMContextCompactionPolicy"
         },
@@ -22574,6 +22746,9 @@
         "model_pricing": {
           "type": "string"
         },
+        "plan_hash": {
+          "type": "string"
+        },
         "prompt_hash": {
           "type": "string"
         },
@@ -22583,6 +22758,9 @@
         "publisher_name": {
           "type": "string"
         },
+        "report_id": {
+          "type": "string"
+        },
         "report_name": {
           "type": "string"
         },
@@ -22590,6 +22768,9 @@
           "type": "string"
         },
         "source_url": {
+          "type": "string"
+        },
+        "stage": {
           "type": "string"
         },
         "timeout_seconds": {
@@ -22603,6 +22784,9 @@
           ]
         },
         "usage_db_path": {
+          "type": "string"
+        },
+        "workflow": {
           "type": "string"
         }
       },
@@ -23257,6 +23441,9 @@
             }
           ]
         },
+        "artifact_family": {
+          "type": "string"
+        },
         "cache_decision": {
           "type": "string"
         },
@@ -23329,6 +23516,9 @@
         "parse_status": {
           "type": "string"
         },
+        "plan_hash": {
+          "type": "string"
+        },
         "prompt_hash": {
           "type": "string"
         },
@@ -23345,6 +23535,9 @@
           "type": "string"
         },
         "publisher_name": {
+          "type": "string"
+        },
+        "report_id": {
           "type": "string"
         },
         "report_name": {
@@ -23380,6 +23573,9 @@
           ]
         },
         "source_url": {
+          "type": "string"
+        },
+        "stage": {
           "type": "string"
         },
         "step_name": {
@@ -23419,6 +23615,9 @@
           ]
         },
         "usage_db_path": {
+          "type": "string"
+        },
+        "workflow": {
           "type": "string"
         }
       },

@@ -69,6 +69,13 @@ The canonical output location is [`docs/CTO_evidence/`](../CTO_evidence/README.m
 
 The collector reports a metric as `available`, `partial`, `empty`, or `unavailable`. `partial` and `unavailable` are explicit retained-data limitations, not zeroes or inferred successes. In particular, the current stores do not prove per-report browser traces, cache hit/miss rates, cost attribution across every side effect, WordPress duplicate/rollback rates, human editorial ratings, or hosted public-page telemetry until those values are retained by their owning boundaries.
 
+Execution-plan telemetry reads the production writer's
+`divergence_json.reconciliation_status` as the canonical result. A populated
+reconciliation object is normal for both matches and divergences. Older rows
+without that status are compared using unordered planned/actual stages, call
+categories, and side effects: only unplanned work diverges; malformed or
+incomplete historical values remain explicitly `unreconciled`.
+
 All files are first created in a temporary staging directory. The collector validates snapshot integrity, exact-head state, log-content result, summary consistency, run IDs, repository SHAs, and every inventoried file hash before publishing. It will not merge into an existing output directory; use `--replace-output` for an explicit replacement. A failing strict run leaves no partial final bundle. Temporary workspaces are removed after success and failure unless `--debug-retain-snapshots` is set; retained debug workspaces are operator diagnostics and are not publishable evidence.
 
 For release evidence, add the passed CTO JSON artifacts through the generic manifest command. The embedded repository SHA is checked against the requested release commit when `--require-head-commit` is used; a failed leakage artifact is therefore a normal unwaived `artifact_failed` release issue.

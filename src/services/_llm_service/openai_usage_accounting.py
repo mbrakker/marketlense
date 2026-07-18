@@ -89,6 +89,7 @@ def record_usage_accounting(
                 or getattr(source, "title", "")
                 or ""
             ),
+            report_id=str(getattr(source, "report_id", "") or ""),
             source_url=str(
                 getattr(source, "source_url", "")
                 or getattr(source, "landing_page_url", "")
@@ -112,11 +113,19 @@ def record_usage_accounting(
             call_ordinal=call_ordinal,
             parse_status=parse_status,
             schema_validation_status=schema_validation_status,
+            workflow=str(getattr(source, "workflow", "") or ""),
+            stage=str(getattr(source, "stage", "") or ""),
+            plan_hash=str(getattr(source, "plan_hash", "") or ""),
+            artifact_family=str(getattr(source, "artifact_family", "") or ""),
             extra={
                 "schema_name": str(getattr(source, "schema_name", "") or ""),
                 "response_cache_dir": str(
                     getattr(source, "response_cache_dir", "") or ""
                 ),
+                "workflow": str(getattr(source, "workflow", "") or ""),
+                "stage": str(getattr(source, "stage", "") or ""),
+                "plan_hash": str(getattr(source, "plan_hash", "") or ""),
+                "artifact_family": str(getattr(source, "artifact_family", "") or ""),
             },
         ),
         ctx,

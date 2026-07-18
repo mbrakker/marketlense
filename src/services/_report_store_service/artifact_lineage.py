@@ -12,6 +12,9 @@ from src.contracts.artifact_lineage import (
     ARTIFACT_LINEAGE_SCHEMA_VERSION,
     ArtifactInvalidationRequest,
     ArtifactInvalidationResponse,
+    ArtifactLineageAuditItem,
+    ArtifactLineageAuditRequest,
+    ArtifactLineageAuditResponse,
     ArtifactLineageBackfillRequest,
     ArtifactLineageBackfillResponse,
     ArtifactLineageRecord,
@@ -60,6 +63,7 @@ def _identity_payload(
     storage_ref: str,
     content_hash: str,
     dependencies: list[str],
+    lineage_status: str,
 ) -> dict[str, object]:
     return {
         "schema_version": ARTIFACT_LINEAGE_SCHEMA_VERSION,
@@ -78,12 +82,32 @@ def _identity_payload(
         "validation_status": request.validation_status.strip(),
         "metadata": request.metadata,
         "compatibility": request.compatibility,
-        "lineage_status": request.lineage_status.strip(),
+        "lineage_status": lineage_status,
     }
 
 
 def _artifact_id(payload: dict[str, object]) -> str:
     return "art_" + hashlib.sha256(_canonical_json(payload).encode("utf-8")).hexdigest()
+
+
+_VALID_LINEAGE_STATUSES = {"complete", "legacy_unverified", "legacy_incomplete"}
+
+
+def _complete_request_missing_fields(
+    request: ArtifactLineageRegistrationRequest,
+) -> list[str]:
+    """Proof fields required before an artifact can be marked reusable."""
+    values = {
+        "report_id": request.report_id,
+        "source_id": request.source_id,
+        "producer": request.producer,
+        "schema_version_used": request.schema_version_used,
+        "processing_version": request.processing_version,
+        "validation_status": request.validation_status,
+    }
+    return sorted(
+        name for name, value in values.items() if not str(value or "").strip()
+    )
 
 
 def _row_to_record(row: sqlite3.Row) -> ArtifactLineageRecord:
@@ -179,6 +203,23 @@ def record_artifact_lineage(
             message="Artifact lineage requires DB path, kind, and storage reference",
             retryable=False,
         )
+    lineage_status = request.lineage_status.strip() or "legacy_unverified"
+    if lineage_status not in _VALID_LINEAGE_STATUSES:
+        raise AppError(
+            code="artifact_lineage_status_invalid",
+            message="Artifact lineage status is unsupported",
+            retryable=False,
+            context={"lineage_status": lineage_status},
+        )
+    if lineage_status == "complete":
+        missing_fields = _complete_request_missing_fields(request)
+        if missing_fields:
+            raise AppError(
+                code="artifact_lineage_complete_proof_missing",
+                message="Reusable artifact lineage is missing mandatory proof fields",
+                retryable=False,
+                context={"missing_field_codes": missing_fields},
+            )
     storage_ref, actual_hash = _sha256_file(request.storage_ref)
     if request.content_hash and request.content_hash.strip().lower() != actual_hash:
         raise AppError(
@@ -190,7 +231,9 @@ def record_artifact_lineage(
     dependencies = sorted(
         {value.strip() for value in request.dependency_artifact_ids if value.strip()}
     )
-    payload = _identity_payload(request, storage_ref, actual_hash, dependencies)
+    payload = _identity_payload(
+        request, storage_ref, actual_hash, dependencies, lineage_status
+    )
     artifact_id = _artifact_id(payload)
     logger.info(
         log_event(
@@ -254,7 +297,7 @@ def record_artifact_lineage(
                 request.validation_status.strip(),
                 _canonical_json(request.metadata),
                 _canonical_json(request.compatibility),
-                request.lineage_status.strip() or "legacy_unverified",
+                lineage_status,
             ),
         )
         conn.execute(
@@ -321,6 +364,13 @@ def check_artifact_reuse(
             schema_version=ARTIFACT_LINEAGE_SCHEMA_VERSION,
             reusable=False,
             reason="not_active",
+            record=record,
+        )
+    if record.lineage_status != "complete":
+        return ArtifactReuseCheckResponse(
+            schema_version=ARTIFACT_LINEAGE_SCHEMA_VERSION,
+            reusable=False,
+            reason="legacy_incomplete",
             record=record,
         )
     if any(
@@ -486,7 +536,15 @@ def backfill_artifact_lineage(
                 workspace_root=workspace_root,
                 stage_name=str(checkpoint.get("stage_name") or "checkpoint_backfill"),
             )
-            file_id = str(checkpoint.get("file_id") or "")
+            file_id = str(checkpoint.get("file_id") or "").strip()
+            source_id = str(
+                checkpoint.get("source_id") or inner.get("source_id") or ""
+            ).strip()
+            checkpoint_processing_version = str(
+                checkpoint.get("processing_version")
+                or inner.get("processing_version")
+                or ""
+            ).strip()
             known: dict[str, str] = {}
             for ref in refs:
                 artifact_name, storage_ref = (
@@ -501,10 +559,9 @@ def backfill_artifact_lineage(
                     skipped += 1
                     continue
                 eligible += 1
+                dependency_names = _checkpoint_dependencies(artifact_name)
                 dependencies = [
-                    known[value]
-                    for value in _checkpoint_dependencies(artifact_name)
-                    if value in known
+                    known[value] for value in dependency_names if value in known
                 ]
                 if request.dry_run:
                     known[artifact_name] = artifact_name
@@ -513,23 +570,56 @@ def backfill_artifact_lineage(
                 prompt_hash, model_name, metadata = _backfill_provenance(
                     inner, artifact_name
                 )
+                producer = str(ref.get("producer_step") or "").strip()
+                schema_version = str(ref.get("schema_version") or "").strip()
+                processing_version = str(
+                    ref.get("processing_version") or checkpoint_processing_version
+                ).strip()
+                validation_status = str(
+                    ref.get("validation_status")
+                    or ("not_applicable" if artifact_name != "validation" else "")
+                ).strip()
+                compatibility = ref.get("compatibility")
+                complete = (
+                    bool(file_id)
+                    and bool(source_id)
+                    and bool(producer)
+                    and bool(schema_version)
+                    and bool(processing_version)
+                    and bool(validation_status)
+                    and len(dependencies) == len(dependency_names)
+                )
+                if not complete:
+                    metadata["backfill_proof_status"] = "legacy_incomplete"
                 response = record_artifact_lineage(
                     ArtifactLineageRegistrationRequest(
                         schema_version=ARTIFACT_LINEAGE_SCHEMA_VERSION,
                         db_path=request.db_path,
                         artifact_kind=artifact_name,
                         report_id=file_id,
-                        source_id="",
+                        source_id=source_id,
                         storage_ref=storage_ref,
-                        producer=str(ref.get("producer_step") or "checkpoint_backfill"),
-                        schema_version_used=str(ref.get("schema_version") or "1.0"),
-                        processing_version="checkpoint-v1",
+                        producer=producer,
+                        schema_version_used=schema_version,
+                        processing_version=processing_version,
                         dependency_artifact_ids=dependencies,
+                        content_hash=(
+                            str(ref.get("content_hash") or "").strip()
+                            if len(str(ref.get("content_hash") or "").strip()) == 64
+                            else ""
+                        ),
                         prompt_hash=prompt_hash,
                         model_name=model_name,
-                        validation_status="not_applicable",
+                        validation_status=validation_status,
                         metadata=metadata,
-                        lineage_status="legacy_unverified",
+                        compatibility=(
+                            dict(compatibility)
+                            if isinstance(compatibility, dict)
+                            else {}
+                        ),
+                        lineage_status=(
+                            "complete" if complete else "legacy_incomplete"
+                        ),
                     ),
                     ctx,
                 )
@@ -547,6 +637,97 @@ def backfill_artifact_lineage(
         dry_run=request.dry_run,
         incomplete_artifacts=incomplete,
     )
+
+
+def audit_artifact_lineage(
+    request: ArtifactLineageAuditRequest, ctx: RunContext
+) -> ArtifactLineageAuditResponse:
+    """Read immutable lineage proof and classify incomplete records fail-closed."""
+    clauses = ["1=1"]
+    params: list[object] = []
+    if request.report_id.strip():
+        clauses.append("r.report_id=?")
+        params.append(request.report_id.strip())
+    with _metadata_conn(request.db_path.strip(), ctx) as conn:
+        rows = conn.execute(
+            f"""SELECT r.*, s.state, s.invalidation_reason, s.superseded_by
+            FROM artifact_lineage_records r
+            JOIN artifact_lineage_states s ON s.artifact_id=r.artifact_id
+            WHERE {" AND ".join(clauses)}
+            ORDER BY r.report_id,r.artifact_kind,r.producer,r.processing_version,r.artifact_id""",
+            tuple(params),
+        ).fetchall()
+    items: list[ArtifactLineageAuditItem] = []
+    status_counts: dict[str, int] = {}
+    for row in rows:
+        record = _row_to_record(row)
+        missing = [
+            field
+            for field, value in (
+                ("report_id", record.report_id),
+                ("source_id", record.source_id),
+                ("producer", record.producer),
+                ("schema_version_used", record.schema_version_used),
+                ("processing_version", record.processing_version),
+                ("validation_status", record.validation_status),
+            )
+            if not str(value or "").strip()
+        ]
+        if record.lineage_status != "complete":
+            missing.append("lineage_not_complete")
+        try:
+            _, observed_hash = _sha256_file(record.storage_ref)
+            hash_state = (
+                "verified" if observed_hash == record.content_hash else "hash_mismatch"
+            )
+        except AppError:
+            hash_state = "missing_storage"
+        if record.state == "superseded":
+            classification = "superseded"
+        elif record.state != "active":
+            classification = record.state or "invalidated"
+        elif hash_state == "missing_storage":
+            classification = "missing_storage"
+        elif hash_state == "hash_mismatch":
+            classification = "hash_mismatch"
+        elif missing:
+            classification = "legacy_non_reusable"
+        else:
+            classification = "complete"
+        status_counts[classification] = status_counts.get(classification, 0) + 1
+        items.append(
+            ArtifactLineageAuditItem(
+                schema_version=ARTIFACT_LINEAGE_SCHEMA_VERSION,
+                artifact_id=record.artifact_id,
+                report_id=record.report_id,
+                artifact_family=record.artifact_kind,
+                producer=record.producer,
+                processing_version=record.processing_version,
+                state=record.state,
+                lineage_status=record.lineage_status,
+                missing_field_codes=tuple(sorted(set(missing))),
+                hash_state=hash_state,
+                created_at_utc=str(row["created_at_utc"] or ""),
+            )
+        )
+    response = ArtifactLineageAuditResponse(
+        schema_version=ARTIFACT_LINEAGE_SCHEMA_VERSION,
+        items=items,
+        status_counts=dict(sorted(status_counts.items())),
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="artifact_lineage_audit_complete",
+            module=logger.name,
+            fields={
+                "artifact_count": len(items),
+                "status_counts": response.status_counts,
+            },
+        )
+    )
+    return response
 
 
 def _checkpoint_artifact_refs(

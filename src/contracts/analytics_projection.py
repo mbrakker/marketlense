@@ -30,6 +30,7 @@ QueueClassification = Literal[
     "invalid_payload",
     "orphaned_report",
     "blocked_by_budget",
+    "leased",
     "unknown_requires_review",
 ]
 
@@ -681,6 +682,46 @@ class ClaimEmbeddingQueueHealthResponse(SemanticIdContract):
     )
     oldest_pending_age_seconds: int = field(
         metadata={"doc": "Age of oldest pending or retryable row."}
+    )
+    age_percentiles_seconds: Dict[str, int] = field(
+        default_factory=dict,
+        metadata={"doc": "p50, p95, and p99 age for eligible queue work."},
+    )
+    observed_throughput_per_hour: float = field(
+        default=0.0,
+        metadata={
+            "doc": "Completed embeddings per hour over the retained 24-hour window."
+        },
+    )
+    completion_rate: float | None = field(
+        default=None,
+        metadata={"doc": "Embedded share of rows with an actionable completion state."},
+    )
+    estimated_drain_seconds: float | None = field(
+        default=None,
+        metadata={
+            "doc": "Backlog drain estimate from observed throughput, if available."
+        },
+    )
+    retry_reason_counts: Dict[str, int] = field(
+        default_factory=dict,
+        metadata={"doc": "Retryable queue reason counts."},
+    )
+    terminal_reason_counts: Dict[str, int] = field(
+        default_factory=dict,
+        metadata={"doc": "Terminal queue reason counts."},
+    )
+    content_hash_skip_count: int = field(
+        default=0,
+        metadata={
+            "doc": "Rows with a current matching embedding; zero provider calls needed."
+        },
+    )
+    model_version_mismatch_count: int = field(
+        default=0,
+        metadata={
+            "doc": "Rows held because their stored embedding version is obsolete."
+        },
     )
 
 

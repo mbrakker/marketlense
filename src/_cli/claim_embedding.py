@@ -76,6 +76,14 @@ def _health_payload(health) -> dict[str, object]:
         "status_counts": health.status_counts,
         "total_pending": health.total_pending,
         "oldest_pending_age_seconds": health.oldest_pending_age_seconds,
+        "age_percentiles_seconds": health.age_percentiles_seconds,
+        "observed_throughput_per_hour": health.observed_throughput_per_hour,
+        "completion_rate": health.completion_rate,
+        "estimated_drain_seconds": health.estimated_drain_seconds,
+        "retry_reason_counts": health.retry_reason_counts,
+        "terminal_reason_counts": health.terminal_reason_counts,
+        "content_hash_skip_count": health.content_hash_skip_count,
+        "model_version_mismatch_count": health.model_version_mismatch_count,
         "items": items,
     }
 
@@ -141,6 +149,8 @@ def embedding_queue_health(
             "rows": len(health.items),
             "total pending": health.total_pending,
             "oldest pending age seconds": health.oldest_pending_age_seconds,
+            "estimated drain seconds": health.estimated_drain_seconds,
+            "throughput per hour": health.observed_throughput_per_hour,
             "classifications": health.classification_counts,
             "artifact": output,
         },
