@@ -30,6 +30,19 @@ class WorkflowWorkerRunResult:
     terminal_status: str = "idle"
 
 
+def _is_budget_deferral_error(error: AppError) -> bool:
+    """Identify recoverable resource budgets, not input-size policy failures."""
+
+    code = error.code
+    if code == "cross_report_prompt_budget_exceeded":
+        return False
+    return (
+        code.startswith("budget_")
+        or code.startswith("workflow_budget_")
+        or "_budget_" in code
+    )
+
+
 def run_workflow_worker_once(
     *,
     state_db: str,
@@ -87,17 +100,14 @@ def run_workflow_worker_once(
             exc,
             work_ctx,
             now_utc=now_utc,
-            budget_deferred=(
-                exc.code.startswith("budget_")
-                or exc.code.startswith("workflow_budget_")
-                or "_budget_" in exc.code
-            ),
+            budget_deferred=_is_budget_deferral_error(exc),
             blocked=exc.code
             in {
                 "stale_approval",
                 "source_identity_conflict",
                 "captcha_blocked",
                 "credentials_required",
+                "cross_report_publish_live_disabled",
             },
         )
         return WorkflowWorkerRunResult(

@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 import sys
 from datetime import UTC, datetime
 from typing import Callable, cast
 from uuid import uuid4
 
+from src.contracts.config import ConfigLoadRequest
 from src.contracts.run_context import RunContext
 from src.contracts.semantic_ids import RunId
 from src.contracts.ui_run_control import (
@@ -38,6 +41,14 @@ from src.contracts.ui_run_control import (
     UiRunWorkerRequest,
     UiRunWorkerRequestWriteRequest,
 )
+from src.contracts.workflow_queue import (
+    BriefingOpportunityPayload,
+    PublisherDiscoveryPayload,
+    ReportAcquisitionPayload,
+    SignalCandidatePayload,
+    WorkflowJobSubmission,
+)
+from src.services.config_service import load_settings
 from src.services.process_service import (
     launch_process,
     poll_process,
@@ -53,6 +64,11 @@ from src.services.run_registry_service import (
     write_ui_run_record,
 )
 from src.services.ui_run_replay_service import write_ui_run_worker_request
+from src.services.workflow_queue_service import (
+    cancel_workflow_job,
+    enqueue_workflow_job,
+    get_workflow_job,
+)
 from src.utils.clock import utc_now_iso as _utc_now
 from src.utils.errors import AppError
 from src.utils.logging import log_event
@@ -62,6 +78,332 @@ from src.utils.ui_run_paths import ui_run_dir
 logger = logging.getLogger("market_lense.ui_run_control_orchestrator")
 
 FINAL_UI_RUN_STATUSES = {"succeeded", "failed", "canceled"}
+_QUEUE_SUBMISSION_FLAG = "workflow_queue_submit"
+_QUEUE_JOB_ID_KEY = "workflow_queue_job_id"
+_QUEUE_STATE_DB_KEY = "workflow_queue_state_db"
+
+
+def _ui_payload_hash(*parts: object) -> str:
+    """Return a stable non-sensitive identity for a typed UI queue request."""
+
+    encoded = json.dumps(
+        parts,
+        ensure_ascii=True,
+        sort_keys=True,
+        separators=(",", ":"),
+        default=str,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _ui_string_list(payload: dict[str, object], field_name: str) -> list[str]:
+    raw = payload.get(field_name, [])
+    if not isinstance(raw, list) or not all(isinstance(item, str) for item in raw):
+        raise AppError(
+            code="ui_run_payload_list_invalid",
+            message="Queue-backed UI list fields must contain strings",
+            retryable=False,
+            context={"field": field_name},
+        )
+    return [item.strip() for item in raw if item.strip()]
+
+
+def _ui_positive_int(payload: dict[str, object], field_name: str, default: int) -> int:
+    raw = payload.get(field_name, default)
+    if isinstance(raw, bool) or not isinstance(raw, (int, str)):
+        raise AppError(
+            code="ui_run_payload_number_invalid",
+            message="Queue-backed UI numeric fields must be positive integers",
+            retryable=False,
+            context={"field": field_name},
+        )
+    try:
+        value = int(raw or default)
+    except (TypeError, ValueError) as exc:
+        raise AppError(
+            code="ui_run_payload_number_invalid",
+            message="Queue-backed UI numeric fields must be positive integers",
+            cause=exc,
+            retryable=False,
+            context={"field": field_name},
+        ) from exc
+    if value < 1:
+        raise AppError(
+            code="ui_run_payload_number_invalid",
+            message="Queue-backed UI numeric fields must be positive integers",
+            retryable=False,
+            context={"field": field_name},
+        )
+    return value
+
+
+def _ui_boolean(payload: dict[str, object], field_name: str, default: bool) -> bool:
+    raw = payload.get(field_name, default)
+    if not isinstance(raw, bool):
+        raise AppError(
+            code="ui_run_payload_boolean_invalid",
+            message="Queue-backed UI boolean fields must be booleans",
+            retryable=False,
+            context={"field": field_name},
+        )
+    return raw
+
+
+def _ui_queue_submission(
+    *,
+    run_id: RunId,
+    run_type: str,
+    payload: dict[str, object],
+) -> WorkflowJobSubmission | None:
+    """Map supported UI requests onto the fixed typed workflow graph."""
+
+    normalized_type = str(run_type or "").strip().lower()
+    if normalized_type == "publisher_discovery":
+        insights_url = str(payload.get("insights_url") or "").strip()
+        if not insights_url:
+            raise AppError(
+                code="ui_run_payload_insights_url_missing",
+                message="Publisher discovery requires an insights URL",
+                retryable=False,
+            )
+        publisher_id = "ui-publisher:" + insights_url
+        return WorkflowJobSubmission(
+            schema_version="1.0",
+            queue_name="publisher_discovery",
+            job_type="publisher_discovery.v1",
+            payload=PublisherDiscoveryPayload(
+                publisher_id=publisher_id,
+                insights_url=insights_url,
+                discovery_policy_version="ui-v1",
+                input_reference=insights_url,
+                input_content_hash=_ui_payload_hash("publisher", insights_url, "ui-v1"),
+                processing_version="ui-v1",
+            ),
+            idempotency_key=f"{publisher_id}:ui-v1",
+            deduplication_scope="ui-publisher-discovery",
+            root_workflow_id=str(run_id),
+            correlation_id=str(run_id),
+            publisher_id=publisher_id,
+            budget_profile="publisher_inventory",
+        )
+    if normalized_type == "report_download":
+        source_url = str(payload.get("url") or "").strip()
+        if not source_url:
+            raise AppError(
+                code="ui_run_payload_url_missing",
+                message="Report download requires a source URL",
+                retryable=False,
+            )
+        source_identity_id = "ui-source:" + source_url
+        return WorkflowJobSubmission(
+            schema_version="1.0",
+            queue_name="report_acquisition",
+            job_type="report_acquisition.v1",
+            payload=ReportAcquisitionPayload(
+                source_identity_id=source_identity_id,
+                source_url=source_url,
+                acquisition_policy_version="ui-v1",
+                input_reference=source_url,
+                input_content_hash=_ui_payload_hash("source", source_url, "ui-v1"),
+                processing_version="ui-v1",
+                attributes={
+                    "delivery_email": str(payload.get("delivery_email") or ""),
+                    "publisher_insights_url": str(
+                        payload.get("publisher_insights_url") or ""
+                    ),
+                    "publisher_google_folder": str(
+                        payload.get("publisher_google_folder") or ""
+                    ),
+                },
+            ),
+            idempotency_key=f"{source_identity_id}:ui-v1",
+            deduplication_scope="ui-report-acquisition",
+            root_workflow_id=str(run_id),
+            correlation_id=str(run_id),
+            source_identity_id=source_identity_id,
+            budget_profile="browser_acquisition",
+        )
+    if normalized_type in {"signal_candidate_extraction", "signal_post"}:
+        topic = str(payload.get("topic") or "").strip()
+        if not topic:
+            raise AppError(
+                code="ui_run_payload_topic_missing",
+                message="Signal queue submission requires a topic",
+                retryable=False,
+            )
+        request_hash = _ui_payload_hash(
+            "signal",
+            normalized_type,
+            topic,
+            _ui_string_list(payload, "category_filters"),
+            _ui_string_list(payload, "tag_filters"),
+            _ui_string_list(payload, "publisher_filters"),
+            payload.get("date_range_start") or "",
+            payload.get("date_range_end") or "",
+            _ui_positive_int(payload, "max_source_reports", 3),
+            _ui_positive_int(payload, "max_evidence_items", 6),
+            _ui_positive_int(payload, "max_signals", 8),
+        )
+        generate_signals = normalized_type == "signal_post"
+        return WorkflowJobSubmission(
+            schema_version="1.0",
+            queue_name="signal_candidate",
+            job_type="signal_candidate.v1",
+            payload=SignalCandidatePayload(
+                projection_reference=f"ui-run:{run_id}",
+                signal_selection_policy_version="ui-signal-v1",
+                input_reference=f"ui-run:{run_id}",
+                input_content_hash=request_hash,
+                processing_version="ui-signal-v1",
+                attributes={
+                    "category_filters": _ui_string_list(payload, "category_filters"),
+                    "date_range_end": str(payload.get("date_range_end") or ""),
+                    "date_range_start": str(payload.get("date_range_start") or ""),
+                    "generate_signals": generate_signals,
+                    "max_evidence_items": _ui_positive_int(
+                        payload, "max_evidence_items", 6
+                    ),
+                    "max_signals": _ui_positive_int(payload, "max_signals", 8),
+                    "max_source_reports": _ui_positive_int(
+                        payload, "max_source_reports", 3
+                    ),
+                    "minimum_evidence_items": _ui_positive_int(
+                        payload, "minimum_evidence_items", 2
+                    ),
+                    "minimum_source_reports": _ui_positive_int(
+                        payload, "minimum_source_reports", 2
+                    ),
+                    "publisher_filters": _ui_string_list(payload, "publisher_filters"),
+                    "tag_filters": _ui_string_list(payload, "tag_filters"),
+                    "topic": topic,
+                },
+            ),
+            idempotency_key=request_hash,
+            deduplication_scope=f"ui-{normalized_type}",
+            root_workflow_id=str(run_id),
+            correlation_id=str(run_id),
+            entity_type="signal",
+            entity_id=topic,
+            budget_profile="signal_candidate",
+        )
+    if normalized_type == "cross_report_analysis":
+        auto_theme = _ui_boolean(payload, "auto_theme", True)
+        topic = str(payload.get("topic") or "").strip()
+        if not topic and not auto_theme:
+            raise AppError(
+                code="ui_run_payload_topic_missing",
+                message=(
+                    "Briefing queue submission requires a topic when auto-theme is off"
+                ),
+                retryable=False,
+            )
+        request_hash = _ui_payload_hash(
+            "briefing",
+            topic or "automatic-theme",
+            auto_theme,
+            _ui_string_list(payload, "category_filters"),
+            _ui_string_list(payload, "tag_filters"),
+            _ui_string_list(payload, "publisher_filters"),
+            payload.get("date_range_start") or "",
+            payload.get("date_range_end") or "",
+            _ui_positive_int(payload, "max_source_reports", 6),
+            _ui_positive_int(payload, "max_evidence_items", 48),
+            _ui_positive_int(payload, "max_prompt_chars", 60_000),
+        )
+        return WorkflowJobSubmission(
+            schema_version="1.0",
+            queue_name="briefing_opportunity",
+            job_type="briefing_opportunity.v1",
+            payload=BriefingOpportunityPayload(
+                projection_event_id=f"ui-run:{run_id}",
+                topic=topic or "automatic-theme",
+                rolling_window=f"ui:{request_hash[:24]}",
+                briefing_policy_version="ui-briefing-v1",
+                input_reference=f"ui-run:{run_id}",
+                input_content_hash=request_hash,
+                processing_version="ui-briefing-v1",
+                prompt_policy_version="ui-briefing-v1",
+                attributes={
+                    "auto_theme": auto_theme,
+                    "category_filters": _ui_string_list(payload, "category_filters"),
+                    "date_range_end": str(payload.get("date_range_end") or ""),
+                    "date_range_start": str(payload.get("date_range_start") or ""),
+                    "diagnostic": _ui_boolean(payload, "diagnostic", False),
+                    "max_evidence_items": _ui_positive_int(
+                        payload, "max_evidence_items", 48
+                    ),
+                    "max_prompt_chars": _ui_positive_int(
+                        payload, "max_prompt_chars", 60_000
+                    ),
+                    "max_source_reports": _ui_positive_int(
+                        payload, "max_source_reports", 6
+                    ),
+                    "max_signals": 8,
+                    "minimum_distinct_reports": 2,
+                    "minimum_publisher_diversity": 2,
+                    "override_publishability": _ui_boolean(
+                        payload, "override_publishability", False
+                    ),
+                    "publisher_filters": _ui_string_list(payload, "publisher_filters"),
+                    "publisher_ids": [],
+                    "resolve_projected_sources": True,
+                    "tag_filters": _ui_string_list(payload, "tag_filters"),
+                },
+            ),
+            idempotency_key=request_hash,
+            deduplication_scope="ui-briefing-request",
+            root_workflow_id=str(run_id),
+            correlation_id=str(run_id),
+            entity_type="briefing",
+            entity_id=topic or "automatic-theme",
+            budget_profile="briefing_opportunity",
+        )
+    return None
+
+
+def _queue_record_from_job(record: UiRunRecord, job) -> UiRunRecord:
+    """Render durable queue state through the established UI-run compatibility view."""
+
+    status_map = {
+        "pending": "queued",
+        "leased": "running",
+        "running": "running",
+        "retry_wait": "queued",
+        "budget_deferred": "queued",
+        "blocked": "failed",
+        "dead_letter": "failed",
+        "cancelled": "canceled",
+        "succeeded": "succeeded",
+    }
+    ui_status = status_map.get(job.status, "failed")
+    terminal = ui_status in FINAL_UI_RUN_STATUSES
+    return UiRunRecord(
+        schema_version="1.0",
+        run_id=record.run_id,
+        run_type=record.run_type,
+        display_name=record.display_name,
+        status=ui_status,
+        request_payload=record.request_payload,
+        command=[],
+        created_at_utc=record.created_at_utc,
+        updated_at_utc=_utc_now(),
+        started_at_utc=job.started_at_utc or record.started_at_utc,
+        finished_at_utc=job.completed_at_utc if terminal else "",
+        artifact_paths=[
+            value for value in (job.input_reference, job.output_reference) if value
+        ],
+        result_summary={
+            "workflow_job_id": job.job_id,
+            "queue_name": job.queue_name,
+            "queue_status": job.status,
+            "attempt_count": job.attempt_count,
+            "output_verified": bool(job.output_reference),
+        },
+        error_code=job.error_code,
+        error_message=job.error_message_summary,
+        error_retryable=job.error_retryable,
+        error_severity="error" if job.error_code else "",
+    )
 
 
 def _summary(record: UiRunRecord) -> UiRunSummary:
@@ -107,6 +449,57 @@ def launch_ui_run(request: UiRunLaunchRequest, ctx: RunContext) -> UiRunLaunchRe
             },
         )
     )
+    if bool(request.request_payload.get(_QUEUE_SUBMISSION_FLAG, False)):
+        submission = _ui_queue_submission(
+            run_id=run_id,
+            run_type=request.run_type,
+            payload=request.request_payload,
+        )
+        if submission is not None:
+            app = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+            job, _ = enqueue_workflow_job(app.state_db, submission, ctx)
+            queue_payload = dict(request.request_payload)
+            queue_payload[_QUEUE_JOB_ID_KEY] = job.job_id
+            queue_payload[_QUEUE_STATE_DB_KEY] = app.state_db
+            record = UiRunRecord(
+                schema_version="1.0",
+                run_id=run_id,
+                run_type=request.run_type,
+                display_name=request.display_name,
+                status="queued",
+                request_payload=queue_payload,
+                command=[],
+                created_at_utc=created_at,
+                updated_at_utc=created_at,
+                result_summary={
+                    "workflow_job_id": job.job_id,
+                    "queue_name": job.queue_name,
+                    "queue_status": job.status,
+                },
+            )
+            write_ui_run_record(
+                UiRunRecordWriteRequest(
+                    schema_version="1.0",
+                    registry_path=request.registry_path,
+                    record=record,
+                ),
+                ctx,
+            )
+            logger.info(
+                log_event(
+                    ctx,
+                    role="orchestrator",
+                    event="ui_run_queue_submission_complete",
+                    module=logger.name,
+                    fields={
+                        "run_id": run_id,
+                        "run_type": request.run_type,
+                        "workflow_job_id": job.job_id,
+                        "queue_name": job.queue_name,
+                    },
+                )
+            )
+            return UiRunLaunchResponse(schema_version="1.0", record=record)
     worker_write = write_ui_run_worker_request(
         UiRunWorkerRequestWriteRequest(
             schema_version="1.0",
@@ -242,6 +635,28 @@ def poll_ui_run(request: UiRunPollRequest, ctx: RunContext) -> UiRunPollResponse
             context={"run_id": request.run_id},
         )
     record = stored
+    workflow_job_id = str(record.request_payload.get(_QUEUE_JOB_ID_KEY) or "").strip()
+    workflow_state_db = str(
+        record.request_payload.get(_QUEUE_STATE_DB_KEY) or ""
+    ).strip()
+    if workflow_job_id and workflow_state_db:
+        job = get_workflow_job(workflow_state_db, workflow_job_id, ctx)
+        if job is None:
+            raise AppError(
+                code="ui_run_workflow_job_missing",
+                message="UI run references a missing durable workflow job",
+                retryable=False,
+                context={"run_id": record.run_id, "workflow_job_id": workflow_job_id},
+            )
+        record = _queue_record_from_job(record, job)
+        write_ui_run_record(
+            UiRunRecordWriteRequest(
+                schema_version="1.0",
+                registry_path=request.registry_path,
+                record=record,
+            ),
+            ctx,
+        )
     if record.status not in FINAL_UI_RUN_STATUSES and record.pid is not None:
         process = poll_process(
             ProcessPollRequest(schema_version="1.0", pid=record.pid),
@@ -350,6 +765,31 @@ def cancel_ui_run(request: UiRunCancelRequest, ctx: RunContext) -> UiRunCancelRe
             context={"run_id": request.run_id},
         )
     canceled = False
+    workflow_job_id = str(stored.request_payload.get(_QUEUE_JOB_ID_KEY) or "").strip()
+    workflow_state_db = str(
+        stored.request_payload.get(_QUEUE_STATE_DB_KEY) or ""
+    ).strip()
+    if workflow_job_id and workflow_state_db:
+        job = cancel_workflow_job(
+            workflow_state_db,
+            workflow_job_id,
+            str(ctx.run_id),
+            ctx,
+        )
+        record = _queue_record_from_job(stored, job)
+        write_ui_run_record(
+            UiRunRecordWriteRequest(
+                schema_version="1.0",
+                registry_path=request.registry_path,
+                record=record,
+            ),
+            ctx,
+        )
+        return UiRunCancelResponse(
+            schema_version="1.0",
+            record=record,
+            canceled=job.status == "cancelled",
+        )
     if stored.status not in FINAL_UI_RUN_STATUSES and stored.pid is not None:
         terminate_process(
             ProcessTerminateRequest(schema_version="1.0", pid=stored.pid),

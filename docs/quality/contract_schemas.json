@@ -4288,6 +4288,15 @@
         "analysis_request": {
           "$ref": "#/$defs/src.contracts._cross_report_analysis.requests.CrossReportAnalysisRequest"
         },
+        "frozen_source_hashes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "generate_cover_assets": {
+          "type": "boolean"
+        },
         "idempotency_db_path": {
           "type": "string"
         },
@@ -16100,6 +16109,70 @@
         "usage_db_path",
         "now_utc"
       ],
+      "type": "object"
+    },
+    "src.contracts.deferred_work.DeferredWorkQueueMigrationRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "outcome": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "work_key": {
+          "type": "string"
+        },
+        "workflow_job_id": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.deferred_work.DeferredWorkQueueMigrationRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "state_db": {
+          "type": "string"
+        },
+        "usage_db_path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "usage_db_path",
+        "state_db"
+      ],
+      "type": "object"
+    },
+    "src.contracts.deferred_work.DeferredWorkQueueMigrationResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "inspected_count": {
+          "type": "integer"
+        },
+        "records": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.deferred_work.DeferredWorkQueueMigrationRecord"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [],
       "type": "object"
     },
     "src.contracts.deferred_work.DeferredWorkReaperRequest": {
@@ -38548,6 +38621,30 @@
       ],
       "type": "object"
     },
+    "src.contracts.wordpress_entities.SignalPostGenerationResult": {
+      "additionalProperties": false,
+      "properties": {
+        "projected_data_request": {
+          "$ref": "#/$defs/src.contracts._cross_report_analysis.requests.CrossReportProjectedDataReadRequest"
+        },
+        "projection": {
+          "$ref": "#/$defs/src.contracts.wordpress_entities.SignalPublishProjection"
+        },
+        "request_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "request_id",
+        "projected_data_request",
+        "projection"
+      ],
+      "type": "object"
+    },
     "src.contracts.wordpress_entities.SignalPostWorkflowRequest": {
       "additionalProperties": false,
       "properties": {
@@ -40948,6 +41045,2661 @@
         "retry_policy_ref",
         "side_effects"
       ],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.AnalyticsProjectionPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        "input_content_hash": {
+          "type": "string"
+        },
+        "input_reference": {
+          "type": "string"
+        },
+        "processing_version": {
+          "type": "string"
+        },
+        "prompt_policy_version": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "required_artifact_references": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.workflow_queue.WorkflowArtifactReference"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "validated_artifact_reference": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.AnalyticsProjectionResult": {
+      "additionalProperties": false,
+      "properties": {
+        "execution_plan_hash": {
+          "type": "string"
+        },
+        "output_content_hash": {
+          "type": "string"
+        },
+        "output_reference": {
+          "type": "string"
+        },
+        "output_verified": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "summary": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.BriefingGenerationPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        "frozen_source_manifest": {
+          "type": "string"
+        },
+        "generation_configuration_hash": {
+          "type": "string"
+        },
+        "input_content_hash": {
+          "type": "string"
+        },
+        "input_reference": {
+          "type": "string"
+        },
+        "model_routing_policy_version": {
+          "type": "string"
+        },
+        "opportunity_id": {
+          "type": "string"
+        },
+        "processing_version": {
+          "type": "string"
+        },
+        "prompt_policy_version": {
+          "type": "string"
+        },
+        "required_artifact_references": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.workflow_queue.WorkflowArtifactReference"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "selected_topic": {
+          "type": "string"
+        },
+        "sorted_source_hashes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.BriefingGenerationResult": {
+      "additionalProperties": false,
+      "properties": {
+        "execution_plan_hash": {
+          "type": "string"
+        },
+        "output_content_hash": {
+          "type": "string"
+        },
+        "output_reference": {
+          "type": "string"
+        },
+        "output_verified": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "summary": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.BriefingOpportunity": {
+      "additionalProperties": false,
+      "properties": {
+        "briefing_policy_version": {
+          "type": "string"
+        },
+        "created_at_utc": {
+          "type": "string"
+        },
+        "frozen_source_hashes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "frozen_source_manifest": {
+          "type": "string"
+        },
+        "generation_job_id": {
+          "type": "string"
+        },
+        "geography": {
+          "type": "string"
+        },
+        "last_generated_at_utc": {
+          "type": "string"
+        },
+        "opportunity_id": {
+          "type": "string"
+        },
+        "opportunity_key": {
+          "type": "string"
+        },
+        "publisher_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "rolling_window": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_hashes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "status": {
+          "type": "string"
+        },
+        "topic": {
+          "type": "string"
+        },
+        "updated_at_utc": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "opportunity_id",
+        "opportunity_key",
+        "topic",
+        "geography",
+        "rolling_window",
+        "briefing_policy_version",
+        "source_hashes",
+        "publisher_ids",
+        "frozen_source_manifest",
+        "frozen_source_hashes",
+        "status",
+        "generation_job_id",
+        "last_generated_at_utc",
+        "created_at_utc",
+        "updated_at_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.BriefingOpportunityPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        "briefing_policy_version": {
+          "type": "string"
+        },
+        "geography": {
+          "type": "string"
+        },
+        "input_content_hash": {
+          "type": "string"
+        },
+        "input_reference": {
+          "type": "string"
+        },
+        "processing_version": {
+          "type": "string"
+        },
+        "projection_event_id": {
+          "type": "string"
+        },
+        "prompt_policy_version": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "required_artifact_references": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.workflow_queue.WorkflowArtifactReference"
+          },
+          "type": "array"
+        },
+        "rolling_window": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_hashes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "topic": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.BriefingOpportunityResult": {
+      "additionalProperties": false,
+      "properties": {
+        "execution_plan_hash": {
+          "type": "string"
+        },
+        "output_content_hash": {
+          "type": "string"
+        },
+        "output_reference": {
+          "type": "string"
+        },
+        "output_verified": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "summary": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.ClaimEmbeddingPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        "claim_id": {
+          "type": "string"
+        },
+        "embedding_row_id": {
+          "type": "string"
+        },
+        "input_content_hash": {
+          "type": "string"
+        },
+        "input_reference": {
+          "type": "string"
+        },
+        "model_version": {
+          "type": "string"
+        },
+        "processing_version": {
+          "type": "string"
+        },
+        "prompt_policy_version": {
+          "type": "string"
+        },
+        "required_artifact_references": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.workflow_queue.WorkflowArtifactReference"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.ClaimEmbeddingResult": {
+      "additionalProperties": false,
+      "properties": {
+        "execution_plan_hash": {
+          "type": "string"
+        },
+        "output_content_hash": {
+          "type": "string"
+        },
+        "output_reference": {
+          "type": "string"
+        },
+        "output_verified": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "summary": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.CoverGenerationPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        "entity_package_reference": {
+          "type": "string"
+        },
+        "entity_type": {
+          "type": "string"
+        },
+        "input_content_hash": {
+          "type": "string"
+        },
+        "input_reference": {
+          "type": "string"
+        },
+        "processing_version": {
+          "type": "string"
+        },
+        "prompt_policy_version": {
+          "type": "string"
+        },
+        "required_artifact_references": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.workflow_queue.WorkflowArtifactReference"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "template_version": {
+          "type": "string"
+        },
+        "visual_semantics": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.CoverGenerationResult": {
+      "additionalProperties": false,
+      "properties": {
+        "execution_plan_hash": {
+          "type": "string"
+        },
+        "output_content_hash": {
+          "type": "string"
+        },
+        "output_reference": {
+          "type": "string"
+        },
+        "output_verified": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "summary": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.MailboxDeliveryPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        "deadline_at_utc": {
+          "type": "string"
+        },
+        "delivery_request_id": {
+          "type": "string"
+        },
+        "input_content_hash": {
+          "type": "string"
+        },
+        "input_reference": {
+          "type": "string"
+        },
+        "processing_version": {
+          "type": "string"
+        },
+        "prompt_policy_version": {
+          "type": "string"
+        },
+        "publisher_id": {
+          "type": "string"
+        },
+        "report_title": {
+          "type": "string"
+        },
+        "request_watermark": {
+          "type": "string"
+        },
+        "required_artifact_references": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.workflow_queue.WorkflowArtifactReference"
+          },
+          "type": "array"
+        },
+        "retry_policy_version": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_url": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.MailboxDeliveryResult": {
+      "additionalProperties": false,
+      "properties": {
+        "execution_plan_hash": {
+          "type": "string"
+        },
+        "output_content_hash": {
+          "type": "string"
+        },
+        "output_reference": {
+          "type": "string"
+        },
+        "output_verified": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "summary": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.MaintenancePayload": {
+      "additionalProperties": false,
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        "input_content_hash": {
+          "type": "string"
+        },
+        "input_reference": {
+          "type": "string"
+        },
+        "maintenance_policy_version": {
+          "type": "string"
+        },
+        "processing_version": {
+          "type": "string"
+        },
+        "prompt_policy_version": {
+          "type": "string"
+        },
+        "required_artifact_references": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.workflow_queue.WorkflowArtifactReference"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "subject_id": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.PublicationApprovalRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "actor_id": {
+          "type": "string"
+        },
+        "approval_id": {
+          "type": "string"
+        },
+        "created_at_utc": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        },
+        "package_checksum": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "approval_id",
+        "package_checksum",
+        "actor_id",
+        "note",
+        "action",
+        "created_at_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.PublicationReadinessPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        "entity_package_reference": {
+          "type": "string"
+        },
+        "entity_type": {
+          "type": "string"
+        },
+        "input_content_hash": {
+          "type": "string"
+        },
+        "input_reference": {
+          "type": "string"
+        },
+        "lineage_reference": {
+          "type": "string"
+        },
+        "package_checksum": {
+          "type": "string"
+        },
+        "processing_version": {
+          "type": "string"
+        },
+        "prompt_policy_version": {
+          "type": "string"
+        },
+        "required_artifact_references": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.workflow_queue.WorkflowArtifactReference"
+          },
+          "type": "array"
+        },
+        "required_asset_status": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "validation_reference": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.PublicationReadinessRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "created_at_utc": {
+          "type": "string"
+        },
+        "entity_type": {
+          "type": "string"
+        },
+        "lineage_reference": {
+          "type": "string"
+        },
+        "package_checksum": {
+          "type": "string"
+        },
+        "package_reference": {
+          "type": "string"
+        },
+        "readiness_status": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "required_asset_status": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "updated_at_utc": {
+          "type": "string"
+        },
+        "validation_reference": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "package_checksum",
+        "entity_type",
+        "package_reference",
+        "validation_reference",
+        "lineage_reference",
+        "required_asset_status",
+        "readiness_status",
+        "reason",
+        "created_at_utc",
+        "updated_at_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.PublicationReadinessResult": {
+      "additionalProperties": false,
+      "properties": {
+        "execution_plan_hash": {
+          "type": "string"
+        },
+        "output_content_hash": {
+          "type": "string"
+        },
+        "output_reference": {
+          "type": "string"
+        },
+        "output_verified": {
+          "type": "boolean"
+        },
+        "readiness_state": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "summary": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.PublisherDiscoveryPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        "discovery_policy_version": {
+          "type": "string"
+        },
+        "input_content_hash": {
+          "type": "string"
+        },
+        "input_reference": {
+          "type": "string"
+        },
+        "insights_url": {
+          "type": "string"
+        },
+        "inventory_window": {
+          "type": "string"
+        },
+        "prior_snapshot_reference": {
+          "type": "string"
+        },
+        "processing_version": {
+          "type": "string"
+        },
+        "prompt_policy_version": {
+          "type": "string"
+        },
+        "publisher_id": {
+          "type": "string"
+        },
+        "required_artifact_references": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.workflow_queue.WorkflowArtifactReference"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.PublisherDiscoveryResult": {
+      "additionalProperties": false,
+      "properties": {
+        "execution_plan_hash": {
+          "type": "string"
+        },
+        "output_content_hash": {
+          "type": "string"
+        },
+        "output_reference": {
+          "type": "string"
+        },
+        "output_verified": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "summary": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.ReportAcquisitionPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "acquisition_policy_version": {
+          "type": "string"
+        },
+        "acquisition_route_context": {
+          "type": "string"
+        },
+        "attributes": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        "delivery_email_reference": {
+          "type": "string"
+        },
+        "input_content_hash": {
+          "type": "string"
+        },
+        "input_reference": {
+          "type": "string"
+        },
+        "processing_version": {
+          "type": "string"
+        },
+        "prompt_policy_version": {
+          "type": "string"
+        },
+        "publisher_id": {
+          "type": "string"
+        },
+        "publisher_name": {
+          "type": "string"
+        },
+        "report_title": {
+          "type": "string"
+        },
+        "required_artifact_references": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.workflow_queue.WorkflowArtifactReference"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_identity_id": {
+          "type": "string"
+        },
+        "source_url": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.ReportAcquisitionResult": {
+      "additionalProperties": false,
+      "properties": {
+        "execution_plan_hash": {
+          "type": "string"
+        },
+        "output_content_hash": {
+          "type": "string"
+        },
+        "output_reference": {
+          "type": "string"
+        },
+        "output_verified": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "summary": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.ReportAnalysisPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        "input_content_hash": {
+          "type": "string"
+        },
+        "input_reference": {
+          "type": "string"
+        },
+        "model_routing_policy_version": {
+          "type": "string"
+        },
+        "processing_version": {
+          "type": "string"
+        },
+        "prompt_policy_version": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "required_artifact_references": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.workflow_queue.WorkflowArtifactReference"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "selection_checkpoint": {
+          "type": "string"
+        },
+        "validator_compatibility_version": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.ReportAnalysisResult": {
+      "additionalProperties": false,
+      "properties": {
+        "execution_plan_hash": {
+          "type": "string"
+        },
+        "output_content_hash": {
+          "type": "string"
+        },
+        "output_reference": {
+          "type": "string"
+        },
+        "output_verified": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "summary": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.ReportRenderPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "analysis_checkpoint": {
+          "type": "string"
+        },
+        "attributes": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        "input_content_hash": {
+          "type": "string"
+        },
+        "input_reference": {
+          "type": "string"
+        },
+        "presentation_version": {
+          "type": "string"
+        },
+        "processing_version": {
+          "type": "string"
+        },
+        "prompt_policy_version": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "required_artifact_references": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.workflow_queue.WorkflowArtifactReference"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "template_version": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.ReportRenderResult": {
+      "additionalProperties": false,
+      "properties": {
+        "execution_plan_hash": {
+          "type": "string"
+        },
+        "output_content_hash": {
+          "type": "string"
+        },
+        "output_reference": {
+          "type": "string"
+        },
+        "output_verified": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "summary": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.ReportSelectionPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        "input_content_hash": {
+          "type": "string"
+        },
+        "input_reference": {
+          "type": "string"
+        },
+        "processing_version": {
+          "type": "string"
+        },
+        "prompt_policy_version": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "required_artifact_references": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.workflow_queue.WorkflowArtifactReference"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "selection_profile": {
+          "type": "string"
+        },
+        "source_prepared_checkpoint": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.ReportSelectionResult": {
+      "additionalProperties": false,
+      "properties": {
+        "execution_plan_hash": {
+          "type": "string"
+        },
+        "output_content_hash": {
+          "type": "string"
+        },
+        "output_reference": {
+          "type": "string"
+        },
+        "output_verified": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "summary": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.SignalCandidatePayload": {
+      "additionalProperties": false,
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        "embedding_ready": {
+          "type": "boolean"
+        },
+        "input_content_hash": {
+          "type": "string"
+        },
+        "input_reference": {
+          "type": "string"
+        },
+        "processing_version": {
+          "type": "string"
+        },
+        "projection_reference": {
+          "type": "string"
+        },
+        "prompt_policy_version": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "required_artifact_references": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.workflow_queue.WorkflowArtifactReference"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "signal_selection_policy_version": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.SignalCandidateResult": {
+      "additionalProperties": false,
+      "properties": {
+        "execution_plan_hash": {
+          "type": "string"
+        },
+        "output_content_hash": {
+          "type": "string"
+        },
+        "output_reference": {
+          "type": "string"
+        },
+        "output_verified": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "summary": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.SignalGenerationPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        "candidate_group_id": {
+          "type": "string"
+        },
+        "frozen_evidence_manifest": {
+          "type": "string"
+        },
+        "input_content_hash": {
+          "type": "string"
+        },
+        "input_reference": {
+          "type": "string"
+        },
+        "model_routing_policy_version": {
+          "type": "string"
+        },
+        "processing_version": {
+          "type": "string"
+        },
+        "prompt_policy_version": {
+          "type": "string"
+        },
+        "required_artifact_references": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.workflow_queue.WorkflowArtifactReference"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.SignalGenerationResult": {
+      "additionalProperties": false,
+      "properties": {
+        "execution_plan_hash": {
+          "type": "string"
+        },
+        "output_content_hash": {
+          "type": "string"
+        },
+        "output_reference": {
+          "type": "string"
+        },
+        "output_verified": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "summary": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.SourceIngestPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        "input_content_hash": {
+          "type": "string"
+        },
+        "input_reference": {
+          "type": "string"
+        },
+        "parser_ocr_compatibility_version": {
+          "type": "string"
+        },
+        "processing_version": {
+          "type": "string"
+        },
+        "prompt_policy_version": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "required_artifact_references": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.workflow_queue.WorkflowArtifactReference"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_artifact_reference": {
+          "type": "string"
+        },
+        "source_content_hash": {
+          "type": "string"
+        },
+        "source_identity_id": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.SourceIngestResult": {
+      "additionalProperties": false,
+      "properties": {
+        "execution_plan_hash": {
+          "type": "string"
+        },
+        "output_content_hash": {
+          "type": "string"
+        },
+        "output_reference": {
+          "type": "string"
+        },
+        "output_verified": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "summary": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.WordPressProjectionPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        "entity_type": {
+          "type": "string"
+        },
+        "input_content_hash": {
+          "type": "string"
+        },
+        "input_reference": {
+          "type": "string"
+        },
+        "processing_version": {
+          "type": "string"
+        },
+        "prompt_policy_version": {
+          "type": "string"
+        },
+        "published_entity_reference": {
+          "type": "string"
+        },
+        "required_artifact_references": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.workflow_queue.WorkflowArtifactReference"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "wordpress_id": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.WordPressProjectionResult": {
+      "additionalProperties": false,
+      "properties": {
+        "execution_plan_hash": {
+          "type": "string"
+        },
+        "output_content_hash": {
+          "type": "string"
+        },
+        "output_reference": {
+          "type": "string"
+        },
+        "output_verified": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "summary": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.WordPressPublishPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "approval_id": {
+          "type": "string"
+        },
+        "attributes": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        "dry_run": {
+          "type": "boolean"
+        },
+        "entity_package_reference": {
+          "type": "string"
+        },
+        "entity_type": {
+          "type": "string"
+        },
+        "input_content_hash": {
+          "type": "string"
+        },
+        "input_reference": {
+          "type": "string"
+        },
+        "package_checksum": {
+          "type": "string"
+        },
+        "processing_version": {
+          "type": "string"
+        },
+        "prompt_policy_version": {
+          "type": "string"
+        },
+        "required_artifact_references": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.workflow_queue.WorkflowArtifactReference"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "target_site": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.WordPressPublishResult": {
+      "additionalProperties": false,
+      "properties": {
+        "execution_plan_hash": {
+          "type": "string"
+        },
+        "output_content_hash": {
+          "type": "string"
+        },
+        "output_reference": {
+          "type": "string"
+        },
+        "output_verified": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "summary": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        "wordpress_id": {
+          "type": "string"
+        },
+        "wordpress_url": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.WorkflowArtifactReference": {
+      "additionalProperties": false,
+      "properties": {
+        "content_hash": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "reference": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.WorkflowJob": {
+      "additionalProperties": false,
+      "properties": {
+        "attempt_count": {
+          "type": "integer"
+        },
+        "available_at_utc": {
+          "type": "string"
+        },
+        "budget_profile": {
+          "type": "string"
+        },
+        "completed_at_utc": {
+          "type": "string"
+        },
+        "correlation_id": {
+          "type": "string"
+        },
+        "created_at_utc": {
+          "type": "string"
+        },
+        "deduplication_scope": {
+          "type": "string"
+        },
+        "entity_id": {
+          "type": "string"
+        },
+        "entity_type": {
+          "type": "string"
+        },
+        "error_code": {
+          "type": "string"
+        },
+        "error_message_summary": {
+          "type": "string"
+        },
+        "error_retryable": {
+          "type": "boolean"
+        },
+        "execution_plan_hash": {
+          "type": "string"
+        },
+        "heartbeat_at_utc": {
+          "type": "string"
+        },
+        "idempotency_key": {
+          "type": "string"
+        },
+        "input_content_hash": {
+          "type": "string"
+        },
+        "input_reference": {
+          "type": "string"
+        },
+        "job_id": {
+          "type": "string"
+        },
+        "job_schema_version": {
+          "type": "string"
+        },
+        "job_type": {
+          "type": "string"
+        },
+        "lease_expires_at_utc": {
+          "type": "string"
+        },
+        "lease_owner": {
+          "type": "string"
+        },
+        "max_attempts": {
+          "type": "integer"
+        },
+        "output_content_hash": {
+          "type": "string"
+        },
+        "output_reference": {
+          "type": "string"
+        },
+        "parent_job_id": {
+          "type": "string"
+        },
+        "payload_json": {
+          "type": "string"
+        },
+        "priority": {
+          "type": "integer"
+        },
+        "processing_version": {
+          "type": "string"
+        },
+        "prompt_policy_version": {
+          "type": "string"
+        },
+        "publisher_id": {
+          "type": "string"
+        },
+        "queue_name": {
+          "type": "string"
+        },
+        "remediation_id": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "required_artifact_references": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.workflow_queue.WorkflowArtifactReference"
+          },
+          "type": "array"
+        },
+        "root_workflow_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_identity_id": {
+          "type": "string"
+        },
+        "started_at_utc": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "pending",
+            "leased",
+            "running",
+            "succeeded",
+            "retry_wait",
+            "budget_deferred",
+            "blocked",
+            "dead_letter",
+            "cancelled"
+          ]
+        },
+        "terminal_reason": {
+          "type": "string"
+        },
+        "trigger_event_id": {
+          "type": "string"
+        },
+        "updated_at_utc": {
+          "type": "string"
+        },
+        "workflow_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "job_id",
+        "queue_name",
+        "job_type",
+        "job_schema_version",
+        "workflow_version",
+        "root_workflow_id",
+        "parent_job_id",
+        "trigger_event_id",
+        "correlation_id",
+        "entity_type",
+        "entity_id",
+        "publisher_id",
+        "source_identity_id",
+        "report_id",
+        "input_reference",
+        "input_content_hash",
+        "required_artifact_references",
+        "output_reference",
+        "output_content_hash",
+        "idempotency_key",
+        "deduplication_scope",
+        "priority",
+        "status",
+        "available_at_utc",
+        "attempt_count",
+        "max_attempts",
+        "lease_owner",
+        "lease_expires_at_utc",
+        "heartbeat_at_utc",
+        "budget_profile",
+        "execution_plan_hash",
+        "prompt_policy_version",
+        "processing_version",
+        "created_at_utc",
+        "updated_at_utc",
+        "started_at_utc",
+        "completed_at_utc",
+        "error_code",
+        "error_message_summary",
+        "error_retryable",
+        "terminal_reason",
+        "remediation_id"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.WorkflowJobAttempt": {
+      "additionalProperties": false,
+      "properties": {
+        "attempt_id": {
+          "type": "string"
+        },
+        "attempt_number": {
+          "type": "integer"
+        },
+        "budget_decision": {
+          "type": "string"
+        },
+        "completed_at_utc": {
+          "type": "string"
+        },
+        "error_code": {
+          "type": "string"
+        },
+        "execution_plan_hash": {
+          "type": "string"
+        },
+        "external_effects_json": {
+          "type": "string"
+        },
+        "input_content_hash": {
+          "type": "string"
+        },
+        "job_id": {
+          "type": "string"
+        },
+        "outcome": {
+          "type": "string"
+        },
+        "output_content_hash": {
+          "type": "string"
+        },
+        "provider_usage_json": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "started_at_utc": {
+          "type": "string"
+        },
+        "worker_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "attempt_id",
+        "job_id",
+        "attempt_number",
+        "worker_id",
+        "started_at_utc",
+        "completed_at_utc",
+        "input_content_hash",
+        "output_content_hash",
+        "execution_plan_hash",
+        "budget_decision",
+        "provider_usage_json",
+        "external_effects_json",
+        "outcome",
+        "error_code"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.WorkflowJobSubmission": {
+      "additionalProperties": false,
+      "properties": {
+        "available_at_utc": {
+          "type": "string"
+        },
+        "budget_profile": {
+          "type": "string"
+        },
+        "correlation_id": {
+          "type": "string"
+        },
+        "deduplication_scope": {
+          "type": "string"
+        },
+        "entity_id": {
+          "type": "string"
+        },
+        "entity_type": {
+          "type": "string"
+        },
+        "execution_plan_hash": {
+          "type": "string"
+        },
+        "idempotency_key": {
+          "type": "string"
+        },
+        "job_type": {
+          "type": "string"
+        },
+        "max_attempts": {
+          "type": "integer"
+        },
+        "parent_job_id": {
+          "type": "string"
+        },
+        "payload": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.workflow_queue.PublisherDiscoveryPayload"
+            },
+            {
+              "$ref": "#/$defs/src.contracts.workflow_queue.ReportAcquisitionPayload"
+            },
+            {
+              "$ref": "#/$defs/src.contracts.workflow_queue.MailboxDeliveryPayload"
+            },
+            {
+              "$ref": "#/$defs/src.contracts.workflow_queue.SourceIngestPayload"
+            },
+            {
+              "$ref": "#/$defs/src.contracts.workflow_queue.ReportSelectionPayload"
+            },
+            {
+              "$ref": "#/$defs/src.contracts.workflow_queue.ReportAnalysisPayload"
+            },
+            {
+              "$ref": "#/$defs/src.contracts.workflow_queue.ReportRenderPayload"
+            },
+            {
+              "$ref": "#/$defs/src.contracts.workflow_queue.AnalyticsProjectionPayload"
+            },
+            {
+              "$ref": "#/$defs/src.contracts.workflow_queue.ClaimEmbeddingPayload"
+            },
+            {
+              "$ref": "#/$defs/src.contracts.workflow_queue.SignalCandidatePayload"
+            },
+            {
+              "$ref": "#/$defs/src.contracts.workflow_queue.SignalGenerationPayload"
+            },
+            {
+              "$ref": "#/$defs/src.contracts.workflow_queue.BriefingOpportunityPayload"
+            },
+            {
+              "$ref": "#/$defs/src.contracts.workflow_queue.BriefingGenerationPayload"
+            },
+            {
+              "$ref": "#/$defs/src.contracts.workflow_queue.CoverGenerationPayload"
+            },
+            {
+              "$ref": "#/$defs/src.contracts.workflow_queue.PublicationReadinessPayload"
+            },
+            {
+              "$ref": "#/$defs/src.contracts.workflow_queue.WordPressPublishPayload"
+            },
+            {
+              "$ref": "#/$defs/src.contracts.workflow_queue.WordPressProjectionPayload"
+            },
+            {
+              "$ref": "#/$defs/src.contracts.workflow_queue.MaintenancePayload"
+            }
+          ]
+        },
+        "priority": {
+          "type": "integer"
+        },
+        "publisher_id": {
+          "type": "string"
+        },
+        "queue_name": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "root_workflow_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_identity_id": {
+          "type": "string"
+        },
+        "trigger_event_id": {
+          "type": "string"
+        },
+        "workflow_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "queue_name",
+        "job_type",
+        "payload",
+        "idempotency_key",
+        "deduplication_scope"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.WorkflowQueueControl": {
+      "additionalProperties": false,
+      "properties": {
+        "budget_profile": {
+          "type": "string"
+        },
+        "emergency_stop_reason": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "lease_seconds": {
+          "type": "integer"
+        },
+        "max_attempts": {
+          "type": "integer"
+        },
+        "maximum_fanout": {
+          "type": "integer"
+        },
+        "maximum_pending": {
+          "type": "integer"
+        },
+        "mode": {
+          "enum": [
+            "active",
+            "paused",
+            "draining"
+          ]
+        },
+        "queue_name": {
+          "type": "string"
+        },
+        "retry_delay_seconds": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "updated_at_utc": {
+          "type": "string"
+        },
+        "updated_by": {
+          "type": "string"
+        },
+        "worker_concurrency_limit": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "queue_name",
+        "mode",
+        "enabled",
+        "worker_concurrency_limit",
+        "maximum_pending",
+        "maximum_fanout",
+        "max_attempts",
+        "lease_seconds",
+        "budget_profile",
+        "retry_delay_seconds",
+        "emergency_stop_reason",
+        "updated_at_utc",
+        "updated_by"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.WorkflowQueueHealth": {
+      "additionalProperties": false,
+      "properties": {
+        "completion_rate": {
+          "type": "number"
+        },
+        "lease_expiry_count": {
+          "type": "integer"
+        },
+        "mean_attempts": {
+          "type": "number"
+        },
+        "mean_runtime_seconds": {
+          "type": "number"
+        },
+        "oldest_due_age_seconds": {
+          "type": "integer"
+        },
+        "oldest_pending_age_seconds": {
+          "type": "integer"
+        },
+        "outbox_pending_count": {
+          "type": "integer"
+        },
+        "p95_runtime_seconds": {
+          "type": "number"
+        },
+        "queue_name": {
+          "type": "string"
+        },
+        "reconciliation_anomaly_count": {
+          "type": "integer"
+        },
+        "retry_rate": {
+          "type": "number"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status_counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "terminal_rate": {
+          "type": "number"
+        },
+        "throughput_24h": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "queue_name",
+        "status_counts",
+        "oldest_pending_age_seconds",
+        "oldest_due_age_seconds",
+        "lease_expiry_count",
+        "throughput_24h",
+        "completion_rate",
+        "retry_rate",
+        "terminal_rate",
+        "mean_runtime_seconds",
+        "p95_runtime_seconds",
+        "mean_attempts",
+        "outbox_pending_count",
+        "reconciliation_anomaly_count"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.WorkflowQueuePayload": {
+      "additionalProperties": false,
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        "input_content_hash": {
+          "type": "string"
+        },
+        "input_reference": {
+          "type": "string"
+        },
+        "processing_version": {
+          "type": "string"
+        },
+        "prompt_policy_version": {
+          "type": "string"
+        },
+        "required_artifact_references": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.workflow_queue.WorkflowArtifactReference"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.WorkflowQueuePolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "budget_profile": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "lease_seconds": {
+          "type": "integer"
+        },
+        "max_attempts": {
+          "type": "integer"
+        },
+        "max_workers": {
+          "type": "integer"
+        },
+        "maximum_fanout": {
+          "type": "integer"
+        },
+        "maximum_pending": {
+          "type": "integer"
+        },
+        "queue_name": {
+          "type": "string"
+        },
+        "retry_delay_seconds": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.WorkflowStageResult": {
+      "additionalProperties": false,
+      "properties": {
+        "execution_plan_hash": {
+          "type": "string"
+        },
+        "output_content_hash": {
+          "type": "string"
+        },
+        "output_reference": {
+          "type": "string"
+        },
+        "output_verified": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "summary": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "type": "object"
+        }
+      },
+      "required": [],
       "type": "object"
     }
   },

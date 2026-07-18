@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from types import SimpleNamespace
 
 from src.contracts.semantic_ids import RunId
 from src.contracts.ui_run_control import (
@@ -25,6 +26,7 @@ from src.services.run_registry_service import (
     get_ui_run_record,
     write_ui_run_record,
 )
+from src.services.workflow_queue_service import get_workflow_job
 from src.utils.logging import new_run_context
 
 
@@ -123,6 +125,138 @@ def test_launch_ui_run_persists_record_and_request(
     assert Path(response.record.request_path).exists()
     assert Path(response.record.output_path).parent.exists()
     assert_logs_have_required_fields(caplog.records)
+
+
+def test_queue_backed_ui_run_submits_polls_and_cancels_without_a_process(
+    tmp_path: Path,
+    external_boundary_mocks_only,
+) -> None:
+    registry_path = _registry_path(tmp_path)
+    state_db = str(tmp_path / "state" / "workflow.sqlite")
+    external_boundary_mocks_only.setattr(
+        orchestrator,
+        "load_settings",
+        lambda _request, _ctx: SimpleNamespace(state_db=state_db),
+    )
+    external_boundary_mocks_only.setattr(
+        orchestrator,
+        "launch_process",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("queue-backed UI runs must not launch a process")
+        ),
+    )
+
+    launched = orchestrator.launch_ui_run(
+        UiRunLaunchRequest(
+            schema_version="1.0",
+            registry_path=registry_path,
+            workspace_root=str(tmp_path),
+            run_type="publisher_discovery",
+            display_name="Publisher discovery",
+            request_payload={
+                "insights_url": "https://example.com/insights",
+                "workflow_queue_submit": True,
+            },
+        ),
+        _ctx(),
+    )
+
+    workflow_job_id = str(launched.record.request_payload["workflow_queue_job_id"])
+    job = get_workflow_job(state_db, workflow_job_id, _ctx())
+    assert launched.record.command == []
+    assert launched.record.pid is None
+    assert job is not None
+    assert job.queue_name == "publisher_discovery"
+
+    polled = orchestrator.poll_ui_run(
+        UiRunPollRequest(
+            schema_version="1.0",
+            registry_path=registry_path,
+            run_id=launched.record.run_id,
+            output_tail_bytes=1024,
+        ),
+        _ctx(),
+    )
+    assert polled.record.status == "queued"
+    assert polled.record.result_summary["workflow_job_id"] == workflow_job_id
+
+    canceled = orchestrator.cancel_ui_run(
+        UiRunCancelRequest(
+            schema_version="1.0",
+            registry_path=registry_path,
+            run_id=launched.record.run_id,
+        ),
+        _ctx(),
+    )
+    assert canceled.canceled is True
+    assert canceled.record.status == "canceled"
+    assert get_workflow_job(state_db, workflow_job_id, _ctx()).status == "cancelled"
+
+
+def test_queue_backed_derived_ui_runs_use_fixed_typed_queues() -> None:
+    cases = [
+        (
+            "signal_candidate_extraction",
+            {
+                "topic": "Rates",
+                "category_filters": ["Economy"],
+                "tag_filters": [],
+                "publisher_filters": [],
+                "max_source_reports": 3,
+                "max_evidence_items": 6,
+                "max_signals": 4,
+            },
+            "signal_candidate",
+            False,
+        ),
+        (
+            "signal_post",
+            {
+                "topic": "Rates",
+                "category_filters": [],
+                "tag_filters": [],
+                "publisher_filters": [],
+                "max_source_reports": 3,
+                "max_evidence_items": 6,
+                "minimum_source_reports": 2,
+                "minimum_evidence_items": 2,
+            },
+            "signal_candidate",
+            True,
+        ),
+        (
+            "cross_report_analysis",
+            {
+                "topic": "Rates",
+                "auto_theme": False,
+                "category_filters": [],
+                "tag_filters": [],
+                "publisher_filters": [],
+                "max_source_reports": 3,
+                "max_evidence_items": 12,
+                "max_prompt_chars": 12000,
+                "diagnostic": False,
+                "override_publishability": False,
+            },
+            "briefing_opportunity",
+            None,
+        ),
+    ]
+
+    for run_type, payload, expected_queue, generate_signals in cases:
+        submission = orchestrator._ui_queue_submission(
+            run_id=RunId("ui-derived-run"),
+            run_type=run_type,
+            payload=payload,
+        )
+
+        assert submission is not None
+        assert submission.queue_name == expected_queue
+        assert submission.payload.input_content_hash
+        if generate_signals is not None:
+            assert submission.payload.attributes["generate_signals"] is generate_signals
+        else:
+            assert submission.payload.attributes["resolve_projected_sources"] is True
 
 
 def test_poll_ui_run_marks_unexpected_worker_exit_as_failed(

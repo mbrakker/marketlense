@@ -19,7 +19,10 @@ class CrossReportAnalysisRequest:
     )
     topic: str = field(
         metadata={
-            "doc": "Explicit requested analysis topic; empty only when auto-theme selection is enabled.",
+            "doc": (
+                "Explicit requested analysis topic; empty only when auto-theme "
+                "selection is enabled."
+            ),
             "required": False,
         }
     )
@@ -61,12 +64,18 @@ class CrossReportAnalysisRequest:
     )
     diagnostic: bool = field(
         metadata={
-            "doc": "Whether diagnostic mode may inspect otherwise unpublishable source sets."
+            "doc": (
+                "Whether diagnostic mode may inspect otherwise unpublishable "
+                "source sets."
+            )
         }
     )
     override_publishability: bool = field(
         metadata={
-            "doc": "Explicit operator override for publishability gates; logged by orchestrators."
+            "doc": (
+                "Explicit operator override for publishability gates; logged by "
+                "orchestrators."
+            )
         }
     )
     publication_mode: PublicationMode = field(
@@ -113,13 +122,19 @@ class CrossReportProjectedDataReadRequest:
     content_classes: List[CrossReportReadContentClass] = field(
         default_factory=list,
         metadata={
-            "doc": "Projected evidence classes to return; empty means claims, findings, quotes, and metrics."
+            "doc": (
+                "Projected evidence classes to return; empty means claims, "
+                "findings, quotes, and metrics."
+            )
         },
     )
     minimum_projection_status: ProjectionReadinessStatus = field(
         default="projected",
         metadata={
-            "doc": "Minimum projection status to include: projected includes only ready reports."
+            "doc": (
+                "Minimum projection status to include: projected includes only "
+                "ready reports."
+            )
         },
     )
 
@@ -180,4 +195,22 @@ class CrossReportAnalysisOrchestratorRequest:
     state_db: str = field(
         default="",
         metadata={"doc": "Optional canonical remediation-ledger state database."},
+    )
+    frozen_source_hashes: List[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": (
+                "Optional immutable projected-source content hashes allowed for "
+                "this run."
+            )
+        },
+    )
+    generate_cover_assets: bool = field(
+        default=True,
+        metadata={
+            "doc": (
+                "Whether this invocation owns card-cover rendering; queue workers "
+                "set false."
+            )
+        },
     )

@@ -9,6 +9,11 @@ from dataclasses import asdict, replace
 from pathlib import Path
 from typing import Any, Callable, cast
 
+from src.contracts.analytics_projection import (
+    ClaimEmbeddingReadRequest,
+    ClaimEmbeddingReadResponse,
+)
+from src.contracts.cover_images import CoverImageGenerationRequest, CoverImageReport
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
     CrossReportAnalysisArtifact,
@@ -20,6 +25,7 @@ from src.contracts.cross_report_analysis import (
     CrossReportOrchestratorOutcome,
     CrossReportOutcomeStatus,
     CrossReportProjectedDataReadRequest,
+    CrossReportProjectedDataReadResponse,
     CrossReportPublishPackage,
     CrossReportPublishRequestSummary,
     CrossReportPublishResultSummary,
@@ -31,26 +37,20 @@ from src.contracts.cross_report_analysis import (
     validate_cross_report_contract,
 )
 from src.contracts.files import WriteBytesRequest
-from src.contracts.cover_images import CoverImageGenerationRequest, CoverImageReport
-from src.contracts.analytics_projection import (
-    ClaimEmbeddingReadRequest,
-    ClaimEmbeddingReadResponse,
-)
-from src.contracts.report_cards import CoverFingerprint
 from src.contracts.idempotency import (
     OrchestratorIdempotencyGetRequest,
     OrchestratorIdempotencyRecordRequest,
 )
-from src.contracts.remediation import RemediationArtifactReference
 from src.contracts.prompts import PromptLoadRequest
+from src.contracts.remediation import RemediationArtifactReference
+from src.contracts.report_cards import CoverFingerprint
 from src.contracts.run_context import RunContext
+from src.generators.cover_image_generator import generate_cover_images
 from src.generators.cross_report_analysis_generator import (
     build_cross_report_publish_package,
     generate_cross_report_analysis,
     validate_cross_report_generated_analysis,
 )
-from src.generators.cover_image_generator import generate_cover_images
-from src.orchestrators.publish_orchestrator import publish_cross_report_package
 from src.generators.cross_report_analysis_input_generator import (
     assemble_cross_report_analysis_inputs,
     group_cross_report_evidence_agreement,
@@ -59,12 +59,13 @@ from src.generators.cross_report_analysis_input_generator import (
     select_cross_report_theme,
     validate_cross_report_publishability,
 )
-from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
+from src.orchestrators.publish_orchestrator import publish_cross_report_package
 from src.orchestrators.remediation_orchestrator import (
     record_workflow_failure,
     remediation_budget_summary,
     remediation_input_checksum,
 )
+from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
 from src.services import (
     analytics_store_service,
     file_service,
@@ -257,6 +258,8 @@ def _idempotency_material(
         "max_signals": request.max_signals,
         "max_prompt_chars": request.max_prompt_chars,
         "publish_target_route": request.publish_target_route,
+        "frozen_source_hashes": sorted(request.frozen_source_hashes),
+        "generate_cover_assets": request.generate_cover_assets,
         "selected_report_ids": selected_report_ids,
         "projection_content_hashes": content_hashes,
         "semantic_preselection": semantic_preselection or {},
@@ -401,6 +404,55 @@ def _publish_html_bytes(package: CrossReportPublishPackage) -> bytes:
     return (package.html_text + "\n").encode("utf-8")
 
 
+def _restrict_to_frozen_source_hashes(
+    projected_data: CrossReportProjectedDataReadResponse,
+    frozen_source_hashes: list[str],
+) -> CrossReportProjectedDataReadResponse:
+    """Limit synthesis to a frozen opportunity manifest without mutating it.
+
+    Opportunity memberships are content hashes rather than report identifiers.
+    The analytics read remains canonical; this narrow in-memory view merely
+    excludes source reports whose current projected hash is not in that frozen
+    manifest.  A changed report therefore cannot silently alter a running
+    Briefing.
+    """
+
+    allowed_hashes = {value.strip() for value in frozen_source_hashes if value.strip()}
+    if not allowed_hashes:
+        return projected_data
+    selected_sources = [
+        source
+        for source in projected_data.source_candidates
+        if source.content_hash in allowed_hashes
+    ]
+    selected_report_ids = {source.report_id for source in selected_sources}
+    return CrossReportProjectedDataReadResponse(
+        schema_version=projected_data.schema_version,
+        source_candidates=selected_sources,
+        evidence=[
+            item
+            for item in projected_data.evidence
+            if item.report_id in selected_report_ids
+        ],
+        raw_metrics=[
+            item
+            for item in projected_data.raw_metrics
+            if item.report_id in selected_report_ids
+        ],
+        content_hashes={
+            report_id: hashes
+            for report_id, hashes in projected_data.content_hashes.items()
+            if report_id in selected_report_ids
+        },
+        excluded_report_counts={
+            **projected_data.excluded_report_counts,
+            "frozen_source_manifest": max(
+                len(projected_data.source_candidates) - len(selected_sources), 0
+            ),
+        },
+    )
+
+
 def _skipped_publish_result(
     request: CrossReportAnalysisOrchestratorRequest,
 ) -> CrossReportPublishResultSummary:
@@ -506,7 +558,9 @@ def _enforce_cross_report_feature_policy(
         )
         raise AppError(
             code="cross_report_auto_theme_disabled",
-            message="Automatic cross-report theme selection is disabled by configuration",
+            message=(
+                "Automatic cross-report theme selection is disabled by configuration"
+            ),
             retryable=False,
             severity="error",
             context={
@@ -603,6 +657,17 @@ def _run_cross_report_analysis(
         ctx=ctx,
         sleep_fn=sleep_fn,
     )
+    projected_data = _restrict_to_frozen_source_hashes(
+        projected_data, request.frozen_source_hashes
+    )
+    if request.frozen_source_hashes and not projected_data.source_candidates:
+        raise AppError(
+            code="cross_report_frozen_source_set_incomplete",
+            message="No current projected reports match the frozen Briefing source set",
+            retryable=False,
+            severity="error",
+            context={"frozen_source_hash_count": len(request.frozen_source_hashes)},
+        )
     _log_transition(ctx, transitions, "projected_data_read")
     source_selection = select_cross_report_source_reports(
         request.analysis_request, projected_data, ctx
@@ -833,40 +898,44 @@ def _run_cross_report_analysis(
         seed=int(
             hashlib.sha256(generated.analysis_id.encode("utf-8")).hexdigest()[:8], 16
         ),
-        selection_reason="Cross-report briefing synthesizes multiple linked report systems.",
-    )
-    cover_outcomes = generate_cover_images(
-        CoverImageGenerationRequest(
-            schema_version="2.0",
-            output_dir=request.output_root,
-            style_config_path=str(getattr(settings, "cover_style_path", "")),
-            reports=[
-                CoverImageReport(
-                    schema_version="2.0",
-                    file_id=f"cross-report:{generated.analysis_id}",
-                    title=generated.title,
-                    publisher="Market Bearing",
-                    report_slug=generated.slug,
-                    time_period="",
-                    region=None,
-                    fingerprint=fingerprint,
-                    cover_profile="briefing",
-                )
-            ],
+        selection_reason=(
+            "Cross-report briefing synthesizes multiple linked report systems."
         ),
-        ctx,
     )
-    cover_assets = (
-        cover_outcomes[0].assets
-        if cover_outcomes and cover_outcomes[0].status == "generated"
-        else None
-    )
-    if cover_assets is None:
-        raise AppError(
-            code="cover_asset_set_incomplete",
-            message="Briefing cover generation did not produce all assets",
-            retryable=False,
+    cover_assets = None
+    if request.generate_cover_assets:
+        cover_outcomes = generate_cover_images(
+            CoverImageGenerationRequest(
+                schema_version="2.0",
+                output_dir=request.output_root,
+                style_config_path=str(getattr(settings, "cover_style_path", "")),
+                reports=[
+                    CoverImageReport(
+                        schema_version="2.0",
+                        file_id=f"cross-report:{generated.analysis_id}",
+                        title=generated.title,
+                        publisher="Market Bearing",
+                        report_slug=generated.slug,
+                        time_period="",
+                        region=None,
+                        fingerprint=fingerprint,
+                        cover_profile="briefing",
+                    )
+                ],
+            ),
+            ctx,
         )
+        cover_assets = (
+            cover_outcomes[0].assets
+            if cover_outcomes and cover_outcomes[0].status == "generated"
+            else None
+        )
+        if cover_assets is None:
+            raise AppError(
+                code="cover_asset_set_incomplete",
+                message="Briefing cover generation did not produce all assets",
+                retryable=False,
+            )
     briefing_card = {
         "schema_version": "1.0",
         "summary_compact": generated.executive_summary,
@@ -875,11 +944,12 @@ def _run_cross_report_analysis(
         "takeaways": list(generated.executive_takeaways),
         "source_count": len(generated.selected_sources),
         "evidence_count": len(generated.evidence),
-        "covers": {
+    }
+    if cover_assets is not None:
+        briefing_card["covers"] = {
             size: getattr(cover_assets, size).output_path
             for size in ("small", "medium", "large")
-        },
-    }
+        }
     publish_package = build_cross_report_publish_package(
         generated,
         validation,

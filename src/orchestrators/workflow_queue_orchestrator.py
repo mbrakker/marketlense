@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import asdict, dataclass, field, replace
+from pathlib import Path
 from typing import Callable
 
 from src.contracts.analytics_projection import (
@@ -21,21 +22,35 @@ from src.contracts.analytics_projection import (
 )
 from src.contracts.browser_download import ReportDownloadOrchestratorRequest
 from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
+from src.contracts.cover_images import CoverImageGenerationRequest, CoverImageReport
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+    CrossReportAnalysisOrchestratorRequest,
     CrossReportAnalysisRequest,
     CrossReportProjectedDataReadRequest,
     CrossReportPublishPackage,
 )
 from src.contracts.drive import DriveFile
-from src.contracts.files import FileStatRequest, ReadBytesRequest
+from src.contracts.files import FileStatRequest, ReadBytesRequest, WriteBytesRequest
 from src.contracts.mailbox_acquisition import MailReportAcquisitionRequest
 from src.contracts.publisher_inventory import PublisherInventoryDiscoveryRequest
+from src.contracts.report_cards import CoverFingerprint
 from src.contracts.run_budget import BudgetOverrideContext
 from src.contracts.run_context import RunContext
 from src.contracts.signal_candidates import (
     SIGNAL_CANDIDATE_SCHEMA_VERSION,
     SignalCandidateExtractionRequest,
+)
+from src.contracts.wordpress_entities import (
+    WORDPRESS_ENTITY_SCHEMA_VERSION,
+    SignalPostGenerationRequest,
+    SignalPostWorkflowRequest,
+    SignalPublishProjection,
+)
+from src.contracts.wordpress_intelligence_projection import (
+    WORDPRESS_INTELLIGENCE_SCHEMA_VERSION,
+    WordPressIntelligenceSourceReadRequest,
+    WordPressIntelligenceSyncRequest,
 )
 from src.contracts.workflow_queue import (
     AnalyticsProjectionPayload,
@@ -78,8 +93,12 @@ from src.contracts.workflow_queue import (
     WorkflowJobSubmission,
     WorkflowStageResult,
 )
+from src.generators.cover_image_generator import generate_cover_images
 from src.orchestrators.claim_embedding_orchestrator import (
     run_claim_embedding_workflow,
+)
+from src.orchestrators.cross_report_analysis_orchestrator import (
+    run_cross_report_analysis,
 )
 from src.orchestrators.mail_report_acquisition_orchestrator import (
     run_mail_report_acquisition,
@@ -93,6 +112,13 @@ from src.orchestrators.report_pipeline_orchestrator import run_report_pipeline
 from src.orchestrators.signal_candidate_orchestrator import (
     run_signal_candidate_extraction,
 )
+from src.orchestrators.signal_post_orchestrator import (
+    generate_signal_post_projection,
+)
+from src.orchestrators.wordpress_intelligence_projection_orchestrator import (
+    sync_wordpress_intelligence_projection,
+)
+from src.services import analytics_store_service
 from src.services.config_service import (
     build_ingest_settings,
     load_browser_download_settings,
@@ -101,14 +127,16 @@ from src.services.config_service import (
     load_publisher_inventory_settings,
     load_settings,
 )
-from src.services.file_service import file_stat, read_bytes
+from src.services.file_service import file_stat, read_bytes, write_bytes
 from src.services.workflow_queue_service import (
     freeze_briefing_opportunity,
     publication_approval_is_valid,
     record_publication_readiness,
     upsert_briefing_opportunity,
 )
+from src.utils.clock import utc_now_iso
 from src.utils.errors import AppError
+from src.utils.wp_auth import build_auth_header
 
 WorkflowQueueHandler = Callable[
     [WorkflowJob, QueuePayload, RunContext], "WorkflowQueueHandlerResult"
@@ -191,7 +219,9 @@ def _requested_budget_override(payload: QueuePayload) -> BudgetOverrideContext |
         scope=str(payload.attributes.get("budget_override_scope", "all")),
         expires_at_utc=expiry,
         policy_version=str(
-            payload.attributes.get("budget_override_policy_version", "budget-authority-v2")
+            payload.attributes.get(
+                "budget_override_policy_version", "budget-authority-v2"
+            )
         ),
     )
 
@@ -309,7 +339,10 @@ def _publisher_discovery_handler(
             output_content_hash=snapshot_hash,
             execution_plan_hash=job.execution_plan_hash,
             output_verified=True,
-            summary={"new_reports": len(children), "snapshot_changed": result.snapshot_changed},
+            summary={
+                "new_reports": len(children),
+                "snapshot_changed": result.snapshot_changed,
+            },
         ),
         downstream=children,
     )
@@ -333,15 +366,25 @@ def _report_acquisition_handler(
         ReportDownloadOrchestratorRequest(
             schema_version="1.0",
             url=payload.source_url,
-            settings=load_browser_download_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx),
+            settings=load_browser_download_settings(
+                ConfigLoadRequest(schema_version="1.0", path=""), ctx
+            ),
             state_db=app.state_db,
             reports_db=app.reports_db,
             delivery_email=delivery_email or None,
-            publisher_insights_url=str(payload.attributes.get("publisher_insights_url", "")) or None,
-            publisher_google_folder=str(payload.attributes.get("publisher_google_folder", "")) or None,
+            publisher_insights_url=str(
+                payload.attributes.get("publisher_insights_url", "")
+            )
+            or None,
+            publisher_google_folder=str(
+                payload.attributes.get("publisher_google_folder", "")
+            )
+            or None,
             report_title=payload.report_title,
             publisher_name=payload.publisher_name,
-            mailbox_settings=load_mailbox_acquisition_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx),
+            mailbox_settings=load_mailbox_acquisition_settings(
+                ConfigLoadRequest(schema_version="1.0", path=""), ctx
+            ),
         ),
         ctx=ctx,
     )
@@ -349,34 +392,63 @@ def _report_acquisition_handler(
     if artifact:
         source_hash = _verified_file_hash(artifact, ctx)
         child = _source_ingest_submission(
-            job=job, artifact_reference=artifact, source_hash=source_hash,
-            source_identity_id=payload.source_identity_id or _digest(payload.source_url),
+            job=job,
+            artifact_reference=artifact,
+            source_hash=source_hash,
+            source_identity_id=payload.source_identity_id
+            or _digest(payload.source_url),
             report_id=payload.source_identity_id or _digest(payload.source_url),
             processing_version=payload.processing_version or "acquisition-v1",
         )
         children = [child]
     elif result.outcome in {"email_requested", "email_required"}:
-        children = [WorkflowJobSubmission(
-            schema_version="1.0", queue_name="mailbox_delivery", job_type="mailbox_delivery.v1",
-            payload=MailboxDeliveryPayload(
-                delivery_request_id=payload.source_identity_id or _digest(payload.source_url),
-                source_url=payload.source_url, publisher_id=payload.publisher_id,
-                report_title=payload.report_title, request_watermark="", retry_policy_version="mailbox-v1",
-                input_reference=payload.source_url, input_content_hash=payload.input_content_hash or _digest(payload.source_url),
-                processing_version=payload.processing_version,
-                attributes={"publisher_name": payload.publisher_name, "delivery_email": delivery_email},
-            ),
-            idempotency_key=f"{payload.source_identity_id or _digest(payload.source_url)}:mailbox:v1",
-            deduplication_scope="mailbox-delivery-source", root_workflow_id=job.root_workflow_id or job.job_id,
-            parent_job_id=job.job_id, trigger_event_id=job.trigger_event_id or job.job_id,
-            correlation_id=job.correlation_id or job.root_workflow_id or job.job_id,
-            publisher_id=payload.publisher_id, source_identity_id=payload.source_identity_id,
-            budget_profile="mailbox_delivery",
-        )]
+        children = [
+            WorkflowJobSubmission(
+                schema_version="1.0",
+                queue_name="mailbox_delivery",
+                job_type="mailbox_delivery.v1",
+                payload=MailboxDeliveryPayload(
+                    delivery_request_id=payload.source_identity_id
+                    or _digest(payload.source_url),
+                    source_url=payload.source_url,
+                    publisher_id=payload.publisher_id,
+                    report_title=payload.report_title,
+                    request_watermark="",
+                    retry_policy_version="mailbox-v1",
+                    input_reference=payload.source_url,
+                    input_content_hash=payload.input_content_hash
+                    or _digest(payload.source_url),
+                    processing_version=payload.processing_version,
+                    attributes={
+                        "publisher_name": payload.publisher_name,
+                        "delivery_email": delivery_email,
+                    },
+                ),
+                idempotency_key=f"{payload.source_identity_id or _digest(payload.source_url)}:mailbox:v1",
+                deduplication_scope="mailbox-delivery-source",
+                root_workflow_id=job.root_workflow_id or job.job_id,
+                parent_job_id=job.job_id,
+                trigger_event_id=job.trigger_event_id or job.job_id,
+                correlation_id=job.correlation_id or job.root_workflow_id or job.job_id,
+                publisher_id=payload.publisher_id,
+                source_identity_id=payload.source_identity_id,
+                budget_profile="mailbox_delivery",
+            )
+        ]
     else:
-        raise AppError(code="workflow_queue_acquisition_no_verified_artifact", message="Acquisition completed without a verified source or mail delivery request", retryable=False)
+        raise AppError(
+            code="workflow_queue_acquisition_no_verified_artifact",
+            message="Acquisition completed without a verified source or mail delivery request",
+            retryable=False,
+        )
     return WorkflowQueueHandlerResult(
-        result=WorkflowStageResult(output_reference=artifact or payload.source_url, output_content_hash=_digest(artifact or payload.source_url), execution_plan_hash=job.execution_plan_hash, output_verified=bool(artifact), summary={"outcome": result.outcome}),
+        result=WorkflowStageResult(
+            output_reference=artifact or payload.source_url,
+            output_content_hash=_digest(artifact or payload.source_url),
+            execution_plan_hash=job.execution_plan_hash,
+            output_verified=bool(artifact),
+            summary={"outcome": result.outcome},
+        ),
         downstream=children,
     )
 
@@ -461,8 +533,13 @@ def _publication_readiness_handler(
             retryable=False,
         )
     required_assets = str(payload.required_asset_status or "optional").strip().lower()
-    status = "awaiting_review" if required_assets in {"ready", "optional"} else "not_publishable"
-    app = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+    status = (
+        "awaiting_review"
+        if required_assets in {"ready", "optional"}
+        else "not_publishable"
+    )
+    config_path = str(payload.attributes.get("config_path", ""))
+    app = load_settings(ConfigLoadRequest(schema_version="1.0", path=config_path), ctx)
     readiness = record_publication_readiness(
         app.state_db,
         package_checksum=payload.package_checksum,
@@ -486,28 +563,32 @@ def _publication_readiness_handler(
     )
 
 
-def _briefing_package_from_artifact(
+def _cross_report_package_from_artifact(
     package_reference: str, ctx: RunContext
 ) -> CrossReportPublishPackage:
-    """Load the retained Briefing package without putting HTML in a queue row."""
+    """Load a retained Briefing or Signal package without queueing its HTML."""
 
     response = read_bytes(
         ReadBytesRequest(schema_version="1.0", path=package_reference), ctx
     )
     try:
         artifact = json.loads(response.content.decode("utf-8"))
-        package = artifact["publish_package"]
-    except (UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError) as exc:
+    except (UnicodeDecodeError, json.JSONDecodeError, TypeError) as exc:
         raise AppError(
             code="workflow_queue_publish_package_invalid",
-            message="Publication queue package is not a valid retained Briefing artifact",
+            message="Publication queue package is not valid JSON",
             cause=exc,
             retryable=False,
         ) from exc
+    package = (
+        artifact.get("publish_package", artifact)
+        if isinstance(artifact, dict)
+        else None
+    )
     if not isinstance(package, dict):
         raise AppError(
             code="workflow_queue_publish_package_invalid",
-            message="Publication queue package is not a valid retained Briefing artifact",
+            message="Publication queue package is not a valid retained entity artifact",
             retryable=False,
         )
     try:
@@ -521,20 +602,76 @@ def _briefing_package_from_artifact(
         ) from exc
 
 
+def _package_checksum(package: CrossReportPublishPackage) -> str:
+    """Hash the complete approval package while avoiding a self-referential field."""
+
+    return _digest(
+        json.dumps(
+            asdict(replace(package, artifact_sha256="")),
+            ensure_ascii=True,
+            sort_keys=True,
+            separators=(",", ":"),
+            default=str,
+        )
+    )
+
+
+def _with_package_checksum(
+    package: CrossReportPublishPackage,
+) -> CrossReportPublishPackage:
+    return replace(package, artifact_sha256=_package_checksum(package))
+
+
+def _persist_queue_publish_package(
+    package: CrossReportPublishPackage,
+    path: str,
+    ctx: RunContext,
+) -> CrossReportPublishPackage:
+    """Persist and read back one deterministic publish package before handoff."""
+
+    checked = _with_package_checksum(replace(package, canonical_artifact_path=path))
+    content = (
+        json.dumps(
+            asdict(checked),
+            ensure_ascii=True,
+            sort_keys=True,
+            indent=2,
+            default=str,
+        )
+        + "\n"
+    ).encode("utf-8")
+    write_bytes(
+        WriteBytesRequest(
+            schema_version="1.0", path=path, content=content, make_parents=True
+        ),
+        ctx,
+    )
+    readback = read_bytes(ReadBytesRequest(schema_version="1.0", path=path), ctx)
+    if readback.content != content:
+        raise AppError(
+            code="workflow_queue_publish_package_readback_failed",
+            message="Retained publish package did not match its verified write",
+            retryable=True,
+            context={"path": path},
+        )
+    return checked
+
+
 def _wordpress_publish_handler(
     job: WorkflowJob, payload: QueuePayload, ctx: RunContext
 ) -> WorkflowQueueHandlerResult:
-    """Perform an approval-gated, idempotent WordPress Briefing publication."""
+    """Perform an approval-gated, idempotent WordPress entity publication."""
 
     assert isinstance(payload, WordPressPublishPayload)
-    if payload.entity_type != "briefing":
+    if payload.entity_type not in {"briefing", "signal"}:
         raise AppError(
             code="workflow_queue_publish_entity_unsupported",
-            message="WordPress queue currently supports retained Briefing packages only",
+            message="WordPress queue supports retained Briefing and Signal packages only",
             retryable=False,
             context={"entity_type": payload.entity_type},
         )
-    app = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+    config_path = str(payload.attributes.get("config_path", ""))
+    app = load_settings(ConfigLoadRequest(schema_version="1.0", path=config_path), ctx)
     if not payload.approval_id or not publication_approval_is_valid(
         app.state_db,
         package_checksum=payload.package_checksum,
@@ -546,11 +683,22 @@ def _wordpress_publish_handler(
             message="WordPress publication requires a current approval for this package",
             retryable=False,
         )
-    package = _briefing_package_from_artifact(payload.entity_package_reference, ctx)
+    package = _cross_report_package_from_artifact(payload.entity_package_reference, ctx)
+    expected_route = f"wordpress:ml_{payload.entity_type}"
+    if package.target_route != expected_route:
+        raise AppError(
+            code="workflow_queue_publish_entity_mismatch",
+            message="Approved queue entity type does not match its retained package route",
+            retryable=False,
+            context={
+                "entity_type": payload.entity_type,
+                "target_route": package.target_route,
+            },
+        )
     if package.artifact_sha256 != payload.package_checksum:
         raise AppError(
             code="workflow_queue_publish_package_checksum_mismatch",
-            message="Approved package checksum does not match the retained Briefing package",
+            message="Approved package checksum does not match the retained entity package",
             retryable=False,
         )
     if not payload.dry_run and not bool(
@@ -563,7 +711,9 @@ def _wordpress_publish_handler(
         )
     result = publish_cross_report_package(
         package,
-        load_publish_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx),
+        load_publish_settings(
+            ConfigLoadRequest(schema_version="1.0", path=config_path), ctx
+        ),
         ctx,
         dry_run=payload.dry_run,
     )
@@ -589,7 +739,9 @@ def _wordpress_publish_handler(
                     processing_version=payload.processing_version,
                 ),
                 idempotency_key=_digest(
-                    "wordpress-projection", payload.package_checksum, str(result.post_id)
+                    "wordpress-projection",
+                    payload.package_checksum,
+                    str(result.post_id),
                 ),
                 deduplication_scope="wordpress-published-package",
                 root_workflow_id=job.root_workflow_id or job.job_id,
@@ -617,10 +769,86 @@ def _wordpress_publish_handler(
     )
 
 
+def _wordpress_projection_handler(
+    job: WorkflowJob, payload: QueuePayload, ctx: RunContext
+) -> WorkflowQueueHandlerResult:
+    """Refresh retained WordPress intelligence after a verified publication.
+
+    The projection service remains the sole WordPress read/write boundary.  This
+    adapter only performs durable queue validation and constructs its typed
+    request after live-publication policy has allowed the operation.
+    """
+
+    assert isinstance(payload, WordPressProjectionPayload)
+    if (
+        not payload.wordpress_id.strip()
+        or not payload.published_entity_reference.strip()
+        or not payload.input_content_hash.strip()
+    ):
+        raise AppError(
+            code="workflow_queue_wordpress_projection_input_incomplete",
+            message="WordPress projection requires a verified published entity and package checksum",
+            retryable=False,
+        )
+    config_path = str(payload.attributes.get("config_path", ""))
+    app = load_settings(ConfigLoadRequest(schema_version="1.0", path=config_path), ctx)
+    if not bool(getattr(app, "cross_report_analysis_publish_enabled", False)):
+        raise AppError(
+            code="cross_report_publish_live_disabled",
+            message="WordPress projection remains disabled while live publication is disabled",
+            retryable=False,
+        )
+    settings = load_publish_settings(
+        ConfigLoadRequest(schema_version="1.0", path=""), ctx
+    )
+    response = sync_wordpress_intelligence_projection(
+        WordPressIntelligenceSyncRequest(
+            schema_version=WORDPRESS_INTELLIGENCE_SCHEMA_VERSION,
+            source_request=WordPressIntelligenceSourceReadRequest(
+                schema_version=WORDPRESS_INTELLIGENCE_SCHEMA_VERSION,
+                base_url=settings.wp.site_url,
+                auth_header=build_auth_header(
+                    username=settings.wp.username,
+                    app_password=settings.wp.app_password,
+                    bearer_token=settings.wp.bearer_token,
+                ),
+                ssl_verify=settings.wp.ssl_verify,
+                ca_bundle_path=settings.wp.ca_bundle_path,
+            ),
+            generated_at_utc=utc_now_iso(),
+            state_db=app.state_db,
+        ),
+        ctx,
+    )
+    return WorkflowQueueHandlerResult(
+        result=WorkflowStageResult(
+            output_reference=(
+                f"wordpress-intelligence:{response.write_response.projection_version}:"
+                f"{response.write_response.generated_at_utc}"
+            ),
+            output_content_hash=_digest(
+                response.write_response.projection_version,
+                response.write_response.generated_at_utc,
+                payload.input_content_hash,
+            ),
+            execution_plan_hash=job.execution_plan_hash,
+            output_verified=response.write_response.status == "stored",
+            summary={
+                "entity_count": response.entity_count,
+                "projection_version": response.write_response.projection_version,
+                "wordpress_id": payload.wordpress_id,
+            },
+        ),
+        external_effects=["wordpress"],
+    )
+
+
 def _briefing_opportunity_handler(
     job: WorkflowJob, payload: QueuePayload, ctx: RunContext
 ) -> WorkflowQueueHandlerResult:
     assert isinstance(payload, BriefingOpportunityPayload)
+    config_path = str(payload.attributes.get("config_path", ""))
+    app = load_settings(ConfigLoadRequest(schema_version="1.0", path=config_path), ctx)
     publisher_ids = payload.attributes.get("publisher_ids", [])
     if not isinstance(publisher_ids, list):
         raise AppError(
@@ -628,21 +856,82 @@ def _briefing_opportunity_handler(
             message="Briefing opportunity publisher IDs must be a bounded list",
             retryable=False,
         )
+    source_hashes = list(payload.source_hashes)
+    if not source_hashes and _boolean_attribute(
+        payload, "resolve_projected_sources", False
+    ):
+        projected = analytics_store_service.read_cross_report_projected_data(
+            CrossReportProjectedDataReadRequest(
+                schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+                db_path=app.reports_db,
+                publisher_filters=_string_list_attribute(payload, "publisher_filters"),
+                date_range_start=str(payload.attributes.get("date_range_start", ""))
+                or None,
+                date_range_end=str(payload.attributes.get("date_range_end", ""))
+                or None,
+                category_filters=_string_list_attribute(payload, "category_filters"),
+                tag_filters=_string_list_attribute(payload, "tag_filters"),
+                content_classes=["claim", "finding", "quote", "metric"],
+                minimum_projection_status="projected",
+            ),
+            ctx,
+        )
+        candidates = sorted(
+            projected.source_candidates,
+            key=lambda candidate: (-candidate.total_score, candidate.report_id),
+        )[: _positive_int_attribute(payload, "max_source_reports", 6)]
+        source_hashes = [
+            candidate.content_hash
+            for candidate in candidates
+            if candidate.content_hash.strip()
+        ]
+        publisher_ids = [
+            candidate.publisher_id
+            for candidate in candidates
+            if candidate.publisher_id.strip()
+        ]
     opportunity = upsert_briefing_opportunity(
-        load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx).state_db,
+        app.state_db,
         topic=payload.topic,
         geography=payload.geography,
         rolling_window=payload.rolling_window,
         briefing_policy_version=payload.briefing_policy_version,
-        source_hashes=payload.source_hashes,
+        source_hashes=source_hashes,
         publisher_ids=[str(item) for item in publisher_ids],
-        minimum_distinct_reports=int(payload.attributes.get("minimum_distinct_reports", 2)),
-        minimum_publisher_diversity=int(payload.attributes.get("minimum_publisher_diversity", 2)),
+        minimum_distinct_reports=_positive_int_attribute(
+            payload, "minimum_distinct_reports", 2
+        ),
+        minimum_publisher_diversity=_positive_int_attribute(
+            payload, "minimum_publisher_diversity", 2
+        ),
         ctx=ctx,
     )
 
-    if opportunity.status == "eligible":
+    if opportunity.status in {"eligible", "frozen"}:
         source_set_hash = _digest(*opportunity.source_hashes)
+        generation_attributes: dict[str, str | int | bool | list[str]] = {
+            "auto_theme": _boolean_attribute(payload, "auto_theme", False),
+            "category_filters": _string_list_attribute(payload, "category_filters"),
+            "date_range_end": str(payload.attributes.get("date_range_end", "")),
+            "date_range_start": str(payload.attributes.get("date_range_start", "")),
+            "diagnostic": _boolean_attribute(payload, "diagnostic", False),
+            "max_evidence_items": _positive_int_attribute(
+                payload, "max_evidence_items", 48
+            ),
+            "max_prompt_chars": _positive_int_attribute(
+                payload, "max_prompt_chars", 60_000
+            ),
+            "max_signals": _positive_int_attribute(payload, "max_signals", 8),
+            "override_publishability": _boolean_attribute(
+                payload, "override_publishability", False
+            ),
+            "publisher_filters": _string_list_attribute(payload, "publisher_filters"),
+            "tag_filters": _string_list_attribute(payload, "tag_filters"),
+        }
+        generation_configuration_hash = _digest(
+            payload.processing_version,
+            json.dumps(generation_attributes, sort_keys=True, separators=(",", ":")),
+        )
         submission = WorkflowJobSubmission(
             schema_version="1.0",
             queue_name="briefing_generation",
@@ -653,17 +942,18 @@ def _briefing_opportunity_handler(
                 selected_topic=opportunity.topic,
                 sorted_source_hashes=opportunity.source_hashes,
                 model_routing_policy_version=payload.prompt_policy_version,
-                generation_configuration_hash=payload.processing_version,
+                generation_configuration_hash=generation_configuration_hash,
                 input_reference=f"workflow-opportunity:{opportunity.opportunity_id}",
                 input_content_hash=source_set_hash,
                 processing_version=payload.processing_version,
                 prompt_policy_version=payload.prompt_policy_version,
+                attributes=generation_attributes,
             ),
             idempotency_key=_digest(
                 opportunity.topic,
                 *opportunity.source_hashes,
                 payload.prompt_policy_version,
-                payload.processing_version,
+                generation_configuration_hash,
             ),
             deduplication_scope="briefing-frozen-source-set",
             root_workflow_id=job.root_workflow_id or job.job_id,
@@ -675,7 +965,7 @@ def _briefing_opportunity_handler(
             budget_profile="cross_report_analysis",
         )
         opportunity = freeze_briefing_opportunity(
-            load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx).state_db,
+            app.state_db,
             opportunity_id=opportunity.opportunity_id,
             frozen_source_manifest=f"workflow-opportunity:{opportunity.opportunity_id}",
             generation_submission=submission,
@@ -687,7 +977,10 @@ def _briefing_opportunity_handler(
             output_content_hash=_digest(*opportunity.source_hashes),
             execution_plan_hash=job.execution_plan_hash,
             output_verified=opportunity.status in {"collecting", "frozen", "generated"},
-            summary={"opportunity_status": opportunity.status, "source_count": len(opportunity.source_hashes)},
+            summary={
+                "opportunity_status": opportunity.status,
+                "source_count": len(opportunity.source_hashes),
+            },
         )
     )
 
@@ -706,6 +999,13 @@ def _string_list_attribute(payload: QueuePayload, name: str) -> list[str]:
 
 def _positive_int_attribute(payload: QueuePayload, name: str, default: int) -> int:
     raw = payload.attributes.get(name, default)
+    if isinstance(raw, bool) or not isinstance(raw, (int, str)):
+        raise AppError(
+            code="workflow_queue_attribute_invalid",
+            message="Workflow queue numeric attributes must be positive integers",
+            retryable=False,
+            context={"attribute": name},
+        )
     try:
         value = int(raw)
     except (TypeError, ValueError) as exc:
@@ -726,13 +1026,55 @@ def _positive_int_attribute(payload: QueuePayload, name: str, default: int) -> i
     return value
 
 
+def _positive_float_attribute(
+    payload: QueuePayload, name: str, default: float
+) -> float:
+    raw = payload.attributes.get(name, default)
+    if isinstance(raw, bool) or not isinstance(raw, (int, float, str)):
+        raise AppError(
+            code="workflow_queue_attribute_invalid",
+            message="Workflow queue numeric attributes must be positive numbers",
+            retryable=False,
+            context={"attribute": name},
+        )
+    try:
+        value = float(raw)
+    except ValueError as exc:
+        raise AppError(
+            code="workflow_queue_attribute_invalid",
+            message="Workflow queue numeric attributes must be positive numbers",
+            cause=exc,
+            retryable=False,
+            context={"attribute": name},
+        ) from exc
+    if value <= 0:
+        raise AppError(
+            code="workflow_queue_attribute_invalid",
+            message="Workflow queue numeric attributes must be positive numbers",
+            retryable=False,
+            context={"attribute": name},
+        )
+    return value
+
+
+def _boolean_attribute(payload: QueuePayload, name: str, default: bool) -> bool:
+    raw = payload.attributes.get(name, default)
+    if not isinstance(raw, bool):
+        raise AppError(
+            code="workflow_queue_attribute_invalid",
+            message="Workflow queue boolean attributes must be booleans",
+            retryable=False,
+            context={"attribute": name},
+        )
+    return raw
+
+
 def _signal_candidate_handler(
     job: WorkflowJob, payload: QueuePayload, ctx: RunContext
 ) -> WorkflowQueueHandlerResult:
     """Create canonical Signal candidates from existing projected evidence."""
 
     assert isinstance(payload, SignalCandidatePayload)
-    app = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
     topic = str(payload.attributes.get("topic", "")).strip()
     if not topic:
         raise AppError(
@@ -740,6 +1082,8 @@ def _signal_candidate_handler(
             message="Signal candidate extraction requires an explicit topic",
             retryable=False,
         )
+    config_path = str(payload.attributes.get("config_path", ""))
+    app = load_settings(ConfigLoadRequest(schema_version="1.0", path=config_path), ctx)
     request_id = _digest(
         "signal-candidate",
         payload.report_id or job.report_id,
@@ -790,6 +1134,7 @@ def _signal_candidate_handler(
         ),
         ctx,
     )
+    generate_signals = _boolean_attribute(payload, "generate_signals", True)
     downstream = [
         WorkflowJobSubmission(
             schema_version="1.0",
@@ -802,7 +1147,33 @@ def _signal_candidate_handler(
                 input_reference=app.signal_store_db or app.reports_db,
                 input_content_hash=_digest(*group.evidence_ids),
                 processing_version=payload.processing_version,
-                attributes={"topic": topic, "source_report_ids": group.source_report_ids},
+                attributes={
+                    "category_filters": _string_list_attribute(
+                        payload, "category_filters"
+                    ),
+                    "date_range_end": str(payload.attributes.get("date_range_end", "")),
+                    "date_range_start": str(
+                        payload.attributes.get("date_range_start", "")
+                    ),
+                    "max_evidence_items": _positive_int_attribute(
+                        payload, "max_evidence_items", 6
+                    ),
+                    "max_source_reports": _positive_int_attribute(
+                        payload, "max_source_reports", 3
+                    ),
+                    "minimum_evidence_items": _positive_int_attribute(
+                        payload, "minimum_evidence_items", 2
+                    ),
+                    "minimum_source_reports": _positive_int_attribute(
+                        payload, "minimum_source_reports", 2
+                    ),
+                    "publisher_filters": _string_list_attribute(
+                        payload, "publisher_filters"
+                    ),
+                    "topic": topic,
+                    "source_report_ids": group.source_report_ids,
+                    "tag_filters": _string_list_attribute(payload, "tag_filters"),
+                },
             ),
             idempotency_key=_digest(
                 "signal-generation", outcome.extraction_request_id, group.group_id
@@ -817,7 +1188,7 @@ def _signal_candidate_handler(
             budget_profile="high_quality",
         )
         for group in outcome.batch.groups
-        if group.validation_status == "approved"
+        if generate_signals and group.validation_status == "approved"
     ]
     return WorkflowQueueHandlerResult(
         result=WorkflowStageResult(
@@ -837,13 +1208,469 @@ def _signal_candidate_handler(
     )
 
 
+def _signal_publish_package(
+    *,
+    group_id: str,
+    package_path: str,
+    projection: SignalPublishProjection,
+) -> CrossReportPublishPackage:
+    """Adapt the established Signal projection to the shared publish package."""
+
+    signal = projection
+    card = signal.card_content
+    signal_card = {
+        "schema_version": card.schema_version,
+        "summary": card.summary,
+        "confidence": card.confidence,
+        "source_count": card.source_count,
+        "evidence_count": card.evidence_count,
+        "uncertainty": card.uncertainty,
+    }
+    source_report_ids = list(signal.source_report_ids)
+    publisher_labels = list(signal.publisher_labels)
+    return CrossReportPublishPackage(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        package_id=signal.file_id,
+        file_id=signal.file_id,
+        target_route="wordpress:ml_signal",
+        title=signal.title,
+        slug=signal.slug,
+        excerpt=str(card.summary),
+        body_html=signal.body_html,
+        html_text=signal.html_text,
+        html_path=str(Path(package_path).with_name("publish.html")),
+        canonical_artifact_path=package_path,
+        artifact_sha256="",
+        validation_sha256=_digest("signal-validation", signal.validation_status),
+        selected_theme_id=group_id,
+        selected_report_ids=source_report_ids,
+        source_metadata=[
+            {
+                "report_id": report_id,
+                "publisher": publisher_labels[index]
+                if index < len(publisher_labels)
+                else "",
+            }
+            for index, report_id in enumerate(source_report_ids)
+        ],
+        category_labels=list(signal.topic_labels),
+        tag_labels=list(signal.tag_labels),
+        evidence_reference_ids=list(signal.evidence_ids),
+        raw_metric_ids=[],
+        prompt_hashes={},
+        machine_metadata={
+            "schema_version": WORDPRESS_ENTITY_SCHEMA_VERSION,
+            "signal_cover_fingerprint": asdict(card.fingerprint),
+            "signal_validation_status": signal.validation_status,
+        },
+        signal_card=signal_card,
+    )
+
+
+def _signal_generation_handler(
+    job: WorkflowJob, payload: QueuePayload, ctx: RunContext
+) -> WorkflowQueueHandlerResult:
+    """Build a retained deterministic Signal package, then queue card rendering."""
+
+    assert isinstance(payload, SignalGenerationPayload)
+    if not payload.candidate_group_id or not payload.frozen_evidence_manifest:
+        raise AppError(
+            code="workflow_queue_signal_generation_input_incomplete",
+            message="Signal generation requires a candidate group and frozen evidence manifest",
+            retryable=False,
+        )
+    topic = str(payload.attributes.get("topic", "")).strip()
+    if not topic:
+        raise AppError(
+            code="workflow_queue_signal_topic_missing",
+            message="Signal generation requires the candidate group's selected topic",
+            retryable=False,
+        )
+    app = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+    projection_result = generate_signal_post_projection(
+        SignalPostWorkflowRequest(
+            schema_version=WORDPRESS_ENTITY_SCHEMA_VERSION,
+            request_id=_digest(
+                "signal-generation",
+                payload.candidate_group_id,
+                payload.input_content_hash,
+                payload.processing_version,
+            ),
+            generation_request=SignalPostGenerationRequest(
+                schema_version=WORDPRESS_ENTITY_SCHEMA_VERSION,
+                request_id=_digest(
+                    "signal-generation-request",
+                    payload.candidate_group_id,
+                    payload.input_content_hash,
+                ),
+                topic=topic,
+                category_filters=_string_list_attribute(payload, "category_filters"),
+                tag_filters=_string_list_attribute(payload, "tag_filters"),
+                publisher_filters=_string_list_attribute(payload, "publisher_filters"),
+                max_source_reports=_positive_int_attribute(
+                    payload, "max_source_reports", 3
+                ),
+                max_evidence_items=_positive_int_attribute(
+                    payload, "max_evidence_items", 6
+                ),
+                minimum_source_reports=_positive_int_attribute(
+                    payload, "minimum_source_reports", 2
+                ),
+                minimum_evidence_items=_positive_int_attribute(
+                    payload, "minimum_evidence_items", 2
+                ),
+            ),
+            db_path=app.reports_db,
+            signal_store_db=app.signal_store_db or app.reports_db,
+            output_root=app.output_dir,
+            cover_style_path=app.cover_style_path,
+            publication_mode="generate_only",
+            state_db=app.state_db,
+        ),
+        ctx,
+    )
+    package_path = str(
+        Path(app.output_dir)
+        / "workflow_queue"
+        / "signals"
+        / _digest(
+            payload.candidate_group_id,
+            payload.input_content_hash,
+            payload.processing_version,
+        )
+        / "publish_package.json"
+    )
+    package = _persist_queue_publish_package(
+        _signal_publish_package(
+            group_id=payload.candidate_group_id,
+            package_path=package_path,
+            projection=projection_result.projection,
+        ),
+        package_path,
+        ctx,
+    )
+    cover_submission = WorkflowJobSubmission(
+        schema_version="1.0",
+        queue_name="cover_generation",
+        job_type="cover_generation.v1",
+        payload=CoverGenerationPayload(
+            entity_type="signal",
+            entity_package_reference=package_path,
+            visual_semantics="signal",
+            template_version=payload.processing_version or "signal-card-v1",
+            input_reference=package_path,
+            input_content_hash=package.artifact_sha256,
+            processing_version=payload.processing_version,
+        ),
+        idempotency_key=_digest("signal-cover", package.artifact_sha256),
+        deduplication_scope="signal-package-cover",
+        root_workflow_id=job.root_workflow_id or job.job_id,
+        parent_job_id=job.job_id,
+        trigger_event_id=job.trigger_event_id or job.job_id,
+        correlation_id=job.correlation_id or job.root_workflow_id or job.job_id,
+        entity_type="signal",
+        entity_id=payload.candidate_group_id,
+        budget_profile="cover_generation",
+    )
+    return WorkflowQueueHandlerResult(
+        result=WorkflowStageResult(
+            output_reference=package_path,
+            output_content_hash=package.artifact_sha256,
+            execution_plan_hash=job.execution_plan_hash,
+            output_verified=True,
+            summary={
+                "candidate_group_id": payload.candidate_group_id,
+                "source_report_count": len(package.selected_report_ids),
+                "evidence_count": len(package.evidence_reference_ids),
+            },
+        ),
+        downstream=[cover_submission],
+    )
+
+
+def _briefing_generation_handler(
+    job: WorkflowJob, payload: QueuePayload, ctx: RunContext
+) -> WorkflowQueueHandlerResult:
+    """Generate a frozen-source Briefing without rendering covers or publishing."""
+
+    assert isinstance(payload, BriefingGenerationPayload)
+    if (
+        not payload.opportunity_id
+        or not payload.frozen_source_manifest
+        or not payload.selected_topic
+        or not payload.sorted_source_hashes
+    ):
+        raise AppError(
+            code="workflow_queue_briefing_generation_input_incomplete",
+            message="Briefing generation requires an eligible frozen source-set manifest",
+            retryable=False,
+        )
+    app = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+    analysis_request = CrossReportAnalysisRequest(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        request_id=_digest(
+            "briefing-generation",
+            payload.opportunity_id,
+            *payload.sorted_source_hashes,
+            payload.prompt_policy_version,
+            payload.generation_configuration_hash,
+        ),
+        topic=(
+            ""
+            if _boolean_attribute(payload, "auto_theme", False)
+            else payload.selected_topic
+        ),
+        auto_theme=_boolean_attribute(payload, "auto_theme", False),
+        category_filters=_string_list_attribute(payload, "category_filters"),
+        tag_filters=_string_list_attribute(payload, "tag_filters"),
+        publisher_filters=_string_list_attribute(payload, "publisher_filters"),
+        date_range_start=str(payload.attributes.get("date_range_start", "")) or None,
+        date_range_end=str(payload.attributes.get("date_range_end", "")) or None,
+        max_source_reports=max(1, len(payload.sorted_source_hashes)),
+        diagnostic=_boolean_attribute(payload, "diagnostic", False),
+        override_publishability=_boolean_attribute(
+            payload, "override_publishability", False
+        ),
+        publication_mode="generate_only",
+    )
+    outcome = run_cross_report_analysis(
+        CrossReportAnalysisOrchestratorRequest(
+            schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+            analysis_request=analysis_request,
+            projected_data_request=CrossReportProjectedDataReadRequest(
+                schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+                db_path=app.reports_db,
+                publisher_filters=analysis_request.publisher_filters,
+                date_range_start=analysis_request.date_range_start,
+                date_range_end=analysis_request.date_range_end,
+                category_filters=analysis_request.category_filters,
+                tag_filters=analysis_request.tag_filters,
+                content_classes=["claim", "finding", "quote", "metric"],
+                minimum_projection_status="projected",
+            ),
+            idempotency_db_path=app.state_db,
+            output_root=app.output_dir,
+            max_evidence_items=_positive_int_attribute(
+                payload, "max_evidence_items", 48
+            ),
+            max_signals=_positive_int_attribute(payload, "max_signals", 8),
+            max_prompt_chars=_positive_int_attribute(
+                payload, "max_prompt_chars", 60_000
+            ),
+            publish_target_route="wordpress:ml_briefing",
+            state_db=app.state_db,
+            frozen_source_hashes=list(payload.sorted_source_hashes),
+            generate_cover_assets=False,
+        ),
+        app,
+        ctx,
+    )
+    package = _cross_report_package_from_artifact(outcome.artifact_path, ctx)
+    cover_submission = WorkflowJobSubmission(
+        schema_version="1.0",
+        queue_name="cover_generation",
+        job_type="cover_generation.v1",
+        payload=CoverGenerationPayload(
+            entity_type="briefing",
+            entity_package_reference=outcome.artifact_path,
+            visual_semantics="briefing",
+            template_version=payload.processing_version or "briefing-card-v1",
+            input_reference=outcome.artifact_path,
+            input_content_hash=package.artifact_sha256,
+            processing_version=payload.processing_version,
+            prompt_policy_version=payload.prompt_policy_version,
+        ),
+        idempotency_key=_digest("briefing-cover", package.artifact_sha256),
+        deduplication_scope="briefing-package-cover",
+        root_workflow_id=job.root_workflow_id or job.job_id,
+        parent_job_id=job.job_id,
+        trigger_event_id=job.trigger_event_id or job.job_id,
+        correlation_id=job.correlation_id or job.root_workflow_id or job.job_id,
+        entity_type="briefing",
+        entity_id=payload.opportunity_id,
+        budget_profile="cover_generation",
+    )
+    return WorkflowQueueHandlerResult(
+        result=WorkflowStageResult(
+            output_reference=outcome.artifact_path,
+            output_content_hash=package.artifact_sha256,
+            execution_plan_hash=job.execution_plan_hash,
+            output_verified=outcome.validation_result.passed,
+            summary={
+                "selected_source_count": len(package.selected_report_ids),
+                "validation_status": outcome.validation_result.status,
+                "idempotency_reused": outcome.idempotency_reused,
+            },
+        ),
+        downstream=[cover_submission],
+        provider_usage={
+            key: value
+            for key, value in outcome.generated_result.cost_summary.items()
+            if isinstance(value, (int, float, str))
+        },
+        external_effects=["model"],
+    )
+
+
+def _cover_generation_handler(
+    job: WorkflowJob, payload: QueuePayload, ctx: RunContext
+) -> WorkflowQueueHandlerResult:
+    """Render one entity's card assets and freeze the approved publish package."""
+
+    assert isinstance(payload, CoverGenerationPayload)
+    if (
+        payload.entity_type not in {"briefing", "signal"}
+        or not payload.entity_package_reference
+    ):
+        raise AppError(
+            code="workflow_queue_cover_generation_input_incomplete",
+            message="Cover generation requires a retained Briefing or Signal package",
+            retryable=False,
+        )
+    package = _cross_report_package_from_artifact(payload.entity_package_reference, ctx)
+    expected_route = f"wordpress:ml_{payload.entity_type}"
+    if package.target_route != expected_route:
+        raise AppError(
+            code="workflow_queue_cover_entity_mismatch",
+            message="Cover queue entity type does not match the retained package route",
+            retryable=False,
+        )
+    if (
+        payload.input_content_hash
+        and package.artifact_sha256 != payload.input_content_hash
+    ):
+        raise AppError(
+            code="workflow_queue_cover_package_checksum_mismatch",
+            message="Cover generation package no longer matches its queued checksum",
+            retryable=False,
+        )
+    config_path = str(payload.attributes.get("config_path", ""))
+    app = load_settings(ConfigLoadRequest(schema_version="1.0", path=config_path), ctx)
+    if payload.entity_type == "signal":
+        fingerprint_payload = package.machine_metadata.get("signal_cover_fingerprint")
+        if not isinstance(fingerprint_payload, dict):
+            raise AppError(
+                code="workflow_queue_signal_cover_fingerprint_missing",
+                message="Signal package does not retain its grounded cover fingerprint",
+                retryable=False,
+            )
+        fingerprint = CoverFingerprint.from_dict(fingerprint_payload)
+        card = dict(package.signal_card)
+        publisher = "Market Lens Signal"
+    else:
+        fingerprint = CoverFingerprint(
+            schema_version="1.0",
+            geometry_family="system_matrix",
+            evidence_shape="system",
+            direction="neutral",
+            geography_scope="unknown",
+            evidence_density="balanced",
+            domain_layer="forecast",
+            seed=int(
+                hashlib.sha256(package.package_id.encode("utf-8")).hexdigest()[:8], 16
+            ),
+            selection_reason="Cross-report briefing synthesizes multiple linked report systems.",
+        )
+        card = dict(package.briefing_card)
+        card.setdefault("schema_version", "1.0")
+        card.setdefault("summary_compact", package.excerpt)
+        card.setdefault("summary_standard", package.excerpt)
+        card.setdefault("decision_focus", package.title)
+        card.setdefault("takeaways", [])
+        card.setdefault("source_count", len(package.selected_report_ids))
+        card.setdefault("evidence_count", len(package.evidence_reference_ids))
+        publisher = "Market Lens Briefing"
+    outcomes = generate_cover_images(
+        CoverImageGenerationRequest(
+            schema_version="2.0",
+            output_dir=app.output_dir,
+            style_config_path=app.cover_style_path,
+            reports=[
+                CoverImageReport(
+                    schema_version="2.0",
+                    file_id=package.file_id,
+                    title=package.title,
+                    publisher=publisher,
+                    report_slug=package.slug,
+                    categories=list(package.category_labels),
+                    time_period=None,
+                    region=None,
+                    fingerprint=fingerprint,
+                    cover_profile=payload.entity_type,
+                )
+            ],
+        ),
+        ctx,
+    )
+    outcome = outcomes[0] if outcomes else None
+    if outcome is None or outcome.status != "generated" or outcome.assets is None:
+        raise AppError(
+            code="cover_asset_set_incomplete",
+            message="Cover generation did not produce a complete card asset set",
+            retryable=False,
+        )
+    card["covers"] = {
+        size: getattr(outcome.assets, size).output_path
+        for size in ("small", "medium", "large")
+    }
+    final_package = (
+        replace(package, signal_card=card)
+        if payload.entity_type == "signal"
+        else replace(package, briefing_card=card)
+    )
+    final_path = str(
+        Path(payload.entity_package_reference).with_name(
+            "approved_publish_package.json"
+        )
+    )
+    final_package = _persist_queue_publish_package(final_package, final_path, ctx)
+    readiness_submission = WorkflowJobSubmission(
+        schema_version="1.0",
+        queue_name="publication_readiness",
+        job_type="publication_readiness.v1",
+        payload=PublicationReadinessPayload(
+            entity_type=payload.entity_type,
+            entity_package_reference=final_path,
+            package_checksum=final_package.artifact_sha256,
+            validation_reference=package.canonical_artifact_path,
+            lineage_reference=payload.entity_package_reference,
+            required_asset_status="ready",
+            input_reference=final_path,
+            input_content_hash=final_package.artifact_sha256,
+            processing_version=payload.processing_version,
+        ),
+        idempotency_key=_digest(
+            "publication-readiness", payload.entity_type, final_package.artifact_sha256
+        ),
+        deduplication_scope="validated-publication-package",
+        root_workflow_id=job.root_workflow_id or job.job_id,
+        parent_job_id=job.job_id,
+        trigger_event_id=job.trigger_event_id or job.job_id,
+        correlation_id=job.correlation_id or job.root_workflow_id or job.job_id,
+        entity_type=payload.entity_type,
+        entity_id=package.package_id,
+        budget_profile="publishing",
+    )
+    return WorkflowQueueHandlerResult(
+        result=WorkflowStageResult(
+            output_reference=final_path,
+            output_content_hash=final_package.artifact_sha256,
+            execution_plan_hash=job.execution_plan_hash,
+            output_verified=True,
+            summary={"entity_type": payload.entity_type, "asset_count": 3},
+        ),
+        downstream=[readiness_submission],
+    )
+
+
 def _claim_embedding_handler(
     job: WorkflowJob, payload: QueuePayload, ctx: RunContext
 ) -> WorkflowQueueHandlerResult:
     """Run the existing bounded claim-embedding queue for canonical rows only."""
 
     assert isinstance(payload, ClaimEmbeddingPayload)
-    app = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+    config_path = str(payload.attributes.get("config_path", ""))
+    app = load_settings(ConfigLoadRequest(schema_version="1.0", path=config_path), ctx)
     model = payload.model_version or str(
         payload.attributes.get("model", "text-embedding-3-small")
     )
@@ -874,10 +1701,12 @@ def _claim_embedding_handler(
             max_estimated_tokens=_positive_int_attribute(
                 payload, "max_estimated_tokens", 8_000
             ),
-            max_estimated_cost_usd=float(
-                payload.attributes.get("max_estimated_cost_usd", 1.0)
+            max_estimated_cost_usd=_positive_float_attribute(
+                payload, "max_estimated_cost_usd", 1.0
             ),
-            max_runtime_seconds=float(payload.attributes.get("max_runtime_seconds", 120)),
+            max_runtime_seconds=_positive_float_attribute(
+                payload, "max_runtime_seconds", 120.0
+            ),
             max_retries=_positive_int_attribute(payload, "max_retries", 3),
             max_concurrent_provider_calls=1,
             publisher_fairness_limit=_positive_int_attribute(
@@ -927,7 +1756,9 @@ def _stage_child_submission(
     next_payload: QueuePayload,
 ) -> WorkflowJobSubmission:
     """Create the one deterministic report-stage handoff for a checkpoint."""
-    source_hash = payload.input_content_hash or getattr(payload, "source_content_hash", "")
+    source_hash = payload.input_content_hash or getattr(
+        payload, "source_content_hash", ""
+    )
     report_id = getattr(payload, "report_id", "") or job.report_id
     return WorkflowJobSubmission(
         schema_version="1.0",
@@ -967,12 +1798,10 @@ def _report_stage_handler(
         job: WorkflowJob, payload: QueuePayload, ctx: RunContext
     ) -> WorkflowQueueHandlerResult:
         artifact_reference = str(
-            getattr(payload, "source_artifact_reference", "")
-            or payload.input_reference
+            getattr(payload, "source_artifact_reference", "") or payload.input_reference
         ).strip()
         source_hash = str(
-            getattr(payload, "source_content_hash", "")
-            or payload.input_content_hash
+            getattr(payload, "source_content_hash", "") or payload.input_content_hash
         ).strip()
         report_id = str(getattr(payload, "report_id", "") or job.report_id).strip()
         if not artifact_reference or not source_hash or not report_id:
@@ -1017,39 +1846,48 @@ def _report_stage_handler(
             )
         downstream: list[WorkflowJobSubmission] = []
         if next_queue:
-            next_payload_types: dict[str, type[QueuePayload]] = {
-                "report_selection": ReportSelectionPayload,
-                "report_analysis": ReportAnalysisPayload,
-                "report_render": ReportRenderPayload,
-                "analytics_projection": AnalyticsProjectionPayload,
-            }
-            next_payload_type = next_payload_types[next_queue]
-            common = {
-                "input_reference": artifact_reference,
-                "input_content_hash": source_hash,
-                "processing_version": payload.processing_version,
-                "attributes": payload.attributes,
-                "report_id": report_id,
-            }
             if next_queue == "report_selection":
-                next_payload = next_payload_type(
-                    **common,
+                next_payload: QueuePayload = ReportSelectionPayload(
+                    input_reference=artifact_reference,
+                    input_content_hash=source_hash,
+                    processing_version=payload.processing_version,
+                    attributes=payload.attributes,
+                    report_id=report_id,
                     source_prepared_checkpoint="source_prepared",
                 )
             elif next_queue == "report_analysis":
-                next_payload = next_payload_type(
-                    **common,
+                next_payload = ReportAnalysisPayload(
+                    input_reference=artifact_reference,
+                    input_content_hash=source_hash,
+                    processing_version=payload.processing_version,
+                    attributes=payload.attributes,
+                    report_id=report_id,
                     selection_checkpoint="selection_complete",
                 )
             elif next_queue == "report_render":
-                next_payload = next_payload_type(
-                    **common,
+                next_payload = ReportRenderPayload(
+                    input_reference=artifact_reference,
+                    input_content_hash=source_hash,
+                    processing_version=payload.processing_version,
+                    attributes=payload.attributes,
+                    report_id=report_id,
                     analysis_checkpoint="analysis_complete",
                 )
-            else:
-                next_payload = next_payload_type(
-                    **common,
+            elif next_queue == "analytics_projection":
+                next_payload = AnalyticsProjectionPayload(
+                    input_reference=artifact_reference,
+                    input_content_hash=source_hash,
+                    processing_version=payload.processing_version,
+                    attributes=payload.attributes,
+                    report_id=report_id,
                     validated_artifact_reference="analysis_complete",
+                )
+            else:
+                raise AppError(
+                    code="workflow_queue_report_stage_unknown_downstream",
+                    message="Report stage requested an unknown downstream queue",
+                    retryable=False,
+                    context={"next_queue": next_queue},
                 )
             downstream.append(
                 _stage_child_submission(
@@ -1064,7 +1902,8 @@ def _report_stage_handler(
                 output_reference=str(outcome.html_path or artifact_reference),
                 output_content_hash=source_hash,
                 execution_plan_hash=job.execution_plan_hash,
-                output_verified=outcome.status in {"processed", "skipped", "checkpointed"},
+                output_verified=outcome.status
+                in {"processed", "skipped", "checkpointed"},
                 summary={
                     "pipeline_status": outcome.status,
                     "checkpoint": stop_after_stage or "analytics_projected",
@@ -1074,6 +1913,158 @@ def _report_stage_handler(
         )
 
     return handler
+
+
+def _analytics_projection_handler(
+    job: WorkflowJob, payload: QueuePayload, ctx: RunContext
+) -> WorkflowQueueHandlerResult:
+    """Project a report, then durably fan out only source-linked derived work."""
+
+    assert isinstance(payload, AnalyticsProjectionPayload)
+    stage_result = _report_stage_handler(
+        resume_from_stage="analysis_complete", projection_only=True
+    )(job, payload, ctx)
+    app = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+    report_id = payload.report_id or job.report_id
+    if not report_id:
+        raise AppError(
+            code="workflow_queue_projection_report_missing",
+            message="Analytics projection fan-out requires a stable report identifier",
+            retryable=False,
+        )
+    projected = analytics_store_service.read_cross_report_projected_data(
+        CrossReportProjectedDataReadRequest(
+            schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+            db_path=app.reports_db,
+            content_classes=["claim", "finding", "quote", "metric"],
+            minimum_projection_status="projected",
+        ),
+        ctx,
+    )
+    source = next(
+        (
+            candidate
+            for candidate in projected.source_candidates
+            if candidate.report_id == report_id
+        ),
+        None,
+    )
+    if source is None:
+        raise AppError(
+            code="workflow_queue_projection_source_missing",
+            message="Analytics projection did not retain a projected source candidate",
+            retryable=True,
+            context={"report_id": report_id},
+        )
+    root_workflow_id = job.root_workflow_id or job.job_id
+    correlation_id = job.correlation_id or root_workflow_id
+    downstream: list[WorkflowJobSubmission] = [
+        WorkflowJobSubmission(
+            schema_version="1.0",
+            queue_name="claim_embedding",
+            job_type="claim_embedding.v1",
+            payload=ClaimEmbeddingPayload(
+                model_version="text-embedding-3-small",
+                input_reference=f"analytics:report:{report_id}",
+                input_content_hash=source.content_hash,
+                processing_version=payload.processing_version,
+            ),
+            idempotency_key=_digest("claim-embedding", report_id, source.content_hash),
+            deduplication_scope="report-projected-claims",
+            root_workflow_id=root_workflow_id,
+            parent_job_id=job.job_id,
+            trigger_event_id=job.trigger_event_id or job.job_id,
+            correlation_id=correlation_id,
+            entity_type="report",
+            entity_id=report_id,
+            publisher_id=source.publisher_id,
+            report_id=report_id,
+            budget_profile="embedding",
+        )
+    ]
+    topic = str(payload.attributes.get("topic", "")).strip()
+    if not topic and source.category_labels:
+        topic = source.category_labels[0]
+    if topic:
+        downstream.extend(
+            [
+                WorkflowJobSubmission(
+                    schema_version="1.0",
+                    queue_name="signal_candidate",
+                    job_type="signal_candidate.v1",
+                    payload=SignalCandidatePayload(
+                        report_id=report_id,
+                        projection_reference=f"analytics:report:{report_id}",
+                        signal_selection_policy_version=payload.processing_version
+                        or "signal-selection.v1",
+                        input_reference=f"analytics:report:{report_id}",
+                        input_content_hash=source.content_hash,
+                        processing_version=payload.processing_version,
+                        attributes={"topic": topic},
+                    ),
+                    idempotency_key=_digest(
+                        "signal-candidate", report_id, source.content_hash, topic
+                    ),
+                    deduplication_scope="projected-report-signal-candidates",
+                    root_workflow_id=root_workflow_id,
+                    parent_job_id=job.job_id,
+                    trigger_event_id=job.trigger_event_id or job.job_id,
+                    correlation_id=correlation_id,
+                    entity_type="report",
+                    entity_id=report_id,
+                    publisher_id=source.publisher_id,
+                    report_id=report_id,
+                    budget_profile="signal_candidate",
+                ),
+                WorkflowJobSubmission(
+                    schema_version="1.0",
+                    queue_name="briefing_opportunity",
+                    job_type="briefing_opportunity.v1",
+                    payload=BriefingOpportunityPayload(
+                        report_id=report_id,
+                        projection_event_id=job.job_id,
+                        topic=topic,
+                        geography=str(payload.attributes.get("geography", "")),
+                        rolling_window=str(
+                            payload.attributes.get("rolling_window", "current")
+                        ),
+                        source_hashes=[source.content_hash],
+                        briefing_policy_version=payload.processing_version
+                        or "briefing-opportunity.v1",
+                        input_reference=f"analytics:report:{report_id}",
+                        input_content_hash=source.content_hash,
+                        processing_version=payload.processing_version,
+                        attributes={"publisher_ids": [source.publisher_id]},
+                    ),
+                    idempotency_key=_digest(
+                        "briefing-opportunity", topic, source.content_hash
+                    ),
+                    deduplication_scope="projected-report-briefing-opportunity",
+                    root_workflow_id=root_workflow_id,
+                    parent_job_id=job.job_id,
+                    trigger_event_id=job.trigger_event_id or job.job_id,
+                    correlation_id=correlation_id,
+                    entity_type="report",
+                    entity_id=report_id,
+                    publisher_id=source.publisher_id,
+                    report_id=report_id,
+                    budget_profile="briefing_opportunity",
+                ),
+            ]
+        )
+    return replace(
+        stage_result,
+        downstream=downstream,
+        result=replace(
+            stage_result.result,
+            summary={
+                **stage_result.result.summary,
+                "fanout_count": len(downstream),
+                "source_content_hash": source.content_hash,
+                "topic": topic,
+            },
+        ),
+    )
 
 
 def _registration(
@@ -1140,7 +2131,9 @@ def default_workflow_queue_registry() -> dict[
             SourceIngestPayload,
             SourceIngestResult,
             handler=_report_stage_handler(
-                resume_from_stage="", stop_after_stage="source_prepared", next_queue="report_selection"
+                resume_from_stage="",
+                stop_after_stage="source_prepared",
+                next_queue="report_selection",
             ),
             downstream=("report_selection.v1",),
             effects=("pdf", "ocr"),
@@ -1152,7 +2145,9 @@ def default_workflow_queue_registry() -> dict[
             ReportSelectionPayload,
             ReportSelectionResult,
             handler=_report_stage_handler(
-                resume_from_stage="source_prepared", stop_after_stage="selection_complete", next_queue="report_analysis"
+                resume_from_stage="source_prepared",
+                stop_after_stage="selection_complete",
+                next_queue="report_analysis",
             ),
             downstream=("report_analysis.v1",),
             effects=("pdf", "vision"),
@@ -1164,7 +2159,9 @@ def default_workflow_queue_registry() -> dict[
             ReportAnalysisPayload,
             ReportAnalysisResult,
             handler=_report_stage_handler(
-                resume_from_stage="selection_complete", stop_after_stage="analysis_complete", next_queue="report_render"
+                resume_from_stage="selection_complete",
+                stop_after_stage="analysis_complete",
+                next_queue="report_render",
             ),
             downstream=("artifact_repair.v1", "report_render.v1"),
             effects=("model", "vector"),
@@ -1177,7 +2174,9 @@ def default_workflow_queue_registry() -> dict[
             ReportRenderPayload,
             ReportRenderResult,
             handler=_report_stage_handler(
-                resume_from_stage="analysis_complete", stop_after_stage="render_complete", next_queue="analytics_projection"
+                resume_from_stage="analysis_complete",
+                stop_after_stage="render_complete",
+                next_queue="analytics_projection",
             ),
             downstream=(
                 "analytics_projection.v1",
@@ -1191,9 +2190,7 @@ def default_workflow_queue_registry() -> dict[
             "analytics_projection",
             AnalyticsProjectionPayload,
             AnalyticsProjectionResult,
-            handler=_report_stage_handler(
-                resume_from_stage="analysis_complete", projection_only=True
-            ),
+            handler=_analytics_projection_handler,
             downstream=(
                 "claim_embedding.v1",
                 "signal_candidate.v1",
@@ -1221,8 +2218,8 @@ def default_workflow_queue_registry() -> dict[
             "signal_generation",
             SignalGenerationPayload,
             SignalGenerationResult,
-            downstream=("cover_generation.v1", "publication_readiness.v1"),
-            effects=("model",),
+            handler=_signal_generation_handler,
+            downstream=("cover_generation.v1",),
             budget_profile="high_quality",
             lease_seconds=3600,
         ),
@@ -1238,7 +2235,8 @@ def default_workflow_queue_registry() -> dict[
             "briefing_generation",
             BriefingGenerationPayload,
             BriefingGenerationResult,
-            downstream=("cover_generation.v1", "publication_readiness.v1"),
+            handler=_briefing_generation_handler,
+            downstream=("cover_generation.v1",),
             effects=("model",),
             budget_profile="cross_report_analysis",
             lease_seconds=3600,
@@ -1247,6 +2245,8 @@ def default_workflow_queue_registry() -> dict[
             "cover_generation",
             CoverGenerationPayload,
             CoverGenerationResult,
+            handler=_cover_generation_handler,
+            downstream=("publication_readiness.v1",),
             budget_profile="cover_generation",
         ),
         _registration(
@@ -1270,6 +2270,7 @@ def default_workflow_queue_registry() -> dict[
             "wordpress_projection",
             WordPressProjectionPayload,
             WordPressProjectionResult,
+            handler=_wordpress_projection_handler,
             effects=("wordpress",),
             budget_profile="wordpress_projection",
         ),
@@ -1304,7 +2305,10 @@ def default_workflow_queue_registry() -> dict[
             budget_profile="maintenance",
         ),
         _registration(
-            "vector_retention", MaintenancePayload, WorkflowStageResult, budget_profile="maintenance"
+            "vector_retention",
+            MaintenancePayload,
+            WorkflowStageResult,
+            budget_profile="maintenance",
         ),
         _registration(
             "wordpress_category_update",
@@ -1321,7 +2325,10 @@ def default_workflow_queue_registry() -> dict[
             budget_profile="maintenance",
         ),
         _registration(
-            "cost_reconciliation", MaintenancePayload, WorkflowStageResult, budget_profile="maintenance"
+            "cost_reconciliation",
+            MaintenancePayload,
+            WorkflowStageResult,
+            budget_profile="maintenance",
         ),
         _registration(
             "release_evidence_generation",

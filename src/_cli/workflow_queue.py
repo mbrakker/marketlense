@@ -189,17 +189,25 @@ def queue_submit_source_ingest(
     job, created = enqueue_workflow_job(
         state_db,
         WorkflowJobSubmission(
-            schema_version="1.0", queue_name="source_ingest", job_type="source_ingest.v1",
+            schema_version="1.0",
+            queue_name="source_ingest",
+            job_type="source_ingest.v1",
             payload=SourceIngestPayload(
-                source_identity_id=identity, source_artifact_reference=artifact_path,
-                source_content_hash=stat.md5, report_id=report_id,
+                source_identity_id=identity,
+                source_artifact_reference=artifact_path,
+                source_content_hash=stat.md5,
+                report_id=report_id,
                 parser_ocr_compatibility_version=processing_version,
-                input_reference=artifact_path, input_content_hash=stat.md5,
+                input_reference=artifact_path,
+                input_content_hash=stat.md5,
                 processing_version=processing_version,
             ),
             idempotency_key=f"{stat.md5}:source_ingest:{processing_version}",
-            deduplication_scope="source-ingest-content", root_workflow_id=f"ingest:{report_id}",
-            source_identity_id=identity, report_id=report_id, budget_profile="report_ingest",
+            deduplication_scope="source-ingest-content",
+            root_workflow_id=f"ingest:{report_id}",
+            source_identity_id=identity,
+            report_id=report_id,
+            budget_profile="report_ingest",
         ),
         ctx,
     )
@@ -241,6 +249,11 @@ def queue_approve_publication(
     entity_type: str = typer.Option(...),
     target_site: str = typer.Option("default"),
     note: str = typer.Option(""),
+    dry_run: bool = typer.Option(
+        False,
+        "--dry-run",
+        help="Execute the approved WordPress queue job without any WordPress write.",
+    ),
     yes: bool = typer.Option(False, "--yes", help="Confirm human approval"),
 ) -> None:
     """Record human approval and enqueue—never execute—WordPress publication."""
@@ -259,6 +272,7 @@ def queue_approve_publication(
             target_site=target_site,
             input_reference=package_reference,
             input_content_hash=package_checksum,
+            dry_run=dry_run,
         ),
         idempotency_key=f"{target_site}:{entity_type}:{package_checksum}",
         deduplication_scope="wordpress-publish-package",

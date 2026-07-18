@@ -4,6 +4,7 @@ import logging
 from dataclasses import replace
 from typing import Callable, Protocol, cast
 
+from src.contracts.cover_images import CoverImageGenerationRequest, CoverImageReport
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
     CrossReportProjectedDataReadRequest,
@@ -12,7 +13,6 @@ from src.contracts.cross_report_analysis import (
     CrossReportPublishStatus,
     PublicationMode,
 )
-from src.contracts.cover_images import CoverImageGenerationRequest, CoverImageReport
 from src.contracts.publish import PublishSettings
 from src.contracts.remediation import RemediationArtifactReference
 from src.contracts.run_context import RunContext
@@ -24,12 +24,13 @@ from src.contracts.signal_candidates import (
 from src.contracts.wordpress import WordPressAuthSettings
 from src.contracts.wordpress_entities import (
     WORDPRESS_ENTITY_SCHEMA_VERSION,
+    SignalPostGenerationResult,
     SignalPostWorkflowRequest,
     SignalPostWorkflowResult,
     SignalPublishProjection,
 )
-from src.generators.signal_post_generator import build_signal_publish_projection
 from src.generators.cover_image_generator import generate_cover_images
+from src.generators.signal_post_generator import build_signal_publish_projection
 from src.orchestrators.publish_orchestrator import publish_signal_projection
 from src.orchestrators.remediation_orchestrator import (
     record_workflow_failure,
@@ -166,6 +167,53 @@ def _signal_card_payload(
     }
 
 
+def generate_signal_post_projection(
+    request: SignalPostWorkflowRequest,
+    ctx: RunContext,
+    *,
+    read_projected_data_fn: Callable[
+        [CrossReportProjectedDataReadRequest, RunContext],
+        CrossReportProjectedDataReadResponse,
+    ] = analytics_store_service.read_cross_report_projected_data,
+    read_signal_candidates_fn: Callable[
+        [SignalCandidateReadRequest, RunContext], SignalCandidateReadResponse
+    ] = analytics_store_service.read_signal_candidates,
+) -> SignalPostGenerationResult:
+    """Build a source-linked Signal projection before covers or publication."""
+
+    projected_request = _projected_data_request(request)
+    projected_data = read_projected_data_fn(projected_request, ctx)
+    generation = request.generation_request
+    candidate_data = read_signal_candidates_fn(
+        SignalCandidateReadRequest(
+            schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+            db_path=request.signal_store_db or request.db_path,
+            validation_statuses=["approved"],
+            source_report_ids=[],
+            evidence_ids=[],
+            topic_filters=[
+                generation.topic,
+                *generation.tag_filters,
+                *generation.category_filters,
+            ],
+            limit=max(1, generation.max_source_reports),
+        ),
+        ctx,
+    )
+    projection = build_signal_publish_projection(
+        generation,
+        projected_data,
+        ctx,
+        candidate_data=candidate_data,
+    )
+    return SignalPostGenerationResult(
+        schema_version=WORDPRESS_ENTITY_SCHEMA_VERSION,
+        request_id=request.request_id,
+        projected_data_request=projected_request,
+        projection=projection,
+    )
+
+
 def _run_signal_post_workflow(
     request: SignalPostWorkflowRequest,
     ctx: RunContext,
@@ -194,31 +242,14 @@ def _run_signal_post_workflow(
             },
         )
     )
-    projected_request = _projected_data_request(request)
-    projected_data = read_projected_data_fn(projected_request, ctx)
-    generation = request.generation_request
-    candidate_data = read_signal_candidates_fn(
-        SignalCandidateReadRequest(
-            schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
-            db_path=request.signal_store_db or request.db_path,
-            validation_statuses=["approved"],
-            source_report_ids=[],
-            evidence_ids=[],
-            topic_filters=[
-                generation.topic,
-                *generation.tag_filters,
-                *generation.category_filters,
-            ],
-            limit=max(1, generation.max_source_reports),
-        ),
+    generation_result = generate_signal_post_projection(
+        request,
         ctx,
+        read_projected_data_fn=read_projected_data_fn,
+        read_signal_candidates_fn=read_signal_candidates_fn,
     )
-    projection = build_signal_publish_projection(
-        request.generation_request,
-        projected_data,
-        ctx,
-        candidate_data=candidate_data,
-    )
+    projected_request = generation_result.projected_data_request
+    projection = generation_result.projection
     signal_card = _signal_card_payload(request, projection, ctx)
 
     if request.publication_mode in {"generate_only", "validate_only"}:

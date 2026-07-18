@@ -4,15 +4,16 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
+from src.contracts.semantic_ids import RunId
 from src.contracts.ui_run_control import (
+    UiRunCancelRequest,
+    UiRunCancelResponse,
     UiRunDeadLetterActionListRequest,
     UiRunDeadLetterActionListResponse,
     UiRunDeadLetterActionRequest,
     UiRunDeadLetterActionResponse,
     UiRunDeadLetterListRequest,
     UiRunDeadLetterListResponse,
-    UiRunCancelRequest,
-    UiRunCancelResponse,
     UiRunLaunchRequest,
     UiRunLaunchResponse,
     UiRunListRequest,
@@ -20,11 +21,11 @@ from src.contracts.ui_run_control import (
     UiRunPollRequest,
     UiRunPollResponse,
 )
-from src.contracts.semantic_ids import RunId
 from src.contracts.workflow_control import (
     PipelineExecutionAuthorizationRequest,
     RunIntent,
 )
+from src.orchestrators import workflow_control_orchestrator as workflow_control
 from src.orchestrators.ui_run_control_orchestrator import (
     apply_dead_letter_action,
     cancel_ui_run,
@@ -34,9 +35,8 @@ from src.orchestrators.ui_run_control_orchestrator import (
     list_ui_runs,
     poll_ui_run,
 )
-from src.orchestrators import workflow_control_orchestrator as workflow_control
-from src.ui.common import _ctx
 from src.ui import state as ui_state
+from src.ui.common import _ctx
 
 
 def launch_background_run(
@@ -50,6 +50,14 @@ def launch_background_run(
     workflow_payload = _resolve_ui_workflow_control_payload(run_type, request_payload)
     enriched_payload = dict(request_payload)
     enriched_payload["workflow_control"] = workflow_payload
+    if run_type in {
+        "publisher_discovery",
+        "report_download",
+        "signal_candidate_extraction",
+        "signal_post",
+        "cross_report_analysis",
+    }:
+        enriched_payload["workflow_queue_submit"] = True
     response = launch_ui_run(
         UiRunLaunchRequest(
             schema_version="1.0",
@@ -183,6 +191,9 @@ def _ui_run_type_to_intent(run_type: str) -> str:
         "report_download": "acquire missing pdf",
         "publisher_discovery": "refresh publisher inventory",
         "publisher_inventory": "refresh publisher inventory",
+        "cross_report_analysis": "generate cross-report analysis",
+        "signal_candidate_extraction": "extract signal candidates",
+        "signal_post": "generate signal post",
         "publish": "publish ready reports",
         "publish_wp": "publish ready reports",
         "ui_replay": "replay ui run",

@@ -7,16 +7,22 @@ from dataclasses import asdict
 from typing import Any, Callable, TypeVar, cast
 
 from src.contracts.ingest import IngestSettings
+from src.contracts.mailbox_acquisition import MailReportAcquisitionRequest
 from src.contracts.pipeline_preflight import (
-    PipelinePreflightRequest,
     PipelinePreflightReport,
+    PipelinePreflightRequest,
 )
 from src.contracts.publish import PublishSettings
 from src.contracts.retry_telemetry import RetryDecisionTelemetryReport
 from src.contracts.run_context import RunContext
+from src.contracts.state import (
+    MailDeliveryRequestListDueRequest,
+    MailDeliveryRequestMarkAttemptRequest,
+    WorkflowControlObservationWriteRequest,
+)
 from src.contracts.workflow_control import (
-    AutonomousRunSupervisorInput,
     AutonomousRunSupervisorExecution,
+    AutonomousRunSupervisorInput,
     AutonomousRunSupervisorPlan,
     ConcurrencyDecision,
     ConcurrencyLimit,
@@ -26,38 +32,32 @@ from src.contracts.workflow_control import (
     MailDeliveryWorkflowRunResult,
     ModelCallAuditRecord,
     ModelCallReplayBundle,
-    PipelineExecutionPlan,
     OperationalMemoryRecommendation,
     OperationalMemoryRecord,
     OperationalObservation,
     PipelineExecutionAuthorization,
     PipelineExecutionAuthorizationRequest,
-    PreLlmDataQualityDecision,
-    PreLlmDataQualityInput,
+    PipelineExecutionPlan,
     PreflightRemediationAction,
     PreflightRemediationArtifact,
-    PublishRemediationTarget,
-    PublishRemediationWorkflow,
+    PreLlmDataQualityDecision,
+    PreLlmDataQualityInput,
     PublishPolicyDecision,
     PublishPolicyInput,
+    PublishRemediationTarget,
+    PublishRemediationWorkflow,
     ResolvedRetryPolicy,
     ResolvedRunIntent,
     RunHealthGateDecision,
     RunHealthGateInput,
     RunIntent,
     WorkflowContract,
-    WorkflowControlSettings,
     WorkflowControlObservation,
+    WorkflowControlSettings,
     WorkflowGateOutcome,
     WorkflowPreflightProfile,
     WorkflowRetryPolicyConfig,
     WorkflowTransition,
-)
-from src.contracts.mailbox_acquisition import MailReportAcquisitionRequest
-from src.contracts.state import (
-    MailDeliveryRequestListDueRequest,
-    MailDeliveryRequestMarkAttemptRequest,
-    WorkflowControlObservationWriteRequest,
 )
 from src.orchestrators.mail_report_acquisition_orchestrator import (
     run_mail_report_acquisition,
@@ -66,15 +66,15 @@ from src.orchestrators.pipeline_preflight_orchestrator import (
     report_pipeline_prompt_namespaces,
 )
 from src.orchestrators.retry_orchestrator import RetryPolicy
-from src.utils.errors import AppError
-from src.utils.clock import utc_now_seconds_z
-from src.utils.logging import log_event
 from src.services.state_service import (
     list_due_mail_delivery_requests,
     mark_mail_delivery_request_attempt,
     write_workflow_control_observation,
 )
 from src.utils.cache_utils import sha256_json
+from src.utils.clock import utc_now_seconds_z
+from src.utils.errors import AppError
+from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.workflow_control_orchestrator")
 _T = TypeVar("_T")
@@ -129,6 +129,24 @@ _INTENT_MAP = {
         ["network", "browser"],
         "",
     ),
+    "generate_cross_report_analysis": (
+        "cross_report_analysis",
+        "cross_report_analysis",
+        ["model", "analytics_store"],
+        "",
+    ),
+    "extract_signal_candidates": (
+        "cross_report_analysis",
+        "signal_candidate",
+        ["model", "analytics_store"],
+        "",
+    ),
+    "generate_signal_post": (
+        "cross_report_analysis",
+        "high_quality",
+        ["model", "analytics_store"],
+        "",
+    ),
     "replay_ui_run": ("ui_replay", "safe_default", ["filesystem"], ""),
 }
 _AMBIGUOUS_INTENTS = {"run", "process", "start", "continue", "auto"}
@@ -160,7 +178,9 @@ def build_workflow_preflight_request(
     if ingest_settings is None:
         raise AppError(
             code="workflow_preflight_settings_missing",
-            message="Ingest settings are required to build a workflow preflight request",
+            message=(
+                "Ingest settings are required to build a workflow preflight request"
+            ),
             retryable=False,
             context={"workflow": workflow_name},
         )

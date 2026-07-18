@@ -68,3 +68,19 @@ def test_ui_run_replay_type_resolves_workflow_control_payload() -> None:
     assert payload["status"] == "resolved"
     assert payload["workflow"] == "ui_replay"
     assert payload["preflight_profile"] == "ui_replay"
+
+
+def test_strategy_output_ui_types_resolve_the_cross_report_authority() -> None:
+    for run_type in (
+        "cross_report_analysis",
+        "signal_candidate_extraction",
+        "signal_post",
+    ):
+        payload = run_control._resolve_ui_workflow_control_payload(
+            run_type,
+            {"topic": "Consumer behavior"},
+        )
+
+        assert payload["status"] == "resolved"
+        assert payload["workflow"] == "cross_report_analysis"
+        assert payload["execution_authority"]["workflow"] == "cross_report_analysis"

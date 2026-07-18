@@ -8,6 +8,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from src.contracts.analytics_projection import ClaimEmbeddingReadResponse
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
     CrossReportAnalysisOrchestratorRequest,
@@ -19,7 +20,6 @@ from src.contracts.cross_report_analysis import (
     CrossReportRawMetricReference,
     CrossReportSourceReportCandidate,
 )
-from src.contracts.analytics_projection import ClaimEmbeddingReadResponse
 from src.contracts.openai import OpenAIResponseResult
 from src.contracts.prompts import PromptRenderResponse, PromptSet, PromptTemplate
 from src.contracts.remediation import RemediationListRequest
@@ -65,7 +65,9 @@ class CountingOpenAIClient:
             "analysis_id": "analysis-orchestrated-ai",
             "title": "AI Commerce Adoption Across Retail Reports",
             "slug": "ai-commerce-adoption-across-retail-reports",
-            "executive_summary": "AI commerce adoption is visible across selected reports.",
+            "executive_summary": (
+                "AI commerce adoption is visible across selected reports."
+            ),
             "decision_focus": "Prioritize the shared AI commerce adoption signal.",
             "executive_takeaways": [
                 "AI appears across both selected reports.",
@@ -361,6 +363,42 @@ def test_cross_report_orchestrator_rejects_auto_theme_when_disabled(
         severity="error",
     )
     assert exc_info.value.context["auto_theme"] is True
+
+
+def test_cross_report_orchestrator_limits_generation_to_frozen_source_hashes(
+    tmp_path,
+    run_context,
+) -> None:
+    settings = _settings(tmp_path)
+    projected = _projected_data()
+    extra = _candidate("report-c", "Publisher C", "2026-05-21")
+    projected = replace(
+        projected,
+        source_candidates=[*projected.source_candidates, extra],
+        evidence=[
+            *projected.evidence,
+            _evidence("report-c:claim:1", "report-c", "Publisher C"),
+        ],
+    )
+    outcome = run_cross_report_analysis(
+        replace(
+            _orchestrator_request(tmp_path),
+            frozen_source_hashes=["report-a-hash", "report-b-hash"],
+            generate_cover_assets=False,
+        ),
+        settings,
+        run_context,
+        read_projected_data_fn=lambda _request, _ctx: projected,
+        prompt_client=FakePromptClient(),
+        openai_client=CountingOpenAIClient(),
+        sleep_fn=lambda _seconds: None,
+    )
+
+    assert outcome.generated_result.selected_sources
+    assert {item.report_id for item in outcome.generated_result.selected_sources} == {
+        "report-a",
+        "report-b",
+    }
 
 
 def test_cross_report_orchestrator_wires_theme_rotation_settings(

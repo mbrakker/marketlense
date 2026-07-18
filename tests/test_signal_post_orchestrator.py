@@ -13,6 +13,14 @@ from src.contracts.cross_report_analysis import (
     CrossReportSourceReportCandidate,
 )
 from src.contracts.publish import PublishOutcome
+from src.contracts.remediation import RemediationListRequest
+from src.contracts.signal_candidates import (
+    SIGNAL_CANDIDATE_SCHEMA_VERSION,
+    SignalCandidate,
+    SignalCandidateGroup,
+    SignalCandidateReadResponse,
+    SignalCandidateSourceRef,
+)
 from src.contracts.wordpress import (
     WordPressPostLookupResponse,
     WordPressTagEnsureResponse,
@@ -23,16 +31,11 @@ from src.contracts.wordpress_entities import (
     SignalPostGenerationRequest,
     SignalPostWorkflowRequest,
 )
-from src.contracts.signal_candidates import (
-    SIGNAL_CANDIDATE_SCHEMA_VERSION,
-    SignalCandidate,
-    SignalCandidateGroup,
-    SignalCandidateReadResponse,
-    SignalCandidateSourceRef,
-)
-from src.contracts.remediation import RemediationListRequest
 from src.orchestrators.publish_orchestrator import publish_signal_projection
-from src.orchestrators.signal_post_orchestrator import run_signal_post_workflow
+from src.orchestrators.signal_post_orchestrator import (
+    generate_signal_post_projection,
+    run_signal_post_workflow,
+)
 from src.services.state_service import list_remediation_records
 from src.utils.errors import AppError
 
@@ -238,6 +241,27 @@ def test_signal_workflow_reads_candidates_from_separate_signal_store(
 
     assert projected_requests[0].db_path == str(tmp_path / "analytics.sqlite")
     assert signal_candidate_requests[0].db_path == str(tmp_path / "signals.sqlite")
+
+
+def test_signal_projection_stage_does_not_render_covers_or_publish(
+    tmp_path,
+    run_context,
+) -> None:
+    result = generate_signal_post_projection(
+        _workflow_request(tmp_path, "generate_only"),
+        run_context,
+        read_projected_data_fn=lambda _request, _ctx: _projected_data(),
+        read_signal_candidates_fn=lambda request, _ctx: SignalCandidateReadResponse(
+            schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+            db_path=request.db_path,
+            candidates=[],
+            groups=[],
+        ),
+    )
+
+    assert result.projection.validation_status == "approved"
+    assert result.projection.target_route == "wordpress:ml_signal"
+    assert list(tmp_path.rglob("*.png")) == []
 
 
 def test_signal_post_failure_creates_operator_held_remediation(

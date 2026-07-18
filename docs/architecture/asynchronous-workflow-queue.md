@@ -26,11 +26,10 @@ flowchart LR
   SI --> RS[report_selection] --> AN[report_analysis] --> RR[report_render]
   AN --> AR[artifact_repair]
   RR --> AP[analytics_projection]
-  RR --> CG[cover_generation]
-  RR --> PR[publication_readiness]
   AP --> CE[claim_embedding]
-  AP --> SC[signal_candidate] --> SG[signal_generation] --> PR
-  AP --> BO[briefing_opportunity] --> BG[briefing_generation] --> PR
+  AP --> SC[signal_candidate] --> SG[signal_generation] --> CG[cover_generation]
+  AP --> BO[briefing_opportunity] --> BG[briefing_generation] --> CG
+  CG --> PR[publication_readiness]
   PR --> REVIEW[human review] --> WP[wordpress_publish] --> WPP[wordpress_projection]
 ```
 
@@ -73,7 +72,9 @@ after `file_service` verifies a retained local artifact and its content hash.
 Email-gated sources enqueue mailbox delivery instead of calling it in memory.
 `publication_readiness` records immutable readiness; the explicit
 `queue-approve-publication --yes` command creates only a WordPress outbox
-event, never a WordPress write.
+event, never a WordPress write. `--dry-run` carries a no-write instruction to
+that durable job so the real publish preflight can be validated without
+enabling live publication.
 
 ## Briefing fan-in
 
@@ -93,6 +94,9 @@ Frozen or generated opportunities are immutable; later source changes collect
 in a later opportunity. No cross-publisher metric normalization is performed.
 The `briefing_opportunity` worker now owns this aggregation and writes the
 single frozen-generation outbox event; it performs no model generation itself.
+The generation configuration hash includes all bounded selection and prompt
+settings, so a deliberate compatibility change can be replayed without
+mistaking a prior terminal configuration for the same effective request.
 
 ## Approval and WordPress publication
 
@@ -178,6 +182,7 @@ python -m src.cli queue-release-expired-leases
 python -m src.cli queue-materialize-outbox
 python -m src.cli queue-reconcile
 python -m src.cli queue-migrate-deferred-work --yes
+python -m src.cli queue-approve-publication --package-checksum <sha> --package-reference <path> --entity-type briefing --dry-run --yes
 python -m src.cli workflow-worker --queue publisher_discovery --limit 1
 ```
 
@@ -215,9 +220,38 @@ deduplicated `signal_generation` job per approved candidate group. Both workers
 reject malformed bounded attributes before opening a projection or provider
 operation.
 
-`wordpress_publish` accepts only an approved immutable Briefing artifact. The
+`wordpress_publish` accepts only an approved immutable Briefing or Signal artifact. The
 approval transaction injects its durable approval ID into the outbox submission;
 the worker verifies that ID and the artifact checksum before loading the package
 or contacting WordPress. It then delegates taxonomy, media, idempotency, and
 readback to the established publisher. Live writes remain feature-gated; a
 verified WordPress post emits one deduplicated `wordpress_projection` job.
+`wordpress_projection` validates that verified post reference, then delegates
+the public-entity read, deterministic intelligence build, and WordPress
+readback-backed projection write to the existing projection orchestrator. It is
+gated by the same live-publication authority, so a disabled site leaves the job
+blocked for explicit operator action rather than creating a second write path.
+
+## Configuration resolution
+
+Queue payloads may carry the bounded `config_path` attribute already supported
+by the report-stage adapters. Every migrated handler resolves that path through
+the canonical configuration service before it opens its domain service. This
+keeps compatibility and isolated live-validation profiles on the same typed
+worker path while production jobs continue to use the canonical application
+configuration when the attribute is absent. The attribute is a local operator
+profile reference only: it never contains configuration content or secrets and
+is validated before any provider or publishing operation.
+
+## UI compatibility migration
+
+Publisher Discovery, Report Download, Signal Candidate Extraction, Signal Post,
+and Cross-Report Analysis launched from Streamlit submit the same typed durable
+queue jobs as the CLI. Cross-report UI input enters `briefing_opportunity` and
+uses canonical projected evidence to form a frozen manifest; Signal Post enters
+`signal_candidate` and has the registered worker create independent generation
+jobs. The UI run registry retains a user-facing run identifier and the durable
+job ID, polls queue state, and forwards a safe cancel request; it does not start
+or own a hidden workflow subprocess for these migrated flows. Existing UI-run
+payloads that do not request queue submission continue through the bounded
+compatibility worker while lower-risk legacy screens are migrated.

@@ -57,8 +57,8 @@ def _sync_runtime_patch_points() -> None:
         _workflow_control,
         _workflow_queue,
     ):
-        module.load_dotenv = load_dotenv
-        module.find_dotenv = find_dotenv
+        module.load_dotenv = load_dotenv  # type: ignore[attr-defined]
+        module.find_dotenv = find_dotenv  # type: ignore[attr-defined]
 
 
 def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:

@@ -14,7 +14,7 @@ import json
 import uuid
 from dataclasses import asdict, replace
 from datetime import datetime, timedelta, timezone
-from typing import Iterable
+from typing import Any, Callable, Iterable, cast
 
 from src.contracts.run_context import RunContext
 from src.contracts.workflow_queue import (
@@ -44,6 +44,7 @@ from src.contracts.workflow_queue import (
     WorkflowArtifactReference,
     WorkflowJob,
     WorkflowJobAttempt,
+    WorkflowJobStatus,
     WorkflowJobSubmission,
     WorkflowQueueControl,
     WorkflowQueueHealth,
@@ -107,6 +108,18 @@ _PAYLOAD_TYPES: dict[str, type[QueuePayload]] = {
 
 def _now(value: str = "") -> str:
     return value.strip() or utc_now_seconds_iso()
+
+
+def _row_int(value: object) -> int:
+    """Decode SQLite integer cells without treating malformed state as zero."""
+
+    if isinstance(value, bool) or not isinstance(value, (int, float, str)):
+        raise AppError(
+            code="workflow_queue_state_corrupt",
+            message="Workflow queue integer state is malformed",
+            retryable=False,
+        )
+    return int(value)
 
 
 def _parse_time(value: str) -> datetime:
@@ -207,8 +220,9 @@ def _payload_from_json(queue_name: str, raw: str) -> QueuePayload:
         if isinstance(item, dict)
     ]
     payload_type = _PAYLOAD_TYPES[_require_queue(queue_name)]
+    payload_constructor = cast(Callable[..., QueuePayload], payload_type)
     try:
-        return payload_type(**data)
+        return payload_constructor(**data)
     except TypeError as exc:
         raise AppError(
             code="workflow_queue_payload_incompatible",
@@ -225,13 +239,13 @@ def _control_from_row(row: tuple[object, ...]) -> WorkflowQueueControl:
         queue_name=str(row[0]),
         mode=str(row[2]),  # type: ignore[arg-type]
         enabled=bool(row[3]),
-        worker_concurrency_limit=int(row[4]),
-        maximum_pending=int(row[5]),
-        maximum_fanout=int(row[6]),
-        max_attempts=int(row[7]),
-        lease_seconds=int(row[8]),
+        worker_concurrency_limit=_row_int(row[4]),
+        maximum_pending=_row_int(row[5]),
+        maximum_fanout=_row_int(row[6]),
+        max_attempts=_row_int(row[7]),
+        lease_seconds=_row_int(row[8]),
         budget_profile=str(row[9]),
-        retry_delay_seconds=int(row[10]),
+        retry_delay_seconds=_row_int(row[10]),
         emergency_stop_reason=str(row[11]),
         updated_at_utc=str(row[12]),
         updated_by=str(row[13]),
@@ -269,11 +283,11 @@ def _job_from_row(row: tuple[object, ...]) -> WorkflowJob:
         output_content_hash=str(row[20]),
         idempotency_key=str(row[21]),
         deduplication_scope=str(row[22]),
-        priority=int(row[23]),
-        status=str(row[24]),
+        priority=_row_int(row[23]),
+        status=cast(WorkflowJobStatus, str(row[24])),
         available_at_utc=str(row[25]),
-        attempt_count=int(row[26]),
-        max_attempts=int(row[27]),
+        attempt_count=_row_int(row[26]),
+        max_attempts=_row_int(row[27]),
         lease_owner=str(row[28]),
         lease_expires_at_utc=str(row[29]),
         heartbeat_at_utc=str(row[30]),
@@ -887,13 +901,13 @@ def _submission_from_json(raw: str) -> WorkflowJobSubmission:
         )
     queue_name = _require_queue(str(data.get("queue_name") or ""))
     payload = _payload_from_json(queue_name, _json(data.get("payload") or {}))
-    fields = {
+    fields: dict[str, Any] = {
         name: data.get(name)
         for name in WorkflowJobSubmission.__dataclass_fields__
         if name not in {"payload"}
     }
     fields["payload"] = payload
-    return WorkflowJobSubmission(**fields)
+    return WorkflowJobSubmission(**cast(Any, fields))
 
 
 def complete_workflow_job(
@@ -1234,7 +1248,7 @@ def materialize_workflow_outbox(
         with _state_conn(state_db, ctx) as conn:
             conn.execute("BEGIN IMMEDIATE")
             event = conn.execute(
-                "SELECT event_id,submission_json,attempt_count,max_attempts FROM workflow_outbox "
+                "SELECT event_id,parent_job_id,submission_json,attempt_count,max_attempts FROM workflow_outbox "
                 "WHERE status IN ('pending','retry_wait') AND available_at_utc<=? "
                 "ORDER BY available_at_utc,created_at_utc,event_id LIMIT 1",
                 (now,),
@@ -1242,7 +1256,7 @@ def materialize_workflow_outbox(
             if event is None:
                 conn.commit()
                 break
-            event_id, raw_submission, attempts, max_attempts = event
+            event_id, parent_job_id, raw_submission, attempts, max_attempts = event
             changed = conn.execute(
                 "UPDATE workflow_outbox SET status='leased',lease_owner=?,lease_expires_at_utc=?,updated_at_utc=? "
                 "WHERE event_id=? AND status IN ('pending','retry_wait')",
@@ -1278,6 +1292,17 @@ def materialize_workflow_outbox(
                 WHERE event_id=? AND status='leased' AND lease_owner=?""",
                 (job.job_id, now, event_id, worker_id),
             )
+            if str(parent_job_id).startswith("briefing_opportunity:"):
+                conn.execute(
+                    "UPDATE workflow_briefing_opportunities SET generation_job_id=?,"
+                    "updated_at_utc=? WHERE opportunity_id=? AND status='frozen' "
+                    "AND generation_job_id=''",
+                    (
+                        job.job_id,
+                        now,
+                        str(parent_job_id).removeprefix("briefing_opportunity:"),
+                    ),
+                )
             conn.commit()
         materialised.append(job.job_id)
     return materialised
@@ -1850,10 +1875,10 @@ def freeze_briefing_opportunity(
                 retryable=False,
             )
         opportunity = _opportunity_from_row(row)
-        if opportunity.status in {"frozen", "generated"}:
+        if opportunity.status == "generated":
             conn.commit()
             return opportunity
-        if opportunity.status != "eligible":
+        if opportunity.status not in {"eligible", "frozen"}:
             raise AppError(
                 code="workflow_briefing_opportunity_not_eligible",
                 message="Briefing opportunity does not meet deterministic eligibility",
@@ -1869,6 +1894,15 @@ def freeze_briefing_opportunity(
                 message="Frozen Briefing source set must be a non-empty opportunity subset",
                 retryable=False,
             )
+        if (
+            opportunity.status == "frozen"
+            and selected_hashes != opportunity.frozen_source_hashes
+        ):
+            raise AppError(
+                code="workflow_briefing_source_set_immutable",
+                message="A frozen Briefing opportunity cannot change its source manifest",
+                retryable=False,
+            )
         event_key = ":".join(
             (
                 generation_submission.queue_name,
@@ -1877,17 +1911,18 @@ def freeze_briefing_opportunity(
                 generation_submission.idempotency_key,
             )
         )
-        conn.execute(
-            "UPDATE workflow_briefing_opportunities SET status='frozen',"
-            "frozen_source_manifest=?,frozen_source_hashes_json=?,updated_at_utc=? "
-            "WHERE opportunity_id=? AND status='eligible'",
-            (
-                frozen_source_manifest,
-                _json(selected_hashes),
-                now,
-                opportunity_id,
-            ),
-        )
+        if opportunity.status == "eligible":
+            conn.execute(
+                "UPDATE workflow_briefing_opportunities SET status='frozen',"
+                "frozen_source_manifest=?,frozen_source_hashes_json=?,updated_at_utc=? "
+                "WHERE opportunity_id=? AND status='eligible'",
+                (
+                    frozen_source_manifest,
+                    _json(selected_hashes),
+                    now,
+                    opportunity_id,
+                ),
+            )
         conn.execute(
             """INSERT INTO workflow_outbox(
             event_id,event_key,parent_job_id,root_workflow_id,queue_name,job_type,

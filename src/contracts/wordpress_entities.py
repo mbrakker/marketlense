@@ -10,7 +10,6 @@ from src.contracts.cross_report_analysis import (
 )
 from src.contracts.signal_cards import SignalCardContent
 
-
 WORDPRESS_ENTITY_SCHEMA_VERSION = "1.0"
 
 
@@ -191,12 +190,28 @@ class SignalPostWorkflowRequest:
     signal_store_db: str = field(
         default="",
         metadata={
-            "doc": "Optional separate SQLite database path for reusable approved Signal candidates."
+            "doc": "Optional SQLite path for reusable approved Signal candidates."
         },
     )
     state_db: str = field(
         default="",
         metadata={"doc": "Optional canonical remediation-ledger state database."},
+    )
+
+
+@dataclass(frozen=True)
+class SignalPostGenerationResult:
+    """Retained, publish-independent Signal projection generation outcome."""
+
+    schema_version: str = field(
+        metadata={"doc": "Signal generation result contract schema version."}
+    )
+    request_id: str = field(metadata={"doc": "Signal generation request ID."})
+    projected_data_request: CrossReportProjectedDataReadRequest = field(
+        metadata={"doc": "Canonical projection query used for the Signal."}
+    )
+    projection: SignalPublishProjection = field(
+        metadata={"doc": "Validated source-linked Signal publish projection."}
     )
 
 
