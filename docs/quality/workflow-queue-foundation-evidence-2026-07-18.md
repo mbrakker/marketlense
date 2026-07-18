@@ -1,7 +1,7 @@
 # Workflow queue foundation evidence — 2026-07-18
 
-> **Implementation commit:** `dd6eab6d72901d7e774e6c3d6dc5c413be9452f4`  
-> **Inspected baseline:** `d3b7ed830a4692d9e97ce3a69f73c17ced118282`  
+> **Implementation commit:** `dd6eab6d72901d7e774e6c3d6dc5c413be9452f4`
+> **Inspected baseline:** `d3b7ed830a4692d9e97ce3a69f73c17ced118282`
 > **State schema version:** `12`
 
 ## Implemented evidence
