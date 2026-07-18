@@ -1,1 +1,13 @@
-Workflow queue completion evidence\nBaseline: d3b7ed830a4692d9e97ce3a69f73c17ced118282\nSchema: 12\nQuality: canonical steps 1-19 completed before outer wrapper timeout; steps 20-21 then passed individually.\nCoverage: 84.55% global (60289/71308); orchestrators 85.30% (7820/9168), above 84.80% baseline.\nLive: real two-publisher Briefing succeeded in 38.5s with 12256 tokens; one Signal root completed eight generation/cover/readiness paths; approved WordPress dry-run completed with no external write.\nEvidence: docs/quality/workflow-queue-foundation-evidence-2026-07-18.md
+Workflow queue completion evidence
+
+Baseline: d3b7ed830a4692d9e97ce3a69f73c17ced118282
+
+Schema: 12
+
+Quality: canonical steps 1-19 completed before outer wrapper timeout; steps 20-21 then passed individually.
+
+Coverage: 84.55% global (60289/71308); orchestrators 85.30% (7820/9168), above 84.80% baseline.
+
+Live: real two-publisher Briefing succeeded in 38.5s with 12256 tokens; one Signal root completed eight generation/cover/readiness paths; approved WordPress dry-run completed with no external write.
+
+Evidence: docs/quality/workflow-queue-foundation-evidence-2026-07-18.md
