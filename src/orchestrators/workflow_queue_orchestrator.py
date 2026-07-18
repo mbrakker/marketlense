@@ -20,6 +20,7 @@ from src.contracts.drive import DriveFile
 from src.contracts.files import FileStatRequest
 from src.contracts.mailbox_acquisition import MailReportAcquisitionRequest
 from src.contracts.publisher_inventory import PublisherInventoryDiscoveryRequest
+from src.contracts.run_budget import BudgetOverrideContext
 from src.contracts.run_context import RunContext
 from src.contracts.workflow_queue import (
     AnalyticsProjectionPayload,
@@ -145,6 +146,30 @@ def _verified_reference_handler(
 
 def _digest(*parts: str) -> str:
     return hashlib.sha256("\x1f".join(parts).encode("utf-8")).hexdigest()
+
+
+def _requested_budget_override(payload: QueuePayload) -> BudgetOverrideContext | None:
+    actor = str(payload.attributes.get("budget_override_actor", "")).strip()
+    reason = str(payload.attributes.get("budget_override_reason", "")).strip()
+    expiry = str(payload.attributes.get("budget_override_expires_at_utc", "")).strip()
+    if not any((actor, reason, expiry)):
+        return None
+    if not all((actor, reason, expiry)):
+        raise AppError(
+            code="workflow_queue_budget_override_incomplete",
+            message="Queue budget override requires actor, reason, and expiry",
+            retryable=False,
+        )
+    return BudgetOverrideContext(
+        schema_version="1.0",
+        actor=actor,
+        reason=reason,
+        scope=str(payload.attributes.get("budget_override_scope", "all")),
+        expires_at_utc=expiry,
+        policy_version=str(
+            payload.attributes.get("budget_override_policy_version", "budget-authority-v2")
+        ),
+    )
 
 
 def _source_ingest_submission(
@@ -596,6 +621,7 @@ def _report_stage_handler(
             resume_from_stage=resume_from_stage,
             stop_after_stage=stop_after_stage,
             projection_only=projection_only,
+            budget_override=_requested_budget_override(payload),
         )
         if outcome.status == "error":
             raise AppError(
@@ -653,7 +679,7 @@ def _report_stage_handler(
                 output_reference=str(outcome.html_path or artifact_reference),
                 output_content_hash=source_hash,
                 execution_plan_hash=job.execution_plan_hash,
-                output_verified=outcome.status in {"processed", "skipped"},
+                output_verified=outcome.status in {"processed", "skipped", "checkpointed"},
                 summary={
                     "pipeline_status": outcome.status,
                     "checkpoint": stop_after_stage or "analytics_projected",

@@ -661,6 +661,7 @@ def claim_next_workflow_job(
         candidate = conn.execute(
             f"SELECT {_JOB_COLUMNS} FROM workflow_jobs WHERE queue_name=? "
             "AND status IN ('pending','retry_wait','budget_deferred') AND available_at_utc<=? "
+            "AND attempt_count < max_attempts "
             "ORDER BY priority DESC,available_at_utc ASC,created_at_utc ASC,job_id ASC LIMIT 1",
             (queue, now),
         ).fetchone()
@@ -713,6 +714,23 @@ def start_workflow_job(
         _assert_lease(job, worker_id, now, required_status="leased")
         attempt_number = job.attempt_count + 1
         if attempt_number > job.max_attempts:
+            conn.execute(
+                "UPDATE workflow_jobs SET status='dead_letter',completed_at_utc=?,updated_at_utc=?,"
+                "lease_owner='',lease_expires_at_utc='',heartbeat_at_utc='',"
+                "error_code='workflow_queue_attempts_exhausted',terminal_reason='attempts_exhausted' "
+                "WHERE job_id=? AND status='leased' AND lease_owner=?",
+                (now, now, job_id, worker_id),
+            )
+            _record_transition(
+                conn,
+                job_id=job_id,
+                from_status="leased",
+                to_status="dead_letter",
+                reason="attempts_exhausted_before_start",
+                actor=worker_id,
+                now_utc=now,
+            )
+            conn.commit()
             raise AppError(
                 code="workflow_queue_attempts_exhausted",
                 message="Workflow job exhausted its automatic attempt budget",

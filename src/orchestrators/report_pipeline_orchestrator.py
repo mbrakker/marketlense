@@ -33,6 +33,7 @@ from src.contracts.regeneration import (
 )
 from src.contracts.report_generation import ReportGenerationClientBundle
 from src.contracts.run_budget import (
+    BudgetOverrideContext,
     BudgetRequest,
     BudgetSideEffectFinalizeRequest,
     RunBudget,
@@ -216,6 +217,7 @@ def _invoke_report_fn(
     enforce_minimal_execution: bool = False,
     stop_after_stage: str | None = None,
     projection_only: bool = False,
+    budget_override: BudgetOverrideContext | None = None,
 ) -> IngestOutcome:
     arguments: dict[str, object] = {"resume_from_stage": resume_from_stage}
     if client_bundle is not None:
@@ -404,6 +406,7 @@ def run_report_pipeline(
     execution_plan_mode: str = "shadow",
     stop_after_stage: str | None = None,
     projection_only: bool = False,
+    budget_override: BudgetOverrideContext | None = None,
 ) -> IngestOutcome:
     report_fn = generate_report_fn or generate_report_orchestrator
     preflight_report = (
@@ -865,6 +868,7 @@ def run_report_pipeline(
                 operation="process_pdf",
                 estimated_pdfs=1,
                 idempotency_key=f"pdf-process:{ctx.run_id}:{file.file_id}:{md5 or ''}",
+                requested_override=budget_override,
                 reserve_in_flight=True,
             ),
             ctx,
