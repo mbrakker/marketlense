@@ -1,0 +1,19 @@
+{
+  "associated_pull_requests": [],
+  "check_runs": {
+    "conclusion_counts": {
+      "failure": 1,
+      "success": 3
+    },
+    "failed_count": 1,
+    "pending_count": 0,
+    "status_counts": {
+      "completed": 4
+    },
+    "total": 4
+  },
+  "main_commit_sha": "93327847ccd59777c15f673e4e16459dd298d64b",
+  "repository": "mbrakker/marketlense",
+  "schema_version": "1.0",
+  "status": "available"
+}

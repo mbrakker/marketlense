@@ -1,0 +1,293 @@
+{
+  "contract_schema_version": "1.0",
+  "observation_contract": {
+    "fields": [
+      {
+        "description": "Source-identity observation schema version.",
+        "name": "schema_version",
+        "required": true,
+        "type": "str"
+      },
+      {
+        "description": "Existing report_sources row that produced this observation.",
+        "name": "source_record_id",
+        "required": true,
+        "type": "int"
+      },
+      {
+        "description": "Observed canonical source title, when available.",
+        "name": "canonical_title",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "Bounded location that supports the observed canonical title.",
+        "name": "title_evidence_locator",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "Stable publisher identifier, when already known.",
+        "name": "publisher_id",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "Observed publisher display name, when known.",
+        "name": "publisher_name",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "Canonical publisher landing-page URL.",
+        "name": "canonical_landing_page_url",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "Safe-to-retain URL used to acquire the source artifact.",
+        "name": "acquired_artifact_url",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "Publisher page on which the source was observed.",
+        "name": "source_page_url",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "Observed publication date without invented precision.",
+        "name": "publication_date",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "verified, publisher_inferred, document_inferred, or unknown.",
+        "name": "publication_date_status",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "Bounded location supporting the publication date.",
+        "name": "publication_date_evidence_locator",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "UTC instant when the source was discovered.",
+        "name": "discovered_at_utc",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "UTC instant when source evidence was retrieved.",
+        "name": "retrieved_at_utc",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "Observed acquisition route or route family.",
+        "name": "acquisition_route",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "Algorithm-prefixed immutable source-content hash.",
+        "name": "content_hash",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "Method that produced this identity observation.",
+        "name": "resolution_method",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "high, medium, low, or unknown.",
+        "name": "identity_confidence",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "Stable, bounded identity limitations for operator inspection.",
+        "name": "identity_issues",
+        "required": false,
+        "type": "Tuple[str, ...]"
+      },
+      {
+        "description": "Prior canonical source identity superseded by this observation.",
+        "name": "supersedes_source_identity_id",
+        "required": false,
+        "type": "str"
+      }
+    ],
+    "name": "SourceIdentityObservation"
+  },
+  "resolution_contract": {
+    "fields": [
+      {
+        "description": "Resolved source-identity schema version.",
+        "name": "schema_version",
+        "required": true,
+        "type": "str"
+      },
+      {
+        "description": "Resolved report_sources row identifier.",
+        "name": "source_record_id",
+        "required": false,
+        "type": "int"
+      },
+      {
+        "description": "Stable canonical identity derived from source content.",
+        "name": "source_identity_id",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "Resolved canonical title.",
+        "name": "canonical_title",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "Evidence location supporting the resolved title.",
+        "name": "title_evidence_locator",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "Resolved publisher identifier.",
+        "name": "publisher_id",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "Resolved publisher name.",
+        "name": "publisher_name",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "Resolved canonical landing-page URL.",
+        "name": "canonical_landing_page_url",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "Resolved safe acquisition-artifact URL.",
+        "name": "acquired_artifact_url",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "Resolved source-page URL.",
+        "name": "source_page_url",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "Resolved date, blank when unknown or conflicting.",
+        "name": "publication_date",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "Resolved publication-date evidence status.",
+        "name": "publication_date_status",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "Evidence location supporting the resolved date.",
+        "name": "publication_date_evidence_locator",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "Resolved discovery instant.",
+        "name": "discovered_at_utc",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "Resolved retrieval instant.",
+        "name": "retrieved_at_utc",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "Resolved acquisition route.",
+        "name": "acquisition_route",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "Resolved source-content hash.",
+        "name": "content_hash",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "Deterministic resolver method.",
+        "name": "resolution_method",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "Resolved confidence label.",
+        "name": "identity_confidence",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "Retained deterministic conflict and gap reasons.",
+        "name": "identity_issues",
+        "required": false,
+        "type": "Tuple[str, ...]"
+      },
+      {
+        "description": "Resolved supersession identity, when applicable.",
+        "name": "supersedes_source_identity_id",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "resolved, legacy_unverified, unknown, or conflicting.",
+        "name": "identity_status",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "Stable hash of the resolved public source metadata.",
+        "name": "source_metadata_hash",
+        "required": false,
+        "type": "str"
+      },
+      {
+        "description": "Number of immutable observations considered.",
+        "name": "observation_count",
+        "required": false,
+        "type": "int"
+      }
+    ],
+    "name": "SourceIdentityResolution"
+  },
+  "resolution_policy": {
+    "conflict_behavior": "Conflicting publication dates clear the resolved date and set identity_status to conflicting.",
+    "implementation": "src/services/_report_store_service/metadata.py",
+    "legacy_behavior": "A legacy report-source record is retained as legacy_unverified rather than promoted to resolved identity.",
+    "selection_order": [
+      "publication_date_status",
+      "identity_confidence",
+      "title_evidence_locator_present",
+      "canonical_landing_page_url_present",
+      "resolution_method",
+      "canonical_title",
+      "publisher_name",
+      "content_hash"
+    ]
+  },
+  "schema_version": "1.0"
+}

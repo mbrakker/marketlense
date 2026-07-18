@@ -7,7 +7,7 @@ import html
 import json
 import re
 import unicodedata
-from collections import defaultdict
+from collections import defaultdict, deque
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterable
@@ -20,7 +20,8 @@ from src.utils.gui_utils import (
 # Paragraphs below these bounds are commonly labels, headings, or boilerplate.
 MIN_CANARY_CHARACTERS = 160
 MIN_CANARY_TOKENS = 24
-# Two independent windows make accidental overlap with ordinary operational logs unlikely.
+# Two independent windows make accidental overlap with ordinary operational logs
+# unlikely.
 WINDOW_CHARACTERS = 80
 WINDOW_MATCHES_REQUIRED = 2
 _JSON_ESCAPE = re.compile(r'\\(?:["\\/bfnrt]|u[0-9a-fA-F]{4})')
@@ -262,7 +263,7 @@ def _spread_and_bound(candidates: list[Canary], maximum: int) -> list[Canary]:
         by_report[candidate.report_identity].append(candidate)
     selected: list[Canary] = []
     while by_report and len(selected) < maximum:
-        for report in sorted(tuple(by_report)):
+        for report in sorted(by_report):
             selected.append(by_report[report].pop(0))
             if not by_report[report]:
                 del by_report[report]
@@ -278,15 +279,19 @@ def scan_logs(
     *,
     fresh_after: object | None,
     parse_timestamp: Callable[[str], object | None],
-) -> tuple[list[dict[str, object]], dict[str, int], bool]:
+) -> tuple[list[dict[str, object]], dict[str, object], bool]:
     """Scan snapshotted logs line-by-line; return redacted matches and coverage."""
     matches: list[dict[str, object]] = []
-    coverage = {
+    parse_all_structured_events = fresh_after is not None
+    coverage: dict[str, object] = {
         "log_files_scanned": 0,
         "log_bytes_scanned": 0,
         "log_lines_scanned": 0,
-        "structured_events_parsed": 0,
-        "unparsed_lines": 0,
+        "structured_event_metadata_mode": (
+            "full" if parse_all_structured_events else "matches_only"
+        ),
+        "structured_events_parsed": 0 if parse_all_structured_events else None,
+        "unparsed_lines": 0 if parse_all_structured_events else None,
     }
     matcher = _build_matcher(canaries)
     fresh_log_seen = False
@@ -307,21 +312,28 @@ def scan_logs(
             for number, raw_line in enumerate(handle, start=1):
                 line_count += 1
                 coverage["log_lines_scanned"] += 1
-                parsed = parse_structured_log_line(raw_line, log_date=log_date)
-                if parsed is None:
+                matched = matcher(normalize_text(raw_line))
+                parsed = (
+                    parse_structured_log_line(raw_line, log_date=log_date)
+                    if parse_all_structured_events or matched
+                    else None
+                )
+                if parse_all_structured_events and parsed is None:
                     unparsed_count += 1
-                    coverage["unparsed_lines"] += 1
-                    record = raw_line
-                else:
+                    coverage["unparsed_lines"] = (
+                        int(coverage["unparsed_lines"] or 0) + 1
+                    )
+                elif parse_all_structured_events and parsed is not None:
                     parsed_count += 1
-                    coverage["structured_events_parsed"] += 1
+                    coverage["structured_events_parsed"] = (
+                        int(coverage["structured_events_parsed"] or 0) + 1
+                    )
+                if parse_all_structured_events and parsed is not None:
                     timestamp = str(parsed.get("timestamp_utc") or "")
                     if timestamp:
                         first = min(first or timestamp, timestamp)
                         last = max(last or timestamp, timestamp)
-                    record = raw_line + " " + json.dumps(parsed, ensure_ascii=False)
-                normalized = normalize_text(record)
-                for canary, match_type, window_count in matcher(normalized):
+                for canary, match_type, window_count in matched:
                     matches.append(
                         {
                             "canary_sha256": canary.sha256,
@@ -339,8 +351,15 @@ def scan_logs(
                         }
                     )
         entry["total_line_count"] = line_count
-        entry["parsed_structured_event_count"] = parsed_count
-        entry["unparsed_line_count"] = unparsed_count
+        entry["structured_event_metadata_mode"] = coverage[
+            "structured_event_metadata_mode"
+        ]
+        entry["parsed_structured_event_count"] = (
+            parsed_count if parse_all_structured_events else None
+        )
+        entry["unparsed_line_count"] = (
+            unparsed_count if parse_all_structured_events else None
+        )
         entry["first_parsed_event_timestamp"] = first
         entry["last_parsed_event_timestamp"] = last
         timestamps = [entry.get("source_modified_at"), first, last]
@@ -366,18 +385,17 @@ def _build_matcher(
         full_by_text[canary.normalized_text].append(canary)
         for window in _windows(canary.normalized_text):
             windows_by_text[window].append(canary)
-    full_pattern = _compile_patterns(full_by_text)
-    window_pattern = _compile_patterns(windows_by_text)
+    find_texts = _build_substring_matcher((*full_by_text, *windows_by_text))
 
     def find_matches(record: str) -> list[tuple[Canary, str, int]]:
+        matched_texts = find_texts(record)
         full_canaries = {
             id(canary): canary
-            for match in full_pattern.finditer(record)
-            for canary in full_by_text[match.group(0)]
+            for text in sorted(matched_texts & full_by_text.keys())
+            for canary in full_by_text[text]
         }
         window_counts: dict[int, tuple[Canary, set[str]]] = {}
-        for match in window_pattern.finditer(record):
-            window = match.group(0)
+        for window in sorted(matched_texts & windows_by_text.keys()):
             for canary in windows_by_text[window]:
                 _, seen = window_counts.setdefault(id(canary), (canary, set()))
                 seen.add(window)
@@ -393,9 +411,49 @@ def _build_matcher(
     return find_matches
 
 
-def _compile_patterns(values: dict[str, list[Canary]]) -> re.Pattern[str]:
-    patterns = sorted(values, key=lambda value: (-len(value), value))
-    return re.compile("|".join(re.escape(value) for value in patterns))
+def _build_substring_matcher(
+    patterns: Iterable[str],
+) -> Callable[[str], set[str]]:
+    """Return an Aho-Corasick matcher for bounded canary and window patterns."""
+    transitions: list[dict[str, int]] = [{}]
+    failures = [0]
+    outputs: list[set[str]] = [set()]
+    for pattern in sorted(set(patterns)):
+        state = 0
+        for character in pattern:
+            next_state = transitions[state].get(character)
+            if next_state is None:
+                next_state = len(transitions)
+                transitions[state][character] = next_state
+                transitions.append({})
+                failures.append(0)
+                outputs.append(set())
+            state = next_state
+        outputs[state].add(pattern)
+
+    queue: deque[int] = deque(transitions[0].values())
+    while queue:
+        state = queue.popleft()
+        for character, next_state in transitions[state].items():
+            queue.append(next_state)
+            fallback = failures[state]
+            while fallback and character not in transitions[fallback]:
+                fallback = failures[fallback]
+            failures[next_state] = transitions[fallback].get(character, 0)
+            outputs[next_state].update(outputs[failures[next_state]])
+
+    def find_matches(record: str) -> set[str]:
+        state = 0
+        matches: set[str] = set()
+        for character in record:
+            while state and character not in transitions[state]:
+                state = failures[state]
+            state = transitions[state].get(character, 0)
+            if outputs[state]:
+                matches.update(outputs[state])
+        return matches
+
+    return find_matches
 
 
 def _match(canary: str, record: str) -> tuple[str, int]:

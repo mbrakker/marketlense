@@ -1,0 +1,483 @@
+{
+  "canaries": [
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[1].summary[0]",
+      "normalized_character_count": 166,
+      "relative_artifact_path": "1/report_analysis/145TTK2861EtgGWH7n-5RJupGSbsmShZ2/doc_map.json",
+      "report_identity": "1",
+      "sha256": "4726759d690136660ca549ace9035cd8e0132b7a71062e2ff1f339d49c12380a",
+      "token_count": 26
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[11].summary[0]",
+      "normalized_character_count": 306,
+      "relative_artifact_path": "182v7x-6iz4er0xsp4njxrakggm3m90wr-pdf/report_analysis/doc_map.json",
+      "report_identity": "182v7x-6iz4er0xsp4njxrakggm3m90wr-pdf",
+      "sha256": "cd1e240304d2e6ed09dd8c919052edb1ce57e735fa38fa646cb332b0f36887d7",
+      "token_count": 43
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "findings.json:findings[1].summary[0]",
+      "normalized_character_count": 224,
+      "relative_artifact_path": "2/report_analysis/145TTK2861EtgGWH7n-5RJupGSbsmShZ2/findings.json",
+      "report_identity": "2",
+      "sha256": "b073a765fe77ea3516a2c9a411acd9d77c7ed84049a87cd9144f40c9dd222603",
+      "token_count": 31
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[10].summary[0]",
+      "normalized_character_count": 175,
+      "relative_artifact_path": "2016-environmental-scan-refresh-pdf/report_analysis/doc_map.json",
+      "report_identity": "2016-environmental-scan-refresh-pdf",
+      "sha256": "2978e9c1de618d8a9cae4631f754a910819871d78832c9e99003a74c268fe951",
+      "token_count": 25
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[3].summary[0]",
+      "normalized_character_count": 182,
+      "relative_artifact_path": "2412-activate-technology-and-media-outlook-2025-ecommerce-pdf/report_analysis/doc_map.json",
+      "report_identity": "2412-activate-technology-and-media-outlook-2025-ecommerce-pdf",
+      "sha256": "7f7f27964491657657188f5111397c84e3a3ad8c0ae73a73f9887ac8608b3e99",
+      "token_count": 24
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[0].summary[0]",
+      "normalized_character_count": 233,
+      "relative_artifact_path": "3/report_analysis/1EJ8wqgoAnXK1CIPV_rpABE1ZgWvGXjFe/doc_map.json",
+      "report_identity": "3",
+      "sha256": "9803dd85fa0fb43713e6c8265b83871291db249464d9edf6399cd97461a42eab",
+      "token_count": 31
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "scope.json:scope.summary[0]",
+      "normalized_character_count": 374,
+      "relative_artifact_path": "4/report_analysis/145TTK2861EtgGWH7n-5RJupGSbsmShZ2/scope.json",
+      "report_identity": "4",
+      "sha256": "68677b4108fe5ac607007e4a7617b83ad2545970708704c7aae3ee36c6683cc4",
+      "token_count": 52
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "quote_candidates.json:quote_candidates[0].text[0]",
+      "normalized_character_count": 656,
+      "relative_artifact_path": "5/capgemini-2026-retail-trends-acig-pdf/report_analysis/quote_candidates.json",
+      "report_identity": "5",
+      "sha256": "2a0d41ca1e2282928b07d9cfc96afe6ef05b1d72ade6310d8fc2fe0b8da114e1",
+      "token_count": 93
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[2].summary[0]",
+      "normalized_character_count": 179,
+      "relative_artifact_path": "6/attest-uk-consumer-trends-report-2026-acig-pdf/report_analysis/doc_map.json",
+      "report_identity": "6",
+      "sha256": "7980053a524dba40ea22e8acf00c8c629c8a815aadd15569edf9d295f5c262a8",
+      "token_count": 26
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "findings.json:findings[0].text[0]",
+      "normalized_character_count": 187,
+      "relative_artifact_path": "7/attest-uk-consumer-trends-report-2026-acig-pdf/report_analysis/findings.json",
+      "report_identity": "7",
+      "sha256": "c4570e0d2536660a9222295256eecb15f9f1682353916672a3673e92e8e1a3d0",
+      "token_count": 29
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[1].summary[0]",
+      "normalized_character_count": 278,
+      "relative_artifact_path": "8/allegro-2026-trends-macrotrends-es-acig-pdf/report_analysis/doc_map.json",
+      "report_identity": "8",
+      "sha256": "80f1137f1d48bf2f028301d3b1ad19805dc6451d9b1f090ada98b91ed478f267",
+      "token_count": 27
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[3].summary[0]",
+      "normalized_character_count": 197,
+      "relative_artifact_path": "9/2023-email-sms-and-push-report-pdf/report_analysis/doc_map.json",
+      "report_identity": "9",
+      "sha256": "05a6ae8d4396b3755fd7c67e6a7a606b6a9d7bb08ea3ac6a61eec2849819d14e",
+      "token_count": 31
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "findings.json:findings[0].text[0]",
+      "normalized_character_count": 163,
+      "relative_artifact_path": "90bbb6f141259489c1a1cfebc200a905a628186c-pdf/report_analysis/findings.json",
+      "report_identity": "90bbb6f141259489c1a1cfebc200a905a628186c-pdf",
+      "sha256": "1d566c9f64b7c8e9a1fe21c7aee92939a8b3cbe4f10e56f2efa0a84ccf886cf4",
+      "token_count": 27
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[2].summary[0]",
+      "normalized_character_count": 259,
+      "relative_artifact_path": "activate-2021-post-covid-agenda-pdf/report_analysis/doc_map.json",
+      "report_identity": "activate-2021-post-covid-agenda-pdf",
+      "sha256": "2a7db7010c5914ac09144cf35675afd6feb45a605336e0cd0d1874720765ceac",
+      "token_count": 39
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[1].summary[0]",
+      "normalized_character_count": 353,
+      "relative_artifact_path": "activate-2022-post-covid-shopper-pdf/report_analysis/doc_map.json",
+      "report_identity": "activate-2022-post-covid-shopper-pdf",
+      "sha256": "b4dbd2bc0b2d331496e0225aae81514db218bce190be213a99734a5a123367f4",
+      "token_count": 46
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[0].summary[0]",
+      "normalized_character_count": 223,
+      "relative_artifact_path": "activate-2023-metaverse-report-pdf/report_analysis/doc_map.json",
+      "report_identity": "activate-2023-metaverse-report-pdf",
+      "sha256": "2a23d0a65109dbff3a44cdd572c5826baf21099950680003d6c515ce8186d0df",
+      "token_count": 29
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[1].summary[0]",
+      "normalized_character_count": 168,
+      "relative_artifact_path": "activate-2025-audio-pdf/report_analysis/doc_map.json",
+      "report_identity": "activate-2025-audio-pdf",
+      "sha256": "f7a81ba7f02122ad55451ce91f78e6171c857e44a625aa05eb774d318f60bcf2",
+      "token_count": 25
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[3].summary[0]",
+      "normalized_character_count": 184,
+      "relative_artifact_path": "activate-2025-consumer-internet-and-media-revenues-pdf/report_analysis/doc_map.json",
+      "report_identity": "activate-2025-consumer-internet-and-media-revenues-pdf",
+      "sha256": "bbe5719049dc6f32ee419fd448db7b30dc6017fa6a5acf15a3dc90cabac45908",
+      "token_count": 27
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[0].summary[0]",
+      "normalized_character_count": 163,
+      "relative_artifact_path": "activate-2025-consumer-time-and-attention-pdf/report_analysis/doc_map.json",
+      "report_identity": "activate-2025-consumer-time-and-attention-pdf",
+      "sha256": "4a7781db84aacc682afa995659dc1c4947cfb9bd58d4edfa16caa6b2a65a73e3",
+      "token_count": 26
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[1].summary[0]",
+      "normalized_character_count": 171,
+      "relative_artifact_path": "activate-2025-data-and-advertising-pdf/report_analysis/doc_map.json",
+      "report_identity": "activate-2025-data-and-advertising-pdf",
+      "sha256": "711e92123230bef38153e8eeeeecb3d572ec4169f53f0c6ab5fa84e404513f61",
+      "token_count": 26
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[1].summary[0]",
+      "normalized_character_count": 222,
+      "relative_artifact_path": "activate-2025-discovery-and-generative-ai-pdf/report_analysis/doc_map.json",
+      "report_identity": "activate-2025-discovery-and-generative-ai-pdf",
+      "sha256": "5ecb05698120b5c88fcfe91872190315ad8bbd545de71a6d0b28fc9b396b7601",
+      "token_count": 33
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[0].summary[0]",
+      "normalized_character_count": 172,
+      "relative_artifact_path": "activate-2025-ecommerce-pdf/report_analysis/doc_map.json",
+      "report_identity": "activate-2025-ecommerce-pdf",
+      "sha256": "dab4c3c915c2e7cb7bc110f4ffde9a25514612be075bcc1645453e74e6335e73",
+      "token_count": 27
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[1].summary[0]",
+      "normalized_character_count": 177,
+      "relative_artifact_path": "activate-2025-social-video-pdf/report_analysis/doc_map.json",
+      "report_identity": "activate-2025-social-video-pdf",
+      "sha256": "3a0d205f9be3898fbc94d22a47b77b926c1a55e73e966e98839af75604fe8768",
+      "token_count": 28
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[0].summary[0]",
+      "normalized_character_count": 198,
+      "relative_artifact_path": "activate-2025-spatial-computing-pdf/report_analysis/doc_map.json",
+      "report_identity": "activate-2025-spatial-computing-pdf",
+      "sha256": "2dd5ba642c3233d083922db5892f0c09a3bf667f2475d27a41a5e58a41b29b5a",
+      "token_count": 30
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[6].summary[0]",
+      "normalized_character_count": 190,
+      "relative_artifact_path": "activate-2025-sports-media-and-betting-pdf/report_analysis/doc_map.json",
+      "report_identity": "activate-2025-sports-media-and-betting-pdf",
+      "sha256": "ab9b1d564e00c5207e69327184ed8f9423a0fab297d5a46e25e1cc124a2d585f",
+      "token_count": 35
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 729,
+      "relative_artifact_path": "1/report_analysis/145TTK2861EtgGWH7n-5RJupGSbsmShZ2/artifacts.json",
+      "report_identity": "1",
+      "sha256": "c008e8e0cb39a0d20404200e9cd94e091705a0406a0919d7b57c315c69fb7d7b",
+      "token_count": 114
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 716,
+      "relative_artifact_path": "182v7x-6iz4er0xsp4njxrakggm3m90wr-pdf/report_analysis/artifacts.json",
+      "report_identity": "182v7x-6iz4er0xsp4njxrakggm3m90wr-pdf",
+      "sha256": "1a4feeeadfc415fbd65164ef2930116af39d736128619d6ea02691a1634e3869",
+      "token_count": 84
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 715,
+      "relative_artifact_path": "2/report_analysis/145TTK2861EtgGWH7n-5RJupGSbsmShZ2/artifacts.json",
+      "report_identity": "2",
+      "sha256": "a364444344305bc27ead8d8a7697ffa263fbece808c6745f48da52131658f701",
+      "token_count": 104
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 694,
+      "relative_artifact_path": "2412-activate-technology-and-media-outlook-2025-ecommerce-pdf/report_analysis/artifacts.json",
+      "report_identity": "2412-activate-technology-and-media-outlook-2025-ecommerce-pdf",
+      "sha256": "e39070403aa6b7896a3461a40818688246530cc2ad24211bc5cce987dc1f66c3",
+      "token_count": 99
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 462,
+      "relative_artifact_path": "3/report_analysis/1EJ8wqgoAnXK1CIPV_rpABE1ZgWvGXjFe/artifacts.json",
+      "report_identity": "3",
+      "sha256": "e28b3fe0cb273b4f16170d196066ee84785000e91fcfa4bce56e4d87fd72c311",
+      "token_count": 78
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 666,
+      "relative_artifact_path": "4/report_analysis/145TTK2861EtgGWH7n-5RJupGSbsmShZ2/artifacts.json",
+      "report_identity": "4",
+      "sha256": "0ef4a73f2b6ad703959cd27466b2377f9442463545594d2052db7f3ed63975af",
+      "token_count": 91
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 450,
+      "relative_artifact_path": "5/attest-uk-consumer-trends-report-2026-acig-pdf/report_analysis/artifacts.json",
+      "report_identity": "5",
+      "sha256": "54bf3e8dd7448d2638329cfa4f56905cdfd71f39e4323611c9dd1b4ce83a535d",
+      "token_count": 72
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 473,
+      "relative_artifact_path": "6/attest-uk-consumer-trends-report-2026-acig-pdf/report_analysis/artifacts.json",
+      "report_identity": "6",
+      "sha256": "0b31a12d52fa56411d583dc7438a33f6a937c7bfe1d935002fc8c1b5a72ad92e",
+      "token_count": 70
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 546,
+      "relative_artifact_path": "7/attest-uk-consumer-trends-report-2026-acig-pdf/report_analysis/artifacts.json",
+      "report_identity": "7",
+      "sha256": "8be37157bda6c5385595586cefb9a05227f6673ed75e55dfe28b914825193b30",
+      "token_count": 80
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 781,
+      "relative_artifact_path": "8/allegro-2026-trends-macrotrends-es-acig-pdf/report_analysis/artifacts.json",
+      "report_identity": "8",
+      "sha256": "38dcd7cf20a7e2e9059f6d694ac6730f03c55a391edbfc7b60d6cdc60f74b532",
+      "token_count": 95
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 402,
+      "relative_artifact_path": "9/2023-email-sms-and-push-report-pdf/report_analysis/artifacts.json",
+      "report_identity": "9",
+      "sha256": "9ad1c2f60bd4d1f74649cf3c9db42ae608fb0d14be4d8801dfa87a37fb632975",
+      "token_count": 51
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 545,
+      "relative_artifact_path": "90bbb6f141259489c1a1cfebc200a905a628186c-pdf/report_analysis/artifacts.json",
+      "report_identity": "90bbb6f141259489c1a1cfebc200a905a628186c-pdf",
+      "sha256": "18ee771eee92e888ac28e4ad3a6d0636e455781a5067d34d78cd8bd28d92f4d9",
+      "token_count": 75
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 411,
+      "relative_artifact_path": "activate-2021-post-covid-agenda-pdf/report_analysis/artifacts.json",
+      "report_identity": "activate-2021-post-covid-agenda-pdf",
+      "sha256": "6c3a53449f5bccb128bd7beb22b10684ab774a5ef04300e6eb6a7c7532683177",
+      "token_count": 54
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 677,
+      "relative_artifact_path": "activate-2022-post-covid-shopper-pdf/report_analysis/artifacts.json",
+      "report_identity": "activate-2022-post-covid-shopper-pdf",
+      "sha256": "63d6ec181f91381cd9e6983e4075da9e50c2f9ec5ecdd5701437095b7a58eddf",
+      "token_count": 90
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 758,
+      "relative_artifact_path": "activate-2023-metaverse-report-pdf/report_analysis/artifacts.json",
+      "report_identity": "activate-2023-metaverse-report-pdf",
+      "sha256": "e84c07ba8936027f69d955b787c5eea29b39e36141c64c033dcb81638e2449c1",
+      "token_count": 114
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 490,
+      "relative_artifact_path": "activate-2025-audio-pdf/report_analysis/artifacts.json",
+      "report_identity": "activate-2025-audio-pdf",
+      "sha256": "75f4701932087aa768c9c2250286c48dc4e4f0ca4b4107fae3043b957cc48f30",
+      "token_count": 69
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 525,
+      "relative_artifact_path": "activate-2025-consumer-internet-and-media-revenues-pdf/report_analysis/artifacts.json",
+      "report_identity": "activate-2025-consumer-internet-and-media-revenues-pdf",
+      "sha256": "c986d91ab81cc4b649ef3a6207f4b58902b49cdb237969d44bd35a0593e7e647",
+      "token_count": 71
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 634,
+      "relative_artifact_path": "activate-2025-consumer-time-and-attention-pdf/report_analysis/artifacts.json",
+      "report_identity": "activate-2025-consumer-time-and-attention-pdf",
+      "sha256": "8b6509a6123afc51fb60278830439dd4eadcd85c30bebbe0404a9b63ed940e3b",
+      "token_count": 86
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 630,
+      "relative_artifact_path": "activate-2025-data-and-advertising-pdf/report_analysis/artifacts.json",
+      "report_identity": "activate-2025-data-and-advertising-pdf",
+      "sha256": "de57b33666d2d35a44f4aca791f62938b9b9d9c70606bd4da828f338d222a189",
+      "token_count": 95
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 540,
+      "relative_artifact_path": "activate-2025-discovery-and-generative-ai-pdf/report_analysis/artifacts.json",
+      "report_identity": "activate-2025-discovery-and-generative-ai-pdf",
+      "sha256": "c4b0ffb483fc67f25f4145f0cd1d0416794a1e4dcba193f92011060bf9ebc2a7",
+      "token_count": 85
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 503,
+      "relative_artifact_path": "activate-2025-ecommerce-pdf/report_analysis/artifacts.json",
+      "report_identity": "activate-2025-ecommerce-pdf",
+      "sha256": "724b167a7ebe856f622a217c48f4be94c761fc42a2d8af3901057ed134350ef0",
+      "token_count": 71
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 487,
+      "relative_artifact_path": "activate-2025-social-video-pdf/report_analysis/artifacts.json",
+      "report_identity": "activate-2025-social-video-pdf",
+      "sha256": "fa16c0e11384274c1ca26c9835801af4c0fdcd5bc34f817cb62c01b0d19f53e3",
+      "token_count": 79
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 493,
+      "relative_artifact_path": "activate-2025-spatial-computing-pdf/report_analysis/artifacts.json",
+      "report_identity": "activate-2025-spatial-computing-pdf",
+      "sha256": "7b779f9b1f0b8e3a5348a4eedfba942dc688e91090b9e318fd2c2558507be9ba",
+      "token_count": 57
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 623,
+      "relative_artifact_path": "activate-2025-sports-media-and-betting-pdf/report_analysis/artifacts.json",
+      "report_identity": "activate-2025-sports-media-and-betting-pdf",
+      "sha256": "4ca955240f0059a105b98bb4e74017d73504a896c888b7468633c35a305ec53b",
+      "token_count": 88
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 597,
+      "relative_artifact_path": "activate-2025-super-users-pdf/report_analysis/artifacts.json",
+      "report_identity": "activate-2025-super-users-pdf",
+      "sha256": "1043531255269707d8b15f4c579ed4ebdead847a87c9ad5b79b4b73849a76200",
+      "token_count": 87
+    }
+  ],
+  "coverage": {
+    "artifact_files_examined": 2508,
+    "editorial_canary_count": 25,
+    "log_bytes_scanned": 924210077,
+    "log_files_scanned": 3,
+    "log_lines_scanned": 1321087,
+    "reports_sampled": 26,
+    "source_canary_count": 25,
+    "structured_event_metadata_mode": "matches_only",
+    "structured_events_parsed": null,
+    "unparsed_lines": null
+  },
+  "evidence_run_id": "af87e10752da4d25adf4aa9c40e55f80",
+  "fresh_after": null,
+  "fresh_log_seen": false,
+  "generated_at": "2026-07-18T08:32:44.509672+00:00",
+  "limitations": [
+    "log_corpus_scope_not_declared"
+  ],
+  "log_corpus": {
+    "operator_declared_scope": "not_declared",
+    "repository_provenance": "The repository commit identifies the evidence collector revision; it does not attest to the producer revision of historical log records.",
+    "scope_attestation": "The collector verifies the snapshotted corpus and content coverage, not whether the declared workflow scope was actually executed."
+  },
+  "matches": [],
+  "passed": true,
+  "repository_commit_sha": "65750b654b421024443d46be60805174f80b0585",
+  "schema_version": "1.0",
+  "status": "passed"
+}

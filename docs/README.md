@@ -9,6 +9,7 @@ This index separates current reference material from executable procedures, hist
 | Workflows | Stage-specific behavior from discovery through publication | Engineers and operators | Current reference | Workflow documentation | [workflows/](workflows/report-processing.md) | Workflow change |
 | Operations | Local setup, credentials, monitoring, recovery, and deployment | Operators and incident responders | Operational | Operations documentation | [ops/](ops/local-development.md) | Operator procedure or environment change |
 | Quality | Testing policy, gates, benchmarks, and evidence process | Contributors and reviewers | Current reference | Quality documentation | [quality/](quality/testing.md) | Quality-policy or gate change |
+| CTO evidence | Commit-bound repository inventory and snapshotted runtime telemetry | CTO, operators, reviewers | Generated evidence | CTO evidence collector | [CTO_evidence/](CTO_evidence/README.md) | Run the strict CTO evidence collector after representative processing |
 | Releases | Curated historical summaries; Git remains the detailed chronology | Reviewers and maintainers | Historical | Release history | [releases/](releases/README.md) | Review-period or release completion |
 | Generated reference | Code/configuration-derived CLI, configuration, and capability inventories | Contributors and operators | Generated | Generator scripts | [generated/](generated/capability-manifest.md) | Run `python scripts/docs/generate_references.py` after relevant source changes |
 

@@ -1,0 +1,140 @@
+{
+  "applied_overlays": [
+    "src/config/app.local.yaml"
+  ],
+  "configuration_path": "src/config/app.yaml",
+  "profiles": [
+    {
+      "planned_side_effects": [
+        "network",
+        "browser"
+      ],
+      "profile": "browser_acquisition",
+      "prompt_namespaces": [
+        "browser_report_download/browser_route"
+      ],
+      "requires": {
+        "browser": true,
+        "drive": false,
+        "llm": false,
+        "publish": false
+      },
+      "workflow": "browser_acquisition"
+    },
+    {
+      "planned_side_effects": [
+        "model",
+        "analytics_store"
+      ],
+      "profile": "cross_report_analysis",
+      "prompt_namespaces": [
+        "cross_report_analysis/synthesis"
+      ],
+      "requires": {
+        "browser": false,
+        "drive": false,
+        "llm": true,
+        "publish": false
+      },
+      "workflow": "cross_report_analysis"
+    },
+    {
+      "planned_side_effects": [
+        "network",
+        "browser",
+        "drive",
+        "model"
+      ],
+      "profile": "publisher_inventory",
+      "prompt_namespaces": [
+        "publisher_inventory/discovery",
+        "publisher_inventory/meaningful_candidate_screen"
+      ],
+      "requires": {
+        "browser": true,
+        "drive": true,
+        "llm": true,
+        "publish": false
+      },
+      "workflow": "publisher_inventory"
+    },
+    {
+      "planned_side_effects": [
+        "wordpress",
+        "publish"
+      ],
+      "profile": "publishing",
+      "prompt_namespaces": [],
+      "requires": {
+        "browser": false,
+        "drive": false,
+        "llm": false,
+        "publish": true
+      },
+      "workflow": "publishing"
+    },
+    {
+      "planned_side_effects": [
+        "network",
+        "browser",
+        "drive"
+      ],
+      "profile": "report_download",
+      "prompt_namespaces": [
+        "browser_report_download/browser_route"
+      ],
+      "requires": {
+        "browser": true,
+        "drive": true,
+        "llm": false,
+        "publish": false
+      },
+      "workflow": "report_download"
+    },
+    {
+      "planned_side_effects": [
+        "pdf",
+        "model"
+      ],
+      "profile": "report_generation",
+      "prompt_namespaces": [],
+      "requires": {
+        "browser": false,
+        "drive": false,
+        "llm": true,
+        "publish": false
+      },
+      "workflow": "report_generation"
+    },
+    {
+      "planned_side_effects": [
+        "filesystem"
+      ],
+      "profile": "ui_replay",
+      "prompt_namespaces": [],
+      "requires": {
+        "browser": false,
+        "drive": false,
+        "llm": false,
+        "publish": false
+      },
+      "workflow": "ui_replay"
+    },
+    {
+      "planned_side_effects": [
+        "wordpress"
+      ],
+      "profile": "wordpress_sync",
+      "prompt_namespaces": [],
+      "requires": {
+        "browser": false,
+        "drive": false,
+        "llm": false,
+        "publish": true
+      },
+      "workflow": "wordpress_sync"
+    }
+  ],
+  "requested_profile": null,
+  "schema_version": "1.0"
+}

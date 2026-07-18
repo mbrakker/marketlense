@@ -1,0 +1,48 @@
+{
+  "artifacts": [
+    "acquisition_metrics.csv",
+    "browser_metrics.csv",
+    "llm_usage_metrics.csv",
+    "ocr_vision_metrics.csv",
+    "lineage_reuse_metrics.csv",
+    "failure_metrics.csv",
+    "wordpress_metrics.csv",
+    "crop_quality_metrics.csv",
+    "README.md",
+    "workflow_to_remediation_coverage.json",
+    "artifact_lineage_completeness.json",
+    "architecture_manifest.json",
+    "source_identity_schema.json",
+    "editorial_rule_catalog.json",
+    "effective_run_profile_matrix.json",
+    "github_main_status.json",
+    "runtime_telemetry.json",
+    "detailed_metrics.json",
+    "snapshot_manifest.json",
+    "log_content_leakage.json"
+  ],
+  "evidence_run_id": "af87e10752da4d25adf4aa9c40e55f80",
+  "generated_at": "2026-07-18T08:32:46.858368+00:00",
+  "repository": {
+    "commit_sha": "65750b654b421024443d46be60805174f80b0585"
+  },
+  "repository_commit_sha": "65750b654b421024443d46be60805174f80b0585",
+  "schema_version": "1.0",
+  "totals": {
+    "acquisition": {
+      "attempt_count": 1385,
+      "record_count": 295,
+      "success_count": 539
+    },
+    "failures": {
+      "record_count": 3
+    },
+    "llm": {
+      "call_count": 1204,
+      "estimated_cost_usd": "2.028749",
+      "input_tokens": 2514494,
+      "output_tokens": 623172,
+      "total_tokens": 3137666
+    }
+  }
+}

@@ -1,0 +1,175 @@
+{
+  "definition": "A complete lineage record has all required canonical fields, verified lineage status, and active state.",
+  "families": [
+    {
+      "active_count": 7,
+      "artifact_count": 11,
+      "artifact_family": "analysis_pdf",
+      "complete_count": 3,
+      "completeness_percentage": 27.2727
+    },
+    {
+      "active_count": 12,
+      "artifact_count": 18,
+      "artifact_family": "analysis_vector_store",
+      "complete_count": 10,
+      "completeness_percentage": 55.5556
+    },
+    {
+      "active_count": 19,
+      "artifact_count": 26,
+      "artifact_family": "artifacts",
+      "complete_count": 15,
+      "completeness_percentage": 57.6923
+    },
+    {
+      "active_count": 2,
+      "artifact_count": 7,
+      "artifact_family": "artifacts_regen_attempt_1",
+      "complete_count": 2,
+      "completeness_percentage": 28.5714
+    },
+    {
+      "active_count": 1,
+      "artifact_count": 1,
+      "artifact_family": "artifacts_regen_attempt_2",
+      "complete_count": 1,
+      "completeness_percentage": 100.0
+    },
+    {
+      "active_count": 1,
+      "artifact_count": 4,
+      "artifact_family": "contents_image",
+      "complete_count": 1,
+      "completeness_percentage": 25.0
+    },
+    {
+      "active_count": 11,
+      "artifact_count": 17,
+      "artifact_family": "context_category_fit",
+      "complete_count": 9,
+      "completeness_percentage": 52.9412
+    },
+    {
+      "active_count": 5,
+      "artifact_count": 11,
+      "artifact_family": "doc_map",
+      "complete_count": 3,
+      "completeness_percentage": 27.2727
+    },
+    {
+      "active_count": 5,
+      "artifact_count": 11,
+      "artifact_family": "findings",
+      "complete_count": 3,
+      "completeness_percentage": 27.2727
+    },
+    {
+      "active_count": 5,
+      "artifact_count": 11,
+      "artifact_family": "limitations",
+      "complete_count": 3,
+      "completeness_percentage": 27.2727
+    },
+    {
+      "active_count": 5,
+      "artifact_count": 11,
+      "artifact_family": "methods",
+      "complete_count": 3,
+      "completeness_percentage": 27.2727
+    },
+    {
+      "active_count": 3,
+      "artifact_count": 7,
+      "artifact_family": "preview_image",
+      "complete_count": 3,
+      "completeness_percentage": 42.8571
+    },
+    {
+      "active_count": 1,
+      "artifact_count": 7,
+      "artifact_family": "public_editorial_quality_after",
+      "complete_count": 1,
+      "completeness_percentage": 14.2857
+    },
+    {
+      "active_count": 1,
+      "artifact_count": 7,
+      "artifact_family": "public_editorial_quality_before",
+      "complete_count": 1,
+      "completeness_percentage": 14.2857
+    },
+    {
+      "active_count": 1,
+      "artifact_count": 6,
+      "artifact_family": "public_editorial_quality_regen_attempt_1",
+      "complete_count": 1,
+      "completeness_percentage": 16.6667
+    },
+    {
+      "active_count": 5,
+      "artifact_count": 11,
+      "artifact_family": "quote_candidates",
+      "complete_count": 3,
+      "completeness_percentage": 27.2727
+    },
+    {
+      "active_count": 13,
+      "artifact_count": 20,
+      "artifact_family": "rendered_html",
+      "complete_count": 11,
+      "completeness_percentage": 55.0
+    },
+    {
+      "active_count": 5,
+      "artifact_count": 11,
+      "artifact_family": "report_context",
+      "complete_count": 3,
+      "completeness_percentage": 27.2727
+    },
+    {
+      "active_count": 5,
+      "artifact_count": 11,
+      "artifact_family": "scope",
+      "complete_count": 3,
+      "completeness_percentage": 27.2727
+    },
+    {
+      "active_count": 11,
+      "artifact_count": 14,
+      "artifact_family": "signals",
+      "complete_count": 9,
+      "completeness_percentage": 64.2857
+    },
+    {
+      "active_count": 7,
+      "artifact_count": 10,
+      "artifact_family": "source_pdf",
+      "complete_count": 3,
+      "completeness_percentage": 30.0
+    },
+    {
+      "active_count": 18,
+      "artifact_count": 27,
+      "artifact_family": "validation",
+      "complete_count": 16,
+      "completeness_percentage": 59.2593
+    },
+    {
+      "active_count": 2,
+      "artifact_count": 7,
+      "artifact_family": "validation_regen_attempt_1",
+      "complete_count": 2,
+      "completeness_percentage": 28.5714
+    },
+    {
+      "active_count": 1,
+      "artifact_count": 1,
+      "artifact_family": "validation_regen_attempt_2",
+      "complete_count": 1,
+      "completeness_percentage": 100.0
+    }
+  ],
+  "schema_version": "1.0",
+  "status": "available"
+}

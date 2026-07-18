@@ -1,0 +1,265 @@
+{
+  "artifact_inventory": [
+    {
+      "artifact_name": "acquisition_metrics.csv",
+      "byte_count": 3983,
+      "evidence_run_id": "af87e10752da4d25adf4aa9c40e55f80",
+      "relative_path": "acquisition_metrics.csv",
+      "repository_commit_sha": "65750b654b421024443d46be60805174f80b0585",
+      "required": true,
+      "schema_version": null,
+      "sha256": "fa91f58d37cb06301a30c0737833702431b752852bfc0da1f04571d722131e7b"
+    },
+    {
+      "artifact_name": "architecture_manifest.json",
+      "byte_count": 3444,
+      "evidence_run_id": "af87e10752da4d25adf4aa9c40e55f80",
+      "relative_path": "architecture_manifest.json",
+      "repository_commit_sha": "65750b654b421024443d46be60805174f80b0585",
+      "required": true,
+      "schema_version": "1.0",
+      "sha256": "b94c973b89e628b1a5f90eb38c6bcfeac86645313c8967c617b775d09944601d"
+    },
+    {
+      "artifact_name": "artifact_lineage_completeness.json",
+      "byte_count": 4673,
+      "evidence_run_id": "af87e10752da4d25adf4aa9c40e55f80",
+      "relative_path": "artifact_lineage_completeness.json",
+      "repository_commit_sha": "65750b654b421024443d46be60805174f80b0585",
+      "required": true,
+      "schema_version": "1.0",
+      "sha256": "8feffa5513afa0a317d425edf77ca851261d2b206ed9a90f82d23aac939605de"
+    },
+    {
+      "artifact_name": "browser_metrics.csv",
+      "byte_count": 1599,
+      "evidence_run_id": "af87e10752da4d25adf4aa9c40e55f80",
+      "relative_path": "browser_metrics.csv",
+      "repository_commit_sha": "65750b654b421024443d46be60805174f80b0585",
+      "required": true,
+      "schema_version": null,
+      "sha256": "212b0a5b9ad5fc72216d11fcb5a99319c0fcc429cf10681fe8a6781013565f24"
+    },
+    {
+      "artifact_name": "crop_quality_metrics.csv",
+      "byte_count": 16095,
+      "evidence_run_id": "af87e10752da4d25adf4aa9c40e55f80",
+      "relative_path": "crop_quality_metrics.csv",
+      "repository_commit_sha": "65750b654b421024443d46be60805174f80b0585",
+      "required": true,
+      "schema_version": null,
+      "sha256": "8a67265b98a2a89af29596faad3f4417e4edc1dda34f29b01e100794cea9e59e"
+    },
+    {
+      "artifact_name": "detailed_metrics.json",
+      "byte_count": 155465,
+      "evidence_run_id": "af87e10752da4d25adf4aa9c40e55f80",
+      "relative_path": "detailed_metrics.json",
+      "repository_commit_sha": "65750b654b421024443d46be60805174f80b0585",
+      "required": true,
+      "schema_version": "1.0",
+      "sha256": "0dd989b5911e4a1e0f27ca3059e64602ac599f08e15f5cfa9ee8c8c57c69362d"
+    },
+    {
+      "artifact_name": "editorial_rule_catalog.json",
+      "byte_count": 4252,
+      "evidence_run_id": "af87e10752da4d25adf4aa9c40e55f80",
+      "relative_path": "editorial_rule_catalog.json",
+      "repository_commit_sha": "65750b654b421024443d46be60805174f80b0585",
+      "required": true,
+      "schema_version": "1.0",
+      "sha256": "686f322fdff81ef1b24cfb34e90df06420e686cd66ee2ab9d5823cdc272b2bf7"
+    },
+    {
+      "artifact_name": "effective_run_profile_matrix.json",
+      "byte_count": 3170,
+      "evidence_run_id": "af87e10752da4d25adf4aa9c40e55f80",
+      "relative_path": "effective_run_profile_matrix.json",
+      "repository_commit_sha": "65750b654b421024443d46be60805174f80b0585",
+      "required": true,
+      "schema_version": "1.0",
+      "sha256": "f55012a65853be866d1bd1e5345885789968005e4d30924cb328a8c525892c97"
+    },
+    {
+      "artifact_name": "executive_summary.json",
+      "byte_count": 1360,
+      "evidence_run_id": "af87e10752da4d25adf4aa9c40e55f80",
+      "relative_path": "executive_summary.json",
+      "repository_commit_sha": "65750b654b421024443d46be60805174f80b0585",
+      "required": true,
+      "schema_version": "1.0",
+      "sha256": "04cfc3b4a1bacb731bb5aa39bdda15c898dab11855872a78e2761eba3ffb9f85"
+    },
+    {
+      "artifact_name": "failure_metrics.csv",
+      "byte_count": 386,
+      "evidence_run_id": "af87e10752da4d25adf4aa9c40e55f80",
+      "relative_path": "failure_metrics.csv",
+      "repository_commit_sha": "65750b654b421024443d46be60805174f80b0585",
+      "required": true,
+      "schema_version": null,
+      "sha256": "c950267f53cd29cfe68cf08b01e5b2cbe6988d9c506731d556aa0e35e7cae028"
+    },
+    {
+      "artifact_name": "github_main_status.json",
+      "byte_count": 422,
+      "evidence_run_id": "af87e10752da4d25adf4aa9c40e55f80",
+      "relative_path": "github_main_status.json",
+      "repository_commit_sha": "65750b654b421024443d46be60805174f80b0585",
+      "required": true,
+      "schema_version": "1.0",
+      "sha256": "7dfaa3bfb8c4f50b2fc2c3de4c1d033e7baed47a679c54e092d89b8c6eab4da6"
+    },
+    {
+      "artifact_name": "lineage_reuse_metrics.csv",
+      "byte_count": 9583,
+      "evidence_run_id": "af87e10752da4d25adf4aa9c40e55f80",
+      "relative_path": "lineage_reuse_metrics.csv",
+      "repository_commit_sha": "65750b654b421024443d46be60805174f80b0585",
+      "required": true,
+      "schema_version": null,
+      "sha256": "412e945d419c76ea3c311eabf414f551c65851e0f7f4f293a8e3c0682f279653"
+    },
+    {
+      "artifact_name": "llm_usage_metrics.csv",
+      "byte_count": 18074,
+      "evidence_run_id": "af87e10752da4d25adf4aa9c40e55f80",
+      "relative_path": "llm_usage_metrics.csv",
+      "repository_commit_sha": "65750b654b421024443d46be60805174f80b0585",
+      "required": true,
+      "schema_version": null,
+      "sha256": "f2668d70686f19ba20729ccab20c6911c3bf63267464b79bc843408df5ded636"
+    },
+    {
+      "artifact_name": "log_content_leakage.json",
+      "byte_count": 22425,
+      "evidence_run_id": "af87e10752da4d25adf4aa9c40e55f80",
+      "relative_path": "log_content_leakage.json",
+      "repository_commit_sha": "65750b654b421024443d46be60805174f80b0585",
+      "required": true,
+      "schema_version": "1.0",
+      "sha256": "0b494e3361ba9da7a45761618f06a8ac9a80f2879af5ea6a714c20b9385eef94"
+    },
+    {
+      "artifact_name": "ocr_vision_metrics.csv",
+      "byte_count": 193,
+      "evidence_run_id": "af87e10752da4d25adf4aa9c40e55f80",
+      "relative_path": "ocr_vision_metrics.csv",
+      "repository_commit_sha": "65750b654b421024443d46be60805174f80b0585",
+      "required": true,
+      "schema_version": null,
+      "sha256": "54cf40816da2b5e387b1a0307f87ca7d08416cd3484fd9baaeca6b51f35ad909"
+    },
+    {
+      "artifact_name": "README.md",
+      "byte_count": 1032,
+      "evidence_run_id": "af87e10752da4d25adf4aa9c40e55f80",
+      "relative_path": "README.md",
+      "repository_commit_sha": "65750b654b421024443d46be60805174f80b0585",
+      "required": true,
+      "schema_version": null,
+      "sha256": "0b3704003910fbb86c3699f365a4135ad4d8fa9d3eebdd2fe796867083f90006"
+    },
+    {
+      "artifact_name": "runtime_telemetry.json",
+      "byte_count": 54672,
+      "evidence_run_id": "af87e10752da4d25adf4aa9c40e55f80",
+      "relative_path": "runtime_telemetry.json",
+      "repository_commit_sha": "65750b654b421024443d46be60805174f80b0585",
+      "required": true,
+      "schema_version": "1.0",
+      "sha256": "2aca2780f22e8bfed84b549c4634d34cf2374bcfb22e909d7e0d67aefd26d6a5"
+    },
+    {
+      "artifact_name": "snapshot_manifest.json",
+      "byte_count": 1098912,
+      "evidence_run_id": "af87e10752da4d25adf4aa9c40e55f80",
+      "relative_path": "snapshot_manifest.json",
+      "repository_commit_sha": "65750b654b421024443d46be60805174f80b0585",
+      "required": true,
+      "schema_version": "1.0",
+      "sha256": "42b734aa2983296c5ed5e438bd062d5c6d36040b2271788f51e3cae83826cdfe"
+    },
+    {
+      "artifact_name": "source_identity_schema.json",
+      "byte_count": 8873,
+      "evidence_run_id": "af87e10752da4d25adf4aa9c40e55f80",
+      "relative_path": "source_identity_schema.json",
+      "repository_commit_sha": "65750b654b421024443d46be60805174f80b0585",
+      "required": true,
+      "schema_version": "1.0",
+      "sha256": "5029cb35d789d01e309f64266d57e9780c4eee5c8f04dff3b2371eb8bead4e00"
+    },
+    {
+      "artifact_name": "wordpress_metrics.csv",
+      "byte_count": 148,
+      "evidence_run_id": "af87e10752da4d25adf4aa9c40e55f80",
+      "relative_path": "wordpress_metrics.csv",
+      "repository_commit_sha": "65750b654b421024443d46be60805174f80b0585",
+      "required": true,
+      "schema_version": null,
+      "sha256": "0b5a3cc09963f23a4b027623372149d47ac7245b4a1bf00b66d9e4234fb52e70"
+    },
+    {
+      "artifact_name": "workflow_to_remediation_coverage.json",
+      "byte_count": 11037,
+      "evidence_run_id": "af87e10752da4d25adf4aa9c40e55f80",
+      "relative_path": "workflow_to_remediation_coverage.json",
+      "repository_commit_sha": "65750b654b421024443d46be60805174f80b0585",
+      "required": true,
+      "schema_version": "1.0",
+      "sha256": "9f36a9aba3d6bb578881b903f2ad7ebe9a5eb6c5d852522b4c836a9f1f60bb53"
+    }
+  ],
+  "collector_version": "3.0",
+  "command_args": [
+    "--state-dir",
+    "state",
+    "--artifact-dir",
+    "out",
+    "--log-dir",
+    "logs",
+    "--output-dir",
+    "docs\\CTO_evidence",
+    "--include-github-status",
+    "--replace-output"
+  ],
+  "configuration": {
+    "artifact_dir": "out",
+    "include_github_status": true,
+    "log_dir": "logs",
+    "maximum_canaries_per_class": 25,
+    "minimum_editorial_canaries": 5,
+    "minimum_source_canaries": 5,
+    "required_databases": [
+      "llm_usage",
+      "reports"
+    ],
+    "state_dir": "."
+  },
+  "configuration_hash": "ba59df6d2c8f8de75641b2588c2a4d03987adbaa144975dfcb4bf452ed1d6440",
+  "ended_at": "2026-07-18T08:32:47.010327+00:00",
+  "evidence_run_id": "af87e10752da4d25adf4aa9c40e55f80",
+  "fresh_after": null,
+  "generated_at": "2026-07-18T08:32:47.010312+00:00",
+  "log_corpus": {
+    "operator_declared_scope": "not_declared",
+    "repository_provenance": "The repository commit identifies the evidence collector revision; it does not attest to the producer revision of historical log records.",
+    "scope_attestation": "The collector verifies the snapshotted corpus and content coverage, not whether the declared workflow scope was actually executed."
+  },
+  "operating_system": "Windows-11-10.0.26200-SP0",
+  "python_version": "3.14.2 (tags/v3.14.2:df79316, Dec  5 2025, 17:18:21) [MSC v.1944 64 bit (AMD64)]",
+  "repository": {
+    "dirty_worktree_end": true,
+    "dirty_worktree_start": true,
+    "end_commit_sha": "65750b654b421024443d46be60805174f80b0585",
+    "exact_head_verified": false,
+    "expected_commit_sha": "65750b654b421024443d46be60805174f80b0585",
+    "head_stable": true,
+    "start_commit_sha": "65750b654b421024443d46be60805174f80b0585"
+  },
+  "repository_commit_sha": "65750b654b421024443d46be60805174f80b0585",
+  "schema_version": "1.0",
+  "snapshot_manifest_sha256": "42b734aa2983296c5ed5e438bd062d5c6d36040b2271788f51e3cae83826cdfe",
+  "started_at": "2026-07-18T08:29:05.370412+00:00"
+}

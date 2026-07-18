@@ -23,13 +23,15 @@ python scripts/quality/collect_cto_review_evidence.py \
   --state-dir state \
   --artifact-dir out \
   --log-dir logs \
-  --output-dir out/cto-review-evidence \
+  --output-dir docs/CTO_evidence \
   --expected-commit-sha "$HEAD_SHA" \
   --require-exact-head \
   --fresh-after "$FRESH_AFTER" \
   --log-corpus-scope representative_report_processing \
   --minimum-source-canaries 5 \
-  --minimum-editorial-canaries 5
+  --minimum-editorial-canaries 5 \
+  --include-github-status \
+  --replace-output
 ```
 
 Strict mode resolves a full 40-character HEAD before snapshots and again immediately before finalization. It requires the expected, starting, and ending SHAs to match and the worktree to be clean at both checks. Git metadata being unavailable, a dirty worktree, an invalid or mismatched expected SHA, or a moving HEAD all fail the run. This proves the bundle-generation code came from one clean repository revision. It does not prove that historical log lines were produced by that revision: standard logs have separate corpus provenance unless a log record itself contains trustworthy commit metadata.
@@ -58,6 +60,15 @@ The existing CSV filenames remain stable. The collector additionally writes:
 
 The JSON CTO artifacts carry one `evidence_run_id` and one `repository_commit_sha`; the manifest binds stable CSV names through the same inventory. The run manifest intentionally does not hash itself. Instead, `consistency_validation.json` records the finalized run-manifest SHA after independent validation, avoiding a circular hash. Public output paths never include a workstation root or username.
 
+The canonical output location is [`docs/CTO_evidence/`](../CTO_evidence/README.md). In addition to the existing integrity, log-leakage, detailed, summary, and CSV artifacts, every bundle writes these machine-readable CTO artifacts:
+
+- `workflow_to_remediation_coverage.json`, `artifact_lineage_completeness.json`, and `architecture_manifest.json` for commit-bound repository evidence;
+- `source_identity_schema.json`, `editorial_rule_catalog.json`, and `effective_run_profile_matrix.json` for the public policy and configured execution surface;
+- `github_main_status.json` for the latest main commit and its check/PR state when `--include-github-status` is passed; and
+- `runtime_telemetry.json` for acquisition, browser, cost, OCR, crop, plan-divergence, deferred-work, remediation, embedding, WordPress, editorial-quality, and public-page evidence.
+
+The collector reports a metric as `available`, `partial`, `empty`, or `unavailable`. `partial` and `unavailable` are explicit retained-data limitations, not zeroes or inferred successes. In particular, the current stores do not prove per-report browser traces, cache hit/miss rates, cost attribution across every side effect, WordPress duplicate/rollback rates, human editorial ratings, or hosted public-page telemetry until those values are retained by their owning boundaries.
+
 All files are first created in a temporary staging directory. The collector validates snapshot integrity, exact-head state, log-content result, summary consistency, run IDs, repository SHAs, and every inventoried file hash before publishing. It will not merge into an existing output directory; use `--replace-output` for an explicit replacement. A failing strict run leaves no partial final bundle. Temporary workspaces are removed after success and failure unless `--debug-retain-snapshots` is set; retained debug workspaces are operator diagnostics and are not publishable evidence.
 
 For release evidence, add the passed CTO JSON artifacts through the generic manifest command. The embedded repository SHA is checked against the requested release commit when `--require-head-commit` is used; a failed leakage artifact is therefore a normal unwaived `artifact_failed` release issue.
@@ -65,9 +76,9 @@ For release evidence, add the passed CTO JSON artifacts through the generic mani
 ```bash
 python scripts/quality/release_evidence_manifest.py \
   --release-id "<release-id>" \
-  --artifact cto_log_content_leakage=out/cto-review-evidence/log_content_leakage.json \
+  --artifact cto_log_content_leakage=docs/CTO_evidence/log_content_leakage.json \
   --expected-schema cto_log_content_leakage=1.0 \
-  --artifact cto_consistency=out/cto-review-evidence/consistency_validation.json \
+  --artifact cto_consistency=docs/CTO_evidence/consistency_validation.json \
   --expected-schema cto_consistency=1.0 \
   --require-head-commit
 ```

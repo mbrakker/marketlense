@@ -28,12 +28,14 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 try:
+    from scripts.quality._cto_review_evidence.cto_evidence import write_cto_evidence
     from scripts.quality._cto_review_evidence.log_content_leakage import (
         extract_canaries,
         normalize_text,
         scan_logs,
     )
 except ModuleNotFoundError:  # Direct `python scripts/quality/...` execution.
+    from _cto_review_evidence.cto_evidence import write_cto_evidence
     from _cto_review_evidence.log_content_leakage import (
         extract_canaries,
         normalize_text,
@@ -193,6 +195,7 @@ class EvidencePaths:
     minimum_editorial_canaries: int = 5
     maximum_canaries_per_class: int = 25
     replace_output: bool = False
+    include_github_status: bool = False
     repository_root: Path = ROOT
 
 
@@ -966,6 +969,14 @@ def validate_consistency(
         "detailed_metrics.json",
         "executive_summary.json",
         "log_content_leakage.json",
+        "workflow_to_remediation_coverage.json",
+        "artifact_lineage_completeness.json",
+        "architecture_manifest.json",
+        "source_identity_schema.json",
+        "editorial_rule_catalog.json",
+        "effective_run_profile_matrix.json",
+        "github_main_status.json",
+        "runtime_telemetry.json",
     )
     files = {name: output_dir / name for name in required_names}
     for name, path in files.items():
@@ -978,6 +989,9 @@ def validate_consistency(
     detailed = json.loads(files["detailed_metrics.json"].read_text(encoding="utf-8"))
     summary = json.loads(files["executive_summary.json"].read_text(encoding="utf-8"))
     leakage = json.loads(files["log_content_leakage.json"].read_text(encoding="utf-8"))
+    architecture = json.loads(
+        files["architecture_manifest.json"].read_text(encoding="utf-8")
+    )
     validation_path = output_dir / "consistency_validation.json"
     if require_validation and not validation_path.is_file():
         raise MissingArtifactError(
@@ -1002,6 +1016,10 @@ def validate_consistency(
     ):
         raise RepositoryShaMismatchError(
             "Evidence artifacts do not share one repository SHA"
+        )
+    if architecture.get("repository_commit_sha") != commit_sha:
+        raise RepositoryShaMismatchError(
+            "Architecture manifest commit does not match the evidence bundle"
         )
     if manifest.get("snapshot_manifest_sha256") != _sha256(
         files["snapshot_manifest.json"]
@@ -1421,6 +1439,14 @@ def collect(
         csv_paths = [
             _write_csv(staging_dir / name, rows) for name, rows in metrics.items()
         ]
+        cto_paths = write_cto_evidence(
+            output_dir=staging_dir,
+            repository_root=ROOT,
+            snapshots=snapshots,
+            artifact_dir=artifact_snapshot_root,
+            repository_commit_sha=commit_sha,
+            include_github_status=paths.include_github_status,
+        )
         detailed_path = _write_json(
             staging_dir / "detailed_metrics.json",
             {
@@ -1436,6 +1462,7 @@ def collect(
             path.name
             for path in [
                 *csv_paths,
+                *cto_paths,
                 detailed_path,
                 snapshot_manifest_path,
                 leakage_path,
@@ -1459,6 +1486,7 @@ def collect(
             "minimum_source_canaries": paths.minimum_source_canaries,
             "minimum_editorial_canaries": paths.minimum_editorial_canaries,
             "maximum_canaries_per_class": paths.maximum_canaries_per_class,
+            "include_github_status": paths.include_github_status,
         }
         manifest_path = _write_json(
             staging_dir / "evidence_run_manifest.json",
@@ -1556,8 +1584,12 @@ def main() -> int:
     parser.add_argument("--state-dir", default="state")
     parser.add_argument("--artifact-dir", default="out")
     parser.add_argument("--log-dir", default="logs")
-    parser.add_argument("--output-dir", default="out/cto-review-evidence")
-    parser.add_argument("--archive-path", default="docs/cto-review-evidence.zip")
+    parser.add_argument("--output-dir", default="docs/CTO_evidence")
+    parser.add_argument(
+        "--archive-path",
+        default="",
+        help="Optional ZIP path; empty keeps the evidence directory as the only output.",
+    )
     parser.add_argument("--debug-retain-snapshots", action="store_true")
     parser.add_argument("--require-exact-head", action="store_true")
     parser.add_argument("--expected-commit-sha", default="")
@@ -1571,6 +1603,11 @@ def main() -> int:
     parser.add_argument("--minimum-source-canaries", type=int, default=5)
     parser.add_argument("--minimum-editorial-canaries", type=int, default=5)
     parser.add_argument("--maximum-canaries-per-class", type=int, default=25)
+    parser.add_argument(
+        "--include-github-status",
+        action="store_true",
+        help="Read the latest main commit and check status through GitHub CLI.",
+    )
     parser.add_argument("--replace-output", action="store_true")
     args = parser.parse_args()
     for path in collect(
@@ -1580,7 +1617,7 @@ def main() -> int:
             Path(args.output_dir),
             log_dir=Path(args.log_dir),
             debug_retain_snapshots=args.debug_retain_snapshots,
-            archive_path=Path(args.archive_path),
+            archive_path=Path(args.archive_path) if args.archive_path else None,
             require_exact_head=args.require_exact_head,
             expected_commit_sha=args.expected_commit_sha or None,
             fresh_after=args.fresh_after or None,
@@ -1589,6 +1626,7 @@ def main() -> int:
             minimum_editorial_canaries=args.minimum_editorial_canaries,
             maximum_canaries_per_class=args.maximum_canaries_per_class,
             replace_output=args.replace_output,
+            include_github_status=args.include_github_status,
         ),
         command_args=tuple(sys.argv[1:]),
     ):

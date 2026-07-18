@@ -11,18 +11,24 @@ from pathlib import Path
 
 import pytest
 
+from scripts.quality._cto_review_evidence.log_content_leakage import (
+    Canary,
+    _build_matcher,
+)
 from scripts.quality.collect_cto_review_evidence import (
+    ROOT,
     ArtifactIntegrityError,
     DuplicateEvidenceRunIdError,
     EvidenceCoverageError,
     EvidencePaths,
     LogContentLeakageError,
     LogCorpusScopeError,
-    RequiredEvidenceDatabaseError,
     RepositoryHeadChangedError,
     RepositoryHeadMismatchError,
+    RepositoryShaMismatchError,
     RepositoryStateUnavailableError,
     RepositoryWorktreeDirtyError,
+    RequiredEvidenceDatabaseError,
     RetainedArtifactEvidenceError,
     RowCountMismatchError,
     SnapshotIntegrityError,
@@ -246,6 +252,108 @@ def test_collect_reads_local_state_and_writes_aggregate_csvs(tmp_path: Path) -> 
         assert next(csv.DictReader(handle))["request_count"] == "1"
 
 
+def test_collect_writes_named_cto_evidence_artifacts_from_snapshots(
+    tmp_path: Path,
+) -> None:
+    state, _ = _seed_state(tmp_path)
+    with sqlite3.connect(state / "reports.sqlite") as db:
+        for column in (
+            "source_id",
+            "content_hash",
+            "storage_ref",
+            "schema_version_used",
+            "processing_version",
+            "validation_status",
+            "lineage_status",
+        ):
+            db.execute(f"ALTER TABLE artifact_lineage_records ADD COLUMN {column}")
+        db.execute(
+            """
+            UPDATE artifact_lineage_records
+            SET source_id='source-1', content_hash='hash-1', storage_ref='safe-ref',
+                schema_version_used='1.0', processing_version='1.0',
+                validation_status='passed', lineage_status='verified'
+            """
+        )
+        db.execute(
+            """
+            CREATE TABLE artifact_execution_plan_runs (
+              plan_hash, report_id, execution_intent, execution_mode,
+              planned_external_calls_json, actual_external_calls_json,
+              reusable_artifact_ids_json, divergence_json, actual_cost_usd
+            )
+            """
+        )
+        db.execute(
+            """
+            INSERT INTO artifact_execution_plan_runs VALUES
+            ('plan-1','report-1','render','enforce','["html_render"]',
+             '["html_render"]','["a"]','{}',0.2)
+            """
+        )
+    paths = _paths(tmp_path, state, output_name="CTO_evidence")
+
+    collect(paths)
+
+    expected = {
+        "README.md",
+        "workflow_to_remediation_coverage.json",
+        "artifact_lineage_completeness.json",
+        "architecture_manifest.json",
+        "source_identity_schema.json",
+        "editorial_rule_catalog.json",
+        "effective_run_profile_matrix.json",
+        "github_main_status.json",
+        "runtime_telemetry.json",
+    }
+    assert expected <= {path.name for path in paths.output_dir.iterdir()}
+    assert (paths.output_dir / "README.md").read_text(encoding="utf-8") == (
+        ROOT / "docs/CTO_evidence/README.md"
+    ).read_text(encoding="utf-8")
+
+    lineage = json.loads(
+        (paths.output_dir / "artifact_lineage_completeness.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert lineage["status"] == "available"
+    assert lineage["families"] == [
+        {
+            "active_count": 1,
+            "artifact_count": 1,
+            "artifact_family": "source_pdf",
+            "complete_count": 1,
+            "completeness_percentage": 100.0,
+        }
+    ]
+    telemetry = json.loads(
+        (paths.output_dir / "runtime_telemetry.json").read_text(encoding="utf-8")
+    )
+    assert (
+        telemetry["acquisition_by_publisher_and_route"]["values"]["rows"][0][
+            "successful_acquisition_rate"
+        ]
+        == 1.0
+    )
+    assert telemetry["minimal_plan_actual_call_divergence"]["values"]["rows"] == [
+        {
+            "actual_call_count": 1,
+            "divergent_plan_count": 0,
+            "execution_intent": "render",
+            "execution_mode": "enforce",
+            "matching_plan_count": 1,
+            "plan_count": 1,
+            "planned_call_count": 1,
+        }
+    ]
+    assert (
+        json.loads(
+            (paths.output_dir / "github_main_status.json").read_text(encoding="utf-8")
+        )["reason"]
+        == "github_status_not_requested"
+    )
+
+
 def test_collect_writes_requested_validated_evidence_archive(tmp_path: Path) -> None:
     state, _ = _seed_state(tmp_path)
     archive_path = tmp_path / "docs" / "cto-review-evidence.zip"
@@ -332,6 +440,24 @@ def test_summary_mismatch_fails_closed(tmp_path: Path) -> None:
     summary_path.write_text(json.dumps(summary), encoding="utf-8")
 
     with pytest.raises(RowCountMismatchError):
+        validate_consistency(
+            paths.output_dir,
+            expected_run_id=json.loads(
+                (paths.output_dir / "detailed_metrics.json").read_text(encoding="utf-8")
+            )["evidence_run_id"],
+        )
+
+
+def test_architecture_manifest_commit_mismatch_fails_closed(tmp_path: Path) -> None:
+    state, _ = _seed_state(tmp_path)
+    paths = _paths(tmp_path, state)
+    collect(paths)
+    architecture_path = paths.output_dir / "architecture_manifest.json"
+    architecture = json.loads(architecture_path.read_text(encoding="utf-8"))
+    architecture["repository_commit_sha"] = "0" * 40
+    architecture_path.write_text(json.dumps(architecture), encoding="utf-8")
+
+    with pytest.raises(RepositoryShaMismatchError):
         validate_consistency(
             paths.output_dir,
             expected_run_id=json.loads(
@@ -486,6 +612,7 @@ def test_strict_clean_exact_head_snapshots_logs_and_publishes_redacted_bundle(
     assert snapshots["log_snapshots"][0]["source_path"] == "market_lense_2026-07-16.log"
     assert len(snapshots["log_snapshots"]) == 1
     assert snapshots["log_snapshots"][0]["snapshot_path"].startswith("standard_logs/")
+    assert snapshots["log_snapshots"][0]["structured_event_metadata_mode"] == "matches_only"
     assert leakage["status"] == "passed"
     assert leakage["coverage"]["source_canary_count"] == 5
     assert leakage["coverage"]["editorial_canary_count"] == 5
@@ -627,6 +754,27 @@ def test_json_escaped_and_windowed_retained_content_fail_leakage_assessment(
 
     with pytest.raises(LogContentLeakageError):
         collect(paths)
+
+
+def test_log_matcher_detects_full_and_windowed_canary_content() -> None:
+    content = _retained_paragraph("source", 1)
+    canary = Canary(
+        canary_class="source",
+        report_identity="report-1",
+        relative_artifact_path="report-1/report_analysis/doc_map.json",
+        field_family="summary",
+        normalized_text=" ".join(content.casefold().split()),
+    )
+    matcher = _build_matcher([canary])
+
+    assert matcher(f"operational record {canary.normalized_text}") == [
+        (canary, "full", 0)
+    ]
+
+    normalized = canary.normalized_text
+    middle = (len(normalized) - 80) // 2
+    windowed = f"{normalized[:80]} unrelated marker {normalized[middle : middle + 80]}"
+    assert matcher(windowed) == [(canary, "windowed", 2)]
 
 
 def test_missing_canary_coverage_is_incomplete_and_fails_strict_collection(
