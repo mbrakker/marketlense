@@ -10,11 +10,16 @@ the queue lifecycle remains unchanged.
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import asdict, dataclass, field, replace
 from typing import Callable
 
+from src.contracts.browser_download import ReportDownloadOrchestratorRequest
 from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
 from src.contracts.drive import DriveFile
+from src.contracts.files import FileStatRequest
+from src.contracts.mailbox_acquisition import MailReportAcquisitionRequest
+from src.contracts.publisher_inventory import PublisherInventoryDiscoveryRequest
 from src.contracts.run_context import RunContext
 from src.contracts.workflow_queue import (
     AnalyticsProjectionPayload,
@@ -57,8 +62,23 @@ from src.contracts.workflow_queue import (
     WorkflowJobSubmission,
     WorkflowStageResult,
 )
+from src.orchestrators.mail_report_acquisition_orchestrator import (
+    run_mail_report_acquisition,
+)
+from src.orchestrators.publisher_inventory_orchestrator import (
+    run_publisher_inventory_discovery,
+)
+from src.orchestrators.report_download_orchestrator import run_report_download
 from src.orchestrators.report_pipeline_orchestrator import run_report_pipeline
-from src.services.config_service import build_ingest_settings, load_settings
+from src.services.config_service import (
+    build_ingest_settings,
+    load_browser_download_settings,
+    load_mailbox_acquisition_settings,
+    load_publisher_inventory_settings,
+    load_settings,
+)
+from src.services.file_service import file_stat
+from src.services.workflow_queue_service import record_publication_readiness
 from src.utils.errors import AppError
 
 WorkflowQueueHandler = Callable[
@@ -119,6 +139,298 @@ def _verified_reference_handler(
     )
 
 
+def _digest(*parts: str) -> str:
+    return hashlib.sha256("\x1f".join(parts).encode("utf-8")).hexdigest()
+
+
+def _source_ingest_submission(
+    *,
+    job: WorkflowJob,
+    artifact_reference: str,
+    source_hash: str,
+    source_identity_id: str,
+    report_id: str,
+    processing_version: str,
+) -> WorkflowJobSubmission:
+    return WorkflowJobSubmission(
+        schema_version="1.0",
+        queue_name="source_ingest",
+        job_type="source_ingest.v1",
+        payload=SourceIngestPayload(
+            source_identity_id=source_identity_id,
+            source_artifact_reference=artifact_reference,
+            source_content_hash=source_hash,
+            report_id=report_id,
+            parser_ocr_compatibility_version=processing_version,
+            input_reference=artifact_reference,
+            input_content_hash=source_hash,
+            processing_version=processing_version,
+        ),
+        idempotency_key=f"{source_hash}:source_ingest:{processing_version}",
+        deduplication_scope="source-ingest-content",
+        root_workflow_id=job.root_workflow_id or job.job_id,
+        parent_job_id=job.job_id,
+        trigger_event_id=job.trigger_event_id or job.job_id,
+        correlation_id=job.correlation_id or job.root_workflow_id or job.job_id,
+        entity_type="report",
+        entity_id=report_id,
+        publisher_id=job.publisher_id,
+        source_identity_id=source_identity_id,
+        report_id=report_id,
+        budget_profile="report_ingest",
+    )
+
+
+def _verified_file_hash(path: str, ctx: RunContext) -> str:
+    stat = file_stat(
+        FileStatRequest(schema_version="1.0", path=path, compute_md5=True), ctx
+    )
+    if not stat.exists or not stat.is_file or not stat.md5:
+        raise AppError(
+            code="workflow_queue_acquired_artifact_unverified",
+            message="A downstream ingest job requires a retained verified file",
+            retryable=False,
+            context={"artifact_reference": path},
+        )
+    return stat.md5
+
+
+def _publisher_discovery_handler(
+    job: WorkflowJob, payload: QueuePayload, ctx: RunContext
+) -> WorkflowQueueHandlerResult:
+    assert isinstance(payload, PublisherDiscoveryPayload)
+    if not payload.insights_url:
+        raise AppError(
+            code="workflow_queue_discovery_input_incomplete",
+            message="Publisher discovery requires an insights URL",
+            retryable=False,
+        )
+    app = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+    result = run_publisher_inventory_discovery(
+        PublisherInventoryDiscoveryRequest(
+            schema_version="1.0",
+            insights_url=payload.insights_url,
+            reports_db=app.reports_db,
+            settings=load_publisher_inventory_settings(
+                ConfigLoadRequest(schema_version="1.0", path=""), ctx
+            ),
+            state_db=app.state_db,
+        ),
+        ctx=ctx,
+    )
+    children = [
+        WorkflowJobSubmission(
+            schema_version="1.0",
+            queue_name="report_acquisition",
+            job_type="report_acquisition.v1",
+            payload=ReportAcquisitionPayload(
+                source_identity_id=_digest(item.canonical_url),
+                source_url=item.canonical_url,
+                publisher_id=payload.publisher_id,
+                acquisition_policy_version="publisher-discovery-v1",
+                report_title=item.title,
+                publisher_name=result.publisher_name,
+                input_reference=item.canonical_url,
+                input_content_hash=_digest(item.canonical_url),
+                processing_version=payload.processing_version,
+            ),
+            idempotency_key=f"{_digest(item.canonical_url)}:acquisition:publisher-discovery-v1",
+            deduplication_scope="report-acquisition-source",
+            root_workflow_id=job.root_workflow_id or job.job_id,
+            parent_job_id=job.job_id,
+            trigger_event_id=job.trigger_event_id or job.job_id,
+            correlation_id=job.correlation_id or job.root_workflow_id or job.job_id,
+            publisher_id=payload.publisher_id,
+            source_identity_id=_digest(item.canonical_url),
+            budget_profile="browser_acquisition",
+        )
+        for item in result.new_report_urls
+    ]
+    snapshot_hash = _digest(
+        result.normalized_insights_url,
+        *sorted(item.canonical_url for item in result.new_report_urls),
+    )
+    return WorkflowQueueHandlerResult(
+        result=WorkflowStageResult(
+            output_reference=result.normalized_insights_url,
+            output_content_hash=snapshot_hash,
+            execution_plan_hash=job.execution_plan_hash,
+            output_verified=True,
+            summary={"new_reports": len(children), "snapshot_changed": result.snapshot_changed},
+        ),
+        downstream=children,
+    )
+
+
+def _report_acquisition_handler(
+    job: WorkflowJob, payload: QueuePayload, ctx: RunContext
+) -> WorkflowQueueHandlerResult:
+    assert isinstance(payload, ReportAcquisitionPayload)
+    if not payload.source_url:
+        raise AppError(
+            code="workflow_queue_acquisition_input_incomplete",
+            message="Report acquisition requires a source URL",
+            retryable=False,
+        )
+    app = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+    delivery_email = payload.delivery_email_reference or str(
+        payload.attributes.get("delivery_email", "")
+    )
+    result = run_report_download(
+        ReportDownloadOrchestratorRequest(
+            schema_version="1.0",
+            url=payload.source_url,
+            settings=load_browser_download_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx),
+            state_db=app.state_db,
+            reports_db=app.reports_db,
+            delivery_email=delivery_email or None,
+            publisher_insights_url=str(payload.attributes.get("publisher_insights_url", "")) or None,
+            publisher_google_folder=str(payload.attributes.get("publisher_google_folder", "")) or None,
+            report_title=payload.report_title,
+            publisher_name=payload.publisher_name,
+            mailbox_settings=load_mailbox_acquisition_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx),
+        ),
+        ctx=ctx,
+    )
+    artifact = result.downloaded_file_path or result.onsite_capture_path or ""
+    if artifact:
+        source_hash = _verified_file_hash(artifact, ctx)
+        child = _source_ingest_submission(
+            job=job, artifact_reference=artifact, source_hash=source_hash,
+            source_identity_id=payload.source_identity_id or _digest(payload.source_url),
+            report_id=payload.source_identity_id or _digest(payload.source_url),
+            processing_version=payload.processing_version or "acquisition-v1",
+        )
+        children = [child]
+    elif result.outcome in {"email_requested", "email_required"}:
+        children = [WorkflowJobSubmission(
+            schema_version="1.0", queue_name="mailbox_delivery", job_type="mailbox_delivery.v1",
+            payload=MailboxDeliveryPayload(
+                delivery_request_id=payload.source_identity_id or _digest(payload.source_url),
+                source_url=payload.source_url, publisher_id=payload.publisher_id,
+                report_title=payload.report_title, request_watermark="", retry_policy_version="mailbox-v1",
+                input_reference=payload.source_url, input_content_hash=payload.input_content_hash or _digest(payload.source_url),
+                processing_version=payload.processing_version,
+                attributes={"publisher_name": payload.publisher_name, "delivery_email": delivery_email},
+            ),
+            idempotency_key=f"{payload.source_identity_id or _digest(payload.source_url)}:mailbox:v1",
+            deduplication_scope="mailbox-delivery-source", root_workflow_id=job.root_workflow_id or job.job_id,
+            parent_job_id=job.job_id, trigger_event_id=job.trigger_event_id or job.job_id,
+            correlation_id=job.correlation_id or job.root_workflow_id or job.job_id,
+            publisher_id=payload.publisher_id, source_identity_id=payload.source_identity_id,
+            budget_profile="mailbox_delivery",
+        )]
+    else:
+        raise AppError(code="workflow_queue_acquisition_no_verified_artifact", message="Acquisition completed without a verified source or mail delivery request", retryable=False)
+    return WorkflowQueueHandlerResult(
+        result=WorkflowStageResult(output_reference=artifact or payload.source_url, output_content_hash=_digest(artifact or payload.source_url), execution_plan_hash=job.execution_plan_hash, output_verified=bool(artifact), summary={"outcome": result.outcome}),
+        downstream=children,
+    )
+
+
+def _mailbox_delivery_handler(
+    job: WorkflowJob, payload: QueuePayload, ctx: RunContext
+) -> WorkflowQueueHandlerResult:
+    assert isinstance(payload, MailboxDeliveryPayload)
+    publisher_name = str(payload.attributes.get("publisher_name", "")).strip()
+    if not payload.source_url or not payload.report_title or not publisher_name:
+        raise AppError(
+            code="workflow_queue_mailbox_input_incomplete",
+            message="Mailbox delivery requires source, title, and publisher context",
+            retryable=False,
+        )
+    app = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+    result = run_mail_report_acquisition(
+        MailReportAcquisitionRequest(
+            schema_version="1.0",
+            source_url=payload.source_url,
+            report_title=payload.report_title,
+            publisher_name=publisher_name,
+            delivery_email=str(payload.attributes.get("delivery_email", "")) or None,
+            reports_db=app.reports_db,
+            mailbox_settings=load_mailbox_acquisition_settings(
+                ConfigLoadRequest(schema_version="1.0", path=""), ctx
+            ),
+            browser_download_settings=load_browser_download_settings(
+                ConfigLoadRequest(schema_version="1.0", path=""), ctx
+            ),
+            requested_after_utc=payload.request_watermark or None,
+            workflow_request_id=int(payload.delivery_request_id or 0)
+            if payload.delivery_request_id.isdigit()
+            else 0,
+        ),
+        ctx=ctx,
+    )
+    artifact = result.downloaded_file_path or ""
+    if not artifact:
+        raise AppError(
+            code="workflow_queue_mailbox_not_arrived",
+            message="Mailbox delivery has not produced a verified source artifact yet",
+            retryable=True,
+        )
+    source_hash = _verified_file_hash(artifact, ctx)
+    source_identity_id = _digest(payload.source_url)
+    return WorkflowQueueHandlerResult(
+        result=WorkflowStageResult(
+            output_reference=artifact,
+            output_content_hash=source_hash,
+            execution_plan_hash=job.execution_plan_hash,
+            output_verified=True,
+            summary={"mailbox_polls": result.mailbox_poll_count},
+        ),
+        downstream=[
+            _source_ingest_submission(
+                job=job,
+                artifact_reference=artifact,
+                source_hash=source_hash,
+                source_identity_id=source_identity_id,
+                report_id=source_identity_id,
+                processing_version=payload.processing_version or "mailbox-v1",
+            )
+        ],
+    )
+
+
+def _publication_readiness_handler(
+    job: WorkflowJob, payload: QueuePayload, ctx: RunContext
+) -> WorkflowQueueHandlerResult:
+    assert isinstance(payload, PublicationReadinessPayload)
+    if (
+        not payload.entity_type
+        or not payload.entity_package_reference
+        or not payload.package_checksum
+        or not payload.validation_reference
+        or not payload.lineage_reference
+    ):
+        raise AppError(
+            code="workflow_queue_publication_readiness_incomplete",
+            message="Publication readiness requires an immutable package, validation, and lineage",
+            retryable=False,
+        )
+    required_assets = str(payload.required_asset_status or "optional").strip().lower()
+    status = "awaiting_review" if required_assets in {"ready", "optional"} else "not_publishable"
+    app = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+    readiness = record_publication_readiness(
+        app.state_db,
+        package_checksum=payload.package_checksum,
+        entity_type=payload.entity_type,
+        package_reference=payload.entity_package_reference,
+        validation_reference=payload.validation_reference,
+        lineage_reference=payload.lineage_reference,
+        required_asset_status=required_assets,
+        readiness_status=status,
+        reason="queue_readiness_deterministic_check",
+        ctx=ctx,
+    )
+    return WorkflowQueueHandlerResult(
+        result=WorkflowStageResult(
+            output_reference=readiness.package_reference,
+            output_content_hash=readiness.package_checksum,
+            execution_plan_hash=job.execution_plan_hash,
+            output_verified=readiness.readiness_status == "awaiting_review",
+            summary={"readiness_status": readiness.readiness_status},
+        )
+    )
 def _stage_child_submission(
     *,
     job: WorkflowJob,
@@ -310,6 +622,7 @@ def default_workflow_queue_registry() -> dict[
             "publisher_discovery",
             PublisherDiscoveryPayload,
             PublisherDiscoveryResult,
+            handler=_publisher_discovery_handler,
             downstream=("report_acquisition.v1",),
             effects=("browser", "drive"),
             budget_profile="publisher_inventory",
@@ -318,6 +631,7 @@ def default_workflow_queue_registry() -> dict[
             "report_acquisition",
             ReportAcquisitionPayload,
             ReportAcquisitionResult,
+            handler=_report_acquisition_handler,
             downstream=("mailbox_delivery.v1", "source_ingest.v1"),
             effects=("browser", "drive"),
             budget_profile="browser_acquisition",
@@ -327,6 +641,7 @@ def default_workflow_queue_registry() -> dict[
             "mailbox_delivery",
             MailboxDeliveryPayload,
             MailboxDeliveryResult,
+            handler=_mailbox_delivery_handler,
             downstream=("source_ingest.v1",),
             effects=("mailbox", "browser", "drive"),
             budget_profile="mailbox_delivery",
@@ -446,6 +761,7 @@ def default_workflow_queue_registry() -> dict[
             "publication_readiness",
             PublicationReadinessPayload,
             PublicationReadinessResult,
+            handler=_publication_readiness_handler,
             downstream=("wordpress_publish.v1",),
             budget_profile="publishing",
         ),

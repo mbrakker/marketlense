@@ -51,10 +51,11 @@ it is not evidence of a completed provider-backed report run.
 ## Remaining migration scope
 
 This commit is a validated foundation, not completion of the entire programme.
-The report checkpoint queues invoke existing pipeline orchestration. The other
-registered queue types still use the fail-closed verified-reference
-compatibility handler until their domain-specific adapters, UI submission
-migration, deferred-work migration, and direct-chaining enforcement are
-implemented. Accordingly, backlog items remain open and no completion claim is
-made for acquisition-to-ingest automation, Signal/Briefing production work, or
-WordPress publication migration.
+The report checkpoint queues invoke existing pipeline orchestration; discovery,
+acquisition, mailbox delivery, and immutable publication readiness now invoke
+their existing production boundaries. The remaining registered queue types use
+the fail-closed verified-reference compatibility handler until their
+domain-specific adapters, UI submission migration, deferred-work migration,
+and direct-chaining enforcement are implemented. Accordingly, backlog items
+remain open for Signal/Briefing production work and WordPress publication
+migration.

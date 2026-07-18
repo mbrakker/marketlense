@@ -67,6 +67,14 @@ adapters that have not yet been migrated. It deliberately cannot manufacture
 domain outputs or perform external writes; each remaining adapter must replace
 that bridge before the corresponding queue is enabled for operational work.
 
+`publisher_discovery`, `report_acquisition`, and `mailbox_delivery` invoke
+their existing production orchestrators. They enqueue `source_ingest` only
+after `file_service` verifies a retained local artifact and its content hash.
+Email-gated sources enqueue mailbox delivery instead of calling it in memory.
+`publication_readiness` records immutable readiness; the explicit
+`queue-approve-publication --yes` command creates only a WordPress outbox
+event, never a WordPress write.
+
 ## Briefing fan-in
 
 ```mermaid

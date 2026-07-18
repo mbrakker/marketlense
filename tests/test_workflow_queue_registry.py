@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from src.contracts.workflow_queue import (
     WORKFLOW_QUEUE_NAMES,
+    MaintenancePayload,
+    PublicationReadinessPayload,
     PublisherDiscoveryPayload,
     WorkflowJobSubmission,
 )
@@ -39,16 +41,47 @@ def test_worker_claims_runs_and_completes_a_verified_reference_job(tmp_path) -> 
         db,
         WorkflowJobSubmission(
             schema_version="1.0",
-            queue_name="publisher_discovery",
-            job_type="publisher_discovery.v1",
-            payload=PublisherDiscoveryPayload(
-                publisher_id="publisher-1",
-                insights_url="https://example.test/insights",
-                discovery_policy_version="v1",
+            queue_name="vector_retention",
+            job_type="vector_retention.v1",
+            payload=MaintenancePayload(
+                subject_id="verified-artifact",
                 input_reference="verified:inventory-snapshot",
                 input_content_hash="snapshot-hash",
             ),
             idempotency_key="publisher-1:v1",
+            deduplication_scope="vector-retention",
+        ),
+        _ctx(),
+    )
+
+    outcome = run_workflow_worker_once(
+        state_db=db,
+        queue_name="vector_retention",
+        worker_id="worker-1",
+        ctx=_ctx(),
+    )
+
+    assert outcome.claimed_job_id == job.job_id
+    assert outcome.terminal_status == "succeeded"
+    completed = get_workflow_job(db, job.job_id, _ctx())
+    assert completed.status == "succeeded"
+    assert completed.output_reference == "verified:inventory-snapshot"
+
+
+def test_operational_discovery_handler_fails_closed_without_an_insights_url(
+    tmp_path,
+) -> None:
+    db = str(tmp_path / "state.sqlite")
+    job, _ = enqueue_workflow_job(
+        db,
+        WorkflowJobSubmission(
+            schema_version="1.0",
+            queue_name="publisher_discovery",
+            job_type="publisher_discovery.v1",
+            payload=PublisherDiscoveryPayload(
+                publisher_id="publisher-1", discovery_policy_version="v1"
+            ),
+            idempotency_key="publisher-1:incomplete",
             deduplication_scope="publisher_discovery",
         ),
         _ctx(),
@@ -61,11 +94,43 @@ def test_worker_claims_runs_and_completes_a_verified_reference_job(tmp_path) -> 
         ctx=_ctx(),
     )
 
-    assert outcome.claimed_job_id == job.job_id
-    assert outcome.terminal_status == "succeeded"
-    completed = get_workflow_job(db, job.job_id, _ctx())
-    assert completed.status == "succeeded"
-    assert completed.output_reference == "verified:inventory-snapshot"
+    assert outcome.terminal_status == "dead_letter"
+    assert get_workflow_job(db, job.job_id, _ctx()).error_code == (
+        "workflow_queue_discovery_input_incomplete"
+    )
+
+
+def test_publication_readiness_handler_fails_closed_without_lineage(tmp_path) -> None:
+    db = str(tmp_path / "state.sqlite")
+    job, _ = enqueue_workflow_job(
+        db,
+        WorkflowJobSubmission(
+            schema_version="1.0",
+            queue_name="publication_readiness",
+            job_type="publication_readiness.v1",
+            payload=PublicationReadinessPayload(
+                entity_type="report",
+                entity_package_reference="retained:package",
+                package_checksum="package-hash",
+                validation_reference="retained:validation",
+            ),
+            idempotency_key="package-hash",
+            deduplication_scope="publication-readiness",
+        ),
+        _ctx(),
+    )
+
+    outcome = run_workflow_worker_once(
+        state_db=db,
+        queue_name="publication_readiness",
+        worker_id="worker-1",
+        ctx=_ctx(),
+    )
+
+    assert outcome.terminal_status == "dead_letter"
+    assert get_workflow_job(db, job.job_id, _ctx()).error_code == (
+        "workflow_queue_publication_readiness_incomplete"
+    )
 
 
 def test_worker_classifies_canonical_pipeline_budget_stop_as_deferral(tmp_path) -> None:

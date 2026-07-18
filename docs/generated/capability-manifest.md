@@ -88,6 +88,7 @@ Generated from CLI registrations, configuration example, architecture policy, or
 - `poll-mail-report`
 - `promote-private-api-playbook`
 - `publish-wp`
+- `queue-approve-publication`
 - `queue-cancel`
 - `queue-drain`
 - `queue-health`
@@ -99,6 +100,9 @@ Generated from CLI registrations, configuration example, architecture policy, or
 - `queue-release-expired-leases`
 - `queue-requeue`
 - `queue-resume`
+- `queue-submit-acquisition`
+- `queue-submit-discovery`
+- `queue-submit-source-ingest`
 - `reap-ui-dead-letters`
 - `recategorize`
 - `remediation-soak`

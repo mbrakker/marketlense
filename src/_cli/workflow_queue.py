@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import asdict, replace
 from uuid import uuid4
 
@@ -11,16 +12,27 @@ import typer
 
 from src._cli.app import cli_app, console
 from src.contracts.config import ConfigLoadRequest
+from src.contracts.files import FileStatRequest
 from src.contracts.logging import LoggingSetupRequest
-from src.contracts.workflow_queue import WorkflowQueueControl
+from src.contracts.workflow_queue import (
+    PublisherDiscoveryPayload,
+    ReportAcquisitionPayload,
+    SourceIngestPayload,
+    WordPressPublishPayload,
+    WorkflowJobSubmission,
+    WorkflowQueueControl,
+)
 from src.orchestrators.workflow_worker_orchestrator import run_workflow_worker_once
 from src.services.config_service import (
     load_settings,
     load_workflow_queue_policies,
 )
+from src.services.file_service import file_stat
 from src.services.logging_service import setup_logging
 from src.services.workflow_queue_service import (
+    approve_publication_package,
     cancel_workflow_job,
+    enqueue_workflow_job,
     get_workflow_job,
     get_workflow_queue_control,
     list_workflow_job_attempts,
@@ -70,6 +82,168 @@ def _state_db(ctx) -> str:
         ctx,
     )
     return settings.state_db
+
+
+def _stable_hash(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+@cli_app.command("queue-submit-discovery")
+def queue_submit_discovery(
+    publisher_id: str = typer.Option(...),
+    insights_url: str = typer.Option(...),
+    policy_version: str = typer.Option("v1"),
+) -> None:
+    """Submit one durable publisher-discovery request and return its job ID."""
+    ctx = _ctx("cli_queue_submit_discovery")
+    state_db = _state_db(ctx)
+    source_hash = _stable_hash(f"{publisher_id}:{insights_url}:{policy_version}")
+    job, created = enqueue_workflow_job(
+        state_db,
+        WorkflowJobSubmission(
+            schema_version="1.0",
+            queue_name="publisher_discovery",
+            job_type="publisher_discovery.v1",
+            payload=PublisherDiscoveryPayload(
+                publisher_id=publisher_id,
+                insights_url=insights_url,
+                discovery_policy_version=policy_version,
+                input_reference=insights_url,
+                input_content_hash=source_hash,
+                processing_version=policy_version,
+            ),
+            idempotency_key=source_hash,
+            deduplication_scope="publisher-discovery",
+            root_workflow_id=f"discovery:{source_hash[:20]}",
+            publisher_id=publisher_id,
+            budget_profile="publisher_inventory",
+        ),
+        ctx,
+    )
+    console.print_json(data={"job_id": job.job_id, "created": created})
+
+
+@cli_app.command("queue-submit-acquisition")
+def queue_submit_acquisition(
+    source_url: str = typer.Option(...),
+    publisher_id: str = typer.Option(""),
+    title: str = typer.Option(""),
+    publisher_name: str = typer.Option(""),
+    delivery_email: str = typer.Option(""),
+    policy_version: str = typer.Option("v1"),
+) -> None:
+    """Submit one durable report-acquisition request; it never waits for I/O."""
+    ctx = _ctx("cli_queue_submit_acquisition")
+    state_db = _state_db(ctx)
+    source_identity_id = _stable_hash(source_url)
+    job, created = enqueue_workflow_job(
+        state_db,
+        WorkflowJobSubmission(
+            schema_version="1.0",
+            queue_name="report_acquisition",
+            job_type="report_acquisition.v1",
+            payload=ReportAcquisitionPayload(
+                source_identity_id=source_identity_id,
+                source_url=source_url,
+                publisher_id=publisher_id,
+                acquisition_policy_version=policy_version,
+                report_title=title,
+                publisher_name=publisher_name,
+                delivery_email_reference=delivery_email,
+                input_reference=source_url,
+                input_content_hash=source_identity_id,
+                processing_version=policy_version,
+            ),
+            idempotency_key=f"{source_identity_id}:{policy_version}",
+            deduplication_scope="report-acquisition-source",
+            root_workflow_id=f"acquisition:{source_identity_id[:20]}",
+            publisher_id=publisher_id,
+            source_identity_id=source_identity_id,
+            budget_profile="browser_acquisition",
+        ),
+        ctx,
+    )
+    console.print_json(data={"job_id": job.job_id, "created": created})
+
+
+@cli_app.command("queue-submit-source-ingest")
+def queue_submit_source_ingest(
+    artifact_path: str = typer.Option(...),
+    report_id: str = typer.Option(...),
+    source_identity_id: str = typer.Option(""),
+    processing_version: str = typer.Option("v1"),
+) -> None:
+    """Submit a verified local source artifact for durable report-stage processing."""
+    ctx = _ctx("cli_queue_submit_source_ingest")
+    state_db = _state_db(ctx)
+    stat = file_stat(
+        FileStatRequest(schema_version="1.0", path=artifact_path, compute_md5=True), ctx
+    )
+    if not stat.exists or not stat.is_file or not stat.md5:
+        raise typer.BadParameter("artifact-path must be a readable retained file")
+    identity = source_identity_id or _stable_hash(f"{artifact_path}:{stat.md5}")
+    job, created = enqueue_workflow_job(
+        state_db,
+        WorkflowJobSubmission(
+            schema_version="1.0", queue_name="source_ingest", job_type="source_ingest.v1",
+            payload=SourceIngestPayload(
+                source_identity_id=identity, source_artifact_reference=artifact_path,
+                source_content_hash=stat.md5, report_id=report_id,
+                parser_ocr_compatibility_version=processing_version,
+                input_reference=artifact_path, input_content_hash=stat.md5,
+                processing_version=processing_version,
+            ),
+            idempotency_key=f"{stat.md5}:source_ingest:{processing_version}",
+            deduplication_scope="source-ingest-content", root_workflow_id=f"ingest:{report_id}",
+            source_identity_id=identity, report_id=report_id, budget_profile="report_ingest",
+        ),
+        ctx,
+    )
+    console.print_json(data={"job_id": job.job_id, "created": created})
+
+
+@cli_app.command("queue-approve-publication")
+def queue_approve_publication(
+    package_checksum: str = typer.Option(...),
+    package_reference: str = typer.Option(...),
+    entity_type: str = typer.Option(...),
+    target_site: str = typer.Option("default"),
+    note: str = typer.Option(""),
+    yes: bool = typer.Option(False, "--yes", help="Confirm human approval"),
+) -> None:
+    """Record human approval and enqueue—never execute—WordPress publication."""
+    if not yes:
+        raise typer.BadParameter("--yes is required to record publication approval")
+    ctx = _ctx("cli_queue_approve_publication")
+    state_db = _state_db(ctx)
+    submission = WorkflowJobSubmission(
+        schema_version="1.0",
+        queue_name="wordpress_publish",
+        job_type="wordpress_publish.v1",
+        payload=WordPressPublishPayload(
+            entity_type=entity_type,
+            entity_package_reference=package_reference,
+            package_checksum=package_checksum,
+            target_site=target_site,
+            input_reference=package_reference,
+            input_content_hash=package_checksum,
+        ),
+        idempotency_key=f"{target_site}:{entity_type}:{package_checksum}",
+        deduplication_scope="wordpress-publish-package",
+        root_workflow_id=f"publication:{package_checksum[:20]}",
+        entity_type=entity_type,
+        entity_id=package_checksum,
+        budget_profile="publishing",
+    )
+    approval = approve_publication_package(
+        state_db,
+        package_checksum=package_checksum,
+        actor_id=str(ctx.run_id),
+        note=note,
+        publish_submission=submission,
+        ctx=ctx,
+    )
+    console.print_json(data=asdict(approval))
 
 
 @cli_app.command("queue-list")
