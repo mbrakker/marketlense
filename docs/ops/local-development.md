@@ -22,6 +22,13 @@ Copy-Item src\config\app.example.yaml src\config\app.local.yaml
 
 Keep machine-specific values in `src/config/app.local.yaml` and secrets in `.env` or the process environment. Do not commit either secret material or generated runtime output.
 
+## Dependency security updates
+
+When a direct dependency has a security advisory, update its exact source pin and
+the matching hash-locked entry together. Validate the change with
+`python scripts/ci/check_dependency_consistency.py` before installing or
+publishing it; CI rejects declarations that drift from `requirements.lock`.
+
 ## Start locally
 
 ```powershell

@@ -1,6 +1,6 @@
 # Direct development requirements. requirements.lock is the sole resolved graph
 # installed by CI; keep these exact declarations aligned with that lock.
-pytest==9.0.2
+pytest==9.0.3
 pytest-cov==7.0.0
 ruff==0.15.2
 mypy==1.19.1
