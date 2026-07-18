@@ -302,6 +302,11 @@ def test_approval_and_briefing_opportunity_are_durable_and_idempotent(tmp_path) 
         ctx=_ctx(),
     )
     assert approved.approval_id == repeat.approval_id
+    materialized = materialize_workflow_outbox(db, "outbox-worker", _ctx())
+    assert len(materialized) == 1
+    published_job = get_workflow_job(db, materialized[0], _ctx())
+    assert published_job is not None
+    assert approved.approval_id in published_job.payload_json
     opportunity = upsert_briefing_opportunity(
         db,
         topic="retail",

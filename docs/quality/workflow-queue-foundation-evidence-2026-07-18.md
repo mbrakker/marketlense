@@ -78,3 +78,9 @@ bounded usage summaries. The `signal_candidate` adapter invokes the existing
 source-linked candidate extractor and creates deduplicated generation jobs for
 approved groups. Focused registry plus embedding/candidate suites passed (`30
 passed`) after malformed queue-limit tests were added.
+
+Approval now binds the generated approval ID into the retained WordPress outbox
+submission. The `wordpress_publish` worker validates that approval and the
+immutable Briefing package checksum before it invokes the existing idempotent
+publisher; stale approvals block before package read or external I/O. Focused
+queue, registry, and publication suites passed (`38 passed`).

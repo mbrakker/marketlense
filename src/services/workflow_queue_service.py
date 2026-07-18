@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import datetime, timedelta, timezone
 from typing import Iterable
 
@@ -1622,12 +1622,14 @@ def approve_publication_package(
                 now,
             ),
         )
+        approved_payload = replace(payload, approval_id=approval_id)
+        approved_submission = replace(publish_submission, payload=approved_payload)
         event_key = ":".join(
             (
-                publish_submission.queue_name,
-                publish_submission.job_type,
-                publish_submission.deduplication_scope,
-                publish_submission.idempotency_key,
+                approved_submission.queue_name,
+                approved_submission.job_type,
+                approved_submission.deduplication_scope,
+                approved_submission.idempotency_key,
             )
         )
         conn.execute(
@@ -1639,11 +1641,11 @@ def approve_publication_package(
                 str(uuid.uuid4()),
                 event_key,
                 "publication_approval:" + approval_id,
-                publish_submission.root_workflow_id or package_checksum,
-                publish_submission.queue_name,
-                publish_submission.job_type,
-                _submission_to_json(publish_submission),
-                publish_submission.available_at_utc or now,
+                approved_submission.root_workflow_id or package_checksum,
+                approved_submission.queue_name,
+                approved_submission.job_type,
+                _submission_to_json(approved_submission),
+                approved_submission.available_at_utc or now,
                 now,
                 now,
             ),

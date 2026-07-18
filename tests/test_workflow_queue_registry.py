@@ -8,6 +8,7 @@ from src.contracts.workflow_queue import (
     PublicationReadinessPayload,
     PublisherDiscoveryPayload,
     SignalCandidatePayload,
+    WordPressPublishPayload,
     WorkflowJobSubmission,
 )
 from src.orchestrators.workflow_queue_orchestrator import (
@@ -236,6 +237,39 @@ def test_claim_embedding_rejects_invalid_bounded_numeric_attributes(tmp_path) ->
     assert get_workflow_job(db, job.job_id, _ctx()).error_code == (
         "workflow_queue_attribute_invalid"
     )
+
+
+def test_wordpress_publish_requires_current_durable_approval(tmp_path) -> None:
+    db = str(tmp_path / "state.sqlite")
+    job, _ = enqueue_workflow_job(
+        db,
+        WorkflowJobSubmission(
+            schema_version="1.0",
+            queue_name="wordpress_publish",
+            job_type="wordpress_publish.v1",
+            payload=WordPressPublishPayload(
+                entity_type="briefing",
+                entity_package_reference="missing:briefing-artifact",
+                package_checksum="package-hash",
+                approval_id="not-an-approval",
+                input_reference="missing:briefing-artifact",
+                input_content_hash="package-hash",
+            ),
+            idempotency_key="wordpress-unapproved",
+            deduplication_scope="wordpress-publish",
+        ),
+        _ctx(),
+    )
+
+    outcome = run_workflow_worker_once(
+        state_db=db,
+        queue_name="wordpress_publish",
+        worker_id="worker-1",
+        ctx=_ctx(),
+    )
+
+    assert outcome.terminal_status == "blocked"
+    assert get_workflow_job(db, job.job_id, _ctx()).error_code == "stale_approval"
 
 
 def test_worker_classifies_canonical_pipeline_budget_stop_as_deferral(tmp_path) -> None:

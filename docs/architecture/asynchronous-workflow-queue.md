@@ -214,3 +214,10 @@ candidate extractor, retains candidates in the analytics store, and emits one
 deduplicated `signal_generation` job per approved candidate group. Both workers
 reject malformed bounded attributes before opening a projection or provider
 operation.
+
+`wordpress_publish` accepts only an approved immutable Briefing artifact. The
+approval transaction injects its durable approval ID into the outbox submission;
+the worker verifies that ID and the artifact checksum before loading the package
+or contacting WordPress. It then delegates taxonomy, media, idempotency, and
+readback to the established publisher. Live writes remain feature-gated; a
+verified WordPress post emits one deduplicated `wordpress_projection` job.

@@ -11,6 +11,7 @@ the queue lifecycle remains unchanged.
 from __future__ import annotations
 
 import hashlib
+import json
 from dataclasses import asdict, dataclass, field, replace
 from typing import Callable
 
@@ -24,9 +25,10 @@ from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
     CrossReportAnalysisRequest,
     CrossReportProjectedDataReadRequest,
+    CrossReportPublishPackage,
 )
 from src.contracts.drive import DriveFile
-from src.contracts.files import FileStatRequest
+from src.contracts.files import FileStatRequest, ReadBytesRequest
 from src.contracts.mailbox_acquisition import MailReportAcquisitionRequest
 from src.contracts.publisher_inventory import PublisherInventoryDiscoveryRequest
 from src.contracts.run_budget import BudgetOverrideContext
@@ -82,6 +84,7 @@ from src.orchestrators.claim_embedding_orchestrator import (
 from src.orchestrators.mail_report_acquisition_orchestrator import (
     run_mail_report_acquisition,
 )
+from src.orchestrators.publish_orchestrator import publish_cross_report_package
 from src.orchestrators.publisher_inventory_orchestrator import (
     run_publisher_inventory_discovery,
 )
@@ -94,12 +97,14 @@ from src.services.config_service import (
     build_ingest_settings,
     load_browser_download_settings,
     load_mailbox_acquisition_settings,
+    load_publish_settings,
     load_publisher_inventory_settings,
     load_settings,
 )
-from src.services.file_service import file_stat
+from src.services.file_service import file_stat, read_bytes
 from src.services.workflow_queue_service import (
     freeze_briefing_opportunity,
+    publication_approval_is_valid,
     record_publication_readiness,
     upsert_briefing_opportunity,
 )
@@ -478,6 +483,137 @@ def _publication_readiness_handler(
             output_verified=readiness.readiness_status == "awaiting_review",
             summary={"readiness_status": readiness.readiness_status},
         )
+    )
+
+
+def _briefing_package_from_artifact(
+    package_reference: str, ctx: RunContext
+) -> CrossReportPublishPackage:
+    """Load the retained Briefing package without putting HTML in a queue row."""
+
+    response = read_bytes(
+        ReadBytesRequest(schema_version="1.0", path=package_reference), ctx
+    )
+    try:
+        artifact = json.loads(response.content.decode("utf-8"))
+        package = artifact["publish_package"]
+    except (UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError) as exc:
+        raise AppError(
+            code="workflow_queue_publish_package_invalid",
+            message="Publication queue package is not a valid retained Briefing artifact",
+            cause=exc,
+            retryable=False,
+        ) from exc
+    if not isinstance(package, dict):
+        raise AppError(
+            code="workflow_queue_publish_package_invalid",
+            message="Publication queue package is not a valid retained Briefing artifact",
+            retryable=False,
+        )
+    try:
+        return CrossReportPublishPackage(**package)
+    except TypeError as exc:
+        raise AppError(
+            code="workflow_queue_publish_package_invalid",
+            message="Publication queue package is incompatible with the current contract",
+            cause=exc,
+            retryable=False,
+        ) from exc
+
+
+def _wordpress_publish_handler(
+    job: WorkflowJob, payload: QueuePayload, ctx: RunContext
+) -> WorkflowQueueHandlerResult:
+    """Perform an approval-gated, idempotent WordPress Briefing publication."""
+
+    assert isinstance(payload, WordPressPublishPayload)
+    if payload.entity_type != "briefing":
+        raise AppError(
+            code="workflow_queue_publish_entity_unsupported",
+            message="WordPress queue currently supports retained Briefing packages only",
+            retryable=False,
+            context={"entity_type": payload.entity_type},
+        )
+    app = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+    if not payload.approval_id or not publication_approval_is_valid(
+        app.state_db,
+        package_checksum=payload.package_checksum,
+        approval_id=payload.approval_id,
+        ctx=ctx,
+    ):
+        raise AppError(
+            code="stale_approval",
+            message="WordPress publication requires a current approval for this package",
+            retryable=False,
+        )
+    package = _briefing_package_from_artifact(payload.entity_package_reference, ctx)
+    if package.artifact_sha256 != payload.package_checksum:
+        raise AppError(
+            code="workflow_queue_publish_package_checksum_mismatch",
+            message="Approved package checksum does not match the retained Briefing package",
+            retryable=False,
+        )
+    if not payload.dry_run and not bool(
+        getattr(app, "cross_report_analysis_publish_enabled", False)
+    ):
+        raise AppError(
+            code="cross_report_publish_live_disabled",
+            message="Live Briefing publication remains disabled by configuration",
+            retryable=False,
+        )
+    result = publish_cross_report_package(
+        package,
+        load_publish_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx),
+        ctx,
+        dry_run=payload.dry_run,
+    )
+    if result.status == "error":
+        raise AppError(
+            code=result.error_code or "workflow_queue_wordpress_publish_failed",
+            message=result.error_message or "WordPress publish returned an error",
+            retryable=False,
+        )
+    downstream: list[WorkflowJobSubmission] = []
+    if result.post_id is not None:
+        downstream.append(
+            WorkflowJobSubmission(
+                schema_version="1.0",
+                queue_name="wordpress_projection",
+                job_type="wordpress_projection.v1",
+                payload=WordPressProjectionPayload(
+                    published_entity_reference=payload.entity_package_reference,
+                    wordpress_id=str(result.post_id),
+                    entity_type=payload.entity_type,
+                    input_reference=payload.entity_package_reference,
+                    input_content_hash=payload.package_checksum,
+                    processing_version=payload.processing_version,
+                ),
+                idempotency_key=_digest(
+                    "wordpress-projection", payload.package_checksum, str(result.post_id)
+                ),
+                deduplication_scope="wordpress-published-package",
+                root_workflow_id=job.root_workflow_id or job.job_id,
+                parent_job_id=job.job_id,
+                trigger_event_id=job.trigger_event_id or job.job_id,
+                correlation_id=job.correlation_id or job.root_workflow_id or job.job_id,
+                entity_type=payload.entity_type,
+                entity_id=str(result.post_id),
+                budget_profile="wordpress_projection",
+            )
+        )
+    return WorkflowQueueHandlerResult(
+        result=WorkflowStageResult(
+            output_reference=result.post_url or payload.entity_package_reference,
+            output_content_hash=payload.package_checksum,
+            execution_plan_hash=job.execution_plan_hash,
+            output_verified=payload.dry_run or result.post_id is not None,
+            summary={
+                "publication_status": result.status,
+                "wordpress_id": result.post_id or 0,
+            },
+        ),
+        downstream=downstream,
+        external_effects=[] if payload.dry_run else ["wordpress"],
     )
 
 
@@ -1125,6 +1261,7 @@ def default_workflow_queue_registry() -> dict[
             "wordpress_publish",
             WordPressPublishPayload,
             WordPressPublishResult,
+            handler=_wordpress_publish_handler,
             downstream=("wordpress_projection.v1",),
             effects=("wordpress",),
             budget_profile="publishing",
