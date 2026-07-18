@@ -14,6 +14,10 @@ import hashlib
 from dataclasses import asdict, dataclass, field, replace
 from typing import Callable
 
+from src.contracts.analytics_projection import (
+    PROJECTION_SCHEMA_VERSION,
+    ClaimEmbeddingWorkflowRequest,
+)
 from src.contracts.browser_download import ReportDownloadOrchestratorRequest
 from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
 from src.contracts.cross_report_analysis import (
@@ -71,6 +75,9 @@ from src.contracts.workflow_queue import (
     WorkflowJob,
     WorkflowJobSubmission,
     WorkflowStageResult,
+)
+from src.orchestrators.claim_embedding_orchestrator import (
+    run_claim_embedding_workflow,
 )
 from src.orchestrators.mail_report_acquisition_orchestrator import (
     run_mail_report_acquisition,
@@ -694,6 +701,88 @@ def _signal_candidate_handler(
     )
 
 
+def _claim_embedding_handler(
+    job: WorkflowJob, payload: QueuePayload, ctx: RunContext
+) -> WorkflowQueueHandlerResult:
+    """Run the existing bounded claim-embedding queue for canonical rows only."""
+
+    assert isinstance(payload, ClaimEmbeddingPayload)
+    app = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+    model = payload.model_version or str(
+        payload.attributes.get("model", "text-embedding-3-small")
+    )
+    dry_run = bool(payload.attributes.get("dry_run", False))
+    if not dry_run and not app.openai_api_key:
+        raise AppError(
+            code="credentials_required",
+            message="Claim embedding work requires configured provider credentials",
+            retryable=False,
+        )
+    response = run_claim_embedding_workflow(
+        ClaimEmbeddingWorkflowRequest(
+            schema_version=PROJECTION_SCHEMA_VERSION,
+            db_path=app.reports_db,
+            api_key="" if dry_run else app.openai_api_key,
+            provider=str(payload.attributes.get("provider", "openai")),
+            model=model,
+            embedding_version=str(
+                payload.attributes.get("embedding_version", "claim-embedding.v1")
+            ),
+            limit=_positive_int_attribute(payload, "limit", 1),
+            timeout_seconds=None,
+            ctx=ctx,
+            cost_ledger_path=app.cost_ledger_path,
+            cost_daily_path=app.cost_daily_path,
+            model_pricing=getattr(app, "model_pricing", {}),
+            max_reports=_positive_int_attribute(payload, "max_reports", 1),
+            max_estimated_tokens=_positive_int_attribute(
+                payload, "max_estimated_tokens", 8_000
+            ),
+            max_estimated_cost_usd=float(
+                payload.attributes.get("max_estimated_cost_usd", 1.0)
+            ),
+            max_runtime_seconds=float(payload.attributes.get("max_runtime_seconds", 120)),
+            max_retries=_positive_int_attribute(payload, "max_retries", 3),
+            max_concurrent_provider_calls=1,
+            publisher_fairness_limit=_positive_int_attribute(
+                payload, "publisher_fairness_limit", 3
+            ),
+            report_ids=[job.report_id] if job.report_id else [],
+            publishers=[job.publisher_id] if job.publisher_id else [],
+            dry_run=dry_run,
+            state_db=app.state_db,
+        )
+    )
+    return WorkflowQueueHandlerResult(
+        result=WorkflowStageResult(
+            output_reference=(
+                payload.embedding_row_id
+                or payload.claim_id
+                or f"claim-embedding:{job.job_id}"
+            ),
+            output_content_hash=_digest(
+                payload.embedding_row_id,
+                payload.claim_id,
+                str(response.embedded_count),
+                str(response.failed_count),
+            ),
+            execution_plan_hash=job.execution_plan_hash,
+            output_verified=response.failed_count == 0,
+            summary={
+                "embedded_count": response.embedded_count,
+                "failed_count": response.failed_count,
+                "skipped_count": response.skipped_count,
+            },
+        ),
+        provider_usage={
+            "input_tokens": response.actual_input_tokens,
+            "estimated_cost_usd": response.actual_cost_usd,
+            "provider_calls": response.embedded_count,
+        },
+        external_effects=["embedding"] if response.embedded_count else [],
+    )
+
+
 def _stage_child_submission(
     *,
     job: WorkflowJob,
@@ -980,6 +1069,7 @@ def default_workflow_queue_registry() -> dict[
             "claim_embedding",
             ClaimEmbeddingPayload,
             ClaimEmbeddingResult,
+            handler=_claim_embedding_handler,
             effects=("embedding",),
             budget_profile="embedding",
         ),

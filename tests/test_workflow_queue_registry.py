@@ -3,6 +3,7 @@ from __future__ import annotations
 from src.contracts.workflow_queue import (
     WORKFLOW_QUEUE_NAMES,
     BriefingOpportunityPayload,
+    ClaimEmbeddingPayload,
     MaintenancePayload,
     PublicationReadinessPayload,
     PublisherDiscoveryPayload,
@@ -192,6 +193,41 @@ def test_signal_candidate_rejects_invalid_bounded_numeric_attributes(tmp_path) -
     outcome = run_workflow_worker_once(
         state_db=db,
         queue_name="signal_candidate",
+        worker_id="worker-1",
+        ctx=_ctx(),
+    )
+
+    assert outcome.terminal_status == "dead_letter"
+    assert get_workflow_job(db, job.job_id, _ctx()).error_code == (
+        "workflow_queue_attribute_invalid"
+    )
+
+
+def test_claim_embedding_rejects_invalid_bounded_numeric_attributes(tmp_path) -> None:
+    db = str(tmp_path / "state.sqlite")
+    job, _ = enqueue_workflow_job(
+        db,
+        WorkflowJobSubmission(
+            schema_version="1.0",
+            queue_name="claim_embedding",
+            job_type="claim_embedding.v1",
+            payload=ClaimEmbeddingPayload(
+                claim_id="claim-1",
+                embedding_row_id="embedding-1",
+                model_version="text-embedding-3-small",
+                input_reference="analytics:claim:claim-1",
+                input_content_hash="claim-hash",
+                attributes={"dry_run": True, "limit": "not-an-int"},
+            ),
+            idempotency_key="embedding-invalid-limit",
+            deduplication_scope="claim-embedding",
+        ),
+        _ctx(),
+    )
+
+    outcome = run_workflow_worker_once(
+        state_db=db,
+        queue_name="claim_embedding",
         worker_id="worker-1",
         ctx=_ctx(),
     )

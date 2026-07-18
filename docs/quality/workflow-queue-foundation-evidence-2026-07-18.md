@@ -70,3 +70,11 @@ row remains readable; unsupported workflows and missing inputs are surfaced as
 unresolved. Focused adapter, legacy-recovery, and queue-service tests passed
 (`17 passed`). This is a migration adapter, not evidence that all legacy
 workflows or the remaining production queue adapters have been completed.
+
+The `claim_embedding` adapter now invokes the existing canonical embedding
+queue rather than a reference-only compatibility handler. It retains canonical
+embedding rows and provider metadata, while the workflow attempt records only
+bounded usage summaries. The `signal_candidate` adapter invokes the existing
+source-linked candidate extractor and creates deduplicated generation jobs for
+approved groups. Focused registry plus embedding/candidate suites passed (`30
+passed`) after malformed queue-limit tests were added.

@@ -202,3 +202,15 @@ legacy-work lineage, original due time, remaining attempt budget and plan hash.
 It does not delete or mutate the historical row. Unsupported workflows, missing
 artifacts and exhausted legacy retries are reported as unresolved for operator
 action rather than being silently retried by a parallel scheduler.
+
+## Domain queue adapters
+
+`claim_embedding` delegates to the canonical claim/embedding store and its
+existing oldest-first fairness, execution-lease, unchanged-content, retry and
+cost-accounting rules. The workflow job only carries the claim/embedding row
+reference; it never copies claim text or vector data into `workflow_jobs`.
+`signal_candidate` delegates to the existing source-linked deterministic
+candidate extractor, retains candidates in the analytics store, and emits one
+deduplicated `signal_generation` job per approved candidate group. Both workers
+reject malformed bounded attributes before opening a projection or provider
+operation.
