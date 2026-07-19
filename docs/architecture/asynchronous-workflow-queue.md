@@ -217,8 +217,8 @@ reference; it never copies claim text or vector data into `workflow_jobs`.
 `signal_candidate` delegates to the existing source-linked deterministic
 candidate extractor, retains candidates in the analytics store, and emits one
 deduplicated `signal_generation` job per approved candidate group. Both workers
-reject malformed bounded attributes before opening a projection or provider
-operation.
+reject malformed bounded attributes before resolving application configuration
+or opening a projection or provider operation.
 
 `wordpress_publish` accepts only an approved immutable Briefing or Signal artifact. The
 approval transaction injects its durable approval ID into the outbox submission;
