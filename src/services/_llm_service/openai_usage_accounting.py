@@ -11,6 +11,7 @@ from src.contracts.openai import (
 )
 from src.contracts.run_context import RunContext
 from src.services import openai_accounting_service
+from src.utils.errors import AppError
 
 
 def _semantic_usage_action(*, step_name: str, source_request: Any | None) -> str:
@@ -57,6 +58,22 @@ def record_usage_accounting(
         )
     if int(cached_input_tokens or 0) > 0:
         cache_decision = "provider_hit"
+    prompt_namespace = str(getattr(source, "prompt_namespace", "") or "").strip()
+    if not prompt_namespace:
+        raise AppError(
+            code="llm_usage_namespace_missing",
+            message="Provider usage accounting requires an explicit prompt namespace",
+            retryable=False,
+            context={"step_name": step_name},
+        )
+    execution_identity = str(getattr(source, "execution_identity", "") or "").strip()
+    if not execution_identity:
+        raise AppError(
+            code="llm_usage_execution_identity_missing",
+            message="Provider usage accounting requires a resolved execution identity",
+            retryable=False,
+            context={"prompt_namespace": prompt_namespace},
+        )
     return openai_accounting_service.record_usage(
         OpenAIUsageAccountingRequest(
             schema_version="1.0",
@@ -96,7 +113,7 @@ def record_usage_accounting(
                 or getattr(source, "url", "")
                 or ""
             ),
-            prompt_namespace=str(getattr(source, "prompt_namespace", "") or ""),
+            prompt_namespace=prompt_namespace,
             prompt_hash=str(
                 getattr(source, "prompt_hash", "")
                 or getattr(source, "prompt_sha256", "")
@@ -127,9 +144,7 @@ def record_usage_accounting(
                 "prompt_dependency_manifest": dict(
                     getattr(source, "prompt_dependency_manifest", {}) or {}
                 ),
-                "execution_identity": str(
-                    getattr(source, "execution_identity", "") or ""
-                ),
+                "execution_identity": execution_identity,
                 "execution_identity_manifest": dict(
                     getattr(source, "execution_identity_manifest", {}) or {}
                 ),

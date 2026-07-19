@@ -32,6 +32,7 @@ Generated from CLI registrations, configuration example, architecture policy, or
 - `src/orchestrators/analytics_projection_orchestrator.py`
 - `src/orchestrators/candidate_extraction_orchestrator.py`
 - `src/orchestrators/claim_embedding_orchestrator.py`
+- `src/orchestrators/corpus_rehabilitation_orchestrator.py`
 - `src/orchestrators/cost_reporting_orchestrator.py`
 - `src/orchestrators/cover_image_orchestrator.py`
 - `src/orchestrators/cross_report_analysis_orchestrator.py`
@@ -72,6 +73,10 @@ Generated from CLI registrations, configuration example, architecture policy, or
 - `audit-acquisition-paths`
 - `backfill-artifact-lineage`
 - `browser-doctor`
+- `corpus-rehabilitation-approve`
+- `corpus-rehabilitation-create`
+- `corpus-rehabilitation-plan`
+- `corpus-rehabilitation-submit`
 - `cost-report`
 - `deferred-work`
 - `deferred-work-reap`
@@ -87,6 +92,7 @@ Generated from CLI registrations, configuration example, architecture policy, or
 - `generate-cross-report-analysis`
 - `ingest`
 - `plan`
+- `policy-effectiveness`
 - `poll-mail-report`
 - `promote-private-api-playbook`
 - `publish-wp`
@@ -112,6 +118,9 @@ Generated from CLI registrations, configuration example, architecture policy, or
 - `remediation-soak`
 - `remediations`
 - `replay-run`
+- `revalidate-source-pdf`
+- `route-economics`
+- `source-quarantines`
 - `supervise-workflows`
 - `sync-publishers`
 - `sync-wordpress-intelligence`

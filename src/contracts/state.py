@@ -112,6 +112,80 @@ class StateRecordRequest:
 
 
 @dataclass(frozen=True)
+class SourceQuarantineRecord:
+    schema_version: str = field(metadata={"doc": "Quarantine record schema version."})
+    source_file_id: str = field(metadata={"doc": "Canonical source-file identity."})
+    content_checksum: str = field(metadata={"doc": "Checksum of quarantined bytes."})
+    validator_version: str = field(metadata={"doc": "Integrity validator version."})
+    status: str = field(metadata={"doc": "active, cleared, or superseded."})
+    size_bytes: int = field(metadata={"doc": "Observed source byte size."})
+    failure_code: str = field(metadata={"doc": "Deterministic structural failure code."})
+    next_operator_action: str = field(
+        metadata={"doc": "Bounded revalidation or replacement guidance."}
+    )
+    first_observed_at_utc: str = field(metadata={"doc": "First failure observation."})
+    latest_observed_at_utc: str = field(metadata={"doc": "Latest failure observation."})
+    failed_validation_count: int = field(
+        metadata={"doc": "Number of matching deterministic failures."}
+    )
+    replacement_checksum: str = field(
+        default="", metadata={"doc": "Known replacement checksum, when superseded."}
+    )
+    cleared_at_utc: str = field(
+        default="", metadata={"doc": "Successful revalidation timestamp, when cleared."}
+    )
+
+
+@dataclass(frozen=True)
+class SourceQuarantineGetRequest:
+    schema_version: str = field(metadata={"doc": "Quarantine lookup request schema version."})
+    state_db: str = field(metadata={"doc": "Canonical state database."})
+    source_file_id: str = field(metadata={"doc": "Canonical source-file identity."})
+    content_checksum: str = field(metadata={"doc": "Observed upstream or local checksum."})
+    validator_version: str = field(
+        default="pdf-integrity-v1", metadata={"doc": "Required validator version."}
+    )
+
+
+@dataclass(frozen=True)
+class SourceQuarantineGetResponse:
+    schema_version: str = field(metadata={"doc": "Quarantine lookup response schema version."})
+    record: SourceQuarantineRecord | None = field(
+        default=None, metadata={"doc": "Matching durable record, if present."}
+    )
+
+
+@dataclass(frozen=True)
+class SourceQuarantineUpsertRequest:
+    schema_version: str = field(metadata={"doc": "Quarantine upsert request schema version."})
+    state_db: str = field(metadata={"doc": "Canonical state database."})
+    record: SourceQuarantineRecord = field(
+        metadata={"doc": "Deterministically validated quarantine observation."}
+    )
+
+
+@dataclass(frozen=True)
+class SourceQuarantineUpsertResponse:
+    schema_version: str = field(metadata={"doc": "Quarantine upsert response schema version."})
+    record: SourceQuarantineRecord = field(metadata={"doc": "Stored record."})
+    created: bool = field(metadata={"doc": "Whether an active record was newly created."})
+
+
+@dataclass(frozen=True)
+class SourceQuarantineListRequest:
+    schema_version: str = field(metadata={"doc": "Quarantine list request schema version."})
+    state_db: str = field(metadata={"doc": "Canonical state database."})
+    statuses: List[str] = field(default_factory=list)
+    limit: int = field(default=100)
+
+
+@dataclass(frozen=True)
+class SourceQuarantineListResponse:
+    schema_version: str = field(metadata={"doc": "Quarantine list response schema version."})
+    records: List[SourceQuarantineRecord] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
 class StateDbAccessRequest:
     schema_version: str = field(
         metadata={"doc": "State DB access check request schema version."}

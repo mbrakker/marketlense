@@ -40,6 +40,11 @@ from src.services._state_service.routes import (
     get_report_download_route,
     record_report_download_route,
 )
+from src.services._state_service.source_quarantine import (
+    get_source_quarantine,
+    list_source_quarantines,
+    upsert_source_quarantine,
+)
 from src.services._state_service.workflow_control import (
     list_workflow_control_observations,
     write_workflow_control_observation,
@@ -56,12 +61,14 @@ __all__ = [
     "get_by_md5",
     "get_ingest_cursor",
     "get_publish",
+    "get_source_quarantine",
     "get_report_download_route",
     "list_due_mail_delivery_requests",
     "list_mailbox_candidate_rejections",
     "list_processed",
     "list_published",
     "list_remediation_records",
+    "list_source_quarantines",
     "read_remediation_soak_report",
     "list_workflow_control_observations",
     "mark_mail_delivery_request_attempt",
@@ -72,6 +79,7 @@ __all__ = [
     "record_report_download_route",
     "release_expired_remediation_leases",
     "upsert_mail_delivery_request",
+    "upsert_source_quarantine",
     "write_workflow_control_observation",
     "set_ingest_cursor",
     "transition_remediation",

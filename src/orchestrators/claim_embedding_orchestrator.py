@@ -402,6 +402,15 @@ def _run_claim_embedding_workflow(
                     model_pricing=request.model_pricing,
                     publisher_name=str(row.metadata.get("publisher") or ""),
                     report_id=str(row.report_id),
+                    prompt_namespace="claim_embedding/generate",
+                    prompt_hash=row.content_hash,
+                    execution_identity=(
+                        f"claim_embedding.v1:{request.provider}:{request.model}:"
+                        f"{request.embedding_version}"
+                    ),
+                    execution_policy_hash=(
+                        f"claim_embedding.v1:{request.provider}:{request.model}"
+                    ),
                     workflow="claim_embedding",
                     stage="provider_embedding",
                     artifact_family="claim",

@@ -6,6 +6,7 @@ from src.contracts.llm import LLMRoutingPolicy
 from src.utils.errors import AppError
 from src.utils.model_resolver import (
     execution_policies_from_config,
+    registered_production_llm_namespaces,
     registered_report_generation_namespaces,
     resolve_execution_policy,
     resolve_routing_policy,
@@ -205,3 +206,51 @@ def test_registered_report_namespaces_are_preflight_inventory() -> None:
     namespaces = registered_report_generation_namespaces()
     assert "report_vs/artifacts/summary" in namespaces
     assert "report_vs/validate/semantic" in namespaces
+
+
+def test_registered_production_namespace_uses_approved_longest_prefix() -> None:
+    policies = execution_policies_from_config(
+        {
+            "browser_report_download/browser_route": {
+                "model": "gpt-5-mini",
+                "temperature": 0.0,
+                "timeout_seconds": 180,
+            }
+        },
+        model_overrides={},
+        legacy_routing={},
+        default_model="gpt-5-mini",
+        default_temperature=1.0,
+        default_seed=None,
+        default_timeout_seconds=600,
+    )
+
+    decision = resolve_execution_policy(
+        "browser_report_download/browser_route/browser_pdf_click",
+        policies,
+        default_model="gpt-5-mini",
+        default_temperature=1.0,
+        default_seed=None,
+        default_timeout_seconds=600,
+        require_registered_namespace=True,
+    )
+
+    assert decision.policy_source == "browser_report_download/browser_route"
+    assert decision.compatibility_mode is False
+
+
+def test_unknown_production_namespace_is_rejected_without_compatibility_policy(
+) -> None:
+    with pytest.raises(AppError) as err:
+        resolve_execution_policy(
+            "unregistered/production_call",
+            {},
+            default_model="gpt-5-mini",
+            default_temperature=1.0,
+            default_seed=None,
+            default_timeout_seconds=600,
+            require_registered_namespace=True,
+        )
+
+    assert err.value.code == "llm_execution_policy_unknown_namespace"
+    assert "pdf_text/ocr_fallback" in registered_production_llm_namespaces()

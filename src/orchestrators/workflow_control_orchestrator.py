@@ -48,9 +48,12 @@ from src.contracts.workflow_control import (
     PublishRemediationWorkflow,
     ResolvedRetryPolicy,
     ResolvedRunIntent,
+    ResolvedRunProfile,
     RunHealthGateDecision,
     RunHealthGateInput,
     RunIntent,
+    RunProfileDefinition,
+    RunProfileRecommendation,
     WorkflowContract,
     WorkflowControlObservation,
     WorkflowControlSettings,
@@ -161,6 +164,15 @@ def default_workflow_control_settings() -> WorkflowControlSettings:
         concurrency=_default_concurrency_limits(),
         operational_memory_ttl_days=30,
         operational_memory_min_observations=2,
+        run_profiles=_default_run_profiles(),
+        available_budget_profile_refs=[
+            "browser_acquisition",
+            "cross_report_analysis",
+            "high_quality",
+            "publisher_inventory",
+            "publishing",
+            "report_ingest",
+        ],
     )
 
 
@@ -645,6 +657,185 @@ def resolve_run_intent(
     return resolved
 
 
+_PROFILE_RUNTIME_OVERRIDE_FIELDS = {
+    "maximum_runtime_seconds",
+    "maximum_provider_calls",
+    "maximum_cost_usd",
+    "browser_allowance",
+}
+
+
+def recommend_run_profile(
+    intent: RunIntent, *, ctx: RunContext
+) -> RunProfileRecommendation:
+    """Return a suggestion only; selection remains explicit or legacy-safe."""
+    intent_key = _intent_key(intent.intent)
+    if intent_key == "repair_failed_report":
+        profile_name, reason = "repair_failed", "repair_intent"
+    elif intent_key == "publish_ready_reports":
+        profile_name, reason = "publish_ready", "publish_readiness_intent"
+    elif intent_key in {"acquire_missing_pdf", "audit_acquisition"}:
+        profile_name, reason = "browser_acquisition", "browser_acquisition_intent"
+    elif intent_key in {"generate_cross_report_analysis", "generate_signal_post"}:
+        profile_name, reason = "high_quality", "quality_sensitive_generation_intent"
+    else:
+        profile_name, reason = "safe_default", "conservative_default"
+    recommendation = RunProfileRecommendation(
+        schema_version="1.0",
+        profile_name=profile_name,
+        intent_key=intent_key,
+        reason=reason,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="workflow_run_profile_recommended",
+            module=logger.name,
+            fields={
+                "intent_key": recommendation.intent_key,
+                "profile_name": recommendation.profile_name,
+                "reason": recommendation.reason,
+            },
+        )
+    )
+    return recommendation
+
+
+def resolve_run_profile(
+    intent: RunIntent,
+    settings: WorkflowControlSettings,
+    *,
+    ctx: RunContext,
+) -> ResolvedRunProfile:
+    """Resolve an approved profile without changing the intent's workflow choice."""
+    resolved_intent = resolve_run_intent(intent, settings, ctx=ctx)
+    return _resolve_run_profile(intent, settings, resolved_intent, ctx=ctx)
+
+
+def _resolve_run_profile(
+    intent: RunIntent,
+    settings: WorkflowControlSettings,
+    resolved_intent: ResolvedRunIntent,
+    *,
+    ctx: RunContext,
+) -> ResolvedRunProfile:
+    recommendation = recommend_run_profile(intent, ctx=ctx)
+    explicit_name = _key(intent.run_profile)
+    selected_name = explicit_name or "safe_default"
+    definition = settings.run_profiles.get(selected_name)
+    if definition is None:
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="workflow_run_profile_incompatible",
+                module=logger.name,
+                fields={"profile_name": selected_name, "reason": "unknown_profile"},
+            )
+        )
+        raise AppError(
+            code="workflow_run_profile_unknown",
+            message="Requested run profile is not configured",
+            retryable=False,
+            context={"profile": selected_name},
+        )
+    workflow = resolved_intent.workflow
+    if workflow and definition.compatible_workflows and workflow not in {
+        _key(item) for item in definition.compatible_workflows
+    }:
+        raise AppError(
+            code="workflow_run_profile_incompatible",
+            message="Requested run profile is incompatible with the resolved workflow",
+            retryable=False,
+            context={"profile": selected_name, "workflow": workflow},
+        )
+    if definition.requires_bounded_target and not (
+        intent.report_id.strip() or intent.subject.strip()
+    ):
+        raise AppError(
+            code="workflow_run_profile_target_required",
+            message="This run profile requires a bounded report or work-item target",
+            retryable=False,
+            context={"profile": selected_name},
+        )
+    unknown_overrides = sorted(
+        set(intent.profile_overrides) - _PROFILE_RUNTIME_OVERRIDE_FIELDS
+    )
+    if unknown_overrides:
+        raise AppError(
+            code="workflow_run_profile_override_invalid",
+            message="Run-profile overrides must use the approved bounded surface",
+            retryable=False,
+            context={"profile": selected_name, "fields": unknown_overrides},
+        )
+    selections: dict[str, str | int | float | bool] = {
+        "minimum_regeneration_mode": definition.minimum_regeneration_mode,
+        "cached_artifact_preference": definition.cached_artifact_preference,
+        "ocr_fallback_policy": definition.ocr_fallback_policy,
+        "browser_allowance": definition.browser_allowance,
+        "model_quality_tier": definition.model_quality_tier,
+        "publication_readiness_mode": definition.publication_readiness_mode,
+        "concurrency_resource": definition.concurrency_resource,
+        "maximum_runtime_seconds": definition.maximum_runtime_seconds,
+        "maximum_provider_calls": definition.maximum_provider_calls,
+        "maximum_cost_usd": definition.maximum_cost_usd,
+        "regeneration_scope": definition.regeneration_scope,
+        "human_publication_approval_required": True,
+    }
+    warnings: list[str] = []
+    for key in sorted(intent.profile_overrides):
+        value = intent.profile_overrides[key]
+        if isinstance(value, bool) or not isinstance(value, (str, int, float)):
+            raise AppError(
+                code="workflow_run_profile_override_invalid",
+                message="Run-profile overrides must be scalar bounded values",
+                retryable=False,
+                context={"profile": selected_name, "field": key},
+            )
+        selections[key] = value
+        warnings.append(f"explicit_override_preserved:{key}")
+    if definition.cached_artifact_preference == "require":
+        warnings.append("planner_safe_artifacts_required")
+    if definition.publication_readiness_mode == "readiness_only":
+        warnings.append("human_publication_approval_required")
+    profile = ResolvedRunProfile(
+        schema_version="1.0",
+        profile_name=definition.name,
+        profile_hash=sha256_json(asdict(definition)),
+        intended_outcome=definition.intended_outcome,
+        workflow=workflow,
+        preflight_profile=(
+            definition.preflight_profile or resolved_intent.preflight_profile
+        ),
+        budget_profile_refs=list(definition.budget_profile_refs),
+        effective_selections=selections,
+        resolution_source="explicit" if explicit_name else "legacy_default",
+        explicitly_selected=bool(explicit_name),
+        recommended_profile=recommendation.profile_name,
+        warnings=warnings,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="workflow_run_profile_resolved",
+            module=logger.name,
+            fields={
+                "profile_name": profile.profile_name,
+                "profile_hash": profile.profile_hash,
+                "workflow": profile.workflow,
+                "resolution_source": profile.resolution_source,
+                "explicitly_selected": profile.explicitly_selected,
+                "recommended_profile": profile.recommended_profile,
+                "budget_profile_count": len(profile.budget_profile_refs),
+                "warning_count": len(profile.warnings),
+            },
+        )
+    )
+    return profile
+
+
 def build_pipeline_execution_plan(
     intent: RunIntent,
     settings: WorkflowControlSettings,
@@ -653,6 +844,7 @@ def build_pipeline_execution_plan(
 ) -> PipelineExecutionPlan:
     """Create the inspectable, side-effect-free plan consumed before execution."""
     resolved = resolve_run_intent(intent, settings, ctx=ctx)
+    run_profile = _resolve_run_profile(intent, settings, resolved, ctx=ctx)
     if resolved.status != "resolved":
         plan = PipelineExecutionPlan(
             schema_version="1.0",
@@ -670,9 +862,13 @@ def build_pipeline_execution_plan(
             executable=False,
             blockers=list(resolved.blockers),
             budget_boundaries=[],
+            run_profile=run_profile.profile_name,
+            run_profile_hash=run_profile.profile_hash,
+            recommended_run_profile=run_profile.recommended_profile,
+            profile_effective_selections=dict(run_profile.effective_selections),
         )
     else:
-        profile = _profile(settings, resolved.preflight_profile)
+        profile = _profile(settings, run_profile.preflight_profile)
         contract = resolve_workflow_contract(settings, resolved.workflow)
         ordered_steps = list(
             dict.fromkeys(transition.step_name for transition in contract.transitions)
@@ -702,6 +898,10 @@ def build_pipeline_execution_plan(
             executable=True,
             blockers=[],
             budget_boundaries=_budget_boundaries(resolved.side_effect_plan),
+            run_profile=run_profile.profile_name,
+            run_profile_hash=run_profile.profile_hash,
+            recommended_run_profile=run_profile.recommended_profile,
+            profile_effective_selections=dict(run_profile.effective_selections),
         )
     logger.info(
         log_event(
@@ -714,6 +914,8 @@ def build_pipeline_execution_plan(
                 "intent_key": plan.intent_key,
                 "workflow": plan.workflow,
                 "profile": plan.profile,
+                "run_profile": plan.run_profile,
+                "run_profile_hash": plan.run_profile_hash,
                 "executable": plan.executable,
                 "idempotency_key": plan.idempotency_key,
                 "ordered_step_count": len(plan.ordered_steps),
@@ -1626,6 +1828,87 @@ def _default_preflight_profiles() -> dict[str, WorkflowPreflightProfile]:
     }
 
 
+def _default_run_profiles() -> dict[str, RunProfileDefinition]:
+    """Legacy-safe catalogue used when a compact test config omits run_profiles."""
+    def make(
+        name: str,
+        intended_outcome: str,
+        compatible_workflows: list[str],
+        **selections: Any,
+    ) -> RunProfileDefinition:
+        return RunProfileDefinition(
+            schema_version="1.0",
+            name=name,
+            intended_outcome=intended_outcome,
+            compatible_workflows=compatible_workflows,
+            **selections,
+        )
+
+    return {
+        "safe_default": make(
+            "safe_default", "conservative cached-first execution", []
+        ),
+        "fast_cached": make(
+            "fast_cached",
+            "planner-safe cache-first execution",
+            ["report_generation", "cross_report_analysis"],
+            budget_profile_refs=["report_ingest"],
+            minimum_regeneration_mode="require_planner_safe",
+            cached_artifact_preference="require",
+            ocr_fallback_policy="restricted",
+            browser_allowance="restricted",
+            regeneration_scope="minimum",
+        ),
+        "repair_failed": make(
+            "repair_failed",
+            "bounded failed-work repair",
+            ["report_generation", "report_download", "publisher_inventory"],
+            budget_profile_refs=["report_ingest"],
+            minimum_regeneration_mode="affected_only",
+            cached_artifact_preference="require",
+            requires_bounded_target=True,
+        ),
+        "publish_ready": make(
+            "publish_ready",
+            "publication readiness with human approval",
+            ["publishing", "wordpress_sync"],
+            preflight_profile="publishing",
+            budget_profile_refs=["publishing"],
+            minimum_regeneration_mode="readiness_only",
+            cached_artifact_preference="require",
+            ocr_fallback_policy="restricted",
+            browser_allowance="restricted",
+            publication_readiness_mode="readiness_only",
+            regeneration_scope="readiness_only",
+        ),
+        "browser_acquisition": make(
+            "browser_acquisition",
+            "governed direct-first acquisition",
+            ["report_download", "browser_acquisition", "publisher_inventory"],
+            budget_profile_refs=["browser_acquisition"],
+            ocr_fallback_policy="restricted",
+            browser_allowance="allowed",
+        ),
+        "cost_saver": make(
+            "cost_saver",
+            "restrictive cache-first cost control",
+            [],
+            minimum_regeneration_mode="require_planner_safe",
+            cached_artifact_preference="require",
+            ocr_fallback_policy="restricted",
+            browser_allowance="restricted",
+            regeneration_scope="minimum",
+        ),
+        "high_quality": make(
+            "high_quality",
+            "approved high-quality generation and validation",
+            ["report_generation", "cross_report_analysis"],
+            budget_profile_refs=["high_quality", "cross_report_analysis"],
+            model_quality_tier="high_quality",
+        ),
+    }
+
+
 def _default_retry_policies() -> dict[str, dict[str, WorkflowRetryPolicyConfig]]:
     def policy(policy_id: str, retries: int) -> WorkflowRetryPolicyConfig:
         return WorkflowRetryPolicyConfig(
@@ -1891,8 +2174,10 @@ __all__ = [
     "dispatch_autonomous_run",
     "is_valid_transition",
     "recommend_from_operational_memory",
+    "recommend_run_profile",
     "resolve_all_adaptive_concurrency",
     "resolve_run_intent",
+    "resolve_run_profile",
     "resolve_adaptive_concurrency",
     "resolve_retry_policy",
     "resolve_workflow_contract",

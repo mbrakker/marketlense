@@ -272,6 +272,145 @@ class WorkflowSupervisorSettings:
 
 
 @dataclass(frozen=True)
+class RunProfileDefinition:
+    """An approved, bounded operating-mode selection.
+
+    Profiles compose references owned by the existing workflow, queue, budget and
+    model-policy configuration; they never carry credentials or arbitrary config
+    paths.
+    """
+
+    schema_version: str = field(metadata={"doc": "Run-profile schema version."})
+    name: str = field(metadata={"doc": "Stable profile name."})
+    intended_outcome: str = field(
+        metadata={"doc": "Operator-facing outcome selected by this profile."}
+    )
+    compatible_workflows: list[str] = field(
+        metadata={"doc": "Workflows this profile may be applied to."}
+    )
+    preflight_profile: str = field(
+        default="",
+        metadata={"doc": "Optional existing preflight profile reference."},
+    )
+    budget_profile_refs: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Existing queue budget-profile references selected."},
+    )
+    minimum_regeneration_mode: str = field(
+        default="latest_safe",
+        metadata={"doc": "Bounded regeneration selection, never a new planner."},
+    )
+    cached_artifact_preference: str = field(
+        default="prefer",
+        metadata={"doc": "Reuse preference: prefer, require, or normal."},
+    )
+    ocr_fallback_policy: str = field(
+        default="when_required",
+        metadata={"doc": "OCR selection: when_required or restricted."},
+    )
+    browser_allowance: str = field(
+        default="explicit_required",
+        metadata={"doc": "Browser selection: explicit_required, allowed, restricted."},
+    )
+    model_quality_tier: str = field(
+        default="default",
+        metadata={
+            "doc": "Existing model-policy tier selection, not a provider change."
+        },
+    )
+    publication_readiness_mode: str = field(
+        default="preserve",
+        metadata={"doc": "Publication readiness mode; approval remains mandatory."},
+    )
+    concurrency_resource: str = field(
+        default="",
+        metadata={"doc": "Optional existing concurrency resource reference."},
+    )
+    maximum_runtime_seconds: int = field(
+        default=0,
+        metadata={
+            "doc": "Optional bounded runtime envelope; zero defers to canonical budget."
+        },
+    )
+    maximum_provider_calls: int = field(
+        default=0,
+        metadata={
+            "doc": "Optional provider-call envelope; zero defers to canonical budget."
+        },
+    )
+    maximum_cost_usd: float = field(
+        default=0.0,
+        metadata={
+            "doc": "Optional bounded cost envelope; zero defers to canonical budget."
+        },
+    )
+    regeneration_scope: str = field(
+        default="affected_only",
+        metadata={
+            "doc": "Regeneration scope: affected_only, minimum, or readiness_only."
+        },
+    )
+    requires_bounded_target: bool = field(
+        default=False,
+        metadata={
+            "doc": "Whether a report/work target must be supplied before resolution."
+        },
+    )
+    human_publication_approval_required: bool = field(
+        default=True,
+        metadata={
+            "doc": "Invariant: profiles cannot bypass human publication approval."
+        },
+    )
+
+
+@dataclass(frozen=True)
+class RunProfileRecommendation:
+    schema_version: str = field(metadata={"doc": "Recommendation schema version."})
+    profile_name: str = field(
+        metadata={"doc": "Suggested profile; not automatically applied."}
+    )
+    intent_key: str = field(
+        metadata={"doc": "Normalized intent used for recommendation."}
+    )
+    reason: str = field(metadata={"doc": "Stable recommendation reason."})
+
+
+@dataclass(frozen=True)
+class ResolvedRunProfile:
+    schema_version: str = field(metadata={"doc": "Resolved profile schema version."})
+    profile_name: str = field(metadata={"doc": "Selected profile name."})
+    profile_hash: str = field(
+        metadata={"doc": "Deterministic hash of the selected profile."}
+    )
+    intended_outcome: str = field(metadata={"doc": "Selected operating outcome."})
+    workflow: str = field(
+        metadata={"doc": "Resolved workflow this profile applies to."}
+    )
+    preflight_profile: str = field(
+        metadata={"doc": "Resolved existing preflight profile."}
+    )
+    budget_profile_refs: list[str] = field(
+        metadata={"doc": "Resolved existing budget-profile references."}
+    )
+    effective_selections: dict[str, str | int | float | bool] = field(
+        metadata={"doc": "Bounded effective selections without secrets or full config."}
+    )
+    resolution_source: str = field(
+        metadata={"doc": "explicit, legacy_default, or configuration_default."}
+    )
+    explicitly_selected: bool = field(
+        metadata={"doc": "Whether the operator explicitly selected this profile."}
+    )
+    recommended_profile: str = field(
+        metadata={"doc": "Suggested profile retained separately from selection."}
+    )
+    warnings: list[str] = field(
+        metadata={"doc": "Bounded incompatibility or precedence warnings."}
+    )
+
+
+@dataclass(frozen=True)
 class WorkflowControlSettings:
     schema_version: str = field(metadata={"doc": "Workflow control settings version."})
     preflight_profiles: dict[str, WorkflowPreflightProfile] = field(
@@ -291,6 +430,16 @@ class WorkflowControlSettings:
     )
     operational_memory_min_observations: int = field(
         metadata={"doc": "Minimum observations before high-confidence recommendations."}
+    )
+    run_profiles: dict[str, RunProfileDefinition] = field(
+        default_factory=dict,
+        metadata={"doc": "Typed operating profiles by stable profile name."},
+    )
+    available_budget_profile_refs: list[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Budget-profile refs derived from canonical workflow queues."
+        },
     )
     remediation_reaper: RemediationReaperSettings = field(
         default_factory=lambda: RemediationReaperSettings(schema_version="1.0"),
@@ -410,6 +559,16 @@ class RunIntent:
         metadata={"doc": "Whether safe automation may proceed after planning."}
     )
     metadata: dict[str, Any] = field(metadata={"doc": "Sanitized caller context."})
+    run_profile: str = field(
+        default="",
+        metadata={"doc": "Explicit approved run-profile name, if supplied."},
+    )
+    profile_overrides: dict[str, str | int | float | bool] = field(
+        default_factory=dict,
+        metadata={
+            "doc": "Explicit bounded profile overrides; arbitrary paths are forbidden."
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -496,6 +655,20 @@ class PipelineExecutionPlan:
         metadata={
             "doc": "Typed budget checks required before each planned side effect."
         },
+    )
+    run_profile: str = field(
+        default="", metadata={"doc": "Resolved typed operating profile name."}
+    )
+    run_profile_hash: str = field(
+        default="", metadata={"doc": "Deterministic resolved profile hash."}
+    )
+    recommended_run_profile: str = field(
+        default="",
+        metadata={"doc": "Suggested profile retained separately from selection."},
+    )
+    profile_effective_selections: dict[str, str | int | float | bool] = field(
+        default_factory=dict,
+        metadata={"doc": "Bounded resolved selections without secrets."},
     )
 
 

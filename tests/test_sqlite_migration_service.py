@@ -35,7 +35,7 @@ def test_state_db_migrations_create_schema_version_and_ledger_on_fresh_db(
                 schema_version="1.0",
                 database_key="state_db",
                 db_path=str(db_path),
-                target_version=13,
+                target_version=14,
                 ctx=_ctx(),
             ),
             conn,
@@ -95,8 +95,15 @@ def test_state_db_migrations_create_schema_version_and_ledger_on_fresh_db(
             WHERE type='table' AND name='workflow_supervisor_lease'
             """
         ).fetchone()
+        source_quarantine_table = conn.execute(
+            """
+            SELECT name
+            FROM sqlite_master
+            WHERE type='table' AND name='source_quarantine_records'
+            """
+        ).fetchone()
 
-    assert response.current_version == 13
+    assert response.current_version == 14
     assert [step.migration_id for step in response.applied_steps] == [
         "state_db_001_create_base_tables",
         "state_db_002_add_processed_vector_columns",
@@ -111,6 +118,7 @@ def test_state_db_migrations_create_schema_version_and_ledger_on_fresh_db(
         "state_db_011_create_workflow_queue",
         "state_db_012_create_queue_publication_and_briefing_state",
         "state_db_013_create_supervisor_lease",
+        "state_db_014_create_source_quarantine",
     ]
     assert ledger_rows == [
         ("state_db_001_create_base_tables", 1),
@@ -126,14 +134,16 @@ def test_state_db_migrations_create_schema_version_and_ledger_on_fresh_db(
         ("state_db_011_create_workflow_queue", 11),
         ("state_db_012_create_queue_publication_and_briefing_state", 12),
         ("state_db_013_create_supervisor_lease", 13),
+        ("state_db_014_create_source_quarantine", 14),
     ]
-    assert version_row == (13,)
+    assert version_row == (14,)
     assert workflow_table == ("workflow_control_observations",)
     assert mail_table == ("mail_delivery_requests",)
     assert rejection_table == ("mailbox_candidate_rejections",)
     assert artifact_cache_table == ("artifact_acquisition_cache",)
     assert remediation_table == ("remediation_records",)
     assert supervisor_lease_table == ("workflow_supervisor_lease",)
+    assert source_quarantine_table == ("source_quarantine_records",)
     assert_logs_have_required_fields(caplog.records)
 
 

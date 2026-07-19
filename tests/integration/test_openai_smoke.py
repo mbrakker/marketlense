@@ -31,10 +31,13 @@ def test_openai_responses_smoke() -> None:
             api_key=api_key,
             seed=7,
             timeout_seconds=30.0,
-            cost_ledger_path="./out/cost-ledger.jsonl",
-            cost_daily_path="./out/cost-daily.json",
-            model_pricing={},
-        ),
+                cost_ledger_path="./out/cost-ledger.jsonl",
+                cost_daily_path="./out/cost-daily.json",
+                model_pricing={},
+                prompt_namespace="test/openai_smoke",
+                execution_identity="test-openai-smoke-v1",
+                execution_policy_hash="test-openai-smoke-v1",
+            ),
         RunContext(
             schema_version="1.0", run_id="smoke", task_id="smoke", span_id="smoke"
         ),

@@ -17,7 +17,19 @@ The important operator sections are `paths`, `ingest`, `publish`, `browser_downl
 
 `ingest.validation.public_editorial_quality.disabled_rule_waivers` is the temporary staged-rollout escape hatch for the deterministic public-editorial release gate. Each mapping key is a stable rule ID and each value must be a concrete non-empty release-waiver reason. An empty or malformed entry has no effect; do not use this setting to suppress an unresolved reader-facing defect.
 
+`ingest.source_quarantine.enabled` is the single rollback switch for the deterministic source-PDF integrity gate. When enabled (the default), a source that fails the header, EOF, parser-open, or page-count check is recorded in the canonical state database and an unchanged upstream checksum is skipped before extraction, OCR, or model work. It does not delete source or cache bytes. Operators can review records with `source-quarantines` and revalidate a retained file with `revalidate-source-pdf`; successful validation clears the matching record and supersedes an earlier active checksum for the same source. Disable the switch only for a time-bounded incident rollback, because malformed inputs then follow the ordinary typed failure path and may consume repeated acquisition work.
+
+Corpus rehabilitation has no automatic switch: planning is read-only and campaign execution is explicit. `corpus-rehabilitation-create` persists a bounded retained-evidence plan; `corpus-rehabilitation-approve --yes` records a bounded operator approval; and `corpus-rehabilitation-submit --yes` queues only reusable, checksum-bound candidates through the existing maintenance queue. The submitter rechecks retained classification and lineage before handoff, while incomplete candidates remain operator-held. It has no public-write path.
+
 Use the generated [configuration reference](../generated/configuration-reference.md) for the current section inventory. It is generated from `src/config/app.example.yaml`; use the YAML and typed contracts as the final authority for values and validation.
+
+## Typed operational run profiles
+
+`workflow_control.run_profiles` is the single typed selector for operating outcomes. It composes existing preflight profiles, queue budget-profile references, concurrency resources, and already-approved model-policy tiers; it does not create budgets, routing rules, or mutable configuration. The available profiles are `safe_default`, `fast_cached`, `repair_failed`, `publish_ready`, `browser_acquisition`, `cost_saver`, and `high_quality`.
+
+Use `python -m src.cli plan <intent> --profile <name>` to inspect a selection before execution. Plan output includes the profile name, deterministic hash, bounded effective selections, and a separate recommendation; a recommendation never changes the selected profile. CLI and UI resolve through the same typed resolver. A profile is resolved after the existing base-and-overlay configuration load: an explicit CLI/UI profile wins, otherwise the legacy-safe `safe_default` is selected; the environment/local overlays only determine the available profile definitions. Explicit bounded per-run overrides win over profile values. Unknown profiles, unknown queue-budget references, secret-like fields, unsupported override keys, incompatible workflows, and unbounded `repair_failed` targets fail before provider I/O.
+
+Profiles cannot disable validation, evidence checks, human publication approval, the supervisor, remediation reaping, or deferred-work reaping. Roll back selection by omitting `--profile` or the UI profile field; retained hashes remain readable in plans and run records.
 
 ## Side-effect budget authority
 

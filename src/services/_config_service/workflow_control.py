@@ -6,6 +6,7 @@ from src.contracts.workflow_control import (
     ConcurrencyLimit,
     DeferredWorkReaperSettings,
     RemediationReaperSettings,
+    RunProfileDefinition,
     WorkflowContract,
     WorkflowControlSettings,
     WorkflowPreflightProfile,
@@ -73,6 +74,19 @@ def load_workflow_control_settings(
                 2,
             ),
         ),
+        run_profiles=_parse_run_profiles(
+            raw_control.get("run_profiles"),
+            available_budget_profile_refs=_available_budget_profile_refs(
+                data.get("workflow_queues")
+            ),
+            preflight_profiles=_parse_preflight_profiles(
+                raw_control.get("preflight_profiles")
+            ),
+            concurrency=_parse_concurrency(raw_control.get("concurrency")),
+        ),
+        available_budget_profile_refs=_available_budget_profile_refs(
+            data.get("workflow_queues")
+        ),
         remediation_reaper=_parse_remediation_reaper(
             raw_control.get("remediation_reaper")
         ),
@@ -93,10 +107,208 @@ def load_workflow_control_settings(
                 "retry_workflow_count": len(settings.retry_policies),
                 "workflow_contract_count": len(settings.workflow_contracts),
                 "concurrency_resource_count": len(settings.concurrency),
+                "run_profile_count": len(settings.run_profiles),
+                "available_budget_profile_ref_count": len(
+                    settings.available_budget_profile_refs
+                ),
             },
         )
     )
     return settings
+
+
+_RUN_PROFILE_SECRET_TOKENS = ("secret", "token", "password", "api_key", "credential")
+_RUN_PROFILE_ALLOWED_KEYS = {
+    "schema_version",
+    "intended_outcome",
+    "compatible_workflows",
+    "preflight_profile",
+    "budget_profile_refs",
+    "minimum_regeneration_mode",
+    "cached_artifact_preference",
+    "ocr_fallback_policy",
+    "browser_allowance",
+    "model_quality_tier",
+    "publication_readiness_mode",
+    "concurrency_resource",
+    "maximum_runtime_seconds",
+    "maximum_provider_calls",
+    "maximum_cost_usd",
+    "regeneration_scope",
+    "requires_bounded_target",
+    "human_publication_approval_required",
+}
+
+
+def _available_budget_profile_refs(raw_queues: object) -> list[str]:
+    return sorted(
+        {
+            str(_mapping(raw_queue).get("budget_profile") or "").strip()
+            for raw_queue in _mapping(raw_queues).values()
+            if str(_mapping(raw_queue).get("budget_profile") or "").strip()
+        }
+    )
+
+
+def _parse_run_profiles(
+    raw_profiles: object,
+    *,
+    available_budget_profile_refs: list[str],
+    preflight_profiles: dict[str, WorkflowPreflightProfile],
+    concurrency: dict[str, ConcurrencyLimit],
+) -> dict[str, RunProfileDefinition]:
+    profiles: dict[str, RunProfileDefinition] = {}
+    for raw_name, raw_definition in _mapping(raw_profiles).items():
+        name = _key(raw_name)
+        definition = _mapping(raw_definition)
+        unknown_fields = sorted(set(definition) - _RUN_PROFILE_ALLOWED_KEYS)
+        forbidden_fields = sorted(
+            key
+            for key in definition
+            if any(token in _key(key) for token in _RUN_PROFILE_SECRET_TOKENS)
+        )
+        if unknown_fields or forbidden_fields:
+            raise AppError(
+                code="workflow_run_profile_invalid_field",
+                message="Run profiles may only select approved non-secret fields",
+                retryable=False,
+                context={
+                    "profile": name,
+                    "unknown_fields": unknown_fields,
+                    "forbidden_fields": forbidden_fields,
+                },
+            )
+        budget_refs = _string_list(definition.get("budget_profile_refs"))
+        invalid_budget_refs = sorted(
+            set(budget_refs) - set(available_budget_profile_refs)
+        )
+        if invalid_budget_refs:
+            raise AppError(
+                code="workflow_run_profile_budget_ref_invalid",
+                message="Run profile references an unknown queue budget profile",
+                retryable=False,
+                context={"profile": name, "budget_profile_refs": invalid_budget_refs},
+            )
+        preflight_profile = _key(definition.get("preflight_profile"))
+        if preflight_profile and preflight_profile not in preflight_profiles:
+            raise AppError(
+                code="workflow_run_profile_preflight_missing",
+                message="Run profile references a missing preflight profile",
+                retryable=False,
+                context={"profile": name, "preflight_profile": preflight_profile},
+            )
+        concurrency_resource = _key(definition.get("concurrency_resource"))
+        if concurrency_resource and concurrency_resource not in concurrency:
+            raise AppError(
+                code="workflow_run_profile_concurrency_missing",
+                message="Run profile references a missing concurrency resource",
+                retryable=False,
+                context={"profile": name, "concurrency_resource": concurrency_resource},
+            )
+        if definition.get("human_publication_approval_required") is False:
+            raise AppError(
+                code="workflow_run_profile_publication_approval_required",
+                message="Run profiles cannot disable human publication approval",
+                retryable=False,
+                context={"profile": name},
+            )
+        minimum_regeneration_mode = _profile_choice(
+            definition,
+            "minimum_regeneration_mode",
+            {"latest_safe", "require_planner_safe", "affected_only", "readiness_only"},
+            "latest_safe",
+            name,
+        )
+        cached_artifact_preference = _profile_choice(
+            definition,
+            "cached_artifact_preference",
+            {"prefer", "require", "normal"},
+            "prefer",
+            name,
+        )
+        ocr_fallback_policy = _profile_choice(
+            definition,
+            "ocr_fallback_policy",
+            {"when_required", "restricted"},
+            "when_required",
+            name,
+        )
+        browser_allowance = _profile_choice(
+            definition,
+            "browser_allowance",
+            {"explicit_required", "allowed", "restricted"},
+            "explicit_required",
+            name,
+        )
+        model_quality_tier = _profile_choice(
+            definition,
+            "model_quality_tier",
+            {"default", "high_quality"},
+            "default",
+            name,
+        )
+        publication_readiness_mode = _profile_choice(
+            definition,
+            "publication_readiness_mode",
+            {"preserve", "readiness_only"},
+            "preserve",
+            name,
+        )
+        regeneration_scope = _profile_choice(
+            definition,
+            "regeneration_scope",
+            {"affected_only", "minimum", "readiness_only"},
+            "affected_only",
+            name,
+        )
+        profiles[name] = RunProfileDefinition(
+            schema_version=str(definition.get("schema_version") or "1.0"),
+            name=name,
+            intended_outcome=str(definition.get("intended_outcome") or name),
+            compatible_workflows=_string_list(definition.get("compatible_workflows")),
+            preflight_profile=preflight_profile,
+            budget_profile_refs=budget_refs,
+            minimum_regeneration_mode=minimum_regeneration_mode,
+            cached_artifact_preference=cached_artifact_preference,
+            ocr_fallback_policy=ocr_fallback_policy,
+            browser_allowance=browser_allowance,
+            model_quality_tier=model_quality_tier,
+            publication_readiness_mode=publication_readiness_mode,
+            concurrency_resource=concurrency_resource,
+            maximum_runtime_seconds=max(
+                0, _to_int(definition.get("maximum_runtime_seconds"), 0)
+            ),
+            maximum_provider_calls=max(
+                0, _to_int(definition.get("maximum_provider_calls"), 0)
+            ),
+            maximum_cost_usd=max(
+                0.0, _to_float(definition.get("maximum_cost_usd"), 0.0)
+            ),
+            regeneration_scope=regeneration_scope,
+            requires_bounded_target=_to_bool(
+                definition.get("requires_bounded_target"), False
+            ),
+            human_publication_approval_required=True,
+        )
+    return profiles
+
+
+def _profile_choice(
+    definition: dict,
+    field_name: str,
+    allowed: set[str],
+    default: str,
+    profile: str,
+) -> str:
+    value = _key(definition.get(field_name) or default)
+    if value not in allowed:
+        raise AppError(
+            code="workflow_run_profile_value_invalid",
+            message="Run profile contains an unsupported bounded selection",
+            retryable=False,
+            context={"profile": profile, "field": field_name, "value": value},
+        )
+    return value
 
 
 def _parse_preflight_profiles(

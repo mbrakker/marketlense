@@ -10,6 +10,10 @@ from src.contracts.state import (
     MailDeliveryRequestListDueRequest,
     MailDeliveryRequestMarkAttemptRequest,
     MailDeliveryRequestUpsertRequest,
+    SourceQuarantineGetRequest,
+    SourceQuarantineListRequest,
+    SourceQuarantineRecord,
+    SourceQuarantineUpsertRequest,
     StateArtifactAcquisitionCacheGetRequest,
     StateArtifactAcquisitionCacheRecordRequest,
     StateBatchCheckItem,
@@ -40,10 +44,12 @@ from src.services.state_service import (
     get_by_md5,
     get_ingest_cursor,
     get_report_download_route,
+    get_source_quarantine,
     list_due_mail_delivery_requests,
     list_mailbox_candidate_rejections,
     list_processed,
     list_published,
+    list_source_quarantines,
     list_workflow_control_observations,
     mark_mail_delivery_request_attempt,
     record,
@@ -53,6 +59,7 @@ from src.services.state_service import (
     record_report_download_route,
     set_ingest_cursor,
     upsert_mail_delivery_request,
+    upsert_source_quarantine,
     write_workflow_control_observation,
 )
 from src.utils.errors import AppError
@@ -122,8 +129,74 @@ def test_migration_adds_vector_columns_and_preserves_data(tmp_path: Path) -> Non
     assert resp.last_error is None
     assert resp.openai_file_id == "of_123"
     assert resp.doc_map_summary is None
-    assert schema_version == (13,)
-    assert ledger_count == 13
+    assert schema_version == (14,)
+    assert ledger_count == 14
+
+
+def test_source_quarantine_is_superseded_by_a_verified_replacement(
+    tmp_path: Path,
+) -> None:
+    state_db = str(tmp_path / "state.sqlite")
+    old = SourceQuarantineRecord(
+        schema_version="1.0",
+        source_file_id="drive-file-1",
+        content_checksum="old-checksum",
+        validator_version="pdf-integrity-v1",
+        status="active",
+        size_bytes=101,
+        failure_code="pdf_missing_eof",
+        next_operator_action="revalidate_after_source_replacement",
+        first_observed_at_utc="2026-07-19T10:00:00+00:00",
+        latest_observed_at_utc="2026-07-19T10:00:00+00:00",
+        failed_validation_count=1,
+    )
+    upsert_source_quarantine(
+        SourceQuarantineUpsertRequest(
+            schema_version="1.0", state_db=state_db, record=old
+        ),
+        _ctx(),
+    )
+    verified_replacement = SourceQuarantineRecord(
+        schema_version="1.0",
+        source_file_id="drive-file-1",
+        content_checksum="new-checksum",
+        validator_version="pdf-integrity-v1",
+        status="cleared",
+        size_bytes=202,
+        failure_code="",
+        next_operator_action="",
+        first_observed_at_utc="2026-07-19T11:00:00+00:00",
+        latest_observed_at_utc="2026-07-19T11:00:00+00:00",
+        failed_validation_count=0,
+        cleared_at_utc="2026-07-19T11:00:00+00:00",
+    )
+    upsert_source_quarantine(
+        SourceQuarantineUpsertRequest(
+            schema_version="1.0", state_db=state_db, record=verified_replacement
+        ),
+        _ctx(),
+    )
+
+    old_response = get_source_quarantine(
+        SourceQuarantineGetRequest(
+            schema_version="1.0",
+            state_db=state_db,
+            source_file_id="drive-file-1",
+            content_checksum="old-checksum",
+        ),
+        _ctx(),
+    )
+    records = list_source_quarantines(
+        SourceQuarantineListRequest(schema_version="1.0", state_db=state_db), _ctx()
+    ).records
+
+    assert old_response.record is not None
+    assert old_response.record.status == "superseded"
+    assert old_response.record.replacement_checksum == "new-checksum"
+    assert {(record.content_checksum, record.status) for record in records} == {
+        ("new-checksum", "cleared"),
+        ("old-checksum", "superseded"),
+    }
 
 
 def test_record_and_get_with_defaults(tmp_path: Path) -> None:

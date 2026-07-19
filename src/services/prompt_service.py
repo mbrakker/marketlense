@@ -433,6 +433,11 @@ def validate_prompt_dry_run(
             default_temperature=runtime_settings.temperature,
             default_seed=runtime_settings.openai_seed,
             default_timeout_seconds=runtime_settings.openai_timeout_seconds,
+            # A fixture may exercise an intentionally private throwaway
+            # namespace only when it explicitly opts into the retained
+            # test-only execution override. Production dry-runs always use
+            # the finite registered inventory.
+            require_registered_namespace=not fixture.test_only_execution_override,
         )
         started_at = time.perf_counter()
         prompt_set = load_prompt_set(
@@ -901,6 +906,14 @@ def _build_prompt_dry_run_fixture(
         namespace=namespace,
         field_name="user_variables",
     )
+    test_only_execution_override = payload.get("test_only_execution_override", False)
+    if not isinstance(test_only_execution_override, bool):
+        raise AppError(
+            code="prompt_dry_run_fixture_registry_invalid",
+            message="test_only_execution_override must be a boolean",
+            retryable=False,
+            context={"namespace": namespace, "index": index},
+        )
     return PromptDryRunFixture(
         schema_version=str(payload.get("schema_version", "1.0")),
         namespace=namespace,
@@ -913,6 +926,7 @@ def _build_prompt_dry_run_fixture(
         user_variables=user_variables,
         model=str(payload.get("model") or "").strip(),
         temperature=float(payload.get("temperature", 0.0)),
+        test_only_execution_override=test_only_execution_override,
     )
 
 

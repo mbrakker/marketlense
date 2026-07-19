@@ -4,6 +4,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
+from src.contracts.config import ConfigLoadRequest
 from src.contracts.semantic_ids import RunId
 from src.contracts.ui_run_control import (
     UiRunCancelRequest,
@@ -35,6 +36,7 @@ from src.orchestrators.ui_run_control_orchestrator import (
     list_ui_runs,
     poll_ui_run,
 )
+from src.services.config_service import load_workflow_control_settings
 from src.ui import state as ui_state
 from src.ui.common import _ctx
 
@@ -79,7 +81,9 @@ def _resolve_ui_workflow_control_payload(
 ) -> dict[str, Any]:
     intent = _ui_run_type_to_intent(run_type)
     ctx = _ctx(f"workflow_control_{run_type}")
-    settings = workflow_control.default_workflow_control_settings()
+    settings = load_workflow_control_settings(
+        ConfigLoadRequest(schema_version="1.0", path=""), ctx
+    )
     resolved = workflow_control.resolve_run_intent(
         RunIntent(
             schema_version="1.0",
@@ -100,6 +104,7 @@ def _resolve_ui_workflow_control_payload(
             dry_run=False,
             allow_automation=True,
             metadata={"source": "ui", "run_type": run_type},
+            run_profile=str(request_payload.get("profile") or ""),
         ),
         settings,
         ctx=ctx,
@@ -124,6 +129,7 @@ def _resolve_ui_workflow_control_payload(
             dry_run=True,
             allow_automation=False,
             metadata={"source": "ui", "run_type": run_type},
+            run_profile=str(request_payload.get("profile") or ""),
         ),
         settings,
         ctx=ctx,
@@ -168,6 +174,10 @@ def _resolve_ui_workflow_control_payload(
             "intent_key": plan.intent_key,
             "workflow": plan.workflow,
             "profile": plan.profile,
+            "run_profile": plan.run_profile,
+            "run_profile_hash": plan.run_profile_hash,
+            "recommended_run_profile": plan.recommended_run_profile,
+            "profile_effective_selections": dict(plan.profile_effective_selections),
             "ordered_steps": list(plan.ordered_steps),
             "skipped_steps": list(plan.skipped_steps),
             "blocked_steps": list(plan.blocked_steps),

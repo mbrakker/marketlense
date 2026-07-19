@@ -14,10 +14,15 @@ from src.contracts.file_cache import (
 )
 from src.contracts.files import DeleteFileRequest, FileStatRequest
 from src.contracts.ingest import IngestOutcome, IngestSettings
-from src.contracts.pdf_utils import PdfEofCheckRequest
+from src.contracts.pdf_utils import PdfEofCheckRequest, PdfIntegrityCheckRequest
 from src.contracts.remediation import RemediationArtifactReference
 from src.contracts.run_context import RunContext
-from src.contracts.state import StateRecordRequest
+from src.contracts.state import (
+    SourceQuarantineGetRequest,
+    SourceQuarantineRecord,
+    SourceQuarantineUpsertRequest,
+    StateRecordRequest,
+)
 from src.orchestrators.remediation_orchestrator import record_workflow_failure
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
@@ -101,6 +106,16 @@ class IngestFileDependencies:
     state_record: Callable[[StateRecordRequest, RunContext], Any]
     eof_retry_limit: int
     bypass_existing_report_html: bool = False
+    check_pdf_integrity: (
+        Callable[[PdfIntegrityCheckRequest, RunContext], Any] | None
+    ) = None
+    get_source_quarantine: (
+        Callable[[SourceQuarantineGetRequest, RunContext], Any] | None
+    ) = None
+    upsert_source_quarantine: (
+        Callable[[SourceQuarantineUpsertRequest, RunContext], Any] | None
+    ) = None
+    quarantine_enabled: bool = True
 
 
 @dataclass(frozen=True)
@@ -566,18 +581,55 @@ def _record_permanent_source_failure(
     error: AppError,
     logger_name: str,
 ) -> bool:
-    if error.retryable or error.code != "pdf_download_missing_eof":
+    if error.retryable or not error.code.startswith("pdf_"):
+        return False
+    integrity = (
+        dependencies.check_pdf_integrity(
+            PdfIntegrityCheckRequest(schema_version="1.0", path=runtime.cache_path),
+            file_ctx,
+        )
+        if dependencies.check_pdf_integrity is not None
+        else None
+    )
+    failure_code = str(getattr(integrity, "failure_code", "") or "").strip()
+    if integrity is not None and not failure_code:
         return False
     md5 = (runtime.md5 or runtime.drive_md5 or "").strip()
-    if not md5:
+    checksum = md5 or str(getattr(integrity, "sha256", "") or "").strip()
+    if not checksum:
         return False
+    if (
+        dependencies.quarantine_enabled
+        and dependencies.upsert_source_quarantine is not None
+        and integrity is not None
+    ):
+        dependencies.upsert_source_quarantine(
+            SourceQuarantineUpsertRequest(
+                schema_version="1.0",
+                state_db=settings.state_db,
+                record=SourceQuarantineRecord(
+                    schema_version="1.0",
+                    source_file_id=runtime.file.file_id,
+                    content_checksum=checksum,
+                    validator_version=str(integrity.validator_version),
+                    status="active",
+                    size_bytes=int(integrity.size_bytes),
+                    failure_code=failure_code,
+                    next_operator_action="revalidate_after_source_replacement",
+                    first_observed_at_utc=str(integrity.validated_at_utc),
+                    latest_observed_at_utc=str(integrity.validated_at_utc),
+                    failed_validation_count=1,
+                ),
+            ),
+            file_ctx,
+        )
     last_error = f"{error.code}: {error.message}"
     dependencies.state_record(
         StateRecordRequest(
             schema_version="1.0",
             state_db=settings.state_db,
             file_id=runtime.file.file_id,
-            md5=md5,
+            md5=checksum,
             openai_file_id="",
             vector_store_id=None,
             vector_store_status=None,
@@ -600,12 +652,142 @@ def _record_permanent_source_failure(
             module=logger_name,
             fields={
                 "file_id": runtime.file.file_id,
-                "md5": md5,
-                "error_code": error.code,
+                "checksum": checksum,
+                "error_code": failure_code or error.code,
+                "quarantined": bool(integrity and dependencies.quarantine_enabled),
             },
         )
     )
     return True
+
+
+def _validate_source_pdf_before_pipeline(
+    runtime: _IngestFileRuntime,
+    *,
+    settings: IngestSettings,
+    dependencies: IngestFileDependencies,
+    file_ctx: RunContext,
+    logger_name: str,
+) -> None:
+    """Stop deterministic structural failures before extraction, OCR, or model work."""
+    if dependencies.check_pdf_integrity is None:
+        return
+    integrity = dependencies.check_pdf_integrity(
+        PdfIntegrityCheckRequest(schema_version="1.0", path=runtime.cache_path),
+        file_ctx,
+    )
+    failure_code = str(integrity.failure_code or "").strip()
+    checksum = (
+        runtime.drive_md5 or runtime.md5 or str(integrity.sha256 or "")
+    ).strip()
+    if failure_code:
+        raise AppError(
+            code=f"pdf_integrity_{failure_code}",
+            message="PDF failed deterministic structural integrity validation",
+            retryable=bool(integrity.retryable),
+            context={
+                "file_id": runtime.file.file_id,
+                "failure_code": failure_code,
+                "validator_version": integrity.validator_version,
+            },
+        )
+    if (
+        dependencies.quarantine_enabled
+        and dependencies.upsert_source_quarantine is not None
+        and checksum
+    ):
+        dependencies.upsert_source_quarantine(
+            SourceQuarantineUpsertRequest(
+                schema_version="1.0",
+                state_db=settings.state_db,
+                record=SourceQuarantineRecord(
+                    schema_version="1.0",
+                    source_file_id=runtime.file.file_id,
+                    content_checksum=checksum,
+                    validator_version=integrity.validator_version,
+                    status="cleared",
+                    size_bytes=int(integrity.size_bytes),
+                    failure_code="",
+                    next_operator_action="",
+                    first_observed_at_utc=integrity.validated_at_utc,
+                    latest_observed_at_utc=integrity.validated_at_utc,
+                    failed_validation_count=0,
+                    cleared_at_utc=integrity.validated_at_utc,
+                ),
+            ),
+            file_ctx,
+        )
+    logging.getLogger(logger_name).info(
+        log_event(
+            file_ctx,
+            role="orchestrator",
+            event="source_pdf_integrity_validated",
+            module=logger_name,
+            fields={
+                "file_id": runtime.file.file_id,
+                "validator_version": integrity.validator_version,
+                "size_bytes": integrity.size_bytes,
+                "quarantine_cleared": bool(
+                    dependencies.quarantine_enabled and checksum
+                ),
+            },
+        )
+    )
+
+
+def _matching_source_quarantine(
+    runtime: _IngestFileRuntime,
+    *,
+    index: int,
+    settings: IngestSettings,
+    dependencies: IngestFileDependencies,
+    file_ctx: RunContext,
+    logger_name: str,
+) -> FileProcessResult | None:
+    checksum = (runtime.drive_md5 or "").strip()
+    if (
+        not dependencies.quarantine_enabled
+        or not checksum
+        or dependencies.get_source_quarantine is None
+    ):
+        return None
+    response = dependencies.get_source_quarantine(
+        SourceQuarantineGetRequest(
+            schema_version="1.0",
+            state_db=settings.state_db,
+            source_file_id=runtime.file.file_id,
+            content_checksum=checksum,
+        ),
+        file_ctx,
+    )
+    record = response.record
+    if record is None or record.status != "active":
+        return None
+    logging.getLogger(logger_name).info(
+        log_event(
+            file_ctx,
+            role="orchestrator",
+            event="source_quarantine_skip",
+            module=logger_name,
+            fields={
+                "file_id": runtime.file.file_id,
+                "failure_code": record.failure_code,
+                "validator_version": record.validator_version,
+                "avoided_drive_download": True,
+                "avoided_pdf_parse": True,
+                "avoided_ocr": True,
+                "avoided_model": True,
+            },
+        )
+    )
+    return _skip_result(
+        index=index,
+        file=runtime.file,
+        display_name=runtime.display_name,
+        md5=checksum,
+        html_path=None,
+        error=f"source_quarantined:{record.failure_code}",
+    )
 
 
 def run_ingest_file(
@@ -641,6 +823,17 @@ def run_ingest_file(
         )
         if skipped is not None:
             return skipped
+
+        quarantined = _matching_source_quarantine(
+            runtime,
+            index=index,
+            settings=settings,
+            dependencies=dependencies,
+            file_ctx=file_ctx,
+            logger_name=logger_name,
+        )
+        if quarantined is not None:
+            return quarantined
 
         runtime.md5 = None
         cache_hit = _resolve_cached_pdf(
@@ -708,6 +901,13 @@ def run_ingest_file(
         runtime.file = dependencies.ensure_file_name(runtime.file, settings, file_ctx)
         runtime.display_name = runtime.file.name or runtime.file.file_id
         _ensure_runtime_md5(
+            runtime,
+            settings=settings,
+            dependencies=dependencies,
+            file_ctx=file_ctx,
+            logger_name=logger_name,
+        )
+        _validate_source_pdf_before_pipeline(
             runtime,
             settings=settings,
             dependencies=dependencies,

@@ -11,18 +11,23 @@ try:
 except ModuleNotFoundError:  # pragma: no cover - depends on PyMuPDF packaging alias
     import pymupdf as fitz
 
+from src.contracts.pdf_context import PdfContextBuildRequest
 from src.contracts.pdf_ocr import (
     PdfOcrPageText,
     PdfOcrSplitRequest,
     PdfTextRenderRequest,
 )
-from src.contracts.pdf_context import PdfContextBuildRequest
 from src.contracts.pdf_text import PdfTextExtractRequest, PdfTextSampleRequest
-from src.contracts.pdf_utils import PdfEofCheckRequest, PdfInfoRequest
+from src.contracts.pdf_utils import (
+    PdfEofCheckRequest,
+    PdfInfoRequest,
+    PdfIntegrityCheckRequest,
+)
 from src.contracts.run_context import RunContext
 from src.services.pdf_service import (
     build_pdf_context,
     check_pdf_eof,
+    check_pdf_integrity,
     extract_pdf_info,
     extract_pdf_text,
     render_text_pdf,
@@ -82,6 +87,29 @@ def _build_multi_page_text_pdf(path: Path, page_count: int) -> None:
         )
     doc.save(path.as_posix())
     doc.close()
+
+
+def test_integrity_check_accepts_retained_golden_pdf_without_provider_io() -> None:
+    pdf_path = (
+        Path(__file__).parent
+        / "fixtures"
+        / "pdf_benchmark"
+        / "golden"
+        / "CAPGEMINI - 2026-Retail-Trends_ACIG.pdf"
+    )
+
+    response = check_pdf_integrity(
+        PdfIntegrityCheckRequest(schema_version="1.0", path=str(pdf_path)), _ctx()
+    )
+
+    assert response.failure_code == ""
+    assert response.retryable is False
+    assert response.has_pdf_header is True
+    assert response.has_eof is True
+    assert response.parser_opened is True
+    assert response.page_count > 0
+    assert len(response.sha256) == 64
+    assert len(response.md5) == 32
 
 
 def test_pdf_text_service_facade_preserves_contracts_and_logs(

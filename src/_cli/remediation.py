@@ -24,15 +24,13 @@ from src.contracts.remediation import (
 )
 from src.contracts.run_context import RunContext
 from src.orchestrators.deferred_work_orchestrator import (
-    DeferredWorkReaperDependencies,
     run_bounded_deferred_work_reaper,
+)
+from src.orchestrators.recovery_adapter_registry import (
+    build_recovery_adapter_registry,
 )
 from src.orchestrators.remediation_orchestrator import (
     build_remediation_opportunity_report,
-)
-from src.orchestrators.report_pipeline_orchestrator import (
-    build_report_pipeline_deferred_work_plan,
-    resume_deferred_report_pipeline,
 )
 from src.services.config_service import (
     build_ingest_settings,
@@ -238,8 +236,9 @@ def list_deferred_work_items(
     ).records
     console.print(
         "Deferred work: "
-        f"depth={metrics.queue_depth}, due={metrics.due_count}, leased={metrics.lease_count}, "
-        f"terminal={metrics.terminal_count}, completion_rate={metrics.completion_rate:.0%}"
+        f"depth={metrics.queue_depth}, due={metrics.due_count}, "
+        f"leased={metrics.lease_count}, terminal={metrics.terminal_count}, "
+        f"completion_rate={metrics.completion_rate:.0%}"
     )
     table = Table(title="Durable Budget-Deferred Work", box=box.SIMPLE_HEAVY)
     for heading in (
@@ -286,25 +285,9 @@ def reap_deferred_work(
         ConfigLoadRequest(schema_version="1.0", path=""), ctx
     )
     reaper = control.deferred_work_reaper
-    dependencies = DeferredWorkReaperDependencies(
-        plan_builders={
-            "report_generation": lambda item, work_ctx: (
-                build_report_pipeline_deferred_work_plan(
-                    item, ingest_settings, work_ctx
-                )
-            )
-        },
-        resumers={
-            "report_generation": lambda item, plan, work_ctx: (
-                resume_deferred_report_pipeline(
-                    item,
-                    plan,
-                    ingest_settings,
-                    work_ctx,
-                    workflow_control_settings=control,
-                )
-            )
-        },
+    registry = build_recovery_adapter_registry(
+        ingest_settings=ingest_settings,
+        workflow_control_settings=control,
     )
     response = run_bounded_deferred_work_reaper(
         DeferredWorkReaperRequest(
@@ -319,12 +302,14 @@ def reap_deferred_work(
             retry_delay_seconds=reaper.retry_delay_seconds,
         ),
         ctx,
-        dependencies=dependencies,
+        dependencies=registry.deferred_work_dependencies,
     )
     console.print(
         "Deferred-work reaper: "
-        f"inspected={response.inspected_count}, completed={len(response.completed_work_keys)}, "
-        f"deferred={len(response.deferred_work_keys)}, remediation={len(response.remediation_work_keys)}, "
+        f"inspected={response.inspected_count}, "
+        f"completed={len(response.completed_work_keys)}, "
+        f"deferred={len(response.deferred_work_keys)}, "
+        f"remediation={len(response.remediation_work_keys)}, "
         f"released_leases={len(response.released_lease_work_keys)}"
     )
 

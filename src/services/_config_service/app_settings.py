@@ -347,6 +347,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         cover_style_path=paths_settings["cover_style_path"],
         ingest_lock_path=paths_settings["ingest_lock_path"],
         ingest_lock_ttl_seconds=ingest_runtime["ingest_lock_ttl_seconds"],
+        source_quarantine_enabled=ingest_runtime["source_quarantine_enabled"],
         temperature=ingest_runtime["temperature"],
         taxonomy_temperature=ingest_runtime["taxonomy_temperature"],
         openai_seed=ingest_runtime["openai_seed"],

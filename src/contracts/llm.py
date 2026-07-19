@@ -85,6 +85,12 @@ class LLMExecutionPolicy:
     structured_output_schema_identity: str = field(
         default="", metadata={"doc": "Stable output-schema identity, never raw schema."}
     )
+    output_validator_identity: str = field(
+        default="",
+        metadata={
+            "doc": "Stable validator identity applied to structured output, never validator source."
+        },
+    )
     retrieval_mode: str = field(
         default="inherit",
         metadata={

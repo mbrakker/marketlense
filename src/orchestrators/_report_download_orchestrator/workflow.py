@@ -291,39 +291,40 @@ def run_report_download(
                 "reason": suppression_reason,
             },
         )
-    if _should_avoid_mailbox_preflight_for_remembered_blocker(
-        remembered_route,
-        ttl_seconds=request.settings.route_memory_ttl_seconds,
-        revalidate_route_policy=request.revalidate_route_policy,
-        now_seconds=int(time.time()),
-    ):
-        logger.info(
-            log_event(
-                ctx,
-                role="orchestrator",
-                event="report_download_mailbox_preflight_avoided",
-                module=logger.name,
-                fields={
-                    "normalized_url": normalized_url,
-                    "reason": "fresh_remembered_hard_blocker",
-                    "avoided_mailbox_polls": 1,
-                    "revalidate_route_policy": False,
-                },
-            )
-        )
-    else:
-        preflight_mailbox_before_email_form(
-            request=request,
-            normalized_url=normalized_url,
-            ctx=ctx,
-            dependencies=deps,
-            route_families=[step.route_family for step in executable_steps],
-        )
     result: BrowserReportDownloadResult | None = None
     last_retryable_error: AppError | None = None
     last_planned_step: ReportDownloadRoutePlanStep | None = None
     for planned_step in executable_steps:
         last_planned_step = planned_step
+        if planned_step.route_family == "browser_email_form":
+            if _should_avoid_mailbox_preflight_for_remembered_blocker(
+                remembered_route,
+                ttl_seconds=request.settings.route_memory_ttl_seconds,
+                revalidate_route_policy=request.revalidate_route_policy,
+                now_seconds=int(time.time()),
+            ):
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="orchestrator",
+                        event="report_download_mailbox_preflight_avoided",
+                        module=logger.name,
+                        fields={
+                            "normalized_url": normalized_url,
+                            "reason": "fresh_remembered_hard_blocker",
+                            "avoided_mailbox_polls": 1,
+                            "revalidate_route_policy": False,
+                        },
+                    )
+                )
+            else:
+                preflight_mailbox_before_email_form(
+                    request=request,
+                    normalized_url=normalized_url,
+                    ctx=ctx,
+                    dependencies=deps,
+                    route_families=[planned_step.route_family],
+                )
         try:
             result = _run_download_attempt(
                 request=request,

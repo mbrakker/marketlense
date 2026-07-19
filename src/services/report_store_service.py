@@ -15,6 +15,13 @@ from src.services._report_store_service.artifact_lineage import (
     record_artifact_lineage,
     trace_artifact_lineage,
 )
+from src.services._report_store_service.corpus_rehabilitation import (
+    approve_corpus_rehabilitation_campaign,
+    create_corpus_rehabilitation_campaign,
+    read_corpus_rehabilitation_campaign,
+    read_corpus_rehabilitation_plan,
+    update_corpus_rehabilitation_campaign_item,
+)
 from src.services._report_store_service.download_routes import (
     evaluate_acquisition_route_suppression,
     get_publisher_download_route,
@@ -54,6 +61,9 @@ from src.services._report_store_service.publishers import (
     list_publishers,
     replace_publishers,
     update_publisher_google_folder,
+)
+from src.services._report_store_service.route_economics import (
+    read_acquisition_route_economics,
 )
 from src.services._report_store_service.sources import (
     get_report_download_drive_folder,
@@ -96,6 +106,12 @@ __all__ = [
     "read_validated_report_artifacts",
     "record_publisher_private_api_candidate_observation",
     "record_acquisition_attempt_resource",
+    "read_acquisition_route_economics",
+    "read_corpus_rehabilitation_plan",
+    "create_corpus_rehabilitation_campaign",
+    "approve_corpus_rehabilitation_campaign",
+    "read_corpus_rehabilitation_campaign",
+    "update_corpus_rehabilitation_campaign_item",
     "record_report_value_score",
     "record_publisher_download_route",
     "record_publisher_inventory_recovery_cache_record",

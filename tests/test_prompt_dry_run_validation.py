@@ -164,6 +164,7 @@ def test_validate_prompt_dry_run_surfaces_missing_variable(
                 "fixtures:",
                 '  - namespace: "alpha"',
                 '    family: "report"',
+                "    test_only_execution_override: true",
                 "    system_variables: {}",
                 "    user_variables: {}",
             ]

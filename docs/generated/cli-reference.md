@@ -9,6 +9,10 @@ For command options and help text, run `python -m src.cli <command> --help`.
 | `audit-acquisition-paths` | [`src/_cli/publisher.py`](../../src/_cli/publisher.py) | Public |
 | `backfill-artifact-lineage` | [`src/_cli/admin.py`](../../src/_cli/admin.py) | Public |
 | `browser-doctor` | [`src/_cli/browser.py`](../../src/_cli/browser.py) | Public |
+| `corpus-rehabilitation-approve` | [`src/_cli/admin.py`](../../src/_cli/admin.py) | Public |
+| `corpus-rehabilitation-create` | [`src/_cli/admin.py`](../../src/_cli/admin.py) | Public |
+| `corpus-rehabilitation-plan` | [`src/_cli/admin.py`](../../src/_cli/admin.py) | Public |
+| `corpus-rehabilitation-submit` | [`src/_cli/admin.py`](../../src/_cli/admin.py) | Public |
 | `cost-report` | [`src/_cli/pipeline.py`](../../src/_cli/pipeline.py) | Public |
 | `deferred-work` | [`src/_cli/remediation.py`](../../src/_cli/remediation.py) | Public |
 | `deferred-work-reap` | [`src/_cli/remediation.py`](../../src/_cli/remediation.py) | Public |
@@ -24,6 +28,7 @@ For command options and help text, run `python -m src.cli <command> --help`.
 | `generate-cross-report-analysis` | [`src/_cli/cross_report.py`](../../src/_cli/cross_report.py) | Public |
 | `ingest` | [`src/_cli/pipeline.py`](../../src/_cli/pipeline.py) | Public |
 | `plan` | [`src/_cli/pipeline.py`](../../src/_cli/pipeline.py) | Public |
+| `policy-effectiveness` | [`src/_cli/admin.py`](../../src/_cli/admin.py) | Public |
 | `poll-mail-report` | [`src/_cli/browser.py`](../../src/_cli/browser.py) | Public |
 | `promote-private-api-playbook` | [`src/_cli/private_api.py`](../../src/_cli/private_api.py) | Public |
 | `publish-wp` | [`src/_cli/pipeline.py`](../../src/_cli/pipeline.py) | Public |
@@ -49,6 +54,9 @@ For command options and help text, run `python -m src.cli <command> --help`.
 | `remediation-soak` | [`src/_cli/remediation.py`](../../src/_cli/remediation.py) | Public |
 | `remediations` | [`src/_cli/remediation.py`](../../src/_cli/remediation.py) | Public |
 | `replay-run` | [`src/_cli/ui_runs.py`](../../src/_cli/ui_runs.py) | Public |
+| `revalidate-source-pdf` | [`src/_cli/admin.py`](../../src/_cli/admin.py) | Public |
+| `route-economics` | [`src/_cli/admin.py`](../../src/_cli/admin.py) | Public |
+| `source-quarantines` | [`src/_cli/admin.py`](../../src/_cli/admin.py) | Public |
 | `supervise-workflows` | [`src/_cli/workflow_queue.py`](../../src/_cli/workflow_queue.py) | Public |
 | `sync-publishers` | [`src/_cli/admin.py`](../../src/_cli/admin.py) | Public |
 | `sync-wordpress-intelligence` | [`src/_cli/pipeline.py`](../../src/_cli/pipeline.py) | Public |

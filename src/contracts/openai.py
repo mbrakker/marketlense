@@ -51,10 +51,19 @@ class OpenAIEmbeddingRequest:
         metadata={"doc": "Source/report URL context for usage reporting, if known."},
     )
     prompt_namespace: str = field(
-        default="", metadata={"doc": "Prompt namespace for usage reporting, if known."}
+        default="claim_embedding/generate",
+        metadata={"doc": "Explicit provider namespace for usage reporting."},
     )
     prompt_hash: str = field(
         default="", metadata={"doc": "Prompt hash for usage reporting, if known."}
+    )
+    execution_identity: str = field(
+        default="claim_embedding-v1",
+        metadata={"doc": "Resolved execution identity for accounting."},
+    )
+    execution_policy_hash: str = field(
+        default="claim_embedding-v1",
+        metadata={"doc": "Resolved execution-policy identity for accounting."},
     )
     usage_db_path: str = field(
         default="./state/llm_usage.sqlite",

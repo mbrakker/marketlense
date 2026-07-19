@@ -156,6 +156,7 @@ def prepare_prompt_bundle(
         default_temperature=fallback_temperature,
         default_seed=getattr(settings, "openai_seed", None),
         default_timeout_seconds=getattr(settings, "openai_timeout_seconds", None),
+        require_registered_namespace=True,
     )
     resolved_policy = execution_policy.policy
     manifest = prompt_set.dependency_manifest

@@ -11,6 +11,7 @@ from src.services._pdf.figures import collect_candidates, extract_best_figure
 from src.services._pdf.text import (
     build_pdf_context,
     check_pdf_eof,
+    check_pdf_integrity,
     extract_pdf_info,
     extract_pdf_text,
     render_text_pdf,
@@ -22,6 +23,7 @@ __all__ = [
     "apply_crop_refine_bbox",
     "build_pdf_context",
     "check_pdf_eof",
+    "check_pdf_integrity",
     "collect_candidates",
     "crop_regions",
     "detect_contents_page",

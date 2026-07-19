@@ -122,6 +122,12 @@ def _resolve_ingest_runtime_settings(
         resolved["temperature"],
     )
     resolved["openai_seed"] = _opt_int(ingest.get("seed"))
+    quarantine_cfg = ingest.get("source_quarantine") or {}
+    if not isinstance(quarantine_cfg, dict):
+        quarantine_cfg = {}
+    resolved["source_quarantine_enabled"] = _to_bool(
+        quarantine_cfg.get("enabled"), True
+    )
     return resolved
 
 

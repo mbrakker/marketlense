@@ -23,6 +23,7 @@ from src.services._sqlite_migration._reports.projections import (
     _reports_db_019_create_source_identity_observations,
     _reports_db_020_expand_execution_plan_audit,
     _reports_db_022_add_execution_plan_prompt_family_reconciliation,
+    _reports_db_023_create_corpus_rehabilitation_campaigns,
 )
 from src.services._sqlite_migration._reports.routing import (
     _reports_db_006_create_or_upgrade_download_route_history,
@@ -40,6 +41,8 @@ from src.services._sqlite_migration._reports.schema import (
     _ARTIFACT_LINEAGE_STATES_TABLE_SQL,
     _CLAIM_EMBEDDING_QUEUE_TRANSITIONS_TABLE_SQL,
     _CLAIM_EMBEDDINGS_TABLE_SQL,
+    _CORPUS_REHABILITATION_CAMPAIGNS_TABLE_SQL,
+    _CORPUS_REHABILITATION_CAMPAIGN_ITEMS_TABLE_SQL,
     _DOWNLOAD_ROUTE_HISTORY_TABLE_SQL,
     _INVENTORY_RECOVERY_CACHE_TABLE_SQL,
     _INVENTORY_ROUTE_HISTORY_TABLE_SQL,
@@ -175,5 +178,10 @@ _REPORTS_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
         migration_id="reports_db_022_add_execution_plan_prompt_family_reconciliation",
         version=22,
         apply_fn=_reports_db_022_add_execution_plan_prompt_family_reconciliation,
+    ),
+    _MigrationSpec(
+        migration_id="reports_db_023_create_corpus_rehabilitation_campaigns",
+        version=23,
+        apply_fn=_reports_db_023_create_corpus_rehabilitation_campaigns,
     ),
 )

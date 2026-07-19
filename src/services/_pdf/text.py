@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from pathlib import Path
+import hashlib
 import re
+from pathlib import Path
 
 import pymupdf as fitz
 from pypdf import PdfReader, PdfWriter
@@ -12,6 +13,13 @@ from src.contracts.pdf_context import (
     PdfContextBuildRequest,
     PdfContextBuildResponse,
 )
+from src.contracts.pdf_ocr import (
+    PdfOcrChunk,
+    PdfOcrSplitRequest,
+    PdfOcrSplitResponse,
+    PdfTextRenderRequest,
+    PdfTextRenderResponse,
+)
 from src.contracts.pdf_text import (
     PdfTextExtractRequest,
     PdfTextExtractResponse,
@@ -19,24 +27,21 @@ from src.contracts.pdf_text import (
     PdfTextSampleRequest,
     PdfTextSampleResponse,
 )
-from src.contracts.pdf_ocr import PdfTextRenderRequest, PdfTextRenderResponse
-from src.contracts.pdf_ocr import (
-    PdfOcrChunk,
-    PdfOcrSplitRequest,
-    PdfOcrSplitResponse,
-)
 from src.contracts.pdf_utils import (
     PdfEofCheckRequest,
     PdfEofCheckResponse,
     PdfInfoRequest,
     PdfInfoResponse,
+    PdfIntegrityCheckRequest,
+    PdfIntegrityCheckResponse,
 )
 from src.contracts.run_context import RunContext
+from src.utils.clock import utc_now_iso
 from src.utils.errors import AppError
 from src.utils.logging import log_event
-from .page_artifacts import create_page_artifact_cache
 from src.utils.pdf_utils import pdf_has_eof_marker as _pdf_has_eof_marker
 
+from .page_artifacts import create_page_artifact_cache
 from .shared import EOF_TAIL_BYTES, logger
 
 PDF_TEXT_EXCEPTIONS = (OSError, RuntimeError, ValueError, TypeError, AttributeError)
@@ -92,6 +97,82 @@ def check_pdf_eof(request: PdfEofCheckRequest, ctx: RunContext) -> PdfEofCheckRe
         )
     )
     return PdfEofCheckResponse(schema_version="1.0", path=request.path, has_eof=has_eof)
+
+
+def check_pdf_integrity(
+    request: PdfIntegrityCheckRequest,
+    ctx: RunContext,
+) -> PdfIntegrityCheckResponse:
+    """Validate deterministic PDF structure without OCR, rendering, or model I/O."""
+    path = Path(request.path)
+    validator_version = "pdf-integrity-v1"
+    try:
+        raw = path.read_bytes()
+    except FileNotFoundError as exc:
+        raise AppError(
+            code="pdf_not_found",
+            message="PDF integrity validation requires a readable local file",
+            cause=exc,
+            retryable=False,
+        ) from exc
+    except OSError as exc:
+        raise AppError(
+            code="pdf_read_failed",
+            message="PDF integrity validation could not read local bytes",
+            cause=exc,
+            retryable=True,
+        ) from exc
+    has_header = raw.startswith(b"%PDF-")
+    has_eof = _pdf_has_eof_marker(raw[-EOF_TAIL_BYTES:]) if raw else False
+    parser_opened = False
+    page_count = 0
+    failure_code = ""
+    if not has_header:
+        failure_code = "pdf_missing_header"
+    elif not has_eof:
+        failure_code = "pdf_missing_eof"
+    else:
+        try:
+            reader = PdfReader(str(path), strict=False)
+            page_count = len(reader.pages)
+            parser_opened = True
+            if page_count < 1:
+                failure_code = "pdf_zero_pages"
+        except (PdfReadError, PdfStreamError, OSError, RuntimeError, ValueError):
+            failure_code = "pdf_parser_open_failed"
+    response = PdfIntegrityCheckResponse(
+        schema_version="1.0",
+        path=str(path),
+        size_bytes=len(raw),
+        sha256=hashlib.sha256(raw).hexdigest(),
+        md5=hashlib.md5(raw).hexdigest(),
+        validator_version=validator_version,
+        has_pdf_header=has_header,
+        has_eof=has_eof,
+        parser_opened=parser_opened,
+        page_count=page_count,
+        failure_code=failure_code,
+        retryable=False,
+        validated_at_utc=utc_now_iso(),
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="pdf_integrity_checked",
+            module=logger.name,
+            fields={
+                "validator_version": validator_version,
+                "size_bytes": response.size_bytes,
+                "has_pdf_header": response.has_pdf_header,
+                "has_eof": response.has_eof,
+                "parser_opened": response.parser_opened,
+                "page_count": response.page_count,
+                "failure_code": response.failure_code,
+            },
+        )
+    )
+    return response
 
 
 def build_pdf_context(

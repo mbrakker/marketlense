@@ -10,8 +10,8 @@ from src.contracts.file_cache import (
 )
 from src.contracts.files import DeleteFileResponse, FileStatResponse
 from src.contracts.ingest import IngestOutcome
+from src.contracts.pdf_utils import PdfEofCheckResponse, PdfIntegrityCheckResponse
 from src.contracts.remediation import RemediationListRequest
-from src.contracts.pdf_utils import PdfEofCheckResponse
 from src.orchestrators.ingest_file_orchestrator import (
     IngestFileDependencies,
     run_ingest_file,
@@ -46,8 +46,11 @@ def _base_dependencies(
     run_report_pipeline_fn,
     write_md5_sidecar_fn,
     check_pdf_eof_fn=None,
+    check_pdf_integrity_fn=None,
     download_pdf_to_path_fn=None,
     state_record_fn=None,
+    get_source_quarantine_fn=None,
+    upsert_source_quarantine_fn=None,
 ):
     return IngestFileDependencies(
         should_skip=lambda *_args, **_kwargs: False,
@@ -91,6 +94,9 @@ def _base_dependencies(
         run_report_pipeline=run_report_pipeline_fn,
         state_record=state_record_fn or (lambda *_args, **_kwargs: SimpleNamespace()),
         eof_retry_limit=1,
+        check_pdf_integrity=check_pdf_integrity_fn,
+        get_source_quarantine=get_source_quarantine_fn,
+        upsert_source_quarantine=upsert_source_quarantine_fn,
     )
 
 
@@ -239,6 +245,70 @@ def test_missing_eof_after_bounded_download_retries_stops_before_pipeline(
     )
     assert state_records[0].text_validation_status == "fail"
     assert state_records[0].text_validation_reason == "pdf_download_missing_eof"
+
+
+def test_structural_integrity_failure_is_quarantined_before_report_pipeline(
+    ingest_settings,
+    run_context,
+):
+    file = _drive_file(md5_checksum="source-md5")
+    pipeline_calls = {"count": 0}
+    quarantines = []
+
+    def _file_stat(request, _ctx):
+        return FileStatResponse(
+            schema_version="1.0",
+            path=request.path,
+            exists=True,
+            size_bytes=100,
+            mtime_utc=123.0,
+            md5="source-md5" if request.compute_md5 else None,
+        )
+
+    def _integrity(request, _ctx):
+        return PdfIntegrityCheckResponse(
+            schema_version="1.0",
+            path=request.path,
+            size_bytes=100,
+            sha256="a" * 64,
+            md5="source-md5",
+            validator_version="pdf-integrity-v1",
+            has_pdf_header=True,
+            has_eof=True,
+            parser_opened=False,
+            page_count=0,
+            failure_code="pdf_parser_open_failed",
+            retryable=False,
+            validated_at_utc="2026-07-19T10:00:00+00:00",
+        )
+
+    dependencies = _base_dependencies(
+        file_stat_fn=_file_stat,
+        run_report_pipeline_fn=lambda *_args: (
+            pipeline_calls.__setitem__("count", pipeline_calls["count"] + 1)
+            or _outcome(file, "source-md5")
+        ),
+        write_md5_sidecar_fn=lambda request, _ctx: FileCacheMd5SidecarWriteResponse(
+            schema_version="1.0",
+            cache_path=request.cache_path,
+            sidecar_path=f"{request.cache_path}.md5.json",
+            record=None,
+            written=False,
+            reason="not_called",
+        ),
+        check_pdf_integrity_fn=_integrity,
+        upsert_source_quarantine_fn=lambda request, _ctx: (
+            quarantines.append(request.record) or SimpleNamespace(record=request.record)
+        ),
+    )
+
+    result = run_ingest_file(file, 0, ingest_settings, run_context, dependencies)
+
+    assert result.outcome.status == "error"
+    assert pipeline_calls["count"] == 0
+    assert len(quarantines) == 1
+    assert quarantines[0].status == "active"
+    assert quarantines[0].failure_code == "pdf_parser_open_failed"
 
 
 def test_ingest_file_enables_latest_safe_resume_when_pipeline_accepts_keyword(

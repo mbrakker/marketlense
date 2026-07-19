@@ -583,3 +583,69 @@ class LLMUsageRunSummaryResponse:
     estimated_cost_usd: float = field(
         metadata={"doc": "Canonical summed estimated cost in USD."}
     )
+
+
+@dataclass(frozen=True)
+class LLMPolicyEffectivenessRequest:
+    """Read-only request for execution-identity effectiveness evidence."""
+
+    schema_version: str = field(
+        metadata={"doc": "Policy-effectiveness request schema version."}
+    )
+    db_path: str = field(metadata={"doc": "Canonical usage-ledger SQLite path."})
+
+
+@dataclass(frozen=True)
+class LLMPolicyEffectivenessRow:
+    """Bounded aggregate for one compatible execution identity."""
+
+    schema_version: str = field(metadata={"doc": "Effectiveness-row schema version."})
+    execution_identity: str = field(
+        metadata={"doc": "Resolved identity or legacy_unattributed."}
+    )
+    prompt_namespace: str = field(
+        metadata={"doc": "Prompt or explicit generic-action namespace."}
+    )
+    provider: str = field(metadata={"doc": "Provider attribution."})
+    model: str = field(metadata={"doc": "Provider-local model attribution."})
+    call_count: int = field(metadata={"doc": "Provider calls in the cohort."})
+    validated_call_count: int = field(
+        metadata={"doc": "Calls with a valid schema-validation result."}
+    )
+    validation_rate: float = field(
+        metadata={"doc": "Validated calls divided by total calls."}
+    )
+    cache_reuse_count: int = field(
+        metadata={"doc": "Calls with semantic or provider cache reuse."}
+    )
+    cache_reuse_rate: float = field(
+        metadata={"doc": "Cache-reused calls divided by total calls."}
+    )
+    latency_record_count: int = field(
+        metadata={"doc": "Calls carrying an observed bounded latency value."}
+    )
+    average_latency_ms: float | None = field(
+        metadata={"doc": "Observed mean latency; absent when legacy rows lack it."}
+    )
+    input_tokens: int = field(metadata={"doc": "Summed input tokens."})
+    cached_input_tokens: int = field(metadata={"doc": "Summed cached input tokens."})
+    output_tokens: int = field(metadata={"doc": "Summed output tokens."})
+    estimated_cost_usd: float = field(metadata={"doc": "Summed estimated cost."})
+    regeneration_count: int = field(
+        metadata={"doc": "Distinct report-regeneration plan hashes."}
+    )
+
+
+@dataclass(frozen=True)
+class LLMPolicyEffectivenessResponse:
+    schema_version: str = field(
+        metadata={"doc": "Policy-effectiveness response schema version."}
+    )
+    rows: list[LLMPolicyEffectivenessRow] = field(
+        default_factory=list,
+        metadata={"doc": "Deterministically ordered execution-identity cohorts."},
+    )
+    unattributed_legacy_call_count: int = field(
+        default=0,
+        metadata={"doc": "Historical calls without a retained execution identity."},
+    )

@@ -40,6 +40,7 @@ from src.services.config_service import (
     build_ingest_settings,
     load_publish_settings,
     load_settings,
+    load_workflow_control_settings,
 )
 from src.services.logging_service import setup_logging
 from src.services.state_service import write_workflow_control_observation
@@ -136,8 +137,12 @@ def _resolve_cli_workflow_control(
     publisher: str = "",
     report_id: str = "",
     requested_side_effects: list[str] | None = None,
+    run_profile: str = "",
+    profile_overrides: dict[str, str | int | float | bool] | None = None,
 ) -> dict[str, object]:
-    settings = workflow_control.default_workflow_control_settings()
+    settings = load_workflow_control_settings(
+        ConfigLoadRequest(schema_version="1.0", path=""), ctx
+    )
     resolved = workflow_control.resolve_run_intent(
         workflow_control.RunIntent(
             schema_version="1.0",
@@ -149,6 +154,8 @@ def _resolve_cli_workflow_control(
             dry_run=False,
             allow_automation=True,
             metadata={"source": "cli"},
+            run_profile=run_profile,
+            profile_overrides=dict(profile_overrides or {}),
         ),
         settings,
         ctx=ctx,
@@ -164,6 +171,8 @@ def _resolve_cli_workflow_control(
             dry_run=True,
             allow_automation=False,
             metadata={"source": "cli"},
+            run_profile=run_profile,
+            profile_overrides=dict(profile_overrides or {}),
         ),
         settings,
         ctx=ctx,
@@ -198,6 +207,10 @@ def _resolve_cli_workflow_control(
         "preflight_profile": resolved.preflight_profile,
         "budget_profile": resolved.budget_profile,
         "retry_policy_id": retry_policy_id,
+        "run_profile": plan.run_profile,
+        "run_profile_hash": plan.run_profile_hash,
+        "recommended_run_profile": plan.recommended_run_profile,
+        "profile_effective_selections": dict(plan.profile_effective_selections),
         "resume_stage": resolved.resume_stage,
         "side_effect_plan": list(resolved.side_effect_plan),
         "alternatives": list(resolved.alternatives),
@@ -283,12 +296,19 @@ def plan_execution(
     subject: str = typer.Option("", help="Optional report, URL, or task subject"),
     publisher: str = typer.Option("", help="Optional publisher context"),
     report_id: str = typer.Option("", help="Optional report identifier"),
+    profile: str = typer.Option(
+        "",
+        "--profile",
+        help="Explicit approved profile; omit to retain safe default",
+    ),
 ):
     """Print a side-effect-free execution plan without launching a workflow."""
     _sync_cli_patch_points()
     ctx = new_run_context(task_id="cli_execution_plan")
     setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
-    settings = workflow_control.default_workflow_control_settings()
+    settings = load_workflow_control_settings(
+        ConfigLoadRequest(schema_version="1.0", path=""), ctx
+    )
     plan = workflow_control.build_pipeline_execution_plan(
         workflow_control.RunIntent(
             schema_version="1.0",
@@ -300,6 +320,7 @@ def plan_execution(
             dry_run=True,
             allow_automation=False,
             metadata={"source": "cli_plan"},
+            run_profile=profile,
         ),
         settings,
         ctx=ctx,

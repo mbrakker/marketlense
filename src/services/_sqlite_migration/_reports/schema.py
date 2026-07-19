@@ -705,3 +705,39 @@ CREATE TABLE IF NOT EXISTS signal_candidate_groups (
   updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
 );
 """
+
+_CORPUS_REHABILITATION_CAMPAIGNS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS corpus_rehabilitation_campaigns (
+  campaign_id TEXT PRIMARY KEY,
+  plan_hash TEXT NOT NULL UNIQUE,
+  approval_hash TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL CHECK(status IN ('planned','approved','submitted','completed','held')),
+  batch_size INTEGER NOT NULL,
+  planned_provider_calls INTEGER NOT NULL DEFAULT 0,
+  actual_provider_calls INTEGER NOT NULL DEFAULT 0,
+  planned_cost_usd REAL,
+  actual_cost_usd REAL,
+  created_at_utc TEXT NOT NULL,
+  approved_at_utc TEXT NOT NULL DEFAULT '',
+  submitted_at_utc TEXT NOT NULL DEFAULT '',
+  created_by TEXT NOT NULL
+);
+"""
+
+_CORPUS_REHABILITATION_CAMPAIGN_ITEMS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS corpus_rehabilitation_campaign_items (
+  campaign_id TEXT NOT NULL REFERENCES corpus_rehabilitation_campaigns(campaign_id),
+  report_id TEXT NOT NULL,
+  classification TEXT NOT NULL,
+  disposition TEXT NOT NULL,
+  source_checksum TEXT NOT NULL,
+  retained_reference TEXT NOT NULL,
+  reusable_artifact_ids_json TEXT NOT NULL,
+  status TEXT NOT NULL CHECK(status IN ('ready_for_approval','queued','completed','operator_held')),
+  reason TEXT NOT NULL,
+  queue_job_id TEXT NOT NULL DEFAULT '',
+  actual_provider_calls INTEGER NOT NULL DEFAULT 0,
+  actual_cost_usd REAL,
+  PRIMARY KEY(campaign_id, report_id)
+);
+"""

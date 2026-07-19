@@ -13,6 +13,7 @@ import pytest
 
 from src.contracts.costs import CostLedgerAppendRequest, CostLedgerEntry
 from src.contracts.llm_usage import (
+    LLMPolicyEffectivenessRequest,
     LLMUsageExportRebuildRequest,
     LLMUsageLedgerAppendRequest,
     LLMUsageLedgerEntry,
@@ -124,6 +125,62 @@ def test_llm_usage_ledger_appends_sqlite_row(
         "llm_usage_ledger_append_complete",
     ]
     assert_logs_have_required_fields(records)
+
+
+def test_policy_effectiveness_is_deterministic_and_read_only(tmp_path: Path) -> None:
+    db_path = tmp_path / "usage.sqlite"
+    first = replace(
+        _entry(),
+        metadata={"execution_identity": "identity-a", "provider_latency_ms": 20},
+        workflow="report_generation",
+        plan_hash="regeneration-a",
+        schema_validation_status="valid",
+        cache_decision="provider_hit",
+    )
+    second = replace(
+        first,
+        request_id="resp_2",
+        call_ordinal=1,
+        input_tokens=20,
+        metadata={"execution_identity": "identity-a", "provider_latency_ms": 40},
+    )
+    for entry in (first, second):
+        svc.append_usage(
+            LLMUsageLedgerAppendRequest(
+                schema_version="1.0", db_path=str(db_path), entry=entry
+            ),
+            _ctx(),
+        )
+
+    before = db_path.stat().st_mtime_ns
+    response = svc.read_policy_effectiveness(
+        LLMPolicyEffectivenessRequest(schema_version="1.0", db_path=str(db_path)),
+        _ctx(),
+    )
+
+    assert db_path.stat().st_mtime_ns == before
+    assert response.unattributed_legacy_call_count == 0
+    assert len(response.rows) == 1
+    row = response.rows[0]
+    assert row.execution_identity == "identity-a"
+    assert row.call_count == 2
+    assert row.validation_rate == 1.0
+    assert row.cache_reuse_rate == 1.0
+    assert row.average_latency_ms == 30.0
+    assert row.input_tokens == 30
+    assert row.regeneration_count == 1
+
+
+def test_policy_effectiveness_zero_provider_calls_has_no_side_effect(tmp_path: Path) -> None:
+    missing_path = tmp_path / "missing.sqlite"
+
+    response = svc.read_policy_effectiveness(
+        LLMPolicyEffectivenessRequest(schema_version="1.0", db_path=str(missing_path)),
+        _ctx(),
+    )
+
+    assert response.rows == []
+    assert not missing_path.exists()
 
 
 def test_usage_attribution_dimensions_project_from_canonical_events(

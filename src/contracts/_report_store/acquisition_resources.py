@@ -239,3 +239,100 @@ class AcquisitionRouteSuppressionResponse:
     expires_at_utc: str = field(
         default="", metadata={"doc": "Active decision expiry, if any."}
     )
+
+
+@dataclass(frozen=True)
+class AcquisitionRouteEconomicsRequest:
+    """Read-only route comparison controls with operator-review thresholds."""
+
+    schema_version: str = field(
+        metadata={"doc": "Route-economics request schema version."}
+    )
+    db_path: str = field(metadata={"doc": "Reports SQLite database path."})
+    minimum_sample_size: int = field(
+        default=3,
+        metadata={"doc": "Minimum complete compatible attempts per route."},
+    )
+    minimum_success_rate_improvement: float = field(
+        default=0.1,
+        metadata={"doc": "Minimum verified-success rate increase for a proposal."},
+    )
+    minimum_cost_reduction_fraction: float = field(
+        default=0.1,
+        metadata={"doc": "Minimum cost reduction fraction for a proposal."},
+    )
+
+
+@dataclass(frozen=True)
+class AcquisitionRouteEconomicsCohort:
+    schema_version: str = field(metadata={"doc": "Route cohort schema version."})
+    publisher_id: str = field(metadata={"doc": "Publisher cohort identifier."})
+    route_policy_hash: str = field(
+        metadata={"doc": "Compatible route-policy hash."}
+    )
+    route_family: str = field(metadata={"doc": "Route family within the cohort."})
+    sample_size: int = field(metadata={"doc": "All retained attempts in the cohort."})
+    complete_sample_size: int = field(
+        metadata={"doc": "Attempts with complete resource envelopes."}
+    )
+    verified_success_rate: float = field(
+        metadata={"doc": "Verified successes divided by complete attempts."}
+    )
+    median_elapsed_ms: int | None = field(
+        metadata={"doc": "Nearest-rank p50 duration for complete attempts."}
+    )
+    p95_elapsed_ms: int | None = field(
+        metadata={"doc": "Nearest-rank p95 duration for complete attempts."}
+    )
+    estimated_cost_usd: float | None = field(
+        metadata={"doc": "Known cost total; absent for incomplete envelopes."}
+    )
+    browser_launches: int = field(metadata={"doc": "Observed browser launches."})
+    browser_model_calls: int = field(
+        metadata={"doc": "Observed browser-model calls."}
+    )
+    avoided_operation_count: int = field(
+        metadata={"doc": "Recorded avoided operations."}
+    )
+
+
+@dataclass(frozen=True)
+class AcquisitionRouteEconomicsRecommendation:
+    schema_version: str = field(
+        metadata={"doc": "Route recommendation schema version."}
+    )
+    publisher_id: str = field(metadata={"doc": "Publisher cohort identifier."})
+    route_policy_hash: str = field(
+        metadata={"doc": "Compatible route-policy hash."}
+    )
+    disposition: str = field(
+        metadata={"doc": "proposal or explicit no_recommendation disposition."}
+    )
+    baseline_route_family: str = field(
+        default="", metadata={"doc": "Current direct-first baseline route."}
+    )
+    candidate_route_family: str = field(
+        default="", metadata={"doc": "Route that met material-evidence thresholds."}
+    )
+    proposal: str = field(
+        default="", metadata={"doc": "Operator-reviewable configuration proposal only."}
+    )
+    reasons: tuple[str, ...] = field(
+        default_factory=tuple,
+        metadata={"doc": "Bounded deterministic evidence reasons."},
+    )
+
+
+@dataclass(frozen=True)
+class AcquisitionRouteEconomicsResponse:
+    schema_version: str = field(
+        metadata={"doc": "Route-economics response schema version."}
+    )
+    cohorts: list[AcquisitionRouteEconomicsCohort] = field(
+        default_factory=list,
+        metadata={"doc": "Deterministically ordered route cohorts."},
+    )
+    recommendations: list[AcquisitionRouteEconomicsRecommendation] = field(
+        default_factory=list,
+        metadata={"doc": "Deterministically ordered proposals or abstentions."},
+    )

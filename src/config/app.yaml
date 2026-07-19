@@ -39,6 +39,8 @@ ingest:
   batch_limit: 20
   worker_limit: 2
   report_worker_limit: 2
+  source_quarantine:
+    enabled: true
   run_budget:
     max_pdfs: 20
     max_retries: 40
@@ -154,6 +156,93 @@ llm_routing:
 # routing maps remain read-compatible while unmigrated non-report namespaces
 # use the explicit compatibility adapter in the resolver.
 llm_execution_policies:
+  # Every active provider-backed prompt namespace resolves through this map by
+  # exact match or the approved longest prefix. Provider retries remain zero;
+  # workflow retries stay at the owning orchestrator.
+  browser_report_download/browser_route:
+    schema_version: "1.0"
+    provider: openai
+    model: "gpt-5-mini"
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 2048
+    retrieval_mode: chat_json
+    timeout_seconds: 180
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    structured_output_schema_identity: "browser_route.v1"
+    fallback_policy: same_provider_only
+    pricing_key: "gpt-5-mini"
+  crop_qa_escalation/publication_strict:
+    schema_version: "1.0"
+    provider: openai
+    model: "gpt-5-mini"
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 1024
+    retrieval_mode: chat_json
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    structured_output_schema_identity: "crop_qa_escalation.v1"
+    fallback_policy: same_provider_only
+    pricing_key: "gpt-5-mini"
+  cross_report_analysis/synthesis:
+    schema_version: "1.0"
+    provider: openai
+    model: "gpt-5-mini"
+    temperature: 0.2
+    seed_policy: inherit
+    max_output_tokens: 4096
+    retrieval_mode: chat_json
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    structured_output_schema_identity: "cross_report_analysis.v1"
+    fallback_policy: same_provider_only
+    pricing_key: "gpt-5-mini"
+  pdf_text/ocr_fallback:
+    schema_version: "1.0"
+    provider: openai
+    model: "gpt-5-mini"
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 16000
+    retrieval_mode: chat_json
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    structured_output_schema_identity: "pdf_text_ocr.v1"
+    fallback_policy: same_provider_only
+    pricing_key: "gpt-5-mini"
+  publisher_inventory/discovery:
+    schema_version: "1.0"
+    provider: openai
+    model: "gpt-5-mini"
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 4096
+    retrieval_mode: chat_json
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    structured_output_schema_identity: "publisher_inventory_discovery.v1"
+    fallback_policy: same_provider_only
+    pricing_key: "gpt-5-mini"
+  publisher_inventory/meaningful_candidate_screen:
+    schema_version: "1.0"
+    provider: openai
+    model: "gpt-5-mini"
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 2048
+    retrieval_mode: chat_json
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    structured_output_schema_identity: "publisher_inventory_candidate_screen.v1"
+    fallback_policy: same_provider_only
+    pricing_key: "gpt-5-mini"
   report_vs:
     schema_version: "1.0"
     provider: openai
@@ -193,6 +282,34 @@ llm_execution_policies:
     structured_output_mode: json_object
     fallback_policy: same_provider_only
     pricing_key: "gpt-5-mini"
+  report_vs/context_category_fit:
+    schema_version: "1.0"
+    provider: openai
+    model: "gpt-5-mini"
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 2048
+    retrieval_mode: file_search
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    structured_output_schema_identity: "context_category_fit.v1"
+    fallback_policy: same_provider_only
+    pricing_key: "gpt-5-mini"
+  report_vs/figure_caption:
+    schema_version: "1.0"
+    provider: openai
+    model: "gpt-5-mini"
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 1024
+    retrieval_mode: chat_json
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    structured_output_schema_identity: "figure_caption.v1"
+    fallback_policy: same_provider_only
+    pricing_key: "gpt-5-mini"
   rank_candidates:
     schema_version: "1.0"
     provider: openai
@@ -206,6 +323,66 @@ llm_execution_policies:
     structured_output_mode: json_object
     fallback_policy: same_provider_only
     pricing_key: "gpt-5-mini"
+  rank_candidates/crop_refine:
+    schema_version: "1.0"
+    provider: openai
+    model: "gpt-5-mini"
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 1024
+    retrieval_mode: chat_json
+    timeout_seconds: 7200
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    structured_output_schema_identity: "crop_refine.v1"
+    fallback_policy: same_provider_only
+    pricing_key: "gpt-5-mini"
+  # Reserved explicit production execution identities for current generic
+  # generation actions. They do not alter routing and are retained so a new
+  # caller cannot silently inherit compatibility controls.
+  signal_generation/synthesis:
+    schema_version: "1.0"
+    provider: openai
+    model: "gpt-5-mini"
+    temperature: 0.2
+    seed_policy: inherit
+    max_output_tokens: 4096
+    retrieval_mode: chat_json
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    structured_output_schema_identity: "signal_generation.v1"
+    fallback_policy: same_provider_only
+    pricing_key: "gpt-5-mini"
+  briefing_generation/synthesis:
+    schema_version: "1.0"
+    provider: openai
+    model: "gpt-5-mini"
+    temperature: 0.2
+    seed_policy: inherit
+    max_output_tokens: 4096
+    retrieval_mode: chat_json
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    structured_output_schema_identity: "briefing_generation.v1"
+    fallback_policy: same_provider_only
+    pricing_key: "gpt-5-mini"
+  claim_embedding/generate:
+    schema_version: "1.0"
+    provider: openai
+    model: "text-embedding-3-small"
+    temperature: 0.0
+    seed_policy: disabled
+    max_output_tokens: 1
+    retrieval_mode: inherit
+    timeout_seconds: 120
+    provider_retry_count: 0
+    structured_output_mode: embedding
+    structured_output_schema_identity: "claim_embedding.vector.v1"
+    output_validator_identity: "claim_embedding.vector_dimensions.validator.v1"
+    fallback_policy: disabled
+    pricing_key: "text-embedding-3-small"
 
 rank:
   model: "gpt-5-mini"
@@ -463,6 +640,70 @@ workflow_queues:
 
 workflow_control:
   schema_version: "1.0"
+  # Typed operational profiles compose the existing queue budgets, preflight
+  # contracts and model-policy tiers. They never enable a reaper or bypass
+  # validation/publication approval.
+  run_profiles:
+    safe_default:
+      intended_outcome: "conservative cached-first execution"
+      compatible_workflows: []
+      cached_artifact_preference: "prefer"
+      browser_allowance: "explicit_required"
+      ocr_fallback_policy: "when_required"
+      model_quality_tier: "default"
+      regeneration_scope: "affected_only"
+    fast_cached:
+      intended_outcome: "planner-safe cache-first execution"
+      compatible_workflows: ["report_generation", "cross_report_analysis"]
+      budget_profile_refs: ["report_ingest"]
+      minimum_regeneration_mode: "require_planner_safe"
+      cached_artifact_preference: "require"
+      browser_allowance: "restricted"
+      ocr_fallback_policy: "restricted"
+      regeneration_scope: "minimum"
+    repair_failed:
+      intended_outcome: "bounded failed-work repair"
+      compatible_workflows: ["report_generation", "report_download", "publisher_inventory"]
+      budget_profile_refs: ["report_ingest"]
+      minimum_regeneration_mode: "affected_only"
+      cached_artifact_preference: "require"
+      requires_bounded_target: true
+      regeneration_scope: "affected_only"
+    publish_ready:
+      intended_outcome: "publication readiness with human approval"
+      compatible_workflows: ["publishing", "wordpress_sync"]
+      budget_profile_refs: ["publishing"]
+      minimum_regeneration_mode: "readiness_only"
+      cached_artifact_preference: "require"
+      browser_allowance: "restricted"
+      ocr_fallback_policy: "restricted"
+      publication_readiness_mode: "readiness_only"
+      regeneration_scope: "readiness_only"
+      human_publication_approval_required: true
+    browser_acquisition:
+      intended_outcome: "governed direct-first acquisition"
+      compatible_workflows: ["report_download", "browser_acquisition", "publisher_inventory"]
+      budget_profile_refs: ["browser_acquisition"]
+      cached_artifact_preference: "prefer"
+      browser_allowance: "allowed"
+      ocr_fallback_policy: "restricted"
+      concurrency_resource: "browser"
+    cost_saver:
+      intended_outcome: "restrictive cache-first cost control"
+      compatible_workflows: []
+      minimum_regeneration_mode: "require_planner_safe"
+      cached_artifact_preference: "require"
+      browser_allowance: "restricted"
+      ocr_fallback_policy: "restricted"
+      regeneration_scope: "minimum"
+    high_quality:
+      intended_outcome: "approved high-quality generation and validation"
+      compatible_workflows: ["report_generation", "cross_report_analysis"]
+      budget_profile_refs: ["high_quality", "cross_report_analysis"]
+      cached_artifact_preference: "prefer"
+      model_quality_tier: "high_quality"
+      ocr_fallback_policy: "when_required"
+      regeneration_scope: "affected_only"
   supervisor:
     schema_version: "1.0"
     # Enable only after read-only queue health and recovery evidence are reviewed.

@@ -2,7 +2,32 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from scripts.ci.check_backlog_source import validate_backlog_sources
+from scripts.ci.check_backlog_source import (
+    validate_backlog_sources,
+    validate_canonical_backlog,
+)
+
+
+def _canonical_backlog(*, register: str, details: str, recent: str = "") -> str:
+    return "\n".join(
+        (
+            "# Consolidated TODO",
+            "",
+            "## Unified Work Register",
+            "",
+            "| Status | ID | Work item | Current outcome / merge target |",
+            "| --- | --- | --- | --- |",
+            register,
+            "",
+            "## Active Backlog",
+            "",
+            details,
+            "",
+            "## Recently Closed",
+            "",
+            recent,
+        )
+    )
 
 
 def test_backlog_source_gate_accepts_current_repository() -> None:
@@ -81,6 +106,106 @@ def test_backlog_source_gate_ignores_intake_and_execution_plan_documents(
             "docs/superpowers/plans/implementation.md",
         ),
         root=tmp_path,
+    )
+
+    assert violations == ()
+
+
+def test_canonical_backlog_accepts_matching_active_register_and_detail() -> None:
+    summary, violations = validate_canonical_backlog(
+        _canonical_backlog(
+            register="| Active | A10 | Budget deferred recovery | bounded outcome |",
+            details=(
+                "#### A10. Budget deferred recovery\n\n"
+                "- **Title:** Budget deferred recovery"
+            ),
+        )
+    )
+
+    assert summary.active_register_items == 1
+    assert summary.detailed_active_sections == 1
+    assert violations == ()
+
+
+def test_canonical_backlog_reports_missing_detail_section() -> None:
+    _, violations = validate_canonical_backlog(
+        _canonical_backlog(
+            register="| Active | A10 | Budget deferred recovery | bounded outcome |",
+            details="",
+        )
+    )
+
+    assert [item.reason for item in violations] == [
+        "active unified-register ID missing detailed section: A10"
+    ]
+
+
+def test_canonical_backlog_reports_orphan_detail_and_duplicate_ids() -> None:
+    _, violations = validate_canonical_backlog(
+        _canonical_backlog(
+            register=(
+                "| Active | A10 | Budget deferred recovery | bounded outcome |\n"
+                "| Active | A10 | Budget deferred recovery | bounded outcome |"
+            ),
+            details=(
+                "#### A10. Budget deferred recovery\n\n"
+                "- **Title:** Budget deferred recovery\n\n"
+                "#### A11. Other recovery\n\n"
+                "- **Title:** Other recovery\n\n"
+                "#### A11. Other recovery\n\n"
+                "- **Title:** Other recovery"
+            ),
+        )
+    )
+
+    assert [item.reason for item in violations] == [
+        "detailed active ID missing unified-register row: A11",
+        "duplicate active unified-register ID: A10",
+        "duplicate detailed active ID: A11",
+    ]
+
+
+def test_canonical_backlog_rejects_title_drift_and_shared_title() -> None:
+    _, violations = validate_canonical_backlog(
+        _canonical_backlog(
+            register=(
+                "| Active | A10 | Budget deferred recovery! | bounded outcome |\n"
+                "| Active | A11 | Budget deferred recovery | bounded outcome |"
+            ),
+            details=(
+                "#### A10. Different title\n\n"
+                "- **Title:** Different title\n\n"
+                "#### A11. Budget deferred recovery\n\n"
+                "- **Title:** Budget deferred recovery"
+            ),
+        )
+    )
+
+    assert [item.reason for item in violations] == [
+        (
+            "active title mismatch for A10: register='Budget deferred recovery!', "
+            "detail='Different title'"
+        ),
+        (
+            "same normalized active title under multiple IDs: "
+            "'budget deferred recovery' (A10, A11)"
+        ),
+    ]
+
+
+def test_canonical_backlog_ignores_closed_and_historical_identifiers() -> None:
+    _, violations = validate_canonical_backlog(
+        _canonical_backlog(
+            register=(
+                "| Active | A10 | Budget deferred recovery | bounded outcome |\n"
+                "| Closed | A13 | Former recovery title | historical outcome |"
+            ),
+            details=(
+                "#### A10. Budget deferred recovery\n\n"
+                "- **Title:** Budget deferred recovery"
+            ),
+            recent="- **A13 — Former recovery title:** historical evidence.",
+        )
     )
 
     assert violations == ()

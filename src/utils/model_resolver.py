@@ -32,6 +32,58 @@ REPORT_GENERATION_NAMESPACES: tuple[str, ...] = (
     "report_vs/taxonomy",
 )
 
+# This is the finite production prompt/provider inventory. It is intentionally
+# separate from the policy map: policies may govern a family by approved prefix,
+# while a new namespace must still be deliberately added here before it can
+# reach provider preparation. Generic provider operations that do not load a
+# prompt use their own explicit action namespace at the owning service boundary.
+PRODUCTION_LLM_NAMESPACES: tuple[str, ...] = (
+    "browser_report_download/browser_route",
+    "browser_report_download/browser_route/browser_email_form",
+    "browser_report_download/browser_route/browser_listing_hub",
+    "browser_report_download/browser_route/browser_onsite_report",
+    "browser_report_download/browser_route/browser_pdf_click",
+    "browser_report_download/browser_route/browser_tracker_redirect",
+    "claim_embedding/generate",
+    "crop_qa_escalation/publication_strict",
+    "cross_report_analysis/synthesis",
+    "pdf_text/ocr_fallback",
+    "publisher_inventory/discovery",
+    "publisher_inventory/meaningful_candidate_screen",
+    "rank_candidates",
+    "rank_candidates/crop_refine",
+    "report_vs/artifacts/cover_semantics",
+    "report_vs/artifacts/expert_comment",
+    "report_vs/artifacts/insights_candidates",
+    "report_vs/artifacts/insights_final",
+    "report_vs/artifacts/linkedin_post",
+    "report_vs/artifacts/quotes",
+    "report_vs/artifacts/regenerate/expert_comment",
+    "report_vs/artifacts/regenerate/insights_candidates",
+    "report_vs/artifacts/regenerate/insights_final",
+    "report_vs/artifacts/regenerate/linkedin_post",
+    "report_vs/artifacts/regenerate/quotes",
+    "report_vs/artifacts/regenerate/summary",
+    "report_vs/artifacts/summary",
+    "report_vs/context_category_fit",
+    "report_vs/doc_map",
+    "report_vs/evidence_packs/contradictions",
+    "report_vs/evidence_packs/findings",
+    "report_vs/evidence_packs/key_metrics",
+    "report_vs/evidence_packs/limitations",
+    "report_vs/evidence_packs/methods",
+    "report_vs/evidence_packs/quote_candidates",
+    "report_vs/evidence_packs/recommendations",
+    "report_vs/evidence_packs/risk_register",
+    "report_vs/evidence_packs/scope",
+    "report_vs/figure_caption",
+    "report_vs/taxonomy",
+    "report_vs/validate/grounding",
+    "report_vs/validate/semantic",
+    "signal_generation/synthesis",
+    "briefing_generation/synthesis",
+)
+
 
 def _normalize_namespace(namespace: str) -> str:
     if not isinstance(namespace, str):
@@ -44,6 +96,12 @@ def registered_report_generation_namespaces() -> tuple[str, ...]:
     """Return the finite prompt namespaces used by report-generation workflows."""
 
     return REPORT_GENERATION_NAMESPACES
+
+
+def registered_production_llm_namespaces() -> tuple[str, ...]:
+    """Return the deterministic inventory of production prompt namespaces."""
+
+    return PRODUCTION_LLM_NAMESPACES
 
 
 def _stable_policy_hash(policy: LLMExecutionPolicy) -> str:
@@ -93,7 +151,9 @@ def _policy_from_mapping(
     if fallback not in {"same_provider_only", "disabled"}:
         raise AppError(
             code="llm_execution_policy_fallback_invalid",
-            message="LLM execution policy fallback must be same_provider_only or disabled",
+            message=(
+                "LLM execution policy fallback must be same_provider_only or disabled"
+            ),
             retryable=False,
             context={"namespace": namespace_prefix},
         )
@@ -163,6 +223,9 @@ def _policy_from_mapping(
         structured_output_schema_identity=str(
             raw.get("structured_output_schema_identity") or ""
         ).strip(),
+        output_validator_identity=str(
+            raw.get("output_validator_identity") or ""
+        ).strip(),
         retrieval_mode=retrieval_mode,
         timeout_seconds=float(timeout) if timeout is not None else None,
         provider_retry_count=retries,
@@ -207,7 +270,7 @@ def execution_policies_from_config(
         if not key or not isinstance(raw_value, dict):
             raise AppError(
                 code="llm_execution_policy_invalid",
-                message="Execution policy entries require a namespace and mapping value",
+            message="Execution policy entries require a namespace and mapping value",
                 retryable=False,
                 context={"namespace": str(raw_key)},
             )
@@ -265,10 +328,10 @@ def resolve_execution_policy(
     """Resolve an execution policy by exact then longest-specific prefix."""
 
     base = _normalize_namespace(namespace)
-    if require_registered_namespace and base not in REPORT_GENERATION_NAMESPACES:
+    if require_registered_namespace and base not in PRODUCTION_LLM_NAMESPACES:
         raise AppError(
             code="llm_execution_policy_unknown_namespace",
-            message="No registered report-generation namespace matches this policy request",
+            message="No registered production namespace matches this policy request",
             retryable=False,
             context={"namespace": base},
         )
@@ -283,6 +346,13 @@ def resolve_execution_policy(
                 policy=policy,
                 policy_hash=_stable_policy_hash(policy),
             )
+    if require_registered_namespace:
+        raise AppError(
+            code="llm_execution_policy_unknown_namespace",
+            message="Registered production namespace lacks an execution policy",
+            retryable=False,
+            context={"namespace": base},
+        )
     compatibility_policy = LLMExecutionPolicy(
         schema_version="1.0",
         namespace_prefix="compatibility_default",
@@ -310,7 +380,7 @@ def resolve_model(namespace: str, overrides: Dict[str, str], default_model: str)
 
     Examples:
     - namespace: "report_vs/validate/grounding"
-    - overrides keys allowed: "report_vs/validate/grounding", "report_vs/validate", "report_vs"
+    - overrides keys allowed: a matching namespace or any ancestor prefix
     """
     base = _normalize_namespace(namespace)
     if not base:

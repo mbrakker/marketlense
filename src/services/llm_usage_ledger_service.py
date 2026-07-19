@@ -42,6 +42,9 @@ from src.contracts.llm_usage import (
     LLMUsageLedgerReconciliationResponse,
     LLMUsageMedianRebuildRequest,
     LLMUsageMedianRebuildResponse,
+    LLMPolicyEffectivenessRequest,
+    LLMPolicyEffectivenessResponse,
+    LLMPolicyEffectivenessRow,
     LLMUsageProjectionStatusRequest,
     LLMUsageProjectionStatusResponse,
     LLMUsageRunSummaryRequest,
@@ -817,6 +820,138 @@ def read_usage_run_summary(
                 "cached_input_tokens": response.cached_input_tokens,
                 "output_tokens": response.output_tokens,
                 "estimated_cost_usd": response.estimated_cost_usd,
+            },
+        )
+    )
+    return response
+
+
+def read_policy_effectiveness(
+    request: LLMPolicyEffectivenessRequest,
+    ctx: RunContext,
+) -> LLMPolicyEffectivenessResponse:
+    """Return deterministic, read-only execution-identity effectiveness evidence."""
+
+    if request.schema_version != "1.0" or not str(request.db_path or "").strip():
+        raise AppError(
+            code="llm_policy_effectiveness_request_invalid",
+            message="Policy effectiveness requires a supported schema version and usage DB path",
+            retryable=False,
+        )
+    path = Path(request.db_path)
+    if not path.exists():
+        return LLMPolicyEffectivenessResponse(schema_version="1.0")
+    try:
+        with sqlite3.connect(f"file:{path.resolve().as_posix()}?mode=ro", uri=True) as conn:
+            table = conn.execute(
+                "select 1 from sqlite_master where type = 'table' and name = 'llm_usage_events'"
+            ).fetchone()
+            raw_rows = (
+                list(
+                    conn.execute(
+                        """
+                        select provider, model, prompt_namespace, input_tokens,
+                               cached_input_tokens, output_tokens, estimated_cost_usd,
+                               cache_decision, schema_validation_status, workflow,
+                               plan_hash, metadata_json
+                        from llm_usage_events
+                        order by provider, model, prompt_namespace, id
+                        """
+                    )
+                )
+                if table is not None
+                else []
+            )
+    except sqlite3.Error as exc:
+        raise AppError(
+            code="llm_policy_effectiveness_read_failed",
+            message="Policy effectiveness report could not read the canonical usage ledger",
+            cause=exc,
+            retryable=False,
+            context={"db_path": str(path)},
+        ) from exc
+
+    aggregates: dict[tuple[str, str, str, str], dict[str, object]] = {}
+    unattributed = 0
+    for row in raw_rows:
+        metadata = _safe_metadata(str(row[11] or ""))
+        identity = str(metadata.get("execution_identity") or "").strip()
+        if not identity:
+            identity = "legacy_unattributed"
+            unattributed += 1
+        namespace = str(row[2] or "").strip() or "legacy_unattributed"
+        key = (identity, namespace, str(row[0] or ""), str(row[1] or ""))
+        aggregate = aggregates.setdefault(
+            key,
+            {
+                "calls": 0,
+                "validated": 0,
+                "cache_reuse": 0,
+                "latencies": [],
+                "input_tokens": 0,
+                "cached_input_tokens": 0,
+                "output_tokens": 0,
+                "estimated_cost_usd": 0.0,
+                "regeneration_plans": set(),
+            },
+        )
+        aggregate["calls"] = int(aggregate["calls"]) + 1
+        aggregate["validated"] = int(aggregate["validated"]) + int(
+            str(row[8] or "") == "valid"
+        )
+        aggregate["cache_reuse"] = int(aggregate["cache_reuse"]) + int(
+            str(row[7] or "") in {"provider_hit", "semantic_hit", "hit"}
+        )
+        latency_value = metadata.get("provider_latency_ms")
+        if isinstance(latency_value, (int, float)) and latency_value >= 0:
+            cast(list[float], aggregate["latencies"]).append(float(latency_value))
+        aggregate["input_tokens"] = int(aggregate["input_tokens"]) + int(row[3] or 0)
+        aggregate["cached_input_tokens"] = int(aggregate["cached_input_tokens"]) + int(row[4] or 0)
+        aggregate["output_tokens"] = int(aggregate["output_tokens"]) + int(row[5] or 0)
+        aggregate["estimated_cost_usd"] = float(aggregate["estimated_cost_usd"]) + float(row[6] or 0.0)
+        if str(row[9] or "") == "report_generation" and str(row[10] or ""):
+            cast(set[str], aggregate["regeneration_plans"]).add(str(row[10]))
+
+    rows: list[LLMPolicyEffectivenessRow] = []
+    for (identity, namespace, provider, model), aggregate in sorted(aggregates.items()):
+        calls = int(aggregate["calls"])
+        latencies = cast(list[float], aggregate["latencies"])
+        rows.append(
+            LLMPolicyEffectivenessRow(
+                schema_version="1.0",
+                execution_identity=identity,
+                prompt_namespace=namespace,
+                provider=provider,
+                model=model,
+                call_count=calls,
+                validated_call_count=int(aggregate["validated"]),
+                validation_rate=round(int(aggregate["validated"]) / calls, 6) if calls else 0.0,
+                cache_reuse_count=int(aggregate["cache_reuse"]),
+                cache_reuse_rate=round(int(aggregate["cache_reuse"]) / calls, 6) if calls else 0.0,
+                latency_record_count=len(latencies),
+                average_latency_ms=(round(sum(latencies) / len(latencies), 3) if latencies else None),
+                input_tokens=int(aggregate["input_tokens"]),
+                cached_input_tokens=int(aggregate["cached_input_tokens"]),
+                output_tokens=int(aggregate["output_tokens"]),
+                estimated_cost_usd=round(float(aggregate["estimated_cost_usd"]), 6),
+                regeneration_count=len(cast(set[str], aggregate["regeneration_plans"])),
+            )
+        )
+    response = LLMPolicyEffectivenessResponse(
+        schema_version="1.0",
+        rows=rows,
+        unattributed_legacy_call_count=unattributed,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="llm_policy_effectiveness_complete",
+            module=logger.name,
+            fields={
+                "row_count": len(rows),
+                "unattributed_legacy_call_count": unattributed,
+                "provider_calls": len(raw_rows),
             },
         )
     )

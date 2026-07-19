@@ -81,7 +81,7 @@ from src.services.file_service import delete_file, file_exists, file_stat, read_
 from src.services.llm_usage_ledger_service import (
     finalize_usage_projection,
 )
-from src.services.pdf_service import check_pdf_eof
+from src.services.pdf_service import check_pdf_eof, check_pdf_integrity
 from src.services.report_store_service import (
     get_metadata as get_report_metadata,
 )
@@ -95,6 +95,10 @@ from src.services.state_service import (
     set_ingest_cursor,
 )
 from src.services.state_service import record as state_record
+from src.services.state_service import (
+    get_source_quarantine,
+    upsert_source_quarantine,
+)
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.path_utils import safe_pdf_name
@@ -433,6 +437,10 @@ def _process_file(
         state_record=state_record,
         eof_retry_limit=EOF_RETRY_LIMIT,
         bypass_existing_report_html=force_report_cards,
+        check_pdf_integrity=check_pdf_integrity,
+        get_source_quarantine=get_source_quarantine,
+        upsert_source_quarantine=upsert_source_quarantine,
+        quarantine_enabled=settings.source_quarantine_enabled,
     )
     return run_ingest_file(
         file=file,

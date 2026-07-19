@@ -580,6 +580,36 @@ def _state_db_013_create_supervisor_lease(conn: sqlite3.Connection) -> None:
     )
 
 
+def _state_db_014_create_source_quarantine(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS source_quarantine_records (
+          source_file_id TEXT NOT NULL,
+          content_checksum TEXT NOT NULL,
+          validator_version TEXT NOT NULL,
+          schema_version TEXT NOT NULL,
+          status TEXT NOT NULL,
+          size_bytes INTEGER NOT NULL,
+          failure_code TEXT NOT NULL,
+          next_operator_action TEXT NOT NULL,
+          first_observed_at_utc TEXT NOT NULL,
+          latest_observed_at_utc TEXT NOT NULL,
+          failed_validation_count INTEGER NOT NULL DEFAULT 1,
+          replacement_checksum TEXT NOT NULL DEFAULT '',
+          cleared_at_utc TEXT NOT NULL DEFAULT '',
+          PRIMARY KEY(source_file_id, content_checksum, validator_version),
+          CHECK(status IN ('active', 'cleared', 'superseded'))
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_source_quarantine_active_lookup
+        ON source_quarantine_records(source_file_id, content_checksum, status)
+        """
+    )
+
+
 _STATE_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
     _MigrationSpec(
         migration_id="state_db_001_create_base_tables",
@@ -645,5 +675,10 @@ _STATE_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
         migration_id="state_db_013_create_supervisor_lease",
         version=13,
         apply_fn=_state_db_013_create_supervisor_lease,
+    ),
+    _MigrationSpec(
+        migration_id="state_db_014_create_source_quarantine",
+        version=14,
+        apply_fn=_state_db_014_create_source_quarantine,
     ),
 )

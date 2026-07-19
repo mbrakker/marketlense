@@ -29,6 +29,8 @@ from ._sqlite_migration.reports import (
     _ARTIFACT_LINEAGE_RECORDS_TABLE_SQL,
     _ARTIFACT_LINEAGE_STATES_TABLE_SQL,
     _CLAIM_EMBEDDINGS_TABLE_SQL,
+    _CORPUS_REHABILITATION_CAMPAIGNS_TABLE_SQL,
+    _CORPUS_REHABILITATION_CAMPAIGN_ITEMS_TABLE_SQL,
     _DOWNLOAD_ROUTE_HISTORY_TABLE_SQL,
     _INVENTORY_RECOVERY_CACHE_TABLE_SQL,
     _INVENTORY_ROUTE_HISTORY_TABLE_SQL,
@@ -72,6 +74,7 @@ from ._sqlite_migration.reports import (
     _reports_db_020_expand_execution_plan_audit,
     _reports_db_021_create_acquisition_resource_telemetry,
     _reports_db_022_add_execution_plan_prompt_family_reconciliation,
+    _reports_db_023_create_corpus_rehabilitation_campaigns,
 )
 from ._sqlite_migration.state import (
     _STATE_ARTIFACT_ACQUISITION_CACHE_TABLE_SQL,
@@ -97,6 +100,7 @@ from ._sqlite_migration.state import (
     _state_db_011_create_workflow_queue,
     _state_db_012_create_queue_publication_and_briefing_state,
     _state_db_013_create_supervisor_lease,
+    _state_db_014_create_source_quarantine,
 )
 from ._sqlite_migration.ui_runs import (
     _UI_RUN_DEAD_LETTER_ACTIONS_TABLE_SQL,

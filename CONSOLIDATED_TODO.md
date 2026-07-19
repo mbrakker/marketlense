@@ -26,38 +26,41 @@ All work is listed below in one register. `Active` items have detailed completio
 | Status | ID | Work item | Current outcome / merge target |
 | --- | --- | --- | --- |
 | Closed | A1 | Single autonomous supervisor, read-only `PipelinePlan`, and mandatory workflow-control authority | Plan authorization is enforced by CLI/UI control payloads; retained plan run and full regression passed. |
-| Active | A2 | `fast_ingest` and other config-driven autopilot profiles | One typed profile outcome. |
+| Closed | A2 | Configured run profiles | Seven typed profiles now resolve identically in plan, CLI, and UI payloads. |
 | Closed | A3 | Workflow-wide remediation-ledger rollout | The 31-workflow coverage matrix, fail-closed bounded reaper, read-only soak, and strict retained evidence bundle passed. |
-| Active | A4 | Malformed-Drive-PDF quarantine | Standalone bounded source-recovery outcome. |
+| Closed | A4 | Quarantine irreparably malformed Drive PDFs | Deterministic structural validation, durable quarantine, and retained-file revalidation are active. |
 | Closed | A6 | Budget-manager closeout and operational proof | Live Drive, OpenAI vector-store, and LLM calls recorded actual use; next governed calls were stopped before provider I/O and strict evidence passed. |
 | Closed | A5 | Business-email, CAPTCHA, anti-bot, terminal-evidence, and avoided-browser-spend route policy | TTL-bound route policy now avoids browser/mailbox work for retained hard blockers and allows explicit revalidation. |
 | Active | A10 | Budget-deferred-work recovery and operator requeue | Turn durable budget deferrals into safe, visible, idempotent resumption. |
 | Closed | A11 | Ledger-driven recurring-failure prevention and operator prioritization | Read-only deterministic remediation-opportunity report groups recurring failures and holds every item without a runtime executor. |
 | Closed | A7 | Budget-aware model routing, compaction, and failure-class fallback | YAML routing, anchor-preserving compaction, same-provider fallback, retained-corpus evidence gate, and regression coverage are active. |
-| Active | A8 | Model-call replay drift comparison | Standalone read-only regression outcome. |
+| Active | A8 | Compare retained model-call replay bundles | Standalone read-only regression outcome. |
 | Closed | A9 | Canonical report-source identity and publication provenance | Schema v19 immutable observations, deterministic source resolution, safe public projection, render-only invalidation, and live idempotent source capture passed. |
 | Closed | P1 | Publish snapshot naming and synchronous idempotent publishing | Public/UI terminology now says Publish Readiness; the compatibility alias preserves callers and synchronous review-gated publishing remains unchanged. |
-| Active | A14 | Calibrate acquisition policy from retained route economics | Turn new resource telemetry into bounded, evidence-based route-order recommendations. |
+| Closed | A14 | Calibrate acquisition policy from retained route economics | Read-only compatible cohort statistics and thresholded operator proposals are active. |
 | Active | A15 | Complete explicit model-policy coverage and policy-effectiveness evidence | Extend hash-pinned controls and measured cost/quality evidence to every production model namespace. |
-| Active | P2 | Bounded public-observability events | Narrow log-event size-bound hardening for public-facing boundaries. |
-| Active | P3 | Hosted HTTPS, sitemap, and public trust checks | Safe-error boundary completed; hosted trust outcome remains. |
-| Active | P10 | Correlated public-render failure observability | Hosted release-observability outcome. |
-| Active | P4 | Briefing, correction, and submission CTAs | Implemented; close after hosted smoke proves the live intake routes. |
-| Active | P5 | Archive/search facets, mobile navigation, and responsive workflows | Responsive public-workflow outcome. |
-| Active | P6 | Editorial report cards, exhibits, visual ranking, and premium copy | Release gate is implemented and live-validated; blind human editorial acceptance remains. |
-| Active | P7 | Hosted latency and public performance | Measured public-performance outcome. |
-| Active | P8 | Readable evidence spans, methodology/source-quality trust, and deterministic related content | Public evidence/discovery outcome. |
+| Closed | A16 | Durable corpus rehabilitation campaign execution | Review-gated retained-evidence campaigns now queue idempotent repair work without public writes. |
+| Active | P2 | Harden bounded public-observability events | Narrow log-event size-bound hardening for public-facing boundaries. |
+| Active | P3 | Resolve hosted-site trust blockers | Safe-error boundary completed; hosted trust outcome remains. |
+| Active | P10 | Operate correlated public-render failure telemetry | Hosted release-observability outcome. |
+| Active | P4 | Close public briefing, correction, and submission intake | Implemented; close after hosted smoke proves the live intake routes. |
+| Active | P5 | Finish responsive search and navigation | Responsive public-workflow outcome. |
+| Active | P6 | Raise report-card and evidence-exhibit editorial quality | Release gate is implemented and live-validated; blind human editorial acceptance remains. |
+| Active | P7 | Improve hosted public-site performance without contract loss | Measured public-performance outcome. |
+| Active | P8 | Complete concise public evidence, methodology, and related-content surfaces | Public evidence/discovery outcome. |
 | Active | E6 | Retain a hash-pinned claim-embedding benchmark export | Semantic benchmark coverage outcome. |
 | Active | E10 | Attest active model-pricing rates before they become stale | Keep cost attribution and spend enforcement trustworthy as provider pricing changes. |
+| Active | E8 | Use canonical source identity to suppress duplicate research work | Canonical source identity reuse outcome. |
+| Active | E9 | Materialize prompt-family outputs and route only their required model calls | Prompt-family repair and model-call reduction outcome. |
 | Closed | E3 | Lineage-driven minimum regeneration | Remains closed; E7 owns expansion beyond the proven rendered-HTML family. |
 | Closed | E4 | Executable retained PDF benchmark corpus in CI | Retained corpus is hash-pinned and CI-gated; local release-equivalent run passed. |
-| Active | R1 | CI/PR release-evidence summaries | Reviewer-surface outcome, including exact-tested-HEAD linkage and runtime-corpus expansion. |
-| Active | R2 | Role-mixing, import-graph, facade, direct-I/O, mutation-selection, and hygiene enforcement | Architecture enforcement outcome. |
-| Active | R3 | Service-quality coverage recovery | Retained-baseline outcome. |
-| Active | R6 | Bounded-log reduction telemetry and remediation review | Operator feedback outcome for attempted oversized standard events. |
+| Active | R1 | Publish release-evidence reviews where reviewers work | Reviewer-surface outcome, including exact-tested-HEAD linkage and runtime-corpus expansion. |
+| Active | R2 | Enforce role boundaries, direct-I/O discipline, and controlled module growth | Architecture enforcement outcome. |
+| Active | R3 | Restore service quality coverage above the retained baseline | Retained-baseline outcome. |
+| Active | R6 | Review bounded-log reduction telemetry and remediate recurring callers | Operator feedback outcome for attempted oversized standard events. |
 | Closed | R5 | Hash-verified dependency lock artifacts | Native Ubuntu CPython 3.12 wheelhouse and offline hash-locked install are verified. |
-| Active | S3 | PDF facade, rendering cache, and visual-heuristics simplification | Canonical PDF-boundary outcome. |
-| Active | S4 | Semantic WordPress shortcode ownership | WordPress boundary outcome. |
+| Active | S3 | Simplify the PDF visual-heuristics boundary | Canonical PDF-boundary outcome. |
+| Active | S4 | Give WordPress shortcodes semantic ownership | WordPress boundary outcome. |
 | Deferred | D1 | Full report-generation DAG scheduler | Revisit when profiling shows material idle dependency time beyond simple parallelism. |
 | Deferred | D2 | Streaming Drive prefetch queue and worker-safe PDF context pooling | Revisit when batches wait on Drive while worker capacity is idle. |
 | Deferred | D3 | Adaptive concurrency and route-specific worker buffers | Revisit when sustained runs show throttling, SQLite contention, or browser saturation. |
@@ -84,6 +87,10 @@ All work is listed below in one register. `Active` items have detailed completio
 
 ## Recently Closed
 
+- **A16 — Durable corpus rehabilitation campaign execution (2026-07-19):** Reports schema v23 persists immutable candidate classification, source checksum/reference, immutable reusable-artifact IDs, campaign/approval hashes, planned-unavailable versus actual cost, and item-level queue identity. Submission rereads the current retained corpus before each queue handoff and holds changed evidence; it uses the canonical maintenance queue rather than reimplementing repair. The real retained-corpus canary classified 99 reports (25 reusable, 36 lineage-incomplete, 38 provenance-incomplete), approved one eligible report with 115 reusable artifacts, and idempotently retained one `artifact_repair` queue job across a second submission. It made zero provider calls, recorded $0 actual cost, and made no public write.
+- **A14 — Calibrate acquisition policy from retained route economics (2026-07-19):** The read-only route-economics command groups only policy-compatible publisher/route cohorts and reports count, verified-success rate, median/p95 elapsed time, browser/model cost, incomplete-field state, and avoided operations. It emits proposals only above deterministic sample/improvement thresholds and never mutates routing or history. A live StackAdapt direct-PDF canary reached the canonical PDF budget stop before provider I/O, persisted one complete 3,860 ms/$0 resource envelope, and correctly returned `no_recommendation: insufficient_direct_sample`; focused route-policy and telemetry regression tests passed.
+- **A4 — Quarantine irreparably malformed Drive PDFs (2026-07-19):** The deterministic `pdf-integrity-v1` gate now checks PDF header, EOF, parser opening, page count, and byte hashes before extraction, OCR, or model work. A matching unchanged Drive checksum is skipped from durable state; a valid replacement supersedes the old active record. The real retained Capgemini benchmark PDF passed the operator revalidation path (540,430 bytes, 15 pages) and recorded a `cleared` state with no provider call. Focused structural, migration, ingest-stop, durable-state, and operator CLI tests passed.
+- **A2 — Configured run profiles (2026-07-19):** `safe_default`, `fast_cached`, `repair_failed`, `publish_ready`, `browser_acquisition`, `cost_saver`, and `high_quality` are parsed from the canonical YAML controls, resolved deterministically with a profile hash, and carried through plan, CLI, and UI execution payloads. The live `plan --profile browser_acquisition` resolved the expected browser-safe controls, while tests cover recommendation, explicit override, invalid profile, incompatible profile, and CLI/UI identity.
 - **A11 — Ledger-driven recurring-failure prevention and operator prioritization (2026-07-19):** `remediation-opportunities` now groups canonical records by workflow, failed stage, typed error, proposed action, retryability, and runbook coverage. It emits only bounded record IDs and opaque source/publisher hashes with recurrence, age, attempted operation/cost, checkpoint/idempotency proof counts, deterministic priority reasons, and an explicit `held_unregistered` disposition. The live retained ledger reported 24 records in 15 groups; its most recurrent group had eight records and was held because its runbook mapping and execution proof were absent. No remediation record, provider call, or external side effect was changed.
 - **D7 — Queue-backed publication coverage and live recovery proof (2026-07-18):** All critical queues have registered non-compatibility handlers and architecture tests prohibit direct major-stage chaining and UI subprocess ownership. A controlled live Briefing used real projected evidence from two publishers, one real model call (8,796 input / 3,460 output tokens), a frozen manifest, durable cover/readiness completion, and an explicit approval-driven `wordpress_publish --dry-run` with zero WordPress write. A live Signal root completed one candidate stage plus eight independent generation, cover, and readiness paths. The legacy deferred-work adapter preserves rows while routing new work through the shared lifecycle. D12 owns the separate staging-only verified WordPress post/projection canary.
 - **E7 — Planner-enforced artifact-family reuse (2026-07-17):** Enforce mode now covers retained render, crop, checkpointed analysis/validator, combined crop-plus-analysis, publication preflight, and cross-report reads with a persisted plan/actual reconciliation, report-artifact lease, canonical lineage replacement, and requested-family dependency scoping. Real retained-report replays matched every planned stage/call/side effect: the final post-fix render-only canary completed in 1.190 s (1.190 s audited) with exactly `render_complete`, `html_render`, and checkpoint/HTML writes; crop-only completed in 15.760 s (15.513 s audited) with only crop QA/render and HTML render; and a real model-policy repair issued 17 LLM calls (134,969 input / 40,241 output tokens, estimated $0.114225) while retaining source extraction. The final HTML was complete (77,911 bytes, 469 tags, five images, no `undefined`). A temporary normal-policy replay rejected an incomplete payload before rendering or publication, and a later normal-policy repair completed in 245.980 s with a matched audit. A final full fresh rebuild was correctly stopped by canonical PDF budget authority before provider I/O; no budget bypass was attempted.
@@ -117,35 +124,9 @@ The original ten-item screenshot baseline is complete in the committed implement
 
 ### 1. Autonomous Safety and Cost Control
 
-#### A2. Configured run profiles
+#### A10. Budget-deferred-work recovery and operator requeue
 
-- **Title:** Configured run profiles
-- **Impact 4 / effort: 2**
-- **Context:** Workflow control resolves some intents and preflight profiles today, but there is no complete, documented profile that consistently resolves approved low-level settings for common operating modes.
-- **Benefit:** Safe defaults become repeatable across CLI, UI, and plan-first execution, while operators can choose an outcome rather than implementation details.
-- **Risks to avoid:** Do not introduce a parallel configuration system or place secrets in YAML.
-- **Success criteria:**
-
-- YAML profiles cover `safe_default`, `fast_cached`, `repair_failed`, `publish_ready`, `browser_acquisition`, `cost_saver`, and `high_quality`.
-- Profile resolution is typed, deterministic, logs effective settings, preserves override precedence, and never stores secrets in YAML.
-- The plan-first interface can recommend or apply a profile, with tests proving deterministic resolution and invalid-profile failure.
-
-#### A4. Quarantine irreparably malformed Drive PDFs
-
-- **Title:** Quarantine irreparably malformed Drive PDFs
-- **Impact 4 / effort: 2**
-- **Context:** Live ingest has encountered cached and redownloaded PDFs that remain structurally malformed; current behavior stops expensive work but does not preserve a durable, actionable source state.
-- **Benefit:** Repeated malformed-source retries stop consuming Drive/API capacity, while operators receive a precise repair path after the source changes.
-- **Risks to avoid:** Do not quarantine transient failures permanently; source replacement must be revalidated explicitly.
-- **Success criteria:**
-
-- State records file identity, checksum/size, typed error, and next action after PDF-integrity failure.
-- Default ingest skips quarantined files; explicit rescan/revalidation clears only a valid replacement.
-- CLI or dashboard exposes quarantined inputs and remediation guidance, with tests for write, skip, revalidation, and valid-replacement transitions.
-
-#### A13. Add approved deferred-work resume adapters for acquisition workflows
-
-- **Title:** Add approved deferred-work resume adapters for report download and publisher inventory
+- **Title:** Budget-deferred-work recovery and operator requeue
 - **Impact 5 / effort: 2**
 - **Context:** Durable budget-deferred recovery now safely resumes report generation through a fresh minimal plan. Budget decisions from acquisition workflows are recorded and visible, but workflows without a typed resume adapter deliberately hand off to remediation rather than guessing their source state.
 - **Benefit:** Recovering Drive, browser, and acquisition capacity can complete retained report-download and publisher-inventory work automatically while reusing route evidence, artifact caches, and existing public-write gates.
@@ -155,19 +136,6 @@ The original ten-item screenshot baseline is complete in the committed implement
 - Approved adapters rebuild the workflow-specific minimum plan from retained route and artifact evidence, fail closed on missing source state, and resume only the latest safe stage.
 - A single bounded invocation proves release-capacity and UTC-day recovery for each adapter, with duplicate worker suppression and no bypass of publishing/mail authorization.
 - Dashboard projections distinguish supported auto-resume workflows from remediation-only deferred records with bounded scalar counts.
-
-#### A14. Calibrate acquisition policy from retained route economics
-
-- **Title:** Calibrate acquisition policy from retained route economics
-- **Impact 5 / effort: 2**
-- **Context:** Acquisition now retains compatible per-route resource envelopes, verified outcomes, and TTL-bound suppression history, but operators still have no deterministic way to compare direct, browser, and mailbox route cost and reliability for the same publisher cohort.
-- **Benefit:** Existing route evidence can prioritize the cheapest verified path and focus browser/model capacity on sources where it materially improves acquisition quality or speed.
-- **Risks to avoid:** Do not auto-change a route from incomplete, stale, or cross-policy data; do not bypass source verification, current budgets, explicit revalidation, mailbox authorization, or public-write gates.
-- **Success criteria:**
-
-- A bounded read-only report groups compatible publisher/route cohorts by policy hash and reports sample size, verified-success rate, median/p95 elapsed time, browser/model cost, and avoided operations without payloads or personal data.
-- Deterministic recommendations require a documented minimum compatible sample and a material measured improvement; they produce an operator-reviewable configuration proposal rather than changing routing autonomously.
-- Tests cover incomplete measurements, policy mismatch, threshold behavior, stable ordering, and proof that recommendations cannot invoke providers or change retained route history.
 
 #### A15. Complete explicit model-policy coverage and policy-effectiveness evidence
 

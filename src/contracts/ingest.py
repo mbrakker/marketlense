@@ -109,6 +109,12 @@ class IngestSettings:
             "doc": "Seconds before a stale ingest lock is cleared; <=0 disables stale eviction."
         },
     )
+    source_quarantine_enabled: bool = field(
+        default=True,
+        metadata={
+            "doc": "Whether deterministically invalid source PDFs are quarantined before expensive processing."
+        },
+    )
     openai_seed: Optional[int] = field(
         default=None, metadata={"doc": "Optional seed for report generation."}
     )

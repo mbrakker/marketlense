@@ -345,3 +345,18 @@ def _reports_db_022_add_execution_plan_prompt_family_reconciliation(
             column_name=column_name,
             column_type=column_type,
         )
+
+
+def _reports_db_023_create_corpus_rehabilitation_campaigns(conn: sqlite3.Connection) -> None:
+    """Persist bounded approved rehabilitation campaigns and their reconciliation."""
+    from .schema import (
+        _CORPUS_REHABILITATION_CAMPAIGNS_TABLE_SQL,
+        _CORPUS_REHABILITATION_CAMPAIGN_ITEMS_TABLE_SQL,
+    )
+
+    conn.execute(_CORPUS_REHABILITATION_CAMPAIGNS_TABLE_SQL)
+    conn.execute(_CORPUS_REHABILITATION_CAMPAIGN_ITEMS_TABLE_SQL)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_corpus_rehabilitation_campaign_items_status "
+        "ON corpus_rehabilitation_campaign_items(campaign_id, status, report_id)"
+    )

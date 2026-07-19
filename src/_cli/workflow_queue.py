@@ -11,7 +11,7 @@ from uuid import uuid4
 import typer
 
 from src._cli.app import cli_app, console
-from src.contracts.config import ConfigLoadRequest
+from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
 from src.contracts.deferred_work import DeferredWorkQueueMigrationRequest
 from src.contracts.files import FileStatRequest
 from src.contracts.logging import LoggingSetupRequest
@@ -27,9 +27,17 @@ from src.contracts.workflow_queue import (
 from src.orchestrators.deferred_work_queue_adapter import (
     migrate_deferred_work_to_workflow_queue,
 )
-from src.orchestrators.workflow_supervisor_orchestrator import run_supervisor_once
+from src.orchestrators.recovery_adapter_registry import (
+    build_recovery_adapter_registry,
+    reap_deferred_work_from_supervisor,
+)
+from src.orchestrators.workflow_supervisor_orchestrator import (
+    SupervisorDependencies,
+    run_supervisor_once,
+)
 from src.orchestrators.workflow_worker_orchestrator import run_workflow_worker_once
 from src.services.config_service import (
+    build_ingest_settings,
     load_settings,
     load_workflow_control_settings,
     load_workflow_queue_policies,
@@ -471,6 +479,13 @@ def supervise_workflows(
     control = load_workflow_control_settings(
         ConfigLoadRequest(schema_version="1.0", path=""), ctx
     )
+    ingest_settings = build_ingest_settings(
+        IngestSettingsBuildRequest(schema_version="1.0", app_settings=settings), ctx
+    )
+    registry = build_recovery_adapter_registry(
+        ingest_settings=ingest_settings,
+        workflow_control_settings=control,
+    )
     result = run_supervisor_once(
         SupervisorRunRequest(
             schema_version="1.0",
@@ -481,6 +496,16 @@ def supervise_workflows(
             settings=control.supervisor,
         ),
         ctx,
+        dependencies=SupervisorDependencies(
+            reap_deferred_work=lambda request, work_ctx: (
+                reap_deferred_work_from_supervisor(
+                    request,
+                    work_ctx,
+                    registry=registry,
+                    settings=control,
+                )
+            )
+        ),
     )
     console.print_json(data=asdict(result))
     exit_codes = {

@@ -15,6 +15,10 @@ ingest:
     min_score: 0.2
     min_recall_pages: 12
     min_recall_page_fraction: 0.65
+  source_quarantine:
+    # Disable only for an operator-approved rollback; malformed sources will then
+    # follow the normal typed failure path instead of being skipped early.
+    enabled: true
   validation:
     data_gap_policy: "warn"
     regeneration_max_attempts: 3
@@ -133,6 +137,65 @@ workflow_queues:
   wordpress_publish: {enabled: true, max_workers: 1, max_attempts: 3, lease_seconds: 900, maximum_pending: 100, maximum_fanout: 10, budget_profile: publishing}
 
 workflow_control:
+  # These profiles only select existing budget/preflight/model-policy controls.
+  # Explicit CLI/UI selection wins; no-profile execution remains safe_default.
+  run_profiles:
+    safe_default:
+      intended_outcome: "conservative cached-first execution"
+      compatible_workflows: []
+      cached_artifact_preference: "prefer"
+      browser_allowance: "explicit_required"
+      ocr_fallback_policy: "when_required"
+      model_quality_tier: "default"
+      regeneration_scope: "affected_only"
+    fast_cached:
+      intended_outcome: "planner-safe cache-first execution"
+      compatible_workflows: ["report_generation", "cross_report_analysis"]
+      budget_profile_refs: ["report_ingest"]
+      minimum_regeneration_mode: "require_planner_safe"
+      cached_artifact_preference: "require"
+      browser_allowance: "restricted"
+      ocr_fallback_policy: "restricted"
+      regeneration_scope: "minimum"
+    repair_failed:
+      intended_outcome: "bounded failed-work repair"
+      compatible_workflows: ["report_generation", "report_download", "publisher_inventory"]
+      budget_profile_refs: ["report_ingest"]
+      minimum_regeneration_mode: "affected_only"
+      cached_artifact_preference: "require"
+      requires_bounded_target: true
+    publish_ready:
+      intended_outcome: "publication readiness with human approval"
+      compatible_workflows: ["publishing", "wordpress_sync"]
+      budget_profile_refs: ["publishing"]
+      minimum_regeneration_mode: "readiness_only"
+      cached_artifact_preference: "require"
+      browser_allowance: "restricted"
+      ocr_fallback_policy: "restricted"
+      publication_readiness_mode: "readiness_only"
+      regeneration_scope: "readiness_only"
+      human_publication_approval_required: true
+    browser_acquisition:
+      intended_outcome: "governed direct-first acquisition"
+      compatible_workflows: ["report_download", "browser_acquisition", "publisher_inventory"]
+      budget_profile_refs: ["browser_acquisition"]
+      browser_allowance: "allowed"
+      ocr_fallback_policy: "restricted"
+      concurrency_resource: "browser"
+    cost_saver:
+      intended_outcome: "restrictive cache-first cost control"
+      compatible_workflows: []
+      minimum_regeneration_mode: "require_planner_safe"
+      cached_artifact_preference: "require"
+      browser_allowance: "restricted"
+      ocr_fallback_policy: "restricted"
+      regeneration_scope: "minimum"
+    high_quality:
+      intended_outcome: "approved high-quality generation and validation"
+      compatible_workflows: ["report_generation", "cross_report_analysis"]
+      budget_profile_refs: ["high_quality", "cross_report_analysis"]
+      model_quality_tier: "high_quality"
+      ocr_fallback_policy: "when_required"
   remediation_reaper:
     schema_version: "1.0"
     execution_enabled: false
