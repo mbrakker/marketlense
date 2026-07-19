@@ -1,16 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Literal, Optional
 
 from src.contracts.run_context import RunContext
 
 
 @dataclass(frozen=True)
 class LLMRoutingPolicy:
-    schema_version: str = field(
-        metadata={"doc": "LLM routing-policy schema version."}
-    )
+    schema_version: str = field(metadata={"doc": "LLM routing-policy schema version."})
     model: str = field(metadata={"doc": "Provider-local model selected for scope."})
     tier: str = field(metadata={"doc": "Quality/cost tier selected for scope."})
     max_input_tokens: int = field(
@@ -23,7 +21,9 @@ class LLMRoutingPolicy:
         metadata={"doc": "Minimum quality threshold required for the selected tier."}
     )
     same_provider_fallback: bool = field(
-        metadata={"doc": "Whether retry fallback must remain with the selected provider."}
+        metadata={
+            "doc": "Whether retry fallback must remain with the selected provider."
+        }
     )
 
 
@@ -36,13 +36,99 @@ class LLMRoutingDecision:
     model: str = field(metadata={"doc": "Resolved provider-local model."})
     tier: str = field(metadata={"doc": "Resolved routing tier."})
     max_input_tokens: int = field(metadata={"doc": "Resolved input-token budget."})
-    compaction_enabled: bool = field(metadata={"doc": "Resolved compaction permission."})
+    compaction_enabled: bool = field(
+        metadata={"doc": "Resolved compaction permission."}
+    )
     quality_threshold: float = field(metadata={"doc": "Resolved quality threshold."})
     same_provider_fallback: bool = field(
         metadata={"doc": "Resolved provider-fallback constraint."}
     )
     policy_source: str = field(
         metadata={"doc": "Longest-prefix policy key or default source."}
+    )
+
+
+SeedPolicy = Literal["inherit", "fixed", "disabled"]
+FallbackPolicy = Literal["same_provider_only", "disabled"]
+
+
+@dataclass(frozen=True)
+class LLMExecutionPolicy:
+    """Versioned, namespace-scoped controls for one model invocation.
+
+    The policy deliberately contains only provider-call compatibility controls.
+    Orchestrators retain retry scheduling and budget authority.
+    """
+
+    schema_version: str = field(metadata={"doc": "Execution-policy schema version."})
+    namespace_prefix: str = field(
+        metadata={"doc": "Normalized exact namespace or prefix governed by policy."}
+    )
+    provider: str = field(metadata={"doc": "Approved provider identifier."})
+    model: str = field(metadata={"doc": "Provider-local model identifier."})
+    temperature: float = field(metadata={"doc": "Sampling temperature."})
+    seed_policy: SeedPolicy = field(
+        default="inherit", metadata={"doc": "How the configured seed is resolved."}
+    )
+    seed: Optional[int] = field(
+        default=None, metadata={"doc": "Fixed seed when seed_policy is fixed."}
+    )
+    max_output_tokens: Optional[int] = field(
+        default=None, metadata={"doc": "Maximum output tokens when supported."}
+    )
+    reasoning_effort: str = field(
+        default="", metadata={"doc": "Provider reasoning configuration when supported."}
+    )
+    structured_output_mode: str = field(
+        default="json_object", metadata={"doc": "Configured structured output mode."}
+    )
+    structured_output_schema_identity: str = field(
+        default="", metadata={"doc": "Stable output-schema identity, never raw schema."}
+    )
+    retrieval_mode: str = field(
+        default="inherit",
+        metadata={
+            "doc": "Configured retrieval mode or inherit for the call-site capability."
+        },
+    )
+    timeout_seconds: Optional[float] = field(
+        default=None, metadata={"doc": "Provider request timeout."}
+    )
+    provider_retry_count: int = field(
+        default=0,
+        metadata={"doc": "Provider retry count; runtime services keep this at zero."},
+    )
+    max_input_tokens: int = field(
+        default=0, metadata={"doc": "Input/compaction budget; zero disables limit."}
+    )
+    compaction_enabled: bool = field(
+        default=False, metadata={"doc": "Whether deterministic compaction is allowed."}
+    )
+    fallback_policy: FallbackPolicy = field(
+        default="same_provider_only",
+        metadata={"doc": "Explicit provider fallback constraint."},
+    )
+    pricing_key: str = field(
+        default="", metadata={"doc": "Pricing configuration key; defaults to model."}
+    )
+
+
+@dataclass(frozen=True)
+class LLMExecutionPolicyDecision:
+    """Resolved immutable policy plus its deterministic identity."""
+
+    schema_version: str = field(metadata={"doc": "Resolved policy schema version."})
+    namespace: str = field(metadata={"doc": "Normalized requested namespace."})
+    policy_source: str = field(
+        metadata={"doc": "Matched prefix or compatibility source."}
+    )
+    policy: LLMExecutionPolicy = field(metadata={"doc": "Resolved execution policy."})
+    policy_hash: str = field(
+        metadata={"doc": "Stable hash of canonical policy fields."}
+    )
+    compatibility_mode: bool = field(
+        default=False,
+        metadata={"doc": "Whether old global settings supplied an unmigrated policy."},
     )
 
 

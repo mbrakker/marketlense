@@ -78,7 +78,9 @@ class LLMExecutionIdentity:
         metadata={"doc": "LLM execution-identity schema version."}
     )
     prompt_content_hash: str = field(
-        metadata={"doc": "Canonical prompt-content identity from its dependency manifest."}
+        metadata={
+            "doc": "Canonical prompt-content identity from its dependency manifest."
+        }
     )
     provider: str = field(metadata={"doc": "Resolved model provider."})
     model: str = field(metadata={"doc": "Resolved provider model."})
@@ -204,11 +206,15 @@ class PromptTemplate:
     )
     include_sha256s: list[str] = field(
         default_factory=list,
-        metadata={"doc": "SHA-256 hashes for prompt include text in composition order."},
+        metadata={
+            "doc": "SHA-256 hashes for prompt include text in composition order."
+        },
     )
     schema_snippets: Dict[str, str] = field(
         default_factory=dict,
-        metadata={"doc": "Generated source-schema prompt snippets keyed by variable name."},
+        metadata={
+            "doc": "Generated source-schema prompt snippets keyed by variable name."
+        },
     )
     schema_snippet_sources: Dict[str, str] = field(
         default_factory=dict,
@@ -296,7 +302,15 @@ class PromptDryRunFixture:
     )
     temperature: float = field(
         default=0.0,
-        metadata={"doc": "Representative temperature for this prompt fixture."},
+        metadata={
+            "doc": "Legacy descriptive fixture temperature; not a runtime override."
+        },
+    )
+    test_only_execution_override: bool = field(
+        default=False,
+        metadata={
+            "doc": "Permit this fixture's model/temperature only in explicitly test-only validation."
+        },
     )
 
 
@@ -361,7 +375,13 @@ class PromptDryRunResult:
     )
     temperature: float = field(
         default=0.0,
-        metadata={"doc": "Representative temperature recorded by the fixture."},
+        metadata={"doc": "Resolved runtime or explicitly test-only temperature."},
+    )
+    execution_policy_hash: str = field(
+        default="", metadata={"doc": "Resolved runtime policy identity."}
+    )
+    execution_policy_source: str = field(
+        default="", metadata={"doc": "Resolved policy prefix or compatibility source."}
     )
 
 

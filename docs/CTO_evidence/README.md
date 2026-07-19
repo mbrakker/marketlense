@@ -8,7 +8,8 @@ Generate a strict review bundle with:
 
 ```powershell
 $evidenceHeadSha = git rev-parse HEAD
-python scripts/quality/collect_cto_review_evidence.py --state-dir state --artifact-dir out --log-dir logs --output-dir docs/CTO_evidence --expected-commit-sha $evidenceHeadSha --require-exact-head --log-corpus-scope representative_report_processing --include-github-status --replace-output
+$freshAfter = "<current-run-start-ISO-8601>"
+python scripts/quality/collect_cto_review_evidence.py --state-dir state --artifact-dir out --log-dir logs --output-dir docs/CTO_evidence --expected-commit-sha $evidenceHeadSha --require-exact-head --fresh-after $freshAfter --log-corpus-scope representative_report_processing --include-github-status --replace-output
 ```
 
-The GitHub status snapshot is intentionally opt-in because it is an external read. It records an explicit unavailable status when it cannot be collected.
+The GitHub status snapshot is intentionally opt-in because it is an external read. It records the tested revision separately from latest `main`, and returns an explicit unavailable status when it cannot be collected.

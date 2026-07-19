@@ -15,15 +15,11 @@ class RunContext(SemanticIdContract):
     span_id: str = field(metadata={"doc": "Span identifier for a specific operation."})
     trace_id: str = field(
         default="",
-        metadata={
-            "doc": "End-to-end trace identifier shared by all spans in one run."
-        },
+        metadata={"doc": "End-to-end trace identifier shared by all spans in one run."},
     )
     parent_span_id: str = field(
         default="",
-        metadata={
-            "doc": "Parent span identifier; empty only for the trace root span."
-        },
+        metadata={"doc": "Parent span identifier; empty only for the trace root span."},
     )
     span_name: str = field(
         default="",
@@ -32,4 +28,10 @@ class RunContext(SemanticIdContract):
     span_depth: int = field(
         default=0,
         metadata={"doc": "Zero-based nested depth of this span in the trace tree."},
+    )
+    producer_commit_sha: str = field(
+        default="",
+        metadata={
+            "doc": "Trusted producer revision supplied by runtime environment, when available."
+        },
     )

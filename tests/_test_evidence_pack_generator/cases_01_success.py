@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 def test_generate_evidence_packs_success(tmp_path):
     parsed = {"doc_id": "d1", "title": "title", "sections": []}
     fake_openai = FakeOpenAIClient(parsed)
@@ -22,6 +23,7 @@ def test_generate_evidence_packs_success(tmp_path):
     assert packs["doc_map"]["family_status"]["status"] == "generated"
     assert packs["doc_map"]["family_status"]["policy_action"] == "keep"
 
+
 def test_generate_evidence_packs_creates_context_when_missing(tmp_path):
     parsed = {"doc_id": "d1", "title": "title", "sections": []}
     fake_openai = FakeOpenAIClient(parsed)
@@ -36,6 +38,7 @@ def test_generate_evidence_packs_creates_context_when_missing(tmp_path):
     )
 
     assert packs["doc_map"]["doc_id"] == "d1"
+
 
 def test_generate_evidence_packs_marks_optional_empty_pack_as_abstained(tmp_path):
     packs = generate_evidence_packs(
@@ -69,6 +72,7 @@ def test_generate_evidence_packs_marks_optional_empty_pack_as_abstained(tmp_path
     assert packs["findings"]["family_status"]["status"] == "abstained"
     assert packs["findings"]["family_status"]["policy_action"] == "abstain"
     assert packs["findings"]["family_status"]["reason"] == "insufficient_pack_content"
+
 
 def test_generate_evidence_packs_logs_prompt_observability_and_raw_response(
     tmp_path, caplog, assert_logs_have_required_fields
@@ -111,11 +115,9 @@ def test_generate_evidence_packs_logs_prompt_observability_and_raw_response(
     assert rendered_fields["namespace"] == "report_vs/doc_map"
     assert rendered_fields["system_path"] == "system"
     assert rendered_fields["user_path"] == "user"
-    for field_name, expected_count in (("system_prompt", 3), ("user_prompt", 4)):
-        redacted = rendered_fields[field_name]
-        assert redacted["redaction"] == "***REDACTED***"
-        assert redacted["character_count"] == expected_count
-        assert len(redacted["sha256"]) == 64
+    assert "system_prompt" not in rendered_fields
+    assert "user_prompt" not in rendered_fields
+    assert len(rendered_fields["execution_policy_hash"]) == 64
     assert rendered_fields["resolved_model"] == "gpt-4.1-mini"
     raw = next(
         event for event in events if event.get("event") == "evidence_pack_raw_response"
@@ -127,6 +129,7 @@ def test_generate_evidence_packs_logs_prompt_observability_and_raw_response(
     assert redacted_response["redaction"] == "***REDACTED***"
     assert redacted_response["character_count"] == 2
     assert len(redacted_response["sha256"]) == 64
+
 
 def test_generate_evidence_packs_handles_missing_json(tmp_path):
     fake_openai = FakeOpenAIClient(parsed=None)
@@ -148,6 +151,7 @@ def test_generate_evidence_packs_handles_missing_json(tmp_path):
     assert stored_report_id == "r1"
     assert stored_pack == "doc_map"
     assert stored_payload["not_found_reason"] == "model_returned_no_json"
+
 
 def test_generate_evidence_packs_propagates_retryable_app_error(
     tmp_path, assert_app_error
@@ -174,6 +178,7 @@ def test_generate_evidence_packs_propagates_retryable_app_error(
     assert fake_openai.call_count == 1
     assert len(analysis_store.stored) == 0
 
+
 def test_generate_evidence_packs_rejects_doc_map_with_only_doc_id(tmp_path):
     # `doc_id` can be present while the pack is still semantically empty.
     parsed = {"doc_id": "d1", "title": "", "sections": []}
@@ -197,6 +202,7 @@ def test_generate_evidence_packs_rejects_doc_map_with_only_doc_id(tmp_path):
     assert exc_info.value.context["sections_count"] == 0
     assert len(analysis_store.stored) == 1
 
+
 def test_generate_evidence_packs_does_not_retry_doc_map_inside_generator(tmp_path):
     fake_openai = RetryingDocMapClient()
     analysis_store = FakeAnalysisStore()
@@ -215,6 +221,7 @@ def test_generate_evidence_packs_does_not_retry_doc_map_inside_generator(tmp_pat
     assert fake_openai.call_count == 1
     assert len(analysis_store.stored) == 1
 
+
 def test_generate_evidence_packs_parses_doc_map_json_from_text_fallback(tmp_path):
     fake_openai = TextFallbackDocMapClient()
     packs = generate_evidence_packs(
@@ -230,6 +237,7 @@ def test_generate_evidence_packs_parses_doc_map_json_from_text_fallback(tmp_path
     assert packs["doc_map"]["doc_id"] == "d1"
     assert packs["doc_map"]["title"] == "title"
     assert fake_openai.call_count == 6
+
 
 def test_generate_evidence_packs_normalizes_docmap_wrapper(tmp_path):
     parsed = {
@@ -255,6 +263,7 @@ def test_generate_evidence_packs_normalizes_docmap_wrapper(tmp_path):
     assert doc_map["sections"][0]["summary"] == ""
     assert doc_map["sections"][0]["key_points"] == []
     assert len(analysis_store.stored) == 6
+
 
 def test_generate_evidence_packs_normalizes_docmap_camelcase_wrapper(tmp_path):
     parsed = {
@@ -288,6 +297,7 @@ def test_generate_evidence_packs_normalizes_docmap_camelcase_wrapper(tmp_path):
     assert doc_map["sections"][0]["key_points"] == []
     assert doc_map["sections"][0]["pages"] == [5]
     assert len(analysis_store.stored) == 6
+
 
 def test_generate_evidence_packs_normalizes_document_structure_shape(tmp_path):
     parsed = {
@@ -323,6 +333,7 @@ def test_generate_evidence_packs_normalizes_document_structure_shape(tmp_path):
     assert doc_map["sections"][0]["key_points"] == []
     assert len(analysis_store.stored) == 6
 
+
 def test_generate_evidence_packs_normalizes_document_level_aliases(tmp_path):
     parsed = {
         "document_title": "Media Reactions (APAC) — Kantar 2025",
@@ -349,6 +360,7 @@ def test_generate_evidence_packs_normalizes_document_level_aliases(tmp_path):
     assert doc_map["summary"] == "Executive recap of APAC media receptivity shifts."
     assert doc_map["sections"][0]["summary"] == "Context and study framing."
     assert len(analysis_store.stored) == 6
+
 
 def test_generate_evidence_packs_normalizes_docmap_brief_aliases(tmp_path):
     parsed = {
@@ -400,6 +412,7 @@ def test_generate_evidence_packs_normalizes_docmap_brief_aliases(tmp_path):
     assert doc_map["sections"][1]["key_points"] == ["Survey + panel blend"]
     assert len(analysis_store.stored) == 6
 
+
 def test_generate_evidence_packs_derives_docmap_publisher_from_document_title(
     tmp_path,
 ):
@@ -425,6 +438,7 @@ def test_generate_evidence_packs_derives_docmap_publisher_from_document_title(
     assert doc_map["title"] == "Media Reactions (APAC) — Kantar 2025"
     assert doc_map["publisher"] == "Kantar"
     assert len(analysis_store.stored) == 6
+
 
 def test_generate_evidence_packs_coerces_docmap_object_fields_to_schema_types(tmp_path):
     parsed = {
@@ -458,6 +472,7 @@ def test_generate_evidence_packs_coerces_docmap_object_fields_to_schema_types(tm
     assert doc_map["sections"][0]["summary"] == "Demand growth decelerates in H2."
     assert doc_map["sections"][0]["key_points"] == ["Growth slowing", "H2 shift"]
     assert doc_map["sections"][0]["pages"] == [2, 3]
+
 
 def test_generate_evidence_packs_warns_on_doc_map_sections_missing_summary(
     tmp_path, caplog, assert_logs_have_required_fields
@@ -502,6 +517,7 @@ def test_generate_evidence_packs_warns_on_doc_map_sections_missing_summary(
     assert fields["sections_missing_summary"] == 1
     assert fields["summary_coverage_ratio"] == 0.5
 
+
 def test_generate_evidence_packs_normalizes_legacy_findings_shape(tmp_path):
     fake_openai = RoutedOpenAIClient(
         payloads_by_pack={
@@ -542,6 +558,7 @@ def test_generate_evidence_packs_normalizes_legacy_findings_shape(tmp_path):
     assert finding["confidence"] == "0.88"
     assert finding["pages"] == [3]
 
+
 def test_generate_evidence_packs_parses_limitations_json_array_from_text(tmp_path):
     fake_openai = RoutedOpenAIClient(
         payloads_by_pack={
@@ -571,6 +588,7 @@ def test_generate_evidence_packs_parses_limitations_json_array_from_text(tmp_pat
         "Preliminary sample",
         "Regional bias",
     ]
+
 
 def test_generate_evidence_packs_normalizes_quote_candidates_shape(tmp_path):
     fake_openai = RoutedOpenAIClient(
@@ -607,6 +625,7 @@ def test_generate_evidence_packs_normalizes_quote_candidates_shape(tmp_path):
     assert quote["source"] == "Section 2"
     assert quote["page"] == 5
 
+
 def test_generate_evidence_packs_uses_registry_subset(tmp_path):
     fake_openai = RoutedOpenAIClient(
         payloads_by_pack={
@@ -632,6 +651,7 @@ def test_generate_evidence_packs_uses_registry_subset(tmp_path):
     )
     assert list(packs.keys()) == ["doc_map", "findings"]
     assert packs["findings"]["findings"][0]["id"] == "f1"
+
 
 __all__ = [
     "test_generate_evidence_packs_success",

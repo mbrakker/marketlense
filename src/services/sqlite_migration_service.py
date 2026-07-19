@@ -96,6 +96,7 @@ from ._sqlite_migration.state import (
     _state_db_010_create_remediation_ledger,
     _state_db_011_create_workflow_queue,
     _state_db_012_create_queue_publication_and_briefing_state,
+    _state_db_013_create_supervisor_lease,
 )
 from ._sqlite_migration.ui_runs import (
     _UI_RUN_DEAD_LETTER_ACTIONS_TABLE_SQL,

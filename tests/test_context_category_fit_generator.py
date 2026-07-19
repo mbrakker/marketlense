@@ -15,7 +15,12 @@ from src.contracts.context_category_fit import (
     ReportContextBuildRequest,
 )
 from src.contracts.openai import OpenAIResponseResult
-from src.contracts.prompts import PromptSet, PromptTemplate
+from src.contracts.prompts import (
+    PromptDependency,
+    PromptDependencyManifest,
+    PromptSet,
+    PromptTemplate,
+)
 from src.contracts.report_store import ReportMetadataGetResponse
 from src.contracts.run_context import RunContext
 from src.generators.context_category_fit_generator import (
@@ -44,6 +49,16 @@ class RecordingPromptClient:
                 text="User prompt {report_context_json} {category_profiles_json}",
                 sha256="user-sha",
             ),
+            dependency_manifest=PromptDependencyManifest(
+                schema_version="1.0",
+                namespace=request.namespace,
+                system_root=PromptDependency(
+                    "1.0", "system.yaml", "a" * 64, "system_root"
+                ),
+                user_root=PromptDependency("1.0", "user.yaml", "b" * 64, "user_root"),
+                prompt_content_hash="c" * 64,
+            ),
+            prompt_content_hash="c" * 64,
         )
 
     def render_prompt(self, request, ctx):

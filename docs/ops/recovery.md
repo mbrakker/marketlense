@@ -30,6 +30,7 @@ python scripts/quality/generate_budget_authority_coverage.py
 python scripts/ci/check_remediation_runbooks.py
 $stamp = Get-Date -Format "yyyyMMddTHHmmss"
 python -m src.cli remediation-soak | Tee-Object "out/ops/remediation-soak-$stamp.txt"
+python -m src.cli remediation-opportunities | Tee-Object "out/ops/remediation-opportunities-$stamp.json"
 ```
 
 The retained evidence must identify the repository revision, observed state

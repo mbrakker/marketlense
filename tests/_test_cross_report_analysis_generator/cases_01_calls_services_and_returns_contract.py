@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 def test_generate_cross_report_analysis_calls_services_and_returns_contract(
     tmp_path,
     run_context,
@@ -70,7 +71,8 @@ def test_generate_cross_report_analysis_calls_services_and_returns_contract(
         if event["event"] == "cross_report_analysis_prompt_rendered"
     ][0]
     assert rendered["fields"]["system_sha256"] == "system-hash"
-    assert rendered["fields"]["rendered_user_prompt"]
+    assert rendered["fields"]["rendered_user_prompt_chars"] > 0
+    assert "rendered_user_prompt" not in rendered["fields"]
     complete = [
         event
         for event in events
@@ -78,6 +80,7 @@ def test_generate_cross_report_analysis_calls_services_and_returns_contract(
     ][0]
     assert complete["fields"]["provider_request_id"] == "provider-request-1"
     assert complete["fields"]["section_count"] == 4
+
 
 def test_generate_cross_report_analysis_rejects_unknown_evidence_id(
     tmp_path,
@@ -120,6 +123,7 @@ def test_generate_cross_report_analysis_rejects_unknown_evidence_id(
         retryable=False,
         severity="error",
     )
+
 
 def test_generate_cross_report_analysis_canonicalizes_projected_entity_uid_citations(
     tmp_path,
@@ -167,6 +171,7 @@ def test_generate_cross_report_analysis_canonicalizes_projected_entity_uid_citat
 
     assert result.sections[0].evidence_ids == ["ev-report-a-claim-1"]
     assert result.evidence_map == {"summary": ["ev-report-a-claim-1"]}
+
 
 def test_generate_cross_report_analysis_canonicalizes_unique_projected_finding_prefixes(
     tmp_path,
@@ -222,6 +227,7 @@ def test_generate_cross_report_analysis_canonicalizes_unique_projected_finding_p
 
     assert result.sections[0].evidence_ids == [canonical_evidence_id]
     assert result.evidence_map == {"summary": [canonical_evidence_id]}
+
 
 def test_generate_cross_report_analysis_allows_full_ids_when_projected_prefixes_collide(
     tmp_path,
@@ -279,6 +285,7 @@ def test_generate_cross_report_analysis_allows_full_ids_when_projected_prefixes_
 
     assert result.sections[0].evidence_ids == [first_evidence_id, second_evidence_id]
     assert result.evidence_map == {"summary": [first_evidence_id, second_evidence_id]}
+
 
 def test_generate_cross_report_analysis_rejects_ambiguous_projected_prefix_citations(
     tmp_path,
@@ -342,6 +349,7 @@ def test_generate_cross_report_analysis_rejects_ambiguous_projected_prefix_citat
     )
     assert exc.value.context["missing_evidence_ids"] == ["report-a:claim:finding"]
 
+
 def test_generate_cross_report_analysis_rejects_colliding_evidence_aliases(
     tmp_path,
     run_context,
@@ -380,6 +388,7 @@ def test_generate_cross_report_analysis_rejects_colliding_evidence_aliases(
         "ev-report-b-finding-1",
     }
 
+
 def test_generate_cross_report_analysis_checks_rendered_prompt_budget_before_model(
     tmp_path,
     run_context,
@@ -410,6 +419,7 @@ def test_generate_cross_report_analysis_checks_rendered_prompt_budget_before_mod
     )
     assert openai_client.requests == []
 
+
 def test_generate_cross_report_analysis_uses_request_prompt_budget_override(
     tmp_path,
     run_context,
@@ -431,6 +441,7 @@ def test_generate_cross_report_analysis_uses_request_prompt_budget_override(
     )
 
     assert result.analysis_id == "analysis-ai-commerce"
+
 
 def test_generate_cross_report_analysis_omits_unsupported_source_notes(
     tmp_path,
@@ -468,6 +479,7 @@ def test_generate_cross_report_analysis_omits_unsupported_source_notes(
 
     assert [section.section_id for section in result.sections] == ["summary"]
 
+
 def test_generate_cross_report_analysis_rejects_missing_json_payload(
     tmp_path,
     run_context,
@@ -493,6 +505,7 @@ def test_generate_cross_report_analysis_rejects_missing_json_payload(
         retryable=False,
         severity="error",
     )
+
 
 def test_generate_cross_report_analysis_rejects_empty_sections(
     tmp_path,
@@ -527,6 +540,7 @@ def test_generate_cross_report_analysis_rejects_empty_sections(
         retryable=False,
         severity="error",
     )
+
 
 def test_validate_cross_report_generated_analysis_accepts_grounded_artifact(
     tmp_path,
@@ -564,6 +578,7 @@ def test_validate_cross_report_generated_analysis_accepts_grounded_artifact(
     ][0]
     assert validation_event["fields"]["status"] == "pass"
 
+
 def test_validate_cross_report_generated_analysis_rejects_missing_section_evidence(
     tmp_path,
     run_context,
@@ -594,6 +609,7 @@ def test_validate_cross_report_generated_analysis_rejects_missing_section_eviden
         in exc.value.context["issues"]
     )
 
+
 def test_validate_cross_report_generated_analysis_rejects_unknown_evidence(
     tmp_path,
     run_context,
@@ -616,6 +632,7 @@ def test_validate_cross_report_generated_analysis_rejects_unknown_evidence(
     )
     assert exc.value.context["missing_evidence_ids"] == ["unknown-evidence"]
 
+
 def test_validate_cross_report_generated_analysis_rejects_empty_required_sections(
     tmp_path,
     run_context,
@@ -634,6 +651,7 @@ def test_validate_cross_report_generated_analysis_rejects_empty_required_section
         severity="error",
     )
     assert "sections_empty" in exc.value.context["issues"]
+
 
 def test_validate_cross_report_generated_analysis_rejects_metric_normalization_language(
     tmp_path,
@@ -664,6 +682,7 @@ def test_validate_cross_report_generated_analysis_rejects_metric_normalization_l
         "normalized average",
         "average across publishers",
     ]
+
 
 __all__ = [
     "test_generate_cross_report_analysis_calls_services_and_returns_contract",

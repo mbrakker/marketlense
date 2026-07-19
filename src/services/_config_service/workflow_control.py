@@ -10,6 +10,7 @@ from src.contracts.workflow_control import (
     WorkflowControlSettings,
     WorkflowPreflightProfile,
     WorkflowRetryPolicyConfig,
+    WorkflowSupervisorSettings,
     WorkflowTransition,
 )
 from src.services._config_service.common import (
@@ -22,6 +23,7 @@ from src.services._config_service.common import (
 )
 from src.utils.errors import AppError
 from src.utils.logging import log_event
+from src.utils.model_resolver import registered_report_generation_namespaces
 
 
 def load_workflow_control_settings(
@@ -67,9 +69,7 @@ def load_workflow_control_settings(
         operational_memory_min_observations=max(
             1,
             _to_int(
-                _mapping(raw_control.get("operational_memory")).get(
-                    "min_observations"
-                ),
+                _mapping(raw_control.get("operational_memory")).get("min_observations"),
                 2,
             ),
         ),
@@ -79,6 +79,7 @@ def load_workflow_control_settings(
         deferred_work_reaper=_parse_deferred_work_reaper(
             raw_control.get("deferred_work_reaper")
         ),
+        supervisor=_parse_supervisor(raw_control.get("supervisor")),
     )
     logger.info(
         log_event(
@@ -98,11 +99,19 @@ def load_workflow_control_settings(
     return settings
 
 
-def _parse_preflight_profiles(raw_profiles: object) -> dict[str, WorkflowPreflightProfile]:
+def _parse_preflight_profiles(
+    raw_profiles: object,
+) -> dict[str, WorkflowPreflightProfile]:
     profiles: dict[str, WorkflowPreflightProfile] = {}
     for name, raw_profile in _mapping(raw_profiles).items():
         profile = _mapping(raw_profile)
         workflow = _key(profile.get("workflow") or name)
+        prompt_namespaces = _string_list(profile.get("prompt_namespaces"))
+        # The report-generation profile is deliberately derived from the
+        # policy registry: adding a configured report namespace cannot leave
+        # preflight silently unaware of it.
+        if workflow == "report_generation" and not prompt_namespaces:
+            prompt_namespaces = registered_report_generation_namespaces()
         profiles[workflow] = WorkflowPreflightProfile(
             schema_version=str(profile.get("schema_version") or "1.0"),
             workflow=workflow,
@@ -111,7 +120,7 @@ def _parse_preflight_profiles(raw_profiles: object) -> dict[str, WorkflowPreflig
             require_drive=_to_bool(profile.get("require_drive"), False),
             require_publish=_to_bool(profile.get("require_publish"), False),
             require_browser=_to_bool(profile.get("require_browser"), False),
-            prompt_namespaces=_string_list(profile.get("prompt_namespaces")),
+            prompt_namespaces=prompt_namespaces,
         )
     return profiles
 
@@ -231,6 +240,31 @@ def _parse_deferred_work_reaper(raw_reaper: object) -> DeferredWorkReaperSetting
     )
 
 
+def _parse_supervisor(raw_supervisor: object) -> WorkflowSupervisorSettings:
+    supervisor = _mapping(raw_supervisor)
+    return WorkflowSupervisorSettings(
+        schema_version=str(supervisor.get("schema_version") or "1.0"),
+        enabled=_to_bool(supervisor.get("enabled"), False),
+        materialize_outbox_enabled=_to_bool(
+            supervisor.get("materialize_outbox_enabled"), True
+        ),
+        recover_expired_leases_enabled=_to_bool(
+            supervisor.get("recover_expired_leases_enabled"), True
+        ),
+        deferred_work_enabled=_to_bool(supervisor.get("deferred_work_enabled"), False),
+        remediation_enabled=_to_bool(supervisor.get("remediation_enabled"), False),
+        worker_batches_enabled=_to_bool(
+            supervisor.get("worker_batches_enabled"), False
+        ),
+        reconcile_enabled=_to_bool(supervisor.get("reconcile_enabled"), True),
+        evidence_enabled=_to_bool(supervisor.get("evidence_enabled"), True),
+        max_jobs_per_queue=max(1, _to_int(supervisor.get("max_jobs_per_queue"), 1)),
+        max_total_jobs=max(1, _to_int(supervisor.get("max_total_jobs"), 20)),
+        max_runtime_seconds=max(1, _to_int(supervisor.get("max_runtime_seconds"), 120)),
+        lease_seconds=max(1, _to_int(supervisor.get("lease_seconds"), 180)),
+    )
+
+
 def _mapping(value: object) -> dict:
     return dict(value) if isinstance(value, dict) else {}
 
@@ -298,8 +332,11 @@ def _string_list(value: object) -> list[str]:
 
 
 def _key(value: object) -> str:
-    return " ".join(str(value or "").strip().split()).lower().replace("-", "_").replace(
-        " ", "_"
+    return (
+        " ".join(str(value or "").strip().split())
+        .lower()
+        .replace("-", "_")
+        .replace(" ", "_")
     )
 
 

@@ -449,6 +449,9 @@ class CropRefineRequest:
     timeout_seconds: Optional[float] = field(
         default=None, metadata={"doc": "Request timeout in seconds, if set."}
     )
+    max_output_tokens: Optional[int] = field(
+        default=None, metadata={"doc": "Bounded provider output-token limit."}
+    )
     tool_calls: int = field(
         default=0, metadata={"doc": "Number of tool calls billed (if any)."}
     )
@@ -480,6 +483,14 @@ class CropRefineRequest:
             "doc": "Semantic response cache TTL in seconds; None disables expiry."
         },
     )
+    prompt_hash: str = field(default="")
+    prompt_content_hash: str = field(default="")
+    prompt_dependency_manifest: dict = field(default_factory=dict)
+    execution_identity: str = field(default="")
+    execution_identity_manifest: dict = field(default_factory=dict)
+    execution_policy_hash: str = field(default="")
+    execution_policy: dict = field(default_factory=dict)
+    execution_policy_source: str = field(default="")
 
 
 @dataclass(frozen=True)
@@ -528,6 +539,9 @@ class RankRequest:
     timeout_seconds: Optional[float] = field(
         default=None, metadata={"doc": "Request timeout in seconds, if set."}
     )
+    max_output_tokens: Optional[int] = field(
+        default=None, metadata={"doc": "Bounded provider output-token limit."}
+    )
     tool_calls: int = field(
         default=0, metadata={"doc": "Number of tool calls billed (if any)."}
     )
@@ -559,6 +573,14 @@ class RankRequest:
             "doc": "Semantic response cache TTL in seconds; None disables expiry."
         },
     )
+    prompt_hash: str = field(default="")
+    prompt_content_hash: str = field(default="")
+    prompt_dependency_manifest: dict = field(default_factory=dict)
+    execution_identity: str = field(default="")
+    execution_identity_manifest: dict = field(default_factory=dict)
+    execution_policy_hash: str = field(default="")
+    execution_policy: dict = field(default_factory=dict)
+    execution_policy_source: str = field(default="")
 
 
 @dataclass(frozen=True)

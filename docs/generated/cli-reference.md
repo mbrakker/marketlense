@@ -45,12 +45,15 @@ For command options and help text, run `python -m src.cli <command> --help`.
 | `queue-submit-source-ingest` | [`src/_cli/workflow_queue.py`](../../src/_cli/workflow_queue.py) | Public |
 | `reap-ui-dead-letters` | [`src/_cli/ui_runs.py`](../../src/_cli/ui_runs.py) | Public |
 | `recategorize` | [`src/_cli/pipeline.py`](../../src/_cli/pipeline.py) | Public |
+| `remediation-opportunities` | [`src/_cli/remediation.py`](../../src/_cli/remediation.py) | Public |
 | `remediation-soak` | [`src/_cli/remediation.py`](../../src/_cli/remediation.py) | Public |
 | `remediations` | [`src/_cli/remediation.py`](../../src/_cli/remediation.py) | Public |
 | `replay-run` | [`src/_cli/ui_runs.py`](../../src/_cli/ui_runs.py) | Public |
+| `supervise-workflows` | [`src/_cli/workflow_queue.py`](../../src/_cli/workflow_queue.py) | Public |
 | `sync-publishers` | [`src/_cli/admin.py`](../../src/_cli/admin.py) | Public |
 | `sync-wordpress-intelligence` | [`src/_cli/pipeline.py`](../../src/_cli/pipeline.py) | Public |
 | `trace-run` | [`src/_cli/trace.py`](../../src/_cli/trace.py) | Public |
 | `ui-run-worker` | [`src/_cli/ui_runs.py`](../../src/_cli/ui_runs.py) | Hidden |
 | `update-wp-categories` | [`src/_cli/pipeline.py`](../../src/_cli/pipeline.py) | Public |
+| `validate-retained-claims` | [`src/_cli/admin.py`](../../src/_cli/admin.py) | Public |
 | `workflow-worker` | [`src/_cli/workflow_queue.py`](../../src/_cli/workflow_queue.py) | Public |

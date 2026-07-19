@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import replace
+import json
+from dataclasses import asdict, replace
 
 import pytest
 
@@ -17,6 +18,7 @@ from src.contracts.remediation import (
 )
 from src.orchestrators.remediation_orchestrator import (
     RemediationReaperDependencies,
+    build_remediation_opportunity_report,
     record_workflow_failure,
     run_bounded_remediation_reaper,
 )
@@ -61,6 +63,46 @@ def _records(state_db: str) -> list[RemediationRecord]:
     return list_remediation_records(
         RemediationListRequest(schema_version="1.0", state_db=state_db), _ctx()
     ).records
+
+
+def test_opportunity_report_is_deterministic_and_does_not_leak_source_ids() -> None:
+    records = [
+        _record(
+            "older",
+            source_id="private-source-id",
+            created_at_utc="2026-07-14T12:00:00Z",
+            attempt_count=2,
+        ),
+        _record(
+            "newer",
+            dedupe_key="dedupe:newer",
+            source_id="private-source-id",
+            created_at_utc=NOW,
+            attempt_count=1,
+        ),
+        _record(
+            "held",
+            dedupe_key="dedupe:held",
+            error_code="missing_runbook",
+            action_code="mark_terminal_blocker",
+        ),
+    ]
+
+    report = build_remediation_opportunity_report(
+        records,
+        observed_at_utc=NOW,
+        runbook_error_codes={"provider_timeout"},
+    )
+
+    assert report.opportunity_count == 2
+    assert report.opportunities[0].record_ids == ["older", "newer"]
+    assert report.opportunities[0].priority_reasons[-1] == (
+        "checkpoint_or_idempotency_proof_missing"
+    )
+    assert report.opportunities[0].executor_eligibility == "held_unregistered"
+    payload = json.dumps(asdict(report), sort_keys=True)
+    assert "private-source-id" not in payload
+    assert report.opportunities[0].source_or_publisher_hashes
 
 
 def test_duplicate_failure_upsert_reuses_current_record(tmp_path) -> None:

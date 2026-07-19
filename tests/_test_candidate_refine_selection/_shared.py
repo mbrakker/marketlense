@@ -2,38 +2,34 @@
 from __future__ import annotations
 
 from pathlib import Path as _SplitPath
-__file__ = str(_SplitPath(__file__).resolve().parent.parent / "test_candidate_refine_selection.py")
 
-import logging
+__file__ = str(
+    _SplitPath(__file__).resolve().parent.parent / "test_candidate_refine_selection.py"
+)
 
 import json
-
+import logging
 from dataclasses import replace
-
 from pathlib import Path
-
 from types import SimpleNamespace
 
 from pypdf import PdfWriter
 
 from src.contracts.candidates import Candidate, CandidateFeatures
-
 from src.contracts.ingest import IngestSettings
-
+from src.contracts.prompts import PromptDependency, PromptDependencyManifest
 from src.contracts.report_assets import CropRefineResponse, CropRefineResult
-
 from src.contracts.report_models import Figure, Quote, RankedCandidate, ReportPayload
-
 from src.contracts.run_context import RunContext
-
 from src.generators import report_selection_generator as rsg
-
 from src.generators.report_generation_dependencies import ReportSelectionDependencies
+
 
 def _ctx() -> RunContext:
     return RunContext(
         schema_version="1.0", run_id="run", task_id="task", span_id="span"
     )
+
 
 def _settings(tmp_path, **overrides) -> IngestSettings:
     cover_style_path = (
@@ -58,6 +54,7 @@ def _settings(tmp_path, **overrides) -> IngestSettings:
     payload = {**base.__dict__, **overrides}
     return IngestSettings(**payload)
 
+
 def _deps(**overrides) -> ReportSelectionDependencies:
     base = ReportSelectionDependencies.default()
     seeded = replace(
@@ -65,6 +62,24 @@ def _deps(**overrides) -> ReportSelectionDependencies:
         load_prompt_set=lambda req, ctx: SimpleNamespace(
             system=SimpleNamespace(path="system.yaml", sha256="sys"),
             user=SimpleNamespace(path="user.yaml", sha256="usr"),
+            dependency_manifest=PromptDependencyManifest(
+                schema_version="1.0",
+                namespace=req.namespace,
+                system_root=PromptDependency(
+                    schema_version="1.0",
+                    path=f"{req.namespace}/system.yaml",
+                    sha256="a" * 64,
+                    kind="system_root",
+                ),
+                user_root=PromptDependency(
+                    schema_version="1.0",
+                    path=f"{req.namespace}/user.yaml",
+                    sha256="b" * 64,
+                    kind="user_root",
+                ),
+                prompt_content_hash="c" * 64,
+            ),
+            prompt_content_hash="c" * 64,
         ),
         render_prompt=lambda req, ctx: SimpleNamespace(text="prompt"),
         render_page_for_crop_refine=lambda req, ctx: SimpleNamespace(
@@ -91,6 +106,7 @@ def _deps(**overrides) -> ReportSelectionDependencies:
     )
     return replace(seeded, **overrides)
 
+
 def _candidate(
     *,
     cid: str,
@@ -112,6 +128,7 @@ def _candidate(
         meta=meta or {},
     )
 
+
 def _pdf_path(tmp_path: Path) -> str:
     path = tmp_path / "dummy.pdf"
     writer = PdfWriter()
@@ -122,14 +139,20 @@ def _pdf_path(tmp_path: Path) -> str:
     return str(path)
 
 
-
 __all__ = [
     name
     for name in globals()
     if name
     not in {
-        '__name__', '__annotations__', '__doc__', '__spec__',
-        '__file__', '__package__', '__loader__', '__cached__',
-        '__builtins__', '_SplitPath',
+        "__name__",
+        "__annotations__",
+        "__doc__",
+        "__spec__",
+        "__file__",
+        "__package__",
+        "__loader__",
+        "__cached__",
+        "__builtins__",
+        "_SplitPath",
     }
 ]

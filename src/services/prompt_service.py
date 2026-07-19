@@ -40,6 +40,10 @@ from src.contracts.prompts import (
 from src.contracts.run_context import RunContext
 from src.utils.errors import AppError
 from src.utils.logging import log_event
+from src.utils.model_resolver import (
+    execution_policies_from_config,
+    resolve_execution_policy,
+)
 
 logger = logging.getLogger("market_lense.prompt_service")
 
@@ -346,6 +350,24 @@ def validate_prompt_dry_run(
         )
     )
     fixtures = _load_prompt_dry_run_fixtures()
+    # Fixture content exercises rendering only. Execution settings always come
+    # from the same runtime resolver as a provider call unless a fixture opts
+    # into a clearly marked test-only override.
+    from src.contracts.config import ConfigLoadRequest
+    from src.services.config_service import load_settings
+
+    runtime_settings = load_settings(
+        ConfigLoadRequest(schema_version="1.0", path=""), ctx
+    )
+    execution_policies = execution_policies_from_config(
+        runtime_settings.llm_execution_policies,
+        model_overrides=runtime_settings.openai_models,
+        legacy_routing=runtime_settings.llm_routing,
+        default_model=runtime_settings.openai_model,
+        default_temperature=runtime_settings.temperature,
+        default_seed=runtime_settings.openai_seed,
+        default_timeout_seconds=runtime_settings.openai_timeout_seconds,
+    )
     fixtures_by_namespace = {fixture.namespace: fixture for fixture in fixtures}
     namespace_response = list_prompt_namespaces(
         PromptNamespaceListRequest(
@@ -404,6 +426,14 @@ def validate_prompt_dry_run(
     results: list[PromptDryRunResult] = []
     for namespace in target_namespaces:
         fixture = fixtures_by_namespace[namespace]
+        policy_decision = resolve_execution_policy(
+            namespace,
+            execution_policies,
+            default_model=runtime_settings.openai_model,
+            default_temperature=runtime_settings.temperature,
+            default_seed=runtime_settings.openai_seed,
+            default_timeout_seconds=runtime_settings.openai_timeout_seconds,
+        )
         started_at = time.perf_counter()
         prompt_set = load_prompt_set(
             PromptLoadRequest(
@@ -444,8 +474,18 @@ def validate_prompt_dry_run(
             rendered_system_prompt=rendered_system.text,
             rendered_user_prompt=rendered_user.text,
             render_runtime_ms=render_runtime_ms,
-            model=fixture.model,
-            temperature=float(fixture.temperature),
+            model=(
+                fixture.model
+                if fixture.test_only_execution_override
+                else policy_decision.policy.model
+            ),
+            temperature=(
+                float(fixture.temperature)
+                if fixture.test_only_execution_override
+                else policy_decision.policy.temperature
+            ),
+            execution_policy_hash=policy_decision.policy_hash,
+            execution_policy_source=policy_decision.policy_source,
         )
         logger.info(
             log_event(
@@ -470,6 +510,8 @@ def validate_prompt_dry_run(
                     "rendered_system_length": len(result.rendered_system_prompt),
                     "rendered_user_length": len(result.rendered_user_prompt),
                     "render_runtime_ms": result.render_runtime_ms,
+                    "execution_policy_hash": result.execution_policy_hash,
+                    "execution_policy_source": result.execution_policy_source,
                     "model": result.model,
                     "temperature": result.temperature,
                     "benchmark": {
@@ -690,7 +732,9 @@ def build_llm_execution_identity(
         retrieval_mode=str(retrieval_mode or "chat_json").strip() or "chat_json",
         routing_policy=dict(routing_policy or {}),
         compaction_policy=dict(compaction_policy or {}),
-        output_contract_schema_version=str(output_contract_schema_version or "").strip(),
+        output_contract_schema_version=str(
+            output_contract_schema_version or ""
+        ).strip(),
         validator_version=str(validator_version or "").strip(),
     )
     payload = asdict(identity)

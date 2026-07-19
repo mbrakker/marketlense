@@ -7,7 +7,10 @@ from typing import Any, Optional
 from src.contracts.candidates import Candidate
 from src.contracts.ingest import IngestSettings
 from src.contracts.report_assets import RankRequest
-from src.generators.prompt_preparation import prepare_prompt_bundle
+from src.generators.prompt_preparation import (
+    model_request_identity_fields,
+    prepare_prompt_bundle,
+)
 from src.generators.report_generation_dependencies import ReportSelectionDependencies
 from src.generators.report_generation_shared import logger
 from src.utils.candidate_features import candidate_features, candidate_features_payload
@@ -392,6 +395,9 @@ def _rank_candidates_batch(
         user_variables={"candidates_json": candidates_json},
         reload_if_changed=True,
         default_model=rank_model,
+        temperature=settings.rank_temperature,
+        seed=settings.rank_seed,
+        timeout_seconds=settings.rank_timeout_seconds,
     )
     logger.info(
         log_event(
@@ -442,8 +448,10 @@ def _rank_candidates_batch(
             module=logger.name,
             fields={
                 "candidate_kind": kind,
-                "system_prompt": prompt_bundle.system_prompt,
-                "user_prompt": prompt_bundle.user_prompt,
+                "prompt_content_hash": prompt_bundle.prompt_content_hash,
+                "execution_identity": prompt_bundle.execution_identity.execution_identity,
+                "system_prompt_chars": len(prompt_bundle.system_prompt),
+                "user_prompt_chars": len(prompt_bundle.user_prompt),
             },
         )
     )
@@ -456,8 +464,8 @@ def _rank_candidates_batch(
             fields={
                 "candidate_kind": kind,
                 "model": prompt_bundle.resolved_model,
-                "temperature": settings.rank_temperature,
-                "seed": settings.rank_seed,
+                "temperature": prompt_bundle.effective_temperature,
+                "seed": prompt_bundle.effective_seed,
                 "candidate_count": len(candidates),
             },
         )
@@ -470,16 +478,18 @@ def _rank_candidates_batch(
             prompt_system_sha256=prompt_bundle.prompt_set.system.sha256,
             prompt_user_sha256=prompt_bundle.prompt_set.user.sha256,
             model=prompt_bundle.resolved_model,
-            temperature=settings.rank_temperature,
+            temperature=prompt_bundle.effective_temperature,
             api_key=settings.openai_api_key,
-            seed=settings.rank_seed,
+            seed=prompt_bundle.effective_seed,
             candidate_count=len(candidates),
-            timeout_seconds=settings.rank_timeout_seconds,
+            max_output_tokens=prompt_bundle.effective_max_output_tokens,
+            timeout_seconds=prompt_bundle.effective_timeout_seconds,
             cost_ledger_path=settings.cost_ledger_path,
             cost_daily_path=settings.cost_daily_path,
             model_pricing=settings.model_pricing,
             response_cache_enabled=True,
             response_cache_dir=settings.cache_dir,
+            **model_request_identity_fields(prompt_bundle),
         ),
         ctx,
     )
@@ -492,7 +502,7 @@ def _rank_candidates_batch(
             fields={
                 "candidate_kind": kind,
                 "request_id": ranked_resp.request_id or "",
-                "content": ranked_resp.raw_content,
+                "response_chars": len(ranked_resp.raw_content or ""),
             },
         )
     )

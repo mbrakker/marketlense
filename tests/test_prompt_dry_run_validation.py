@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from src.contracts.config import ConfigLoadRequest
 from src.contracts.prompts import (
     PromptDryRunRequest,
     PromptLoadRequest,
@@ -13,8 +14,13 @@ from src.contracts.prompts import (
 )
 from src.contracts.run_context import RunContext
 from src.services import prompt_service
+from src.services.config_service import load_settings
 from src.services.prompt_service import list_prompt_namespaces, validate_prompt_dry_run
 from src.utils.errors import AppError
+from src.utils.model_resolver import (
+    execution_policies_from_config,
+    resolve_execution_policy,
+)
 
 
 def _ctx() -> RunContext:
@@ -72,6 +78,37 @@ def test_validate_prompt_dry_run_repository_covers_all_discovered_namespaces(
     ]
     assert len(namespace_events) == len(response.results)
     assert_logs_have_required_fields(events)
+
+
+def test_prompt_dry_run_uses_the_runtime_execution_policy() -> None:
+    response = validate_prompt_dry_run(
+        PromptDryRunRequest(
+            schema_version="1.0", namespaces=["report_vs/artifacts/summary"]
+        ),
+        _ctx(),
+    )
+    settings = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), _ctx())
+    expected = resolve_execution_policy(
+        "report_vs/artifacts/summary",
+        execution_policies_from_config(
+            settings.llm_execution_policies,
+            model_overrides=settings.openai_models,
+            legacy_routing=settings.llm_routing,
+            default_model=settings.openai_model,
+            default_temperature=settings.temperature,
+            default_seed=settings.openai_seed,
+            default_timeout_seconds=settings.openai_timeout_seconds,
+        ),
+        default_model=settings.openai_model,
+        default_temperature=settings.temperature,
+        default_seed=settings.openai_seed,
+        default_timeout_seconds=settings.openai_timeout_seconds,
+    )
+
+    result = response.results[0]
+    assert result.model == expected.policy.model
+    assert result.temperature == expected.policy.temperature
+    assert result.execution_policy_hash == expected.policy_hash
 
 
 def test_validate_prompt_dry_run_rejects_missing_fixture(

@@ -15,7 +15,10 @@ from src.contracts.context_category_fit import (
 from src.contracts.openai import OpenAIJSONPromptRequest, OpenAIResponseResult
 from src.contracts.schema_validation import SchemaValidateRequest
 from src.contracts.semantic_ids import ReportId
-from src.generators.prompt_preparation import prepare_prompt_bundle
+from src.generators.prompt_preparation import (
+    model_request_identity_fields,
+    prepare_prompt_bundle,
+)
 from src.services import prompt_service
 from src.services.category_mapping_service import (
     load_mappings as load_category_mappings,
@@ -135,8 +138,10 @@ def fit_report_categories_from_context(
                 "user_path": prompt_bundle.prompt_set.user.path,
                 "user_sha256": prompt_bundle.prompt_set.user.sha256,
                 "resolved_model": prompt_bundle.resolved_model,
-                "system_prompt": prompt_bundle.system_prompt,
-                "user_prompt": prompt_bundle.user_prompt,
+                "prompt_content_hash": prompt_bundle.prompt_content_hash,
+                "execution_identity": prompt_bundle.execution_identity.execution_identity,
+                "system_prompt_chars": len(prompt_bundle.system_prompt),
+                "user_prompt_chars": len(prompt_bundle.user_prompt),
             },
         )
     )
@@ -147,19 +152,24 @@ def fit_report_categories_from_context(
                 system_prompt=prompt_bundle.system_prompt,
                 user_prompt=prompt_bundle.user_prompt,
                 model=prompt_bundle.resolved_model,
-                temperature=float(getattr(request.settings, "temperature", 1.0)),
+                temperature=prompt_bundle.effective_temperature,
                 api_key=request.settings.openai_api_key,
-                seed=request.settings.openai_seed,
-                timeout_seconds=request.settings.openai_timeout_seconds,
+                seed=prompt_bundle.effective_seed,
+                max_output_tokens=prompt_bundle.effective_max_output_tokens,
+                timeout_seconds=prompt_bundle.effective_timeout_seconds,
                 cost_ledger_path=request.settings.cost_ledger_path,
                 cost_daily_path=request.settings.cost_daily_path,
-                usage_db_path=str(getattr(request.settings, "usage_db_path", "./state/llm_usage.sqlite")),
+                usage_db_path=str(
+                    getattr(
+                        request.settings, "usage_db_path", "./state/llm_usage.sqlite"
+                    )
+                ),
                 model_pricing=request.settings.model_pricing,
                 publisher_name=request.publisher_name,
                 report_name=request.report_name,
                 source_url=request.source_url,
                 prompt_namespace=request.prompt_namespace,
-                prompt_hash=prompt_bundle.prompt_set.user.sha256,
+                **model_request_identity_fields(prompt_bundle),
             ),
             ctx,
         )
@@ -408,14 +418,14 @@ def _coerce_fit_response(
             if text and text not in evidence_sections:
                 evidence_sections.append(text)
         fit = CategoryFitCandidate(
-                schema_version="1.0",
-                category_id=category_id,
-                label=label or profile_by_id[category_id]["label"],
-                fit_score=fit_score,
-                decision=decision,
-                why_fit=str(item.get("why_fit") or "").strip(),
-                why_not_fit=str(item.get("why_not_fit") or "").strip(),
-                evidence_sections=evidence_sections,
+            schema_version="1.0",
+            category_id=category_id,
+            label=label or profile_by_id[category_id]["label"],
+            fit_score=fit_score,
+            decision=decision,
+            why_fit=str(item.get("why_fit") or "").strip(),
+            why_not_fit=str(item.get("why_not_fit") or "").strip(),
+            evidence_sections=evidence_sections,
         )
         fits.append(
             _apply_topic_semantics(

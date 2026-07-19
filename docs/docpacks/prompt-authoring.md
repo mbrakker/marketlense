@@ -47,6 +47,20 @@ and compaction policy, output-contract version, and validator version. A
 legacy record remains readable but is not reused when current execution
 identity compatibility is required.
 
+`llm_execution_policies` in `src/config/app.yaml` is the canonical typed
+provider-call policy inventory. Resolution is exact namespace then longest
+approved prefix; provider retries are forbidden there because workflow retry
+policy remains orchestrator-owned. Prompt dry-run fixtures render retained
+variables but resolve model and temperature through this same runtime policy.
+Their old model/temperature fields are descriptive only unless a fixture sets
+the explicit `test_only_execution_override` flag.
+
+Legacy `openai_models` entries may still select a more specific model during
+the migration, but they inherit every other field from the nearest canonical
+execution policy. A model override must therefore never clear its parent
+output cap, timeout, structured-output requirement, retrieval mode, or
+provenance identity.
+
 Any prompt or schema dependency change should be accompanied by:
 
 - schema compatibility check

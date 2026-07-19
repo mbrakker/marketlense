@@ -2,38 +2,58 @@
 from __future__ import annotations
 
 from pathlib import Path as _SplitPath
-__file__ = str(_SplitPath(__file__).resolve().parent.parent / "test_publisher_inventory_candidate_screening_generator.py")
+
+__file__ = str(
+    _SplitPath(__file__).resolve().parent.parent
+    / "test_publisher_inventory_candidate_screening_generator.py"
+)
 
 import json
-
 import logging
-
 from dataclasses import replace
-
 from types import SimpleNamespace
 
 from src.contracts.openai import OpenAIResponseResult
-
-from src.contracts.prompts import PromptSet, PromptTemplate
-
+from src.contracts.prompts import (
+    PromptDependency,
+    PromptDependencyManifest,
+    PromptSet,
+    PromptTemplate,
+)
 from src.contracts.publisher_inventory import (
     PublisherInventoryCandidateScreeningItem,
     PublisherInventoryCandidateScreeningRequest,
     PublisherInventorySettings,
 )
-
+from src.contracts.run_context import RunContext
 from src.generators.publisher_inventory_candidate_screening_generator import (
     _resolve_candidate_screening_batch_size,
     screen_publisher_inventory_candidates,
 )
 
-from src.contracts.run_context import RunContext
 
 def _ctx() -> RunContext:
     return RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
 
+
 class RecordingPromptClient:
     def load_prompt_set(self, request, ctx):
+        manifest = PromptDependencyManifest(
+            schema_version="1.0",
+            namespace=request.namespace,
+            system_root=PromptDependency(
+                schema_version="1.0",
+                path=f"{request.namespace}/system.yaml",
+                sha256="a" * 64,
+                kind="system_root",
+            ),
+            user_root=PromptDependency(
+                schema_version="1.0",
+                path=f"{request.namespace}/user.yaml",
+                sha256="b" * 64,
+                kind="user_root",
+            ),
+        )
         return PromptSet(
             schema_version="1.0",
             system=PromptTemplate(
@@ -52,6 +72,8 @@ class RecordingPromptClient:
                 ),
                 sha256="user-sha",
             ),
+            dependency_manifest=manifest,
+            prompt_content_hash="c" * 64,
         )
 
     def render_prompt(self, request, ctx):
@@ -59,6 +81,7 @@ class RecordingPromptClient:
         for key, value in request.variables.items():
             text = text.replace(f"{{{{ {key} }}}}", str(value))
         return SimpleNamespace(text=text)
+
 
 class RecordingOpenAIClient:
     def __init__(self, payload: dict) -> None:
@@ -78,6 +101,7 @@ class RecordingOpenAIClient:
             total_tokens=30,
             request_id="req-1",
         )
+
 
 class BatchAwareOpenAIClient:
     def __init__(self) -> None:
@@ -105,6 +129,7 @@ class BatchAwareOpenAIClient:
             total_tokens=30,
             request_id=f"req-{len(self.requests)}",
         )
+
 
 class RepairingOpenAIClient:
     def __init__(self) -> None:
@@ -143,6 +168,7 @@ class RepairingOpenAIClient:
             request_id=f"req-{len(self.requests)}",
         )
 
+
 def _settings() -> PublisherInventorySettings:
     return PublisherInventorySettings(
         schema_version="1.0",
@@ -176,14 +202,20 @@ def _settings() -> PublisherInventorySettings:
     )
 
 
-
 __all__ = [
     name
     for name in globals()
     if name
     not in {
-        '__name__', '__annotations__', '__doc__', '__spec__',
-        '__file__', '__package__', '__loader__', '__cached__',
-        '__builtins__', '_SplitPath',
+        "__name__",
+        "__annotations__",
+        "__doc__",
+        "__spec__",
+        "__file__",
+        "__package__",
+        "__loader__",
+        "__cached__",
+        "__builtins__",
+        "_SplitPath",
     }
 ]

@@ -8,7 +8,10 @@ from src.contracts.config import AppSettings
 from src.contracts.openai import OpenAIJSONPromptRequest
 from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationIssue
-from src.generators.prompt_preparation import prepare_prompt_bundle
+from src.generators.prompt_preparation import (
+    model_request_identity_fields,
+    prepare_prompt_bundle,
+)
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 
@@ -98,11 +101,11 @@ def run_semantic_validation(
         log_event(
             semantic_ctx,
             role="generator",
-            event="prompt_rendered",
+            event="prompt_rendered_identity",
             module=LOGGER_NAME,
             fields={
-                "system_prompt": prompt_bundle.system_prompt,
-                "user_prompt": prompt_bundle.user_prompt,
+                "prompt_content_hash": prompt_bundle.prompt_content_hash,
+                "execution_identity": prompt_bundle.execution_identity.execution_identity,
             },
         )
     )
@@ -143,8 +146,9 @@ def run_semantic_validation(
             module=LOGGER_NAME,
             fields={
                 "model": prompt_bundle.resolved_model,
-                "temperature": settings.temperature,
-                "seed": settings.openai_seed,
+                "temperature": prompt_bundle.effective_temperature,
+                "seed": prompt_bundle.effective_seed,
+                "execution_policy_hash": prompt_bundle.execution_policy.policy_hash,
             },
         )
     )
@@ -155,19 +159,21 @@ def run_semantic_validation(
                 system_prompt=prompt_bundle.system_prompt,
                 user_prompt=prompt_bundle.user_prompt,
                 model=prompt_bundle.resolved_model,
-                temperature=settings.temperature,
+                temperature=prompt_bundle.effective_temperature,
                 api_key=settings.openai_api_key,
-                seed=settings.openai_seed,
-                timeout_seconds=settings.openai_timeout_seconds,
+                seed=prompt_bundle.effective_seed,
+                timeout_seconds=prompt_bundle.effective_timeout_seconds,
                 cost_ledger_path=settings.cost_ledger_path,
                 cost_daily_path=settings.cost_daily_path,
-                usage_db_path=str(getattr(settings, "usage_db_path", "./state/llm_usage.sqlite")),
+                usage_db_path=str(
+                    getattr(settings, "usage_db_path", "./state/llm_usage.sqlite")
+                ),
                 model_pricing=settings.model_pricing,
                 publisher_name=publisher_name,
                 report_name=report_name,
                 source_url=source_url,
                 prompt_namespace=prompt_namespace,
-                prompt_hash=prompt_bundle.prompt_set.user.sha256,
+                **model_request_identity_fields(prompt_bundle),
             ),
             semantic_ctx,
         )

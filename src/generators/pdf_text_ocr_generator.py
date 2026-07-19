@@ -210,8 +210,9 @@ def recover_pdf_text_with_ocr(
                     "chunk_pdf_path": chunk.chunk_pdf_path,
                     "source_page_start": chunk.start_page_number,
                     "source_page_end": chunk.end_page_number,
-                    "system_prompt": system_render.text,
-                    "user_prompt": user_render.text,
+                    "prompt_content_hash": prompt_set.prompt_content_hash,
+                    "system_prompt_chars": len(system_render.text),
+                    "user_prompt_chars": len(user_render.text),
                 },
             )
         )
@@ -379,7 +380,11 @@ def _run_ocr_chunk(
                 timeout_seconds=runtime.settings.pdf_text_ocr_timeout_seconds,
                 cost_ledger_path=runtime.settings.cost_ledger_path,
                 cost_daily_path=runtime.settings.cost_daily_path,
-                usage_db_path=str(getattr(runtime.settings, "usage_db_path", "./state/llm_usage.sqlite")),
+                usage_db_path=str(
+                    getattr(
+                        runtime.settings, "usage_db_path", "./state/llm_usage.sqlite"
+                    )
+                ),
                 model_pricing=runtime.settings.model_pricing,
                 publisher_name=runtime.publisher_name,
                 report_name=runtime.source_report_name or runtime.report_title,

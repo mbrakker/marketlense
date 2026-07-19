@@ -1,8 +1,9 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
-from ._shared import *  # noqa: F401,F403
 from src.services._browser_report_download._browser_runtime import timeout_recovery
+
+from ._shared import *  # noqa: F401,F403
 
 
 def test_download_report_with_browser_use_lookup_submission_assist_recovers_lookup_blocked_submit(
@@ -725,7 +726,9 @@ def test_download_report_with_browser_use_timeout_standard_form_assist_submits_o
 ) -> None:
     settings = replace(
         _settings(tmp_path, work_email="reports@marketbearing.eu"),
-        timeout_seconds=0.01,
+        # Keep the main agent below its two-second simulated stall while
+        # leaving enough bounded time for the terminal confirmation recovery.
+        timeout_seconds=0.5,
         max_steps=1,
         identity_profile=BrowserDownloadIdentity(
             schema_version="1.0",

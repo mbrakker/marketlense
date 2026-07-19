@@ -18,7 +18,6 @@ from scripts.quality.release_evidence_manifest import (
     build_release_evidence_manifest,
 )
 
-
 _SHA = "a" * 40
 
 
@@ -32,7 +31,7 @@ def test_queue_evidence_exercises_bounded_lifecycle_and_reconciles_counts() -> N
 
     assert evidence["passed"] is True
     assert evidence["exact_head_verified"] is True
-    assert evidence["queue_schema_version"] == 12
+    assert evidence["queue_schema_version"] == 13
     assert evidence["transition_counts"] == {
         "budget_deferred": 1,
         "leased": 4,

@@ -130,6 +130,12 @@ class AppSettings:
             "doc": "Per-namespace quality, token, compaction, and provider-fallback routing policies."
         },
     )
+    llm_execution_policies: Dict[str, Dict[str, object]] = field(
+        default_factory=dict,
+        metadata={
+            "doc": "Versioned namespace-aware execution controls for model calls."
+        },
+    )
     ingest_lock_ttl_seconds: float = field(
         default=7200.0,
         metadata={

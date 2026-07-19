@@ -32,12 +32,13 @@ All work is listed below in one register. `Active` items have detailed completio
 | Closed | A6 | Budget-manager closeout and operational proof | Live Drive, OpenAI vector-store, and LLM calls recorded actual use; next governed calls were stopped before provider I/O and strict evidence passed. |
 | Closed | A5 | Business-email, CAPTCHA, anti-bot, terminal-evidence, and avoided-browser-spend route policy | TTL-bound route policy now avoids browser/mailbox work for retained hard blockers and allows explicit revalidation. |
 | Active | A10 | Budget-deferred-work recovery and operator requeue | Turn durable budget deferrals into safe, visible, idempotent resumption. |
-| Active | A11 | Ledger-driven recurring-failure prevention and operator prioritization | Turn canonical remediation evidence into bounded root-cause and avoided-work decisions. |
+| Closed | A11 | Ledger-driven recurring-failure prevention and operator prioritization | Read-only deterministic remediation-opportunity report groups recurring failures and holds every item without a runtime executor. |
 | Closed | A7 | Budget-aware model routing, compaction, and failure-class fallback | YAML routing, anchor-preserving compaction, same-provider fallback, retained-corpus evidence gate, and regression coverage are active. |
 | Active | A8 | Model-call replay drift comparison | Standalone read-only regression outcome. |
 | Closed | A9 | Canonical report-source identity and publication provenance | Schema v19 immutable observations, deterministic source resolution, safe public projection, render-only invalidation, and live idempotent source capture passed. |
 | Closed | P1 | Publish snapshot naming and synchronous idempotent publishing | Public/UI terminology now says Publish Readiness; the compatibility alias preserves callers and synchronous review-gated publishing remains unchanged. |
 | Active | A14 | Calibrate acquisition policy from retained route economics | Turn new resource telemetry into bounded, evidence-based route-order recommendations. |
+| Active | A15 | Complete explicit model-policy coverage and policy-effectiveness evidence | Extend hash-pinned controls and measured cost/quality evidence to every production model namespace. |
 | Active | P2 | Bounded public-observability events | Narrow log-event size-bound hardening for public-facing boundaries. |
 | Active | P3 | Hosted HTTPS, sitemap, and public trust checks | Safe-error boundary completed; hosted trust outcome remains. |
 | Active | P10 | Correlated public-render failure observability | Hosted release-observability outcome. |
@@ -83,6 +84,7 @@ All work is listed below in one register. `Active` items have detailed completio
 
 ## Recently Closed
 
+- **A11 — Ledger-driven recurring-failure prevention and operator prioritization (2026-07-19):** `remediation-opportunities` now groups canonical records by workflow, failed stage, typed error, proposed action, retryability, and runbook coverage. It emits only bounded record IDs and opaque source/publisher hashes with recurrence, age, attempted operation/cost, checkpoint/idempotency proof counts, deterministic priority reasons, and an explicit `held_unregistered` disposition. The live retained ledger reported 24 records in 15 groups; its most recurrent group had eight records and was held because its runbook mapping and execution proof were absent. No remediation record, provider call, or external side effect was changed.
 - **D7 — Queue-backed publication coverage and live recovery proof (2026-07-18):** All critical queues have registered non-compatibility handlers and architecture tests prohibit direct major-stage chaining and UI subprocess ownership. A controlled live Briefing used real projected evidence from two publishers, one real model call (8,796 input / 3,460 output tokens), a frozen manifest, durable cover/readiness completion, and an explicit approval-driven `wordpress_publish --dry-run` with zero WordPress write. A live Signal root completed one candidate stage plus eight independent generation, cover, and readiness paths. The legacy deferred-work adapter preserves rows while routing new work through the shared lifecycle. D12 owns the separate staging-only verified WordPress post/projection canary.
 - **E7 — Planner-enforced artifact-family reuse (2026-07-17):** Enforce mode now covers retained render, crop, checkpointed analysis/validator, combined crop-plus-analysis, publication preflight, and cross-report reads with a persisted plan/actual reconciliation, report-artifact lease, canonical lineage replacement, and requested-family dependency scoping. Real retained-report replays matched every planned stage/call/side effect: the final post-fix render-only canary completed in 1.190 s (1.190 s audited) with exactly `render_complete`, `html_render`, and checkpoint/HTML writes; crop-only completed in 15.760 s (15.513 s audited) with only crop QA/render and HTML render; and a real model-policy repair issued 17 LLM calls (134,969 input / 40,241 output tokens, estimated $0.114225) while retaining source extraction. The final HTML was complete (77,911 bytes, 469 tags, five images, no `undefined`). A temporary normal-policy replay rejected an incomplete payload before rendering or publication, and a later normal-policy repair completed in 245.980 s with a matched audit. A final full fresh rebuild was correctly stopped by canonical PDF budget authority before provider I/O; no budget bypass was attempted.
 - **A3 — Workflow-wide remediation-ledger rollout (2026-07-17):** The generated 31-workflow matrix is CI-checked. A controlled typed `provider_timeout` persisted one remediation record across two submissions; the bounded reaper inspected it once and held it as `operator_action_required` without an executor or external side effect. The read-only soak reported one created, one deduplicated, zero stale, zero eligible, and one held record with no missing runbook mapping. Strict evidence bundle `21a046e89de64aa3a4fcc73250e74074` passed on exact commit `3da3d70e4b202cd2be4f206347982b9d55c94a13`.
@@ -141,19 +143,6 @@ The original ten-item screenshot baseline is complete in the committed implement
 - Default ingest skips quarantined files; explicit rescan/revalidation clears only a valid replacement.
 - CLI or dashboard exposes quarantined inputs and remediation guidance, with tests for write, skip, revalidation, and valid-replacement transitions.
 
-#### A11. Ledger-driven recurring-failure prevention and operator prioritization
-
-- **Title:** Ledger-driven recurring-failure prevention and operator prioritization
-- **Impact 5 / effort: 2**
-- **Context:** The canonical ledger now retains deduplication, held/eligible state, runbook coverage, and bounded side-effect evidence, but recurring root causes still require manual cross-record review.
-- **Benefit:** Operators can prioritize the few failure classes that repeatedly consume time or provider capacity, and prevent known bad work before it enters expensive processing.
-- **Risks to avoid:** Keep aggregation deterministic and redacted; do not create a scheduler, auto-resolve records, or suppress a source without a typed approval and expiry.
-- **Success criteria:**
-
-- A bounded read-only report groups retained remediation records by workflow, error code, action, and runbook status with scalar counts, age, and deduplication trend.
-- The operator surface produces explicit prevention recommendations linked only to record IDs and retained evidence references; it never exposes source payloads or provider responses.
-- Tests prove deterministic ordering, no cross-tenant/source leakage, threshold behavior, and that recommendations cannot trigger execution or hide historical transitions.
-
 #### A13. Add approved deferred-work resume adapters for acquisition workflows
 
 - **Title:** Add approved deferred-work resume adapters for report download and publisher inventory
@@ -179,6 +168,19 @@ The original ten-item screenshot baseline is complete in the committed implement
 - A bounded read-only report groups compatible publisher/route cohorts by policy hash and reports sample size, verified-success rate, median/p95 elapsed time, browser/model cost, and avoided operations without payloads or personal data.
 - Deterministic recommendations require a documented minimum compatible sample and a material measured improvement; they produce an operator-reviewable configuration proposal rather than changing routing autonomously.
 - Tests cover incomplete measurements, policy mismatch, threshold behavior, stable ordering, and proof that recommendations cannot invoke providers or change retained route history.
+
+#### A15. Complete explicit model-policy coverage and policy-effectiveness evidence
+
+- **Title:** Complete explicit model-policy coverage and policy-effectiveness evidence
+- **Impact 5 / effort: 2**
+- **Context:** Report generation, taxonomy, and candidate ranking now use explicit hash-pinned execution policies, but older model-backed namespaces still use compatibility defaults and operators cannot compare observed cost, latency, validation, and cache outcomes by policy identity.
+- **Benefit:** Every materially expensive model call can be governed by an auditable policy and operators can safely identify policies that reduce cost or improve validated output quality.
+- **Risks to avoid:** Preserve each namespace's current semantic contract, provider boundary, retry ownership, and cache compatibility; do not infer a policy from one noisy run or change routing autonomously.
+- **Success criteria:**
+
+- Inventory every active model-backed namespace, migrate each from compatibility fallback to an explicit versioned policy with bounded output, timeout, retrieval, and structured-output controls, and reject unregistered production namespaces at preflight.
+- Emit a bounded policy-effectiveness report that compares compatible policy identities by provider calls, validated-output rate, cache reuse, elapsed time, tokens, and cost without retaining prompts, sources, or model output.
+- Retained-corpus and bounded live checks prove policy hashes invalidate incompatible cache reuse, preserve output contracts, and identify at least one operator-reviewable cost or quality improvement without autonomous policy changes.
 
 #### A8. Compare retained model-call replay bundles
 

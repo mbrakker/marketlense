@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, Optional
 
-from src.contracts.llm import LLMRoutingDecision
+from src.contracts.llm import LLMExecutionPolicyDecision, LLMRoutingDecision
 from src.contracts.prompts import (
     LLMExecutionIdentity,
     PromptDependencyManifest,
@@ -15,6 +15,8 @@ from src.contracts.run_context import RunContext
 from src.services.prompt_service import build_llm_execution_identity
 from src.utils.errors import AppError
 from src.utils.model_resolver import (
+    execution_policies_from_config,
+    resolve_execution_policy,
     resolve_routing_policy,
     routing_policies_from_config,
 )
@@ -35,6 +37,9 @@ class PreparedPromptBundle:
     routing_decision: LLMRoutingDecision = field(
         metadata={"doc": "Deterministic quality/cost routing decision."}
     )
+    execution_policy: LLMExecutionPolicyDecision = field(
+        metadata={"doc": "Resolved versioned provider-call policy."}
+    )
     dependency_manifest: PromptDependencyManifest = field(
         metadata={"doc": "Complete prompt dependency manifest used for rendering."}
     )
@@ -43,6 +48,22 @@ class PreparedPromptBundle:
     )
     execution_identity: LLMExecutionIdentity = field(
         metadata={"doc": "Resolved content and execution compatibility identity."}
+    )
+    effective_temperature: float = field(
+        default=0.0,
+        metadata={"doc": "Resolved temperature sent to the provider."},
+    )
+    effective_seed: int | None = field(
+        default=None,
+        metadata={"doc": "Resolved optional seed sent to the provider."},
+    )
+    effective_max_output_tokens: int | None = field(
+        default=None,
+        metadata={"doc": "Resolved output limit sent to the provider when supported."},
+    )
+    effective_timeout_seconds: float | None = field(
+        default=None,
+        metadata={"doc": "Resolved request timeout sent to the provider."},
     )
 
 
@@ -55,6 +76,9 @@ def model_request_identity_fields(bundle: PreparedPromptBundle) -> dict[str, Any
         "prompt_dependency_manifest": asdict(bundle.dependency_manifest),
         "execution_identity": bundle.execution_identity.execution_identity,
         "execution_identity_manifest": asdict(bundle.execution_identity),
+        "execution_policy_hash": bundle.execution_policy.policy_hash,
+        "execution_policy": asdict(bundle.execution_policy.policy),
+        "execution_policy_source": bundle.execution_policy.policy_source,
     }
 
 
@@ -104,6 +128,11 @@ def prepare_prompt_bundle(
         ctx,
     )
     fallback_model = str(default_model or getattr(settings, "openai_model", "") or "")
+    fallback_temperature = float(
+        temperature
+        if temperature is not None
+        else getattr(settings, "temperature", 1.0)
+    )
     routing_decision = resolve_routing_policy(
         namespace,
         routing_policies_from_config(
@@ -112,6 +141,23 @@ def prepare_prompt_bundle(
         ),
         default_model=fallback_model,
     )
+    execution_policy = resolve_execution_policy(
+        namespace,
+        execution_policies_from_config(
+            getattr(settings, "llm_execution_policies", {}),
+            model_overrides=getattr(settings, "openai_models", {}),
+            legacy_routing=getattr(settings, "llm_routing", {}),
+            default_model=fallback_model,
+            default_temperature=fallback_temperature,
+            default_seed=getattr(settings, "openai_seed", None),
+            default_timeout_seconds=getattr(settings, "openai_timeout_seconds", None),
+        ),
+        default_model=fallback_model,
+        default_temperature=fallback_temperature,
+        default_seed=getattr(settings, "openai_seed", None),
+        default_timeout_seconds=getattr(settings, "openai_timeout_seconds", None),
+    )
+    resolved_policy = execution_policy.policy
     manifest = prompt_set.dependency_manifest
     if manifest is None or not prompt_set.prompt_content_hash:
         raise AppError(
@@ -120,35 +166,46 @@ def prepare_prompt_bundle(
             retryable=False,
             context={"namespace": namespace},
         )
-    resolved_temperature = (
-        float(temperature)
-        if temperature is not None
+    # Explicit call-site values are compatibility inputs only.  Once a policy
+    # applies, its provider settings are authoritative for this invocation.
+    resolved_temperature = resolved_policy.temperature
+    resolved_seed = (
+        None
+        if resolved_policy.seed_policy == "disabled"
         else (
-            float(settings.temperature)
-            if getattr(settings, "temperature", None) is not None
-            else None
+            resolved_policy.seed
+            if resolved_policy.seed_policy == "fixed"
+            else (seed if seed is not None else getattr(settings, "openai_seed", None))
         )
     )
-    resolved_seed = seed if seed is not None else getattr(settings, "openai_seed", None)
     resolved_timeout = (
-        float(timeout_seconds)
-        if timeout_seconds is not None
+        resolved_policy.timeout_seconds
+        if resolved_policy.timeout_seconds is not None
         else (
-            float(settings.openai_timeout_seconds)
-            if getattr(settings, "openai_timeout_seconds", None) is not None
-            else None
+            float(timeout_seconds)
+            if timeout_seconds is not None
+            else getattr(settings, "openai_timeout_seconds", None)
         )
+    )
+    resolved_retrieval_mode = (
+        retrieval_mode
+        if resolved_policy.retrieval_mode == "inherit"
+        else resolved_policy.retrieval_mode
     )
     execution_identity = build_llm_execution_identity(
         prompt_content_hash=prompt_set.prompt_content_hash,
-        provider=provider,
-        model=routing_decision.model,
+        provider=resolved_policy.provider,
+        model=resolved_policy.model,
         temperature=resolved_temperature,
         seed=resolved_seed,
-        max_output_tokens=max_output_tokens,
+        max_output_tokens=(
+            resolved_policy.max_output_tokens
+            if resolved_policy.max_output_tokens is not None
+            else max_output_tokens
+        ),
         timeout_seconds=resolved_timeout,
         provider_retry_count=0,
-        retrieval_mode=retrieval_mode,
+        retrieval_mode=resolved_retrieval_mode,
         routing_policy={
             "policy_source": routing_decision.policy_source,
             "tier": routing_decision.tier,
@@ -156,6 +213,8 @@ def prepare_prompt_bundle(
             "same_provider_fallback": routing_decision.same_provider_fallback,
             "max_input_tokens": routing_decision.max_input_tokens,
             "compaction_enabled": routing_decision.compaction_enabled,
+            "execution_policy_hash": execution_policy.policy_hash,
+            "execution_policy_source": execution_policy.policy_source,
         },
         compaction_policy={
             "enabled": routing_decision.compaction_enabled,
@@ -171,8 +230,17 @@ def prepare_prompt_bundle(
         prompt_set=prompt_set,
         system_prompt=rendered_system.text,
         user_prompt=rendered_user.text,
-        resolved_model=routing_decision.model,
+        resolved_model=resolved_policy.model,
         routing_decision=routing_decision,
+        execution_policy=execution_policy,
+        effective_temperature=resolved_temperature,
+        effective_seed=resolved_seed,
+        effective_max_output_tokens=(
+            resolved_policy.max_output_tokens
+            if resolved_policy.max_output_tokens is not None
+            else max_output_tokens
+        ),
+        effective_timeout_seconds=resolved_timeout,
         dependency_manifest=manifest,
         prompt_content_hash=prompt_set.prompt_content_hash,
         execution_identity=execution_identity,

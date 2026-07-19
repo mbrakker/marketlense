@@ -67,6 +67,70 @@ from .schema import (
 )
 
 
+def acquire_workflow_supervisor_lease(
+    state_db: str,
+    *,
+    owner_id: str,
+    now_utc: str,
+    lease_seconds: int,
+    ctx: RunContext,
+) -> bool:
+    """Atomically acquire the one active supervisor lease or return busy."""
+
+    if not owner_id.strip():
+        raise AppError(
+            code="workflow_supervisor_owner_missing",
+            message="Supervisor owner identity is required",
+            retryable=False,
+        )
+    now = _now(now_utc)
+    expiry = _future(now, lease_seconds)
+    with _state_conn(state_db, ctx) as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute(
+            "SELECT owner_id,lease_expires_at_utc FROM workflow_supervisor_lease "
+            "WHERE lease_name='default'"
+        ).fetchone()
+        if row is None:
+            conn.execute(
+                "INSERT INTO workflow_supervisor_lease(lease_name,owner_id,lease_expires_at_utc,updated_at_utc) "
+                "VALUES('default',?,?,?)",
+                (owner_id, expiry, now),
+            )
+            conn.commit()
+            return True
+        current_owner, current_expiry = str(row[0] or ""), str(row[1] or "")
+        if (
+            current_owner
+            and current_owner != owner_id
+            and _parse_time(current_expiry) > _parse_time(now)
+        ):
+            conn.commit()
+            return False
+        updated = conn.execute(
+            "UPDATE workflow_supervisor_lease SET owner_id=?,lease_expires_at_utc=?,updated_at_utc=? "
+            "WHERE lease_name='default'",
+            (owner_id, expiry, now),
+        ).rowcount
+        conn.commit()
+    return updated == 1
+
+
+def release_workflow_supervisor_lease(
+    state_db: str, *, owner_id: str, now_utc: str, ctx: RunContext
+) -> None:
+    """Release only the caller's lease; another supervisor cannot be cleared."""
+
+    with _state_conn(state_db, ctx) as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        conn.execute(
+            "UPDATE workflow_supervisor_lease SET owner_id='',lease_expires_at_utc='',updated_at_utc=? "
+            "WHERE lease_name='default' AND owner_id=?",
+            (_now(now_utc), owner_id),
+        )
+        conn.commit()
+
+
 def release_expired_workflow_leases(
     state_db: str, ctx: RunContext, *, now_utc: str = "", actor: str = "lease_reaper"
 ) -> list[str]:

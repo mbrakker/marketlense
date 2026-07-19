@@ -58,6 +58,8 @@ from src.utils.errors import AppError
 from src.utils.json_utils import dump_json_text
 from src.utils.logging import log_event
 from src.utils.model_resolver import (
+    execution_policies_from_config,
+    resolve_execution_policy,
     resolve_routing_policy,
     routing_policies_from_config,
 )
@@ -167,7 +169,7 @@ def assemble_artifacts_payload(
                 module=logger.name,
                 fields=evidence_span_stats,
             )
-    )
+        )
     metric_spine = _merge_metric_spines(
         derive_metric_spine(evidence_packs),
         derive_metric_spine_from_insights(insights_final),
@@ -467,7 +469,9 @@ def derive_metric_spine_from_insights(
             continue
         value = _s(metric.get("value") or metric.get("raw_value")).strip()
         unit = _s(metric.get("unit")).strip()
-        evidence_id = _s(insight.get("evidence_id") or metric.get("evidence_id")).strip()
+        evidence_id = _s(
+            insight.get("evidence_id") or metric.get("evidence_id")
+        ).strip()
         label = _s(metric.get("label") or metric.get("metric")).strip()
         if not label:
             label = _metric_label_from_insight_text(_s(insight.get("text")).strip())
@@ -622,14 +626,20 @@ def _artifact_evidence_ids_by_page(
         register(_s(claim.get("evidence_id")).strip(), _int_list(claim.get("pages")))
         for span in claim.get("evidence_spans") or []:
             if isinstance(span, dict):
-                register(_s(span.get("evidence_id")).strip(), _int_list([span.get("page")]))
+                register(
+                    _s(span.get("evidence_id")).strip(), _int_list([span.get("page")])
+                )
     for insight in insights_final:
         if not isinstance(insight, dict):
             continue
-        register(_s(insight.get("evidence_id")).strip(), _int_list(insight.get("pages")))
+        register(
+            _s(insight.get("evidence_id")).strip(), _int_list(insight.get("pages"))
+        )
         for span in insight.get("evidence_spans") or []:
             if isinstance(span, dict):
-                register(_s(span.get("evidence_id")).strip(), _int_list([span.get("page")]))
+                register(
+                    _s(span.get("evidence_id")).strip(), _int_list([span.get("page")])
+                )
     return ids_by_page
 
 
@@ -674,9 +684,7 @@ def build_key_figures(
                 "timeframe": _s(metric.get("timeframe")).strip(),
                 "source_page": page_values[0] if page_values else None,
                 "why_it_matters": _key_figure_why_it_matters(metric),
-                "caveat": (
-                    "Missing context: " + ", ".join(missing) if missing else ""
-                ),
+                "caveat": ("Missing context: " + ", ".join(missing) if missing else ""),
                 "evidence_id": evidence_id,
                 "related_chart_candidate": _related_chart_candidate_id(
                     evidence_packs=evidence_packs,
@@ -841,7 +849,9 @@ def _chart_candidates(evidence_packs: Dict[str, Any]) -> List[Dict[str, Any]]:
 def _related_chart_candidate_id(
     *, evidence_packs: Dict[str, Any], evidence_id: str
 ) -> str:
-    chart = _chart_candidate_for_evidence(_chart_candidates(evidence_packs), evidence_id)
+    chart = _chart_candidate_for_evidence(
+        _chart_candidates(evidence_packs), evidence_id
+    )
     if not chart:
         return ""
     return _s(chart.get("chart_id") or chart.get("id")).strip()
@@ -1128,13 +1138,38 @@ def _artifact_cache_meta(
             ),
             default_model=settings.openai_model,
         )
+        execution_policy = resolve_execution_policy(
+            namespace,
+            execution_policies_from_config(
+                getattr(settings, "llm_execution_policies", {}),
+                model_overrides=getattr(settings, "openai_models", {}),
+                legacy_routing=getattr(settings, "llm_routing", {}),
+                default_model=settings.openai_model,
+                default_temperature=settings.temperature,
+                default_seed=settings.openai_seed,
+                default_timeout_seconds=settings.openai_timeout_seconds,
+            ),
+            default_model=settings.openai_model,
+            default_temperature=settings.temperature,
+            default_seed=settings.openai_seed,
+            default_timeout_seconds=settings.openai_timeout_seconds,
+        )
+        policy = execution_policy.policy
+        seed = (
+            None
+            if policy.seed_policy == "disabled"
+            else policy.seed
+            if policy.seed_policy == "fixed"
+            else settings.openai_seed
+        )
         execution_identity = build_llm_execution_identity(
             prompt_content_hash=prompt_set.prompt_content_hash,
-            provider="openai",
-            model=routing_decision.model,
-            temperature=settings.temperature,
-            seed=settings.openai_seed,
-            timeout_seconds=settings.openai_timeout_seconds,
+            provider=policy.provider,
+            model=policy.model,
+            temperature=policy.temperature,
+            seed=seed,
+            max_output_tokens=policy.max_output_tokens,
+            timeout_seconds=policy.timeout_seconds,
             retrieval_mode=retrieval_mode,
             routing_policy={
                 "policy_source": routing_decision.policy_source,
@@ -1143,6 +1178,8 @@ def _artifact_cache_meta(
                 "same_provider_fallback": routing_decision.same_provider_fallback,
                 "max_input_tokens": routing_decision.max_input_tokens,
                 "compaction_enabled": routing_decision.compaction_enabled,
+                "execution_policy_hash": execution_policy.policy_hash,
+                "execution_policy_source": execution_policy.policy_source,
             },
             compaction_policy={
                 "enabled": routing_decision.compaction_enabled,
@@ -1163,7 +1200,9 @@ def _artifact_cache_meta(
             ),
             "execution_identity": execution_identity.execution_identity,
             "execution_identity_manifest": asdict(execution_identity),
-            "model": routing_decision.model,
+            "model": policy.model,
+            "execution_policy_hash": execution_policy.policy_hash,
+            "execution_policy_source": execution_policy.policy_source,
         }
     inputs_hash = sha256_json(
         {
@@ -1192,7 +1231,7 @@ def _load_cached_artifacts(
     report_id: str,
     report_name: Optional[str],
     cache_key: str,
-    expected_cache_meta: Dict[str, Any],
+    expected_cache_meta: Optional[Dict[str, Any]] = None,
     ctx: RunContext,
     analysis_store,
 ) -> Optional[Dict[str, Any]]:
@@ -1223,7 +1262,7 @@ def _load_cached_artifacts(
         on_read_failed=_log_read_failed,
         cache_meta_matcher=lambda cached_meta: _artifact_cache_meta_matches(
             cached_meta=cached_meta,
-            expected_cache_meta=expected_cache_meta,
+            expected_cache_meta=expected_cache_meta or {},
             cache_key=cache_key,
         ),
         adapt_payload=lambda payload, path: _adapt_cached_artifacts_payload(
@@ -1416,11 +1455,11 @@ def _attach_cached_artifact_family_status(payload: Dict[str, Any]) -> Dict[str, 
     raw_insights_final = payload.get("insights_final")
     raw_quotes_final = payload.get("quotes_final")
     summary: Dict[str, Any] = raw_summary if isinstance(raw_summary, dict) else {}
-    insights_candidates: List[Dict[str, Any]] = (
-        normalize_artifact_insights(raw_insights_candidates, prefix="candidate")
+    insights_candidates: List[Dict[str, Any]] = normalize_artifact_insights(
+        raw_insights_candidates, prefix="candidate"
     )
-    insights_final: List[Dict[str, Any]] = (
-        normalize_artifact_insights(raw_insights_final, prefix="insight")
+    insights_final: List[Dict[str, Any]] = normalize_artifact_insights(
+        raw_insights_final, prefix="insight"
     )
     quotes_final: List[Dict[str, Any]] = (
         [item for item in raw_quotes_final if isinstance(item, dict)]

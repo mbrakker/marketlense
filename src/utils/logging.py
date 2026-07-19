@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 from collections.abc import Mapping
 from datetime import datetime, timezone
@@ -28,6 +29,11 @@ def _coerce_task_id(task_id: TaskId | str | None) -> TaskId:
     return task_id if isinstance(task_id, TaskId) else TaskId(task_id or str(uuid4()))
 
 
+def _producer_commit_sha() -> str:
+    value = os.getenv("MARKET_LENSE_PRODUCER_COMMIT", "").strip().lower()
+    return value if re.fullmatch(r"[0-9a-f]{40}", value) else ""
+
+
 def new_run_context(
     task_id: TaskId | str | None = None,
     span_id: str | None = None,
@@ -43,6 +49,7 @@ def new_run_context(
         parent_span_id="",
         span_name=str(resolved_task_id),
         span_depth=0,
+        producer_commit_sha=_producer_commit_sha(),
     )
 
 
@@ -63,6 +70,7 @@ def child_context(
         parent_span_id=str(parent.span_id or ""),
         span_name=str(resolved_task_id),
         span_depth=max(0, int(getattr(parent, "span_depth", 0))) + 1,
+        producer_commit_sha=str(getattr(parent, "producer_commit_sha", "") or ""),
     )
 
 

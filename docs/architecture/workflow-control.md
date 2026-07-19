@@ -14,6 +14,23 @@ The state database owns the canonical durable remediation ledger. It deduplicate
 
 Budget `defer` decisions are durable recovery work in the canonical usage-ledger SQLite database, not terminal failures. The decision transaction records the original run, workflow/stage, report/source identity, affected limit, plan hash, reusable artifact references, original idempotency key, earliest retry time, deadline, and bounded attempt count. An external supervisor may invoke `python -m src.cli deferred-work-reap`; there is no embedded scheduler or polling loop. The invocation is disabled by default through `workflow_control.deferred_work_reaper.execution_enabled`, atomically leases due rows, re-evaluates the original canonical budget request without reserving capacity, rebuilds and validates a minimal plan, and resumes only an approved workflow handler. Report generation resumes from `latest_safe` with an enforced fresh plan and its retained local PDF. Continued budget deferral is delayed; pause/stop, missing artifacts, expired deadlines, exhausted attempts, unknown workflows, and plan failures hand off to the remediation ledger. A lease owner is required for every completion or state change, so a restart can reclaim only expired work and concurrent workers cannot perform two effective resumes.
 
+## One-shot workflow supervisor
+
+`python -m src.cli supervise-workflows --once` composes existing queue operations; it is not a scheduler and never loops. A durable singleton lease prevents concurrent supervisors from duplicating supervisory work. With its feature gates enabled, one pass runs in this order: outbox materialisation, expired worker-lease recovery, registered deferred-work recovery, registered remediation recovery, bounded queue workers in fixed queue order, reconciliation, then queue-health collection. The default configuration is read-only-safe: the master switch and worker/recovery adapters are disabled, while reconciliation and evidence controls remain independently configurable.
+
+Use an external timer only after observing queue health and recovery evidence:
+
+```cron
+*/5 * * * * cd /srv/marketlense && /usr/bin/python -m src.cli supervise-workflows --once
+```
+
+```ini
+# systemd service ExecStart
+/srv/marketlense/.venv/bin/python -m src.cli supervise-workflows --once
+```
+
+The exit status is `0` for healthy, `3` for a bounded partial deferral, `1` for an isolated failed capability, `4` when another supervisor holds the lease, and `2` when the feature remains disabled. Roll back by setting `workflow_control.supervisor.enabled: false`; queue records, checkpoints, leases, and idempotency keys remain intact for the existing manual worker commands.
+
 Deferred-work transitions are restricted to the typed lifecycle statuses `pending`, `leased`, `completed`, `remediation`, and `terminal`.
 
 For operator actions, see [recovery](../ops/recovery.md) and [troubleshooting](../ops/troubleshooting.md).

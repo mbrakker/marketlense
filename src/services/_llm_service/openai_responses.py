@@ -256,6 +256,7 @@ def openai_respond_with_vector_store(
             "model": request.model,
             "temperature": request.temperature,
             "seed": request.seed,
+            "max_output_tokens": request.max_output_tokens,
             "tools": ["file_search"],
         },
         context={"vector_store_id": request.vector_store_id},
@@ -275,6 +276,8 @@ def openai_respond_with_vector_store(
             {"type": "file_search", "vector_store_ids": [request.vector_store_id]}
         ],
     }
+    if request.max_output_tokens is not None:
+        payload_args["max_output_tokens"] = request.max_output_tokens
     known_unsupported = _known_unsupported_responses_params(request.model)
     skipped_params: set[str] = set()
     if request.temperature is not None:

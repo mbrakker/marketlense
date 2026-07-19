@@ -21,7 +21,13 @@ from src.contracts.cross_report_analysis import (
     CrossReportSourceReportCandidate,
 )
 from src.contracts.openai import OpenAIResponseResult
-from src.contracts.prompts import PromptRenderResponse, PromptSet, PromptTemplate
+from src.contracts.prompts import (
+    PromptDependency,
+    PromptDependencyManifest,
+    PromptRenderResponse,
+    PromptSet,
+    PromptTemplate,
+)
 from src.contracts.remediation import RemediationListRequest
 from src.orchestrators.cross_report_analysis_orchestrator import (
     run_cross_report_analysis,
@@ -32,6 +38,22 @@ from src.utils.errors import AppError
 
 class FakePromptClient:
     def load_prompt_set(self, request, ctx):
+        manifest = PromptDependencyManifest(
+            schema_version="1.0",
+            namespace=request.namespace,
+            system_root=PromptDependency(
+                schema_version="1.0",
+                path="src/prompts/cross_report_analysis/synthesis/system.yaml",
+                sha256="a" * 64,
+                kind="system_root",
+            ),
+            user_root=PromptDependency(
+                schema_version="1.0",
+                path="src/prompts/cross_report_analysis/synthesis/user.yaml",
+                sha256="b" * 64,
+                kind="user_root",
+            ),
+        )
         return PromptSet(
             schema_version="1.0",
             system=PromptTemplate(
@@ -46,6 +68,8 @@ class FakePromptClient:
                 text="user {{ evidence_json }}",
                 sha256="user-hash",
             ),
+            dependency_manifest=manifest,
+            prompt_content_hash="c" * 64,
         )
 
     def render_prompt(self, request, ctx):

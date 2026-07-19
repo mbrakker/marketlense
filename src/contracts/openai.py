@@ -344,6 +344,9 @@ class OpenAIAnalyzeRequest:
     seed: Optional[int] = field(
         default=None, metadata={"doc": "Optional seed for deterministic sampling."}
     )
+    max_output_tokens: Optional[int] = field(
+        default=None, metadata={"doc": "Maximum completion tokens when supported."}
+    )
     timeout_seconds: Optional[float] = field(
         default=None, metadata={"doc": "Request timeout in seconds, if set."}
     )
@@ -433,6 +436,9 @@ class OpenAIResponseRequest:
     seed: Optional[int] = field(
         default=None, metadata={"doc": "Optional seed for deterministic sampling."}
     )
+    max_output_tokens: Optional[int] = field(
+        default=None, metadata={"doc": "Maximum completion tokens when supported."}
+    )
     timeout_seconds: Optional[float] = field(
         default=None, metadata={"doc": "Request timeout in seconds, if set."}
     )
@@ -499,6 +505,16 @@ class OpenAIResponseRequest:
     execution_identity_manifest: Dict[str, Any] = field(
         default_factory=dict,
         metadata={"doc": "Content-free execution identity inputs, if known."},
+    )
+    execution_policy_hash: str = field(
+        default="", metadata={"doc": "Resolved execution-policy identity."}
+    )
+    execution_policy: Dict[str, Any] = field(
+        default_factory=dict,
+        metadata={"doc": "Sanitized resolved execution-policy fields."},
+    )
+    execution_policy_source: str = field(
+        default="", metadata={"doc": "Longest-prefix execution-policy source."}
     )
     usage_db_path: str = field(
         default="./state/llm_usage.sqlite",
@@ -553,6 +569,9 @@ class OpenAIJSONPromptRequest:
     seed: Optional[int] = field(
         default=None, metadata={"doc": "Optional seed for deterministic sampling."}
     )
+    max_output_tokens: Optional[int] = field(
+        default=None, metadata={"doc": "Maximum completion tokens when supported."}
+    )
     timeout_seconds: Optional[float] = field(
         default=None, metadata={"doc": "Request timeout in seconds, if set."}
     )
@@ -619,6 +638,16 @@ class OpenAIJSONPromptRequest:
     execution_identity_manifest: Dict[str, Any] = field(
         default_factory=dict,
         metadata={"doc": "Content-free execution identity inputs, if known."},
+    )
+    execution_policy_hash: str = field(
+        default="", metadata={"doc": "Resolved execution-policy identity."}
+    )
+    execution_policy: Dict[str, Any] = field(
+        default_factory=dict,
+        metadata={"doc": "Sanitized resolved execution-policy fields."},
+    )
+    execution_policy_source: str = field(
+        default="", metadata={"doc": "Longest-prefix execution-policy source."}
     )
     usage_db_path: str = field(
         default="./state/llm_usage.sqlite",

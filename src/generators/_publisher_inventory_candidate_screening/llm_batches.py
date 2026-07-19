@@ -85,8 +85,10 @@ def _screen_candidate_batch(
                 "user_path": prompt_bundle.prompt_set.user.path,
                 "user_sha256": prompt_bundle.prompt_set.user.sha256,
                 "resolved_model": prompt_bundle.resolved_model,
-                "system_prompt": prompt_bundle.system_prompt,
-                "user_prompt": prompt_bundle.user_prompt,
+                "prompt_content_hash": prompt_bundle.prompt_content_hash,
+                "execution_identity": prompt_bundle.execution_identity.execution_identity,
+                "system_prompt_chars": len(prompt_bundle.system_prompt),
+                "user_prompt_chars": len(prompt_bundle.user_prompt),
             },
         )
     )

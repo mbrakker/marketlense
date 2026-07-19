@@ -14008,6 +14008,194 @@
       ],
       "type": "object"
     },
+    "src.contracts.claim_validation.ClaimCandidate": {
+      "additionalProperties": false,
+      "properties": {
+        "claim_id": {
+          "type": "string"
+        },
+        "evidence_references": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.claim_validation.ClaimEvidenceReference"
+          },
+          "type": "array"
+        },
+        "factual": {
+          "type": "boolean"
+        },
+        "kind": {
+          "enum": [
+            "numeric",
+            "quotation",
+            "descriptive",
+            "causal",
+            "interpretive"
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_family": {
+          "type": "string"
+        },
+        "text_hash": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "claim_id",
+        "source_family",
+        "text_hash",
+        "kind",
+        "factual"
+      ],
+      "type": "object"
+    },
+    "src.contracts.claim_validation.ClaimEvidenceReference": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_id": {
+          "type": "string"
+        },
+        "page": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_pack": {
+          "type": "string"
+        },
+        "text_hash": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "evidence_id"
+      ],
+      "type": "object"
+    },
+    "src.contracts.claim_validation.ClaimValidationCheck": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "name",
+        "status"
+      ],
+      "type": "object"
+    },
+    "src.contracts.claim_validation.ClaimValidationPackage": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_hash": {
+          "type": "string"
+        },
+        "deterministic_pass_count": {
+          "type": "integer"
+        },
+        "package_hash": {
+          "type": "string"
+        },
+        "readiness_status": {
+          "type": "string"
+        },
+        "results": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.claim_validation.ClaimValidationResult"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "semantic_execution_identities": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "semantic_validation_count": {
+          "type": "integer"
+        },
+        "unresolved_factual_count": {
+          "type": "integer"
+        },
+        "unsupported_factual_count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "artifact_hash",
+        "package_hash"
+      ],
+      "type": "object"
+    },
+    "src.contracts.claim_validation.ClaimValidationResult": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate": {
+          "$ref": "#/$defs/src.contracts.claim_validation.ClaimCandidate"
+        },
+        "checks": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.claim_validation.ClaimValidationCheck"
+          },
+          "type": "array"
+        },
+        "reasons": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "semantic_execution_identity": {
+          "type": "string"
+        },
+        "semantic_validator_used": {
+          "type": "boolean"
+        },
+        "status": {
+          "enum": [
+            "supported",
+            "unsupported",
+            "unresolved",
+            "not_applicable"
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "candidate"
+      ],
+      "type": "object"
+    },
     "src.contracts.config.AppConfigReadRequest": {
       "additionalProperties": false,
       "properties": {
@@ -14380,6 +14568,13 @@
         },
         "llm_circuit_breaker_recovery_seconds": {
           "type": "number"
+        },
+        "llm_execution_policies": {
+          "additionalProperties": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "type": "object"
         },
         "llm_retry_backoff_step_seconds": {
           "type": "number"
@@ -20422,6 +20617,13 @@
         "llm_circuit_breaker_recovery_seconds": {
           "type": "number"
         },
+        "llm_execution_policies": {
+          "additionalProperties": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "type": "object"
+        },
         "llm_retry_backoff_step_seconds": {
           "type": "number"
         },
@@ -20433,6 +20635,13 @@
         },
         "llm_retry_retries": {
           "type": "integer"
+        },
+        "llm_routing": {
+          "additionalProperties": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "type": "object"
         },
         "model_pricing": {
           "type": "string"
@@ -20841,6 +21050,132 @@
         "retained_anchor_count",
         "original_user_chars",
         "compacted_user_chars"
+      ],
+      "type": "object"
+    },
+    "src.contracts.llm.LLMExecutionPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "compaction_enabled": {
+          "type": "boolean"
+        },
+        "fallback_policy": {
+          "enum": [
+            "same_provider_only",
+            "disabled"
+          ]
+        },
+        "max_input_tokens": {
+          "type": "integer"
+        },
+        "max_output_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "model": {
+          "type": "string"
+        },
+        "namespace_prefix": {
+          "type": "string"
+        },
+        "pricing_key": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "provider_retry_count": {
+          "type": "integer"
+        },
+        "reasoning_effort": {
+          "type": "string"
+        },
+        "retrieval_mode": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "seed": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "seed_policy": {
+          "enum": [
+            "inherit",
+            "fixed",
+            "disabled"
+          ]
+        },
+        "structured_output_mode": {
+          "type": "string"
+        },
+        "structured_output_schema_identity": {
+          "type": "string"
+        },
+        "temperature": {
+          "type": "number"
+        },
+        "timeout_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "namespace_prefix",
+        "provider",
+        "model",
+        "temperature"
+      ],
+      "type": "object"
+    },
+    "src.contracts.llm.LLMExecutionPolicyDecision": {
+      "additionalProperties": false,
+      "properties": {
+        "compatibility_mode": {
+          "type": "boolean"
+        },
+        "namespace": {
+          "type": "string"
+        },
+        "policy": {
+          "$ref": "#/$defs/src.contracts.llm.LLMExecutionPolicy"
+        },
+        "policy_hash": {
+          "type": "string"
+        },
+        "policy_source": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "namespace",
+        "policy_source",
+        "policy",
+        "policy_hash"
       ],
       "type": "object"
     },
@@ -23210,6 +23545,16 @@
         "cost_ledger_path": {
           "type": "string"
         },
+        "max_output_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "model": {
           "type": "string"
         },
@@ -23645,6 +23990,26 @@
           "additionalProperties": {},
           "type": "object"
         },
+        "execution_policy": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "execution_policy_hash": {
+          "type": "string"
+        },
+        "execution_policy_source": {
+          "type": "string"
+        },
+        "max_output_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "model": {
           "type": "string"
         },
@@ -23927,6 +24292,26 @@
         "execution_identity_manifest": {
           "additionalProperties": {},
           "type": "object"
+        },
+        "execution_policy": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "execution_policy_hash": {
+          "type": "string"
+        },
+        "execution_policy_source": {
+          "type": "string"
+        },
+        "max_output_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "model": {
           "type": "string"
@@ -26217,6 +26602,9 @@
         "temperature": {
           "type": "number"
         },
+        "test_only_execution_override": {
+          "type": "boolean"
+        },
         "user_variables": {
           "additionalProperties": {},
           "type": "object"
@@ -26279,6 +26667,12 @@
       "properties": {
         "benchmark": {
           "$ref": "#/$defs/src.contracts.prompts.PromptDryRunBenchmark"
+        },
+        "execution_policy_hash": {
+          "type": "string"
+        },
+        "execution_policy_source": {
+          "type": "string"
         },
         "family": {
           "type": "string"
@@ -27959,6 +28353,70 @@
       ],
       "type": "object"
     },
+    "src.contracts.remediation.RemediationExecutorRegistration": {
+      "additionalProperties": false,
+      "properties": {
+        "action_code": {
+          "enum": [
+            "resume_valid_checkpoint",
+            "retry_transient_service_call",
+            "rerun_targeted_artifact_family",
+            "revalidate_replaced_source",
+            "poll_mailbox_delivery",
+            "retry_idempotent_publication",
+            "defer_for_budget",
+            "escalate_credentials",
+            "mark_terminal_blocker"
+          ]
+        },
+        "approval_required": {
+          "type": "boolean"
+        },
+        "attempt_limit": {
+          "type": "integer"
+        },
+        "checkpoint_policy": {
+          "type": "string"
+        },
+        "cooldown_seconds": {
+          "type": "integer"
+        },
+        "error_code": {
+          "type": "string"
+        },
+        "idempotency_policy": {
+          "type": "string"
+        },
+        "permitted_side_effects": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "prerequisites": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "rollback_and_reconciliation": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "workflow",
+        "error_code",
+        "action_code"
+      ],
+      "type": "object"
+    },
     "src.contracts.remediation.RemediationExpiredLeaseReleaseRequest": {
       "additionalProperties": false,
       "properties": {
@@ -28066,6 +28524,115 @@
       "required": [
         "schema_version",
         "records"
+      ],
+      "type": "object"
+    },
+    "src.contracts.remediation.RemediationOpportunity": {
+      "additionalProperties": false,
+      "properties": {
+        "action_code": {
+          "type": "string"
+        },
+        "attempted_cost_usd": {
+          "type": "number"
+        },
+        "attempted_operations": {
+          "type": "integer"
+        },
+        "checkpoint_available_count": {
+          "type": "integer"
+        },
+        "error_code": {
+          "type": "string"
+        },
+        "executor_eligibility": {
+          "type": "string"
+        },
+        "failed_stage": {
+          "type": "string"
+        },
+        "held_reason": {
+          "type": "string"
+        },
+        "idempotency_proven_count": {
+          "type": "integer"
+        },
+        "oldest_age_seconds": {
+          "type": "integer"
+        },
+        "priority_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "priority_score": {
+          "type": "integer"
+        },
+        "record_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "recurrence_count": {
+          "type": "integer"
+        },
+        "retryability": {
+          "type": "string"
+        },
+        "runbook_status": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_or_publisher_hashes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "workflow",
+        "failed_stage",
+        "error_code",
+        "action_code",
+        "retryability",
+        "runbook_status"
+      ],
+      "type": "object"
+    },
+    "src.contracts.remediation.RemediationOpportunityReport": {
+      "additionalProperties": false,
+      "properties": {
+        "observed_at_utc": {
+          "type": "string"
+        },
+        "opportunities": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.remediation.RemediationOpportunity"
+          },
+          "type": "array"
+        },
+        "opportunity_count": {
+          "type": "integer"
+        },
+        "record_count": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "observed_at_utc"
       ],
       "type": "object"
     },
@@ -28948,6 +29515,31 @@
         "cost_ledger_path": {
           "type": "string"
         },
+        "execution_identity": {
+          "type": "string"
+        },
+        "execution_identity_manifest": {
+          "type": "string"
+        },
+        "execution_policy": {
+          "type": "string"
+        },
+        "execution_policy_hash": {
+          "type": "string"
+        },
+        "execution_policy_source": {
+          "type": "string"
+        },
+        "max_output_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "model": {
           "type": "string"
         },
@@ -28965,6 +29557,15 @@
         },
         "page_width": {
           "type": "number"
+        },
+        "prompt_content_hash": {
+          "type": "string"
+        },
+        "prompt_dependency_manifest": {
+          "type": "string"
+        },
+        "prompt_hash": {
+          "type": "string"
         },
         "prompt_system_sha256": {
           "type": "string"
@@ -29586,10 +30187,44 @@
         "cost_ledger_path": {
           "type": "string"
         },
+        "execution_identity": {
+          "type": "string"
+        },
+        "execution_identity_manifest": {
+          "type": "string"
+        },
+        "execution_policy": {
+          "type": "string"
+        },
+        "execution_policy_hash": {
+          "type": "string"
+        },
+        "execution_policy_source": {
+          "type": "string"
+        },
+        "max_output_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "model": {
           "type": "string"
         },
         "model_pricing": {
+          "type": "string"
+        },
+        "prompt_content_hash": {
+          "type": "string"
+        },
+        "prompt_dependency_manifest": {
+          "type": "string"
+        },
+        "prompt_hash": {
           "type": "string"
         },
         "prompt_system_sha256": {
@@ -32097,6 +32732,9 @@
       "additionalProperties": false,
       "properties": {
         "parent_span_id": {
+          "type": "string"
+        },
+        "producer_commit_sha": {
           "type": "string"
         },
         "run_id": {
@@ -41717,6 +42355,87 @@
       ],
       "type": "object"
     },
+    "src.contracts.workflow_control.SupervisorRunRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "now_utc": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "settings": {
+          "$ref": "#/$defs/src.contracts.workflow_control.WorkflowSupervisorSettings"
+        },
+        "state_db": {
+          "type": "string"
+        },
+        "usage_db_path": {
+          "type": "string"
+        },
+        "worker_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "state_db",
+        "worker_id",
+        "now_utc",
+        "settings"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_control.SupervisorRunResult": {
+      "additionalProperties": false,
+      "properties": {
+        "completed_job_count": {
+          "type": "integer"
+        },
+        "deferred_job_count": {
+          "type": "integer"
+        },
+        "deferred_reaped_count": {
+          "type": "integer"
+        },
+        "error_codes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "lease_acquired": {
+          "type": "boolean"
+        },
+        "materialized_job_count": {
+          "type": "integer"
+        },
+        "queue_health_count": {
+          "type": "integer"
+        },
+        "reconciled_count": {
+          "type": "integer"
+        },
+        "recovered_lease_count": {
+          "type": "integer"
+        },
+        "remediation_reaped_count": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "status",
+        "lease_acquired"
+      ],
+      "type": "object"
+    },
     "src.contracts.workflow_control.WorkflowContract": {
       "additionalProperties": false,
       "properties": {
@@ -41910,6 +42629,9 @@
         "schema_version": {
           "type": "string"
         },
+        "supervisor": {
+          "$ref": "#/$defs/src.contracts.workflow_control.WorkflowSupervisorSettings"
+        },
         "workflow_contracts": {
           "additionalProperties": {
             "$ref": "#/$defs/src.contracts.workflow_control.WorkflowContract"
@@ -42003,6 +42725,54 @@
         "base_delay_seconds",
         "backoff_step_seconds",
         "jitter_seconds"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_control.WorkflowSupervisorSettings": {
+      "additionalProperties": false,
+      "properties": {
+        "deferred_work_enabled": {
+          "type": "boolean"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "evidence_enabled": {
+          "type": "boolean"
+        },
+        "lease_seconds": {
+          "type": "integer"
+        },
+        "materialize_outbox_enabled": {
+          "type": "boolean"
+        },
+        "max_jobs_per_queue": {
+          "type": "integer"
+        },
+        "max_runtime_seconds": {
+          "type": "integer"
+        },
+        "max_total_jobs": {
+          "type": "integer"
+        },
+        "reconcile_enabled": {
+          "type": "boolean"
+        },
+        "recover_expired_leases_enabled": {
+          "type": "boolean"
+        },
+        "remediation_enabled": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "worker_batches_enabled": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "schema_version"
       ],
       "type": "object"
     },

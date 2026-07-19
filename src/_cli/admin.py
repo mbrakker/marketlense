@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import os
+from dataclasses import asdict
 
 import typer
 from rich import box
@@ -17,13 +19,16 @@ from src.contracts.artifact_lineage import (
 )
 from src.contracts.config import ConfigLoadRequest
 from src.contracts.drive import DriveOAuthAuthorizeRequest
+from src.contracts.files import ReadBytesRequest, WriteBytesRequest
 from src.contracts.logging import LoggingSetupRequest
 from src.contracts.publisher_profiles import PublisherSyncRequest
+from src.generators.claim_validation_generator import validate_retained_claims
 from src.orchestrators.publisher_sync_orchestrator import run_publisher_sync
 from src.services.config_service import (
     load_settings,
 )
 from src.services.drive_service import authorize_oauth_user
+from src.services.file_service import read_bytes, write_bytes
 from src.services.logging_service import setup_logging
 from src.services.report_store_service import (
     audit_artifact_lineage,
@@ -218,3 +223,61 @@ def backfill_artifact_lineage_command(
             "Lineage audit: "
             f"{len(audit.items)} records; status counts {audit.status_counts}"
         )
+
+
+@cli_app.command("validate-retained-claims")
+def validate_retained_claims_command(
+    artifacts_path: str = typer.Option(..., help="Retained artifacts.json path"),
+    evidence_packs_path: str = typer.Option(
+        "", help="Optional retained evidence-packs JSON path"
+    ),
+    output_path: str = typer.Option(
+        "out/claim_validation_package.json",
+        help="Validated claim package; safe to pass to publication readiness",
+    ),
+) -> None:
+    """Validate retained report artifacts without source re-ingestion or model calls."""
+
+    ctx = new_run_context(task_id="cli_validate_retained_claims")
+    setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
+    try:
+        artifacts = json.loads(
+            read_bytes(
+                ReadBytesRequest(schema_version="1.0", path=artifacts_path), ctx
+            ).content.decode("utf-8")
+        )
+        evidence_packs = (
+            json.loads(
+                read_bytes(
+                    ReadBytesRequest(schema_version="1.0", path=evidence_packs_path),
+                    ctx,
+                ).content.decode("utf-8")
+            )
+            if evidence_packs_path.strip()
+            else {}
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise typer.BadParameter("retained inputs must be JSON objects") from exc
+    if not isinstance(artifacts, dict) or not isinstance(evidence_packs, dict):
+        raise typer.BadParameter("retained inputs must be JSON objects")
+    package = validate_retained_claims(artifacts, evidence_packs)
+    write_bytes(
+        WriteBytesRequest(
+            schema_version="1.0",
+            path=output_path,
+            content=(
+                json.dumps(asdict(package), ensure_ascii=True, indent=2) + "\n"
+            ).encode("utf-8"),
+            make_parents=True,
+        ),
+        ctx,
+    )
+    console.print_json(
+        data={
+            "readiness_status": package.readiness_status,
+            "unsupported_factual_count": package.unsupported_factual_count,
+            "unresolved_factual_count": package.unresolved_factual_count,
+            "semantic_validation_count": package.semantic_validation_count,
+            "output_path": output_path,
+        }
+    )

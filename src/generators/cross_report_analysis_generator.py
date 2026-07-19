@@ -18,8 +18,8 @@ from src.contracts.cross_report_analysis import (
     CrossReportValidationResult,
     validate_cross_report_contract,
 )
-from src.contracts.publish import PublishEntityMetadata
 from src.contracts.openai import OpenAIJSONPromptRequest, OpenAIResponseResult
+from src.contracts.publish import PublishEntityMetadata
 from src.contracts.run_context import RunContext
 from src.generators.cross_report_publish_html import build_cross_report_html_document
 from src.generators.prompt_preparation import prepare_prompt_bundle
@@ -672,8 +672,10 @@ def generate_cross_report_analysis(
                 "system_sha256": prompt_bundle.prompt_set.system.sha256,
                 "user_path": prompt_bundle.prompt_set.user.path,
                 "user_sha256": prompt_bundle.prompt_set.user.sha256,
-                "rendered_system_prompt": prompt_bundle.system_prompt,
-                "rendered_user_prompt": prompt_bundle.user_prompt,
+                "prompt_content_hash": prompt_bundle.prompt_content_hash,
+                "execution_identity": prompt_bundle.execution_identity.execution_identity,
+                "rendered_system_prompt_chars": len(prompt_bundle.system_prompt),
+                "rendered_user_prompt_chars": len(prompt_bundle.user_prompt),
                 "model": prompt_bundle.resolved_model,
                 "temperature": float(
                     getattr(settings, "cross_report_analysis_temperature", 1.0)

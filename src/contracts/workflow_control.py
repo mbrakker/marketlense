@@ -237,7 +237,9 @@ class DeferredWorkReaperSettings:
     )
     execution_enabled: bool = field(
         default=False,
-        metadata={"doc": "Feature gate; false preserves queued records without leasing."},
+        metadata={
+            "doc": "Feature gate; false preserves queued records without leasing."
+        },
     )
     max_records_per_run: int = field(
         default=10, metadata={"doc": "Bounded deferred records handled per invocation."}
@@ -248,6 +250,25 @@ class DeferredWorkReaperSettings:
     retry_delay_seconds: int = field(
         default=3600, metadata={"doc": "Minimum delay after another defer decision."}
     )
+
+
+@dataclass(frozen=True)
+class WorkflowSupervisorSettings:
+    schema_version: str = field(metadata={"doc": "Supervisor settings version."})
+    enabled: bool = field(
+        default=False, metadata={"doc": "Master supervisor feature gate."}
+    )
+    materialize_outbox_enabled: bool = field(default=True)
+    recover_expired_leases_enabled: bool = field(default=True)
+    deferred_work_enabled: bool = field(default=False)
+    remediation_enabled: bool = field(default=False)
+    worker_batches_enabled: bool = field(default=False)
+    reconcile_enabled: bool = field(default=True)
+    evidence_enabled: bool = field(default=True)
+    max_jobs_per_queue: int = field(default=1)
+    max_total_jobs: int = field(default=20)
+    max_runtime_seconds: int = field(default=120)
+    lease_seconds: int = field(default=180)
 
 
 @dataclass(frozen=True)
@@ -279,6 +300,46 @@ class WorkflowControlSettings:
         default_factory=lambda: DeferredWorkReaperSettings(schema_version="1.0"),
         metadata={"doc": "Budget-deferred work recovery feature gate and bounds."},
     )
+    supervisor: WorkflowSupervisorSettings = field(
+        default_factory=lambda: WorkflowSupervisorSettings(schema_version="1.0"),
+        metadata={"doc": "One-shot durable supervisor feature gates and bounds."},
+    )
+
+
+@dataclass(frozen=True)
+class SupervisorRunRequest:
+    schema_version: str = field(
+        metadata={"doc": "Supervisor invocation schema version."}
+    )
+    state_db: str = field(metadata={"doc": "Canonical durable state database."})
+    worker_id: str = field(metadata={"doc": "Stable supervisor owner identity."})
+    now_utc: str = field(metadata={"doc": "Invocation clock for deterministic tests."})
+    settings: WorkflowSupervisorSettings = field(
+        metadata={"doc": "Resolved gates and bounds."}
+    )
+    usage_db_path: str = field(
+        default="", metadata={"doc": "Deferred-work ledger path."}
+    )
+
+
+@dataclass(frozen=True)
+class SupervisorRunResult:
+    schema_version: str = field(metadata={"doc": "Supervisor result schema version."})
+    status: str = field(
+        metadata={"doc": "healthy, partially_deferred, failed, busy, or disabled."}
+    )
+    lease_acquired: bool = field(
+        metadata={"doc": "Whether singleton lease was acquired."}
+    )
+    materialized_job_count: int = field(default=0)
+    recovered_lease_count: int = field(default=0)
+    deferred_reaped_count: int = field(default=0)
+    remediation_reaped_count: int = field(default=0)
+    completed_job_count: int = field(default=0)
+    deferred_job_count: int = field(default=0)
+    reconciled_count: int = field(default=0)
+    queue_health_count: int = field(default=0)
+    error_codes: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

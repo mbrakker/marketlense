@@ -15,6 +15,8 @@ from src.contracts.remediation import (
     RemediationClaimRequest,
     RemediationExpiredLeaseReleaseRequest,
     RemediationIdempotencyKey,
+    RemediationOpportunity,
+    RemediationOpportunityReport,
     RemediationReaperRequest,
     RemediationReaperResponse,
     RemediationRecord,
@@ -56,6 +58,153 @@ _AUTO_REPAIR_ALLOWLIST: dict[tuple[str, str], set[RemediationActionCode]] = {
         "retry_transient_service_call",
     },
 }
+
+
+def _parse_utc(value: str, fallback: datetime) -> datetime:
+    if not value:
+        return fallback
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return fallback
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+
+
+def _opaque_identity(record: RemediationRecord) -> str:
+    value = record.source_id or record.publisher_id
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()[:16] if value else ""
+
+
+def _attempted_cost_usd(record: RemediationRecord) -> float:
+    values = record.budget.consumed or {}
+    for key in ("cost_usd", "estimated_cost_usd", "actual_cost_usd"):
+        try:
+            return max(0.0, float(values.get(key) or 0.0))
+        except (TypeError, ValueError):
+            continue
+    return 0.0
+
+
+def build_remediation_opportunity_report(
+    records: list[RemediationRecord],
+    *,
+    observed_at_utc: str,
+    runbook_error_codes: set[str] | None = None,
+    max_record_ids_per_opportunity: int = 25,
+) -> RemediationOpportunityReport:
+    """Aggregate retained remediation rows without returning diagnostics or inputs."""
+
+    runbooks = runbook_error_codes or set()
+    now = _parse_utc(observed_at_utc, datetime.now(timezone.utc))
+    grouped: dict[tuple[str, str, str, str, str, str], list[RemediationRecord]] = {}
+    for record in records:
+        retryability = (
+            "retryable"
+            if record.retry_decision and record.retry_decision.error_retryable
+            else "non_retryable"
+            if record.retry_decision
+            else "unknown"
+        )
+        runbook_status = "mapped" if record.error_code in runbooks else "missing"
+        grouped.setdefault(
+            (
+                record.workflow,
+                record.failed_stage,
+                record.error_code,
+                record.action_code,
+                retryability,
+                runbook_status,
+            ),
+            [],
+        ).append(record)
+
+    opportunities: list[RemediationOpportunity] = []
+    for key, members in sorted(grouped.items()):
+        (
+            workflow,
+            failed_stage,
+            error_code,
+            action_code,
+            retryability,
+            runbook_status,
+        ) = key
+        ordered = sorted(
+            members, key=lambda item: (item.created_at_utc, item.remediation_id)
+        )
+        oldest = _parse_utc(ordered[0].created_at_utc, now)
+        oldest_age = max(0, int((now - oldest).total_seconds()))
+        checkpoints = sum(
+            bool(
+                item.checkpoint
+                and item.checkpoint.validation_status == "validated"
+                and item.checkpoint.lineage_ref
+            )
+            for item in ordered
+        )
+        idempotency = sum(bool(item.idempotency_keys) for item in ordered)
+        recurrence = len(ordered)
+        reasons = [f"recurrence:{recurrence}", f"oldest_age_seconds:{oldest_age}"]
+        score = recurrence * 100 + min(oldest_age // 3600, 72)
+        if runbook_status == "mapped":
+            score += 10
+            reasons.append("runbook_mapped")
+        else:
+            reasons.append("runbook_missing")
+        if checkpoints and idempotency:
+            reasons.append("proof_present_but_no_registered_executor")
+        else:
+            reasons.append("checkpoint_or_idempotency_proof_missing")
+        opportunities.append(
+            RemediationOpportunity(
+                schema_version="1.0",
+                workflow=workflow,
+                failed_stage=failed_stage,
+                error_code=error_code,
+                action_code=action_code,
+                retryability=retryability,
+                runbook_status=runbook_status,
+                record_ids=[
+                    item.remediation_id
+                    for item in ordered[
+                        : max(1, min(100, max_record_ids_per_opportunity))
+                    ]
+                ],
+                source_or_publisher_hashes=sorted(
+                    {
+                        identity
+                        for item in ordered
+                        if (identity := _opaque_identity(item))
+                    }
+                )[:25],
+                recurrence_count=recurrence,
+                oldest_age_seconds=oldest_age,
+                attempted_operations=sum(item.attempt_count for item in ordered),
+                attempted_cost_usd=round(
+                    sum(_attempted_cost_usd(item) for item in ordered), 6
+                ),
+                checkpoint_available_count=checkpoints,
+                idempotency_proven_count=idempotency,
+                priority_score=score,
+                priority_reasons=reasons,
+                executor_eligibility="held_unregistered",
+                held_reason="no approved runtime executor registration",
+            )
+        )
+    return RemediationOpportunityReport(
+        schema_version="1.0",
+        observed_at_utc=observed_at_utc,
+        record_count=len(records),
+        opportunity_count=len(opportunities),
+        opportunities=sorted(
+            opportunities,
+            key=lambda item: (
+                -item.priority_score,
+                item.workflow,
+                item.failed_stage,
+                item.error_code,
+            ),
+        ),
+    )
 
 
 def _utc_after(now_utc: str, seconds: int) -> str:
@@ -719,5 +868,6 @@ __all__ = [
     "remediation_budget_summary",
     "remediation_input_checksum",
     "record_workflow_failure",
+    "build_remediation_opportunity_report",
     "run_bounded_remediation_reaper",
 ]

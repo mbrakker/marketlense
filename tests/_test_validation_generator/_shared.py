@@ -2,43 +2,37 @@
 from __future__ import annotations
 
 from pathlib import Path as _SplitPath
-__file__ = str(_SplitPath(__file__).resolve().parent.parent / "test_validation_generator.py")
 
-from types import SimpleNamespace
+__file__ = str(
+    _SplitPath(__file__).resolve().parent.parent / "test_validation_generator.py"
+)
 
 import json
-
 import logging
-
 import threading
-
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
 from src.contracts.config import AppSettings
-
-from src.contracts.prompts import PromptSet, PromptTemplate
-
-from src.contracts.report_models import Figure, Quote, ReportPayload
-
-from src.contracts.run_context import RunContext
-
-from src.contracts.validation import ValidationRequest
-
 from src.contracts.openai import OpenAIResponseResult
-
+from src.contracts.prompts import (
+    PromptDependency,
+    PromptDependencyManifest,
+    PromptSet,
+    PromptTemplate,
+)
+from src.contracts.report_models import Figure, Quote, ReportPayload
+from src.contracts.run_context import RunContext
+from src.contracts.validation import ValidationRequest
 from src.generators.validation.cache import load_cached_validation
-
 from src.generators.validation.numbers import validate_new_numbers
-
 from src.generators.validation.registry import build_validation_rule_registry
-
 from src.generators.validation_generator import validate_report
-
 from src.utils.errors import AppError
-
 from src.utils.slugify import slugify
+
 
 class FakePromptClient:
     def load_prompt_set(self, request, ctx):
@@ -54,10 +48,32 @@ class FakePromptClient:
             text="user {{ report_json }}",
             sha256="u",
         )
-        return PromptSet(schema_version="1.0", system=tmpl, user=user)
+        return PromptSet(
+            schema_version="1.0",
+            system=tmpl,
+            user=user,
+            dependency_manifest=PromptDependencyManifest(
+                schema_version="1.0",
+                namespace=request.namespace,
+                system_root=PromptDependency(
+                    schema_version="1.0",
+                    path=f"{request.namespace}/system",
+                    sha256="a" * 64,
+                    kind="system_root",
+                ),
+                user_root=PromptDependency(
+                    schema_version="1.0",
+                    path=f"{request.namespace}/user",
+                    sha256="b" * 64,
+                    kind="user_root",
+                ),
+            ),
+            prompt_content_hash="c" * 64,
+        )
 
     def render_prompt(self, request, ctx):
         return SimpleNamespace(text=request.template.text)
+
 
 class FakeOpenAI:
     def __init__(self, *payloads, semantic_payload=None, grounding_payload=None):
@@ -99,6 +115,7 @@ class FakeOpenAI:
             )
         return self.openai_chat_json(req, ctx)
 
+
 class FailingOpenAI(FakeOpenAI):
     def __init__(self, *, semantic_exc=None, grounding_exc=None):
         super().__init__(
@@ -122,6 +139,7 @@ class FailingOpenAI(FakeOpenAI):
             raise self.grounding_exc
         return super().openai_respond_with_vector_store(req, ctx)
 
+
 class FakeAnalysisStore:
     def __init__(self):
         self.stored = []
@@ -133,6 +151,7 @@ class FakeAnalysisStore:
         path = Path(output_dir) / slug / "report_analysis" / f"{pack_name}.json"
         self.stored.append((output_dir, report_id, pack_name, payload))
         return str(path)
+
 
 def _settings(
     tmp_path,
@@ -187,8 +206,10 @@ def _settings(
         },
     )
 
+
 def _ctx():
     return RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
+
 
 def _report():
     return ReportPayload(
@@ -201,10 +222,10 @@ def _report():
         source="Source",
     )
 
+
 def _low_text_status():
     path = Path(__file__).parent / "fixtures" / "low_text_status.json"
     return json.loads(path.read_text(encoding="utf-8"))
-
 
 
 __all__ = [
@@ -212,8 +233,15 @@ __all__ = [
     for name in globals()
     if name
     not in {
-        '__name__', '__annotations__', '__doc__', '__spec__',
-        '__file__', '__package__', '__loader__', '__cached__',
-        '__builtins__', '_SplitPath',
+        "__name__",
+        "__annotations__",
+        "__doc__",
+        "__spec__",
+        "__file__",
+        "__package__",
+        "__loader__",
+        "__cached__",
+        "__builtins__",
+        "_SplitPath",
     }
 ]

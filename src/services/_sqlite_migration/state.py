@@ -565,6 +565,21 @@ def _state_db_012_create_queue_publication_and_briefing_state(
     )
 
 
+def _state_db_013_create_supervisor_lease(conn: sqlite3.Connection) -> None:
+    """Durable singleton lease for one bounded supervisor invocation."""
+
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS workflow_supervisor_lease (
+          lease_name TEXT PRIMARY KEY,
+          owner_id TEXT NOT NULL DEFAULT '',
+          lease_expires_at_utc TEXT NOT NULL DEFAULT '',
+          updated_at_utc TEXT NOT NULL DEFAULT ''
+        )
+        """
+    )
+
+
 _STATE_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
     _MigrationSpec(
         migration_id="state_db_001_create_base_tables",
@@ -625,5 +640,10 @@ _STATE_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
         migration_id="state_db_012_create_queue_publication_and_briefing_state",
         version=12,
         apply_fn=_state_db_012_create_queue_publication_and_briefing_state,
+    ),
+    _MigrationSpec(
+        migration_id="state_db_013_create_supervisor_lease",
+        version=13,
+        apply_fn=_state_db_013_create_supervisor_lease,
     ),
 )

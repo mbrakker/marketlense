@@ -11,12 +11,12 @@ from pathlib import Path
 
 import pytest
 
+from scripts.quality._cto_review_evidence.cto_evidence import (
+    _execution_plan_reconciliation_status,
+)
 from scripts.quality._cto_review_evidence.log_content_leakage import (
     Canary,
     _build_matcher,
-)
-from scripts.quality._cto_review_evidence.cto_evidence import (
-    _execution_plan_reconciliation_status,
 )
 from scripts.quality.collect_cto_review_evidence import (
     ROOT,
@@ -275,7 +275,7 @@ def test_collect_writes_named_cto_evidence_artifacts_from_snapshots(
             UPDATE artifact_lineage_records
             SET source_id='source-1', content_hash='hash-1', storage_ref='safe-ref',
                 schema_version_used='1.0', processing_version='1.0',
-                validation_status='passed', lineage_status='verified'
+                validation_status='passed', lineage_status='complete'
             """
         )
         db.execute(
@@ -329,10 +329,16 @@ def test_collect_writes_named_cto_evidence_artifacts_from_snapshots(
     assert lineage["families"] == [
         {
             "active_count": 1,
+            "active_completeness_percentage": 100.0,
+            "all_history_completeness_percentage": 100.0,
             "artifact_count": 1,
             "artifact_family": "source_pdf",
-            "complete_count": 1,
-            "completeness_percentage": 100.0,
+            "complete_active_count": 1,
+            "complete_history_count": 1,
+            "missing_field_counts": {},
+            "processing_version_distribution": {"1.0": 1},
+            "schema_version_distribution": {"1.0": 1},
+            "superseded_count": 0,
         }
     ]
     telemetry = json.loads(

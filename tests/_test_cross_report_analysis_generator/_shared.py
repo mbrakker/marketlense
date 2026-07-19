@@ -2,14 +2,15 @@
 from __future__ import annotations
 
 from pathlib import Path as _SplitPath
-__file__ = str(_SplitPath(__file__).resolve().parent.parent / "test_cross_report_analysis_generator.py")
+
+__file__ = str(
+    _SplitPath(__file__).resolve().parent.parent
+    / "test_cross_report_analysis_generator.py"
+)
 
 import json
-
 import logging
-
 from dataclasses import is_dataclass, replace
-
 from types import SimpleNamespace
 
 import pytest
@@ -27,22 +28,42 @@ from src.contracts.cross_report_analysis import (
     CrossReportSignalScore,
     CrossReportSignalScoreResult,
 )
-
 from src.contracts.openai import OpenAIResponseResult
-
-from src.contracts.prompts import PromptRenderResponse, PromptSet, PromptTemplate
-
+from src.contracts.prompts import (
+    PromptDependency,
+    PromptDependencyManifest,
+    PromptRenderResponse,
+    PromptSet,
+    PromptTemplate,
+)
 from src.generators.cross_report_analysis_generator import (
     build_cross_report_publish_package,
     generate_cross_report_analysis,
     validate_cross_report_generated_analysis,
 )
 
+
 class FakePromptClient:
     def __init__(self) -> None:
         self.render_variables: list[dict] = []
 
     def load_prompt_set(self, request, ctx):
+        manifest = PromptDependencyManifest(
+            schema_version="1.0",
+            namespace=request.namespace,
+            system_root=PromptDependency(
+                schema_version="1.0",
+                path="src/prompts/cross_report_analysis/synthesis/system.yaml",
+                sha256="a" * 64,
+                kind="system_root",
+            ),
+            user_root=PromptDependency(
+                schema_version="1.0",
+                path="src/prompts/cross_report_analysis/synthesis/user.yaml",
+                sha256="b" * 64,
+                kind="user_root",
+            ),
+        )
         return PromptSet(
             schema_version="1.0",
             system=PromptTemplate(
@@ -57,6 +78,8 @@ class FakePromptClient:
                 text="user {{ request_json }} {{ evidence_json }}",
                 sha256="user-hash",
             ),
+            dependency_manifest=manifest,
+            prompt_content_hash="c" * 64,
         )
 
     def render_prompt(self, request, ctx):
@@ -66,7 +89,9 @@ class FakePromptClient:
             text = text.replace("{{ " + key + " }}", str(value))
         return PromptRenderResponse(schema_version="1.0", text=text)
 
+
 _DEFAULT_PAYLOAD = object()
+
 
 class FakeOpenAIClient:
     def __init__(self, payload: dict | None | object = _DEFAULT_PAYLOAD) -> None:
@@ -171,12 +196,14 @@ class FakeOpenAIClient:
             request_id="provider-request-1",
         )
 
+
 def _events(caplog) -> list[dict]:
     return [
         json.loads(record.message)
         for record in caplog.records
         if record.name == "market_lense.cross_report_analysis_generator"
     ]
+
 
 def _request() -> CrossReportAnalysisRequest:
     return CrossReportAnalysisRequest(
@@ -195,6 +222,7 @@ def _request() -> CrossReportAnalysisRequest:
         publication_mode="generate_only",
     )
 
+
 def _selected_theme() -> CrossReportSelectedTheme:
     return CrossReportSelectedTheme(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
@@ -208,6 +236,7 @@ def _selected_theme() -> CrossReportSelectedTheme:
         selection_reasons=["multi_report_theme"],
         rejection_risks=[],
     )
+
 
 def _source(
     report_id: str, publisher: str, rank: int
@@ -229,6 +258,7 @@ def _source(
         tags=["AI"],
     )
 
+
 def _evidence(
     evidence_id: str, report_id: str, text: str
 ) -> CrossReportEvidenceReference:
@@ -242,8 +272,12 @@ def _evidence(
         entity_uid=evidence_id,
         content_class="claim",
         text=text,
-        source_metadata={"page": 1, "source_url": f"https://sources.example/{report_id}"},
+        source_metadata={
+            "page": 1,
+            "source_url": f"https://sources.example/{report_id}",
+        },
     )
+
 
 def _metric() -> CrossReportRawMetricReference:
     return CrossReportRawMetricReference(
@@ -258,6 +292,7 @@ def _metric() -> CrossReportRawMetricReference:
         evidence_id="ev-report-a-claim-1",
         source_metadata={"page": 4},
     )
+
 
 def _analysis_inputs():
     selected_theme = _selected_theme()
@@ -326,6 +361,7 @@ def _analysis_inputs():
     )
     return evidence_inputs, signal_result, agreement_result
 
+
 def _settings(tmp_path):
     return SimpleNamespace(
         openai_api_key="test-key",
@@ -343,6 +379,7 @@ def _settings(tmp_path):
         model_pricing={},
     )
 
+
 def _generated_result(tmp_path, run_context):
     evidence_inputs, signal_result, agreement_result = _analysis_inputs()
     return generate_cross_report_analysis(
@@ -357,14 +394,20 @@ def _generated_result(tmp_path, run_context):
     )
 
 
-
 __all__ = [
     name
     for name in globals()
     if name
     not in {
-        '__name__', '__annotations__', '__doc__', '__spec__',
-        '__file__', '__package__', '__loader__', '__cached__',
-        '__builtins__', '_SplitPath',
+        "__name__",
+        "__annotations__",
+        "__doc__",
+        "__spec__",
+        "__file__",
+        "__package__",
+        "__loader__",
+        "__cached__",
+        "__builtins__",
+        "_SplitPath",
     }
 ]

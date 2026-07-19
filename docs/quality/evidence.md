@@ -41,11 +41,11 @@ python scripts/quality/collect_cto_review_evidence.py \
   --replace-output
 ```
 
-Strict mode resolves a full 40-character HEAD before snapshots and again immediately before finalization. It requires the expected, starting, and ending SHAs to match and the worktree to be clean at both checks. Git metadata being unavailable, a dirty worktree, an invalid or mismatched expected SHA, or a moving HEAD all fail the run. This proves the bundle-generation code came from one clean repository revision. It does not prove that historical log lines were produced by that revision: standard logs have separate corpus provenance unless a log record itself contains trustworthy commit metadata.
+Strict mode resolves a full 40-character HEAD before snapshots and again immediately before finalization. It requires the expected, starting, and ending SHAs to match and the worktree to be clean at both checks. Git metadata being unavailable, a dirty worktree, an invalid or mismatched expected SHA, or a moving HEAD all fail the run. This proves the bundle-generation code came from one clean repository revision. Standard structured log contexts additionally retain a producer commit when `MARKET_LENSE_PRODUCER_COMMIT` is supplied, but a collector revision and a historical producer revision remain distinct evidence.
 
 The final check excludes only the collector's own temporary staging directory when that directory is created beneath the repository. Any other tracked or untracked worktree change still fails strict collection.
 
-The `--log-corpus-scope` operator declaration states what the snapshotted corpus represents: `representative_report_processing`, `post_remediation_smoke_only`, or `not_declared`. The collector records this declaration and its limitation in both the run manifest and `log_content_leakage.json`; it verifies snapshots and content coverage, not that a claimed workflow was actually run. A smoke-only bundle explicitly states that no representative report-processing workflow was executed and must not be presented as evidence of that workflow.
+The `--log-corpus-scope` operator declaration states what the snapshotted corpus represents: `representative_report_processing`, `post_remediation_smoke_only`, or `not_declared`. Strict representative processing requires timezone-aware `--fresh-after` before any snapshot; omission fails rather than creating a false pass. The leakage artifact records `freshness_state` as `passed`, `failed`, `unverified`, or `not_required`, separately from the content-leakage result. The collector verifies snapshots and content coverage, not that a claimed workflow was actually run. A smoke-only bundle explicitly states that no representative report-processing workflow was executed and must not be presented as evidence of that workflow.
 
 Every database is snapshotted with SQLite's backup API before querying; live WAL files are never copied. The collector snapshots the retained crop and report-analysis JSON evidence inputs under `--artifact-dir` before either metrics or canaries are read. It does not treat unrelated benchmark or runtime sidecars as CTO-review inputs. The collector copies only canonical `market_lense_YYYY-MM-DD.log` files from `--log-dir` into the same workspace and scans only those immutable copies, line by line. Snapshot provenance records normalized source-relative and temporary-relative paths, sizes, hashes, source modification time, parsed event timestamp bounds, line/event counts, and accessibility. Noncanonical files are ignored. In strict mode a discovered standard log that cannot be copied is a failure.
 
@@ -67,14 +67,20 @@ The existing CSV filenames remain stable. The collector additionally writes:
 - `evidence_run_manifest.json`: exact repository provenance, configuration, snapshot-manifest hash, and canonical file inventory with byte counts and SHA-256 values;
 - `consistency_validation.json`: compact checks, exact-head outcome, repository SHA, and finalized run-manifest hash.
 
-The JSON CTO artifacts carry one `evidence_run_id` and one `repository_commit_sha`; the manifest binds stable CSV names through the same inventory. The run manifest intentionally does not hash itself. Instead, `consistency_validation.json` records the finalized run-manifest SHA after independent validation, avoiding a circular hash. Public output paths never include a workstation root or username.
+The JSON CTO artifacts carry one `evidence_run_id` and one `repository_commit_sha`; the manifest binds stable CSV names through the same inventory. It records the collector Python/OS separately from bounded producer-commit observations in historical structured logs; historical producer runtime version is explicitly `not_retained` when absent. The run manifest intentionally does not hash itself. Instead, `consistency_validation.json` records the finalized run-manifest SHA after independent validation, avoiding a circular hash. Public output paths never include a workstation root or username.
 
 The canonical output location is [`docs/CTO_evidence/`](../CTO_evidence/README.md). In addition to the existing integrity, log-leakage, detailed, summary, and CSV artifacts, every bundle writes these machine-readable CTO artifacts:
 
 - `workflow_to_remediation_coverage.json`, `artifact_lineage_completeness.json`, and `architecture_manifest.json` for commit-bound repository evidence;
 - `source_identity_schema.json`, `editorial_rule_catalog.json`, and `effective_run_profile_matrix.json` for the public policy and configured execution surface;
-- `github_main_status.json` for the latest main commit and its check/PR state when `--include-github-status` is passed; and
+- `github_main_status.json` for the exact tested commit's check/PR state, the latest main commit, and their explicit revision-match relationship when `--include-github-status` is passed; and
 - `runtime_telemetry.json` for acquisition, browser, cost, OCR, crop, plan-divergence, deferred-work, remediation, embedding, WordPress, editorial-quality, and public-page evidence.
+
+The lineage artifact reports each family separately: total, active, superseded,
+complete-active, active-only completeness, all-history completeness, required
+field missing counts, and processing/schema version distributions. Incomplete
+historical rows are not silently promoted; reuse remains blocked unless the
+canonical lineage boundary can prove every required field.
 
 The collector reports a metric as `available`, `partial`, `empty`, or `unavailable`. `partial` and `unavailable` are explicit retained-data limitations, not zeroes or inferred successes. In particular, the current stores do not prove per-report browser traces, cache hit/miss rates, cost attribution across every side effect, WordPress duplicate/rollback rates, human editorial ratings, or hosted public-page telemetry until those values are retained by their owning boundaries.
 

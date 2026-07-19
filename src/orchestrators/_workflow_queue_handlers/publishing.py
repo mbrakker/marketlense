@@ -147,7 +147,7 @@ from src.utils.clock import utc_now_iso
 from src.utils.errors import AppError
 from src.utils.wp_auth import build_auth_header
 
-from .shared import WorkflowQueueHandlerResult, _digest
+from .shared import WorkflowQueueHandlerResult, _boolean_attribute, _digest
 
 
 def _publication_readiness_handler(
@@ -167,6 +167,27 @@ def _publication_readiness_handler(
             retryable=False,
         )
     required_assets = str(payload.required_asset_status or "optional").strip().lower()
+    if _boolean_attribute(payload, "claim_validation_required", False):
+        response = read_bytes(
+            ReadBytesRequest(schema_version="1.0", path=payload.validation_reference),
+            ctx,
+        )
+        try:
+            claim_validation = json.loads(response.content.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise AppError(
+                code="claim_validation_package_invalid",
+                message="Publication readiness requires a readable claim-validation package",
+                cause=exc,
+                retryable=False,
+            ) from exc
+        if (
+            not isinstance(claim_validation, dict)
+            or claim_validation.get("readiness_status") != "awaiting_review"
+            or int(claim_validation.get("unsupported_factual_count") or 0) > 0
+            or int(claim_validation.get("unresolved_factual_count") or 0) > 0
+        ):
+            required_assets = "claim_validation_blocked"
     status = (
         "awaiting_review"
         if required_assets in {"ready", "optional"}

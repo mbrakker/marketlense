@@ -95,6 +95,14 @@ class IngestSettings:
             "doc": "Per-namespace OpenAI model overrides keyed by namespace/prefix."
         },
     )
+    llm_routing: Dict[str, Dict[str, object]] = field(
+        default_factory=dict,
+        metadata={"doc": "Legacy namespace quality and compaction routing policies."},
+    )
+    llm_execution_policies: Dict[str, Dict[str, object]] = field(
+        default_factory=dict,
+        metadata={"doc": "Namespace-aware resolved model execution policy config."},
+    )
     ingest_lock_ttl_seconds: float = field(
         default=7200.0,
         metadata={

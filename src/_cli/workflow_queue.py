@@ -15,6 +15,7 @@ from src.contracts.config import ConfigLoadRequest
 from src.contracts.deferred_work import DeferredWorkQueueMigrationRequest
 from src.contracts.files import FileStatRequest
 from src.contracts.logging import LoggingSetupRequest
+from src.contracts.workflow_control import SupervisorRunRequest
 from src.contracts.workflow_queue import (
     PublisherDiscoveryPayload,
     ReportAcquisitionPayload,
@@ -26,9 +27,11 @@ from src.contracts.workflow_queue import (
 from src.orchestrators.deferred_work_queue_adapter import (
     migrate_deferred_work_to_workflow_queue,
 )
+from src.orchestrators.workflow_supervisor_orchestrator import run_supervisor_once
 from src.orchestrators.workflow_worker_orchestrator import run_workflow_worker_once
 from src.services.config_service import (
     load_settings,
+    load_workflow_control_settings,
     load_workflow_queue_policies,
 )
 from src.services.file_service import file_stat
@@ -48,6 +51,7 @@ from src.services.workflow_queue_service import (
     seed_workflow_queue_controls,
     set_workflow_queue_control,
 )
+from src.utils.clock import utc_now_seconds_iso
 from src.utils.logging import new_run_context
 
 
@@ -450,3 +454,40 @@ def workflow_worker(
         if result.terminal_status == "idle":
             break
     console.print_json(data=outcomes)
+
+
+@cli_app.command("supervise-workflows")
+def supervise_workflows(
+    once: bool = typer.Option(False, "--once", help="Required: run one bounded pass"),
+    worker_id: str = typer.Option("", help="Stable supervisor identity"),
+) -> None:
+    """Compose existing durable controls once; the host owns recurrence."""
+
+    if not once:
+        raise typer.BadParameter("--once is required; this command never loops")
+    ctx = _ctx("cli_supervise_workflows")
+    state_db = _state_db(ctx)
+    settings = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+    control = load_workflow_control_settings(
+        ConfigLoadRequest(schema_version="1.0", path=""), ctx
+    )
+    result = run_supervisor_once(
+        SupervisorRunRequest(
+            schema_version="1.0",
+            state_db=state_db,
+            usage_db_path=settings.usage_db_path,
+            worker_id=worker_id or f"workflow-supervisor:{ctx.run_id}",
+            now_utc=utc_now_seconds_iso(),
+            settings=control.supervisor,
+        ),
+        ctx,
+    )
+    console.print_json(data=asdict(result))
+    exit_codes = {
+        "healthy": 0,
+        "partially_deferred": 3,
+        "failed": 1,
+        "busy": 4,
+        "disabled": 2,
+    }
+    raise typer.Exit(code=exit_codes[result.status])

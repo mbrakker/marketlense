@@ -39,6 +39,7 @@ from src.services._config_service.settings_resolvers import (
     _resolve_rank_settings,
     _resolve_validation_settings,
 )
+from src.utils.model_resolver import execution_policies_from_config
 
 
 def _normalize_mapping(raw_value: object) -> dict[str, dict[str, object]]:
@@ -284,6 +285,29 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         resolver=resolver,
     )
 
+    llm_routing = _normalize_mapping(
+        sections.data.get("llm_routing")
+        or _default_config_value("llm_routing", fallback={})
+    )
+    llm_execution_policies = _normalize_mapping(
+        sections.data.get("llm_execution_policies")
+        or _default_config_value("llm_execution_policies", fallback={})
+    )
+    # Validate once at configuration ingress.  Runtime resolves the resulting
+    # mapping again into typed policies so callers never trust raw YAML.
+    execution_policies_from_config(
+        llm_execution_policies,
+        model_overrides=_normalize_openai_models(
+            sections.data.get("openai_models")
+            or _default_config_value("openai_models", fallback={})
+        ),
+        legacy_routing=llm_routing,
+        default_model=openai_model,
+        default_temperature=float(ingest_runtime["temperature"]),
+        default_seed=ingest_runtime["openai_seed"],
+        default_timeout_seconds=float(ingest_runtime["openai_timeout_seconds"]),
+    )
+
     settings = AppSettings(
         schema_version=str(sections.data.get("schema_version", "1.0")),
         google_sa_path=drive_auth_settings["google_sa_path"],
@@ -308,10 +332,8 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
             sections.data.get("openai_models")
             or _default_config_value("openai_models", fallback={})
         ),
-        llm_routing=_normalize_mapping(
-            sections.data.get("llm_routing")
-            or _default_config_value("llm_routing", fallback={})
-        ),
+        llm_routing=llm_routing,
+        llm_execution_policies=llm_execution_policies,
         batch_limit=ingest_runtime["batch_limit"],
         ingest_worker_limit=ingest_runtime["ingest_worker_limit"],
         report_worker_limit=ingest_runtime["report_worker_limit"],

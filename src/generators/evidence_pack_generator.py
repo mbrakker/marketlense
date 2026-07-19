@@ -12,17 +12,19 @@ from src.contracts.report_analysis import (
     AnalysisStorePackRequest,
 )
 from src.contracts.run_context import RunContext
-from src.contracts.semantic_ids import ReportId
 from src.contracts.schema_validation import SchemaValidateRequest
+from src.contracts.semantic_ids import ReportId
 from src.generators.analysis_pack_cache import (
     CachedPackAdaptResult,
     load_cached_pack,
 )
 from src.generators.analysis_store_adapter import (
     resolve_pack_path as resolve_analysis_pack_path,
+)
+from src.generators.analysis_store_adapter import (
     store_pack as store_analysis_pack,
 )
-from src.generators.prompt_preparation import prepare_prompt_bundle
+from src.generators.evidence_packs.base import EvidencePackStrategy
 from src.generators.evidence_packs.doc_map_strategy import (
     normalize_payload as normalize_doc_map_payload,
 )
@@ -32,20 +34,21 @@ from src.generators.evidence_packs.doc_map_strategy import (
 from src.generators.evidence_packs.doc_map_strategy import (
     summarize_payload as summarize_doc_map,
 )
-from src.generators.evidence_packs.base import EvidencePackStrategy
 from src.generators.evidence_packs.registry import (
     DEFAULT_PACK_REGISTRY,
     PACK_STRATEGIES,
     VARIETY_PACKS,
 )
-from src.services import file_service
-from src.services import prompt_service
-from src.services import report_analysis_store_service
+from src.generators.prompt_preparation import (
+    model_request_identity_fields,
+    prepare_prompt_bundle,
+)
+from src.services import file_service, prompt_service, report_analysis_store_service
 from src.services.schema_validator_service import validate_schema
+from src.utils.analysis_family import serialize_family_status
 from src.utils.cache_utils import sha256_json
 from src.utils.coercion import coerce_int
 from src.utils.errors import AppError
-from src.utils.analysis_family import serialize_family_status
 from src.utils.json_recovery import parse_json_from_text, strip_json_fence
 from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.model_client_contract import require_injected_model_client
@@ -479,10 +482,9 @@ def _generate_pack(
                 "user_path": prompt_bundle.prompt_set.user.path,
                 "prompt_system_sha256": prompt_bundle.prompt_set.system.sha256,
                 "prompt_user_sha256": prompt_bundle.prompt_set.user.sha256,
-                "system_prompt": prompt_bundle.system_prompt,
-                "user_prompt": prompt_bundle.user_prompt,
                 "resolved_model": prompt_bundle.resolved_model,
-                "temperature": settings.temperature,
+                "temperature": prompt_bundle.effective_temperature,
+                "execution_policy_hash": prompt_bundle.execution_policy.policy_hash,
             },
         )
     )
@@ -608,19 +610,21 @@ def _generate_pack(
                 user_prompt=prompt_bundle.user_prompt,
                 vector_store_id=vector_store_id,
                 model=prompt_bundle.resolved_model,
-                temperature=settings.temperature,
+                temperature=prompt_bundle.effective_temperature,
                 api_key=settings.openai_api_key,
-                seed=settings.openai_seed,
-                timeout_seconds=settings.openai_timeout_seconds,
+                seed=prompt_bundle.effective_seed,
+                timeout_seconds=prompt_bundle.effective_timeout_seconds,
                 cost_ledger_path=settings.cost_ledger_path,
                 cost_daily_path=settings.cost_daily_path,
-                usage_db_path=str(getattr(settings, "usage_db_path", "./state/llm_usage.sqlite")),
+                usage_db_path=str(
+                    getattr(settings, "usage_db_path", "./state/llm_usage.sqlite")
+                ),
                 model_pricing=settings.model_pricing,
                 publisher_name=publisher_name,
                 report_name=report_name,
                 source_url=source_url,
                 prompt_namespace=prompt_namespace,
-                prompt_hash=prompt_bundle.prompt_set.user.sha256,
+                **model_request_identity_fields(prompt_bundle),
             ),
             ctx,
         )

@@ -274,8 +274,17 @@ def artifact_lineage_completeness(snapshot: Path | None) -> dict[str, object]:
         str(row.get("artifact_id") or ""): str(row.get("state") or "")
         for row in _rows(snapshot, "artifact_lineage_states")
     }
-    families: dict[str, dict[str, int]] = defaultdict(
-        lambda: {"artifact_count": 0, "complete_count": 0, "active_count": 0}
+    families: dict[str, dict[str, Any]] = defaultdict(
+        lambda: {
+            "artifact_count": 0,
+            "active_count": 0,
+            "superseded_count": 0,
+            "complete_active_count": 0,
+            "complete_history_count": 0,
+            "missing_field_counts": Counter(),
+            "processing_version_distribution": Counter(),
+            "schema_version_distribution": Counter(),
+        }
     )
     for row in _rows(snapshot, "artifact_lineage_records"):
         family = str(row.get("artifact_kind") or "unknown")
@@ -284,26 +293,65 @@ def artifact_lineage_completeness(snapshot: Path | None) -> dict[str, object]:
         state = states.get(str(row.get("artifact_id") or ""), "")
         if state == "active":
             entry["active_count"] += 1
-        if state == "active" and all(
-            str(row.get(key) or "").strip() for key in _LINEAGE_REQUIRED_COLUMNS
-        ):
-            entry["complete_count"] += 1
+        if state == "superseded":
+            entry["superseded_count"] += 1
+        entry["processing_version_distribution"][
+            str(row.get("processing_version") or "missing")
+        ] += 1
+        entry["schema_version_distribution"][
+            str(row.get("schema_version_used") or "missing")
+        ] += 1
+        missing = [
+            key
+            for key in _LINEAGE_REQUIRED_COLUMNS
+            if not str(row.get(key) or "").strip()
+        ]
+        if str(row.get("lineage_status") or "") != "complete":
+            missing.append("lineage_status_not_complete")
+        for field_name in missing:
+            entry["missing_field_counts"][field_name] += 1
+        complete = not missing
+        if complete:
+            entry["complete_history_count"] += 1
+            if state == "active":
+                entry["complete_active_count"] += 1
     rows = [
         {
             "artifact_family": name,
-            **counts,
-            "completeness_percentage": round(
-                100 * _ratio(counts["complete_count"], counts["artifact_count"]), 4
+            "artifact_count": counts["artifact_count"],
+            "active_count": counts["active_count"],
+            "superseded_count": counts["superseded_count"],
+            "complete_active_count": counts["complete_active_count"],
+            "complete_history_count": counts["complete_history_count"],
+            "active_completeness_percentage": round(
+                100 * _ratio(counts["complete_active_count"], counts["active_count"]),
+                4,
+            )
+            if counts["active_count"]
+            else 0.0,
+            "all_history_completeness_percentage": round(
+                100
+                * _ratio(counts["complete_history_count"], counts["artifact_count"]),
+                4,
             )
             if counts["artifact_count"]
             else 0.0,
+            "missing_field_counts": dict(
+                sorted(counts["missing_field_counts"].items())
+            ),
+            "processing_version_distribution": dict(
+                sorted(counts["processing_version_distribution"].items())
+            ),
+            "schema_version_distribution": dict(
+                sorted(counts["schema_version_distribution"].items())
+            ),
         }
         for name, counts in sorted(families.items())
     ]
     return {
         "schema_version": SCHEMA_VERSION,
         "status": "available" if rows else "empty",
-        "definition": "A complete lineage record has all required canonical fields, verified lineage status, and active state.",
+        "definition": "Completeness is reported separately for active and all-history records; planner-safe rows require all canonical fields and lineage_status=complete.",
         "families": rows,
     }
 
@@ -520,7 +568,9 @@ def _github_repository_slug(root: Path) -> str | None:
     return None
 
 
-def github_main_status(root: Path, *, include: bool) -> dict[str, object]:
+def github_main_status(
+    root: Path, *, include: bool, tested_commit_sha: str = ""
+) -> dict[str, object]:
     if not include:
         return {
             "schema_version": SCHEMA_VERSION,
@@ -535,7 +585,7 @@ def github_main_status(root: Path, *, include: bool) -> dict[str, object]:
             "reason": "github_origin_not_configured",
         }
     try:
-        commit = json.loads(
+        main_commit = json.loads(
             subprocess.run(
                 ["gh", "api", "--method", "GET", f"repos/{slug}/commits/main"],
                 cwd=root,
@@ -544,7 +594,10 @@ def github_main_status(root: Path, *, include: bool) -> dict[str, object]:
                 text=True,
             ).stdout
         )
-        sha = str(commit.get("sha") or "")
+        main_sha = str(main_commit.get("sha") or "")
+        sha = tested_commit_sha or main_sha
+        if not sha:
+            raise ValueError("GitHub returned no commit SHA")
         checks = json.loads(
             subprocess.run(
                 [
@@ -594,7 +647,9 @@ def github_main_status(root: Path, *, include: bool) -> dict[str, object]:
         "schema_version": SCHEMA_VERSION,
         "status": "available",
         "repository": slug,
-        "main_commit_sha": sha,
+        "tested_commit_sha": sha,
+        "main_commit_sha": main_sha,
+        "revision_match": bool(not tested_commit_sha or main_sha == tested_commit_sha),
         "check_runs": {
             "total": len(runs),
             "status_counts": dict(sorted(states.items())),
@@ -994,7 +1049,7 @@ def _runtime_telemetry(
 
 
 def _readme() -> str:
-    return """# CTO Evidence\n\nThis directory is generated by `scripts/quality/collect_cto_review_evidence.py`. It is a point-in-time, machine-readable evidence surface; do not edit the files by hand.\n\nRepository artifacts describe the revision that produced the bundle. Runtime telemetry is derived only from immutable SQLite and retained-artifact snapshots. Each metric declares `available`, `partial`, `empty`, or `unavailable`; an unavailable metric is a retention gap, not a zero value.\n\nGenerate a strict review bundle with:\n\n```powershell\n$evidenceHeadSha = git rev-parse HEAD\npython scripts/quality/collect_cto_review_evidence.py --state-dir state --artifact-dir out --log-dir logs --output-dir docs/CTO_evidence --expected-commit-sha $evidenceHeadSha --require-exact-head --log-corpus-scope representative_report_processing --include-github-status --replace-output\n```\n\nThe GitHub status snapshot is intentionally opt-in because it is an external read. It records an explicit unavailable status when it cannot be collected.\n"""
+    return """# CTO Evidence\n\nThis directory is generated by `scripts/quality/collect_cto_review_evidence.py`. It is a point-in-time, machine-readable evidence surface; do not edit the files by hand.\n\nRepository artifacts describe the revision that produced the bundle. Runtime telemetry is derived only from immutable SQLite and retained-artifact snapshots. Each metric declares `available`, `partial`, `empty`, or `unavailable`; an unavailable metric is a retention gap, not a zero value.\n\nGenerate a strict review bundle with:\n\n```powershell\n$evidenceHeadSha = git rev-parse HEAD\n$freshAfter = \"<current-run-start-ISO-8601>\"\npython scripts/quality/collect_cto_review_evidence.py --state-dir state --artifact-dir out --log-dir logs --output-dir docs/CTO_evidence --expected-commit-sha $evidenceHeadSha --require-exact-head --fresh-after $freshAfter --log-corpus-scope representative_report_processing --include-github-status --replace-output\n```\n\nThe GitHub status snapshot is intentionally opt-in because it is an external read. It records the tested revision separately from latest `main`, and returns an explicit unavailable status when it cannot be collected.\n"""
 
 
 def write_cto_evidence(
@@ -1005,6 +1060,7 @@ def write_cto_evidence(
     artifact_dir: Path,
     repository_commit_sha: str,
     include_github_status: bool,
+    tested_commit_sha: str = "",
 ) -> list[Path]:
     """Write the public CTO artifacts from already-frozen collector inputs."""
     artifacts: dict[str, object] = {
@@ -1021,7 +1077,9 @@ def write_cto_evidence(
         "editorial_rule_catalog.json": _editorial_rule_catalog(),
         "effective_run_profile_matrix.json": _effective_run_profiles(repository_root),
         "github_main_status.json": github_main_status(
-            repository_root, include=include_github_status
+            repository_root,
+            include=include_github_status,
+            tested_commit_sha=tested_commit_sha or repository_commit_sha,
         ),
         "runtime_telemetry.json": _runtime_telemetry(snapshots, artifact_dir),
     }

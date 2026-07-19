@@ -199,6 +199,25 @@ class EvidencePaths:
     repository_root: Path = ROOT
 
 
+def _freshness_state(
+    *,
+    log_corpus_scope: str,
+    fresh_after: datetime | None,
+    fresh_log_seen: bool,
+) -> str:
+    """State freshness without conflating omitted evidence with a pass."""
+
+    if log_corpus_scope != "representative_report_processing":
+        return (
+            "not_required"
+            if fresh_after is None
+            else ("passed" if fresh_log_seen else "failed")
+        )
+    if fresh_after is None:
+        return "unverified"
+    return "passed" if fresh_log_seen else "failed"
+
+
 @dataclass(frozen=True)
 class DatabaseSpec:
     """A mutable SQLite source that must be copied before evidence queries begin."""
@@ -843,6 +862,14 @@ def _repository_provenance(
     fresh_after = (
         _parse_aware_timestamp(paths.fresh_after) if paths.fresh_after else None
     )
+    if (
+        paths.require_exact_head
+        and paths.log_corpus_scope == "representative_report_processing"
+        and fresh_after is None
+    ):
+        raise EvidenceFreshnessError(
+            "Strict representative-report evidence requires timezone-aware fresh_after"
+        )
     if paths.expected_commit_sha and not COMMIT_SHA_RE.fullmatch(
         paths.expected_commit_sha
     ):
@@ -1324,6 +1351,11 @@ def _leakage_payload(
         incomplete = True
         limitations.append("no_fresh_standard_log")
     status = "failed" if matches else "incomplete" if incomplete else "passed"
+    freshness_state = _freshness_state(
+        log_corpus_scope=log_corpus_scope,
+        fresh_after=fresh_after,
+        fresh_log_seen=fresh_log_seen,
+    )
     return (
         {
             "schema_version": "1.0",
@@ -1334,6 +1366,7 @@ def _leakage_payload(
             "passed": status == "passed",
             "fresh_after": fresh_after.isoformat() if fresh_after else None,
             "fresh_log_seen": fresh_log_seen,
+            "freshness_state": freshness_state,
             "log_corpus": _log_corpus_provenance(log_corpus_scope),
             "coverage": coverage,
             "canaries": [item.public_metadata() for item in canaries],
@@ -1365,6 +1398,34 @@ def _log_corpus_provenance(scope: str) -> dict[str, str]:
             "The repository commit identifies the evidence collector revision; it "
             "does not attest to the producer revision of historical log records."
         ),
+    }
+
+
+def _producer_runtime_provenance(log_root: Path) -> dict[str, object]:
+    """Summarise retained producer provenance without retaining log payloads."""
+
+    commits: set[str] = set()
+    for path in sorted(log_root.glob("market_lense_*.log")):
+        try:
+            handle = path.open(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        with handle:
+            for line in handle:
+                try:
+                    event = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if not isinstance(event, dict):
+                    continue
+                value = str(event.get("producer_commit_sha") or "").strip().lower()
+                if COMMIT_SHA_RE.fullmatch(value):
+                    commits.add(value)
+    return {
+        "status": "observed" if commits else "unavailable",
+        "producer_commit_shas": sorted(commits)[:25],
+        "producer_commit_sha_count": len(commits),
+        "runtime_version_status": "not_retained_by_historical_logs",
     }
 
 
@@ -1466,6 +1527,7 @@ def collect(
             artifact_dir=artifact_snapshot_root,
             repository_commit_sha=commit_sha,
             include_github_status=paths.include_github_status,
+            tested_commit_sha=commit_sha,
         )
         detailed_path = _write_json(
             staging_dir / "detailed_metrics.json",
@@ -1533,6 +1595,11 @@ def collect(
                 "command_args": list(command_args),
                 "python_version": sys.version,
                 "operating_system": platform.platform(),
+                "collector_runtime": {
+                    "python_version": sys.version,
+                    "operating_system": platform.platform(),
+                },
+                "producer_runtime": _producer_runtime_provenance(log_snapshot_root),
                 "artifact_inventory": _artifact_inventory(
                     staging_dir, run_id=run_id, commit_sha=commit_sha
                 ),
@@ -1568,9 +1635,7 @@ def collect(
                     else "not_required",
                     "snapshot_integrity": "passed",
                     "artifact_hashes": "passed",
-                    "log_freshness": "passed"
-                    if not fresh_after or leakage["fresh_log_seen"]
-                    else "failed",
+                    "log_freshness": leakage["freshness_state"],
                     "source_canary_coverage": "passed"
                     if leakage["coverage"]["source_canary_count"]
                     >= paths.minimum_source_canaries

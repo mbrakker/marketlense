@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+from dataclasses import asdict
 
 import typer
 import yaml
@@ -25,6 +26,9 @@ from src.contracts.run_context import RunContext
 from src.orchestrators.deferred_work_orchestrator import (
     DeferredWorkReaperDependencies,
     run_bounded_deferred_work_reaper,
+)
+from src.orchestrators.remediation_orchestrator import (
+    build_remediation_opportunity_report,
 )
 from src.orchestrators.report_pipeline_orchestrator import (
     build_report_pipeline_deferred_work_plan,
@@ -169,6 +173,43 @@ def remediation_soak(
     console.print(table)
 
 
+@cli_app.command("remediation-opportunities")
+def remediation_opportunities(
+    state_db: str | None = typer.Option(
+        None, help="Optional state database path; defaults to application settings."
+    ),
+    registry: str = typer.Option(
+        "docs/ops/failure_remediation.yaml",
+        help="Approved runbook registry used only for read-only grouping.",
+    ),
+    now_utc: str | None = typer.Option(
+        None, help="Optional ISO-8601 UTC observation time for reproducible reads."
+    ),
+    limit: int = typer.Option(500, min=1, max=500, help="Maximum retained rows read."),
+) -> None:
+    """Prioritise repeated remediation work without leasing or executing it."""
+
+    ctx = new_run_context(task_id="cli_remediation_opportunities")
+    setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
+    resolved_state_db = str(state_db or "").strip()
+    if not resolved_state_db:
+        settings = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+        resolved_state_db = settings.state_db
+    observation_time = str(now_utc or "").strip() or utc_now_seconds_z()
+    records = list_remediation_records(
+        RemediationListRequest(
+            schema_version="1.0", state_db=resolved_state_db, limit=limit
+        ),
+        ctx,
+    ).records
+    report = build_remediation_opportunity_report(
+        records,
+        observed_at_utc=observation_time,
+        runbook_error_codes=set(_runbook_codes(registry, ctx)),
+    )
+    console.print_json(data=asdict(report))
+
+
 @cli_app.command("deferred-work")
 def list_deferred_work_items(
     usage_db: str | None = typer.Option(
@@ -201,7 +242,15 @@ def list_deferred_work_items(
         f"terminal={metrics.terminal_count}, completion_rate={metrics.completion_rate:.0%}"
     )
     table = Table(title="Durable Budget-Deferred Work", box=box.SIMPLE_HEAVY)
-    for heading in ("Workflow", "Stage", "State", "Limit", "Attempts", "Earliest UTC", "Terminal"):
+    for heading in (
+        "Workflow",
+        "Stage",
+        "State",
+        "Limit",
+        "Attempts",
+        "Earliest UTC",
+        "Terminal",
+    ):
         table.add_column(heading)
     for item in records:
         table.add_row(
@@ -239,17 +288,21 @@ def reap_deferred_work(
     reaper = control.deferred_work_reaper
     dependencies = DeferredWorkReaperDependencies(
         plan_builders={
-            "report_generation": lambda item, work_ctx: build_report_pipeline_deferred_work_plan(
-                item, ingest_settings, work_ctx
+            "report_generation": lambda item, work_ctx: (
+                build_report_pipeline_deferred_work_plan(
+                    item, ingest_settings, work_ctx
+                )
             )
         },
         resumers={
-            "report_generation": lambda item, plan, work_ctx: resume_deferred_report_pipeline(
-                item,
-                plan,
-                ingest_settings,
-                work_ctx,
-                workflow_control_settings=control,
+            "report_generation": lambda item, plan, work_ctx: (
+                resume_deferred_report_pipeline(
+                    item,
+                    plan,
+                    ingest_settings,
+                    work_ctx,
+                    workflow_control_settings=control,
+                )
             )
         },
     )
@@ -279,6 +332,7 @@ def reap_deferred_work(
 __all__ = [
     "list_deferred_work_items",
     "list_remediations",
+    "remediation_opportunities",
     "reap_deferred_work",
     "remediation_soak",
 ]

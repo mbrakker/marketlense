@@ -6,7 +6,12 @@ import pytest
 
 from src.contracts.config import AppSettings
 from src.contracts.openai import OpenAIResponseResult
-from src.contracts.prompts import PromptSet, PromptTemplate
+from src.contracts.prompts import (
+    PromptDependency,
+    PromptDependencyManifest,
+    PromptSet,
+    PromptTemplate,
+)
 from src.contracts.run_context import RunContext
 from src.contracts.taxonomy import TaxonomyExtractRequest
 from src.generators.taxonomy_generator import extract_taxonomy
@@ -27,7 +32,21 @@ class FakePromptClient:
             text="user {{ report_title }} {{ allowed_tags_json }}",
             sha256="user-sha",
         )
-        return PromptSet(schema_version="1.0", system=system, user=user)
+        return PromptSet(
+            schema_version="1.0",
+            system=system,
+            user=user,
+            dependency_manifest=PromptDependencyManifest(
+                schema_version="1.0",
+                namespace=request.namespace,
+                system_root=PromptDependency(
+                    "1.0", "system.yaml", "a" * 64, "system_root"
+                ),
+                user_root=PromptDependency("1.0", "user.yaml", "b" * 64, "user_root"),
+                prompt_content_hash="c" * 64,
+            ),
+            prompt_content_hash="c" * 64,
+        )
 
     def render_prompt(self, request, ctx):
         return SimpleNamespace(text=request.template.text)

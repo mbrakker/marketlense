@@ -296,6 +296,79 @@ class RemediationSoakReportResponse:
 
 
 @dataclass(frozen=True)
+class RemediationExecutorRegistration:
+    """Reviewable declaration for a narrowly approved recovery adapter.
+
+    Registration is metadata, not an executor. The bounded reaper still needs
+    an explicit dependency at runtime and all proof checks before it can act.
+    """
+
+    schema_version: str = field(metadata={"doc": "Registration schema version."})
+    workflow: str = field(metadata={"doc": "Supported owning workflow."})
+    error_code: str = field(metadata={"doc": "Supported typed failure code."})
+    action_code: RemediationActionCode = field(
+        metadata={"doc": "Only permitted recovery action."}
+    )
+    prerequisites: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Required retained proof before recovery."},
+    )
+    permitted_side_effects: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Explicitly permitted side-effect families."},
+    )
+    checkpoint_policy: str = field(default="required")
+    idempotency_policy: str = field(default="required")
+    approval_required: bool = field(default=True)
+    attempt_limit: int = field(default=1)
+    cooldown_seconds: int = field(default=0)
+    rollback_and_reconciliation: str = field(default="operator_review")
+
+
+@dataclass(frozen=True)
+class RemediationOpportunity:
+    """Bounded, non-executable aggregation of repeated operator work."""
+
+    schema_version: str = field(metadata={"doc": "Opportunity schema version."})
+    workflow: str = field(metadata={"doc": "Owning workflow."})
+    failed_stage: str = field(metadata={"doc": "Failed workflow stage."})
+    error_code: str = field(metadata={"doc": "Typed error code."})
+    action_code: str = field(metadata={"doc": "Proposed remediation action."})
+    retryability: str = field(metadata={"doc": "Retryable, non_retryable, or unknown."})
+    runbook_status: str = field(metadata={"doc": "Mapped, missing, or absent."})
+    record_ids: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Bounded retained remediation IDs only."},
+    )
+    source_or_publisher_hashes: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Bounded opaque source/publisher hashes."},
+    )
+    recurrence_count: int = field(default=0)
+    oldest_age_seconds: int = field(default=0)
+    attempted_operations: int = field(default=0)
+    attempted_cost_usd: float = field(default=0.0)
+    checkpoint_available_count: int = field(default=0)
+    idempotency_proven_count: int = field(default=0)
+    priority_score: int = field(default=0)
+    priority_reasons: list[str] = field(default_factory=list)
+    executor_eligibility: str = field(
+        default="held_unregistered",
+        metadata={"doc": "Read-only registration/proof disposition."},
+    )
+    held_reason: str = field(default="")
+
+
+@dataclass(frozen=True)
+class RemediationOpportunityReport:
+    schema_version: str = field(metadata={"doc": "Opportunity-report schema version."})
+    observed_at_utc: str = field(metadata={"doc": "Read-only observation timestamp."})
+    record_count: int = field(default=0)
+    opportunity_count: int = field(default=0)
+    opportunities: list[RemediationOpportunity] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
 class RemediationClaimRequest:
     schema_version: str = field(
         metadata={"doc": "Remediation lease-claim request schema version."}

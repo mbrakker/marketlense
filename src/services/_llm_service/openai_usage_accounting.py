@@ -133,6 +133,13 @@ def record_usage_accounting(
                 "execution_identity_manifest": dict(
                     getattr(source, "execution_identity_manifest", {}) or {}
                 ),
+                "execution_policy_hash": str(
+                    getattr(source, "execution_policy_hash", "") or ""
+                ),
+                "execution_policy": dict(getattr(source, "execution_policy", {}) or {}),
+                "execution_policy_source": str(
+                    getattr(source, "execution_policy_source", "") or ""
+                ),
                 "response_cache_dir": str(
                     getattr(source, "response_cache_dir", "") or ""
                 ),

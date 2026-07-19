@@ -119,8 +119,10 @@ def render_artifact_json_model(
                 "expected_input_tokens": expected_input_tokens,
                 "expected_cost_usd": expected_cost_usd,
                 "pricing_status": pricing_resolution.status,
-                "temperature": settings.temperature,
-                "seed": settings.openai_seed,
+                "temperature": prompt_bundle.effective_temperature,
+                "seed": prompt_bundle.effective_seed,
+                "execution_policy_hash": prompt_bundle.execution_policy.policy_hash,
+                "execution_policy_source": prompt_bundle.execution_policy.policy_source,
                 "retrieval_mode": (
                     "vector_store"
                     if allow_vector_store and vector_store_id
@@ -140,20 +142,25 @@ def render_artifact_json_model(
                 user_prompt=prompt_bundle.user_prompt,
                 vector_store_id=vector_store_id,
                 model=prompt_bundle.resolved_model,
-                temperature=settings.temperature,
+                temperature=prompt_bundle.effective_temperature,
                 api_key=settings.openai_api_key,
-                seed=settings.openai_seed,
-                timeout_seconds=settings.openai_timeout_seconds,
+                seed=prompt_bundle.effective_seed,
+                timeout_seconds=prompt_bundle.effective_timeout_seconds,
                 cost_ledger_path=settings.cost_ledger_path,
                 cost_daily_path=settings.cost_daily_path,
-                usage_db_path=str(getattr(settings, "usage_db_path", "./state/llm_usage.sqlite")),
+                usage_db_path=str(
+                    getattr(settings, "usage_db_path", "./state/llm_usage.sqlite")
+                ),
                 model_pricing=settings.model_pricing,
                 publisher_name=publisher_name,
                 report_name=report_name,
                 source_url=source_url,
                 prompt_namespace=namespace,
                 **model_request_identity_fields(prompt_bundle),
-                same_provider_fallback=prompt_bundle.routing_decision.same_provider_fallback,
+                same_provider_fallback=(
+                    prompt_bundle.execution_policy.policy.fallback_policy
+                    == "same_provider_only"
+                ),
                 context_compaction_policy=LLMContextCompactionPolicy(
                     schema_version="1.0",
                     enabled=prompt_bundle.routing_decision.compaction_enabled,
@@ -170,20 +177,25 @@ def render_artifact_json_model(
                 system_prompt=prompt_bundle.system_prompt,
                 user_prompt=prompt_bundle.user_prompt,
                 model=prompt_bundle.resolved_model,
-                temperature=settings.temperature,
+                temperature=prompt_bundle.effective_temperature,
                 api_key=settings.openai_api_key,
-                seed=settings.openai_seed,
-                timeout_seconds=settings.openai_timeout_seconds,
+                seed=prompt_bundle.effective_seed,
+                timeout_seconds=prompt_bundle.effective_timeout_seconds,
                 cost_ledger_path=settings.cost_ledger_path,
                 cost_daily_path=settings.cost_daily_path,
-                usage_db_path=str(getattr(settings, "usage_db_path", "./state/llm_usage.sqlite")),
+                usage_db_path=str(
+                    getattr(settings, "usage_db_path", "./state/llm_usage.sqlite")
+                ),
                 model_pricing=settings.model_pricing,
                 publisher_name=publisher_name,
                 report_name=report_name,
                 source_url=source_url,
                 prompt_namespace=namespace,
                 **model_request_identity_fields(prompt_bundle),
-                same_provider_fallback=prompt_bundle.routing_decision.same_provider_fallback,
+                same_provider_fallback=(
+                    prompt_bundle.execution_policy.policy.fallback_policy
+                    == "same_provider_only"
+                ),
                 context_compaction_policy=LLMContextCompactionPolicy(
                     schema_version="1.0",
                     enabled=prompt_bundle.routing_decision.compaction_enabled,

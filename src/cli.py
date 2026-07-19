@@ -60,6 +60,7 @@ from src._cli.remediation import (
     list_deferred_work_items,
     list_remediations,
     reap_deferred_work,
+    remediation_opportunities,
     remediation_soak,
 )
 from src._cli.trace import _load_structured_log_events, _trace_depths, trace_run
@@ -82,6 +83,7 @@ from src._cli.workflow_queue import (  # noqa: F401
     queue_release_expired_leases,
     queue_requeue,
     queue_resume,
+    supervise_workflows,
     workflow_worker,
 )
 from src.contracts.acquisition_audit import AcquisitionAuditBatchRequest

@@ -8,6 +8,8 @@ import pytest
 from src.contracts.ingest import IngestSettings
 from src.contracts.openai import OpenAIResponseResult
 from src.contracts.prompts import (
+    PromptDependency,
+    PromptDependencyManifest,
     PromptRenderResponse,
     PromptSet,
     PromptTemplate,
@@ -40,6 +42,22 @@ class _FakePromptClient:
 
     def load_prompt_set(self, req, ctx):
         del ctx
+        manifest = PromptDependencyManifest(
+            schema_version="1.0",
+            namespace=req.namespace,
+            system_root=PromptDependency(
+                schema_version="1.0",
+                path=f"{req.namespace}/system.yaml",
+                sha256="a" * 64,
+                kind="system_root",
+            ),
+            user_root=PromptDependency(
+                schema_version="1.0",
+                path=f"{req.namespace}/user.yaml",
+                sha256="b" * 64,
+                kind="user_root",
+            ),
+        )
         return PromptSet(
             schema_version="1.0",
             system=PromptTemplate(
@@ -54,6 +72,8 @@ class _FakePromptClient:
                 text=f"user::{req.namespace}",
                 sha256=f"user-{req.namespace}",
             ),
+            dependency_manifest=manifest,
+            prompt_content_hash="c" * 64,
         )
 
     def render_prompt(self, req, ctx):

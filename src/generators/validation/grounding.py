@@ -6,7 +6,10 @@ from typing import Any, List, Sequence
 
 from src.contracts.openai import OpenAIJSONPromptRequest, OpenAIResponseRequest
 from src.contracts.validation import ValidationIssue, ValidationRequest
-from src.generators.prompt_preparation import prepare_prompt_bundle
+from src.generators.prompt_preparation import (
+    model_request_identity_fields,
+    prepare_prompt_bundle,
+)
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 from src.utils.quantity import extract_quantities
@@ -96,11 +99,11 @@ def run_grounding_check(
         log_event(
             prompt_ctx,
             role="generator",
-            event="prompt_rendered",
+            event="prompt_rendered_identity",
             module=LOGGER_NAME,
             fields={
-                "system_prompt": prompt_bundle.system_prompt,
-                "user_prompt": prompt_bundle.user_prompt,
+                "prompt_content_hash": prompt_bundle.prompt_content_hash,
+                "execution_identity": prompt_bundle.execution_identity.execution_identity,
             },
         )
     )
@@ -125,14 +128,15 @@ def run_grounding_check(
             module=LOGGER_NAME,
             fields={
                 "model": prompt_bundle.resolved_model,
-                "temperature": settings.temperature,
+                "temperature": prompt_bundle.effective_temperature,
                 "vector_store_id_present": bool(request.vector_store_id),
                 "setting_enabled": bool(
                     getattr(settings, "validation_grounding_use_vector_store", False)
                 ),
                 "grounding_use_vector_store": grounding_use_vector_store,
                 "retrieval_mode": grounding_retrieval_mode(grounding_use_vector_store),
-                "seed": settings.openai_seed,
+                "seed": prompt_bundle.effective_seed,
+                "execution_policy_hash": prompt_bundle.execution_policy.policy_hash,
             },
         )
     )
@@ -145,19 +149,21 @@ def run_grounding_check(
                     user_prompt=prompt_bundle.user_prompt,
                     vector_store_id=request.vector_store_id or "",
                     model=prompt_bundle.resolved_model,
-                    temperature=settings.temperature,
+                    temperature=prompt_bundle.effective_temperature,
                     api_key=settings.openai_api_key,
-                    seed=settings.openai_seed,
-                    timeout_seconds=settings.openai_timeout_seconds,
+                    seed=prompt_bundle.effective_seed,
+                    timeout_seconds=prompt_bundle.effective_timeout_seconds,
                     cost_ledger_path=settings.cost_ledger_path,
                     cost_daily_path=settings.cost_daily_path,
-                    usage_db_path=str(getattr(settings, "usage_db_path", "./state/llm_usage.sqlite")),
+                    usage_db_path=str(
+                        getattr(settings, "usage_db_path", "./state/llm_usage.sqlite")
+                    ),
                     model_pricing=settings.model_pricing,
                     publisher_name=request.publisher_name,
                     report_name=request.report_name,
                     source_url=request.source_url,
                     prompt_namespace=prompt_namespace,
-                    prompt_hash=prompt_bundle.prompt_set.user.sha256,
+                    **model_request_identity_fields(prompt_bundle),
                 ),
                 prompt_ctx,
             )
@@ -168,19 +174,21 @@ def run_grounding_check(
                     system_prompt=prompt_bundle.system_prompt,
                     user_prompt=prompt_bundle.user_prompt,
                     model=prompt_bundle.resolved_model,
-                    temperature=settings.temperature,
+                    temperature=prompt_bundle.effective_temperature,
                     api_key=settings.openai_api_key,
-                    seed=settings.openai_seed,
-                    timeout_seconds=settings.openai_timeout_seconds,
+                    seed=prompt_bundle.effective_seed,
+                    timeout_seconds=prompt_bundle.effective_timeout_seconds,
                     cost_ledger_path=settings.cost_ledger_path,
                     cost_daily_path=settings.cost_daily_path,
-                    usage_db_path=str(getattr(settings, "usage_db_path", "./state/llm_usage.sqlite")),
+                    usage_db_path=str(
+                        getattr(settings, "usage_db_path", "./state/llm_usage.sqlite")
+                    ),
                     model_pricing=settings.model_pricing,
                     publisher_name=request.publisher_name,
                     report_name=request.report_name,
                     source_url=request.source_url,
                     prompt_namespace=prompt_namespace,
-                    prompt_hash=prompt_bundle.prompt_set.user.sha256,
+                    **model_request_identity_fields(prompt_bundle),
                 ),
                 prompt_ctx,
             )
@@ -373,11 +381,14 @@ def infer_claim_classification(section_key: str, text: str) -> str:
         ):
             return "prescriptive_recommendation"
         return "analyst_interpretation"
-    if policy == "mixed" and not METRIC_ATTRIBUTION_RE.search(lowered):
-        if re.search(
+    if (
+        policy == "mixed"
+        and not METRIC_ATTRIBUTION_RE.search(lowered)
+        and re.search(
             r"\b(should|could|may|might|consider|recommend|priority)\b", lowered
-        ):
-            return "analyst_interpretation"
+        )
+    ):
+        return "analyst_interpretation"
     return "factual_claim"
 
 

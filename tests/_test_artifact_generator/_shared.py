@@ -8,52 +8,42 @@ __file__ = str(
 )
 
 import json
-
 import logging
-
 import threading
-
 import time
-
 from pathlib import Path
-
 from types import SimpleNamespace
 
 import pytest
 
 from src.contracts.config import AppSettings
-
 from src.contracts.openai import OpenAIResponseResult
-
-from src.contracts.prompts import PromptSet, PromptTemplate
-
+from src.contracts.prompts import (
+    PromptDependency,
+    PromptDependencyManifest,
+    PromptSet,
+    PromptTemplate,
+)
 from src.contracts.run_context import RunContext
-
 from src.contracts.schema_validation import SchemaValidateRequest
-
-from src.generators.artifact_normalization import normalize_artifact_quotes
-
+from src.generators._artifact_generator.family_policy import (
+    build_artifact_family_status,
+)
 from src.generators.artifact_generator import (
     _load_cached_artifacts,
     assemble_artifacts_payload,
     build_chart_insight_cards,
     build_executive_advisory_artifacts,
     build_key_figures,
+    build_topic_briefs,
     build_topics_covered,
     derive_metric_spine,
     derive_metric_spine_from_insights,
-    build_topic_briefs,
     generate_artifacts,
 )
-
-from src.generators._artifact_generator.family_policy import (
-    build_artifact_family_status,
-)
-
+from src.generators.artifact_normalization import normalize_artifact_quotes
 from src.services.schema_validator_service import validate_schema
-
 from src.utils.errors import AppError
-
 from src.utils.slugify import slugify
 
 
@@ -86,7 +76,30 @@ class FakePromptClient:
             text="user",
             sha256="u",
         )
-        return PromptSet(schema_version="1.0", system=tmpl, user=user)
+        manifest = PromptDependencyManifest(
+            schema_version="1.0",
+            namespace=request.namespace,
+            system_root=PromptDependency(
+                schema_version="1.0",
+                path=f"prompts/{request.namespace}/system.yaml",
+                sha256="s",
+                kind="system_root",
+            ),
+            user_root=PromptDependency(
+                schema_version="1.0",
+                path=f"prompts/{request.namespace}/user.yaml",
+                sha256="u",
+                kind="user_root",
+            ),
+            prompt_content_hash="a" * 64,
+        )
+        return PromptSet(
+            schema_version="1.0",
+            system=tmpl,
+            user=user,
+            dependency_manifest=manifest,
+            prompt_content_hash=manifest.prompt_content_hash,
+        )
 
     def render_prompt(self, request, ctx):
         return SimpleNamespace(text=request.template.text)

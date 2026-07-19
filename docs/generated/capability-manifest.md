@@ -63,6 +63,7 @@ Generated from CLI registrations, configuration example, architecture policy, or
 - `src/orchestrators/wordpress_intelligence_projection_orchestrator.py`
 - `src/orchestrators/workflow_control_orchestrator.py`
 - `src/orchestrators/workflow_queue_orchestrator.py`
+- `src/orchestrators/workflow_supervisor_orchestrator.py`
 - `src/orchestrators/workflow_worker_orchestrator.py`
 - `src/orchestrators/wp_category_update_orchestrator.py`
 
@@ -107,14 +108,17 @@ Generated from CLI registrations, configuration example, architecture policy, or
 - `queue-submit-source-ingest`
 - `reap-ui-dead-letters`
 - `recategorize`
+- `remediation-opportunities`
 - `remediation-soak`
 - `remediations`
 - `replay-run`
+- `supervise-workflows`
 - `sync-publishers`
 - `sync-wordpress-intelligence`
 - `trace-run`
 - `ui-run-worker`
 - `update-wp-categories`
+- `validate-retained-claims`
 - `workflow-worker`
 
 ## JSON schemas
