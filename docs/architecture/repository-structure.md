@@ -11,10 +11,12 @@
 | `src/generators/` | Domain assembly and validation logic |
 | `src/orchestrators/` | Workflow sequencing, retry, state, and idempotency |
 | `src/prompts/` | Use-case-scoped prompt namespaces |
+| `src/playbooks/` | Reviewable, file-based browser-route guidance and related runtime playbook assets |
 | `src/_cli/` and `src/cli.py` | CLI command families and public CLI facade |
 | `src/ui/` and `src/streamlit_app.py` | Operator UI and its presentation layer |
 | `src/config/` | Versioned non-secret configuration and configuration assets |
 | `src/schemas/` | JSON schemas for persisted and generated artifacts |
+| `src/utils/` | Deterministic, side-effect-free helpers shared across architectural roles |
 | `scripts/ci/` | Repository and quality gates |
 | `scripts/quality/` | Evidence, benchmark, and quality tooling |
 | `Wordpress/` | Theme, plugin, and WordPress operational scripts |
