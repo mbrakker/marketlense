@@ -1092,9 +1092,7 @@ def _signal_candidate_handler(
             message="Signal candidate extraction requires an explicit topic",
             retryable=False,
         )
-    requested_publisher_filters = _string_list_attribute(
-        payload, "publisher_filters"
-    )
+    requested_publisher_filters = _string_list_attribute(payload, "publisher_filters")
     publisher_filters = list(requested_publisher_filters)
     category_filters = _string_list_attribute(payload, "category_filters")
     tag_filters = _string_list_attribute(payload, "tag_filters")
