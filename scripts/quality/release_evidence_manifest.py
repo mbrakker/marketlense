@@ -12,6 +12,8 @@ from pathlib import Path
 from typing import Any, Iterable, Sequence
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 
 @dataclass(frozen=True)
@@ -266,6 +268,18 @@ def _artifact_from_payload(
                 detail=f"artifact status is {status}",
             )
         )
+    evidence_errors = _artifact_evidence_errors(artifact_input.name, payload)
+    if evidence_errors:
+        status = "invalid"
+        passed = False
+        issues.append(
+            ReleaseEvidenceIssue(
+                artifact_name=artifact_input.name,
+                artifact_path=display_path,
+                reason="artifact_invalid_queue_evidence",
+                detail="; ".join(evidence_errors[:10]),
+            )
+        )
     if (
         artifact_input.required
         and fresh_after is not None
@@ -353,6 +367,16 @@ def _embedded_repository_commit_sha(payload: dict[str, Any]) -> str | None:
     return _string_or_none(
         repository.get("expected_commit_sha") or repository.get("commit_sha")
     )
+
+
+def _artifact_evidence_errors(name: str, payload: dict[str, Any]) -> tuple[str, ...]:
+    if name != "workflow_queue_evidence":
+        return ()
+    from scripts.quality.generate_workflow_queue_evidence import (
+        validate_workflow_queue_evidence,
+    )
+
+    return validate_workflow_queue_evidence(payload)
 
 
 def _status_from_payload(payload: dict[str, Any]) -> tuple[str, bool]:

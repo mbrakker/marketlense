@@ -1,8 +1,8 @@
 # ruff: noqa: F403,F405
 from __future__ import annotations
 
-from src.services._config_service.common import *
 from src.contracts.run_budget import RunBudgetLimits
+from src.services._config_service.common import *
 
 
 def _load_budget_limits(raw: object) -> RunBudgetLimits | None:
@@ -68,6 +68,7 @@ def load_browser_download_settings(
     session_reuse_cfg = browser_download.get("session_reuse", {}) or {}
     warm_worker_pool_cfg = browser_download.get("warm_worker_pool", {}) or {}
     captcha_handoff_cfg = browser_download.get("captcha_handoff", {}) or {}
+    route_suppression_cfg = browser_download.get("route_suppression", {}) or {}
     run_budget_cfg = browser_download.get("run_budget", {}) or {}
     authority_cfg = (data.get("cost", {}) or {}).get("budget_authority", {}) or {}
     route_budgets_cfg = browser_download.get("route_budgets", {}) or {}
@@ -192,6 +193,29 @@ def load_browser_download_settings(
             30 * 24 * 60 * 60,
         ),
         1,
+    )
+    route_suppression_failure_classes = tuple(
+        sorted(
+            {
+                str(item).strip()
+                for item in route_suppression_cfg.get("terminal_failure_classes", [])
+                if str(item).strip()
+            }
+            or {"blocked_captcha", "blocked_email_domain"}
+        )
+    )
+    route_suppression_minimum_sample_size = max(
+        _to_int(route_suppression_cfg.get("minimum_sample_size"), 3), 3
+    )
+    route_suppression_threshold = min(
+        1.0,
+        max(
+            0.0,
+            _to_float(route_suppression_cfg.get("terminal_failure_threshold"), 1.0),
+        ),
+    )
+    route_suppression_ttl_seconds = max(
+        _to_int(route_suppression_cfg.get("ttl_seconds"), 7 * 24 * 60 * 60), 1
     )
     route_playbook_promotion_mode = (
         str(
@@ -634,6 +658,14 @@ def load_browser_download_settings(
             if not _is_missing(run_budget_cfg.get("max_drive_writes"))
             else None
         ),
+        route_suppression_policy=BrowserDownloadRouteSuppressionPolicy(
+            schema_version="1.0",
+            enabled=_to_bool(route_suppression_cfg.get("enabled"), True),
+            minimum_sample_size=route_suppression_minimum_sample_size,
+            terminal_failure_threshold=route_suppression_threshold,
+            ttl_seconds=route_suppression_ttl_seconds,
+            terminal_failure_classes=route_suppression_failure_classes,
+        ),
         run_budget_max_drive_reads=(
             max(_to_int(run_budget_cfg.get("max_drive_reads"), 0), 1)
             if not _is_missing(run_budget_cfg.get("max_drive_reads"))
@@ -770,6 +802,16 @@ def load_browser_download_settings(
                 "captcha_handoff_enabled": (settings.captcha_handoff_policy.enabled),
                 "captcha_handoff_timeout_seconds": (
                     settings.captcha_handoff_policy.timeout_seconds
+                ),
+                "route_suppression_enabled": settings.route_suppression_policy.enabled,
+                "route_suppression_minimum_sample_size": (
+                    settings.route_suppression_policy.minimum_sample_size
+                ),
+                "route_suppression_terminal_failure_threshold": (
+                    settings.route_suppression_policy.terminal_failure_threshold
+                ),
+                "route_suppression_ttl_seconds": (
+                    settings.route_suppression_policy.ttl_seconds
                 ),
                 "route_budget_count": len(settings.route_budgets),
             },

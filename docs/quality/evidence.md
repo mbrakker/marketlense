@@ -8,6 +8,10 @@ Release evidence is generated from executed quality-gate artifacts; it is not ha
 
 Use the repository scripts `scripts/quality/release_evidence_manifest.py` and `scripts/quality/release_evidence_review.py` with the arguments required by CI or the release procedure. Retain generated manifests and reviews in the configured output/artifact mechanism. The waiver policy is [`release_evidence_waivers.yaml`](release_evidence_waivers.yaml).
 
+CI also runs `scripts/quality/generate_workflow_queue_evidence.py` against a temporary SQLite database. It requires an expected full commit SHA, checks that HEAD is unchanged before and after generation, and records only queue record IDs and scalar counts. The fixed scenario proves submission, lease/start, completion, one downstream outbox event and materialisation, expired-lease recovery, a bounded retry, a budget deferral, and a dry-run publication-approval handoff. The artifact is required in the release manifest and is included in `release-evidence-bundle`.
+
+This deterministic queue evidence confirms queue semantics at the exact tested revision; it does **not** demonstrate live production throughput, provider behavior, or a public WordPress write. The GitHub job summary explicitly preserves that distinction and bounds any listed unwaived issues.
+
 For operational diagnostics, use structured logs and retained workflow artifacts first. See [monitoring](../ops/monitoring.md) and [recovery](../ops/recovery.md).
 
 The bounded workflow-queue foundation record is retained in

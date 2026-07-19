@@ -21,6 +21,11 @@ from src.contracts.files import (
 from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.pdf_text import PdfTextExtractResponse
 from src.contracts.pdf_utils import PdfInfoResponse
+from src.contracts.prompt_family_materialization import (
+    PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+    PromptFamilyMaterializationRequest,
+)
+from src.contracts.prompts import PromptLoadRequest
 from src.contracts.regeneration import (
     RegenerationAttemptResult,
     RegenerationLoopState,
@@ -46,11 +51,14 @@ from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationIssue, ValidationReport
 from src.generators.report_analysis_generator import VectorStoreIndexingState
 from src.generators.report_generation_shared import derive_title, report_slug
+from src.services import prompt_service
 from src.services.file_service import (
     file_stat,
     write_pipeline_checkpoint,
 )
+from src.services.prompt_family_materialization_service import materialize_prompt_family
 from src.services.report_store_service import record_artifact_lineage
+from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -307,12 +315,31 @@ def _write_stage_checkpoint(
         stage_name=stage_name,
         artifact_refs=artifact_refs,
     )
-    checkpoint_payload["artifact_lineage"] = _record_checkpoint_artifact_lineage(
+    artifact_lineage, artifact_hashes = _record_checkpoint_artifact_lineage(
         runtime,
         stage_name=stage_name,
         artifact_registry=checkpoint_payload["artifact_registry"],
         payload=checkpoint_payload,
     )
+    checkpoint_payload["artifact_lineage"] = artifact_lineage
+    prompt_family_materializations = _record_prompt_family_materializations(
+        runtime,
+        stage_name=stage_name,
+        payload=checkpoint_payload,
+        artifact_lineage=artifact_lineage,
+        artifact_hashes=artifact_hashes,
+    )
+    checkpoint_payload["prompt_family_materializations"] = (
+        prompt_family_materializations
+    )
+    if stage_name == STAGE_RENDER_COMPLETE:
+        _record_rendered_html_prompt_family_lineage(
+            runtime,
+            artifact_registry=checkpoint_payload["artifact_registry"],
+            payload=checkpoint_payload,
+            artifact_lineage=artifact_lineage,
+            prompt_family_materializations=prompt_family_materializations,
+        )
     response = write_pipeline_checkpoint(
         PipelineCheckpointWriteRequest(
             schema_version="1.0",
@@ -348,6 +375,9 @@ def _write_stage_checkpoint(
                     checkpoint_payload["artifact_registry"]["refs"]
                 ),
                 "artifact_lineage_count": len(checkpoint_payload["artifact_lineage"]),
+                "prompt_family_materialization_count": len(
+                    checkpoint_payload["prompt_family_materializations"]
+                ),
             },
         )
     )
@@ -360,12 +390,13 @@ def _record_checkpoint_artifact_lineage(
     stage_name: str,
     artifact_registry: dict,
     payload: dict,
-) -> dict[str, str]:
+) -> tuple[dict[str, str], dict[str, str]]:
     """Persist checkpoint artifacts without changing legacy checkpoint ref IDs."""
     lineage_ids: dict[str, str] = {}
+    lineage_hashes: dict[str, str] = {}
     refs = artifact_registry.get("refs")
     if not isinstance(refs, list):
-        return lineage_ids
+        return lineage_ids, lineage_hashes
     validation_status = _checkpoint_validation_status(payload)
     for raw_ref in _checkpoint_lineage_registration_order(refs):
         artifact_name = str(raw_ref["artifact_id"]).strip()
@@ -459,7 +490,8 @@ def _record_checkpoint_artifact_lineage(
             runtime.ctx,
         )
         lineage_ids[artifact_name] = response.record.artifact_id
-    return lineage_ids
+        lineage_hashes[artifact_name] = response.record.content_hash
+    return lineage_ids, lineage_hashes
 
 
 def _checkpoint_lineage_registration_order(refs: list[object]) -> list[dict]:
@@ -576,6 +608,348 @@ def _checkpoint_model_provenance(
         if isinstance(value, dict)
     }
     return prompt_hash, ",".join(models), metadata, compatibility
+
+
+def _record_prompt_family_materializations(
+    runtime: ReportRuntimeState,
+    *,
+    stage_name: str,
+    payload: dict,
+    artifact_lineage: dict[str, str],
+    artifact_hashes: dict[str, str],
+) -> dict[str, str]:
+    """Persist independently reusable family output at the analysis boundary.
+
+    Composite checkpoints remain for backward-compatible resume.  They are
+    deliberately not used as a substitute for family-level provenance.
+    """
+    if stage_name not in {STAGE_ANALYSIS_COMPLETE, STAGE_RENDER_COMPLETE}:
+        return {}
+    analysis = payload.get("analysis")
+    if not isinstance(analysis, dict):
+        return {}
+    artifacts = analysis.get("artifacts_payload")
+    evidence_packs = analysis.get("evidence_packs")
+    if not isinstance(artifacts, dict) or not isinstance(evidence_packs, dict):
+        return {}
+    cache = artifacts.get("_cache")
+    cached_prompts = cache.get("prompts") if isinstance(cache, dict) else {}
+    prompts = cached_prompts if isinstance(cached_prompts, dict) else {}
+    execution_compatibility = dict(runtime.execution_compatibility or {})
+    raw_prompt_versions = execution_compatibility.get("prompt_versions")
+    raw_model_versions = execution_compatibility.get("model_policy_versions")
+    raw_validator_versions = execution_compatibility.get("validator_versions")
+    prompt_versions = (
+        raw_prompt_versions if isinstance(raw_prompt_versions, dict) else {}
+    )
+    model_versions = raw_model_versions if isinstance(raw_model_versions, dict) else {}
+    validator_versions = (
+        raw_validator_versions if isinstance(raw_validator_versions, dict) else {}
+    )
+    evidence_set_hash = sha256_json(evidence_packs)
+    source_identity = (
+        str(
+            runtime.md5
+            or artifact_hashes.get("source_pdf")
+            or artifact_hashes.get("analysis_pdf")
+            or ""
+        )
+        .strip()
+        .lower()
+    )
+    validation_report = analysis.get("validation_report")
+    validation_status = (
+        str(validation_report.get("status") or "fail")
+        if isinstance(validation_report, dict)
+        else "fail"
+    )
+    materialized: dict[str, str] = {}
+    materialized_hashes: dict[str, str] = {}
+
+    def dependencies(*names: str) -> tuple[list[str], dict[str, str]]:
+        ids: list[str] = []
+        hashes: dict[str, str] = {}
+        for name in names:
+            if name in artifact_lineage:
+                artifact_id = artifact_lineage[name]
+                digest = artifact_hashes.get(name, "")
+            elif name in materialized:
+                artifact_id = materialized[name]
+                digest = materialized_hashes.get(name, "")
+            else:
+                continue
+            if artifact_id not in ids:
+                ids.append(artifact_id)
+                hashes[artifact_id] = digest
+        return ids, hashes
+
+    def persist(
+        family_id: str,
+        output: object,
+        dependency_names: tuple[str, ...],
+        *,
+        schema_version: str = "1.0",
+        family_validation: str = validation_status,
+    ) -> None:
+        prompt = prompts.get(family_id)
+        prompt_data = prompt if isinstance(prompt, dict) else {}
+        system_hash = str(prompt_data.get("prompt_system_sha256") or "")
+        user_hash = str(prompt_data.get("prompt_user_sha256") or "")
+        if not system_hash and not user_hash:
+            try:
+                prompt_set = prompt_service.load_prompt_set(
+                    PromptLoadRequest(schema_version="1.0", namespace=family_id),
+                    runtime.ctx,
+                )
+            except AppError:
+                # Some deterministic packs (for example report context) do
+                # not own a prompt namespace. Their compatibility is governed
+                # by direct dependencies and schema/processing versions.
+                pass
+            else:
+                system_hash = prompt_set.system.sha256
+                user_hash = prompt_set.user.sha256
+        policy_version = str(
+            prompt_versions.get(family_id)
+            or sha256_json({"system": system_hash, "user": user_hash})
+        )
+        dependency_ids, dependency_hashes = dependencies(*dependency_names)
+        result = materialize_prompt_family(
+            PromptFamilyMaterializationRequest(
+                schema_version=PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+                db_path=runtime.settings.reports_db,
+                output_dir=runtime.settings.output_dir,
+                report_id=runtime.file.file_id,
+                report_slug=runtime.report_name,
+                source_id=source_identity,
+                family_id=family_id,
+                family_schema_version=schema_version,
+                processing_version="report_generation_checkpoint_v2",
+                output_payload=output,
+                system_prompt_hash=system_hash,
+                user_prompt_hash=user_hash,
+                prompt_policy_version=policy_version,
+                model_name=str(prompt_data.get("model") or ""),
+                routing_policy_version=str(
+                    model_versions.get(family_id) or model_versions.get("*") or ""
+                ),
+                validator_version=str(
+                    validator_versions.get(family_id)
+                    or validator_versions.get("*")
+                    or ""
+                ),
+                direct_dependency_artifact_ids=dependency_ids,
+                direct_dependency_hashes=dependency_hashes,
+                evidence_set_hash=evidence_set_hash,
+                validation_status=family_validation,
+            ),
+            runtime.ctx,
+        )
+        materialized[family_id] = result.materialization.artifact_id
+        materialized_hashes[family_id] = result.materialization.output_hash
+
+    persist(
+        "report_vs/doc_map",
+        evidence_packs.get("doc_map", {}),
+        ("analysis_pdf",),
+    )
+    for pack_name in sorted(evidence_packs):
+        if pack_name == "doc_map":
+            continue
+        family_id = f"report_vs/evidence_packs/{pack_name}"
+        persist(
+            family_id,
+            evidence_packs[pack_name],
+            ("analysis_pdf", "report_vs/doc_map"),
+        )
+    persist(
+        "report_vs/taxonomy",
+        {
+            "taxonomy": analysis.get("payload", {}).get("taxonomy", []),
+            "region": analysis.get("payload", {}).get("region", ""),
+            "time_period": analysis.get("payload", {}).get("time_period", ""),
+            "categories": list(analysis.get("category_labels") or []),
+        },
+        ("analysis_pdf", "report_vs/doc_map"),
+    )
+    persist(
+        "report_vs/context_category_fit",
+        evidence_packs.get("context_category_fit", {}),
+        (
+            "report_vs/doc_map",
+            "report_vs/evidence_packs/report_context",
+        ),
+    )
+    evidence_family_ids = tuple(
+        f"report_vs/evidence_packs/{name}"
+        for name in sorted(evidence_packs)
+        if f"report_vs/evidence_packs/{name}" in materialized
+    )
+    persist(
+        "report_vs/artifacts/summary",
+        artifacts.get("summary", {}),
+        ("report_vs/doc_map", *evidence_family_ids),
+    )
+    persist(
+        "report_vs/artifacts/insights_candidates",
+        artifacts.get("insights_candidates", []),
+        ("report_vs/doc_map", *evidence_family_ids),
+    )
+    persist(
+        "report_vs/artifacts/quotes",
+        artifacts.get("quotes_final", []),
+        ("report_vs/doc_map", *evidence_family_ids),
+    )
+    persist(
+        "report_vs/artifacts/insights_final",
+        artifacts.get("insights_final", []),
+        ("report_vs/artifacts/insights_candidates", *evidence_family_ids),
+    )
+    persist(
+        "report_vs/artifacts/cover_semantics",
+        artifacts.get("cover_semantics", {}),
+        ("report_vs/artifacts/summary", "report_vs/artifacts/insights_final"),
+    )
+    persist(
+        "report_vs/validate/grounding",
+        validation_report or {},
+        (
+            "report_vs/artifacts/summary",
+            "report_vs/artifacts/insights_final",
+            "report_vs/artifacts/quotes",
+            *evidence_family_ids,
+        ),
+        family_validation=validation_status,
+    )
+    persist(
+        "report_vs/validate/semantic",
+        validation_report or {},
+        (
+            "report_vs/artifacts/summary",
+            "report_vs/artifacts/insights_final",
+            "report_vs/artifacts/quotes",
+            "report_vs/artifacts/cover_semantics",
+        ),
+        family_validation=validation_status,
+    )
+    persist(
+        "report_vs/artifacts/expert_comment",
+        {"expert_comment": artifacts.get("expert_comment", "")},
+        (
+            "report_vs/artifacts/summary",
+            "report_vs/artifacts/insights_final",
+            "report_vs/artifacts/quotes",
+            "report_vs/validate/grounding",
+            "report_vs/validate/semantic",
+        ),
+    )
+    persist(
+        "report_vs/artifacts/linkedin_post",
+        {"linkedin_post": artifacts.get("linkedin_post", "")},
+        (
+            "report_vs/artifacts/summary",
+            "report_vs/artifacts/insights_final",
+            "report_vs/validate/grounding",
+            "report_vs/validate/semantic",
+        ),
+    )
+    return materialized
+
+
+def _record_rendered_html_prompt_family_lineage(
+    runtime: ReportRuntimeState,
+    *,
+    artifact_registry: dict,
+    payload: dict,
+    artifact_lineage: dict[str, str],
+    prompt_family_materializations: dict[str, str],
+) -> None:
+    """Make the rendered artifact explicitly consume accepted family outputs."""
+    rendered_ref = next(
+        (
+            ref
+            for ref in artifact_registry.get("refs", [])
+            if isinstance(ref, dict)
+            and str(ref.get("artifact_id") or "") == "rendered_html"
+        ),
+        None,
+    )
+    if not isinstance(rendered_ref, dict) or not prompt_family_materializations:
+        return
+    storage_ref = _resolve_retained_artifact_path(
+        runtime, str(rendered_ref.get("path") or "").strip()
+    )
+    storage_stat = file_stat(
+        FileStatRequest(schema_version="1.0", path=storage_ref, compute_md5=False),
+        runtime.ctx,
+    )
+    if not storage_stat.exists or not storage_stat.is_file:
+        return
+    dependencies = sorted(
+        {
+            artifact_id
+            for name, artifact_id in artifact_lineage.items()
+            if name
+            not in {"source_pdf", "analysis_pdf", "preview_image", "rendered_html"}
+        }
+        | set(prompt_family_materializations.values())
+    )
+    prompt_hash, model_name, metadata, compatibility = _checkpoint_model_provenance(
+        payload, "rendered_html"
+    )
+    source_metadata_hash = str(
+        getattr(runtime.source_identity, "source_metadata_hash", "") or ""
+    ).strip()
+    compatibility = {
+        **dict(runtime.execution_compatibility),
+        **compatibility,
+        "source_metadata_hash": {
+            "rendered_html": source_metadata_hash
+            or hashlib.sha256(
+                json.dumps(
+                    {
+                        "publisher_name": runtime.publisher_name,
+                        "source_report_name": runtime.source_report_name,
+                        "source_url": runtime.source_url,
+                        "source_publication_metadata": (
+                            asdict(runtime.source_publication_metadata)
+                            if runtime.source_publication_metadata is not None
+                            else None
+                        ),
+                    },
+                    ensure_ascii=True,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode("utf-8")
+            ).hexdigest()
+        },
+    }
+    response = record_artifact_lineage(
+        ArtifactLineageRegistrationRequest(
+            schema_version=ARTIFACT_LINEAGE_SCHEMA_VERSION,
+            db_path=runtime.settings.reports_db,
+            artifact_kind="rendered_html",
+            report_id=runtime.file.file_id,
+            source_id=str(runtime.md5 or "").strip().lower(),
+            storage_ref=storage_ref,
+            producer=STAGE_RENDER_COMPLETE,
+            schema_version_used=str(rendered_ref.get("schema_version") or "1.0"),
+            processing_version="report_generation_checkpoint_v2",
+            dependency_artifact_ids=dependencies,
+            prompt_hash=prompt_hash,
+            model_name=model_name,
+            validation_status="not_applicable",
+            metadata=metadata,
+            compatibility=compatibility,
+            lineage_status=(
+                "complete"
+                if runtime.file.file_id.strip() and str(runtime.md5 or "").strip()
+                else "legacy_incomplete"
+            ),
+        ),
+        runtime.ctx,
+    )
+    artifact_lineage["rendered_html"] = response.record.artifact_id
 
 
 def _artifact_required(artifact_id: str) -> bool:

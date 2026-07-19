@@ -11,9 +11,9 @@ Source discovery -> acquisition -> queue handoff -> ingest -> selection -> analy
 ```
 
 1. Discovery, acquisition, mailbox delivery, and ingest are durable logical queues.
-2. A verified acquired artifact creates deterministic governed ingest work; mailbox delivery retains its own request/watermark state.
+2. A verified acquired artifact creates deterministic governed ingest work; the immutable source identity (content/provenance) remains distinct from the report identifier (including any retained Drive ID), and mailbox delivery retains its own request/watermark state.
 3. Report work is handed off at `source_prepared`, `selection_complete`, `analysis_complete`, and `render_complete` checkpoints.
 4. Rendering fans out independently to analytics projection, covers, and publication readiness.
 5. Publication remains an immutable package readiness decision followed by human approval and asynchronous WordPress work.
 
-The state and reports databases retain workflow state, checkpoints, artifact lineage, and operational observations. A resume request is accepted only when the retained checkpoint and lineage are usable. Detailed stage behavior is in [workflows](../workflows/report-processing.md); queue lifecycle and operations are in [asynchronous workflow queue](../architecture/asynchronous-workflow-queue.md); retry and resume ownership is in [workflow control](../architecture/workflow-control.md).
+The state and reports databases retain workflow state, checkpoints, artifact lineage, and operational observations. At analysis completion, the lineage store also retains validated prompt-family materialisations so compatibility can be evaluated below the former composite analysis artifact. A resume request is accepted only when the retained checkpoint and lineage are usable. Detailed stage behavior is in [workflows](../workflows/report-processing.md); queue lifecycle and operations are in [asynchronous workflow queue](../architecture/asynchronous-workflow-queue.md); retry and resume ownership is in [workflow control](../architecture/workflow-control.md).

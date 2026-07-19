@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from dataclasses import replace
 from pathlib import Path
 
@@ -435,24 +436,10 @@ def test_queue_attribute_and_budget_override_parsers_preserve_operator_intent() 
         )
 
 
-def test_queue_handoff_builders_preserve_hashes_and_workflow_lineage() -> None:
+def test_queue_stage_builder_preserves_workflow_lineage() -> None:
     job = _workflow_job(
         queue_name="report_acquisition", job_type="report_acquisition.v1"
     )
-    ingest = queue_orchestrator._source_ingest_submission(
-        job=job,
-        artifact_reference="retained:source.pdf",
-        source_hash="source-md5",
-        source_identity_id="source-1",
-        report_id="report-1",
-        processing_version="parser.v2",
-    )
-    assert ingest.queue_name == "source_ingest"
-    assert ingest.idempotency_key == "source-md5:source_ingest:parser.v2"
-    assert ingest.parent_job_id == job.job_id
-    assert isinstance(ingest.payload, SourceIngestPayload)
-    assert ingest.payload.source_content_hash == "source-md5"
-
     stage = queue_orchestrator._stage_child_submission(
         job=job,
         payload=SourceIngestPayload(
@@ -576,7 +563,6 @@ def test_signal_publish_adapter_retains_card_evidence_and_fallback_publishers(
     assert queue_orchestrator._package_checksum(persisted) == persisted.artifact_sha256
     assert readback.artifact_sha256 == persisted.artifact_sha256
     assert readback.canonical_artifact_path == retained_path
-    assert queue_orchestrator._verified_file_hash(retained_path, _ctx())
 
     config_path = _isolated_app_config(tmp_path)
     cover_result = queue_orchestrator._cover_generation_handler(
@@ -844,9 +830,6 @@ def test_signal_publish_adapter_retains_card_evidence_and_fallback_publishers(
             ),
             _ctx(),
         )
-    with pytest.raises(AppError, match="requires a retained verified file"):
-        queue_orchestrator._verified_file_hash(str(tmp_path / "missing.pdf"), _ctx())
-
     invalid_artifacts = (
         ("not-json.json", b"not-json", "not valid JSON"),
         ("not-object.json", b"[]", "not a valid retained entity artifact"),
@@ -904,7 +887,7 @@ def test_source_ingest_checkpoint_hands_off_to_report_selection(
     source_path = Path(
         "tests/fixtures/pdf_benchmark/golden/IAS - Industry_Pulse_Report_2026_ACIG.pdf"
     ).resolve()
-    source_hash = queue_orchestrator._verified_file_hash(str(source_path), _ctx())
+    source_hash = hashlib.md5(source_path.read_bytes()).hexdigest()
     job = _workflow_job(queue_name="source_ingest", job_type="source_ingest.v1")
 
     result = queue_orchestrator._report_stage_handler(

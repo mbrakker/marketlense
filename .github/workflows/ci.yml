@@ -99,6 +99,8 @@ jobs:
         run: python scripts/ci/check_public_report_quality.py --minimum-reports 15 --output-dir out/public_report_quality_ci --output-json out/public_report_quality_ci.json
       - name: Retained LLM-routing evidence gate
         run: python scripts/quality/llm_routing_retained_benchmark.py --minimum-reports 15 --output-json out/llm_routing_retained_benchmark_ci.json
+      - name: Generate deterministic workflow queue evidence
+        run: python scripts/quality/generate_workflow_queue_evidence.py --expected-commit-sha "${GITHUB_SHA}" --output-json out/workflow_queue_evidence_ci.json
       - name: Build CI health scorecard
         run: |
           mkdir -p out
@@ -157,6 +159,8 @@ jobs:
             --expected-schema health_scorecard=1.0 \
             --artifact llm_accounting_reconciliation=out/llm_accounting_reconciliation_ci.json \
             --expected-schema llm_accounting_reconciliation=1.0 \
+            --artifact workflow_queue_evidence=out/workflow_queue_evidence_ci.json \
+            --expected-schema workflow_queue_evidence=1.0 \
             --artifact-command coverage="python scripts/ci/check_coverage.py --coverage-xml coverage.xml" \
             --artifact-command mutation="python scripts/ci/run_mutation_gate.py --json-out mutation_results.json" \
             --artifact-command pdf_candidate="python scripts/ci/check_pdf_candidate_benchmark.py --baseline docs/quality/pdf_candidate_extraction_benchmark_baseline.json --output-json out/pdf_candidate_benchmark_ci.json" \
@@ -165,6 +169,7 @@ jobs:
             --artifact-command public_report_quality="python scripts/ci/check_public_report_quality.py --minimum-reports 15 --output-dir out/public_report_quality_ci --output-json out/public_report_quality_ci.json" \
             --artifact-command health_scorecard="python scripts/quality/run_health_scorecard.py out/ci_health_events.jsonl --run-id ci-release-evidence --output-json out/run_health_scorecard_ci.json" \
             --artifact-command llm_accounting_reconciliation="python scripts/quality/reconcile_llm_usage_ledger.py --db out/ci_llm_accounting/usage.sqlite --ledger out/ci_llm_accounting/cost-ledger.jsonl --daily out/ci_llm_accounting/cost-daily.json --output-json out/llm_accounting_reconciliation_ci.json" \
+            --artifact-command workflow_queue_evidence="python scripts/quality/generate_workflow_queue_evidence.py --expected-commit-sha ${GITHUB_SHA} --output-json out/workflow_queue_evidence_ci.json" \
             --fresh-after "${RELEASE_EVIDENCE_STARTED_AT}" \
             --require-head-commit \
             --allow-issues \
@@ -176,6 +181,9 @@ jobs:
             --waivers-yaml docs/quality/release_evidence_waivers.yaml \
             --output-json out/release_evidence_review_ci.json \
             --output-md out/release_evidence_review_ci.md
+      - name: Write release evidence job summary
+        if: always()
+        run: python scripts/quality/release_evidence_job_summary.py --review-json out/release_evidence_review_ci.json --queue-evidence-json out/workflow_queue_evidence_ci.json --output-path "$GITHUB_STEP_SUMMARY"
       - name: Upload release evidence bundle
         if: always()
         uses: actions/upload-artifact@v4
@@ -187,6 +195,7 @@ jobs:
             out/release_evidence_manifest_ci.json
             out/release_evidence_review_ci.json
             out/release_evidence_review_ci.md
+            out/workflow_queue_evidence_ci.json
             docs/quality/release_evidence_waivers.yaml
             out/wordpress_entity_rest_verification_staging.json
             coverage.xml

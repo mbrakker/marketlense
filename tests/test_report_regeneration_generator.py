@@ -76,6 +76,29 @@ class _FakeOpenAIClient:
     def openai_chat_json(self, req, ctx):
         del ctx
         self.calls.append(req)
+        if "system::report_vs/artifacts/cover_semantics" in req.system_prompt:
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text=(
+                    '{"cover_semantics":{"evidence_shape":"trend",'
+                    '"direction":"rising","geography_scope":"global",'
+                    '"evidence_density":"metric_rich","domain_layer":"grid",'
+                    '"selection_reason":"A rising time series is the strongest visual story."}}'
+                ),
+                parsed_json={
+                    "cover_semantics": {
+                        "evidence_shape": "trend",
+                        "direction": "rising",
+                        "geography_scope": "global",
+                        "evidence_density": "metric_rich",
+                        "domain_layer": "grid",
+                        "selection_reason": (
+                            "A rising time series is the strongest visual story."
+                        ),
+                    }
+                },
+                request_id="req-cover",
+            )
         if "system::report_vs/artifacts/regenerate/insights_final" in req.system_prompt:
             return OpenAIResponseResult(
                 schema_version="1.0",
@@ -446,6 +469,50 @@ def test_regenerate_artifacts_dispatches_summary_via_target_section_registry(tmp
         "report_vs/artifacts/regenerate/summary/system.yaml",
         "report_vs/artifacts/regenerate/summary/user.yaml",
     ]
+
+
+def test_regenerate_artifacts_refreshes_cover_semantics_from_retained_analysis(
+    tmp_path,
+):
+    prompt_client = _FakePromptClient()
+    openai_client = _FakeOpenAIClient()
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=RegenerationPlan(
+                mode="targeted",
+                targets=[
+                    RegenerationTarget(
+                        target_section="cover_semantics",
+                        regenerate_steps=["cover_semantics"],
+                        prompt_namespaces=["report_vs/artifacts/cover_semantics"],
+                        issues=[],
+                    )
+                ],
+                unmappable_issues=[],
+                broad_retry_allowed=False,
+            ),
+            current_artifacts=_current_artifacts(),
+            doc_map=_evidence_packs()["doc_map"],
+            evidence_packs=_evidence_packs(),
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=_current_artifacts()["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=openai_client,
+        prompt_client=prompt_client,
+    )
+
+    assert response.regenerated_sections == ["cover_semantics"]
+    assert response.updated_artifacts["cover_semantics"]["selection_reason"] == (
+        "A rising time series is the strongest visual story."
+    )
+    assert response.prompt_namespaces == ["report_vs/artifacts/cover_semantics"]
 
 
 def test_regenerate_artifacts_summary_only_keeps_other_sections_unchanged(tmp_path):

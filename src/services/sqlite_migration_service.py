@@ -23,6 +23,8 @@ from ._sqlite_migration.runner import (
 )
 from ._sqlite_migration.reports import (
     _ARTIFACT_EXECUTION_PLAN_RUNS_TABLE_SQL,
+    _ACQUISITION_ATTEMPT_RESOURCES_TABLE_SQL,
+    _ACQUISITION_ROUTE_SUPPRESSIONS_TABLE_SQL,
     _ARTIFACT_LINEAGE_DEPENDENCIES_TABLE_SQL,
     _ARTIFACT_LINEAGE_RECORDS_TABLE_SQL,
     _ARTIFACT_LINEAGE_STATES_TABLE_SQL,
@@ -68,6 +70,8 @@ from ._sqlite_migration.reports import (
     _reports_db_018_create_source_publication_metadata,
     _reports_db_019_create_source_identity_observations,
     _reports_db_020_expand_execution_plan_audit,
+    _reports_db_021_create_acquisition_resource_telemetry,
+    _reports_db_022_add_execution_plan_prompt_family_reconciliation,
 )
 from ._sqlite_migration.state import (
     _STATE_ARTIFACT_ACQUISITION_CACHE_TABLE_SQL,

@@ -16,8 +16,11 @@ from src.services._report_store_service.artifact_lineage import (
     trace_artifact_lineage,
 )
 from src.services._report_store_service.download_routes import (
+    evaluate_acquisition_route_suppression,
     get_publisher_download_route,
+    list_acquisition_resource_aggregates,
     mark_publisher_private_api_candidate_promoted,
+    record_acquisition_attempt_resource,
     record_publisher_download_route,
     record_publisher_private_api_candidate_observation,
 )
@@ -75,6 +78,8 @@ __all__ = [
     "get_artifact_lineage_for_storage",
     "invalidate_artifacts",
     "get_publisher_download_route",
+    "evaluate_acquisition_route_suppression",
+    "list_acquisition_resource_aggregates",
     "get_publisher_inventory_recovery_cache_record",
     "get_publisher_inventory_state",
     "get_report_download_drive_folder",
@@ -90,6 +95,7 @@ __all__ = [
     "record_minimal_execution_plan_result",
     "read_validated_report_artifacts",
     "record_publisher_private_api_candidate_observation",
+    "record_acquisition_attempt_resource",
     "record_report_value_score",
     "record_publisher_download_route",
     "record_publisher_inventory_recovery_cache_record",

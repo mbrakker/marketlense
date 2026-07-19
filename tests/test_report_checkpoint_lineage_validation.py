@@ -12,6 +12,7 @@ from src.contracts.artifact_lineage import (
     ArtifactInvalidationRequest,
     ArtifactLineageRegistrationRequest,
     ArtifactLineageRegistrationResponse,
+    ArtifactLineageTraceRequest,
 )
 from src.contracts.drive import DriveFile
 from src.contracts.files import PipelineStageCheckpoint
@@ -19,6 +20,7 @@ from src.contracts.report_generation import ReportRuntimeState
 from src.generators.report_generation_dependencies import ReportGenerationDependencies
 from src.generators.report_render_generator import render_preview_asset
 from src.orchestrators._report_generation_orchestrator.checkpoints import (
+    _record_rendered_html_prompt_family_lineage,
     _vector_indexing_state_from_checkpoint,
 )
 from src.orchestrators._report_generation_orchestrator.resume import (
@@ -27,20 +29,23 @@ from src.orchestrators._report_generation_orchestrator.resume import (
     _render_project_and_cleanup,
     _resume_from_checkpoint_stage,
     _select_latest_safe_restart_stage,
-    _validate_checkpoint_artifacts,
     _validate_checkpoint_artifact_lineage,
+    _validate_checkpoint_artifacts,
 )
 from src.services.report_store_service import (
     invalidate_artifacts,
     record_artifact_lineage,
+    trace_artifact_lineage,
 )
 from src.utils.errors import AppError
 from tests.test_report_pipeline_orchestrator import _ctx, _settings
 from tests.test_report_render_generator import (
     _analysis,
-    _deps as _render_dependencies,
     _selection,
     _source,
+)
+from tests.test_report_render_generator import (
+    _deps as _render_dependencies,
 )
 
 
@@ -121,6 +126,76 @@ def test_checkpoint_lineage_validation_accepts_active_content(tmp_path: Path) ->
         _checkpoint(artifact_id=record.record.artifact_id),
         "checkpoint.json",
     )
+
+
+def test_rendered_html_lineage_explicitly_depends_on_prompt_materializations(
+    tmp_path: Path,
+) -> None:
+    runtime = _runtime(tmp_path)
+    artifacts_path = tmp_path / "artifacts.json"
+    validation_path = tmp_path / "validation.json"
+    family_path = tmp_path / "prompt-family.json"
+    html_path = tmp_path / "report.html"
+    artifacts_path.write_text("{}", encoding="utf-8")
+    validation_path.write_text("{}", encoding="utf-8")
+    family_path.write_text("{}", encoding="utf-8")
+    html_path.write_text("<h1>Report</h1>", encoding="utf-8")
+
+    def record(kind: str, path: Path):
+        return record_artifact_lineage(
+            ArtifactLineageRegistrationRequest(
+                schema_version=ARTIFACT_LINEAGE_SCHEMA_VERSION,
+                db_path=runtime.settings.reports_db,
+                artifact_kind=kind,
+                report_id=runtime.file.file_id,
+                source_id="md5",
+                storage_ref=str(path),
+                producer="analysis_complete",
+                schema_version_used="1.0",
+                processing_version="report_generation_checkpoint_v2",
+                validation_status="pass",
+                lineage_status="complete",
+            ),
+            runtime.ctx,
+        ).record.artifact_id
+
+    artifacts_id = record("artifacts", artifacts_path)
+    validation_id = record("validation", validation_path)
+    family_id = record("prompt_family:report_vs/artifacts/summary", family_path)
+    initial_rendered = _record_rendered_html(
+        runtime, html_path, lineage_status="complete"
+    ).record.artifact_id
+    lineage = {
+        "artifacts": artifacts_id,
+        "validation": validation_id,
+        "rendered_html": initial_rendered,
+    }
+
+    _record_rendered_html_prompt_family_lineage(
+        runtime,
+        artifact_registry={
+            "refs": [
+                {
+                    "artifact_id": "rendered_html",
+                    "path": str(html_path),
+                    "schema_version": "1.0",
+                }
+            ]
+        },
+        payload={},
+        artifact_lineage=lineage,
+        prompt_family_materializations={"report_vs/artifacts/summary": family_id},
+    )
+
+    trace = trace_artifact_lineage(
+        ArtifactLineageTraceRequest(
+            schema_version=ARTIFACT_LINEAGE_SCHEMA_VERSION,
+            db_path=runtime.settings.reports_db,
+            artifact_id=lineage["rendered_html"],
+        ),
+        runtime.ctx,
+    )
+    assert (lineage["rendered_html"], family_id) in trace.edges
 
 
 def test_checkpoint_lineage_validation_rejects_invalidated_artifact(

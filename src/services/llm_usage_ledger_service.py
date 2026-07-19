@@ -44,6 +44,8 @@ from src.contracts.llm_usage import (
     LLMUsageMedianRebuildResponse,
     LLMUsageProjectionStatusRequest,
     LLMUsageProjectionStatusResponse,
+    LLMUsageRunSummaryRequest,
+    LLMUsageRunSummaryResponse,
     LLMUsageSpendGuardrailRequest,
     LLMUsageSpendGuardrailResponse,
     LLMUsageSpendReservationReleaseRequest,
@@ -739,6 +741,82 @@ def read_run_budget_usage(
                 "projection_outcome": response.projection_outcome,
                 "projection_pending_event_count": response.projection_pending_event_count,
                 "projection_pending_estimated_cost_usd": response.projection_pending_estimated_cost_usd,
+            },
+        )
+    )
+    return response
+
+
+def read_usage_run_summary(
+    request: LLMUsageRunSummaryRequest,
+    ctx: RunContext,
+) -> LLMUsageRunSummaryResponse:
+    """Read bounded canonical provider usage without creating another ledger."""
+    if (
+        request.schema_version != "1.0"
+        or not str(request.db_path or "").strip()
+        or not str(request.run_id or "").strip()
+    ):
+        raise AppError(
+            code="llm_usage_run_summary_request_invalid",
+            message="Usage-run summary requires a ledger path and run identifier",
+            retryable=False,
+        )
+    path = Path(request.db_path)
+    _apply_budget_authority_migrations(path, ctx)
+    action = str(request.action or "").strip()
+    where = "run_id = ?"
+    params: tuple[object, ...] = (str(request.run_id),)
+    if action:
+        where += " and action = ?"
+        params = (*params, action)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with _LOCK, sqlite3.connect(path) as conn:
+            _ensure_schema(conn)
+            row = conn.execute(
+                f"""
+                select count(*), coalesce(sum(input_tokens), 0),
+                       coalesce(sum(cached_input_tokens), 0),
+                       coalesce(sum(output_tokens), 0),
+                       coalesce(sum(estimated_cost_usd), 0.0)
+                from llm_usage_events
+                where {where}
+                """,
+                params,
+            ).fetchone()
+    except sqlite3.Error as exc:
+        raise AppError(
+            code="llm_usage_run_summary_read_failed",
+            message="Canonical usage-run summary could not be read",
+            cause=exc,
+            retryable=False,
+            context={"db_path": str(path), "run_id": str(request.run_id)},
+        ) from exc
+    response = LLMUsageRunSummaryResponse(
+        schema_version="1.0",
+        run_id=str(request.run_id),
+        action=action,
+        call_count=int(row[0] or 0) if row is not None else 0,
+        input_tokens=int(row[1] or 0) if row is not None else 0,
+        cached_input_tokens=int(row[2] or 0) if row is not None else 0,
+        output_tokens=int(row[3] or 0) if row is not None else 0,
+        estimated_cost_usd=round(float(row[4] or 0.0), 6) if row is not None else 0.0,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="llm_usage_run_summary_read",
+            module=logger.name,
+            fields={
+                "run_id": response.run_id,
+                "action": response.action,
+                "call_count": response.call_count,
+                "input_tokens": response.input_tokens,
+                "cached_input_tokens": response.cached_input_tokens,
+                "output_tokens": response.output_tokens,
+                "estimated_cost_usd": response.estimated_cost_usd,
             },
         )
     )

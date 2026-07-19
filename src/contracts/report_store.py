@@ -6,6 +6,7 @@ This module preserves the public import surface while semantic dataclass
 families live under `src/contracts/_report_store/`.
 """
 
+from ._report_store.acquisition_resources import *
 from ._report_store.download_routes import *
 from ._report_store.inventory_state import *
 from ._report_store.metadata import *

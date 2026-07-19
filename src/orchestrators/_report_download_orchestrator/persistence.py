@@ -159,10 +159,10 @@ def _record_source_identity_observation(
     publication_metadata: SourcePublicationMetadata,
     ctx: RunContext,
     dependencies: ReportDownloadDependencies,
-) -> None:
+) -> str:
     """Attach immutable route and retrieval evidence to the downloaded source."""
     if dependencies.record_source_identity_observation is None:
-        return
+        return ""
     terminal = result.terminal_evidence
     terminal_title = str(getattr(terminal, "final_page_title", "") or "").strip()
     canonical_title = terminal_title or source_record.report_name
@@ -197,11 +197,17 @@ def _record_source_identity_observation(
                 acquired_artifact_url=artifact_url,
                 source_page_url=source_page_url,
                 publication_date=(
-                    publication_metadata.publication_date if publication_verified else ""
+                    publication_metadata.publication_date
+                    if publication_verified
+                    else ""
                 ),
-                publication_date_status="verified" if publication_verified else "unknown",
+                publication_date_status="verified"
+                if publication_verified
+                else "unknown",
                 publication_date_evidence_locator=(
-                    publication_metadata.evidence_locator if publication_verified else ""
+                    publication_metadata.evidence_locator
+                    if publication_verified
+                    else ""
                 ),
                 discovered_at_utc=source_record.downloaded_at_utc,
                 retrieved_at_utc=(
@@ -240,6 +246,7 @@ def _record_source_identity_observation(
             },
         )
     )
+    return str(getattr(response.resolution, "source_identity_id", "") or "")
 
 
 def _lookup_idempotency_record(
@@ -583,7 +590,8 @@ def record_downloaded_source(
     policy: RetryPolicy,
     ctx: RunContext,
     dependencies: ReportDownloadDependencies,
-) -> None:
+) -> tuple[str, str]:
+    """Return canonical source identity and verified hash after successful recording."""
     if result.outcome == "downloaded" and result.downloaded_file_path:
         file_hash = dependencies.file_md5(
             FileHashRequest(
@@ -690,7 +698,7 @@ def record_downloaded_source(
             ctx=ctx,
             dependencies=dependencies,
         )
-        _record_source_identity_observation(
+        source_identity_id = _record_source_identity_observation(
             request=request,
             result=result,
             source_record=source_record,
@@ -753,6 +761,8 @@ def record_downloaded_source(
                 },
             )
         )
+        return source_identity_id, f"md5:{source_record.md5}"
+    return "", ""
 
 
 def record_identity_update(

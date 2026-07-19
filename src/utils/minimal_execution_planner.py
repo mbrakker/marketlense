@@ -85,6 +85,10 @@ def _family_for(artifact: RetainedArtifact) -> str:
     return str(raw or artifact.artifact_kind).strip()
 
 
+def _is_prompt_family_materialization(artifact: RetainedArtifact) -> bool:
+    return artifact.artifact_kind.startswith("prompt_family:")
+
+
 def _compatibility_value(
     compatibility: dict[str, object], key: str, family: str
 ) -> str:
@@ -179,9 +183,14 @@ def _artifact_reason(
         if (
             key in {"prompt_versions", "model_policy_versions"}
             and artifact.artifact_kind not in analysis_kinds
+            and not _is_prompt_family_materialization(artifact)
         ):
             continue
-        if key == "validator_versions" and artifact.artifact_kind != "validation":
+        if (
+            key == "validator_versions"
+            and artifact.artifact_kind != "validation"
+            and not _is_prompt_family_materialization(artifact)
+        ):
             continue
         if key == "crop_profiles" and artifact.artifact_kind not in {
             "crop",
@@ -232,6 +241,11 @@ def _artifact_reason(
                 return "missing_lineage", "ocr_policy_version"
             if observed != current.ocr_policy_version:
                 return INVALIDATION_OCR_POLICY_VERSION_CHANGED, ""
+    if (
+        _is_prompt_family_materialization(artifact)
+        and artifact.validation_status.strip().lower() != "pass"
+    ):
+        return "family_validation_not_accepted", ""
     target = str(publication_state.get("target") or "").strip()
     if target and artifact.artifact_kind == "publication":
         observed = _compatibility_value(
@@ -442,6 +456,17 @@ def plan_minimal_execution(
         if str(value).strip()
     }
     relevant_artifact_ids = _requested_artifact_ids(artifacts, edges, requested)
+    if intent == "targeted_repair" and "rendered_html" in requested:
+        # Prompt materializations are consumed by the rendered report even
+        # though the legacy composite renderer predates their explicit lineage
+        # edges.  Include them only when a retained report has actually
+        # materialized them; legacy reports continue through the established
+        # checkpoint safety path rather than gaining synthetic blockers.
+        relevant_artifact_ids.update(
+            item.artifact_id
+            for item in artifacts
+            if _is_prompt_family_materialization(item)
+        )
 
     for artifact in artifacts:
         if artifact.artifact_id not in relevant_artifact_ids:
@@ -561,6 +586,69 @@ def plan_minimal_execution(
             publication_prerequisites.append("validated_rendered_html_invalid")
         if blockers:
             publication_prerequisites.append("lineage_complete_required")
+    required_prompt_family_set = {
+        item.artifact_family
+        for item in invalid
+        if item.artifact_kind.startswith("prompt_family:")
+    }
+    artifact_prompt_family_prefix = "report_vs/artifacts/"
+    validation_prompt_families = {
+        "report_vs/validate/grounding",
+        "report_vs/validate/semantic",
+    }
+    if any(
+        family.startswith(artifact_prompt_family_prefix)
+        for family in required_prompt_family_set
+    ):
+        required_prompt_family_set.update(
+            _family_for(item)
+            for item in artifacts
+            if _is_prompt_family_materialization(item)
+            and _family_for(item) in validation_prompt_families
+            and item.artifact_id in relevant_artifact_ids
+        )
+    required_prompt_families = sorted(required_prompt_family_set)
+    reused_prompt_families = sorted(
+        {
+            _family_for(item)
+            for item in artifacts
+            if _is_prompt_family_materialization(item)
+            and item.artifact_id in relevant_artifact_ids
+            and item.artifact_id not in invalid_by_id
+            and not any(blocker.artifact_id == item.artifact_id for blocker in blockers)
+        }
+    )
+    if required_prompt_families:
+        regenerated_artifact_prompt_count = sum(
+            family.startswith(artifact_prompt_family_prefix)
+            for family in required_prompt_families
+        )
+        required_validation_prompt_count = sum(
+            family in validation_prompt_families for family in required_prompt_families
+        )
+        external = ["html_render"]
+        categories = [EstimatedWorkCategory(category="html_render", estimated_calls=1)]
+        if regenerated_artifact_prompt_count:
+            external.append("report_analysis_model")
+            categories.append(
+                EstimatedWorkCategory(
+                    category="report_analysis_model",
+                    estimated_calls=regenerated_artifact_prompt_count,
+                )
+            )
+        if required_validation_prompt_count:
+            external.append("validator_model")
+            categories.append(
+                EstimatedWorkCategory(
+                    category="validator_model",
+                    estimated_calls=required_validation_prompt_count,
+                )
+            )
+        side_effects = [
+            "analysis_artifact_write",
+            "checkpoint_write",
+            "rendered_html_write",
+        ]
     provisional = MinimalExecutionPlan(
         schema_version=MINIMAL_EXECUTION_PLAN_SCHEMA_VERSION,
         execution_intent=intent,
@@ -575,6 +663,8 @@ def plan_minimal_execution(
         missing_lineage_blockers=blockers,
         publication_prerequisites=publication_prerequisites,
         plan_hash="",
+        required_prompt_families=required_prompt_families,
+        reused_prompt_families=reused_prompt_families,
     )
     return replace(provisional, plan_hash=_plan_hash(provisional))
 

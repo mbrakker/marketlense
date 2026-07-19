@@ -553,3 +553,33 @@ class LLMUsageMedianRebuildResponse:
     median_row_count: int = field(
         metadata={"doc": "Number of median rows rebuilt from source usage records."}
     )
+
+
+@dataclass(frozen=True)
+class LLMUsageRunSummaryRequest:
+    """Read-only canonical usage aggregate for one workflow run and action."""
+
+    schema_version: str = field(
+        metadata={"doc": "Usage-run summary request schema version."}
+    )
+    db_path: str = field(metadata={"doc": "Canonical SQLite usage ledger path."})
+    run_id: str = field(metadata={"doc": "Exact run identifier to aggregate."})
+    action: str = field(default="", metadata={"doc": "Optional exact action filter."})
+
+
+@dataclass(frozen=True)
+class LLMUsageRunSummaryResponse:
+    schema_version: str = field(
+        metadata={"doc": "Usage-run summary response schema version."}
+    )
+    run_id: str = field(metadata={"doc": "Aggregated run identifier."})
+    action: str = field(metadata={"doc": "Applied action filter, if any."})
+    call_count: int = field(metadata={"doc": "Canonical provider-call count."})
+    input_tokens: int = field(metadata={"doc": "Canonical summed input tokens."})
+    cached_input_tokens: int = field(
+        metadata={"doc": "Canonical summed cached input tokens."}
+    )
+    output_tokens: int = field(metadata={"doc": "Canonical summed output tokens."})
+    estimated_cost_usd: float = field(
+        metadata={"doc": "Canonical summed estimated cost in USD."}
+    )

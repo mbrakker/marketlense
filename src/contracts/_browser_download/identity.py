@@ -3,9 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional
 
+from src.contracts.run_budget import RunBudgetLimits
+
 from .session_reuse import BrowserDownloadSessionReusePolicy
 from .worker_pool import BrowserDownloadWarmWorkerPoolPolicy
-from src.contracts.run_budget import RunBudgetLimits
 
 BROWSER_DOWNLOAD_IDENTITY_SCHEMA_VERSION = "1.0"
 
@@ -254,6 +255,39 @@ class BrowserDownloadCaptchaHandoffPolicy:
         metadata={
             "doc": "Maximum operator handoff window in seconds before the route remains blocked_captcha."
         },
+    )
+
+
+@dataclass(frozen=True)
+class BrowserDownloadRouteSuppressionPolicy:
+    """Bounded, reversible suppression for empirically terminal browser routes."""
+
+    schema_version: str = field(
+        metadata={"doc": "Acquisition route-suppression policy schema version."}
+    )
+    enabled: bool = field(
+        default=True,
+        metadata={"doc": "Whether eligible terminal browser routes may be suppressed."},
+    )
+    minimum_sample_size: int = field(
+        default=3,
+        metadata={
+            "doc": "Minimum terminal-route observations before suppression; never below three."
+        },
+    )
+    terminal_failure_threshold: float = field(
+        default=1.0,
+        metadata={
+            "doc": "Required terminal-failure fraction in [0, 1] for suppression."
+        },
+    )
+    ttl_seconds: int = field(
+        default=604800,
+        metadata={"doc": "Expiry for an active suppression decision in seconds."},
+    )
+    terminal_failure_classes: tuple[str, ...] = field(
+        default=("blocked_captcha", "blocked_email_domain"),
+        metadata={"doc": "Typed terminal blocker classes eligible for suppression."},
     )
 
 
@@ -553,6 +587,15 @@ class BrowserDownloadSettings:
             "doc": "Maximum governed Drive writes per run, day, and publisher scope."
         },
     )
+    route_suppression_policy: BrowserDownloadRouteSuppressionPolicy = field(
+        default_factory=lambda: BrowserDownloadRouteSuppressionPolicy(
+            schema_version=BROWSER_DOWNLOAD_IDENTITY_SCHEMA_VERSION
+        ),
+        metadata={
+            "doc": "TTL-bound terminal-route suppression policy evaluated before browser/provider work."
+        },
+    )
+
     run_budget_max_drive_reads: int | None = field(
         default=None,
         metadata={"doc": "Maximum governed material Drive reads per scope."},

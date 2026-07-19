@@ -34,7 +34,7 @@ artifact-family context when the caller has it. Historical events remain in an
 
 `enabled_effect_kinds` is an independent additive feature gate for each effect category. Removing a kind rolls back its pre-effect enforcement while retaining all earlier reservations, decisions, and actual-use records. Reservations expire after `reservation_ttl_seconds` (one hour maximum); completed effects finalize observed non-monetary use and release unused capacity. Provider monetary actuals remain in the existing LLM usage events and only reconcile their reservation.
 
-`ingest.run_budget` sets the report-generation PDF, retry, and elapsed-runtime ceilings. `browser_download.run_budget` and `publish.run_budget` remain the scoped acquisition and publication controls; all use the same `cost.usage_db_path` authority.
+`ingest.run_budget` sets the report-generation PDF, retry, and elapsed-runtime ceilings. `browser_download.run_budget` and `publish.run_budget` remain the scoped acquisition and publication controls; all use the same `cost.usage_db_path` authority. `browser_download.route_suppression` is independently reversible: it requires a minimum of three compatible typed terminal failures, records a policy-compatibility hash and TTL, and can always be bypassed with the explicit acquisition revalidation option. It never permanently blacklists a publisher.
 
 Opening the canonical usage database applies additive migration `003`: it extends the existing deferred-work audit rows with bounded lease, deadline, plan, artifact, idempotency, and terminal-remediation state. It is safe to rerun after interruption; no accounting rows are rewritten or discarded.
 

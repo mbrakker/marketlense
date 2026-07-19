@@ -145,6 +145,16 @@ class MinimalExecutionPlan:
     missing_lineage_blockers: list[MissingLineageBlocker]
     publication_prerequisites: list[str]
     plan_hash: str
+    required_prompt_families: list[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Exact independently materialized prompt families to regenerate."
+        },
+    )
+    reused_prompt_families: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Validated prompt families reused without provider calls."},
+    )
 
 
 @dataclass(frozen=True)
@@ -194,6 +204,10 @@ class ExecutionPlanResultRequest:
     actual_cost_usd: float | None = None
     estimated_avoided_cost_usd: float | None = None
     reusable_artifact_ids: list[str] = field(default_factory=list)
+    actual_prompt_families: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Observed model-backed family calls for plan reconciliation."},
+    )
 
 
 @dataclass(frozen=True)

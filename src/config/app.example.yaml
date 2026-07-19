@@ -44,6 +44,14 @@ browser_download:
   openrouter_model: "openai/gpt-5-mini"
   max_tokens: 12000
   route_memory_ttl_seconds: 2592000
+  route_suppression:
+    enabled: true
+    minimum_sample_size: 3
+    terminal_failure_threshold: 1.0
+    ttl_seconds: 604800
+    terminal_failure_classes:
+      - "blocked_captcha"
+      - "blocked_email_domain"
   captcha_handoff:
     enabled: true
     timeout_seconds: 120

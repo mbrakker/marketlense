@@ -45,6 +45,32 @@ same backfill is idempotent.
 | Prompt, schema, model policy, or validator | Affected analysis family and downstream outputs | Resume from selection plus analysis/render; preserve source PDF and selected crops |
 | Publication target | Publication record | Publication only |
 
+## Prompt-family materialisations
+
+At the `analysis_complete` checkpoint, the report-generation orchestrator
+persists separate, content-addressed family records through the report-store
+lineage boundary. These cover the document map, each evidence pack, taxonomy
+and category fit, each artifact prompt family, and grounding/semantic
+validation. A record retains only bounded provenance in the lineage database:
+family/schema/processing versions, prompt and routing hashes, direct
+dependency IDs and hashes, evidence-set hash, output hash, validation state,
+and supersession reference. The JSON output itself remains in the controlled
+report-analysis output directory and is never put in operational logs.
+
+Prompt-family records are reusable only when their validation status is
+`pass`, all direct edges and hashes remain valid, and their family-specific
+prompt/model compatibility matches. Legacy composite `artifacts` files remain
+valid checkpoint inputs but are not treated as proof that a constituent family
+is independently reusable. The planner exposes `required_prompt_families` and
+`reused_prompt_families`, allowing an operator to see the exact intended model
+scope before a targeted repair. The existing checkpoint executor remains the
+rollback path. In enforce mode, a proven artifact-family change resumes from
+the active render checkpoint when present, regenerates only the planned
+artifact families, re-runs grounding and semantic validation, then performs
+deterministic rendering. The rendered-html lineage record explicitly depends
+on the accepted prompt-family records. Any missing lineage, unsupported family,
+validation failure, or planned/actual family mismatch fails closed.
+
 The compatibility matrix in `tests/test_minimal_execution_planner.py` covers
 each of these cases, deterministic plan hashing, targeted prompt-family
 repair, render-only regeneration, crop repair, and publication-only retry.

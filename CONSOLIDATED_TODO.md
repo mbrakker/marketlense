@@ -37,17 +37,17 @@ All work is listed below in one register. `Active` items have detailed completio
 | Active | A8 | Model-call replay drift comparison | Standalone read-only regression outcome. |
 | Closed | A9 | Canonical report-source identity and publication provenance | Schema v19 immutable observations, deterministic source resolution, safe public projection, render-only invalidation, and live idempotent source capture passed. |
 | Closed | P1 | Publish snapshot naming and synchronous idempotent publishing | Public/UI terminology now says Publish Readiness; the compatibility alias preserves callers and synchronous review-gated publishing remains unchanged. |
+| Active | A14 | Calibrate acquisition policy from retained route economics | Turn new resource telemetry into bounded, evidence-based route-order recommendations. |
 | Active | P2 | Bounded public-observability events | Narrow log-event size-bound hardening for public-facing boundaries. |
 | Active | P3 | Hosted HTTPS, sitemap, and public trust checks | Safe-error boundary completed; hosted trust outcome remains. |
 | Active | P10 | Correlated public-render failure observability | Hosted release-observability outcome. |
 | Active | P4 | Briefing, correction, and submission CTAs | Implemented; close after hosted smoke proves the live intake routes. |
 | Active | P5 | Archive/search facets, mobile navigation, and responsive workflows | Responsive public-workflow outcome. |
 | Active | P6 | Editorial report cards, exhibits, visual ranking, and premium copy | Release gate is implemented and live-validated; blind human editorial acceptance remains. |
-| Active | P11 | Route verified acquired reports into governed ingest | Eliminate the manual per-folder handoff from the canonical downloader to live report analysis. |
 | Active | P7 | Hosted latency and public performance | Measured public-performance outcome. |
 | Active | P8 | Readable evidence spans, methodology/source-quality trust, and deterministic related content | Public evidence/discovery outcome. |
 | Active | E6 | Retain a hash-pinned claim-embedding benchmark export | Semantic benchmark coverage outcome. |
-| Active | E9 | Attest active model-pricing rates before they become stale | Keep cost attribution and spend enforcement trustworthy as provider pricing changes. |
+| Active | E10 | Attest active model-pricing rates before they become stale | Keep cost attribution and spend enforcement trustworthy as provider pricing changes. |
 | Closed | E3 | Lineage-driven minimum regeneration | Remains closed; E7 owns expansion beyond the proven rendered-HTML family. |
 | Closed | E4 | Executable retained PDF benchmark corpus in CI | Retained corpus is hash-pinned and CI-gated; local release-equivalent run passed. |
 | Active | R1 | CI/PR release-evidence summaries | Reviewer-surface outcome, including exact-tested-HEAD linkage and runtime-corpus expansion. |
@@ -90,6 +90,7 @@ All work is listed below in one register. `Active` items have detailed completio
 - **A9 — Canonical report-source identity and publication provenance (2026-07-17):** Reports schema v19 stores immutable, hash-addressed source observations and deterministic resolutions; it preserves v18 compatibility, projects safe source fields to analytics, report cards, and WordPress, and invalidates only rendering/publication when source metadata changes. A live Julius Baer landing page returned HTTP 200 with 218,676 bounded HTML bytes; its existing retained PDF benchmark resolved verified source provenance, while an exact repeat produced no duplicate observation. No LLM call or production write was made.
 - **A12 — Complete configured model-pricing coverage for spend budgets (2026-07-18):** The canonical rate card now pins active OpenAI routes to an effective version/source, separately bills cached input, and holds unpriced or unapproved routes before provider I/O. Usage events project cost by report, workflow, prompt namespace, artifact family, and publisher. A bounded live OpenAI embedding recorded 49 input tokens, $0.000001 estimated spend, and complete claim-embedding attribution; the SQLite ledger and JSONL/daily projections reconciled exactly across 1,206 events.
 - **E1 — Claim-embedding freshness, retention, and cost controls (2026-07-18):** The existing queue now uses deterministic due-work selection, expiring atomic leases, rechecks before provider I/O, bounded retries/budgets, and a health surface with age percentiles, throughput, drain estimate, failure reasons, model drift, and avoided calls. A live one-row OpenAI canary embedded one valid claim with no duplicate work; queue depth fell from 2,648 to 2,647 and content-hash skips rose from four to five. Historic non-claim rows remain explicitly `unknown_requires_review`, not silently embedded.
+- **P11 — Verified acquisition-to-ingest handoff and live proof (2026-07-19):** Direct, browser, and mailbox acquisition now share one verified file/MD5/source-identity handoff that upserts the canonical report record and enqueues idempotent `source_ingest` work. A live authenticated Drive PDF download (6,203,358 bytes, MD5 verified) reached `analysis_complete` through the retained artifact with 21 real model calls and no public write. The same closeout added bounded acquisition resource telemetry and route suppression; live direct, browser, and mailbox canaries recorded their actual resource envelopes without a Drive or WordPress write.
 - **C8 — CTO evidence-collector integrity (2026-07-17):** The strict collector snapshots retained inputs, validates exact repository HEAD, checks log-content coverage, run IDs, provenance, summary consistency, and every inventoried file hash before publishing. It fails closed without a partial final bundle. R1 owns expansion of the retained runtime corpus, not collector integrity.
 - **C7 — Logging content exposure (2026-07-16):** Standard events apply deterministic byte, depth, node, collection, and text bounds; report and browser terminal events emit scalar summaries with retained audit references; CI rejects direct `fields=asdict(...)` serialization. Focused report/logging and browser suites passed, as did guarded live browser and OpenAI runs. P2 retains the narrow public-boundary size-limit hardening and R6 owns ongoing reduction-telemetry review.
 - **A7 (2026-07-14):** The retained 15-report corpus is now a required no-provider routing gate across 30 configured prompt routes. It confirms explicit policy selection, same-provider constraints, and zero lost retained evidence IDs; focused routing/compaction/fallback tests and the full suite pass.
@@ -165,6 +166,19 @@ The original ten-item screenshot baseline is complete in the committed implement
 - Approved adapters rebuild the workflow-specific minimum plan from retained route and artifact evidence, fail closed on missing source state, and resume only the latest safe stage.
 - A single bounded invocation proves release-capacity and UTC-day recovery for each adapter, with duplicate worker suppression and no bypass of publishing/mail authorization.
 - Dashboard projections distinguish supported auto-resume workflows from remediation-only deferred records with bounded scalar counts.
+
+#### A14. Calibrate acquisition policy from retained route economics
+
+- **Title:** Calibrate acquisition policy from retained route economics
+- **Impact 5 / effort: 2**
+- **Context:** Acquisition now retains compatible per-route resource envelopes, verified outcomes, and TTL-bound suppression history, but operators still have no deterministic way to compare direct, browser, and mailbox route cost and reliability for the same publisher cohort.
+- **Benefit:** Existing route evidence can prioritize the cheapest verified path and focus browser/model capacity on sources where it materially improves acquisition quality or speed.
+- **Risks to avoid:** Do not auto-change a route from incomplete, stale, or cross-policy data; do not bypass source verification, current budgets, explicit revalidation, mailbox authorization, or public-write gates.
+- **Success criteria:**
+
+- A bounded read-only report groups compatible publisher/route cohorts by policy hash and reports sample size, verified-success rate, median/p95 elapsed time, browser/model cost, and avoided operations without payloads or personal data.
+- Deterministic recommendations require a documented minimum compatible sample and a material measured improvement; they produce an operator-reviewable configuration proposal rather than changing routing autonomously.
+- Tests cover incomplete measurements, policy mismatch, threshold behavior, stable ordering, and proof that recommendations cannot invoke providers or change retained route history.
 
 #### A8. Compare retained model-call replay bundles
 
@@ -259,19 +273,6 @@ The original ten-item screenshot baseline is complete in the committed implement
 - Audit identifiers remain available without being reader-facing labels; regression checks fail known leakage patterns in rendered output.
 - Three independent blind evaluators assess 30 paired public reports with median readability, decision usefulness, evidence clarity, and appropriate certainty at least 4/5, and an explicit record of any outlier/appeal decision.
 
-#### P11. Route verified acquired reports into governed ingest
-
-- **Title:** Route verified acquired reports into governed ingest
-- **Impact 5 / effort: 2**
-- **Context:** The canonical downloader now retains verified report PDFs in Drive with route, checksum, and idempotency evidence, but the standard ingest scope does not discover their publisher folders. A live report needs a manual `--folder` handoff despite already being a verified sample.
-- **Benefit:** Newly acquired reports enter the same bounded analysis and editorial-release workflow automatically, reducing manual operations and turning source-acquisition diversity into faster quality coverage.
-- **Risks to avoid:** Reuse the existing report store, Drive service, cursor, idempotency, and budget authority. Do not duplicate PDFs, create a second queue, loosen source verification, or allow automatic WordPress publication.
-- **Success criteria:**
-
-- A verified canonical acquisition record is a deterministic, bounded ingest candidate with source-folder provenance and checksum compatibility checks.
-- Default ingest discovers each eligible acquired PDF once, preserves cursor/idempotency behavior, and leaves failed or operator-held records actionable without repeated provider work.
-- Focused tests cover discovery, duplicate suppression, stale/mismatched provenance, budget deferral, and no publication side effect; a bounded Drive-to-analysis live canary proves the handoff.
-
 #### P7. Improve hosted public-site performance without contract loss
 
 - **Title:** Improve hosted public-site performance without contract loss
@@ -307,7 +308,7 @@ The original ten-item screenshot baseline is complete in the committed implement
 - **Benefit:** A bounded, redacted export makes semantic quality and prompt savings reproducible without live embedding calls.
 - **Success criteria:** Persist a hash-pinned, retention-governed benchmark export containing only approved vector IDs/content hashes/vectors; benchmark it in CI and compare semantic coverage against lexical fallback without provider calls.
 
-#### E9. Attest active model-pricing rates before they become stale
+#### E10. Attest active model-pricing rates before they become stale
 
 - **Title:** Attest active model-pricing rates before they become stale
 - **Impact 5 / effort: 1**

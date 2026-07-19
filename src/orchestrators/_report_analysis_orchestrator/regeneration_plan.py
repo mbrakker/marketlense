@@ -379,10 +379,28 @@ def _build_regeneration_plan(
 def _target_keys_for_issue(issue: RegenerationIssue) -> List[str]:
     explicit_target = str(issue.repair_target or "").strip()
     if explicit_target:
+        if explicit_target == "artifact_copy":
+            # Public-editorial quality deliberately reports the semantic copy
+            # category rather than a generator implementation detail.  Map it
+            # deterministically from the retained affected section; never let
+            # a valid live quality finding dead-letter the full report solely
+            # because it used that public contract label.
+            derived_target = _target_section(issue.affected_section)
+            if derived_target:
+                return [derived_target]
+            affected = str(issue.affected_section or "").strip().lower()
+            if affected.startswith(("key_figures", "chart_insight_cards")):
+                return ["insights_bundle"]
+            if affected.startswith("topics_covered"):
+                return ["topics"]
+            return []
         if explicit_target not in SUPPORTED_TARGETS:
             raise AppError(
                 code="regeneration_repair_target_unsupported",
-                message="Validation issue requested an unsupported regeneration repair target",
+                message=(
+                    "Validation issue requested an unsupported regeneration "
+                    "repair target"
+                ),
                 retryable=False,
                 severity="error",
                 context={

@@ -617,3 +617,9 @@ class IngestOutcome:
             "doc": "Filesystem path to the validated report-card manifest, if produced."
         },
     )
+    actual_prompt_families: List[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Exact independently materialized prompt families regenerated in this outcome."
+        },
+    )

@@ -202,6 +202,66 @@ CREATE TABLE IF NOT EXISTS publisher_private_api_candidates (
 );
 """
 
+_ACQUISITION_ATTEMPT_RESOURCES_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS acquisition_attempt_resources (
+  attempt_id TEXT PRIMARY KEY,
+  schema_version TEXT NOT NULL,
+  publisher_id TEXT NOT NULL,
+  source_identity_id TEXT NOT NULL,
+  source_identity_status TEXT NOT NULL,
+  normalized_url TEXT NOT NULL,
+  route_family TEXT NOT NULL,
+  route_policy_version TEXT NOT NULL,
+  source_policy_compatibility_hash TEXT NOT NULL,
+  started_at_utc TEXT NOT NULL,
+  completed_at_utc TEXT NOT NULL,
+  elapsed_ms INTEGER NOT NULL,
+  browser_launches INTEGER NOT NULL,
+  browser_steps INTEGER NOT NULL,
+  page_navigations INTEGER NOT NULL,
+  screenshots INTEGER NOT NULL,
+  browser_model_calls INTEGER NOT NULL,
+  input_tokens INTEGER NOT NULL,
+  cached_input_tokens INTEGER NOT NULL,
+  output_tokens INTEGER NOT NULL,
+  drive_reads INTEGER NOT NULL,
+  drive_writes INTEGER NOT NULL,
+  mailbox_reads INTEGER NOT NULL,
+  retry_count INTEGER NOT NULL,
+  terminal_outcome TEXT NOT NULL,
+  terminal_reason TEXT NOT NULL,
+  verified_artifact_hash TEXT NOT NULL,
+  estimated_cost_usd REAL NOT NULL,
+  avoided_operations_json TEXT NOT NULL,
+  incomplete_fields_json TEXT NOT NULL,
+  revalidation_override INTEGER NOT NULL,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+  updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+);
+"""
+
+_ACQUISITION_ROUTE_SUPPRESSIONS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS acquisition_route_suppressions (
+  decision_id TEXT PRIMARY KEY,
+  normalized_url TEXT NOT NULL,
+  publisher_id TEXT NOT NULL,
+  route_family TEXT NOT NULL,
+  policy_version TEXT NOT NULL,
+  source_policy_compatibility_hash TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  sample_size INTEGER NOT NULL,
+  terminal_failure_count INTEGER NOT NULL,
+  terminal_failure_rate REAL NOT NULL,
+  activated_at_utc TEXT NOT NULL,
+  expires_at_utc TEXT NOT NULL,
+  status TEXT NOT NULL,
+  superseded_at_utc TEXT NOT NULL DEFAULT '',
+  revalidation_attempt_id TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+  updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+);
+"""
+
 _INVENTORY_RECOVERY_CACHE_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS publisher_inventory_candidate_recovery_cache (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -508,10 +568,12 @@ CREATE TABLE IF NOT EXISTS artifact_execution_plan_runs (
   planned_stages_json TEXT NOT NULL,
   planned_external_calls_json TEXT NOT NULL,
   planned_side_effects_json TEXT NOT NULL DEFAULT '[]',
+  planned_prompt_families_json TEXT NOT NULL DEFAULT '[]',
   reusable_artifact_ids_json TEXT NOT NULL DEFAULT '[]',
   actual_stages_json TEXT NOT NULL DEFAULT '[]',
   actual_external_calls_json TEXT NOT NULL DEFAULT '[]',
   actual_side_effects_json TEXT NOT NULL DEFAULT '[]',
+  actual_prompt_families_json TEXT NOT NULL DEFAULT '[]',
   duration_ms INTEGER NOT NULL DEFAULT 0,
   actual_cost_usd REAL,
   estimated_avoided_cost_usd REAL,

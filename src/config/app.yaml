@@ -240,6 +240,14 @@ browser_download:
   route_playbook_dir: "./src/playbooks/browser_routes"
   route_playbook_stale_policy: "fallback"
   route_memory_ttl_seconds: 2592000
+  route_suppression:
+    enabled: true
+    minimum_sample_size: 3
+    terminal_failure_threshold: 1.0
+    ttl_seconds: 604800
+    terminal_failure_classes:
+      - "blocked_captcha"
+      - "blocked_email_domain"
   route_playbook_promotion_mode: "write"
   private_api_playbook_promotion_mode: "write"
   private_api_playbook_min_success_count: 3

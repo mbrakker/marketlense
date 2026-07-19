@@ -37,6 +37,10 @@ from src.contracts.files import (
 )
 from src.contracts.mailbox_acquisition import MailboxSearchRequest, MailboxSearchResult
 from src.contracts.report_store import (
+    AcquisitionAttemptResourceRecordRequest,
+    AcquisitionAttemptResourceRecordResponse,
+    AcquisitionRouteSuppressionRequest,
+    AcquisitionRouteSuppressionResponse,
     PublisherDownloadRouteGetRequest,
     PublisherDownloadRouteRecordRequest,
     PublisherDownloadRouteResponse,
@@ -87,9 +91,11 @@ from src.services.drive_service import (
 from src.services.file_service import file_md5, file_stat, read_bytes, write_bytes
 from src.services.mailbox_acquisition_service import preflight_mailbox_search
 from src.services.report_store_service import (
+    evaluate_acquisition_route_suppression,
     get_publisher_download_route,
     get_report_download_drive_folder,
     mark_publisher_private_api_candidate_promoted,
+    record_acquisition_attempt_resource,
     record_publisher_download_route,
     record_publisher_private_api_candidate_observation,
     record_report_source,
@@ -128,6 +134,14 @@ class ReportDownloadDependencies:
         BrowserDownloadIdentityFieldUpsertResponse,
     ]
     sleep_fn: Callable[[float], None]
+    evaluate_acquisition_route_suppression: Callable[
+        [AcquisitionRouteSuppressionRequest, RunContext],
+        AcquisitionRouteSuppressionResponse,
+    ] = evaluate_acquisition_route_suppression
+    record_acquisition_attempt_resource: Callable[
+        [AcquisitionAttemptResourceRecordRequest, RunContext],
+        AcquisitionAttemptResourceRecordResponse,
+    ] = record_acquisition_attempt_resource
     upsert_browser_download_required_select_overrides: Callable[
         [BrowserDownloadRequiredSelectOverrideRequest, RunContext],
         BrowserDownloadRequiredSelectOverrideResponse,
@@ -220,6 +234,10 @@ class ReportDownloadDependencies:
             download_report_with_browser_use=download_report_with_browser_use,
             get_publisher_download_route=get_publisher_download_route,
             record_publisher_download_route=record_publisher_download_route,
+            evaluate_acquisition_route_suppression=(
+                evaluate_acquisition_route_suppression
+            ),
+            record_acquisition_attempt_resource=(record_acquisition_attempt_resource),
             file_md5=file_md5,
             file_stat=file_stat,
             record_report_source=record_report_source,

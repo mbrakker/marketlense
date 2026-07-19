@@ -61,6 +61,7 @@ from .resume import (
     _pdf_text_unextractable_outcome,
     _resume_crop_from_source_checkpoint,
     _resume_from_checkpoint_stage,
+    _resume_prompt_family_repair,
     _run_projection,
     _run_signal_artifact_generation,
     _score_ingested_report_source,
@@ -427,6 +428,35 @@ def run_report_generation(
             runtime,
             deps,
             analytics_projection_fn,
+        )
+    if (
+        enforce_minimal_execution
+        and minimal_execution_plan is not None
+        and minimal_execution_plan.required_prompt_families
+    ):
+        if client_bundle is not None:
+            bundle = require_report_generation_client_bundle(client_bundle)
+            validation_openai_client = bundle.validation_client
+            regeneration_openai_client = bundle.regeneration_client
+        else:
+            validation_openai_client = _build_model_client(
+                settings,
+                scope="validation",
+                provided_client=validation_openai_client,
+            )
+            regeneration_openai_client = _build_model_client(
+                settings,
+                scope="artifact_regeneration",
+                provided_client=regeneration_openai_client,
+            )
+        return _resume_prompt_family_repair(
+            runtime,
+            deps,
+            analytics_projection_fn,
+            prompt_families=minimal_execution_plan.required_prompt_families,
+            regeneration_openai_client=regeneration_openai_client,
+            validation_openai_client=validation_openai_client,
+            stop_after_stage=requested_stop_stage,
         )
     if client_bundle is not None:
         bundle = require_report_generation_client_bundle(client_bundle)

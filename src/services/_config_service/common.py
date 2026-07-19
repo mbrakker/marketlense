@@ -1,15 +1,28 @@
 from __future__ import annotations
 
-import os
 import logging
-from functools import lru_cache
+import os
 from dataclasses import asdict, dataclass, fields
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Callable, Sequence
 
-from dotenv import load_dotenv, find_dotenv
 import yaml
+from dotenv import find_dotenv, load_dotenv
 
+from src.contracts.browser_download import (
+    BrowserDownloadCaptchaHandoffPolicy,
+    BrowserDownloadIdentityFieldUpsertRequest,
+    BrowserDownloadIdentityFieldUpsertResponse,
+    BrowserDownloadRequiredSelectOverrideProposal,
+    BrowserDownloadRequiredSelectOverrideRequest,
+    BrowserDownloadRequiredSelectOverrideResponse,
+    BrowserDownloadRouteBudget,
+    BrowserDownloadRouteSuppressionPolicy,
+    BrowserDownloadSessionReusePolicy,
+    BrowserDownloadSettings,
+    BrowserDownloadWarmWorkerPoolPolicy,
+)
 from src.contracts.config import (
     AppConfigReadRequest,
     AppConfigReadResponse,
@@ -21,42 +34,46 @@ from src.contracts.config import (
     OpenAICredentialResolveRequest,
     OpenAICredentialResolveResponse,
 )
-from src.contracts.browser_download import (
-    BrowserDownloadCaptchaHandoffPolicy,
-    BrowserDownloadIdentityFieldUpsertRequest,
-    BrowserDownloadIdentityFieldUpsertResponse,
-    BrowserDownloadRequiredSelectOverrideRequest,
-    BrowserDownloadRequiredSelectOverrideResponse,
-    BrowserDownloadRequiredSelectOverrideProposal,
-    BrowserDownloadRouteBudget,
-    BrowserDownloadSessionReusePolicy,
-    BrowserDownloadSettings,
-    BrowserDownloadWarmWorkerPoolPolicy,
-)
-from src.contracts.publisher_inventory import PublisherInventorySettings
 from src.contracts.ingest import IngestSettings
 from src.contracts.publish import PublishSettings
+from src.contracts.publisher_inventory import PublisherInventorySettings
 from src.contracts.run_context import RunContext
 from src.contracts.wordpress import WordPressAuthSettings
-from src.services._config_service.identity import (
-    load_browser_download_identity as _load_browser_download_identity,
-    plan_browser_download_identity_field_upserts as _plan_browser_download_identity_field_upserts,
-    serialize_browser_download_identity as _serialize_browser_download_identity,
-)
 from src.services._config_service.app_document import (
     read_app_config_document as _read_app_config_document,
+)
+from src.services._config_service.app_document import (
     write_app_config_document as _write_app_config_document,
+)
+from src.services._config_service.identity import (
+    load_browser_download_identity as _load_browser_download_identity,
+)
+from src.services._config_service.identity import (
+    plan_browser_download_identity_field_upserts as _plan_browser_download_identity_field_upserts,
+)
+from src.services._config_service.identity import (
+    serialize_browser_download_identity as _serialize_browser_download_identity,
 )
 from src.services._config_service.yaml_mapping import (
     YamlMappingError,
     deep_merge_mappings,
+)
+from src.services._config_service.yaml_mapping import (
     load_yaml_mapping as _read_yaml_mapping,
+)
+from src.services._config_service.yaml_mapping import (
     parse_yaml_mapping as _parse_yaml_mapping,
 )
 from src.utils.coercion import (
     coerce_bool as _to_bool,
+)
+from src.utils.coercion import (
     coerce_extended_bool as _to_config_bool,
+)
+from src.utils.coercion import (
     coerce_float as _to_float,
+)
+from src.utils.coercion import (
     coerce_int as _to_int,
 )
 from src.utils.errors import AppError
@@ -573,6 +590,7 @@ __all__ = [
     "BrowserDownloadRequiredSelectOverrideRequest",
     "BrowserDownloadRequiredSelectOverrideResponse",
     "BrowserDownloadRouteBudget",
+    "BrowserDownloadRouteSuppressionPolicy",
     "BrowserDownloadSessionReusePolicy",
     "BrowserDownloadSettings",
     "BrowserDownloadWarmWorkerPoolPolicy",

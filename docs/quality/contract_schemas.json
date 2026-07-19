@@ -954,6 +954,36 @@
       ],
       "type": "object"
     },
+    "src.contracts._browser_download.identity.BrowserDownloadRouteSuppressionPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "minimum_sample_size": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "terminal_failure_classes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "terminal_failure_threshold": {
+          "type": "number"
+        },
+        "ttl_seconds": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
     "src.contracts._browser_download.identity.BrowserDownloadSettings": {
       "additionalProperties": false,
       "properties": {
@@ -1136,6 +1166,9 @@
         },
         "route_playbook_stale_policy": {
           "type": "string"
+        },
+        "route_suppression_policy": {
+          "$ref": "#/$defs/src.contracts._browser_download.identity.BrowserDownloadRouteSuppressionPolicy"
         },
         "run_budget_enabled": {
           "type": "boolean"
@@ -7352,6 +7385,418 @@
       ],
       "type": "object"
     },
+    "src.contracts._report_store.acquisition_resources.AcquisitionAttemptResourceRecordRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "summary": {
+          "$ref": "#/$defs/src.contracts._report_store.acquisition_resources.AcquisitionAttemptResourceSummary"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "summary"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.acquisition_resources.AcquisitionAttemptResourceRecordResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "attempt_id": {
+          "type": "string"
+        },
+        "created": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "superseded_suppression_count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "attempt_id",
+        "created"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.acquisition_resources.AcquisitionAttemptResourceSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "attempt_id": {
+          "type": "string"
+        },
+        "avoided_operations": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "browser_launches": {
+          "type": "integer"
+        },
+        "browser_model_calls": {
+          "type": "integer"
+        },
+        "browser_steps": {
+          "type": "integer"
+        },
+        "cached_input_tokens": {
+          "type": "integer"
+        },
+        "completed_at_utc": {
+          "type": "string"
+        },
+        "drive_reads": {
+          "type": "integer"
+        },
+        "drive_writes": {
+          "type": "integer"
+        },
+        "elapsed_ms": {
+          "type": "integer"
+        },
+        "estimated_cost_usd": {
+          "type": "number"
+        },
+        "incomplete_fields": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "input_tokens": {
+          "type": "integer"
+        },
+        "mailbox_reads": {
+          "type": "integer"
+        },
+        "normalized_url": {
+          "type": "string"
+        },
+        "output_tokens": {
+          "type": "integer"
+        },
+        "page_navigations": {
+          "type": "integer"
+        },
+        "publisher_id": {
+          "type": "string"
+        },
+        "retry_count": {
+          "type": "integer"
+        },
+        "revalidation_override": {
+          "type": "boolean"
+        },
+        "route_family": {
+          "type": "string"
+        },
+        "route_policy_version": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "screenshots": {
+          "type": "integer"
+        },
+        "source_identity_id": {
+          "type": "string"
+        },
+        "source_identity_status": {
+          "type": "string"
+        },
+        "source_policy_compatibility_hash": {
+          "type": "string"
+        },
+        "started_at_utc": {
+          "type": "string"
+        },
+        "terminal_outcome": {
+          "type": "string"
+        },
+        "terminal_reason": {
+          "type": "string"
+        },
+        "verified_artifact_hash": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "attempt_id",
+        "publisher_id",
+        "source_identity_id",
+        "source_identity_status",
+        "normalized_url",
+        "route_family",
+        "route_policy_version",
+        "source_policy_compatibility_hash",
+        "started_at_utc",
+        "completed_at_utc",
+        "elapsed_ms",
+        "terminal_outcome"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.acquisition_resources.AcquisitionResourceAggregate": {
+      "additionalProperties": false,
+      "properties": {
+        "avoided_browser_launches": {
+          "type": "integer"
+        },
+        "avoided_browser_model_calls": {
+          "type": "integer"
+        },
+        "browser_steps_per_verified_acquisition": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cost_per_verified_acquisition_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "estimated_cost_usd": {
+          "type": "number"
+        },
+        "incomplete_record_count": {
+          "type": "integer"
+        },
+        "median_elapsed_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "p95_elapsed_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "publisher_id": {
+          "type": "string"
+        },
+        "route_family": {
+          "type": "string"
+        },
+        "sample_size": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "success_rate": {
+          "type": "number"
+        },
+        "terminal_failure_count": {
+          "type": "integer"
+        },
+        "verified_acquisition_count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "publisher_id",
+        "route_family",
+        "sample_size",
+        "incomplete_record_count",
+        "verified_acquisition_count",
+        "success_rate",
+        "estimated_cost_usd",
+        "cost_per_verified_acquisition_usd",
+        "median_elapsed_ms",
+        "p95_elapsed_ms",
+        "browser_steps_per_verified_acquisition",
+        "terminal_failure_count",
+        "avoided_browser_launches",
+        "avoided_browser_model_calls"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.acquisition_resources.AcquisitionResourceAggregateRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "publisher_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "route_family": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.acquisition_resources.AcquisitionResourceAggregateResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "aggregates": {
+          "items": {
+            "$ref": "#/$defs/src.contracts._report_store.acquisition_resources.AcquisitionResourceAggregate"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.acquisition_resources.AcquisitionRouteSuppressionRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "minimum_sample_size": {
+          "type": "integer"
+        },
+        "normalized_url": {
+          "type": "string"
+        },
+        "now_utc": {
+          "type": "string"
+        },
+        "policy_version": {
+          "type": "string"
+        },
+        "publisher_id": {
+          "type": "string"
+        },
+        "revalidation_override": {
+          "type": "boolean"
+        },
+        "route_family": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_policy_compatibility_hash": {
+          "type": "string"
+        },
+        "terminal_failure_classes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "terminal_failure_threshold": {
+          "type": "number"
+        },
+        "ttl_seconds": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "normalized_url",
+        "publisher_id",
+        "route_family",
+        "policy_version",
+        "source_policy_compatibility_hash",
+        "enabled",
+        "minimum_sample_size",
+        "terminal_failure_threshold",
+        "terminal_failure_classes",
+        "ttl_seconds"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.acquisition_resources.AcquisitionRouteSuppressionResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "decision_id": {
+          "type": "string"
+        },
+        "expires_at_utc": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "sample_size": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "suppressed": {
+          "type": "boolean"
+        },
+        "terminal_failure_count": {
+          "type": "integer"
+        },
+        "terminal_failure_rate": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "schema_version",
+        "suppressed"
+      ],
+      "type": "object"
+    },
     "src.contracts._report_store.download_routes.PublisherDownloadRouteGetRequest": {
       "additionalProperties": false,
       "properties": {
@@ -10609,6 +11054,46 @@
         "email_required_count",
         "failed_count"
       ],
+      "type": "object"
+    },
+    "src.contracts.acquisition_handoff.VerifiedAcquisitionIngestHandoffRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "acquisition_route": {
+          "type": "string"
+        },
+        "expected_content_hash": {
+          "type": "string"
+        },
+        "processing_version": {
+          "type": "string"
+        },
+        "publisher_id": {
+          "type": "string"
+        },
+        "publisher_name": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "report_title": {
+          "type": "string"
+        },
+        "reports_db": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_artifact_reference": {
+          "type": "string"
+        },
+        "source_url": {
+          "type": "string"
+        }
+      },
+      "required": [],
       "type": "object"
     },
     "src.contracts.analysis_family.AnalysisFamilyStatus": {
@@ -19541,6 +20026,12 @@
     "src.contracts.ingest.IngestOutcome": {
       "additionalProperties": false,
       "properties": {
+        "actual_prompt_families": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "doc_map_summary": {
           "anyOf": [
             {
@@ -21132,6 +21623,69 @@
       ],
       "type": "object"
     },
+    "src.contracts.llm_usage.LLMUsageRunSummaryRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "run_id"
+      ],
+      "type": "object"
+    },
+    "src.contracts.llm_usage.LLMUsageRunSummaryResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "cached_input_tokens": {
+          "type": "integer"
+        },
+        "call_count": {
+          "type": "integer"
+        },
+        "estimated_cost_usd": {
+          "type": "number"
+        },
+        "input_tokens": {
+          "type": "integer"
+        },
+        "output_tokens": {
+          "type": "integer"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "run_id",
+        "action",
+        "call_count",
+        "input_tokens",
+        "cached_input_tokens",
+        "output_tokens",
+        "estimated_cost_usd"
+      ],
+      "type": "object"
+    },
     "src.contracts.llm_usage.LLMUsageSpendGuardrailRequest": {
       "additionalProperties": false,
       "properties": {
@@ -22185,6 +22739,12 @@
           },
           "type": "array"
         },
+        "actual_prompt_families": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "actual_side_effects": {
           "items": {
             "type": "string"
@@ -22295,6 +22855,12 @@
           },
           "type": "array"
         },
+        "required_prompt_families": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "required_stages": {
           "items": {
             "type": "string"
@@ -22302,6 +22868,12 @@
           "type": "array"
         },
         "reusable_artifacts": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "reused_prompt_families": {
           "items": {
             "type": "string"
           },
@@ -25199,6 +25771,198 @@
         "require_publish",
         "require_browser",
         "require_live_endpoints"
+      ],
+      "type": "object"
+    },
+    "src.contracts.prompt_family_materialization.PromptFamilyMaterialization": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_id": {
+          "type": "string"
+        },
+        "created_at_utc": {
+          "type": "string"
+        },
+        "direct_dependency_artifact_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "direct_dependency_hashes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "evidence_set_hash": {
+          "type": "string"
+        },
+        "family_id": {
+          "type": "string"
+        },
+        "family_schema_version": {
+          "type": "string"
+        },
+        "model_name": {
+          "type": "string"
+        },
+        "output_hash": {
+          "type": "string"
+        },
+        "output_reference": {
+          "type": "string"
+        },
+        "processing_version": {
+          "type": "string"
+        },
+        "prompt_policy_version": {
+          "type": "string"
+        },
+        "routing_policy_version": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "superseded_materialization_reference": {
+          "type": "string"
+        },
+        "system_prompt_hash": {
+          "type": "string"
+        },
+        "user_prompt_hash": {
+          "type": "string"
+        },
+        "validation_status": {
+          "type": "string"
+        },
+        "validator_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "family_id",
+        "family_schema_version",
+        "processing_version",
+        "system_prompt_hash",
+        "user_prompt_hash",
+        "prompt_policy_version",
+        "model_name",
+        "routing_policy_version",
+        "validator_version",
+        "direct_dependency_artifact_ids",
+        "direct_dependency_hashes",
+        "evidence_set_hash",
+        "output_reference",
+        "output_hash",
+        "validation_status",
+        "created_at_utc",
+        "superseded_materialization_reference",
+        "artifact_id"
+      ],
+      "type": "object"
+    },
+    "src.contracts.prompt_family_materialization.PromptFamilyMaterializationRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "direct_dependency_artifact_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "direct_dependency_hashes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "evidence_set_hash": {
+          "type": "string"
+        },
+        "family_id": {
+          "type": "string"
+        },
+        "family_schema_version": {
+          "type": "string"
+        },
+        "model_name": {
+          "type": "string"
+        },
+        "output_dir": {
+          "type": "string"
+        },
+        "output_payload": {},
+        "processing_version": {
+          "type": "string"
+        },
+        "prompt_policy_version": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "report_slug": {
+          "type": "string"
+        },
+        "routing_policy_version": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "system_prompt_hash": {
+          "type": "string"
+        },
+        "user_prompt_hash": {
+          "type": "string"
+        },
+        "validation_status": {
+          "type": "string"
+        },
+        "validator_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "output_dir",
+        "report_id",
+        "report_slug",
+        "source_id",
+        "family_id",
+        "family_schema_version",
+        "processing_version",
+        "output_payload"
+      ],
+      "type": "object"
+    },
+    "src.contracts.prompt_family_materialization.PromptFamilyMaterializationResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "created": {
+          "type": "boolean"
+        },
+        "materialization": {
+          "$ref": "#/$defs/src.contracts.prompt_family_materialization.PromptFamilyMaterialization"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "materialization",
+        "created"
       ],
       "type": "object"
     },
@@ -43504,6 +44268,52 @@
         "updated_at_utc",
         "updated_by"
       ],
+      "type": "object"
+    },
+    "src.contracts.workflow_queue.WorkflowQueueEvidenceSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "approval_count": {
+          "type": "integer"
+        },
+        "external_effect_count": {
+          "type": "integer"
+        },
+        "job_count": {
+          "type": "integer"
+        },
+        "outbox_status_counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "publication_readiness_counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "state_schema_version": {
+          "type": "integer"
+        },
+        "status_counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "transition_counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
+        }
+      },
+      "required": [],
       "type": "object"
     },
     "src.contracts.workflow_queue.WorkflowQueueHealth": {

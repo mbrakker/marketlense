@@ -258,8 +258,7 @@ def _invoke_report_fn(
     if supports_stop_boundary:
         arguments["stop_after_stage"] = stop_after_stage
     supports_projection_only = any(
-        parameter.kind == Parameter.VAR_KEYWORD
-        or parameter.name == "projection_only"
+        parameter.kind == Parameter.VAR_KEYWORD or parameter.name == "projection_only"
         for parameter in parameters
     )
     if supports_projection_only:
@@ -1025,6 +1024,7 @@ def run_report_pipeline(
                 actual_stages=list(minimal_plan.required_stages),
                 actual_external_calls=list(minimal_plan.required_external_calls),
                 actual_side_effects=list(minimal_plan.expected_side_effects),
+                actual_prompt_families=list(outcome.actual_prompt_families),
                 duration_ms=int((time.perf_counter() - execution_started_at) * 1000),
                 reusable_artifact_ids=list(minimal_plan.reusable_artifacts),
                 execution_status=outcome.status,

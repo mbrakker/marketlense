@@ -534,6 +534,23 @@ class WorkflowQueueHealth:
 
 
 @dataclass(frozen=True)
+class WorkflowQueueEvidenceSummary:
+    """Bounded scalar queue state used by release-evidence validation."""
+
+    schema_version: str = field(
+        default="1.0", metadata={"doc": "Contract schema version."}
+    )
+    state_schema_version: int = 0
+    job_count: int = 0
+    transition_counts: dict[str, int] = field(default_factory=dict)
+    status_counts: dict[str, int] = field(default_factory=dict)
+    outbox_status_counts: dict[str, int] = field(default_factory=dict)
+    publication_readiness_counts: dict[str, int] = field(default_factory=dict)
+    approval_count: int = 0
+    external_effect_count: int = 0
+
+
+@dataclass(frozen=True)
 class PublicationReadinessRecord:
     schema_version: str = field(metadata={"doc": "Contract schema version."})
     package_checksum: str

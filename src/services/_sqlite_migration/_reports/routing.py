@@ -3,16 +3,19 @@ from __future__ import annotations
 """Routing ownership for reports database migrations."""
 
 import sqlite3
-from ..runner import (
-    _add_column_if_missing,
-    _fetch_columns,
-)
 
 from src.services._sqlite_migration._reports.schema import (
+    _ACQUISITION_ATTEMPT_RESOURCES_TABLE_SQL,
+    _ACQUISITION_ROUTE_SUPPRESSIONS_TABLE_SQL,
     _DOWNLOAD_ROUTE_HISTORY_TABLE_SQL,
     _INVENTORY_RECOVERY_CACHE_TABLE_SQL,
     _INVENTORY_ROUTE_HISTORY_TABLE_SQL,
     _PRIVATE_API_CANDIDATE_TABLE_SQL,
+)
+
+from ..runner import (
+    _add_column_if_missing,
+    _fetch_columns,
 )
 
 
@@ -196,6 +199,35 @@ def _reports_db_012_create_private_api_candidate_ledger(
         """
         CREATE INDEX IF NOT EXISTS idx_private_api_candidates_publisher_host
         ON publisher_private_api_candidates(publisher_host)
+        """
+    )
+
+
+def _reports_db_021_create_acquisition_resource_telemetry(
+    conn: sqlite3.Connection,
+) -> None:
+    """Create scalar route-resource and reversible suppression records."""
+    conn.execute(_ACQUISITION_ATTEMPT_RESOURCES_TABLE_SQL)
+    conn.execute(_ACQUISITION_ROUTE_SUPPRESSIONS_TABLE_SQL)
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_acquisition_resources_route
+        ON acquisition_attempt_resources(normalized_url, publisher_id, route_family)
+        """
+    )
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_acquisition_resources_completed
+        ON acquisition_attempt_resources(completed_at_utc)
+        """
+    )
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_acquisition_suppressions_active
+        ON acquisition_route_suppressions(
+            normalized_url, publisher_id, route_family,
+            source_policy_compatibility_hash, status, expires_at_utc
+        )
         """
     )
     conn.execute(

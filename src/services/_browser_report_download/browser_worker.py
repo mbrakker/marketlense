@@ -16,6 +16,7 @@ from src.contracts.browser_download import (
     BrowserDownloadPublisherOverride,
     BrowserDownloadRouteBudget,
     BrowserDownloadRouteStep,
+    BrowserDownloadRouteSuppressionPolicy,
     BrowserDownloadSessionReusePolicy,
     BrowserDownloadSettings,
     BrowserDownloadWarmWorkerPoolPolicy,
@@ -102,6 +103,7 @@ def _build_settings(payload: dict) -> BrowserDownloadSettings:
     session_reuse_payload = payload.get("session_reuse_policy")
     warm_worker_pool_payload = payload.get("warm_worker_pool_policy")
     captcha_handoff_payload = payload.get("captcha_handoff_policy")
+    route_suppression_payload = payload.get("route_suppression_policy")
     route_budgets_payload = payload.get("route_budgets")
     model_pricing_payload = payload.get("model_pricing")
     session_reuse_policy = _build_session_reuse_policy(
@@ -159,6 +161,11 @@ def _build_settings(payload: dict) -> BrowserDownloadSettings:
         captcha_handoff_policy=_build_captcha_handoff_policy(
             captcha_handoff_payload if isinstance(captcha_handoff_payload, dict) else {}
         ),
+        route_suppression_policy=_build_route_suppression_policy(
+            route_suppression_payload
+            if isinstance(route_suppression_payload, dict)
+            else {}
+        ),
         route_budgets=[
             _build_route_budget(item)
             for item in route_budgets_payload
@@ -193,6 +200,32 @@ def _build_captcha_handoff_policy(payload: dict) -> BrowserDownloadCaptchaHandof
         schema_version=str(payload.get("schema_version", "1.0")),
         enabled=bool(payload.get("enabled", False)),
         timeout_seconds=max(float(payload.get("timeout_seconds", 120.0)), 1.0),
+    )
+
+
+def _build_route_suppression_policy(
+    payload: dict,
+) -> BrowserDownloadRouteSuppressionPolicy:
+    classes = tuple(
+        sorted(
+            {
+                str(item).strip()
+                for item in payload.get("terminal_failure_classes", [])
+                if str(item).strip()
+            }
+            or {"blocked_captcha", "blocked_email_domain"}
+        )
+    )
+    return BrowserDownloadRouteSuppressionPolicy(
+        schema_version=str(payload.get("schema_version", "1.0")),
+        enabled=bool(payload.get("enabled", True)),
+        minimum_sample_size=max(int(payload.get("minimum_sample_size", 3) or 3), 3),
+        terminal_failure_threshold=min(
+            1.0,
+            max(0.0, float(payload.get("terminal_failure_threshold", 1.0) or 1.0)),
+        ),
+        ttl_seconds=max(int(payload.get("ttl_seconds", 604800) or 604800), 1),
+        terminal_failure_classes=classes,
     )
 
 

@@ -328,3 +328,20 @@ def _reports_db_020_expand_execution_plan_audit(conn: sqlite3.Connection) -> Non
             column_name=column_name,
             column_type=column_type,
         )
+
+
+def _reports_db_022_add_execution_plan_prompt_family_reconciliation(
+    conn: sqlite3.Connection,
+) -> None:
+    """Persist exact planned and observed prompt-family sets for enforced runs."""
+    conn.execute(_ARTIFACT_EXECUTION_PLAN_RUNS_TABLE_SQL)
+    for column_name, column_type in (
+        ("planned_prompt_families_json", "TEXT NOT NULL DEFAULT '[]'"),
+        ("actual_prompt_families_json", "TEXT NOT NULL DEFAULT '[]'"),
+    ):
+        _add_column_if_missing(
+            conn,
+            table_name="artifact_execution_plan_runs",
+            column_name=column_name,
+            column_type=column_type,
+        )

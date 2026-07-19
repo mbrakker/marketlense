@@ -154,6 +154,15 @@ def build_current_report_execution_compatibility(
         "report_vs/artifacts/insights_candidates",
         "report_vs/artifacts/insights_final",
         "report_vs/artifacts/cover_semantics",
+        "report_vs/evidence_packs/contradictions",
+        "report_vs/evidence_packs/findings",
+        "report_vs/evidence_packs/key_metrics",
+        "report_vs/evidence_packs/limitations",
+        "report_vs/evidence_packs/methods",
+        "report_vs/evidence_packs/quote_candidates",
+        "report_vs/evidence_packs/recommendations",
+        "report_vs/evidence_packs/risk_register",
+        "report_vs/evidence_packs/scope",
     ):
         prompt_set = prompt_service.load_prompt_set(
             PromptLoadRequest(
@@ -210,6 +219,8 @@ def build_current_report_execution_compatibility(
         validator_versions={
             "validation": ("validation:v1|" + PUBLIC_EDITORIAL_VALIDATOR_VERSION),
             "public_editorial_quality": PUBLIC_EDITORIAL_VALIDATOR_VERSION,
+            "report_vs/validate/grounding": "validation:v1",
+            "report_vs/validate/semantic": "validation:v1",
         },
         crop_profiles={"*": crop_profile},
         template_render_versions={
@@ -533,8 +544,8 @@ def record_minimal_execution_plan(
             """INSERT INTO artifact_execution_plan_runs(
             plan_hash,report_id,execution_intent,execution_mode,planned_stages_json,
             planned_external_calls_json,planned_side_effects_json,
-            reusable_artifact_ids_json,created_at_utc)
-            VALUES(?,?,?,?,?,?,?, ?,strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+            planned_prompt_families_json,reusable_artifact_ids_json,created_at_utc)
+            VALUES(?,?,?,?,?,?,?,?,?,strftime('%Y-%m-%dT%H:%M:%fZ','now'))
             ON CONFLICT(plan_hash) DO NOTHING""",
             (
                 plan.plan_hash,
@@ -544,6 +555,7 @@ def record_minimal_execution_plan(
                 _canonical_json(plan.required_stages),
                 _canonical_json(plan.required_external_calls),
                 _canonical_json(plan.expected_side_effects),
+                _canonical_json(plan.required_prompt_families),
                 _canonical_json(plan.reusable_artifacts),
             ),
         )
@@ -555,13 +567,14 @@ def record_minimal_execution_plan_result(
     with _metadata_conn(request.db_path, ctx) as conn:
         row = conn.execute(
             """SELECT planned_stages_json, planned_external_calls_json,
-            planned_side_effects_json
+            planned_side_effects_json, planned_prompt_families_json
             FROM artifact_execution_plan_runs WHERE plan_hash=?""",
             (request.plan_hash,),
         ).fetchone()
         planned_stages = json.loads(str(row[0])) if row else []
         planned_calls = json.loads(str(row[1])) if row else []
         planned_side_effects = json.loads(str(row[2])) if row else []
+        planned_prompt_families = json.loads(str(row[3])) if row else []
         divergence = {
             "unplanned_stages": sorted(
                 set(request.actual_stages) - set(planned_stages)
@@ -581,6 +594,12 @@ def record_minimal_execution_plan_result(
             "avoided_planned_side_effects": sorted(
                 set(planned_side_effects) - set(request.actual_side_effects)
             ),
+            "unplanned_prompt_families": sorted(
+                set(request.actual_prompt_families) - set(planned_prompt_families)
+            ),
+            "missing_planned_prompt_families": sorted(
+                set(planned_prompt_families) - set(request.actual_prompt_families)
+            ),
             "duration_ms": max(0, int(request.duration_ms)),
             "actual_cost_usd": request.actual_cost_usd,
             "estimated_avoided_cost_usd": request.estimated_avoided_cost_usd,
@@ -592,19 +611,22 @@ def record_minimal_execution_plan_result(
                 "unplanned_stages",
                 "unplanned_external_calls",
                 "unplanned_side_effects",
+                "unplanned_prompt_families",
+                "missing_planned_prompt_families",
             )
         )
         divergence["reconciliation_status"] = "diverged" if diverged else "matched"
         conn.execute(
             """UPDATE artifact_execution_plan_runs SET actual_stages_json=?,
             actual_external_calls_json=?,actual_side_effects_json=?,duration_ms=?,
-            actual_cost_usd=?,estimated_avoided_cost_usd=?,execution_status=?,divergence_json=?,
+            actual_prompt_families_json=?,actual_cost_usd=?,estimated_avoided_cost_usd=?,execution_status=?,divergence_json=?,
             completed_at_utc=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE plan_hash=?""",
             (
                 _canonical_json(sorted(set(request.actual_stages))),
                 _canonical_json(sorted(set(request.actual_external_calls))),
                 _canonical_json(sorted(set(request.actual_side_effects))),
                 max(0, int(request.duration_ms)),
+                _canonical_json(sorted(set(request.actual_prompt_families))),
                 request.actual_cost_usd,
                 request.estimated_avoided_cost_usd,
                 "diverged" if diverged else request.execution_status,

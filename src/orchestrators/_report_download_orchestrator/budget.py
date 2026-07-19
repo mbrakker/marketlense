@@ -23,9 +23,40 @@ def build_report_download_budget(
     request: "ReportDownloadOrchestratorRequest", ctx: RunContext
 ) -> RunBudget | None:
     """Build the one configured acquisition budget shared by browser and Drive work."""
-    settings = request.settings
-    if not settings.run_budget_enabled:
+    if not request.settings.run_budget_enabled:
         return None
+    return _configured_report_download_budget(request, ctx)
+
+
+def build_report_download_telemetry_budget(
+    request: "ReportDownloadOrchestratorRequest", ctx: RunContext
+) -> RunBudget:
+    """Build the configured ledger scope for mailbox attribution.
+
+    Mailbox preflight is a real external read even when enforcement is disabled.
+    It must therefore use the same durable run ledger as the rest of report
+    acquisition instead of the mailbox service's fallback local ledger.
+    """
+    if request.settings.run_budget_enabled:
+        return _configured_report_download_budget(request, ctx)
+    return RunBudget(
+        schema_version="1.0",
+        run_id=ctx.run_id,
+        publisher_name=request.publisher_name,
+        usage_db_path=request.settings.usage_db_path,
+        day_utc=datetime.now(timezone.utc).date().isoformat(),
+        policy_version=getattr(
+            request.settings, "run_budget_policy_version", "budget-authority-v2"
+        ),
+        enabled_effect_kinds=("mailbox_read",),
+    )
+
+
+def _configured_report_download_budget(
+    request: "ReportDownloadOrchestratorRequest", ctx: RunContext
+) -> RunBudget:
+    """Build the configured enforced budget for one report-acquisition run."""
+    settings = request.settings
     return RunBudget(
         schema_version="1.0",
         run_id=ctx.run_id,
@@ -63,6 +94,28 @@ def read_report_download_budget_usage(
     return read_run_budget_usage(
         RunBudgetUsageReadRequest(schema_version="1.0", budget=budget), ctx
     ).usage
+
+
+def read_report_download_run_usage(
+    *,
+    request: "ReportDownloadOrchestratorRequest",
+    ctx: RunContext,
+) -> RunBudgetUsage:
+    """Read the exact run scope for telemetry without enabling budget enforcement."""
+    settings = request.settings
+    budget = RunBudget(
+        schema_version="1.0",
+        run_id=ctx.run_id,
+        publisher_name=request.publisher_name,
+        usage_db_path=settings.usage_db_path,
+        day_utc=datetime.now(timezone.utc).date().isoformat(),
+        policy_version=getattr(
+            settings, "run_budget_policy_version", "budget-authority-v2"
+        ),
+    )
+    return read_run_budget_usage(
+        RunBudgetUsageReadRequest(schema_version="1.0", budget=budget), ctx
+    ).run_usage
 
 
 def record_report_download_budget_event(

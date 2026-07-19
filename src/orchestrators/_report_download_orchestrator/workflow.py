@@ -17,6 +17,7 @@ from src.contracts.browser_download import (
 )
 from src.contracts.mailbox_acquisition import MailboxSearchRequest
 from src.contracts.report_store import (
+    AcquisitionRouteSuppressionRequest,
     PublisherDownloadRouteGetRequest,
     PublisherDownloadRouteResponse,
 )
@@ -33,6 +34,7 @@ from src.contracts.state import (
 from src.contracts.workflow_control import WorkflowControlObservation
 from src.orchestrators._report_download_orchestrator.budget import (
     build_report_download_budget,
+    build_report_download_telemetry_budget,
     read_report_download_budget_usage,
 )
 from src.orchestrators._report_download_orchestrator.candidate_readiness import (
@@ -51,10 +53,6 @@ from src.orchestrators._report_download_orchestrator.failure_forensics import (
     terminal_evidence_from_error_context,
     with_failure_forensics_context,
 )
-from src.services.llm_usage_ledger_service import (
-    evaluate_budget_request,
-    finalize_budget_side_effect,
-)
 from src.orchestrators._report_download_orchestrator.persistence import (
     record_downloaded_source,
     record_identity_update,
@@ -65,6 +63,10 @@ from src.orchestrators._report_download_orchestrator.promotions import (
     evaluate_private_api_playbook_auto_promotion,
     evaluate_route_playbook_promotion,
 )
+from src.orchestrators._report_download_orchestrator.resource_telemetry import (
+    record_acquisition_resource_summary,
+    route_suppression_policy_hash,
+)
 from src.orchestrators._report_download_orchestrator.route_planner import (
     plan_report_download_routes,
 )
@@ -73,6 +75,10 @@ from src.orchestrators.retry_orchestrator import (
     RetryPolicy,
     is_retryable_app_error,
     run_with_retry,
+)
+from src.services.llm_usage_ledger_service import (
+    evaluate_budget_request,
+    finalize_budget_side_effect,
 )
 from src.utils.clock import utc_now_seconds_z
 from src.utils.errors import AppError
@@ -90,6 +96,7 @@ def run_report_download(
 ) -> ReportDownloadOrchestratorResult:
     deps = dependencies or ReportDownloadDependencies.default()
     run_started_at_utc = utc_now_seconds_z()
+    run_started_monotonic = time.monotonic()
     normalized_url = normalize_url(request.url)
     logger.info(
         log_event(
@@ -208,6 +215,82 @@ def run_report_download(
         ),
         ctx,
     )
+    route_suppression_policy = request.settings.route_suppression_policy
+    suppression_hash = route_suppression_policy_hash(request)
+    executable_steps: list[ReportDownloadRoutePlanStep] = []
+    suppressed_steps: list[tuple[ReportDownloadRoutePlanStep, str]] = []
+    for planned_step in plan.steps:
+        if not planned_step.route_family.startswith("browser_"):
+            executable_steps.append(planned_step)
+            continue
+        suppression = deps.evaluate_acquisition_route_suppression(
+            AcquisitionRouteSuppressionRequest(
+                schema_version="1.0",
+                db_path=request.reports_db,
+                normalized_url=normalized_url,
+                publisher_id=str(request.publisher_name or "").strip(),
+                route_family=planned_step.route_family,
+                policy_version=route_suppression_policy.schema_version,
+                source_policy_compatibility_hash=suppression_hash,
+                enabled=route_suppression_policy.enabled,
+                minimum_sample_size=route_suppression_policy.minimum_sample_size,
+                terminal_failure_threshold=(
+                    route_suppression_policy.terminal_failure_threshold
+                ),
+                terminal_failure_classes=(
+                    route_suppression_policy.terminal_failure_classes
+                ),
+                ttl_seconds=route_suppression_policy.ttl_seconds,
+                revalidation_override=request.revalidate_route_policy,
+            ),
+            ctx,
+        )
+        if suppression.suppressed:
+            suppressed_steps.append((planned_step, suppression.reason))
+            logger.info(
+                log_event(
+                    ctx,
+                    role="orchestrator",
+                    event="report_download_route_suppressed",
+                    module=logger.name,
+                    fields={
+                        "normalized_url": normalized_url,
+                        "route_family": planned_step.route_family,
+                        "decision_id": suppression.decision_id,
+                        "reason": suppression.reason,
+                        "sample_size": suppression.sample_size,
+                        "terminal_failure_count": (suppression.terminal_failure_count),
+                        "terminal_failure_rate": suppression.terminal_failure_rate,
+                        "expires_at_utc": suppression.expires_at_utc,
+                        "avoided_browser_launches": 1,
+                        "avoided_browser_model_calls": 1,
+                    },
+                )
+            )
+        else:
+            executable_steps.append(planned_step)
+    if not executable_steps:
+        suppressed_step, suppression_reason = suppressed_steps[0]
+        record_acquisition_resource_summary(
+            request=request,
+            ctx=ctx,
+            dependencies=deps,
+            started_at_utc=run_started_at_utc,
+            started_monotonic=run_started_monotonic,
+            route_family=suppressed_step.route_family,
+            terminal_outcome="suppressed",
+            terminal_reason=suppression_reason,
+            avoided_operations=("browser_launch", "browser_model_call"),
+        )
+        raise AppError(
+            code="report_download_route_suppressed",
+            message="All planned browser routes were suppressed by terminal-route evidence",
+            retryable=False,
+            context={
+                "route_family": suppressed_step.route_family,
+                "reason": suppression_reason,
+            },
+        )
     if _should_avoid_mailbox_preflight_for_remembered_blocker(
         remembered_route,
         ttl_seconds=request.settings.route_memory_ttl_seconds,
@@ -234,11 +317,13 @@ def run_report_download(
             normalized_url=normalized_url,
             ctx=ctx,
             dependencies=deps,
-            route_families=[step.route_family for step in plan.steps],
+            route_families=[step.route_family for step in executable_steps],
         )
     result: BrowserReportDownloadResult | None = None
     last_retryable_error: AppError | None = None
-    for planned_step in plan.steps:
+    last_planned_step: ReportDownloadRoutePlanStep | None = None
+    for planned_step in executable_steps:
+        last_planned_step = planned_step
         try:
             result = _run_download_attempt(
                 request=request,
@@ -292,6 +377,18 @@ def run_report_download(
                 )
             )
             if not attempt_retryable:
+                record_acquisition_resource_summary(
+                    request=request,
+                    ctx=ctx,
+                    dependencies=deps,
+                    started_at_utc=run_started_at_utc,
+                    started_monotonic=run_started_monotonic,
+                    route_family=planned_step.route_family,
+                    terminal_outcome="failed",
+                    terminal_reason=str(
+                        (exc.context or {}).get("blocked_reason") or exc.code
+                    ),
+                )
                 record_workflow_failure(
                     state_db=request.settings.state_db,
                     workflow="report_download",
@@ -306,6 +403,18 @@ def run_report_download(
                 raise
             last_retryable_error = exc
             if not planned_step.fallback_on_retryable_error:
+                record_acquisition_resource_summary(
+                    request=request,
+                    ctx=ctx,
+                    dependencies=deps,
+                    started_at_utc=run_started_at_utc,
+                    started_monotonic=run_started_monotonic,
+                    route_family=planned_step.route_family,
+                    terminal_outcome="failed",
+                    terminal_reason=str(
+                        (exc.context or {}).get("blocked_reason") or exc.code
+                    ),
+                )
                 record_workflow_failure(
                     state_db=request.settings.state_db,
                     workflow="report_download",
@@ -320,6 +429,21 @@ def run_report_download(
                 raise
     if result is None:
         if last_retryable_error is not None:
+            record_acquisition_resource_summary(
+                request=request,
+                ctx=ctx,
+                dependencies=deps,
+                started_at_utc=run_started_at_utc,
+                started_monotonic=run_started_monotonic,
+                route_family=(
+                    last_planned_step.route_family if last_planned_step else "unknown"
+                ),
+                terminal_outcome="failed",
+                terminal_reason=str(
+                    (last_retryable_error.context or {}).get("blocked_reason")
+                    or last_retryable_error.code
+                ),
+            )
             record_workflow_failure(
                 state_db=request.settings.state_db,
                 workflow="report_download",
@@ -337,6 +461,18 @@ def run_report_download(
             message="The report download route plan completed without a result",
             retryable=True,
             context={"normalized_url": normalized_url},
+        )
+        record_acquisition_resource_summary(
+            request=request,
+            ctx=ctx,
+            dependencies=deps,
+            started_at_utc=run_started_at_utc,
+            started_monotonic=run_started_monotonic,
+            route_family=(
+                last_planned_step.route_family if last_planned_step else "unknown"
+            ),
+            terminal_outcome="failed",
+            terminal_reason=error.code,
         )
         record_workflow_failure(
             state_db=request.settings.state_db,
@@ -385,7 +521,7 @@ def run_report_download(
             },
         )
     )
-    record_downloaded_source(
+    source_identity_id, verified_artifact_hash = record_downloaded_source(
         request=request,
         result=result,
         policy=policy,
@@ -419,6 +555,22 @@ def run_report_download(
         ctx=ctx,
         dependencies=deps,
         preflighted_folder_id=preflighted_drive_folder_id,
+    )
+    record_acquisition_resource_summary(
+        request=request,
+        ctx=ctx,
+        dependencies=deps,
+        started_at_utc=run_started_at_utc,
+        started_monotonic=run_started_monotonic,
+        route_family=result.route_family,
+        terminal_outcome="success",
+        terminal_reason=(
+            "verified" if result.route_status == "verified" else result.route_status
+        ),
+        result=result,
+        source_identity_id=source_identity_id,
+        verified_artifact_hash=verified_artifact_hash,
+        drive_uploads=drive_uploads,
     )
     response = ReportDownloadOrchestratorResult(
         schema_version="1.0",
@@ -996,6 +1148,7 @@ def preflight_mailbox_before_email_form(
             ),
             publisher_name=_mail_delivery_publisher_name(request),
             query_terms=[],
+            run_budget=build_report_download_telemetry_budget(request, ctx),
         ),
         ctx,
     )

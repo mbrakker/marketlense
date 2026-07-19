@@ -1,11 +1,11 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
-from ._shared import *  # noqa: F401,F403
-
 from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
     _build_regeneration_plan,
 )
+
+from ._shared import *  # noqa: F401,F403
 
 
 def test_build_regeneration_plan_skips_info_and_orders_errors_first():
@@ -102,6 +102,27 @@ def test_run_report_analysis_rejects_unsupported_repair_target(tmp_path):
     assert excinfo.value.code == "regeneration_repair_target_unsupported"
     assert excinfo.value.retryable is False
 
+
+def test_build_regeneration_plan_maps_public_artifact_copy_to_its_family():
+    plan = _build_regeneration_plan(
+        issues=[
+            ValidationIssue(
+                schema_version="1.0",
+                message="Public copy needs a grounded repair",
+                severity="error",
+                affected_section="key_figures:0.takeaway",
+                rule_id="public_editorial_quality.generic_copy",
+                repair_target="artifact_copy",
+            )
+        ],
+        artifacts={},
+        broad_retry_available=True,
+    )
+
+    assert plan.mode == "targeted"
+    assert [target.target_section for target in plan.targets] == ["insights_bundle"]
+
+
 def test_run_report_analysis_snapshot_preserves_internal_payload_metadata(tmp_path):
     runtime = _runtime(tmp_path)
     source = _source(runtime)
@@ -171,8 +192,10 @@ def test_run_report_analysis_snapshot_preserves_internal_payload_metadata(tmp_pa
     assert snapshot["_evidence_packs"]["doc_map"].endswith("doc_map.json")
     assert snapshot["_evidence_packs"]["validation"].endswith("validation.json")
 
+
 __all__ = [
     "test_build_regeneration_plan_skips_info_and_orders_errors_first",
+    "test_build_regeneration_plan_maps_public_artifact_copy_to_its_family",
     "test_run_report_analysis_rejects_unsupported_repair_target",
     "test_run_report_analysis_snapshot_preserves_internal_payload_metadata",
 ]

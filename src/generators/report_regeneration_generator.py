@@ -13,6 +13,13 @@ from src.contracts.regeneration import (
 )
 from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationRequest
+from src.generators.artifact_generator import (
+    apply_artifact_family_policy,
+    assemble_artifacts_payload,
+    build_toc_artifacts,
+    render_artifact_json_model,
+    store_artifacts_payload,
+)
 from src.generators.artifact_normalization import (
     artifact_base_variables,
     artifact_quote_candidates,
@@ -27,13 +34,6 @@ from src.generators.artifact_normalization import (
     normalize_expert_domain,
     pad_artifact_insights,
     strip_artifact_inline_reference_ids,
-)
-from src.generators.artifact_generator import (
-    apply_artifact_family_policy,
-    assemble_artifacts_payload,
-    build_toc_artifacts,
-    render_artifact_json_model,
-    store_artifacts_payload,
 )
 from src.generators.validation.evidence import retrieve_evidence_windows
 from src.generators.validation.preparation import prepare_validation_inputs
@@ -57,6 +57,7 @@ class _RegenerationState:
     insights_candidates: List[Dict[str, Any]]
     insights_final: List[Dict[str, Any]]
     quotes_final: List[Dict[str, Any]]
+    cover_semantics: Dict[str, Any]
     expert_comment: str
     linkedin_post: str
     source_status: Dict[str, Any]
@@ -233,11 +234,6 @@ def regenerate_artifacts(
         expert_comment=state.expert_comment,
         linkedin_post=state.linkedin_post,
     )
-    raw_cover_semantics = safe_artifacts.get("cover_semantics")
-    cover_semantics = (
-        dict(raw_cover_semantics) if isinstance(raw_cover_semantics, dict) else {}
-    )
-
     updated_artifacts = assemble_artifacts_payload(
         report_id=request.report_id,
         report_name=request.report_name,
@@ -249,7 +245,7 @@ def regenerate_artifacts(
             "toc_topics_expanded": state.topic_briefs,
         },
         summary=summary,
-        cover_semantics=cover_semantics,
+        cover_semantics=state.cover_semantics,
         insights_candidates=insights_candidates,
         insights_final=insights_final,
         quotes_final=quotes_final,
@@ -469,6 +465,7 @@ def _artifact_state(
     insights_candidates: List[Dict[str, Any]],
     insights_final: List[Dict[str, Any]],
     quotes_final: List[Dict[str, Any]],
+    cover_semantics: Dict[str, Any],
     expert_comment: str,
     linkedin_post: str,
     source_status: Dict[str, Any],
@@ -482,6 +479,7 @@ def _artifact_state(
         "insights_candidates": deepcopy(insights_candidates),
         "insights_final": deepcopy(insights_final),
         "quotes_final": deepcopy(quotes_final),
+        "cover_semantics": deepcopy(cover_semantics),
         "expert_comment": expert_comment,
         "linkedin_post": linkedin_post,
         "source_status": deepcopy(source_status),
@@ -497,6 +495,7 @@ def _artifact_state_from_state(state: _RegenerationState) -> Dict[str, Any]:
         insights_candidates=state.insights_candidates,
         insights_final=state.insights_final,
         quotes_final=state.quotes_final,
+        cover_semantics=state.cover_semantics,
         expert_comment=state.expert_comment,
         linkedin_post=state.linkedin_post,
         source_status=state.source_status,
@@ -588,6 +587,7 @@ def _build_regeneration_state(
         insights_candidates=_copy_list(safe_artifacts.get("insights_candidates")),
         insights_final=_copy_list(safe_artifacts.get("insights_final")),
         quotes_final=_copy_list(safe_artifacts.get("quotes_final")),
+        cover_semantics=_copy_dict(safe_artifacts.get("cover_semantics")),
         expert_comment=_s(safe_artifacts.get("expert_comment")),
         linkedin_post=_s(safe_artifacts.get("linkedin_post")),
         source_status=deepcopy(source_status),
@@ -738,6 +738,37 @@ def _handle_quotes_regeneration(execution: _RegenerationHandlerExecution) -> Non
     execution.state.prompt_namespaces.append(namespace)
 
 
+def _handle_cover_semantics_regeneration(
+    execution: _RegenerationHandlerExecution,
+) -> None:
+    """Refresh the cover fingerprint from retained, already-grounded artifacts."""
+    namespace = execution.handler.prompt_namespaces[0]
+    result = _render_regeneration_model(
+        execution=execution,
+        namespace=namespace,
+        ctx=execution.target_ctx,
+        variables={
+            **execution.runtime.base_vars,
+            "summary_json": _dump_json(execution.state.summary),
+            "insights_final_json": _dump_json(execution.state.insights_final),
+            "categories_json": _dump_json(execution.runtime.request.categories),
+            "region": _s(
+                execution.runtime.safe_doc_map.get("region")
+                or execution.runtime.safe_doc_map.get("geography")
+            ).strip(),
+            "covered_period": _s(
+                execution.runtime.safe_doc_map.get("covered_period")
+                or execution.runtime.safe_doc_map.get("time_period")
+                or execution.runtime.safe_doc_map.get("period")
+            ).strip(),
+        },
+    )
+    cover = result.get("cover_semantics")
+    execution.state.cover_semantics = dict(cover) if isinstance(cover, dict) else {}
+    execution.state.regenerated_sections.append("cover_semantics")
+    execution.state.prompt_namespaces.append(namespace)
+
+
 def _handle_expert_comment_regeneration(
     execution: _RegenerationHandlerExecution,
 ) -> None:
@@ -815,6 +846,10 @@ def _quotes_section_payload(artifacts: Dict[str, Any]) -> List[Dict[str, Any]]:
     return _copy_list(artifacts.get("quotes_final"))
 
 
+def _cover_semantics_section_payload(artifacts: Dict[str, Any]) -> Dict[str, Any]:
+    return _copy_dict(artifacts.get("cover_semantics"))
+
+
 def _expert_comment_section_payload(artifacts: Dict[str, Any]) -> str:
     return _s(artifacts.get("expert_comment"))
 
@@ -858,6 +893,13 @@ _REGENERATION_HANDLER_REGISTRY: Dict[str, _RegenerationHandler] = {
             "Quotes must be verbatim or clearly supported by source evidence.",
         ),
         handle=_handle_quotes_regeneration,
+    ),
+    "cover_semantics": _RegenerationHandler(
+        target_section="cover_semantics",
+        prompt_namespaces=("report_vs/artifacts/cover_semantics",),
+        current_section_payload=_cover_semantics_section_payload,
+        extra_fix_checklist=(),
+        handle=_handle_cover_semantics_regeneration,
     ),
     "expert_comment": _RegenerationHandler(
         target_section="expert_comment",

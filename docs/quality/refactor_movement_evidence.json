@@ -66,6 +66,22 @@
       "unchanged_moved_symbol_count": 15,
       "changed_moved_symbol_count": 0,
       "facade_owned_definitions": []
+    },
+    {
+      "original_file": "src/services/workflow_queue_service.py",
+      "baseline_ref": "HEAD:src/services/workflow_queue_service.py",
+      "moved_symbol_count": 41,
+      "unchanged_moved_symbol_count": 41,
+      "changed_moved_symbol_count": 0,
+      "facade_owned_definitions": []
+    },
+    {
+      "original_file": "src/orchestrators/workflow_queue_orchestrator.py",
+      "baseline_ref": "HEAD:src/orchestrators/workflow_queue_orchestrator.py",
+      "moved_symbol_count": 31,
+      "unchanged_moved_symbol_count": 29,
+      "changed_moved_symbol_count": 2,
+      "facade_owned_definitions": []
     }
   ]
 }

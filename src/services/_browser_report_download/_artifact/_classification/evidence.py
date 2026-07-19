@@ -1,11 +1,19 @@
 """Deterministic terminal route, outcome, blocker, and confirmation classification."""
 
 from __future__ import annotations
+
 import re
+
 from src.contracts.browser_download import (
     BrowserDownloadConfirmationEvidence,
     BrowserDownloadNetworkEvent,
     BrowserReportDownloadRequest,
+)
+from src.services._browser_report_download._artifact import (
+    _VERIFIED_EMAIL_SIGNAL_MARKERS,
+)
+from src.services._browser_report_download._artifact.evidence import (
+    _extract_visible_text_from_html,
 )
 from src.services._browser_report_download.models import BrowserUseAgentResult
 from src.services._browser_report_download.request import (
@@ -16,12 +24,6 @@ from src.services._config_service.identity import (
     normalize_browser_download_identity_key,
 )
 from src.utils.url_utils import normalize_url
-from src.services._browser_report_download._artifact import (
-    _VERIFIED_EMAIL_SIGNAL_MARKERS,
-)
-from src.services._browser_report_download._artifact.evidence import (
-    _extract_visible_text_from_html,
-)
 
 _ROUTE_KINDS = {"pdf_download", "email_delivery", "onsite_report"}
 _BLOCKED_REASONS = {
@@ -214,8 +216,6 @@ def _upgrade_confirmation_evidence_from_terminal_html(
     encountered_form_fields: list[str],
     html: str,
 ) -> BrowserDownloadConfirmationEvidence:
-    if email_submission_completed is not True and not encountered_form_fields:
-        return confirmation_evidence
     token = str(html or "").strip()
     if not token:
         return confirmation_evidence
@@ -223,6 +223,12 @@ def _upgrade_confirmation_evidence_from_terminal_html(
         html=token,
         fallback_text=confirmation_evidence.visible_confirmation_text,
     )
+    if (
+        email_submission_completed is not True
+        and not encountered_form_fields
+        and not _message_indicates_confirmed_email_delivery(terminal_confirmation_text)
+    ):
+        return confirmation_evidence
     terminal_text_confirms_delivery = (
         _message_indicates_confirmed_email_delivery(terminal_confirmation_text)
         or _message_indicates_email_delivery(terminal_confirmation_text)

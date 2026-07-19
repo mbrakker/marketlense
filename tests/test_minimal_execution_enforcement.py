@@ -289,6 +289,64 @@ def test_execution_audit_marks_unplanned_side_effect_as_divergence(
     assert diverged is True
 
 
+def test_execution_audit_requires_exact_prompt_family_reconciliation(
+    tmp_path: Path,
+) -> None:
+    settings = _settings(tmp_path)
+    ctx = _ctx("prompt-audit")
+    plan = MinimalExecutionPlan(
+        schema_version=MINIMAL_EXECUTION_PLAN_SCHEMA_VERSION,
+        execution_intent="targeted_repair",
+        report_id="f1",
+        reusable_artifacts=[],
+        invalid_artifacts=[],
+        required_stages=["analysis_complete", "render_complete"],
+        skipped_stages=["source_prepared", "selection_complete"],
+        required_external_calls=[
+            "report_analysis_model",
+            "validator_model",
+            "html_render",
+        ],
+        expected_side_effects=[
+            "analysis_artifact_write",
+            "checkpoint_write",
+            "rendered_html_write",
+        ],
+        estimated_cost_call_categories=[],
+        missing_lineage_blockers=[],
+        publication_prerequisites=[],
+        plan_hash="prompt-audit-plan",
+        required_prompt_families=["report_vs/artifacts/summary"],
+    )
+    record_minimal_execution_plan(
+        ExecutionPlanRecordRequest(
+            schema_version=MINIMAL_EXECUTION_PLAN_SCHEMA_VERSION,
+            db_path=settings.reports_db,
+            plan=plan,
+            execution_mode="enforce",
+        ),
+        ctx,
+    )
+
+    diverged = record_minimal_execution_plan_result(
+        ExecutionPlanResultRequest(
+            schema_version=MINIMAL_EXECUTION_PLAN_SCHEMA_VERSION,
+            db_path=settings.reports_db,
+            plan_hash=plan.plan_hash,
+            report_id="f1",
+            execution_intent=plan.execution_intent,
+            actual_stages=plan.required_stages,
+            actual_external_calls=plan.required_external_calls,
+            actual_side_effects=plan.expected_side_effects,
+            actual_prompt_families=["report_vs/artifacts/insights_final"],
+            execution_status="processed",
+        ),
+        ctx,
+    )
+
+    assert diverged is True
+
+
 def test_enforce_mode_combines_crop_and_analysis_at_source_checkpoint() -> None:
     plan = MinimalExecutionPlan(
         schema_version=MINIMAL_EXECUTION_PLAN_SCHEMA_VERSION,

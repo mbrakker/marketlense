@@ -14,6 +14,8 @@ SCHEMA = {
     "_PUBLISHERS_TABLE_SQL",
     "_DOWNLOAD_ROUTE_HISTORY_TABLE_SQL",
     "_PRIVATE_API_CANDIDATE_TABLE_SQL",
+    "_ACQUISITION_ATTEMPT_RESOURCES_TABLE_SQL",
+    "_ACQUISITION_ROUTE_SUPPRESSIONS_TABLE_SQL",
     "_INVENTORY_RECOVERY_CACHE_TABLE_SQL",
     "_INVENTORY_ROUTE_HISTORY_TABLE_SQL",
     "_REPORT_SECTIONS_TABLE_SQL",
@@ -46,6 +48,7 @@ ROUTING = {
     "_reports_db_007_normalize_inventory_recovery_cache",
     "_reports_db_008_create_inventory_route_history",
     "_reports_db_012_create_private_api_candidate_ledger",
+    "_reports_db_021_create_acquisition_resource_telemetry",
 }
 
 PROJECTIONS = {
@@ -60,6 +63,7 @@ PROJECTIONS = {
     "_reports_db_018_create_source_publication_metadata",
     "_reports_db_019_create_source_identity_observations",
     "_reports_db_020_expand_execution_plan_audit",
+    "_reports_db_022_add_execution_plan_prompt_family_reconciliation",
 }
 
 

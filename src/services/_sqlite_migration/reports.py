@@ -22,14 +22,18 @@ from src.services._sqlite_migration._reports.projections import (
     _reports_db_018_create_source_publication_metadata,
     _reports_db_019_create_source_identity_observations,
     _reports_db_020_expand_execution_plan_audit,
+    _reports_db_022_add_execution_plan_prompt_family_reconciliation,
 )
 from src.services._sqlite_migration._reports.routing import (
     _reports_db_006_create_or_upgrade_download_route_history,
     _reports_db_007_normalize_inventory_recovery_cache,
     _reports_db_008_create_inventory_route_history,
     _reports_db_012_create_private_api_candidate_ledger,
+    _reports_db_021_create_acquisition_resource_telemetry,
 )
 from src.services._sqlite_migration._reports.schema import (
+    _ACQUISITION_ATTEMPT_RESOURCES_TABLE_SQL,
+    _ACQUISITION_ROUTE_SUPPRESSIONS_TABLE_SQL,
     _ARTIFACT_EXECUTION_PLAN_RUNS_TABLE_SQL,
     _ARTIFACT_LINEAGE_DEPENDENCIES_TABLE_SQL,
     _ARTIFACT_LINEAGE_RECORDS_TABLE_SQL,
@@ -161,5 +165,15 @@ _REPORTS_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
         migration_id="reports_db_020_expand_execution_plan_audit",
         version=20,
         apply_fn=_reports_db_020_expand_execution_plan_audit,
+    ),
+    _MigrationSpec(
+        migration_id="reports_db_021_create_acquisition_resource_telemetry",
+        version=21,
+        apply_fn=_reports_db_021_create_acquisition_resource_telemetry,
+    ),
+    _MigrationSpec(
+        migration_id="reports_db_022_add_execution_plan_prompt_family_reconciliation",
+        version=22,
+        apply_fn=_reports_db_022_add_execution_plan_prompt_family_reconciliation,
     ),
 )
