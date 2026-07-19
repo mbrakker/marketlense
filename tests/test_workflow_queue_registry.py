@@ -894,8 +894,12 @@ def test_signal_publish_adapter_retains_card_evidence_and_fallback_publishers(
 def test_source_ingest_checkpoint_hands_off_to_report_selection(
     tmp_path: Path,
     external_boundary_mocks_only,
+    fake_openai,
 ) -> None:
     external_boundary_mocks_only.setenv("OPENAI_API_KEY", "test-openai-key")
+    fake_openai.add("vector_stores.create", {"id": "vs_queue_test"})
+    fake_openai.add("files.create", {"id": "file_queue_test"})
+    fake_openai.add("vector_stores.files.create", {"id": "file_queue_test"})
     config_path = _isolated_app_config(tmp_path)
     source_path = Path(
         "tests/fixtures/pdf_benchmark/golden/IAS - Industry_Pulse_Report_2026_ACIG.pdf"
@@ -956,6 +960,9 @@ def test_source_ingest_checkpoint_hands_off_to_report_selection(
     assert selection_result.result.output_verified is True
     assert selection_result.result.summary["checkpoint"] == "selection_complete"
     assert selection_result.downstream[0].queue_name == "report_analysis"
+    assert len(fake_openai.calls["vector_stores.create"]) == 1
+    assert len(fake_openai.calls["files.create"]) == 1
+    assert len(fake_openai.calls["vector_stores.files.create"]) == 1
 
 
 # Worker lifecycle failure cases live in test_workflow_queue_worker_failures.py.
