@@ -778,7 +778,12 @@ def _metric_rows(
     }
 
 
-def _git_state(repository_root: Path, *, strict: bool) -> tuple[str, bool]:
+def _git_state(
+    repository_root: Path,
+    *,
+    strict: bool,
+    excluded_paths: tuple[Path, ...] = (),
+) -> tuple[str, bool]:
     try:
         commit = subprocess.run(
             ["git", "rev-parse", "HEAD"],
@@ -787,9 +792,19 @@ def _git_state(repository_root: Path, *, strict: bool) -> tuple[str, bool]:
             capture_output=True,
             text=True,
         ).stdout.strip()
+        status_command = ["git", "status", "--porcelain"]
+        exclusions: list[str] = []
+        for path in excluded_paths:
+            try:
+                relative_path = path.resolve().relative_to(repository_root.resolve())
+            except ValueError:
+                continue
+            exclusions.append(f":(exclude){relative_path.as_posix()}")
+        if exclusions:
+            status_command.extend(["--", ".", *exclusions])
         dirty = bool(
             subprocess.run(
-                ["git", "status", "--porcelain"],
+                status_command,
                 cwd=repository_root,
                 check=True,
                 capture_output=True,
@@ -862,10 +877,15 @@ def _repository_provenance(
 
 
 def _finalize_repository_provenance(
-    paths: EvidencePaths, repository: dict[str, object]
+    paths: EvidencePaths,
+    repository: dict[str, object],
+    *,
+    excluded_paths: tuple[Path, ...] = (),
 ) -> None:
     end_sha, end_dirty = _git_state(
-        paths.repository_root, strict=paths.require_exact_head
+        paths.repository_root,
+        strict=paths.require_exact_head,
+        excluded_paths=excluded_paths,
     )
     repository["end_commit_sha"] = end_sha
     repository["dirty_worktree_end"] = end_dirty
@@ -1477,7 +1497,11 @@ def collect(
                 artifact_names=summary_artifacts,
             ),
         )
-        _finalize_repository_provenance(paths, repository)
+        _finalize_repository_provenance(
+            paths,
+            repository,
+            excluded_paths=(staging_parent,),
+        )
         configuration = {
             "state_dir": _public_path(paths.state_dir, paths.state_dir),
             "artifact_dir": _public_path(paths.artifact_dir, ROOT),

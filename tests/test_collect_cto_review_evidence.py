@@ -743,6 +743,65 @@ def test_strict_dirty_worktree_fails(tmp_path: Path) -> None:
         collect(paths)
 
 
+def test_strict_collection_ignores_only_its_staging_directory(tmp_path: Path) -> None:
+    paths, _, _, _ = _strict_paths(tmp_path)
+    documentation_dir = paths.repository_root / "docs"
+    documentation_dir.mkdir()
+    (documentation_dir / ".keep").write_text("\n", encoding="utf-8")
+    subprocess.run(
+        ["git", "add", "docs/.keep"],
+        cwd=paths.repository_root,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "commit", "-m", "add docs directory"],
+        cwd=paths.repository_root,
+        check=True,
+        capture_output=True,
+    )
+    sha = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=paths.repository_root,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    paths = EvidencePaths(
+        **{
+            **paths.__dict__,
+            "output_dir": documentation_dir / "CTO_evidence",
+            "expected_commit_sha": sha,
+        }
+    )
+
+    collect(paths)
+
+    validate_consistency(
+        paths.output_dir,
+        expected_run_id=json.loads(
+            (paths.output_dir / "detailed_metrics.json").read_text(encoding="utf-8")
+        )["evidence_run_id"],
+        strict=True,
+    )
+
+
+def test_strict_collection_rejects_other_untracked_changes_at_finalization(
+    tmp_path: Path,
+) -> None:
+    paths, _, _, _ = _strict_paths(tmp_path)
+
+    def create_untracked(_: dict[str, Path]) -> None:
+        (paths.repository_root / "untracked.txt").write_text(
+            "unexpected\n", encoding="utf-8"
+        )
+
+    with pytest.raises(RepositoryWorktreeDirtyError):
+        collect(paths, _after_snapshot=create_untracked)
+
+    assert not paths.output_dir.exists()
+
+
 def test_strict_head_change_during_collection_fails_and_does_not_publish(
     tmp_path: Path,
 ) -> None:
