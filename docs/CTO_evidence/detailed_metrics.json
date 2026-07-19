@@ -1,6 +1,6 @@
 {
-  "evidence_run_id": "afca500952a4489193074501f88aba62",
-  "generated_at": "2026-07-19T12:42:05.994755+00:00",
+  "evidence_run_id": "bf95afe3bc084b46a063d367fb402194",
+  "generated_at": "2026-07-19T17:17:16.525400+00:00",
   "metrics": {
     "acquisition_metrics.csv": [
       {
@@ -4451,15 +4451,15 @@
         "cached_input_tokens": 0,
         "date": "2026-07-19",
         "estimated_cost_usd": "0",
-        "input_tokens": 54,
+        "input_tokens": 108,
         "model": "gpt-4.1-mini",
-        "output_tokens": 24,
+        "output_tokens": 48,
         "prompt_namespace": "",
         "provider": "openai",
         "provider_call_status": "completed",
-        "request_count": 6,
+        "request_count": 12,
         "semantic_task": "openai_analyze",
-        "total_tokens": 78,
+        "total_tokens": 156,
         "unknown_pricing_count": 0
       },
       {
@@ -4467,15 +4467,15 @@
         "cached_input_tokens": 0,
         "date": "2026-07-19",
         "estimated_cost_usd": "0",
-        "input_tokens": 30,
+        "input_tokens": 60,
         "model": "gpt-4.1-mini",
-        "output_tokens": 12,
+        "output_tokens": 24,
         "prompt_namespace": "",
         "provider": "openai",
         "provider_call_status": "completed",
-        "request_count": 6,
+        "request_count": 12,
         "semantic_task": "openai_chat_json",
-        "total_tokens": 42,
+        "total_tokens": 84,
         "unknown_pricing_count": 0
       },
       {
@@ -4492,6 +4492,22 @@
         "request_count": 2,
         "semantic_task": "openai_chat_json",
         "total_tokens": 462,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "artifacts:summary",
+        "cached_input_tokens": 0,
+        "date": "2026-07-19",
+        "estimated_cost_usd": "0.011103",
+        "input_tokens": 1524,
+        "model": "gpt-5-mini",
+        "output_tokens": 5361,
+        "prompt_namespace": "report_vs/artifacts/summary",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 2,
+        "semantic_task": "artifacts:summary",
+        "total_tokens": 6885,
         "unknown_pricing_count": 0
       },
       {
@@ -4531,15 +4547,31 @@
         "cached_input_tokens": 0,
         "date": "2026-07-19",
         "estimated_cost_usd": "0",
-        "input_tokens": 192,
+        "input_tokens": 384,
         "model": "gpt-5-mini",
-        "output_tokens": 228,
+        "output_tokens": 456,
         "prompt_namespace": "",
         "provider": "openai",
         "provider_call_status": "completed",
-        "request_count": 18,
+        "request_count": 36,
         "semantic_task": "openai_ocr_pdf",
-        "total_tokens": 420,
+        "total_tokens": 840,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "openai_embeddings",
+        "cached_input_tokens": 0,
+        "date": "2026-07-19",
+        "estimated_cost_usd": "0.000001",
+        "input_tokens": 74,
+        "model": "text-embedding-3-small",
+        "output_tokens": 0,
+        "prompt_namespace": "",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 1,
+        "semantic_task": "openai_embeddings",
+        "total_tokens": 74,
         "unknown_pricing_count": 0
       }
     ],
@@ -4547,12 +4579,12 @@
       {
         "action": "openai_ocr_pdf",
         "estimated_cost_usd": "0",
-        "input_tokens": 2842,
+        "input_tokens": 3034,
         "model": "gpt-5-mini",
-        "output_tokens": 3444,
+        "output_tokens": 3672,
         "provider": "openai",
         "provider_call_status": "completed",
-        "request_count": 266,
+        "request_count": 284,
         "semantic_task": "openai_ocr_pdf"
       }
     ],
@@ -4569,6 +4601,6 @@
       }
     ]
   },
-  "repository_commit_sha": "c352d503f2e55268e8b74a7f27fd4f4857abd333",
+  "repository_commit_sha": "0c19e6757ddc04223a4d8fc3b231d4635edab74d",
   "schema_version": "1.0"
 }

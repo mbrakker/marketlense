@@ -1141,8 +1141,8 @@
         },
         {
           "action": "artifacts:summary",
-          "call_count": 12,
-          "estimated_cost_usd": 0.093439,
+          "call_count": 14,
+          "estimated_cost_usd": 0.104542,
           "prompt_namespace": "report_vs/artifacts/summary",
           "semantic_task": "artifacts:summary"
         },
@@ -1232,7 +1232,7 @@
         },
         {
           "action": "openai_analyze",
-          "call_count": 126,
+          "call_count": 132,
           "estimated_cost_usd": 0.0,
           "prompt_namespace": "",
           "semantic_task": "openai_analyze"
@@ -1295,7 +1295,7 @@
         },
         {
           "action": "openai_chat_json",
-          "call_count": 336,
+          "call_count": 342,
           "estimated_cost_usd": 0.34662,
           "prompt_namespace": "",
           "semantic_task": "openai_chat_json"
@@ -1330,14 +1330,14 @@
         },
         {
           "action": "openai_embeddings",
-          "call_count": 14,
-          "estimated_cost_usd": 6e-06,
+          "call_count": 15,
+          "estimated_cost_usd": 7e-06,
           "prompt_namespace": "",
           "semantic_task": "openai_embeddings"
         },
         {
           "action": "openai_ocr_pdf",
-          "call_count": 266,
+          "call_count": 284,
           "estimated_cost_usd": 0.0,
           "prompt_namespace": "",
           "semantic_task": "openai_ocr_pdf"
@@ -1493,14 +1493,14 @@
     "source": "reports.vector_projection_queue; reports.claim_embedding_queue_transitions",
     "status": "partial",
     "values": {
-      "mean_open_queue_age_seconds": 3521594.619,
+      "mean_open_queue_age_seconds": 3537452.009,
       "queue_status_counts": {
-        "embedded": 6,
-        "pending": 2646
+        "embedded": 7,
+        "pending": 2645
       },
       "transition_reason_counts": {
         "durable_embedding_already_satisfied": 4,
-        "embedding_completed": 6
+        "embedding_completed": 7
       }
     }
   },
@@ -1592,8 +1592,8 @@
     "source": "llm_usage.llm_usage_events",
     "status": "available",
     "values": {
-      "ocr_call_count": 266,
-      "ocr_incidence_among_llm_calls": 0.201515,
+      "ocr_call_count": 284,
+      "ocr_incidence_among_llm_calls": 0.209904,
       "ocr_success_rate": 1.0
     }
   },

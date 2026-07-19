@@ -3,9 +3,9 @@
     {
       "artifact_name": "acquisition_metrics.csv",
       "byte_count": 3983,
-      "evidence_run_id": "afca500952a4489193074501f88aba62",
+      "evidence_run_id": "bf95afe3bc084b46a063d367fb402194",
       "relative_path": "acquisition_metrics.csv",
-      "repository_commit_sha": "c352d503f2e55268e8b74a7f27fd4f4857abd333",
+      "repository_commit_sha": "0c19e6757ddc04223a4d8fc3b231d4635edab74d",
       "required": true,
       "schema_version": null,
       "sha256": "fa91f58d37cb06301a30c0737833702431b752852bfc0da1f04571d722131e7b"
@@ -13,29 +13,29 @@
     {
       "artifact_name": "architecture_manifest.json",
       "byte_count": 3444,
-      "evidence_run_id": "afca500952a4489193074501f88aba62",
+      "evidence_run_id": "bf95afe3bc084b46a063d367fb402194",
       "relative_path": "architecture_manifest.json",
-      "repository_commit_sha": "c352d503f2e55268e8b74a7f27fd4f4857abd333",
+      "repository_commit_sha": "0c19e6757ddc04223a4d8fc3b231d4635edab74d",
       "required": true,
       "schema_version": "1.0",
-      "sha256": "c1e0d04427ae0ba33a8fa81e7c77d5a4c69378b1367598a52c4a11751ee168e3"
+      "sha256": "838e7ef4d32aa8a9b7034ada2a019675a21d26f6b0e8f5ad7598d506ac3d6008"
     },
     {
       "artifact_name": "artifact_lineage_completeness.json",
-      "byte_count": 4660,
-      "evidence_run_id": "afca500952a4489193074501f88aba62",
+      "byte_count": 16031,
+      "evidence_run_id": "bf95afe3bc084b46a063d367fb402194",
       "relative_path": "artifact_lineage_completeness.json",
-      "repository_commit_sha": "c352d503f2e55268e8b74a7f27fd4f4857abd333",
+      "repository_commit_sha": "0c19e6757ddc04223a4d8fc3b231d4635edab74d",
       "required": true,
       "schema_version": "1.0",
-      "sha256": "e50805200ff6e1b945245f3fc0950f7a670e1a6a4eb7da218577b485277c1123"
+      "sha256": "d40785868bc6e248242c88a128947c2e769536c248577815eda8383bd9803da5"
     },
     {
       "artifact_name": "browser_metrics.csv",
       "byte_count": 1599,
-      "evidence_run_id": "afca500952a4489193074501f88aba62",
+      "evidence_run_id": "bf95afe3bc084b46a063d367fb402194",
       "relative_path": "browser_metrics.csv",
-      "repository_commit_sha": "c352d503f2e55268e8b74a7f27fd4f4857abd333",
+      "repository_commit_sha": "0c19e6757ddc04223a4d8fc3b231d4635edab74d",
       "required": true,
       "schema_version": null,
       "sha256": "212b0a5b9ad5fc72216d11fcb5a99319c0fcc429cf10681fe8a6781013565f24"
@@ -43,29 +43,29 @@
     {
       "artifact_name": "crop_quality_metrics.csv",
       "byte_count": 16302,
-      "evidence_run_id": "afca500952a4489193074501f88aba62",
+      "evidence_run_id": "bf95afe3bc084b46a063d367fb402194",
       "relative_path": "crop_quality_metrics.csv",
-      "repository_commit_sha": "c352d503f2e55268e8b74a7f27fd4f4857abd333",
+      "repository_commit_sha": "0c19e6757ddc04223a4d8fc3b231d4635edab74d",
       "required": true,
       "schema_version": null,
       "sha256": "8c1063aee68df614553f0a2d9d443d642efb7b0391fcda7a0fb84900eb1afc6e"
     },
     {
       "artifact_name": "detailed_metrics.json",
-      "byte_count": 157453,
-      "evidence_run_id": "afca500952a4489193074501f88aba62",
+      "byte_count": 158521,
+      "evidence_run_id": "bf95afe3bc084b46a063d367fb402194",
       "relative_path": "detailed_metrics.json",
-      "repository_commit_sha": "c352d503f2e55268e8b74a7f27fd4f4857abd333",
+      "repository_commit_sha": "0c19e6757ddc04223a4d8fc3b231d4635edab74d",
       "required": true,
       "schema_version": "1.0",
-      "sha256": "2ed5f0f94ca89bed7782b6dd7c971140a66efd56fa18062893430ee8134cec88"
+      "sha256": "0f20fd04dbe73ce23d3b083831948749115655da6c8f51d8c8ce31241572180f"
     },
     {
       "artifact_name": "editorial_rule_catalog.json",
       "byte_count": 4252,
-      "evidence_run_id": "afca500952a4489193074501f88aba62",
+      "evidence_run_id": "bf95afe3bc084b46a063d367fb402194",
       "relative_path": "editorial_rule_catalog.json",
-      "repository_commit_sha": "c352d503f2e55268e8b74a7f27fd4f4857abd333",
+      "repository_commit_sha": "0c19e6757ddc04223a4d8fc3b231d4635edab74d",
       "required": true,
       "schema_version": "1.0",
       "sha256": "686f322fdff81ef1b24cfb34e90df06420e686cd66ee2ab9d5823cdc272b2bf7"
@@ -73,9 +73,9 @@
     {
       "artifact_name": "effective_run_profile_matrix.json",
       "byte_count": 3170,
-      "evidence_run_id": "afca500952a4489193074501f88aba62",
+      "evidence_run_id": "bf95afe3bc084b46a063d367fb402194",
       "relative_path": "effective_run_profile_matrix.json",
-      "repository_commit_sha": "c352d503f2e55268e8b74a7f27fd4f4857abd333",
+      "repository_commit_sha": "0c19e6757ddc04223a4d8fc3b231d4635edab74d",
       "required": true,
       "schema_version": "1.0",
       "sha256": "f55012a65853be866d1bd1e5345885789968005e4d30924cb328a8c525892c97"
@@ -83,109 +83,109 @@
     {
       "artifact_name": "executive_summary.json",
       "byte_count": 1360,
-      "evidence_run_id": "afca500952a4489193074501f88aba62",
+      "evidence_run_id": "bf95afe3bc084b46a063d367fb402194",
       "relative_path": "executive_summary.json",
-      "repository_commit_sha": "c352d503f2e55268e8b74a7f27fd4f4857abd333",
+      "repository_commit_sha": "0c19e6757ddc04223a4d8fc3b231d4635edab74d",
       "required": true,
       "schema_version": "1.0",
-      "sha256": "e9857076c271e013651ec6f95a156e3b19274a1b5502c775d5d8d5de2df9e5fd"
+      "sha256": "3313e848fdfaea610d5355cadf2df3d9768b1ab694b4dd6e0f254b4627febbba"
     },
     {
       "artifact_name": "failure_metrics.csv",
       "byte_count": 386,
-      "evidence_run_id": "afca500952a4489193074501f88aba62",
+      "evidence_run_id": "bf95afe3bc084b46a063d367fb402194",
       "relative_path": "failure_metrics.csv",
-      "repository_commit_sha": "c352d503f2e55268e8b74a7f27fd4f4857abd333",
+      "repository_commit_sha": "0c19e6757ddc04223a4d8fc3b231d4635edab74d",
       "required": true,
       "schema_version": null,
       "sha256": "c950267f53cd29cfe68cf08b01e5b2cbe6988d9c506731d556aa0e35e7cae028"
     },
     {
       "artifact_name": "github_main_status.json",
-      "byte_count": 401,
-      "evidence_run_id": "afca500952a4489193074501f88aba62",
+      "byte_count": 517,
+      "evidence_run_id": "bf95afe3bc084b46a063d367fb402194",
       "relative_path": "github_main_status.json",
-      "repository_commit_sha": "c352d503f2e55268e8b74a7f27fd4f4857abd333",
+      "repository_commit_sha": "0c19e6757ddc04223a4d8fc3b231d4635edab74d",
       "required": true,
       "schema_version": "1.0",
-      "sha256": "bd21e959b1954b67fe3beef5e347c4cc0c1de4d4e8f74c6480695adb486b1cd2"
+      "sha256": "db06448a02fcec87c38ee5b7e21267a6391fb86916a1b8d99f69e55b1ccfae19"
     },
     {
       "artifact_name": "lineage_reuse_metrics.csv",
       "byte_count": 8632,
-      "evidence_run_id": "afca500952a4489193074501f88aba62",
+      "evidence_run_id": "bf95afe3bc084b46a063d367fb402194",
       "relative_path": "lineage_reuse_metrics.csv",
-      "repository_commit_sha": "c352d503f2e55268e8b74a7f27fd4f4857abd333",
+      "repository_commit_sha": "0c19e6757ddc04223a4d8fc3b231d4635edab74d",
       "required": true,
       "schema_version": null,
       "sha256": "b644748baac6cf5a6d2a663611a0e3a47e0b3aac3ad326c1743ec41cd8225aec"
     },
     {
       "artifact_name": "llm_usage_metrics.csv",
-      "byte_count": 18948,
-      "evidence_run_id": "afca500952a4489193074501f88aba62",
+      "byte_count": 19198,
+      "evidence_run_id": "bf95afe3bc084b46a063d367fb402194",
       "relative_path": "llm_usage_metrics.csv",
-      "repository_commit_sha": "c352d503f2e55268e8b74a7f27fd4f4857abd333",
+      "repository_commit_sha": "0c19e6757ddc04223a4d8fc3b231d4635edab74d",
       "required": true,
       "schema_version": null,
-      "sha256": "0fdb0ab6d27d9259b8dbe381dd80341cee58287a6ee02a73f38f735adf737298"
+      "sha256": "62aece2d9f03c834633f9fcadf4245858fd03f98e6aba160412cd81f45560aac"
     },
     {
       "artifact_name": "log_content_leakage.json",
-      "byte_count": 22405,
-      "evidence_run_id": "afca500952a4489193074501f88aba62",
+      "byte_count": 22453,
+      "evidence_run_id": "bf95afe3bc084b46a063d367fb402194",
       "relative_path": "log_content_leakage.json",
-      "repository_commit_sha": "c352d503f2e55268e8b74a7f27fd4f4857abd333",
+      "repository_commit_sha": "0c19e6757ddc04223a4d8fc3b231d4635edab74d",
       "required": true,
       "schema_version": "1.0",
-      "sha256": "827e8d3a6bfd44c96ee7421972cef841bd8326bd815703897be44718fae4e732"
+      "sha256": "5bb2e793a39532c0bb492da8ca10d2c66c72179efbc632cabdf3a38f98c68b17"
     },
     {
       "artifact_name": "ocr_vision_metrics.csv",
       "byte_count": 193,
-      "evidence_run_id": "afca500952a4489193074501f88aba62",
+      "evidence_run_id": "bf95afe3bc084b46a063d367fb402194",
       "relative_path": "ocr_vision_metrics.csv",
-      "repository_commit_sha": "c352d503f2e55268e8b74a7f27fd4f4857abd333",
+      "repository_commit_sha": "0c19e6757ddc04223a4d8fc3b231d4635edab74d",
       "required": true,
       "schema_version": null,
-      "sha256": "7483cd89cea5fc9c14ab33fd7053505c7920c1e66fdb8f19661ba88fd08c061c"
+      "sha256": "ccf0da1ac4da4e21023c6c3dc0fabec3ffd50cbee89398f16a15d6cbb910d65e"
     },
     {
       "artifact_name": "README.md",
-      "byte_count": 1032,
-      "evidence_run_id": "afca500952a4489193074501f88aba62",
+      "byte_count": 1167,
+      "evidence_run_id": "bf95afe3bc084b46a063d367fb402194",
       "relative_path": "README.md",
-      "repository_commit_sha": "c352d503f2e55268e8b74a7f27fd4f4857abd333",
+      "repository_commit_sha": "0c19e6757ddc04223a4d8fc3b231d4635edab74d",
       "required": true,
       "schema_version": null,
-      "sha256": "0b3704003910fbb86c3699f365a4135ad4d8fa9d3eebdd2fe796867083f90006"
+      "sha256": "f14b6931ee53005e5791b49c1ef094a093baf984d648f93e3de012049a58b261"
     },
     {
       "artifact_name": "runtime_telemetry.json",
       "byte_count": 55298,
-      "evidence_run_id": "afca500952a4489193074501f88aba62",
+      "evidence_run_id": "bf95afe3bc084b46a063d367fb402194",
       "relative_path": "runtime_telemetry.json",
-      "repository_commit_sha": "c352d503f2e55268e8b74a7f27fd4f4857abd333",
+      "repository_commit_sha": "0c19e6757ddc04223a4d8fc3b231d4635edab74d",
       "required": true,
       "schema_version": "1.0",
-      "sha256": "47a493adc5ad2fdaa431aa8c5cdb819ae2aa6436fe029efc2bb52547cacb71eb"
+      "sha256": "30e04f5267b5e596aaf398a3a350874dd08e0fb0072d7643d92eef6234d4aee6"
     },
     {
       "artifact_name": "snapshot_manifest.json",
-      "byte_count": 1111561,
-      "evidence_run_id": "afca500952a4489193074501f88aba62",
+      "byte_count": 1111770,
+      "evidence_run_id": "bf95afe3bc084b46a063d367fb402194",
       "relative_path": "snapshot_manifest.json",
-      "repository_commit_sha": "c352d503f2e55268e8b74a7f27fd4f4857abd333",
+      "repository_commit_sha": "0c19e6757ddc04223a4d8fc3b231d4635edab74d",
       "required": true,
       "schema_version": "1.0",
-      "sha256": "3af60c7f733fec5b4fcdcfcccef86811db14cd70b16df72e6d2cbd9e57061e21"
+      "sha256": "4c94ff6caccd7b9497e85c237fbbaf2b965cde0f524377ee21b44f1c0f37d0f5"
     },
     {
       "artifact_name": "source_identity_schema.json",
       "byte_count": 8873,
-      "evidence_run_id": "afca500952a4489193074501f88aba62",
+      "evidence_run_id": "bf95afe3bc084b46a063d367fb402194",
       "relative_path": "source_identity_schema.json",
-      "repository_commit_sha": "c352d503f2e55268e8b74a7f27fd4f4857abd333",
+      "repository_commit_sha": "0c19e6757ddc04223a4d8fc3b231d4635edab74d",
       "required": true,
       "schema_version": "1.0",
       "sha256": "5029cb35d789d01e309f64266d57e9780c4eee5c8f04dff3b2371eb8bead4e00"
@@ -193,9 +193,9 @@
     {
       "artifact_name": "wordpress_metrics.csv",
       "byte_count": 148,
-      "evidence_run_id": "afca500952a4489193074501f88aba62",
+      "evidence_run_id": "bf95afe3bc084b46a063d367fb402194",
       "relative_path": "wordpress_metrics.csv",
-      "repository_commit_sha": "c352d503f2e55268e8b74a7f27fd4f4857abd333",
+      "repository_commit_sha": "0c19e6757ddc04223a4d8fc3b231d4635edab74d",
       "required": true,
       "schema_version": null,
       "sha256": "0b5a3cc09963f23a4b027623372149d47ac7245b4a1bf00b66d9e4234fb52e70"
@@ -203,14 +203,18 @@
     {
       "artifact_name": "workflow_to_remediation_coverage.json",
       "byte_count": 11037,
-      "evidence_run_id": "afca500952a4489193074501f88aba62",
+      "evidence_run_id": "bf95afe3bc084b46a063d367fb402194",
       "relative_path": "workflow_to_remediation_coverage.json",
-      "repository_commit_sha": "c352d503f2e55268e8b74a7f27fd4f4857abd333",
+      "repository_commit_sha": "0c19e6757ddc04223a4d8fc3b231d4635edab74d",
       "required": true,
       "schema_version": "1.0",
       "sha256": "9f36a9aba3d6bb578881b903f2ad7ebe9a5eb6c5d852522b4c836a9f1f60bb53"
     }
   ],
+  "collector_runtime": {
+    "operating_system": "Windows-11-10.0.26200-SP0",
+    "python_version": "3.14.2 (tags/v3.14.2:df79316, Dec  5 2025, 17:18:21) [MSC v.1944 64 bit (AMD64)]"
+  },
   "collector_version": "3.0",
   "command_args": [
     "--state-dir",
@@ -222,10 +226,16 @@
     "--output-dir",
     "docs/CTO_evidence",
     "--expected-commit-sha",
-    "c352d503f2e55268e8b74a7f27fd4f4857abd333",
+    "0c19e6757ddc04223a4d8fc3b231d4635edab74d",
     "--require-exact-head",
+    "--fresh-after",
+    "2026-07-19T15:00:00+00:00",
     "--log-corpus-scope",
     "representative_report_processing",
+    "--minimum-source-canaries",
+    "5",
+    "--minimum-editorial-canaries",
+    "5",
     "--include-github-status",
     "--replace-output"
   ],
@@ -243,28 +253,34 @@
     "state_dir": "."
   },
   "configuration_hash": "ba59df6d2c8f8de75641b2588c2a4d03987adbaa144975dfcb4bf452ed1d6440",
-  "ended_at": "2026-07-19T12:42:06.319146+00:00",
-  "evidence_run_id": "afca500952a4489193074501f88aba62",
-  "fresh_after": null,
-  "generated_at": "2026-07-19T12:42:06.319125+00:00",
+  "ended_at": "2026-07-19T17:17:16.771284+00:00",
+  "evidence_run_id": "bf95afe3bc084b46a063d367fb402194",
+  "fresh_after": "2026-07-19T15:00:00+00:00",
+  "generated_at": "2026-07-19T17:17:16.771267+00:00",
   "log_corpus": {
     "operator_declared_scope": "representative_report_processing",
     "repository_provenance": "The repository commit identifies the evidence collector revision; it does not attest to the producer revision of historical log records.",
     "scope_attestation": "The collector verifies the snapshotted corpus and content coverage, not whether the declared workflow scope was actually executed."
   },
   "operating_system": "Windows-11-10.0.26200-SP0",
+  "producer_runtime": {
+    "producer_commit_sha_count": 0,
+    "producer_commit_shas": [],
+    "runtime_version_status": "not_retained_by_historical_logs",
+    "status": "unavailable"
+  },
   "python_version": "3.14.2 (tags/v3.14.2:df79316, Dec  5 2025, 17:18:21) [MSC v.1944 64 bit (AMD64)]",
   "repository": {
     "dirty_worktree_end": false,
     "dirty_worktree_start": false,
-    "end_commit_sha": "c352d503f2e55268e8b74a7f27fd4f4857abd333",
+    "end_commit_sha": "0c19e6757ddc04223a4d8fc3b231d4635edab74d",
     "exact_head_verified": true,
-    "expected_commit_sha": "c352d503f2e55268e8b74a7f27fd4f4857abd333",
+    "expected_commit_sha": "0c19e6757ddc04223a4d8fc3b231d4635edab74d",
     "head_stable": true,
-    "start_commit_sha": "c352d503f2e55268e8b74a7f27fd4f4857abd333"
+    "start_commit_sha": "0c19e6757ddc04223a4d8fc3b231d4635edab74d"
   },
-  "repository_commit_sha": "c352d503f2e55268e8b74a7f27fd4f4857abd333",
+  "repository_commit_sha": "0c19e6757ddc04223a4d8fc3b231d4635edab74d",
   "schema_version": "1.0",
-  "snapshot_manifest_sha256": "3af60c7f733fec5b4fcdcfcccef86811db14cd70b16df72e6d2cbd9e57061e21",
-  "started_at": "2026-07-19T12:35:31.672567+00:00"
+  "snapshot_manifest_sha256": "4c94ff6caccd7b9497e85c237fbbaf2b965cde0f524377ee21b44f1c0f37d0f5",
+  "started_at": "2026-07-19T17:08:30.355124+00:00"
 }

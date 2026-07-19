@@ -454,19 +454,20 @@
   "coverage": {
     "artifact_files_examined": 2531,
     "editorial_canary_count": 25,
-    "log_bytes_scanned": 1650229080,
+    "log_bytes_scanned": 1983485300,
     "log_files_scanned": 4,
-    "log_lines_scanned": 2336144,
+    "log_lines_scanned": 2794564,
     "reports_sampled": 26,
     "source_canary_count": 25,
-    "structured_event_metadata_mode": "matches_only",
-    "structured_events_parsed": null,
-    "unparsed_lines": null
+    "structured_event_metadata_mode": "full",
+    "structured_events_parsed": 2794270,
+    "unparsed_lines": 294
   },
-  "evidence_run_id": "afca500952a4489193074501f88aba62",
-  "fresh_after": null,
-  "fresh_log_seen": false,
-  "generated_at": "2026-07-19T12:42:03.254035+00:00",
+  "evidence_run_id": "bf95afe3bc084b46a063d367fb402194",
+  "fresh_after": "2026-07-19T15:00:00+00:00",
+  "fresh_log_seen": true,
+  "freshness_state": "passed",
+  "generated_at": "2026-07-19T17:17:12.858449+00:00",
   "limitations": [],
   "log_corpus": {
     "operator_declared_scope": "representative_report_processing",
@@ -475,7 +476,7 @@
   },
   "matches": [],
   "passed": true,
-  "repository_commit_sha": "c352d503f2e55268e8b74a7f27fd4f4857abd333",
+  "repository_commit_sha": "0c19e6757ddc04223a4d8fc3b231d4635edab74d",
   "schema_version": "1.0",
   "status": "passed"
 }
