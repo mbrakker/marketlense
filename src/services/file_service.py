@@ -813,7 +813,10 @@ def write_bytes(request: WriteBytesRequest, ctx: RunContext) -> WriteBytesRespon
 def append_bytes(request: AppendBytesRequest, ctx: RunContext) -> AppendBytesResponse:
     logger.info(
         log_event(
-            ctx, role="service", event="append_bytes_start", module=logger.name,
+            ctx,
+            role="service",
+            event="append_bytes_start",
+            module=logger.name,
             fields={"path": request.path, "size": len(request.content)},
         )
     )
@@ -835,13 +838,22 @@ def append_bytes(request: AppendBytesRequest, ctx: RunContext) -> AppendBytesRes
     md5 = _md5_bytes(request.content)
     logger.info(
         log_event(
-            ctx, role="service", event="append_bytes_complete", module=logger.name,
-            fields={"path": request.path, "bytes_appended": len(request.content), "md5": md5},
+            ctx,
+            role="service",
+            event="append_bytes_complete",
+            module=logger.name,
+            fields={
+                "path": request.path,
+                "bytes_appended": len(request.content),
+                "md5": md5,
+            },
         )
     )
     return AppendBytesResponse(
-        schema_version="1.0", path=request.path,
-        bytes_appended=len(request.content), md5=md5,
+        schema_version="1.0",
+        path=request.path,
+        bytes_appended=len(request.content),
+        md5=md5,
     )
 
 
