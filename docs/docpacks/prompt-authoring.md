@@ -24,17 +24,32 @@ Each pack prompt must explicitly define:
 
 ## Logging and Reproducibility
 
-Generators log:
+The prompt-loading and artifact-generation paths log:
 
 - prompt namespace and file path
-- prompt hashes
-- rendered system prompt
-- rendered user prompt
-- model parameters
-- raw model response
+- canonical prompt-content identity and dependency counts
+- resolved execution identity, provider/model, and bounded model parameters
+- rendered-prompt hashes and character counts in dry-run diagnostics
 
-Any prompt change should be accompanied by:
+Those operational logs never contain rendered prompt text, source extracts, or
+raw model responses. The prompt service records a machine-independent
+dependency manifest for every namespace: both YAML roots, ordered included
+partials, and schema source files. Its canonical prompt-content identity hashes
+that manifest without timestamps or absolute paths. A prompt cache read hashes
+each declared dependency, so partial and schema changes invalidate only the
+dependent namespace in the running process.
+
+Model-backed artifact cache metadata, prompt-family materialisations, and
+provider-accounting metadata also retain the prompt-content identity, manifest,
+and an execution identity. The execution identity combines the resolved
+provider/model, sampling and token/timeout controls, retrieval mode, routing
+and compaction policy, output-contract version, and validator version. A
+legacy record remains readable but is not reused when current execution
+identity compatibility is required.
+
+Any prompt or schema dependency change should be accompanied by:
 
 - schema compatibility check
 - positive-path test
 - negative-path test
+- cache-invalidation evidence for the affected namespace

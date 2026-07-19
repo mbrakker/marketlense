@@ -52,16 +52,24 @@ persists separate, content-addressed family records through the report-store
 lineage boundary. These cover the document map, each evidence pack, taxonomy
 and category fit, each artifact prompt family, and grounding/semantic
 validation. A record retains only bounded provenance in the lineage database:
-family/schema/processing versions, prompt and routing hashes, direct
+family/schema/processing versions, prompt-content hashes, content-addressed
+dependency manifests, execution identities, routing information, direct
 dependency IDs and hashes, evidence-set hash, output hash, validation state,
-and supersession reference. The JSON output itself remains in the controlled
-report-analysis output directory and is never put in operational logs.
+and supersession reference. The prompt-content identity includes both YAML
+roots, ordered partials, and schema snippets without timestamps or absolute
+paths. The execution identity adds the resolved model/provider, generation and
+token controls, retrieval, routing/compaction, output-contract, and validator
+settings. The JSON output itself remains in the controlled report-analysis
+output directory and is never put in operational logs.
 
 Prompt-family records are reusable only when their validation status is
 `pass`, all direct edges and hashes remain valid, and their family-specific
-prompt/model compatibility matches. Legacy composite `artifacts` files remain
-valid checkpoint inputs but are not treated as proof that a constituent family
-is independently reusable. The planner exposes `required_prompt_families` and
+prompt/execution compatibility matches. An execution-identity mismatch rejects
+reuse before provider work. Older rows remain readable and are explicitly
+labelled legacy when they lack the new identity; they cannot satisfy a request
+that requires current identity compatibility. Legacy composite `artifacts`
+files remain valid checkpoint inputs but are not treated as proof that a
+constituent family is independently reusable. The planner exposes `required_prompt_families` and
 `reused_prompt_families`, allowing an operator to see the exact intended model
 scope before a targeted repair. The existing checkpoint executor remains the
 rollback path. In enforce mode, a proven artifact-family change resumes from

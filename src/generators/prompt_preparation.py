@@ -1,11 +1,19 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, Optional
 
-from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest, PromptSet
-from src.contracts.run_context import RunContext
 from src.contracts.llm import LLMRoutingDecision
+from src.contracts.prompts import (
+    LLMExecutionIdentity,
+    PromptDependencyManifest,
+    PromptLoadRequest,
+    PromptRenderRequest,
+    PromptSet,
+)
+from src.contracts.run_context import RunContext
+from src.services.prompt_service import build_llm_execution_identity
+from src.utils.errors import AppError
 from src.utils.model_resolver import (
     resolve_routing_policy,
     routing_policies_from_config,
@@ -27,6 +35,27 @@ class PreparedPromptBundle:
     routing_decision: LLMRoutingDecision = field(
         metadata={"doc": "Deterministic quality/cost routing decision."}
     )
+    dependency_manifest: PromptDependencyManifest = field(
+        metadata={"doc": "Complete prompt dependency manifest used for rendering."}
+    )
+    prompt_content_hash: str = field(
+        metadata={"doc": "Stable identity of all prompt content dependencies."}
+    )
+    execution_identity: LLMExecutionIdentity = field(
+        metadata={"doc": "Resolved content and execution compatibility identity."}
+    )
+
+
+def model_request_identity_fields(bundle: PreparedPromptBundle) -> dict[str, Any]:
+    """Return content-free provenance fields accepted by model request contracts."""
+
+    return {
+        "prompt_hash": bundle.prompt_content_hash,
+        "prompt_content_hash": bundle.prompt_content_hash,
+        "prompt_dependency_manifest": asdict(bundle.dependency_manifest),
+        "execution_identity": bundle.execution_identity.execution_identity,
+        "execution_identity_manifest": asdict(bundle.execution_identity),
+    }
 
 
 def prepare_prompt_bundle(
@@ -40,6 +69,14 @@ def prepare_prompt_bundle(
     reload_if_changed: bool = False,
     force_reload: bool = False,
     default_model: Optional[str] = None,
+    provider: str = "openai",
+    retrieval_mode: str = "chat_json",
+    temperature: float | None = None,
+    seed: int | None = None,
+    max_output_tokens: int | None = None,
+    timeout_seconds: float | None = None,
+    output_contract_schema_version: str = "",
+    validator_version: str = "",
 ) -> PreparedPromptBundle:
     prompt_set = prompt_client.load_prompt_set(
         PromptLoadRequest(
@@ -75,6 +112,59 @@ def prepare_prompt_bundle(
         ),
         default_model=fallback_model,
     )
+    manifest = prompt_set.dependency_manifest
+    if manifest is None or not prompt_set.prompt_content_hash:
+        raise AppError(
+            code="prompt_dependency_manifest_missing",
+            message="Canonical prompt loading did not provide dependency provenance",
+            retryable=False,
+            context={"namespace": namespace},
+        )
+    resolved_temperature = (
+        float(temperature)
+        if temperature is not None
+        else (
+            float(settings.temperature)
+            if getattr(settings, "temperature", None) is not None
+            else None
+        )
+    )
+    resolved_seed = seed if seed is not None else getattr(settings, "openai_seed", None)
+    resolved_timeout = (
+        float(timeout_seconds)
+        if timeout_seconds is not None
+        else (
+            float(settings.openai_timeout_seconds)
+            if getattr(settings, "openai_timeout_seconds", None) is not None
+            else None
+        )
+    )
+    execution_identity = build_llm_execution_identity(
+        prompt_content_hash=prompt_set.prompt_content_hash,
+        provider=provider,
+        model=routing_decision.model,
+        temperature=resolved_temperature,
+        seed=resolved_seed,
+        max_output_tokens=max_output_tokens,
+        timeout_seconds=resolved_timeout,
+        provider_retry_count=0,
+        retrieval_mode=retrieval_mode,
+        routing_policy={
+            "policy_source": routing_decision.policy_source,
+            "tier": routing_decision.tier,
+            "quality_threshold": routing_decision.quality_threshold,
+            "same_provider_fallback": routing_decision.same_provider_fallback,
+            "max_input_tokens": routing_decision.max_input_tokens,
+            "compaction_enabled": routing_decision.compaction_enabled,
+        },
+        compaction_policy={
+            "enabled": routing_decision.compaction_enabled,
+            "max_input_tokens": routing_decision.max_input_tokens or None,
+            "strategy": "anchor_preserving_head_tail",
+        },
+        output_contract_schema_version=output_contract_schema_version,
+        validator_version=validator_version,
+    )
     return PreparedPromptBundle(
         schema_version="1.0",
         namespace=namespace,
@@ -83,4 +173,7 @@ def prepare_prompt_bundle(
         user_prompt=rendered_user.text,
         resolved_model=routing_decision.model,
         routing_decision=routing_decision,
+        dependency_manifest=manifest,
+        prompt_content_hash=prompt_set.prompt_content_hash,
+        execution_identity=execution_identity,
     )

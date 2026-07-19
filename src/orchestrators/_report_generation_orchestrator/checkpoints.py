@@ -579,9 +579,17 @@ def _checkpoint_model_provenance(
     prompts = cache.get("prompts") if isinstance(cache, dict) else None
     if not isinstance(prompts, dict) or not prompts:
         return "", "", metadata, compatibility
+    prompt_content_hashes = {
+        str(namespace): str(value.get("prompt_content_hash") or "").strip()
+        for namespace, value in prompts.items()
+        if isinstance(value, dict) and str(value.get("prompt_content_hash") or "").strip()
+    }
     prompt_hash = hashlib.sha256(
         json.dumps(
-            prompts, ensure_ascii=True, sort_keys=True, separators=(",", ":")
+            prompt_content_hashes or prompts,
+            ensure_ascii=True,
+            sort_keys=True,
+            separators=(",", ":"),
         ).encode("utf-8")
     ).hexdigest()
     models = sorted(
@@ -592,21 +600,36 @@ def _checkpoint_model_provenance(
         }
     )
     metadata["prompt_hashes"] = prompts
-    compatibility["prompt_versions"] = {
-        str(namespace): hashlib.sha256(
-            json.dumps(
-                {
-                    "system": str(value.get("prompt_system_sha256") or ""),
-                    "user": str(value.get("prompt_user_sha256") or ""),
-                },
-                ensure_ascii=True,
-                sort_keys=True,
-                separators=(",", ":"),
-            ).encode("utf-8")
-        ).hexdigest()
+    metadata["prompt_content_hashes"] = prompt_content_hashes
+    metadata["prompt_dependency_manifests"] = {
+        str(namespace): dict(value.get("dependency_manifest") or {})
+        for namespace, value in prompts.items()
+        if isinstance(value, dict) and isinstance(value.get("dependency_manifest"), dict)
+    }
+    metadata["execution_identities"] = {
+        str(namespace): str(value.get("execution_identity") or "")
         for namespace, value in prompts.items()
         if isinstance(value, dict)
     }
+    compatibility["prompt_versions"] = {
+        str(namespace): (
+            str(value.get("prompt_content_hash") or "")
+            or hashlib.sha256(
+                json.dumps(
+                    {
+                        "system": str(value.get("prompt_system_sha256") or ""),
+                        "user": str(value.get("prompt_user_sha256") or ""),
+                    },
+                    ensure_ascii=True,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode("utf-8")
+            ).hexdigest()
+        )
+        for namespace, value in prompts.items()
+        if isinstance(value, dict)
+    }
+    compatibility["execution_identities"] = dict(metadata["execution_identities"])
     return prompt_hash, ",".join(models), metadata, compatibility
 
 
@@ -695,6 +718,14 @@ def _record_prompt_family_materializations(
         prompt_data = prompt if isinstance(prompt, dict) else {}
         system_hash = str(prompt_data.get("prompt_system_sha256") or "")
         user_hash = str(prompt_data.get("prompt_user_sha256") or "")
+        prompt_content_hash = str(prompt_data.get("prompt_content_hash") or "")
+        prompt_dependency_manifest = dict(
+            prompt_data.get("dependency_manifest") or {}
+        )
+        execution_identity = str(prompt_data.get("execution_identity") or "")
+        execution_identity_manifest = dict(
+            prompt_data.get("execution_identity_manifest") or {}
+        )
         if not system_hash and not user_hash:
             try:
                 prompt_set = prompt_service.load_prompt_set(
@@ -709,8 +740,15 @@ def _record_prompt_family_materializations(
             else:
                 system_hash = prompt_set.system.sha256
                 user_hash = prompt_set.user.sha256
+                prompt_content_hash = prompt_set.prompt_content_hash
+                prompt_dependency_manifest = (
+                    asdict(prompt_set.dependency_manifest)
+                    if prompt_set.dependency_manifest is not None
+                    else {}
+                )
         policy_version = str(
             prompt_versions.get(family_id)
+            or prompt_content_hash
             or sha256_json({"system": system_hash, "user": user_hash})
         )
         dependency_ids, dependency_hashes = dependencies(*dependency_names)
@@ -728,6 +766,10 @@ def _record_prompt_family_materializations(
                 output_payload=output,
                 system_prompt_hash=system_hash,
                 user_prompt_hash=user_hash,
+                prompt_content_hash=prompt_content_hash,
+                prompt_dependency_manifest=prompt_dependency_manifest,
+                execution_identity=execution_identity,
+                execution_identity_manifest=execution_identity_manifest,
                 prompt_policy_version=policy_version,
                 model_name=str(prompt_data.get("model") or ""),
                 routing_policy_version=str(

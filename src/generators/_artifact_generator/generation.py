@@ -185,6 +185,7 @@ def generate_artifacts(
             report_id=report_id,
             report_name=report_name,
             cache_key=cache_key,
+            expected_cache_meta=cache_meta,
             ctx=ctx,
             analysis_store=analysis_store,
         )

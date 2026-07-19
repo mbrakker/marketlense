@@ -4,6 +4,118 @@ from dataclasses import dataclass, field
 from typing import Any, Dict
 
 PROMPT_SCHEMA_VERSION = "1.0"
+PROMPT_COMPOSITION_VERSION = "2.0"
+PROMPT_IDENTITY_SCHEMA_VERSION = "1.0"
+
+
+@dataclass(frozen=True)
+class PromptDependency:
+    """One content-addressed prompt or schema input without machine-local paths."""
+
+    schema_version: str = field(
+        metadata={"doc": "Prompt dependency contract schema version."}
+    )
+    path: str = field(
+        metadata={
+            "doc": "Canonical prompts/ or schemas/ relative path, never an absolute path."
+        }
+    )
+    sha256: str = field(metadata={"doc": "SHA-256 of the dependency file bytes."})
+    kind: str = field(
+        metadata={
+            "doc": "Dependency role: system_root, user_root, partial, or schema_snippet."
+        }
+    )
+    source: str = field(
+        default="",
+        metadata={
+            "doc": "Bounded source detail such as a JSON Pointer, when applicable."
+        },
+    )
+
+
+@dataclass(frozen=True)
+class PromptDependencyManifest:
+    """All content inputs that can alter one namespace's rendered prompt."""
+
+    schema_version: str = field(
+        metadata={"doc": "Prompt dependency-manifest schema version."}
+    )
+    namespace: str = field(
+        metadata={"doc": "Canonical prompt namespace under src/prompts."}
+    )
+    system_root: PromptDependency = field(
+        metadata={"doc": "Content-addressed system.yaml root dependency."}
+    )
+    user_root: PromptDependency = field(
+        metadata={"doc": "Content-addressed user.yaml root dependency."}
+    )
+    included_partials: list[PromptDependency] = field(
+        default_factory=list,
+        metadata={"doc": "Ordered partial dependencies from both prompt roots."},
+    )
+    schema_snippets: list[PromptDependency] = field(
+        default_factory=list,
+        metadata={"doc": "Ordered schema-file dependencies from both prompt roots."},
+    )
+    composition_version: str = field(
+        default=PROMPT_COMPOSITION_VERSION,
+        metadata={"doc": "Version of canonical include and schema composition."},
+    )
+    prompt_content_hash: str = field(
+        default="",
+        metadata={
+            "doc": "Canonical SHA-256 identity of this manifest excluding this field."
+        },
+    )
+
+
+@dataclass(frozen=True)
+class LLMExecutionIdentity:
+    """Content and execution compatibility identity for a model invocation."""
+
+    schema_version: str = field(
+        metadata={"doc": "LLM execution-identity schema version."}
+    )
+    prompt_content_hash: str = field(
+        metadata={"doc": "Canonical prompt-content identity from its dependency manifest."}
+    )
+    provider: str = field(metadata={"doc": "Resolved model provider."})
+    model: str = field(metadata={"doc": "Resolved provider model."})
+    temperature: float | None = field(
+        metadata={"doc": "Sampling temperature sent to the provider, if supported."}
+    )
+    seed: int | None = field(
+        metadata={"doc": "Configured deterministic seed, if supported."}
+    )
+    output_controls: Dict[str, Any] = field(
+        default_factory=dict,
+        metadata={"doc": "Stable output and token controls for the invocation."},
+    )
+    retrieval_mode: str = field(
+        default="chat_json",
+        metadata={"doc": "Resolved retrieval mode that affects model output."},
+    )
+    routing_policy: Dict[str, Any] = field(
+        default_factory=dict,
+        metadata={"doc": "Resolved routing policy values affecting execution."},
+    )
+    compaction_policy: Dict[str, Any] = field(
+        default_factory=dict,
+        metadata={"doc": "Resolved deterministic context-compaction policy."},
+    )
+    output_contract_schema_version: str = field(
+        default="",
+        metadata={"doc": "Output contract or structured-output schema version."},
+    )
+    validator_version: str = field(
+        default="",
+        metadata={"doc": "Output validator compatibility version, when applicable."},
+    )
+    execution_identity: str = field(
+        default="",
+        metadata={"doc": "Canonical SHA-256 identity of all execution fields."},
+    )
 
 
 @dataclass(frozen=True)
@@ -70,6 +182,14 @@ class PromptSet:
     schema_version: str = field(metadata={"doc": "Prompt set schema version."})
     system: "PromptTemplate" = field(metadata={"doc": "System prompt template."})
     user: "PromptTemplate" = field(metadata={"doc": "User prompt template."})
+    dependency_manifest: PromptDependencyManifest | None = field(
+        default=None,
+        metadata={"doc": "Complete content-addressed dependency manifest."},
+    )
+    prompt_content_hash: str = field(
+        default="",
+        metadata={"doc": "Canonical identity for all prompt-content dependencies."},
+    )
 
 
 @dataclass(frozen=True)
@@ -93,6 +213,14 @@ class PromptTemplate:
     schema_snippet_sources: Dict[str, str] = field(
         default_factory=dict,
         metadata={"doc": "Source schema references used to generate prompt snippets."},
+    )
+    schema_snippet_paths: Dict[str, str] = field(
+        default_factory=dict,
+        metadata={"doc": "Canonical schema dependency path keyed by snippet variable."},
+    )
+    schema_snippet_sha256s: Dict[str, str] = field(
+        default_factory=dict,
+        metadata={"doc": "Schema-file SHA-256 keyed by snippet variable."},
     )
 
 
@@ -121,6 +249,10 @@ class PromptNamespaceSummary:
     user_path: str = field(metadata={"doc": "Filesystem path to user.yaml."})
     system_sha256: str = field(metadata={"doc": "SHA-256 hash of system prompt text."})
     user_sha256: str = field(metadata={"doc": "SHA-256 hash of user prompt text."})
+    prompt_content_hash: str = field(
+        default="",
+        metadata={"doc": "Canonical identity of all prompt dependencies."},
+    )
 
 
 @dataclass(frozen=True)

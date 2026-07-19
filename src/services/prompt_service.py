@@ -4,7 +4,7 @@ import hashlib
 import json
 import logging
 import time
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from typing import Any, Dict
 
@@ -18,15 +18,20 @@ from jinja2 import (
 )
 
 from src.contracts.prompts import (
+    PROMPT_COMPOSITION_VERSION,
+    PROMPT_IDENTITY_SCHEMA_VERSION,
+    LLMExecutionIdentity,
+    PromptDependency,
+    PromptDependencyManifest,
     PromptDryRunBenchmark,
     PromptDryRunFixture,
     PromptDryRunRequest,
     PromptDryRunResponse,
     PromptDryRunResult,
+    PromptLoadRequest,
     PromptNamespaceListRequest,
     PromptNamespaceListResponse,
     PromptNamespaceSummary,
-    PromptLoadRequest,
     PromptRenderRequest,
     PromptRenderResponse,
     PromptSet,
@@ -51,10 +56,6 @@ JINJA_ENV = Environment(
 @dataclass(frozen=True)
 class _PromptCacheEntry:
     prompt_set: PromptSet
-    system_mtime: int
-    user_mtime: int
-    system_size: int
-    user_size: int
 
 
 @dataclass(frozen=True)
@@ -119,19 +120,8 @@ def load_prompt_set(request: PromptLoadRequest, ctx: RunContext) -> PromptSet:
     prompt_set: PromptSet | None = None
     source = "reloaded"
     if cache_entry and not request.force_reload:
-        if not request.reload_if_changed:
-            logger.info(
-                log_event(
-                    ctx,
-                    role="service",
-                    event="prompt_load_cache_hit",
-                    module=logger.name,
-                    fields={"namespace": namespace, "validated": False},
-                )
-            )
-            prompt_set = cache_entry.prompt_set
-            source = "cache"
-        elif _is_prompt_cache_valid(cache_entry, system_path, user_path):
+        valid, invalidation_reason = _is_prompt_cache_valid(cache_entry)
+        if valid:
             logger.info(
                 log_event(
                     ctx,
@@ -143,6 +133,7 @@ def load_prompt_set(request: PromptLoadRequest, ctx: RunContext) -> PromptSet:
                         "validated": True,
                         "system_path": cache_entry.prompt_set.system.path,
                         "user_path": cache_entry.prompt_set.user.path,
+                        "prompt_content_hash": cache_entry.prompt_set.prompt_content_hash,
                     },
                 )
             )
@@ -153,25 +144,46 @@ def load_prompt_set(request: PromptLoadRequest, ctx: RunContext) -> PromptSet:
                 log_event(
                     ctx,
                     role="service",
-                    event="prompt_load_cache_stale",
+                    event="prompt_cache_invalidated",
                     module=logger.name,
-                    fields={"namespace": namespace},
+                    fields={
+                        "namespace": namespace,
+                        "reason": invalidation_reason,
+                    },
                 )
             )
     if prompt_set is None:
         system_template = _load_prompt(system_path)
         user_template = _load_prompt(user_path)
+        dependency_manifest = _build_dependency_manifest(
+            namespace=namespace,
+            system_path=system_path,
+            user_path=user_path,
+            system_template=system_template,
+            user_template=user_template,
+        )
         prompt_set = PromptSet(
             schema_version="1.0",
             system=system_template,
             user=user_template,
+            dependency_manifest=dependency_manifest,
+            prompt_content_hash=dependency_manifest.prompt_content_hash,
         )
-        _PROMPT_CACHE[namespace] = _PromptCacheEntry(
-            prompt_set=prompt_set,
-            system_mtime=_get_mtime(system_path),
-            user_mtime=_get_mtime(user_path),
-            system_size=_get_size(system_path),
-            user_size=_get_size(user_path),
+        _PROMPT_CACHE[namespace] = _PromptCacheEntry(prompt_set=prompt_set)
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="prompt_dependency_manifest_built",
+                module=logger.name,
+                fields={
+                    "namespace": namespace,
+                    "prompt_content_hash": dependency_manifest.prompt_content_hash,
+                    "partial_count": len(dependency_manifest.included_partials),
+                    "schema_snippet_count": len(dependency_manifest.schema_snippets),
+                    "composition_version": dependency_manifest.composition_version,
+                },
+            )
         )
     else:
         system_template = prompt_set.system
@@ -187,6 +199,7 @@ def load_prompt_set(request: PromptLoadRequest, ctx: RunContext) -> PromptSet:
                 "system_sha256": system_template.sha256,
                 "user_path": user_template.path,
                 "user_sha256": user_template.sha256,
+                "prompt_content_hash": prompt_set.prompt_content_hash,
                 "cached": source != "reloaded",
                 "source": source,
             },
@@ -233,6 +246,7 @@ def list_prompt_namespaces(
                 user_path=prompt_set.user.path,
                 system_sha256=prompt_set.system.sha256,
                 user_sha256=prompt_set.user.sha256,
+                prompt_content_hash=prompt_set.prompt_content_hash,
             )
         )
     response = PromptNamespaceListResponse(schema_version="1.0", namespaces=namespaces)
@@ -447,8 +461,14 @@ def validate_prompt_dry_run(
                     "user_path": result.user_path,
                     "system_sha256": result.system_sha256,
                     "user_sha256": result.user_sha256,
-                    "rendered_system_prompt": result.rendered_system_prompt,
-                    "rendered_user_prompt": result.rendered_user_prompt,
+                    "rendered_system_sha256": hashlib.sha256(
+                        result.rendered_system_prompt.encode("utf-8")
+                    ).hexdigest(),
+                    "rendered_user_sha256": hashlib.sha256(
+                        result.rendered_user_prompt.encode("utf-8")
+                    ).hexdigest(),
+                    "rendered_system_length": len(result.rendered_system_prompt),
+                    "rendered_user_length": len(result.rendered_user_prompt),
                     "render_runtime_ms": result.render_runtime_ms,
                     "model": result.model,
                     "temperature": result.temperature,
@@ -486,22 +506,205 @@ def _get_mtime(path: Path) -> int:
     return int(getattr(stat, "st_mtime_ns", int(stat.st_mtime * 1_000_000_000)))
 
 
-def _get_size(path: Path) -> int:
-    return int(path.stat().st_size)
+def _is_prompt_cache_valid(entry: _PromptCacheEntry) -> tuple[bool, str]:
+    manifest = entry.prompt_set.dependency_manifest
+    if manifest is None or not manifest.prompt_content_hash:
+        return False, "legacy_manifest_missing"
+    for dependency in _manifest_dependencies(manifest):
+        try:
+            actual_hash = _sha256_file(
+                _resolve_manifest_dependency_path(dependency.path)
+            )
+        except (AppError, FileNotFoundError):
+            return False, f"{dependency.kind}_missing"
+        if actual_hash != dependency.sha256:
+            return False, f"{dependency.kind}_content_changed"
+    return True, ""
 
 
-def _is_prompt_cache_valid(
-    entry: _PromptCacheEntry, system_path: Path, user_path: Path
-) -> bool:
+def _manifest_dependencies(
+    manifest: PromptDependencyManifest,
+) -> tuple[PromptDependency, ...]:
+    return (
+        manifest.system_root,
+        manifest.user_root,
+        *manifest.included_partials,
+        *manifest.schema_snippets,
+    )
+
+
+def _sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _canonical_dependency_path(path: Path, *, root: Path, prefix: str) -> str:
     try:
-        return (
-            entry.system_mtime == _get_mtime(system_path)
-            and entry.user_mtime == _get_mtime(user_path)
-            and entry.system_size == _get_size(system_path)
-            and entry.user_size == _get_size(user_path)
+        relative = path.resolve().relative_to(root.resolve())
+    except ValueError as exc:
+        raise AppError(
+            code="prompt_dependency_path_invalid",
+            message="Prompt dependency must resolve under its canonical root",
+            cause=exc,
+            retryable=False,
+        ) from exc
+    return f"{prefix}/{relative.as_posix()}"
+
+
+def _resolve_manifest_dependency_path(canonical_path: str) -> Path:
+    prefix, separator, relative = canonical_path.partition("/")
+    if not separator or not relative:
+        raise AppError(
+            code="prompt_dependency_path_invalid",
+            message="Prompt dependency path is invalid",
+            retryable=False,
+            context={"path": canonical_path},
         )
-    except FileNotFoundError:
-        return False
+    if prefix == "prompts":
+        root = PROMPTS_ROOT.resolve()
+    elif prefix == "schemas":
+        root = SCHEMAS_ROOT.resolve()
+    else:
+        raise AppError(
+            code="prompt_dependency_path_invalid",
+            message="Prompt dependency path root is invalid",
+            retryable=False,
+            context={"path": canonical_path},
+        )
+    candidate = (root / relative).resolve()
+    try:
+        candidate.relative_to(root)
+    except ValueError as exc:
+        raise AppError(
+            code="prompt_dependency_path_invalid",
+            message="Prompt dependency path must remain under its canonical root",
+            cause=exc,
+            retryable=False,
+            context={"path": canonical_path},
+        ) from exc
+    return candidate
+
+
+def _build_dependency_manifest(
+    *,
+    namespace: str,
+    system_path: Path,
+    user_path: Path,
+    system_template: PromptTemplate,
+    user_template: PromptTemplate,
+) -> PromptDependencyManifest:
+    def root_dependency(path: Path, kind: str) -> PromptDependency:
+        return PromptDependency(
+            schema_version=PROMPT_IDENTITY_SCHEMA_VERSION,
+            path=_canonical_dependency_path(path, root=PROMPTS_ROOT, prefix="prompts"),
+            sha256=_sha256_file(path),
+            kind=kind,
+        )
+
+    partials: list[PromptDependency] = []
+    schema_snippets: list[PromptDependency] = []
+    for root_name, template in (("system", system_template), ("user", user_template)):
+        for index, (path, digest) in enumerate(
+            zip(template.include_paths, template.include_sha256s, strict=True)
+        ):
+            partials.append(
+                PromptDependency(
+                    schema_version=PROMPT_IDENTITY_SCHEMA_VERSION,
+                    path=_canonical_dependency_path(
+                        Path(path), root=PROMPTS_ROOT, prefix="prompts"
+                    ),
+                    sha256=digest,
+                    kind="partial",
+                    source=f"{root_name}:{index}",
+                )
+            )
+        for key in sorted(template.schema_snippet_paths):
+            schema_snippets.append(
+                PromptDependency(
+                    schema_version=PROMPT_IDENTITY_SCHEMA_VERSION,
+                    path=template.schema_snippet_paths[key],
+                    sha256=template.schema_snippet_sha256s[key],
+                    kind="schema_snippet",
+                    source=f"{root_name}:{key}:{template.schema_snippet_sources.get(key, '')}",
+                )
+            )
+    without_hash = PromptDependencyManifest(
+        schema_version=PROMPT_IDENTITY_SCHEMA_VERSION,
+        namespace=namespace,
+        system_root=root_dependency(system_path, "system_root"),
+        user_root=root_dependency(user_path, "user_root"),
+        included_partials=partials,
+        schema_snippets=schema_snippets,
+        composition_version=PROMPT_COMPOSITION_VERSION,
+    )
+    payload = asdict(without_hash)
+    payload.pop("prompt_content_hash", None)
+    return replace(
+        without_hash,
+        prompt_content_hash=hashlib.sha256(
+            json.dumps(
+                payload, ensure_ascii=True, sort_keys=True, separators=(",", ":")
+            ).encode("utf-8")
+        ).hexdigest(),
+    )
+
+
+def build_llm_execution_identity(
+    *,
+    prompt_content_hash: str,
+    provider: str,
+    model: str,
+    temperature: float | None,
+    seed: int | None,
+    max_output_tokens: int | None = None,
+    timeout_seconds: float | None = None,
+    provider_retry_count: int = 0,
+    retrieval_mode: str = "chat_json",
+    routing_policy: dict[str, Any] | None = None,
+    compaction_policy: dict[str, Any] | None = None,
+    output_contract_schema_version: str = "",
+    validator_version: str = "",
+) -> LLMExecutionIdentity:
+    """Build the stable, content-free identity for one model execution.
+
+    The payload deliberately contains only resolved configuration and hashes.  It
+    excludes checkout paths, timestamps, prompt text, source content, and
+    request-local IDs so compatible work can be reused across processes.
+    """
+
+    identity = LLMExecutionIdentity(
+        schema_version=PROMPT_IDENTITY_SCHEMA_VERSION,
+        prompt_content_hash=str(prompt_content_hash or "").strip(),
+        provider=str(provider or "").strip(),
+        model=str(model or "").strip(),
+        temperature=None if temperature is None else float(temperature),
+        seed=None if seed is None else int(seed),
+        output_controls={
+            "max_output_tokens": (
+                None if max_output_tokens is None else int(max_output_tokens)
+            ),
+            "timeout_seconds": (
+                None if timeout_seconds is None else float(timeout_seconds)
+            ),
+            "provider_retry_count": int(provider_retry_count),
+        },
+        retrieval_mode=str(retrieval_mode or "chat_json").strip() or "chat_json",
+        routing_policy=dict(routing_policy or {}),
+        compaction_policy=dict(compaction_policy or {}),
+        output_contract_schema_version=str(output_contract_schema_version or "").strip(),
+        validator_version=str(validator_version or "").strip(),
+    )
+    payload = asdict(identity)
+    payload.pop("execution_identity", None)
+    return LLMExecutionIdentity(
+        **{
+            **payload,
+            "execution_identity": hashlib.sha256(
+                json.dumps(
+                    payload, ensure_ascii=True, sort_keys=True, separators=(",", ":")
+                ).encode("utf-8")
+            ).hexdigest(),
+        }
+    )
 
 
 def _list_prompt_namespace_names(
@@ -786,7 +989,12 @@ def _load_prompt(path: Path) -> PromptTemplate:
     include_templates = _load_prompt_includes(data.get("includes", []), owner_path=path)
     include_texts = [item.text for item in include_templates]
     composed_text = "\n\n".join([*include_texts, str(text)]).strip() + "\n"
-    schema_snippets, schema_snippet_sources = _load_prompt_schema_snippets(
+    (
+        schema_snippets,
+        schema_snippet_sources,
+        schema_snippet_paths,
+        schema_snippet_sha256s,
+    ) = _load_prompt_schema_snippets(
         data.get("schema_snippets", {}),
         owner_path=path,
     )
@@ -800,6 +1008,8 @@ def _load_prompt(path: Path) -> PromptTemplate:
         include_sha256s=[item.sha256 for item in include_templates],
         schema_snippets=schema_snippets,
         schema_snippet_sources=schema_snippet_sources,
+        schema_snippet_paths=schema_snippet_paths,
+        schema_snippet_sha256s=schema_snippet_sha256s,
     )
 
 
@@ -892,9 +1102,9 @@ def _resolve_prompt_relative_path(raw_path: object, *, owner_path: Path) -> Path
 
 def _load_prompt_schema_snippets(
     payload: object, *, owner_path: Path
-) -> tuple[dict[str, str], dict[str, str]]:
+) -> tuple[dict[str, str], dict[str, str], dict[str, str], dict[str, str]]:
     if payload in (None, ""):
-        return {}, {}
+        return {}, {}, {}, {}
     if not isinstance(payload, dict):
         raise AppError(
             code="prompt_schema_snippets_invalid",
@@ -904,6 +1114,8 @@ def _load_prompt_schema_snippets(
         )
     snippets: dict[str, str] = {}
     sources: dict[str, str] = {}
+    paths: dict[str, str] = {}
+    hashes: dict[str, str] = {}
     for raw_key, raw_spec in payload.items():
         key = str(raw_key or "").strip()
         if not key:
@@ -913,13 +1125,19 @@ def _load_prompt_schema_snippets(
                 retryable=False,
                 context={"path": str(owner_path)},
             )
-        snippet, source = _build_prompt_schema_snippet(raw_spec, owner_path=owner_path)
+        snippet, source, schema_path, schema_hash = _build_prompt_schema_snippet(
+            raw_spec, owner_path=owner_path
+        )
         snippets[key] = snippet
         sources[key] = source
-    return snippets, sources
+        paths[key] = schema_path
+        hashes[key] = schema_hash
+    return snippets, sources, paths, hashes
 
 
-def _build_prompt_schema_snippet(spec: object, *, owner_path: Path) -> tuple[str, str]:
+def _build_prompt_schema_snippet(
+    spec: object, *, owner_path: Path
+) -> tuple[str, str, str, str]:
     if isinstance(spec, str):
         schema_name = spec
         pointer = ""
@@ -935,7 +1153,8 @@ def _build_prompt_schema_snippet(spec: object, *, owner_path: Path) -> tuple[str
         )
     schema_path = _resolve_schema_path(schema_name, owner_path=owner_path)
     try:
-        schema_payload = json.loads(schema_path.read_text(encoding="utf-8"))
+        raw_schema = schema_path.read_bytes()
+        schema_payload = json.loads(raw_schema.decode("utf-8"))
     except FileNotFoundError as exc:
         raise AppError(
             code="prompt_schema_not_found",
@@ -955,7 +1174,12 @@ def _build_prompt_schema_snippet(spec: object, *, owner_path: Path) -> tuple[str
     target = _json_pointer_get(schema_payload, pointer)
     source = f"{schema_name}#{pointer}" if pointer else schema_name
     lines = [f"Schema source: {source}", *_schema_snippet_lines(target)]
-    return "\n".join(lines), source
+    return (
+        "\n".join(lines),
+        source,
+        _canonical_dependency_path(schema_path, root=SCHEMAS_ROOT, prefix="schemas"),
+        hashlib.sha256(raw_schema).hexdigest(),
+    )
 
 
 def _resolve_schema_path(schema_name: str, *, owner_path: Path) -> Path:

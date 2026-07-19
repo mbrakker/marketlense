@@ -1,6 +1,11 @@
 from types import SimpleNamespace
 
-from src.contracts.prompts import PromptSet, PromptTemplate
+from src.contracts.prompts import (
+    PromptDependency,
+    PromptDependencyManifest,
+    PromptSet,
+    PromptTemplate,
+)
 from src.contracts.run_context import RunContext
 from src.generators.prompt_preparation import prepare_prompt_bundle
 
@@ -16,6 +21,23 @@ class RecordingPromptClient:
 
     def load_prompt_set(self, request, ctx):
         self.load_requests.append((request, ctx))
+        manifest = PromptDependencyManifest(
+            schema_version="1.0",
+            namespace=request.namespace,
+            system_root=PromptDependency(
+                schema_version="1.0",
+                path=f"prompts/{request.namespace}/system.yaml",
+                sha256="system-sha",
+                kind="system_root",
+            ),
+            user_root=PromptDependency(
+                schema_version="1.0",
+                path=f"prompts/{request.namespace}/user.yaml",
+                sha256="user-sha",
+                kind="user_root",
+            ),
+            prompt_content_hash="a" * 64,
+        )
         return PromptSet(
             schema_version="1.0",
             system=PromptTemplate(
@@ -30,6 +52,8 @@ class RecordingPromptClient:
                 text="User {audience}",
                 sha256="user-sha",
             ),
+            dependency_manifest=manifest,
+            prompt_content_hash=manifest.prompt_content_hash,
         )
 
     def render_prompt(self, request, ctx):

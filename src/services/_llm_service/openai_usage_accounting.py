@@ -119,6 +119,20 @@ def record_usage_accounting(
             artifact_family=str(getattr(source, "artifact_family", "") or ""),
             extra={
                 "schema_name": str(getattr(source, "schema_name", "") or ""),
+                "prompt_content_hash": str(
+                    getattr(source, "prompt_content_hash", "")
+                    or getattr(source, "prompt_hash", "")
+                    or ""
+                ),
+                "prompt_dependency_manifest": dict(
+                    getattr(source, "prompt_dependency_manifest", {}) or {}
+                ),
+                "execution_identity": str(
+                    getattr(source, "execution_identity", "") or ""
+                ),
+                "execution_identity_manifest": dict(
+                    getattr(source, "execution_identity_manifest", {}) or {}
+                ),
                 "response_cache_dir": str(
                     getattr(source, "response_cache_dir", "") or ""
                 ),

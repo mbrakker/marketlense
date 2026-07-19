@@ -45,6 +45,22 @@ class PromptFamilyMaterializationRequest:
     user_prompt_hash: str = field(
         default="", metadata={"doc": "Rendered user-prompt SHA-256 when model-backed."}
     )
+    prompt_content_hash: str = field(
+        default="",
+        metadata={"doc": "Canonical dependency-manifest prompt-content identity."},
+    )
+    prompt_dependency_manifest: dict[str, Any] = field(
+        default_factory=dict,
+        metadata={"doc": "Complete content-addressed prompt dependency manifest."},
+    )
+    execution_identity: str = field(
+        default="",
+        metadata={"doc": "Model execution compatibility identity when model-backed."},
+    )
+    execution_identity_manifest: dict[str, Any] = field(
+        default_factory=dict,
+        metadata={"doc": "Content-free resolved execution identity inputs."},
+    )
     prompt_policy_version: str = field(
         default="", metadata={"doc": "Prompt-policy compatibility fingerprint."}
     )
@@ -95,6 +111,18 @@ class PromptFamilyMaterialization:
         metadata={"doc": "System-prompt hash when applicable."}
     )
     user_prompt_hash: str = field(metadata={"doc": "User-prompt hash when applicable."})
+    prompt_content_hash: str = field(
+        metadata={"doc": "Canonical dependency-manifest prompt-content identity."}
+    )
+    prompt_dependency_manifest: dict[str, Any] = field(
+        metadata={"doc": "Complete content-addressed prompt dependency manifest."}
+    )
+    execution_identity: str = field(
+        metadata={"doc": "Model execution compatibility identity when model-backed."}
+    )
+    execution_identity_manifest: dict[str, Any] = field(
+        metadata={"doc": "Content-free resolved execution identity inputs."}
+    )
     prompt_policy_version: str = field(metadata={"doc": "Prompt-policy fingerprint."})
     model_name: str = field(metadata={"doc": "Resolved model when applicable."})
     routing_policy_version: str = field(metadata={"doc": "Routing-policy fingerprint."})

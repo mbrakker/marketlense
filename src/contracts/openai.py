@@ -484,6 +484,22 @@ class OpenAIResponseRequest:
     prompt_hash: str = field(
         default="", metadata={"doc": "Prompt hash for usage reporting, if known."}
     )
+    prompt_content_hash: str = field(
+        default="",
+        metadata={"doc": "Complete prompt-content identity for provenance, if known."},
+    )
+    prompt_dependency_manifest: Dict[str, Any] = field(
+        default_factory=dict,
+        metadata={"doc": "Content-addressed prompt dependency manifest, if known."},
+    )
+    execution_identity: str = field(
+        default="",
+        metadata={"doc": "Resolved execution compatibility identity, if known."},
+    )
+    execution_identity_manifest: Dict[str, Any] = field(
+        default_factory=dict,
+        metadata={"doc": "Content-free execution identity inputs, if known."},
+    )
     usage_db_path: str = field(
         default="./state/llm_usage.sqlite",
         metadata={"doc": "Canonical SQLite usage ledger path for this provider call."},
@@ -587,6 +603,22 @@ class OpenAIJSONPromptRequest:
     )
     prompt_hash: str = field(
         default="", metadata={"doc": "Prompt hash for usage reporting, if known."}
+    )
+    prompt_content_hash: str = field(
+        default="",
+        metadata={"doc": "Complete prompt-content identity for provenance, if known."},
+    )
+    prompt_dependency_manifest: Dict[str, Any] = field(
+        default_factory=dict,
+        metadata={"doc": "Content-addressed prompt dependency manifest, if known."},
+    )
+    execution_identity: str = field(
+        default="",
+        metadata={"doc": "Resolved execution compatibility identity, if known."},
+    )
+    execution_identity_manifest: Dict[str, Any] = field(
+        default_factory=dict,
+        metadata={"doc": "Content-free execution identity inputs, if known."},
     )
     usage_db_path: str = field(
         default="./state/llm_usage.sqlite",

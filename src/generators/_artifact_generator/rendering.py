@@ -8,8 +8,15 @@ from src.contracts.ingest import IngestSettings
 from src.contracts.llm import LLMContextCompactionPolicy
 from src.contracts.openai import OpenAIJSONPromptRequest, OpenAIResponseRequest
 from src.contracts.run_context import RunContext
-from src.generators.prompt_preparation import prepare_prompt_bundle
-from src.utils.costing import estimate_cost_usd, estimate_text_tokens, resolve_model_pricing
+from src.generators.prompt_preparation import (
+    model_request_identity_fields,
+    prepare_prompt_bundle,
+)
+from src.utils.costing import (
+    estimate_cost_usd,
+    estimate_text_tokens,
+    resolve_model_pricing,
+)
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.artifact_generator")
@@ -36,6 +43,14 @@ def render_artifact_json_model(
         prompt_client=prompt_client,
         system_variables=variables,
         user_variables=variables,
+        retrieval_mode=(
+            "vector_store" if allow_vector_store and vector_store_id else "chat_json"
+        ),
+        temperature=settings.temperature,
+        seed=settings.openai_seed,
+        timeout_seconds=settings.openai_timeout_seconds,
+        output_contract_schema_version="artifact_json:1.0",
+        validator_version="artifacts_schema:3.0",
     )
     expected_input_tokens = estimate_text_tokens(
         f"{prompt_bundle.system_prompt}\n{prompt_bundle.user_prompt}"
@@ -62,8 +77,14 @@ def render_artifact_json_model(
                 "user_path": prompt_bundle.prompt_set.user.path,
                 "prompt_system_sha256": prompt_bundle.prompt_set.system.sha256,
                 "prompt_user_sha256": prompt_bundle.prompt_set.user.sha256,
-                "system_prompt": prompt_bundle.system_prompt,
-                "user_prompt": prompt_bundle.user_prompt,
+                "prompt_content_hash": prompt_bundle.prompt_content_hash,
+                "execution_identity": prompt_bundle.execution_identity.execution_identity,
+                "partial_count": len(
+                    prompt_bundle.dependency_manifest.included_partials
+                ),
+                "schema_snippet_count": len(
+                    prompt_bundle.dependency_manifest.schema_snippets
+                ),
             },
         )
     )
@@ -106,6 +127,8 @@ def render_artifact_json_model(
                     else "chat_json"
                 ),
                 "vector_store_id": vector_store_id or "",
+                "prompt_content_hash": prompt_bundle.prompt_content_hash,
+                "execution_identity": prompt_bundle.execution_identity.execution_identity,
             },
         )
     )
@@ -129,7 +152,7 @@ def render_artifact_json_model(
                 report_name=report_name,
                 source_url=source_url,
                 prompt_namespace=namespace,
-                prompt_hash=prompt_bundle.prompt_set.user.sha256,
+                **model_request_identity_fields(prompt_bundle),
                 same_provider_fallback=prompt_bundle.routing_decision.same_provider_fallback,
                 context_compaction_policy=LLMContextCompactionPolicy(
                     schema_version="1.0",
@@ -159,7 +182,7 @@ def render_artifact_json_model(
                 report_name=report_name,
                 source_url=source_url,
                 prompt_namespace=namespace,
-                prompt_hash=prompt_bundle.prompt_set.user.sha256,
+                **model_request_identity_fields(prompt_bundle),
                 same_provider_fallback=prompt_bundle.routing_decision.same_provider_fallback,
                 context_compaction_policy=LLMContextCompactionPolicy(
                     schema_version="1.0",
@@ -182,7 +205,7 @@ def render_artifact_json_model(
                 "model": getattr(resp, "model", prompt_bundle.resolved_model),
                 "has_json": bool(resp.parsed_json),
                 "request_id": getattr(resp, "request_id", "") or "",
-                "raw_response": getattr(resp, "text", "") or "",
+                "response_chars": len(getattr(resp, "text", "") or ""),
             },
         )
     )

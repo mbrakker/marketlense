@@ -12,8 +12,8 @@ from src.contracts.artifact_lineage import (
     ArtifactReuseCheckRequest,
 )
 from src.services.report_store_service import (
-    backfill_artifact_lineage,
     audit_artifact_lineage,
+    backfill_artifact_lineage,
     check_artifact_reuse,
     invalidate_artifacts,
     record_artifact_lineage,
@@ -124,6 +124,65 @@ def test_lineage_persists_immutable_identity_edges_and_compatible_reuse(
     )
     assert changed.reusable is False
     assert changed.reason == "content_changed"
+
+
+def test_reuse_rejects_execution_identity_mismatch_and_reads_legacy_records(
+    tmp_path: Path, run_context
+) -> None:
+    db_path = tmp_path / "reports.sqlite"
+    artifact_path = tmp_path / "summary.json"
+    artifact_path.write_text('{"summary":"retained"}', encoding="utf-8")
+    current = _register(
+        db_path,
+        artifact_path,
+        run_context,
+        kind="artifacts",
+        metadata={"execution_identity": "current-execution-identity"},
+    )
+    mismatch = check_artifact_reuse(
+        ArtifactReuseCheckRequest(
+            schema_version=ARTIFACT_LINEAGE_SCHEMA_VERSION,
+            db_path=str(db_path),
+            artifact_id=current.record.artifact_id,
+            expected_schema_version="1.0",
+            expected_processing_version="test-v1",
+            expected_execution_identity="changed-execution-identity",
+            expected_validation_status="pass",
+        ),
+        run_context,
+    )
+    assert mismatch.reusable is False
+    assert mismatch.reason == "execution_identity_mismatch"
+
+    legacy_path = tmp_path / "legacy.json"
+    legacy_path.write_text('{"summary":"legacy"}', encoding="utf-8")
+    legacy = _register(db_path, legacy_path, run_context, kind="legacy_artifacts")
+    readable = check_artifact_reuse(
+        ArtifactReuseCheckRequest(
+            schema_version=ARTIFACT_LINEAGE_SCHEMA_VERSION,
+            db_path=str(db_path),
+            artifact_id=legacy.record.artifact_id,
+            expected_schema_version="1.0",
+            expected_processing_version="test-v1",
+            expected_validation_status="pass",
+        ),
+        run_context,
+    )
+    compatibility_checked = check_artifact_reuse(
+        ArtifactReuseCheckRequest(
+            schema_version=ARTIFACT_LINEAGE_SCHEMA_VERSION,
+            db_path=str(db_path),
+            artifact_id=legacy.record.artifact_id,
+            expected_schema_version="1.0",
+            expected_processing_version="test-v1",
+            expected_execution_identity="current-execution-identity",
+            expected_validation_status="pass",
+        ),
+        run_context,
+    )
+    assert readable.reusable is True
+    assert compatibility_checked.reusable is False
+    assert compatibility_checked.reason == "legacy_identity"
 
 
 def test_new_materialization_supersedes_active_record_at_the_same_path(

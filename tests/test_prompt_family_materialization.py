@@ -51,6 +51,13 @@ def _request(tmp_path: Path, *, output: object, dependencies=None, hashes=None):
         output_payload=output,
         system_prompt_hash="system-hash",
         user_prompt_hash="user-hash",
+        prompt_content_hash="prompt-content-hash",
+        prompt_dependency_manifest={
+            "namespace": "report_vs/artifacts/summary",
+            "system_root": {"path": "prompts/report_vs/artifacts/summary/system.yaml"},
+        },
+        execution_identity="execution-identity-hash",
+        execution_identity_manifest={"provider": "openai", "model": "gpt-5-mini"},
         prompt_policy_version="policy-hash",
         model_name="gpt-5-mini",
         routing_policy_version="routing-hash",
@@ -100,6 +107,8 @@ def test_materialization_is_independent_idempotent_and_supersedes_history(
     assert trace.records[0].compatibility["validator_versions"] == {
         "report_vs/artifacts/summary": "validation-v1"
     }
+    assert trace.records[0].metadata["prompt_content_hash"] == "prompt-content-hash"
+    assert trace.records[0].metadata["execution_identity"] == "execution-identity-hash"
 
 
 def test_materialization_rejects_dependency_without_verified_hash(

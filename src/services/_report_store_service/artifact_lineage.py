@@ -373,6 +373,42 @@ def check_artifact_reuse(
             reason="legacy_incomplete",
             record=record,
         )
+    if request.expected_execution_identity:
+        actual_execution_identity = str(
+            record.metadata.get("execution_identity") or ""
+        )
+        if not actual_execution_identity:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="artifact_reuse_legacy_identity_read",
+                    module=logger.name,
+                    fields={"artifact_id": record.artifact_id},
+                )
+            )
+            return ArtifactReuseCheckResponse(
+                schema_version=ARTIFACT_LINEAGE_SCHEMA_VERSION,
+                reusable=False,
+                reason="legacy_identity",
+                record=record,
+            )
+        if actual_execution_identity != request.expected_execution_identity:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="artifact_reuse_execution_identity_mismatch",
+                    module=logger.name,
+                    fields={"artifact_id": record.artifact_id},
+                )
+            )
+            return ArtifactReuseCheckResponse(
+                schema_version=ARTIFACT_LINEAGE_SCHEMA_VERSION,
+                reusable=False,
+                reason="execution_identity_mismatch",
+                record=record,
+            )
     if any(
         expected_value and getattr(record, field) != expected_value
         for field, expected_value in expected

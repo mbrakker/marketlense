@@ -1,15 +1,25 @@
 import hashlib
 import logging
 import os
+import shutil
 from pathlib import Path
 
 import pytest
 
-from src.contracts.prompts import PromptLoadRequest
-from src.contracts.prompts import PromptNamespaceListRequest
+from src.contracts.prompts import (
+    PromptLoadRequest,
+    PromptNamespaceListRequest,
+    PromptRenderRequest,
+    PromptTemplate,
+)
 from src.contracts.run_context import RunContext
-from src.services.prompt_service import list_prompt_namespaces, load_prompt_set
 from src.services import prompt_service
+from src.services.prompt_service import (
+    build_llm_execution_identity,
+    list_prompt_namespaces,
+    load_prompt_set,
+    render_prompt,
+)
 from src.utils.errors import AppError
 
 
@@ -28,6 +38,14 @@ def _write_prompt_namespace(
     os.utime(namespace_dir.parent, None)
 
 
+def _copy_prompt_and_schema_roots(tmp_path: Path) -> tuple[Path, Path]:
+    prompts_root = tmp_path / "prompts"
+    schemas_root = tmp_path / "schemas"
+    shutil.copytree(prompt_service.PROMPTS_ROOT, prompts_root)
+    shutil.copytree(prompt_service.SCHEMAS_ROOT, schemas_root)
+    return prompts_root, schemas_root
+
+
 def test_load_prompt_set_hashes(caplog):
     caplog.set_level(logging.INFO, logger="market_lense.prompt_service")
     prompt_set = load_prompt_set(
@@ -44,6 +62,29 @@ def test_load_prompt_set_hashes(caplog):
         rec.message for rec in caplog.records if "prompt_load_complete" in rec.message
     ]
     assert loaded_logs, "expected load logs"
+
+
+def test_prompt_render_logs_do_not_expose_rendered_content(caplog) -> None:
+    marker = "confidential-rendered-prompt-marker"
+    template = PromptTemplate(
+        schema_version="1.0",
+        path="prompts/test/system.yaml",
+        text="System instruction: {{ secret }}",
+        sha256="test-template-sha",
+    )
+    caplog.set_level(logging.INFO, logger="market_lense.prompt_service")
+
+    response = render_prompt(
+        PromptRenderRequest(
+            schema_version="1.0",
+            template=template,
+            variables={"secret": marker},
+        ),
+        _ctx(),
+    )
+
+    assert marker in response.text
+    assert marker not in caplog.text
 
 
 def test_artifact_prompts_include_shared_editorial_constitution() -> None:
@@ -241,3 +282,144 @@ def test_load_prompt_set_rejects_non_mapping_yaml_root(
         )
 
     assert_app_error(err.value, code="prompt_yaml_invalid", retryable=False)
+
+
+def test_partial_change_invalidates_only_dependent_namespace_without_restart(
+    tmp_path: Path,
+    external_boundary_mocks_only,
+    caplog,
+) -> None:
+    prompts_root, schemas_root = _copy_prompt_and_schema_roots(tmp_path)
+    external_boundary_mocks_only.setattr(prompt_service, "PROMPTS_ROOT", prompts_root)
+    external_boundary_mocks_only.setattr(prompt_service, "SCHEMAS_ROOT", schemas_root)
+    caplog.set_level(logging.INFO, logger="market_lense.prompt_service")
+
+    dependent_before = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/expert_comment",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+    unrelated_before = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/doc_map",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+    partial_path = (
+        prompts_root / "report_vs/artifacts/_partials/editorial_constitution.yaml"
+    )
+    original_stat = partial_path.stat()
+    original = partial_path.read_text(encoding="utf-8")
+    partial_path.write_text(
+        original.replace("constitution", "constitutioN", 1), encoding="utf-8"
+    )
+    os.utime(partial_path, ns=(original_stat.st_atime_ns, original_stat.st_mtime_ns))
+
+    dependent_after = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0", namespace="report_vs/artifacts/expert_comment"
+        ),
+        _ctx(),
+    )
+    unrelated_after = load_prompt_set(
+        PromptLoadRequest(schema_version="1.0", namespace="report_vs/doc_map"), _ctx()
+    )
+
+    assert dependent_after.prompt_content_hash != dependent_before.prompt_content_hash
+    assert unrelated_after is unrelated_before
+    assert any(
+        "prompt_cache_invalidated" in record.message
+        and '"reason": "partial_content_changed"' in record.message
+        for record in caplog.records
+    )
+
+
+def test_schema_dependency_change_invalidates_content_identity_without_restart(
+    tmp_path: Path,
+    external_boundary_mocks_only,
+) -> None:
+    prompts_root, schemas_root = _copy_prompt_and_schema_roots(tmp_path)
+    external_boundary_mocks_only.setattr(prompt_service, "PROMPTS_ROOT", prompts_root)
+    external_boundary_mocks_only.setattr(prompt_service, "SCHEMAS_ROOT", schemas_root)
+
+    before = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/summary",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+    schema_path = schemas_root / "artifacts.schema.json"
+    original_stat = schema_path.stat()
+    original = schema_path.read_text(encoding="utf-8")
+    schema_path.write_text(
+        original.replace('"array"', '"Array"', 1), encoding="utf-8"
+    )
+    os.utime(schema_path, ns=(original_stat.st_atime_ns, original_stat.st_mtime_ns))
+
+    after = load_prompt_set(
+        PromptLoadRequest(schema_version="1.0", namespace="report_vs/artifacts/summary"),
+        _ctx(),
+    )
+
+    assert after.prompt_content_hash != before.prompt_content_hash
+    assert after.dependency_manifest is not None
+    assert after.dependency_manifest.schema_snippets[0].path == "schemas/artifacts.schema.json"
+
+
+def test_prompt_content_identity_is_path_independent_and_execution_identity_is_sensitive(
+    tmp_path: Path,
+    external_boundary_mocks_only,
+) -> None:
+    first_prompts, first_schemas = _copy_prompt_and_schema_roots(tmp_path / "first")
+    second_prompts, second_schemas = _copy_prompt_and_schema_roots(tmp_path / "second")
+    external_boundary_mocks_only.setattr(prompt_service, "PROMPTS_ROOT", first_prompts)
+    external_boundary_mocks_only.setattr(prompt_service, "SCHEMAS_ROOT", first_schemas)
+    first = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/summary",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+    external_boundary_mocks_only.setattr(prompt_service, "PROMPTS_ROOT", second_prompts)
+    external_boundary_mocks_only.setattr(prompt_service, "SCHEMAS_ROOT", second_schemas)
+    second = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/summary",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+
+    stable = build_llm_execution_identity(
+        prompt_content_hash=first.prompt_content_hash,
+        provider="openai",
+        model="gpt-5-mini",
+        temperature=0.1,
+        seed=7,
+        retrieval_mode="chat_json",
+        output_contract_schema_version="artifact_json:1.0",
+        validator_version="artifacts_schema:3.0",
+    )
+    changed_policy = build_llm_execution_identity(
+        prompt_content_hash=second.prompt_content_hash,
+        provider="openai",
+        model="gpt-5-mini",
+        temperature=0.2,
+        seed=7,
+        retrieval_mode="chat_json",
+        output_contract_schema_version="artifact_json:1.0",
+        validator_version="artifacts_schema:3.0",
+    )
+
+    assert first.prompt_content_hash == second.prompt_content_hash
+    assert stable.execution_identity != changed_policy.execution_identity

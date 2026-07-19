@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import asdict
 from typing import Any, Dict, List, Optional
 
 from src.contracts.config import AppSettings
@@ -45,6 +46,7 @@ from src.generators.artifact_normalization import (
     normalize_artifact_toc_entries,
 )
 from src.services import file_service
+from src.services.prompt_service import build_llm_execution_identity
 from src.services.schema_validator_service import (
     validate_evidence_references,
     validate_schema,
@@ -55,7 +57,10 @@ from src.utils.coercion import string_value as _s
 from src.utils.errors import AppError
 from src.utils.json_utils import dump_json_text
 from src.utils.logging import log_event
-from src.utils.model_resolver import resolve_model
+from src.utils.model_resolver import (
+    resolve_routing_policy,
+    routing_policies_from_config,
+)
 
 logger = logging.getLogger("market_lense.artifact_generator")
 EVIDENCE_QUALITY_BY_SUPPORT_TYPE = {
@@ -1115,12 +1120,50 @@ def _artifact_cache_meta(
         prompt_set = prompt_client.load_prompt_set(
             PromptLoadRequest(schema_version="1.0", namespace=namespace), ctx
         )
+        routing_decision = resolve_routing_policy(
+            namespace,
+            routing_policies_from_config(
+                getattr(settings, "llm_routing", {}),
+                model_overrides=getattr(settings, "openai_models", {}),
+            ),
+            default_model=settings.openai_model,
+        )
+        execution_identity = build_llm_execution_identity(
+            prompt_content_hash=prompt_set.prompt_content_hash,
+            provider="openai",
+            model=routing_decision.model,
+            temperature=settings.temperature,
+            seed=settings.openai_seed,
+            timeout_seconds=settings.openai_timeout_seconds,
+            retrieval_mode=retrieval_mode,
+            routing_policy={
+                "policy_source": routing_decision.policy_source,
+                "tier": routing_decision.tier,
+                "quality_threshold": routing_decision.quality_threshold,
+                "same_provider_fallback": routing_decision.same_provider_fallback,
+                "max_input_tokens": routing_decision.max_input_tokens,
+                "compaction_enabled": routing_decision.compaction_enabled,
+            },
+            compaction_policy={
+                "enabled": routing_decision.compaction_enabled,
+                "max_input_tokens": routing_decision.max_input_tokens or None,
+                "strategy": "anchor_preserving_head_tail",
+            },
+            output_contract_schema_version="artifact_json:1.0",
+            validator_version="artifacts_schema:3.0",
+        )
         prompt_meta[namespace] = {
             "prompt_system_sha256": prompt_set.system.sha256,
             "prompt_user_sha256": prompt_set.user.sha256,
-            "model": resolve_model(
-                namespace, getattr(settings, "openai_models", {}), settings.openai_model
+            "prompt_content_hash": prompt_set.prompt_content_hash,
+            "dependency_manifest": (
+                asdict(prompt_set.dependency_manifest)
+                if prompt_set.dependency_manifest is not None
+                else {}
             ),
+            "execution_identity": execution_identity.execution_identity,
+            "execution_identity_manifest": asdict(execution_identity),
+            "model": routing_decision.model,
         }
     inputs_hash = sha256_json(
         {
@@ -1131,7 +1174,7 @@ def _artifact_cache_meta(
         }
     )
     return {
-        "schema_version": "1.0",
+        "schema_version": "2.0",
         "topic_brief_mapping_version": TOPIC_BRIEF_MAPPING_VERSION,
         "toc_structure_version": TOC_STRUCTURE_VERSION,
         "md5": md5,
@@ -1149,6 +1192,7 @@ def _load_cached_artifacts(
     report_id: str,
     report_name: Optional[str],
     cache_key: str,
+    expected_cache_meta: Dict[str, Any],
     ctx: RunContext,
     analysis_store,
 ) -> Optional[Dict[str, Any]]:
@@ -1177,6 +1221,11 @@ def _load_cached_artifacts(
         ),
         read_text=file_service.read_text,
         on_read_failed=_log_read_failed,
+        cache_meta_matcher=lambda cached_meta: _artifact_cache_meta_matches(
+            cached_meta=cached_meta,
+            expected_cache_meta=expected_cache_meta,
+            cache_key=cache_key,
+        ),
         adapt_payload=lambda payload, path: _adapt_cached_artifacts_payload(
             payload=payload,
             path=path,
@@ -1185,6 +1234,31 @@ def _load_cached_artifacts(
         ),
     )
     return result.value if result.status == "hit" else None
+
+
+def _artifact_cache_meta_matches(
+    *,
+    cached_meta: dict[str, Any],
+    expected_cache_meta: dict[str, Any],
+    cache_key: str,
+) -> tuple[bool, str]:
+    if cached_meta.get("key") == cache_key:
+        return True, ""
+    cached_prompts = cached_meta.get("prompts")
+    expected_prompts = expected_cache_meta.get("prompts")
+    if not isinstance(cached_prompts, dict):
+        return False, "legacy_identity_read"
+    if not isinstance(expected_prompts, dict):
+        return False, "key_mismatch"
+    for namespace, expected in expected_prompts.items():
+        cached = cached_prompts.get(namespace)
+        if not isinstance(expected, dict) or not isinstance(cached, dict):
+            return False, "execution_identity_mismatch"
+        if cached.get("execution_identity") != expected.get("execution_identity"):
+            return False, "execution_identity_mismatch"
+        if cached.get("prompt_content_hash") != expected.get("prompt_content_hash"):
+            return False, "prompt_content_identity_mismatch"
+    return False, "key_mismatch"
 
 
 def _adapt_cached_artifacts_payload(

@@ -152,6 +152,12 @@ class ArtifactReuseCheckRequest:
     expected_model_name: str = field(
         default="", metadata={"doc": "Required model name when applicable."}
     )
+    expected_execution_identity: str = field(
+        default="",
+        metadata={
+            "doc": "Required model execution identity for model-derived artifact reuse."
+        },
+    )
     expected_validation_status: str = field(
         default="", metadata={"doc": "Required validation status when applicable."}
     )

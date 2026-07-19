@@ -159,13 +159,16 @@ def materialize_prompt_family(
         ),
         ctx,
     )
-    prompt_hash = sha256_json(
+    legacy_prompt_hash = sha256_json(
         {
             "system": request.system_prompt_hash,
             "user": request.user_prompt_hash,
             "policy": request.prompt_policy_version,
         }
     )
+    prompt_content_hash = str(request.prompt_content_hash or "").strip()
+    execution_identity = str(request.execution_identity or "").strip()
+    prompt_hash = prompt_content_hash or legacy_prompt_hash
     response = record_artifact_lineage(
         ArtifactLineageRegistrationRequest(
             schema_version=ARTIFACT_LINEAGE_SCHEMA_VERSION,
@@ -186,6 +189,17 @@ def materialize_prompt_family(
                 "family_id": family_id,
                 "system_prompt_hash": request.system_prompt_hash,
                 "user_prompt_hash": request.user_prompt_hash,
+                "prompt_content_hash": prompt_content_hash,
+                "prompt_dependency_manifest": dict(
+                    request.prompt_dependency_manifest or {}
+                ),
+                "execution_identity": execution_identity,
+                "execution_identity_manifest": dict(
+                    request.execution_identity_manifest or {}
+                ),
+                "identity_status": (
+                    "current" if prompt_content_hash and execution_identity else "legacy"
+                ),
                 "prompt_policy_version": request.prompt_policy_version,
                 "routing_policy_version": request.routing_policy_version,
                 "validator_version": request.validator_version,
@@ -197,7 +211,10 @@ def materialize_prompt_family(
                 "artifact_family": family_id,
                 "schema_versions": {family_id: family_schema_version},
                 "processing_versions": {family_id: processing_version},
-                "prompt_versions": {family_id: request.prompt_policy_version},
+                "prompt_versions": {
+                    family_id: prompt_content_hash or request.prompt_policy_version
+                },
+                "execution_identities": {family_id: execution_identity},
                 "model_policy_versions": {family_id: request.routing_policy_version},
                 "validator_versions": {family_id: request.validator_version},
             },
@@ -212,6 +229,10 @@ def materialize_prompt_family(
         processing_version=processing_version,
         system_prompt_hash=request.system_prompt_hash,
         user_prompt_hash=request.user_prompt_hash,
+        prompt_content_hash=prompt_content_hash,
+        prompt_dependency_manifest=dict(request.prompt_dependency_manifest or {}),
+        execution_identity=execution_identity,
+        execution_identity_manifest=dict(request.execution_identity_manifest or {}),
         prompt_policy_version=request.prompt_policy_version,
         model_name=request.model_name,
         routing_policy_version=request.routing_policy_version,
@@ -248,6 +269,20 @@ def materialize_prompt_family(
             fields=log_event_payload,
         )
     )
+    if not prompt_content_hash or not execution_identity:
+        logging.getLogger("market_lense.prompt_family_materialization").info(
+            log_event(
+                ctx,
+                role="service",
+                event="legacy_identity_read",
+                module="market_lense.prompt_family_materialization",
+                fields={
+                    "report_id": report_id,
+                    "family_id": family_id,
+                    "artifact_id": response.record.artifact_id,
+                },
+            )
+        )
     return PromptFamilyMaterializationResponse(
         schema_version=PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
         materialization=materialization,

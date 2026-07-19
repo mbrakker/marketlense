@@ -13335,6 +13335,9 @@
         "db_path": {
           "type": "string"
         },
+        "expected_execution_identity": {
+          "type": "string"
+        },
         "expected_model_name": {
           "type": "string"
         },
@@ -23635,11 +23638,25 @@
         "daily_spend_warn_usd": {
           "type": "number"
         },
+        "execution_identity": {
+          "type": "string"
+        },
+        "execution_identity_manifest": {
+          "additionalProperties": {},
+          "type": "object"
+        },
         "model": {
           "type": "string"
         },
         "model_pricing": {
           "type": "string"
+        },
+        "prompt_content_hash": {
+          "type": "string"
+        },
+        "prompt_dependency_manifest": {
+          "additionalProperties": {},
+          "type": "object"
         },
         "prompt_hash": {
           "type": "string"
@@ -23904,11 +23921,25 @@
         "cost_ledger_path": {
           "type": "string"
         },
+        "execution_identity": {
+          "type": "string"
+        },
+        "execution_identity_manifest": {
+          "additionalProperties": {},
+          "type": "object"
+        },
         "model": {
           "type": "string"
         },
         "model_pricing": {
           "type": "string"
+        },
+        "prompt_content_hash": {
+          "type": "string"
+        },
+        "prompt_dependency_manifest": {
+          "additionalProperties": {},
+          "type": "object"
         },
         "prompt_hash": {
           "type": "string"
@@ -25798,6 +25829,13 @@
         "evidence_set_hash": {
           "type": "string"
         },
+        "execution_identity": {
+          "type": "string"
+        },
+        "execution_identity_manifest": {
+          "additionalProperties": {},
+          "type": "object"
+        },
         "family_id": {
           "type": "string"
         },
@@ -25815,6 +25853,13 @@
         },
         "processing_version": {
           "type": "string"
+        },
+        "prompt_content_hash": {
+          "type": "string"
+        },
+        "prompt_dependency_manifest": {
+          "additionalProperties": {},
+          "type": "object"
         },
         "prompt_policy_version": {
           "type": "string"
@@ -25848,6 +25893,10 @@
         "processing_version",
         "system_prompt_hash",
         "user_prompt_hash",
+        "prompt_content_hash",
+        "prompt_dependency_manifest",
+        "execution_identity",
+        "execution_identity_manifest",
         "prompt_policy_version",
         "model_name",
         "routing_policy_version",
@@ -25885,6 +25934,13 @@
         "evidence_set_hash": {
           "type": "string"
         },
+        "execution_identity": {
+          "type": "string"
+        },
+        "execution_identity_manifest": {
+          "additionalProperties": {},
+          "type": "object"
+        },
         "family_id": {
           "type": "string"
         },
@@ -25900,6 +25956,13 @@
         "output_payload": {},
         "processing_version": {
           "type": "string"
+        },
+        "prompt_content_hash": {
+          "type": "string"
+        },
+        "prompt_dependency_manifest": {
+          "additionalProperties": {},
+          "type": "object"
         },
         "prompt_policy_version": {
           "type": "string"
@@ -25963,6 +26026,145 @@
         "schema_version",
         "materialization",
         "created"
+      ],
+      "type": "object"
+    },
+    "src.contracts.prompts.LLMExecutionIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "compaction_policy": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "execution_identity": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "output_contract_schema_version": {
+          "type": "string"
+        },
+        "output_controls": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "prompt_content_hash": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "retrieval_mode": {
+          "type": "string"
+        },
+        "routing_policy": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "seed": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "temperature": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "validator_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "prompt_content_hash",
+        "provider",
+        "model",
+        "temperature",
+        "seed"
+      ],
+      "type": "object"
+    },
+    "src.contracts.prompts.PromptDependency": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "path",
+        "sha256",
+        "kind"
+      ],
+      "type": "object"
+    },
+    "src.contracts.prompts.PromptDependencyManifest": {
+      "additionalProperties": false,
+      "properties": {
+        "composition_version": {
+          "type": "string"
+        },
+        "included_partials": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.prompts.PromptDependency"
+          },
+          "type": "array"
+        },
+        "namespace": {
+          "type": "string"
+        },
+        "prompt_content_hash": {
+          "type": "string"
+        },
+        "schema_snippets": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.prompts.PromptDependency"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "system_root": {
+          "$ref": "#/$defs/src.contracts.prompts.PromptDependency"
+        },
+        "user_root": {
+          "$ref": "#/$defs/src.contracts.prompts.PromptDependency"
+        }
+      },
+      "required": [
+        "schema_version",
+        "namespace",
+        "system_root",
+        "user_root"
       ],
       "type": "object"
     },
@@ -26197,6 +26399,9 @@
         "namespace": {
           "type": "string"
         },
+        "prompt_content_hash": {
+          "type": "string"
+        },
         "schema_version": {
           "type": "string"
         },
@@ -26263,6 +26468,19 @@
     "src.contracts.prompts.PromptSet": {
       "additionalProperties": false,
       "properties": {
+        "dependency_manifest": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.prompts.PromptDependencyManifest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "prompt_content_hash": {
+          "type": "string"
+        },
         "schema_version": {
           "type": "string"
         },
@@ -26297,6 +26515,18 @@
         },
         "path": {
           "type": "string"
+        },
+        "schema_snippet_paths": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "schema_snippet_sha256s": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
         },
         "schema_snippet_sources": {
           "additionalProperties": {

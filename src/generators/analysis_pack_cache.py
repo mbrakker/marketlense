@@ -111,6 +111,7 @@ def load_cached_pack(
     read_text: Callable[[ReadTextRequest, RunContext], Any],
     on_read_failed: Callable[[AppError, str], None],
     adapt_payload: Callable[[Dict[str, Any], str], CachedPackAdaptResult[T]],
+    cache_meta_matcher: Callable[[dict[str, Any]], tuple[bool, str]] | None = None,
     artifact_kind: str = "analysis_pack",
 ) -> CachedPackLoadResult[T]:
     if not cache_key:
@@ -201,19 +202,23 @@ def load_cached_pack(
     cached_meta: dict[str, Any] = (
         raw_cache_meta if isinstance(raw_cache_meta, dict) else {}
     )
-    if cached_meta.get("key") != cache_key:
+    cache_matches = cached_meta.get("key") == cache_key
+    mismatch_reason = "key_mismatch"
+    if cache_meta_matcher is not None:
+        cache_matches, mismatch_reason = cache_meta_matcher(cached_meta)
+    if not cache_matches:
         _log_cache_status(
             ctx=ctx,
             artifact_kind=artifact_kind,
             path=path,
-            status_code="key_mismatch",
+            status_code=mismatch_reason or "key_mismatch",
             recovery_policy="regenerate",
         )
         return CachedPackLoadResult(
             schema_version="1.0",
-            status="key_mismatch",
+            status=mismatch_reason or "key_mismatch",
             path=path,
-            status_code="key_mismatch",
+            status_code=mismatch_reason or "key_mismatch",
         )
     if _cache_meta_expired(cached_meta):
         _log_cache_status(
