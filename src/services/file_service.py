@@ -1104,9 +1104,10 @@ def _replace_atomic_file(temp_path: Path, path: Path) -> None:
 
 
 def _is_retryable_windows_replace_error(error: OSError) -> bool:
-    return os.name == "nt" and getattr(error, "winerror", None) in (
-        _WINDOWS_REPLACE_RETRYABLE_ERRORS
-    )
+    # POSIX errors do not carry ``winerror``.  Checking the error signature
+    # directly keeps the guard narrowly scoped while allowing deterministic
+    # cross-platform tests of a Windows sharing violation.
+    return getattr(error, "winerror", None) in _WINDOWS_REPLACE_RETRYABLE_ERRORS
 
 
 def _atomic_temp_path(path: Path) -> Path:

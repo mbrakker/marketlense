@@ -18,7 +18,7 @@ CLI unit tests must inject the canonical configuration service whenever the comm
 
 When diagnosing an apparently stalled run, use verbose progress, `--durations`, and (where needed) `-o faulthandler_timeout=<seconds>` before interrupting it. Quiet output alone is not evidence of a deadlock; the diagnostic command must identify the active test and stack before a timeout remediation is made.
 
-Windows atomic-write tests exercise same-target thread serialization and the only permitted local retry guard: at most two re-attempts of the final rename for native access/sharing errors (`5` or `32`). This is not a workflow retry; all other write failures propagate as typed errors.
+Windows atomic-write tests exercise same-target thread serialization and the only permitted local retry guard: at most two re-attempts of the final rename for the Windows access/sharing error signatures (`5` or `32`). The signature-based guard is tested on every platform; this is not a workflow retry, and all other write failures propagate as typed errors.
 
 The contract-schema gate ignores files whose basenames are not valid Python module identifiers, so untracked editor copies cannot alter the generated contract inventory.
 

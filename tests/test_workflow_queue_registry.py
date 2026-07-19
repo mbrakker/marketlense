@@ -124,6 +124,9 @@ def _isolated_app_config(tmp_path: Path) -> Path:
     assert isinstance(config_payload, dict)
     paths = config_payload["paths"]
     assert isinstance(paths, dict)
+    ingest = config_payload["ingest"]
+    assert isinstance(ingest, dict)
+    ingest["gdrive_folder_id"] = "test-drive-folder"
     paths.update(
         {
             "output_dir": str(tmp_path / "out"),
@@ -505,7 +508,9 @@ def test_operational_handlers_reject_incomplete_inputs_before_external_work() ->
 
 def test_signal_publish_adapter_retains_card_evidence_and_fallback_publishers(
     tmp_path,
+    external_boundary_mocks_only,
 ) -> None:
+    external_boundary_mocks_only.setenv("OPENAI_API_KEY", "test-openai-key")
     projection = SignalPublishProjection(
         schema_version=WORDPRESS_ENTITY_SCHEMA_VERSION,
         title="Checkout trust is fragmenting",
@@ -888,7 +893,9 @@ def test_signal_publish_adapter_retains_card_evidence_and_fallback_publishers(
 
 def test_source_ingest_checkpoint_hands_off_to_report_selection(
     tmp_path: Path,
+    external_boundary_mocks_only,
 ) -> None:
+    external_boundary_mocks_only.setenv("OPENAI_API_KEY", "test-openai-key")
     config_path = _isolated_app_config(tmp_path)
     source_path = Path(
         "tests/fixtures/pdf_benchmark/golden/IAS - Industry_Pulse_Report_2026_ACIG.pdf"

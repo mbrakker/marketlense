@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import uuid
 from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import Callable
@@ -670,6 +671,15 @@ def _wordpress_publish_handler(
             retryable=False,
             context={"entity_type": payload.entity_type},
         )
+    try:
+        uuid.UUID(payload.approval_id)
+    except (AttributeError, TypeError, ValueError) as exc:
+        raise AppError(
+            code="stale_approval",
+            message="WordPress publication requires a current approval for this package",
+            cause=exc,
+            retryable=False,
+        ) from exc
     config_path = str(payload.attributes.get("config_path", ""))
     app = load_settings(ConfigLoadRequest(schema_version="1.0", path=config_path), ctx)
     if not payload.approval_id or not publication_approval_is_valid(
@@ -847,8 +857,6 @@ def _briefing_opportunity_handler(
     job: WorkflowJob, payload: QueuePayload, ctx: RunContext
 ) -> WorkflowQueueHandlerResult:
     assert isinstance(payload, BriefingOpportunityPayload)
-    config_path = str(payload.attributes.get("config_path", ""))
-    app = load_settings(ConfigLoadRequest(schema_version="1.0", path=config_path), ctx)
     publisher_ids = payload.attributes.get("publisher_ids", [])
     if not isinstance(publisher_ids, list):
         raise AppError(
@@ -856,6 +864,8 @@ def _briefing_opportunity_handler(
             message="Briefing opportunity publisher IDs must be a bounded list",
             retryable=False,
         )
+    config_path = str(payload.attributes.get("config_path", ""))
+    app = load_settings(ConfigLoadRequest(schema_version="1.0", path=config_path), ctx)
     source_hashes = list(payload.source_hashes)
     if not source_hashes and _boolean_attribute(
         payload, "resolve_projected_sources", False
@@ -1082,6 +1092,28 @@ def _signal_candidate_handler(
             message="Signal candidate extraction requires an explicit topic",
             retryable=False,
         )
+    requested_publisher_filters = _string_list_attribute(
+        payload, "publisher_filters"
+    )
+    publisher_filters = list(requested_publisher_filters)
+    category_filters = _string_list_attribute(payload, "category_filters")
+    tag_filters = _string_list_attribute(payload, "tag_filters")
+    max_source_reports = _positive_int_attribute(payload, "max_source_reports", 6)
+    max_evidence_items = _positive_int_attribute(payload, "max_evidence_items", 48)
+    downstream_max_source_reports = _positive_int_attribute(
+        payload, "max_source_reports", 3
+    )
+    downstream_max_evidence_items = _positive_int_attribute(
+        payload, "max_evidence_items", 6
+    )
+    max_signals = _positive_int_attribute(payload, "max_signals", 8)
+    minimum_evidence_items = _positive_int_attribute(
+        payload, "minimum_evidence_items", 2
+    )
+    minimum_source_reports = _positive_int_attribute(
+        payload, "minimum_source_reports", 2
+    )
+    generate_signals = _boolean_attribute(payload, "generate_signals", True)
     config_path = str(payload.attributes.get("config_path", ""))
     app = load_settings(ConfigLoadRequest(schema_version="1.0", path=config_path), ctx)
     request_id = _digest(
@@ -1091,7 +1123,6 @@ def _signal_candidate_handler(
         payload.signal_selection_policy_version,
         topic,
     )
-    publisher_filters = _string_list_attribute(payload, "publisher_filters")
     if job.publisher_id and job.publisher_id not in publisher_filters:
         publisher_filters.append(job.publisher_id)
     analysis_request = CrossReportAnalysisRequest(
@@ -1099,12 +1130,12 @@ def _signal_candidate_handler(
         request_id=request_id,
         topic=topic,
         auto_theme=False,
-        category_filters=_string_list_attribute(payload, "category_filters"),
-        tag_filters=_string_list_attribute(payload, "tag_filters"),
+        category_filters=category_filters,
+        tag_filters=tag_filters,
         publisher_filters=publisher_filters,
         date_range_start=str(payload.attributes.get("date_range_start", "")) or None,
         date_range_end=str(payload.attributes.get("date_range_end", "")) or None,
-        max_source_reports=_positive_int_attribute(payload, "max_source_reports", 6),
+        max_source_reports=max_source_reports,
         diagnostic=False,
         override_publishability=True,
         publication_mode="generate_only",
@@ -1126,15 +1157,12 @@ def _signal_candidate_handler(
                 minimum_projection_status="projected",
             ),
             db_path=app.signal_store_db or app.reports_db,
-            max_evidence_items=_positive_int_attribute(
-                payload, "max_evidence_items", 48
-            ),
-            max_signals=_positive_int_attribute(payload, "max_signals", 8),
+            max_evidence_items=max_evidence_items,
+            max_signals=max_signals,
             state_db=app.state_db,
         ),
         ctx,
     )
-    generate_signals = _boolean_attribute(payload, "generate_signals", True)
     downstream = [
         WorkflowJobSubmission(
             schema_version="1.0",
@@ -1148,31 +1176,19 @@ def _signal_candidate_handler(
                 input_content_hash=_digest(*group.evidence_ids),
                 processing_version=payload.processing_version,
                 attributes={
-                    "category_filters": _string_list_attribute(
-                        payload, "category_filters"
-                    ),
+                    "category_filters": category_filters,
                     "date_range_end": str(payload.attributes.get("date_range_end", "")),
                     "date_range_start": str(
                         payload.attributes.get("date_range_start", "")
                     ),
-                    "max_evidence_items": _positive_int_attribute(
-                        payload, "max_evidence_items", 6
-                    ),
-                    "max_source_reports": _positive_int_attribute(
-                        payload, "max_source_reports", 3
-                    ),
-                    "minimum_evidence_items": _positive_int_attribute(
-                        payload, "minimum_evidence_items", 2
-                    ),
-                    "minimum_source_reports": _positive_int_attribute(
-                        payload, "minimum_source_reports", 2
-                    ),
-                    "publisher_filters": _string_list_attribute(
-                        payload, "publisher_filters"
-                    ),
+                    "max_evidence_items": downstream_max_evidence_items,
+                    "max_source_reports": downstream_max_source_reports,
+                    "minimum_evidence_items": minimum_evidence_items,
+                    "minimum_source_reports": minimum_source_reports,
+                    "publisher_filters": requested_publisher_filters,
                     "topic": topic,
                     "source_report_ids": group.source_report_ids,
-                    "tag_filters": _string_list_attribute(payload, "tag_filters"),
+                    "tag_filters": tag_filters,
                 },
             ),
             idempotency_key=_digest(
@@ -1669,12 +1685,27 @@ def _claim_embedding_handler(
     """Run the existing bounded claim-embedding queue for canonical rows only."""
 
     assert isinstance(payload, ClaimEmbeddingPayload)
-    config_path = str(payload.attributes.get("config_path", ""))
-    app = load_settings(ConfigLoadRequest(schema_version="1.0", path=config_path), ctx)
     model = payload.model_version or str(
         payload.attributes.get("model", "text-embedding-3-small")
     )
-    dry_run = bool(payload.attributes.get("dry_run", False))
+    dry_run = _boolean_attribute(payload, "dry_run", False)
+    limit = _positive_int_attribute(payload, "limit", 1)
+    max_reports = _positive_int_attribute(payload, "max_reports", 1)
+    max_estimated_tokens = _positive_int_attribute(
+        payload, "max_estimated_tokens", 8_000
+    )
+    max_estimated_cost_usd = _positive_float_attribute(
+        payload, "max_estimated_cost_usd", 1.0
+    )
+    max_runtime_seconds = _positive_float_attribute(
+        payload, "max_runtime_seconds", 120.0
+    )
+    max_retries = _positive_int_attribute(payload, "max_retries", 3)
+    publisher_fairness_limit = _positive_int_attribute(
+        payload, "publisher_fairness_limit", 3
+    )
+    config_path = str(payload.attributes.get("config_path", ""))
+    app = load_settings(ConfigLoadRequest(schema_version="1.0", path=config_path), ctx)
     if not dry_run and not app.openai_api_key:
         raise AppError(
             code="credentials_required",
@@ -1691,27 +1722,19 @@ def _claim_embedding_handler(
             embedding_version=str(
                 payload.attributes.get("embedding_version", "claim-embedding.v1")
             ),
-            limit=_positive_int_attribute(payload, "limit", 1),
+            limit=limit,
             timeout_seconds=None,
             ctx=ctx,
             cost_ledger_path=app.cost_ledger_path,
             cost_daily_path=app.cost_daily_path,
             model_pricing=getattr(app, "model_pricing", {}),
-            max_reports=_positive_int_attribute(payload, "max_reports", 1),
-            max_estimated_tokens=_positive_int_attribute(
-                payload, "max_estimated_tokens", 8_000
-            ),
-            max_estimated_cost_usd=_positive_float_attribute(
-                payload, "max_estimated_cost_usd", 1.0
-            ),
-            max_runtime_seconds=_positive_float_attribute(
-                payload, "max_runtime_seconds", 120.0
-            ),
-            max_retries=_positive_int_attribute(payload, "max_retries", 3),
+            max_reports=max_reports,
+            max_estimated_tokens=max_estimated_tokens,
+            max_estimated_cost_usd=max_estimated_cost_usd,
+            max_runtime_seconds=max_runtime_seconds,
+            max_retries=max_retries,
             max_concurrent_provider_calls=1,
-            publisher_fairness_limit=_positive_int_attribute(
-                payload, "publisher_fairness_limit", 3
-            ),
+            publisher_fairness_limit=publisher_fairness_limit,
             report_ids=[job.report_id] if job.report_id else [],
             publishers=[job.publisher_id] if job.publisher_id else [],
             dry_run=dry_run,
