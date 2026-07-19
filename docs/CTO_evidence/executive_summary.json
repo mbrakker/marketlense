@@ -21,12 +21,12 @@
     "snapshot_manifest.json",
     "log_content_leakage.json"
   ],
-  "evidence_run_id": "af87e10752da4d25adf4aa9c40e55f80",
-  "generated_at": "2026-07-18T08:32:46.858368+00:00",
+  "evidence_run_id": "afca500952a4489193074501f88aba62",
+  "generated_at": "2026-07-19T12:42:06.027912+00:00",
   "repository": {
-    "commit_sha": "65750b654b421024443d46be60805174f80b0585"
+    "commit_sha": "c352d503f2e55268e8b74a7f27fd4f4857abd333"
   },
-  "repository_commit_sha": "65750b654b421024443d46be60805174f80b0585",
+  "repository_commit_sha": "c352d503f2e55268e8b74a7f27fd4f4857abd333",
   "schema_version": "1.0",
   "totals": {
     "acquisition": {
@@ -38,11 +38,11 @@
       "record_count": 3
     },
     "llm": {
-      "call_count": 1204,
-      "estimated_cost_usd": "2.028749",
-      "input_tokens": 2514494,
-      "output_tokens": 623172,
-      "total_tokens": 3137666
+      "call_count": 1320,
+      "estimated_cost_usd": "2.124082",
+      "input_tokens": 2554169,
+      "output_tokens": 668263,
+      "total_tokens": 3222432
     }
   }
 }

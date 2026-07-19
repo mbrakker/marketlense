@@ -19266,6 +19266,70 @@
     },
     {
       "accessibility": "readable",
+      "snapshot_file_size": 95824,
+      "snapshot_path": "retained_artifacts/live_acquisition_handoff_canary_retry/output/ias-industry-pulse-report-2026-acig-pdf/report_analysis/artifacts.json",
+      "snapshot_sha256": "9bafb9324195672414fa0a237e6d125588fa7b3896bf84eb27eb410e7b4fe7f9",
+      "source_file_size": 95824,
+      "source_path": "live_acquisition_handoff_canary_retry/output/ias-industry-pulse-report-2026-acig-pdf/report_analysis/artifacts.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 959,
+      "snapshot_path": "retained_artifacts/live_acquisition_handoff_canary_retry/output/ias-industry-pulse-report-2026-acig-pdf/report_analysis/crop_refine.json",
+      "snapshot_sha256": "5aac5f988c6f5ab8ec9f38c877aeafd3f667d78a648bb4f13394932fa171d6c7",
+      "source_file_size": 959,
+      "source_path": "live_acquisition_handoff_canary_retry/output/ias-industry-pulse-report-2026-acig-pdf/report_analysis/crop_refine.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 8400,
+      "snapshot_path": "retained_artifacts/live_acquisition_handoff_canary_retry/output/ias-industry-pulse-report-2026-acig-pdf/report_analysis/doc_map.json",
+      "snapshot_sha256": "940457089ca11eaa71fdb73599489a39ca842dd9cfb788155021a572c82987ef",
+      "source_file_size": 8400,
+      "source_path": "live_acquisition_handoff_canary_retry/output/ias-industry-pulse-report-2026-acig-pdf/report_analysis/doc_map.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 4105,
+      "snapshot_path": "retained_artifacts/live_acquisition_handoff_canary_retry/output/ias-industry-pulse-report-2026-acig-pdf/report_analysis/findings.json",
+      "snapshot_sha256": "d5687af734b3cf0b6ac4a0b87c84142907b43c523be8247b13168202022bd7b6",
+      "source_file_size": 4105,
+      "source_path": "live_acquisition_handoff_canary_retry/output/ias-industry-pulse-report-2026-acig-pdf/report_analysis/findings.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 1032,
+      "snapshot_path": "retained_artifacts/live_acquisition_handoff_canary_retry/output/ias-industry-pulse-report-2026-acig-pdf/report_analysis/limitations.json",
+      "snapshot_sha256": "00fb2489061697f703625ad5b7a5a2ae7a6f3dfbce5fd4e487d71ac7099e115b",
+      "source_file_size": 1032,
+      "source_path": "live_acquisition_handoff_canary_retry/output/ias-industry-pulse-report-2026-acig-pdf/report_analysis/limitations.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 2144,
+      "snapshot_path": "retained_artifacts/live_acquisition_handoff_canary_retry/output/ias-industry-pulse-report-2026-acig-pdf/report_analysis/methods.json",
+      "snapshot_sha256": "3f545efd7e026761dd5920d85ad0f21691cb44f563d45610199f068b3be04052",
+      "source_file_size": 2144,
+      "source_path": "live_acquisition_handoff_canary_retry/output/ias-industry-pulse-report-2026-acig-pdf/report_analysis/methods.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 3143,
+      "snapshot_path": "retained_artifacts/live_acquisition_handoff_canary_retry/output/ias-industry-pulse-report-2026-acig-pdf/report_analysis/quote_candidates.json",
+      "snapshot_sha256": "29bc86a2ce4a5d4a4231ebc14b581a2d48cef884314a7fda7d743a5faad5220d",
+      "source_file_size": 3143,
+      "source_path": "live_acquisition_handoff_canary_retry/output/ias-industry-pulse-report-2026-acig-pdf/report_analysis/quote_candidates.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 1023,
+      "snapshot_path": "retained_artifacts/live_acquisition_handoff_canary_retry/output/ias-industry-pulse-report-2026-acig-pdf/report_analysis/scope.json",
+      "snapshot_sha256": "0d3f7b7a63e25a9b545e54e48ca7985c0c31f53d795d3a6dcfc21e23b4f19015",
+      "source_file_size": 1023,
+      "source_path": "live_acquisition_handoff_canary_retry/output/ias-industry-pulse-report-2026-acig-pdf/report_analysis/scope.json"
+    },
+    {
+      "accessibility": "readable",
       "snapshot_file_size": 38580,
       "snapshot_path": "retained_artifacts/live_model_client_injection/1cpbbo02-jgxksxc8d6lpawtwmsmvs030-pdf/report_analysis/artifacts.json",
       "snapshot_sha256": "996e86b4243c39c95cb6da95c8f3c465d838ad55616a5a57111a6b8c3d8b8399",
@@ -19826,6 +19890,126 @@
     },
     {
       "accessibility": "readable",
+      "snapshot_file_size": 75214,
+      "snapshot_path": "retained_artifacts/task2_live_drive_to_analysis_20260719/output-final/d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf/report_analysis/artifacts.json",
+      "snapshot_sha256": "4fc456fed10b3c6e4d19f13bc284e2d6ae8232e18df60dda23472307a4b70b6a",
+      "source_file_size": 75214,
+      "source_path": "task2_live_drive_to_analysis_20260719/output-final/d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf/report_analysis/artifacts.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 2904,
+      "snapshot_path": "retained_artifacts/task2_live_drive_to_analysis_20260719/output-final/d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf/report_analysis/crop_refine.json",
+      "snapshot_sha256": "fc7d6bd63dc3b23b619ef9c98527af18f60b42b3e43d4ab210ce72c10312443c",
+      "source_file_size": 2904,
+      "source_path": "task2_live_drive_to_analysis_20260719/output-final/d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf/report_analysis/crop_refine.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 9883,
+      "snapshot_path": "retained_artifacts/task2_live_drive_to_analysis_20260719/output-final/d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf/report_analysis/doc_map.json",
+      "snapshot_sha256": "f8e5da2d23716293c86c17bbbc68dcf9fbbea2fb835126d9ae157760972f5e6b",
+      "source_file_size": 9883,
+      "source_path": "task2_live_drive_to_analysis_20260719/output-final/d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf/report_analysis/doc_map.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 4472,
+      "snapshot_path": "retained_artifacts/task2_live_drive_to_analysis_20260719/output-final/d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf/report_analysis/findings.json",
+      "snapshot_sha256": "f49c76c88012da3ff9ae13cd3945893e4080ac0e7285d27002b54adf71f81a0d",
+      "source_file_size": 4472,
+      "source_path": "task2_live_drive_to_analysis_20260719/output-final/d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf/report_analysis/findings.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 2341,
+      "snapshot_path": "retained_artifacts/task2_live_drive_to_analysis_20260719/output-final/d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf/report_analysis/limitations.json",
+      "snapshot_sha256": "f6ba58fe88862ade13f75e32cbb1f88ccf016f7d30a4ff8099c6b8196e63bbe1",
+      "source_file_size": 2341,
+      "source_path": "task2_live_drive_to_analysis_20260719/output-final/d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf/report_analysis/limitations.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 4008,
+      "snapshot_path": "retained_artifacts/task2_live_drive_to_analysis_20260719/output-final/d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf/report_analysis/methods.json",
+      "snapshot_sha256": "9722d6b5d49dbe471dcbf43dce371ea873d895bedcd41a8e19836a844e724940",
+      "source_file_size": 4008,
+      "source_path": "task2_live_drive_to_analysis_20260719/output-final/d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf/report_analysis/methods.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 2591,
+      "snapshot_path": "retained_artifacts/task2_live_drive_to_analysis_20260719/output-final/d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf/report_analysis/quote_candidates.json",
+      "snapshot_sha256": "c9c75ab5813fedc8b9db26aec75541cca5ff6c5eb0fc11b9aa7c6a5f7f3a5e65",
+      "source_file_size": 2591,
+      "source_path": "task2_live_drive_to_analysis_20260719/output-final/d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf/report_analysis/quote_candidates.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 1152,
+      "snapshot_path": "retained_artifacts/task2_live_drive_to_analysis_20260719/output-final/d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf/report_analysis/scope.json",
+      "snapshot_sha256": "a89858bd48d32219c018a9189c6884dca478b63c8008806d146b648d91a02a61",
+      "source_file_size": 1152,
+      "source_path": "task2_live_drive_to_analysis_20260719/output-final/d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf/report_analysis/scope.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 86388,
+      "snapshot_path": "retained_artifacts/task4_live_prompt_family_20260719/output/ias-industry-pulse-report-2026-acig-pdf/report_analysis/artifacts.json",
+      "snapshot_sha256": "7ac171c95fda2b616bf05c6ec022e73900564cb7e9a1ff6a599740d30d8f1d78",
+      "source_file_size": 86388,
+      "source_path": "task4_live_prompt_family_20260719/output/ias-industry-pulse-report-2026-acig-pdf/report_analysis/artifacts.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 6906,
+      "snapshot_path": "retained_artifacts/task4_live_prompt_family_20260719/output/ias-industry-pulse-report-2026-acig-pdf/report_analysis/doc_map.json",
+      "snapshot_sha256": "24bdf2e088e272c7a3c206e9bbbdb38a112b0f1f093ff84e211f8b1dc158169b",
+      "source_file_size": 6906,
+      "source_path": "task4_live_prompt_family_20260719/output/ias-industry-pulse-report-2026-acig-pdf/report_analysis/doc_map.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 3197,
+      "snapshot_path": "retained_artifacts/task4_live_prompt_family_20260719/output/ias-industry-pulse-report-2026-acig-pdf/report_analysis/findings.json",
+      "snapshot_sha256": "e8fd1d239fd9867037f01ddc2010aec4b86f4127110bbdfbf157b98980ab380f",
+      "source_file_size": 3197,
+      "source_path": "task4_live_prompt_family_20260719/output/ias-industry-pulse-report-2026-acig-pdf/report_analysis/findings.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 1054,
+      "snapshot_path": "retained_artifacts/task4_live_prompt_family_20260719/output/ias-industry-pulse-report-2026-acig-pdf/report_analysis/limitations.json",
+      "snapshot_sha256": "84c39b2261e5cc74d6127fe5db4b2915e4d76966008ae2f1d578b6ac373655e0",
+      "source_file_size": 1054,
+      "source_path": "task4_live_prompt_family_20260719/output/ias-industry-pulse-report-2026-acig-pdf/report_analysis/limitations.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 1368,
+      "snapshot_path": "retained_artifacts/task4_live_prompt_family_20260719/output/ias-industry-pulse-report-2026-acig-pdf/report_analysis/methods.json",
+      "snapshot_sha256": "a3a4e7d432df98ec0c106861d539ef110ede1ecd091774b273f8598dba82e408",
+      "source_file_size": 1368,
+      "source_path": "task4_live_prompt_family_20260719/output/ias-industry-pulse-report-2026-acig-pdf/report_analysis/methods.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 2408,
+      "snapshot_path": "retained_artifacts/task4_live_prompt_family_20260719/output/ias-industry-pulse-report-2026-acig-pdf/report_analysis/quote_candidates.json",
+      "snapshot_sha256": "90e6f5b964c4c96e6ecdf8e01abd99cf88d7f4828e1617a7bd99af0e380b2deb",
+      "source_file_size": 2408,
+      "source_path": "task4_live_prompt_family_20260719/output/ias-industry-pulse-report-2026-acig-pdf/report_analysis/quote_candidates.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 612,
+      "snapshot_path": "retained_artifacts/task4_live_prompt_family_20260719/output/ias-industry-pulse-report-2026-acig-pdf/report_analysis/scope.json",
+      "snapshot_sha256": "372e6102557d071ef83a2b9454e1dfc00d791bdf31cae939e08407b81df42395",
+      "source_file_size": 612,
+      "source_path": "task4_live_prompt_family_20260719/output/ias-industry-pulse-report-2026-acig-pdf/report_analysis/scope.json"
+    },
+    {
+      "accessibility": "readable",
       "snapshot_file_size": 32736,
       "snapshot_path": "retained_artifacts/tech-tonic-shifts-pdf/report_analysis/artifacts.json",
       "snapshot_sha256": "5746262d05dc66ef07450a8c272477eeeca74435c83dc46a8585c5252a3312fc",
@@ -20065,8 +20249,8 @@
       "source_path": "wp-2024-11-id-double-day-report-v2-pdf/report_analysis/scope.json"
     }
   ],
-  "evidence_run_id": "af87e10752da4d25adf4aa9c40e55f80",
-  "generated_at": "2026-07-18T08:32:44.510427+00:00",
+  "evidence_run_id": "afca500952a4489193074501f88aba62",
+  "generated_at": "2026-07-19T12:42:03.255755+00:00",
   "log_snapshots": [
     {
       "accessibility": "readable",
@@ -20103,18 +20287,33 @@
       "first_parsed_event_timestamp": null,
       "last_parsed_event_timestamp": null,
       "parsed_structured_event_count": null,
-      "snapshot_file_size": 230716053,
+      "snapshot_file_size": 689995340,
       "snapshot_path": "standard_logs/market_lense_2026-07-18.log",
-      "snapshot_sha256": "c7b63e7d70f05e2dce226f371c5b5f23e901628c4860b3ade45c0d0cf086e02d",
-      "source_file_size": 230716053,
-      "source_modified_at": "2026-07-18T07:58:12.851344+00:00",
+      "snapshot_sha256": "da9df4f5b80520fe3f811d7e523ccaad2bd786f69381f2056340140ecadd686d",
+      "source_file_size": 689995340,
+      "source_modified_at": "2026-07-18T21:42:03.837487+00:00",
       "source_path": "market_lense_2026-07-18.log",
       "structured_event_metadata_mode": "matches_only",
-      "total_line_count": 319542,
+      "total_line_count": 958180,
+      "unparsed_line_count": null
+    },
+    {
+      "accessibility": "readable",
+      "first_parsed_event_timestamp": null,
+      "last_parsed_event_timestamp": null,
+      "parsed_structured_event_count": null,
+      "snapshot_file_size": 266739716,
+      "snapshot_path": "standard_logs/market_lense_2026-07-19.log",
+      "snapshot_sha256": "89cab1dc66188b6a488cd766872844c816c363e0c517d3a28fb2e216c0fd2b2f",
+      "source_file_size": 266739716,
+      "source_modified_at": "2026-07-19T09:40:47.778683+00:00",
+      "source_path": "market_lense_2026-07-19.log",
+      "structured_event_metadata_mode": "matches_only",
+      "total_line_count": 376419,
       "unparsed_line_count": null
     }
   ],
-  "repository_commit_sha": "65750b654b421024443d46be60805174f80b0585",
+  "repository_commit_sha": "c352d503f2e55268e8b74a7f27fd4f4857abd333",
   "schema_version": "1.0",
   "snapshots": [
     {
@@ -20124,19 +20323,19 @@
       ],
       "journal_mode": "wal",
       "logical_database_name": "reports",
-      "maximum_relevant_timestamp": "2026-07-18T06:00:25.103Z",
+      "maximum_relevant_timestamp": "2026-07-18T15:25:14.358Z",
       "schema_version": 1,
-      "snapshot_created_at": "2026-07-18T08:29:05.381233+00:00",
-      "snapshot_file_size": 18296832,
+      "snapshot_created_at": "2026-07-19T12:35:31.681978+00:00",
+      "snapshot_file_size": 19025920,
       "snapshot_path": "snapshots/reports.sqlite",
-      "snapshot_sha256": "cf590ecfcec69420d506d8dac88f5fd5b89c6c030da7d646e561f543e15df820",
+      "snapshot_sha256": "b0892aaefc097be267900bebe2337b62fe68d7f47a479b9a1754fa7a1ce06c5b",
       "source_accessibility": "readable",
       "source_exists": true,
-      "source_file_size": 18296832,
+      "source_file_size": 19025920,
       "source_path": "reports.sqlite",
       "table_row_counts": {
-        "artifact_lineage_records": 267,
-        "artifact_lineage_states": 267,
+        "artifact_lineage_records": 673,
+        "artifact_lineage_states": 673,
         "publisher_download_route_history": 295
       }
     },
@@ -20147,18 +20346,18 @@
       ],
       "journal_mode": "delete",
       "logical_database_name": "llm_usage",
-      "maximum_relevant_timestamp": "2026-07-18T07:06:48.129413+00:00",
+      "maximum_relevant_timestamp": "2026-07-19T09:36:12.214069+00:00",
       "schema_version": 1,
-      "snapshot_created_at": "2026-07-18T08:29:05.586948+00:00",
-      "snapshot_file_size": 20291584,
+      "snapshot_created_at": "2026-07-19T12:35:31.906701+00:00",
+      "snapshot_file_size": 32772096,
       "snapshot_path": "snapshots/llm_usage.sqlite",
-      "snapshot_sha256": "c817aa90bf1318cf82b182be8dc4bd23a5c1cf56d2ac3cfff87fc7807eb53cc5",
+      "snapshot_sha256": "d76a5c8e56b3f259ec8c438404ba8e32f3b3e3c1b3b460d0f631fa6e99afd909",
       "source_accessibility": "readable",
       "source_exists": true,
-      "source_file_size": 20291584,
+      "source_file_size": 32772096,
       "source_path": "llm_usage.sqlite",
       "table_row_counts": {
-        "llm_usage_events": 1204
+        "llm_usage_events": 1320
       }
     },
     {
@@ -20170,13 +20369,13 @@
       "logical_database_name": "index",
       "maximum_relevant_timestamp": "2026-07-17T20:38:32.994296+00:00",
       "schema_version": 1,
-      "snapshot_created_at": "2026-07-18T08:29:05.879507+00:00",
-      "snapshot_file_size": 819200,
+      "snapshot_created_at": "2026-07-19T12:35:32.554842+00:00",
+      "snapshot_file_size": 1306624,
       "snapshot_path": "snapshots/index.sqlite",
-      "snapshot_sha256": "4c698c96942e6f4fb3f713ffb00688e024f4359cba58f6e75ba9194348bbc072",
+      "snapshot_sha256": "5c895d92fc56f4fe02d0bae69b9f4127f46b3ad01b88c3a9a2417caeb5a42efe",
       "source_accessibility": "readable",
       "source_exists": true,
-      "source_file_size": 819200,
+      "source_file_size": 1306624,
       "source_path": "index.sqlite",
       "table_row_counts": {
         "workflow_control_observations": 42
@@ -20191,16 +20390,16 @@
       "logical_database_name": "ui_runs",
       "maximum_relevant_timestamp": "2026-07-04T09:35:42.748264+00:00",
       "schema_version": 1,
-      "snapshot_created_at": "2026-07-18T08:29:05.915177+00:00",
-      "snapshot_file_size": 81920,
+      "snapshot_created_at": "2026-07-19T12:35:32.608251+00:00",
+      "snapshot_file_size": 98304,
       "snapshot_path": "snapshots/ui_runs.sqlite",
-      "snapshot_sha256": "872ebaba4ee164dd62fa1e63efb0151451b68ab3b0440dc11f38f4768b72ce80",
+      "snapshot_sha256": "a4f4f3ef5d51551c05112fc5209aaa6f9aaa15c662edbb8997757347f1d0aba2",
       "source_accessibility": "readable",
       "source_exists": true,
-      "source_file_size": 81920,
+      "source_file_size": 98304,
       "source_path": "ui_runs.sqlite",
       "table_row_counts": {
-        "ui_runs": 4
+        "ui_runs": 8
       }
     }
   ]

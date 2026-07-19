@@ -1056,7 +1056,7 @@
     "source": "reports.artifact_execution_plan_runs; reports.artifact_lineage_records",
     "status": "partial",
     "values": {
-      "plan_count": 22,
+      "plan_count": 26,
       "planned_reusable_artifact_count": 7
     }
   },
@@ -1232,7 +1232,7 @@
         },
         {
           "action": "openai_analyze",
-          "call_count": 107,
+          "call_count": 126,
           "estimated_cost_usd": 0.0,
           "prompt_namespace": "",
           "semantic_task": "openai_analyze"
@@ -1295,8 +1295,8 @@
         },
         {
           "action": "openai_chat_json",
-          "call_count": 306,
-          "estimated_cost_usd": 0.273921,
+          "call_count": 336,
+          "estimated_cost_usd": 0.34662,
           "prompt_namespace": "",
           "semantic_task": "openai_chat_json"
         },
@@ -1323,21 +1323,21 @@
         },
         {
           "action": "openai_chat_json_with_images",
-          "call_count": 131,
-          "estimated_cost_usd": 0.022019,
+          "call_count": 139,
+          "estimated_cost_usd": 0.044651,
           "prompt_namespace": "",
           "semantic_task": "openai_chat_json_with_images"
         },
         {
           "action": "openai_embeddings",
-          "call_count": 12,
-          "estimated_cost_usd": 4e-06,
+          "call_count": 14,
+          "estimated_cost_usd": 6e-06,
           "prompt_namespace": "",
           "semantic_task": "openai_embeddings"
         },
         {
           "action": "openai_ocr_pdf",
-          "call_count": 209,
+          "call_count": 266,
           "estimated_cost_usd": 0.0,
           "prompt_namespace": "",
           "semantic_task": "openai_ocr_pdf"
@@ -1469,11 +1469,11 @@
     "source": "retained crop_refine.json; llm_usage.llm_usage_events",
     "status": "partial",
     "values": {
-      "acceptance_rate": 0.864499,
-      "accepted_candidate_count": 319,
-      "crop_candidate_count": 369,
+      "acceptance_rate": 0.866667,
+      "accepted_candidate_count": 325,
+      "crop_candidate_count": 375,
       "crop_qa_call_count": 0,
-      "crop_refinement_file_count": 155
+      "crop_refinement_file_count": 157
     }
   },
   "deferred_work_age_and_completion": {
@@ -1493,13 +1493,14 @@
     "source": "reports.vector_projection_queue; reports.claim_embedding_queue_transitions",
     "status": "partial",
     "values": {
-      "mean_open_queue_age_seconds": 3423191.562,
+      "mean_open_queue_age_seconds": 3521594.619,
       "queue_status_counts": {
-        "embedded": 4,
-        "pending": 2648
+        "embedded": 6,
+        "pending": 2646
       },
       "transition_reason_counts": {
-        "embedding_completed": 4
+        "durable_embedding_already_satisfied": 4,
+        "embedding_completed": 6
       }
     }
   },
@@ -1519,57 +1520,69 @@
       "rows": [
         {
           "actual_call_count": 6,
-          "divergent_plan_count": 2,
+          "divergent_plan_count": 0,
+          "enforcement_deferred_or_blocked_count": 0,
           "execution_intent": "crop_repair",
           "execution_mode": "enforce",
-          "matching_plan_count": 0,
+          "matching_plan_count": 2,
           "plan_count": 2,
-          "planned_call_count": 6
+          "planned_call_count": 6,
+          "unreconciled_plan_count": 0
         },
         {
           "actual_call_count": 0,
-          "divergent_plan_count": 1,
+          "divergent_plan_count": 0,
+          "enforcement_deferred_or_blocked_count": 0,
           "execution_intent": "publication_repair",
           "execution_mode": "enforce",
-          "matching_plan_count": 0,
+          "matching_plan_count": 1,
           "plan_count": 1,
-          "planned_call_count": 9
+          "planned_call_count": 9,
+          "unreconciled_plan_count": 0
         },
         {
           "actual_call_count": 37,
-          "divergent_plan_count": 9,
+          "divergent_plan_count": 4,
+          "enforcement_deferred_or_blocked_count": 0,
           "execution_intent": "render_repair",
           "execution_mode": "enforce",
-          "matching_plan_count": 0,
+          "matching_plan_count": 5,
           "plan_count": 9,
-          "planned_call_count": 21
+          "planned_call_count": 21,
+          "unreconciled_plan_count": 0
         },
         {
           "actual_call_count": 6,
-          "divergent_plan_count": 2,
+          "divergent_plan_count": 0,
+          "enforcement_deferred_or_blocked_count": 0,
           "execution_intent": "report_generation",
           "execution_mode": "enforce",
-          "matching_plan_count": 0,
+          "matching_plan_count": 2,
           "plan_count": 2,
-          "planned_call_count": 6
+          "planned_call_count": 6,
+          "unreconciled_plan_count": 0
         },
         {
-          "actual_call_count": 40,
-          "divergent_plan_count": 5,
+          "actual_call_count": 64,
+          "divergent_plan_count": 2,
+          "enforcement_deferred_or_blocked_count": 0,
           "execution_intent": "report_generation",
           "execution_mode": "shadow",
-          "matching_plan_count": 0,
-          "plan_count": 5,
-          "planned_call_count": 33
+          "matching_plan_count": 7,
+          "plan_count": 9,
+          "planned_call_count": 65,
+          "unreconciled_plan_count": 0
         },
         {
           "actual_call_count": 10,
-          "divergent_plan_count": 3,
+          "divergent_plan_count": 0,
+          "enforcement_deferred_or_blocked_count": 0,
           "execution_intent": "targeted_repair",
           "execution_mode": "enforce",
-          "matching_plan_count": 0,
+          "matching_plan_count": 3,
           "plan_count": 3,
-          "planned_call_count": 14
+          "planned_call_count": 14,
+          "unreconciled_plan_count": 0
         }
       ]
     }
@@ -1579,8 +1592,8 @@
     "source": "llm_usage.llm_usage_events",
     "status": "available",
     "values": {
-      "ocr_call_count": 209,
-      "ocr_incidence_among_llm_calls": 0.173588,
+      "ocr_call_count": 266,
+      "ocr_incidence_among_llm_calls": 0.201515,
       "ocr_success_rate": 1.0
     }
   },
@@ -1597,10 +1610,10 @@
     "source": "index.remediation_records; index.remediation_transitions",
     "status": "available",
     "values": {
-      "human_intervention_rate": 0.761905,
-      "recurrence_rate": 0.238095,
+      "human_intervention_rate": 0.791667,
+      "recurrence_rate": 0.208333,
       "status_counts": {
-        "operator_action_required": 16,
+        "operator_action_required": 19,
         "pending": 1,
         "terminal": 4
       },

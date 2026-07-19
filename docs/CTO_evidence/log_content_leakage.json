@@ -452,32 +452,30 @@
     }
   ],
   "coverage": {
-    "artifact_files_examined": 2508,
+    "artifact_files_examined": 2531,
     "editorial_canary_count": 25,
-    "log_bytes_scanned": 924210077,
-    "log_files_scanned": 3,
-    "log_lines_scanned": 1321087,
+    "log_bytes_scanned": 1650229080,
+    "log_files_scanned": 4,
+    "log_lines_scanned": 2336144,
     "reports_sampled": 26,
     "source_canary_count": 25,
     "structured_event_metadata_mode": "matches_only",
     "structured_events_parsed": null,
     "unparsed_lines": null
   },
-  "evidence_run_id": "af87e10752da4d25adf4aa9c40e55f80",
+  "evidence_run_id": "afca500952a4489193074501f88aba62",
   "fresh_after": null,
   "fresh_log_seen": false,
-  "generated_at": "2026-07-18T08:32:44.509672+00:00",
-  "limitations": [
-    "log_corpus_scope_not_declared"
-  ],
+  "generated_at": "2026-07-19T12:42:03.254035+00:00",
+  "limitations": [],
   "log_corpus": {
-    "operator_declared_scope": "not_declared",
+    "operator_declared_scope": "representative_report_processing",
     "repository_provenance": "The repository commit identifies the evidence collector revision; it does not attest to the producer revision of historical log records.",
     "scope_attestation": "The collector verifies the snapshotted corpus and content coverage, not whether the declared workflow scope was actually executed."
   },
   "matches": [],
   "passed": true,
-  "repository_commit_sha": "65750b654b421024443d46be60805174f80b0585",
+  "repository_commit_sha": "c352d503f2e55268e8b74a7f27fd4f4857abd333",
   "schema_version": "1.0",
   "status": "passed"
 }
