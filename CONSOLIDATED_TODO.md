@@ -1,6 +1,6 @@
 # Consolidated TODO
 
-Last audited: 2026-07-18
+Last audited: 2026-07-19
 
 This is the repository's single, source-neutral work register. Every task is evaluated by its current codebase evidence and project decision—not by where it was first proposed. Equivalent tasks are merged under one owner; deferred, closed, and excluded work stays visible in the same register.
 
@@ -141,7 +141,7 @@ The original ten-item screenshot baseline is complete in the committed implement
 
 - **Title:** Complete explicit model-policy coverage and policy-effectiveness evidence
 - **Impact 5 / effort: 2**
-- **Context:** Report generation, taxonomy, and candidate ranking now use explicit hash-pinned execution policies, but older model-backed namespaces still use compatibility defaults and operators cannot compare observed cost, latency, validation, and cache outcomes by policy identity.
+- **Context:** Report generation, taxonomy, and candidate ranking now use explicit hash-pinned execution policies, but older model-backed namespaces still use compatibility defaults and operators cannot compare observed cost, latency, validation, and cache outcomes by policy identity. The 2026-07-19 live validation stopped five publisher discoveries at `llm_execution_policy_unknown_namespace`, confirming that the remaining compatibility coverage is a production-path blocker rather than a theoretical gap.
 - **Benefit:** Every materially expensive model call can be governed by an auditable policy and operators can safely identify policies that reduce cost or improve validated output quality.
 - **Risks to avoid:** Preserve each namespace's current semantic contract, provider boundary, retry ownership, and cache compatibility; do not infer a policy from one noisy run or change routing autonomously.
 - **Success criteria:**
