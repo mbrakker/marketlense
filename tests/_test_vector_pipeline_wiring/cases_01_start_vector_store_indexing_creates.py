@@ -5,7 +5,7 @@ from ._shared import *  # noqa: F401,F403
 
 
 def test_start_vector_store_indexing_creates_without_wait_loop(tmp_path):
-    settings = _ingest_settings(tmp_path)
+    settings = replace(_ingest_settings(tmp_path), run_budget_max_spend_usd=4.25)
     ctx = RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
     file = DriveFile(
         schema_version="1.0",
@@ -15,16 +15,23 @@ def test_start_vector_store_indexing_creates_without_wait_loop(tmp_path):
         md5_checksum="md5",
     )
     calls: list[str] = []
+    requests = []
 
     deps = _analysis_dependencies(
         state_get=lambda req, ctx: None,
         vector_store_create=lambda req, ctx: (
-            calls.append("create") or SimpleNamespace(vector_store_id="vs_123")
+            requests.append(req)
+            or calls.append("create")
+            or SimpleNamespace(vector_store_id="vs_123")
         ),
         vector_store_upload_file=lambda req, ctx: (
-            calls.append("upload") or SimpleNamespace(openai_file_id="file_upload_1")
+            requests.append(req)
+            or calls.append("upload")
+            or SimpleNamespace(openai_file_id="file_upload_1")
         ),
-        vector_store_attach_file=lambda req, ctx: calls.append("attach") or None,
+        vector_store_attach_file=lambda req, ctx: (
+            requests.append(req) or calls.append("attach") or None
+        ),
         vector_store_get_status=lambda req, ctx: (
             calls.append("status")
             or SimpleNamespace(
@@ -50,6 +57,11 @@ def test_start_vector_store_indexing_creates_without_wait_loop(tmp_path):
     assert state.vector_store_status == "indexing"
     assert state.indexed_at_utc is None
     assert state.last_error is None
+    assert all(request.run_budget is not None for request in requests)
+    assert {request.run_budget.usage_db_path for request in requests} == {
+        settings.usage_db_path
+    }
+    assert {request.run_budget.max_spend_usd for request in requests} == {4.25}
 
 
 def test_ingest_orchestrator_records_vector_events(
@@ -82,8 +94,8 @@ def test_ingest_orchestrator_records_vector_events(
     deps = _batch_dependencies(
         list_pdfs=lambda req, ctx: [file],
         process_file=_make_ingest_process(
-            generate_report=lambda current_file, cache_path, current_settings, md5, ctx: (
-                outcome
+            generate_report=(
+                lambda current_file, cache_path, current_settings, md5, ctx: outcome
             )
         ),
     )
@@ -141,8 +153,8 @@ def test_ingest_orchestrator_records_doc_map_summary(tmp_path) -> None:
     deps = _batch_dependencies(
         list_pdfs=lambda req, ctx: [file],
         process_file=_make_ingest_process(
-            generate_report=lambda current_file, cache_path, current_settings, md5, ctx: (
-                outcome
+            generate_report=(
+                lambda current_file, cache_path, current_settings, md5, ctx: outcome
             )
         ),
     )

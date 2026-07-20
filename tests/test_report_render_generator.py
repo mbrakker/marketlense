@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import replace
 from pathlib import Path
@@ -11,6 +12,11 @@ from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestSettings
 from src.contracts.pdf_text import PdfTextExtractResponse
 from src.contracts.pdf_utils import PdfInfoResponse
+from src.contracts.report_cards import (
+    CardCoverAsset,
+    CardCoverAssetSet,
+    ReportCardManifestWriteResponse,
+)
 from src.contracts.report_generation import (
     ReportAnalysisState,
     ReportRuntimeState,
@@ -18,11 +24,6 @@ from src.contracts.report_generation import (
     ReportSourceState,
 )
 from src.contracts.report_models import Figure, Quote, ReportPayload
-from src.contracts.report_cards import (
-    CardCoverAsset,
-    CardCoverAssetSet,
-    ReportCardManifestWriteResponse,
-)
 from src.contracts.report_store import (
     ReportMetadataGetResponse,
     SourcePublicationMetadata,
@@ -40,9 +41,8 @@ from src.generators.report_render_generator import (
     render_preview_asset,
     render_report_output,
 )
-from src.utils.errors import AppError
 from src.utils.cache_utils import sha256_json
-import hashlib
+from src.utils.errors import AppError
 
 
 def _template_bundle_sha(template_contents: dict[str, str]) -> str:
@@ -185,15 +185,22 @@ def _analysis(
         evidence_packs={"doc_map": {"title": source.payload.title}},
         artifacts_payload={
             "summary": {
-                "tldr": "A complete standard summary explains the report's strategic finding.",
-                "card_tldr_compact": "Strategic demand is shifting toward more efficient channels.",
+                "tldr": (
+                    "A complete standard summary explains the report's strategic "
+                    "finding."
+                ),
+                "card_tldr_compact": (
+                    "Strategic demand is shifting toward more efficient channels."
+                ),
             },
             "cover_semantics": {
                 "evidence_shape": "trend",
                 "direction": "rising",
                 "evidence_density": "balanced",
                 "domain_layer": "grid",
-                "selection_reason": "The report presents a sustained upward market trend.",
+                "selection_reason": (
+                    "The report presents a sustained upward market trend."
+                ),
             },
             "insights_final": [
                 {"text": "Channel efficiency improved across the measured period."},
@@ -375,7 +382,7 @@ def test_render_report_output_passes_db_source_url_to_public_renderer(tmp_path):
 
     assert captured == {
         "source": "https://publisher.example/reports/original-study",
-        "canonical_url": "https://publisher.example/reports/original-study",
+        "canonical_url": "",
     }
 
 
@@ -542,6 +549,7 @@ def test_render_report_output_uses_html_cache_hit_and_skips_render(tmp_path):
         "title": "DB Title",
         "publisher": "DB Publisher",
         "time_period": "Q1 2026",
+        "canonical_url": "",
     }
     template_contents = {
         "report.html.j2": "template",

@@ -90,6 +90,10 @@ def _resolve_ingest_runtime_settings(
     run_budget_cfg = ingest.get("run_budget", {}) or {}
     if not isinstance(run_budget_cfg, dict):
         run_budget_cfg = {}
+    raw_max_spend = run_budget_cfg.get("max_spend_usd")
+    resolved["run_budget_max_spend_usd"] = (
+        None if _is_missing(raw_max_spend) else max(0.0, _to_float(raw_max_spend, 0.0))
+    )
     resolved["run_budget_max_pdfs"] = _optional_positive_int(
         run_budget_cfg.get("max_pdfs")
     )
@@ -104,9 +108,9 @@ def _resolve_ingest_runtime_settings(
         for effect in (run_budget_cfg.get("enabled_effect_kinds") or [])
         if str(effect).strip()
     )
-    resolved["run_budget_limit_decision"] = str(
-        run_budget_cfg.get("limit_decision") or "stop"
-    ).strip().lower()
+    resolved["run_budget_limit_decision"] = (
+        str(run_budget_cfg.get("limit_decision") or "stop").strip().lower()
+    )
     resolved["taxonomy_temperature"] = _to_float(
         _resolve_setting_raw(
             ingest,

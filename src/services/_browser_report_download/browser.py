@@ -2,7 +2,6 @@ from __future__ import annotations
 
 # Compatibility facade imports are consumed by decomposed browser runtime modules.
 # ruff: noqa: F401
-
 import asyncio
 import inspect
 import json
@@ -15,7 +14,6 @@ import tempfile
 import time
 from dataclasses import asdict, dataclass
 from hashlib import sha256
-from importlib import import_module
 from pathlib import Path
 from threading import Thread
 from typing import Any
@@ -32,19 +30,175 @@ from src.contracts.openai import OpenAIUsageAccountingRequest
 from src.contracts.run_budget import (
     BudgetDecision,
     BudgetRequest,
+    BudgetReservationReconcileRequest,
     BudgetSideEffectFinalizeRequest,
     RunBudget,
     RunBudgetUsage,
 )
 from src.contracts.run_context import RunContext
 from src.services import llm_service
-from src.services._llm_service.policy import spend_reservation_key
-from src.services.llm_usage_ledger_service import (
-    evaluate_budget_request,
-    finalize_budget_side_effect,
-    reconcile_budget_reservation,
+from src.services._browser_report_download._browser_runtime import (
+    _AGENT_COMPLETED_HISTORY_POLL_SECONDS,
+    _AGENT_RUN_TIMEOUT_MAX_BUFFER_SECONDS,
+    _AGENT_RUN_TIMEOUT_MIN_BUFFER_SECONDS,
+    _AGENT_RUN_TIMEOUT_STEP_BUFFER_SECONDS,
+    _ANSI_ESCAPE_PATTERN,
+    _BROWSER_AGENT_USE_JUDGE,
+    _BROWSER_AGENT_WORKER_ENV,
+    _BROWSER_AGENT_WORKER_OUTPUT_MAX_CHARS,
+    _BROWSER_AGENT_WORKER_TIMEOUT_BUFFER_SECONDS,
+    _BROWSER_CLEANUP_GRACE_SECONDS,
+    _BROWSER_KILL_TIMEOUT_SECONDS,
+    _BROWSER_PROFILE_DIR_PREFIX,
+    _BROWSER_RESET_TIMEOUT_SECONDS,
+    _BROWSER_USE_TEMP_DIR_PATTERNS,
+    _EMAIL_DOMAIN_BLOCK_MARKERS,
+    _EMAIL_DOMAIN_FAILURE_MARKERS,
+    _LOOKUP_FAILURE_MARKERS,
+    _LOOKUP_FIELD_MARKERS,
+    _LOOKUP_SUBMIT_MARKERS,
+    _PARTIAL_HISTORY_TEXT_MAX_CHARS,
+    _STALE_BROWSER_USE_TEMP_DIR_MIN_AGE_SECONDS,
+    _TEMP_CLEANUP_LOG_SAMPLE_LIMIT,
+    _TERMINAL_REPORT_TEXT_MARKERS,
+    _TERMINAL_STABILIZATION_DEFAULT_POLL_SCHEDULE_SECONDS,
+    _TERMINAL_STABILIZATION_EMAIL_POLL_SCHEDULE_SECONDS,
+    _TERMINAL_SUCCESS_TEXT_MARKERS,
+    _TERMINAL_SUCCESS_URL_MARKERS,
+    _TERMINAL_TEXT_EXCERPT_MAX_CHARS,
+    _TERMINAL_TRANSIENT_MARKERS,
+    _TIMED_OUT_COMPLETED_HISTORY_GRACE_SECONDS,
+    _TIMED_OUT_RECOVERY_OPERATION_TIMEOUT_SECONDS,
 )
-from src.contracts.run_budget import BudgetReservationReconcileRequest
+from src.services._browser_report_download._browser_runtime.runtime import (
+    browser_runtime_identity,
+    load_browser_use_runtime,
+)
+from src.services._browser_report_download._browser_runtime.session_lifecycle import (
+    BrowserAgentHistoryResult,
+    _cleanup_browser_profile_dir,
+    _cleanup_managed_browser_profile_dirs,
+    _cleanup_new_browser_use_temp_dirs,
+    _cleanup_stale_browser_use_temp_dirs,
+    _collect_agent_history_text,
+    _default_session_reuse_base_dir,
+    _force_stop_local_browser_process,
+    _infer_encountered_form_fields,
+    _kill_browser,
+    _kill_browser_with_timeout,
+    _list_browser_use_temp_dirs,
+    _log_browser_cleanup_failure,
+    _new_managed_browser_profile_dir,
+    _prepare_browser_for_shutdown,
+    _prime_agent_timing_fields,
+    _read_completed_agent_history,
+    _read_distinct_history_urls,
+    _read_email_domain_blocker_partial_history,
+    _read_lookup_blocker_partial_history,
+    _read_terminal_blocker_partial_history,
+    _remove_browser_use_temp_dirs,
+    _resolve_agent_run_timeout_seconds,
+    _resolve_lookup_blocker_label,
+    _run_agent_history_with_timeout,
+    _serialize_history_fragment,
+    _signal_agent_stop,
+    _SyntheticActionResult,
+    _SyntheticAgentHistory,
+    _SyntheticHistoryEntry,
+    _SyntheticHistoryState,
+    _truncate_partial_history_excerpt,
+)
+from src.services._browser_report_download._browser_runtime.terminal_assets import (
+    _await_browser_task,
+    _await_in_current_or_thread,
+    _browser_rendered_pdf_capture_path,
+    _browser_text_has_non_report_marker,
+    _browser_visible_text_from_html,
+    _capture_completed_history_terminal_assets,
+    _capture_terminal_assets,
+    _capture_terminal_dialog_evidence,
+    _classify_network_signal_kind,
+    _coerce_evaluate_list,
+    _collect_dom_candidate_urls,
+    _collect_network_events,
+    _collect_network_events_via_cdp,
+    _collect_network_resource_urls,
+    _collect_page_resource_urls,
+    _copy_external_artifact,
+    _copy_history_screenshot,
+    _dedupe_browser_dialog_evidence,
+    _ensure_terminal_target_hygiene,
+    _extract_documentish_urls_from_html,
+    _is_within_directory,
+    _local_artifact_candidate_paths,
+    _looks_like_documentish_url,
+    _looks_like_pdf_resource_url,
+    _materialize_external_artifacts,
+    _maybe_await,
+    _maybe_capture_print_pdf_fallback,
+    _merge_network_events,
+    _network_events_from_raw_events,
+    _parse_closed_popup_message,
+    _parse_raw_model_response,
+    _pdf_prefetch_destination_path,
+    _prefetch_structured_pdf_artifact,
+    _read_browser_closed_popup_dialog_evidence,
+    _read_browser_current_page_title,
+    _read_browser_current_page_url,
+    _read_history_attachment_paths,
+    _read_history_final_page_title,
+    _read_history_final_page_url,
+    _read_history_final_state,
+    _read_page_html,
+    _read_page_title,
+    _read_page_url,
+    _resolve_current_page,
+    _run_awaitable,
+    _safe_resolve_path,
+    _should_capture_print_pdf_fallback,
+    _structured_pdf_candidate_urls,
+    _try_screenshot_call,
+    _write_terminal_html_snapshot,
+    _write_terminal_screenshot,
+)
+from src.services._browser_report_download._browser_runtime.terminal_state import (
+    TerminalQuorumAssessment,
+    TerminalSnapshot,
+    TerminalStabilizationPolicy,
+    _assess_terminal_snapshot_quorum,
+    _assessment_meets_terminal_quorum,
+    _capture_terminal_snapshot,
+    _contains_transient_terminal_marker,
+    _dedupe_labels,
+    _merge_terminal_snapshots,
+    _resolve_terminal_stabilization_policy,
+    _stabilize_terminal_snapshot,
+    _terminal_quorum_text,
+    _terminal_stabilization_reason,
+)
+from src.services._browser_report_download._browser_runtime.timeout_recovery import (
+    _attempt_lookup_submission_assist,
+    _attempt_lookup_submission_assist_with_timeout,
+    _attempt_standard_form_submit_assist_with_timeout,
+    _browser_form_identity_field_values,
+    _browser_standard_form_identity_field_values,
+    _build_cached_timed_out_browser_run,
+    _payload_has_lookup_submission_recovery_signal,
+    _salvage_timed_out_browser_run,
+    _salvage_timed_out_browser_run_unbounded,
+    _should_attempt_lookup_submission_assist,
+    _should_attempt_standard_form_submit_assist,
+    _should_attempt_timeout_standard_form_submit_assist,
+)
+from src.services._browser_report_download._browser_runtime.worker_protocol import (
+    BrowserAgentWorkerPayload,
+    BrowserAgentWorkerResponse,
+    _deserialize_browser_agent_run_result,
+    _discard_browser_agent_worker_payload,
+    _normalize_browser_worker_output_excerpt,
+    _run_browser_report_download_agent_subprocess,
+    _should_run_browser_agent_in_subprocess,
+)
 from src.services._browser_report_download.cdp import (
     capture_print_pdf_via_cdp,
     collect_terminal_dialog_evidence_via_cdp,
@@ -54,9 +208,9 @@ from src.services._browser_report_download.cdp import (
 from src.services._browser_report_download.helpers import (
     browser_helper_capture_screenshot,
     browser_helper_form_autocomplete,
-    browser_helper_standard_form_submit,
     browser_helper_js,
     browser_helper_page_info,
+    browser_helper_standard_form_submit,
 )
 from src.services._browser_report_download.http import (
     download_pdf_from_url,
@@ -79,167 +233,15 @@ from src.services._browser_report_download.session_reuse import (
     resolve_browser_session_reuse,
 )
 from src.services._browser_report_download.usage_writer import BrowserUsageWriter
+from src.services._llm_service.policy import spend_reservation_key
+from src.services.llm_usage_ledger_service import (
+    evaluate_budget_request,
+    finalize_budget_side_effect,
+    reconcile_budget_reservation,
+)
 from src.utils.coercion import normalize_optional_bool_signal
 from src.utils.errors import AppError
 from src.utils.logging import log_event
-from src.services._browser_report_download._browser_runtime import (
-    _TERMINAL_TRANSIENT_MARKERS,
-    _TERMINAL_SUCCESS_URL_MARKERS,
-    _TERMINAL_SUCCESS_TEXT_MARKERS,
-    _TERMINAL_REPORT_TEXT_MARKERS,
-    _TERMINAL_TEXT_EXCERPT_MAX_CHARS,
-    _TERMINAL_STABILIZATION_DEFAULT_POLL_SCHEDULE_SECONDS,
-    _TERMINAL_STABILIZATION_EMAIL_POLL_SCHEDULE_SECONDS,
-    _AGENT_RUN_TIMEOUT_MIN_BUFFER_SECONDS,
-    _AGENT_RUN_TIMEOUT_STEP_BUFFER_SECONDS,
-    _AGENT_RUN_TIMEOUT_MAX_BUFFER_SECONDS,
-    _BROWSER_KILL_TIMEOUT_SECONDS,
-    _BROWSER_RESET_TIMEOUT_SECONDS,
-    _BROWSER_CLEANUP_GRACE_SECONDS,
-    _BROWSER_PROFILE_DIR_PREFIX,
-    _BROWSER_USE_TEMP_DIR_PATTERNS,
-    _STALE_BROWSER_USE_TEMP_DIR_MIN_AGE_SECONDS,
-    _TEMP_CLEANUP_LOG_SAMPLE_LIMIT,
-    _TIMED_OUT_COMPLETED_HISTORY_GRACE_SECONDS,
-    _TIMED_OUT_RECOVERY_OPERATION_TIMEOUT_SECONDS,
-    _AGENT_COMPLETED_HISTORY_POLL_SECONDS,
-    _BROWSER_AGENT_WORKER_ENV,
-    _BROWSER_AGENT_WORKER_TIMEOUT_BUFFER_SECONDS,
-    _BROWSER_AGENT_WORKER_OUTPUT_MAX_CHARS,
-    _ANSI_ESCAPE_PATTERN,
-    _BROWSER_AGENT_USE_JUDGE,
-    _LOOKUP_FIELD_MARKERS,
-    _LOOKUP_FAILURE_MARKERS,
-    _LOOKUP_SUBMIT_MARKERS,
-    _EMAIL_DOMAIN_BLOCK_MARKERS,
-    _EMAIL_DOMAIN_FAILURE_MARKERS,
-    _PARTIAL_HISTORY_TEXT_MAX_CHARS,
-)
-from src.services._browser_report_download._browser_runtime.terminal_state import (
-    TerminalSnapshot,
-    TerminalStabilizationPolicy,
-    TerminalQuorumAssessment,
-    _capture_terminal_snapshot,
-    _stabilize_terminal_snapshot,
-    _terminal_stabilization_reason,
-    _resolve_terminal_stabilization_policy,
-    _assess_terminal_snapshot_quorum,
-    _assessment_meets_terminal_quorum,
-    _terminal_quorum_text,
-    _dedupe_labels,
-    _contains_transient_terminal_marker,
-    _merge_terminal_snapshots,
-)
-from src.services._browser_report_download._browser_runtime.terminal_assets import (
-    _parse_raw_model_response,
-    _prefetch_structured_pdf_artifact,
-    _materialize_external_artifacts,
-    _local_artifact_candidate_paths,
-    _copy_external_artifact,
-    _safe_resolve_path,
-    _is_within_directory,
-    _structured_pdf_candidate_urls,
-    _looks_like_pdf_resource_url,
-    _pdf_prefetch_destination_path,
-    _capture_terminal_assets,
-    _capture_terminal_dialog_evidence,
-    _ensure_terminal_target_hygiene,
-    _read_browser_closed_popup_dialog_evidence,
-    _parse_closed_popup_message,
-    _dedupe_browser_dialog_evidence,
-    _maybe_capture_print_pdf_fallback,
-    _should_capture_print_pdf_fallback,
-    _browser_visible_text_from_html,
-    _browser_text_has_non_report_marker,
-    _browser_rendered_pdf_capture_path,
-    _capture_completed_history_terminal_assets,
-    _collect_network_resource_urls,
-    _collect_network_events,
-    _collect_network_events_via_cdp,
-    _network_events_from_raw_events,
-    _merge_network_events,
-    _classify_network_signal_kind,
-    _collect_page_resource_urls,
-    _collect_dom_candidate_urls,
-    _coerce_evaluate_list,
-    _extract_documentish_urls_from_html,
-    _looks_like_documentish_url,
-    _resolve_current_page,
-    _read_history_final_page_url,
-    _read_history_final_page_title,
-    _copy_history_screenshot,
-    _read_history_final_state,
-    _read_history_attachment_paths,
-    _read_page_url,
-    _read_browser_current_page_url,
-    _read_page_title,
-    _read_browser_current_page_title,
-    _read_page_html,
-    _write_terminal_html_snapshot,
-    _write_terminal_screenshot,
-    _try_screenshot_call,
-    _maybe_await,
-    _await_browser_task,
-    _await_in_current_or_thread,
-    _run_awaitable,
-)
-from src.services._browser_report_download._browser_runtime.timeout_recovery import (
-    _salvage_timed_out_browser_run,
-    _build_cached_timed_out_browser_run,
-    _salvage_timed_out_browser_run_unbounded,
-    _should_attempt_lookup_submission_assist,
-    _payload_has_lookup_submission_recovery_signal,
-    _attempt_lookup_submission_assist,
-    _browser_form_identity_field_values,
-    _attempt_lookup_submission_assist_with_timeout,
-    _should_attempt_standard_form_submit_assist,
-    _should_attempt_timeout_standard_form_submit_assist,
-    _attempt_standard_form_submit_assist_with_timeout,
-    _browser_standard_form_identity_field_values,
-)
-from src.services._browser_report_download._browser_runtime.worker_protocol import (
-    BrowserAgentWorkerPayload,
-    BrowserAgentWorkerResponse,
-    _should_run_browser_agent_in_subprocess,
-    _run_browser_report_download_agent_subprocess,
-    _discard_browser_agent_worker_payload,
-    _normalize_browser_worker_output_excerpt,
-    _deserialize_browser_agent_run_result,
-)
-from src.services._browser_report_download._browser_runtime.session_lifecycle import (
-    BrowserAgentHistoryResult,
-    _SyntheticHistoryState,
-    _SyntheticHistoryEntry,
-    _SyntheticActionResult,
-    _SyntheticAgentHistory,
-    _run_agent_history_with_timeout,
-    _read_lookup_blocker_partial_history,
-    _read_terminal_blocker_partial_history,
-    _read_email_domain_blocker_partial_history,
-    _collect_agent_history_text,
-    _serialize_history_fragment,
-    _resolve_lookup_blocker_label,
-    _infer_encountered_form_fields,
-    _truncate_partial_history_excerpt,
-    _read_distinct_history_urls,
-    _read_completed_agent_history,
-    _resolve_agent_run_timeout_seconds,
-    _signal_agent_stop,
-    _prime_agent_timing_fields,
-    _log_browser_cleanup_failure,
-    _prepare_browser_for_shutdown,
-    _cleanup_browser_profile_dir,
-    _new_managed_browser_profile_dir,
-    _default_session_reuse_base_dir,
-    _cleanup_managed_browser_profile_dirs,
-    _cleanup_stale_browser_use_temp_dirs,
-    _cleanup_new_browser_use_temp_dirs,
-    _list_browser_use_temp_dirs,
-    _remove_browser_use_temp_dirs,
-    _kill_browser,
-    _kill_browser_with_timeout,
-    _force_stop_local_browser_process,
-)
 
 logger = logging.getLogger("market_lense.browser_report_download_service")
 
@@ -286,9 +288,9 @@ def _mark_standard_form_submit_assisted_raw_response(raw_model_response: str) ->
     payload["email_submission_completed"] = True
     payload["blocked_reason"] = None
     payload["blocked_reason_detail"] = None
-    payload["route_summary"] = (
-        str(payload.get("route_summary") or "").strip()
-        or "Recovered standard required form controls and submitted the report request form."
+    payload["route_summary"] = str(payload.get("route_summary") or "").strip() or (
+        "Recovered standard required form controls and submitted the report "
+        "request form."
     )
     route_steps = payload.get("route_steps")
     if not isinstance(route_steps, list):
@@ -545,7 +547,7 @@ def run_browser_report_download_agent(
         ctx=ctx,
         normalized_url=normalized_url,
     )
-    browser_use = _load_browser_use_runtime(normalized_url)
+    browser_use = _load_browser_use_runtime(normalized_url, ctx)
     launch_started = False
     launch_outcome = "completed"
     launch_error_code = ""
@@ -940,7 +942,9 @@ def run_browser_report_download_agent(
             )
             raise AppError(
                 code="browser_download_browser_start_timeout",
-                message="browser-use timed out while starting the local browser session",
+                message=(
+                    "browser-use timed out while starting the local browser session"
+                ),
                 cause=exc,
                 retryable=True,
                 context={"normalized_url": normalized_url},
@@ -1076,18 +1080,28 @@ def run_browser_report_download_agent(
     )
 
 
-def _load_browser_use_runtime(normalized_url: str) -> Any:
+def _load_browser_use_runtime(normalized_url: str, ctx: RunContext) -> Any:
     os.environ.setdefault("BROWSER_USE_SETUP_LOGGING", "false")
-    try:
-        return import_module("browser_use")
-    except Exception as exc:
-        raise AppError(
-            code="browser_use_unavailable",
-            message="The local browser_use runtime is not installed in this environment",
-            cause=exc,
-            retryable=False,
-            context={"normalized_url": normalized_url},
-        ) from exc
+    runtime = load_browser_use_runtime(normalized_url=normalized_url)
+    runtime_identity = browser_runtime_identity(runtime)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_runtime_resolved",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "interpreter_path": runtime_identity.interpreter_path,
+                "python_version": runtime_identity.python_version,
+                "virtualenv_path": runtime_identity.virtualenv_path,
+                "browser_use_module_path": runtime_identity.browser_use_module_path,
+                "runtime_source": runtime_identity.runtime_source,
+                "vendored_checksum": runtime_identity.vendored_checksum,
+            },
+        )
+    )
+    return runtime
 
 
 def _reserve_browser_use_spend(
@@ -1140,7 +1154,9 @@ def _reserve_browser_use_spend(
     if authority.decision in {"defer", "pause", "stop"}:
         raise AppError(
             code=f"browser_use_budget_{authority.decision}",
-            message="Browser Use provider call blocked by the canonical budget authority",
+            message=(
+                "Browser Use provider call blocked by the canonical budget authority"
+            ),
             retryable=False,
             context={
                 "reason_code": authority.reason_code,

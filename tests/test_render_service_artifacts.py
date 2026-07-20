@@ -4,11 +4,53 @@ from PIL import Image
 
 from src.contracts.report_assets import RenderRequest
 from src.contracts.run_context import RunContext
+from src.services._render_service.view import (
+    _marketlense_article_url,
+    _normalize_public_title,
+    _seo_description,
+)
 from src.services.render_service import render_report
 
 
 def _ctx():
     return RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
+
+
+def test_source_pdf_is_never_used_as_a_marketlense_article_canonical() -> None:
+    source = "https://publisher.example/reports/original-study.pdf"
+
+    assert _marketlense_article_url(source, source_url=source) == ""
+    assert (
+        _marketlense_article_url(
+            "https://marketlense.example/reports/original-study",
+            source,
+            source_url=source,
+        )
+        == "https://marketlense.example/reports/original-study"
+    )
+
+
+def test_public_title_and_meta_description_are_bounded_editorial_prose() -> None:
+    assert (
+        _normalize_public_title("Retail_Trends_2026_2026.pdf...")
+        == "Retail Trends 2026"
+    )
+    assert (
+        _seo_description(
+            "A concise source-backed market update ends here. Extra copy is excluded.",
+            fallback="Digest for Retail Trends 2026.",
+            max_length=48,
+        )
+        == "A concise source-backed market update ends here."
+    )
+    assert (
+        _seo_description(
+            "A deliberately overlong description without punctuation " * 8,
+            fallback="Digest for Retail Trends 2026.",
+            max_length=80,
+        )
+        == "Digest for Retail Trends 2026."
+    )
 
 
 def test_render_removes_inline_internal_evidence_tokens_from_public_prose(

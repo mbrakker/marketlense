@@ -235,7 +235,11 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     need = resolver.need
     need_env = resolver.need_env
 
-    paths_settings = _resolve_paths_settings(sections.paths, resolver)
+    paths_settings = _resolve_paths_settings(
+        sections.paths,
+        resolver,
+        runtime_base_path=sections.runtime_base_path,
+    )
     openai_model = str(
         sections.ingest.get("openai_model")
         or _env_value("OPENAI_MODEL")
@@ -468,6 +472,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         cost_ledger_path=analysis_settings["cost_ledger_path"],
         cost_daily_path=analysis_settings["cost_daily_path"],
         usage_db_path=analysis_settings["usage_db_path"],
+        run_budget_max_spend_usd=ingest_runtime["run_budget_max_spend_usd"],
         run_budget_max_pdfs=ingest_runtime["run_budget_max_pdfs"],
         run_budget_max_retries=ingest_runtime["run_budget_max_retries"],
         run_budget_max_runtime_seconds=ingest_runtime["run_budget_max_runtime_seconds"],

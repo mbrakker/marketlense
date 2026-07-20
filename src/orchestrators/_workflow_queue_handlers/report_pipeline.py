@@ -217,7 +217,7 @@ def _report_stage_handler(
                 retryable=False,
                 context={"job_id": job.job_id, "queue_name": job.queue_name},
             )
-        config_path = str(payload.attributes.get("config_path", "src/config/app.yaml"))
+        config_path = str(payload.attributes.get("config_path", "")).strip()
         app_settings = load_settings(
             ConfigLoadRequest(schema_version="1.0", path=config_path), ctx
         )

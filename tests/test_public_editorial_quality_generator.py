@@ -98,6 +98,12 @@ def test_retained_public_artifact_has_no_editorial_blockers() -> None:
             ),
         ),
         (
+            "public_editorial_quality.text_corruption",
+            lambda payload: payload["insights_final"][0].update(
+                {"text": "Consumer demand rose by 12â€% in the survey."}
+            ),
+        ),
+        (
             "public_editorial_quality.duplicate_insight",
             _set_near_duplicate,
         ),

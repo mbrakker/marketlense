@@ -222,9 +222,7 @@ def _build_metadata_upsert_request(
             getattr(runtime.source_identity, "identity_status", "unknown") or "unknown"
         ).strip(),
         source_publication_date_status=str(
-            getattr(
-                runtime.source_identity, "publication_date_status", "unknown"
-            )
+            getattr(runtime.source_identity, "publication_date_status", "unknown")
             or "unknown"
         ).strip(),
     )
@@ -388,7 +386,10 @@ def render_report_output(
         source_url = str(render_meta.source_url or "").strip()
         if source_url:
             render_data_dict["source"] = source_url
-            render_data_dict["canonical_url"] = source_url
+        # A source document is attribution, never the canonical URL of the
+        # MarketLense article. WordPress supplies its own article URL after
+        # the final publication route and metadata are known.
+        render_data_dict["canonical_url"] = ""
         logger.info(
             log_event(
                 runtime.ctx,
@@ -692,7 +693,8 @@ def render_report_output(
                     ),
                     source_note=_public_source_note(runtime),
                     source_metadata_hash=str(
-                        getattr(runtime.source_identity, "source_metadata_hash", "") or ""
+                        getattr(runtime.source_identity, "source_metadata_hash", "")
+                        or ""
                     ).strip(),
                     source_identity_status=str(
                         getattr(runtime.source_identity, "identity_status", "unknown")

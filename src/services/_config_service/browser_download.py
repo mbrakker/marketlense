@@ -159,7 +159,7 @@ def load_browser_download_settings(
     identity_config_path = _resolve_optional_path(
         browser_download.get("identity_config_path")
         or _env_value("BROWSER_DOWNLOAD_IDENTITY_CONFIG_PATH")
-        or DEFAULT_BROWSER_DOWNLOAD_IDENTITY_PATH.name,
+        or str(DEFAULT_BROWSER_DOWNLOAD_IDENTITY_PATH),
         base_path=config_path.parent,
     )
     if _is_missing(identity_config_path):

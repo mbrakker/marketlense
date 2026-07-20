@@ -521,9 +521,9 @@
               <p>Open the source material used for this MarketBearing analysis.</p>
               <div class="download-actions">
                 {% if view.source_download_href %}<a class="download-link" href="{{ view.source_download_href }}" download>Download full report</a>{% endif %}
-                {% if view.canonical_url %}<a class="download-link secondary" href="{{ view.canonical_url }}" rel="noopener" target="_blank">Open source URL</a>{% elif view.source_url %}<a class="download-link secondary" href="{{ view.source_url }}" rel="noopener" target="_blank">Open original source</a>{% endif %}
+                {% if view.source_url %}<a class="download-link secondary" href="{{ view.source_url }}" rel="noopener" target="_blank">Open original source</a>{% endif %}
               </div>
-              {% if not view.source_download_href and not view.canonical_url and not view.source_url %}
+              {% if not view.source_download_href and not view.source_url %}
               <p class="muted">Source URL was not available in the extracted report metadata.</p>
               {% endif %}
             </div>

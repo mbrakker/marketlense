@@ -85,6 +85,20 @@ class RecordingOpenAIClient:
         )
 
 
+def _execution_policies() -> dict[str, dict[str, object]]:
+    """Supply the governed policy inherited by the production report namespace."""
+
+    return {
+        "report_vs": {
+            "provider": "openai",
+            "model": "gpt-5-mini",
+            "temperature": 1.0,
+            "timeout_seconds": 30.0,
+            "max_output_tokens": 800,
+        }
+    }
+
+
 def test_build_report_category_context_compacts_evidence_packs(
     tmp_path: Path,
     assert_no_defaulted_required_fields,
@@ -279,6 +293,7 @@ def test_fit_report_categories_from_context_returns_selected_categories(
         cost_ledger_path="./out/cost-ledger.jsonl",
         cost_daily_path="./out/cost-daily.json",
         model_pricing={"gpt-5-mini": {}},
+        llm_execution_policies=_execution_policies(),
     )
 
     response = fit_report_categories_from_context(
@@ -382,6 +397,7 @@ def test_fit_report_categories_from_context_defaults_missing_optional_fields() -
         cost_ledger_path="./out/cost-ledger.jsonl",
         cost_daily_path="./out/cost-daily.json",
         model_pricing={"gpt-5-mini": {}},
+        llm_execution_policies=_execution_policies(),
     )
 
     response = fit_report_categories_from_context(
@@ -451,6 +467,7 @@ def test_fit_report_categories_rejects_topic_exclusion_conflict() -> None:
         cost_ledger_path="./out/cost-ledger.jsonl",
         cost_daily_path="./out/cost-daily.json",
         model_pricing={"gpt-5-mini": {}},
+        llm_execution_policies=_execution_policies(),
     )
     response = fit_report_categories_from_context(
         ContextCategoryFitRequest(
@@ -530,6 +547,7 @@ def test_fit_report_categories_marks_ambiguous_topic_fit() -> None:
         cost_ledger_path="./out/cost-ledger.jsonl",
         cost_daily_path="./out/cost-daily.json",
         model_pricing={"gpt-5-mini": {}},
+        llm_execution_policies=_execution_policies(),
     )
     response = fit_report_categories_from_context(
         ContextCategoryFitRequest(

@@ -13,6 +13,14 @@ Configuration resolves in this order:
 3. `app.local.yaml` next to the selected `app.yaml`, when present.
 4. Environment variables where the configuration loader supports an override.
 
+All runtime data paths in `paths`, acquisition, analysis, cost, publication,
+mailbox, and browser sections are resolved once to absolute paths. A profile
+inside the repository is relative to the repository workspace even when it is
+nested below another directory; an intentionally external configuration file
+uses its containing directory as its portable workspace. Provider rate-card
+paths remain relative to their configuration file so an external profile can
+ship its matching rate card together.
+
 The important operator sections are `paths`, `ingest`, `publish`, `browser_download`, `mailbox_acquisition`, `publisher_discovery`, and `workflow_control`. `workflow_control.remediation_reaper.execution_enabled` remains `false` until record creation and read-only projections have been verified; `max_records_per_run` and `lease_seconds` bound each explicit reaper invocation. `workflow_control.deferred_work_reaper.execution_enabled` is the independent rollback gate for budget-deferred recovery; it is also `false` by default, while its record limit, lease duration, and retry delay bound each external worker invocation. `openai_models`, `llm_routing`, `llm_execution_policies`, and `cost` govern model routing and accounting. `llm_execution_policies` is the versioned namespace policy for provider/model, sampling, output limits, timeout, structured-output mode, compaction, pricing key, and same-provider fallback. It resolves exact namespace then longest prefix and forbids provider-owned retries; workflow retry policy remains orchestrator-owned. The compatibility adapter preserves historical non-report namespaces until they are explicitly migrated. `workflow_control.supervisor` is disabled by default and bounds one lease-protected `supervise-workflows --once` pass; an external scheduler owns recurrence.
 
 `ingest.validation.public_editorial_quality.disabled_rule_waivers` is the temporary staged-rollout escape hatch for the deterministic public-editorial release gate. Each mapping key is a stable rule ID and each value must be a concrete non-empty release-waiver reason. An empty or malformed entry has no effect; do not use this setting to suppress an unresolved reader-facing defect.
@@ -33,7 +41,7 @@ Profiles cannot disable validation, evidence checks, human publication approval,
 
 ## Side-effect budget authority
 
-`cost.budget_authority` configures the single SQLite-backed authority used before provider calls, browser launches and Browser Use model calls, material Drive reads and writes, WordPress writes, PDF processing, retry attempts, and mailbox polls. Its `run`, `day`, and `publisher` sections accept the typed limits in `RunBudgetLimits`, including spend, calls, runtime, retries, browser launches, Drive reads/writes, WordPress writes, PDFs, and mailbox reads.
+`cost.budget_authority` configures the single SQLite-backed authority used before provider calls, browser launches and Browser Use model calls, material Drive reads and writes, WordPress writes, PDF processing, retry attempts, and mailbox polls. Its `run`, `day`, and `publisher` sections accept the typed limits in `RunBudgetLimits`, including spend, calls, runtime, retries, browser launches, Drive reads/writes, WordPress writes, and mailbox reads. PDF processing remains an auditable effect, but it has no count-based admission limit in the committed configuration: processing admission is governed by the configured spend forecast and spend limit.
 
 `cost.pricing_path` points to the versioned operator rate card. Each active
 model entry records its provider, exact model key, effective date, pricing
@@ -46,7 +54,7 @@ artifact-family context when the caller has it. Historical events remain in an
 
 `enabled_effect_kinds` is an independent additive feature gate for each effect category. Removing a kind rolls back its pre-effect enforcement while retaining all earlier reservations, decisions, and actual-use records. Reservations expire after `reservation_ttl_seconds` (one hour maximum); completed effects finalize observed non-monetary use and release unused capacity. Provider monetary actuals remain in the existing LLM usage events and only reconcile their reservation.
 
-`ingest.run_budget` sets the report-generation PDF, retry, and elapsed-runtime ceilings. `browser_download.run_budget` and `publish.run_budget` remain the scoped acquisition and publication controls; all use the same `cost.usage_db_path` authority. `browser_download.route_suppression` is independently reversible: it requires a minimum of three compatible typed terminal failures, records a policy-compatibility hash and TTL, and can always be bypassed with the explicit acquisition revalidation option. It never permanently blacklists a publisher.
+`ingest.run_budget` sets retry and elapsed-runtime safeguards; it does not cap the number of PDFs. `browser_download.run_budget` and `publish.run_budget` remain the scoped acquisition and publication controls; all use the same `cost.usage_db_path` authority. Vector-store requests inherit the active report runtime's `RunBudget`, so their forecasts and actual usage are written to that same isolated ledger rather than a process-default ledger. `browser_download.route_suppression` is independently reversible: it requires a minimum of three compatible typed terminal failures, records a policy-compatibility hash and TTL, and can always be bypassed with the explicit acquisition revalidation option. It never permanently blacklists a publisher.
 
 Opening the canonical usage database applies additive migration `003`: it extends the existing deferred-work audit rows with bounded lease, deadline, plan, artifact, idempotency, and terminal-remediation state. It is safe to rerun after interruption; no accounting rows are rewritten or discarded.
 
