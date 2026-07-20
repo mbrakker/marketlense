@@ -221,10 +221,16 @@ def _resolve_optional_path(raw_value: Any, *, base_path: Path) -> str:
 
 
 def _resolve_runtime_base_path(config_path: Path) -> Path:
-    normalized = config_path.resolve()
-    if normalized.parent.name == "config" and normalized.parent.parent.name == "src":
-        return normalized.parent.parent.parent
-    return normalized.parent
+    # Runtime-owned paths have one meaning regardless of whether an operator
+    # selects the base config or a nested in-workspace profile.  A deliberately
+    # external config remains its own portable workspace for local/test use.
+    for candidate in (config_path.resolve().parent, *config_path.resolve().parents):
+        if (
+            candidate.joinpath("pyproject.toml").is_file()
+            and candidate.joinpath("src").is_dir()
+        ):
+            return candidate
+    return config_path.resolve().parent
 
 
 def _resolve_bootstrap_config_path(path: str) -> Path:
@@ -332,7 +338,14 @@ def _resolve_pricing_path(
     if raw_path:
         candidate = Path(raw_path).expanduser()
         if not candidate.is_absolute():
-            candidate = runtime_base_path / candidate
+            # In-workspace app profiles use the canonical workspace resolver;
+            # an external portable profile keeps a sibling rate card.
+            base_path = (
+                runtime_base_path
+                if runtime_base_path != config_path.parent
+                else config_path.parent
+            )
+            candidate = base_path / candidate
         return candidate.resolve()
     sibling = config_path.with_name("llm-costs.yaml")
     if sibling.exists():
@@ -450,6 +463,18 @@ class _ConfigResolver:
             self.missing.append(label if not env_key else f"{label}|env:{env_key}")
             return ""
         return str(value)
+
+    def need_path(
+        self,
+        section: dict,
+        key: str,
+        label: str,
+        *,
+        base_path: Path,
+        env_key: str | None = None,
+    ) -> str:
+        value = self.need(section, key, label, env_key)
+        return _resolve_optional_path(value, base_path=base_path)
 
 
 @dataclass(frozen=True)

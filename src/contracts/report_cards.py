@@ -449,6 +449,7 @@ class ReportCardManifest:
                 payload.get("covered_period"),
                 code="cover_fingerprint_invalid",
                 field_name="covered_period",
+                allow_empty=True,
             ),
             tldr_compact=_complete_sentence(
                 payload.get("tldr_compact"),

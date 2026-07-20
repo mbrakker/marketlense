@@ -59,6 +59,7 @@ def load_publish_settings(
         )
     )
     data = _load_config(str(config_path))
+    runtime_base_path = _resolve_runtime_base_path(config_path)
     resolver = _ConfigResolver()
     need = resolver.need
     missing = resolver.missing
@@ -70,13 +71,35 @@ def load_publish_settings(
     run_budget_cfg = publish.get("run_budget", {}) or {}
     cost_cfg = data.get("cost", {}) or {}
     authority_cfg = cost_cfg.get("budget_authority", {}) or {}
-    category_mapping_path = paths.get("category_mappings") or str(
-        Path(__file__).resolve().parents[2] / "config" / "category-mappings.yaml"
+    category_mapping_path = _resolve_optional_path(
+        paths.get("category_mappings")
+        or str(
+            Path(__file__).resolve().parents[2] / "config" / "category-mappings.yaml"
+        ),
+        base_path=runtime_base_path,
     )
 
-    output_dir = need(paths, "output_dir", "paths.output_dir", "OUTPUT_DIR")
-    state_db = need(paths, "state_db", "paths.state_db", "STATE_DB")
-    reports_db = need(paths, "reports_db", "paths.reports_db", "REPORTS_DB")
+    output_dir = resolver.need_path(
+        paths,
+        "output_dir",
+        "paths.output_dir",
+        base_path=runtime_base_path,
+        env_key="OUTPUT_DIR",
+    )
+    state_db = resolver.need_path(
+        paths,
+        "state_db",
+        "paths.state_db",
+        base_path=runtime_base_path,
+        env_key="STATE_DB",
+    )
+    reports_db = resolver.need_path(
+        paths,
+        "reports_db",
+        "paths.reports_db",
+        base_path=runtime_base_path,
+        env_key="REPORTS_DB",
+    )
 
     admin_url = wp_cfg.get("admin_url") or _env_value("WP_ADMIN_URL")
     site_url = wp_cfg.get("site_url") or _env_value("WP_SITE_URL")
@@ -101,7 +124,7 @@ def load_publish_settings(
         ca_bundle_path_raw = wp_cfg.get("ca_bundle_path")
     ca_bundle_path = _resolve_optional_path(
         ca_bundle_path_raw,
-        base_path=config_path.parent,
+        base_path=runtime_base_path,
     )
     if ssl_verify and ca_bundle_path and not Path(ca_bundle_path).exists():
         missing.append("publish.wp.ca_bundle_path|env:WP_CA_BUNDLE_PATH")
@@ -150,13 +173,13 @@ def load_publish_settings(
     )
     media_upload_workers = max(_to_int(media_upload_workers_raw, 4), 1)
     usage_db_path = _resolve_optional_path(
-        cost_cfg.get("usage_db_path"), base_path=config_path.parent
+        cost_cfg.get("usage_db_path"), base_path=runtime_base_path
     )
     projection_ledger_path = _resolve_optional_path(
-        cost_cfg.get("ledger_path"), base_path=config_path.parent
+        cost_cfg.get("ledger_path"), base_path=runtime_base_path
     )
     projection_daily_path = _resolve_optional_path(
-        cost_cfg.get("daily_path"), base_path=config_path.parent
+        cost_cfg.get("daily_path"), base_path=runtime_base_path
     )
 
     if resolver.missing:

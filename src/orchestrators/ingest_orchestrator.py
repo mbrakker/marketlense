@@ -394,6 +394,17 @@ def _run_step_with_retry(step_name: str, ctx: RunContext, func, retries: int = 2
     )
 
 
+def _report_pipeline_resume_options(
+    *,
+    force_report_cards: bool,
+    has_existing_report_html: bool,
+    auto_resume_from_latest_safe: bool,
+) -> tuple[str | None, bool]:
+    if force_report_cards and has_existing_report_html:
+        return "analysis_complete", False
+    return None, auto_resume_from_latest_safe
+
+
 def _process_file(
     file: DriveFile,
     index: int,
@@ -409,6 +420,22 @@ def _process_file(
         current_ctx: RunContext,
         **kwargs: object,
     ) -> IngestOutcome:
+        has_existing_report_html = bool(
+            current_md5
+            and _existing_report_html(
+                current_file,
+                current_md5,
+                current_settings,
+                current_ctx,
+            )
+        )
+        resume_from_stage, auto_resume = _report_pipeline_resume_options(
+            force_report_cards=force_report_cards,
+            has_existing_report_html=has_existing_report_html,
+            auto_resume_from_latest_safe=bool(
+                kwargs.get("auto_resume_from_latest_safe", False)
+            ),
+        )
         return run_report_pipeline_orchestrator(
             current_file,
             local_pdf_path,
@@ -416,9 +443,8 @@ def _process_file(
             current_md5,
             current_ctx,
             retries=2,
-            auto_resume_from_latest_safe=bool(
-                kwargs.get("auto_resume_from_latest_safe", False)
-            ),
+            resume_from_stage=resume_from_stage,
+            auto_resume_from_latest_safe=auto_resume,
         )
 
     dependencies = IngestFileDependencies(

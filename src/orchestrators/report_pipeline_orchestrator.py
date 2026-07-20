@@ -455,6 +455,7 @@ def run_report_pipeline(
         run_id=ctx.run_id,
         publisher_name="",
         usage_db_path=settings.usage_db_path,
+        max_spend_usd=getattr(settings, "run_budget_max_spend_usd", None),
         max_pdfs=getattr(settings, "run_budget_max_pdfs", None),
         max_retries=getattr(settings, "run_budget_max_retries", None),
         max_runtime_seconds=getattr(settings, "run_budget_max_runtime_seconds", None),

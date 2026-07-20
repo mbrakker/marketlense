@@ -12,4 +12,28 @@ The pipeline delegates stage sequencing to `src/orchestrators/report_generation_
 
 `resume_from_stage` supports `source_prepared`, `selection_complete`, `analysis_complete`, `render_complete`, and `latest_safe` when the applicable retained checkpoint passes validation.
 
+A render-only resume reuses report-card assets only when the complete validated
+report-card manifest is also retained. If that manifest is missing, the renderer
+regenerates the deterministic cover set and manifest before the package can
+reach the blocking publication boundary; it never reports a package as ready
+with orphaned card assets.
+
+`ingest --force-report-cards` resumes from the validated analysis checkpoint,
+not `latest_safe`, only when an existing rendered package has a missing or
+invalid card manifest. It rebuilds that render/card package and avoids a second
+analysis or model-generation pass. New files follow the normal pipeline and
+therefore never request a nonexistent checkpoint.
+
+The same render outcome fails closed when report-card publisher, region, or
+period metadata fails public-metadata governance. Such a package remains a
+render error with the typed reason and cannot be mistaken for a publication
+candidate.
+
+`region` and `covered_period` are optional card labels: known missing-value
+tokens are deterministically omitted before manifest validation, while a
+placeholder publisher or extraction leakage remains a blocking error. This
+prevents internal labels from reaching WordPress without inventing metadata.
+The report-card contract permits those omitted optional labels and renders an
+unknown geography rather than manufacturing a period or location.
+
 Run a configured batch with `python -m src.cli ingest --limit 1`. Use `--rescan` only when the normal cursor should be bypassed. Queue operations and checkpoint recovery are documented in [asynchronous workflow queue](../architecture/asynchronous-workflow-queue.md). See [validation and regeneration](validation-and-regeneration.md), [artifact model](../architecture/data-and-artifact-model.md), and [configuration](../ops/configuration.md).

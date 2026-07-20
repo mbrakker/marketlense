@@ -181,7 +181,9 @@ def _build_render_view(
     source_status = _coerce_dict(artifacts.get("source_status"))
     evidence_packs = _coerce_dict(data.get("evidence_packs"))
     doc_map = _unwrap_doc_map(evidence_packs.get("doc_map"))
-    report_title = _pick_first_text(data.get("title"), doc_map.get("title"))
+    report_title = _normalize_public_title(
+        _pick_first_text(data.get("title"), doc_map.get("title"))
+    )
     publisher = _pick_first_text(
         data.get("publisher"),
         doc_map.get("publisher"),
@@ -214,7 +216,11 @@ def _build_render_view(
         _pick_first_text(summary.get("executive_summary"), data.get("commentary"))
     )
     source_url = _s(data.get("source"))
-    canonical_url = _pick_first_text(data.get("canonical_url"), source_url)
+    canonical_url = _marketlense_article_url(
+        data.get("wordpress_url"),
+        data.get("canonical_url"),
+        source_url=source_url,
+    )
     topics = [
         _s(item) for item in _coerce_list(artifacts.get("toc_topics")) if _s(item)
     ]
@@ -437,9 +443,12 @@ def _build_render_view(
             ),
         },
         "seo": {
-            "description": _pick_first_text(
-                tldr_text, executive_summary, f"Digest for {report_title}"
-            )[:180],
+            "description": _seo_description(
+                _pick_first_text(
+                    tldr_text, executive_summary, f"Digest for {report_title}."
+                ),
+                fallback=f"Digest for {report_title}.",
+            ),
             "title": "",
             "robots": _s(data.get("robots"))
             or (
@@ -462,12 +471,51 @@ def _build_render_view(
     }
 
 
+def _marketlense_article_url(*candidates: object, source_url: str) -> str:
+    source_key = source_url.rstrip("/").casefold()
+    for candidate in candidates:
+        value = _s(candidate)
+        if not value:
+            continue
+        normalized = value.rstrip("/").casefold()
+        if normalized == source_key or normalized.endswith(".pdf"):
+            continue
+        return value
+    return ""
+
+
+def _normalize_public_title(value: str, *, max_length: int = 110) -> str:
+    title = _s(value).replace("…", "").replace("...", "")
+    title = re.sub(r"\.pdf$", "", title, flags=re.IGNORECASE)
+    if "_" in title:
+        title = re.sub(r"[_]+", " ", title)
+    title = re.sub(r"\b(20\d{2})(?:\s*[-|:]?\s*)\1\b", r"\1", title)
+    title = re.sub(r"\s+", " ", title).strip(" -|:.")
+    if len(title) <= max_length:
+        return title
+    return title[:max_length].rsplit(" ", 1)[0].strip(" -|:.")
+
+
+def _seo_description(value: str, *, fallback: str, max_length: int = 180) -> str:
+    text = " ".join(_s(value).split())
+    if not text:
+        return fallback
+    if len(text) <= max_length:
+        return text if re.search(r"[.!?;:]$", text) else f"{text}."
+    boundary = max(
+        (index for index, char in enumerate(text[: max_length + 1]) if char in ".!?;:"),
+        default=-1,
+    )
+    if boundary >= 0:
+        return text[: boundary + 1].strip()
+    return fallback
+
+
 def _build_seo_title(report_title: str, focus_year: str, publisher: str) -> str:
-    short_title = report_title[:72] + ("..." if len(report_title) > 72 else "")
-    base_title = short_title
-    if focus_year:
+    base_title = _normalize_public_title(report_title, max_length=72)
+    if focus_year and focus_year not in base_title:
         base_title = f"{base_title} {focus_year}"
-    publisher_short = publisher[:40] + ("..." if len(publisher) > 40 else "")
+    publisher_short = _normalize_public_title(publisher, max_length=40)
     publisher_segment = f" | {publisher_short}" if publisher_short else ""
     return f"{base_title}{publisher_segment} | MarketBearing"
 
@@ -476,4 +524,7 @@ __all__ = [
     "_build_figure_slides",
     "_build_render_view",
     "_build_seo_title",
+    "_marketlense_article_url",
+    "_normalize_public_title",
+    "_seo_description",
 ]

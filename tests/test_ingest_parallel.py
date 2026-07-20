@@ -783,6 +783,24 @@ def test_ingest_does_not_repeat_drive_md5_single_state_check(ingest_settings) ->
     assert single_calls["count"] == 0
 
 
+def test_force_report_cards_resume_from_analysis_only_for_existing_html() -> None:
+    assert orch._report_pipeline_resume_options(
+        force_report_cards=True,
+        has_existing_report_html=True,
+        auto_resume_from_latest_safe=True,
+    ) == ("analysis_complete", False)
+    assert orch._report_pipeline_resume_options(
+        force_report_cards=False,
+        has_existing_report_html=True,
+        auto_resume_from_latest_safe=True,
+    ) == (None, True)
+    assert orch._report_pipeline_resume_options(
+        force_report_cards=True,
+        has_existing_report_html=False,
+        auto_resume_from_latest_safe=True,
+    ) == (None, True)
+
+
 def test_force_report_cards_bypasses_existing_html_cache(ingest_settings) -> None:
     settings = replace(ingest_settings, batch_limit=1, ingest_worker_limit=1)
     file = DriveFile(

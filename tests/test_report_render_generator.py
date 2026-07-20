@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import replace
 from pathlib import Path
@@ -11,6 +12,11 @@ from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestSettings
 from src.contracts.pdf_text import PdfTextExtractResponse
 from src.contracts.pdf_utils import PdfInfoResponse
+from src.contracts.report_cards import (
+    CardCoverAsset,
+    CardCoverAssetSet,
+    ReportCardManifestWriteResponse,
+)
 from src.contracts.report_generation import (
     ReportAnalysisState,
     ReportRuntimeState,
@@ -18,11 +24,6 @@ from src.contracts.report_generation import (
     ReportSourceState,
 )
 from src.contracts.report_models import Figure, Quote, ReportPayload
-from src.contracts.report_cards import (
-    CardCoverAsset,
-    CardCoverAssetSet,
-    ReportCardManifestWriteResponse,
-)
 from src.contracts.report_store import (
     ReportMetadataGetResponse,
     SourcePublicationMetadata,
@@ -40,9 +41,8 @@ from src.generators.report_render_generator import (
     render_preview_asset,
     render_report_output,
 )
-from src.utils.errors import AppError
 from src.utils.cache_utils import sha256_json
-import hashlib
+from src.utils.errors import AppError
 
 
 def _template_bundle_sha(template_contents: dict[str, str]) -> str:
@@ -185,15 +185,22 @@ def _analysis(
         evidence_packs={"doc_map": {"title": source.payload.title}},
         artifacts_payload={
             "summary": {
-                "tldr": "A complete standard summary explains the report's strategic finding.",
-                "card_tldr_compact": "Strategic demand is shifting toward more efficient channels.",
+                "tldr": (
+                    "A complete standard summary explains the report's strategic "
+                    "finding."
+                ),
+                "card_tldr_compact": (
+                    "Strategic demand is shifting toward more efficient channels."
+                ),
             },
             "cover_semantics": {
                 "evidence_shape": "trend",
                 "direction": "rising",
                 "evidence_density": "balanced",
                 "domain_layer": "grid",
-                "selection_reason": "The report presents a sustained upward market trend.",
+                "selection_reason": (
+                    "The report presents a sustained upward market trend."
+                ),
             },
             "insights_final": [
                 {"text": "Channel efficiency improved across the measured period."},
@@ -375,7 +382,7 @@ def test_render_report_output_passes_db_source_url_to_public_renderer(tmp_path):
 
     assert captured == {
         "source": "https://publisher.example/reports/original-study",
-        "canonical_url": "https://publisher.example/reports/original-study",
+        "canonical_url": "",
     }
 
 
@@ -542,6 +549,7 @@ def test_render_report_output_uses_html_cache_hit_and_skips_render(tmp_path):
         "title": "DB Title",
         "publisher": "DB Publisher",
         "time_period": "Q1 2026",
+        "canonical_url": "",
     }
     template_contents = {
         "report.html.j2": "template",
@@ -843,6 +851,56 @@ def test_render_report_output_does_not_use_file_modified_time_for_card_date(tmp_
     assert outcome.error is None
 
 
+def test_render_only_regenerates_card_manifest_when_it_is_missing(tmp_path):
+    runtime = _runtime(tmp_path, md5="md5")
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    analysis = _analysis(runtime, source, selection)
+    html_path = Path(tmp_path / "out" / "report.html")
+    html_path.parent.mkdir(parents=True, exist_ok=True)
+    generated_covers = []
+    written_manifests = []
+
+    def _render_report(req, ctx):
+        del req, ctx
+        html_path.write_text("<html></html>", encoding="utf-8")
+        return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
+
+    deps = _deps(
+        render_report=_render_report,
+        generate_cover_images=lambda req, ctx: (
+            generated_covers.append(req)
+            or [
+                SimpleNamespace(
+                    status="generated",
+                    assets=_cover_assets(runtime),
+                    error=None,
+                )
+            ]
+        ),
+        write_report_card_manifest=lambda req, ctx: (
+            written_manifests.append(req)
+            or SimpleNamespace(
+                manifest_path=str(Path(req.output_dir) / "report-card-manifest.json")
+            )
+        ),
+    )
+
+    outcome = render_report_output(
+        runtime,
+        source,
+        selection,
+        analysis,
+        deps,
+        preview_resp=render_preview_asset(runtime, source, deps),
+        reuse_report_card_assets=True,
+    )
+
+    assert len(generated_covers) == 1
+    assert len(written_manifests) == 1
+    assert outcome.report_card_manifest_path.endswith("report-card-manifest.json")
+
+
 def test_render_report_output_omits_an_unverified_source_date(tmp_path):
     runtime = replace(
         _runtime(tmp_path, md5="md5"),
@@ -986,4 +1044,52 @@ def test_render_report_output_fails_closed_for_invalid_card_content(tmp_path):
     assert writes == []
     assert outcome.status == "error"
     assert outcome.error.startswith("card_tldr_compact_invalid:")
+    assert outcome.report_card_manifest_path is None
+
+
+def test_render_report_output_fails_closed_for_ungoverned_card_metadata(tmp_path):
+    runtime = _runtime(tmp_path, md5="md5")
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    analysis = _analysis(runtime, source, selection)
+    html_path = Path(tmp_path / "out" / "report.html")
+    html_path.parent.mkdir(parents=True, exist_ok=True)
+
+    def _render_report(req, ctx):
+        del req, ctx
+        html_path.write_text("<html></html>", encoding="utf-8")
+        return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
+
+    deps = _deps(
+        render_report=_render_report,
+        get_report_metadata=lambda req, ctx: SimpleNamespace(
+            title="DB Title",
+            publisher="Not extracted",
+            time_period="2024",
+            region="Global",
+            source_url="https://publisher.example/report",
+        ),
+        generate_cover_images=lambda req, ctx: [
+            SimpleNamespace(
+                schema_version="2.0",
+                file_id=runtime.file.file_id,
+                title="DB Title",
+                status="generated",
+                assets=_cover_assets(runtime),
+                error=None,
+            )
+        ],
+    )
+
+    outcome = render_report_output(
+        runtime,
+        source,
+        selection,
+        analysis,
+        deps,
+        preview_resp=render_preview_asset(runtime, source, deps),
+    )
+
+    assert outcome.status == "error"
+    assert outcome.error.startswith("public_metadata_governance_blocked:")
     assert outcome.report_card_manifest_path is None

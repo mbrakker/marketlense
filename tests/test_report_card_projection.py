@@ -12,9 +12,9 @@ from src.generators.report_card_projection import (
     build_cover_fingerprint,
     build_report_card_manifest,
     classify_geography,
-    validate_public_metadata_governance,
     select_title_scale,
     stable_cover_seed,
+    validate_public_metadata_governance,
 )
 from src.utils.errors import AppError
 
@@ -274,6 +274,31 @@ def test_public_metadata_governance_rejects_raw_extraction_fragments(
         "publisher",
         "region",
     }
+
+
+def test_public_metadata_governance_omits_optional_placeholder_labels() -> None:
+    governed = validate_public_metadata_governance(
+        {
+            "publisher": "Publisher Example",
+            "region": "Not extracted",
+            "covered_period": "Unknown",
+        }
+    )
+
+    assert governed == {
+        "publisher": "Publisher Example",
+        "region": "",
+        "covered_period": "",
+    }
+
+
+def test_report_card_manifest_allows_an_omitted_optional_period() -> None:
+    manifest = build_report_card_manifest(
+        _manifest_request(region="", covered_period="")
+    )
+
+    assert manifest.geography_scope == "unknown"
+    assert manifest.covered_period == ""
 
 
 def test_report_card_manifest_applies_public_metadata_governance(

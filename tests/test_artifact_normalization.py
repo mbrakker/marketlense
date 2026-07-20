@@ -19,8 +19,12 @@ def test_normalize_artifact_insights_preserves_scoring_and_strategy_fields():
                 "metric_strength_score": 0.8,
                 "novelty_score": 0.7,
                 "coverage_role": "operating_implication",
-                "so_what": "Checkout teams need to treat wallets as core infrastructure.",
-                "now_what": "Prioritize wallet coverage in payment orchestration roadmaps.",
+                "so_what": (
+                    "Checkout teams need to treat wallets as core infrastructure."
+                ),
+                "now_what": (
+                    "Prioritize wallet coverage in payment orchestration roadmaps."
+                ),
                 "report_type_lens": "operations",
             }
         ],
@@ -73,8 +77,12 @@ def test_pad_artifact_insights_preserves_candidate_strategy_fields():
                 "metric_strength_score": 0.8,
                 "novelty_score": 0.7,
                 "coverage_role": "operating_implication",
-                "so_what": "Checkout teams need to treat wallets as core infrastructure.",
-                "now_what": "Prioritize wallet coverage in payment orchestration roadmaps.",
+                "so_what": (
+                    "Checkout teams need to treat wallets as core infrastructure."
+                ),
+                "now_what": (
+                    "Prioritize wallet coverage in payment orchestration roadmaps."
+                ),
                 "report_type_lens": "operations",
             }
         ],
@@ -112,7 +120,7 @@ def test_normalize_artifact_insights_repairs_cross_enum_strategy_fields():
     assert insights[1]["report_type_lens"] == "consumer_behavior"
 
 
-def test_normalize_artifact_insights_keeps_unknown_strategy_fields_invalid():
+def test_normalize_artifact_insights_drops_unknown_optional_strategy_fields():
     insights = normalize_artifact_insights(
         [
             {
@@ -125,8 +133,8 @@ def test_normalize_artifact_insights_keeps_unknown_strategy_fields_invalid():
         prefix="insight",
     )
 
-    assert insights[0]["coverage_role"] == "not_a_role"
-    assert insights[0]["report_type_lens"] == "not_a_lens"
+    assert "coverage_role" not in insights[0]
+    assert "report_type_lens" not in insights[0]
 
 
 def test_pad_artifact_insights_repairs_candidate_cross_enum_strategy_fields():

@@ -530,6 +530,12 @@ class AppSettings:
         default="./state/llm_usage.sqlite",
         metadata={"doc": "Canonical SQLite path for durable LLM usage events."},
     )
+    run_budget_max_spend_usd: float | None = field(
+        default=None,
+        metadata={
+            "doc": "Maximum forecasted spend in USD for one report-generation run."
+        },
+    )
     run_budget_max_pdfs: int | None = field(
         default=None,
         metadata={"doc": "Maximum PDFs processed by one report-generation run."},

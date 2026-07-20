@@ -23,6 +23,7 @@ _PLACEHOLDER_METADATA = {
     "na",
     "-",
 }
+_OPTIONAL_CARD_METADATA_FIELDS = frozenset({"region", "covered_period", "period"})
 _LEAKED_FIELD_PREFIXES = {
     "publisher",
     "region",
@@ -149,6 +150,14 @@ def validate_public_metadata_governance(
         text = " ".join(str(raw_value or "").split())
         folded = text.casefold()
         normalized[str(field_name)] = text
+        if (
+            str(field_name) in _OPTIONAL_CARD_METADATA_FIELDS
+            and folded in _PLACEHOLDER_METADATA
+        ):
+            # A missing optional label must be omitted from public metadata,
+            # never published as an extraction placeholder.
+            normalized[str(field_name)] = ""
+            continue
         if folded in _PLACEHOLDER_METADATA:
             blocked_fields.append(str(field_name))
             continue

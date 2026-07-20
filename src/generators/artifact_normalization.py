@@ -553,7 +553,7 @@ def _empty_insight(idx: int) -> Dict[str, Any]:
         "text": "",
         "evidence_id": "",
         "evidence": "",
-        "metric": {key: "" for key in METRIC_FIELDS},
+        "metric": dict.fromkeys(METRIC_FIELDS, ""),
         "pages": [],
     }
 
@@ -563,11 +563,14 @@ def _normalize_insight_text_field(field_name: str, value: Any) -> str:
     if field_name == "coverage_role":
         if text in COVERAGE_ROLE_VALUES:
             return text
-        return REPORT_TYPE_LENS_TO_COVERAGE_ROLE.get(text, text)
+        # These strategy labels are optional.  Keep the supported cross-enum
+        # translation, but do not retain an unsupported model label that the
+        # artifact contract will reject later.
+        return REPORT_TYPE_LENS_TO_COVERAGE_ROLE.get(text, "")
     if field_name == "report_type_lens":
         if text in REPORT_TYPE_LENS_VALUES:
             return text
-        return COVERAGE_ROLE_TO_REPORT_TYPE_LENS.get(text, text)
+        return COVERAGE_ROLE_TO_REPORT_TYPE_LENS.get(text, "")
     return text
 
 

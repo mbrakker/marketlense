@@ -83,7 +83,11 @@ def load_publisher_inventory_settings(
         resolver=resolver,
     )
     llm_runtime = _resolve_llm_runtime_settings(llm_cfg)
-    paths_settings = _resolve_paths_settings(paths, resolver)
+    paths_settings = _resolve_paths_settings(
+        paths,
+        resolver,
+        runtime_base_path=runtime_base_path,
+    )
     analysis_settings = _resolve_analysis_settings(
         analysis_cfg,
         cost_cfg,

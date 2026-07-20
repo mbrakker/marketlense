@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+import json
 import logging
+import subprocess
 import sys
 from contextlib import suppress
 from pathlib import Path
@@ -22,6 +24,12 @@ from src.contracts.browser_download import (
     BrowserDeveloperDiagnosticsResult,
 )
 from src.contracts.run_context import RunContext
+from src.services._browser_report_download._browser_runtime.runtime import (
+    BrowserRuntimeIdentity,
+    browser_runtime_identity,
+    load_browser_session_class,
+    load_browser_use_runtime,
+)
 from src.services._browser_report_download.cdp import (
     select_browser_download_real_page_target_info,
 )
@@ -42,7 +50,10 @@ logger = logging.getLogger(
 
 _DIAGNOSTIC_SCHEMA_VERSION = "1.0"
 _DETAIL_MAX_CHARS = 500
-_DEFAULT_VERIFICATION_URL = "data:text/html,<title>Marketlense%20Browser%20Doctor</title><h1>Marketlense browser doctor</h1>"
+_DEFAULT_VERIFICATION_URL = (
+    "data:text/html,<title>Marketlense%20Browser%20Doctor</title>"
+    "<h1>Marketlense browser doctor</h1>"
+)
 
 
 def default_browser_doctor_verification_url() -> str:
@@ -89,8 +100,10 @@ def run_browser_developer_diagnostics(
                     else "Bounded developer browser session reuse was rejected."
                 ),
                 detail=(
-                    f"mode={session_reuse_decision.mode} scope={session_reuse_decision.publisher_scope} "
-                    f"reused={session_reuse_decision.profile_reused} reason={session_reuse_decision.rejection_reason}"
+                    f"mode={session_reuse_decision.mode} "
+                    f"scope={session_reuse_decision.publisher_scope} "
+                    f"reused={session_reuse_decision.profile_reused} "
+                    f"reason={session_reuse_decision.rejection_reason}"
                 ),
             )
         )
@@ -115,7 +128,26 @@ def run_browser_developer_diagnostics(
     verification_tab_activated = False
     top_level_error = ""
     try:
-        session_class = browser_session_class or _load_browser_session_class()
+        if browser_session_class is None:
+            runtime = load_browser_use_runtime()
+            runtime_identity = browser_runtime_identity(runtime)
+            worker_runtime_identity = _verify_worker_runtime_identity()
+            if worker_runtime_identity != runtime_identity:
+                raise RuntimeError(
+                    "Browser doctor and acquisition worker resolved different "
+                    "browser-use runtimes"
+                )
+            checks.append(
+                _check(
+                    name="browser_runtime_parity",
+                    status="ok",
+                    message="Doctor resolved the canonical browser worker runtime.",
+                    detail=runtime_identity.concise(),
+                )
+            )
+            session_class = load_browser_session_class()
+        else:
+            session_class = browser_session_class
         session_kwargs: dict[str, Any] = {
             "headless": not bool(request.headed),
             "user_data_dir": profile_path,
@@ -266,19 +298,15 @@ def _attempt_stale_browser_cleanup(
         if reconnect_task is not None and hasattr(reconnect_task, "done"):
             if not reconnect_task.done():
                 reconnect_task.cancel()
-                try:
+                with suppress(asyncio.CancelledError, TimeoutError):
                     _await_diagnostic(reconnect_task, timeout_seconds=timeout_seconds)
-                except (asyncio.CancelledError, TimeoutError):
-                    pass
-            setattr(browser_session, "_reconnect_task", None)
+            browser_session._reconnect_task = None
         if not preserve_cdp_url:
             browser_profile = getattr(browser_session, "browser_profile", None)
             profile_cdp_url = str(getattr(browser_profile, "cdp_url", "") or "").strip()
             if browser_profile is not None and profile_cdp_url:
-                try:
-                    setattr(browser_profile, "cdp_url", None)
-                except Exception:
-                    pass
+                with suppress(Exception):
+                    browser_profile.cdp_url = None
         return "ok"
     except Exception as exc:
         return f"failed:{_excerpt(str(exc))}"
@@ -410,7 +438,9 @@ async def _run_browser_diagnostic_flow(
                     else "CDP did not expose a usable real page target."
                 ),
                 detail=(
-                    f"target={selected_target_id} activated={bool(request.activate_verification_tab and selected_target_id)} "
+                    f"target={selected_target_id} "
+                    "activated="
+                    f"{bool(request.activate_verification_tab and selected_target_id)} "
                     f"attached={attached} viewport={viewport_width}x{viewport_height}"
                 ),
             )
@@ -598,19 +628,44 @@ def _flow_timeout_seconds(timeout_seconds: float) -> float:
     return max(float(timeout_seconds) * 5.0, float(timeout_seconds) + 30.0)
 
 
-def _load_browser_session_class() -> Any:
+def _verify_worker_runtime_identity() -> BrowserRuntimeIdentity:
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "src.services._browser_report_download.browser_worker",
+            "--runtime-probe",
+        ],
+        check=False,
+        cwd=str(Path(__file__).resolve().parents[3]),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=20.0,
+    )
+    if completed.returncode != 0:
+        raise RuntimeError("Browser worker runtime probe failed")
     try:
-        from browser_use.browser.session import BrowserSession
+        payload = json.loads(completed.stdout)
+        return browser_runtime_identity_from_payload(payload)
+    except (TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise RuntimeError(
+            "Browser worker runtime probe returned invalid data"
+        ) from exc
 
-        return BrowserSession
-    except ModuleNotFoundError:
-        repo_root = Path(__file__).resolve().parents[3]
-        vendored_root = repo_root / "tools" / "browser-use"
-        if str(vendored_root) not in sys.path:
-            sys.path.insert(0, str(vendored_root))
-        from browser_use.browser.session import BrowserSession
 
-        return BrowserSession
+def browser_runtime_identity_from_payload(payload: object) -> BrowserRuntimeIdentity:
+    if not isinstance(payload, dict):
+        raise ValueError("runtime identity must be a JSON object")
+    return BrowserRuntimeIdentity(
+        interpreter_path=str(payload.get("interpreter_path") or ""),
+        python_version=str(payload.get("python_version") or ""),
+        virtualenv_path=str(payload.get("virtualenv_path") or ""),
+        browser_use_module_path=str(payload.get("browser_use_module_path") or ""),
+        runtime_source=str(payload.get("runtime_source") or ""),
+        vendored_checksum=str(payload.get("vendored_checksum") or ""),
+    )
 
 
 def _await_diagnostic(value: Any, *, timeout_seconds: float) -> Any:

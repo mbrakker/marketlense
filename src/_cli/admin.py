@@ -37,10 +37,10 @@ from src.contracts.state import (
     SourceQuarantineUpsertRequest,
 )
 from src.generators.claim_validation_generator import validate_retained_claims
-from src.orchestrators.publisher_sync_orchestrator import run_publisher_sync
 from src.orchestrators.corpus_rehabilitation_orchestrator import (
     submit_corpus_rehabilitation_campaign,
 )
+from src.orchestrators.publisher_sync_orchestrator import run_publisher_sync
 from src.services.config_service import (
     load_settings,
 )
@@ -50,12 +50,12 @@ from src.services.llm_usage_ledger_service import read_policy_effectiveness
 from src.services.logging_service import setup_logging
 from src.services.pdf_service import check_pdf_integrity
 from src.services.report_store_service import (
+    approve_corpus_rehabilitation_campaign,
     audit_artifact_lineage,
     backfill_artifact_lineage,
+    create_corpus_rehabilitation_campaign,
     read_acquisition_route_economics,
     read_corpus_rehabilitation_plan,
-    approve_corpus_rehabilitation_campaign,
-    create_corpus_rehabilitation_campaign,
 )
 from src.services.state_service import (
     get_source_quarantine,
@@ -276,9 +276,9 @@ def backfill_artifact_lineage_command(
 
 @cli_app.command("policy-effectiveness")
 def policy_effectiveness(
-    usage_db: str = typer.Option(
-        "state/llm_usage.sqlite",
-        help="Canonical usage SQLite database; report generation is read-only.",
+    usage_db: str | None = typer.Option(
+        None,
+        help="Usage SQLite database; defaults to the active configuration profile.",
     ),
 ) -> None:
     """Show bounded model-policy evidence grouped by execution identity."""
@@ -286,8 +286,11 @@ def policy_effectiveness(
     _sync_cli_patch_points()
     ctx = new_run_context(task_id="cli_policy_effectiveness")
     setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
+    settings = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+    usage_db_path = str(usage_db or settings.usage_db_path).strip()
     response = read_policy_effectiveness(
-        LLMPolicyEffectivenessRequest(schema_version="1.0", db_path=usage_db), ctx
+        LLMPolicyEffectivenessRequest(schema_version="1.0", db_path=usage_db_path),
+        ctx,
     )
     table = Table(title="LLM Policy Effectiveness", box=box.SIMPLE_HEAVY)
     table.add_column("Namespace")
@@ -365,8 +368,11 @@ def corpus_rehabilitation_create(
     setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
     result = create_corpus_rehabilitation_campaign(
         CorpusRehabilitationCampaignCreateRequest(
-            schema_version="1.0", db_path=reports_db, report_ids=report_id,
-            batch_size=batch_size, created_by=created_by,
+            schema_version="1.0",
+            db_path=reports_db,
+            report_ids=report_id,
+            batch_size=batch_size,
+            created_by=created_by,
         ),
         ctx,
     )
@@ -383,14 +389,19 @@ def corpus_rehabilitation_approve(
 ) -> None:
     """Record explicit approval before the campaign can enter the workflow queue."""
     if not yes:
-        raise typer.BadParameter("--yes is required to approve a rehabilitation campaign")
+        raise typer.BadParameter(
+            "--yes is required to approve a rehabilitation campaign"
+        )
     _sync_cli_patch_points()
     ctx = new_run_context(task_id="cli_corpus_rehabilitation_approve")
     setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
     result = approve_corpus_rehabilitation_campaign(
         CorpusRehabilitationCampaignApprovalRequest(
-            schema_version="1.0", db_path=reports_db, campaign_id=campaign_id,
-            approved_by=approved_by, reason=reason,
+            schema_version="1.0",
+            db_path=reports_db,
+            campaign_id=campaign_id,
+            approved_by=approved_by,
+            reason=reason,
         ),
         ctx,
     )
@@ -412,8 +423,11 @@ def corpus_rehabilitation_submit(
     ctx = new_run_context(task_id="cli_corpus_rehabilitation_submit")
     setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
     result = submit_corpus_rehabilitation_campaign(
-        reports_db=reports_db, state_db=state_db, campaign_id=campaign_id,
-        ctx=ctx, limit=limit,
+        reports_db=reports_db,
+        state_db=state_db,
+        campaign_id=campaign_id,
+        ctx=ctx,
+        limit=limit,
     )
     console.print_json(data=_campaign_output(result))
 
@@ -450,7 +464,9 @@ def route_economics(
             f"{row.complete_sample_size}/{row.sample_size}",
             f"{row.verified_success_rate:.1%}",
             f"{row.median_elapsed_ms or '-'} / {row.p95_elapsed_ms or '-'}",
-            "unknown" if row.estimated_cost_usd is None else f"${row.estimated_cost_usd:.6f}",
+            "unknown"
+            if row.estimated_cost_usd is None
+            else f"${row.estimated_cost_usd:.6f}",
         )
     console.print(table)
     for recommendation in response.recommendations:
@@ -521,7 +537,8 @@ def revalidate_source_pdf(
     checksum = content_checksum.strip().lower()
     if checksum not in {integrity.md5, integrity.sha256}:
         raise typer.BadParameter(
-            "content checksum does not match retained PDF bytes", param_hint="--content-checksum"
+            "content checksum does not match retained PDF bytes",
+            param_hint="--content-checksum",
         )
     existing = get_source_quarantine(
         SourceQuarantineGetRequest(

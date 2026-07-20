@@ -168,6 +168,7 @@ def _is_card_contract_error(exc: AppError) -> bool:
     return exc.code.startswith("card_") or exc.code in {
         "cover_fingerprint_invalid",
         "cover_asset_set_incomplete",
+        "public_metadata_governance_blocked",
     }
 
 
@@ -222,9 +223,7 @@ def _build_metadata_upsert_request(
             getattr(runtime.source_identity, "identity_status", "unknown") or "unknown"
         ).strip(),
         source_publication_date_status=str(
-            getattr(
-                runtime.source_identity, "publication_date_status", "unknown"
-            )
+            getattr(runtime.source_identity, "publication_date_status", "unknown")
             or "unknown"
         ).strip(),
     )
@@ -388,7 +387,10 @@ def render_report_output(
         source_url = str(render_meta.source_url or "").strip()
         if source_url:
             render_data_dict["source"] = source_url
-            render_data_dict["canonical_url"] = source_url
+        # A source document is attribution, never the canonical URL of the
+        # MarketLense article. WordPress supplies its own article URL after
+        # the final publication route and metadata are known.
+        render_data_dict["canonical_url"] = ""
         logger.info(
             log_event(
                 runtime.ctx,
@@ -534,37 +536,50 @@ def render_report_output(
             ).exists
             else None
         )
+        if report_card_manifest_path:
+            logger.info(
+                log_event(
+                    runtime.ctx,
+                    role="generator",
+                    event="report_card_assets_reused_for_render_only",
+                    module=logger.name,
+                    fields={
+                        "file_id": runtime.file.file_id,
+                        "manifest_available": True,
+                    },
+                )
+            )
+            return IngestOutcome(
+                schema_version="1.1",
+                file_id=runtime.file.file_id,
+                name=runtime.file_name,
+                md5=runtime.md5,
+                html_path=out_html,
+                status="processed",
+                vector_store_id=analysis.vector_store_id,
+                vector_store_status=analysis.vector_store_status,
+                indexed_at_utc=analysis.indexed_at_utc,
+                openai_file_id=analysis.openai_file_id,
+                evidence_packs=analysis.evidence_paths or None,
+                vector_store_last_error=analysis.last_error,
+                text_validation_status=source.text_validation_status,
+                text_validation_reason=source.text_validation_reason,
+                text_validation_pages=source.text_validation_pages,
+                ocr_fallback_used=source.ocr_fallback_used,
+                ocr_pdf_path=source.ocr_pdf_path or None,
+                report_card_manifest_path=report_card_manifest_path,
+            )
         logger.info(
             log_event(
                 runtime.ctx,
                 role="generator",
-                event="report_card_assets_reused_for_render_only",
+                event="report_card_assets_reuse_invalidated",
                 module=logger.name,
                 fields={
                     "file_id": runtime.file.file_id,
-                    "manifest_available": bool(report_card_manifest_path),
+                    "reason": "manifest_missing",
                 },
             )
-        )
-        return IngestOutcome(
-            schema_version="1.1",
-            file_id=runtime.file.file_id,
-            name=runtime.file_name,
-            md5=runtime.md5,
-            html_path=out_html,
-            status="processed",
-            vector_store_id=analysis.vector_store_id,
-            vector_store_status=analysis.vector_store_status,
-            indexed_at_utc=analysis.indexed_at_utc,
-            openai_file_id=analysis.openai_file_id,
-            evidence_packs=analysis.evidence_paths or None,
-            vector_store_last_error=analysis.last_error,
-            text_validation_status=source.text_validation_status,
-            text_validation_reason=source.text_validation_reason,
-            text_validation_pages=source.text_validation_pages,
-            ocr_fallback_used=source.ocr_fallback_used,
-            ocr_pdf_path=source.ocr_pdf_path or None,
-            report_card_manifest_path=report_card_manifest_path,
         )
 
     cover_meta = dependencies.get_report_metadata(
@@ -692,7 +707,8 @@ def render_report_output(
                     ),
                     source_note=_public_source_note(runtime),
                     source_metadata_hash=str(
-                        getattr(runtime.source_identity, "source_metadata_hash", "") or ""
+                        getattr(runtime.source_identity, "source_metadata_hash", "")
+                        or ""
                     ).strip(),
                     source_identity_status=str(
                         getattr(runtime.source_identity, "identity_status", "unknown")

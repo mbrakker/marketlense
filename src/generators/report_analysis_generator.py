@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import inspect
+from dataclasses import dataclass
 from typing import Optional
 
 from src.contracts.categories import (
     CategoryAssignment,
 )
 from src.contracts.context_category_fit import (
-    ContextCategoryFitResponse,
     ContextCategoryFitRequest,
+    ContextCategoryFitResponse,
     ReportCategoryContext,
     ReportContextBuildRequest,
 )
@@ -18,6 +18,7 @@ from src.contracts.report_generation import (
     ReportSourceState,
 )
 from src.contracts.report_store import ReportMetadataGetResponse
+from src.contracts.run_budget import RunBudget
 from src.contracts.semantic_ids import ReportId
 from src.contracts.state import StateGetByMd5Request, StateGetRequest
 from src.contracts.taxonomy import TaxonomyExtractRequest
@@ -74,6 +75,26 @@ def _is_vector_store_ready(status: Optional[str]) -> bool:
     return str(status or "").strip().lower() in {"completed", "ready", "indexed"}
 
 
+def _vector_store_run_budget(runtime: ReportRuntimeState) -> RunBudget:
+    """Keep vector-store calls in the report's configured accounting namespace."""
+
+    settings = runtime.settings
+    return RunBudget(
+        schema_version="1.0",
+        run_id=runtime.ctx.run_id,
+        publisher_name=runtime.publisher_name,
+        usage_db_path=settings.usage_db_path,
+        max_spend_usd=getattr(settings, "run_budget_max_spend_usd", None),
+        max_tokens=getattr(settings, "run_budget_max_tokens", None),
+        max_calls=getattr(settings, "run_budget_max_calls", None),
+        max_retries=getattr(settings, "run_budget_max_retries", None),
+        max_runtime_seconds=getattr(settings, "run_budget_max_runtime_seconds", None),
+        max_pdfs=getattr(settings, "run_budget_max_pdfs", None),
+        limit_decision=getattr(settings, "run_budget_limit_decision", "stop"),
+        enabled_effect_kinds=getattr(settings, "run_budget_enabled_effect_kinds", ()),
+    )
+
+
 def start_vector_store_indexing(
     runtime: ReportRuntimeState,
     source: ReportSourceState | None,
@@ -91,6 +112,7 @@ def start_vector_store_indexing(
     )
 
     mode_ctx = child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:vector_store")
+    vector_store_budget = _vector_store_run_budget(runtime)
     logger.info(
         log_event(
             mode_ctx,
@@ -160,6 +182,7 @@ def start_vector_store_indexing(
             VectorStoreStatusRequest(
                 schema_version="1.0",
                 vector_store_id=vector_store_id,
+                run_budget=vector_store_budget,
             ),
             mode_ctx,
         )
@@ -180,6 +203,7 @@ def start_vector_store_indexing(
                     region="",
                     time_period="",
                 ),
+                run_budget=vector_store_budget,
             ),
             mode_ctx,
         )
@@ -201,6 +225,7 @@ def start_vector_store_indexing(
                 schema_version="1.0",
                 vector_store_id=vector_store_id,
                 file_path=analysis_pdf_path,
+                run_budget=vector_store_budget,
             ),
             mode_ctx,
         )
@@ -210,6 +235,7 @@ def start_vector_store_indexing(
                 schema_version="1.0",
                 vector_store_id=vector_store_id,
                 openai_file_id=upload_resp.openai_file_id,
+                run_budget=vector_store_budget,
             ),
             mode_ctx,
         )

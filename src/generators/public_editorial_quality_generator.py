@@ -32,6 +32,7 @@ BLOCKING_RULE_IDS = {
     "public_editorial_quality.duplicate_insight",
     "public_editorial_quality.sentence_fragment",
     "public_editorial_quality.ocr_fragment",
+    "public_editorial_quality.text_corruption",
     "public_editorial_quality.generic_figure_label",
     "public_editorial_quality.fallback_boilerplate",
     "public_editorial_quality.unsupported_certainty",
@@ -57,6 +58,7 @@ _PLACEHOLDER = re.compile(
     re.IGNORECASE,
 )
 _MALFORMED = re.compile(r"\ufffd|\b\w{1,16}\s*\|\s*\w{1,16}\b|(?:\w\s+){5,}\w")
+_MOJIBAKE = re.compile(r"(?:Ã[\u0080-\u00bf]|Â[\u0080-\u00bf]|â€)")
 _GENERIC_FIGURE = re.compile(r"^(?:figure|chart|exhibit)\s*(?:\d+|[ivxlcdm]+)?$", re.I)
 _NUMBER = re.compile(
     r"(?<![A-Za-z])(?:\d{1,3}(?:[,.]\d{3})+|\d+(?:[.,]\d+)?)(?:\s*%|\s*(?:million|billion|m|bn|x))?",
@@ -221,6 +223,11 @@ def _text_issues(
             "public_editorial_quality.malformed_extraction_fragment",
             _MALFORMED,
             "contains a malformed extraction fragment",
+        ),
+        (
+            "public_editorial_quality.text_corruption",
+            _MOJIBAKE,
+            "contains a common UTF-8 mojibake sequence",
         ),
     ):
         if pattern.search(text):

@@ -4,7 +4,7 @@
 > **Canonical topic:** Data and artifact model
 > **Update trigger:** Contract, schema, persistence, lineage, or output-layout changes.
 
-External and workflow boundaries use typed dataclass contracts. JSON artifacts that have schemas are validated through the schema-validation service before persistence.
+External and workflow boundaries use typed dataclass contracts. JSON artifacts that have schemas are validated through the schema-validation service before persistence. At the artifact boundary, optional model-provided strategy labels are deterministically normalized to supported contract values (including approved cross-enum aliases); unsupported optional labels are omitted so they cannot invalidate otherwise grounded artifacts.
 
 The report lifecycle retains source metadata, analysis artifacts, validation results, rendered output, and operational state. Artifact lineage records content hashes and dependency relationships so reuse and restart decisions can verify retained content rather than trust a file path alone. Invalid, stale, or missing lineage is an explicit failure condition when lineage is required.
 

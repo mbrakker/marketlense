@@ -7698,6 +7698,175 @@
       ],
       "type": "object"
     },
+    "src.contracts._report_store.acquisition_resources.AcquisitionRouteEconomicsCohort": {
+      "additionalProperties": false,
+      "properties": {
+        "avoided_operation_count": {
+          "type": "integer"
+        },
+        "browser_launches": {
+          "type": "integer"
+        },
+        "browser_model_calls": {
+          "type": "integer"
+        },
+        "complete_sample_size": {
+          "type": "integer"
+        },
+        "estimated_cost_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "median_elapsed_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "p95_elapsed_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "publisher_id": {
+          "type": "string"
+        },
+        "route_family": {
+          "type": "string"
+        },
+        "route_policy_hash": {
+          "type": "string"
+        },
+        "sample_size": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "verified_success_rate": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "schema_version",
+        "publisher_id",
+        "route_policy_hash",
+        "route_family",
+        "sample_size",
+        "complete_sample_size",
+        "verified_success_rate",
+        "median_elapsed_ms",
+        "p95_elapsed_ms",
+        "estimated_cost_usd",
+        "browser_launches",
+        "browser_model_calls",
+        "avoided_operation_count"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.acquisition_resources.AcquisitionRouteEconomicsRecommendation": {
+      "additionalProperties": false,
+      "properties": {
+        "baseline_route_family": {
+          "type": "string"
+        },
+        "candidate_route_family": {
+          "type": "string"
+        },
+        "disposition": {
+          "type": "string"
+        },
+        "proposal": {
+          "type": "string"
+        },
+        "publisher_id": {
+          "type": "string"
+        },
+        "reasons": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "route_policy_hash": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "publisher_id",
+        "route_policy_hash",
+        "disposition"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.acquisition_resources.AcquisitionRouteEconomicsRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "minimum_cost_reduction_fraction": {
+          "type": "number"
+        },
+        "minimum_sample_size": {
+          "type": "integer"
+        },
+        "minimum_success_rate_improvement": {
+          "type": "number"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.acquisition_resources.AcquisitionRouteEconomicsResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "cohorts": {
+          "items": {
+            "$ref": "#/$defs/src.contracts._report_store.acquisition_resources.AcquisitionRouteEconomicsCohort"
+          },
+          "type": "array"
+        },
+        "recommendations": {
+          "items": {
+            "$ref": "#/$defs/src.contracts._report_store.acquisition_resources.AcquisitionRouteEconomicsRecommendation"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
     "src.contracts._report_store.acquisition_resources.AcquisitionRouteSuppressionRequest": {
       "additionalProperties": false,
       "properties": {
@@ -14756,11 +14925,24 @@
             }
           ]
         },
+        "run_budget_max_spend_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "schema_version": {
           "type": "string"
         },
         "signal_store_db": {
           "type": "string"
+        },
+        "source_quarantine_enabled": {
+          "type": "boolean"
         },
         "state_db": {
           "type": "string"
@@ -15306,6 +15488,367 @@
         "section_label",
         "source_pack",
         "summary"
+      ],
+      "type": "object"
+    },
+    "src.contracts.corpus_rehabilitation.CorpusRehabilitationCampaign": {
+      "additionalProperties": false,
+      "properties": {
+        "actual_cost_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "actual_provider_calls": {
+          "type": "integer"
+        },
+        "approval_hash": {
+          "type": "string"
+        },
+        "approved_at_utc": {
+          "type": "string"
+        },
+        "batch_size": {
+          "type": "integer"
+        },
+        "campaign_id": {
+          "type": "string"
+        },
+        "created_at_utc": {
+          "type": "string"
+        },
+        "plan_hash": {
+          "type": "string"
+        },
+        "planned_cost_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "planned_provider_calls": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "submitted_at_utc": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.corpus_rehabilitation.CorpusRehabilitationCampaignApprovalRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "approved_by": {
+          "type": "string"
+        },
+        "campaign_id": {
+          "type": "string"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "campaign_id",
+        "approved_by",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "src.contracts.corpus_rehabilitation.CorpusRehabilitationCampaignCreateRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "batch_size": {
+          "type": "integer"
+        },
+        "created_by": {
+          "type": "string"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "report_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path"
+      ],
+      "type": "object"
+    },
+    "src.contracts.corpus_rehabilitation.CorpusRehabilitationCampaignItem": {
+      "additionalProperties": false,
+      "properties": {
+        "campaign_id": {
+          "type": "string"
+        },
+        "classification": {
+          "type": "string"
+        },
+        "disposition": {
+          "type": "string"
+        },
+        "queue_job_id": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "retained_reference": {
+          "type": "string"
+        },
+        "reusable_artifact_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_checksum": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.corpus_rehabilitation.CorpusRehabilitationCampaignItemUpdateRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "actual_cost_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "actual_provider_calls": {
+          "type": "integer"
+        },
+        "campaign_id": {
+          "type": "string"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "queue_job_id": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "campaign_id",
+        "report_id",
+        "status"
+      ],
+      "type": "object"
+    },
+    "src.contracts.corpus_rehabilitation.CorpusRehabilitationCampaignReadRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "campaign_id": {
+          "type": "string"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "campaign_id"
+      ],
+      "type": "object"
+    },
+    "src.contracts.corpus_rehabilitation.CorpusRehabilitationCampaignResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "campaign": {
+          "$ref": "#/$defs/src.contracts.corpus_rehabilitation.CorpusRehabilitationCampaign"
+        },
+        "created": {
+          "type": "boolean"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.corpus_rehabilitation.CorpusRehabilitationCampaignItem"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.corpus_rehabilitation.CorpusRehabilitationCandidate": {
+      "additionalProperties": false,
+      "properties": {
+        "classification": {
+          "type": "string"
+        },
+        "disposition": {
+          "type": "string"
+        },
+        "estimate_status": {
+          "type": "string"
+        },
+        "estimated_cost_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "estimated_provider_calls": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reason": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "retained_reference": {
+          "type": "string"
+        },
+        "reusable_artifact_count": {
+          "type": "integer"
+        },
+        "reusable_artifact_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_checksum": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "report_id",
+        "classification",
+        "disposition",
+        "reason",
+        "reusable_artifact_count",
+        "estimated_provider_calls",
+        "estimated_cost_usd",
+        "estimate_status"
+      ],
+      "type": "object"
+    },
+    "src.contracts.corpus_rehabilitation.CorpusRehabilitationPlanRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path"
+      ],
+      "type": "object"
+    },
+    "src.contracts.corpus_rehabilitation.CorpusRehabilitationPlanResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.corpus_rehabilitation.CorpusRehabilitationCandidate"
+          },
+          "type": "array"
+        },
+        "classification_counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "provider_calls": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version"
       ],
       "type": "object"
     },
@@ -20801,11 +21344,24 @@
             }
           ]
         },
+        "run_budget_max_spend_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "schema_version": {
           "type": "string"
         },
         "signal_store_db": {
           "type": "string"
+        },
+        "source_quarantine_enabled": {
+          "type": "boolean"
         },
         "state_db": {
           "type": "string"
@@ -21084,6 +21640,9 @@
         "namespace_prefix": {
           "type": "string"
         },
+        "output_validator_identity": {
+          "type": "string"
+        },
         "pricing_key": {
           "type": "string"
         },
@@ -21318,6 +21877,126 @@
         "compaction_enabled",
         "quality_threshold",
         "same_provider_fallback"
+      ],
+      "type": "object"
+    },
+    "src.contracts.llm_usage.LLMPolicyEffectivenessRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path"
+      ],
+      "type": "object"
+    },
+    "src.contracts.llm_usage.LLMPolicyEffectivenessResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "rows": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.llm_usage.LLMPolicyEffectivenessRow"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "unattributed_legacy_call_count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts.llm_usage.LLMPolicyEffectivenessRow": {
+      "additionalProperties": false,
+      "properties": {
+        "average_latency_ms": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cache_reuse_count": {
+          "type": "integer"
+        },
+        "cache_reuse_rate": {
+          "type": "number"
+        },
+        "cached_input_tokens": {
+          "type": "integer"
+        },
+        "call_count": {
+          "type": "integer"
+        },
+        "estimated_cost_usd": {
+          "type": "number"
+        },
+        "execution_identity": {
+          "type": "string"
+        },
+        "input_tokens": {
+          "type": "integer"
+        },
+        "latency_record_count": {
+          "type": "integer"
+        },
+        "model": {
+          "type": "string"
+        },
+        "output_tokens": {
+          "type": "integer"
+        },
+        "prompt_namespace": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "regeneration_count": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "validated_call_count": {
+          "type": "integer"
+        },
+        "validation_rate": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "schema_version",
+        "execution_identity",
+        "prompt_namespace",
+        "provider",
+        "model",
+        "call_count",
+        "validated_call_count",
+        "validation_rate",
+        "cache_reuse_count",
+        "cache_reuse_rate",
+        "latency_record_count",
+        "average_latency_ms",
+        "input_tokens",
+        "cached_input_tokens",
+        "output_tokens",
+        "estimated_cost_usd",
+        "regeneration_count"
       ],
       "type": "object"
     },
@@ -23727,6 +24406,12 @@
         "cost_ledger_path": {
           "type": "string"
         },
+        "execution_identity": {
+          "type": "string"
+        },
+        "execution_policy_hash": {
+          "type": "string"
+        },
         "inputs": {
           "items": {
             "type": "string"
@@ -25999,6 +26684,82 @@
         "schema_version",
         "path",
         "page_count"
+      ],
+      "type": "object"
+    },
+    "src.contracts.pdf_utils.PdfIntegrityCheckRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "path"
+      ],
+      "type": "object"
+    },
+    "src.contracts.pdf_utils.PdfIntegrityCheckResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "failure_code": {
+          "type": "string"
+        },
+        "has_eof": {
+          "type": "boolean"
+        },
+        "has_pdf_header": {
+          "type": "boolean"
+        },
+        "md5": {
+          "type": "string"
+        },
+        "page_count": {
+          "type": "integer"
+        },
+        "parser_opened": {
+          "type": "boolean"
+        },
+        "path": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "size_bytes": {
+          "type": "integer"
+        },
+        "validated_at_utc": {
+          "type": "string"
+        },
+        "validator_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "path",
+        "size_bytes",
+        "sha256",
+        "md5",
+        "validator_version",
+        "has_pdf_header",
+        "has_eof",
+        "parser_opened",
+        "page_count",
+        "failure_code",
+        "retryable",
+        "validated_at_utc"
       ],
       "type": "object"
     },
@@ -33870,6 +34631,196 @@
       ],
       "type": "object"
     },
+    "src.contracts.state.SourceQuarantineGetRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "content_checksum": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_file_id": {
+          "type": "string"
+        },
+        "state_db": {
+          "type": "string"
+        },
+        "validator_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "state_db",
+        "source_file_id",
+        "content_checksum"
+      ],
+      "type": "object"
+    },
+    "src.contracts.state.SourceQuarantineGetResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "record": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.state.SourceQuarantineRecord"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts.state.SourceQuarantineListRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "state_db": {
+          "type": "string"
+        },
+        "statuses": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "state_db"
+      ],
+      "type": "object"
+    },
+    "src.contracts.state.SourceQuarantineListResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "records": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.state.SourceQuarantineRecord"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts.state.SourceQuarantineRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "cleared_at_utc": {
+          "type": "string"
+        },
+        "content_checksum": {
+          "type": "string"
+        },
+        "failed_validation_count": {
+          "type": "integer"
+        },
+        "failure_code": {
+          "type": "string"
+        },
+        "first_observed_at_utc": {
+          "type": "string"
+        },
+        "latest_observed_at_utc": {
+          "type": "string"
+        },
+        "next_operator_action": {
+          "type": "string"
+        },
+        "replacement_checksum": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "size_bytes": {
+          "type": "integer"
+        },
+        "source_file_id": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "validator_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "source_file_id",
+        "content_checksum",
+        "validator_version",
+        "status",
+        "size_bytes",
+        "failure_code",
+        "next_operator_action",
+        "first_observed_at_utc",
+        "latest_observed_at_utc",
+        "failed_validation_count"
+      ],
+      "type": "object"
+    },
+    "src.contracts.state.SourceQuarantineUpsertRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "record": {
+          "$ref": "#/$defs/src.contracts.state.SourceQuarantineRecord"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "state_db": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "state_db",
+        "record"
+      ],
+      "type": "object"
+    },
+    "src.contracts.state.SourceQuarantineUpsertResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "created": {
+          "type": "boolean"
+        },
+        "record": {
+          "$ref": "#/$defs/src.contracts.state.SourceQuarantineRecord"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "record",
+        "created"
+      ],
+      "type": "object"
+    },
     "src.contracts.state.StateArtifactAcquisitionCacheGetRequest": {
       "additionalProperties": false,
       "properties": {
@@ -41720,11 +42671,39 @@
         "profile": {
           "type": "string"
         },
+        "profile_effective_selections": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        "recommended_run_profile": {
+          "type": "string"
+        },
         "required_credentials": {
           "items": {
             "type": "string"
           },
           "type": "array"
+        },
+        "run_profile": {
+          "type": "string"
+        },
+        "run_profile_hash": {
+          "type": "string"
         },
         "schema_version": {
           "type": "string"
@@ -42213,6 +43192,84 @@
       ],
       "type": "object"
     },
+    "src.contracts.workflow_control.ResolvedRunProfile": {
+      "additionalProperties": false,
+      "properties": {
+        "budget_profile_refs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "effective_selections": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        "explicitly_selected": {
+          "type": "boolean"
+        },
+        "intended_outcome": {
+          "type": "string"
+        },
+        "preflight_profile": {
+          "type": "string"
+        },
+        "profile_hash": {
+          "type": "string"
+        },
+        "profile_name": {
+          "type": "string"
+        },
+        "recommended_profile": {
+          "type": "string"
+        },
+        "resolution_source": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "profile_name",
+        "profile_hash",
+        "intended_outcome",
+        "workflow",
+        "preflight_profile",
+        "budget_profile_refs",
+        "effective_selections",
+        "resolution_source",
+        "explicitly_selected",
+        "recommended_profile",
+        "warnings"
+      ],
+      "type": "object"
+    },
     "src.contracts.workflow_control.RunHealthGateDecision": {
       "additionalProperties": false,
       "properties": {
@@ -42323,6 +43380,25 @@
           "additionalProperties": {},
           "type": "object"
         },
+        "profile_overrides": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "type": "object"
+        },
         "publisher": {
           "type": "string"
         },
@@ -42334,6 +43410,9 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "run_profile": {
+          "type": "string"
         },
         "schema_version": {
           "type": "string"
@@ -42352,6 +43431,105 @@
         "dry_run",
         "allow_automation",
         "metadata"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_control.RunProfileDefinition": {
+      "additionalProperties": false,
+      "properties": {
+        "browser_allowance": {
+          "type": "string"
+        },
+        "budget_profile_refs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "cached_artifact_preference": {
+          "type": "string"
+        },
+        "compatible_workflows": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "concurrency_resource": {
+          "type": "string"
+        },
+        "human_publication_approval_required": {
+          "type": "boolean"
+        },
+        "intended_outcome": {
+          "type": "string"
+        },
+        "maximum_cost_usd": {
+          "type": "number"
+        },
+        "maximum_provider_calls": {
+          "type": "integer"
+        },
+        "maximum_runtime_seconds": {
+          "type": "integer"
+        },
+        "minimum_regeneration_mode": {
+          "type": "string"
+        },
+        "model_quality_tier": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "ocr_fallback_policy": {
+          "type": "string"
+        },
+        "preflight_profile": {
+          "type": "string"
+        },
+        "publication_readiness_mode": {
+          "type": "string"
+        },
+        "regeneration_scope": {
+          "type": "string"
+        },
+        "requires_bounded_target": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "name",
+        "intended_outcome",
+        "compatible_workflows"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_control.RunProfileRecommendation": {
+      "additionalProperties": false,
+      "properties": {
+        "intent_key": {
+          "type": "string"
+        },
+        "profile_name": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "profile_name",
+        "intent_key",
+        "reason"
       ],
       "type": "object"
     },
@@ -42593,6 +43771,12 @@
     "src.contracts.workflow_control.WorkflowControlSettings": {
       "additionalProperties": false,
       "properties": {
+        "available_budget_profile_refs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "concurrency": {
           "additionalProperties": {
             "$ref": "#/$defs/src.contracts.workflow_control.ConcurrencyLimit"
@@ -42623,6 +43807,12 @@
               "$ref": "#/$defs/src.contracts.workflow_control.WorkflowRetryPolicyConfig"
             },
             "type": "object"
+          },
+          "type": "object"
+        },
+        "run_profiles": {
+          "additionalProperties": {
+            "$ref": "#/$defs/src.contracts.workflow_control.RunProfileDefinition"
           },
           "type": "object"
         },

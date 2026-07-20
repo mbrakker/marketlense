@@ -27,6 +27,11 @@ from src.contracts.logging import LoggingSetupRequest
 from src.contracts.publisher_inventory import PublisherInventoryCandidateTrace
 from src.contracts.run_context import RunContext
 from src.contracts.semantic_ids import RunId, TaskId
+from src.services._browser_report_download._browser_runtime.runtime import (
+    browser_runtime_identity,
+    load_browser_session_class,
+    load_browser_use_runtime,
+)
 from src.services._browser_report_download.browser import (
     BrowserAgentWorkerResponse,
     run_browser_report_download_agent,
@@ -498,6 +503,11 @@ def _serve() -> int:
 
 
 def main() -> int:
+    if len(sys.argv) == 2 and sys.argv[1] == "--runtime-probe":
+        runtime = load_browser_use_runtime()
+        load_browser_session_class()
+        print(json.dumps(browser_runtime_identity(runtime).__dict__, ensure_ascii=True))
+        return 0
     if len(sys.argv) == 2 and sys.argv[1] == "--serve":
         return _serve()
     if len(sys.argv) != 3:

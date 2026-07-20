@@ -1,6 +1,6 @@
 # Consolidated TODO
 
-Last audited: 2026-07-19
+Last audited: 2026-07-20
 
 This is the repository's single, source-neutral work register. Every task is evaluated by its current codebase evidence and project decision—not by where it was first proposed. Equivalent tasks are merged under one owner; deferred, closed, and excluded work stays visible in the same register.
 
@@ -43,6 +43,7 @@ All work is listed below in one register. `Active` items have detailed completio
 | Active | P2 | Harden bounded public-observability events | Narrow log-event size-bound hardening for public-facing boundaries. |
 | Active | P3 | Resolve hosted-site trust blockers | Safe-error boundary completed; hosted trust outcome remains. |
 | Active | P10 | Operate correlated public-render failure telemetry | Hosted release-observability outcome. |
+| Active | P12 | Release-locked sandbox publish canary | Repeatedly prove manifest-backed report recovery and final sandbox publication on a small, spend-governed real-report cohort. |
 | Active | P4 | Close public briefing, correction, and submission intake | Implemented; close after hosted smoke proves the live intake routes. |
 | Active | P5 | Finish responsive search and navigation | Responsive public-workflow outcome. |
 | Active | P6 | Raise report-card and evidence-exhibit editorial quality | Release gate is implemented and live-validated; blind human editorial acceptance remains. |
@@ -87,6 +88,7 @@ All work is listed below in one register. `Active` items have detailed completio
 
 ## Recently Closed
 
+- **P0/P1 remediation and sandbox end-to-end validation (2026-07-20):** The canonical runtime/path/policy and public-editorial remediation package was exercised against an isolated real-report namespace. The final recovery makes a missing report-card manifest invalidate render reuse, rebuilds the required assets/manifest, and treats blocked public metadata as a typed render error. Optional card placeholders now normalize to omission rather than leaking or blocking valid public cards; `--force-report-cards` requests the analysis checkpoint only for an existing rendered package, while new files take the normal pipeline. The 60-minute report-analysis lease and spend-only budget profile were active. A five-report live Drive cohort completed in 46.23 minutes; every package passed semantic and editorial validation and had all three card assets. Canonical sandbox publication created three new posts, reused two existing posts, and a repeat made zero new writes through durable idempotency. The affected regression suite passed 122 tests; the isolated ledger recorded 159 completed LLM calls, 1,883,341 tokens, and $1.152941 estimated spend, below the $6 cap.
 - **A16 — Durable corpus rehabilitation campaign execution (2026-07-19):** Reports schema v23 persists immutable candidate classification, source checksum/reference, immutable reusable-artifact IDs, campaign/approval hashes, planned-unavailable versus actual cost, and item-level queue identity. Submission rereads the current retained corpus before each queue handoff and holds changed evidence; it uses the canonical maintenance queue rather than reimplementing repair. The real retained-corpus canary classified 99 reports (25 reusable, 36 lineage-incomplete, 38 provenance-incomplete), approved one eligible report with 115 reusable artifacts, and idempotently retained one `artifact_repair` queue job across a second submission. It made zero provider calls, recorded $0 actual cost, and made no public write.
 - **A14 — Calibrate acquisition policy from retained route economics (2026-07-19):** The read-only route-economics command groups only policy-compatible publisher/route cohorts and reports count, verified-success rate, median/p95 elapsed time, browser/model cost, incomplete-field state, and avoided operations. It emits proposals only above deterministic sample/improvement thresholds and never mutates routing or history. A live StackAdapt direct-PDF canary reached the canonical PDF budget stop before provider I/O, persisted one complete 3,860 ms/$0 resource envelope, and correctly returned `no_recommendation: insufficient_direct_sample`; focused route-policy and telemetry regression tests passed.
 - **A4 — Quarantine irreparably malformed Drive PDFs (2026-07-19):** The deterministic `pdf-integrity-v1` gate now checks PDF header, EOF, parser opening, page count, and byte hashes before extraction, OCR, or model work. A matching unchanged Drive checksum is skipped from durable state; a valid replacement supersedes the old active record. The real retained Capgemini benchmark PDF passed the operator revalidation path (540,430 bytes, 15 pages) and recorded a `cleared` state with no provider call. Focused structural, migration, ingest-stop, durable-state, and operator CLI tests passed.
@@ -242,6 +244,19 @@ The original ten-item screenshot baseline is complete in the committed implement
 - Blank/low-information thumbnails use deterministic covers or validated source previews.
 - Audit identifiers remain available without being reader-facing labels; regression checks fail known leakage patterns in rendered output.
 - Three independent blind evaluators assess 30 paired public reports with median readability, decision usefulness, evidence clarity, and appropriate certainty at least 4/5, and an explicit record of any outlier/appeal decision.
+
+#### P12. Release-locked sandbox publish canary
+
+- **Title:** Release-locked sandbox publish canary
+- **Impact 5 / effort: 2**
+- **Context:** The 2026-07-20 live run proved one complete report can recover a missing report-card manifest, pass public-quality gates, publish to the authorized sandbox, and be duplicate-suppressed. That evidence is intentionally one bounded report, not a recurring release confidence measure.
+- **Benefit:** A small, real, manifest-backed cohort catches render-reuse, card-asset, WordPress-readback, and idempotency regressions before a release affects a wider report set.
+- **Risks to avoid:** Run only against the named sandbox and isolated state; require explicit approval, canonical spend authority, the existing validation/editorial gates, a fixed low cohort cap, and retained non-sensitive evidence. Never turn this into production auto-publishing.
+- **Success criteria:**
+
+- A release command selects a small, diverse, already-authorized real-report cohort and records deterministic cohort identity, configuration/policy hashes, and spend forecast before work begins.
+- Every member must pass semantic validation, public editorial quality, complete manifest/asset checks, canonical publish readback, and a repeat idempotency lookup; any failure stops the cohort and preserves the failed evidence.
+- Retained evidence compares the cohort's actual calls/tokens/spend, elapsed time, package completeness, created-versus-reused posts, and typed failures with the approved forecast; focused tests cover target isolation and no-write behavior when approval is absent.
 
 #### P7. Improve hosted public-site performance without contract loss
 
