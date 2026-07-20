@@ -216,6 +216,12 @@ Use live calls only when they provide evidence mocks cannot: provider compatibil
 
 Coverage, mutation, typing, formatting, architecture, and repository-hygiene thresholds are defined by executable policy and release gates. Do not weaken a threshold or test merely to make a change pass.
 
+### 8.6 End-to-end validation after significant code work
+
+After any significant code change, agents MUST run the current bounded validation workflow through discovery, acquisition, ingest, and publish, in that order. The run MUST use the repository's approved isolated or otherwise safe profile and retain the normal validation and publication safeguards; it MUST NOT publish, email, or make uncontrolled external writes merely to satisfy this requirement.
+
+Agents MUST investigate and fix every error produced by that validation run that is attributable to the change, then rerun the affected stage and all downstream stages. Do not report the work complete until the full discovery-to-publish validation run passes. If an error cannot be fixed because it requires unavailable credentials, an external-system repair, or user authority, report the exact error and blocker rather than treating the validation as successful.
+
 ## 9. Documentation ownership
 
 Every code change MUST be reflected in the corresponding documentation pack under `docs/`, selected through `docs/README.md`, in the same change set. Before coding, identify that pack; update its canonical document to describe the current behavior, boundary, workflow, configuration, validation, or operational consequence, and regenerate derived references through their canonical script when applicable. The root README is an orientation page, not a change ledger and not the mandatory destination for every change.
@@ -228,10 +234,11 @@ Completion claims MUST be evidence-based. Before reporting done:
 
 1. inspect the final diff for scope and secret exposure;
 2. run the narrowest relevant validators and affected tests;
-3. run broader fast gates in proportion to risk;
-4. report exact commands and results, including skipped or unavailable checks;
-5. distinguish newly introduced failures from pre-existing failures;
-6. state residual risks, human-review rules, and any unverified external behavior.
+3. after significant code work, run and pass the required discovery, acquisition, ingest, and publish validation workflow;
+4. run broader fast gates in proportion to risk;
+5. report exact commands and results, including skipped or unavailable checks;
+6. distinguish newly introduced failures from pre-existing failures;
+7. state residual risks, human-review rules, and any unverified external behavior.
 
 Do not claim a rule is enforced, a test passed, or behavior was verified without direct evidence.
 
