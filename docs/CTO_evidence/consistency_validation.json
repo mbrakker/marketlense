@@ -10,12 +10,12 @@
     "summary_consistency": "passed"
   },
   "cost_tolerance_usd": "0.000001",
-  "evidence_run_id": "bf95afe3bc084b46a063d367fb402194",
+  "evidence_run_id": "5b92eb3c8e4547348d00571abe0a1ded",
   "exact_head_verified": true,
-  "generated_at": "2026-07-19T17:17:43.113701+00:00",
+  "generated_at": "2026-07-20T06:01:12.027478+00:00",
   "passed": true,
-  "repository_commit_sha": "0c19e6757ddc04223a4d8fc3b231d4635edab74d",
-  "run_manifest_sha256": "01f9ce6401bbe6c7f732b9cc4f19129275fa0119644e95b77fdc9a78e3b0fbbb",
+  "repository_commit_sha": "cc8aa7b56c059706eedae543fcf6709bdb4758c0",
+  "run_manifest_sha256": "ecdca7df4974d5410896d0e1ed17c451aa7b59e8ba1c4130d8c624b9d526f219",
   "schema_version": "1.0",
   "status": "passed"
 }
