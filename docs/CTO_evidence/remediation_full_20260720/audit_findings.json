@@ -1,0 +1,90 @@
+{
+  "schema_version": "1.0",
+  "audit_date": "2026-07-21",
+  "audit_scope": "remediation_full_20260720",
+  "overall_verdict": "not verified",
+  "verdicts": {
+    "scope_isolation": "verified with limitations",
+    "funnel_reconciliation": "not verified",
+    "publication": "verified with limitations",
+    "cost": "verified",
+    "visual_quality": "partially proven",
+    "ci": "not verified"
+  },
+  "scope_isolation": {
+    "state_namespace": "state/remediation_full_20260720",
+    "artifact_namespace": "out/remediation_full_20260720",
+    "outside_namespace_paths_found": false,
+    "limitations": [
+      "run_owned_logs_unavailable",
+      "signals_sqlite_not_snapshot_inventoried",
+      "cost_projection_json_files_not_snapshot_inventoried"
+    ]
+  },
+  "cohort": {
+    "file_ids": [
+      "1VooWIbaZG6_RtRMcCgfU_reDZgrsit3L",
+      "1WSylL4_O1OrVtXA6SVTr7hjEZPbM8110",
+      "1nrXx69QT4pqye59eEi2CS6WaoZEt9Cb5",
+      "1iMmqocOUBzzgzM_Eqtu_NgPezptVlWi_",
+      "1YWo18NdOzGjRNmTG7C32gnn8dMgFJ1fg"
+    ],
+    "semantic_validation_pass_count": 5,
+    "public_editorial_validation_pass_count": 5,
+    "report_card_manifest_count": 5,
+    "additional_isolated_validation_packages": 2,
+    "funnel_manifest_available": false
+  },
+  "publication": {
+    "unique_sandbox_posts": 5,
+    "published_outcomes": 3,
+    "existing_matches": 2,
+    "duplicate_post_ids_found": false,
+    "authenticated_readback_retained": false,
+    "repeat_zero_writes_directly_retained": false,
+    "failed_package_published_evidence": "not_found_in_durable_published_table"
+  },
+  "cost": {
+    "completed_calls": 159,
+    "input_tokens": 1491119,
+    "cached_input_tokens": 19072,
+    "output_tokens": 392222,
+    "total_tokens": 1883341,
+    "estimated_cost_usd": "1.152941",
+    "ledger_cost_difference_usd": "0",
+    "summary_cost_difference_usd": "0",
+    "release_cost_difference_usd": "0",
+    "workflow_stage_report_attribution": "unavailable"
+  },
+  "visual_quality": {
+    "verdict": "partially proven",
+    "qa_sidecar_count": 98,
+    "chart_candidates": 46,
+    "table_candidates": 52,
+    "crop_refine_files": 0,
+    "chart_to_evidence_linkage": "not retained as an auditable aggregate",
+    "chart_to_insight_linkage": "not retained as an auditable aggregate"
+  },
+  "ci": {
+    "focused_tests": "122 passed claimed in release record",
+    "full_suite": "not retained",
+    "ruff": "changed-source result claimed in release record",
+    "documentation_checks": "claimed in release record",
+    "git_diff_check": "claimed in release record",
+    "github_checks": "unavailable"
+  },
+  "blockers": [
+    "No canonical entity-stage validation-run manifest",
+    "No run-owned canonical logs",
+    "No retained typed WordPress readback or repeat-write outcome",
+    "No retained chart-to-evidence-to-insight aggregate",
+    "Blank workflow, stage, and report attribution on all isolated LLM events",
+    "No retained full-suite or GitHub-check result"
+  ],
+  "recommended_next_validation": [
+    "Run a five-report sandbox cohort with a durable entity-stage manifest",
+    "Retain a run-owned log index and typed WordPress outcomes",
+    "Record visual semantic classes and evidence/insight links",
+    "Run and retain full-suite and GitHub check results against the release commit"
+  ]
+}
