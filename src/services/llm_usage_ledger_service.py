@@ -217,6 +217,26 @@ def _validate_request(request: LLMUsageLedgerAppendRequest) -> None:
         error_stage=request.entry.error_stage,
         error_code=request.entry.error_code,
     )
+    if request.entry.validation_run_id:
+        required = {
+            "workflow": request.entry.workflow,
+            "stage": request.entry.stage,
+            "report_id": request.entry.report_id,
+            "artifact_family": request.entry.artifact_family,
+            "publisher_id": request.entry.publisher_id,
+            "model_policy_namespace": request.entry.model_policy_namespace,
+            "configuration_hash": request.entry.configuration_hash,
+            "policy_hash": request.entry.policy_hash,
+            "producer_build_identity": request.entry.producer_build_identity,
+        }
+        missing = sorted(key for key, value in required.items() if not str(value).strip())
+        if missing:
+            raise AppError(
+                code="llm_usage_validation_attribution_missing",
+                message="Validation-run LLM usage must retain complete runtime attribution",
+                retryable=False,
+                context={"validation_run_id": request.entry.validation_run_id, "missing": missing},
+            )
 
 
 def _validate_median_rebuild_request(request: LLMUsageMedianRebuildRequest) -> None:
@@ -278,6 +298,13 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
             stage text not null default '',
             plan_hash text not null default '',
             artifact_family text not null default '',
+            validation_run_id text not null default '',
+            publisher_id text not null default '',
+            model_policy_namespace text not null default '',
+            configuration_hash text not null default '',
+            policy_hash text not null default '',
+            producer_build_identity text not null default '',
+            repair_attempt integer not null default 0,
             pricing_version text not null default '',
             pricing_status text not null default '',
             metadata_json text not null
@@ -301,6 +328,13 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
         "stage": "text not null default ''",
         "plan_hash": "text not null default ''",
         "artifact_family": "text not null default ''",
+        "validation_run_id": "text not null default ''",
+        "publisher_id": "text not null default ''",
+        "model_policy_namespace": "text not null default ''",
+        "configuration_hash": "text not null default ''",
+        "policy_hash": "text not null default ''",
+        "producer_build_identity": "text not null default ''",
+        "repair_attempt": "integer not null default 0",
         "pricing_version": "text not null default ''",
         "pricing_status": "text not null default ''",
     }
@@ -353,7 +387,7 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
     conn.execute(
         """
         create index if not exists idx_llm_usage_events_attribution
-        on llm_usage_events(report_id, workflow, artifact_family)
+        on llm_usage_events(validation_run_id, report_id, workflow, stage, artifact_family)
         """
     )
     conn.execute(
@@ -3375,10 +3409,14 @@ def append_usage(
                     timeout_seconds, event_key, call_ordinal, provider_call_status,
                     parse_status, schema_validation_status, error_stage, error_code,
                     semantic_task, report_id, workflow, stage, plan_hash,
-                    artifact_family, pricing_version, pricing_status, metadata_json
+                    artifact_family, validation_run_id, publisher_id,
+                    model_policy_namespace, configuration_hash, policy_hash,
+                    producer_build_identity, repair_attempt, pricing_version,
+                    pricing_status, metadata_json
                 ) values (
                     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
                 )
                 on conflict(event_key) do nothing
                 """,
@@ -3422,6 +3460,13 @@ def append_usage(
                     entry.stage,
                     entry.plan_hash,
                     entry.artifact_family,
+                    entry.validation_run_id,
+                    entry.publisher_id,
+                    entry.model_policy_namespace,
+                    entry.configuration_hash,
+                    entry.policy_hash,
+                    entry.producer_build_identity,
+                    max(0, int(entry.repair_attempt or 0)),
                     entry.pricing_version,
                     entry.pricing_status,
                     _metadata_json(entry.metadata),
@@ -3618,14 +3663,17 @@ def _canonical_export_rows(
                provider_decision, cache_decision, call_ordinal,
                provider_call_status, parse_status, schema_validation_status,
                error_stage, error_code, event_key, report_id, workflow, stage,
-               plan_hash, artifact_family, pricing_version, pricing_status, metadata_json
+               plan_hash, artifact_family, validation_run_id, publisher_id,
+               model_policy_namespace, configuration_hash, policy_hash,
+               producer_build_identity, repair_attempt, pricing_version,
+               pricing_status, metadata_json
         from llm_usage_events where id > ? order by id
         """,
         (after_event_id,),
     ).fetchall()
     export_rows: list[dict[str, Any]] = []
     for row in rows:
-        metadata = _safe_metadata(str(row[35]))
+        metadata = _safe_metadata(str(row[42]))
         export_rows.append(
             {
                 "schema_version": "1.0",
@@ -3667,8 +3715,16 @@ def _canonical_export_rows(
                         "stage": str(row[30]) or "unknown",
                         "plan_hash": str(row[31]) or "unknown",
                         "artifact_family": str(row[32]) or "unknown",
-                        "pricing_version": str(row[33]) or "unknown",
-                        "pricing_status": str(row[34]) or "unknown",
+                        "validation_run_id": str(row[33]) or "unknown",
+                        "publisher_id": str(row[34]) or "unknown",
+                        "model_policy_namespace": str(row[35]) or "unknown",
+                        "configuration_hash": str(row[36]) or "unknown",
+                        "policy_hash": str(row[37]) or "unknown",
+                        "producer_build_identity": str(row[38]) or "unknown",
+                        "repair_attempt": int(row[39] or 0),
+                        "semantic_task": _semantic_task(str(row[3]), str(row[5])),
+                        "pricing_version": str(row[40]) or "unknown",
+                        "pricing_status": str(row[41]) or "unknown",
                         "prompt_namespace": str(row[17]) or "unknown",
                         "publisher_name": str(row[14]) or "unknown",
                     },
@@ -3950,6 +4006,8 @@ def _daily_export_payload(
     by_task = _rollup_metrics(rows, "task_id")
     by_report = _rollup_usage_context(rows, "report_id")
     by_workflow = _rollup_usage_context(rows, "workflow")
+    by_stage = _rollup_usage_context(rows, "stage")
+    by_semantic_task = _rollup_usage_context(rows, "semantic_task")
     by_prompt = _rollup_usage_context(rows, "prompt_namespace")
     by_artifact_family = _rollup_usage_context(rows, "artifact_family")
     by_publisher = _rollup_usage_context(rows, "publisher_name")
@@ -3983,6 +4041,13 @@ def _daily_export_payload(
         },
         "totals_by_workflow": {
             key: _cost_total(metrics) for key, metrics in sorted(by_workflow.items())
+        },
+        "totals_by_stage": {
+            key: _cost_total(metrics) for key, metrics in sorted(by_stage.items())
+        },
+        "totals_by_semantic_task": {
+            key: _cost_total(metrics)
+            for key, metrics in sorted(by_semantic_task.items())
         },
         "totals_by_prompt_namespace": {
             key: _cost_total(metrics) for key, metrics in sorted(by_prompt.items())

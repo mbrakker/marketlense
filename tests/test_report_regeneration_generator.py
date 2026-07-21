@@ -228,6 +228,22 @@ def _settings(tmp_path: Path) -> IngestSettings:
         model_pricing={},
         cost_ledger_path=str(output_dir / "cost-ledger.jsonl"),
         cost_daily_path=str(output_dir / "cost-daily.json"),
+        llm_execution_policies={
+            "report_vs": {
+                "schema_version": "1.0",
+                "provider": "openai",
+                "model": "gpt-5-mini",
+                "temperature": 0.0,
+                "seed_policy": "inherit",
+                "max_output_tokens": 2048,
+                "retrieval_mode": "chat_json",
+                "timeout_seconds": 30.0,
+                "provider_retry_count": 0,
+                "structured_output_mode": "json_object",
+                "fallback_policy": "same_provider_only",
+                "pricing_key": "gpt-5-mini",
+            }
+        },
     )
 
 

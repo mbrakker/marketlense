@@ -139,6 +139,27 @@ class LLMUsageLedgerEntry(SemanticIdContract):
     artifact_family: str = field(
         default="", metadata={"doc": "Produced or consumed artifact family, if known."}
     )
+    validation_run_id: str = field(
+        default="", metadata={"doc": "Canonical validation-run ID, if applicable."}
+    )
+    publisher_id: str = field(
+        default="", metadata={"doc": "Canonical publisher ID, if known."}
+    )
+    model_policy_namespace: str = field(
+        default="", metadata={"doc": "Resolved model-policy namespace."}
+    )
+    configuration_hash: str = field(
+        default="", metadata={"doc": "Resolved configuration hash."}
+    )
+    policy_hash: str = field(
+        default="", metadata={"doc": "Resolved model-policy hash."}
+    )
+    producer_build_identity: str = field(
+        default="", metadata={"doc": "Producer commit or build identity."}
+    )
+    repair_attempt: int = field(
+        default=0, metadata={"doc": "Zero-based retry or repair attempt."}
+    )
     pricing_version: str = field(
         default="",
         metadata={"doc": "Immutable pricing-card version used for this event."},

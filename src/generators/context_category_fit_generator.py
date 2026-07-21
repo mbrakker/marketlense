@@ -184,7 +184,7 @@ def fit_report_categories_from_context(
             context={"report_id": request.context.report_id},
         ) from exc
 
-    payload = response.parsed_json if isinstance(response.parsed_json, dict) else None
+    payload = _response_json_object(response)
     if payload is None:
         raise AppError(
             code="context_category_fit_invalid_json",
@@ -233,6 +233,23 @@ def fit_report_categories_from_context(
         )
     )
     return fit_response
+
+
+def _response_json_object(response: OpenAIResponseResult) -> dict[str, Any] | None:
+    """Recover the first JSON object from a provider response without guessing."""
+    if isinstance(response.parsed_json, dict):
+        return response.parsed_json
+    text = str(response.text or "").strip()
+    if text.startswith("```"):
+        text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text, flags=re.IGNORECASE)
+    start = text.find("{")
+    if start < 0:
+        return None
+    try:
+        payload, _ = json.JSONDecoder().raw_decode(text[start:])
+    except json.JSONDecodeError:
+        return None
+    return payload if isinstance(payload, dict) else None
 
 
 def _serialize_context(context: ReportCategoryContext) -> Dict[str, Any]:

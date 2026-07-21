@@ -74,12 +74,19 @@ from src.services._report_store_service.sources import (
     record_report_source,
     record_report_value_score,
 )
+from src.services._report_store_service.validation_run_manifest import (
+    audit_validation_run_manifest,
+    create_validation_run_manifest,
+    record_validation_run_manifest_stage,
+)
 
 __all__ = [
     "check_report_db_access",
+    "create_validation_run_manifest",
     "build_current_report_execution_compatibility",
     "build_minimal_execution_plan",
     "audit_artifact_lineage",
+    "audit_validation_run_manifest",
     "backfill_artifact_lineage",
     "check_artifact_reuse",
     "get_metadata",
@@ -106,6 +113,7 @@ __all__ = [
     "read_validated_report_artifacts",
     "record_publisher_private_api_candidate_observation",
     "record_acquisition_attempt_resource",
+    "record_validation_run_manifest_stage",
     "read_acquisition_route_economics",
     "read_corpus_rehabilitation_plan",
     "create_corpus_rehabilitation_campaign",

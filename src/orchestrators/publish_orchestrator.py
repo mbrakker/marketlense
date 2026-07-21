@@ -746,6 +746,53 @@ def run_publish(
             for candidate in candidates
             if candidate.html_path not in blocked_paths
         ]
+    idempotent_term_skip_file_ids: set[str] = set()
+    if not force_report_cards:
+        for candidate in candidates:
+            file_id = str(candidate.file_id or "").strip()
+            entity_route = candidate.entity_route
+            if not file_id or entity_route is None or candidate.entity_error is not None:
+                continue
+            file_ctx = child_context(root_ctx, task_id=candidate.html_path)
+            state_row = state_get(
+                StateGetRequest(
+                    schema_version="1.0",
+                    state_db=settings.state_db,
+                    file_id=file_id,
+                ),
+                file_ctx,
+            )
+            if state_row is None or candidate.html_snapshot is None:
+                continue
+            validation_report = _load_validation_report(
+                file_id=file_id,
+                html_path=candidate.html_path,
+                settings=settings,
+                ctx=file_ctx,
+            )
+            validation_status = validation_report.status if validation_report else "missing"
+            validation_issues = (
+                [issue.message for issue in validation_report.issues]
+                if validation_report
+                else []
+            )
+            checksum = _publish_checksum(
+                file_id=file_id,
+                html_path=candidate.html_path,
+                html_text=candidate.html_snapshot.html_text,
+                post_type=entity_route.post_type,
+                validation_status=validation_status,
+                validation_issues=validation_issues,
+            )
+            if _lookup_publish_idempotency(
+                settings=settings,
+                file_id=file_id,
+                post_type=entity_route.post_type,
+                checksum=checksum,
+                ctx=file_ctx,
+            ) is not None:
+                idempotent_term_skip_file_ids.add(file_id)
+
     preflight_entries = _build_publish_preflight_entries(
         settings=settings,
         candidates=candidates,
@@ -753,6 +800,7 @@ def run_publish(
         base_url=base_url,
         auth_header=auth_header,
         ctx=root_ctx,
+        skip_term_resolution_file_ids=idempotent_term_skip_file_ids,
     )
 
     for entry in preflight_entries:
@@ -916,6 +964,7 @@ def run_publish(
                     file_id=file_id,
                     status="skipped",
                     error="already_published",
+                    publication_outcome="already_published_state_skip",
                 )
             )
             continue
@@ -942,6 +991,7 @@ def run_publish(
                     error="validation_failed",
                     validation_status=validation_status,
                     validation_issues=validation_issues,
+                    publication_outcome="preflight_blocked",
                 )
             )
             continue
@@ -1059,6 +1109,9 @@ def run_publish(
                     post_id=lookup_resp.post_id,
                     post_url=lookup_resp.link,
                     error="already_exists",
+                    publication_outcome="existing_post_matched",
+                    lookup_count=1,
+                    authenticated_readback_verified=True,
                 )
                 return _with_validation(outcome, validation_status, validation_issues)
 

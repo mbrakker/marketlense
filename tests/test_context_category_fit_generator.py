@@ -24,6 +24,7 @@ from src.contracts.prompts import (
 from src.contracts.report_store import ReportMetadataGetResponse
 from src.contracts.run_context import RunContext
 from src.generators.context_category_fit_generator import (
+    _response_json_object,
     fit_report_categories_from_context,
 )
 from src.generators.report_context_generator import build_report_category_context
@@ -83,6 +84,20 @@ class RecordingOpenAIClient:
             total_tokens=150,
             request_id="req-1",
         )
+
+
+def test_response_json_object_recovers_fenced_provider_json() -> None:
+    response = OpenAIResponseResult(
+        schema_version="1.0",
+        text='```json\n{"selected_category_ids":["retail"]}\n```',
+        parsed_json=None,
+        input_tokens=0,
+        output_tokens=0,
+        tool_calls=0,
+        model="test-model",
+    )
+
+    assert _response_json_object(response) == {"selected_category_ids": ["retail"]}
 
 
 def _execution_policies() -> dict[str, dict[str, object]]:

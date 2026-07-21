@@ -79,8 +79,6 @@ class OpenAIEmbeddingRequest:
     artifact_family: str = field(
         default="", metadata={"doc": "Produced or consumed artifact family, if known."}
     )
-
-
 @dataclass(frozen=True)
 class OpenAIEmbeddingResponse:
     schema_version: str = field(
@@ -237,6 +235,27 @@ class OpenAIUsageAccountingRequest:
     artifact_family: str = field(
         default="", metadata={"doc": "Produced or consumed artifact family, if known."}
     )
+    validation_run_id: str = field(
+        default="", metadata={"doc": "Canonical validation-run ID, if applicable."}
+    )
+    publisher_id: str = field(
+        default="", metadata={"doc": "Canonical publisher ID, if known."}
+    )
+    model_policy_namespace: str = field(
+        default="", metadata={"doc": "Resolved model-policy namespace."}
+    )
+    configuration_hash: str = field(
+        default="", metadata={"doc": "Resolved configuration hash."}
+    )
+    policy_hash: str = field(
+        default="", metadata={"doc": "Resolved model-policy hash."}
+    )
+    producer_build_identity: str = field(
+        default="", metadata={"doc": "Producer commit or build identity."}
+    )
+    repair_attempt: int = field(
+        default=0, metadata={"doc": "Zero-based retry or repair attempt."}
+    )
     extra: Dict[str, Any] = field(
         default_factory=dict, metadata={"doc": "Additional non-secret usage metadata."}
     )
@@ -389,7 +408,8 @@ class OpenAIAnalyzeRequest:
         metadata={"doc": "Source/report URL context for usage reporting, if known."},
     )
     prompt_namespace: str = field(
-        default="", metadata={"doc": "Prompt namespace for usage reporting, if known."}
+        default="direct/openai_chat_json",
+        metadata={"doc": "Prompt namespace for usage reporting."},
     )
     prompt_hash: str = field(
         default="", metadata={"doc": "Prompt hash for usage reporting, if known."}
@@ -508,8 +528,8 @@ class OpenAIResponseRequest:
         metadata={"doc": "Content-addressed prompt dependency manifest, if known."},
     )
     execution_identity: str = field(
-        default="",
-        metadata={"doc": "Resolved execution compatibility identity, if known."},
+        default="direct-openai-chat-json-v1",
+        metadata={"doc": "Resolved execution compatibility identity."},
     )
     execution_identity_manifest: Dict[str, Any] = field(
         default_factory=dict,
@@ -529,6 +549,16 @@ class OpenAIResponseRequest:
         default="./state/llm_usage.sqlite",
         metadata={"doc": "Canonical SQLite usage ledger path for this provider call."},
     )
+    report_id: str = field(default="", metadata={"doc": "Canonical report ID."})
+    workflow: str = field(default="", metadata={"doc": "Owning workflow."})
+    stage: str = field(default="", metadata={"doc": "Owning workflow stage."})
+    artifact_family: str = field(default="", metadata={"doc": "Affected artifact family."})
+    publisher_id: str = field(default="", metadata={"doc": "Canonical publisher ID."})
+    validation_run_id: str = field(default="", metadata={"doc": "Validation run ID when applicable."})
+    configuration_hash: str = field(default="", metadata={"doc": "Resolved configuration hash."})
+    policy_hash: str = field(default="", metadata={"doc": "Resolved policy hash."})
+    producer_build_identity: str = field(default="", metadata={"doc": "Producer build identity."})
+    repair_attempt: int = field(default=0, metadata={"doc": "Repair attempt number."})
     same_provider_fallback: bool = field(
         default=False,
         metadata={
@@ -627,7 +657,8 @@ class OpenAIJSONPromptRequest:
         metadata={"doc": "Source/report URL context for usage reporting, if known."},
     )
     prompt_namespace: str = field(
-        default="", metadata={"doc": "Prompt namespace for usage reporting, if known."}
+        default="direct/openai_chat_json",
+        metadata={"doc": "Prompt namespace for usage reporting."},
     )
     prompt_hash: str = field(
         default="", metadata={"doc": "Prompt hash for usage reporting, if known."}
@@ -641,8 +672,8 @@ class OpenAIJSONPromptRequest:
         metadata={"doc": "Content-addressed prompt dependency manifest, if known."},
     )
     execution_identity: str = field(
-        default="",
-        metadata={"doc": "Resolved execution compatibility identity, if known."},
+        default="direct-openai-chat-json-v1",
+        metadata={"doc": "Resolved execution compatibility identity."},
     )
     execution_identity_manifest: Dict[str, Any] = field(
         default_factory=dict,

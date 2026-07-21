@@ -12,7 +12,7 @@ from src.utils.quantity import (
 )
 from src.utils.text_normalization import normalize_text
 
-from .shared import MAGNITUDE_FACTORS, METRIC_ATTRIBUTION_RE, ensure_dict, s
+from .shared import MAGNITUDE_FACTORS, ensure_dict, s
 
 
 def collect_allowed_quantities(
@@ -275,17 +275,8 @@ def numeric_inequality_compatible(
 def unsupported_quantity_severity(
     *, policy: str, quantity: Quantity, sentence: str
 ) -> str:
-    if policy == "strict":
-        return "error"
-    if policy == "mixed":
-        if METRIC_ATTRIBUTION_RE.search(
-            normalize_text(sentence)
-        ) or quantity_has_metric_cues(quantity, sentence):
-            return "error"
-        return "warning"
-    if quantity_has_metric_cues(quantity, sentence):
-        return "error"
-    return "warning"
+    del policy, quantity, sentence
+    return "error"
 
 
 def quantity_has_metric_cues_from_text(text: str) -> bool:

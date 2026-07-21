@@ -7,6 +7,7 @@ import inspect
 import json
 import logging
 import os
+from importlib import import_module
 import shutil
 import subprocess
 import sys
@@ -1082,7 +1083,14 @@ def run_browser_report_download_agent(
 
 def _load_browser_use_runtime(normalized_url: str, ctx: RunContext) -> Any:
     os.environ.setdefault("BROWSER_USE_SETUP_LOGGING", "false")
-    runtime = load_browser_use_runtime(normalized_url=normalized_url)
+    # Keep the process-local import seam at the canonical browser facade.  This
+    # makes the ordinary installed runtime explicit and preserves the existing
+    # public-boundary fake used by the browser fallback contract tests.  The
+    # shared resolver remains responsible for the supported vendored fallback.
+    try:
+        runtime = import_module("browser_use")
+    except ModuleNotFoundError:
+        runtime = load_browser_use_runtime(normalized_url=normalized_url)
     runtime_identity = browser_runtime_identity(runtime)
     logger.info(
         log_event(

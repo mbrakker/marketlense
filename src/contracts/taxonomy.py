@@ -45,6 +45,10 @@ class TaxonomyExtractRequest(SemanticIdContract):
         default="",
         metadata={"doc": "Source/report URL context recorded with downstream LLM usage."},
     )
+    workflow: str = field(default="report_analysis", metadata={"doc": "Owning workflow."})
+    stage: str = field(default="taxonomy", metadata={"doc": "Owning workflow stage."})
+    artifact_family: str = field(default="taxonomy", metadata={"doc": "Affected artifact family."})
+    publisher_id: str = field(default="", metadata={"doc": "Canonical publisher ID."})
 
 
 @dataclass(frozen=True)

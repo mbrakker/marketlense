@@ -1,6 +1,6 @@
-from __future__ import annotations
-
 """Common operations for the analytics store service."""
+
+from __future__ import annotations
 
 import json
 import sqlite3
@@ -325,7 +325,7 @@ def _analytics_conn(path: str, ctx: RunContext):
                     schema_version="1.0",
                     database_key="reports_db",
                     db_path=db_path,
-                    target_version=23,
+                    target_version=24,
                     ctx=ctx,
                 ),
                 conn,

@@ -10,6 +10,8 @@ CASES = (
     ("trend", "rising", "ascending_trajectory"),
     ("trend", "falling", "descending_trajectory"),
     ("trend", "volatile", "volatility_corridor"),
+    ("trend", "diverging", "split_horizon"),
+    ("trend", "converging", "signal_lattice"),
     ("comparison", "converging", "convergence_funnel"),
     ("comparison", "diverging", "divergence_fan"),
     ("comparison", "volatile", "parallel_bands"),
@@ -21,6 +23,7 @@ CASES = (
     ("network", "neutral", "network_constellation"),
     ("hierarchy", "stable", "hierarchy_terraces"),
     ("cycle", "cyclical", "cycle_orbit"),
+    ("trend", "neutral", "interlaced_mesh"),
     ("trend", "neutral", "forecast_horizon"),
     ("uncertainty", "neutral", "uncertainty_envelope"),
     ("system", "neutral", "system_matrix"),
@@ -56,8 +59,8 @@ def test_geometry_table_cannot_collapse_to_one_constant_family() -> None:
         for shape, direction, expected in CASES
     ]
 
-    assert len(set(selected)) == 16
-    assert sum(item != selected[0] for item in selected) >= 16
+    assert len(set(selected)) == 19
+    assert sum(item != selected[0] for item in selected) >= 19
 
 
 def test_select_geometry_family_rejects_unknown_shape(assert_app_error) -> None:

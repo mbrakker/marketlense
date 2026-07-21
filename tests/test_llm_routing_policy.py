@@ -254,3 +254,34 @@ def test_unknown_production_namespace_is_rejected_without_compatibility_policy(
 
     assert err.value.code == "llm_execution_policy_unknown_namespace"
     assert "pdf_text/ocr_fallback" in registered_production_llm_namespaces()
+
+
+def test_policy_preflight_rejects_missing_registered_namespace_before_io() -> None:
+    from src.utils.model_resolver import preflight_execution_policy_coverage
+
+    policies = execution_policies_from_config(
+        {
+            "report_vs": {
+                "model": "gpt-5-mini",
+                "temperature": 0.0,
+                "timeout_seconds": 60,
+            }
+        },
+        model_overrides={},
+        legacy_routing={},
+        default_model="gpt-5-mini",
+        default_temperature=1.0,
+        default_seed=None,
+        default_timeout_seconds=600,
+    )
+
+    with pytest.raises(AppError) as error:
+        preflight_execution_policy_coverage(
+            policies,
+            default_model="gpt-5-mini",
+            default_temperature=1.0,
+            default_seed=None,
+            default_timeout_seconds=600,
+        )
+
+    assert error.value.code == "llm_execution_policy_unknown_namespace"

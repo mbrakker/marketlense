@@ -200,6 +200,13 @@ def test_usage_attribution_dimensions_project_from_canonical_events(
                 stage="analysis",
                 plan_hash="plan-1",
                 artifact_family="findings",
+                validation_run_id="validation-20260721",
+                publisher_id="publisher-1",
+                model_policy_namespace="report_vs/analysis/findings",
+                configuration_hash="config-hash",
+                policy_hash="policy-hash",
+                producer_build_identity="build-sha",
+                repair_attempt=1,
                 pricing_version="card-1",
                 pricing_status="matched",
             ),
@@ -226,9 +233,13 @@ def test_usage_attribution_dimensions_project_from_canonical_events(
         == 5
     )
     assert payload["totals_by_artifact_family"]["findings"]["total_tool_calls"] == 0
+    assert payload["totals_by_stage"]["analysis"]["estimated_cost_usd"] == 0.001
+    assert payload["totals_by_semantic_task"]["openai_chat_json"]["total_output_tokens"] == 5
     with sqlite3.connect(db_path) as conn:
         row = conn.execute(
-            "SELECT report_id,workflow,stage,plan_hash,artifact_family,pricing_version,pricing_status "
+            "SELECT report_id,workflow,stage,plan_hash,artifact_family,validation_run_id,"
+            "publisher_id,model_policy_namespace,configuration_hash,policy_hash,"
+            "producer_build_identity,repair_attempt,pricing_version,pricing_status "
             "FROM llm_usage_events"
         ).fetchone()
     assert row == (
@@ -237,9 +248,30 @@ def test_usage_attribution_dimensions_project_from_canonical_events(
         "analysis",
         "plan-1",
         "findings",
+        "validation-20260721",
+        "publisher-1",
+        "report_vs/analysis/findings",
+        "config-hash",
+        "policy-hash",
+        "build-sha",
+        1,
         "card-1",
         "matched",
     )
+
+
+def test_validation_run_usage_rejects_missing_runtime_attribution(tmp_path: Path) -> None:
+    with pytest.raises(AppError, match="complete runtime attribution") as exc_info:
+        svc.append_usage(
+            LLMUsageLedgerAppendRequest(
+                schema_version="1.0",
+                db_path=str(tmp_path / "usage.sqlite"),
+                entry=replace(_entry(), validation_run_id="validation-20260721"),
+            ),
+            _ctx(),
+        )
+
+    assert exc_info.value.code == "llm_usage_validation_attribution_missing"
 
 
 def test_llm_usage_ledger_schedules_median_rebuild_on_twentieth_task_event(

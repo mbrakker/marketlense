@@ -214,9 +214,12 @@ def test_assemble_artifacts_builds_topics_key_figures_and_chart_cards() -> None:
         "chart_candidates": [
             {
                 "chart_id": "chart-1",
+                "candidate_id": "chart-1",
                 "evidence_id": "f1",
                 "caption": "Wallet adoption rose to 42 percent.",
                 "confidence": "high",
+                "crop_qa_accepted": True,
+                "source_page": 2,
             }
         ]
     }
@@ -304,6 +307,8 @@ def test_assemble_artifacts_builds_topics_key_figures_and_chart_cards() -> None:
     assert payload["key_figures"][0]["source_page"] == 2
     assert payload["chart_insight_cards"][0]["card_id"] == "chart-1"
     assert payload["chart_insight_cards"][0]["status"] == "generated"
+    assert payload["chart_insight_cards"][0]["candidate_id"] == "chart-1"
+    assert payload["chart_insight_cards"][0]["insight_id"] == "i1"
     assert payload["chart_insight_cards"][0]["avoid_reason_if_weak"] == ""
 
 

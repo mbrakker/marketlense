@@ -1,6 +1,6 @@
-from __future__ import annotations
-
 """Preflight helpers for publication orchestration."""
+
+from __future__ import annotations
 
 import json
 import logging
@@ -328,6 +328,7 @@ def _build_publish_preflight_entries(
     base_url: str,
     auth_header: str,
     ctx: RunContext,
+    skip_term_resolution_file_ids: set[str] | None = None,
 ) -> list[_PublishPreflightEntry]:
     state_rows_by_file_id: dict[str, StateGetResponse] = {}
     validation_by_file_id: dict[str, tuple[str, list[str]]] = {}
@@ -401,10 +402,19 @@ def _build_publish_preflight_entries(
                 ctx=ctx,
             )
         )
+    # A matching publication idempotency record needs no taxonomy work.  Term
+    # "ensure" calls can write, so exclude these candidates before the batch
+    # resolver runs; the caller still performs the normal authenticated post
+    # lookup/readback preflight for every eligible candidate.
+    skipped_term_file_ids = skip_term_resolution_file_ids or set()
     resolved_terms_by_file_id = _resolve_batch_term_assignments(
         settings=settings,
         metadata_by_file_id=metadata_by_file_id,
-        selected_file_ids=eligible_network_preflight_file_ids,
+        selected_file_ids=[
+            file_id
+            for file_id in eligible_network_preflight_file_ids
+            if file_id not in skipped_term_file_ids
+        ],
         base_url=base_url,
         auth_header=auth_header,
         ctx=ctx,
@@ -438,6 +448,7 @@ def _build_publish_preflight_entries(
                 "state_row_count": len(state_rows_by_file_id),
                 "existing_post_batch_count": len(existing_posts_by_file_id),
                 "resolved_term_count": len(resolved_terms_by_file_id),
+                "idempotent_term_skip_count": len(skipped_term_file_ids),
             },
         )
     )

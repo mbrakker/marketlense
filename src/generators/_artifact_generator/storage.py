@@ -720,7 +720,10 @@ def build_chart_insight_cards(
 ) -> List[Dict[str, Any]]:
     chart_candidates = _chart_candidates(evidence_packs)
     insights_by_evidence = {
-        _s(item.get("evidence_id")).strip(): _s(item.get("text")).strip()
+        _s(item.get("evidence_id")).strip(): {
+            "insight_id": _s(item.get("id") or item.get("insight_id")).strip(),
+            "text": _s(item.get("text")).strip(),
+        }
         for item in insights_final
         if isinstance(item, dict) and _s(item.get("evidence_id")).strip()
     }
@@ -729,19 +732,33 @@ def build_chart_insight_cards(
         evidence_id = _s(figure.get("evidence_id")).strip()
         chart = _chart_candidate_for_evidence(chart_candidates, evidence_id)
         confidence = _s((chart or {}).get("confidence")).strip() or "medium"
-        chart_id = _s((chart or {}).get("chart_id") or (chart or {}).get("id")).strip()
+        candidate_id = _s(
+            (chart or {}).get("candidate_id")
+            or (chart or {}).get("chart_id")
+            or (chart or {}).get("id")
+        ).strip()
+        insight = insights_by_evidence.get(evidence_id, {})
         caption = _s((chart or {}).get("caption") or figure.get("label")).strip()
         metric_mentions = _metric_mentions_for_figure(figure)
         weak_reason = ""
         if not chart:
             weak_reason = "No chart candidate was linked to the metric evidence."
+        elif not candidate_id:
+            weak_reason = "The linked chart has no retained accepted candidate ID."
+        elif not bool((chart or {}).get("crop_qa_accepted")):
+            weak_reason = "The linked candidate is not retained as crop-QA accepted."
+        elif not _s((chart or {}).get("source_page") or figure.get("source_page")).strip():
+            weak_reason = "The accepted candidate has no retained source-page linkage."
+        elif not _s(insight.get("insight_id")).strip() or not _s(insight.get("text")).strip():
+            weak_reason = "No retained insight is linked to the chart evidence."
         elif confidence.lower() in {"low", "weak"}:
             weak_reason = "Chart candidate confidence is below source-backed threshold."
         cards.append(
             {
                 "schema_version": "1.0",
-                "card_id": chart_id or f"chart-card-{index}",
+                "card_id": candidate_id or f"chart-card-{index}",
                 "status": "generated" if not weak_reason else "weak_evidence",
+                "candidate_id": candidate_id,
                 "caption": caption,
                 "takeaway": _chart_takeaway(figure, insights_by_evidence),
                 "business_implication": _business_implication(
@@ -750,7 +767,8 @@ def build_chart_insight_cards(
                 "metric_mentions": metric_mentions,
                 "evidence_confidence": confidence,
                 "evidence_id": evidence_id,
-                "source_page": figure.get("source_page"),
+                "source_page": (chart or {}).get("source_page") or figure.get("source_page"),
+                "insight_id": _s(insight.get("insight_id")).strip(),
                 "avoid_reason_if_weak": weak_reason,
             }
         )
@@ -888,22 +906,22 @@ def _metric_mentions_for_figure(figure: Dict[str, Any]) -> List[str]:
 
 
 def _chart_takeaway(
-    figure: Dict[str, Any], insights_by_evidence: Dict[str, str]
+    figure: Dict[str, Any], insights_by_evidence: Dict[str, Dict[str, str]]
 ) -> str:
     evidence_id = _s(figure.get("evidence_id")).strip()
-    insight = insights_by_evidence.get(evidence_id, "")
-    if insight:
-        return insight
+    insight = insights_by_evidence.get(evidence_id, {})
+    if _s(insight.get("text")).strip():
+        return _s(insight.get("text")).strip()
     return f"{_s(figure.get('label')).strip()} is reported at {_s(figure.get('figure')).strip()}."
 
 
 def _business_implication(
-    figure: Dict[str, Any], insights_by_evidence: Dict[str, str]
+    figure: Dict[str, Any], insights_by_evidence: Dict[str, Dict[str, str]]
 ) -> str:
     evidence_id = _s(figure.get("evidence_id")).strip()
-    insight = insights_by_evidence.get(evidence_id, "")
-    if insight:
-        return insight
+    insight = insights_by_evidence.get(evidence_id, {})
+    if _s(insight.get("text")).strip():
+        return _s(insight.get("text")).strip()
     context = _s(figure.get("why_it_matters")).strip()
     return context or _s(figure.get("label")).strip()
 

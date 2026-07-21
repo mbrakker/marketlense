@@ -204,6 +204,22 @@ def _settings(
                 "tool_call_usd": 0.0,
             }
         },
+        llm_execution_policies={
+            "report_vs": {
+                "schema_version": "1.0",
+                "provider": "openai",
+                "model": "gpt-4.1-mini",
+                "temperature": 0.1,
+                "seed_policy": "inherit",
+                "max_output_tokens": 2048,
+                "retrieval_mode": "chat_json",
+                "timeout_seconds": 5.0,
+                "provider_retry_count": 0,
+                "structured_output_mode": "json_object",
+                "fallback_policy": "same_provider_only",
+                "pricing_key": "gpt-4.1-mini",
+            }
+        },
     )
 
 

@@ -1,0 +1,54 @@
+schema_version: "1.0"
+
+# Fresh, bounded release-validation namespace. Credentials and targets remain
+# environment-owned; this profile only isolates run-owned state and artifacts.
+paths:
+  output_dir: "./out/closure_20260721"
+  cache_dir: "./cache/closure_20260721"
+  state_db: "./state/closure_20260721/index.sqlite"
+  reports_db: "./state/closure_20260721/reports.sqlite"
+  signal_store_db: "./state/closure_20260721/signals.sqlite"
+  ingest_lock: "./state/closure_20260721/ingest.lock"
+
+ingest:
+  run_budget:
+    max_spend_usd: 6.0
+    # The five-source live funnel charges a PDF-processing unit at acquisition,
+    # source preparation, selection, and analysis. Thirty retains a hard cap
+    # while allowing the exact cohort to reach publication readiness.
+    max_pdfs: 30
+    max_retries: 10
+    max_runtime_seconds: 14400
+    limit_decision: "stop"
+
+browser_download:
+  output_dir: "./out/closure_20260721/browser_downloads"
+  max_steps: 4
+  timeout_seconds: 120
+  run_budget:
+    max_browser_launches: 8
+    max_pdfs: 30
+    max_drive_writes: 12
+    max_drive_reads: 32
+    max_mailbox_reads: 8
+    max_retries: 10
+    max_runtime_seconds: 7200
+    limit_decision: "stop"
+
+mailbox_acquisition:
+  output_dir: "./out/closure_20260721/mailbox_acquisition"
+
+publisher_discovery:
+  output_dir: "./out/closure_20260721/publisher_inventory_discovery"
+
+analysis:
+  cost_ledger_path: "./state/closure_20260721/llm_cost_ledger.jsonl"
+
+cost:
+  usage_db_path: "./state/closure_20260721/llm_usage.sqlite"
+  daily_path: "./state/closure_20260721/llm_cost_daily.json"
+  ledger_path: "./state/closure_20260721/llm_cost_ledger.jsonl"
+
+publish:
+  projection_daily_path: "./state/closure_20260721/projection_cost_daily.json"
+  projection_ledger_path: "./state/closure_20260721/projection_cost_ledger.jsonl"

@@ -58,10 +58,91 @@ def test_retained_public_artifact_has_no_editorial_blockers() -> None:
         "public_editorial_quality.insight_role_diversity",
         "public_editorial_quality.repeated_syntax",
         "public_editorial_quality.excessive_verbosity",
-        "public_editorial_quality.chart_insight_linkage",
+        "public_editorial_quality.card_to_insight_linkage",
+        "public_editorial_quality.figure_to_evidence_linkage",
+        "public_editorial_quality.figure_to_insight_linkage",
         "public_editorial_quality.source_note_completeness",
         "public_editorial_quality.action_specificity",
     }
+
+
+def test_public_chart_card_requires_retained_candidate_evidence_and_insight_chain() -> None:
+    artifacts = _retained_artifacts()
+    artifacts["chart_insight_cards"] = [
+        {
+            "status": "generated",
+            "title": "Demand shifts by channel",
+            "caption": "Demand shifts by channel.",
+            "evidence_id": "retained-70",
+        }
+    ]
+
+    report = evaluate_public_editorial_quality(
+        report_id="retained-report", artifacts=artifacts
+    )
+
+    assert report.status == "fail"
+    assert "public_editorial_quality.figure_linkage_missing" in _rule_ids(report)
+
+
+def test_linked_non_generic_public_chart_card_passes_figure_rules() -> None:
+    artifacts = _retained_artifacts()
+    artifacts["chart_insight_cards"] = [
+        {
+            "status": "generated",
+            "title": "Demand shifts by channel",
+            "caption": "Demand shifts by channel.",
+            "candidate_id": "candidate-1",
+            "evidence_id": "retained-70",
+            "source_page": 4,
+            "insight_id": "insight-1",
+        }
+    ]
+
+    report = evaluate_public_editorial_quality(
+        report_id="retained-report", artifacts=artifacts
+    )
+
+    assert "public_editorial_quality.generic_figure_label" not in _rule_ids(report)
+    assert "public_editorial_quality.figure_linkage_missing" not in _rule_ids(report)
+
+
+def test_public_html_blocks_operational_source_and_editorial_scaffolding() -> None:
+    report = evaluate_public_editorial_quality(
+        report_id="retained-report",
+        artifacts=_retained_artifacts(),
+        html=(
+            '<a href="https://drive.google.com/file/d/private">Source</a>'
+            "<p>Observation: the source says demand rose...</p>"
+        ),
+    )
+
+    assert report.status == "fail"
+    assert {
+        "public_editorial_quality.private_operational_reference",
+        "public_editorial_quality.mechanical_editorial_scaffold",
+        "public_editorial_quality.literal_truncation",
+    } <= _rule_ids(report)
+
+
+def test_public_html_source_section_requires_a_public_original_source_link() -> None:
+    missing = evaluate_public_editorial_quality(
+        report_id="retained-report",
+        artifacts=_retained_artifacts(),
+        html='<section id="source"><p>Source details</p></section>',
+    )
+    linked = evaluate_public_editorial_quality(
+        report_id="retained-report",
+        artifacts=_retained_artifacts(),
+        html=(
+            '<section id="source">'
+            '<a href="https://publisher.example/report" rel="noopener">'
+            "Open original source</a></section>"
+        ),
+    )
+
+    assert "public_editorial_quality.public_source_provenance_missing" in _rule_ids(missing)
+    assert "public_editorial_quality.public_source_provenance_missing" not in _rule_ids(linked)
 
 
 @pytest.mark.parametrize(

@@ -47,6 +47,10 @@ class PublisherId(SemanticId):
     kind = "publisher_id"
 
 
+class ValidationRunId(SemanticId):
+    kind = "validation_run_id"
+
+
 class SemanticIdContract:
     """Dataclass mixin that coerces and validates semantic ID fields."""
 

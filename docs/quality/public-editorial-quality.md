@@ -10,13 +10,13 @@ Every public report is evaluated twice: before any validation-driven repair and 
 
 ## Blocking rules
 
-The gate blocks public release for unsupported numeric claims; material claims without retained evidence linkage; internal IDs; placeholders; malformed extraction and OCR fragments; missing rendered assets; exact or high-confidence duplicate insights; fragments; generic figure labels when a descriptive caption exists; generic fallback boilerplate; certainty unsupported by evidence status; and empty or non-specific decision implications.
+The gate blocks public release for unsupported numeric claims; material claims without retained evidence linkage; internal IDs; placeholders; malformed extraction and OCR fragments; missing rendered assets; exact or high-confidence duplicate insights; fragments; generic figure labels when a descriptive caption exists; generic fallback boilerplate; certainty unsupported by evidence status; empty or non-specific decision implications; unlinked public chart cards; private operational paths or URLs; mechanical labels; literal truncation; and a rendered source section without a public original-source link.
 
 Duplicate detection compares normalized claim-token sets and material-number overlap. Regexes are used only for deterministic syntax defects such as IDs and placeholders; semantic duplication is not determined by a regex alone.
 
 ## Advisory measurements
 
-The retained report includes non-blocking measurements for insight-role diversity, repeated syntax, excessive verbosity, chart-to-insight linkage, source-note completeness, and action specificity. They are review signals, not a public score.
+The retained report includes non-blocking measurements for insight-role diversity, repeated syntax, excessive verbosity, card-to-insight, figure-to-evidence and figure-to-insight linkage, source-note completeness, and action specificity. They are review signals, not a public score. A public card is accepted only when it carries the retained candidate ID, evidence ID, source page, insight ID, and caption; weak or incomplete cards are omitted by rendering rather than displayed as limited evidence.
 
 ## Repair and waivers
 

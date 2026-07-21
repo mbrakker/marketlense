@@ -274,6 +274,13 @@ def _settings(
                 "tool_call_usd": 0.0,
             }
         },
+        llm_execution_policies={
+            "report_vs": {
+                "model": "gpt-4.1-mini",
+                "temperature": 0.1,
+                "timeout_seconds": 5.0,
+            }
+        },
     )
 
 

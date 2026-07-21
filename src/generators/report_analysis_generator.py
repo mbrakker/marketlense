@@ -305,6 +305,7 @@ def _resolve_taxonomy(
             report_slug=runtime.report_name,
             publisher_name=runtime.publisher_name,
             source_url=runtime.source_url,
+            publisher_id=runtime.publisher_name,
         ),
         taxonomy_ctx,
         **kwargs,

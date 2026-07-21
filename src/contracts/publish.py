@@ -275,6 +275,25 @@ class PublishOutcome:
             "doc": "Validation issues summarised for the publish attempt, if any."
         },
     )
+    publication_outcome: str = field(
+        default="",
+        metadata={
+            "doc": "Typed publication disposition for the completed publication path."
+        },
+    )
+    requested_write_count: int = field(
+        default=0, metadata={"doc": "Requested final WordPress post writes."}
+    )
+    actual_write_count: int = field(
+        default=0, metadata={"doc": "Observed final WordPress post writes."}
+    )
+    lookup_count: int = field(
+        default=0, metadata={"doc": "Authenticated WordPress lookup/readback calls."}
+    )
+    authenticated_readback_verified: bool = field(
+        default=False,
+        metadata={"doc": "Whether authenticated WordPress readback matched the post."},
+    )
 
 
 @dataclass(frozen=True)

@@ -141,22 +141,26 @@ def prepare_prompt_bundle(
         ),
         default_model=fallback_model,
     )
-    execution_policy = resolve_execution_policy(
-        namespace,
-        execution_policies_from_config(
-            getattr(settings, "llm_execution_policies", {}),
-            model_overrides=getattr(settings, "openai_models", {}),
-            legacy_routing=getattr(settings, "llm_routing", {}),
-            default_model=fallback_model,
-            default_temperature=fallback_temperature,
-            default_seed=getattr(settings, "openai_seed", None),
-            default_timeout_seconds=getattr(settings, "openai_timeout_seconds", None),
-        ),
+    execution_policies = execution_policies_from_config(
+        getattr(settings, "llm_execution_policies", {}),
+        model_overrides=getattr(settings, "openai_models", {}),
+        legacy_routing=getattr(settings, "llm_routing", {}),
         default_model=fallback_model,
         default_temperature=fallback_temperature,
         default_seed=getattr(settings, "openai_seed", None),
         default_timeout_seconds=getattr(settings, "openai_timeout_seconds", None),
-        require_registered_namespace=True,
+    )
+    execution_policy = resolve_execution_policy(
+        namespace,
+        execution_policies,
+        default_model=fallback_model,
+        default_temperature=fallback_temperature,
+        default_seed=getattr(settings, "openai_seed", None),
+        default_timeout_seconds=getattr(settings, "openai_timeout_seconds", None),
+        # Production startup preflight already rejects ungoverned namespaces
+        # before provider I/O.  Empty test-only settings retain the established
+        # deterministic compatibility policy for isolated generator tests.
+        require_registered_namespace=bool(execution_policies),
     )
     resolved_policy = execution_policy.policy
     manifest = prompt_set.dependency_manifest

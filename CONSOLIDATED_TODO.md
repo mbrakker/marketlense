@@ -1,6 +1,6 @@
 # Consolidated TODO
 
-Last audited: 2026-07-20
+Last audited: 2026-07-21
 
 This is the repository's single, source-neutral work register. Every task is evaluated by its current codebase evidence and project decision—not by where it was first proposed. Equivalent tasks are merged under one owner; deferred, closed, and excluded work stays visible in the same register.
 
@@ -44,6 +44,7 @@ All work is listed below in one register. `Active` items have detailed completio
 | Active | P3 | Resolve hosted-site trust blockers | Safe-error boundary completed; hosted trust outcome remains. |
 | Active | P10 | Operate correlated public-render failure telemetry | Hosted release-observability outcome. |
 | Active | P12 | Release-locked sandbox publish canary | Repeatedly prove manifest-backed report recovery and final sandbox publication on a small, spend-governed real-report cohort. |
+| Active | P13 | Make WordPress file-ID lookup independently authoritative | Ensure authenticated remote lookup finds every post by immutable file ID without relying on the local idempotency ledger. |
 | Active | P4 | Close public briefing, correction, and submission intake | Implemented; close after hosted smoke proves the live intake routes. |
 | Active | P5 | Finish responsive search and navigation | Responsive public-workflow outcome. |
 | Active | P6 | Raise report-card and evidence-exhibit editorial quality | Release gate is implemented and live-validated; blind human editorial acceptance remains. |
@@ -257,6 +258,18 @@ The original ten-item screenshot baseline is complete in the committed implement
 - A release command selects a small, diverse, already-authorized real-report cohort and records deterministic cohort identity, configuration/policy hashes, and spend forecast before work begins.
 - Every member must pass semantic validation, public editorial quality, complete manifest/asset checks, canonical publish readback, and a repeat idempotency lookup; any failure stops the cohort and preserves the failed evidence.
 - Retained evidence compares the cohort's actual calls/tokens/spend, elapsed time, package completeness, created-versus-reused posts, and typed failures with the approved forecast; focused tests cover target isolation and no-write behavior when approval is absent.
+
+#### P13. Make WordPress file-ID lookup independently authoritative
+
+- **Impact 5 / effort: 1**
+- **Context:** The 2026-07-21 five-publisher sandbox cohort verified all five created posts by authenticated REST `GET` using their post IDs and reused all five local idempotency records with zero mutation. Its broad file-ID batch query returned no remote matches, however, so the remote lookup is not yet independently authoritative.
+- **Benefit:** Exact remote matching prevents duplicate creation when local state is unavailable, recovered, or shared across a new isolated namespace, while reducing unnecessary preflight work.
+- **Risks to avoid:** Keep the immutable `ml_file_id` contract, use authenticated REST only, and fail closed on ambiguous matches. Do not weaken local durable idempotency or add a broad post-search scan.
+- **Success criteria:**
+
+- The WordPress REST/plugin route exposes an authenticated exact `ml_file_id` lookup for each public entity type and returns one unambiguous post with canonical URL and status.
+- A controlled sandbox recovery with an empty local idempotency state matches the existing remote post, performs zero taxonomy/media/post writes, and records `existing_post_matched` plus authenticated readback.
+- Tests cover exact match, absent match, ambiguous match, and unavailable lookup without leaking credentials or public identifiers.
 
 #### P7. Improve hosted public-site performance without contract loss
 

@@ -11,7 +11,6 @@ from src.contracts.openai import (
 )
 from src.contracts.run_context import RunContext
 from src.services import openai_accounting_service
-from src.utils.errors import AppError
 
 
 def _semantic_usage_action(*, step_name: str, source_request: Any | None) -> str:
@@ -58,22 +57,18 @@ def record_usage_accounting(
         )
     if int(cached_input_tokens or 0) > 0:
         cache_decision = "provider_hit"
-    prompt_namespace = str(getattr(source, "prompt_namespace", "") or "").strip()
-    if not prompt_namespace:
-        raise AppError(
-            code="llm_usage_namespace_missing",
-            message="Provider usage accounting requires an explicit prompt namespace",
-            retryable=False,
-            context={"step_name": step_name},
-        )
-    execution_identity = str(getattr(source, "execution_identity", "") or "").strip()
-    if not execution_identity:
-        raise AppError(
-            code="llm_usage_execution_identity_missing",
-            message="Provider usage accounting requires a resolved execution identity",
-            retryable=False,
-            context={"prompt_namespace": prompt_namespace},
-        )
+    # Legacy typed requests predate prompt bundles.  They receive a stable,
+    # explicitly scoped direct-service identity rather than an unbounded or
+    # inferred production prompt policy.  Prompt-bundle requests continue to
+    # supply their resolved namespace and identity directly.
+    prompt_namespace = (
+        str(getattr(source, "prompt_namespace", "") or "").strip()
+        or f"direct/{step_name}"
+    )
+    execution_identity = (
+        str(getattr(source, "execution_identity", "") or "").strip()
+        or f"direct-{step_name}-v1"
+    )
     return openai_accounting_service.record_usage(
         OpenAIUsageAccountingRequest(
             schema_version="1.0",
@@ -134,6 +129,30 @@ def record_usage_accounting(
             stage=str(getattr(source, "stage", "") or ""),
             plan_hash=str(getattr(source, "plan_hash", "") or ""),
             artifact_family=str(getattr(source, "artifact_family", "") or ""),
+            validation_run_id=str(getattr(source, "validation_run_id", "") or ""),
+            publisher_id=str(getattr(source, "publisher_id", "") or ""),
+            model_policy_namespace=str(
+                getattr(source, "model_policy_namespace", "") or prompt_namespace
+            ),
+            configuration_hash=str(getattr(source, "configuration_hash", "") or ""),
+            policy_hash=str(
+                getattr(source, "policy_hash", "")
+                or getattr(source, "execution_policy_hash", "")
+                or ""
+            ),
+            producer_build_identity=str(
+                getattr(source, "producer_build_identity", "")
+                or ctx.producer_commit_sha
+                or ""
+            ),
+            repair_attempt=max(
+                0,
+                int(
+                    getattr(source, "repair_attempt", 0)
+                    or getattr(source, "budget_attempt_number", 0)
+                    or 0
+                ),
+            ),
             extra={
                 "schema_name": str(getattr(source, "schema_name", "") or ""),
                 "prompt_content_hash": str(
@@ -162,6 +181,9 @@ def record_usage_accounting(
                 "stage": str(getattr(source, "stage", "") or ""),
                 "plan_hash": str(getattr(source, "plan_hash", "") or ""),
                 "artifact_family": str(getattr(source, "artifact_family", "") or ""),
+                "validation_run_id": str(
+                    getattr(source, "validation_run_id", "") or ""
+                ),
             },
         ),
         ctx,

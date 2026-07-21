@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Sequence
 
 from src.contracts.validation import ValidationIssue
+from src.utils.quantity import extract_quantities
 
 from .evidence import contains_token, metric_value_supported, retrieve_evidence_windows
 from .models import EvidenceWindow, SemanticSupport, ValidationRuntime
@@ -79,16 +80,24 @@ def validate_insight_metrics(
                 if semantic_entry and semantic_entry.reason
                 else ""
             )
-            severity = (
-                "error"
-                if not semantic_entry or semantic_confidence >= 0.6
-                else "warning"
-            )
             issues.append(
                 issue(
                     rule_id=RULE_ID,
                     message=f"Metric value '{value}' not found in evidence for {label}{reason}",
-                    severity=severity,
+                    severity="error",
+                    section=f"insights:{label}",
+                )
+            )
+        if _invalid_more_than_doubled(s(insight.get("text")), evidence_blob):
+            issues.append(
+                issue(
+                    rule_id=RULE_ID,
+                    message=(
+                        "Claim says 'more than doubled' but retained evidence "
+                        "does not exceed a two-times increase for "
+                        f"{label}"
+                    ),
+                    severity="error",
                     section=f"insights:{label}",
                 )
             )
@@ -129,3 +138,15 @@ def validate_insight_metrics(
                     )
                 )
     return issues
+
+
+def _invalid_more_than_doubled(claim_text: str, evidence_text: str) -> bool:
+    """Block a deterministic comparison claim contradicted by retained values."""
+
+    if "more than doubled" not in claim_text.casefold():
+        return False
+    quantities = extract_quantities(evidence_text)
+    for first, second in zip(quantities, quantities[1:], strict=False):
+        if first.value > 0 and second.value > 0 and first.unit_family == second.unit_family:
+            return second.value <= first.value * 2
+    return True

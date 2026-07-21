@@ -1,6 +1,6 @@
-from __future__ import annotations
-
 """Routing ownership for reports database migrations."""
+
+from __future__ import annotations
 
 import sqlite3
 
@@ -11,6 +11,7 @@ from src.services._sqlite_migration._reports.schema import (
     _INVENTORY_RECOVERY_CACHE_TABLE_SQL,
     _INVENTORY_ROUTE_HISTORY_TABLE_SQL,
     _PRIVATE_API_CANDIDATE_TABLE_SQL,
+    _VALIDATION_RUNS_TABLE_SQL,
 )
 
 from ..runner import (
@@ -235,4 +236,17 @@ def _reports_db_021_create_acquisition_resource_telemetry(
         CREATE INDEX IF NOT EXISTS idx_private_api_candidates_promoted_at
         ON publisher_private_api_candidates(promoted_at_utc)
         """
+    )
+
+
+def _reports_db_024_create_validation_run_manifest(conn: sqlite3.Connection) -> None:
+    """Create the canonical per-entity validation-run manifest tables."""
+    conn.executescript(_VALIDATION_RUNS_TABLE_SQL)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_validation_manifest_current_entity "
+        "ON validation_run_entity_attempts(validation_run_id, entity_key, is_current)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_validation_manifest_stage "
+        "ON validation_run_stage_records(validation_run_id, stage, terminal_outcome)"
     )

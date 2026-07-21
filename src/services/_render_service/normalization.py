@@ -622,17 +622,7 @@ def _coerce_public_chart_insight_cards(
         if not title:
             continue
         if status in {"weak", "weak_evidence", "limited", "abstained"}:
-            cards.append(
-                {
-                    "title": title,
-                    "insight": "",
-                    "so_what": "",
-                    "now_what": "",
-                    "status_label": "Limited evidence",
-                    "limitation": limitation
-                    or "Chart evidence was too weak for a public claim.",
-                }
-            )
+            continue
         else:
             insight = _pick_first_text(
                 item.get("insight"),

@@ -74,6 +74,26 @@ def _validate_request(request: OpenAIUsageAccountingRequest) -> None:
             message="LLM usage database path is required",
             retryable=False,
         )
+    if request.validation_run_id:
+        required = {
+            "workflow": request.workflow,
+            "stage": request.stage,
+            "report_id": request.report_id,
+            "artifact_family": request.artifact_family,
+            "publisher_id": request.publisher_id,
+            "model_policy_namespace": request.model_policy_namespace,
+            "configuration_hash": request.configuration_hash,
+            "policy_hash": request.policy_hash,
+            "producer_build_identity": request.producer_build_identity,
+        }
+        missing = sorted(key for key, value in required.items() if not str(value).strip())
+        if missing:
+            raise AppError(
+                code="openai_accounting_validation_attribution_missing",
+                message="Validation-run OpenAI accounting requires complete runtime attribution",
+                retryable=False,
+                context={"validation_run_id": request.validation_run_id, "missing": missing},
+            )
 
 
 def _usage_total_tokens(
@@ -104,6 +124,13 @@ def _usage_metadata(
             json.dumps(request.model_pricing or {}, sort_keys=True).encode("utf-8")
         ).hexdigest(),
         "emit_cost_ledger": request.emit_cost_ledger,
+        "validation_run_id": request.validation_run_id,
+        "publisher_id": request.publisher_id,
+        "model_policy_namespace": request.model_policy_namespace,
+        "configuration_hash": request.configuration_hash,
+        "policy_hash": request.policy_hash,
+        "producer_build_identity": request.producer_build_identity,
+        "repair_attempt": max(0, int(request.repair_attempt or 0)),
     }
     metadata.update(request.extra or {})
     return metadata
@@ -235,6 +262,13 @@ def record_usage(
                     stage=request.stage,
                     plan_hash=request.plan_hash,
                     artifact_family=request.artifact_family,
+                    validation_run_id=request.validation_run_id,
+                    publisher_id=request.publisher_id,
+                    model_policy_namespace=request.model_policy_namespace,
+                    configuration_hash=request.configuration_hash,
+                    policy_hash=request.policy_hash,
+                    producer_build_identity=request.producer_build_identity,
+                    repair_attempt=request.repair_attempt,
                     pricing_version=pricing_version,
                     pricing_status=pricing_resolution.status,
                     metadata=_usage_metadata(

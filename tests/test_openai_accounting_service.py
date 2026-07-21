@@ -58,6 +58,17 @@ def _request(tmp_path: Path) -> OpenAIUsageAccountingRequest:
         temperature=0.0,
         seed=7,
         timeout_seconds=30.0,
+        workflow="report_generation",
+        stage="semantic_validation",
+        report_id="report-1",
+        artifact_family="insights",
+        validation_run_id="validation-1",
+        publisher_id="publisher-1",
+        model_policy_namespace="report_vs/validate/semantic",
+        configuration_hash="configuration-hash",
+        policy_hash="policy-hash",
+        producer_build_identity="build-sha",
+        repair_attempt=1,
     )
 
 
@@ -111,6 +122,14 @@ def test_record_usage_defers_compatibility_exports_until_projection_interval(
     assert row["total_tokens"] == 1500
     assert row["estimated_cost_usd"] == 2.5
     assert row["prompt_namespace"] == "test/prompt"
+    metadata = json.loads(row["metadata_json"])
+    assert metadata["validation_run_id"] == "validation-1"
+    assert metadata["publisher_id"] == "publisher-1"
+    assert metadata["model_policy_namespace"] == "report_vs/validate/semantic"
+    assert metadata["configuration_hash"] == "configuration-hash"
+    assert metadata["policy_hash"] == "policy-hash"
+    assert metadata["producer_build_identity"] == "build-sha"
+    assert metadata["repair_attempt"] == 1
     assert not (tmp_path / "ledger.jsonl").exists()
     assert not (tmp_path / "daily.json").exists()
     records = [

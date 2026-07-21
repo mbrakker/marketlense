@@ -31,6 +31,7 @@ from src.services._sqlite_migration._reports.routing import (
     _reports_db_008_create_inventory_route_history,
     _reports_db_012_create_private_api_candidate_ledger,
     _reports_db_021_create_acquisition_resource_telemetry,
+    _reports_db_024_create_validation_run_manifest,
 )
 from src.services._sqlite_migration._reports.schema import (
     _ACQUISITION_ATTEMPT_RESOURCES_TABLE_SQL,
@@ -64,6 +65,7 @@ from src.services._sqlite_migration._reports.schema import (
     _SOURCE_IDENTITY_OBSERVATIONS_TABLE_SQL,
     _SOURCE_IDENTITY_RESOLUTIONS_TABLE_SQL,
     _SOURCE_PUBLICATION_METADATA_TABLE_SQL,
+    _VALIDATION_RUNS_TABLE_SQL,
     _VECTOR_PROJECTION_QUEUE_TABLE_SQL,
 )  # noqa: F401
 from src.services._sqlite_migration.runner import _MigrationSpec
@@ -183,5 +185,10 @@ _REPORTS_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
         migration_id="reports_db_023_create_corpus_rehabilitation_campaigns",
         version=23,
         apply_fn=_reports_db_023_create_corpus_rehabilitation_campaigns,
+    ),
+    _MigrationSpec(
+        migration_id="reports_db_024_create_validation_run_manifest",
+        version=24,
+        apply_fn=_reports_db_024_create_validation_run_manifest,
     ),
 )

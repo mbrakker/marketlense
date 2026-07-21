@@ -104,6 +104,35 @@ def registered_production_llm_namespaces() -> tuple[str, ...]:
     return PRODUCTION_LLM_NAMESPACES
 
 
+def preflight_execution_policy_coverage(
+    policies: dict[str, LLMExecutionPolicy],
+    *,
+    default_model: str,
+    default_temperature: float,
+    default_seed: int | None,
+    default_timeout_seconds: float | None,
+) -> tuple[LLMExecutionPolicyDecision, ...]:
+    """Resolve every registered production namespace before provider I/O.
+
+    The result is deterministic and deliberately has no compatibility fallback:
+    a missing or unknown namespace raises before a live workflow can issue a
+    provider request.
+    """
+
+    return tuple(
+        resolve_execution_policy(
+            namespace,
+            policies,
+            default_model=default_model,
+            default_temperature=default_temperature,
+            default_seed=default_seed,
+            default_timeout_seconds=default_timeout_seconds,
+            require_registered_namespace=True,
+        )
+        for namespace in PRODUCTION_LLM_NAMESPACES
+    )
+
+
 def _stable_policy_hash(policy: LLMExecutionPolicy) -> str:
     payload = asdict(policy)
     return hashlib.sha256(

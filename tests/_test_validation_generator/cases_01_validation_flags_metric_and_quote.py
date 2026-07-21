@@ -41,6 +41,34 @@ def test_validation_flags_metric_and_quote_mismatches(tmp_path):
     assert any("Quote not verbatim" in issue.message for issue in result.issues)
     assert analysis_store.stored and analysis_store.stored[0][2] == "validation"
 
+
+def test_validation_blocks_more_than_doubled_when_evidence_only_doubles(tmp_path):
+    artifacts = {
+        "insights_final": [
+            {
+                "id": "i1",
+                "text": "Adoption more than doubled from the prior period.",
+                "evidence_id": "e1",
+                "evidence": "Adoption increased from 10% to 20%.",
+                "metric": {"value": "20", "unit": "%", "timeframe": "2024"},
+            }
+        ]
+    }
+    result = validate_report(
+        ValidationRequest(
+            schema_version="1.0", report_id="r-double", report=_report(),
+            artifacts=artifacts, evidence_packs={}, vector_store_id=None,
+        ),
+        _settings(tmp_path),
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=FakeOpenAI({"unsupported": []}),
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    assert result.status == "fail"
+    assert any("more than doubled" in issue.message for issue in result.issues)
+
 def test_number_validation_ignores_soft_planning_timeframes():
     artifacts = {
         "linkedin_post": (
@@ -577,7 +605,7 @@ def test_validation_number_check_ignores_units_and_matches_numeric_value(tmp_pat
     assert result.status == "pass"
     assert not any("Number" in issue.message for issue in result.issues)
 
-def test_grounding_unsupported_number_is_downgraded_when_numeric_value_matches(
+def test_grounding_unsupported_number_with_unit_mismatch_is_blocking(
     tmp_path,
 ):
     settings = _settings(tmp_path)
@@ -630,11 +658,11 @@ def test_grounding_unsupported_number_is_downgraded_when_numeric_value_matches(
         openai_client=fake_openai,
         analysis_store=FakeAnalysisStore(),
     )
-    assert result.status == "pass"
+    assert result.status == "fail"
     assert any(
-        "normalized_quantity_supported" in issue.message for issue in result.issues
+        "unsupported_number" in issue.message for issue in result.issues
     )
-    assert not any(issue.severity == "error" for issue in result.issues)
+    assert any(issue.severity == "error" for issue in result.issues)
 
 def test_validation_warns_on_data_gap(tmp_path):
     settings = _settings(tmp_path)
@@ -881,7 +909,7 @@ __all__ = [
     "test_validation_fails_on_report_directive_misattribution",
     "test_validation_number_matching_normalizes_percent_and_billions",
     "test_validation_number_check_ignores_units_and_matches_numeric_value",
-    "test_grounding_unsupported_number_is_downgraded_when_numeric_value_matches",
+    "test_grounding_unsupported_number_with_unit_mismatch_is_blocking",
     "test_validation_warns_on_data_gap",
     "test_validation_issue_order_preserved_with_parallel_checks",
     "test_validation_grounding_uses_chat_path_when_flag_disabled",

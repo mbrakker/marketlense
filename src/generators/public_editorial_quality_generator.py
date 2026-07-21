@@ -37,6 +37,11 @@ BLOCKING_RULE_IDS = {
     "public_editorial_quality.fallback_boilerplate",
     "public_editorial_quality.unsupported_certainty",
     "public_editorial_quality.nonspecific_decision_implication",
+    "public_editorial_quality.figure_linkage_missing",
+    "public_editorial_quality.private_operational_reference",
+    "public_editorial_quality.mechanical_editorial_scaffold",
+    "public_editorial_quality.literal_truncation",
+    "public_editorial_quality.public_source_provenance_missing",
 }
 
 ADVISORY_RULE_IDS = {
@@ -59,6 +64,20 @@ _PLACEHOLDER = re.compile(
 )
 _MALFORMED = re.compile(r"\ufffd|\b\w{1,16}\s*\|\s*\w{1,16}\b|(?:\w\s+){5,}\w")
 _MOJIBAKE = re.compile(r"(?:Ã[\u0080-\u00bf]|Â[\u0080-\u00bf]|â€)")
+_MECHANICAL_SCAFFOLD = re.compile(
+    r"\b(?:answer|observation|implication|executive action|concrete finding|immediate implication)\s*:",
+    re.IGNORECASE,
+)
+_PRIVATE_OPERATIONAL_REFERENCE = re.compile(
+    r"(?:https?://(?:drive\.google\.com|localhost|127\.0\.0\.1)\S*|"
+    r"(?:[A-Za-z]:[\\/]|(?:^|[\"'])/(?:out|cache|state)/))",
+    re.IGNORECASE,
+)
+_SOURCE_SECTION = re.compile(r"<section\b[^>]*\bid=[\"']source[\"'][^>]*>", re.IGNORECASE)
+_PUBLIC_SOURCE_LINK = re.compile(
+    r"<a\b[^>]*\bhref=[\"']https?://[^\"']+[\"'][^>]*>\s*Open original source\s*</a>",
+    re.IGNORECASE,
+)
 _GENERIC_FIGURE = re.compile(r"^(?:figure|chart|exhibit)\s*(?:\d+|[ivxlcdm]+)?$", re.I)
 _NUMBER = re.compile(
     r"(?<![A-Za-z])(?:\d{1,3}(?:[,.]\d{3})+|\d+(?:[.,]\d+)?)(?:\s*%|\s*(?:million|billion|m|bn|x))?",
@@ -394,6 +413,31 @@ def _figure_issues(
                     ),
                 )
             )
+        if str(figure.get("status") or "").strip().lower() not in {
+            "weak",
+            "weak_evidence",
+            "limited",
+            "abstained",
+        }:
+            required = ("candidate_id", "evidence_id", "source_page", "insight_id", "caption")
+            missing = [key for key in required if not str(figure.get(key) or "").strip()]
+            if missing:
+                item = _item(
+                    artifact="chart_insight_cards",
+                    field=f"chart_insight_cards:{index + 1}",
+                    text=caption or title,
+                    evidence_ids=_string_list(figure.get("evidence_id")),
+                    repair_target="insights_bundle",
+                    evidence_text=caption,
+                )
+                issues.append(
+                    _issue(
+                        report_id,
+                        "public_editorial_quality.figure_linkage_missing",
+                        item,
+                        "public chart card is missing retained linkage fields: " + ", ".join(missing),
+                    )
+                )
     return issues
 
 
@@ -403,6 +447,42 @@ def _html_issues(
     visible_text = _visible_html_text(html)
     item = _item("rendered_html", "html", visible_text, [], "", evidence_text="")
     issues = _text_issues(report_id, item)
+    if _MECHANICAL_SCAFFOLD.search(visible_text):
+        issues.append(
+            _issue(
+                report_id,
+                "public_editorial_quality.mechanical_editorial_scaffold",
+                item,
+                "renders mechanical editorial scaffolding",
+            )
+        )
+    if "..." in visible_text or "…" in visible_text:
+        issues.append(
+            _issue(
+                report_id,
+                "public_editorial_quality.literal_truncation",
+                item,
+                "renders a literal truncation ellipsis",
+            )
+        )
+    if _PRIVATE_OPERATIONAL_REFERENCE.search(html):
+        issues.append(
+            _issue(
+                report_id,
+                "public_editorial_quality.private_operational_reference",
+                item,
+                "renders a private or operational URL/path",
+            )
+        )
+    if _SOURCE_SECTION.search(html) and not _PUBLIC_SOURCE_LINK.search(html):
+        issues.append(
+            _issue(
+                report_id,
+                "public_editorial_quality.public_source_provenance_missing",
+                item,
+                "renders a source section without a public original-source link",
+            )
+        )
     if _visible_report_id(report_id, visible_text):
         issues.append(
             _issue(
@@ -484,10 +564,25 @@ def _measurements(artifacts: dict[str, Any]) -> list[PublicEditorialQualityMeasu
         value - 1 for value in Counter(templates).values() if value > 1
     )
     chart_cards = _dict_items(artifacts.get("chart_insight_cards"))
-    linked_charts = sum(
-        1
+    public_chart_cards = [
+        item
         for item in chart_cards
-        if str(item.get("insight") or item.get("takeaway") or "").strip()
+        if str(item.get("status") or "").strip().lower()
+        not in {"weak", "weak_evidence", "limited", "abstained"}
+    ]
+    card_to_insight = sum(1 for item in public_chart_cards if str(item.get("insight_id") or "").strip())
+    figure_to_evidence = sum(
+        1
+        for item in public_chart_cards
+        if str(item.get("candidate_id") or "").strip()
+        and str(item.get("evidence_id") or "").strip()
+        and str(item.get("source_page") or "").strip()
+    )
+    figure_to_insight = sum(
+        1
+        for item in public_chart_cards
+        if str(item.get("candidate_id") or "").strip()
+        and str(item.get("insight_id") or "").strip()
     )
     source_linked = sum(
         1 for item in insights if str(item.get("evidence_id") or "").strip()
@@ -520,10 +615,22 @@ def _measurements(artifacts: dict[str, Any]) -> list[PublicEditorialQualityMeasu
             "Average insight length; investigate only when it is unusually high.",
         ),
         (
-            "public_editorial_quality.chart_insight_linkage",
-            _ratio(linked_charts, len(chart_cards)),
+            "public_editorial_quality.card_to_insight_linkage",
+            _ratio(card_to_insight, len(public_chart_cards)),
             "share",
-            "Chart cards with a linked insight or takeaway.",
+            "Public chart cards with a retained insight ID.",
+        ),
+        (
+            "public_editorial_quality.figure_to_evidence_linkage",
+            _ratio(figure_to_evidence, len(public_chart_cards)),
+            "share",
+            "Public chart cards with accepted candidate, source page, and evidence ID.",
+        ),
+        (
+            "public_editorial_quality.figure_to_insight_linkage",
+            _ratio(figure_to_insight, len(public_chart_cards)),
+            "share",
+            "Public chart cards with an accepted candidate and retained insight ID.",
         ),
         (
             "public_editorial_quality.source_note_completeness",

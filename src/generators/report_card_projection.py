@@ -58,6 +58,12 @@ def select_geometry_family(semantics: dict[str, object]) -> str:
         return "descending_trajectory"
     if shape == "trend" and direction == "volatile":
         return "volatility_corridor"
+    if shape == "trend" and direction == "diverging":
+        return "split_horizon"
+    if shape == "trend" and direction == "converging":
+        return "signal_lattice"
+    if shape == "trend" and direction == "neutral":
+        return "interlaced_mesh"
     if shape == "comparison" and direction == "converging":
         return "convergence_funnel"
     if shape == "comparison" and direction == "diverging":

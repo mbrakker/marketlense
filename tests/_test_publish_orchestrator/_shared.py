@@ -188,7 +188,12 @@ def _record_processed(state_db: str, file_id: str, run_context) -> None:
 
 
 def _seed_report_metadata(
-    reports_db: str, html_path: str, file_id: str, run_context
+    reports_db: str,
+    html_path: str,
+    file_id: str,
+    run_context,
+    *,
+    publisher: str | None = None,
 ) -> None:
     upsert_metadata(
         ReportMetadataUpsertRequest(
@@ -197,7 +202,7 @@ def _seed_report_metadata(
             file_id=file_id,
             title="Report",
             file_name="report.pdf",
-            publisher=None,
+            publisher=publisher,
             taxonomy=[],
             categories=[],
             region=None,

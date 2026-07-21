@@ -12,6 +12,8 @@ Use `python -m src.cli publish-wp` after required configuration and validation a
 
 For report routes, `validation.json` includes the post-repair deterministic public-editorial release result. With `publish.validation_policy: block`, any enabled editorial blocker or an abstained unresolved repair prevents WordPress side effects. See [public editorial quality](../quality/public-editorial-quality.md) for retained artifacts, rollout waivers, and CI evidence.
 
+Every typed publish outcome reports the requested and observed WordPress-write counts, lookup count, and whether an authenticated readback was verified. The normal idempotency lookup is retained as an `existing_post_matched` outcome; a bounded release canary must separately verify a created post with an authenticated readback and repeat the same package with zero new writes. Candidates with a matching idempotency record remain eligible for authenticated lookup/readback, but skip taxonomy resolution as well as post mutation, because an `ensure` request may itself write. This verification is permitted only against an explicitly configured sandbox target.
+
 Queue-driven Signal and Briefing publication is approval-gated. Generation
 persists a source-linked package; `cover_generation` produces the mandatory
 card assets and freezes the approval checksum; `publication_readiness` records

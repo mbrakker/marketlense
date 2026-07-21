@@ -160,6 +160,7 @@ def publish_html(
                 error="publish_editorial_contract_failed",
                 validation_status="fail",
                 validation_issues=editorial_issues,
+                publication_outcome="preflight_blocked",
             )
     base_url = settings.wp.site_url.rstrip("/")
     card_manifest = None
@@ -258,6 +259,9 @@ def publish_html(
             status="published",
             post_id=update_resp.post_id,
             post_url=str(update_resp.link or ""),
+            publication_outcome="post_updated",
+            requested_write_count=1,
+            actual_write_count=1,
         )
 
     metadata = None
@@ -427,6 +431,9 @@ def publish_html(
         post_url=post_url,
         validation_status="fail" if editorial_issues else "pass",
         validation_issues=editorial_issues,
+        publication_outcome="post_created",
+        requested_write_count=1,
+        actual_write_count=1,
     )
 
 

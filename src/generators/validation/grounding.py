@@ -17,11 +17,7 @@ from src.utils.text_normalization import normalize_text
 
 from .evidence import sanitize_citation_tokens
 from .models import EvidenceWindow, ValidationRuntime
-from .quantities import (
-    all_quantities_supported,
-    collect_quantities_from_texts,
-    quantity_has_metric_cues_from_text,
-)
+from .quantities import collect_quantities_from_texts
 from .shared import (
     GROUNDING_HARD_FAILURES,
     LOGGER_NAME,
@@ -239,23 +235,6 @@ def run_grounding_check(
                 if is_retrieval_failure(reason):
                     violation_type = "evidence_retrieval_failure"
 
-                if violation_type == "unsupported_number":
-                    candidate_quantities = extract_quantities(text)
-                    if candidate_quantities and all_quantities_supported(
-                        candidate_quantities, evidence_quantities, numeric_only=True
-                    ):
-                        issues.append(
-                            issue(
-                                rule_id=RULE_ID,
-                                message=(
-                                    f"[{classification}|normalized_quantity_supported] {reason}: "
-                                    f"{text[:200]}"
-                                ),
-                                severity="info",
-                                section=section,
-                            )
-                        )
-                        continue
                 severity = grounding_issue_severity(
                     section_policy_value=current_policy,
                     classification=classification,
@@ -481,17 +460,7 @@ def grounding_issue_severity(
     if violation_type == "evidence_retrieval_failure":
         return "warning"
     if violation_type == "unsupported_number":
-        if section_policy_value == "strict":
-            return "error"
-        if section_policy_value == "mixed":
-            if METRIC_ATTRIBUTION_RE.search(text) or quantity_has_metric_cues_from_text(
-                text
-            ):
-                return "error"
-            return "warning"
-        if quantity_has_metric_cues_from_text(text):
-            return "error"
-        return "warning"
+        return "error"
     if section_policy_value == "soft" and classification in {
         "analyst_interpretation",
         "prescriptive_recommendation",

@@ -247,5 +247,5 @@ def test_render_surfaces_topics_key_figures_and_chart_insight_cards(tmp_path):
     assert "Chart insight cards" in html
     assert "Premium demand weakens" in html
     assert "Planning cannot rely on blended category averages." in html
-    assert "Chart link is too weak for a public implication." in html
+    assert "Chart link is too weak for a public implication." not in html
     assert "Do not publish as a claim." not in html

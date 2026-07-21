@@ -74,7 +74,9 @@ class CorpusRehabilitationCampaignCreateRequest:
 
 @dataclass(frozen=True)
 class CorpusRehabilitationCampaignItem:
-    schema_version: str = field(default="1.0")
+    schema_version: str = field(
+        default="1.0", metadata={"doc": "Campaign item schema version."}
+    )
     campaign_id: str = field(default="")
     report_id: str = field(default="")
     classification: str = field(default="")
@@ -89,7 +91,9 @@ class CorpusRehabilitationCampaignItem:
 
 @dataclass(frozen=True)
 class CorpusRehabilitationCampaign:
-    schema_version: str = field(default="1.0")
+    schema_version: str = field(
+        default="1.0", metadata={"doc": "Campaign schema version."}
+    )
     campaign_id: str = field(default="")
     plan_hash: str = field(default="")
     approval_hash: str = field(default="")
@@ -106,7 +110,9 @@ class CorpusRehabilitationCampaign:
 
 @dataclass(frozen=True)
 class CorpusRehabilitationCampaignResponse:
-    schema_version: str = field(default="1.0")
+    schema_version: str = field(
+        default="1.0", metadata={"doc": "Campaign response schema version."}
+    )
     campaign: CorpusRehabilitationCampaign = field(
         default_factory=CorpusRehabilitationCampaign
     )

@@ -741,3 +741,55 @@ CREATE TABLE IF NOT EXISTS corpus_rehabilitation_campaign_items (
   PRIMARY KEY(campaign_id, report_id)
 );
 """
+
+_VALIDATION_RUNS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS validation_runs (
+  validation_run_id TEXT PRIMARY KEY,
+  schema_version TEXT NOT NULL,
+  workflow_run_id TEXT NOT NULL,
+  configuration_hash TEXT NOT NULL,
+  policy_hash TEXT NOT NULL,
+  producer_build_identity TEXT NOT NULL,
+  created_at_utc TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS validation_run_entity_attempts (
+  attempt_id TEXT PRIMARY KEY,
+  validation_run_id TEXT NOT NULL REFERENCES validation_runs(validation_run_id),
+  entity_key TEXT NOT NULL,
+  entity_type TEXT NOT NULL,
+  publisher_id TEXT NOT NULL,
+  report_id TEXT NOT NULL,
+  source_identity_id TEXT NOT NULL,
+  attempt_number INTEGER NOT NULL,
+  cohort_disposition TEXT NOT NULL,
+  is_current INTEGER NOT NULL,
+  terminal_outcome TEXT NOT NULL DEFAULT '',
+  terminal_stage TEXT NOT NULL DEFAULT '',
+  failure_code TEXT NOT NULL DEFAULT '',
+  created_at_utc TEXT NOT NULL,
+  completed_at_utc TEXT NOT NULL DEFAULT '',
+  UNIQUE(validation_run_id, entity_key, attempt_number)
+);
+CREATE TABLE IF NOT EXISTS validation_run_stage_records (
+  stage_record_id TEXT PRIMARY KEY,
+  attempt_id TEXT NOT NULL REFERENCES validation_run_entity_attempts(attempt_id),
+  validation_run_id TEXT NOT NULL REFERENCES validation_runs(validation_run_id),
+  workflow_run_id TEXT NOT NULL,
+  stage TEXT NOT NULL,
+  input_artifact_ids_json TEXT NOT NULL,
+  output_artifact_ids_json TEXT NOT NULL,
+  started_at_utc TEXT NOT NULL,
+  completed_at_utc TEXT NOT NULL,
+  terminal_outcome TEXT NOT NULL,
+  failure_code TEXT NOT NULL,
+  retryable INTEGER NOT NULL,
+  repair_disposition TEXT NOT NULL,
+  duplicate_disposition TEXT NOT NULL,
+  configuration_hash TEXT NOT NULL,
+  policy_hash TEXT NOT NULL,
+  producer_build_identity TEXT NOT NULL,
+  entity_terminal INTEGER NOT NULL,
+  created_at_utc TEXT NOT NULL,
+  UNIQUE(attempt_id, stage)
+);
+"""
