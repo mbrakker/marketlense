@@ -32,14 +32,23 @@ from src.utils.errors import AppError
 
 
 def _ctx() -> RunContext:
-    return RunContext(schema_version="1.0", run_id="deferred-run", task_id="task", span_id="span")
+    return RunContext(
+        schema_version="1.0", run_id="deferred-run", task_id="task", span_id="span"
+    )
 
 
 def _iso(delta_seconds: int = 0) -> str:
     return (datetime.now(timezone.utc) + timedelta(seconds=delta_seconds)).isoformat()
 
 
-def _request(tmp_path, *, key: str = "deferred:one", due: bool = True, deadline_seconds: int = 3600, max_attempts: int = 3) -> BudgetRequest:
+def _request(
+    tmp_path,
+    *,
+    key: str = "deferred:one",
+    due: bool = True,
+    deadline_seconds: int = 3600,
+    max_attempts: int = 3,
+) -> BudgetRequest:
     now = datetime.now(timezone.utc)
     return BudgetRequest(
         schema_version="1.0",
@@ -58,13 +67,19 @@ def _request(tmp_path, *, key: str = "deferred:one", due: bool = True, deadline_
         source_id="source-hash",
         stage="source_prepared",
         plan_hash="plan-original",
-        reusable_artifact_references=(("local_pdf", "retained/report-1.pdf", "source-hash"),),
+        reusable_artifact_references=(
+            ("local_pdf", "retained/report-1.pdf", "source-hash"),
+        ),
         resource_type="llm_provider",
         operation="generate_summary",
-        estimated_calls=1,
+        estimated_calls=2,
         idempotency_key=key,
-        deferred_earliest_run_at_utc=(now - timedelta(seconds=1)).isoformat() if due else "",
-        deferred_deadline_at_utc=(now + timedelta(seconds=deadline_seconds)).isoformat(),
+        deferred_earliest_run_at_utc=(now - timedelta(seconds=1)).isoformat()
+        if due
+        else "",
+        deferred_deadline_at_utc=(
+            now + timedelta(seconds=deadline_seconds)
+        ).isoformat(),
         deferred_max_attempts=max_attempts,
     )
 
@@ -83,7 +98,9 @@ def _item(tmp_path, *, key: str = "deferred:one", **kwargs):
     return next(record for record in records if record.idempotency_key == key)
 
 
-def _reaper_request(tmp_path, *, now_utc: str, limit: int = 1) -> DeferredWorkReaperRequest:
+def _reaper_request(
+    tmp_path, *, now_utc: str, limit: int = 1
+) -> DeferredWorkReaperRequest:
     return DeferredWorkReaperRequest(
         schema_version="1.0",
         usage_db_path=str(tmp_path / "usage.sqlite"),
@@ -106,7 +123,12 @@ def _records(tmp_path):
     ).records
 
 
-def _deps(*, budget: str = "allow", plan_hash: str = "plan-original", outcome: str = "completed"):
+def _deps(
+    *,
+    budget: str = "allow",
+    plan_hash: str = "plan-original",
+    outcome: str = "completed",
+):
     return DeferredWorkReaperDependencies(
         plan_builders={
             "report_generation": lambda item, ctx: DeferredWorkResumePlan(
@@ -147,7 +169,9 @@ def test_defer_is_durable_idempotent_and_not_immediately_due(tmp_path) -> None:
     assert metrics.due_count == 0
 
 
-def test_atomic_claim_prevents_duplicate_execution_and_restart_recovers_expired_lease(tmp_path) -> None:
+def test_atomic_claim_prevents_duplicate_execution_and_restart_recovers_expired_lease(
+    tmp_path,
+) -> None:
     item = _item(tmp_path)
     now = _iso(30)
 
@@ -232,20 +256,26 @@ def test_missing_artifact_and_deadline_expiry_handoff_to_remediation(tmp_path) -
         _ctx(),
         dependencies=missing_deps,
     )
-    assert sorted(result.remediation_work_keys) == sorted([missing.work_key, deadline.work_key])
+    assert sorted(result.remediation_work_keys) == sorted(
+        [missing.work_key, deadline.work_key]
+    )
     by_key = {record.work_key: record for record in _records(tmp_path)}
     assert by_key[missing.work_key].status == "remediation"
     assert by_key[missing.work_key].terminal_status == "plan_or_resume_failed"
     assert by_key[deadline.work_key].terminal_status == "deadline_expired"
     remediations = list_remediation_records(
-        RemediationListRequest(schema_version="1.0", state_db=str(tmp_path / "state.sqlite"), limit=10),
+        RemediationListRequest(
+            schema_version="1.0", state_db=str(tmp_path / "state.sqlite"), limit=10
+        ),
         _ctx(),
     ).records
     assert len(remediations) == 2
     assert all(record.status == "operator_action_required" for record in remediations)
 
 
-def test_stop_and_attempt_exhaustion_are_terminal_remediation_not_defer(tmp_path) -> None:
+def test_stop_and_attempt_exhaustion_are_terminal_remediation_not_defer(
+    tmp_path,
+) -> None:
     stopped = _item(tmp_path, key="deferred:stop")
     exhausted = _item(tmp_path, key="deferred:exhausted", max_attempts=1)
     stopped_result = run_bounded_deferred_work_reaper(

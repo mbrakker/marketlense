@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+from hashlib import sha256
 from typing import Any, Dict, List, Optional, Tuple
 
 from src.contracts.categories import CategoryMappingLoadRequest, TaxonomyInferenceRule
@@ -269,7 +270,7 @@ def extract_taxonomy(
                 fields={
                     "model": getattr(resp, "model", prompt_bundle.resolved_model),
                     "response_chars": len(raw_text),
-                    "response_hash": sha256_json(raw_text),
+                    "response_hash": sha256(raw_text.encode("utf-8")).hexdigest(),
                     "has_json": bool(resp.parsed_json),
                 },
             )

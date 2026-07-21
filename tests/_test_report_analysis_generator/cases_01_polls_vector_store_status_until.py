@@ -452,21 +452,23 @@ def test_run_report_analysis_logs_artifact_scheduler_failure_propagation(
         ),
     )
 
-    state = run_report_analysis(
-        runtime,
-        source,
-        selection,
-        VectorStoreIndexingState(
-            vector_store_id="vs_1",
-            openai_file_id="file_1",
-            vector_store_status="completed",
-            indexed_at_utc="2026-01-01T00:00:00Z",
-            last_error=None,
-        ),
-        deps,
-    )
+    with pytest.raises(AppError) as exc_info:
+        run_report_analysis(
+            runtime,
+            source,
+            selection,
+            VectorStoreIndexingState(
+                vector_store_id="vs_1",
+                openai_file_id="file_1",
+                vector_store_status="completed",
+                indexed_at_utc="2026-01-01T00:00:00Z",
+                last_error=None,
+            ),
+            deps,
+        )
 
-    assert state.artifacts_payload is None
+    assert exc_info.value.code == "artifact_step_failed"
+    assert exc_info.value.retryable is True
     events = _orchestrator_events(caplog)
     assert any(
         event.get("event") == "artifact_step_failed"

@@ -4,6 +4,7 @@ import logging
 import re
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
@@ -215,7 +216,8 @@ def _build_render_view(
     executive_summary = _sanitize_public_prose(
         _pick_first_text(summary.get("executive_summary"), data.get("commentary"))
     )
-    source_url = _s(data.get("source"))
+    source_url = _public_http_url(data.get("source"))
+    source_download_href = _public_http_url(data.get("_source_download_href"))
     canonical_url = _marketlense_article_url(
         data.get("wordpress_url"),
         data.get("canonical_url"),
@@ -320,7 +322,7 @@ def _build_render_view(
         "fieldwork_dates": fieldwork_dates,
         "source_url": source_url,
         "canonical_url": canonical_url,
-        "source_download_href": _s(data.get("_source_download_href")),
+        "source_download_href": source_download_href,
         "fallback_reason": _s(source_status.get("reason")),
         "not_available": not_available,
         "core_signal": core_signal,
@@ -425,7 +427,7 @@ def _build_render_view(
             ),
             "has_editorial": any(card["items"] for card in editorial_cards),
             "has_chapters": bool(chapters),
-            "has_source_download": bool(_s(data.get("_source_download_href"))),
+            "has_source_download": bool(source_download_href),
             "has_signal_cards": bool(
                 _build_signal_cards(
                     topics=topics, topic_briefs=topic_briefs, tags=snapshot_tags
@@ -474,7 +476,7 @@ def _build_render_view(
 def _marketlense_article_url(*candidates: object, source_url: str) -> str:
     source_key = source_url.rstrip("/").casefold()
     for candidate in candidates:
-        value = _s(candidate)
+        value = _public_http_url(candidate)
         if not value:
             continue
         normalized = value.rstrip("/").casefold()
@@ -482,6 +484,23 @@ def _marketlense_article_url(*candidates: object, source_url: str) -> str:
             continue
         return value
     return ""
+
+
+def _public_http_url(value: object) -> str:
+    """Return a safe public HTTP(S) URL, rejecting local and credentialed values."""
+    candidate = _s(value)
+    if not candidate:
+        return ""
+    parsed = urlsplit(candidate)
+    if (
+        parsed.scheme.casefold() not in {"http", "https"}
+        or not parsed.hostname
+        or parsed.username
+        or parsed.password
+        or parsed.hostname.casefold() in {"localhost", "127.0.0.1", "::1"}
+    ):
+        return ""
+    return candidate
 
 
 def _normalize_public_title(value: str, *, max_length: int = 110) -> str:

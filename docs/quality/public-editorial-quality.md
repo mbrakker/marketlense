@@ -16,7 +16,7 @@ Duplicate detection compares normalized claim-token sets and material-number ove
 
 ## Advisory measurements
 
-The retained report includes non-blocking measurements for insight-role diversity, repeated syntax, excessive verbosity, card-to-insight, figure-to-evidence and figure-to-insight linkage, source-note completeness, and action specificity. They are review signals, not a public score. A public card is accepted only when it carries the retained candidate ID, evidence ID, source page, insight ID, and caption; weak or incomplete cards are omitted by rendering rather than displayed as limited evidence.
+The retained report includes non-blocking measurements for insight-role diversity, repeated syntax, excessive verbosity, card-to-insight, figure-to-evidence and figure-to-insight linkage, source-note completeness, and action specificity. They are review signals, not a public score. A public card is accepted only when it carries the retained candidate ID, evidence ID, source page, insight ID, and caption; weak or incomplete cards are omitted by rendering rather than displayed as limited evidence. A source section without a public original-source link must instead state that no verified publisher source link is available; a local path, Drive URL, or unverified URL is never an acceptable substitute.
 
 ## Repair and waivers
 

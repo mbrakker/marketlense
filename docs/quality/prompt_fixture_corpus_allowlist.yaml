@@ -1,5 +1,23 @@
 schema_version: "1.0"
 allowlist:
+  - pattern: "totals.runtime_ms"
+    owner: "market-lense"
+    reason: "The unchanged dry-run corpus is reproducibly slower on the current Windows/Python runtime while token, OCR, browser-attempt, and estimated-cost controls remain bounded; retain this exception only until the scheduled corpus-baseline review."
+    expires_on: "2026-07-31"
+    max_delta_absolute: 200
+    max_delta_percent: 3.0
+  - pattern: "families.browser_download.runtime_ms"
+    owner: "market-lense"
+    reason: "Browser-download dry-run rendering is CPU-bound in the current local runtime with unchanged prompt tokens and planned browser attempts; the live canary remains the provider and browser performance authority."
+    expires_on: "2026-07-31"
+    max_delta_absolute: 90
+    max_delta_percent: 7.0
+  - pattern: "families.publishing.runtime_ms"
+    owner: "market-lense"
+    reason: "Publishing dry-run template rendering is slower on the current local runtime while its bounded token and estimated-cost changes remain independently controlled."
+    expires_on: "2026-07-31"
+    max_delta_absolute: 90
+    max_delta_percent: 3.0
   - pattern: "totals.total_tokens"
     owner: "market-lense"
     reason: "Report-card prompts now include bounded TLDR projections and grounded cover-semantics classification, with the current cross-report synthesis fixture remaining within a bounded 47-token drift."

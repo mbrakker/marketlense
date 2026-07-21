@@ -232,7 +232,7 @@ llm_execution_policies:
   publisher_inventory/meaningful_candidate_screen:
     schema_version: "1.0"
     provider: openai
-    model: "gpt-5-mini"
+    model: "gpt-5-nano"
     temperature: 0.0
     seed_policy: inherit
     max_output_tokens: 2048
@@ -242,7 +242,7 @@ llm_execution_policies:
     structured_output_mode: json_object
     structured_output_schema_identity: "publisher_inventory_candidate_screen.v1"
     fallback_policy: same_provider_only
-    pricing_key: "gpt-5-mini"
+    pricing_key: "gpt-5-nano"
   report_vs:
     schema_version: "1.0"
     provider: openai

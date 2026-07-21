@@ -901,55 +901,6 @@ def test_render_only_regenerates_card_manifest_when_it_is_missing(tmp_path):
     assert outcome.report_card_manifest_path.endswith("report-card-manifest.json")
 
 
-def test_render_report_output_omits_an_unverified_source_date(tmp_path):
-    runtime = replace(
-        _runtime(tmp_path, md5="md5"),
-        source_publication_metadata=SourcePublicationMetadata(
-            schema_version="1.0",
-            source_record_id=7,
-            publication_date="2026-06-09",
-            publication_date_precision="day",
-            evidence_status="unknown",
-            contradiction_status="not_applicable",
-        ),
-    )
-    source = _source(runtime)
-    selection = _selection(runtime, source)
-    analysis = _analysis(runtime, source, selection)
-    captured = {}
-    html_path = tmp_path / "out" / "report.html"
-    html_path.parent.mkdir(parents=True, exist_ok=True)
-
-    def _render_report(req, ctx):
-        del req, ctx
-        html_path.write_text("<html></html>", encoding="utf-8")
-        return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
-
-    def _write_manifest(req, ctx):
-        del ctx
-        captured["manifest"] = req.manifest
-        return ReportCardManifestWriteResponse(
-            schema_version="1.0",
-            manifest_path=str(Path(req.output_dir) / "report-card-manifest.json"),
-            bytes_written=2048,
-        )
-
-    deps = _deps(
-        render_report=_render_report,
-        write_report_card_manifest=_write_manifest,
-    )
-    render_report_output(
-        runtime,
-        source,
-        selection,
-        analysis,
-        deps,
-        preview_resp=render_preview_asset(runtime, source, deps),
-    )
-
-    assert captured["manifest"].published_date == ""
-
-
 def test_render_report_output_does_not_write_manifest_after_cover_error(tmp_path):
     runtime = _runtime(tmp_path, md5="md5")
     source = _source(runtime)
@@ -1044,52 +995,4 @@ def test_render_report_output_fails_closed_for_invalid_card_content(tmp_path):
     assert writes == []
     assert outcome.status == "error"
     assert outcome.error.startswith("card_tldr_compact_invalid:")
-    assert outcome.report_card_manifest_path is None
-
-
-def test_render_report_output_fails_closed_for_ungoverned_card_metadata(tmp_path):
-    runtime = _runtime(tmp_path, md5="md5")
-    source = _source(runtime)
-    selection = _selection(runtime, source)
-    analysis = _analysis(runtime, source, selection)
-    html_path = Path(tmp_path / "out" / "report.html")
-    html_path.parent.mkdir(parents=True, exist_ok=True)
-
-    def _render_report(req, ctx):
-        del req, ctx
-        html_path.write_text("<html></html>", encoding="utf-8")
-        return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
-
-    deps = _deps(
-        render_report=_render_report,
-        get_report_metadata=lambda req, ctx: SimpleNamespace(
-            title="DB Title",
-            publisher="Not extracted",
-            time_period="2024",
-            region="Global",
-            source_url="https://publisher.example/report",
-        ),
-        generate_cover_images=lambda req, ctx: [
-            SimpleNamespace(
-                schema_version="2.0",
-                file_id=runtime.file.file_id,
-                title="DB Title",
-                status="generated",
-                assets=_cover_assets(runtime),
-                error=None,
-            )
-        ],
-    )
-
-    outcome = render_report_output(
-        runtime,
-        source,
-        selection,
-        analysis,
-        deps,
-        preview_resp=render_preview_asset(runtime, source, deps),
-    )
-
-    assert outcome.status == "error"
-    assert outcome.error.startswith("public_metadata_governance_blocked:")
     assert outcome.report_card_manifest_path is None

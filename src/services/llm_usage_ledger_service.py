@@ -229,13 +229,18 @@ def _validate_request(request: LLMUsageLedgerAppendRequest) -> None:
             "policy_hash": request.entry.policy_hash,
             "producer_build_identity": request.entry.producer_build_identity,
         }
-        missing = sorted(key for key, value in required.items() if not str(value).strip())
+        missing = sorted(
+            key for key, value in required.items() if not str(value).strip()
+        )
         if missing:
             raise AppError(
                 code="llm_usage_validation_attribution_missing",
                 message="Validation-run LLM usage must retain complete runtime attribution",
                 retryable=False,
-                context={"validation_run_id": request.entry.validation_run_id, "missing": missing},
+                context={
+                    "validation_run_id": request.entry.validation_run_id,
+                    "missing": missing,
+                },
             )
 
 
@@ -876,7 +881,9 @@ def read_policy_effectiveness(
     if not path.exists():
         return LLMPolicyEffectivenessResponse(schema_version="1.0")
     try:
-        with sqlite3.connect(f"file:{path.resolve().as_posix()}?mode=ro", uri=True) as conn:
+        with sqlite3.connect(
+            f"file:{path.resolve().as_posix()}?mode=ro", uri=True
+        ) as conn:
             table = conn.execute(
                 "select 1 from sqlite_master where type = 'table' and name = 'llm_usage_events'"
             ).fetchone()
@@ -929,26 +936,34 @@ def read_policy_effectiveness(
                 "regeneration_plans": set(),
             },
         )
-        aggregate["calls"] = int(aggregate["calls"]) + 1
-        aggregate["validated"] = int(aggregate["validated"]) + int(
+        aggregate["calls"] = _integer_value(aggregate["calls"]) + 1
+        aggregate["validated"] = _integer_value(aggregate["validated"]) + int(
             str(row[8] or "") == "valid"
         )
-        aggregate["cache_reuse"] = int(aggregate["cache_reuse"]) + int(
+        aggregate["cache_reuse"] = _integer_value(aggregate["cache_reuse"]) + int(
             str(row[7] or "") in {"provider_hit", "semantic_hit", "hit"}
         )
         latency_value = metadata.get("provider_latency_ms")
         if isinstance(latency_value, (int, float)) and latency_value >= 0:
             cast(list[float], aggregate["latencies"]).append(float(latency_value))
-        aggregate["input_tokens"] = int(aggregate["input_tokens"]) + int(row[3] or 0)
-        aggregate["cached_input_tokens"] = int(aggregate["cached_input_tokens"]) + int(row[4] or 0)
-        aggregate["output_tokens"] = int(aggregate["output_tokens"]) + int(row[5] or 0)
-        aggregate["estimated_cost_usd"] = float(aggregate["estimated_cost_usd"]) + float(row[6] or 0.0)
+        aggregate["input_tokens"] = _integer_value(
+            aggregate["input_tokens"]
+        ) + _integer_value(row[3])
+        aggregate["cached_input_tokens"] = _integer_value(
+            aggregate["cached_input_tokens"]
+        ) + _integer_value(row[4])
+        aggregate["output_tokens"] = _integer_value(
+            aggregate["output_tokens"]
+        ) + _integer_value(row[5])
+        aggregate["estimated_cost_usd"] = _float_value(
+            aggregate["estimated_cost_usd"]
+        ) + _float_value(row[6])
         if str(row[9] or "") == "report_generation" and str(row[10] or ""):
             cast(set[str], aggregate["regeneration_plans"]).add(str(row[10]))
 
     rows: list[LLMPolicyEffectivenessRow] = []
     for (identity, namespace, provider, model), aggregate in sorted(aggregates.items()):
-        calls = int(aggregate["calls"])
+        calls = _integer_value(aggregate["calls"])
         latencies = cast(list[float], aggregate["latencies"])
         rows.append(
             LLMPolicyEffectivenessRow(
@@ -958,16 +973,26 @@ def read_policy_effectiveness(
                 provider=provider,
                 model=model,
                 call_count=calls,
-                validated_call_count=int(aggregate["validated"]),
-                validation_rate=round(int(aggregate["validated"]) / calls, 6) if calls else 0.0,
-                cache_reuse_count=int(aggregate["cache_reuse"]),
-                cache_reuse_rate=round(int(aggregate["cache_reuse"]) / calls, 6) if calls else 0.0,
+                validated_call_count=_integer_value(aggregate["validated"]),
+                validation_rate=round(_integer_value(aggregate["validated"]) / calls, 6)
+                if calls
+                else 0.0,
+                cache_reuse_count=_integer_value(aggregate["cache_reuse"]),
+                cache_reuse_rate=round(
+                    _integer_value(aggregate["cache_reuse"]) / calls, 6
+                )
+                if calls
+                else 0.0,
                 latency_record_count=len(latencies),
-                average_latency_ms=(round(sum(latencies) / len(latencies), 3) if latencies else None),
-                input_tokens=int(aggregate["input_tokens"]),
-                cached_input_tokens=int(aggregate["cached_input_tokens"]),
-                output_tokens=int(aggregate["output_tokens"]),
-                estimated_cost_usd=round(float(aggregate["estimated_cost_usd"]), 6),
+                average_latency_ms=(
+                    round(sum(latencies) / len(latencies), 3) if latencies else None
+                ),
+                input_tokens=_integer_value(aggregate["input_tokens"]),
+                cached_input_tokens=_integer_value(aggregate["cached_input_tokens"]),
+                output_tokens=_integer_value(aggregate["output_tokens"]),
+                estimated_cost_usd=round(
+                    _float_value(aggregate["estimated_cost_usd"]), 6
+                ),
                 regeneration_count=len(cast(set[str], aggregate["regeneration_plans"])),
             )
         )
@@ -990,6 +1015,30 @@ def read_policy_effectiveness(
         )
     )
     return response
+
+
+def _integer_value(value: object) -> int:
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, (int, float)):
+        return int(value)
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError:
+            return 0
+    return 0
+
+
+def _float_value(value: object) -> float:
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        try:
+            return float(value)
+        except ValueError:
+            return 0.0
+    return 0.0
 
 
 _BUDGET_DECISIONS = {"allow", "warn", "defer", "pause", "stop", "authorized_override"}
@@ -1544,7 +1593,9 @@ def _budget_limit_breach(
     for usage_field, limit_field in _BUDGET_LIMIT_FIELDS:
         limit = getattr(limits, limit_field)
         value = getattr(usage, usage_field)
-        if limit is not None and value >= limit:
+        # ``usage`` includes the proposed side effect.  A maximum of one PDF
+        # must therefore admit the first PDF and stop the second one.
+        if limit is not None and value > limit:
             return usage_field, value, limit
     return None
 

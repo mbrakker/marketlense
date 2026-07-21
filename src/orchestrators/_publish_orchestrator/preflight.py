@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from dataclasses import replace
 from pathlib import Path
 from typing import List, Optional
 from src.contracts.files import ReadTextRequest
@@ -511,14 +512,8 @@ def _load_validation_report(
 def _with_validation(
     outcome: PublishOutcome, status: Optional[str], issues: List[str]
 ) -> PublishOutcome:
-    return PublishOutcome(
-        schema_version=outcome.schema_version,
-        html_path=outcome.html_path,
-        file_id=outcome.file_id,
-        status=outcome.status,
-        post_id=outcome.post_id,
-        post_url=outcome.post_url,
-        error=outcome.error,
+    return replace(
+        outcome,
         validation_status=status,
         validation_issues=issues,
     )

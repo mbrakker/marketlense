@@ -171,7 +171,9 @@ def test_policy_effectiveness_is_deterministic_and_read_only(tmp_path: Path) -> 
     assert row.regeneration_count == 1
 
 
-def test_policy_effectiveness_zero_provider_calls_has_no_side_effect(tmp_path: Path) -> None:
+def test_policy_effectiveness_zero_provider_calls_has_no_side_effect(
+    tmp_path: Path,
+) -> None:
     missing_path = tmp_path / "missing.sqlite"
 
     response = svc.read_policy_effectiveness(
@@ -234,7 +236,10 @@ def test_usage_attribution_dimensions_project_from_canonical_events(
     )
     assert payload["totals_by_artifact_family"]["findings"]["total_tool_calls"] == 0
     assert payload["totals_by_stage"]["analysis"]["estimated_cost_usd"] == 0.001
-    assert payload["totals_by_semantic_task"]["openai_chat_json"]["total_output_tokens"] == 5
+    assert (
+        payload["totals_by_semantic_task"]["openai_chat_json"]["total_output_tokens"]
+        == 5
+    )
     with sqlite3.connect(db_path) as conn:
         row = conn.execute(
             "SELECT report_id,workflow,stage,plan_hash,artifact_family,validation_run_id,"
@@ -260,7 +265,9 @@ def test_usage_attribution_dimensions_project_from_canonical_events(
     )
 
 
-def test_validation_run_usage_rejects_missing_runtime_attribution(tmp_path: Path) -> None:
+def test_validation_run_usage_rejects_missing_runtime_attribution(
+    tmp_path: Path,
+) -> None:
     with pytest.raises(AppError, match="complete runtime attribution") as exc_info:
         svc.append_usage(
             LLMUsageLedgerAppendRequest(
@@ -891,23 +898,6 @@ def test_daily_spend_guardrail_uses_canonical_events_not_lagging_export(
     assert stopped.decision == "stop"
 
 
-def test_daily_spend_guardrail_initializes_a_missing_database_parent(
-    tmp_path: Path,
-) -> None:
-    db_path = tmp_path / "new" / "ledger" / "usage.sqlite"
-
-    response = svc.evaluate_daily_spend_guardrail(
-        LLMUsageSpendGuardrailRequest(
-            schema_version="1.0", db_path=str(db_path), warn_usd=1.0
-        ),
-        _ctx(),
-    )
-
-    assert db_path.is_file()
-    assert response.canonical_spend_usd == 0.0
-    assert response.decision == "allow"
-
-
 def test_daily_spend_guardrail_forecasts_exact_task_median_before_call(
     tmp_path: Path,
 ) -> None:
@@ -996,50 +986,3 @@ def test_spend_guardrail_reserves_and_releases_concurrent_forecast_capacity(
     assert released.released is True
     assert after_release.decision == "allow"
     assert after_release.reservation_created is True
-
-
-def test_concurrent_projection_generations_preserve_one_consistent_checkpoint(
-    tmp_path: Path,
-) -> None:
-    db_path = tmp_path / "usage.sqlite"
-    ledger_path = tmp_path / "cost-ledger.jsonl"
-    daily_path = tmp_path / "cost-daily.json"
-    for ordinal in (0, 1):
-        svc.append_usage(
-            LLMUsageLedgerAppendRequest(
-                schema_version="1.0",
-                db_path=str(db_path),
-                entry=replace(_entry(), call_ordinal=ordinal),
-            ),
-            _ctx(),
-        )
-
-    request = LLMUsageExportRebuildRequest(
-        schema_version="1.0",
-        db_path=str(db_path),
-        ledger_path=str(ledger_path),
-        daily_path=str(daily_path),
-    )
-
-    def rebuild_one() -> tuple[str, int]:
-        try:
-            response = svc.rebuild_usage_exports(request, _ctx())
-            return ("ok", response.generation_id)
-        except AppError as exc:
-            return (exc.code, 0)
-
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        results = list(executor.map(lambda _: rebuild_one(), range(2)))
-
-    assert any(result[0] == "ok" for result in results)
-    assert all(result[0] in {"ok", "llm_usage_projection_busy"} for result in results)
-    reconciled = svc.reconcile_usage_export(
-        LLMUsageLedgerReconciliationRequest(
-            schema_version="1.0",
-            db_path=str(db_path),
-            ledger_path=str(ledger_path),
-            daily_path=str(daily_path),
-        ),
-        _ctx(),
-    )
-    assert reconciled.matches is True

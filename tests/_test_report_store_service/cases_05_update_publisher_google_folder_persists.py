@@ -435,8 +435,8 @@ class TestReportStoreService05UpdatePublisherGoogleFolder(unittest.TestCase):
                 ],
                 columns,
             )
-            self.assertEqual((24,), schema_version)
-            self.assertEqual(24, ledger_count)
+            self.assertEqual((25,), schema_version)
+            self.assertEqual(25, ledger_count)
             self.assertEqual(
                 (
                     "Activate Consulting",

@@ -42,7 +42,9 @@ def evaluate_run_budget(
         usage_name
         for usage_name, limit_name in _METRICS
         if getattr(budget, limit_name) is not None
-        and getattr(usage, usage_name) >= getattr(budget, limit_name)
+        # The caller supplies prospective usage, so equality consumes the
+        # final permitted unit; only a value beyond the maximum is blocked.
+        and getattr(usage, usage_name) > getattr(budget, limit_name)
     ]
     if not breached:
         return RunBudgetDecision(

@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+import json
+
+import pytest
+
+from src.contracts.publish import PublishOutcome
 from src.contracts.run_context import RunContext
 from src.contracts.validation_run_manifest import (
     ValidationRunManifestAuditRequest,
@@ -7,11 +12,15 @@ from src.contracts.validation_run_manifest import (
     ValidationRunManifestRecordRequest,
     ValidationRunManifestStageRecord,
 )
+from src.orchestrators.publish_orchestrator import (
+    _record_validation_cohort_publish_outcomes,
+)
 from src.services.report_store_service import (
     audit_validation_run_manifest,
     create_validation_run_manifest,
     record_validation_run_manifest_stage,
 )
+from src.utils.errors import AppError
 
 
 def _ctx() -> RunContext:
@@ -23,9 +32,13 @@ def _ctx() -> RunContext:
 def _record(
     *, attempt: int, stage: str, terminal: bool = False, outcome: str = "succeeded"
 ) -> ValidationRunManifestStageRecord:
+    terminal_outcome = (
+        "publish_ready" if terminal and outcome == "succeeded" else outcome
+    )
     return ValidationRunManifestStageRecord(
         schema_version="1.0",
         validation_run_id="validation-1",
+        cohort_id="cohort-1",
         workflow_run_id="workflow-1",
         entity_type="report",
         publisher_id="publisher-1",
@@ -33,15 +46,22 @@ def _record(
         source_identity_id="source-1",
         stage=stage,
         attempt_number=attempt,
+        parent_attempt_number=attempt - 1 if attempt > 1 else 0,
         input_artifact_ids=("input-1",),
         output_artifact_ids=("output-1",),
         started_at_utc="2026-07-21T10:00:00Z",
         completed_at_utc="2026-07-21T10:01:00Z",
-        terminal_outcome=outcome,
-        failure_code="" if outcome == "succeeded" else "typed_failure",
-        retryable=outcome == "failed",
+        terminal_outcome=terminal_outcome,
+        failure_code=(
+            ""
+            if terminal_outcome in {"succeeded", "publish_ready"}
+            else "typed_failure"
+        ),
+        retryable=terminal_outcome == "failed",
         repair_disposition="not_required",
         duplicate_disposition="new",
+        supersession_state="current",
+        idempotency_state="new",
         configuration_hash="config-hash",
         policy_hash="policy-hash",
         producer_build_identity="build-sha",
@@ -55,6 +75,7 @@ def _create(db_path: str) -> None:
             schema_version="1.0",
             db_path=db_path,
             validation_run_id="validation-1",
+            cohort_id="cohort-1",
             workflow_run_id="workflow-1",
             configuration_hash="config-hash",
             policy_hash="policy-hash",
@@ -113,7 +134,7 @@ def test_manifest_retains_stages_and_derives_a_reconciled_final_cohort(
     assert actual_totals == {
         ("acquisition", "failed", 1),
         ("acquisition", "succeeded", 1),
-        ("publication", "succeeded", 1),
+        ("publication", "publish_ready", 1),
     }
 
 
@@ -138,3 +159,86 @@ def test_manifest_audit_fails_closed_without_a_current_terminal_state(tmp_path) 
 
     assert audit.complete is False
     assert audit.incomplete_entity_ids == ("report|report-1|source-1",)
+
+
+def test_manifest_rejects_nonterminal_outcomes_at_closure(tmp_path) -> None:
+    db_path = str(tmp_path / "reports.sqlite")
+    _create(db_path)
+    with pytest.raises(AppError, match="invalid outcome"):
+        record_validation_run_manifest_stage(
+            ValidationRunManifestRecordRequest(
+                schema_version="1.0",
+                db_path=db_path,
+                record=_record(
+                    attempt=1,
+                    stage="publication",
+                    terminal=True,
+                    outcome="failed",
+                ),
+            ),
+            _ctx(),
+        )
+
+
+def test_wordpress_outcome_closes_the_matching_immutable_cohort_member(
+    tmp_path,
+) -> None:
+    db_path = str(tmp_path / "reports.sqlite")
+    cohort_path = tmp_path / "cohort.json"
+    cohort_path.write_text(
+        json.dumps(
+            {
+                "cohort_id": "cohort-1",
+                "configuration_hash": "config-hash",
+                "policy_hash": "policy-hash",
+                "members": [{"file_id": "report-1", "md5_checksum": "source-1"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    create_validation_run_manifest(
+        ValidationRunManifestCreateRequest(
+            schema_version="1.0",
+            db_path=db_path,
+            validation_run_id="validation:cohort-1",
+            cohort_id="cohort-1",
+            workflow_run_id="workflow-1",
+            configuration_hash="config-hash",
+            policy_hash="policy-hash",
+            producer_build_identity="workspace",
+            created_at_utc="2026-07-21T10:00:00Z",
+        ),
+        _ctx(),
+    )
+
+    _record_validation_cohort_publish_outcomes(
+        cohort_manifest=str(cohort_path),
+        reports_db=db_path,
+        outcomes=[
+            PublishOutcome(
+                schema_version="1.0",
+                html_path="out/report.html",
+                file_id="report-1",
+                status="published",
+                post_id=42,
+                post_url="https://sandbox.example/reports/report-1",
+                publication_outcome="post_created",
+                authenticated_readback_verified=True,
+            )
+        ],
+        ctx=_ctx(),
+    )
+
+    audit = audit_validation_run_manifest(
+        ValidationRunManifestAuditRequest(
+            schema_version="1.0",
+            db_path=db_path,
+            validation_run_id="validation:cohort-1",
+        ),
+        _ctx(),
+    )
+    assert audit.complete is True
+    assert audit.final_cohort_report_ids == ("report-1",)
+    assert {(item.stage, item.terminal_outcome) for item in audit.stage_totals} == {
+        ("wordpress_write", "published_verified")
+    }

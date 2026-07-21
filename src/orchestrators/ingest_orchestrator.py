@@ -4,8 +4,9 @@ import json
 import logging
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
+from hashlib import sha256
 from pathlib import Path
 from typing import Any, Callable, Iterable, List, Optional
 
@@ -24,16 +25,23 @@ from src.contracts.files import (
     FileExistsRequest,
     FileStatRequest,
     ReadTextRequest,
+    WriteBytesRequest,
 )
 from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.llm_usage import LLMUsageProjectionStatusRequest
-from src.contracts.pdf_utils import PdfEofCheckRequest
+from src.contracts.pdf_text import PdfTextExtractRequest
+from src.contracts.pdf_utils import (
+    PdfEofCheckRequest,
+    PdfIntegrityCheckRequest,
+)
 from src.contracts.report_cards import ReportCardManifest
 from src.contracts.report_store import (
     ReportMetadataGetRequest,
 )
 from src.contracts.run_context import RunContext
+from src.contracts.semantic_ids import RunId, ValidationRunId
 from src.contracts.state import (
+    SourceQuarantineGetRequest,
     StateBatchCheckItem,
     StateBatchCheckRequest,
     StateCheckRequest,
@@ -41,6 +49,12 @@ from src.contracts.state import (
     StateGetResponse,
     StateIngestCursorGetRequest,
     StateIngestCursorSetRequest,
+)
+from src.contracts.validation_run_manifest import (
+    ValidationRunManifestAuditRequest,
+    ValidationRunManifestCreateRequest,
+    ValidationRunManifestRecordRequest,
+    ValidationRunManifestStageRecord,
 )
 from src.generators.report_generation_shared import report_slug
 from src.orchestrators._ingest_orchestrator.db_preflight import (
@@ -57,12 +71,12 @@ from src.orchestrators.ingest_file_orchestrator import (
     IngestFileDependencies,
     run_ingest_file,
 )
-from src.orchestrators.report_pipeline_orchestrator import (
-    run_report_pipeline as run_report_pipeline_orchestrator,
-)
 from src.orchestrators.remediation_orchestrator import (
     record_workflow_failure,
     remediation_input_checksum,
+)
+from src.orchestrators.report_pipeline_orchestrator import (
+    run_report_pipeline as run_report_pipeline_orchestrator,
 )
 from src.orchestrators.retry_orchestrator import run_step_with_default_policy
 from src.orchestrators.vector_store_retention_orchestrator import (
@@ -77,11 +91,26 @@ from src.services.file_cache_service import (
     resolve_md5_sidecar,
     write_md5_sidecar,
 )
-from src.services.file_service import delete_file, file_exists, file_stat, read_text
+from src.services.file_service import (
+    delete_file,
+    file_exists,
+    file_stat,
+    read_text,
+    write_bytes,
+)
 from src.services.llm_usage_ledger_service import (
     finalize_usage_projection,
 )
-from src.services.pdf_service import check_pdf_eof, check_pdf_integrity
+from src.services.pdf_service import (
+    check_pdf_eof,
+    check_pdf_integrity,
+    extract_pdf_text,
+)
+from src.services.report_store_service import (
+    audit_validation_run_manifest,
+    create_validation_run_manifest,
+    record_validation_run_manifest_stage,
+)
 from src.services.report_store_service import (
     get_metadata as get_report_metadata,
 )
@@ -92,13 +121,11 @@ from src.services.state_service import (
 from src.services.state_service import get as state_get
 from src.services.state_service import (
     get_ingest_cursor,
-    set_ingest_cursor,
-)
-from src.services.state_service import record as state_record
-from src.services.state_service import (
     get_source_quarantine,
+    set_ingest_cursor,
     upsert_source_quarantine,
 )
+from src.services.state_service import record as state_record
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.path_utils import safe_pdf_name
@@ -123,11 +150,23 @@ class IngestBatchDependencies:
         default=file_exists
     )
     read_text: Callable[[ReadTextRequest, RunContext], Any] = field(default=read_text)
+    write_bytes: Callable[[WriteBytesRequest, RunContext], Any] = field(
+        default=write_bytes
+    )
     get_report_metadata: Callable[[ReportMetadataGetRequest, RunContext], Any] = field(
         default=get_report_metadata
     )
     vector_store_retention_cleanup: Callable[[IngestSettings, RunContext], Any] = field(
         default=run_vector_store_retention_cleanup
+    )
+    check_pdf_integrity: Callable[[PdfIntegrityCheckRequest, RunContext], Any] = field(
+        default=check_pdf_integrity
+    )
+    extract_pdf_text: Callable[[PdfTextExtractRequest, RunContext], Any] = field(
+        default=extract_pdf_text
+    )
+    get_source_quarantine: Callable[[SourceQuarantineGetRequest, RunContext], Any] = (
+        field(default=get_source_quarantine)
     )
 
     @classmethod
@@ -647,6 +686,366 @@ def _materialize_files_to_process(
     return files_to_process
 
 
+def _cohort_configuration_hash(settings: IngestSettings) -> str:
+    """Hash non-secret ingest policy needed to replay a frozen cohort."""
+    values = _redact_cohort_hash_values(asdict(settings))
+    encoded = json.dumps(values, sort_keys=True, separators=(",", ":"), default=str)
+    return sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def _cohort_policy_hash(settings: IngestSettings) -> str:
+    """Hash the admission and quality rules independently from runtime settings."""
+    policy = {
+        "strict_schema_validation": bool(settings.strict_schema_validation),
+        "validation_data_gap_policy": settings.validation_data_gap_policy,
+        "public_editorial_quality_disabled_rule_waivers": (
+            settings.public_editorial_quality_disabled_rule_waivers
+        ),
+        "run_budget_limit_decision": settings.run_budget_limit_decision,
+        "run_budget_max_pdfs": settings.run_budget_max_pdfs,
+        "run_budget_max_spend_usd": settings.run_budget_max_spend_usd,
+        "run_budget_max_runtime_seconds": settings.run_budget_max_runtime_seconds,
+    }
+    encoded = json.dumps(policy, sort_keys=True, separators=(",", ":"), default=str)
+    return sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def _redact_cohort_hash_values(value: Any) -> Any:
+    """Exclude credentials from stable cohort configuration identity material."""
+    if isinstance(value, dict):
+        return {
+            key: _redact_cohort_hash_values(item)
+            for key, item in value.items()
+            if not any(
+                marker in key.casefold()
+                for marker in ("api_key", "secret", "password", "token", "auth_header")
+            )
+        }
+    if isinstance(value, list):
+        return [_redact_cohort_hash_values(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_redact_cohort_hash_values(item) for item in value)
+    return value
+
+
+def _cohort_admission_preflight(
+    files: list[DriveFile],
+    *,
+    settings: IngestSettings,
+    deps: IngestBatchDependencies,
+    root_ctx: RunContext,
+) -> list[DriveFile]:
+    """Admit deterministic, locally verifiable sources before freezing a cohort.
+
+    Acquisition may populate the local cache before this check, but no model,
+    vector-store, or report-generation work occurs until the admitted members
+    are persisted in the immutable manifest.
+    """
+    admitted: list[DriveFile] = []
+    for file in files:
+        file_ctx = child_context(root_ctx, task_id=f"admission:{file.file_id}")
+        reason = "admitted"
+        source_identity = (file.md5_checksum or "").strip()
+        normalized_mime = (file.mime_type or "").strip().casefold()
+        if not file.file_id.strip():
+            reason = "missing_source_identity"
+        elif normalized_mime and normalized_mime != "application/pdf":
+            reason = "unsupported_document"
+        elif not source_identity:
+            reason = "missing_source_identity"
+        else:
+            quarantine = deps.get_source_quarantine(
+                SourceQuarantineGetRequest(
+                    schema_version="1.0",
+                    state_db=settings.state_db,
+                    source_file_id=file.file_id,
+                    content_checksum=source_identity,
+                    validator_version="pdf-integrity-v1",
+                ),
+                file_ctx,
+            ).record
+            if quarantine is not None and quarantine.status == "active":
+                reason = "quarantined"
+            else:
+                integrity = deps.check_pdf_integrity(
+                    PdfIntegrityCheckRequest(
+                        schema_version="1.0",
+                        path=_cache_pdf_path(settings, file),
+                    ),
+                    file_ctx,
+                )
+                if integrity.failure_code:
+                    reason = "corrupt_source"
+                else:
+                    text = deps.extract_pdf_text(
+                        PdfTextExtractRequest(
+                            schema_version="1.0",
+                            path=_cache_pdf_path(settings, file),
+                            max_pages=max(1, settings.pdf_text_sample_pages),
+                            max_chars=max(1, settings.pdf_text_max_chars),
+                        ),
+                        file_ctx,
+                    )
+                    if text.char_count < 1 and not settings.pdf_text_ocr_enabled:
+                        reason = "insufficient_content"
+        logger.info(
+            log_event(
+                file_ctx,
+                role="orchestrator",
+                event="ingest_cohort_admission_preflight_complete",
+                module=logger.name,
+                fields={
+                    "file_id": file.file_id,
+                    "source_identity_id": source_identity,
+                    "outcome": reason,
+                    "admission_preflight_version": "1.0",
+                },
+            )
+        )
+        if reason == "admitted":
+            admitted.append(file)
+    return admitted
+
+
+def _load_frozen_cohort(
+    *,
+    cohort_manifest: str,
+    expected_size: int | None,
+    deps: IngestBatchDependencies,
+    root_ctx: RunContext,
+) -> tuple[int, list[DriveFile]]:
+    """Read and validate a persisted cohort without consulting the Drive listing."""
+    try:
+        payload = json.loads(
+            deps.read_text(
+                ReadTextRequest(schema_version="1.0", path=cohort_manifest),
+                root_ctx,
+            ).content
+        )
+        members = payload["members"]
+        manifest_size = int(payload["cohort_size"])
+        if (
+            payload.get("schema_version") != "1.0"
+            or manifest_size < 1
+            or expected_size not in {None, manifest_size}
+            or not isinstance(members, list)
+            or len(members) != manifest_size
+        ):
+            raise ValueError("manifest schema or cohort size is invalid")
+        files = [
+            DriveFile(
+                schema_version="1.0",
+                file_id=str(member["file_id"]),
+                name=member.get("name"),
+                modified_time=member.get("modified_time"),
+                md5_checksum=member.get("md5_checksum"),
+                mime_type=member.get("mime_type"),
+            )
+            for member in members
+        ]
+        if len({file.file_id for file in files}) != manifest_size:
+            raise ValueError("manifest contains duplicate file IDs")
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise AppError(
+            code="ingest_cohort_manifest_invalid",
+            message="Cohort manifest is not a valid immutable ingest cohort",
+            cause=exc,
+            retryable=False,
+        ) from exc
+    return manifest_size, files
+
+
+def _frozen_cohort(
+    *,
+    cohort_size: int,
+    cohort_manifest: str,
+    selected_files: list[DriveFile],
+    settings: IngestSettings,
+    deps: IngestBatchDependencies,
+    root_ctx: RunContext,
+) -> list[DriveFile]:
+    """Load a replayable immutable cohort or persist it before processing."""
+    if cohort_size < 1:
+        raise AppError(
+            code="ingest_cohort_size_invalid",
+            message="Cohort size must be positive",
+            retryable=False,
+        )
+    exists = deps.file_exists(
+        FileExistsRequest(schema_version="1.0", path=cohort_manifest), root_ctx
+    ).exists
+    if exists:
+        _manifest_size, files = _load_frozen_cohort(
+            cohort_manifest=cohort_manifest,
+            expected_size=cohort_size,
+            deps=deps,
+            root_ctx=root_ctx,
+        )
+        return files
+    if len(selected_files) != cohort_size:
+        raise AppError(
+            code="ingest_cohort_insufficient_eligible_reports",
+            message="Insufficient eligible reports to freeze the requested cohort",
+            retryable=False,
+            context={"requested": cohort_size, "selected": len(selected_files)},
+        )
+    members = [asdict(file) for file in selected_files]
+    configuration_hash = _cohort_configuration_hash(settings)
+    policy_hash = _cohort_policy_hash(settings)
+    cohort_id = _cohort_id(selected_files)
+    payload = {
+        "schema_version": "1.0",
+        "cohort_id": cohort_id,
+        "cohort_size": cohort_size,
+        "configuration_hash": configuration_hash,
+        "policy_hash": policy_hash,
+        "selection_reason": "deterministic_admission_preflight",
+        "admission_preflight_version": "1.0",
+        "admission_decision_hash": sha256(
+            json.dumps(members, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest(),
+        "created_at_utc": datetime.now(timezone.utc).isoformat(),
+        "members": members,
+    }
+    deps.write_bytes(
+        WriteBytesRequest(
+            schema_version="1.0",
+            path=cohort_manifest,
+            content=json.dumps(payload, sort_keys=True, indent=2).encode("utf-8"),
+        ),
+        root_ctx,
+    )
+    return selected_files
+
+
+def _cohort_id(files: list[DriveFile]) -> str:
+    """Return the immutable identity of the exact ordered admitted cohort."""
+    members = [asdict(file) for file in files]
+    return sha256(
+        json.dumps(members, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+
+
+def _record_cohort_ingest_manifest(
+    *,
+    validation_run_id: ValidationRunId,
+    settings: IngestSettings,
+    root_ctx: RunContext,
+    files: list[DriveFile],
+    outcomes: list[IngestOutcome] | None = None,
+) -> None:
+    configuration_hash = _cohort_configuration_hash(settings)
+    policy_hash = _cohort_policy_hash(settings)
+    cohort_id = _cohort_id(files)
+    create_validation_run_manifest(
+        ValidationRunManifestCreateRequest(
+            schema_version="1.0",
+            db_path=settings.reports_db,
+            validation_run_id=validation_run_id,
+            cohort_id=cohort_id,
+            workflow_run_id=RunId(root_ctx.run_id),
+            configuration_hash=configuration_hash,
+            policy_hash=policy_hash,
+            producer_build_identity=root_ctx.producer_commit_sha or "workspace",
+            created_at_utc=datetime.now(timezone.utc).isoformat(),
+        ),
+        root_ctx,
+    )
+    timestamp = datetime.now(timezone.utc).isoformat()
+    if outcomes is None:
+        for file in files:
+            record_validation_run_manifest_stage(
+                ValidationRunManifestRecordRequest(
+                    schema_version="1.0",
+                    db_path=settings.reports_db,
+                    record=ValidationRunManifestStageRecord(
+                        schema_version="1.0",
+                        validation_run_id=validation_run_id,
+                        cohort_id=cohort_id,
+                        workflow_run_id=RunId(root_ctx.run_id),
+                        entity_type="report",
+                        publisher_id="",
+                        report_id=file.file_id,
+                        source_identity_id=file.md5_checksum or file.file_id,
+                        stage="admission_preflight",
+                        attempt_number=1,
+                        parent_attempt_number=0,
+                        input_artifact_ids=(file.file_id,),
+                        output_artifact_ids=(cohort_id,),
+                        started_at_utc=timestamp,
+                        completed_at_utc=timestamp,
+                        terminal_outcome="succeeded",
+                        failure_code="",
+                        retryable=False,
+                        repair_disposition="not_required",
+                        duplicate_disposition="new",
+                        supersession_state="current",
+                        idempotency_state="new",
+                        configuration_hash=configuration_hash,
+                        policy_hash=policy_hash,
+                        producer_build_identity=root_ctx.producer_commit_sha
+                        or "workspace",
+                        cohort_disposition="final_validation",
+                        entity_terminal=False,
+                    ),
+                ),
+                root_ctx,
+            )
+        return
+    outcome_by_id = {outcome.file_id: outcome for outcome in outcomes or []}
+    for file in files:
+        outcome = outcome_by_id.get(file.file_id)
+        terminal = outcome is not None
+        successful = bool(outcome and outcome.status == "processed")
+        terminal_outcome = (
+            "publish_ready"
+            if successful
+            else "permanent_failure"
+            if terminal
+            else "blocked"
+        )
+        record_validation_run_manifest_stage(
+            ValidationRunManifestRecordRequest(
+                schema_version="1.0",
+                db_path=settings.reports_db,
+                record=ValidationRunManifestStageRecord(
+                    schema_version="1.0",
+                    validation_run_id=validation_run_id,
+                    cohort_id=cohort_id,
+                    workflow_run_id=RunId(root_ctx.run_id),
+                    entity_type="report",
+                    publisher_id="",
+                    report_id=file.file_id,
+                    source_identity_id=file.md5_checksum or file.file_id,
+                    stage="ingest",
+                    attempt_number=1,
+                    parent_attempt_number=0,
+                    input_artifact_ids=(file.file_id,),
+                    output_artifact_ids=(
+                        (outcome.html_path,) if outcome and outcome.html_path else ()
+                    ),
+                    started_at_utc=timestamp,
+                    completed_at_utc=timestamp,
+                    terminal_outcome=terminal_outcome,
+                    failure_code=(
+                        (outcome.error or "") if outcome else "ingest_unfinished"
+                    ),
+                    retryable=False,
+                    repair_disposition="none",
+                    duplicate_disposition="none",
+                    supersession_state="current",
+                    idempotency_state="new",
+                    configuration_hash=configuration_hash,
+                    policy_hash=policy_hash,
+                    producer_build_identity=root_ctx.producer_commit_sha or "workspace",
+                    cohort_disposition="final_validation",
+                    entity_terminal=terminal,
+                ),
+            ),
+            root_ctx,
+        )
+
+
 def _report_card_backfill_should_skip(
     file: DriveFile,
     *,
@@ -1141,7 +1540,7 @@ def _update_ingest_cursor(
 
 
 def _finalize_usage_projection(settings: IngestSettings, root_ctx: RunContext) -> None:
-    """Boundedly materialize canonical usage after an ingest run without masking its result."""
+    """Materialize canonical usage without masking the ingest result."""
     if not file_exists(
         FileExistsRequest(schema_version="1.0", path=settings.usage_db_path), root_ctx
     ).exists:
@@ -1186,6 +1585,9 @@ def run_ingest(
     *,
     folder_id: Optional[str] = None,
     limit: Optional[int] = None,
+    cohort_size: Optional[int] = None,
+    cohort_manifest: Optional[str] = None,
+    success_target: Optional[int] = None,
     ctx: Optional[RunContext] = None,
     dependencies: Optional[IngestBatchDependencies] = None,
     force_report_cards: bool = False,
@@ -1195,6 +1597,7 @@ def run_ingest(
     root_ctx = ctx or new_run_context()
     lock_ctx = child_context(root_ctx, task_id="ingest_lock")
     lock_info = None
+    validation_run_id: ValidationRunId | None = None
     try:
         lock_info = acquire_ingest_lock(settings, lock_ctx)
         verify_ingest_db_access(settings, root_ctx)
@@ -1208,6 +1611,9 @@ def run_ingest(
                 fields={
                     "folder_id": folder_id or settings.gdrive_folder_id,
                     "limit": limit,
+                    "cohort_size": cohort_size,
+                    "cohort_manifest": cohort_manifest or "",
+                    "success_target": success_target,
                     "force_report_cards": force_report_cards,
                     "rescan": rescan,
                 },
@@ -1221,68 +1627,77 @@ def run_ingest(
             rescan=rescan,
             root_ctx=root_ctx,
         )
-        max_n = limit if limit is not None else settings.batch_limit
+        manifest_files: list[DriveFile] | None = None
+        if cohort_manifest:
+            manifest_exists = deps.file_exists(
+                FileExistsRequest(schema_version="1.0", path=cohort_manifest), root_ctx
+            ).exists
+            if manifest_exists:
+                cohort_size, manifest_files = _load_frozen_cohort(
+                    cohort_manifest=cohort_manifest,
+                    expected_size=cohort_size,
+                    deps=deps,
+                    root_ctx=root_ctx,
+                )
+            elif cohort_size is None:
+                raise AppError(
+                    code="ingest_cohort_size_required",
+                    message="Creating a cohort manifest requires a cohort size",
+                    retryable=False,
+                )
+        selected_modes = sum(
+            value is not None for value in (limit, cohort_size, success_target)
+        )
+        if selected_modes > 1:
+            raise AppError(
+                code="ingest_selection_mode_conflict",
+                message=(
+                    "Attempt limit, cohort size, and success target are mutually "
+                    "exclusive"
+                ),
+                retryable=False,
+            )
+        selection_limit = cohort_size if cohort_size is not None else limit
+        max_n = selection_limit if selection_limit is not None else settings.batch_limit
         list_req = _build_drive_list_request(
             settings,
             folder_id=folder_id,
-            limit=limit,
+            limit=selection_limit,
             modified_after=modified_after,
         )
-        if limit is None:
-            files_to_process = _run_step_with_retry(
-                "materialize_drive_files",
-                root_ctx,
-                lambda: _materialize_files_to_process(
-                    list_req,
-                    settings=settings,
-                    max_n=max_n,
-                    deps=deps,
-                    root_ctx=root_ctx,
-                    force_report_cards=force_report_cards,
-                ),
-                2,
-            )
-            results = _process_ingest_batch(
-                files_to_process,
-                settings=settings,
-                deps=deps,
-                root_ctx=root_ctx,
-                force_report_cards=force_report_cards,
-            )
-        else:
-            results = []
+        if success_target is not None:
+            if success_target < 1:
+                raise AppError(
+                    code="ingest_success_target_invalid",
+                    message="Success target must be positive",
+                    retryable=False,
+                )
             attempted_file_ids: set[str] = set()
+            results: list[_FileProcessResult] = []
             processed_so_far = 0
-            while processed_so_far < max_n:
-                remaining = max_n - processed_so_far
-
-                def _materialize_remaining(
-                    *,
-                    current_remaining: int = remaining,
-                    current_excluded: set[str] | None = None,
-                ) -> list[DriveFile]:
-                    return _materialize_files_to_process(
-                        list_req,
-                        settings=settings,
-                        max_n=current_remaining,
-                        deps=deps,
-                        root_ctx=root_ctx,
-                        force_report_cards=force_report_cards,
-                        excluded_file_ids=current_excluded or set(),
-                    )
-
+            while processed_so_far < success_target:
+                remaining = success_target - processed_so_far
+                excluded = set(attempted_file_ids)
                 files_to_process = _run_step_with_retry(
                     "materialize_drive_files",
                     root_ctx,
-                    lambda excluded=set(attempted_file_ids): _materialize_remaining(
-                        current_excluded=excluded,
+                    lambda current_remaining=remaining, current_excluded=excluded: (
+                        _materialize_files_to_process(
+                            list_req,
+                            settings=settings,
+                            max_n=current_remaining,
+                            deps=deps,
+                            root_ctx=root_ctx,
+                            force_report_cards=force_report_cards,
+                            excluded_file_ids=current_excluded,
+                        )
                     ),
                     2,
                 )
                 if not files_to_process:
                     break
                 attempted_file_ids.update(file.file_id for file in files_to_process)
-                batch_results = _process_ingest_batch(
+                batch = _process_ingest_batch(
                     files_to_process,
                     settings=settings,
                     deps=deps,
@@ -1290,10 +1705,99 @@ def run_ingest(
                     force_report_cards=force_report_cards,
                     start_index=len(results),
                 )
-                results.extend(batch_results)
-                processed_so_far += sum(result.processed for result in batch_results)
+                results.extend(batch)
+                processed_so_far += sum(row.processed for row in batch)
+        else:
+            files_to_process = manifest_files
+            if files_to_process is None:
+                files_to_process = _run_step_with_retry(
+                    "materialize_drive_files",
+                    root_ctx,
+                    lambda: _materialize_files_to_process(
+                        list_req,
+                        settings=settings,
+                        max_n=max_n,
+                        deps=deps,
+                        root_ctx=root_ctx,
+                        force_report_cards=force_report_cards,
+                    ),
+                    2,
+                )
+            if cohort_size is not None:
+                if manifest_files is None:
+                    _prefetch_drive_cache_stage(
+                        files_to_process,
+                        settings=settings,
+                        deps=deps,
+                        root_ctx=root_ctx,
+                    )
+                    files_to_process = _cohort_admission_preflight(
+                        files_to_process,
+                        settings=settings,
+                        deps=deps,
+                        root_ctx=root_ctx,
+                    )
+                manifest_path = cohort_manifest or str(
+                    Path(settings.output_dir) / "cohorts" / f"{root_ctx.run_id}.json"
+                )
+                files_to_process = _frozen_cohort(
+                    cohort_size=cohort_size,
+                    cohort_manifest=manifest_path,
+                    selected_files=files_to_process,
+                    settings=settings,
+                    deps=deps,
+                    root_ctx=root_ctx,
+                )
+            if cohort_size is not None:
+                validation_run_id = ValidationRunId(
+                    f"validation:{_cohort_id(files_to_process)}"
+                )
+                _record_cohort_ingest_manifest(
+                    validation_run_id=validation_run_id,
+                    settings=settings,
+                    root_ctx=root_ctx,
+                    files=files_to_process,
+                )
+            results = _process_ingest_batch(
+                files_to_process,
+                settings=settings,
+                deps=deps,
+                root_ctx=root_ctx,
+                force_report_cards=force_report_cards,
+            )
         results.sort(key=lambda r: r.index)
         outcomes = [result.outcome for result in results]
+        if validation_run_id is not None:
+            _record_cohort_ingest_manifest(
+                validation_run_id=validation_run_id,
+                settings=settings,
+                root_ctx=root_ctx,
+                files=files_to_process,
+                outcomes=outcomes,
+            )
+            manifest_audit = audit_validation_run_manifest(
+                ValidationRunManifestAuditRequest(
+                    schema_version="1.0",
+                    db_path=settings.reports_db,
+                    validation_run_id=validation_run_id,
+                ),
+                root_ctx,
+            )
+            if not manifest_audit.complete:
+                raise AppError(
+                    code="validation_manifest_closure_incomplete",
+                    message="Fixed-cohort ingest did not close every admitted report",
+                    retryable=False,
+                    context={
+                        "validation_run_id": str(validation_run_id),
+                        "incomplete_entity_count": len(
+                            manifest_audit.incomplete_entity_ids
+                        ),
+                        "duplicate_current_entity_count": len(
+                            manifest_audit.duplicate_current_entity_ids
+                        ),
+                    },
+                )
         processed = sum(result.processed for result in results)
         had_errors = any(result.had_error for result in results)
 

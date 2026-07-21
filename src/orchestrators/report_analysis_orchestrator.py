@@ -503,7 +503,7 @@ def run_report_analysis(
             openai_file_id=vector_state.openai_file_id,
             last_error=vector_state.last_error,
         )
-    except Exception as exc:
+    except AppError as exc:
         logger.info(
             log_event(
                 mode_ctx,
@@ -513,6 +513,24 @@ def run_report_analysis(
                 fields={"file_id": runtime.file.file_id, "error": str(exc)},
             )
         )
+        raise
+    except Exception as exc:
+        logger.exception(
+            log_event(
+                mode_ctx,
+                role="orchestrator",
+                event="artifacts_generation_failed",
+                module=logger.name,
+                fields={"file_id": runtime.file.file_id, "error": str(exc)},
+            )
+        )
+        raise AppError(
+            code="artifacts_generation_failed",
+            message="Artifact generation failed before report validation",
+            cause=exc,
+            retryable=False,
+            context={"file_id": runtime.file.file_id},
+        ) from exc
 
     normalized_payload = _attach_payload_analysis_metadata(
         merge_artifacts_into_payload(deepcopy(base_payload), artifacts_payload or {}),

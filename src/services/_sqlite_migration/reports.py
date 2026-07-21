@@ -32,6 +32,7 @@ from src.services._sqlite_migration._reports.routing import (
     _reports_db_012_create_private_api_candidate_ledger,
     _reports_db_021_create_acquisition_resource_telemetry,
     _reports_db_024_create_validation_run_manifest,
+    _reports_db_025_expand_validation_run_manifest_provenance,
 )
 from src.services._sqlite_migration._reports.schema import (
     _ACQUISITION_ATTEMPT_RESOURCES_TABLE_SQL,
@@ -42,8 +43,8 @@ from src.services._sqlite_migration._reports.schema import (
     _ARTIFACT_LINEAGE_STATES_TABLE_SQL,
     _CLAIM_EMBEDDING_QUEUE_TRANSITIONS_TABLE_SQL,
     _CLAIM_EMBEDDINGS_TABLE_SQL,
-    _CORPUS_REHABILITATION_CAMPAIGNS_TABLE_SQL,
     _CORPUS_REHABILITATION_CAMPAIGN_ITEMS_TABLE_SQL,
+    _CORPUS_REHABILITATION_CAMPAIGNS_TABLE_SQL,
     _DOWNLOAD_ROUTE_HISTORY_TABLE_SQL,
     _INVENTORY_RECOVERY_CACHE_TABLE_SQL,
     _INVENTORY_ROUTE_HISTORY_TABLE_SQL,
@@ -190,5 +191,10 @@ _REPORTS_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
         migration_id="reports_db_024_create_validation_run_manifest",
         version=24,
         apply_fn=_reports_db_024_create_validation_run_manifest,
+    ),
+    _MigrationSpec(
+        migration_id="reports_db_025_expand_validation_run_manifest_provenance",
+        version=25,
+        apply_fn=_reports_db_025_expand_validation_run_manifest_provenance,
     ),
 )

@@ -65,17 +65,24 @@ _PLACEHOLDER = re.compile(
 _MALFORMED = re.compile(r"\ufffd|\b\w{1,16}\s*\|\s*\w{1,16}\b|(?:\w\s+){5,}\w")
 _MOJIBAKE = re.compile(r"(?:Ã[\u0080-\u00bf]|Â[\u0080-\u00bf]|â€)")
 _MECHANICAL_SCAFFOLD = re.compile(
-    r"\b(?:answer|observation|implication|executive action|concrete finding|immediate implication)\s*:",
+    r"\b(?:answer|observation|implication|executive action|concrete finding|"
+    r"immediate implication)\s*:",
     re.IGNORECASE,
 )
 _PRIVATE_OPERATIONAL_REFERENCE = re.compile(
     r"(?:https?://(?:drive\.google\.com|localhost|127\.0\.0\.1)\S*|"
-    r"(?:[A-Za-z]:[\\/]|(?:^|[\"'])/(?:out|cache|state)/))",
+    r"(?<![A-Za-z0-9])(?:[A-Za-z]:[\\/]|(?:^|[\"'])/(?:out|cache|state)/))",
     re.IGNORECASE,
 )
-_SOURCE_SECTION = re.compile(r"<section\b[^>]*\bid=[\"']source[\"'][^>]*>", re.IGNORECASE)
+_SOURCE_SECTION = re.compile(
+    r"<section\b[^>]*\bid=[\"']source[\"'][^>]*>", re.IGNORECASE
+)
 _PUBLIC_SOURCE_LINK = re.compile(
     r"<a\b[^>]*\bhref=[\"']https?://[^\"']+[\"'][^>]*>\s*Open original source\s*</a>",
+    re.IGNORECASE,
+)
+_SOURCE_PROVENANCE_UNAVAILABLE = re.compile(
+    r"No verified publisher source link is available for this briefing\.",
     re.IGNORECASE,
 )
 _GENERIC_FIGURE = re.compile(r"^(?:figure|chart|exhibit)\s*(?:\d+|[ivxlcdm]+)?$", re.I)
@@ -419,8 +426,16 @@ def _figure_issues(
             "limited",
             "abstained",
         }:
-            required = ("candidate_id", "evidence_id", "source_page", "insight_id", "caption")
-            missing = [key for key in required if not str(figure.get(key) or "").strip()]
+            required = (
+                "candidate_id",
+                "evidence_id",
+                "source_page",
+                "insight_id",
+                "caption",
+            )
+            missing = [
+                key for key in required if not str(figure.get(key) or "").strip()
+            ]
             if missing:
                 item = _item(
                     artifact="chart_insight_cards",
@@ -435,7 +450,8 @@ def _figure_issues(
                         report_id,
                         "public_editorial_quality.figure_linkage_missing",
                         item,
-                        "public chart card is missing retained linkage fields: " + ", ".join(missing),
+                        "public chart card is missing retained linkage fields: "
+                        + ", ".join(missing),
                     )
                 )
     return issues
@@ -474,7 +490,11 @@ def _html_issues(
                 "renders a private or operational URL/path",
             )
         )
-    if _SOURCE_SECTION.search(html) and not _PUBLIC_SOURCE_LINK.search(html):
+    if (
+        _SOURCE_SECTION.search(html)
+        and not _PUBLIC_SOURCE_LINK.search(html)
+        and not _SOURCE_PROVENANCE_UNAVAILABLE.search(visible_text)
+    ):
         issues.append(
             _issue(
                 report_id,
@@ -570,7 +590,9 @@ def _measurements(artifacts: dict[str, Any]) -> list[PublicEditorialQualityMeasu
         if str(item.get("status") or "").strip().lower()
         not in {"weak", "weak_evidence", "limited", "abstained"}
     ]
-    card_to_insight = sum(1 for item in public_chart_cards if str(item.get("insight_id") or "").strip())
+    card_to_insight = sum(
+        1 for item in public_chart_cards if str(item.get("insight_id") or "").strip()
+    )
     figure_to_evidence = sum(
         1
         for item in public_chart_cards

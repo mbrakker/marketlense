@@ -133,13 +133,27 @@ def _nearest_rank(values: list[int], percentile: float) -> int | None:
     return values[index]
 
 
+def _nonnegative_int(value: object) -> int:
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, (int, float, str)):
+        return max(0, int(value))
+    return 0
+
+
+def _nonnegative_float(value: object) -> float:
+    if isinstance(value, (int, float, str)):
+        return max(0.0, float(value))
+    return 0.0
+
+
 def _cohort(
     key: tuple[str, str, str], records: list[tuple[object, ...]]
 ) -> AcquisitionRouteEconomicsCohort:
     complete = [record for record in records if not _json_list(record[9])]
-    elapsed = sorted(max(0, int(record[3] or 0)) for record in complete)
+    elapsed = sorted(_nonnegative_int(record[3]) for record in complete)
     successes = sum(str(record[4]) == "success" for record in complete)
-    known_cost = round(sum(max(0.0, float(record[5] or 0.0)) for record in complete), 6)
+    known_cost = round(sum(_nonnegative_float(record[5]) for record in complete), 6)
     return AcquisitionRouteEconomicsCohort(
         schema_version="1.0",
         publisher_id=key[0],
@@ -153,8 +167,8 @@ def _cohort(
         median_elapsed_ms=_nearest_rank(elapsed, 0.5),
         p95_elapsed_ms=_nearest_rank(elapsed, 0.95),
         estimated_cost_usd=known_cost if len(complete) == len(records) else None,
-        browser_launches=sum(max(0, int(record[6] or 0)) for record in complete),
-        browser_model_calls=sum(max(0, int(record[7] or 0)) for record in complete),
+        browser_launches=sum(_nonnegative_int(record[6]) for record in complete),
+        browser_model_calls=sum(_nonnegative_int(record[7]) for record in complete),
         avoided_operation_count=sum(len(_json_list(record[8])) for record in records),
     )
 
@@ -190,7 +204,8 @@ def _recommend(
             and item.complete_sample_size >= request.minimum_sample_size
             and item.estimated_cost_usd is not None
         ]
-        if direct.estimated_cost_usd is None or not candidates:
+        direct_cost = direct.estimated_cost_usd
+        if direct_cost is None or not candidates:
             recommendations.append(
                 _abstain(
                     publisher_id,
@@ -209,12 +224,12 @@ def _recommend(
                 item.route_family,
             ),
         )[0]
+        candidate_cost = candidate.estimated_cost_usd
+        if candidate_cost is None:
+            continue
         success_gain = candidate.verified_success_rate - direct.verified_success_rate
         cost_reduction = (
-            (direct.estimated_cost_usd - candidate.estimated_cost_usd)
-            / direct.estimated_cost_usd
-            if direct.estimated_cost_usd > 0
-            else 0.0
+            (direct_cost - candidate_cost) / direct_cost if direct_cost > 0 else 0.0
         )
         if (
             success_gain >= request.minimum_success_rate_improvement

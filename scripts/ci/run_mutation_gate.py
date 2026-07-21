@@ -402,7 +402,10 @@ def _targets() -> Iterable[MutationTarget]:
         ),
         MutationTarget(
             module_path=ROOT / "src" / "generators" / "report_render_generator.py",
-            test_paths=("tests/test_report_render_generator.py",),
+            test_paths=(
+                "tests/test_report_render_generator.py",
+                "tests/test_report_render_generator_metadata_governance.py",
+            ),
             max_mutants=4,
             min_score=75.0,
         ),

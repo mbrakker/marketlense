@@ -582,7 +582,8 @@ def _checkpoint_model_provenance(
     prompt_content_hashes = {
         str(namespace): str(value.get("prompt_content_hash") or "").strip()
         for namespace, value in prompts.items()
-        if isinstance(value, dict) and str(value.get("prompt_content_hash") or "").strip()
+        if isinstance(value, dict)
+        and str(value.get("prompt_content_hash") or "").strip()
     }
     prompt_hash = hashlib.sha256(
         json.dumps(
@@ -604,7 +605,8 @@ def _checkpoint_model_provenance(
     metadata["prompt_dependency_manifests"] = {
         str(namespace): dict(value.get("dependency_manifest") or {})
         for namespace, value in prompts.items()
-        if isinstance(value, dict) and isinstance(value.get("dependency_manifest"), dict)
+        if isinstance(value, dict)
+        and isinstance(value.get("dependency_manifest"), dict)
     }
     metadata["execution_identities"] = {
         str(namespace): str(value.get("execution_identity") or "")
@@ -629,7 +631,10 @@ def _checkpoint_model_provenance(
         for namespace, value in prompts.items()
         if isinstance(value, dict)
     }
-    compatibility["execution_identities"] = dict(metadata["execution_identities"])
+    execution_identities = metadata["execution_identities"]
+    compatibility["execution_identities"] = (
+        dict(execution_identities) if isinstance(execution_identities, dict) else {}
+    )
     return prompt_hash, ",".join(models), metadata, compatibility
 
 
@@ -719,9 +724,7 @@ def _record_prompt_family_materializations(
         system_hash = str(prompt_data.get("prompt_system_sha256") or "")
         user_hash = str(prompt_data.get("prompt_user_sha256") or "")
         prompt_content_hash = str(prompt_data.get("prompt_content_hash") or "")
-        prompt_dependency_manifest = dict(
-            prompt_data.get("dependency_manifest") or {}
-        )
+        prompt_dependency_manifest = dict(prompt_data.get("dependency_manifest") or {})
         execution_identity = str(prompt_data.get("execution_identity") or "")
         execution_identity_manifest = dict(
             prompt_data.get("execution_identity_manifest") or {}
