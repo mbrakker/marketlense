@@ -1,0 +1,677 @@
+{
+  "artifact_snapshots": [
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 111143,
+      "snapshot_path": "retained_artifacts/2023-email-sms-and-push-report-pdf/report_analysis/artifacts.json",
+      "snapshot_sha256": "32a3fed6426d1b90754506fdc9c1fbbda98c5cf4c7585e92beb77bc8f3ec69fd",
+      "source_file_size": 111143,
+      "source_path": "2023-email-sms-and-push-report-pdf/report_analysis/artifacts.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 8735,
+      "snapshot_path": "retained_artifacts/2023-email-sms-and-push-report-pdf/report_analysis/doc_map.json",
+      "snapshot_sha256": "f2108a3a4a99ab9f76b0323dd299a24fe4c1190af4f3576e6b7e8677477009da",
+      "source_file_size": 8735,
+      "source_path": "2023-email-sms-and-push-report-pdf/report_analysis/doc_map.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 3403,
+      "snapshot_path": "retained_artifacts/2023-email-sms-and-push-report-pdf/report_analysis/findings.json",
+      "snapshot_sha256": "507375366b735473558e2de072a1480565d9dd3e14532d0f7a3b5c3415df3d80",
+      "source_file_size": 3403,
+      "source_path": "2023-email-sms-and-push-report-pdf/report_analysis/findings.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 1861,
+      "snapshot_path": "retained_artifacts/2023-email-sms-and-push-report-pdf/report_analysis/limitations.json",
+      "snapshot_sha256": "0292d020413b03d00db51b7d491108db4ce16d6b3328f098129a7a7e3da23bf7",
+      "source_file_size": 1861,
+      "source_path": "2023-email-sms-and-push-report-pdf/report_analysis/limitations.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 1563,
+      "snapshot_path": "retained_artifacts/2023-email-sms-and-push-report-pdf/report_analysis/methods.json",
+      "snapshot_sha256": "73d725332cd531f93805fec95a6c7cc038f724a19b46bdd61d742302ec8476ed",
+      "source_file_size": 1563,
+      "source_path": "2023-email-sms-and-push-report-pdf/report_analysis/methods.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 3166,
+      "snapshot_path": "retained_artifacts/2023-email-sms-and-push-report-pdf/report_analysis/quote_candidates.json",
+      "snapshot_sha256": "8f4ef793199892502c9e2d4a2eced46f7cb7771f9dcefda149e4a610e80d1a13",
+      "source_file_size": 3166,
+      "source_path": "2023-email-sms-and-push-report-pdf/report_analysis/quote_candidates.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 899,
+      "snapshot_path": "retained_artifacts/2023-email-sms-and-push-report-pdf/report_analysis/scope.json",
+      "snapshot_sha256": "3694e9e7e12ae7899667edd648474366b4e7b53e9eebba759038355ad5d9a219",
+      "source_file_size": 899,
+      "source_path": "2023-email-sms-and-push-report-pdf/report_analysis/scope.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 9510,
+      "snapshot_path": "retained_artifacts/2412-activate-technology-and-media-outlook-2025-ecommerce-pdf/report_analysis/doc_map.json",
+      "snapshot_sha256": "e2ecef83404bad0ed56916bb54e55d601338770b8cb5f809b5550ccadaa0f321",
+      "source_file_size": 9510,
+      "source_path": "2412-activate-technology-and-media-outlook-2025-ecommerce-pdf/report_analysis/doc_map.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 5421,
+      "snapshot_path": "retained_artifacts/2412-activate-technology-and-media-outlook-2025-ecommerce-pdf/report_analysis/findings.json",
+      "snapshot_sha256": "864cea25b562986934ac46eb2f5dd958bdf53c00baf73f45b6d2c8f1ecc75971",
+      "source_file_size": 5421,
+      "source_path": "2412-activate-technology-and-media-outlook-2025-ecommerce-pdf/report_analysis/findings.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 1884,
+      "snapshot_path": "retained_artifacts/2412-activate-technology-and-media-outlook-2025-ecommerce-pdf/report_analysis/limitations.json",
+      "snapshot_sha256": "8aec76e6fdbef75f49bade95323ada1ca22b4b054f8487a9bf3e8cd37c35af58",
+      "source_file_size": 1884,
+      "source_path": "2412-activate-technology-and-media-outlook-2025-ecommerce-pdf/report_analysis/limitations.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 1948,
+      "snapshot_path": "retained_artifacts/2412-activate-technology-and-media-outlook-2025-ecommerce-pdf/report_analysis/methods.json",
+      "snapshot_sha256": "6ea565e855c38c0a22841d5c96d562ee3eb1da1e56075cc019fb12f77d6c5420",
+      "source_file_size": 1948,
+      "source_path": "2412-activate-technology-and-media-outlook-2025-ecommerce-pdf/report_analysis/methods.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 2476,
+      "snapshot_path": "retained_artifacts/2412-activate-technology-and-media-outlook-2025-ecommerce-pdf/report_analysis/quote_candidates.json",
+      "snapshot_sha256": "276019a8e2d8a76f982d56b20822b3a8155bcd49ea05350c45201abf8271c8c2",
+      "source_file_size": 2476,
+      "source_path": "2412-activate-technology-and-media-outlook-2025-ecommerce-pdf/report_analysis/quote_candidates.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 1233,
+      "snapshot_path": "retained_artifacts/2412-activate-technology-and-media-outlook-2025-ecommerce-pdf/report_analysis/scope.json",
+      "snapshot_sha256": "65ba3ef134ae770e4afa8d32bd6286f559eac0ecbae079a8d5257238f5d451d0",
+      "source_file_size": 1233,
+      "source_path": "2412-activate-technology-and-media-outlook-2025-ecommerce-pdf/report_analysis/scope.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 113890,
+      "snapshot_path": "retained_artifacts/90bbb6f141259489c1a1cfebc200a905a628186c-pdf/report_analysis/artifacts.json",
+      "snapshot_sha256": "55c2a08353635ddffb40699d235761a19823d5c4b1c55e4c2babf28436e95556",
+      "source_file_size": 113890,
+      "source_path": "90bbb6f141259489c1a1cfebc200a905a628186c-pdf/report_analysis/artifacts.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 12450,
+      "snapshot_path": "retained_artifacts/90bbb6f141259489c1a1cfebc200a905a628186c-pdf/report_analysis/doc_map.json",
+      "snapshot_sha256": "8c869a4efdc7f890494aeabc075eb32c72a1516b524c391a0067a54e3a16113b",
+      "source_file_size": 12450,
+      "source_path": "90bbb6f141259489c1a1cfebc200a905a628186c-pdf/report_analysis/doc_map.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 4860,
+      "snapshot_path": "retained_artifacts/90bbb6f141259489c1a1cfebc200a905a628186c-pdf/report_analysis/findings.json",
+      "snapshot_sha256": "9b6c4a0ac4610b2c7e943eedea215013f662ee5f01c38d0bbb5dab610f1f19bb",
+      "source_file_size": 4860,
+      "source_path": "90bbb6f141259489c1a1cfebc200a905a628186c-pdf/report_analysis/findings.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 2232,
+      "snapshot_path": "retained_artifacts/90bbb6f141259489c1a1cfebc200a905a628186c-pdf/report_analysis/limitations.json",
+      "snapshot_sha256": "b3687c7f6cf70e3c3b44f225d902ec730af246173693d6165c707b785fe21d0a",
+      "source_file_size": 2232,
+      "source_path": "90bbb6f141259489c1a1cfebc200a905a628186c-pdf/report_analysis/limitations.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 2480,
+      "snapshot_path": "retained_artifacts/90bbb6f141259489c1a1cfebc200a905a628186c-pdf/report_analysis/methods.json",
+      "snapshot_sha256": "f200f23c6c76e7a3d21ff95f61d350c5fabe94d9c184fe19fc9244a8645ef74d",
+      "source_file_size": 2480,
+      "source_path": "90bbb6f141259489c1a1cfebc200a905a628186c-pdf/report_analysis/methods.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 2574,
+      "snapshot_path": "retained_artifacts/90bbb6f141259489c1a1cfebc200a905a628186c-pdf/report_analysis/quote_candidates.json",
+      "snapshot_sha256": "ee3ebf1272c91ae288520587440442b45ee44a675fe593dbd6dae72dd283af3a",
+      "source_file_size": 2574,
+      "source_path": "90bbb6f141259489c1a1cfebc200a905a628186c-pdf/report_analysis/quote_candidates.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 1288,
+      "snapshot_path": "retained_artifacts/90bbb6f141259489c1a1cfebc200a905a628186c-pdf/report_analysis/scope.json",
+      "snapshot_sha256": "63f22e685aa31c8723113f4289bb568252f9a823fd8e3f4d9410e7f9b1539dd8",
+      "source_file_size": 1288,
+      "source_path": "90bbb6f141259489c1a1cfebc200a905a628186c-pdf/report_analysis/scope.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 89227,
+      "snapshot_path": "retained_artifacts/activate-2025-consumer-internet-and-media-revenues-pdf/report_analysis/artifacts.json",
+      "snapshot_sha256": "6d72d95b8672953556fb65f6a57b1c82196ad5332a0e6df37ccd354e4698ed6b",
+      "source_file_size": 89227,
+      "source_path": "activate-2025-consumer-internet-and-media-revenues-pdf/report_analysis/artifacts.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 6248,
+      "snapshot_path": "retained_artifacts/activate-2025-consumer-internet-and-media-revenues-pdf/report_analysis/doc_map.json",
+      "snapshot_sha256": "a022b60ff453bef7902b3afa1d77d6ba83467e9be38155ec9fdea4bbc3483f8a",
+      "source_file_size": 6248,
+      "source_path": "activate-2025-consumer-internet-and-media-revenues-pdf/report_analysis/doc_map.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 1828,
+      "snapshot_path": "retained_artifacts/activate-2025-consumer-internet-and-media-revenues-pdf/report_analysis/findings.json",
+      "snapshot_sha256": "141d7b940c9c4e0c52d25c7e9091e717f00002d2355b6bfb94d1b8d92f48e1c2",
+      "source_file_size": 1828,
+      "source_path": "activate-2025-consumer-internet-and-media-revenues-pdf/report_analysis/findings.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 852,
+      "snapshot_path": "retained_artifacts/activate-2025-consumer-internet-and-media-revenues-pdf/report_analysis/limitations.json",
+      "snapshot_sha256": "7dae949bf48f5b28402d39510b5fcc7e599b6385412d0a5c2edef79d5cb752a6",
+      "source_file_size": 852,
+      "source_path": "activate-2025-consumer-internet-and-media-revenues-pdf/report_analysis/limitations.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 1934,
+      "snapshot_path": "retained_artifacts/activate-2025-consumer-internet-and-media-revenues-pdf/report_analysis/methods.json",
+      "snapshot_sha256": "f58ddb0a10c0061bd04b8c378bddf7a6e0c2d9a5db5bdbda5c480f63d7db4d5b",
+      "source_file_size": 1934,
+      "source_path": "activate-2025-consumer-internet-and-media-revenues-pdf/report_analysis/methods.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 2146,
+      "snapshot_path": "retained_artifacts/activate-2025-consumer-internet-and-media-revenues-pdf/report_analysis/quote_candidates.json",
+      "snapshot_sha256": "7e920faac19e2836b6d12e18f814f247391586323c7a2f3263b0d33f39a6569b",
+      "source_file_size": 2146,
+      "source_path": "activate-2025-consumer-internet-and-media-revenues-pdf/report_analysis/quote_candidates.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 975,
+      "snapshot_path": "retained_artifacts/activate-2025-consumer-internet-and-media-revenues-pdf/report_analysis/scope.json",
+      "snapshot_sha256": "5104f4a868af37f8bc469d3c5b19a2b378b9cf123e30fa17bd711a3718bfd7ac",
+      "source_file_size": 975,
+      "source_path": "activate-2025-consumer-internet-and-media-revenues-pdf/report_analysis/scope.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 9847,
+      "snapshot_path": "retained_artifacts/activate-2025-discovery-and-generative-ai-pdf/report_analysis/doc_map.json",
+      "snapshot_sha256": "01b609893b82a2cdc8099c1c916109b8ba80ee98271ea9570e94884eeb4071ee",
+      "source_file_size": 9847,
+      "source_path": "activate-2025-discovery-and-generative-ai-pdf/report_analysis/doc_map.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 2714,
+      "snapshot_path": "retained_artifacts/activate-2025-discovery-and-generative-ai-pdf/report_analysis/findings.json",
+      "snapshot_sha256": "746829c4d1a295005eea513f837c4cd2c0f82379e88c5589abd48bcdccfe75dc",
+      "source_file_size": 2714,
+      "source_path": "activate-2025-discovery-and-generative-ai-pdf/report_analysis/findings.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 1651,
+      "snapshot_path": "retained_artifacts/activate-2025-discovery-and-generative-ai-pdf/report_analysis/limitations.json",
+      "snapshot_sha256": "bcf8905165bfc1063c21bf7ee7761dc148f54637e7b6afdbd970d87b2ea921da",
+      "source_file_size": 1651,
+      "source_path": "activate-2025-discovery-and-generative-ai-pdf/report_analysis/limitations.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 2259,
+      "snapshot_path": "retained_artifacts/activate-2025-discovery-and-generative-ai-pdf/report_analysis/methods.json",
+      "snapshot_sha256": "ebd858283ca6834493d7d366d3e14d6528fe8787fa407c8b7442d087818d4849",
+      "source_file_size": 2259,
+      "source_path": "activate-2025-discovery-and-generative-ai-pdf/report_analysis/methods.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 2451,
+      "snapshot_path": "retained_artifacts/activate-2025-discovery-and-generative-ai-pdf/report_analysis/quote_candidates.json",
+      "snapshot_sha256": "4615dd41a8422315fbd12d1f738f07d44f7e61ccb2d4e7f374680b53e3e8e452",
+      "source_file_size": 2451,
+      "source_path": "activate-2025-discovery-and-generative-ai-pdf/report_analysis/quote_candidates.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 1119,
+      "snapshot_path": "retained_artifacts/activate-2025-discovery-and-generative-ai-pdf/report_analysis/scope.json",
+      "snapshot_sha256": "87da8b0887354283823fbc1180d4ddc2234927a58177d72d35067b28770946ea",
+      "source_file_size": 1119,
+      "source_path": "activate-2025-discovery-and-generative-ai-pdf/report_analysis/scope.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 95698,
+      "snapshot_path": "retained_artifacts/activate-2025-social-video-pdf/report_analysis/artifacts.json",
+      "snapshot_sha256": "4782cbd4f5edfd2265067e51da88bc0e86464afaa9f901a38d509be1d3cbed8e",
+      "source_file_size": 95698,
+      "source_path": "activate-2025-social-video-pdf/report_analysis/artifacts.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 7542,
+      "snapshot_path": "retained_artifacts/activate-2025-social-video-pdf/report_analysis/doc_map.json",
+      "snapshot_sha256": "9e8bde7cec59c7cbd2c774674b34fef1c3afccc3a4be26a5a74cd058483485bb",
+      "source_file_size": 7542,
+      "source_path": "activate-2025-social-video-pdf/report_analysis/doc_map.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 2942,
+      "snapshot_path": "retained_artifacts/activate-2025-social-video-pdf/report_analysis/findings.json",
+      "snapshot_sha256": "3710b9a556c92ebbc5a3ffbedb2c70b2697d5ee17eec90be4e717cf6e979a584",
+      "source_file_size": 2942,
+      "source_path": "activate-2025-social-video-pdf/report_analysis/findings.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 1837,
+      "snapshot_path": "retained_artifacts/activate-2025-social-video-pdf/report_analysis/limitations.json",
+      "snapshot_sha256": "e1fd4352317c651966eaa9b19f1bfc78970b5fb9c84560084b7c45c43f28e16f",
+      "source_file_size": 1837,
+      "source_path": "activate-2025-social-video-pdf/report_analysis/limitations.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 1764,
+      "snapshot_path": "retained_artifacts/activate-2025-social-video-pdf/report_analysis/methods.json",
+      "snapshot_sha256": "5358788fb45ae4f31435ff8791d12fb47558f372a6c7e9baf11e95039a9cae95",
+      "source_file_size": 1764,
+      "source_path": "activate-2025-social-video-pdf/report_analysis/methods.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 2192,
+      "snapshot_path": "retained_artifacts/activate-2025-social-video-pdf/report_analysis/quote_candidates.json",
+      "snapshot_sha256": "1dc9a898ed801f8324c1a26ca68506937e3ac29fc85591d3404b71d6f0a395a4",
+      "source_file_size": 2192,
+      "source_path": "activate-2025-social-video-pdf/report_analysis/quote_candidates.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 1137,
+      "snapshot_path": "retained_artifacts/activate-2025-social-video-pdf/report_analysis/scope.json",
+      "snapshot_sha256": "2968d8f5ba32ead8640948244e42e9c6b302bc8b465f2a3b217d11fcf4de6830",
+      "source_file_size": 1137,
+      "source_path": "activate-2025-social-video-pdf/report_analysis/scope.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 10292,
+      "snapshot_path": "retained_artifacts/activate-technology-and-media-outlook-2025-pdf/report_analysis/doc_map.json",
+      "snapshot_sha256": "c8cd9ce2d628dbae34a2621644b6de463f83a61cfe01df3db986d377b91ed081",
+      "source_file_size": 10292,
+      "source_path": "activate-technology-and-media-outlook-2025-pdf/report_analysis/doc_map.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 3845,
+      "snapshot_path": "retained_artifacts/activate-technology-and-media-outlook-2025-pdf/report_analysis/findings.json",
+      "snapshot_sha256": "5c0552b365fc7cc48cd183e2733a11806caee924d55957415081aeea38f90488",
+      "source_file_size": 3845,
+      "source_path": "activate-technology-and-media-outlook-2025-pdf/report_analysis/findings.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 2263,
+      "snapshot_path": "retained_artifacts/activate-technology-and-media-outlook-2025-pdf/report_analysis/limitations.json",
+      "snapshot_sha256": "e1b4b72f14417d671363f2af2dabac6df9e424efd5837997dc96318fd733629d",
+      "source_file_size": 2263,
+      "source_path": "activate-technology-and-media-outlook-2025-pdf/report_analysis/limitations.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 2635,
+      "snapshot_path": "retained_artifacts/activate-technology-and-media-outlook-2025-pdf/report_analysis/methods.json",
+      "snapshot_sha256": "8b258e2c8031f092f3a34056b8f7d5eed0d12e30b13ba7f75d30b177d8dadebb",
+      "source_file_size": 2635,
+      "source_path": "activate-technology-and-media-outlook-2025-pdf/report_analysis/methods.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 2639,
+      "snapshot_path": "retained_artifacts/activate-technology-and-media-outlook-2025-pdf/report_analysis/quote_candidates.json",
+      "snapshot_sha256": "841961aed82aabbe78c50d34c8ace45cb3cafeda6b67ab400adf306a1e861fac",
+      "source_file_size": 2639,
+      "source_path": "activate-technology-and-media-outlook-2025-pdf/report_analysis/quote_candidates.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 1291,
+      "snapshot_path": "retained_artifacts/activate-technology-and-media-outlook-2025-pdf/report_analysis/scope.json",
+      "snapshot_sha256": "5b080bb0c0df24685e8ef33d4556fe69d043666317c5980c5ab9430fe3117029",
+      "source_file_size": 1291,
+      "source_path": "activate-technology-and-media-outlook-2025-pdf/report_analysis/scope.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 10079,
+      "snapshot_path": "retained_artifacts/activate-technology-media-outlook-2026-acig-pdf/report_analysis/doc_map.json",
+      "snapshot_sha256": "56e853b00f81328e8f1a82a48aa83ad0e563d556c24ae940034e37c5beb75bef",
+      "source_file_size": 10079,
+      "source_path": "activate-technology-media-outlook-2026-acig-pdf/report_analysis/doc_map.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 4233,
+      "snapshot_path": "retained_artifacts/activate-technology-media-outlook-2026-acig-pdf/report_analysis/findings.json",
+      "snapshot_sha256": "915c3811e8132cfa32c3a3923ad10878f0c1584364f732bcab1b842ca777241e",
+      "source_file_size": 4233,
+      "source_path": "activate-technology-media-outlook-2026-acig-pdf/report_analysis/findings.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 2788,
+      "snapshot_path": "retained_artifacts/activate-technology-media-outlook-2026-acig-pdf/report_analysis/limitations.json",
+      "snapshot_sha256": "85948c8c50721461c7a90b3b4e7111700ea47ae1dc3013c92d93ad231d2b0e79",
+      "source_file_size": 2788,
+      "source_path": "activate-technology-media-outlook-2026-acig-pdf/report_analysis/limitations.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 3187,
+      "snapshot_path": "retained_artifacts/activate-technology-media-outlook-2026-acig-pdf/report_analysis/methods.json",
+      "snapshot_sha256": "4d54ec0676323a5c938436a1ed625e93f882187bd7304b09669d11ea125e9203",
+      "source_file_size": 3187,
+      "source_path": "activate-technology-media-outlook-2026-acig-pdf/report_analysis/methods.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 2221,
+      "snapshot_path": "retained_artifacts/activate-technology-media-outlook-2026-acig-pdf/report_analysis/quote_candidates.json",
+      "snapshot_sha256": "03fc21168863fff0d0c192e300f7680d990c310c6a442ee5ff197fd1f0dd27eb",
+      "source_file_size": 2221,
+      "source_path": "activate-technology-media-outlook-2026-acig-pdf/report_analysis/quote_candidates.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 1463,
+      "snapshot_path": "retained_artifacts/activate-technology-media-outlook-2026-acig-pdf/report_analysis/scope.json",
+      "snapshot_sha256": "a8f25a539336322a05091a5531c47073976f72e76413fb119ba5374436f9ba72",
+      "source_file_size": 1463,
+      "source_path": "activate-technology-media-outlook-2026-acig-pdf/report_analysis/scope.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 107598,
+      "snapshot_path": "retained_artifacts/cf091e263a2b6ed29222c5c60b6ed133a90fbe0c-pdf/report_analysis/artifacts.json",
+      "snapshot_sha256": "7c9c94c6130b0b1ddf10cfc7c70d43bd702e2f4b6da02a06fae38b3a59920c85",
+      "source_file_size": 107598,
+      "source_path": "cf091e263a2b6ed29222c5c60b6ed133a90fbe0c-pdf/report_analysis/artifacts.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 8216,
+      "snapshot_path": "retained_artifacts/cf091e263a2b6ed29222c5c60b6ed133a90fbe0c-pdf/report_analysis/doc_map.json",
+      "snapshot_sha256": "13b382cfcee071210919d9f00732cb0e546ccdb031cfbb263f877c0fdd59effa",
+      "source_file_size": 8216,
+      "source_path": "cf091e263a2b6ed29222c5c60b6ed133a90fbe0c-pdf/report_analysis/doc_map.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 6716,
+      "snapshot_path": "retained_artifacts/cf091e263a2b6ed29222c5c60b6ed133a90fbe0c-pdf/report_analysis/findings.json",
+      "snapshot_sha256": "e6d005472888ef137a49a1096cc2ead7f8106f0c8c2eff028fd02a5367955f6e",
+      "source_file_size": 6716,
+      "source_path": "cf091e263a2b6ed29222c5c60b6ed133a90fbe0c-pdf/report_analysis/findings.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 1894,
+      "snapshot_path": "retained_artifacts/cf091e263a2b6ed29222c5c60b6ed133a90fbe0c-pdf/report_analysis/limitations.json",
+      "snapshot_sha256": "1e3f0f4f36bf15e8970062079013ea14fa21003e2fc98d0e1f65dd2348cb7f1c",
+      "source_file_size": 1894,
+      "source_path": "cf091e263a2b6ed29222c5c60b6ed133a90fbe0c-pdf/report_analysis/limitations.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 2888,
+      "snapshot_path": "retained_artifacts/cf091e263a2b6ed29222c5c60b6ed133a90fbe0c-pdf/report_analysis/methods.json",
+      "snapshot_sha256": "cf0baead499590735784409d29efc3e2368a5cff8b0e5bd68c13152a5d626bd6",
+      "source_file_size": 2888,
+      "source_path": "cf091e263a2b6ed29222c5c60b6ed133a90fbe0c-pdf/report_analysis/methods.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 2670,
+      "snapshot_path": "retained_artifacts/cf091e263a2b6ed29222c5c60b6ed133a90fbe0c-pdf/report_analysis/quote_candidates.json",
+      "snapshot_sha256": "d3946a46a68481b436d2a8f4b16dec268bd1b30d9a3664a436ccb7f43f1ac944",
+      "source_file_size": 2670,
+      "source_path": "cf091e263a2b6ed29222c5c60b6ed133a90fbe0c-pdf/report_analysis/quote_candidates.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 1222,
+      "snapshot_path": "retained_artifacts/cf091e263a2b6ed29222c5c60b6ed133a90fbe0c-pdf/report_analysis/scope.json",
+      "snapshot_sha256": "97d149db560eee2c23570e3689f1f2906d521df383d8845975fca8573e7e3c1c",
+      "source_file_size": 1222,
+      "source_path": "cf091e263a2b6ed29222c5c60b6ed133a90fbe0c-pdf/report_analysis/scope.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 90897,
+      "snapshot_path": "retained_artifacts/d01c72af1b10260d54ec45e891bfc7af40a041ce-pdf/report_analysis/artifacts.json",
+      "snapshot_sha256": "eb017d2af9ab4cf4b0b3e13a15408edcc05ee616e84e05669a548eb4a709a498",
+      "source_file_size": 90897,
+      "source_path": "d01c72af1b10260d54ec45e891bfc7af40a041ce-pdf/report_analysis/artifacts.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 6007,
+      "snapshot_path": "retained_artifacts/d01c72af1b10260d54ec45e891bfc7af40a041ce-pdf/report_analysis/doc_map.json",
+      "snapshot_sha256": "7201534f47cbfb4923c7964bff361b93e1392e62028999f37654b5931b31c471",
+      "source_file_size": 6007,
+      "source_path": "d01c72af1b10260d54ec45e891bfc7af40a041ce-pdf/report_analysis/doc_map.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 6477,
+      "snapshot_path": "retained_artifacts/d01c72af1b10260d54ec45e891bfc7af40a041ce-pdf/report_analysis/findings.json",
+      "snapshot_sha256": "4f389d4de690d11b7ee5996c0c6cbe89d65309c5e72b867c5618d5008fe05040",
+      "source_file_size": 6477,
+      "source_path": "d01c72af1b10260d54ec45e891bfc7af40a041ce-pdf/report_analysis/findings.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 1593,
+      "snapshot_path": "retained_artifacts/d01c72af1b10260d54ec45e891bfc7af40a041ce-pdf/report_analysis/limitations.json",
+      "snapshot_sha256": "f66793389cb5c2a6afad2bc8809e6f593d937d221daf676a68e45d8ebf87e13f",
+      "source_file_size": 1593,
+      "source_path": "d01c72af1b10260d54ec45e891bfc7af40a041ce-pdf/report_analysis/limitations.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 1474,
+      "snapshot_path": "retained_artifacts/d01c72af1b10260d54ec45e891bfc7af40a041ce-pdf/report_analysis/methods.json",
+      "snapshot_sha256": "8f93224f9abacf1bdb7ffd5b0aa17bdfa34b6eac40919da5f1562bf2655612ca",
+      "source_file_size": 1474,
+      "source_path": "d01c72af1b10260d54ec45e891bfc7af40a041ce-pdf/report_analysis/methods.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 2697,
+      "snapshot_path": "retained_artifacts/d01c72af1b10260d54ec45e891bfc7af40a041ce-pdf/report_analysis/quote_candidates.json",
+      "snapshot_sha256": "48e1e815378cfc85ba58953b9606ddd9393bd3e6265aaf49be33183856e3016a",
+      "source_file_size": 2697,
+      "source_path": "d01c72af1b10260d54ec45e891bfc7af40a041ce-pdf/report_analysis/quote_candidates.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 1259,
+      "snapshot_path": "retained_artifacts/d01c72af1b10260d54ec45e891bfc7af40a041ce-pdf/report_analysis/scope.json",
+      "snapshot_sha256": "2f2497cdd7e16bdd4ad522da3ac01b8edb1df789a9c49e6cee3b216a775ac236",
+      "source_file_size": 1259,
+      "source_path": "d01c72af1b10260d54ec45e891bfc7af40a041ce-pdf/report_analysis/scope.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 103445,
+      "snapshot_path": "retained_artifacts/d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf/report_analysis/artifacts.json",
+      "snapshot_sha256": "cd9e932c24a88335ebf3ad57af1f0edb75dd0e352b7842252d60908cf71f97f3",
+      "source_file_size": 103445,
+      "source_path": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf/report_analysis/artifacts.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 7063,
+      "snapshot_path": "retained_artifacts/d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf/report_analysis/doc_map.json",
+      "snapshot_sha256": "3711f4c7abfa509088d91ed115deec0c52cc9f490c5b60c018f988426c16cdee",
+      "source_file_size": 7063,
+      "source_path": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf/report_analysis/doc_map.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 4445,
+      "snapshot_path": "retained_artifacts/d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf/report_analysis/findings.json",
+      "snapshot_sha256": "8df037ae6913a0971c85c76793457a13a737cb027bf1a91076ada93f158e1feb",
+      "source_file_size": 4445,
+      "source_path": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf/report_analysis/findings.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 2026,
+      "snapshot_path": "retained_artifacts/d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf/report_analysis/limitations.json",
+      "snapshot_sha256": "75c76edd5b46471c997571429bc35b095e33769906d979d4bf2c036582394376",
+      "source_file_size": 2026,
+      "source_path": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf/report_analysis/limitations.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 3211,
+      "snapshot_path": "retained_artifacts/d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf/report_analysis/methods.json",
+      "snapshot_sha256": "34ac4214f462048b3e80a9a03c9de60f516c28cf2ed672eb781d29d43c2d7d04",
+      "source_file_size": 3211,
+      "source_path": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf/report_analysis/methods.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 3032,
+      "snapshot_path": "retained_artifacts/d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf/report_analysis/quote_candidates.json",
+      "snapshot_sha256": "091f4edb873bf51306b0778e080c7635fae8a3f32494aafb0321915560201f91",
+      "source_file_size": 3032,
+      "source_path": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf/report_analysis/quote_candidates.json"
+    },
+    {
+      "accessibility": "readable",
+      "snapshot_file_size": 1128,
+      "snapshot_path": "retained_artifacts/d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf/report_analysis/scope.json",
+      "snapshot_sha256": "f218a51b826c2430cea725bf1b7328f1bc54b8dceedf9754671b813ce653c436",
+      "source_file_size": 1128,
+      "source_path": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf/report_analysis/scope.json"
+    }
+  ],
+  "evidence_run_id": "2e4771b9215a430886f4851ce110924f",
+  "generated_at": "2026-07-21T06:46:23.263461+00:00",
+  "log_snapshots": [],
+  "repository_commit_sha": "33c882d4e41b5f0b0ae63f06fe201ccd2dd58911",
+  "schema_version": "1.0",
+  "snapshots": [
+    {
+      "foreign_key_check": [],
+      "integrity_check": [
+        "ok"
+      ],
+      "journal_mode": "wal",
+      "logical_database_name": "reports",
+      "maximum_relevant_timestamp": "2026-07-20T21:23:23.961Z",
+      "schema_version": 1,
+      "snapshot_created_at": "2026-07-21T06:46:22.254860+00:00",
+      "snapshot_file_size": 4030464,
+      "snapshot_path": "snapshots/reports.sqlite",
+      "snapshot_sha256": "6f517e216948374001fb4cc60c9ffe0b1b9dcbac217e7b92a04ab1de6d0dba44",
+      "source_accessibility": "readable",
+      "source_exists": true,
+      "source_file_size": 4030464,
+      "source_path": "reports.sqlite",
+      "table_row_counts": {
+        "artifact_lineage_records": 387,
+        "artifact_lineage_states": 387,
+        "publisher_download_route_history": 1
+      }
+    },
+    {
+      "foreign_key_check": [],
+      "integrity_check": [
+        "ok"
+      ],
+      "journal_mode": "delete",
+      "logical_database_name": "llm_usage",
+      "maximum_relevant_timestamp": "2026-07-20T21:23:18.089254+00:00",
+      "schema_version": 1,
+      "snapshot_created_at": "2026-07-21T06:46:22.328360+00:00",
+      "snapshot_file_size": 1490944,
+      "snapshot_path": "snapshots/llm_usage.sqlite",
+      "snapshot_sha256": "c101fc2d3810a7b509939bc7afb476c5bf7cef8031040f1688610ceeebf238d4",
+      "source_accessibility": "readable",
+      "source_exists": true,
+      "source_file_size": 1490944,
+      "source_path": "llm_usage.sqlite",
+      "table_row_counts": {
+        "llm_usage_events": 159
+      }
+    },
+    {
+      "foreign_key_check": [],
+      "integrity_check": [
+        "ok"
+      ],
+      "journal_mode": "wal",
+      "logical_database_name": "index",
+      "maximum_relevant_timestamp": "2026-07-20T21:23:24.139449+00:00",
+      "schema_version": 1,
+      "snapshot_created_at": "2026-07-21T06:46:22.363131+00:00",
+      "snapshot_file_size": 557056,
+      "snapshot_path": "snapshots/index.sqlite",
+      "snapshot_sha256": "2c11d7c36c91b29bf7ef8c534f71607545dc3225f24a0beef2176e073372d009",
+      "source_accessibility": "readable",
+      "source_exists": true,
+      "source_file_size": 557056,
+      "source_path": "index.sqlite",
+      "table_row_counts": {
+        "workflow_control_observations": 8
+      }
+    },
+    {
+      "foreign_key_check": "not_run",
+      "integrity_check": "not_run",
+      "journal_mode": null,
+      "logical_database_name": "ui_runs",
+      "maximum_relevant_timestamp": null,
+      "schema_version": null,
+      "snapshot_created_at": "2026-07-21T06:46:22.392925+00:00",
+      "snapshot_file_size": null,
+      "snapshot_path": "snapshots/ui_runs.sqlite",
+      "snapshot_sha256": null,
+      "source_accessibility": "missing_optional",
+      "source_exists": false,
+      "source_file_size": null,
+      "source_path": "ui_runs.sqlite",
+      "table_row_counts": {}
+    }
+  ]
+}

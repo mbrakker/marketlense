@@ -1,0 +1,795 @@
+{
+  "evidence_run_id": "2e4771b9215a430886f4851ce110924f",
+  "generated_at": "2026-07-21T06:46:25.090975+00:00",
+  "metrics": {
+    "acquisition_metrics.csv": [
+      {
+        "attempts": 1,
+        "limitation": "route history has no publisher, duration or cost fields",
+        "outcome": "downloaded",
+        "publisher": "unattributed",
+        "route_family": "direct_pdf_probe",
+        "route_kind": "pdf_download",
+        "route_status": "verified",
+        "sample_size": 1,
+        "successes": 1
+      }
+    ],
+    "browser_metrics.csv": [
+      {
+        "acquisition_records": 1,
+        "attempts": 1,
+        "browser_steps": 1,
+        "limitation": "launch/navigation/screenshot/network/duration fields not retained",
+        "onsite_capture_records": 0,
+        "route_family": "direct_pdf_probe",
+        "structured_browser_records": 0
+      }
+    ],
+    "crop_quality_metrics.csv": [],
+    "failure_metrics.csv": [],
+    "lineage_reuse_metrics.csv": [
+      {
+        "artifact_count": 17,
+        "artifact_kind": "analysis_pdf",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "source_prepared",
+        "report_count": 17,
+        "state": "active"
+      },
+      {
+        "artifact_count": 7,
+        "artifact_kind": "analysis_vector_store",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 7,
+        "state": "active"
+      },
+      {
+        "artifact_count": 7,
+        "artifact_kind": "artifacts",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 7,
+        "state": "active"
+      },
+      {
+        "artifact_count": 11,
+        "artifact_kind": "contents_image",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "source_prepared",
+        "report_count": 11,
+        "state": "active"
+      },
+      {
+        "artifact_count": 7,
+        "artifact_kind": "context_category_fit",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 7,
+        "state": "active"
+      },
+      {
+        "artifact_count": 7,
+        "artifact_kind": "doc_map",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 7,
+        "state": "active"
+      },
+      {
+        "artifact_count": 7,
+        "artifact_kind": "findings",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 7,
+        "state": "active"
+      },
+      {
+        "artifact_count": 7,
+        "artifact_kind": "limitations",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 7,
+        "state": "active"
+      },
+      {
+        "artifact_count": 7,
+        "artifact_kind": "methods",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 7,
+        "state": "active"
+      },
+      {
+        "artifact_count": 7,
+        "artifact_kind": "preview_image",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 7,
+        "state": "active"
+      },
+      {
+        "artifact_count": 7,
+        "artifact_kind": "prompt_family:report_vs/artifacts/cover_semantics",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 7,
+        "state": "active"
+      },
+      {
+        "artifact_count": 4,
+        "artifact_kind": "prompt_family:report_vs/artifacts/cover_semantics",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 2,
+        "state": "superseded"
+      },
+      {
+        "artifact_count": 7,
+        "artifact_kind": "prompt_family:report_vs/artifacts/expert_comment",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 7,
+        "state": "active"
+      },
+      {
+        "artifact_count": 4,
+        "artifact_kind": "prompt_family:report_vs/artifacts/expert_comment",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 2,
+        "state": "superseded"
+      },
+      {
+        "artifact_count": 7,
+        "artifact_kind": "prompt_family:report_vs/artifacts/insights_candidates",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 7,
+        "state": "active"
+      },
+      {
+        "artifact_count": 4,
+        "artifact_kind": "prompt_family:report_vs/artifacts/insights_candidates",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 2,
+        "state": "superseded"
+      },
+      {
+        "artifact_count": 7,
+        "artifact_kind": "prompt_family:report_vs/artifacts/insights_final",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 7,
+        "state": "active"
+      },
+      {
+        "artifact_count": 4,
+        "artifact_kind": "prompt_family:report_vs/artifacts/insights_final",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 2,
+        "state": "superseded"
+      },
+      {
+        "artifact_count": 7,
+        "artifact_kind": "prompt_family:report_vs/artifacts/linkedin_post",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 7,
+        "state": "active"
+      },
+      {
+        "artifact_count": 4,
+        "artifact_kind": "prompt_family:report_vs/artifacts/linkedin_post",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 2,
+        "state": "superseded"
+      },
+      {
+        "artifact_count": 7,
+        "artifact_kind": "prompt_family:report_vs/artifacts/quotes",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 7,
+        "state": "active"
+      },
+      {
+        "artifact_count": 4,
+        "artifact_kind": "prompt_family:report_vs/artifacts/quotes",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 2,
+        "state": "superseded"
+      },
+      {
+        "artifact_count": 7,
+        "artifact_kind": "prompt_family:report_vs/artifacts/summary",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 7,
+        "state": "active"
+      },
+      {
+        "artifact_count": 4,
+        "artifact_kind": "prompt_family:report_vs/artifacts/summary",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 2,
+        "state": "superseded"
+      },
+      {
+        "artifact_count": 7,
+        "artifact_kind": "prompt_family:report_vs/context_category_fit",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 7,
+        "state": "active"
+      },
+      {
+        "artifact_count": 4,
+        "artifact_kind": "prompt_family:report_vs/context_category_fit",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 2,
+        "state": "superseded"
+      },
+      {
+        "artifact_count": 7,
+        "artifact_kind": "prompt_family:report_vs/doc_map",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 7,
+        "state": "active"
+      },
+      {
+        "artifact_count": 4,
+        "artifact_kind": "prompt_family:report_vs/doc_map",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 2,
+        "state": "superseded"
+      },
+      {
+        "artifact_count": 7,
+        "artifact_kind": "prompt_family:report_vs/evidence_packs/context_category_fit",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 7,
+        "state": "active"
+      },
+      {
+        "artifact_count": 4,
+        "artifact_kind": "prompt_family:report_vs/evidence_packs/context_category_fit",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 2,
+        "state": "superseded"
+      },
+      {
+        "artifact_count": 7,
+        "artifact_kind": "prompt_family:report_vs/evidence_packs/findings",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 7,
+        "state": "active"
+      },
+      {
+        "artifact_count": 4,
+        "artifact_kind": "prompt_family:report_vs/evidence_packs/findings",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 2,
+        "state": "superseded"
+      },
+      {
+        "artifact_count": 7,
+        "artifact_kind": "prompt_family:report_vs/evidence_packs/limitations",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 7,
+        "state": "active"
+      },
+      {
+        "artifact_count": 4,
+        "artifact_kind": "prompt_family:report_vs/evidence_packs/limitations",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 2,
+        "state": "superseded"
+      },
+      {
+        "artifact_count": 7,
+        "artifact_kind": "prompt_family:report_vs/evidence_packs/methods",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 7,
+        "state": "active"
+      },
+      {
+        "artifact_count": 4,
+        "artifact_kind": "prompt_family:report_vs/evidence_packs/methods",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 2,
+        "state": "superseded"
+      },
+      {
+        "artifact_count": 7,
+        "artifact_kind": "prompt_family:report_vs/evidence_packs/quote_candidates",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 7,
+        "state": "active"
+      },
+      {
+        "artifact_count": 4,
+        "artifact_kind": "prompt_family:report_vs/evidence_packs/quote_candidates",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 2,
+        "state": "superseded"
+      },
+      {
+        "artifact_count": 7,
+        "artifact_kind": "prompt_family:report_vs/evidence_packs/report_context",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 7,
+        "state": "active"
+      },
+      {
+        "artifact_count": 4,
+        "artifact_kind": "prompt_family:report_vs/evidence_packs/report_context",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 2,
+        "state": "superseded"
+      },
+      {
+        "artifact_count": 7,
+        "artifact_kind": "prompt_family:report_vs/evidence_packs/scope",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 7,
+        "state": "active"
+      },
+      {
+        "artifact_count": 4,
+        "artifact_kind": "prompt_family:report_vs/evidence_packs/scope",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 2,
+        "state": "superseded"
+      },
+      {
+        "artifact_count": 7,
+        "artifact_kind": "prompt_family:report_vs/taxonomy",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 7,
+        "state": "active"
+      },
+      {
+        "artifact_count": 4,
+        "artifact_kind": "prompt_family:report_vs/taxonomy",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 2,
+        "state": "superseded"
+      },
+      {
+        "artifact_count": 7,
+        "artifact_kind": "prompt_family:report_vs/validate/grounding",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 7,
+        "state": "active"
+      },
+      {
+        "artifact_count": 4,
+        "artifact_kind": "prompt_family:report_vs/validate/grounding",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 2,
+        "state": "superseded"
+      },
+      {
+        "artifact_count": 7,
+        "artifact_kind": "prompt_family:report_vs/validate/semantic",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 7,
+        "state": "active"
+      },
+      {
+        "artifact_count": 4,
+        "artifact_kind": "prompt_family:report_vs/validate/semantic",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 2,
+        "state": "superseded"
+      },
+      {
+        "artifact_count": 7,
+        "artifact_kind": "public_editorial_quality_after",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 7,
+        "state": "active"
+      },
+      {
+        "artifact_count": 7,
+        "artifact_kind": "public_editorial_quality_before",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 7,
+        "state": "active"
+      },
+      {
+        "artifact_count": 7,
+        "artifact_kind": "quote_candidates",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 7,
+        "state": "active"
+      },
+      {
+        "artifact_count": 7,
+        "artifact_kind": "rendered_html",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "render_complete",
+        "report_count": 7,
+        "state": "active"
+      },
+      {
+        "artifact_count": 19,
+        "artifact_kind": "rendered_html",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "render_complete",
+        "report_count": 7,
+        "state": "superseded"
+      },
+      {
+        "artifact_count": 7,
+        "artifact_kind": "report_context",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 7,
+        "state": "active"
+      },
+      {
+        "artifact_count": 7,
+        "artifact_kind": "scope",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 7,
+        "state": "active"
+      },
+      {
+        "artifact_count": 7,
+        "artifact_kind": "signals",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "render_complete",
+        "report_count": 7,
+        "state": "active"
+      },
+      {
+        "artifact_count": 2,
+        "artifact_kind": "signals",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "render_complete",
+        "report_count": 1,
+        "state": "superseded"
+      },
+      {
+        "artifact_count": 17,
+        "artifact_kind": "source_pdf",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "source_prepared",
+        "report_count": 17,
+        "state": "active"
+      },
+      {
+        "artifact_count": 7,
+        "artifact_kind": "validation",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 7,
+        "state": "active"
+      }
+    ],
+    "llm_usage_metrics.csv": [
+      {
+        "action": "artifacts:cover_semantics",
+        "cached_input_tokens": 0,
+        "date": "2026-07-20",
+        "estimated_cost_usd": "0.033165",
+        "input_tokens": 94995,
+        "model": "gpt-5-mini",
+        "output_tokens": 4709,
+        "prompt_namespace": "report_vs/artifacts/cover_semantics",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 8,
+        "semantic_task": "artifacts:cover_semantics",
+        "total_tokens": 99704,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "artifacts:expert_comment",
+        "cached_input_tokens": 0,
+        "date": "2026-07-20",
+        "estimated_cost_usd": "0.034129",
+        "input_tokens": 32504,
+        "model": "gpt-5-mini",
+        "output_tokens": 13001,
+        "prompt_namespace": "report_vs/artifacts/expert_comment",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 8,
+        "semantic_task": "artifacts:expert_comment",
+        "total_tokens": 45505,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "artifacts:insights_candidates",
+        "cached_input_tokens": 3840,
+        "date": "2026-07-20",
+        "estimated_cost_usd": "0.088743",
+        "input_tokens": 80352,
+        "model": "gpt-5-mini",
+        "output_tokens": 34759,
+        "prompt_namespace": "report_vs/artifacts/insights_candidates",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 8,
+        "semantic_task": "artifacts:insights_candidates",
+        "total_tokens": 115111,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "artifacts:insights_final",
+        "cached_input_tokens": 0,
+        "date": "2026-07-20",
+        "estimated_cost_usd": "0.08069",
+        "input_tokens": 97922,
+        "model": "gpt-5-mini",
+        "output_tokens": 28104,
+        "prompt_namespace": "report_vs/artifacts/insights_final",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 8,
+        "semantic_task": "artifacts:insights_final",
+        "total_tokens": 126026,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "artifacts:linkedin_post",
+        "cached_input_tokens": 0,
+        "date": "2026-07-20",
+        "estimated_cost_usd": "0.03399",
+        "input_tokens": 28770,
+        "model": "gpt-5-mini",
+        "output_tokens": 13398,
+        "prompt_namespace": "report_vs/artifacts/linkedin_post",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 8,
+        "semantic_task": "artifacts:linkedin_post",
+        "total_tokens": 42168,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "artifacts:quotes",
+        "cached_input_tokens": 3840,
+        "date": "2026-07-20",
+        "estimated_cost_usd": "0.038232",
+        "input_tokens": 80189,
+        "model": "gpt-5-mini",
+        "output_tokens": 9524,
+        "prompt_namespace": "report_vs/artifacts/quotes",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 8,
+        "semantic_task": "artifacts:quotes",
+        "total_tokens": 89713,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "artifacts:summary",
+        "cached_input_tokens": 3840,
+        "date": "2026-07-20",
+        "estimated_cost_usd": "0.060008",
+        "input_tokens": 78992,
+        "model": "gpt-5-mini",
+        "output_tokens": 20562,
+        "prompt_namespace": "report_vs/artifacts/summary",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 8,
+        "semantic_task": "artifacts:summary",
+        "total_tokens": 99554,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "context_category_fit",
+        "cached_input_tokens": 7552,
+        "date": "2026-07-20",
+        "estimated_cost_usd": "0.0642",
+        "input_tokens": 87885,
+        "model": "gpt-5-mini",
+        "output_tokens": 21964,
+        "prompt_namespace": "report_vs/context_category_fit",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 12,
+        "semantic_task": "categories",
+        "total_tokens": 109849,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "doc_map",
+        "cached_input_tokens": 0,
+        "date": "2026-07-20",
+        "estimated_cost_usd": "0.161483",
+        "input_tokens": 135915,
+        "model": "gpt-5-mini",
+        "output_tokens": 63751,
+        "prompt_namespace": "report_vs/doc_map",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 11,
+        "semantic_task": "evidence:doc_map",
+        "total_tokens": 199666,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "evidence_packs:findings",
+        "cached_input_tokens": 0,
+        "date": "2026-07-20",
+        "estimated_cost_usd": "0.085775",
+        "input_tokens": 109034,
+        "model": "gpt-5-mini",
+        "output_tokens": 29259,
+        "prompt_namespace": "report_vs/evidence_packs/findings",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 11,
+        "semantic_task": "evidence:findings",
+        "total_tokens": 138293,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "evidence_packs:limitations",
+        "cached_input_tokens": 0,
+        "date": "2026-07-20",
+        "estimated_cost_usd": "0.082883",
+        "input_tokens": 110574,
+        "model": "gpt-5-mini",
+        "output_tokens": 27619,
+        "prompt_namespace": "report_vs/evidence_packs/limitations",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 11,
+        "semantic_task": "evidence:limitations",
+        "total_tokens": 138193,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "evidence_packs:methods",
+        "cached_input_tokens": 0,
+        "date": "2026-07-20",
+        "estimated_cost_usd": "0.096546",
+        "input_tokens": 109530,
+        "model": "gpt-5-mini",
+        "output_tokens": 34581,
+        "prompt_namespace": "report_vs/evidence_packs/methods",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 11,
+        "semantic_task": "evidence:methods",
+        "total_tokens": 144111,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "evidence_packs:quote_candidates",
+        "cached_input_tokens": 0,
+        "date": "2026-07-20",
+        "estimated_cost_usd": "0.08158",
+        "input_tokens": 111018,
+        "model": "gpt-5-mini",
+        "output_tokens": 26912,
+        "prompt_namespace": "report_vs/evidence_packs/quote_candidates",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 11,
+        "semantic_task": "evidence:quote_candidates",
+        "total_tokens": 137930,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "evidence_packs:scope",
+        "cached_input_tokens": 0,
+        "date": "2026-07-20",
+        "estimated_cost_usd": "0.062914",
+        "input_tokens": 108446,
+        "model": "gpt-5-mini",
+        "output_tokens": 17902,
+        "prompt_namespace": "report_vs/evidence_packs/scope",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 11,
+        "semantic_task": "evidence:scope",
+        "total_tokens": 126348,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "taxonomy",
+        "cached_input_tokens": 0,
+        "date": "2026-07-20",
+        "estimated_cost_usd": "0.082797",
+        "input_tokens": 156260,
+        "model": "gpt-5-mini",
+        "output_tokens": 21866,
+        "prompt_namespace": "report_vs/taxonomy",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 11,
+        "semantic_task": "taxonomy",
+        "total_tokens": 178126,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "validate:grounding",
+        "cached_input_tokens": 0,
+        "date": "2026-07-20",
+        "estimated_cost_usd": "0.039122",
+        "input_tokens": 42990,
+        "model": "gpt-5-mini",
+        "output_tokens": 14187,
+        "prompt_namespace": "report_vs/validate/grounding",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 7,
+        "semantic_task": "validation:grounding",
+        "total_tokens": 57177,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "validate:semantic",
+        "cached_input_tokens": 0,
+        "date": "2026-07-20",
+        "estimated_cost_usd": "0.026684",
+        "input_tokens": 25743,
+        "model": "gpt-5-mini",
+        "output_tokens": 10124,
+        "prompt_namespace": "report_vs/validate/semantic",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 7,
+        "semantic_task": "validation:semantic",
+        "total_tokens": 35867,
+        "unknown_pricing_count": 0
+      }
+    ],
+    "ocr_vision_metrics.csv": [],
+    "wordpress_metrics.csv": [
+      {
+        "error_code": "",
+        "max_latency_ms": 11427,
+        "min_latency_ms": 2251,
+        "outcome": "completed",
+        "record_count": 2,
+        "retry_count": 0,
+        "step_name": "wordpress_publish",
+        "workflow": "publishing"
+      }
+    ]
+  },
+  "repository_commit_sha": "33c882d4e41b5f0b0ae63f06fe201ccd2dd58911",
+  "schema_version": "1.0"
+}

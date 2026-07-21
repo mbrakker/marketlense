@@ -1,0 +1,2 @@
+publisher,route_family,route_kind,outcome,route_status,sample_size,attempts,successes,limitation
+unattributed,direct_pdf_probe,pdf_download,downloaded,verified,1,1,1,"route history has no publisher, duration or cost fields"

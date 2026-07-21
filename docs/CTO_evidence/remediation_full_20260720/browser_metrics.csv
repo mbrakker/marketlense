@@ -1,0 +1,2 @@
+route_family,acquisition_records,attempts,browser_steps,structured_browser_records,onsite_capture_records,limitation
+direct_pdf_probe,1,1,1,0,0,launch/navigation/screenshot/network/duration fields not retained
