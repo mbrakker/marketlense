@@ -54,7 +54,7 @@ def _deferred_request(
         reusable_artifact_references=(("local_pdf", _fixture_pdf(), ""),),
         resource_type="llm_provider",
         operation="generate_report",
-        estimated_calls=1,
+        estimated_calls=2,
         idempotency_key=f"legacy:{workflow_id}",
         deferred_earliest_run_at_utc=(now - timedelta(seconds=1)).isoformat(),
         deferred_deadline_at_utc=(now + timedelta(hours=1)).isoformat(),

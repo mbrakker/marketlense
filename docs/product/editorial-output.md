@@ -18,6 +18,11 @@ citation and is never presented as the public canonical page.
 The deterministic public-editorial gate blocks common UTF-8 mojibake sequences
 and replacement characters in reader-facing prose. It retains a bounded defect
 record for targeted repair rather than silently rewriting source-derived text.
+It also withholds prose carrying literal truncation markers or mechanical
+editorial scaffolding, rather than publishing an incomplete quotation or a
+template-like claim. Source links are emitted only for public, credential-free
+HTTP(S) URLs. When no verified publisher link is available, the report keeps a
+plain disclosure and never exposes a local cache or operational path.
 
 Context-first category assignment uses category definitions, inclusion conditions, and exclusion conditions to assign public Topics. Taxonomy tags remain supporting metadata and prompt vocabulary; they are not a competing weighted category scorer.
 

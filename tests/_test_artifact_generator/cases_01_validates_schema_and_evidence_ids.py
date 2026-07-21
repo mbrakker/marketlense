@@ -1,6 +1,8 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+from src.generators._artifact_generator.storage import _validate_cover_semantics
+
 from ._shared import *  # noqa: F401,F403
 
 
@@ -58,6 +60,29 @@ def test_assemble_artifacts_accepts_complete_card_tldrs():
 
     assert payload["schema_version"] == "3.0"
     assert payload["summary"]["card_tldr_compact"].endswith(".")
+
+
+def test_cover_semantics_normalizes_provider_enum_formatting():
+    result = _validate_cover_semantics(
+        {
+            "evidence_shape": "Trend",
+            "direction": "RISING",
+            "geography_scope": "Unknown",
+            "evidence_density": "metric rich",
+            "domain_layer": "Grid",
+            "selection_reason": "The supplied figures show an upward trajectory.",
+        },
+        ctx=_ctx(),
+    )
+
+    assert result == {
+        "evidence_shape": "trend",
+        "direction": "rising",
+        "geography_scope": "unknown",
+        "evidence_density": "metric_rich",
+        "domain_layer": "grid",
+        "selection_reason": "The supplied figures show an upward trajectory.",
+    }
 
 
 @pytest.mark.parametrize(
@@ -769,6 +794,7 @@ def test_build_topic_briefs_avoids_positional_section_swap():
 
 
 __all__ = [
+    "test_cover_semantics_normalizes_provider_enum_formatting",
     "test_generate_artifacts_validates_schema_and_evidence_ids",
     "test_generate_artifacts_prunes_unbound_summary_claims",
     "test_generate_artifacts_abstains_low_confidence_families_and_marks_regeneration",

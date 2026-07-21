@@ -30,6 +30,12 @@ _INLINE_INTERNAL_REFERENCE = re.compile(
     r"\b(?:[a-z]{1,4}|finding|insight|claim)[_-]?\d{1,5}\b)",
     re.IGNORECASE,
 )
+_PUBLIC_TRUNCATION_MARKER = re.compile(r"(?:\.\.\.|…)")
+_MECHANICAL_PUBLIC_SCAFFOLD = re.compile(
+    r"\b(?:answer|observation|implication|executive action|concrete finding|"
+    r"immediate implication)\s*:",
+    re.IGNORECASE,
+)
 
 
 def _build_tag_acronym_map(acronyms: list[str]) -> dict[str, str]:
@@ -63,11 +69,16 @@ def _pick_first_text(*values: object) -> str:
 
 
 def _sanitize_public_prose(value: object) -> str:
-    """Remove internal evidence tokens from reader-facing prose."""
+    """Return complete public prose without internal or placeholder text."""
     text = _s(value)
     if not text:
         return ""
-    return re.sub(r"\s{2,}", " ", _INLINE_INTERNAL_REFERENCE.sub("", text)).strip()
+    sanitized = re.sub(r"\s{2,}", " ", _INLINE_INTERNAL_REFERENCE.sub("", text)).strip()
+    if _PUBLIC_TRUNCATION_MARKER.search(
+        sanitized
+    ) or _MECHANICAL_PUBLIC_SCAFFOLD.search(sanitized):
+        return ""
+    return sanitized
 
 
 def _split_summary_bullets(text: str, *, max_items: int = 5) -> list[str]:
@@ -106,13 +117,9 @@ def _sentence_excerpt(text: str, *, max_chars: int) -> str:
     candidate = first_sentence.strip()
     if len(candidate) <= max_chars:
         return candidate
-    words: list[str] = []
-    for word in candidate.split():
-        trial = " ".join([*words, word]).strip()
-        if len(trial) > max_chars:
-            break
-        words.append(word)
-    return (" ".join(words).rstrip(" ,;:") + "...") if words else candidate[:max_chars]
+    # A clipped fragment reads as a claim whose ending was withheld.  Prefer the
+    # renderer's explicit unavailable state to emitting a literal ellipsis.
+    return ""
 
 
 def _build_core_signal(
@@ -682,8 +689,10 @@ def _coerce_quotes(
     quotes: list[dict[str, str]] = []
     for raw_item in _coerce_list(raw_quotes):
         item = _coerce_dict(raw_item)
-        text = _pick_first_text(
-            item.get("text"), raw_item if isinstance(raw_item, str) else ""
+        text = _sanitize_public_prose(
+            _pick_first_text(
+                item.get("text"), raw_item if isinstance(raw_item, str) else ""
+            )
         )
         if not text:
             continue
@@ -709,10 +718,11 @@ def _coerce_quotes(
     if quotes:
         return quotes
     legacy_quote = _coerce_dict(data.get("quote"))
-    if _s(legacy_quote.get("text")):
+    legacy_text = _sanitize_public_prose(legacy_quote.get("text"))
+    if legacy_text:
         return [
             {
-                "text": _s(legacy_quote.get("text")),
+                "text": legacy_text,
                 "author": _display_quote_author(
                     _pick_first_text(legacy_quote.get("author"), "Unknown"),
                     publisher,

@@ -342,9 +342,7 @@ def test_publish_reuses_idempotent_outcome_without_second_post(
     publish_settings_factory, run_context, wordpress_http
 ) -> None:
     settings = publish_settings_factory(validation_policy="warn")
-    html_path = _write_html(
-        settings.output_dir, "report.html", "Drive fileId: file123"
-    )
+    html_path = _write_html(settings.output_dir, "report.html", "Drive fileId: file123")
     _record_processed(settings.state_db, "file123", run_context)
     _seed_report_metadata(
         settings.reports_db,
@@ -353,11 +351,25 @@ def test_publish_reuses_idempotent_outcome_without_second_post(
         run_context,
         publisher="WARC",
     )
-    wordpress_http.add_json(
-        "GET",
-        "https://example.com/wp-json/wp/v2/ml_report",
-        status_code=200,
-        payload=[],
+    lookup_calls = []
+
+    def _lookup_posts(call: RecordedHttpRequest) -> FakeHttpResponse:
+        lookup_calls.append(call)
+        payload = (
+            []
+            if len(lookup_calls) == 1
+            else [
+                {
+                    "id": 10,
+                    "link": "https://example.com/post/10",
+                    "content": {"rendered": "Drive fileId: file123"},
+                }
+            ]
+        )
+        return FakeHttpResponse.from_payload(status_code=200, payload=payload)
+
+    wordpress_http.add(
+        "GET", "https://example.com/wp-json/wp/v2/ml_report", _lookup_posts
     )
     wordpress_http.add_json(
         "POST",
@@ -382,9 +394,13 @@ def test_publish_reuses_idempotent_outcome_without_second_post(
     second = orch.run_publish(settings, limit=1)
 
     assert first[0].status == "published"
-    assert second[0].status == "published"
+    assert second[0].status == "skipped"
     assert second[0].post_id == 10
     assert second[0].post_url == "https://example.com/post/10"
+    assert second[0].publication_outcome == "existing_post_matched"
+    assert second[0].authenticated_readback_verified is True
+    assert second[0].requested_write_count == 0
+    assert second[0].actual_write_count == 0
     assert (
         len(
             wordpress_http.calls_for(

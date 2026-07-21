@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Sequence
+
 from src.contracts.config import ConfigLoadRequest
 from src.contracts.run_context import RunContext
 from src.contracts.workflow_control import (
@@ -318,7 +320,9 @@ def _parse_preflight_profiles(
     for name, raw_profile in _mapping(raw_profiles).items():
         profile = _mapping(raw_profile)
         workflow = _key(profile.get("workflow") or name)
-        prompt_namespaces = _string_list(profile.get("prompt_namespaces"))
+        prompt_namespaces: Sequence[str] = _string_list(
+            profile.get("prompt_namespaces")
+        )
         # The report-generation profile is deliberately derived from the
         # policy registry: adding a configured report namespace cannot leave
         # preflight silently unaware of it.

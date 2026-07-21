@@ -36,4 +36,29 @@ prevents internal labels from reaching WordPress without inventing metadata.
 The report-card contract permits those omitted optional labels and renders an
 unknown geography rather than manufacturing a period or location.
 
-Run a configured batch with `python -m src.cli ingest --limit 1`. Use `--rescan` only when the normal cursor should be bypassed. Queue operations and checkpoint recovery are documented in [asynchronous workflow queue](../architecture/asynchronous-workflow-queue.md). See [validation and regeneration](validation-and-regeneration.md), [artifact model](../architecture/data-and-artifact-model.md), and [configuration](../ops/configuration.md).
+Run a configured batch with `python -m src.cli ingest --attempt-limit 1`. An
+attempt limit counts selected reports, including failures; it never continues
+selecting replacements to meet a success count. `--limit` remains a deprecated
+alias with the same attempt-limit meaning. Release and reliability validation
+use `--cohort-size N --cohort-manifest <path>`: files first pass deterministic
+admission (source identity, supported type, active-quarantine, PDF structure,
+and usable-source-content checks), then the exact admitted IDs are atomically
+persisted before report-generation work begins. The ordered candidate pool
+continues only while this pre-manifest admission has fewer than `N` accepted
+sources; a rejected candidate is not silently included. After the manifest is
+written, no failure can trigger a replacement. Re-running with only
+`--cohort-manifest <path>` replays the same immutable members without a Drive
+reselection. A malformed manifest, duplicate member, size mismatch, rejected
+admission candidate cannot enter the cohort, and an insufficient eligible
+population fails closed.
+`--success-target N` is the only explicit mode allowed to select later
+candidates after a failure; it is prohibited for release/reliability rates.
+Publish a fixed cohort with the same `--cohort-manifest <path>` passed to
+`publish-wp`. This closes each cohort member with a typed WordPress outcome:
+a verified write or authenticated idempotent readback becomes
+`published_verified`; an unattempted or unverified member is `blocked`.
+Use `--rescan` only when the normal cursor should be bypassed. Queue operations and checkpoint recovery are
+documented in [asynchronous workflow queue](../architecture/asynchronous-workflow-queue.md).
+See [validation and regeneration](validation-and-regeneration.md), [artifact
+model](../architecture/data-and-artifact-model.md), and
+[configuration](../ops/configuration.md).

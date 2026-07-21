@@ -5,8 +5,8 @@ from pathlib import Path
 
 from scripts.ci.check_prompt_fixture_regression import (
     PromptRegressionAllowlistEntry,
-    compare_prompt_fixture_metrics,
     _load_pricing,
+    compare_prompt_fixture_metrics,
 )
 from scripts.quality.prompt_fixture_corpus_metrics import (
     collect_prompt_fixture_corpus_metrics,
@@ -44,6 +44,7 @@ def test_collect_prompt_fixture_corpus_metrics_aggregates_runtime_tokens_and_cos
                 '  - namespace: "alpha"',
                 '    family: "report"',
                 '    model: "openai/gpt-5-mini"',
+                "    test_only_execution_override: true",
                 "    benchmark:",
                 "      expected_output_tokens: 120",
                 "      expected_browser_attempts: 1",

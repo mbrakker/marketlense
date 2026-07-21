@@ -250,3 +250,49 @@ def _reports_db_024_create_validation_run_manifest(conn: sqlite3.Connection) -> 
         "CREATE INDEX IF NOT EXISTS idx_validation_manifest_stage "
         "ON validation_run_stage_records(validation_run_id, stage, terminal_outcome)"
     )
+
+
+def _reports_db_025_expand_validation_run_manifest_provenance(
+    conn: sqlite3.Connection,
+) -> None:
+    """Add immutable cohort and recovery provenance to validation manifests."""
+    _add_column_if_missing(
+        conn,
+        table_name="validation_runs",
+        column_name="cohort_id",
+        column_type="TEXT NOT NULL DEFAULT ''",
+    )
+    _add_column_if_missing(
+        conn,
+        table_name="validation_run_entity_attempts",
+        column_name="cohort_id",
+        column_type="TEXT NOT NULL DEFAULT ''",
+    )
+    _add_column_if_missing(
+        conn,
+        table_name="validation_run_entity_attempts",
+        column_name="parent_attempt_number",
+        column_type="INTEGER NOT NULL DEFAULT 0",
+    )
+    _add_column_if_missing(
+        conn,
+        table_name="validation_run_stage_records",
+        column_name="cohort_id",
+        column_type="TEXT NOT NULL DEFAULT ''",
+    )
+    _add_column_if_missing(
+        conn,
+        table_name="validation_run_stage_records",
+        column_name="supersession_state",
+        column_type="TEXT NOT NULL DEFAULT 'current'",
+    )
+    _add_column_if_missing(
+        conn,
+        table_name="validation_run_stage_records",
+        column_name="idempotency_state",
+        column_type="TEXT NOT NULL DEFAULT 'new'",
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_validation_manifest_cohort "
+        "ON validation_run_entity_attempts(validation_run_id, cohort_id, is_current)"
+    )

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import asdict
 from typing import Any, Dict, List, Optional
 
@@ -747,9 +748,14 @@ def build_chart_insight_cards(
             weak_reason = "The linked chart has no retained accepted candidate ID."
         elif not bool((chart or {}).get("crop_qa_accepted")):
             weak_reason = "The linked candidate is not retained as crop-QA accepted."
-        elif not _s((chart or {}).get("source_page") or figure.get("source_page")).strip():
+        elif not _s(
+            (chart or {}).get("source_page") or figure.get("source_page")
+        ).strip():
             weak_reason = "The accepted candidate has no retained source-page linkage."
-        elif not _s(insight.get("insight_id")).strip() or not _s(insight.get("text")).strip():
+        elif (
+            not _s(insight.get("insight_id")).strip()
+            or not _s(insight.get("text")).strip()
+        ):
             weak_reason = "No retained insight is linked to the chart evidence."
         elif confidence.lower() in {"low", "weak"}:
             weak_reason = "Chart candidate confidence is below source-backed threshold."
@@ -767,7 +773,8 @@ def build_chart_insight_cards(
                 "metric_mentions": metric_mentions,
                 "evidence_confidence": confidence,
                 "evidence_id": evidence_id,
-                "source_page": (chart or {}).get("source_page") or figure.get("source_page"),
+                "source_page": (chart or {}).get("source_page")
+                or figure.get("source_page"),
                 "insight_id": _s(insight.get("insight_id")).strip(),
                 "avoid_reason_if_weak": weak_reason,
             }
@@ -1435,7 +1442,7 @@ def _validate_cover_semantics(
     }
     normalized: Dict[str, str] = {}
     for field_name, allowed in allowed_values.items():
-        field_value = _s(value.get(field_name)).strip()
+        field_value = _normalize_cover_semantic_enum(value.get(field_name))
         if field_value not in allowed:
             raise AppError(
                 code="cover_fingerprint_invalid",
@@ -1463,6 +1470,11 @@ def _validate_cover_semantics(
         )
     )
     return normalized
+
+
+def _normalize_cover_semantic_enum(value: Any) -> str:
+    """Normalize provider formatting without broadening the semantic contract."""
+    return re.sub(r"[\s-]+", "_", _s(value).strip().casefold())
 
 
 def _attach_cached_artifact_family_status(payload: Dict[str, Any]) -> Dict[str, Any]:

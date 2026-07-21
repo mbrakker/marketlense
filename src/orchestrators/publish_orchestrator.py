@@ -8,6 +8,7 @@ import json
 import logging
 import time
 from dataclasses import asdict, dataclass, field, replace
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, List, Optional, TypedDict, cast
 from urllib.parse import urlparse
@@ -50,13 +51,18 @@ from src.contracts.report_store import (
     ReportMetadataListRequest,
 )
 from src.contracts.run_context import RunContext
+from src.contracts.semantic_ids import RunId, ValidationRunId
 from src.contracts.state import (
     StateGetRequest,
     StateGetResponse,
-    StatePublishCheckRequest,
     StatePublishRecordRequest,
 )
 from src.contracts.validation import ValidationReport
+from src.contracts.validation_run_manifest import (
+    ValidationRunManifestAuditRequest,
+    ValidationRunManifestRecordRequest,
+    ValidationRunManifestStageRecord,
+)
 from src.contracts.wordpress import (
     WordPressPostLookupBatchItem,
     WordPressPostLookupBatchRequest,
@@ -141,12 +147,13 @@ from src.services.category_mapping_service import (
 )
 from src.services.file_service import file_exists, list_html, read_text
 from src.services.report_store_service import (
+    audit_validation_run_manifest,
     build_minimal_execution_plan,
     list_metadata,
     record_minimal_execution_plan,
     record_minimal_execution_plan_result,
+    record_validation_run_manifest_stage,
 )
-from src.services.state_service import already_published as state_already_published
 from src.services.state_service import get as state_get
 from src.services.state_service import record_publish as state_record_publish
 from src.services.wordpress_service import (
@@ -166,6 +173,165 @@ from src.utils.validation import parse_validation_report_payload
 from src.utils.wp_auth import build_auth_header
 
 logger = logging.getLogger("market_lense.publish_orchestrator")
+
+
+def _load_validation_cohort_for_publish(
+    cohort_manifest: str, ctx: RunContext
+) -> tuple[ValidationRunId, str, str, str, dict[str, dict[str, object]]]:
+    """Load immutable cohort provenance needed to close WordPress outcomes."""
+    try:
+        payload = json.loads(
+            read_text(
+                ReadTextRequest(schema_version="1.0", path=cohort_manifest), ctx
+            ).content
+        )
+        members = payload["members"]
+        cohort_id = str(payload["cohort_id"])
+        configuration_hash = str(payload["configuration_hash"])
+        policy_hash = str(payload["policy_hash"])
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise AppError(
+            code="validation_cohort_manifest_invalid",
+            message="WordPress validation closure requires a valid cohort manifest",
+            cause=exc,
+            retryable=False,
+        ) from exc
+    if (
+        not cohort_id
+        or not configuration_hash
+        or not policy_hash
+        or not isinstance(members, list)
+    ):
+        raise AppError(
+            code="validation_cohort_manifest_invalid",
+            message="WordPress validation closure requires complete cohort provenance",
+            retryable=False,
+        )
+    by_file_id = {
+        str(member.get("file_id") or ""): member
+        for member in members
+        if isinstance(member, dict) and str(member.get("file_id") or "")
+    }
+    if len(by_file_id) != len(members):
+        raise AppError(
+            code="validation_cohort_manifest_invalid",
+            message="WordPress validation closure requires unique cohort file IDs",
+            retryable=False,
+        )
+    return (
+        ValidationRunId(f"validation:{cohort_id}"),
+        cohort_id,
+        configuration_hash,
+        policy_hash,
+        by_file_id,
+    )
+
+
+def _record_validation_cohort_publish_outcomes(
+    *,
+    cohort_manifest: str,
+    reports_db: str,
+    outcomes: list[PublishOutcome],
+    ctx: RunContext,
+) -> None:
+    """Close each immutable cohort member with one typed WordPress outcome."""
+    (
+        validation_run_id,
+        cohort_id,
+        configuration_hash,
+        policy_hash,
+        members,
+    ) = _load_validation_cohort_for_publish(cohort_manifest, ctx)
+    outcomes_by_file_id = {
+        str(outcome.file_id): outcome for outcome in outcomes if outcome.file_id
+    }
+    timestamp = datetime.now(timezone.utc).isoformat()
+    for file_id, member in members.items():
+        outcome = outcomes_by_file_id.get(file_id)
+        if outcome is None:
+            terminal_outcome = "blocked"
+            failure_code = "wordpress_publish_not_attempted"
+            stage = "wordpress_preflight"
+            idempotency_state = "new"
+            output_artifact_ids: tuple[str, ...] = ()
+        else:
+            verified = bool(outcome.authenticated_readback_verified)
+            terminal_outcome = "published_verified" if verified else "blocked"
+            failure_code = "" if verified else str(outcome.error or "readback_failed")
+            if outcome.publication_outcome == "existing_post_matched":
+                stage = "wordpress_lookup"
+                idempotency_state = "verified"
+            elif outcome.status == "skipped":
+                stage = "wordpress_repeat"
+                idempotency_state = "reused"
+            else:
+                stage = "wordpress_write"
+                idempotency_state = "verified" if verified else "new"
+            output_artifact_ids = tuple(
+                value
+                for value in (str(outcome.post_id or ""), str(outcome.post_url or ""))
+                if value
+            )
+        source_identity_id = str(member.get("md5_checksum") or file_id)
+        record_validation_run_manifest_stage(
+            ValidationRunManifestRecordRequest(
+                schema_version="1.0",
+                db_path=reports_db,
+                record=ValidationRunManifestStageRecord(
+                    schema_version="1.0",
+                    validation_run_id=validation_run_id,
+                    cohort_id=cohort_id,
+                    workflow_run_id=RunId(ctx.run_id),
+                    entity_type="report",
+                    publisher_id="",
+                    report_id=file_id,
+                    source_identity_id=source_identity_id,
+                    stage=stage,
+                    attempt_number=1,
+                    parent_attempt_number=0,
+                    input_artifact_ids=(file_id,),
+                    output_artifact_ids=output_artifact_ids,
+                    started_at_utc=timestamp,
+                    completed_at_utc=timestamp,
+                    terminal_outcome=terminal_outcome,
+                    failure_code=failure_code,
+                    retryable=False,
+                    repair_disposition="not_required",
+                    duplicate_disposition=(
+                        "reused" if idempotency_state == "reused" else "none"
+                    ),
+                    supersession_state="current",
+                    idempotency_state=idempotency_state,
+                    configuration_hash=configuration_hash,
+                    policy_hash=policy_hash,
+                    producer_build_identity=ctx.producer_commit_sha or "workspace",
+                    cohort_disposition="final_validation",
+                    entity_terminal=True,
+                ),
+            ),
+            ctx,
+        )
+    audit = audit_validation_run_manifest(
+        ValidationRunManifestAuditRequest(
+            schema_version="1.0",
+            db_path=reports_db,
+            validation_run_id=validation_run_id,
+        ),
+        ctx,
+    )
+    if not audit.complete:
+        raise AppError(
+            code="validation_manifest_closure_incomplete",
+            message="WordPress publication did not close every cohort member",
+            retryable=False,
+            context={
+                "validation_run_id": str(validation_run_id),
+                "incomplete_entity_count": len(audit.incomplete_entity_ids),
+                "duplicate_current_entity_count": len(
+                    audit.duplicate_current_entity_ids
+                ),
+            },
+        )
 
 
 def publish_cross_report_package(
@@ -542,6 +708,7 @@ def run_publish(
     force_report_cards: bool = False,
     force_draft: bool = False,
     execution_plan_mode: str = "shadow",
+    cohort_manifest: str | None = None,
 ) -> List[PublishOutcome]:
     root_ctx = ctx or new_run_context()
     publish_budget = build_publish_budget(settings, root_ctx)
@@ -576,6 +743,7 @@ def run_publish(
                 "explicit_html_paths": len(html_paths) if html_paths is not None else 0,
                 "force_report_cards": force_report_cards,
                 "force_draft": force_draft,
+                "cohort_manifest": cohort_manifest or "",
                 "post_status": settings.wp.post_status,
             },
         )
@@ -751,7 +919,11 @@ def run_publish(
         for candidate in candidates:
             file_id = str(candidate.file_id or "").strip()
             entity_route = candidate.entity_route
-            if not file_id or entity_route is None or candidate.entity_error is not None:
+            if (
+                not file_id
+                or entity_route is None
+                or candidate.entity_error is not None
+            ):
                 continue
             file_ctx = child_context(root_ctx, task_id=candidate.html_path)
             state_row = state_get(
@@ -770,7 +942,9 @@ def run_publish(
                 settings=settings,
                 ctx=file_ctx,
             )
-            validation_status = validation_report.status if validation_report else "missing"
+            validation_status = (
+                validation_report.status if validation_report else "missing"
+            )
             validation_issues = (
                 [issue.message for issue in validation_report.issues]
                 if validation_report
@@ -784,13 +958,16 @@ def run_publish(
                 validation_status=validation_status,
                 validation_issues=validation_issues,
             )
-            if _lookup_publish_idempotency(
-                settings=settings,
-                file_id=file_id,
-                post_type=entity_route.post_type,
-                checksum=checksum,
-                ctx=file_ctx,
-            ) is not None:
+            if (
+                _lookup_publish_idempotency(
+                    settings=settings,
+                    file_id=file_id,
+                    post_type=entity_route.post_type,
+                    checksum=checksum,
+                    ctx=file_ctx,
+                )
+                is not None
+            ):
                 idempotent_term_skip_file_ids.add(file_id)
 
     preflight_entries = _build_publish_preflight_entries(
@@ -921,6 +1098,55 @@ def run_publish(
             )
         )
         if reused_outcome is not None:
+            if (
+                existing_post_lookup is None
+                or existing_post_lookup.error_code
+                or not existing_post_lookup.found
+                or not existing_post_lookup.post_id
+                or not existing_post_lookup.link
+            ):
+                outcomes.append(
+                    PublishOutcome(
+                        schema_version="1.0",
+                        html_path=html_path,
+                        file_id=file_id,
+                        status="error",
+                        error="wordpress_idempotency_readback_missing",
+                        validation_status=validation_status,
+                        validation_issues=validation_issues,
+                        publication_outcome="readback_failed",
+                        requested_write_count=0,
+                        actual_write_count=0,
+                        lookup_count=1,
+                    )
+                )
+                continue
+            verified_outcome = replace(
+                reused_outcome,
+                status="skipped",
+                post_id=existing_post_lookup.post_id,
+                post_url=existing_post_lookup.link,
+                error="already_exists",
+                publication_outcome="existing_post_matched",
+                requested_write_count=0,
+                actual_write_count=0,
+                lookup_count=1,
+                authenticated_readback_verified=True,
+                validation_status=validation_status,
+                validation_issues=validation_issues,
+            )
+            state_record_publish(
+                StatePublishRecordRequest(
+                    schema_version="1.0",
+                    state_db=settings.state_db,
+                    file_id=file_id,
+                    md5=state_row.md5,
+                    wp_post_id=existing_post_lookup.post_id,
+                    wp_post_url=existing_post_lookup.link,
+                    post_type=entity_route.post_type,
+                ),
+                file_ctx,
+            )
             logger.info(
                 log_event(
                     file_ctx,
@@ -930,43 +1156,14 @@ def run_publish(
                     fields={
                         "file_id": file_id,
                         "post_type": entity_route.post_type,
-                        "status": reused_outcome.status,
-                        "post_id": reused_outcome.post_id,
+                        "status": verified_outcome.status,
+                        "post_id": verified_outcome.post_id,
                     },
                 )
             )
-            outcomes.append(reused_outcome)
-            if reused_outcome.status == "published":
+            outcomes.append(verified_outcome)
+            if verified_outcome.status == "published":
                 published += 1
-            continue
-        if not force_report_cards and state_already_published(
-            StatePublishCheckRequest(
-                schema_version="1.0",
-                state_db=settings.state_db,
-                file_id=file_id,
-                post_type=entity_route.post_type,
-            ),
-            file_ctx,
-        ):
-            logger.info(
-                log_event(
-                    file_ctx,
-                    role="orchestrator",
-                    event="publish_already_published",
-                    module=logger.name,
-                    fields={"file_id": file_id},
-                )
-            )
-            outcomes.append(
-                PublishOutcome(
-                    schema_version="1.0",
-                    html_path=html_path,
-                    file_id=file_id,
-                    status="skipped",
-                    error="already_published",
-                    publication_outcome="already_published_state_skip",
-                )
-            )
             continue
         if settings.validation_policy == "block" and validation_status != "pass":
             logger.info(
@@ -1347,4 +1544,11 @@ def run_publish(
                     },
                 )
             )
+    if cohort_manifest:
+        _record_validation_cohort_publish_outcomes(
+            cohort_manifest=cohort_manifest,
+            reports_db=settings.reports_db,
+            outcomes=outcomes,
+            ctx=root_ctx,
+        )
     return outcomes

@@ -23,6 +23,11 @@ ship its matching rate card together.
 
 The important operator sections are `paths`, `ingest`, `publish`, `browser_download`, `mailbox_acquisition`, `publisher_discovery`, and `workflow_control`. `workflow_control.remediation_reaper.execution_enabled` remains `false` until record creation and read-only projections have been verified; `max_records_per_run` and `lease_seconds` bound each explicit reaper invocation. `workflow_control.deferred_work_reaper.execution_enabled` is the independent rollback gate for budget-deferred recovery; it is also `false` by default, while its record limit, lease duration, and retry delay bound each external worker invocation. `openai_models`, `llm_routing`, `llm_execution_policies`, and `cost` govern model routing and accounting. `llm_execution_policies` is the versioned namespace policy for provider/model, sampling, output limits, timeout, structured-output mode, compaction, pricing key, and same-provider fallback. It resolves exact namespace then longest prefix and forbids provider-owned retries; workflow retry policy remains orchestrator-owned. The compatibility adapter preserves historical non-report namespaces until they are explicitly migrated. `workflow_control.supervisor` is disabled by default and bounds one lease-protected `supervise-workflows --once` pass; an external scheduler owns recurrence.
 
+The `publisher_inventory/meaningful_candidate_screen` namespace is deliberately
+routed and priced as `gpt-5-nano`, matching the bounded candidate-screening
+configuration. Namespace policy and workflow-specific settings must agree;
+the policy preflight rejects unknown or incompatible routes before provider I/O.
+
 `ingest.validation.public_editorial_quality.disabled_rule_waivers` is the temporary staged-rollout escape hatch for the deterministic public-editorial release gate. Each mapping key is a stable rule ID and each value must be a concrete non-empty release-waiver reason. An empty or malformed entry has no effect; do not use this setting to suppress an unresolved reader-facing defect.
 
 `ingest.source_quarantine.enabled` is the single rollback switch for the deterministic source-PDF integrity gate. When enabled (the default), a source that fails the header, EOF, parser-open, or page-count check is recorded in the canonical state database and an unchanged upstream checksum is skipped before extraction, OCR, or model work. It does not delete source or cache bytes. Operators can review records with `source-quarantines` and revalidate a retained file with `revalidate-source-pdf`; successful validation clears the matching record and supersedes an earlier active checksum for the same source. Disable the switch only for a time-bounded incident rollback, because malformed inputs then follow the ordinary typed failure path and may consume repeated acquisition work.
@@ -42,6 +47,8 @@ Profiles cannot disable validation, evidence checks, human publication approval,
 ## Side-effect budget authority
 
 `cost.budget_authority` configures the single SQLite-backed authority used before provider calls, browser launches and Browser Use model calls, material Drive reads and writes, WordPress writes, PDF processing, retry attempts, and mailbox polls. Its `run`, `day`, and `publisher` sections accept the typed limits in `RunBudgetLimits`, including spend, calls, runtime, retries, browser launches, Drive reads/writes, WordPress writes, and mailbox reads. PDF processing remains an auditable effect, but it has no count-based admission limit in the committed configuration: processing admission is governed by the configured spend forecast and spend limit.
+
+Limits are inclusive: a prospective side effect that brings a metric exactly to its configured maximum is admitted and warned; the next prospective side effect is stopped. This keeps a configured one-PDF run capable of processing one PDF while retaining a hard bound.
 
 `cost.pricing_path` points to the versioned operator rate card. Each active
 model entry records its provider, exact model key, effective date, pricing

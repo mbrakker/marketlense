@@ -192,6 +192,11 @@ def test_publish_batches_preflight_and_term_resolution(
     assert results_by_file_id["file123"].status == "skipped"
     assert results_by_file_id["file123"].error == "already_exists"
     assert results_by_file_id["file123"].post_id == 501
+    assert results_by_file_id["file123"].publication_outcome == "existing_post_matched"
+    assert results_by_file_id["file123"].lookup_count == 1
+    assert results_by_file_id["file123"].authenticated_readback_verified is True
+    assert results_by_file_id["file123"].requested_write_count == 0
+    assert results_by_file_id["file123"].actual_write_count == 0
     assert results_by_file_id["file456"].status == "published"
     assert second_post_call.json_data["categories"] == [11, 12]
     assert second_post_call.json_data["tags"] == [31, 32]

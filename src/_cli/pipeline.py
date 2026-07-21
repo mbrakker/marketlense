@@ -331,7 +331,33 @@ def plan_execution(
 @cli_app.command("ingest")
 def ingest(
     folder: str = typer.Option(None, help="Override Drive folder ID"),
-    limit: int = typer.Option(None, help="Max PDFs to process this run"),
+    limit: int = typer.Option(
+        None,
+        "--attempt-limit",
+        "--limit",
+        help=(
+            "Maximum unique report attempts. Failed attempts remain in the "
+            "result; this is not a success target. --limit is deprecated."
+        ),
+    ),
+    cohort_size: int = typer.Option(
+        None,
+        "--cohort-size",
+        help="Freeze exactly this many eligible reports before any report processing.",
+    ),
+    cohort_manifest: str = typer.Option(
+        None,
+        "--cohort-manifest",
+        help="Immutable cohort manifest path; reuse it to replay the same members.",
+    ),
+    success_target: int = typer.Option(
+        None,
+        "--success-target",
+        help=(
+            "Explicitly continue selecting reports until this many succeed; "
+            "not for release validation."
+        ),
+    ),
     force_report_cards: bool = typer.Option(
         False,
         "--force-report-cards",
@@ -373,6 +399,9 @@ def ingest(
             settings,
             folder_id=folder,
             limit=limit,
+            cohort_size=cohort_size,
+            cohort_manifest=cohort_manifest,
+            success_target=success_target,
             ctx=ctx,
             force_report_cards=force_report_cards,
             rescan=rescan,
@@ -486,6 +515,11 @@ def extract_candidates(
 @cli_app.command("publish-wp")
 def publish_wp(
     limit: int = typer.Option(None, help="Max HTML reports to publish this run"),
+    cohort_manifest: str = typer.Option(
+        None,
+        "--cohort-manifest",
+        help="Immutable ingest cohort whose WordPress outcomes must be closed",
+    ),
     draft: bool = typer.Option(
         False,
         "--draft",
@@ -530,6 +564,7 @@ def publish_wp(
         ctx=ctx,
         force_report_cards=force_report_cards,
         force_draft=draft,
+        cohort_manifest=cohort_manifest,
     )
     _record_cli_workflow_feedback(
         state_db=settings.state_db,

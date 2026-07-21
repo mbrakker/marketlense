@@ -88,7 +88,7 @@ def test_authority_returns_each_blocking_outcome(
         run_limits=RunBudgetLimits(schema_version="1.0", max_calls=1),
     )
 
-    decision = evaluate_budget_request(_request(budget), _ctx())
+    decision = evaluate_budget_request(_request(budget, estimated_calls=2), _ctx())
 
     assert decision.decision == expected
     assert decision.reason_code == "budget_limit_reached"
@@ -136,7 +136,7 @@ def test_authority_rejects_expired_override_and_audits_valid_override(tmp_path) 
         expires_at_utc=(datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat(),
     )
     decision = evaluate_budget_request(
-        _request(budget, requested_override=valid), _ctx()
+        _request(budget, requested_override=valid, estimated_calls=2), _ctx()
     )
 
     assert decision.decision == "authorized_override"
@@ -146,7 +146,7 @@ def test_authority_rejects_expired_override_and_audits_valid_override(tmp_path) 
 def test_authority_reservations_are_atomic_for_concurrent_requests(tmp_path) -> None:
     budget = _budget(
         tmp_path,
-        run_limits=RunBudgetLimits(schema_version="1.0", max_calls=2),
+        run_limits=RunBudgetLimits(schema_version="1.0", max_calls=1),
     )
     barrier = threading.Barrier(2)
 
@@ -159,7 +159,42 @@ def test_authority_reservations_are_atomic_for_concurrent_requests(tmp_path) -> 
     with ThreadPoolExecutor(max_workers=2) as executor:
         results = list(executor.map(evaluate, range(2)))
 
-    assert sorted(results) == ["allow", "stop"]
+    assert sorted(results) == ["stop", "warn"]
+
+
+def test_authority_allows_a_proposed_effect_at_its_exact_maximum(tmp_path) -> None:
+    budget = _budget(
+        tmp_path,
+        run_limits=RunBudgetLimits(schema_version="1.0", max_pdfs=1),
+    )
+
+    allowed = evaluate_budget_request(
+        _request(
+            budget,
+            resource_type="pdf",
+            operation="report_pipeline_pdf",
+            estimated_cost_usd=None,
+            estimated_calls=0,
+            estimated_pdfs=1,
+        ),
+        _ctx(),
+    )
+    blocked = evaluate_budget_request(
+        _request(
+            budget,
+            resource_type="pdf",
+            operation="report_pipeline_pdf",
+            estimated_cost_usd=None,
+            estimated_calls=0,
+            estimated_pdfs=1,
+            idempotency_key="pdf:authority-run:1",
+        ),
+        _ctx(),
+    )
+
+    assert allowed.decision == "warn"
+    assert blocked.decision == "stop"
+    assert blocked.affected_limit == "run.pdfs"
 
 
 def test_authority_expires_orphaned_reservation_and_reconciles_actual_cost(
@@ -279,7 +314,7 @@ def test_browser_worker_crash_reservation_expires_before_later_call(tmp_path) ->
 def test_budget_reservation_ttl_bounds_default_side_effect_requests(tmp_path) -> None:
     budget = _budget(tmp_path, reservation_ttl_seconds=1)
 
-    decision = evaluate_budget_request(_request(budget), _ctx())
+    decision = evaluate_budget_request(_request(budget, estimated_calls=2), _ctx())
 
     with sqlite3.connect(budget.usage_db_path) as conn:
         created_at, expires_at = conn.execute(
@@ -303,13 +338,15 @@ def test_authority_enforces_each_configured_scope(
         **{budget_field: RunBudgetLimits(schema_version="1.0", max_calls=1)},
     )
 
-    decision = evaluate_budget_request(_request(budget), _ctx())
+    decision = evaluate_budget_request(_request(budget, estimated_calls=2), _ctx())
 
     assert decision.decision == "stop"
     assert decision.affected_limit == f"{scope_name}.calls"
 
 
-def _drive_read_request(budget: RunBudget, *, key: str, publisher: str = "Publisher") -> BudgetRequest:
+def _drive_read_request(
+    budget: RunBudget, *, key: str, publisher: str = "Publisher"
+) -> BudgetRequest:
     return BudgetRequest(
         schema_version="1.0",
         budget=budget,
@@ -331,9 +368,7 @@ def _finalize_drive_read(budget: RunBudget, key: str, *, actual_reads: int) -> N
             schema_version="1.0",
             usage_db_path=budget.usage_db_path,
             reservation_key=key,
-            actual_usage=RunBudgetUsage(
-                schema_version="1.0", drive_reads=actual_reads
-            ),
+            actual_usage=RunBudgetUsage(schema_version="1.0", drive_reads=actual_reads),
         ),
         _ctx(),
     )
@@ -346,7 +381,9 @@ def test_side_effect_actual_reconciliation_releases_unused_capacity_and_is_idemp
         tmp_path,
         run_limits=RunBudgetLimits(schema_version="1.0", max_drive_reads=2),
     )
-    reserved = evaluate_budget_request(_drive_read_request(budget, key="read:one"), _ctx())
+    reserved = evaluate_budget_request(
+        _drive_read_request(budget, key="read:one"), _ctx()
+    )
     assert reserved.decision == "allow"
 
     _finalize_drive_read(budget, reserved.reservation_key, actual_reads=0)
@@ -362,7 +399,9 @@ def test_side_effect_actual_reconciliation_releases_unused_capacity_and_is_idemp
     assert replay.actual_recorded is False
     assert replay.reservation_released is False
 
-    next_read = evaluate_budget_request(_drive_read_request(budget, key="read:two"), _ctx())
+    next_read = evaluate_budget_request(
+        _drive_read_request(budget, key="read:two"), _ctx()
+    )
     assert next_read.decision == "allow"
     usage = read_run_budget_usage(
         RunBudgetUsageReadRequest(schema_version="1.0", budget=budget), _ctx()
@@ -372,25 +411,34 @@ def test_side_effect_actual_reconciliation_releases_unused_capacity_and_is_idemp
 
 def test_authority_day_scope_spans_runs_and_publisher_scope_isolated(tmp_path) -> None:
     usage_db_path = str(tmp_path / "usage.sqlite")
-    day_limits = RunBudgetLimits(schema_version="1.0", max_drive_reads=2)
+    day_limits = RunBudgetLimits(schema_version="1.0", max_drive_reads=1)
     run_a = RunBudget(
-        schema_version="1.0", run_id="run-a", publisher_name="Publisher A",
-        usage_db_path=usage_db_path, day_utc="2026-07-16", day_limits=day_limits,
+        schema_version="1.0",
+        run_id="run-a",
+        publisher_name="Publisher A",
+        usage_db_path=usage_db_path,
+        day_utc="2026-07-16",
+        day_limits=day_limits,
     )
-    ctx_a = RunContext(schema_version="1.0", run_id="run-a", task_id="task", span_id="a")
+    ctx_a = RunContext(
+        schema_version="1.0", run_id="run-a", task_id="task", span_id="a"
+    )
     first = evaluate_budget_request(
         _drive_read_request(run_a, key="day:a", publisher="Publisher A"), ctx_a
     )
     finalize_budget_side_effect(
         BudgetSideEffectFinalizeRequest(
-            schema_version="1.0", usage_db_path=usage_db_path,
+            schema_version="1.0",
+            usage_db_path=usage_db_path,
             reservation_key=first.reservation_key,
             actual_usage=RunBudgetUsage(schema_version="1.0", drive_reads=1),
         ),
         ctx_a,
     )
     run_b = replace(run_a, run_id="run-b", publisher_name="Publisher B")
-    ctx_b = RunContext(schema_version="1.0", run_id="run-b", task_id="task", span_id="b")
+    ctx_b = RunContext(
+        schema_version="1.0", run_id="run-b", task_id="task", span_id="b"
+    )
     blocked_by_day = evaluate_budget_request(
         _drive_read_request(run_b, key="day:b", publisher="Publisher B"), ctx_b
     )
@@ -413,13 +461,17 @@ def test_authority_day_scope_spans_runs_and_publisher_scope_isolated(tmp_path) -
     assert isolated.decision == "allow"
 
 
-def test_defer_persists_actionable_work_and_cold_start_forecast_is_audited(tmp_path) -> None:
+def test_defer_persists_actionable_work_and_cold_start_forecast_is_audited(
+    tmp_path,
+) -> None:
     budget = _budget(
         tmp_path,
         limit_decision="defer",
         run_limits=RunBudgetLimits(schema_version="1.0", max_calls=1),
     )
-    deferred = evaluate_budget_request(_request(budget, idempotency_key="defer:one"), _ctx())
+    deferred = evaluate_budget_request(
+        _request(budget, idempotency_key="defer:one", estimated_calls=2), _ctx()
+    )
     assert deferred.decision == "defer"
     cold = evaluate_budget_request(
         _request(
@@ -498,4 +550,4 @@ def test_retry_budget_stop_prevents_the_second_side_effect_attempt(tmp_path) -> 
             sleep_fn=lambda _seconds: None,
         )
     assert exc_info.value.code == "retry_budget_stop"
-    assert attempts["count"] == 1
+    assert attempts["count"] == 2

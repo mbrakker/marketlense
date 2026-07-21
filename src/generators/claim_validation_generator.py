@@ -296,15 +296,19 @@ def validate_retained_claims(
         for item in results
         if item.status == "supported" and not item.semantic_validator_used
     )
-    payload = {
-        "artifact_hash": _hash(artifacts),
-        "results": [asdict(item) for item in results],
-        "semantic_execution_identities": sorted(set(semantic_ids)),
-    }
+    artifact_hash = _hash(artifacts)
+    semantic_execution_identities = sorted(set(semantic_ids))
+    package_hash = _hash(
+        {
+            "artifact_hash": artifact_hash,
+            "results": [asdict(item) for item in results],
+            "semantic_execution_identities": semantic_execution_identities,
+        }
+    )
     return ClaimValidationPackage(
         schema_version=CLAIM_VALIDATION_SCHEMA_VERSION,
-        artifact_hash=payload["artifact_hash"],
-        package_hash=_hash(payload),
+        artifact_hash=artifact_hash,
+        package_hash=package_hash,
         results=results,
         readiness_status="awaiting_review"
         if not unsupported and not unresolved
@@ -313,5 +317,5 @@ def validate_retained_claims(
         unresolved_factual_count=unresolved,
         deterministic_pass_count=deterministic_passes,
         semantic_validation_count=sum(item.semantic_validator_used for item in results),
-        semantic_execution_identities=payload["semantic_execution_identities"],
+        semantic_execution_identities=semantic_execution_identities,
     )

@@ -18,8 +18,19 @@ from src.utils.errors import AppError
 
 from .connection import _metadata_conn
 
-_OUTCOMES = {"succeeded", "failed", "skipped", "abstained", "blocked"}
+_STAGE_OUTCOMES = {"succeeded", "failed", "skipped", "abstained", "blocked"}
+_TERMINAL_OUTCOMES = {
+    "published_verified",
+    "publish_ready",
+    "blocked",
+    "permanent_failure",
+    "abstained",
+    "cancelled",
+    "superseded",
+}
 _COHORTS = {"final_validation", "repair_attempt", "out_of_cohort"}
+_SUPERSESSION_STATES = {"current", "superseded"}
+_IDEMPOTENCY_STATES = {"new", "replayed", "reused", "verified"}
 
 
 def create_validation_run_manifest(
@@ -29,6 +40,7 @@ def create_validation_run_manifest(
     _require_fields(
         request.db_path,
         str(request.validation_run_id),
+        request.cohort_id,
         str(request.workflow_run_id),
         request.configuration_hash,
         request.policy_hash,
@@ -37,18 +49,19 @@ def create_validation_run_manifest(
     )
     with _metadata_conn(request.db_path, ctx) as conn:
         existing = conn.execute(
-            "SELECT workflow_run_id, configuration_hash, policy_hash, "
+            "SELECT workflow_run_id, cohort_id, configuration_hash, policy_hash, "
             "producer_build_identity FROM validation_runs WHERE validation_run_id=?",
             (str(request.validation_run_id),),
         ).fetchone()
         identity = (
-            str(request.workflow_run_id),
+            request.cohort_id,
             request.configuration_hash,
             request.policy_hash,
             request.producer_build_identity,
         )
         if existing is not None:
-            if tuple(str(existing[index]) for index in range(4)) != identity:
+            existing_identity = tuple(str(existing[index]) for index in range(1, 5))
+            if existing_identity != identity:
                 raise AppError(
                     code="validation_manifest_run_identity_conflict",
                     message=(
@@ -60,14 +73,21 @@ def create_validation_run_manifest(
         conn.execute(
             """
             INSERT INTO validation_runs(
-                validation_run_id, schema_version, workflow_run_id, configuration_hash,
+                validation_run_id, schema_version, cohort_id, workflow_run_id,
+                configuration_hash,
                 policy_hash, producer_build_identity, created_at_utc
-            ) VALUES(?,?,?,?,?,?,?)
+            ) VALUES(?,?,?,?,?,?,?,?)
             """,
-            (str(request.validation_run_id), request.schema_version,
-             str(request.workflow_run_id), request.configuration_hash,
-             request.policy_hash, request.producer_build_identity,
-             request.created_at_utc),
+            (
+                str(request.validation_run_id),
+                request.schema_version,
+                request.cohort_id,
+                str(request.workflow_run_id),
+                request.configuration_hash,
+                request.policy_hash,
+                request.producer_build_identity,
+                request.created_at_utc,
+            ),
         )
 
 
@@ -80,6 +100,7 @@ def record_validation_run_manifest_stage(
     _require_fields(
         request.db_path,
         str(record.validation_run_id),
+        record.cohort_id,
         str(record.workflow_run_id),
         record.entity_type,
         record.stage,
@@ -89,16 +110,38 @@ def record_validation_run_manifest_stage(
         record.policy_hash,
         record.producer_build_identity,
     )
-    if record.attempt_number < 1 or record.terminal_outcome not in _OUTCOMES:
+    if record.attempt_number < 1 or record.parent_attempt_number < 0:
         raise AppError(
             code="validation_manifest_stage_invalid",
             message="Validation manifest stage has an invalid attempt or outcome",
+            retryable=False,
+        )
+    if record.entity_terminal:
+        valid_outcome = record.terminal_outcome in _TERMINAL_OUTCOMES
+    else:
+        valid_outcome = record.terminal_outcome in _STAGE_OUTCOMES
+    if not valid_outcome:
+        raise AppError(
+            code="validation_manifest_stage_invalid",
+            message="Validation manifest stage has an invalid outcome",
             retryable=False,
         )
     if record.cohort_disposition not in _COHORTS:
         raise AppError(
             code="validation_manifest_cohort_invalid",
             message="Validation manifest cohort disposition is invalid",
+            retryable=False,
+        )
+    if record.supersession_state not in _SUPERSESSION_STATES:
+        raise AppError(
+            code="validation_manifest_supersession_invalid",
+            message="Validation manifest supersession state is invalid",
+            retryable=False,
+        )
+    if record.idempotency_state not in _IDEMPOTENCY_STATES:
+        raise AppError(
+            code="validation_manifest_idempotency_invalid",
+            message="Validation manifest idempotency state is invalid",
             retryable=False,
         )
     entity_key = _entity_key(
@@ -109,22 +152,30 @@ def record_validation_run_manifest_stage(
     )
     stage_record_id = _digest(attempt_id, record.stage)
     with _metadata_conn(request.db_path, ctx) as conn:
-        if conn.execute(
-            "SELECT 1 FROM validation_runs WHERE validation_run_id=?",
-            (str(record.validation_run_id),),
-        ).fetchone() is None:
+        if (
+            conn.execute(
+                "SELECT 1 FROM validation_runs WHERE validation_run_id=?",
+                (str(record.validation_run_id),),
+            ).fetchone()
+            is None
+        ):
             raise AppError(
                 code="validation_manifest_run_missing",
                 message="Validation manifest stage requires a created validation run",
                 retryable=False,
             )
-        if conn.execute(
-            "SELECT 1 FROM validation_run_stage_records WHERE stage_record_id=?",
-            (stage_record_id,),
-        ).fetchone() is not None:
+        if (
+            conn.execute(
+                "SELECT 1 FROM validation_run_stage_records WHERE stage_record_id=?",
+                (stage_record_id,),
+            ).fetchone()
+            is not None
+        ):
             return ValidationRunManifestRecordResponse(
-                schema_version="1.0", stage_record_id=stage_record_id,
-                inserted=False, superseded_attempts=0,
+                schema_version="1.0",
+                stage_record_id=stage_record_id,
+                inserted=False,
+                superseded_attempts=0,
             )
         superseded = conn.execute(
             """
@@ -138,26 +189,41 @@ def record_validation_run_manifest_stage(
             """
             INSERT INTO validation_run_entity_attempts(
                 attempt_id, validation_run_id, entity_key, entity_type, publisher_id,
-                report_id, source_identity_id, attempt_number, cohort_disposition,
+                report_id, source_identity_id, cohort_id, attempt_number,
+                parent_attempt_number, cohort_disposition,
                 is_current, created_at_utc
-            ) VALUES(?,?,?,?,?,?,?,?,?,?,?)
+            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)
             ON CONFLICT(validation_run_id, entity_key, attempt_number) DO UPDATE SET
-                cohort_disposition=excluded.cohort_disposition, is_current=1
+                cohort_disposition=excluded.cohort_disposition,
+                parent_attempt_number=excluded.parent_attempt_number, is_current=1
             """,
-            (attempt_id, str(record.validation_run_id), entity_key, record.entity_type,
-             record.publisher_id, record.report_id, record.source_identity_id,
-             record.attempt_number, record.cohort_disposition, 1,
-             record.started_at_utc),
+            (
+                attempt_id,
+                str(record.validation_run_id),
+                entity_key,
+                record.entity_type,
+                record.publisher_id,
+                record.report_id,
+                record.source_identity_id,
+                record.cohort_id,
+                record.attempt_number,
+                record.parent_attempt_number,
+                record.cohort_disposition,
+                1,
+                record.started_at_utc,
+            ),
         )
         conn.execute(
             """
             INSERT INTO validation_run_stage_records(
                 stage_record_id, attempt_id, validation_run_id, workflow_run_id, stage,
-                input_artifact_ids_json, output_artifact_ids_json, started_at_utc,
+                cohort_id, input_artifact_ids_json, output_artifact_ids_json,
+                started_at_utc,
                 completed_at_utc, terminal_outcome, failure_code, retryable,
                 repair_disposition, duplicate_disposition, configuration_hash,
-                policy_hash, producer_build_identity, entity_terminal, created_at_utc
-            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                policy_hash, producer_build_identity, supersession_state,
+                idempotency_state, entity_terminal, created_at_utc
+            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """,
             (
                 stage_record_id,
@@ -165,6 +231,7 @@ def record_validation_run_manifest_stage(
                 str(record.validation_run_id),
                 str(record.workflow_run_id),
                 record.stage,
+                record.cohort_id,
                 _json(record.input_artifact_ids),
                 _json(record.output_artifact_ids),
                 record.started_at_utc,
@@ -177,6 +244,8 @@ def record_validation_run_manifest_stage(
                 record.configuration_hash,
                 record.policy_hash,
                 record.producer_build_identity,
+                record.supersession_state,
+                record.idempotency_state,
                 int(record.entity_terminal),
                 record.completed_at_utc,
             ),
@@ -189,11 +258,18 @@ def record_validation_run_manifest_stage(
                     completed_at_utc=?
                 WHERE attempt_id=?
                 """,
-                (record.terminal_outcome, record.stage, record.failure_code,
-                 record.completed_at_utc, attempt_id),
+                (
+                    record.terminal_outcome,
+                    record.stage,
+                    record.failure_code,
+                    record.completed_at_utc,
+                    attempt_id,
+                ),
             )
     return ValidationRunManifestRecordResponse(
-        schema_version="1.0", stage_record_id=stage_record_id, inserted=True,
+        schema_version="1.0",
+        stage_record_id=stage_record_id,
+        inserted=True,
         superseded_attempts=max(0, int(superseded or 0)),
     )
 
@@ -203,10 +279,13 @@ def audit_validation_run_manifest(
 ) -> ValidationRunManifestAuditResponse:
     _require_schema(request.schema_version)
     with _metadata_conn(request.db_path, ctx) as conn:
-        if conn.execute(
-            "SELECT 1 FROM validation_runs WHERE validation_run_id=?",
-            (str(request.validation_run_id),),
-        ).fetchone() is None:
+        if (
+            conn.execute(
+                "SELECT 1 FROM validation_runs WHERE validation_run_id=?",
+                (str(request.validation_run_id),),
+            ).fetchone()
+            is None
+        ):
             raise AppError(
                 code="validation_manifest_run_missing",
                 message="Validation manifest audit requires a created validation run",
@@ -220,9 +299,14 @@ def audit_validation_run_manifest(
             """,
             (str(request.validation_run_id),),
         ).fetchall()
-        incomplete = tuple(str(row[0]) for row in current if not str(row[2] or ""))
+        incomplete = tuple(
+            str(row[0])
+            for row in current
+            if str(row[2] or "") not in _TERMINAL_OUTCOMES
+        )
         duplicates = tuple(
-            str(row[0]) for row in conn.execute(
+            str(row[0])
+            for row in conn.execute(
                 """
                 SELECT entity_key FROM validation_run_entity_attempts
                 WHERE validation_run_id=? AND is_current=1
@@ -233,9 +317,12 @@ def audit_validation_run_manifest(
         )
         totals = tuple(
             ValidationRunManifestStageTotal(
-                schema_version="1.0", stage=str(row[0]),
-                terminal_outcome=str(row[1]), entity_count=int(row[2]),
-            ) for row in conn.execute(
+                schema_version="1.0",
+                stage=str(row[0]),
+                terminal_outcome=str(row[1]),
+                entity_count=int(row[2]),
+            )
+            for row in conn.execute(
                 """
                 SELECT stage, terminal_outcome, COUNT(DISTINCT attempt_id)
                 FROM validation_run_stage_records WHERE validation_run_id=?
@@ -246,17 +333,16 @@ def audit_validation_run_manifest(
         )
     cohort = tuple(
         sorted(
-            {
-                str(row[1])
-                for row in current
-                if row[1] and row[3] == "final_validation"
-            }
+            {str(row[1]) for row in current if row[1] and row[3] == "final_validation"}
         )
     )
     return ValidationRunManifestAuditResponse(
-        schema_version="1.0", validation_run_id=request.validation_run_id,
-        complete=not incomplete and not duplicates, final_cohort_report_ids=cohort,
-        stage_totals=totals, incomplete_entity_ids=incomplete,
+        schema_version="1.0",
+        validation_run_id=request.validation_run_id,
+        complete=not incomplete and not duplicates,
+        final_cohort_report_ids=cohort,
+        stage_totals=totals,
+        incomplete_entity_ids=incomplete,
         duplicate_current_entity_ids=duplicates,
     )
 

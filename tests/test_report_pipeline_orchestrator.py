@@ -1000,7 +1000,7 @@ def test_pdf_budget_stop_prevents_report_generation_call(tmp_path) -> None:
     )
     settings = replace(
         _settings(),
-        run_budget_max_pdfs=1,
+        run_budget_max_pdfs=0,
         usage_db_path=str(tmp_path / "pdf_budget.sqlite"),
     )
     calls = {"count": 0}
@@ -1026,7 +1026,9 @@ def test_pdf_budget_stop_prevents_report_generation_call(tmp_path) -> None:
     assert calls["count"] == 0
 
 
-def test_pdf_budget_defer_persists_resumable_report_work_without_generation(tmp_path) -> None:
+def test_pdf_budget_defer_persists_resumable_report_work_without_generation(
+    tmp_path,
+) -> None:
     file = DriveFile(
         schema_version="1.0",
         file_id="deferred-pdf",
@@ -1037,7 +1039,7 @@ def test_pdf_budget_defer_persists_resumable_report_work_without_generation(tmp_
     settings = replace(
         _settings(),
         state_db=str(tmp_path / "state.sqlite"),
-        run_budget_max_pdfs=1,
+        run_budget_max_pdfs=0,
         run_budget_limit_decision="defer",
         usage_db_path=str(tmp_path / "pdf_budget.sqlite"),
     )

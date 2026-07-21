@@ -1,0 +1,31 @@
+schema_version: "1.0"
+
+# Post-fix, one-report verification namespace. It is isolated from the failed
+# smoke and from the later fixed reliability cohort.
+paths:
+  output_dir: "./out/reliability_smoke_20260721"
+  cache_dir: "./cache/reliability_smoke_20260721"
+  state_db: "./state/reliability_smoke_20260721/index.sqlite"
+  reports_db: "./state/reliability_smoke_20260721/reports.sqlite"
+  signal_store_db: "./state/reliability_smoke_20260721/signals.sqlite"
+  ingest_lock: "./state/reliability_smoke_20260721/ingest.lock"
+
+ingest:
+  run_budget:
+    max_spend_usd: 1.0
+    max_pdfs: 1
+    max_retries: 2
+    max_runtime_seconds: 3600
+    limit_decision: "stop"
+
+analysis:
+  cost_ledger_path: "./state/reliability_smoke_20260721/llm_cost_ledger.jsonl"
+
+cost:
+  usage_db_path: "./state/reliability_smoke_20260721/llm_usage.sqlite"
+  daily_path: "./state/reliability_smoke_20260721/llm_cost_daily.json"
+  ledger_path: "./state/reliability_smoke_20260721/llm_cost_ledger.jsonl"
+
+publish:
+  projection_daily_path: "./state/reliability_smoke_20260721/projection_cost_daily.json"
+  projection_ledger_path: "./state/reliability_smoke_20260721/projection_cost_ledger.jsonl"

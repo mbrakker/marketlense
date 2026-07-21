@@ -22194,6 +22194,9 @@
             }
           ]
         },
+        "configuration_hash": {
+          "type": "string"
+        },
         "error_code": {
           "type": "string"
         },
@@ -22213,6 +22216,9 @@
         "model": {
           "type": "string"
         },
+        "model_policy_namespace": {
+          "type": "string"
+        },
         "output_tokens": {
           "type": "integer"
         },
@@ -22222,10 +22228,16 @@
         "plan_hash": {
           "type": "string"
         },
+        "policy_hash": {
+          "type": "string"
+        },
         "pricing_status": {
           "type": "string"
         },
         "pricing_version": {
+          "type": "string"
+        },
+        "producer_build_identity": {
           "type": "string"
         },
         "prompt_hash": {
@@ -22243,8 +22255,14 @@
         "provider_decision": {
           "type": "string"
         },
+        "publisher_id": {
+          "type": "string"
+        },
         "publisher_name": {
           "type": "string"
+        },
+        "repair_attempt": {
+          "type": "integer"
         },
         "report_id": {
           "type": "string"
@@ -22323,6 +22341,9 @@
           "type": "integer"
         },
         "trace_id": {
+          "type": "string"
+        },
+        "validation_run_id": {
           "type": "string"
         },
         "workflow": {
@@ -24962,6 +24983,12 @@
         "api_key": {
           "type": "string"
         },
+        "artifact_family": {
+          "type": "string"
+        },
+        "configuration_hash": {
+          "type": "string"
+        },
         "context_compaction_policy": {
           "$ref": "#/$defs/src.contracts.llm.LLMContextCompactionPolicy"
         },
@@ -25004,6 +25031,12 @@
         "model_pricing": {
           "type": "string"
         },
+        "policy_hash": {
+          "type": "string"
+        },
+        "producer_build_identity": {
+          "type": "string"
+        },
         "prompt_content_hash": {
           "type": "string"
         },
@@ -25017,7 +25050,16 @@
         "prompt_namespace": {
           "type": "string"
         },
+        "publisher_id": {
+          "type": "string"
+        },
         "publisher_name": {
+          "type": "string"
+        },
+        "repair_attempt": {
+          "type": "integer"
+        },
+        "report_id": {
           "type": "string"
         },
         "report_name": {
@@ -25058,6 +25100,9 @@
         "source_url": {
           "type": "string"
         },
+        "stage": {
+          "type": "string"
+        },
         "system_prompt": {
           "type": "string"
         },
@@ -25080,7 +25125,13 @@
         "user_prompt": {
           "type": "string"
         },
+        "validation_run_id": {
+          "type": "string"
+        },
         "vector_store_id": {
+          "type": "string"
+        },
+        "workflow": {
           "type": "string"
         }
       },
@@ -25213,6 +25264,9 @@
             }
           ]
         },
+        "configuration_hash": {
+          "type": "string"
+        },
         "cost_daily_path": {
           "type": "string"
         },
@@ -25245,6 +25299,9 @@
         "model": {
           "type": "string"
         },
+        "model_policy_namespace": {
+          "type": "string"
+        },
         "model_pricing": {
           "additionalProperties": {},
           "type": "object"
@@ -25265,6 +25322,12 @@
         "plan_hash": {
           "type": "string"
         },
+        "policy_hash": {
+          "type": "string"
+        },
+        "producer_build_identity": {
+          "type": "string"
+        },
         "prompt_hash": {
           "type": "string"
         },
@@ -25280,8 +25343,14 @@
         "provider_decision": {
           "type": "string"
         },
+        "publisher_id": {
+          "type": "string"
+        },
         "publisher_name": {
           "type": "string"
+        },
+        "repair_attempt": {
+          "type": "integer"
         },
         "report_id": {
           "type": "string"
@@ -25361,6 +25430,9 @@
           ]
         },
         "usage_db_path": {
+          "type": "string"
+        },
+        "validation_run_id": {
           "type": "string"
         },
         "workflow": {
@@ -28020,6 +28092,12 @@
     "src.contracts.publish.PublishOutcome": {
       "additionalProperties": false,
       "properties": {
+        "actual_write_count": {
+          "type": "integer"
+        },
+        "authenticated_readback_verified": {
+          "type": "boolean"
+        },
         "error": {
           "anyOf": [
             {
@@ -28043,6 +28121,9 @@
         "html_path": {
           "type": "string"
         },
+        "lookup_count": {
+          "type": "integer"
+        },
         "post_id": {
           "anyOf": [
             {
@@ -28062,6 +28143,12 @@
               "type": "null"
             }
           ]
+        },
+        "publication_outcome": {
+          "type": "string"
+        },
+        "requested_write_count": {
+          "type": "integer"
         },
         "schema_version": {
           "type": "string"
@@ -36661,6 +36748,9 @@
     "src.contracts.taxonomy.TaxonomyExtractRequest": {
       "additionalProperties": false,
       "properties": {
+        "artifact_family": {
+          "type": "string"
+        },
         "md5": {
           "anyOf": [
             {
@@ -36672,6 +36762,9 @@
           ]
         },
         "prompt_namespace": {
+          "type": "string"
+        },
+        "publisher_id": {
           "type": "string"
         },
         "publisher_name": {
@@ -36709,7 +36802,13 @@
         "source_url": {
           "type": "string"
         },
+        "stage": {
+          "type": "string"
+        },
         "vector_store_id": {
+          "type": "string"
+        },
+        "workflow": {
           "type": "string"
         }
       },
@@ -39533,6 +39632,306 @@
         "schema_version",
         "report_id",
         "report"
+      ],
+      "type": "object"
+    },
+    "src.contracts.validation_run_manifest.ValidationRunManifestAuditRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "validation_run_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "validation_run_id"
+      ],
+      "type": "object"
+    },
+    "src.contracts.validation_run_manifest.ValidationRunManifestAuditResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "complete": {
+          "type": "boolean"
+        },
+        "duplicate_current_entity_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "final_cohort_report_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "incomplete_entity_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "stage_totals": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.validation_run_manifest.ValidationRunManifestStageTotal"
+          },
+          "type": "array"
+        },
+        "validation_run_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "validation_run_id",
+        "complete",
+        "final_cohort_report_ids",
+        "stage_totals",
+        "incomplete_entity_ids",
+        "duplicate_current_entity_ids"
+      ],
+      "type": "object"
+    },
+    "src.contracts.validation_run_manifest.ValidationRunManifestCreateRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "cohort_id": {
+          "type": "string"
+        },
+        "configuration_hash": {
+          "type": "string"
+        },
+        "created_at_utc": {
+          "type": "string"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "policy_hash": {
+          "type": "string"
+        },
+        "producer_build_identity": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "validation_run_id": {
+          "type": "string"
+        },
+        "workflow_run_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "validation_run_id",
+        "cohort_id",
+        "workflow_run_id",
+        "configuration_hash",
+        "policy_hash",
+        "producer_build_identity",
+        "created_at_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts.validation_run_manifest.ValidationRunManifestRecordRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "record": {
+          "$ref": "#/$defs/src.contracts.validation_run_manifest.ValidationRunManifestStageRecord"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "record"
+      ],
+      "type": "object"
+    },
+    "src.contracts.validation_run_manifest.ValidationRunManifestRecordResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "inserted": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "stage_record_id": {
+          "type": "string"
+        },
+        "superseded_attempts": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "stage_record_id",
+        "inserted",
+        "superseded_attempts"
+      ],
+      "type": "object"
+    },
+    "src.contracts.validation_run_manifest.ValidationRunManifestStageRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "attempt_number": {
+          "type": "integer"
+        },
+        "cohort_disposition": {
+          "type": "string"
+        },
+        "cohort_id": {
+          "type": "string"
+        },
+        "completed_at_utc": {
+          "type": "string"
+        },
+        "configuration_hash": {
+          "type": "string"
+        },
+        "duplicate_disposition": {
+          "type": "string"
+        },
+        "entity_terminal": {
+          "type": "boolean"
+        },
+        "entity_type": {
+          "type": "string"
+        },
+        "failure_code": {
+          "type": "string"
+        },
+        "idempotency_state": {
+          "type": "string"
+        },
+        "input_artifact_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "output_artifact_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "parent_attempt_number": {
+          "type": "integer"
+        },
+        "policy_hash": {
+          "type": "string"
+        },
+        "producer_build_identity": {
+          "type": "string"
+        },
+        "publisher_id": {
+          "type": "string"
+        },
+        "repair_disposition": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_identity_id": {
+          "type": "string"
+        },
+        "stage": {
+          "type": "string"
+        },
+        "started_at_utc": {
+          "type": "string"
+        },
+        "supersession_state": {
+          "type": "string"
+        },
+        "terminal_outcome": {
+          "type": "string"
+        },
+        "validation_run_id": {
+          "type": "string"
+        },
+        "workflow_run_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "validation_run_id",
+        "cohort_id",
+        "workflow_run_id",
+        "entity_type",
+        "publisher_id",
+        "report_id",
+        "source_identity_id",
+        "stage",
+        "attempt_number",
+        "parent_attempt_number",
+        "input_artifact_ids",
+        "output_artifact_ids",
+        "started_at_utc",
+        "completed_at_utc",
+        "terminal_outcome",
+        "failure_code",
+        "retryable",
+        "repair_disposition",
+        "duplicate_disposition",
+        "supersession_state",
+        "idempotency_state",
+        "configuration_hash",
+        "policy_hash",
+        "producer_build_identity"
+      ],
+      "type": "object"
+    },
+    "src.contracts.validation_run_manifest.ValidationRunManifestStageTotal": {
+      "additionalProperties": false,
+      "properties": {
+        "entity_count": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "stage": {
+          "type": "string"
+        },
+        "terminal_outcome": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "stage",
+        "terminal_outcome",
+        "entity_count"
       ],
       "type": "object"
     },
@@ -43850,10 +44249,7 @@
           "type": "array"
         },
         "prompt_namespaces": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
+          "type": "string"
         },
         "require_browser": {
           "type": "boolean"

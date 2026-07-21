@@ -1,0 +1,51 @@
+schema_version: "1.0"
+
+# Dedicated, unused namespace for the release reliability canary. Secrets and
+# the explicitly configured sandbox WordPress target remain environment-owned.
+paths:
+  output_dir: "./out/reliability_canary_20260721_final"
+  cache_dir: "./cache/reliability_canary_20260721_final"
+  state_db: "./state/reliability_canary_20260721_final/index.sqlite"
+  reports_db: "./state/reliability_canary_20260721_final/reports.sqlite"
+  signal_store_db: "./state/reliability_canary_20260721_final/signals.sqlite"
+  ingest_lock: "./state/reliability_canary_20260721_final/ingest.lock"
+
+ingest:
+  run_budget:
+    max_spend_usd: 6.0
+    max_pdfs: 20
+    max_retries: 10
+    max_runtime_seconds: 28800
+    limit_decision: "stop"
+
+browser_download:
+  output_dir: "./out/reliability_canary_20260721_final/browser_downloads"
+  max_steps: 4
+  timeout_seconds: 120
+  run_budget:
+    max_browser_launches: 8
+    max_pdfs: 20
+    max_drive_writes: 24
+    max_drive_reads: 48
+    max_mailbox_reads: 8
+    max_retries: 10
+    max_runtime_seconds: 14400
+    limit_decision: "stop"
+
+mailbox_acquisition:
+  output_dir: "./out/reliability_canary_20260721_final/mailbox_acquisition"
+
+publisher_discovery:
+  output_dir: "./out/reliability_canary_20260721_final/publisher_inventory_discovery"
+
+analysis:
+  cost_ledger_path: "./state/reliability_canary_20260721_final/llm_cost_ledger.jsonl"
+
+cost:
+  usage_db_path: "./state/reliability_canary_20260721_final/llm_usage.sqlite"
+  daily_path: "./state/reliability_canary_20260721_final/llm_cost_daily.json"
+  ledger_path: "./state/reliability_canary_20260721_final/llm_cost_ledger.jsonl"
+
+publish:
+  projection_daily_path: "./state/reliability_canary_20260721_final/projection_cost_daily.json"
+  projection_ledger_path: "./state/reliability_canary_20260721_final/projection_cost_ledger.jsonl"

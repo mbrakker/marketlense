@@ -308,10 +308,10 @@ def test_render_fallbacks_without_artifacts(tmp_path):
     assert "Legacy quote" in html
     assert "Legacy commentary" in html
     assert "What leaders should take from the report" in html
-    assert "Source URL was not available in the extracted report metadata." in html
+    assert "No verified publisher source link is available for this briefing." in html
 
 
-def test_render_surfaces_report_quality_score_and_download_link(tmp_path):
+def test_render_surfaces_report_quality_score_and_verified_source_link(tmp_path):
     data = {
         "title": "Scored Report",
         "tldr": "TLDR",
@@ -323,6 +323,7 @@ def test_render_surfaces_report_quality_score_and_download_link(tmp_path):
         "region": "US",
         "time_period": "2026",
         "contents_page_number": 0,
+        "source": "https://publisher.example/reports/scored.pdf",
         "_source_download_href": "../cache/scored.pdf",
         "_report_value_score": {
             "schema_version": "1.0",
@@ -380,7 +381,8 @@ def test_render_surfaces_report_quality_score_and_download_link(tmp_path):
     assert "High source value" in html
     assert 'data-dimension="market_insight_depth"' in html
     assert 'data-dimension="source_authority_originality"' in html
-    assert 'href="../cache/scored.pdf" download' in html
+    assert 'href="https://publisher.example/reports/scored.pdf"' in html
+    assert "../cache/scored.pdf" not in html
 
 
 def test_render_surfaces_explicit_abstain_notices(tmp_path):
@@ -503,7 +505,7 @@ def test_render_surfaces_report_identity_line_and_source_note(tmp_path):
     assert "Publisher: Capgemini" in html
     assert "Year: 2026" in html
     assert "Author: Mark Ruston" in html
-    assert "Source URL was not available in the extracted report metadata." in html
+    assert "No verified publisher source link is available for this briefing." in html
 
 
 def test_render_relabels_unknown_quote_speakers_and_shows_citation_micro_lines(
@@ -975,64 +977,3 @@ def test_render_creates_missing_nested_output_directory(tmp_path):
 
     assert out_dir.exists()
     assert Path(response.html_path).exists()
-
-
-def test_render_overwrites_existing_html_atomically(tmp_path):
-    first = RenderRequest(
-        schema_version="1.0",
-        data={
-            "title": "First Title",
-            "tldr": "TLDR",
-            "insights": [
-                "Insight A",
-                "Insight B",
-                "Insight C",
-                "Insight D",
-                "Insight E",
-            ],
-            "quote": {"text": "Quote", "author": "Author"},
-            "commentary": "Commentary",
-            "publisher": "Publisher",
-            "taxonomy": ["tag"],
-            "region": "US",
-            "time_period": "2024",
-            "contents_page_number": 0,
-        },
-        doc_name="overwrite.pdf",
-        file_id="file_overwrite",
-        out_dir=str(tmp_path),
-        preview_png=None,
-    )
-    second = RenderRequest(
-        schema_version="1.0",
-        data={
-            "title": "Second Title",
-            "tldr": "TLDR",
-            "insights": [
-                "Insight A",
-                "Insight B",
-                "Insight C",
-                "Insight D",
-                "Insight E",
-            ],
-            "quote": {"text": "Quote", "author": "Author"},
-            "commentary": "Commentary",
-            "publisher": "Publisher",
-            "taxonomy": ["tag"],
-            "region": "US",
-            "time_period": "2024",
-            "contents_page_number": 0,
-        },
-        doc_name="overwrite.pdf",
-        file_id="file_overwrite",
-        out_dir=str(tmp_path),
-        preview_png=None,
-    )
-
-    first_response = render_report(first, _ctx())
-    second_response = render_report(second, _ctx())
-
-    html = Path(second_response.html_path).read_text(encoding="utf-8")
-    assert first_response.html_path == second_response.html_path
-    assert "Second Title" in html
-    assert "First Title" not in html

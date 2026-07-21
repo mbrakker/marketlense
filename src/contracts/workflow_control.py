@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Callable, Literal
+from typing import Any, Callable, Literal, Sequence
 
 from src.contracts.browser_download import BrowserDownloadSettings
 from src.contracts.mailbox_acquisition import MailboxAcquisitionSettings
@@ -40,7 +40,7 @@ class WorkflowPreflightProfile:
     require_browser: bool = field(
         metadata={"doc": "Whether this workflow requires browser readiness."}
     )
-    prompt_namespaces: list[str] = field(
+    prompt_namespaces: Sequence[str] = field(
         metadata={"doc": "Prompt namespaces required before the workflow starts."}
     )
 
@@ -437,9 +437,7 @@ class WorkflowControlSettings:
     )
     available_budget_profile_refs: list[str] = field(
         default_factory=list,
-        metadata={
-            "doc": "Budget-profile refs derived from canonical workflow queues."
-        },
+        metadata={"doc": "Budget-profile refs derived from canonical workflow queues."},
     )
     remediation_reaper: RemediationReaperSettings = field(
         default_factory=lambda: RemediationReaperSettings(schema_version="1.0"),
