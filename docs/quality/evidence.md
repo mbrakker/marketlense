@@ -47,6 +47,13 @@ The final check excludes only the collector's own temporary staging directory wh
 
 The `--log-corpus-scope` operator declaration states what the snapshotted corpus represents: `representative_report_processing`, `post_remediation_smoke_only`, or `not_declared`. Strict representative processing requires timezone-aware `--fresh-after` before any snapshot; omission fails rather than creating a false pass. The leakage artifact records `freshness_state` as `passed`, `failed`, `unverified`, or `not_required`, separately from the content-leakage result. The collector verifies snapshots and content coverage, not that a claimed workflow was actually run. A smoke-only bundle explicitly states that no representative report-processing workflow was executed and must not be presented as evidence of that workflow.
 
+For an isolated historical run whose canonical logs were not retained in that
+namespace, use `--allow-unavailable-run-logs` with an empty run-owned log
+directory. This preserves strict repository, database, artifact, and canary
+integrity checks while recording log-content and freshness evidence as
+`unavailable`; it never substitutes repository-wide logs or claims a leakage
+pass.
+
 Every database is snapshotted with SQLite's backup API before querying; live WAL files are never copied. The collector snapshots the retained crop and report-analysis JSON evidence inputs under `--artifact-dir` before either metrics or canaries are read. It does not treat unrelated benchmark or runtime sidecars as CTO-review inputs. The collector copies only canonical `market_lense_YYYY-MM-DD.log` files from `--log-dir` into the same workspace and scans only those immutable copies, line by line. Snapshot provenance records normalized source-relative and temporary-relative paths, sizes, hashes, source modification time, parsed event timestamp bounds, line/event counts, and accessibility. Noncanonical files are ignored. In strict mode a discovered standard log that cannot be copied is a failure.
 
 The log-content assessment takes deterministic representative samples from two categories:

@@ -196,6 +196,7 @@ class EvidencePaths:
     maximum_canaries_per_class: int = 25
     replace_output: bool = False
     include_github_status: bool = False
+    allow_unavailable_run_logs: bool = False
     repository_root: Path = ROOT
 
 
@@ -1089,6 +1090,12 @@ def validate_consistency(
                 "Consistency validation does not hash the finalized run manifest"
             )
     repository = manifest.get("repository", {})
+    configuration = manifest.get("configuration", {})
+    allow_unavailable_run_logs = bool(
+        configuration.get("allow_unavailable_run_logs", False)
+        if isinstance(configuration, dict)
+        else False
+    )
     if strict:
         if not repository.get("exact_head_verified"):
             raise RepositoryHeadMismatchError(
@@ -1185,11 +1192,17 @@ def validate_consistency(
                 f"Artifact inventory provenance mismatch: {relative}"
             )
     if strict:
-        if leakage.get("status") == "incomplete":
+        leakage_status = str(leakage.get("status") or "")
+        logs_unavailable = (
+            allow_unavailable_run_logs and leakage_status == "unavailable"
+        )
+        if leakage_status == "incomplete":
             raise EvidenceCoverageError("Strict bundle has incomplete leakage evidence")
-        if leakage.get("status") == "failed" or leakage.get("matches"):
+        if leakage_status == "failed" or leakage.get("matches"):
             raise LogContentLeakageError("Strict bundle detects report content in logs")
-        if leakage.get("status") != "passed" or leakage.get("passed") is not True:
+        if not logs_unavailable and (
+            leakage_status != "passed" or leakage.get("passed") is not True
+        ):
             raise EvidenceCoverageError(
                 "Strict bundle lacks a passed leakage assessment"
             )
@@ -1202,9 +1215,13 @@ def validate_consistency(
             raise EvidenceCoverageError(
                 "Strict bundle has insufficient canary coverage"
             )
-        if int(coverage.get("log_files_scanned") or 0) < 1:
+        if not logs_unavailable and int(coverage.get("log_files_scanned") or 0) < 1:
             raise EvidenceCoverageError("Strict bundle has no standard logs")
-        if manifest.get("fresh_after") and not leakage.get("fresh_log_seen"):
+        if (
+            not logs_unavailable
+            and manifest.get("fresh_after")
+            and not leakage.get("fresh_log_seen")
+        ):
             raise EvidenceFreshnessError("Strict bundle has no fresh standard log")
     rendered = "\n".join(
         path.read_text(encoding="utf-8", errors="replace")
@@ -1313,6 +1330,7 @@ def _leakage_payload(
     minimum_source: int,
     minimum_editorial: int,
     maximum_per_class: int,
+    allow_unavailable_run_logs: bool,
 ) -> tuple[dict[str, object], tuple[str, ...]]:
     source_canaries, editorial_canaries, examined = extract_canaries(
         artifact_snapshot_root, maximum_per_class=maximum_per_class
@@ -1337,6 +1355,9 @@ def _leakage_payload(
         if log_corpus_scope in LOG_CORPUS_LIMITATIONS
         else []
     )
+    logs_unavailable = (
+        allow_unavailable_run_logs and int(log_coverage["log_files_scanned"]) == 0
+    )
     incomplete = False
     if len(source_canaries) < minimum_source:
         incomplete = True
@@ -1344,13 +1365,23 @@ def _leakage_payload(
     if len(editorial_canaries) < minimum_editorial:
         incomplete = True
         limitations.append("insufficient_editorial_canaries")
-    if int(log_coverage["log_files_scanned"]) == 0:
+    if int(log_coverage["log_files_scanned"]) == 0 and not logs_unavailable:
         incomplete = True
         limitations.append("no_standard_logs")
-    if fresh_after is not None and not fresh_log_seen:
+    if fresh_after is not None and not fresh_log_seen and not logs_unavailable:
         incomplete = True
         limitations.append("no_fresh_standard_log")
-    status = "failed" if matches else "incomplete" if incomplete else "passed"
+    if logs_unavailable:
+        limitations.append("run_owned_logs_unavailable")
+    status = (
+        "failed"
+        if matches
+        else "unavailable"
+        if logs_unavailable
+        else "incomplete"
+        if incomplete
+        else "passed"
+    )
     freshness_state = _freshness_state(
         log_corpus_scope=log_corpus_scope,
         fresh_after=fresh_after,
@@ -1499,6 +1530,7 @@ def collect(
                 minimum_source=paths.minimum_source_canaries,
                 minimum_editorial=paths.minimum_editorial_canaries,
                 maximum_per_class=paths.maximum_canaries_per_class,
+                allow_unavailable_run_logs=paths.allow_unavailable_run_logs,
             )
         except ValueError as exc:
             raise RetainedArtifactEvidenceError(
@@ -1573,6 +1605,7 @@ def collect(
             "minimum_editorial_canaries": paths.minimum_editorial_canaries,
             "maximum_canaries_per_class": paths.maximum_canaries_per_class,
             "include_github_status": paths.include_github_status,
+            "allow_unavailable_run_logs": paths.allow_unavailable_run_logs,
         }
         manifest_path = _write_json(
             staging_dir / "evidence_run_manifest.json",
@@ -1620,10 +1653,10 @@ def collect(
                 "generated_at": _utc_now(),
                 "evidence_run_id": run_id,
                 "repository_commit_sha": commit_sha,
-                "passed": validation_status == "passed"
+                "passed": validation_status in {"passed", "unavailable"}
                 and bool(repository["exact_head_verified"]),
                 "status": "passed"
-                if validation_status == "passed"
+                if validation_status in {"passed", "unavailable"}
                 and bool(repository["exact_head_verified"])
                 else validation_status,
                 "exact_head_verified": bool(repository["exact_head_verified"]),
@@ -1635,7 +1668,11 @@ def collect(
                     else "not_required",
                     "snapshot_integrity": "passed",
                     "artifact_hashes": "passed",
-                    "log_freshness": leakage["freshness_state"],
+                    "log_freshness": (
+                        "unavailable"
+                        if validation_status == "unavailable"
+                        else leakage["freshness_state"]
+                    ),
                     "source_canary_coverage": "passed"
                     if leakage["coverage"]["source_canary_count"]
                     >= paths.minimum_source_canaries
@@ -1649,7 +1686,10 @@ def collect(
                 },
             },
         )
-        if paths.require_exact_head and validation_status != "passed":
+        if paths.require_exact_head and validation_status not in {
+            "passed",
+            "unavailable",
+        }:
             if validation_status == "failed":
                 raise LogContentLeakageError(
                     "CTO evidence found retained content in standard logs"
@@ -1698,6 +1738,14 @@ def main() -> int:
         help="Read the latest main commit and check status through GitHub CLI.",
     )
     parser.add_argument("--replace-output", action="store_true")
+    parser.add_argument(
+        "--allow-unavailable-run-logs",
+        action="store_true",
+        help=(
+            "Allow explicit unavailable log evidence when an isolated run has no "
+            "run-owned canonical logs; repository-wide logs are never substituted."
+        ),
+    )
     args = parser.parse_args()
     for path in collect(
         EvidencePaths(
@@ -1716,6 +1764,7 @@ def main() -> int:
             maximum_canaries_per_class=args.maximum_canaries_per_class,
             replace_output=args.replace_output,
             include_github_status=args.include_github_status,
+            allow_unavailable_run_logs=args.allow_unavailable_run_logs,
         ),
         command_args=tuple(sys.argv[1:]),
     ):

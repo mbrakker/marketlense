@@ -718,6 +718,31 @@ def test_declared_smoke_log_scope_is_explicit_in_public_evidence(
     assert "does not attest" in manifest["log_corpus"]["repository_provenance"]
 
 
+def test_strict_isolated_bundle_marks_absent_run_logs_unavailable(
+    tmp_path: Path,
+) -> None:
+    paths, sha, _, _ = _strict_paths(tmp_path)
+    paths = EvidencePaths(
+        **{
+            **paths.__dict__,
+            "log_dir": tmp_path / "isolated-run-logs",
+            "allow_unavailable_run_logs": True,
+        }
+    )
+
+    collect(paths)
+
+    leakage = json.loads((paths.output_dir / "log_content_leakage.json").read_text())
+    validation = json.loads(
+        (paths.output_dir / "consistency_validation.json").read_text()
+    )
+    assert leakage["status"] == "unavailable"
+    assert "run_owned_logs_unavailable" in leakage["limitations"]
+    assert validation["passed"] is True
+    assert validation["checks"]["log_content_leakage"] == "unavailable"
+    assert validation["repository_commit_sha"] == sha
+
+
 def test_unknown_log_corpus_scope_fails_before_snapshot_work(tmp_path: Path) -> None:
     paths, _, _, _ = _strict_paths(tmp_path)
     paths = EvidencePaths(**{**paths.__dict__, "log_corpus_scope": "unknown"})
