@@ -630,6 +630,18 @@ def test_public_evidence_paths_do_not_expose_absolute_workspace_paths(
     assert "C:\\" not in rendered
 
 
+def test_manifest_retains_relative_state_namespace(tmp_path: Path) -> None:
+    state, _ = _seed_state(tmp_path)
+    paths = _paths(tmp_path, state)
+
+    collect(paths)
+
+    manifest = json.loads(
+        (paths.output_dir / "evidence_run_manifest.json").read_text(encoding="utf-8")
+    )
+    assert manifest["configuration"]["state_dir"] == "state"
+
+
 def test_duplicate_explicit_evidence_run_id_fails_closed(tmp_path: Path) -> None:
     state, _ = _seed_state(tmp_path)
     paths = EvidencePaths(

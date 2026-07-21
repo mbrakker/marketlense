@@ -1597,7 +1597,7 @@ def collect(
             excluded_paths=(staging_parent,),
         )
         configuration = {
-            "state_dir": _public_path(paths.state_dir, paths.state_dir),
+            "state_dir": _public_path(paths.state_dir, ROOT),
             "artifact_dir": _public_path(paths.artifact_dir, ROOT),
             "log_dir": _public_path(paths.log_dir, ROOT),
             "required_databases": sorted(paths.required_databases),
