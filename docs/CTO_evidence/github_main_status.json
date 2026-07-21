@@ -12,10 +12,10 @@
     },
     "total": 4
   },
-  "main_commit_sha": "cc8aa7b56c059706eedae543fcf6709bdb4758c0",
+  "main_commit_sha": "e61ea35dbab49d2a3ed594b993f07def774c486c",
   "repository": "mbrakker/marketlense",
   "revision_match": true,
   "schema_version": "1.0",
   "status": "available",
-  "tested_commit_sha": "cc8aa7b56c059706eedae543fcf6709bdb4758c0"
+  "tested_commit_sha": "e61ea35dbab49d2a3ed594b993f07def774c486c"
 }

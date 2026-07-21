@@ -7,7 +7,7 @@
       "rows": [
         {
           "attempt_count": 1,
-          "publisher": "a.storyblok.com",
+          "publisher": "127.0.0.1:53405",
           "route_family": "direct_pdf_probe",
           "route_kind": "pdf_download",
           "route_records": 1,
@@ -16,7 +16,430 @@
         },
         {
           "attempt_count": 1,
-          "publisher": "cdn.prod.website-files.com",
+          "publisher": "127.0.0.1:64397",
+          "route_family": "direct_pdf_probe",
+          "route_kind": "pdf_download",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 3,
+          "publisher": "about.bigcommerce.com",
+          "route_family": "browser_email_form",
+          "route_kind": "email_delivery",
+          "route_records": 3,
+          "success_count": 0,
+          "successful_acquisition_rate": 0.0
+        },
+        {
+          "attempt_count": 5,
+          "publisher": "about.bigcommerce.com",
+          "route_family": "browser_preflight_js_pdf_probe",
+          "route_kind": "pdf_download",
+          "route_records": 4,
+          "success_count": 5,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "assets1.consumergoods.com",
+          "route_family": "direct_pdf_probe",
+          "route_kind": "pdf_download",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "azure-na-assets.contentstack.com",
+          "route_family": "direct_pdf_probe",
+          "route_kind": "pdf_download",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 26,
+          "publisher": "brandfinance.com",
+          "route_family": "browser_onsite_report",
+          "route_kind": "email_delivery",
+          "route_records": 6,
+          "success_count": 11,
+          "successful_acquisition_rate": 0.423077
+        },
+        {
+          "attempt_count": 132,
+          "publisher": "brandfinance.com",
+          "route_family": "browser_onsite_report",
+          "route_kind": "onsite_report",
+          "route_records": 11,
+          "success_count": 99,
+          "successful_acquisition_rate": 0.75
+        },
+        {
+          "attempt_count": 19,
+          "publisher": "brandfinance.com",
+          "route_family": "browser_onsite_report",
+          "route_kind": "pdf_download",
+          "route_records": 1,
+          "success_count": 16,
+          "successful_acquisition_rate": 0.842105
+        },
+        {
+          "attempt_count": 13,
+          "publisher": "brandfinance.com",
+          "route_family": "browser_pdf_download",
+          "route_kind": "onsite_report",
+          "route_records": 1,
+          "success_count": 10,
+          "successful_acquisition_rate": 0.769231
+        },
+        {
+          "attempt_count": 15,
+          "publisher": "business.adobe.com",
+          "route_family": "browser_email_form",
+          "route_kind": "email_delivery",
+          "route_records": 5,
+          "success_count": 0,
+          "successful_acquisition_rate": 0.0
+        },
+        {
+          "attempt_count": 95,
+          "publisher": "cdn.sanity.io",
+          "route_family": "direct_pdf_probe",
+          "route_kind": "pdf_download",
+          "route_records": 17,
+          "success_count": 95,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "consumergoods.com",
+          "route_family": "report_page_pdf_link_probe",
+          "route_kind": "pdf_download",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "d2td6mzj4f4e1e.cloudfront.net",
+          "route_family": "direct_pdf_probe",
+          "route_kind": "pdf_download",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "datareportal.com",
+          "route_family": "browser_email_form",
+          "route_kind": "email_delivery",
+          "route_records": 1,
+          "success_count": 0,
+          "successful_acquisition_rate": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "datareportal.com",
+          "route_family": "browser_longread_capture",
+          "route_kind": "onsite_report",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 13,
+          "publisher": "datareportal.com",
+          "route_family": "browser_onsite_report",
+          "route_kind": "pdf_download",
+          "route_records": 11,
+          "success_count": 12,
+          "successful_acquisition_rate": 0.923077
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "doubleverify.com",
+          "route_family": "browser_email_form",
+          "route_kind": "email_delivery",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "doubleverify.com",
+          "route_family": "direct_pdf_probe",
+          "route_kind": "pdf_download",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "exclaimer.com",
+          "route_family": "report_page_pdf_link_probe",
+          "route_kind": "pdf_download",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 7,
+          "publisher": "explore.contentsquare.com",
+          "route_family": "browser_email_form",
+          "route_kind": "email_delivery",
+          "route_records": 2,
+          "success_count": 5,
+          "successful_acquisition_rate": 0.714286
+        },
+        {
+          "attempt_count": 4,
+          "publisher": "explore.contentsquare.com",
+          "route_family": "browser_pdf",
+          "route_kind": "email_delivery",
+          "route_records": 1,
+          "success_count": 4,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 2,
+          "publisher": "explore.contentsquare.com",
+          "route_family": "browser_pdf",
+          "route_kind": "pdf_download",
+          "route_records": 1,
+          "success_count": 2,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "explore.contentsquare.com",
+          "route_family": "pdf_download",
+          "route_kind": "email_delivery",
+          "route_records": 1,
+          "success_count": 0,
+          "successful_acquisition_rate": 0.0
+        },
+        {
+          "attempt_count": 4,
+          "publisher": "explore.contentsquare.com",
+          "route_family": "pdf_download",
+          "route_kind": "pdf_download",
+          "route_records": 2,
+          "success_count": 4,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "gardenmediagroup.com",
+          "route_family": "browser_onsite_report",
+          "route_kind": "pdf_download",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "getdx.com",
+          "route_family": "browser_email_form",
+          "route_kind": "email_delivery",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 3,
+          "publisher": "go.contentsquare.com",
+          "route_family": "browser_email_form",
+          "route_kind": "email_delivery",
+          "route_records": 2,
+          "success_count": 1,
+          "successful_acquisition_rate": 0.333333
+        },
+        {
+          "attempt_count": 2,
+          "publisher": "go.contentsquare.com",
+          "route_family": "browser_tracker_redirect",
+          "route_kind": "pdf_download",
+          "route_records": 2,
+          "success_count": 2,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "hoxhunt.com",
+          "route_family": "browser_email_form",
+          "route_kind": "email_delivery",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 3,
+          "publisher": "impact.com",
+          "route_family": "browser_pdf_click",
+          "route_kind": "pdf_download",
+          "route_records": 2,
+          "success_count": 3,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 2,
+          "publisher": "internetretailing.net",
+          "route_family": "browser_onsite_report",
+          "route_kind": "pdf_download",
+          "route_records": 2,
+          "success_count": 2,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "kpmg.com",
+          "route_family": "direct_pdf_probe",
+          "route_kind": "pdf_download",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "liveramp.com",
+          "route_family": "http_pdf_probe",
+          "route_kind": "pdf_download",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "merchantriskcouncil.org",
+          "route_family": "browser_onsite_report",
+          "route_kind": "pdf_download",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 10,
+          "publisher": "pubmatic.com",
+          "route_family": "browser_email_form",
+          "route_kind": "email_delivery",
+          "route_records": 4,
+          "success_count": 0,
+          "successful_acquisition_rate": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "redsift.com",
+          "route_family": "browser_email_form",
+          "route_kind": "email_delivery",
+          "route_records": 1,
+          "success_count": 0,
+          "successful_acquisition_rate": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "resources.ama.org",
+          "route_family": "browser_onsite_report",
+          "route_kind": "pdf_download",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "resources.dataminr.com",
+          "route_family": "browser_email_form",
+          "route_kind": "email_delivery",
+          "route_records": 1,
+          "success_count": 0,
+          "successful_acquisition_rate": 0.0
+        },
+        {
+          "attempt_count": 21,
+          "publisher": "resources.genetec.com",
+          "route_family": "browser_email_form",
+          "route_kind": "email_delivery",
+          "route_records": 6,
+          "success_count": 0,
+          "successful_acquisition_rate": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "resources.satisfyd.com",
+          "route_family": "pdf_download",
+          "route_kind": "email_delivery",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "reutersinstitute.politics.ox.ac.uk",
+          "route_family": "report_page_pdf_link_probe",
+          "route_kind": "pdf_download",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 2,
+          "publisher": "s3.amazonaws.com",
+          "route_family": "direct_pdf_probe",
+          "route_kind": "pdf_download",
+          "route_records": 2,
+          "success_count": 2,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 7,
+          "publisher": "sensortower.com",
+          "route_family": "browser_email_form",
+          "route_kind": "email_delivery",
+          "route_records": 4,
+          "success_count": 0,
+          "successful_acquisition_rate": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "sublime.security",
+          "route_family": "browser_email_form",
+          "route_kind": "email_delivery",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "www.adjust.com",
+          "route_family": "browser_email_form",
+          "route_kind": "email_delivery",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 2,
+          "publisher": "www.adjust.com",
+          "route_family": "browser_preflight_js_pdf_probe",
+          "route_kind": "pdf_download",
+          "route_records": 1,
+          "success_count": 2,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 3,
+          "publisher": "www.adjust.com",
+          "route_family": "report_page_pdf_link_probe",
+          "route_kind": "pdf_download",
+          "route_records": 1,
+          "success_count": 3,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "www.adobe.com",
           "route_family": "direct_pdf_probe",
           "route_kind": "pdf_download",
           "route_records": 1,
@@ -25,44 +448,44 @@
         },
         {
           "attempt_count": 2,
-          "publisher": "d3nkl3psvxxpe9.cloudfront.net",
-          "route_family": "direct_pdf_probe",
+          "publisher": "www.algolia.com",
+          "route_family": "browser_preflight_js_pdf_probe",
           "route_kind": "pdf_download",
           "route_records": 2,
           "success_count": 2,
           "successful_acquisition_rate": 1.0
         },
         {
-          "attempt_count": 19,
-          "publisher": "datareportal.com",
-          "route_family": "browser_onsite_report",
-          "route_kind": "onsite_report",
-          "route_records": 19,
-          "success_count": 19,
-          "successful_acquisition_rate": 1.0
-        },
-        {
-          "attempt_count": 1,
-          "publisher": "impact.com",
-          "route_family": "direct_pdf_probe",
+          "attempt_count": 3,
+          "publisher": "www.algolia.com",
+          "route_family": "browser_tracker_redirect",
           "route_kind": "pdf_download",
-          "route_records": 1,
-          "success_count": 1,
-          "successful_acquisition_rate": 1.0
-        },
-        {
-          "attempt_count": 1,
-          "publisher": "insights.mintel.com",
-          "route_family": "direct_pdf_probe",
-          "route_kind": "pdf_download",
-          "route_records": 1,
-          "success_count": 1,
+          "route_records": 2,
+          "success_count": 3,
           "successful_acquisition_rate": 1.0
         },
         {
           "attempt_count": 1,
           "publisher": "www.algolia.com",
-          "route_family": "direct_pdf_probe",
+          "route_family": "report_page_pdf_link_probe",
+          "route_kind": "pdf_download",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "www.bain.com",
+          "route_family": "browser_email_form",
+          "route_kind": "email_delivery",
+          "route_records": 1,
+          "success_count": 0,
+          "successful_acquisition_rate": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "www.bain.com",
+          "route_family": "browser_pdf_download",
           "route_kind": "pdf_download",
           "route_records": 1,
           "success_count": 1,
@@ -78,17 +501,125 @@
           "successful_acquisition_rate": 1.0
         },
         {
+          "attempt_count": 6,
+          "publisher": "www.bain.com",
+          "route_family": "report_page_pdf_link_probe",
+          "route_kind": "pdf_download",
+          "route_records": 5,
+          "success_count": 5,
+          "successful_acquisition_rate": 0.833333
+        },
+        {
+          "attempt_count": 21,
+          "publisher": "www.barracuda.com",
+          "route_family": "browser_email_form",
+          "route_kind": "email_delivery",
+          "route_records": 6,
+          "success_count": 0,
+          "successful_acquisition_rate": 0.0
+        },
+        {
+          "attempt_count": 7,
+          "publisher": "www.barracuda.com",
+          "route_family": "browser_onsite_report",
+          "route_kind": "onsite_report",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 0.142857
+        },
+        {
+          "attempt_count": 344,
+          "publisher": "www.bigcommerce.com",
+          "route_family": "browser_email_form",
+          "route_kind": "email_delivery",
+          "route_records": 20,
+          "success_count": 106,
+          "successful_acquisition_rate": 0.30814
+        },
+        {
+          "attempt_count": 2,
+          "publisher": "www.bigcommerce.com",
+          "route_family": "browser_email_form",
+          "route_kind": "pdf_download",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 0.5
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "www.bigcommerce.com",
+          "route_family": "browser_onsite_report",
+          "route_kind": "email_delivery",
+          "route_records": 1,
+          "success_count": 0,
+          "successful_acquisition_rate": 0.0
+        },
+        {
+          "attempt_count": 65,
+          "publisher": "www.bigcommerce.com",
+          "route_family": "browser_pdf_click",
+          "route_kind": "email_delivery",
+          "route_records": 10,
+          "success_count": 15,
+          "successful_acquisition_rate": 0.230769
+        },
+        {
           "attempt_count": 3,
           "publisher": "www.brightlocal.com",
           "route_family": "browser_onsite_report",
+          "route_kind": "email_delivery",
+          "route_records": 2,
+          "success_count": 2,
+          "successful_acquisition_rate": 0.666667
+        },
+        {
+          "attempt_count": 15,
+          "publisher": "www.brightlocal.com",
+          "route_family": "browser_onsite_report",
           "route_kind": "onsite_report",
-          "route_records": 3,
-          "success_count": 3,
+          "route_records": 5,
+          "success_count": 15,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 3,
+          "publisher": "www.brightlocal.com",
+          "route_family": "browser_onsite_report",
+          "route_kind": "pdf_download",
+          "route_records": 2,
+          "success_count": 2,
+          "successful_acquisition_rate": 0.666667
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "www.brightlocal.com",
+          "route_family": "browser_tracker_redirect",
+          "route_kind": "email_delivery",
+          "route_records": 1,
+          "success_count": 0,
+          "successful_acquisition_rate": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "www.brightlocal.com",
+          "route_family": "browser_tracker_redirect",
+          "route_kind": "onsite_report",
+          "route_records": 1,
+          "success_count": 0,
+          "successful_acquisition_rate": 0.0
+        },
+        {
+          "attempt_count": 10,
+          "publisher": "www.capgemini.com",
+          "route_family": "direct_pdf_probe",
+          "route_kind": "pdf_download",
+          "route_records": 4,
+          "success_count": 10,
           "successful_acquisition_rate": 1.0
         },
         {
           "attempt_count": 1,
-          "publisher": "www.channelengine.com",
+          "publisher": "www.capgemini.com",
           "route_family": "report_page_pdf_link_probe",
           "route_kind": "pdf_download",
           "route_records": 1,
@@ -96,8 +627,71 @@
           "successful_acquisition_rate": 1.0
         },
         {
+          "attempt_count": 6,
+          "publisher": "www.centricsoftware.com",
+          "route_family": "browser_email_form",
+          "route_kind": "email_delivery",
+          "route_records": 3,
+          "success_count": 0,
+          "successful_acquisition_rate": 0.0
+        },
+        {
           "attempt_count": 1,
-          "publisher": "www.circana.com",
+          "publisher": "www.collectivemeasures.com",
+          "route_family": "direct_pdf_probe",
+          "route_kind": "pdf_download",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 15,
+          "publisher": "www.consumeredge.com",
+          "route_family": "browser_email_form",
+          "route_kind": "email_delivery",
+          "route_records": 5,
+          "success_count": 0,
+          "successful_acquisition_rate": 0.0
+        },
+        {
+          "attempt_count": 3,
+          "publisher": "www.criteo.com",
+          "route_family": "browser_email_form",
+          "route_kind": "email_delivery",
+          "route_records": 2,
+          "success_count": 0,
+          "successful_acquisition_rate": 0.0
+        },
+        {
+          "attempt_count": 2,
+          "publisher": "www.criteo.com",
+          "route_family": "browser_pdf_click",
+          "route_kind": "pdf_download",
+          "route_records": 2,
+          "success_count": 2,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "www.cushmanwakefield.com",
+          "route_family": "browser_onsite_report",
+          "route_kind": "pdf_download",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 2,
+          "publisher": "www.deloitte.com",
+          "route_family": "direct_pdf_probe",
+          "route_kind": "pdf_download",
+          "route_records": 2,
+          "success_count": 2,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "www.dhl.com",
           "route_family": "direct_pdf_probe",
           "route_kind": "pdf_download",
           "route_records": 1,
@@ -115,12 +709,156 @@
         },
         {
           "attempt_count": 1,
-          "publisher": "www.iab.com",
-          "route_family": "direct_pdf_probe",
+          "publisher": "www.earnestanalytics.com",
+          "route_family": "onsite_report",
+          "route_kind": "email_delivery",
+          "route_records": 1,
+          "success_count": 0,
+          "successful_acquisition_rate": 0.0
+        },
+        {
+          "attempt_count": 2,
+          "publisher": "www.earnestanalytics.com",
+          "route_family": "pdf_download",
+          "route_kind": "pdf_download",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 0.5
+        },
+        {
+          "attempt_count": 3,
+          "publisher": "www.greatplacetowork.com",
+          "route_family": "browser_email_form",
+          "route_kind": "email_delivery",
+          "route_records": 2,
+          "success_count": 0,
+          "successful_acquisition_rate": 0.0
+        },
+        {
+          "attempt_count": 13,
+          "publisher": "www.gwi.com",
+          "route_family": "browser_email_form",
+          "route_kind": "email_delivery",
+          "route_records": 7,
+          "success_count": 5,
+          "successful_acquisition_rate": 0.384615
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "www.gwi.com",
+          "route_family": "browser_listing_hub",
+          "route_kind": "email_delivery",
+          "route_records": 1,
+          "success_count": 0,
+          "successful_acquisition_rate": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "www.harriswilliams.com",
+          "route_family": "browser_onsite_report",
           "route_kind": "pdf_download",
           "route_records": 1,
           "success_count": 1,
           "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "www.harriswilliams.com",
+          "route_family": "browser_pdf_click",
+          "route_kind": "pdf_download",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "www.huntress.com",
+          "route_family": "browser_email_form",
+          "route_kind": "email_delivery",
+          "route_records": 1,
+          "success_count": 0,
+          "successful_acquisition_rate": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "www.iab.com",
+          "route_family": "report_page_pdf_link_probe",
+          "route_kind": "pdf_download",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 3,
+          "publisher": "www.marketplacepulse.com",
+          "route_family": "browser_onsite_report",
+          "route_kind": "pdf_download",
+          "route_records": 2,
+          "success_count": 3,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "www.marmind.com",
+          "route_family": "browser_email_form",
+          "route_kind": "email_delivery",
+          "route_records": 1,
+          "success_count": 0,
+          "successful_acquisition_rate": 0.0
+        },
+        {
+          "attempt_count": 2,
+          "publisher": "www.marmind.com",
+          "route_family": "browser_preflight_js_pdf_probe",
+          "route_kind": "pdf_download",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 0.5
+        },
+        {
+          "attempt_count": 2,
+          "publisher": "www.mercer.com",
+          "route_family": "direct_pdf_probe",
+          "route_kind": "pdf_download",
+          "route_records": 2,
+          "success_count": 2,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "www.mimecast.com",
+          "route_family": "browser_email_form",
+          "route_kind": "email_delivery",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 136,
+          "publisher": "www.mintel.com",
+          "route_family": "browser_email_form",
+          "route_kind": "email_delivery",
+          "route_records": 16,
+          "success_count": 0,
+          "successful_acquisition_rate": 0.0
+        },
+        {
+          "attempt_count": 101,
+          "publisher": "www.mintel.com",
+          "route_family": "browser_onsite_report",
+          "route_kind": "pdf_download",
+          "route_records": 6,
+          "success_count": 21,
+          "successful_acquisition_rate": 0.207921
+        },
+        {
+          "attempt_count": 17,
+          "publisher": "www.mintel.com",
+          "route_family": "browser_preflight_js_pdf_probe",
+          "route_kind": "pdf_download",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 0.058824
         },
         {
           "attempt_count": 1,
@@ -141,12 +879,156 @@
           "successful_acquisition_rate": 1.0
         },
         {
+          "attempt_count": 5,
+          "publisher": "www.paymentsnz.co.nz",
+          "route_family": "direct_pdf_probe",
+          "route_kind": "pdf_download",
+          "route_records": 5,
+          "success_count": 5,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 120,
+          "publisher": "www.proximic.com",
+          "route_family": "browser_email_form",
+          "route_kind": "email_delivery",
+          "route_records": 15,
+          "success_count": 0,
+          "successful_acquisition_rate": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "www.proximic.com",
+          "route_family": "pdf_download",
+          "route_kind": "onsite_report",
+          "route_records": 1,
+          "success_count": 0,
+          "successful_acquisition_rate": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "www.qualtrics.com",
+          "route_family": "browser_preflight_js_pdf_probe",
+          "route_kind": "pdf_download",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 2,
+          "publisher": "www.robeco.com",
+          "route_family": "report_page_pdf_link_probe",
+          "route_kind": "pdf_download",
+          "route_records": 2,
+          "success_count": 2,
+          "successful_acquisition_rate": 1.0
+        },
+        {
           "attempt_count": 1,
           "publisher": "www.similarweb.com",
+          "route_family": "browser_email_form",
+          "route_kind": "email_delivery",
+          "route_records": 1,
+          "success_count": 0,
+          "successful_acquisition_rate": 0.0
+        },
+        {
+          "attempt_count": 2,
+          "publisher": "www.similarweb.com",
+          "route_family": "report_page_pdf_link_probe",
+          "route_kind": "pdf_download",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 0.5
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "www.simon-kucher.com",
+          "route_family": "browser_onsite_report",
+          "route_kind": "pdf_download",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 2,
+          "publisher": "www.sita.aero",
+          "route_family": "browser_onsite_report",
+          "route_kind": "onsite_report",
+          "route_records": 2,
+          "success_count": 2,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "www.sprinklr.com",
+          "route_family": "browser_email_form",
+          "route_kind": "email_delivery",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "www.stackadapt.com",
           "route_family": "direct_pdf_probe",
           "route_kind": "pdf_download",
           "route_records": 1,
           "success_count": 1,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 1,
+          "publisher": "www.torchlight.care",
+          "route_family": "browser_onsite_report",
+          "route_kind": "email_delivery",
+          "route_records": 1,
+          "success_count": 0,
+          "successful_acquisition_rate": 0.0
+        },
+        {
+          "attempt_count": 2,
+          "publisher": "www.torchlight.care",
+          "route_family": "onsite_capture",
+          "route_kind": "pdf_download",
+          "route_records": 1,
+          "success_count": 1,
+          "successful_acquisition_rate": 0.5
+        },
+        {
+          "attempt_count": 3,
+          "publisher": "www.tryprofound.com",
+          "route_family": "browser_email_form",
+          "route_kind": "email_delivery",
+          "route_records": 2,
+          "success_count": 0,
+          "successful_acquisition_rate": 0.0
+        },
+        {
+          "attempt_count": 6,
+          "publisher": "www.w3.org",
+          "route_family": "browser_pdf_click",
+          "route_kind": "pdf_download",
+          "route_records": 3,
+          "success_count": 6,
+          "successful_acquisition_rate": 1.0
+        },
+        {
+          "attempt_count": 3,
+          "publisher": "www.wgsn.com:443",
+          "route_family": "browser_email_form",
+          "route_kind": "email_delivery",
+          "route_records": 2,
+          "success_count": 0,
+          "successful_acquisition_rate": 0.0
+        },
+        {
+          "attempt_count": 4,
+          "publisher": "yougov.com",
+          "route_family": "report_page_pdf_link_probe",
+          "route_kind": "pdf_download",
+          "route_records": 4,
+          "success_count": 4,
           "successful_acquisition_rate": 1.0
         }
       ]
@@ -159,12 +1041,12 @@
     "source": "reports.publisher_download_route_history; llm_usage.budget_authority_actuals",
     "status": "partial",
     "values": {
-      "acquired_report_count": 37,
+      "acquired_report_count": 539,
       "browser_sessions": 0,
-      "browser_steps": 61,
+      "browser_steps": 1190,
       "duration_seconds": 0,
       "page_loads": 0,
-      "screenshots": 37
+      "screenshots": 285
     }
   },
   "cache_and_reuse_by_artifact_family": {
@@ -174,7 +1056,7 @@
     "source": "reports.artifact_execution_plan_runs; reports.artifact_lineage_records",
     "status": "partial",
     "values": {
-      "plan_count": 22,
+      "plan_count": 28,
       "planned_reusable_artifact_count": 7
     }
   },
@@ -189,148 +1071,414 @@
       "llm_scopes": [
         {
           "action": "artifacts:cover_semantics",
-          "call_count": 9,
-          "estimated_cost_usd": 0.033024,
+          "call_count": 12,
+          "estimated_cost_usd": 0.050504,
           "prompt_namespace": "report_vs/artifacts/cover_semantics",
           "semantic_task": "artifacts:cover_semantics"
         },
         {
           "action": "artifacts:expert_comment",
-          "call_count": 9,
-          "estimated_cost_usd": 0.041308,
+          "call_count": 12,
+          "estimated_cost_usd": 0.051972,
           "prompt_namespace": "report_vs/artifacts/expert_comment",
           "semantic_task": "artifacts:expert_comment"
         },
         {
           "action": "artifacts:insights_candidates",
-          "call_count": 9,
-          "estimated_cost_usd": 0.095899,
+          "call_count": 12,
+          "estimated_cost_usd": 0.143057,
           "prompt_namespace": "report_vs/artifacts/insights_candidates",
           "semantic_task": "artifacts:insights_candidates"
         },
         {
           "action": "artifacts:insights_final",
-          "call_count": 9,
-          "estimated_cost_usd": 0.080898,
+          "call_count": 12,
+          "estimated_cost_usd": 0.124078,
           "prompt_namespace": "report_vs/artifacts/insights_final",
           "semantic_task": "artifacts:insights_final"
         },
         {
           "action": "artifacts:linkedin_post",
-          "call_count": 9,
-          "estimated_cost_usd": 0.03688,
+          "call_count": 12,
+          "estimated_cost_usd": 0.053361,
           "prompt_namespace": "report_vs/artifacts/linkedin_post",
           "semantic_task": "artifacts:linkedin_post"
         },
         {
           "action": "artifacts:quotes",
-          "call_count": 9,
-          "estimated_cost_usd": 0.044848,
+          "call_count": 12,
+          "estimated_cost_usd": 0.06615,
           "prompt_namespace": "report_vs/artifacts/quotes",
           "semantic_task": "artifacts:quotes"
         },
         {
           "action": "artifacts:regenerate:insights_candidates",
           "call_count": 1,
-          "estimated_cost_usd": 0.010351,
+          "estimated_cost_usd": 0.01184,
           "prompt_namespace": "report_vs/artifacts/regenerate/insights_candidates",
           "semantic_task": "regen:1:insights_bundle:candidates"
         },
         {
           "action": "artifacts:regenerate:insights_final",
           "call_count": 1,
-          "estimated_cost_usd": 0.009493,
+          "estimated_cost_usd": 0.008629,
           "prompt_namespace": "report_vs/artifacts/regenerate/insights_final",
           "semantic_task": "regen:1:insights_bundle:final"
         },
         {
+          "action": "artifacts:regenerate:linkedin_post",
+          "call_count": 2,
+          "estimated_cost_usd": 0.008901,
+          "prompt_namespace": "report_vs/artifacts/regenerate/linkedin_post",
+          "semantic_task": "regen:1:linkedin_post"
+        },
+        {
+          "action": "artifacts:regenerate:summary",
+          "call_count": 1,
+          "estimated_cost_usd": 0.010111,
+          "prompt_namespace": "report_vs/artifacts/regenerate/summary",
+          "semantic_task": "regen:2:summary"
+        },
+        {
           "action": "artifacts:summary",
-          "call_count": 9,
-          "estimated_cost_usd": 0.063951,
+          "call_count": 14,
+          "estimated_cost_usd": 0.104542,
           "prompt_namespace": "report_vs/artifacts/summary",
           "semantic_task": "artifacts:summary"
         },
         {
+          "action": "browser_use_llm_call",
+          "call_count": 3,
+          "estimated_cost_usd": 2.5e-05,
+          "prompt_namespace": "browser_download/agent",
+          "semantic_task": "browser_use_llm_call"
+        },
+        {
+          "action": "browser_use_llm_call",
+          "call_count": 14,
+          "estimated_cost_usd": 0.011577,
+          "prompt_namespace": "browser_report_download/browser_route/browser_pdf_click",
+          "semantic_task": "browser_use_llm_call"
+        },
+        {
+          "action": "claim_embedding:generate",
+          "call_count": 1,
+          "estimated_cost_usd": 1e-06,
+          "prompt_namespace": "claim_embedding/generate",
+          "semantic_task": "claim_embedding:generate"
+        },
+        {
           "action": "context_category_fit",
           "call_count": 11,
-          "estimated_cost_usd": 0.059559,
+          "estimated_cost_usd": 0.061973,
           "prompt_namespace": "report_vs/context_category_fit",
           "semantic_task": "categories"
         },
         {
           "action": "doc_map",
-          "call_count": 11,
-          "estimated_cost_usd": 0.129712,
+          "call_count": 4,
+          "estimated_cost_usd": 0.060915,
           "prompt_namespace": "report_vs/doc_map",
           "semantic_task": "evidence:doc_map"
         },
         {
           "action": "evidence_packs:findings",
-          "call_count": 11,
-          "estimated_cost_usd": 0.07,
+          "call_count": 4,
+          "estimated_cost_usd": 0.032288,
           "prompt_namespace": "report_vs/evidence_packs/findings",
           "semantic_task": "evidence:findings"
         },
         {
           "action": "evidence_packs:limitations",
-          "call_count": 11,
-          "estimated_cost_usd": 0.064458,
+          "call_count": 4,
+          "estimated_cost_usd": 0.02421,
           "prompt_namespace": "report_vs/evidence_packs/limitations",
           "semantic_task": "evidence:limitations"
         },
         {
           "action": "evidence_packs:methods",
-          "call_count": 11,
-          "estimated_cost_usd": 0.063003,
+          "call_count": 4,
+          "estimated_cost_usd": 0.027663,
           "prompt_namespace": "report_vs/evidence_packs/methods",
           "semantic_task": "evidence:methods"
         },
         {
           "action": "evidence_packs:quote_candidates",
-          "call_count": 11,
-          "estimated_cost_usd": 0.074904,
+          "call_count": 4,
+          "estimated_cost_usd": 0.032849,
           "prompt_namespace": "report_vs/evidence_packs/quote_candidates",
           "semantic_task": "evidence:quote_candidates"
         },
         {
           "action": "evidence_packs:scope",
-          "call_count": 11,
-          "estimated_cost_usd": 0.051445,
+          "call_count": 4,
+          "estimated_cost_usd": 0.022318,
           "prompt_namespace": "report_vs/evidence_packs/scope",
           "semantic_task": "evidence:scope"
         },
         {
+          "action": "live:accounting_existing_artifact_embedding",
+          "call_count": 1,
+          "estimated_cost_usd": 0.0,
+          "prompt_namespace": "live/accounting_existing_artifact_embedding",
+          "semantic_task": "live:accounting_existing_artifact_embedding"
+        },
+        {
+          "action": "live:accounting_segment_projection",
+          "call_count": 1,
+          "estimated_cost_usd": 0.00029,
+          "prompt_namespace": "live/accounting_segment_projection",
+          "semantic_task": "live:accounting_segment_projection"
+        },
+        {
+          "action": "live:accounting_verification",
+          "call_count": 1,
+          "estimated_cost_usd": 0.000162,
+          "prompt_namespace": "live/accounting_verification",
+          "semantic_task": "live:accounting_verification"
+        },
+        {
+          "action": "openai_analyze",
+          "call_count": 132,
+          "estimated_cost_usd": 0.0,
+          "prompt_namespace": "",
+          "semantic_task": "openai_analyze"
+        },
+        {
+          "action": "openai_analyze",
+          "call_count": 1,
+          "estimated_cost_usd": 0.0,
+          "prompt_namespace": "generic/openai_analyze",
+          "semantic_task": "openai_analyze"
+        },
+        {
+          "action": "openai_chat_json",
+          "call_count": 7,
+          "estimated_cost_usd": 0.030703,
+          "prompt_namespace": "",
+          "semantic_task": "artifacts:cover_semantics"
+        },
+        {
+          "action": "openai_chat_json",
+          "call_count": 7,
+          "estimated_cost_usd": 0.034276,
+          "prompt_namespace": "",
+          "semantic_task": "artifacts:expert_comment"
+        },
+        {
+          "action": "openai_chat_json",
+          "call_count": 7,
+          "estimated_cost_usd": 0.075827,
+          "prompt_namespace": "",
+          "semantic_task": "artifacts:insights_candidates"
+        },
+        {
+          "action": "openai_chat_json",
+          "call_count": 7,
+          "estimated_cost_usd": 0.070855,
+          "prompt_namespace": "",
+          "semantic_task": "artifacts:insights_final"
+        },
+        {
+          "action": "openai_chat_json",
+          "call_count": 7,
+          "estimated_cost_usd": 0.032076,
+          "prompt_namespace": "",
+          "semantic_task": "artifacts:linkedin_post"
+        },
+        {
+          "action": "openai_chat_json",
+          "call_count": 7,
+          "estimated_cost_usd": 0.038828,
+          "prompt_namespace": "",
+          "semantic_task": "artifacts:quotes"
+        },
+        {
+          "action": "openai_chat_json",
+          "call_count": 7,
+          "estimated_cost_usd": 0.054695,
+          "prompt_namespace": "",
+          "semantic_task": "artifacts:summary"
+        },
+        {
+          "action": "openai_chat_json",
+          "call_count": 7,
+          "estimated_cost_usd": 0.036374,
+          "prompt_namespace": "",
+          "semantic_task": "categories"
+        },
+        {
+          "action": "openai_chat_json",
+          "call_count": 342,
+          "estimated_cost_usd": 0.34662,
+          "prompt_namespace": "",
+          "semantic_task": "openai_chat_json"
+        },
+        {
+          "action": "openai_chat_json",
+          "call_count": 2,
+          "estimated_cost_usd": 0.0,
+          "prompt_namespace": "generic/openai_chat_json",
+          "semantic_task": "openai_chat_json"
+        },
+        {
+          "action": "openai_chat_json",
+          "call_count": 1,
+          "estimated_cost_usd": 0.002577,
+          "prompt_namespace": "report_vs/context_category_fit",
+          "semantic_task": "openai_chat_json"
+        },
+        {
+          "action": "openai_chat_json",
+          "call_count": 3,
+          "estimated_cost_usd": 0.018383,
+          "prompt_namespace": "",
+          "semantic_task": "validation:grounding"
+        },
+        {
+          "action": "openai_chat_json",
+          "call_count": 3,
+          "estimated_cost_usd": 0.011675,
+          "prompt_namespace": "",
+          "semantic_task": "validation:semantic"
+        },
+        {
+          "action": "openai_chat_json_with_images",
+          "call_count": 139,
+          "estimated_cost_usd": 0.044651,
+          "prompt_namespace": "",
+          "semantic_task": "openai_chat_json_with_images"
+        },
+        {
+          "action": "openai_embeddings",
+          "call_count": 15,
+          "estimated_cost_usd": 7e-06,
+          "prompt_namespace": "",
+          "semantic_task": "openai_embeddings"
+        },
+        {
+          "action": "openai_ocr_pdf",
+          "call_count": 284,
+          "estimated_cost_usd": 0.0,
+          "prompt_namespace": "",
+          "semantic_task": "openai_ocr_pdf"
+        },
+        {
+          "action": "openai_ocr_pdf",
+          "call_count": 3,
+          "estimated_cost_usd": 0.0,
+          "prompt_namespace": "generic/openai_ocr_pdf",
+          "semantic_task": "openai_ocr_pdf"
+        },
+        {
+          "action": "openai_response_vector_store",
+          "call_count": 4,
+          "estimated_cost_usd": 0.058046,
+          "prompt_namespace": "",
+          "semantic_task": "evidence:doc_map"
+        },
+        {
+          "action": "openai_response_vector_store",
+          "call_count": 4,
+          "estimated_cost_usd": 0.037043,
+          "prompt_namespace": "",
+          "semantic_task": "evidence:findings"
+        },
+        {
+          "action": "openai_response_vector_store",
+          "call_count": 4,
+          "estimated_cost_usd": 0.030382,
+          "prompt_namespace": "",
+          "semantic_task": "evidence:limitations"
+        },
+        {
+          "action": "openai_response_vector_store",
+          "call_count": 4,
+          "estimated_cost_usd": 0.034891,
+          "prompt_namespace": "",
+          "semantic_task": "evidence:methods"
+        },
+        {
+          "action": "openai_response_vector_store",
+          "call_count": 4,
+          "estimated_cost_usd": 0.034777,
+          "prompt_namespace": "",
+          "semantic_task": "evidence:quote_candidates"
+        },
+        {
+          "action": "openai_response_vector_store",
+          "call_count": 4,
+          "estimated_cost_usd": 0.025964,
+          "prompt_namespace": "",
+          "semantic_task": "evidence:scope"
+        },
+        {
+          "action": "openai_response_vector_store",
+          "call_count": 175,
+          "estimated_cost_usd": 0.01065,
+          "prompt_namespace": "",
+          "semantic_task": "openai_response_vector_store"
+        },
+        {
+          "action": "openai_response_vector_store",
+          "call_count": 4,
+          "estimated_cost_usd": 0.040056,
+          "prompt_namespace": "",
+          "semantic_task": "taxonomy"
+        },
+        {
           "action": "taxonomy",
-          "call_count": 11,
-          "estimated_cost_usd": 0.073114,
+          "call_count": 3,
+          "estimated_cost_usd": 0.025861,
           "prompt_namespace": "report_vs/taxonomy",
           "semantic_task": "taxonomy"
         },
         {
-          "action": "validate:grounding",
+          "action": "test:openai_smoke",
           "call_count": 1,
-          "estimated_cost_usd": 0.005735,
+          "estimated_cost_usd": 0.0,
+          "prompt_namespace": "test/openai_smoke",
+          "semantic_task": "test:openai_smoke"
+        },
+        {
+          "action": "validate:grounding",
+          "call_count": 3,
+          "estimated_cost_usd": 0.018967,
           "prompt_namespace": "report_vs/validate/grounding",
           "semantic_task": "regen:1:validation:grounding"
         },
         {
           "action": "validate:grounding",
-          "call_count": 8,
-          "estimated_cost_usd": 0.04323,
+          "call_count": 1,
+          "estimated_cost_usd": 0.006335,
+          "prompt_namespace": "report_vs/validate/grounding",
+          "semantic_task": "regen:2:validation:grounding"
+        },
+        {
+          "action": "validate:grounding",
+          "call_count": 10,
+          "estimated_cost_usd": 0.06295,
           "prompt_namespace": "report_vs/validate/grounding",
           "semantic_task": "validation:grounding"
         },
         {
           "action": "validate:semantic",
-          "call_count": 1,
-          "estimated_cost_usd": 0.004139,
+          "call_count": 3,
+          "estimated_cost_usd": 0.011469,
           "prompt_namespace": "report_vs/validate/semantic",
           "semantic_task": "regen:1:validation:semantic"
         },
         {
           "action": "validate:semantic",
-          "call_count": 8,
-          "estimated_cost_usd": 0.029761,
+          "call_count": 1,
+          "estimated_cost_usd": 0.004405,
+          "prompt_namespace": "report_vs/validate/semantic",
+          "semantic_task": "regen:2:validation:semantic"
+        },
+        {
+          "action": "validate:semantic",
+          "call_count": 10,
+          "estimated_cost_usd": 0.040005,
           "prompt_namespace": "report_vs/validate/semantic",
           "semantic_task": "validation:semantic"
         }
@@ -345,8 +1493,8 @@
     "status": "partial",
     "values": {
       "execution_plan_cost_usd": 0.0,
-      "published_workflow_observation_count": 0,
-      "successful_publication_observation_count": 0
+      "published_workflow_observation_count": 7,
+      "successful_publication_observation_count": 7
     }
   },
   "crop_qa": {
@@ -354,13 +1502,13 @@
       "Crop cache sidecars identify retained results but do not record whether a request was a cache hit, so reuse rate is unavailable."
     ],
     "source": "retained crop_refine.json; llm_usage.llm_usage_events",
-    "status": "empty",
+    "status": "partial",
     "values": {
-      "acceptance_rate": null,
-      "accepted_candidate_count": 0,
-      "crop_candidate_count": 0,
+      "acceptance_rate": 0.866667,
+      "accepted_candidate_count": 325,
+      "crop_candidate_count": 375,
       "crop_qa_call_count": 0,
-      "crop_refinement_file_count": 0
+      "crop_refinement_file_count": 157
     }
   },
   "deferred_work_age_and_completion": {
@@ -380,11 +1528,15 @@
     "source": "reports.vector_projection_queue; reports.claim_embedding_queue_transitions",
     "status": "partial",
     "values": {
-      "mean_open_queue_age_seconds": 29423.528,
+      "mean_open_queue_age_seconds": 3666886.235,
       "queue_status_counts": {
-        "pending": 190
+        "embedded": 8,
+        "pending": 2644
       },
-      "transition_reason_counts": {}
+      "transition_reason_counts": {
+        "durable_embedding_already_satisfied": 4,
+        "embedding_completed": 8
+      }
     }
   },
   "human_editorial_quality_ratings": {
@@ -402,25 +1554,69 @@
     "values": {
       "rows": [
         {
+          "actual_call_count": 6,
+          "divergent_plan_count": 0,
+          "enforcement_deferred_or_blocked_count": 0,
+          "execution_intent": "crop_repair",
+          "execution_mode": "enforce",
+          "matching_plan_count": 2,
+          "plan_count": 2,
+          "planned_call_count": 6,
+          "unreconciled_plan_count": 0
+        },
+        {
           "actual_call_count": 0,
           "divergent_plan_count": 0,
           "enforcement_deferred_or_blocked_count": 0,
           "execution_intent": "publication_repair",
-          "execution_mode": "shadow",
-          "matching_plan_count": 7,
-          "plan_count": 7,
-          "planned_call_count": 7,
+          "execution_mode": "enforce",
+          "matching_plan_count": 1,
+          "plan_count": 1,
+          "planned_call_count": 9,
+          "unreconciled_plan_count": 0
+        },
+        {
+          "actual_call_count": 37,
+          "divergent_plan_count": 4,
+          "enforcement_deferred_or_blocked_count": 0,
+          "execution_intent": "render_repair",
+          "execution_mode": "enforce",
+          "matching_plan_count": 5,
+          "plan_count": 9,
+          "planned_call_count": 21,
+          "unreconciled_plan_count": 0
+        },
+        {
+          "actual_call_count": 6,
+          "divergent_plan_count": 0,
+          "enforcement_deferred_or_blocked_count": 0,
+          "execution_intent": "report_generation",
+          "execution_mode": "enforce",
+          "matching_plan_count": 2,
+          "plan_count": 2,
+          "planned_call_count": 6,
           "unreconciled_plan_count": 0
         },
         {
           "actual_call_count": 64,
-          "divergent_plan_count": 0,
+          "divergent_plan_count": 2,
           "enforcement_deferred_or_blocked_count": 0,
           "execution_intent": "report_generation",
           "execution_mode": "shadow",
-          "matching_plan_count": 15,
-          "plan_count": 15,
-          "planned_call_count": 120,
+          "matching_plan_count": 9,
+          "plan_count": 11,
+          "planned_call_count": 81,
+          "unreconciled_plan_count": 0
+        },
+        {
+          "actual_call_count": 10,
+          "divergent_plan_count": 0,
+          "enforcement_deferred_or_blocked_count": 0,
+          "execution_intent": "targeted_repair",
+          "execution_mode": "enforce",
+          "matching_plan_count": 3,
+          "plan_count": 3,
+          "planned_call_count": 14,
           "unreconciled_plan_count": 0
         }
       ]
@@ -431,9 +1627,9 @@
     "source": "llm_usage.llm_usage_events",
     "status": "available",
     "values": {
-      "ocr_call_count": 0,
-      "ocr_incidence_among_llm_calls": 0.0,
-      "ocr_success_rate": null
+      "ocr_call_count": 287,
+      "ocr_incidence_among_llm_calls": 0.210565,
+      "ocr_success_rate": 1.0
     }
   },
   "public_page_performance_and_errors": {
@@ -449,10 +1645,12 @@
     "source": "index.remediation_records; index.remediation_transitions",
     "status": "available",
     "values": {
-      "human_intervention_rate": 1.0,
-      "recurrence_rate": 0.0,
+      "human_intervention_rate": 0.807692,
+      "recurrence_rate": 0.192308,
       "status_counts": {
-        "operator_action_required": 66
+        "operator_action_required": 21,
+        "pending": 1,
+        "terminal": 4
       },
       "success_rate": 0.0
     }
@@ -463,12 +1661,14 @@
       "Duplicate and rollback outcomes are not distinguished in the retained workflow observation schema."
     ],
     "source": "index.workflow_control_observations",
-    "status": "empty",
+    "status": "partial",
     "values": {
-      "failure_rate": null,
-      "mean_latency_ms": null,
-      "observation_count": 0,
-      "outcome_counts": {}
+      "failure_rate": 0.0,
+      "mean_latency_ms": 1491.0,
+      "observation_count": 7,
+      "outcome_counts": {
+        "completed": 7
+      }
     }
   }
 }

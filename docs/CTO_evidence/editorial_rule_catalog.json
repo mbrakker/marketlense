@@ -70,6 +70,12 @@
     },
     {
       "kind": "blocking",
+      "rule_id": "public_editorial_quality.text_corruption",
+      "severity": "error",
+      "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
+    },
+    {
+      "kind": "blocking",
       "rule_id": "public_editorial_quality.unsupported_certainty",
       "severity": "error",
       "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
