@@ -463,11 +463,11 @@
     "structured_events_parsed": 0,
     "unparsed_lines": 0
   },
-  "evidence_run_id": "2e4771b9215a430886f4851ce110924f",
+  "evidence_run_id": "5b310a23ed984468ada1f37ba818ba36",
   "fresh_after": "2026-07-20T19:00:00+00:00",
   "fresh_log_seen": false,
   "freshness_state": "failed",
-  "generated_at": "2026-07-21T06:46:23.262802+00:00",
+  "generated_at": "2026-07-21T06:48:35.243063+00:00",
   "limitations": [
     "run_owned_logs_unavailable"
   ],
@@ -478,7 +478,7 @@
   },
   "matches": [],
   "passed": false,
-  "repository_commit_sha": "33c882d4e41b5f0b0ae63f06fe201ccd2dd58911",
+  "repository_commit_sha": "c6036f7ff9cb5edf841f8794afbf8e13b62b7161",
   "schema_version": "1.0",
   "status": "unavailable"
 }

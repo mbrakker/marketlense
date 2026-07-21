@@ -5,6 +5,7 @@
 > **Execution date:** 2026-07-20 (Europe/Paris)
 > **Configuration:** `MARKET_LENSE_CONFIG_PROFILE=remediation_full_20260720`, [`src/config/app.remediation_full_20260720.yaml`](../../src/config/app.remediation_full_20260720.yaml)
 > **Scope:** isolated discovery-to-sandbox-publication validation using real retained and newly acquired project artifacts. The configured WordPress target is the authorized sandbox.
+> **Run-specific CTO evidence:** [isolated remediation bundle](../CTO_evidence/remediation_full_20260720/README.md). This bundle is distinct from repository-wide historical CTO evidence and does not aggregate historical state, artifacts, or logs.
 
 ## Controls exercised
 

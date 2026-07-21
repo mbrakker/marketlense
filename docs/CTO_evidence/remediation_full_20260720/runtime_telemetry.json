@@ -217,7 +217,7 @@
     "source": "reports.vector_projection_queue; reports.claim_embedding_queue_transitions",
     "status": "partial",
     "values": {
-      "mean_open_queue_age_seconds": 36026.303,
+      "mean_open_queue_age_seconds": 36158.67,
       "queue_status_counts": {
         "pending": 209
       },
