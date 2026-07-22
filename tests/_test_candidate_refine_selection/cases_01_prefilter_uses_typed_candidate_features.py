@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 def test_prefilter_uses_typed_candidate_features_without_meta():
     table = Candidate(
         schema_version="1.0",
@@ -66,6 +67,9 @@ def test_rank_candidates_payload_includes_quality_signals(tmp_path, caplog):
     def _rank_candidates(req, ctx):
         assert req.candidate_count == 1
         assert '"quality_signals"' in req.user_prompt
+        assert req.run_budget is not None
+        assert req.run_budget.usage_db_path == settings.usage_db_path
+        assert req.run_budget.run_id == ctx.run_id
         return SimpleNamespace(
             results=[
                 RankedCandidate(

@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from src.contracts.candidates import Candidate, CandidateFeatures
 from src.contracts.pdf_context import PdfContext
 from src.contracts.report_models import CropItem, RankedCandidate
+from src.contracts.run_budget import RunBudget
 
 REPORT_ASSETS_SCHEMA_VERSION = "1.0"
 
@@ -581,6 +582,12 @@ class RankRequest:
     execution_policy_hash: str = field(default="")
     execution_policy: dict = field(default_factory=dict)
     execution_policy_source: str = field(default="")
+    run_budget: RunBudget | None = field(
+        default=None,
+        metadata={
+            "doc": "Optional canonical budget that governs this ranking provider call."
+        },
+    )
 
 
 @dataclass(frozen=True)

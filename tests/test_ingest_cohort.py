@@ -6,9 +6,12 @@ from types import SimpleNamespace
 
 import pytest
 
-from src.contracts.drive import DriveFile
+from src.contracts.drive import DriveFile, DriveFileMetadataResponse
 from src.contracts.ingest import IngestOutcome
+from src.contracts.semantic_ids import ValidationRunId
+from src.contracts.validation_run_manifest import ValidationRunManifestAuditRequest
 from src.orchestrators import ingest_orchestrator as orch
+from src.services.report_store_service import audit_validation_run_manifest
 from src.utils.errors import AppError
 
 
@@ -78,6 +81,63 @@ def test_attempt_limited_ingest_keeps_failed_candidate_in_the_result(
     assert attempted == ["file_bad"]
     assert [row.file_id for row in results] == ["file_bad"]
     assert [row.status for row in results] == ["error"]
+
+
+def test_drive_discovery_request_uses_the_resolved_ingest_budget(
+    ingest_settings,
+    run_context,
+) -> None:
+    request = orch._build_drive_list_request(
+        ingest_settings,
+        folder_id=None,
+        limit=20,
+        modified_after=None,
+        ctx=run_context,
+    )
+
+    assert request.run_budget is not None
+    assert request.run_budget.run_id == run_context.run_id
+    assert request.run_budget.usage_db_path == ingest_settings.usage_db_path
+    assert request.run_budget.max_pdfs == ingest_settings.run_budget_max_pdfs
+
+
+def test_missing_file_name_metadata_lookup_uses_the_resolved_ingest_budget(
+    ingest_settings,
+    run_context,
+) -> None:
+    source = DriveFile(
+        schema_version="1.0",
+        file_id="file-without-name",
+        name=None,
+        modified_time=None,
+        md5_checksum="source-md5",
+    )
+    captured = {}
+
+    def _get_metadata(request, _ctx):
+        captured["request"] = request
+        return DriveFileMetadataResponse(
+            schema_version="1.0",
+            file=DriveFile(
+                schema_version="1.0",
+                file_id=source.file_id,
+                name="Resolved report.pdf",
+                modified_time="2026-07-22T00:00:00Z",
+                md5_checksum="resolved-md5",
+            ),
+        )
+
+    resolved = orch._ensure_file_name(
+        source,
+        ingest_settings,
+        run_context,
+        get_file_metadata_fn=_get_metadata,
+    )
+
+    assert resolved.name == "Resolved report.pdf"
+    assert captured["request"].run_budget is not None
+    assert captured["request"].run_budget.run_id == run_context.run_id
+    assert captured["request"].run_budget.usage_db_path == ingest_settings.usage_db_path
 
 
 def test_frozen_cohort_persists_and_replays_the_same_drive_members(
@@ -239,6 +299,89 @@ def test_fixed_cohort_fills_only_pre_manifest_admission_slots(
     assert generated == ["valid-a", "valid-b"]
     members = json.loads(persisted["cohorts/admission-fill.json"])["members"]
     assert [member["file_id"] for member in members] == ["valid-a", "valid-b"]
+    decisions = json.loads(persisted["cohorts/admission-fill.json"])[
+        "admission_decisions"
+    ]
+    assert [decision["outcome"] for decision in decisions] == [
+        "admitted",
+        "corrupt_source",
+        "admitted",
+    ]
+    assert all(
+        decision["runtime_dependency_status"] == "validated_pre_freeze"
+        for decision in decisions
+    )
+
+
+def test_admission_preflight_rejects_duplicate_source_identity_before_freeze(
+    ingest_settings,
+    run_context,
+) -> None:
+    files = [
+        DriveFile("1.0", "first", "First Report.pdf", None, "same-md5"),
+        DriveFile("1.0", "second", "Second Report.pdf", None, "same-md5"),
+    ]
+    decisions = orch._cohort_admission_preflight(
+        files,
+        settings=ingest_settings,
+        deps=_batch_dependencies(
+            get_source_quarantine=lambda _request, _ctx: SimpleNamespace(record=None),
+            check_pdf_integrity=lambda _request, _ctx: SimpleNamespace(
+                failure_code="", page_count=8, md5="same-md5"
+            ),
+            extract_pdf_text=lambda _request, _ctx: SimpleNamespace(
+                char_count=2_000, pages_extracted=3, text_density=666.0
+            ),
+        ),
+        root_ctx=run_context,
+    )
+
+    assert [item.file_id for item in decisions] == ["first"]
+
+
+def test_failed_fixed_cohort_member_records_blocked_remaining_stages(
+    ingest_settings,
+    run_context,
+) -> None:
+    file = DriveFile("1.0", "failed", "Failed.pdf", None, "md5-failed")
+    validation_run_id = ValidationRunId(f"validation:{orch._cohort_id([file])}")
+
+    orch._record_cohort_ingest_manifest(
+        validation_run_id=validation_run_id,
+        settings=ingest_settings,
+        root_ctx=run_context,
+        files=[file],
+    )
+    orch._record_cohort_ingest_manifest(
+        validation_run_id=validation_run_id,
+        settings=ingest_settings,
+        root_ctx=run_context,
+        files=[file],
+        outcomes=[
+            IngestOutcome(
+                schema_version="1.0",
+                file_id=file.file_id,
+                name=file.name or file.file_id,
+                md5=file.md5_checksum,
+                html_path=None,
+                status="error",
+                error="typed_source_failure",
+            )
+        ],
+    )
+
+    audit = audit_validation_run_manifest(
+        ValidationRunManifestAuditRequest(
+            schema_version="1.0",
+            db_path=ingest_settings.reports_db,
+            validation_run_id=validation_run_id,
+            require_full_workflow=True,
+        ),
+        run_context,
+    )
+
+    assert audit.complete is True
+    assert audit.missing_required_stage_entity_ids == ()
 
 
 def test_manifest_replay_does_not_reselect_or_replace_cohort_members(

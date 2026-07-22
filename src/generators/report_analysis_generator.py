@@ -18,7 +18,6 @@ from src.contracts.report_generation import (
     ReportSourceState,
 )
 from src.contracts.report_store import ReportMetadataGetResponse
-from src.contracts.run_budget import RunBudget
 from src.contracts.semantic_ids import ReportId
 from src.contracts.state import StateGetByMd5Request, StateGetRequest
 from src.contracts.taxonomy import TaxonomyExtractRequest
@@ -35,6 +34,7 @@ from src.generators.report_generation_shared import (
     record_state_progress,
 )
 from src.utils.logging import child_context, log_event
+from src.utils.run_budget import report_runtime_run_budget
 
 
 @dataclass(frozen=True)
@@ -75,26 +75,6 @@ def _is_vector_store_ready(status: Optional[str]) -> bool:
     return str(status or "").strip().lower() in {"completed", "ready", "indexed"}
 
 
-def _vector_store_run_budget(runtime: ReportRuntimeState) -> RunBudget:
-    """Keep vector-store calls in the report's configured accounting namespace."""
-
-    settings = runtime.settings
-    return RunBudget(
-        schema_version="1.0",
-        run_id=runtime.ctx.run_id,
-        publisher_name=runtime.publisher_name,
-        usage_db_path=settings.usage_db_path,
-        max_spend_usd=getattr(settings, "run_budget_max_spend_usd", None),
-        max_tokens=getattr(settings, "run_budget_max_tokens", None),
-        max_calls=getattr(settings, "run_budget_max_calls", None),
-        max_retries=getattr(settings, "run_budget_max_retries", None),
-        max_runtime_seconds=getattr(settings, "run_budget_max_runtime_seconds", None),
-        max_pdfs=getattr(settings, "run_budget_max_pdfs", None),
-        limit_decision=getattr(settings, "run_budget_limit_decision", "stop"),
-        enabled_effect_kinds=getattr(settings, "run_budget_enabled_effect_kinds", ()),
-    )
-
-
 def start_vector_store_indexing(
     runtime: ReportRuntimeState,
     source: ReportSourceState | None,
@@ -112,7 +92,7 @@ def start_vector_store_indexing(
     )
 
     mode_ctx = child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:vector_store")
-    vector_store_budget = _vector_store_run_budget(runtime)
+    vector_store_budget = report_runtime_run_budget(runtime)
     logger.info(
         log_event(
             mode_ctx,
@@ -287,6 +267,9 @@ def _resolve_taxonomy(
     dependencies: ReportAnalysisDependencies,
     *,
     openai_client=None,
+    repair_attempt: int = 0,
+    repair_error: str = "",
+    repair_response: str = "",
 ) -> _TaxonomyState:
     taxonomy_ctx = child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:taxonomy")
     kwargs = {}
@@ -306,6 +289,12 @@ def _resolve_taxonomy(
             publisher_name=runtime.publisher_name,
             source_url=runtime.source_url,
             publisher_id=runtime.publisher_name,
+            prompt_namespace=(
+                "report_vs/taxonomy_repair" if repair_attempt else "report_vs/taxonomy"
+            ),
+            repair_attempt=repair_attempt,
+            repair_error=repair_error,
+            repair_response=repair_response,
         ),
         taxonomy_ctx,
         **kwargs,
@@ -327,6 +316,9 @@ def _resolve_categories_from_report_context(
     mode_ctx,
     dependencies: ReportAnalysisDependencies,
     openai_client=None,
+    repair_attempt: int = 0,
+    repair_error: str = "",
+    repair_response: str = "",
 ) -> _ContextCategoryState:
     category_ctx = child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:categories")
     report_metadata = ReportMetadataGetResponse(
@@ -372,6 +364,14 @@ def _resolve_categories_from_report_context(
             publisher_name=runtime.publisher_name,
             report_name=runtime.source_report_name or runtime.report_title,
             source_url=runtime.source_url,
+            prompt_namespace=(
+                "report_vs/context_category_fit_repair"
+                if repair_attempt
+                else "report_vs/context_category_fit"
+            ),
+            repair_error=repair_error,
+            repair_attempt=repair_attempt,
+            repair_response=repair_response,
         ),
         category_ctx,
         **kwargs,

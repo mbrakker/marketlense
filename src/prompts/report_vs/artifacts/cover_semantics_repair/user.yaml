@@ -1,0 +1,23 @@
+text: |
+  Context:
+  - DocMap JSON: {{ doc_map_json }}
+  - Evidence packs JSON: {{ evidence_json }}
+  - Summary JSON: {{ summary_json }}
+  - Final insights JSON: {{ insights_final_json }}
+  - Categories JSON: {{ categories_json }}
+  - Region: {{ region }}
+  - Covered period: {{ covered_period }}
+
+  The preceding response failed {{ repair_error }}. This is bounded repair attempt {{ repair_attempt }}.
+
+  Return only this JSON shape:
+  {
+    "cover_semantics": {
+      "evidence_shape": "<trend|comparison|distribution|flow|network|concentration|hierarchy|cycle|uncertainty|system>",
+      "direction": "<rising|falling|stable|volatile|converging|diverging|cyclical|neutral>",
+      "geography_scope": "<global|regional|country|unknown>",
+      "evidence_density": "<metric_rich|balanced|qualitative>",
+      "domain_layer": "<grid|forecast>",
+      "selection_reason": "<one concise sentence naming the dominant evidence pattern>"
+    }
+  }

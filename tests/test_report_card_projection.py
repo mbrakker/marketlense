@@ -224,7 +224,7 @@ def test_build_manifest_rejects_incomplete_card_content(
     assert_app_error(captured.value, code=error_code, retryable=False)
 
 
-def test_public_metadata_governance_rejects_placeholder_and_leaked_labels(
+def test_public_metadata_governance_omits_invalid_optional_labels_and_rejects_required(
     assert_app_error,
 ) -> None:
     with pytest.raises(AppError) as captured:
@@ -242,12 +242,7 @@ def test_public_metadata_governance_rejects_placeholder_and_leaked_labels(
         code="public_metadata_governance_blocked",
         retryable=False,
     )
-    assert set(captured.value.context["blocked_fields"]) == {
-        "publisher",
-        "region",
-        "covered_period",
-        "category",
-    }
+    assert set(captured.value.context["blocked_fields"]) == {"publisher", "category"}
 
 
 def test_public_metadata_governance_rejects_raw_extraction_fragments(
@@ -270,9 +265,23 @@ def test_public_metadata_governance_rejects_raw_extraction_fragments(
     )
     assert set(captured.value.context["blocked_fields"]) == {
         "archive_facet",
-        "covered_period",
         "publisher",
-        "region",
+    }
+
+
+def test_public_metadata_governance_suppresses_optional_extraction_leakage() -> None:
+    governed = validate_public_metadata_governance(
+        {
+            "publisher": "Publisher Example",
+            "region": "Table 4 row: Europe",
+            "covered_period": "This report discusses a long period sentence.",
+        }
+    )
+
+    assert governed == {
+        "publisher": "Publisher Example",
+        "region": "",
+        "covered_period": "",
     }
 
 

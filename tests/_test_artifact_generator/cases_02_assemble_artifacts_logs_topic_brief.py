@@ -1,6 +1,9 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+from src.generators._artifact_generator.rendering import render_artifact_json_model
+from src.generators._artifact_generator.storage import _validate_cover_semantics
+
 from ._shared import *  # noqa: F401,F403
 
 
@@ -766,6 +769,59 @@ def test_generate_artifacts_uses_vector_path_when_flag_enabled(tmp_path):
     assert len([req for req in fake_openai.requests if req[0] == "chat"]) == 0
 
 
+def test_cover_semantics_repairs_one_invalid_structured_response(tmp_path) -> None:
+    class CoverRepairClient:
+        def __init__(self) -> None:
+            self.requests = []
+
+        def openai_chat_json(self, request, ctx):
+            del ctx
+            self.requests.append(request)
+            payload = (
+                {
+                    "cover_semantics": {
+                        **_cover_semantics(),
+                        "evidence_shape": "trendline",
+                    }
+                }
+                if request.prompt_namespace == "report_vs/artifacts/cover_semantics"
+                else _cover_semantics_response()
+            )
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text="{}",
+                parsed_json=payload,
+                input_tokens=0,
+                output_tokens=0,
+                tool_calls=0,
+                model=request.model,
+            )
+
+    ctx = _ctx()
+    client = CoverRepairClient()
+    result = render_artifact_json_model(
+        namespace="report_vs/artifacts/cover_semantics",
+        variables={"doc_map_json": "{}"},
+        settings=_settings(tmp_path),
+        ctx=ctx,
+        openai_client=client,
+        prompt_client=FakePromptClient(),
+        allow_vector_store=False,
+        vector_store_id=None,
+        payload_validator=lambda payload: _validate_cover_semantics(
+            payload.get("cover_semantics"), ctx=ctx
+        ),
+        repair_namespace="report_vs/artifacts/cover_semantics_repair",
+    )
+
+    assert result["cover_semantics"] == _cover_semantics()
+    assert [request.prompt_namespace for request in client.requests] == [
+        "report_vs/artifacts/cover_semantics",
+        "report_vs/artifacts/cover_semantics_repair",
+    ]
+    assert client.requests[1].repair_attempt == 1
+
+
 __all__ = [
     "test_assemble_artifacts_logs_topic_brief_mapping_audit",
     "test_generate_artifacts_normalizes_malformed_evidence_ids",
@@ -775,4 +831,5 @@ __all__ = [
     "test_generate_artifacts_runs_llm_steps_serially_without_executor",
     "test_generate_artifacts_strips_inline_reference_tokens_from_summary_and_linkedin",
     "test_generate_artifacts_uses_vector_path_when_flag_enabled",
+    "test_cover_semantics_repairs_one_invalid_structured_response",
 ]

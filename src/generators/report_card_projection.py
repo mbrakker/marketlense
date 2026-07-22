@@ -155,22 +155,45 @@ def validate_public_metadata_governance(
     for field_name, raw_value in values.items():
         text = " ".join(str(raw_value or "").split())
         folded = text.casefold()
-        normalized[str(field_name)] = text
+        field_key = str(field_name)
+        is_optional = field_key in _OPTIONAL_CARD_METADATA_FIELDS
+        normalized[field_key] = text
         if (
-            str(field_name) in _OPTIONAL_CARD_METADATA_FIELDS
-            and folded in _PLACEHOLDER_METADATA
+            is_optional and folded in _PLACEHOLDER_METADATA
         ):
             # A missing optional label must be omitted from public metadata,
             # never published as an extraction placeholder.
-            normalized[str(field_name)] = ""
-            continue
-        if folded in _PLACEHOLDER_METADATA:
-            blocked_fields.append(str(field_name))
-            continue
-        if any(marker in folded for marker in _EXTRACTION_LEAKAGE_MARKERS):
-            blocked_fields.append(str(field_name))
+            normalized[field_key] = ""
             continue
         prefix, separator, remainder = text.partition(":")
+        optional_metadata_invalid = (
+            any(marker in folded for marker in _EXTRACTION_LEAKAGE_MARKERS)
+            or (
+                separator
+                and remainder.strip()
+                and (
+                    prefix.strip().casefold() in _LEAKED_FIELD_PREFIXES
+                    or any(
+                        f" {label}:" in f" {folded}"
+                        for label in _LEAKED_FIELD_PREFIXES
+                    )
+                )
+            )
+            or len(text.split()) > 6
+            or text.endswith(".")
+        )
+        if is_optional and optional_metadata_invalid:
+            # Public cards may omit non-essential labels. Suppressing an
+            # untrusted optional label is safer than either leaking it or
+            # failing an otherwise validated report.
+            normalized[field_key] = ""
+            continue
+        if folded in _PLACEHOLDER_METADATA:
+            blocked_fields.append(field_key)
+            continue
+        if any(marker in folded for marker in _EXTRACTION_LEAKAGE_MARKERS):
+            blocked_fields.append(field_key)
+            continue
         if (
             separator
             and remainder.strip()
@@ -179,12 +202,7 @@ def validate_public_metadata_governance(
                 or any(f" {label}:" in f" {folded}" for label in _LEAKED_FIELD_PREFIXES)
             )
         ):
-            blocked_fields.append(str(field_name))
-            continue
-        if str(field_name) in {"region", "covered_period", "period"}:
-            word_count = len(text.split())
-            if word_count > 6 or text.endswith("."):
-                blocked_fields.append(str(field_name))
+            blocked_fields.append(field_key)
     if blocked_fields:
         raise AppError(
             code="public_metadata_governance_blocked",

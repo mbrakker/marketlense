@@ -32,6 +32,33 @@ _COHORTS = {"final_validation", "repair_attempt", "out_of_cohort"}
 _SUPERSESSION_STATES = {"current", "superseded"}
 _IDEMPOTENCY_STATES = {"new", "replayed", "reused", "verified"}
 
+# Full-run closure is intentionally stricter than an intermediate ingest or
+# first-publication audit.  Each tuple is one required stage group: every final
+# cohort report must retain at least one stage in the group before a canary can
+# claim an end-to-end result.  The WordPress transaction has valid alternative
+# paths (a verified existing post needs no write), hence its grouped form.
+_FULL_WORKFLOW_REQUIRED_STAGE_GROUPS: tuple[tuple[str, ...], ...] = (
+    ("discovery",),
+    ("candidate_qualification",),
+    ("acquisition",),
+    ("admission_preflight",),
+    ("source_preparation",),
+    ("source_validation",),
+    ("evidence_generation",),
+    ("taxonomy",),
+    ("category_fit",),
+    ("artifact_generation",),
+    ("grounding_validation",),
+    ("semantic_validation",),
+    ("rendering",),
+    ("final_html_validation",),
+    ("ingest",),
+    ("publication_preflight",),
+    ("wordpress_lookup", "wordpress_write"),
+    ("authenticated_readback",),
+    ("repeat_publication",),
+)
+
 
 def create_validation_run_manifest(
     request: ValidationRunManifestCreateRequest, ctx: RunContext
@@ -331,19 +358,48 @@ def audit_validation_run_manifest(
                 (str(request.validation_run_id),),
             ).fetchall()
         )
+        stage_rows = conn.execute(
+            """
+            SELECT attempts.entity_key, stages.stage
+            FROM validation_run_entity_attempts AS attempts
+            JOIN validation_run_stage_records AS stages
+              ON stages.attempt_id = attempts.attempt_id
+            WHERE attempts.validation_run_id=?
+              AND attempts.is_current=1
+              AND attempts.cohort_disposition='final_validation'
+            """,
+            (str(request.validation_run_id),),
+        ).fetchall()
     cohort = tuple(
         sorted(
             {str(row[1]) for row in current if row[1] and row[3] == "final_validation"}
         )
     )
+    stages_by_entity: dict[str, set[str]] = {}
+    for row in stage_rows:
+        stages_by_entity.setdefault(str(row[0]), set()).add(str(row[1]))
+    missing_required: list[str] = []
+    if request.require_full_workflow:
+        for entity_key in sorted(
+            str(row[0]) for row in current if str(row[3]) == "final_validation"
+        ):
+            actual = stages_by_entity.get(entity_key, set())
+            for alternatives in _FULL_WORKFLOW_REQUIRED_STAGE_GROUPS:
+                if not any(stage in actual for stage in alternatives):
+                    missing_required.append(f"{entity_key}:{'|'.join(alternatives)}")
     return ValidationRunManifestAuditResponse(
         schema_version="1.0",
         validation_run_id=request.validation_run_id,
-        complete=not incomplete and not duplicates,
+        complete=(
+            not incomplete
+            and not duplicates
+            and (not request.require_full_workflow or not missing_required)
+        ),
         final_cohort_report_ids=cohort,
         stage_totals=totals,
         incomplete_entity_ids=incomplete,
         duplicate_current_entity_ids=duplicates,
+        missing_required_stage_entity_ids=tuple(missing_required),
     )
 
 

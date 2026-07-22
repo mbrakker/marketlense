@@ -47,7 +47,10 @@ class RecordingPromptClient:
             user=PromptTemplate(
                 schema_version="1.0",
                 path=f"{request.namespace}/user.yaml",
-                text="User prompt {report_context_json} {category_profiles_json}",
+                text=(
+                    "User prompt {report_context_json} {category_profiles_json} "
+                    "{repair_response}"
+                ),
                 sha256="user-sha",
             ),
             dependency_manifest=PromptDependencyManifest(
@@ -336,6 +339,10 @@ def test_fit_report_categories_from_context_returns_selected_categories(
     assert openai_client.requests[0][0].model == "gpt-5-mini"
     assert openai_client.requests[0][0].publisher_name == "Deloitte"
     assert openai_client.requests[0][0].report_name == "Tech Trends 2026"
+    assert openai_client.requests[0][0].report_id == "file-1"
+    assert openai_client.requests[0][0].workflow == "report_analysis"
+    assert openai_client.requests[0][0].stage == "category_fit"
+    assert openai_client.requests[0][0].artifact_family == "category_fit"
     assert (
         openai_client.requests[0][0].source_url
         == "https://example.com/tech-trends-2026.pdf"
@@ -432,6 +439,93 @@ def test_fit_report_categories_from_context_defaults_missing_optional_fields() -
     assert response.fits[0].why_not_fit == ""
     assert response.fits[0].evidence_sections == []
     assert response.fits[0].semantic_rule_status == "supported"
+
+
+def test_fit_report_categories_marks_a_targeted_repair_request() -> None:
+    context = ReportCategoryContext(
+        schema_version="1.0",
+        report_id="file-1",
+        title="Tech Trends 2026",
+        publisher="Deloitte",
+        region="Global",
+        time_period="2026",
+        overview="A report about enterprise technology shifts and AI adoption.",
+        methods=[],
+        key_findings=["AI agents are becoming operational tooling."],
+        limitations=[],
+        sections=[],
+    )
+    mappings = CategoryMappings(
+        schema_version="1.0",
+        categories=[
+            CategoryDefinition(
+                id="technology",
+                label="Technology & Innovation",
+                description="Reports about technology shifts.",
+                definition="Reports about technology shifts.",
+                include_when=["Evidence centers on enterprise technology shifts."],
+                exclude_when=[],
+            )
+        ],
+        inference_rules=[],
+        uncategorized=[],
+    )
+
+    def mapping_client(request, ctx):
+        del request, ctx
+        return CategoryMappingLoadResponse(schema_version="1.0", mappings=mappings)
+
+    openai_client = RecordingOpenAIClient(
+        {
+            "schema_version": "1.0",
+            "selected_category_ids": ["technology"],
+            "category_fits": [
+                {
+                    "category_id": "technology",
+                    "label": "Technology & Innovation",
+                    "fit_score": 0.91,
+                    "decision": "primary",
+                    "why_fit": "The report is centrally about technology shifts.",
+                    "why_not_fit": "",
+                    "evidence_sections": ["Overview"],
+                }
+            ],
+        }
+    )
+    settings = SimpleNamespace(
+        openai_model="gpt-5-mini",
+        openai_models={},
+        openai_api_key="test-key",
+        openai_seed=None,
+        openai_timeout_seconds=30.0,
+        cost_ledger_path="./out/cost-ledger.jsonl",
+        cost_daily_path="./out/cost-daily.json",
+        model_pricing={"gpt-5-mini": {}},
+        llm_execution_policies=_execution_policies(),
+    )
+
+    response = fit_report_categories_from_context(
+        ContextCategoryFitRequest(
+            schema_version="1.0",
+            context=context,
+            settings=settings,
+            category_mapping_path="unused",
+            prompt_namespace="report_vs/context_category_fit_repair",
+            repair_error="context_category_fit_invalid_json",
+            repair_attempt=1,
+            repair_response='{"selected_category_ids":',
+        ),
+        _ctx(),
+        openai_client=openai_client,
+        prompt_client=RecordingPromptClient(),
+        mapping_client=mapping_client,
+    )
+
+    assert response.categories == ["technology"]
+    request = openai_client.requests[0][0]
+    assert request.stage == "category_fit_repair"
+    assert request.repair_attempt == 1
+    assert '"selected_category_ids":' in request.user_prompt
 
 
 def test_fit_report_categories_rejects_topic_exclusion_conflict() -> None:
@@ -592,6 +686,91 @@ def test_fit_report_categories_marks_ambiguous_topic_fit() -> None:
         mapping_client=mapping_client,
     )
 
-    assert response.categories == ["technology"]
+    assert response.categories == []
     assert response.fits[0].semantic_rule_status == "ambiguous"
     assert response.fits[0].remediation_signal == "topic_semantics_ambiguous"
+
+
+def test_high_confidence_rejected_category_is_deterministically_promoted_when_central() -> (
+    None
+):
+    """A reject cannot survive explicit central inclusion evidence without exclusion."""
+    context = ReportCategoryContext(
+        schema_version="1.0",
+        report_id="file-1",
+        title="Enterprise Technology Shifts",
+        publisher="Publisher",
+        region="Global",
+        time_period="2026",
+        overview="Enterprise technology shifts are the report's central subject.",
+        methods=[],
+        key_findings=["Technology shifts shape the operating model."],
+        limitations=[],
+        sections=[],
+    )
+    mappings = CategoryMappings(
+        schema_version="1.0",
+        categories=[
+            CategoryDefinition(
+                id="technology",
+                label="Technology & Innovation",
+                description="Reports about technology shifts.",
+                definition="Reports whose primary subject is enterprise technology.",
+                include_when=["Evidence centers on enterprise technology shifts."],
+                exclude_when=["Reject when technology is only a side example."],
+            )
+        ],
+        inference_rules=[],
+        uncategorized=[],
+    )
+
+    def mapping_client(request, ctx):
+        del request, ctx
+        return CategoryMappingLoadResponse(schema_version="1.0", mappings=mappings)
+
+    settings = SimpleNamespace(
+        openai_model="gpt-5-mini",
+        openai_models={},
+        openai_api_key="test-key",
+        openai_seed=None,
+        openai_timeout_seconds=30.0,
+        cost_ledger_path="./out/cost-ledger.jsonl",
+        cost_daily_path="./out/cost-daily.json",
+        model_pricing={"gpt-5-mini": {}},
+        llm_execution_policies=_execution_policies(),
+    )
+    response = fit_report_categories_from_context(
+        ContextCategoryFitRequest(
+            schema_version="1.0",
+            context=context,
+            settings=settings,
+            category_mapping_path="unused",
+        ),
+        _ctx(),
+        openai_client=RecordingOpenAIClient(
+            {
+                "schema_version": "1.0",
+                "selected_category_ids": ["technology"],
+                "category_fits": [
+                    {
+                        "category_id": "technology",
+                        "label": "Technology & Innovation",
+                        "fit_score": 0.93,
+                        "decision": "reject",
+                        "why_fit": "The report is centrally about enterprise technology shifts.",
+                        "why_not_fit": "",
+                        "evidence_sections": ["Overview"],
+                    }
+                ],
+            }
+        ),
+        prompt_client=RecordingPromptClient(),
+        mapping_client=mapping_client,
+    )
+
+    assert response.categories == ["technology"]
+    candidate = response.fits[0]
+    assert candidate.decision == "primary"
+    assert candidate.semantic_rule_status == "supported"
+    assert candidate.supported_topic_rule_ids == ["technology:include:2aa37e1280a21972"]
+    assert candidate.rule_evidence_sections == ["Overview"]

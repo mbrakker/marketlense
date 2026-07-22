@@ -46,8 +46,10 @@ from src.services.schema_validator_service import validate_schema
 from src.utils.cache_utils import sha256_json
 from src.utils.coercion import string_value as _s
 from src.utils.errors import AppError
+from src.utils.json_recovery import parse_json_from_text
 from src.utils.logging import log_event
 from src.utils.model_client_contract import require_injected_model_client
+from src.utils.structured_output import StructuredOutputFailure
 from src.utils.tag_utils import normalize_slug_tag
 
 logger = logging.getLogger("market_lense.taxonomy_generator")
@@ -110,6 +112,9 @@ def extract_taxonomy(
         user_variables={
             "report_title": request.report_title,
             "allowed_tags_json": json.dumps(allowed_tags, ensure_ascii=True),
+            "repair_error": request.repair_error,
+            "repair_attempt": request.repair_attempt,
+            "repair_response": request.repair_response,
         },
         reload_if_changed=True,
         default_model=request.settings.openai_model,
@@ -256,6 +261,12 @@ def extract_taxonomy(
                 publisher_id=request.publisher_id or request.publisher_name,
                 prompt_namespace=request.prompt_namespace,
                 policy_hash=prompt_bundle.execution_policy.policy_hash,
+                validation_run_id=str(getattr(ctx, "validation_run_id", "") or ""),
+                configuration_hash=str(getattr(ctx, "configuration_hash", "") or ""),
+                producer_build_identity=str(
+                    getattr(ctx, "producer_commit_sha", "") or ""
+                ),
+                repair_attempt=request.repair_attempt,
                 **model_request_identity_fields(prompt_bundle),
             ),
             ctx,
@@ -277,8 +288,21 @@ def extract_taxonomy(
         )
         parsed_json = resp.parsed_json if isinstance(resp.parsed_json, dict) else None
         if parsed_json is None:
-            not_found_reason = "model_returned_no_json"
+            recovered, _strategy = parse_json_from_text(
+                raw_text, accepted_types=(dict,)
+            )
+            parsed_json = recovered if isinstance(recovered, dict) else None
+        if parsed_json is None:
+            raise StructuredOutputFailure(
+                code="taxonomy_invalid_json",
+                message="Taxonomy extraction returned no JSON object",
+                artifact_family="taxonomy",
+                response_text=raw_text,
+                repair_attempt=request.repair_attempt,
+            )
     except AppError as exc:
+        if isinstance(exc, StructuredOutputFailure):
+            raise
         if exc.retryable:
             logger.info(
                 log_event(
@@ -290,18 +314,30 @@ def extract_taxonomy(
                 )
             )
             raise
-        not_found_reason = exc.code
-        logger.info(
-            log_event(
-                ctx,
-                role="generator",
-                event="taxonomy_model_failed",
-                module=logger.name,
-                fields={"code": exc.code, "message": exc.message},
-            )
-        )
+        if exc.code in {
+            "openai_response_empty",
+            "openai_response_invalid_json",
+            "openai_response_json_type_invalid",
+        }:
+            raise StructuredOutputFailure(
+                code="taxonomy_invalid_json",
+                message="Taxonomy extraction returned an invalid structured response",
+                artifact_family="taxonomy",
+                response_text=raw_text,
+                schema_errors=exc.code,
+                repair_attempt=request.repair_attempt,
+            ) from exc
+        raise
 
-    payload = parsed_json or _empty_payload(not_found_reason)
+    payload = parsed_json
+    if payload is None:  # Defensive: the provider branch above always classifies this.
+        raise StructuredOutputFailure(
+            code="taxonomy_invalid_json",
+            message="Taxonomy extraction returned no usable structured response",
+            artifact_family="taxonomy",
+            response_text=raw_text,
+            repair_attempt=request.repair_attempt,
+        )
     try:
         validate_schema(
             SchemaValidateRequest(
@@ -330,17 +366,14 @@ def extract_taxonomy(
                 )
             )
             raise
-        not_found_reason = not_found_reason or f"schema_validation_failed:{exc.code}"
-        payload = _empty_payload(not_found_reason)
-        logger.info(
-            log_event(
-                ctx,
-                role="generator",
-                event="taxonomy_schema_invalid",
-                module=logger.name,
-                fields={"code": exc.code, "message": exc.message},
-            )
-        )
+        raise StructuredOutputFailure(
+            code="taxonomy_schema_invalid",
+            message="Taxonomy extraction did not satisfy its output schema",
+            artifact_family="taxonomy",
+            response_text=raw_text,
+            schema_errors=exc.code,
+            repair_attempt=request.repair_attempt,
+        ) from exc
 
     primary_tags = _normalize_tags(payload.get("primary_tags"))
     secondary_tags = _normalize_tags(payload.get("secondary_tags"))

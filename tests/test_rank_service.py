@@ -4,6 +4,7 @@ import pytest
 
 from src.contracts.openai import OpenAIResponseResult
 from src.contracts.report_assets import RankRequest
+from src.contracts.run_budget import RunBudget
 from src.contracts.run_context import RunContext
 from src.services import rank_service
 from src.utils.errors import AppError
@@ -32,10 +33,10 @@ def _request(tmp_path, *, user_prompt: str = "[]") -> RankRequest:
     )
 
 
-def _patch_openai_chat_json(
-    external_boundary_mocks_only, *, text: str, parsed_json: dict | None
-) -> None:
+def _openai_chat_json_response(*, text: str, parsed_json: dict | None, captured=None):
     def _fake_openai_chat_json(req, ctx):
+        if captured is not None:
+            captured.append((req, ctx))
         return OpenAIResponseResult(
             schema_version="1.0",
             text=text,
@@ -48,12 +49,10 @@ def _patch_openai_chat_json(
             request_id="req_1",
         )
 
-    external_boundary_mocks_only.setattr(
-        rank_service, "openai_chat_json", _fake_openai_chat_json
-    )
+    return _fake_openai_chat_json
 
 
-def test_rank_candidates_parses_extended_schema(external_boundary_mocks_only, tmp_path):
+def test_rank_candidates_parses_extended_schema(tmp_path):
     payload = {
         "results": [
             {
@@ -68,12 +67,23 @@ def test_rank_candidates_parses_extended_schema(external_boundary_mocks_only, tm
             }
         ]
     }
-    _patch_openai_chat_json(
-        external_boundary_mocks_only,
+    captured = []
+    fake_openai = _openai_chat_json_response(
         text=json.dumps(payload),
         parsed_json=payload,
+        captured=captured,
     )
-    resp = rank_service.rank_candidates(_request(tmp_path), _ctx())
+    budget = RunBudget(
+        schema_version="1.0",
+        run_id="r",
+        publisher_name="",
+        usage_db_path=str(tmp_path / "isolated-usage.sqlite"),
+    )
+    resp = rank_service.rank_candidates(
+        RankRequest(**{**_request(tmp_path).__dict__, "run_budget": budget}),
+        _ctx(),
+        openai_chat_json_client=fake_openai,
+    )
 
     assert len(resp.results) == 1
     row = resp.results[0]
@@ -84,11 +94,11 @@ def test_rank_candidates_parses_extended_schema(external_boundary_mocks_only, tm
     assert row.data_score == 86
     assert row.keep is True
     assert row.reject_reason == ""
+    assert captured[0][0].run_budget == budget
+    assert captured[0][0].usage_db_path == budget.usage_db_path
 
 
-def test_rank_candidates_legacy_score_only_defaults_subscores(
-    external_boundary_mocks_only, tmp_path
-):
+def test_rank_candidates_legacy_score_only_defaults_subscores(tmp_path):
     payload = [
         {
             "id": "legacy_1",
@@ -96,12 +106,13 @@ def test_rank_candidates_legacy_score_only_defaults_subscores(
             "score": 83,
         }
     ]
-    _patch_openai_chat_json(
-        external_boundary_mocks_only,
+    fake_openai = _openai_chat_json_response(
         text=json.dumps(payload),
         parsed_json=None,
     )
-    resp = rank_service.rank_candidates(_request(tmp_path), _ctx())
+    resp = rank_service.rank_candidates(
+        _request(tmp_path), _ctx(), openai_chat_json_client=fake_openai
+    )
 
     assert len(resp.results) == 1
     row = resp.results[0]
@@ -113,7 +124,7 @@ def test_rank_candidates_legacy_score_only_defaults_subscores(
     assert row.keep is True
 
 
-def test_rank_candidates_maps_openai_errors(external_boundary_mocks_only, tmp_path):
+def test_rank_candidates_maps_openai_errors(tmp_path):
     def _raise_openai_error(req, ctx):
         raise AppError(
             code="openai_chat_failed",
@@ -122,12 +133,12 @@ def test_rank_candidates_maps_openai_errors(external_boundary_mocks_only, tmp_pa
             severity="warning",
         )
 
-    external_boundary_mocks_only.setattr(
-        rank_service, "openai_chat_json", _raise_openai_error
-    )
-
     with pytest.raises(AppError) as exc:
-        rank_service.rank_candidates(_request(tmp_path), _ctx())
+        rank_service.rank_candidates(
+            _request(tmp_path),
+            _ctx(),
+            openai_chat_json_client=_raise_openai_error,
+        )
 
     assert exc.value.code == "rank_request_failed"
     assert exc.value.retryable is True

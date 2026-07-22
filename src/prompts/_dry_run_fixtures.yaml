@@ -413,6 +413,22 @@ fixtures:
       categories_json: '["Digital Payments","Fintech"]'
       region: "Global"
       covered_period: "2026"
+  - namespace: "report_vs/artifacts/cover_semantics_repair"
+    family: "publishing"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    benchmark: *benchmark_publishing_artifact
+    system_variables: {}
+    user_variables:
+      doc_map_json: *doc_map_json
+      evidence_json: *evidence_json
+      summary_json: *summary_json
+      insights_final_json: *insights_final_json
+      categories_json: '["Digital Payments","Fintech"]'
+      region: "Global"
+      covered_period: "2026"
+      repair_error: "cover_fingerprint_invalid"
+      repair_attempt: 1
   - namespace: "report_vs/context_category_fit"
     family: "report"
     model: "openai/gpt-5-mini"
@@ -422,6 +438,18 @@ fixtures:
     user_variables:
       report_context_json: *report_context_json
       category_profiles_json: *category_profiles_json
+  - namespace: "report_vs/context_category_fit_repair"
+    family: "report"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    benchmark: *benchmark_report_classification
+    system_variables: {}
+    user_variables:
+      report_context_json: *report_context_json
+      category_profiles_json: *category_profiles_json
+      repair_error: "schema_validation_failed"
+      repair_attempt: 1
+      repair_response: "{}"
   - namespace: "report_vs/doc_map"
     family: "report"
     model: "openai/gpt-5-mini"
@@ -512,6 +540,19 @@ fixtures:
       report_title: "Enterprise Payments Outlook 2026"
       allowed_tags_json: >-
         [{"slug":"digital-payments","label":"Digital Payments"},{"slug":"wallets","label":"Wallets"},{"slug":"merchant-infrastructure","label":"Merchant Infrastructure"}]
+  - namespace: "report_vs/taxonomy_repair"
+    family: "report"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    benchmark: *benchmark_taxonomy
+    system_variables: {}
+    user_variables:
+      report_title: "Enterprise Payments Outlook 2026"
+      allowed_tags_json: >-
+        [{"slug":"digital-payments","label":"Digital Payments"},{"slug":"wallets","label":"Wallets"},{"slug":"merchant-infrastructure","label":"Merchant Infrastructure"}]
+      repair_error: "schema_validation_failed"
+      repair_attempt: 1
+      repair_response: "{}"
   - namespace: "report_vs/validate/grounding"
     family: "validation"
     model: "openai/gpt-5-mini"

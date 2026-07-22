@@ -4,25 +4,25 @@ allowlist:
     owner: "market-lense"
     reason: "The unchanged dry-run corpus is reproducibly slower on the current Windows/Python runtime while token, OCR, browser-attempt, and estimated-cost controls remain bounded; retain this exception only until the scheduled corpus-baseline review."
     expires_on: "2026-07-31"
-    max_delta_absolute: 200
+    max_delta_absolute: 260
     max_delta_percent: 3.0
   - pattern: "families.browser_download.runtime_ms"
     owner: "market-lense"
     reason: "Browser-download dry-run rendering is CPU-bound in the current local runtime with unchanged prompt tokens and planned browser attempts; the live canary remains the provider and browser performance authority."
     expires_on: "2026-07-31"
-    max_delta_absolute: 90
+    max_delta_absolute: 110
     max_delta_percent: 7.0
   - pattern: "families.publishing.runtime_ms"
     owner: "market-lense"
     reason: "Publishing dry-run template rendering is slower on the current local runtime while its bounded token and estimated-cost changes remain independently controlled."
     expires_on: "2026-07-31"
-    max_delta_absolute: 90
+    max_delta_absolute: 120
     max_delta_percent: 3.0
   - pattern: "totals.total_tokens"
     owner: "market-lense"
-    reason: "Report-card prompts now include bounded TLDR projections and grounded cover-semantics classification, with the current cross-report synthesis fixture remaining within a bounded 47-token drift."
+    reason: "Report-card prompts include bounded TLDR projections, grounded cover-semantics classification, and one constrained cover-semantics repair envelope; the fixture corpus retains no additional browser or OCR work."
     expires_on: "2026-07-31"
-    max_delta_absolute: 1535
+    max_delta_absolute: 3700
   - pattern: "families.cross_report_analysis.total_tokens"
     owner: "market-lense"
     reason: "Current cross-report synthesis fixture has a bounded 47-token input drift with no model, OCR, browser-attempt, or cost-threshold regression."
@@ -30,19 +30,19 @@ allowlist:
     max_delta_absolute: 47
   - pattern: "families.publishing.total_tokens"
     owner: "market-lense"
-    reason: "Publishing prompts now include bounded TLDR contracts and the grounded cover-semantics namespace."
+    reason: "Publishing prompts include bounded TLDR contracts plus primary and one-repair cover-semantics JSON contracts."
     expires_on: "2026-07-31"
-    max_delta_absolute: 1586
+    max_delta_absolute: 2356
   - pattern: "namespaces.set"
     owner: "market-lense"
-    reason: "Adds the approved report_vs/artifacts/cover_semantics prompt namespace."
+    reason: "Adds the approved crop-QA plus bounded taxonomy, category, and cover-semantics structured-repair namespaces; each has a dry-run fixture and a fail-closed runtime policy."
     expires_on: "2026-07-31"
-    max_delta_absolute: 1
+    max_delta_absolute: 4
   - pattern: "families.publishing.namespace_count"
     owner: "market-lense"
-    reason: "Adds one publishing namespace for grounded cover-semantics classification."
+    reason: "Adds primary and bounded repair publishing namespaces for grounded cover-semantics classification."
     expires_on: "2026-07-31"
-    max_delta_absolute: 1
+    max_delta_absolute: 2
   - pattern: "families.set"
     owner: "market-lense"
     reason: "Adds the approved crop_qa_escalation prompt family; the bounded new dry-run is tracked until the next corpus-baseline review."
@@ -53,3 +53,18 @@ allowlist:
     reason: "Current browser-download prompts include the approved acquisition-route context, with a bounded 90-token increase and no browser-attempt or OCR increase."
     expires_on: "2026-07-31"
     max_delta_absolute: 90
+  - pattern: "families.report.namespace_count"
+    owner: "market-lense"
+    reason: "Adds the bounded one-attempt taxonomy and category structured-output repair prompts to the existing report family."
+    expires_on: "2026-07-31"
+    max_delta_absolute: 2
+  - pattern: "families.report.runtime_ms"
+    owner: "market-lense"
+    reason: "The two repair prompt templates add bounded local rendering work; provider calls remain capped at one repair per affected artifact."
+    expires_on: "2026-07-31"
+    max_delta_absolute: 40
+  - pattern: "families.report.total_tokens"
+    owner: "market-lense"
+    reason: "The structured taxonomy and category repair fixtures add 970 bounded prompt tokens to the report-family envelope."
+    expires_on: "2026-07-31"
+    max_delta_absolute: 970

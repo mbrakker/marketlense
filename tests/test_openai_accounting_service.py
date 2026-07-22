@@ -5,6 +5,7 @@ import logging
 import sqlite3
 from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
 
 from src.contracts.openai import (
     OpenAIUsageAccountingRequest,
@@ -17,6 +18,7 @@ from src.contracts.llm_usage import (
 )
 from src.contracts.run_context import RunContext
 from src.services import openai_accounting_service as svc
+from src.services._llm_service.openai_usage_accounting import record_usage_accounting
 from src.services import llm_usage_ledger_service
 from src.utils.errors import AppError
 
@@ -142,6 +144,61 @@ def test_record_usage_defers_compatibility_exports_until_projection_interval(
         "openai_usage_accounting_complete",
     ]
     assert_logs_have_required_fields(records)
+
+
+def test_usage_accounting_inherits_complete_validation_attribution_from_context(
+    tmp_path,
+) -> None:
+    ctx = replace(
+        _ctx(),
+        producer_commit_sha="build-sha",
+        validation_run_id="validation-1",
+        cohort_id="cohort-1",
+        report_id="report-1",
+        publisher_id="publisher-1",
+        workflow="report_analysis",
+        stage="taxonomy",
+        artifact_family="taxonomy",
+        configuration_hash="configuration-hash",
+        policy_hash="policy-hash",
+    )
+    usage_db = str(tmp_path / "usage.sqlite")
+    response = record_usage_accounting(
+        ctx=ctx,
+        step_name="openai_respond_with_vector_store",
+        model="gpt-test",
+        input_tokens=10,
+        output_tokens=5,
+        tool_calls=0,
+        cost_ledger_path=str(tmp_path / "ledger.jsonl"),
+        cost_daily_path=str(tmp_path / "daily.json"),
+        model_pricing={"gpt-test": {}},
+        request_id="request-1",
+        source_request=SimpleNamespace(
+            usage_db_path=usage_db,
+            prompt_namespace="report_vs/taxonomy",
+            publisher_name="Publisher",
+        ),
+    )
+
+    assert response.usage_db_recorded is True
+    with sqlite3.connect(usage_db) as conn:
+        row = conn.execute(
+            "SELECT report_id, workflow, stage, artifact_family, validation_run_id, "
+            "publisher_id, configuration_hash, policy_hash, producer_build_identity "
+            "FROM llm_usage_events"
+        ).fetchone()
+    assert row == (
+        "report-1",
+        "report_analysis",
+        "taxonomy",
+        "taxonomy",
+        "validation-1",
+        "publisher-1",
+        "configuration-hash",
+        "policy-hash",
+        "build-sha",
+    )
 
 
 def test_record_usage_releases_operation_reservation_when_action_is_namespaced(

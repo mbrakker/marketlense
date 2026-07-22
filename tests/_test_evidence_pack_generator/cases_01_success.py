@@ -74,7 +74,7 @@ def test_generate_evidence_packs_marks_optional_empty_pack_as_abstained(tmp_path
     assert packs["findings"]["family_status"]["reason"] == "insufficient_pack_content"
 
 
-def test_generate_evidence_packs_logs_prompt_observability_and_raw_response(
+def test_generate_evidence_packs_logs_prompt_observability_and_response_metadata(
     tmp_path, caplog, assert_logs_have_required_fields
 ):
     caplog.set_level(logging.INFO, logger="market_lense.evidence_pack_generator")
@@ -100,7 +100,7 @@ def test_generate_evidence_packs_logs_prompt_observability_and_raw_response(
             continue
         if payload.get("event") in {
             "evidence_pack_prompt_rendered",
-            "evidence_pack_raw_response",
+            "evidence_pack_response_received",
         }:
             events.append(payload)
 
@@ -119,16 +119,18 @@ def test_generate_evidence_packs_logs_prompt_observability_and_raw_response(
     assert "user_prompt" not in rendered_fields
     assert len(rendered_fields["execution_policy_hash"]) == 64
     assert rendered_fields["resolved_model"] == "gpt-4.1-mini"
-    raw = next(
-        event for event in events if event.get("event") == "evidence_pack_raw_response"
+    response = next(
+        event
+        for event in events
+        if event.get("event") == "evidence_pack_response_received"
     )
-    raw_fields = raw["fields"]
-    assert raw_fields["pack"] == "doc_map"
-    assert raw_fields["has_json"] is True
-    redacted_response = raw_fields["raw_response"]
-    assert redacted_response["redaction"] == "***REDACTED***"
-    assert redacted_response["character_count"] == 2
-    assert len(redacted_response["sha256"]) == 64
+    response_fields = response["fields"]
+    assert response_fields["pack"] == "doc_map"
+    assert response_fields["has_json"] is True
+    assert response_fields["response_chars"] == 2
+    response_hash = response_fields["response_sha256"]
+    assert response_hash["redaction"] == "***REDACTED***"
+    assert len(response_hash["sha256"]) == 64
 
 
 def test_generate_evidence_packs_handles_missing_json(tmp_path):
@@ -657,7 +659,7 @@ __all__ = [
     "test_generate_evidence_packs_success",
     "test_generate_evidence_packs_creates_context_when_missing",
     "test_generate_evidence_packs_marks_optional_empty_pack_as_abstained",
-    "test_generate_evidence_packs_logs_prompt_observability_and_raw_response",
+    "test_generate_evidence_packs_logs_prompt_observability_and_response_metadata",
     "test_generate_evidence_packs_handles_missing_json",
     "test_generate_evidence_packs_propagates_retryable_app_error",
     "test_generate_evidence_packs_rejects_doc_map_with_only_doc_id",

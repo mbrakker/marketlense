@@ -119,9 +119,27 @@ class CategoryFitCandidate:
         default_factory=list,
         metadata={"doc": "Topic include rules that matched the report context."},
     )
+    supported_topic_rule_ids: List[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Stable identifiers for include rules supported by explicit context evidence."
+        },
+    )
     rejected_topic_rules: List[str] = field(
         default_factory=list,
         metadata={"doc": "Topic exclusion rules that matched the report context."},
+    )
+    rejected_topic_rule_ids: List[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Stable identifiers for exclusion rules supported by explicit context evidence."
+        },
+    )
+    rule_evidence_sections: List[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Referenced report-context sections used by deterministic rule evaluation."
+        },
     )
     remediation_signal: str = field(
         default="",
@@ -159,7 +177,28 @@ class ContextCategoryFitRequest:
     )
     source_url: str = field(
         default="",
-        metadata={"doc": "Source/report URL context recorded with downstream LLM usage."},
+        metadata={
+            "doc": "Source/report URL context recorded with downstream LLM usage."
+        },
+    )
+    repair_error: str = field(
+        default="",
+        metadata={
+            "doc": "Typed output-contract error supplied only to the one targeted repair request."
+        },
+    )
+    repair_response: str = field(
+        default="",
+        repr=False,
+        metadata={
+            "doc": "Original failed provider output held only in memory for the one targeted repair."
+        },
+    )
+    repair_attempt: int = field(
+        default=0,
+        metadata={
+            "doc": "Bounded category-fit repair attempt; zero is the primary call."
+        },
     )
     schema_version: str = field(
         default="1.0", metadata={"doc": "Context-category fit request schema version."}

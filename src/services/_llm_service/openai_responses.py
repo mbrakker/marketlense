@@ -184,7 +184,7 @@ def openai_ocr_pdf(
                 "model": resolved_model,
                 "request_id": metadata.request_id or "",
                 "parse_strategy": metadata.parse_strategy,
-                "response_text_preview": metadata.text[:400],
+                "response_char_count": len(metadata.text or ""),
             },
         )
 
@@ -411,7 +411,7 @@ def openai_respond_with_vector_store(
                 "model": request.model,
                 "vector_store_id": request.vector_store_id,
                 "parse_strategy": metadata.parse_strategy,
-                "response_text_preview": metadata.text[:240],
+                "response_char_count": len(metadata.text or ""),
             },
         )
     _finalize_usage_accounting(

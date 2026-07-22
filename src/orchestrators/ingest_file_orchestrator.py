@@ -16,12 +16,16 @@ from src.contracts.files import DeleteFileRequest, FileStatRequest
 from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.pdf_utils import PdfEofCheckRequest, PdfIntegrityCheckRequest
 from src.contracts.remediation import RemediationArtifactReference
+from src.contracts.run_budget import RunBudget
 from src.contracts.run_context import RunContext
 from src.contracts.state import (
     SourceQuarantineGetRequest,
     SourceQuarantineRecord,
     SourceQuarantineUpsertRequest,
     StateRecordRequest,
+)
+from src.orchestrators._report_analysis_orchestrator.manifest import (
+    record_validation_manifest_stage,
 )
 from src.orchestrators.remediation_orchestrator import record_workflow_failure
 from src.utils.errors import AppError
@@ -116,6 +120,7 @@ class IngestFileDependencies:
         Callable[[SourceQuarantineUpsertRequest, RunContext], Any] | None
     ) = None
     quarantine_enabled: bool = True
+    run_budget: RunBudget | None = None
 
 
 @dataclass(frozen=True)
@@ -399,6 +404,7 @@ def _download_pdf_for_processing(
         oauth_client_path=settings.google_oauth_client_path,
         oauth_token_path=settings.google_oauth_token_path,
         output_path=runtime.cache_path,
+        run_budget=dependencies.run_budget,
     )
     eof_check = None
     attempt = 0
@@ -677,9 +683,7 @@ def _validate_source_pdf_before_pipeline(
         file_ctx,
     )
     failure_code = str(integrity.failure_code or "").strip()
-    checksum = (
-        runtime.drive_md5 or runtime.md5 or str(integrity.sha256 or "")
-    ).strip()
+    checksum = (runtime.drive_md5 or runtime.md5 or str(integrity.sha256 or "")).strip()
     if failure_code:
         raise AppError(
             code=f"pdf_integrity_{failure_code}",
@@ -913,6 +917,23 @@ def run_ingest_file(
             dependencies=dependencies,
             file_ctx=file_ctx,
             logger_name=logger_name,
+        )
+        record_validation_manifest_stage(
+            settings=settings,
+            ctx=file_ctx,
+            stage="acquisition",
+            source_identity_id=runtime.md5 or runtime.file.file_id,
+            input_artifact_ids=(runtime.file.file_id,),
+            output_artifact_ids=(runtime.cache_path,),
+            idempotency_state="reused" if cache_hit else "new",
+        )
+        record_validation_manifest_stage(
+            settings=settings,
+            ctx=file_ctx,
+            stage="source_preparation",
+            source_identity_id=runtime.md5 or runtime.file.file_id,
+            input_artifact_ids=(runtime.cache_path,),
+            output_artifact_ids=(runtime.md5 or runtime.file.file_id,),
         )
         cache_eligible = bool(runtime.md5) and bool(settings.vector_store_keep)
         logger.info(

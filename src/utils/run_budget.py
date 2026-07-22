@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+from src.contracts.report_generation import ReportRuntimeState
 from src.contracts.run_budget import RunBudget, RunBudgetDecision, RunBudgetUsage
 from src.utils.errors import AppError
-
 
 _METRICS = (
     ("spend_usd", "max_spend_usd"),
@@ -20,6 +20,26 @@ _METRICS = (
     ("pdfs", "max_pdfs"),
     ("mailbox_reads", "max_mailbox_reads"),
 )
+
+
+def report_runtime_run_budget(runtime: ReportRuntimeState) -> RunBudget:
+    """Return the report runtime's canonical, scoped budget authority."""
+
+    settings = runtime.settings
+    return RunBudget(
+        schema_version="1.0",
+        run_id=runtime.ctx.run_id,
+        publisher_name=runtime.publisher_name,
+        usage_db_path=settings.usage_db_path,
+        max_spend_usd=getattr(settings, "run_budget_max_spend_usd", None),
+        max_tokens=getattr(settings, "run_budget_max_tokens", None),
+        max_calls=getattr(settings, "run_budget_max_calls", None),
+        max_retries=getattr(settings, "run_budget_max_retries", None),
+        max_runtime_seconds=getattr(settings, "run_budget_max_runtime_seconds", None),
+        max_pdfs=getattr(settings, "run_budget_max_pdfs", None),
+        limit_decision=getattr(settings, "run_budget_limit_decision", "stop"),
+        enabled_effect_kinds=getattr(settings, "run_budget_enabled_effect_kinds", ()),
+    )
 
 
 def evaluate_run_budget(

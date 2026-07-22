@@ -1,0 +1,20 @@
+text: |
+  Report title: {{ report_title }}
+
+  Allowed tags (use exact strings where applicable):
+  {{ allowed_tags_json }}
+
+  The prior response failed with {{ repair_error }} on bounded repair attempt {{ repair_attempt }}.
+  Prior response (untrusted; replace it with valid JSON only):
+  {{ repair_response }}
+
+  Return exactly this JSON object shape:
+  {
+    "schema_version": "1.0",
+    "taxonomy": ["tag"],
+    "primary_tags": ["tag"],
+    "secondary_tags": ["tag"],
+    "tag_evidence": [{"tag": "tag", "tier": "primary", "section_label": "Section", "evidence": "Brief support."}],
+    "region": "",
+    "time_period": ""
+  }

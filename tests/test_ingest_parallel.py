@@ -322,6 +322,7 @@ def test_drive_cache_prefetch_downloads_and_hashes_before_report_workers(
         md5_checksum=None,
     )
     download_calls: list[str] = []
+    download_requests = []
 
     def _download(req, ctx):
         del ctx
@@ -330,6 +331,7 @@ def test_drive_cache_prefetch_downloads_and_hashes_before_report_workers(
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_bytes(payload)
         download_calls.append(req.file.file_id)
+        download_requests.append(req)
         return DriveDownloadToPathResponse(
             schema_version="1.0",
             file=req.file,
@@ -350,6 +352,9 @@ def test_drive_cache_prefetch_downloads_and_hashes_before_report_workers(
     cache_path = Path(settings.cache_dir) / "prefetch-file.pdf"
     sidecar_path = Path(f"{cache_path}.md5.json")
     assert download_calls == ["prefetch-file"]
+    assert download_requests[0].run_budget is not None
+    assert download_requests[0].run_budget.run_id == run_context.run_id
+    assert download_requests[0].run_budget.usage_db_path == settings.usage_db_path
     assert cache_path.exists()
     assert sidecar_path.exists()
 

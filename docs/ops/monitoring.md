@@ -16,6 +16,16 @@ Use `--trace-id` for a trace-scoped view. Start with the run ID before narrowing
 
 Quality evidence and release bundles are described in [evidence](../quality/evidence.md). For failure handling, continue to [recovery](recovery.md).
 
+## Validation-run LLM attribution
+
+For a frozen validation cohort, each LLM ledger event inherits the validation
+run, cohort, workflow run, report/source and publisher identity, workflow
+stage, artifact family, repair attempt, configuration/policy hashes and
+producer revision from `RunContext` when an individual provider request does
+not repeat them. Missing attribution is a runtime ledger error. Pipeline
+preflight also writes a non-sensitive resolved namespace/provider/model/policy
+matrix under the run output's `preflight/` directory before provider I/O.
+
 ## Provenance, remediation, and budget authority
 
 Source-publication events retain only source record IDs, statuses, locators,

@@ -4,6 +4,8 @@ import json
 import logging
 import os
 import time
+import errno
+import ctypes
 from pathlib import Path
 from typing import Optional
 
@@ -23,6 +25,43 @@ from src.utils.logging import log_event
 logger = logging.getLogger("market_lense.lock_service")
 LOCK_FILE_EXCEPTIONS = (OSError, json.JSONDecodeError, TypeError, ValueError)
 DEFAULT_LOCK_TTL_SECONDS = 7200.0
+
+
+def _owner_pid_is_alive(pid: int) -> bool:
+    """Return whether a local lock owner is still running.
+
+    Repository locks are local filesystem coordination primitives. A process
+    terminated after lock acquisition must not hold a workflow until a long TTL
+    expires. Permission failures remain conservative and retain the lock.
+    """
+    if pid <= 0:
+        return False
+    if os.name == "nt":
+        # Windows does not support signal zero as a process-existence check.
+        # Query-limited access succeeds for a running local owner and lets us
+        # keep access-denied owners conservative without retaining a dead PID.
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        handle = kernel32.OpenProcess(0x1000, False, pid)
+        if handle:
+            exit_code = ctypes.c_ulong()
+            try:
+                if not kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code)):
+                    return True
+                return exit_code.value == 259  # STILL_ACTIVE
+            finally:
+                kernel32.CloseHandle(handle)
+        return ctypes.get_last_error() not in {87, 1168}
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError as exc:
+        if exc.errno == errno.ESRCH:
+            return False
+        return True
+    return True
 
 
 def _read_lock(path: str) -> Optional[LockInfo]:
@@ -99,18 +138,21 @@ def acquire_lock(request: LockAcquireRequest, ctx: RunContext) -> LockAcquireRes
         float(existing.ttl_seconds) if existing and existing.ttl_seconds > 0 else None
     )
     stale_ttl = existing_ttl if existing_ttl is not None else requested_ttl
-    if existing and stale_ttl and (now - existing.created_at) > stale_ttl:
+    expired = bool(existing and stale_ttl and (now - existing.created_at) > stale_ttl)
+    dead_owner = bool(existing and not _owner_pid_is_alive(existing.pid))
+    if existing and (expired or dead_owner):
         logger.info(
             log_event(
                 ctx,
                 role="service",
-                event="lock_stale_evicted",
+                event="lock_dead_owner_evicted" if dead_owner else "lock_stale_evicted",
                 module=logger.name,
                 fields={
                     "lock_path": request.lock_path,
                     "owner_id": existing.owner_id,
                     "pid": existing.pid,
                     "age_seconds": now - existing.created_at,
+                    "eviction_reason": "dead_owner" if dead_owner else "ttl_expired",
                 },
             )
         )

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+from hashlib import sha256
 from typing import Any, Dict, List
 
 from src.contracts.categories import CategoryMappingLoadRequest
@@ -27,6 +28,7 @@ from src.services.schema_validator_service import validate_schema
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.model_client_contract import require_injected_model_client
+from src.utils.structured_output import StructuredOutputFailure
 
 logger = logging.getLogger("market_lense.context_category_fit_generator")
 
@@ -61,6 +63,7 @@ _STOP_WORDS = {
     "where",
     "whose",
 }
+_HIGH_CONFIDENCE_FIT_THRESHOLD = 0.85
 
 
 def fit_report_categories_from_context(
@@ -105,6 +108,7 @@ def fit_report_categories_from_context(
             "definition": category.definition or category.description,
             "include_when": list(category.include_when or []),
             "exclude_when": list(category.exclude_when or []),
+            "semantic_concepts": list(category.core_tags or []),
         }
         for category in mappings_resp.mappings.categories
         if category.portal_exposed
@@ -122,6 +126,9 @@ def fit_report_categories_from_context(
             "category_profiles_json": json.dumps(
                 category_profiles, ensure_ascii=True, indent=2
             ),
+            "repair_error": request.repair_error,
+            "repair_attempt": request.repair_attempt,
+            "repair_response": request.repair_response,
         },
         reload_if_changed=True,
     )
@@ -169,6 +176,20 @@ def fit_report_categories_from_context(
                 report_name=request.report_name,
                 source_url=request.source_url,
                 prompt_namespace=request.prompt_namespace,
+                report_id=str(request.context.report_id),
+                workflow="report_analysis",
+                stage=(
+                    "category_fit_repair" if request.repair_attempt else "category_fit"
+                ),
+                artifact_family="category_fit",
+                validation_run_id=str(getattr(ctx, "validation_run_id", "") or ""),
+                publisher_id=(
+                    request.publisher_name
+                    or str(getattr(ctx, "publisher_id", "") or "")
+                ),
+                configuration_hash=str(getattr(ctx, "configuration_hash", "") or ""),
+                policy_hash=str(getattr(ctx, "policy_hash", "") or ""),
+                repair_attempt=request.repair_attempt,
                 **model_request_identity_fields(prompt_bundle),
             ),
             ctx,
@@ -186,24 +207,32 @@ def fit_report_categories_from_context(
 
     payload = _response_json_object(response)
     if payload is None:
-        raise AppError(
+        raise StructuredOutputFailure(
             code="context_category_fit_invalid_json",
             message="Context-first category fit returned no JSON object",
-            retryable=False,
-            context={
-                "report_id": request.context.report_id,
-                "response_preview": (response.text or "")[:400],
-            },
+            artifact_family="category_fit",
+            response_text=str(response.text or ""),
+            repair_attempt=request.repair_attempt,
         )
     payload = _normalize_fit_payload(payload)
-    validate_schema(
-        SchemaValidateRequest(
-            schema_version="1.0",
-            payload=payload,
-            schema_name="context_category_fit",
-        ),
-        ctx,
-    )
+    try:
+        validate_schema(
+            SchemaValidateRequest(
+                schema_version="1.0",
+                payload=payload,
+                schema_name="context_category_fit",
+            ),
+            ctx,
+        )
+    except AppError as exc:
+        raise StructuredOutputFailure(
+            code="context_category_fit_schema_invalid",
+            message="Context-first category fit did not satisfy its output schema",
+            artifact_family="category_fit",
+            response_text=str(response.text or ""),
+            schema_errors=exc.code,
+            repair_attempt=request.repair_attempt,
+        ) from exc
     fit_response = _coerce_fit_response(
         payload=payload,
         report_id=request.context.report_id,
@@ -318,31 +347,57 @@ def _context_search_text(context: ReportCategoryContext) -> str:
     return " ".join(str(part or "") for part in parts).casefold()
 
 
-def _semantic_tokens(value: str) -> set[str]:
-    tokens = set()
-    for token in re.findall(r"[a-z0-9][a-z0-9_'-]{2,}", value.casefold()):
-        normalized = token.strip("_-'")
-        if len(normalized) < 4 or normalized in _STOP_WORDS:
-            continue
-        tokens.add(normalized)
-    return tokens
+def _semantic_terms(value: str) -> list[str]:
+    """Return ordered, explicit concepts while discarding only prose connectors."""
+    return [
+        token.strip("_-' ")
+        for token in re.findall(r"[a-z0-9][a-z0-9_'-]{1,}", value.casefold())
+        if token.strip("_-' ") not in _STOP_WORDS
+    ]
 
 
-def _matching_rules(rules: list[str], context_text: str) -> list[str]:
-    context_tokens = _semantic_tokens(context_text)
-    matched: list[str] = []
-    for rule in rules:
-        clean_rule = str(rule or "").strip()
-        if not clean_rule:
-            continue
-        rule_tokens = _semantic_tokens(clean_rule)
-        if not rule_tokens:
-            continue
-        overlap = sorted(rule_tokens.intersection(context_tokens))
-        required = min(2, len(rule_tokens))
-        if len(overlap) >= required:
-            matched.append(clean_rule)
+def _normalized_phrase(value: str) -> str:
+    return " ".join(_semantic_terms(value))
+
+
+def _rule_id(category_id: str, rule_kind: str, position: int, rule: str) -> str:
+    stable_payload = "\x1f".join(
+        (category_id, rule_kind, str(position), _normalized_phrase(rule))
+    )
+    return f"{category_id}:{rule_kind}:{sha256(stable_payload.encode('utf-8')).hexdigest()[:16]}"
+
+
+def _rule_has_explicit_concept(rule: str, context_text: str) -> bool:
+    """Match a rule by an exact multi-term concept, never independent token overlap."""
+    context = _normalized_phrase(context_text)
+    terms = _semantic_terms(rule)
+    if not context or len(terms) < 2:
+        return False
+    for width in range(min(4, len(terms)), 1, -1):
+        for start in range(0, len(terms) - width + 1):
+            if " ".join(terms[start : start + width]) in context:
+                return True
+    return False
+
+
+def _matching_rules(
+    rules: list[str],
+    *,
+    category_id: str,
+    rule_kind: str,
+    context_text: str,
+) -> list[tuple[str, str]]:
+    matched: list[tuple[str, str]] = []
+    for position, raw_rule in enumerate(rules):
+        rule = str(raw_rule or "").strip()
+        if rule and _rule_has_explicit_concept(rule, context_text):
+            matched.append((_rule_id(category_id, rule_kind, position, rule), rule))
     return matched
+
+
+def _central_context_text(context: ReportCategoryContext) -> str:
+    """Use the report's title, overview and key findings as centrality evidence."""
+    return " ".join((context.title, context.overview, *context.key_findings))
 
 
 def _apply_topic_semantics(
@@ -350,11 +405,32 @@ def _apply_topic_semantics(
     candidate: CategoryFitCandidate,
     profile: dict[str, Any],
     context_text: str,
+    central_text: str,
 ) -> CategoryFitCandidate:
     include_rules = [str(item) for item in profile.get("include_when") or []]
     exclude_rules = [str(item) for item in profile.get("exclude_when") or []]
-    supported_rules = _matching_rules(include_rules, context_text)
-    rejected_rules = _matching_rules(exclude_rules, context_text)
+    supported_matches = _matching_rules(
+        include_rules,
+        category_id=candidate.category_id,
+        rule_kind="include",
+        context_text=context_text,
+    )
+    rejected_matches = _matching_rules(
+        exclude_rules,
+        category_id=candidate.category_id,
+        rule_kind="exclude",
+        context_text=context_text,
+    )
+    central_matches = _matching_rules(
+        include_rules,
+        category_id=candidate.category_id,
+        rule_kind="include",
+        context_text=central_text,
+    )
+    supported_rule_ids = [rule_id for rule_id, _rule in supported_matches]
+    supported_rules = [rule for _rule_id_value, rule in supported_matches]
+    rejected_rule_ids = [rule_id for rule_id, _rule in rejected_matches]
+    rejected_rules = [rule for _rule_id_value, rule in rejected_matches]
     decision = candidate.decision
     status = "not_evaluated"
     remediation_signal = ""
@@ -365,6 +441,14 @@ def _apply_topic_semantics(
         remediation_signal = "topic_semantics_exclusion_conflict"
         if not why_not_fit:
             why_not_fit = "Canonical Topic exclusion rule matched the report context."
+    elif (
+        decision == "reject"
+        and candidate.fit_score >= _HIGH_CONFIDENCE_FIT_THRESHOLD
+        and supported_rules
+        and central_matches
+    ):
+        decision = "primary"
+        status = "supported"
     elif decision == "reject":
         status = "rejected"
     elif supported_rules:
@@ -384,7 +468,10 @@ def _apply_topic_semantics(
         evidence_sections=list(candidate.evidence_sections),
         semantic_rule_status=status,
         supported_topic_rules=supported_rules,
+        supported_topic_rule_ids=supported_rule_ids,
         rejected_topic_rules=rejected_rules,
+        rejected_topic_rule_ids=rejected_rule_ids,
+        rule_evidence_sections=list(candidate.evidence_sections),
         remediation_signal=remediation_signal,
     )
 
@@ -410,6 +497,7 @@ def _coerce_fit_response(
 ) -> ContextCategoryFitResponse:
     profile_by_id = {str(item["id"]): item for item in category_profiles}
     context_text = _context_search_text(context)
+    central_text = _central_context_text(context)
     fits: List[CategoryFitCandidate] = []
     for item in payload.get("category_fits") or []:
         if not isinstance(item, dict):
@@ -449,6 +537,7 @@ def _coerce_fit_response(
                 candidate=fit,
                 profile=profile_by_id[category_id],
                 context_text=context_text,
+                central_text=central_text,
             )
         )
     fits.sort(
@@ -469,7 +558,13 @@ def _coerce_fit_response(
         if (
             text in profile_by_id
             and text not in selected_ids
-            and (selected_fit is None or selected_fit.decision != "reject")
+            and (
+                selected_fit is None
+                or (
+                    selected_fit.decision != "reject"
+                    and selected_fit.semantic_rule_status != "ambiguous"
+                )
+            )
         ):
             selected_ids.append(text)
     if not selected_ids:

@@ -1,0 +1,5 @@
+text: |
+  Repair a report cover-semantics response using only the supplied report evidence.
+  Return only the requested JSON object. Use exactly the allowed enum values and
+  do not introduce literal industries, products, landmarks, flags, logos, or
+  category icons.

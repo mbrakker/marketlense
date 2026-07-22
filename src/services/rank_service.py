@@ -123,7 +123,12 @@ def _fallback_crop_refine_results(
     ]
 
 
-def rank_candidates(request: RankRequest, ctx: RunContext) -> RankResponse:
+def rank_candidates(
+    request: RankRequest,
+    ctx: RunContext,
+    *,
+    openai_chat_json_client=None,
+) -> RankResponse:
     logger.info(
         log_event(
             ctx,
@@ -144,7 +149,7 @@ def rank_candidates(request: RankRequest, ctx: RunContext) -> RankResponse:
     try:
         llm_client = llm_service.build_client_from_callables(
             policy=_rank_llm_policy("rank_candidates"),
-            openai_chat_json=openai_chat_json,
+            openai_chat_json=openai_chat_json_client or openai_chat_json,
         )
         response = llm_client.openai_chat_json(
             OpenAIJSONPromptRequest(
@@ -171,6 +176,12 @@ def rank_candidates(request: RankRequest, ctx: RunContext) -> RankResponse:
                 execution_policy_hash=request.execution_policy_hash,
                 execution_policy=request.execution_policy,
                 execution_policy_source=request.execution_policy_source,
+                usage_db_path=(
+                    request.run_budget.usage_db_path
+                    if request.run_budget is not None
+                    else "./state/llm_usage.sqlite"
+                ),
+                run_budget=request.run_budget,
             ),
             ctx,
         )

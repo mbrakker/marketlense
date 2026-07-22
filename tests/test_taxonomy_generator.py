@@ -93,6 +93,20 @@ class RetryableFailingOpenAI:
         )
 
 
+class InvalidJsonOpenAI:
+    def openai_respond_with_vector_store(self, req, ctx):
+        del ctx
+        return OpenAIResponseResult(
+            schema_version="1.0",
+            text='{"taxonomy": ["digital_payments"]',
+            parsed_json=None,
+            input_tokens=11,
+            output_tokens=7,
+            tool_calls=0,
+            model=req.model,
+        )
+
+
 def _ctx() -> RunContext:
     return RunContext(schema_version="1.0", run_id="r", task_id="taxonomy", span_id="s")
 
@@ -234,6 +248,24 @@ def _cache_path(settings: AppSettings) -> Path:
         / "report_analysis"
         / "taxonomy.json"
     )
+
+
+def test_taxonomy_invalid_json_is_a_typed_failure_not_empty_success(tmp_path):
+    mapping_path = tmp_path / "category-mappings.yaml"
+    _write_mapping(mapping_path)
+
+    with pytest.raises(AppError) as exc_info:
+        extract_taxonomy(
+            _request(_settings(tmp_path, mapping_path, vector_store_keep=False)),
+            _ctx(),
+            openai_client=InvalidJsonOpenAI(),
+            prompt_client=FakePromptClient(),
+        )
+
+    assert exc_info.value.code == "taxonomy_invalid_json"
+    assert exc_info.value.retryable is False
+    assert exc_info.value.context["artifact_family"] == "taxonomy"
+    assert exc_info.value.context["response_chars"] > 0
 
 
 def test_taxonomy_cache_miss_calls_openai_and_writes_cache(tmp_path):

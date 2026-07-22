@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
@@ -11,18 +12,22 @@ from src.contracts.files import (
     FileStatRequest,
     WriteBytesRequest,
 )
-from src.contracts.publish import PublishSettings
 from src.contracts.pipeline_preflight import (
-    PreflightCheckStatus,
     PipelinePreflightCheck,
     PipelinePreflightReport,
     PipelinePreflightRequest,
+    PreflightCheckStatus,
 )
 from src.contracts.prompts import PromptLoadRequest
+from src.contracts.publish import PublishSettings
 from src.contracts.run_context import RunContext
 from src.services import drive_service, file_service, prompt_service, wordpress_service
 from src.utils.errors import AppError
 from src.utils.logging import log_event
+from src.utils.model_resolver import (
+    execution_policies_from_config,
+    preflight_execution_policy_coverage,
+)
 
 logger = logging.getLogger("market_lense.pipeline_preflight_orchestrator")
 
@@ -55,7 +60,11 @@ def default_dependencies() -> PipelinePreflightDependencies:
 def report_pipeline_prompt_namespaces(settings) -> list[str]:
     namespaces = {
         "report_vs/taxonomy",
+        "report_vs/taxonomy_repair",
         "report_vs/context_category_fit",
+        "report_vs/context_category_fit_repair",
+        "report_vs/artifacts/cover_semantics",
+        "report_vs/artifacts/cover_semantics_repair",
         "rank_candidates",
     }
     registry = list(getattr(settings, "evidence_pack_registry", []) or [])
@@ -126,11 +135,13 @@ def run_pipeline_preflight(
     checks: list[PipelinePreflightCheck] = []
     checks.extend(_check_local_paths(request, ctx, deps))
     checks.extend(_check_llm(request))
+    checks.extend(_check_llm_policy_coverage(request))
     checks.extend(_check_prompts(request, ctx, deps))
     checks.extend(_check_drive(request, ctx, deps))
     checks.extend(_check_browser(request))
     checks.extend(_check_publish(request, ctx, deps))
     report = _build_report(request, checks)
+    _persist_resolved_policy_matrix(report, request, ctx, deps)
     logger.info(
         log_event(
             ctx,
@@ -284,6 +295,149 @@ def _check_llm(request: PipelinePreflightRequest) -> list[PipelinePreflightCheck
             metadata={"model": str(settings.openai_model)},
         )
     ]
+
+
+def _check_llm_policy_coverage(
+    request: PipelinePreflightRequest,
+) -> list[PipelinePreflightCheck]:
+    """Resolve every reachable provider policy before any model boundary is used."""
+    if not request.require_llm:
+        return []
+    settings = request.settings
+    raw_policies = getattr(settings, "llm_execution_policies", {})
+    if not isinstance(raw_policies, dict) or not raw_policies:
+        # Isolated unit/in-process callers can still use the historical injected
+        # compatibility seam. Live configuration carries an explicit policy map
+        # and therefore always takes the fail-closed branch below.
+        return []
+    try:
+        policies = execution_policies_from_config(
+            raw_policies,
+            model_overrides=getattr(settings, "openai_models", {}),
+            legacy_routing=getattr(settings, "llm_routing", {}),
+            default_model=str(settings.openai_model),
+            default_temperature=float(settings.temperature),
+            default_seed=getattr(settings, "openai_seed", None),
+            default_timeout_seconds=getattr(settings, "openai_timeout_seconds", None),
+        )
+        decisions = preflight_execution_policy_coverage(
+            policies,
+            default_model=str(settings.openai_model),
+            default_temperature=float(settings.temperature),
+            default_seed=getattr(settings, "openai_seed", None),
+            default_timeout_seconds=getattr(settings, "openai_timeout_seconds", None),
+        )
+    except AppError as exc:
+        return [
+            _check(
+                "llm_execution_policy_matrix",
+                "blocker",
+                exc.code,
+                "LLM execution-policy coverage is incomplete",
+                "repair_llm_execution_policy_coverage",
+                metadata={},
+            )
+        ]
+    return [
+        _check(
+            "llm_execution_policy_matrix",
+            "pass",
+            "llm_execution_policy_coverage_complete",
+            "Every registered production LLM namespace resolved before provider I/O",
+            "continue",
+            metadata={
+                "namespace_count": len(decisions),
+                "policy_hashes": sorted(
+                    {decision.policy_hash for decision in decisions}
+                ),
+                "resolved_matrix": [
+                    {
+                        "namespace": decision.namespace,
+                        "policy_source": decision.policy_source,
+                        "provider": decision.policy.provider,
+                        "model": decision.policy.model,
+                        "policy_hash": decision.policy_hash,
+                    }
+                    for decision in decisions
+                ],
+            },
+        )
+    ]
+
+
+def _persist_resolved_policy_matrix(
+    report: PipelinePreflightReport,
+    request: PipelinePreflightRequest,
+    ctx: RunContext,
+    deps: PipelinePreflightDependencies,
+) -> None:
+    """Retain the exact non-sensitive policy resolution used before provider I/O."""
+
+    matrix_check = next(
+        (
+            check
+            for check in report.checks
+            if check.check_name == "llm_execution_policy_matrix"
+        ),
+        None,
+    )
+    if matrix_check is None or matrix_check.status != "pass":
+        return
+    matrix = matrix_check.metadata.get("resolved_matrix")
+    if not isinstance(matrix, list):
+        return
+    path = (
+        Path(str(request.settings.output_dir))
+        / "preflight"
+        / f"{ctx.run_id}.llm_policy_matrix.json"
+    )
+    payload = {
+        "schema_version": "1.0",
+        "run_id": str(ctx.run_id),
+        "workflow": request.workflow,
+        "configuration_hash": str(getattr(ctx, "configuration_hash", "") or ""),
+        "policy_hash": str(getattr(ctx, "policy_hash", "") or ""),
+        "producer_build_identity": str(getattr(ctx, "producer_commit_sha", "") or ""),
+        "resolved_matrix": matrix,
+    }
+    try:
+        deps.write_bytes(
+            WriteBytesRequest(
+                schema_version="1.0",
+                path=str(path),
+                content=json.dumps(
+                    payload, ensure_ascii=True, sort_keys=True, separators=(",", ":")
+                ).encode("utf-8"),
+                make_parents=True,
+            ),
+            ctx,
+        )
+    except AppError as exc:
+        raise AppError(
+            code="llm_execution_policy_matrix_persist_failed",
+            message="Resolved LLM execution-policy matrix could not be retained",
+            retryable=False,
+            cause=exc,
+        ) from exc
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="llm_execution_policy_matrix_persisted",
+            module=logger.name,
+            fields={
+                "path": str(path),
+                "namespace_count": len(matrix),
+                "policy_hash_count": len(
+                    {
+                        str(item.get("policy_hash") or "")
+                        for item in matrix
+                        if isinstance(item, dict)
+                    }
+                ),
+            },
+        )
+    )
 
 
 def _check_prompts(

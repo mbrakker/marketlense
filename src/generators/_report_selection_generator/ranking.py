@@ -7,6 +7,7 @@ from typing import Any, Optional
 from src.contracts.candidates import Candidate
 from src.contracts.ingest import IngestSettings
 from src.contracts.report_assets import RankRequest
+from src.contracts.run_budget import RunBudget
 from src.generators.prompt_preparation import (
     model_request_identity_fields,
     prepare_prompt_bundle,
@@ -51,6 +52,25 @@ _RANK_FEATURE_KEYS_BY_KIND: dict[str, tuple[str, ...]] = {
 _RANK_FLOAT_PRECISION = 3
 _RANK_TITLE_LIMIT = 220
 _RANK_TABLE_PREVIEW_LIMIT = 240
+
+
+def _ranking_run_budget(settings: IngestSettings, ctx) -> RunBudget:
+    """Use the report's isolated authority scope for every ranking call."""
+
+    return RunBudget(
+        schema_version="1.0",
+        run_id=ctx.run_id,
+        publisher_name=str(getattr(ctx, "publisher_id", "") or ""),
+        usage_db_path=settings.usage_db_path,
+        max_spend_usd=getattr(settings, "run_budget_max_spend_usd", None),
+        max_tokens=getattr(settings, "run_budget_max_tokens", None),
+        max_calls=getattr(settings, "run_budget_max_calls", None),
+        max_retries=getattr(settings, "run_budget_max_retries", None),
+        max_runtime_seconds=getattr(settings, "run_budget_max_runtime_seconds", None),
+        max_pdfs=getattr(settings, "run_budget_max_pdfs", None),
+        limit_decision=getattr(settings, "run_budget_limit_decision", "stop"),
+        enabled_effect_kinds=getattr(settings, "run_budget_enabled_effect_kinds", ()),
+    )
 
 
 def _candidate_meta(candidate: Candidate, key: str, default: float = 0.0) -> float:
@@ -489,6 +509,7 @@ def _rank_candidates_batch(
             model_pricing=settings.model_pricing,
             response_cache_enabled=True,
             response_cache_dir=settings.cache_dir,
+            run_budget=_ranking_run_budget(settings, ctx),
             **model_request_identity_fields(prompt_bundle),
         ),
         ctx,

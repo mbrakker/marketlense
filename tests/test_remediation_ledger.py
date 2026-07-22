@@ -511,6 +511,26 @@ def test_known_allowlisted_failure_is_pending_and_unknown_is_operator_held(
     assert unknown.action_code == "mark_terminal_blocker"
 
 
+def test_failure_specific_recovery_rule_persists_narrow_scope(tmp_path) -> None:
+    record = record_workflow_failure(
+        state_db=str(tmp_path / "state.sqlite"),
+        workflow="report_generation",
+        stage="taxonomy",
+        operation="resolve_taxonomy",
+        error=AppError(
+            code="taxonomy_invalid_json", message="invalid", retryable=False
+        ),
+        ctx=_ctx(),
+    )
+
+    assert record is not None
+    assert record.status == "pending"
+    assert record.action_code == "rerun_targeted_artifact_family"
+    assert record.max_attempts == 1
+    assert record.diagnostics["recovery_scope"] == "taxonomy"
+    assert record.diagnostics["required_checkpoint"] == "source_prepared"
+
+
 def test_reaper_holds_unknown_workflow_error_even_when_an_executor_exists(
     tmp_path,
 ) -> None:

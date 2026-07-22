@@ -286,7 +286,10 @@ def test_generate_figure_captions_builds_context_and_updates_assets(
     generated_events = [
         event for event in events if event["event"] == "figure_caption_generated"
     ]
-    assert generated_events[0]["fields"]["raw_response"]
+    assert generated_events[0]["fields"]["response_chars"] > 0
+    response_hash = generated_events[0]["fields"]["response_sha256"]
+    assert response_hash["redaction"] == "***REDACTED***"
+    assert len(response_hash["sha256"]) == 64
     assert generated_events[0]["fields"]["caption_source"] == "generated"
 
 

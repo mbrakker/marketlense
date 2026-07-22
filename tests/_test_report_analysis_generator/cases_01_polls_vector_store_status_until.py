@@ -30,11 +30,11 @@ def test_run_report_analysis_polls_vector_store_status_until_ready(
             ),
         ]
     )
-    status_calls: list[str] = []
+    status_requests = []
 
     deps = _deps(
         vector_store_get_status=lambda req, ctx: (
-            status_calls.append(req.vector_store_id) or next(statuses)
+            status_requests.append(req) or next(statuses)
         ),
         generate_evidence_packs=lambda **kwargs: {
             "doc_map": {"docMap": {"title": "Doc Title", "publisher": "Doc Publisher"}}
@@ -64,7 +64,14 @@ def test_run_report_analysis_polls_vector_store_status_until_ready(
     )
 
     assert state.vector_store_status == "completed"
-    assert status_calls == ["vs_1", "vs_1"]
+    assert [request.vector_store_id for request in status_requests] == ["vs_1", "vs_1"]
+    assert all(request.run_budget is not None for request in status_requests)
+    assert {
+        request.run_budget.usage_db_path for request in status_requests if request.run_budget
+    } == {runtime.settings.usage_db_path}
+    assert {request.run_budget.run_id for request in status_requests if request.run_budget} == {
+        runtime.ctx.run_id
+    }
     events = _orchestrator_events(caplog)
     assert_logs_have_required_fields(events)
     assert any(
@@ -691,7 +698,10 @@ def test_run_report_analysis_uses_context_fit_categories_not_taxonomy_tags(tmp_p
                 "evidence_sections": ["Overview"],
                 "semantic_rule_status": "not_evaluated",
                 "supported_topic_rules": [],
+                "supported_topic_rule_ids": [],
                 "rejected_topic_rules": [],
+                "rejected_topic_rule_ids": [],
+                "rule_evidence_sections": [],
                 "remediation_signal": "",
             }
         ],
@@ -701,6 +711,9 @@ def test_run_report_analysis_uses_context_fit_categories_not_taxonomy_tags(tmp_p
         "agentic_commerce",
         "ai_automation",
     ]
+    assert metadata_updates[0].run_budget is not None
+    assert metadata_updates[0].run_budget.usage_db_path == runtime.settings.usage_db_path
+    assert metadata_updates[0].run_budget.run_id == runtime.ctx.run_id
 
 
 def test_run_report_analysis_returns_complete_report_payload_contract(

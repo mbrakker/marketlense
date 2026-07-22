@@ -326,24 +326,26 @@ def generate_artifacts(
         ),
         insights_candidates,
     )
+    cover_semantics_variables = {
+        **base_vars,
+        "summary_json": _dump_json(summary),
+        "insights_final_json": _dump_json(insights_final),
+        "categories_json": _dump_json(categories or []),
+        "region": _s(
+            safe_doc_map.get("region") or safe_doc_map.get("geography")
+        ).strip(),
+        "covered_period": _s(
+            safe_doc_map.get("covered_period")
+            or safe_doc_map.get("time_period")
+            or safe_doc_map.get("period")
+        ).strip(),
+    }
+    cover_semantics_ctx = child_context(ctx, task_id=f"{ctx.task_id}:cover_semantics")
     cover_semantics_result = render_artifact_json_model(
         namespace="report_vs/artifacts/cover_semantics",
-        variables={
-            **base_vars,
-            "summary_json": _dump_json(summary),
-            "insights_final_json": _dump_json(insights_final),
-            "categories_json": _dump_json(categories or []),
-            "region": _s(
-                safe_doc_map.get("region") or safe_doc_map.get("geography")
-            ).strip(),
-            "covered_period": _s(
-                safe_doc_map.get("covered_period")
-                or safe_doc_map.get("time_period")
-                or safe_doc_map.get("period")
-            ).strip(),
-        },
+        variables=cover_semantics_variables,
         settings=settings,
-        ctx=child_context(ctx, task_id=f"{ctx.task_id}:cover_semantics"),
+        ctx=cover_semantics_ctx,
         openai_client=openai_client,
         prompt_client=prompt_client,
         allow_vector_store=artifact_use_vector_store,
@@ -351,6 +353,11 @@ def generate_artifacts(
         publisher_name=publisher_name,
         report_name=report_name or "",
         source_url=source_url,
+        payload_validator=lambda payload: _validate_cover_semantics(
+            payload.get("cover_semantics"),
+            ctx=cover_semantics_ctx,
+        ),
+        repair_namespace="report_vs/artifacts/cover_semantics_repair",
     )
     cover_semantics = _validate_cover_semantics(
         cover_semantics_result.get("cover_semantics"),

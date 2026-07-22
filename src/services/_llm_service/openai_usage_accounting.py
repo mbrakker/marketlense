@@ -25,6 +25,15 @@ def _semantic_usage_action(*, step_name: str, source_request: Any | None) -> str
     return ":".join(namespace_parts) or step_name
 
 
+def _attribution_value(source: Any | None, ctx: RunContext, name: str) -> str:
+    """Read explicit request attribution first, then inherited runtime context."""
+
+    return (
+        str(getattr(source, name, "") if source is not None else "").strip()
+        or str(getattr(ctx, name, "") or "").strip()
+    )
+
+
 def record_usage_accounting(
     *,
     ctx: RunContext,
@@ -101,7 +110,7 @@ def record_usage_accounting(
                 or getattr(source, "title", "")
                 or ""
             ),
-            report_id=str(getattr(source, "report_id", "") or ""),
+            report_id=_attribution_value(source, ctx, "report_id"),
             source_url=str(
                 getattr(source, "source_url", "")
                 or getattr(source, "landing_page_url", "")
@@ -125,18 +134,28 @@ def record_usage_accounting(
             call_ordinal=call_ordinal,
             parse_status=parse_status,
             schema_validation_status=schema_validation_status,
-            workflow=str(getattr(source, "workflow", "") or ""),
-            stage=str(getattr(source, "stage", "") or ""),
-            plan_hash=str(getattr(source, "plan_hash", "") or ""),
-            artifact_family=str(getattr(source, "artifact_family", "") or ""),
-            validation_run_id=str(getattr(source, "validation_run_id", "") or ""),
-            publisher_id=str(getattr(source, "publisher_id", "") or ""),
+            workflow=_attribution_value(source, ctx, "workflow"),
+            stage=_attribution_value(source, ctx, "stage") or step_name,
+            plan_hash=(
+                _attribution_value(source, ctx, "plan_hash")
+                or _attribution_value(source, ctx, "execution_plan_hash")
+            ),
+            artifact_family=(
+                _attribution_value(source, ctx, "artifact_family")
+                or prompt_namespace.rsplit("/", 1)[-1]
+            ),
+            validation_run_id=_attribution_value(source, ctx, "validation_run_id"),
+            publisher_id=(
+                _attribution_value(source, ctx, "publisher_id")
+                or str(getattr(source, "publisher_name", "") or "").strip()
+                or "unattributed"
+            ),
             model_policy_namespace=str(
                 getattr(source, "model_policy_namespace", "") or prompt_namespace
             ),
-            configuration_hash=str(getattr(source, "configuration_hash", "") or ""),
+            configuration_hash=_attribution_value(source, ctx, "configuration_hash"),
             policy_hash=str(
-                getattr(source, "policy_hash", "")
+                _attribution_value(source, ctx, "policy_hash")
                 or getattr(source, "execution_policy_hash", "")
                 or ""
             ),
@@ -148,8 +167,8 @@ def record_usage_accounting(
             repair_attempt=max(
                 0,
                 int(
-                    getattr(source, "repair_attempt", 0)
-                    or getattr(source, "budget_attempt_number", 0)
+                    _attribution_value(source, ctx, "repair_attempt")
+                    or getattr(source, "budget_attempt_number", "")
                     or 0
                 ),
             ),

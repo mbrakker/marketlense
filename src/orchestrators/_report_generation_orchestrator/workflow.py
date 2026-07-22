@@ -34,6 +34,9 @@ from src.generators.report_render_generator import (
 from src.generators.report_selection_generator import select_report_figures
 from src.generators.report_source_generator import prepare_report_source
 from src.orchestrators.report_analysis_orchestrator import run_report_analysis
+from src.orchestrators._report_analysis_orchestrator.manifest import (
+    record_validation_manifest_stage,
+)
 from src.orchestrators.signal_candidate_orchestrator import (
     run_signal_candidate_extraction,
 )
@@ -661,6 +664,31 @@ def run_report_generation(
                     "resume_stage": STAGE_ANALYSIS_COMPLETE,
                 },
             ) from exc
+        manifest_ctx = replace(
+            runtime.ctx,
+            report_id=runtime.file.file_id,
+            source_identity_id=runtime.md5 or runtime.file.file_id,
+            publisher_id=runtime.publisher_name or "unattributed",
+            workflow="report_generation",
+            stage="rendering",
+            artifact_family="rendered_html",
+        )
+        record_validation_manifest_stage(
+            settings=runtime.settings,
+            ctx=manifest_ctx,
+            stage="rendering",
+            source_identity_id=runtime.md5 or runtime.file.file_id,
+            input_artifact_ids=tuple(analysis.evidence_paths.values()),
+            output_artifact_ids=(outcome.html_path or "",),
+        )
+        record_validation_manifest_stage(
+            settings=runtime.settings,
+            ctx=manifest_ctx,
+            stage="final_html_validation",
+            source_identity_id=runtime.md5 or runtime.file.file_id,
+            input_artifact_ids=(outcome.html_path or "",),
+            output_artifact_ids=(outcome.html_path or "",),
+        )
         _write_stage_checkpoint(
             runtime,
             stage_name=STAGE_RENDER_COMPLETE,

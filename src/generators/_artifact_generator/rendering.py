@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from typing import Any, Dict, Optional
 
 from src.contracts.config import AppSettings
@@ -17,6 +18,7 @@ from src.utils.costing import (
     estimate_text_tokens,
     resolve_model_pricing,
 )
+from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.artifact_generator")
@@ -35,7 +37,11 @@ def render_artifact_json_model(
     publisher_name: str = "",
     report_name: str = "",
     source_url: str = "",
+    payload_validator: Callable[[Dict[str, Any]], Any] | None = None,
+    repair_namespace: str = "",
+    repair_attempt: int = 0,
 ) -> Dict[str, Any]:
+    """Render one artifact JSON contract with one optional validated repair."""
     prompt_bundle = prepare_prompt_bundle(
         namespace=namespace,
         settings=settings,
@@ -156,6 +162,7 @@ def render_artifact_json_model(
                 report_name=report_name,
                 source_url=source_url,
                 prompt_namespace=namespace,
+                repair_attempt=repair_attempt,
                 **model_request_identity_fields(prompt_bundle),
                 same_provider_fallback=(
                     prompt_bundle.execution_policy.policy.fallback_policy
@@ -191,6 +198,7 @@ def render_artifact_json_model(
                 report_name=report_name,
                 source_url=source_url,
                 prompt_namespace=namespace,
+                repair_attempt=repair_attempt,
                 **model_request_identity_fields(prompt_bundle),
                 same_provider_fallback=(
                     prompt_bundle.execution_policy.policy.fallback_policy
@@ -221,4 +229,59 @@ def render_artifact_json_model(
             },
         )
     )
+    if payload_validator is None:
+        return parsed
+    try:
+        payload_validator(parsed)
+    except AppError as exc:
+        if not repair_namespace or repair_attempt:
+            raise
+        error_code = str(getattr(exc, "code", "artifact_structured_invalid"))
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="artifact_structured_repair_started",
+                module=logger.name,
+                fields={
+                    "namespace": namespace,
+                    "repair_namespace": repair_namespace,
+                    "error_code": error_code,
+                    "repair_attempt": 1,
+                },
+            )
+        )
+        repaired = render_artifact_json_model(
+            namespace=repair_namespace,
+            variables={
+                **variables,
+                "repair_error": error_code,
+                "repair_attempt": 1,
+            },
+            settings=settings,
+            ctx=ctx,
+            openai_client=openai_client,
+            prompt_client=prompt_client,
+            allow_vector_store=allow_vector_store,
+            vector_store_id=vector_store_id,
+            publisher_name=publisher_name,
+            report_name=report_name,
+            source_url=source_url,
+            repair_attempt=1,
+        )
+        payload_validator(repaired)
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="artifact_structured_repair_complete",
+                module=logger.name,
+                fields={
+                    "namespace": namespace,
+                    "repair_namespace": repair_namespace,
+                    "repair_attempt": 1,
+                },
+            )
+        )
+        return repaired
     return parsed

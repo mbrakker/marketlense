@@ -8,14 +8,15 @@ from __future__ import annotations
 
 from typing import Optional
 
-from src.contracts.vector_store import VectorStoreStatusRequest
 from src.contracts.report_generation import ReportRuntimeState
+from src.contracts.vector_store import VectorStoreStatusRequest
 from src.generators.report_analysis_generator import VectorStoreIndexingState
 from src.generators.report_generation_dependencies import ReportAnalysisDependencies
 from src.orchestrators._report_analysis_orchestrator.shared import logger
 from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
 from src.utils.errors import AppError
 from src.utils.logging import log_event
+from src.utils.run_budget import report_runtime_run_budget
 
 __all__ = [
     "VECTOR_STORE_FAILED_STATUSES",
@@ -85,6 +86,7 @@ def _await_vector_store_indexing(
     last_status = state.vector_store_status or ""
     last_error = state.last_error
     last_indexed_at = state.indexed_at_utc
+    vector_store_budget = report_runtime_run_budget(runtime)
 
     logger.info(
         log_event(
@@ -109,6 +111,7 @@ def _await_vector_store_indexing(
             VectorStoreStatusRequest(
                 schema_version="1.0",
                 vector_store_id=vector_store_id,
+                run_budget=vector_store_budget,
             ),
             mode_ctx,
         )

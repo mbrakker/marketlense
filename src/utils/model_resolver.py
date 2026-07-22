@@ -16,6 +16,7 @@ from src.utils.errors import AppError
 REPORT_GENERATION_NAMESPACES: tuple[str, ...] = (
     "report_vs/artifacts/summary",
     "report_vs/artifacts/cover_semantics",
+    "report_vs/artifacts/cover_semantics_repair",
     "report_vs/artifacts/insights_candidates",
     "report_vs/artifacts/insights_final",
     "report_vs/artifacts/quotes",
@@ -30,6 +31,9 @@ REPORT_GENERATION_NAMESPACES: tuple[str, ...] = (
     "report_vs/validate/grounding",
     "report_vs/validate/semantic",
     "report_vs/taxonomy",
+    "report_vs/taxonomy_repair",
+    "report_vs/context_category_fit",
+    "report_vs/context_category_fit_repair",
 )
 
 # This is the finite production prompt/provider inventory. It is intentionally
@@ -53,6 +57,7 @@ PRODUCTION_LLM_NAMESPACES: tuple[str, ...] = (
     "rank_candidates",
     "rank_candidates/crop_refine",
     "report_vs/artifacts/cover_semantics",
+    "report_vs/artifacts/cover_semantics_repair",
     "report_vs/artifacts/expert_comment",
     "report_vs/artifacts/insights_candidates",
     "report_vs/artifacts/insights_final",
@@ -66,6 +71,7 @@ PRODUCTION_LLM_NAMESPACES: tuple[str, ...] = (
     "report_vs/artifacts/regenerate/summary",
     "report_vs/artifacts/summary",
     "report_vs/context_category_fit",
+    "report_vs/context_category_fit_repair",
     "report_vs/doc_map",
     "report_vs/evidence_packs/contradictions",
     "report_vs/evidence_packs/findings",
@@ -78,6 +84,7 @@ PRODUCTION_LLM_NAMESPACES: tuple[str, ...] = (
     "report_vs/evidence_packs/scope",
     "report_vs/figure_caption",
     "report_vs/taxonomy",
+    "report_vs/taxonomy_repair",
     "report_vs/validate/grounding",
     "report_vs/validate/semantic",
     "signal_generation/synthesis",
@@ -299,7 +306,7 @@ def execution_policies_from_config(
         if not key or not isinstance(raw_value, dict):
             raise AppError(
                 code="llm_execution_policy_invalid",
-            message="Execution policy entries require a namespace and mapping value",
+                message="Execution policy entries require a namespace and mapping value",
                 retryable=False,
                 context={"namespace": str(raw_key)},
             )
