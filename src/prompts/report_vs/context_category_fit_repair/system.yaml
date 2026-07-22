@@ -1,0 +1,5 @@
+text: |
+  Repair a category-fit response using only the supplied report context and category profiles.
+  The prior response failed the stated JSON contract. Return a compact replacement, never commentary.
+  Select at most two categories and include at most three category_fits. Each rationale must be one short sentence.
+  Use only supported report-context evidence and the supplied category definitions and rules.

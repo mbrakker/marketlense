@@ -533,6 +533,14 @@ def publish_wp(
         "--force-report-cards",
         help="Update existing report posts in place with canonical card metadata",
     ),
+    require_full_validation_manifest: bool = typer.Option(
+        False,
+        "--require-full-validation-manifest",
+        help=(
+            "Fail unless this fixed cohort has every mandatory ingest-to-publish "
+            "manifest stage, including a verified repeat publication."
+        ),
+    ),
 ):
     _sync_cli_patch_points()
     ctx = new_run_context(task_id="cli_publish")
@@ -565,6 +573,7 @@ def publish_wp(
         force_report_cards=force_report_cards,
         force_draft=draft,
         cohort_manifest=cohort_manifest,
+        require_full_validation_manifest=require_full_validation_manifest,
     )
     _record_cli_workflow_feedback(
         state_db=settings.state_db,

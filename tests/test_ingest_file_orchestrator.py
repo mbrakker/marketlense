@@ -12,6 +12,7 @@ from src.contracts.files import DeleteFileResponse, FileStatResponse
 from src.contracts.ingest import IngestOutcome
 from src.contracts.pdf_utils import PdfEofCheckResponse, PdfIntegrityCheckResponse
 from src.contracts.remediation import RemediationListRequest
+from src.contracts.run_budget import RunBudget
 from src.orchestrators.ingest_file_orchestrator import (
     IngestFileDependencies,
     run_ingest_file,
@@ -179,6 +180,7 @@ def test_missing_eof_after_bounded_download_retries_stops_before_pipeline(
 ):
     file = _drive_file(md5_checksum=None)
     download_calls = {"count": 0}
+    download_budgets = []
     pipeline_calls = {"count": 0}
     state_records = []
 
@@ -194,6 +196,7 @@ def test_missing_eof_after_bounded_download_retries_stops_before_pipeline(
 
     def _download(req, _ctx):
         download_calls["count"] += 1
+        download_budgets.append(req.run_budget)
         return DriveDownloadToPathResponse(
             schema_version="1.0",
             file=req.file,
@@ -226,6 +229,13 @@ def test_missing_eof_after_bounded_download_retries_stops_before_pipeline(
             state_records.append(request) or SimpleNamespace()
         ),
     )
+    run_budget = RunBudget(
+        schema_version="1.0",
+        run_id=run_context.run_id,
+        publisher_name="",
+        usage_db_path=ingest_settings.usage_db_path,
+    )
+    dependencies = replace(dependencies, run_budget=run_budget)
 
     result = run_ingest_file(file, 0, ingest_settings, run_context, dependencies)
 
@@ -234,6 +244,7 @@ def test_missing_eof_after_bounded_download_retries_stops_before_pipeline(
         f"Downloaded PDF is missing EOF marker: {ingest_settings.cache_dir}/file-1.pdf"
     )
     assert download_calls["count"] == 2
+    assert download_budgets == [run_budget, run_budget]
     assert pipeline_calls["count"] == 0
     assert len(state_records) == 1
     assert state_records[0].state_db == ingest_settings.state_db

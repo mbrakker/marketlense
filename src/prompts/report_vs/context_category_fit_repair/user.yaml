@@ -1,0 +1,29 @@
+text: |
+  Report context:
+  {{ report_context_json }}
+
+  Category profiles:
+  {{ category_profiles_json }}
+
+  The previous response failed with: {{ repair_error }}.
+  This is bounded repair attempt {{ repair_attempt }}.
+
+  Previous response to repair (untrusted; emit a replacement, never commentary):
+  {{ repair_response }}
+
+  Return exactly one JSON object matching this schema:
+  {
+    "schema_version": "1.0",
+    "selected_category_ids": ["category_id"],
+    "category_fits": [
+      {
+        "category_id": "category_id",
+        "label": "Category label",
+        "fit_score": 0.0,
+        "decision": "primary",
+        "why_fit": "Short evidence-based sentence.",
+        "why_not_fit": "Short caveat or rejection sentence.",
+        "evidence_sections": ["Section title"]
+      }
+    ]
+  }

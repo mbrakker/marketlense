@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -106,7 +109,7 @@ def test_acquire_lock_does_not_steal_live_lock_with_tiny_request_ttl(
             schema_version="1.0",
             lock_path=str(lock_path),
             owner_id="owner-a",
-            pid=1001,
+            pid=os.getpid(),
             ttl_seconds=3600.0,
         ),
         _ctx(),
@@ -127,3 +130,32 @@ def test_acquire_lock_does_not_steal_live_lock_with_tiny_request_ttl(
     assert second.acquired is False
     assert second.conflict is not None
     assert second.conflict.owner_id == "owner-a"
+
+
+def test_acquire_lock_reclaims_a_dead_local_owner_before_ttl_expiry(
+    tmp_path: Path,
+) -> None:
+    lock_path = tmp_path / "ingest.lock"
+    owner = subprocess.Popen([sys.executable, "-c", "pass"])
+    owner.wait(timeout=5)
+    lock_path.write_text(
+        '{"owner_id":"interrupted-owner","pid":'
+        + str(owner.pid)
+        + ',"created_at":9999999999.0,"ttl_seconds":7200.0}',
+        encoding="utf-8",
+    )
+
+    acquired = acquire_lock(
+        LockAcquireRequest(
+            schema_version="1.0",
+            lock_path=str(lock_path),
+            owner_id="replacement-owner",
+            pid=os.getpid(),
+            ttl_seconds=7200.0,
+        ),
+        _ctx(),
+    )
+
+    assert acquired.acquired is True
+    assert acquired.lock is not None
+    assert acquired.lock.owner_id == "replacement-owner"

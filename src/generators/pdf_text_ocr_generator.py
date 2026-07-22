@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import asdict
+from hashlib import sha256
 from pathlib import Path
 
 from src.contracts.files import FileStatRequest
@@ -242,7 +243,10 @@ def recover_pdf_text_with_ocr(
                 "source_page_end": chunk.end_page_number,
                 "resolved_model": chunk_response.model,
                 "request_id": chunk_response.request_id,
-                "raw_response": chunk_response.raw_text,
+                "response_chars": len(chunk_response.raw_text or ""),
+                "response_sha256": sha256(
+                    (chunk_response.raw_text or "").encode("utf-8")
+                ).hexdigest(),
             }
         )
 
@@ -444,7 +448,10 @@ def _run_ocr_chunk(
                 "requested_model": candidate_model,
                 "resolved_model": response.model,
                 "request_id": response.request_id or "",
-                "raw_response": response.raw_text,
+                "response_chars": len(response.raw_text or ""),
+                "response_sha256": sha256(
+                    (response.raw_text or "").encode("utf-8")
+                ).hexdigest(),
                 "page_count": len(response.pages),
             },
         )

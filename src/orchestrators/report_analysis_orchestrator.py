@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from typing import Any, List, Optional
 
 from src.contracts.regeneration import (
@@ -50,6 +50,9 @@ from src.orchestrators._report_analysis_orchestrator.payload import (
     _ensure_report_payload_complete,
     _serialize_context_category_fit_payload,
 )
+from src.orchestrators._report_analysis_orchestrator.manifest import (
+    record_validation_analysis_stage,
+)
 from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
     BROAD_TARGETS,
     RULE_ID_RE,
@@ -84,6 +87,7 @@ from src.orchestrators._report_analysis_orchestrator.vector_store import (
 )
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
+from src.utils.structured_output import StructuredOutputFailure
 
 __all__ = [
     "run_report_analysis",
@@ -144,6 +148,78 @@ def _artifact_family_statuses(artifacts_payload: Any) -> dict[str, str]:
     return statuses
 
 
+def _category_fit_ambiguity_ids(category_state: Any) -> list[str]:
+    """Return the selected non-rejected categories that still need one repair."""
+    assignment = getattr(category_state, "category_assignment", None)
+    selected = set(getattr(assignment, "categories", ()) or ())
+    fit_response = getattr(category_state, "fit_response", None)
+    return [
+        str(fit.category_id)
+        for fit in (getattr(fit_response, "fits", ()) or ())
+        if str(fit.category_id) in selected
+        and str(fit.remediation_signal) == "topic_semantics_ambiguous"
+    ]
+
+
+def _resolve_taxonomy_with_repair(
+    runtime: ReportRuntimeState,
+    mode_ctx: Any,
+    vector_store_id: str | None,
+    dependencies: ReportAnalysisDependencies,
+    *,
+    openai_client=None,
+):
+    """Run taxonomy once, then one source-backed repair for output-contract failures."""
+    try:
+        return (
+            _resolve_taxonomy(
+                runtime,
+                mode_ctx,
+                vector_store_id,
+                dependencies,
+                openai_client=openai_client,
+            ),
+            False,
+        )
+    except AppError as exc:
+        if exc.code not in {"taxonomy_invalid_json", "taxonomy_schema_invalid"}:
+            raise
+        logger.info(
+            log_event(
+                mode_ctx,
+                role="orchestrator",
+                event="taxonomy_targeted_repair_started",
+                module=logger.name,
+                fields={
+                    "file_id": runtime.file.file_id,
+                    "error_code": exc.code,
+                    "repair_attempt": 1,
+                },
+            )
+        )
+        return (
+            _resolve_taxonomy(
+                runtime,
+                mode_ctx,
+                vector_store_id,
+                dependencies,
+                openai_client=openai_client,
+                repair_attempt=1,
+                repair_error=(
+                    exc.schema_errors
+                    if isinstance(exc, StructuredOutputFailure) and exc.schema_errors
+                    else exc.code
+                ),
+                repair_response=(
+                    exc.response_text
+                    if isinstance(exc, StructuredOutputFailure)
+                    else ""
+                ),
+            ),
+            True,
+        )
+
+
 def run_report_analysis(
     runtime: ReportRuntimeState,
     source: ReportSourceState,
@@ -175,7 +251,15 @@ def run_report_analysis(
                 },
             )
         )
-    mode_ctx = child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:vector_store")
+    mode_ctx = replace(
+        child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:vector_store"),
+        report_id=runtime.file.file_id,
+        source_identity_id=runtime.md5 or runtime.file.file_id,
+        publisher_id=runtime.publisher_name or "unattributed",
+        workflow="report_analysis",
+        stage="vector_store",
+        artifact_family="report",
+    )
     vector_state = _await_vector_store_indexing(
         indexing_state,
         runtime,
@@ -194,6 +278,14 @@ def run_report_analysis(
         indexed_at_utc=vector_state.indexed_at_utc,
         openai_file_id=vector_state.openai_file_id,
         last_error=vector_state.last_error,
+    )
+    record_validation_analysis_stage(
+        settings=runtime.settings,
+        ctx=mode_ctx,
+        stage="source_validation",
+        source_identity_id=runtime.md5 or runtime.file.file_id,
+        input_artifact_ids=(runtime.file.file_id, runtime.md5 or ""),
+        output_artifact_ids=(vector_state.vector_store_id or "",),
     )
 
     data = selection.payload
@@ -225,7 +317,7 @@ def run_report_analysis(
             max_workers=min(runtime.report_worker_limit, 2)
         ) as executor:
             taxonomy_future = executor.submit(
-                _resolve_taxonomy,
+                _resolve_taxonomy_with_repair,
                 runtime,
                 mode_ctx,
                 vector_state.vector_store_id,
@@ -244,7 +336,7 @@ def run_report_analysis(
                 source_url=runtime.source_url,
                 **evidence_kwargs,
             )
-            taxonomy_state = taxonomy_future.result()
+            taxonomy_state, taxonomy_repaired = taxonomy_future.result()
             try:
                 packs = evidence_future.result()
             except Exception as exc:
@@ -263,7 +355,7 @@ def run_report_analysis(
             )
         )
     else:
-        taxonomy_state = _resolve_taxonomy(
+        taxonomy_state, taxonomy_repaired = _resolve_taxonomy_with_repair(
             runtime,
             mode_ctx,
             vector_state.vector_store_id,
@@ -274,6 +366,25 @@ def run_report_analysis(
     data.taxonomy = taxonomy_state.taxonomy
     data.region = taxonomy_state.region
     data.time_period = taxonomy_state.time_period
+    record_validation_analysis_stage(
+        settings=runtime.settings,
+        ctx=mode_ctx,
+        stage="taxonomy",
+        source_identity_id=runtime.md5 or runtime.file.file_id,
+        input_artifact_ids=(vector_state.vector_store_id or "",),
+        output_artifact_ids=tuple(taxonomy_state.taxonomy),
+        repair_disposition=("targeted_repair" if taxonomy_repaired else "not_required"),
+    )
+    if taxonomy_repaired:
+        record_validation_analysis_stage(
+            settings=runtime.settings,
+            ctx=mode_ctx,
+            stage="taxonomy_structured_output_repair",
+            source_identity_id=runtime.md5 or runtime.file.file_id,
+            input_artifact_ids=(vector_state.vector_store_id or "",),
+            output_artifact_ids=tuple(taxonomy_state.taxonomy),
+            repair_disposition="targeted_repair",
+        )
 
     try:
         if not runtime.parallel_within_file:
@@ -360,17 +471,82 @@ def run_report_analysis(
         openai_file_id=vector_state.openai_file_id,
         last_error=vector_state.last_error,
     )
-
-    context_category_state = _resolve_categories_from_report_context(
-        runtime,
-        title=data.title,
-        publisher=data.publisher,
-        taxonomy_state=taxonomy_state,
-        evidence_pack_paths=mode_evidence_paths,
-        mode_ctx=mode_ctx,
-        dependencies=dependencies,
-        openai_client=category_fit_openai_client,
+    record_validation_analysis_stage(
+        settings=runtime.settings,
+        ctx=mode_ctx,
+        stage="evidence_generation",
+        source_identity_id=runtime.md5 or runtime.file.file_id,
+        input_artifact_ids=(vector_state.vector_store_id or "",),
+        output_artifact_ids=tuple(mode_evidence_paths.values()),
     )
+
+    category_repaired = False
+    try:
+        context_category_state = _resolve_categories_from_report_context(
+            runtime,
+            title=data.title,
+            publisher=data.publisher,
+            taxonomy_state=taxonomy_state,
+            evidence_pack_paths=mode_evidence_paths,
+            mode_ctx=mode_ctx,
+            dependencies=dependencies,
+            openai_client=category_fit_openai_client,
+        )
+        ambiguity_ids = _category_fit_ambiguity_ids(context_category_state)
+        if ambiguity_ids:
+            raise AppError(
+                code="category_fit_contradiction",
+                message="Selected categories remain semantically ambiguous",
+                retryable=False,
+                context={"category_ids": ambiguity_ids},
+            )
+    except AppError as exc:
+        if exc.code not in {
+            "context_category_fit_invalid_json",
+            "context_category_fit_schema_invalid",
+            "openai_response_empty",
+            "openai_response_invalid_json",
+            "openai_response_json_type_invalid",
+            "category_fit_contradiction",
+        }:
+            raise
+        logger.info(
+            log_event(
+                mode_ctx,
+                role="orchestrator",
+                event="context_category_fit_targeted_repair_started",
+                module=logger.name,
+                fields={
+                    "file_id": runtime.file.file_id,
+                    "error_code": exc.code,
+                    "repair_attempt": 1,
+                },
+            )
+        )
+        context_category_state = _resolve_categories_from_report_context(
+            runtime,
+            title=data.title,
+            publisher=data.publisher,
+            taxonomy_state=taxonomy_state,
+            evidence_pack_paths=mode_evidence_paths,
+            mode_ctx=mode_ctx,
+            dependencies=dependencies,
+            openai_client=category_fit_openai_client,
+            repair_attempt=1,
+            repair_error=exc.code,
+            repair_response=(
+                exc.response_text if isinstance(exc, StructuredOutputFailure) else ""
+            ),
+        )
+        category_repaired = True
+        ambiguity_ids = _category_fit_ambiguity_ids(context_category_state)
+        if ambiguity_ids:
+            raise AppError(
+                code="category_fit_contradiction",
+                message="Targeted category repair left selected categories ambiguous",
+                retryable=False,
+                context={"category_ids": ambiguity_ids, "repair_attempt": 1},
+            )
     category_assignment = context_category_state.category_assignment
     data.categories = category_assignment.categories
     for pack_name, payload in (
@@ -395,6 +571,25 @@ def run_report_analysis(
             child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:{pack_name}"),
         )
         mode_evidence_paths[pack_name] = stored_pack.output_path
+    record_validation_analysis_stage(
+        settings=runtime.settings,
+        ctx=mode_ctx,
+        stage="category_fit",
+        source_identity_id=runtime.md5 or runtime.file.file_id,
+        input_artifact_ids=tuple(mode_evidence_paths.values()),
+        output_artifact_ids=tuple(category_assignment.categories),
+        repair_disposition=("targeted_repair" if category_repaired else "not_required"),
+    )
+    if category_repaired:
+        record_validation_analysis_stage(
+            settings=runtime.settings,
+            ctx=mode_ctx,
+            stage="category_fit_structured_output_repair",
+            source_identity_id=runtime.md5 or runtime.file.file_id,
+            input_artifact_ids=("category_fit",),
+            output_artifact_ids=tuple(category_assignment.categories),
+            repair_disposition="targeted_repair",
+        )
     if vector_state.vector_store_id:
         dependencies.vector_store_update_metadata(
             VectorStoreUpdateMetadataRequest(
@@ -502,6 +697,14 @@ def run_report_analysis(
             indexed_at_utc=vector_state.indexed_at_utc,
             openai_file_id=vector_state.openai_file_id,
             last_error=vector_state.last_error,
+        )
+        record_validation_analysis_stage(
+            settings=runtime.settings,
+            ctx=mode_ctx,
+            stage="artifact_generation",
+            source_identity_id=runtime.md5 or runtime.file.file_id,
+            input_artifact_ids=tuple(mode_evidence_paths.values()),
+            output_artifact_ids=(mode_evidence_paths["artifacts"],),
         )
     except AppError as exc:
         logger.info(
@@ -657,6 +860,39 @@ def run_report_analysis(
         if regeneration_attempts:
             mode_evidence_paths["artifacts"] = regeneration_attempts[-1].artifacts_path
 
+    validation_outcome = "succeeded" if validation_report.status == "pass" else "failed"
+    validation_failure = (
+        "" if validation_outcome == "succeeded" else "validation_failed"
+    )
+    for stage in ("grounding_validation", "semantic_validation"):
+        record_validation_analysis_stage(
+            settings=runtime.settings,
+            ctx=mode_ctx,
+            stage=stage,
+            source_identity_id=runtime.md5 or runtime.file.file_id,
+            input_artifact_ids=(mode_evidence_paths.get("artifacts", ""),),
+            output_artifact_ids=(mode_evidence_paths.get("validation", ""),),
+            terminal_outcome=validation_outcome,
+            failure_code=validation_failure,
+            repair_disposition=(
+                "targeted_repair" if regeneration_attempts else "not_required"
+            ),
+        )
+    if regeneration_attempts:
+        record_validation_analysis_stage(
+            settings=runtime.settings,
+            ctx=mode_ctx,
+            stage="regeneration",
+            source_identity_id=runtime.md5 or runtime.file.file_id,
+            input_artifact_ids=(mode_evidence_paths.get("artifacts", ""),),
+            output_artifact_ids=tuple(
+                attempt.artifacts_path for attempt in regeneration_attempts
+            ),
+            terminal_outcome=validation_outcome,
+            failure_code=validation_failure,
+            repair_disposition="targeted_repair",
+        )
+
     _, editorial_after_path = _evaluate_and_store_public_editorial_quality(
         runtime=runtime,
         dependencies=dependencies,
@@ -700,6 +936,16 @@ def run_report_analysis(
         mode_ctx,
     ).output_path
     mode_evidence_paths[snapshot_name] = snapshot_path
+    record_validation_analysis_stage(
+        settings=runtime.settings,
+        ctx=mode_ctx,
+        stage="analysis_complete",
+        source_identity_id=runtime.md5 or runtime.file.file_id,
+        input_artifact_ids=tuple(mode_evidence_paths.values()),
+        output_artifact_ids=(snapshot_path,),
+        terminal_outcome=validation_outcome,
+        failure_code=validation_failure,
+    )
     logger.info(
         log_event(
             mode_ctx,

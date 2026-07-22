@@ -25,6 +25,7 @@ from src.orchestrators.pipeline_preflight_orchestrator import (
     run_pipeline_preflight,
 )
 from src.utils.errors import AppError
+from src.utils.model_resolver import registered_production_llm_namespaces
 
 
 def _ctx() -> RunContext:
@@ -233,6 +234,90 @@ def test_pipeline_preflight_blocks_missing_credential_before_side_effects(
     )
 
 
+def test_pipeline_preflight_blocks_incomplete_explicit_llm_policy_matrix(
+    tmp_path,
+    ingest_settings,
+) -> None:
+    settings = replace(
+        ingest_settings,
+        llm_execution_policies={
+            "report_vs": {
+                "provider": "openai",
+                "model": "gpt-4.1-mini",
+                "temperature": 0.0,
+                "provider_retry_count": 0,
+            }
+        },
+    )
+    report = run_pipeline_preflight(
+        PipelinePreflightRequest(
+            schema_version="1.0",
+            workflow="report_pipeline",
+            planned_side_effects=["model"],
+            settings=settings,
+            prompt_namespaces=["report_vs/doc_map"],
+            require_llm=True,
+            require_drive=False,
+            require_publish=False,
+            require_browser=False,
+            require_live_endpoints=False,
+        ),
+        _ctx(),
+        dependencies=_deps(tmp_path),
+    )
+
+    assert report.passed is False
+    assert report.blockers[-1].check_name == "llm_execution_policy_matrix"
+    assert report.blockers[-1].code == "llm_execution_policy_unknown_namespace"
+
+
+def test_pipeline_preflight_persists_complete_resolved_policy_matrix(
+    tmp_path,
+    ingest_settings,
+) -> None:
+    settings = replace(
+        ingest_settings,
+        output_dir=str(tmp_path / "out"),
+        cache_dir=str(tmp_path / "cache"),
+        state_db=str(tmp_path / "state" / "state.sqlite"),
+        reports_db=str(tmp_path / "state" / "reports.sqlite"),
+        llm_execution_policies={
+            namespace: {
+                "provider": "openai",
+                "model": "gpt-4.1-mini",
+                "temperature": 0.0,
+                "provider_retry_count": 0,
+            }
+            for namespace in registered_production_llm_namespaces()
+        },
+    )
+
+    report = run_pipeline_preflight(
+        PipelinePreflightRequest(
+            schema_version="1.0",
+            workflow="report_pipeline",
+            planned_side_effects=["model"],
+            settings=settings,
+            prompt_namespaces=["report_vs/doc_map"],
+            require_llm=True,
+            require_drive=False,
+            require_publish=False,
+            require_browser=False,
+            require_live_endpoints=False,
+        ),
+        _ctx(),
+        dependencies=_deps(tmp_path),
+    )
+
+    matrix_path = Path(settings.output_dir) / "preflight" / "r.llm_policy_matrix.json"
+    payload = json.loads(matrix_path.read_text(encoding="utf-8"))
+    assert report.passed is True
+    assert len(payload["resolved_matrix"]) == len(
+        registered_production_llm_namespaces()
+    )
+    assert payload["resolved_matrix"][0]["provider"] == "openai"
+
+
 def test_pipeline_preflight_blocks_missing_prompt_namespace(
     tmp_path,
     ingest_settings,
@@ -437,11 +522,13 @@ def test_report_pipeline_prompt_namespaces_follow_enabled_settings(
             "rank_candidates/crop_refine",
             "pdf_text/ocr_fallback",
             "report_vs/context_category_fit",
+            "report_vs/context_category_fit_repair",
             "report_vs/doc_map",
             "report_vs/evidence_packs/findings",
             "report_vs/evidence_packs/scope",
             "report_vs/figure_caption",
             "report_vs/taxonomy",
+            "report_vs/taxonomy_repair",
         }
     )
 

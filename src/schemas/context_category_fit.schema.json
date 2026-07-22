@@ -71,7 +71,25 @@
               "type": "string"
             }
           },
+          "supported_topic_rule_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "rejected_topic_rules": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "rejected_topic_rule_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "rule_evidence_sections": {
             "type": "array",
             "items": {
               "type": "string"

@@ -287,6 +287,9 @@ def _resolve_taxonomy(
     dependencies: ReportAnalysisDependencies,
     *,
     openai_client=None,
+    repair_attempt: int = 0,
+    repair_error: str = "",
+    repair_response: str = "",
 ) -> _TaxonomyState:
     taxonomy_ctx = child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:taxonomy")
     kwargs = {}
@@ -306,6 +309,12 @@ def _resolve_taxonomy(
             publisher_name=runtime.publisher_name,
             source_url=runtime.source_url,
             publisher_id=runtime.publisher_name,
+            prompt_namespace=(
+                "report_vs/taxonomy_repair" if repair_attempt else "report_vs/taxonomy"
+            ),
+            repair_attempt=repair_attempt,
+            repair_error=repair_error,
+            repair_response=repair_response,
         ),
         taxonomy_ctx,
         **kwargs,
@@ -327,6 +336,9 @@ def _resolve_categories_from_report_context(
     mode_ctx,
     dependencies: ReportAnalysisDependencies,
     openai_client=None,
+    repair_attempt: int = 0,
+    repair_error: str = "",
+    repair_response: str = "",
 ) -> _ContextCategoryState:
     category_ctx = child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:categories")
     report_metadata = ReportMetadataGetResponse(
@@ -372,6 +384,14 @@ def _resolve_categories_from_report_context(
             publisher_name=runtime.publisher_name,
             report_name=runtime.source_report_name or runtime.report_title,
             source_url=runtime.source_url,
+            prompt_namespace=(
+                "report_vs/context_category_fit_repair"
+                if repair_attempt
+                else "report_vs/context_category_fit"
+            ),
+            repair_error=repair_error,
+            repair_attempt=repair_attempt,
+            repair_response=repair_response,
         ),
         category_ctx,
         **kwargs,

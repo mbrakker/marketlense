@@ -13,6 +13,25 @@
 
 The [top failure runbooks](top_failure_runbooks.md) contain typed failure-specific checks and bounded remediation commands. `docs/ops/failure_remediation.yaml` is the machine-validated runbook registry.
 
+Local workflow locks are reclaimed when their owner PID is no longer alive;
+permission-denied inspection remains conservative and falls back to the
+configured TTL. This prevents a terminated local ingest process from blocking
+a safe retry for the full lock window without stealing a lock held by a running
+process.
+
+## Failure-specific report recovery
+
+`src/orchestrators/failure_recovery_registry.py` is the finite recovery matrix
+for report-generation and publication failures. It records the narrow retry
+scope, maximum attempt, required validated checkpoint, reusable artifacts,
+invalidations, action, and terminal fallback in the durable remediation row.
+For example, invalid taxonomy JSON may rerun taxonomy only from a retained
+source checkpoint; a category contradiction may rerun category fit only; a
+final-HTML identifier failure may rerender only; and a WordPress readback
+failure may reconcile the existing publication only. A matrix entry creates a
+bounded durable job, but the reaper still requires checkpoint, budget,
+idempotency, and registered-executor proof before it performs any side effect.
+
 ## Read-only remediation soak and activation gate
 
 The remediation ledger is the canonical workflow-wide failure backlog. UI

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
+from types import SimpleNamespace
 
 import pytest
 
@@ -14,6 +16,9 @@ from src.contracts.validation_run_manifest import (
 )
 from src.orchestrators.publish_orchestrator import (
     _record_validation_cohort_publish_outcomes,
+)
+from src.orchestrators._report_analysis_orchestrator.manifest import (
+    record_validation_analysis_stage,
 )
 from src.services.report_store_service import (
     audit_validation_run_manifest,
@@ -180,6 +185,55 @@ def test_manifest_rejects_nonterminal_outcomes_at_closure(tmp_path) -> None:
         )
 
 
+def test_analysis_stage_recorder_uses_inherited_validation_provenance(tmp_path) -> None:
+    db_path = str(tmp_path / "reports.sqlite")
+    _create(db_path)
+    ctx = replace(
+        _ctx(),
+        producer_commit_sha="build-sha",
+        validation_run_id="validation-1",
+        cohort_id="cohort-1",
+        report_id="report-1",
+        source_identity_id="source-1",
+        publisher_id="publisher-1",
+        configuration_hash="config-hash",
+        policy_hash="policy-hash",
+    )
+
+    record_validation_analysis_stage(
+        settings=SimpleNamespace(reports_db=db_path),
+        ctx=ctx,
+        stage="taxonomy",
+        source_identity_id="source-1",
+        input_artifact_ids=("vector-store-1",),
+        output_artifact_ids=("payments",),
+    )
+
+    audit = audit_validation_run_manifest(
+        ValidationRunManifestAuditRequest(
+            schema_version="1.0", db_path=db_path, validation_run_id="validation-1"
+        ),
+        ctx,
+    )
+    assert audit.complete is False
+    assert {
+        (item.stage, item.terminal_outcome, item.entity_count)
+        for item in audit.stage_totals
+    } == {("taxonomy", "succeeded", 1)}
+
+
+def test_analysis_stage_recorder_rejects_missing_validation_provenance(
+    tmp_path,
+) -> None:
+    with pytest.raises(AppError, match="missing inherited provenance"):
+        record_validation_analysis_stage(
+            settings=SimpleNamespace(reports_db=str(tmp_path / "reports.sqlite")),
+            ctx=replace(_ctx(), validation_run_id="validation-1"),
+            stage="taxonomy",
+            source_identity_id="source-1",
+        )
+
+
 def test_wordpress_outcome_closes_the_matching_immutable_cohort_member(
     tmp_path,
 ) -> None:
@@ -240,5 +294,41 @@ def test_wordpress_outcome_closes_the_matching_immutable_cohort_member(
     assert audit.complete is True
     assert audit.final_cohort_report_ids == ("report-1",)
     assert {(item.stage, item.terminal_outcome) for item in audit.stage_totals} == {
-        ("wordpress_write", "published_verified")
+        ("publication_preflight", "succeeded"),
+        ("wordpress_write", "succeeded"),
+        ("authenticated_readback", "published_verified"),
     }
+
+
+def test_full_manifest_audit_reports_missing_mandatory_stages(tmp_path) -> None:
+    db_path = str(tmp_path / "reports.sqlite")
+    _create(db_path)
+    record_validation_run_manifest_stage(
+        ValidationRunManifestRecordRequest(
+            schema_version="1.0",
+            db_path=db_path,
+            record=_record(attempt=1, stage="publication", terminal=True),
+        ),
+        _ctx(),
+    )
+
+    audit = audit_validation_run_manifest(
+        ValidationRunManifestAuditRequest(
+            schema_version="1.0",
+            db_path=db_path,
+            validation_run_id="validation-1",
+            require_full_workflow=True,
+        ),
+        _ctx(),
+    )
+
+    assert audit.complete is False
+    assert "report|report-1|source-1:admission_preflight" in (
+        audit.missing_required_stage_entity_ids
+    )
+    assert "report|report-1|source-1:ingest" in (
+        audit.missing_required_stage_entity_ids
+    )
+    assert "report|report-1|source-1:repeat_publication" in (
+        audit.missing_required_stage_entity_ids
+    )

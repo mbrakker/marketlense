@@ -35,3 +35,61 @@ class RunContext(SemanticIdContract):
             "doc": "Trusted producer revision supplied by runtime environment, when available."
         },
     )
+    validation_run_id: str = field(
+        default="",
+        metadata={
+            "doc": "Immutable validation-run identity propagated to runtime events."
+        },
+    )
+    cohort_id: str = field(
+        default="",
+        metadata={
+            "doc": "Immutable admitted cohort identity when the run is cohort-bound."
+        },
+    )
+    report_id: str = field(
+        default="",
+        metadata={"doc": "Current report identity when a span is report-scoped."},
+    )
+    source_identity_id: str = field(
+        default="",
+        metadata={
+            "doc": "Immutable source checksum or equivalent identity for the current report."
+        },
+    )
+    publisher_id: str = field(
+        default="",
+        metadata={
+            "doc": "Current publisher identity, or an explicit unattributed sentinel."
+        },
+    )
+    workflow: str = field(
+        default="",
+        metadata={"doc": "Workflow owning the current runtime span."},
+    )
+    stage: str = field(
+        default="",
+        metadata={"doc": "Workflow stage owning the current runtime span."},
+    )
+    artifact_family: str = field(
+        default="",
+        metadata={"doc": "Artifact family produced or validated by the current span."},
+    )
+    configuration_hash: str = field(
+        default="",
+        metadata={"doc": "Resolved configuration identity for validation attribution."},
+    )
+    policy_hash: str = field(
+        default="",
+        metadata={"doc": "Resolved policy identity for validation attribution."},
+    )
+    execution_plan_hash: str = field(
+        default="",
+        metadata={"doc": "Deterministic execution-plan identity when applicable."},
+    )
+    repair_attempt: int = field(
+        default=0,
+        metadata={
+            "doc": "Bounded targeted-repair attempt number for the current span."
+        },
+    )

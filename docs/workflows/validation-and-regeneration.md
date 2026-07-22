@@ -21,10 +21,17 @@ Prompt fixtures and regression controls are documented in [quality testing](../q
 
 Release and reliability runs use an immutable admitted cohort. The cohort is
 persisted before report generation, and its content hash is the cohort ID.
-The canonical validation-run manifest records each admitted member at the
-`admission_preflight` stage before any report-processing work. It then records
-the outcome of the ingest stage against the same member; a failed member is
-never replaced.
+Drive discovery carries the same resolved run-budget and usage-ledger path as
+the later ingest pipeline, so an isolated canary cannot silently reserve shared
+budget capacity before membership is frozen.
+The canonical validation-run manifest records every admitted member from
+`discovery`, `candidate_qualification`, and `admission_preflight` before
+report-processing work, then records acquisition, source preparation and
+validation, evidence, taxonomy/category structured-output repair where used,
+artifact generation, validation/regeneration, rendering, final HTML
+validation, publication preflight, the WordPress transaction, authenticated
+readback, and unchanged-repeat publication. A failed member is never
+replaced.
 
 Each manifest record retains the validation-run and cohort IDs, report/source
 identity, workflow run, attempt and parent attempt, artifact inputs/outputs,
@@ -32,8 +39,10 @@ timestamps, outcome, typed failure, repair disposition, supersession state,
 idempotency state, and configuration/policy/build provenance. Terminal
 outcomes are deliberately constrained to `published_verified`,
 `publish_ready`, `blocked`, `permanent_failure`, `abstained`, `cancelled`, or
-`superseded`. Manifest audit fails closed when a current admitted member has no
-such terminal outcome.
+`superseded`. A normal audit fails closed when a current admitted member has no
+such terminal outcome. The release audit additionally requires every mandatory
+stage group for every final-cohort report; a terminal row alone cannot conceal
+an incomplete funnel.
 
 ## Retained claim validation
 

@@ -15246,6 +15246,12 @@
         "label": {
           "type": "string"
         },
+        "rejected_topic_rule_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "rejected_topic_rules": {
           "items": {
             "type": "string"
@@ -15255,11 +15261,23 @@
         "remediation_signal": {
           "type": "string"
         },
+        "rule_evidence_sections": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "schema_version": {
           "type": "string"
         },
         "semantic_rule_status": {
           "type": "string"
+        },
+        "supported_topic_rule_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "supported_topic_rules": {
           "items": {
@@ -15296,6 +15314,15 @@
           "type": "string"
         },
         "publisher_name": {
+          "type": "string"
+        },
+        "repair_attempt": {
+          "type": "integer"
+        },
+        "repair_error": {
+          "type": "string"
+        },
+        "repair_response": {
           "type": "string"
         },
         "report_name": {
@@ -24671,6 +24698,12 @@
         "api_key": {
           "type": "string"
         },
+        "artifact_family": {
+          "type": "string"
+        },
+        "configuration_hash": {
+          "type": "string"
+        },
         "context_compaction_policy": {
           "$ref": "#/$defs/src.contracts.llm.LLMContextCompactionPolicy"
         },
@@ -24722,6 +24755,15 @@
         "model_pricing": {
           "type": "string"
         },
+        "plan_hash": {
+          "type": "string"
+        },
+        "policy_hash": {
+          "type": "string"
+        },
+        "producer_build_identity": {
+          "type": "string"
+        },
         "prompt_content_hash": {
           "type": "string"
         },
@@ -24735,7 +24777,16 @@
         "prompt_namespace": {
           "type": "string"
         },
+        "publisher_id": {
+          "type": "string"
+        },
         "publisher_name": {
+          "type": "string"
+        },
+        "repair_attempt": {
+          "type": "integer"
+        },
+        "report_id": {
           "type": "string"
         },
         "report_name": {
@@ -24786,6 +24837,9 @@
         "source_url": {
           "type": "string"
         },
+        "stage": {
+          "type": "string"
+        },
         "system_prompt": {
           "type": "string"
         },
@@ -24806,6 +24860,12 @@
           "type": "string"
         },
         "user_prompt": {
+          "type": "string"
+        },
+        "validation_run_id": {
+          "type": "string"
+        },
+        "workflow": {
           "type": "string"
         },
         "workflow_id": {
@@ -33579,16 +33639,43 @@
     "src.contracts.run_context.RunContext": {
       "additionalProperties": false,
       "properties": {
+        "artifact_family": {
+          "type": "string"
+        },
+        "cohort_id": {
+          "type": "string"
+        },
+        "configuration_hash": {
+          "type": "string"
+        },
+        "execution_plan_hash": {
+          "type": "string"
+        },
         "parent_span_id": {
           "type": "string"
         },
+        "policy_hash": {
+          "type": "string"
+        },
         "producer_commit_sha": {
+          "type": "string"
+        },
+        "publisher_id": {
+          "type": "string"
+        },
+        "repair_attempt": {
+          "type": "integer"
+        },
+        "report_id": {
           "type": "string"
         },
         "run_id": {
           "type": "string"
         },
         "schema_version": {
+          "type": "string"
+        },
+        "source_identity_id": {
           "type": "string"
         },
         "span_depth": {
@@ -33600,10 +33687,19 @@
         "span_name": {
           "type": "string"
         },
+        "stage": {
+          "type": "string"
+        },
         "task_id": {
           "type": "string"
         },
         "trace_id": {
+          "type": "string"
+        },
+        "validation_run_id": {
+          "type": "string"
+        },
+        "workflow": {
           "type": "string"
         }
       },
@@ -36770,6 +36866,15 @@
         "publisher_name": {
           "type": "string"
         },
+        "repair_attempt": {
+          "type": "integer"
+        },
+        "repair_error": {
+          "type": "string"
+        },
+        "repair_response": {
+          "type": "string"
+        },
         "report_id": {
           "type": "string"
         },
@@ -39641,6 +39746,9 @@
         "db_path": {
           "type": "string"
         },
+        "require_full_workflow": {
+          "type": "boolean"
+        },
         "schema_version": {
           "type": "string"
         },
@@ -39674,6 +39782,12 @@
           "type": "array"
         },
         "incomplete_entity_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "missing_required_stage_entity_ids": {
           "items": {
             "type": "string"
           },

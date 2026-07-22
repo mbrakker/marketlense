@@ -275,11 +275,25 @@ llm_execution_policies:
     model: "gpt-5-mini"
     temperature: 0.0
     seed_policy: inherit
-    max_output_tokens: 2048
+    max_output_tokens: 4096
     retrieval_mode: file_search
     timeout_seconds: 600
     provider_retry_count: 0
     structured_output_mode: json_object
+    fallback_policy: same_provider_only
+    pricing_key: "gpt-5-mini"
+  report_vs/taxonomy_repair:
+    schema_version: "1.0"
+    provider: openai
+    model: "gpt-5-mini"
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 4096
+    retrieval_mode: file_search
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    structured_output_schema_identity: "taxonomy.v1"
     fallback_policy: same_provider_only
     pricing_key: "gpt-5-mini"
   report_vs/context_category_fit:
@@ -288,7 +302,21 @@ llm_execution_policies:
     model: "gpt-5-mini"
     temperature: 0.0
     seed_policy: inherit
-    max_output_tokens: 2048
+    max_output_tokens: 4096
+    retrieval_mode: file_search
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    structured_output_schema_identity: "context_category_fit.v1"
+    fallback_policy: same_provider_only
+    pricing_key: "gpt-5-mini"
+  report_vs/context_category_fit_repair:
+    schema_version: "1.0"
+    provider: openai
+    model: "gpt-5-mini"
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 4096
     retrieval_mode: file_search
     timeout_seconds: 600
     provider_retry_count: 0

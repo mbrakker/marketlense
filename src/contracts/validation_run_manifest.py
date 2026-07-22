@@ -81,6 +81,15 @@ class ValidationRunManifestAuditRequest(SemanticIdContract):
     )
     db_path: str
     validation_run_id: ValidationRunId
+    require_full_workflow: bool = field(
+        default=False,
+        metadata={
+            "doc": (
+                "Require every mandatory ingest-to-publish stage before declaring "
+                "the validation run closed."
+            )
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -104,3 +113,12 @@ class ValidationRunManifestAuditResponse(SemanticIdContract):
     stage_totals: tuple[ValidationRunManifestStageTotal, ...]
     incomplete_entity_ids: tuple[str, ...]
     duplicate_current_entity_ids: tuple[str, ...]
+    missing_required_stage_entity_ids: tuple[str, ...] = field(
+        default=(),
+        metadata={
+            "doc": (
+                "Current final-cohort entity/stage pairs missing from a full "
+                "ingest-to-publish validation run."
+            )
+        },
+    )

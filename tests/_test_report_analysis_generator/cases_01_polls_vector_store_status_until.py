@@ -691,7 +691,10 @@ def test_run_report_analysis_uses_context_fit_categories_not_taxonomy_tags(tmp_p
                 "evidence_sections": ["Overview"],
                 "semantic_rule_status": "not_evaluated",
                 "supported_topic_rules": [],
+                "supported_topic_rule_ids": [],
                 "rejected_topic_rules": [],
+                "rejected_topic_rule_ids": [],
+                "rule_evidence_sections": [],
                 "remediation_signal": "",
             }
         ],

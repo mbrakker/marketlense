@@ -4,6 +4,7 @@ import json
 import logging
 import re
 from dataclasses import dataclass, replace
+from hashlib import sha256
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -425,7 +426,13 @@ def generate_figure_captions(
                     timeout_seconds=runtime.settings.figure_caption_timeout_seconds,
                     cost_ledger_path=runtime.settings.cost_ledger_path,
                     cost_daily_path=runtime.settings.cost_daily_path,
-                    usage_db_path=str(getattr(runtime.settings, "usage_db_path", "./state/llm_usage.sqlite")),
+                    usage_db_path=str(
+                        getattr(
+                            runtime.settings,
+                            "usage_db_path",
+                            "./state/llm_usage.sqlite",
+                        )
+                    ),
                     model_pricing=runtime.settings.model_pricing,
                     publisher_name=runtime.publisher_name,
                     report_name=runtime.source_report_name or runtime.report_title,
@@ -474,7 +481,10 @@ def generate_figure_captions(
                     fields={
                         "image_path": asset.image_path,
                         "error": error_message,
-                        "raw_response": raw_content,
+                        "response_chars": len(raw_content or ""),
+                        "response_sha256": sha256(
+                            (raw_content or "").encode("utf-8")
+                        ).hexdigest(),
                         "request_id": request_id or "",
                         "caption_source": caption_source,
                         "display_caption": display_caption,
@@ -496,8 +506,11 @@ def generate_figure_captions(
                     module=logger.name,
                     fields={
                         "image_path": asset.image_path,
-                        "caption": generated_caption,
-                        "raw_response": raw_content,
+                        "caption_chars": len(generated_caption or ""),
+                        "response_chars": len(raw_content or ""),
+                        "response_sha256": sha256(
+                            (raw_content or "").encode("utf-8")
+                        ).hexdigest(),
                         "request_id": request_id or "",
                         "caption_source": "generated",
                     },
@@ -517,7 +530,10 @@ def generate_figure_captions(
                 "prompt_namespace": prompt_namespace,
                 "prompt_system_sha256": prompt_set.system.sha256,
                 "prompt_user_sha256": prompt_set.user.sha256,
-                "raw_response": raw_content,
+                "response_chars": len(raw_content or ""),
+                "response_sha256": sha256(
+                    (raw_content or "").encode("utf-8")
+                ).hexdigest(),
                 "request_id": request_id,
                 "prompt_tokens": prompt_tokens,
                 "completion_tokens": completion_tokens,

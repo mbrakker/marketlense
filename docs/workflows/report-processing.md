@@ -57,6 +57,17 @@ Publish a fixed cohort with the same `--cohort-manifest <path>` passed to
 `publish-wp`. This closes each cohort member with a typed WordPress outcome:
 a verified write or authenticated idempotent readback becomes
 `published_verified`; an unattempted or unverified member is `blocked`.
+For the final repeat, pass `--require-full-validation-manifest`. It verifies
+the retained stage chain from discovery and admission through source
+preparation, analysis, rendering, publication preflight, authenticated
+readback, and repeat publication. A terminal outcome by itself is not enough
+to close a reliability run. The second, unchanged publication must retain a
+`repeat_publication` stage with reused idempotency and no write.
+
+Taxonomy and context-category JSON are schema constrained, deterministically
+parsed and normalized, then given exactly one source-backed structured-output
+repair when their first response is invalid. An exhausted repair remains a
+typed failure; it never becomes an empty successful analysis package.
 Use `--rescan` only when the normal cursor should be bypassed. Queue operations and checkpoint recovery are
 documented in [asynchronous workflow queue](../architecture/asynchronous-workflow-queue.md).
 See [validation and regeneration](validation-and-regeneration.md), [artifact

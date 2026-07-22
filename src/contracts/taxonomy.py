@@ -43,12 +43,33 @@ class TaxonomyExtractRequest(SemanticIdContract):
     )
     source_url: str = field(
         default="",
-        metadata={"doc": "Source/report URL context recorded with downstream LLM usage."},
+        metadata={
+            "doc": "Source/report URL context recorded with downstream LLM usage."
+        },
     )
-    workflow: str = field(default="report_analysis", metadata={"doc": "Owning workflow."})
+    workflow: str = field(
+        default="report_analysis", metadata={"doc": "Owning workflow."}
+    )
     stage: str = field(default="taxonomy", metadata={"doc": "Owning workflow stage."})
-    artifact_family: str = field(default="taxonomy", metadata={"doc": "Affected artifact family."})
+    artifact_family: str = field(
+        default="taxonomy", metadata={"doc": "Affected artifact family."}
+    )
     publisher_id: str = field(default="", metadata={"doc": "Canonical publisher ID."})
+    repair_error: str = field(
+        default="",
+        metadata={"doc": "Typed failed-output classification for one targeted repair."},
+    )
+    repair_response: str = field(
+        default="",
+        repr=False,
+        metadata={
+            "doc": "Original failed provider output held only in memory for the one targeted repair."
+        },
+    )
+    repair_attempt: int = field(
+        default=0,
+        metadata={"doc": "Bounded taxonomy repair attempt; zero is the primary call."},
+    )
 
 
 @dataclass(frozen=True)

@@ -53,6 +53,10 @@ REGENERATION_PLAN_SYMBOLS = {
     "_lookup_quote_grounding",
 }
 
+MANIFEST_SYMBOLS = {
+    "record_validation_analysis_stage",
+}
+
 PUBLIC_COORDINATOR_SYMBOLS = {
     "run_report_analysis",
 }
@@ -63,6 +67,7 @@ ALL_MOVED_SYMBOLS = (
     | PAYLOAD_SYMBOLS
     | VALIDATION_SYMBOLS
     | REGENERATION_PLAN_SYMBOLS
+    | MANIFEST_SYMBOLS
 )
 
 
@@ -110,6 +115,7 @@ def test_report_analysis_orchestrator_uses_semantic_private_modules() -> None:
     payload = PACKAGE / "payload.py"
     validation = PACKAGE / "validation.py"
     regeneration_plan = PACKAGE / "regeneration_plan.py"
+    manifest = PACKAGE / "manifest.py"
     shared = PACKAGE / "shared.py"
 
     assert PACKAGE.joinpath("__init__.py").is_file()
@@ -119,6 +125,7 @@ def test_report_analysis_orchestrator_uses_semantic_private_modules() -> None:
     assert payload.is_file()
     assert validation.is_file()
     assert regeneration_plan.is_file()
+    assert manifest.is_file()
 
     facade_owned = _owned_symbols(FACADE)
     assert PUBLIC_COORDINATOR_SYMBOLS <= facade_owned
@@ -129,14 +136,17 @@ def test_report_analysis_orchestrator_uses_semantic_private_modules() -> None:
     assert PAYLOAD_SYMBOLS <= _owned_symbols(payload)
     assert VALIDATION_SYMBOLS <= _owned_symbols(validation)
     assert REGENERATION_PLAN_SYMBOLS <= _owned_symbols(regeneration_plan)
+    assert MANIFEST_SYMBOLS <= _owned_symbols(manifest)
 
     assert _imported_siblings(shared) == set()
     assert _imported_siblings(artifact_batches) <= {"shared"}
     assert _imported_siblings(vector_store) <= {"shared"}
     assert _imported_siblings(payload) <= {"shared"}
     assert _imported_siblings(regeneration_plan) <= set()
+    assert _imported_siblings(manifest) <= set()
     assert _imported_siblings(validation) <= {
         "payload",
+        "manifest",
         "regeneration_plan",
         "shared",
     }

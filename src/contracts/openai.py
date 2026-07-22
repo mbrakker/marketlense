@@ -79,6 +79,8 @@ class OpenAIEmbeddingRequest:
     artifact_family: str = field(
         default="", metadata={"doc": "Produced or consumed artifact family, if known."}
     )
+
+
 @dataclass(frozen=True)
 class OpenAIEmbeddingResponse:
     schema_version: str = field(
@@ -552,12 +554,20 @@ class OpenAIResponseRequest:
     report_id: str = field(default="", metadata={"doc": "Canonical report ID."})
     workflow: str = field(default="", metadata={"doc": "Owning workflow."})
     stage: str = field(default="", metadata={"doc": "Owning workflow stage."})
-    artifact_family: str = field(default="", metadata={"doc": "Affected artifact family."})
+    artifact_family: str = field(
+        default="", metadata={"doc": "Affected artifact family."}
+    )
     publisher_id: str = field(default="", metadata={"doc": "Canonical publisher ID."})
-    validation_run_id: str = field(default="", metadata={"doc": "Validation run ID when applicable."})
-    configuration_hash: str = field(default="", metadata={"doc": "Resolved configuration hash."})
+    validation_run_id: str = field(
+        default="", metadata={"doc": "Validation run ID when applicable."}
+    )
+    configuration_hash: str = field(
+        default="", metadata={"doc": "Resolved configuration hash."}
+    )
     policy_hash: str = field(default="", metadata={"doc": "Resolved policy hash."})
-    producer_build_identity: str = field(default="", metadata={"doc": "Producer build identity."})
+    producer_build_identity: str = field(
+        default="", metadata={"doc": "Producer build identity."}
+    )
     repair_attempt: int = field(default=0, metadata={"doc": "Repair attempt number."})
     same_provider_fallback: bool = field(
         default=False,
@@ -718,6 +728,43 @@ class OpenAIJSONPromptRequest:
         metadata={
             "doc": "Whether retry fallback must remain with the selected provider."
         },
+    )
+    report_id: str = field(
+        default="", metadata={"doc": "Stable report identity for usage attribution."}
+    )
+    workflow: str = field(
+        default="", metadata={"doc": "Workflow owning this model call."}
+    )
+    stage: str = field(
+        default="", metadata={"doc": "Workflow stage owning this model call."}
+    )
+    plan_hash: str = field(
+        default="", metadata={"doc": "Execution-plan identity for usage attribution."}
+    )
+    artifact_family: str = field(
+        default="", metadata={"doc": "Structured artifact family produced or checked."}
+    )
+    validation_run_id: str = field(
+        default="",
+        metadata={"doc": "Immutable validation-run identity, when applicable."},
+    )
+    publisher_id: str = field(
+        default="",
+        metadata={"doc": "Publisher identity or explicit unattributed sentinel."},
+    )
+    configuration_hash: str = field(
+        default="",
+        metadata={"doc": "Configuration identity for validation attribution."},
+    )
+    policy_hash: str = field(
+        default="", metadata={"doc": "Policy identity for validation attribution."}
+    )
+    producer_build_identity: str = field(
+        default="",
+        metadata={"doc": "Producer build identity for validation attribution."},
+    )
+    repair_attempt: int = field(
+        default=0, metadata={"doc": "Bounded structured-output repair attempt number."}
     )
 
 

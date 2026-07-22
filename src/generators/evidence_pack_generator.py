@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from hashlib import sha256
 from typing import Dict, Optional, Tuple
 
 from src.contracts.analysis_family import AnalysisFamilyStatus
@@ -632,7 +633,7 @@ def _generate_pack(
             log_event(
                 ctx,
                 role="generator",
-                event="evidence_pack_raw_response",
+                event="evidence_pack_response_received",
                 module=logger.name,
                 fields={
                     "report_id": report_id,
@@ -644,7 +645,10 @@ def _generate_pack(
                     "output_tokens": resp.output_tokens,
                     "tool_calls": resp.tool_calls,
                     "has_json": isinstance(resp.parsed_json, (dict, list)),
-                    "raw_response": str(resp.text or ""),
+                    "response_chars": len(str(resp.text or "")),
+                    "response_sha256": sha256(
+                        str(resp.text or "").encode("utf-8")
+                    ).hexdigest(),
                 },
             )
         )

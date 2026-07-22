@@ -233,6 +233,7 @@ def _record_validation_cohort_publish_outcomes(
     reports_db: str,
     outcomes: list[PublishOutcome],
     ctx: RunContext,
+    require_full_workflow: bool = False,
 ) -> None:
     """Close each immutable cohort member with one typed WordPress outcome."""
     (
@@ -248,74 +249,139 @@ def _record_validation_cohort_publish_outcomes(
     timestamp = datetime.now(timezone.utc).isoformat()
     for file_id, member in members.items():
         outcome = outcomes_by_file_id.get(file_id)
-        if outcome is None:
-            terminal_outcome = "blocked"
-            failure_code = "wordpress_publish_not_attempted"
-            stage = "wordpress_preflight"
-            idempotency_state = "new"
-            output_artifact_ids: tuple[str, ...] = ()
-        else:
-            verified = bool(outcome.authenticated_readback_verified)
-            terminal_outcome = "published_verified" if verified else "blocked"
-            failure_code = "" if verified else str(outcome.error or "readback_failed")
-            if outcome.publication_outcome == "existing_post_matched":
-                stage = "wordpress_lookup"
-                idempotency_state = "verified"
-            elif outcome.status == "skipped":
-                stage = "wordpress_repeat"
-                idempotency_state = "reused"
-            else:
-                stage = "wordpress_write"
-                idempotency_state = "verified" if verified else "new"
-            output_artifact_ids = tuple(
-                value
-                for value in (str(outcome.post_id or ""), str(outcome.post_url or ""))
-                if value
-            )
         source_identity_id = str(member.get("md5_checksum") or file_id)
-        record_validation_run_manifest_stage(
-            ValidationRunManifestRecordRequest(
-                schema_version="1.0",
-                db_path=reports_db,
-                record=ValidationRunManifestStageRecord(
+
+        def record_stage(
+            stage: str,
+            *,
+            terminal_outcome: str = "succeeded",
+            failure_code: str = "",
+            idempotency_state: str = "new",
+            entity_terminal: bool = False,
+            output_artifact_ids: tuple[str, ...] = (),
+        ) -> None:
+            record_validation_run_manifest_stage(
+                ValidationRunManifestRecordRequest(
                     schema_version="1.0",
-                    validation_run_id=validation_run_id,
-                    cohort_id=cohort_id,
-                    workflow_run_id=RunId(ctx.run_id),
-                    entity_type="report",
-                    publisher_id="",
-                    report_id=file_id,
-                    source_identity_id=source_identity_id,
-                    stage=stage,
-                    attempt_number=1,
-                    parent_attempt_number=0,
-                    input_artifact_ids=(file_id,),
-                    output_artifact_ids=output_artifact_ids,
-                    started_at_utc=timestamp,
-                    completed_at_utc=timestamp,
-                    terminal_outcome=terminal_outcome,
-                    failure_code=failure_code,
-                    retryable=False,
-                    repair_disposition="not_required",
-                    duplicate_disposition=(
-                        "reused" if idempotency_state == "reused" else "none"
+                    db_path=reports_db,
+                    record=ValidationRunManifestStageRecord(
+                        schema_version="1.0",
+                        validation_run_id=validation_run_id,
+                        cohort_id=cohort_id,
+                        workflow_run_id=RunId(ctx.run_id),
+                        entity_type="report",
+                        publisher_id="unattributed",
+                        report_id=file_id,
+                        source_identity_id=source_identity_id,
+                        stage=stage,
+                        attempt_number=1,
+                        parent_attempt_number=0,
+                        input_artifact_ids=(file_id,),
+                        output_artifact_ids=output_artifact_ids,
+                        started_at_utc=timestamp,
+                        completed_at_utc=timestamp,
+                        terminal_outcome=terminal_outcome,
+                        failure_code=failure_code,
+                        retryable=False,
+                        repair_disposition="not_required",
+                        duplicate_disposition=(
+                            "reused" if idempotency_state == "reused" else "none"
+                        ),
+                        supersession_state="current",
+                        idempotency_state=idempotency_state,
+                        configuration_hash=configuration_hash,
+                        policy_hash=policy_hash,
+                        producer_build_identity=ctx.producer_commit_sha or "workspace",
+                        cohort_disposition="final_validation",
+                        entity_terminal=entity_terminal,
                     ),
-                    supersession_state="current",
-                    idempotency_state=idempotency_state,
-                    configuration_hash=configuration_hash,
-                    policy_hash=policy_hash,
-                    producer_build_identity=ctx.producer_commit_sha or "workspace",
-                    cohort_disposition="final_validation",
-                    entity_terminal=True,
                 ),
-            ),
-            ctx,
+                ctx,
+            )
+
+        if outcome is None:
+            record_stage(
+                "publication_preflight",
+                terminal_outcome="blocked",
+                failure_code="wordpress_publish_not_attempted",
+            )
+            record_stage(
+                "authenticated_readback",
+                terminal_outcome="blocked",
+                failure_code="wordpress_publish_not_attempted",
+                entity_terminal=True,
+            )
+            continue
+
+        output_artifact_ids = tuple(
+            value
+            for value in (str(outcome.post_id or ""), str(outcome.post_url or ""))
+            if value
+        )
+        preflight_outcome = "succeeded" if outcome.status != "error" else "blocked"
+        failure_code = (
+            ""
+            if preflight_outcome == "succeeded"
+            else str(outcome.error or "publication_preflight_failed")
+        )
+        record_stage(
+            "publication_preflight",
+            terminal_outcome=preflight_outcome,
+            failure_code=failure_code,
+            output_artifact_ids=output_artifact_ids,
+        )
+        verified = bool(outcome.authenticated_readback_verified)
+        if outcome.publication_outcome == "existing_post_matched":
+            record_stage(
+                "wordpress_lookup",
+                terminal_outcome="succeeded" if verified else "failed",
+                failure_code=""
+                if verified
+                else str(outcome.error or "readback_failed"),
+                idempotency_state="verified" if verified else "new",
+                output_artifact_ids=output_artifact_ids,
+            )
+            if outcome.status == "skipped":
+                record_stage(
+                    "repeat_publication",
+                    terminal_outcome="succeeded" if verified else "failed",
+                    failure_code=""
+                    if verified
+                    else str(outcome.error or "readback_failed"),
+                    idempotency_state="reused" if verified else "new",
+                    output_artifact_ids=output_artifact_ids,
+                )
+        elif outcome.status == "published":
+            record_stage(
+                "wordpress_write",
+                terminal_outcome="succeeded" if verified else "failed",
+                failure_code=""
+                if verified
+                else str(outcome.error or "readback_failed"),
+                idempotency_state="verified" if verified else "new",
+                output_artifact_ids=output_artifact_ids,
+            )
+        else:
+            record_stage(
+                "wordpress_lookup",
+                terminal_outcome="failed",
+                failure_code=str(outcome.error or "wordpress_transaction_failed"),
+                output_artifact_ids=output_artifact_ids,
+            )
+        record_stage(
+            "authenticated_readback",
+            terminal_outcome="published_verified" if verified else "blocked",
+            failure_code="" if verified else str(outcome.error or "readback_failed"),
+            idempotency_state="verified" if verified else "new",
+            entity_terminal=True,
+            output_artifact_ids=output_artifact_ids,
         )
     audit = audit_validation_run_manifest(
         ValidationRunManifestAuditRequest(
             schema_version="1.0",
             db_path=reports_db,
             validation_run_id=validation_run_id,
+            require_full_workflow=require_full_workflow,
         ),
         ctx,
     )
@@ -329,6 +395,9 @@ def _record_validation_cohort_publish_outcomes(
                 "incomplete_entity_count": len(audit.incomplete_entity_ids),
                 "duplicate_current_entity_count": len(
                     audit.duplicate_current_entity_ids
+                ),
+                "missing_required_stage_count": len(
+                    audit.missing_required_stage_entity_ids
                 ),
             },
         )
@@ -709,6 +778,7 @@ def run_publish(
     force_draft: bool = False,
     execution_plan_mode: str = "shadow",
     cohort_manifest: str | None = None,
+    require_full_validation_manifest: bool = False,
 ) -> List[PublishOutcome]:
     root_ctx = ctx or new_run_context()
     publish_budget = build_publish_budget(settings, root_ctx)
@@ -1550,5 +1620,6 @@ def run_publish(
             reports_db=settings.reports_db,
             outcomes=outcomes,
             ctx=root_ctx,
+            require_full_workflow=require_full_validation_manifest,
         )
     return outcomes

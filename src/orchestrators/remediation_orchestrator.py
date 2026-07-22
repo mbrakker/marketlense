@@ -26,6 +26,10 @@ from src.contracts.remediation import (
 )
 from src.contracts.retry_decision import RetryDecision
 from src.contracts.run_context import RunContext
+from src.orchestrators.failure_recovery_registry import (
+    recovery_rule_diagnostics,
+    recovery_rule_for,
+)
 from src.services import state_service
 from src.utils.clock import utc_now_seconds_z
 from src.utils.errors import AppError
@@ -280,6 +284,9 @@ def _failure_diagnostics(error: Exception) -> dict[str, object]:
 
 
 def _allowlisted_actions(workflow: str, error_code: str) -> set[RemediationActionCode]:
+    rule = recovery_rule_for(workflow, error_code)
+    if rule is not None:
+        return {rule.next_action}
     return _AUTO_REPAIR_ALLOWLIST.get(
         (workflow.strip().lower(), error_code.strip().lower()), set()
     )
@@ -319,6 +326,13 @@ def _action_for_failure(
         )
     if decision is not None and decision.action == "defer":
         return "defer_for_budget", "deferred", decision.next_action
+    recovery_rule = recovery_rule_for(workflow, code)
+    if recovery_rule is not None:
+        return (
+            recovery_rule.next_action,
+            "pending",
+            f"Rerun only {recovery_rule.retry_scope} from {recovery_rule.required_checkpoint}.",
+        )
     allowed_actions = _allowlisted_actions(workflow, code)
     if (
         code == "mail_report_not_arrived_yet"
@@ -420,6 +434,7 @@ def record_workflow_failure(
         checkpoint=checkpoint,
     )
     code = _failure_code(error)
+    recovery_rule = recovery_rule_for(workflow, code)
     fingerprint = {
         "workflow": workflow,
         "run_id": workflow_run_id or str(ctx.run_id),
@@ -458,14 +473,21 @@ def record_workflow_failure(
         committed_side_effects=list(committed_side_effects or []),
         idempotency_keys=list(idempotency_keys or []),
         budget=budget or RemediationBudgetSummary(schema_version="1.0"),
-        max_attempts=(retry_decision.max_attempts if retry_decision else 1),
+        max_attempts=(
+            recovery_rule.max_attempts
+            if recovery_rule is not None
+            else (retry_decision.max_attempts if retry_decision else 1)
+        ),
         cooldown_seconds=delay,
         next_eligible_at_utc=_utc_after(now, delay),
         action_code=action,
         operator_next_action=operator_action,
         created_at_utc=now,
         updated_at_utc=now,
-        diagnostics=_failure_diagnostics(error),
+        diagnostics={
+            **_failure_diagnostics(error),
+            **recovery_rule_diagnostics(recovery_rule),
+        },
     )
     response = state_service.upsert_remediation_record(
         RemediationUpsertRequest(

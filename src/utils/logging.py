@@ -5,6 +5,7 @@ import json
 import os
 import re
 from collections.abc import Mapping
+from dataclasses import replace
 from datetime import datetime, timezone
 from typing import Any, Dict
 from uuid import uuid4
@@ -61,16 +62,14 @@ def child_context(
     resolved_task_id = (
         _coerce_task_id(task_id) if task_id is not None else parent.task_id
     )
-    return RunContext(
-        schema_version=parent.schema_version,
-        run_id=parent.run_id,
+    return replace(
+        parent,
         task_id=resolved_task_id,
         span_id=str(uuid4()),
         trace_id=str(parent.trace_id or parent.run_id),
         parent_span_id=str(parent.span_id or ""),
         span_name=str(resolved_task_id),
         span_depth=max(0, int(getattr(parent, "span_depth", 0))) + 1,
-        producer_commit_sha=str(getattr(parent, "producer_commit_sha", "") or ""),
     )
 
 

@@ -999,13 +999,27 @@ def run_report_pipeline(
             ctx,
         )
     if outcome.status == "error":
+        outcome_error = str(outcome.error or "").strip()
+        outcome_code = outcome_error.split(":", 1)[0].strip().lower()
+        known_typed_codes = {
+            "taxonomy_invalid_json",
+            "taxonomy_schema_invalid",
+            "category_fit_contradiction",
+            "final_html_internal_identifier",
+            "missing_report_card_manifest",
+            "wordpress_readback_failed",
+        }
         record_workflow_failure(
             state_db=settings.state_db,
             workflow="report_generation",
             stage="report_pipeline",
             operation="generate_report",
             error=AppError(
-                code="report_pipeline_outcome_error",
+                code=(
+                    outcome_code
+                    if outcome_code in known_typed_codes
+                    else "report_pipeline_outcome_error"
+                ),
                 message=outcome.error or "Report pipeline returned an error outcome",
                 retryable=False,
             ),

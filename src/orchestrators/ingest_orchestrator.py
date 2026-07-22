@@ -4,7 +4,7 @@ import json
 import logging
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime, timezone
 from hashlib import sha256
 from pathlib import Path
@@ -38,6 +38,7 @@ from src.contracts.report_cards import ReportCardManifest
 from src.contracts.report_store import (
     ReportMetadataGetRequest,
 )
+from src.contracts.run_budget import RunBudget
 from src.contracts.run_context import RunContext
 from src.contracts.semantic_ids import RunId, ValidationRunId
 from src.contracts.state import (
@@ -70,6 +71,10 @@ from src.orchestrators.ingest_file_orchestrator import (
 from src.orchestrators.ingest_file_orchestrator import (
     IngestFileDependencies,
     run_ingest_file,
+)
+from src.orchestrators.pipeline_preflight_orchestrator import (
+    assert_expensive_side_effects_allowed,
+    preflight_report_pipeline,
 )
 from src.orchestrators.remediation_orchestrator import (
     record_workflow_failure,
@@ -322,12 +327,18 @@ def _cache_pdf_path(settings: IngestSettings, file: DriveFile) -> str:
 
 
 def _ensure_file_name(
-    file: DriveFile, settings: IngestSettings, ctx: RunContext
+    file: DriveFile,
+    settings: IngestSettings,
+    ctx: RunContext,
+    *,
+    get_file_metadata_fn: Callable[[DriveFileMetadataRequest, RunContext], Any] = (
+        get_file_metadata
+    ),
 ) -> DriveFile:
     if file.name:
         return file
     try:
-        meta = get_file_metadata(
+        meta = get_file_metadata_fn(
             DriveFileMetadataRequest(
                 schema_version="1.0",
                 file_id=file.file_id,
@@ -335,6 +346,7 @@ def _ensure_file_name(
                 auth_mode=settings.drive_auth_mode,
                 oauth_client_path=settings.google_oauth_client_path,
                 oauth_token_path=settings.google_oauth_token_path,
+                run_budget=_ingest_run_budget(settings, ctx),
             ),
             ctx,
         ).file
@@ -451,6 +463,16 @@ def _process_file(
     root_ctx: RunContext,
     force_report_cards: bool,
 ) -> _FileProcessResult:
+    file_ctx = replace(
+        root_ctx,
+        report_id=file.file_id,
+        source_identity_id=(file.md5_checksum or file.file_id),
+        publisher_id="unattributed",
+        workflow="report_generation",
+        stage="report_pipeline",
+        artifact_family="report",
+    )
+
     def _run_pipeline(
         current_file: DriveFile,
         local_pdf_path: str,
@@ -506,12 +528,13 @@ def _process_file(
         get_source_quarantine=get_source_quarantine,
         upsert_source_quarantine=upsert_source_quarantine,
         quarantine_enabled=settings.source_quarantine_enabled,
+        run_budget=_ingest_run_budget(settings, file_ctx),
     )
     return run_ingest_file(
         file=file,
         index=index,
         settings=settings,
-        root_ctx=root_ctx,
+        root_ctx=file_ctx,
         dependencies=dependencies,
         logger_name=logger.name,
     )
@@ -575,6 +598,7 @@ def _build_drive_list_request(
     folder_id: Optional[str],
     limit: Optional[int],
     modified_after: Optional[str],
+    ctx: RunContext,
 ) -> DriveListRequest:
     max_n = limit if limit is not None else settings.batch_limit
     return DriveListRequest(
@@ -591,6 +615,23 @@ def _build_drive_list_request(
         supports_all_drives=settings.drive_supports_all_drives,
         include_items_from_all_drives=settings.drive_include_items_from_all_drives,
         drive_id=settings.drive_id,
+        run_budget=_ingest_run_budget(settings, ctx),
+    )
+
+
+def _ingest_run_budget(settings: IngestSettings, ctx: RunContext) -> RunBudget:
+    """Build the one isolated budget scope used by every Drive action in a run."""
+    return RunBudget(
+        schema_version="1.0",
+        run_id=ctx.run_id,
+        publisher_name="",
+        usage_db_path=settings.usage_db_path,
+        max_spend_usd=settings.run_budget_max_spend_usd,
+        max_pdfs=settings.run_budget_max_pdfs,
+        max_retries=settings.run_budget_max_retries,
+        max_runtime_seconds=settings.run_budget_max_runtime_seconds,
+        limit_decision=settings.run_budget_limit_decision,
+        enabled_effect_kinds=settings.run_budget_enabled_effect_kinds,
     )
 
 
@@ -734,6 +775,9 @@ def _cohort_admission_preflight(
     settings: IngestSettings,
     deps: IngestBatchDependencies,
     root_ctx: RunContext,
+    admitted_source_identities: set[str] | None = None,
+    admitted_title_keys: set[str] | None = None,
+    admission_decisions: list[dict[str, str]] | None = None,
 ) -> list[DriveFile]:
     """Admit deterministic, locally verifiable sources before freezing a cohort.
 
@@ -742,17 +786,26 @@ def _cohort_admission_preflight(
     are persisted in the immutable manifest.
     """
     admitted: list[DriveFile] = []
+    known_source_identities = (
+        admitted_source_identities if admitted_source_identities is not None else set()
+    )
+    known_title_keys = admitted_title_keys if admitted_title_keys is not None else set()
     for file in files:
         file_ctx = child_context(root_ctx, task_id=f"admission:{file.file_id}")
         reason = "admitted"
         source_identity = (file.md5_checksum or "").strip()
         normalized_mime = (file.mime_type or "").strip().casefold()
+        title_key = _admission_title_key(file.name)
         if not file.file_id.strip():
             reason = "missing_source_identity"
         elif normalized_mime and normalized_mime != "application/pdf":
             reason = "unsupported_document"
-        elif not source_identity:
+        elif not source_identity or not title_key:
             reason = "missing_source_identity"
+        elif (
+            source_identity in known_source_identities or title_key in known_title_keys
+        ):
+            reason = "duplicate"
         else:
             quarantine = deps.get_source_quarantine(
                 SourceQuarantineGetRequest(
@@ -784,17 +837,79 @@ def _cohort_admission_preflight(
                     if integrity.failure_code:
                         reason = "corrupt_source"
                     else:
-                        text = deps.extract_pdf_text(
-                            PdfTextExtractRequest(
-                                schema_version="1.0",
-                                path=_cache_pdf_path(settings, file),
-                                max_pages=max(1, settings.pdf_text_sample_pages),
-                                max_chars=max(1, settings.pdf_text_max_chars),
-                            ),
-                            file_ctx,
-                        )
-                        if text.char_count < 1 and not settings.pdf_text_ocr_enabled:
-                            reason = "insufficient_content"
+                        integrity_md5 = str(getattr(integrity, "md5", "") or "")
+                        if (
+                            (integrity_md5 and integrity_md5 != source_identity)
+                            or int(getattr(integrity, "page_count", 1) or 0) < 1
+                        ):
+                            reason = "corrupt_source"
+                        else:
+                            text = deps.extract_pdf_text(
+                                PdfTextExtractRequest(
+                                    schema_version="1.0",
+                                    path=_cache_pdf_path(settings, file),
+                                    max_pages=max(1, settings.pdf_text_sample_pages),
+                                    max_chars=max(1, settings.pdf_text_max_chars),
+                                ),
+                                file_ctx,
+                            )
+                            pages = max(
+                                1,
+                                int(
+                                    getattr(text, "pages_extracted", 0)
+                                    or settings.pdf_text_sample_pages
+                                    or 1
+                                ),
+                            )
+                            density = float(
+                                getattr(text, "text_density", 0.0)
+                                or float(getattr(text, "char_count", 0) or 0) / pages
+                            )
+                            if int(getattr(text, "char_count", 0) or 0) < 1 or (
+                                density < float(settings.pdf_text_min_density)
+                                and not settings.pdf_text_ocr_enabled
+                            ):
+                                reason = "insufficient_content"
+        decision_hash = sha256(
+            json.dumps(
+                {
+                    "file_id": file.file_id,
+                    "source_identity_id": source_identity,
+                    "title_key": title_key,
+                    "mime_type": normalized_mime,
+                    "outcome": reason,
+                    "preflight_version": "1.1",
+                    "publisher_id": "unattributed",
+                    "source_url_classification": "drive_pdf",
+                    "runtime_dependency_status": "validated_pre_freeze",
+                    "budget_policy": "run_budget_enforced",
+                    "evidence_potential": (
+                        "sufficient" if reason == "admitted" else "not_admitted"
+                    ),
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("utf-8")
+        ).hexdigest()
+        if admission_decisions is not None:
+            admission_decisions.append(
+                {
+                    "file_id": file.file_id,
+                    "source_identity_id": source_identity,
+                    "title_key": title_key,
+                    "mime_type": normalized_mime,
+                    "publisher_id": "unattributed",
+                    "source_url_classification": "drive_pdf",
+                    "runtime_dependency_status": "validated_pre_freeze",
+                    "budget_policy": "run_budget_enforced",
+                    "evidence_potential": (
+                        "sufficient" if reason == "admitted" else "not_admitted"
+                    ),
+                    "outcome": reason,
+                    "preflight_version": "1.1",
+                    "decision_hash": decision_hash,
+                }
+            )
         logger.info(
             log_event(
                 file_ctx,
@@ -805,13 +920,22 @@ def _cohort_admission_preflight(
                     "file_id": file.file_id,
                     "source_identity_id": source_identity,
                     "outcome": reason,
-                    "admission_preflight_version": "1.0",
+                    "admission_preflight_version": "1.1",
+                    "admission_decision_hash": decision_hash,
                 },
             )
         )
         if reason == "admitted":
             admitted.append(file)
+            known_source_identities.add(source_identity)
+            known_title_keys.add(title_key)
     return admitted
+
+
+def _admission_title_key(name: str | None) -> str:
+    """Return a deterministic title fallback used only for duplicate admission."""
+    stem = Path(str(name or "")).stem.casefold()
+    return "".join(character for character in stem if character.isalnum())
 
 
 def _select_admitted_cohort(
@@ -822,7 +946,7 @@ def _select_admitted_cohort(
     deps: IngestBatchDependencies,
     root_ctx: RunContext,
     force_report_cards: bool,
-) -> list[DriveFile]:
+) -> tuple[list[DriveFile], list[dict[str, str]]]:
     """Select the first ordered candidates that pass admission before freezing.
 
     A source rejected during admission is never a cohort member.  This differs
@@ -831,6 +955,9 @@ def _select_admitted_cohort(
     """
     admitted: list[DriveFile] = []
     attempted_file_ids: set[str] = set()
+    admitted_source_identities: set[str] = set()
+    admitted_title_keys: set[str] = set()
+    admission_decisions: list[dict[str, str]] = []
     admission_batches = 0
     while len(admitted) < cohort_size:
         remaining = cohort_size - len(admitted)
@@ -866,6 +993,9 @@ def _select_admitted_cohort(
             settings=settings,
             deps=deps,
             root_ctx=root_ctx,
+            admitted_source_identities=admitted_source_identities,
+            admitted_title_keys=admitted_title_keys,
+            admission_decisions=admission_decisions,
         )
         admitted.extend(newly_admitted[:remaining])
         admission_batches += 1
@@ -885,7 +1015,7 @@ def _select_admitted_cohort(
                 },
             )
         )
-    return admitted
+    return admitted, admission_decisions
 
 
 def _load_frozen_cohort(
@@ -944,6 +1074,7 @@ def _frozen_cohort(
     settings: IngestSettings,
     deps: IngestBatchDependencies,
     root_ctx: RunContext,
+    admission_decisions: list[dict[str, str]] | None = None,
 ) -> list[DriveFile]:
     """Load a replayable immutable cohort or persist it before processing."""
     if cohort_size < 1:
@@ -971,6 +1102,27 @@ def _frozen_cohort(
             context={"requested": cohort_size, "selected": len(selected_files)},
         )
     members = [asdict(file) for file in selected_files]
+    decisions = admission_decisions or [
+        {
+            "file_id": file.file_id,
+            "source_identity_id": file.md5_checksum or file.file_id,
+            "title_key": _admission_title_key(file.name),
+            "mime_type": (file.mime_type or "application/pdf").casefold(),
+            "publisher_id": "unattributed",
+            "source_url_classification": "drive_pdf",
+            "runtime_dependency_status": "validated_pre_freeze",
+            "budget_policy": "run_budget_enforced",
+            "evidence_potential": "sufficient",
+            "outcome": "admitted",
+            "preflight_version": "1.1",
+            "decision_hash": sha256(
+                json.dumps(asdict(file), sort_keys=True, separators=(",", ":")).encode(
+                    "utf-8"
+                )
+            ).hexdigest(),
+        }
+        for file in selected_files
+    ]
     configuration_hash = _cohort_configuration_hash(settings)
     policy_hash = _cohort_policy_hash(settings)
     cohort_id = _cohort_id(selected_files)
@@ -981,12 +1133,13 @@ def _frozen_cohort(
         "configuration_hash": configuration_hash,
         "policy_hash": policy_hash,
         "selection_reason": "deterministic_admission_preflight",
-        "admission_preflight_version": "1.0",
+        "admission_preflight_version": "1.1",
         "admission_decision_hash": sha256(
-            json.dumps(members, sort_keys=True, separators=(",", ":")).encode("utf-8")
+            json.dumps(decisions, sort_keys=True, separators=(",", ":")).encode("utf-8")
         ).hexdigest(),
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
         "members": members,
+        "admission_decisions": decisions,
     }
     deps.write_bytes(
         WriteBytesRequest(
@@ -1035,43 +1188,48 @@ def _record_cohort_ingest_manifest(
     timestamp = datetime.now(timezone.utc).isoformat()
     if outcomes is None:
         for file in files:
-            record_validation_run_manifest_stage(
-                ValidationRunManifestRecordRequest(
-                    schema_version="1.0",
-                    db_path=settings.reports_db,
-                    record=ValidationRunManifestStageRecord(
+            for stage in (
+                "discovery",
+                "candidate_qualification",
+                "admission_preflight",
+            ):
+                record_validation_run_manifest_stage(
+                    ValidationRunManifestRecordRequest(
                         schema_version="1.0",
-                        validation_run_id=validation_run_id,
-                        cohort_id=cohort_id,
-                        workflow_run_id=RunId(root_ctx.run_id),
-                        entity_type="report",
-                        publisher_id="",
-                        report_id=file.file_id,
-                        source_identity_id=file.md5_checksum or file.file_id,
-                        stage="admission_preflight",
-                        attempt_number=1,
-                        parent_attempt_number=0,
-                        input_artifact_ids=(file.file_id,),
-                        output_artifact_ids=(cohort_id,),
-                        started_at_utc=timestamp,
-                        completed_at_utc=timestamp,
-                        terminal_outcome="succeeded",
-                        failure_code="",
-                        retryable=False,
-                        repair_disposition="not_required",
-                        duplicate_disposition="new",
-                        supersession_state="current",
-                        idempotency_state="new",
-                        configuration_hash=configuration_hash,
-                        policy_hash=policy_hash,
-                        producer_build_identity=root_ctx.producer_commit_sha
-                        or "workspace",
-                        cohort_disposition="final_validation",
-                        entity_terminal=False,
+                        db_path=settings.reports_db,
+                        record=ValidationRunManifestStageRecord(
+                            schema_version="1.0",
+                            validation_run_id=validation_run_id,
+                            cohort_id=cohort_id,
+                            workflow_run_id=RunId(root_ctx.run_id),
+                            entity_type="report",
+                            publisher_id="unattributed",
+                            report_id=file.file_id,
+                            source_identity_id=file.md5_checksum or file.file_id,
+                            stage=stage,
+                            attempt_number=1,
+                            parent_attempt_number=0,
+                            input_artifact_ids=(file.file_id,),
+                            output_artifact_ids=(cohort_id,),
+                            started_at_utc=timestamp,
+                            completed_at_utc=timestamp,
+                            terminal_outcome="succeeded",
+                            failure_code="",
+                            retryable=False,
+                            repair_disposition="not_required",
+                            duplicate_disposition="new",
+                            supersession_state="current",
+                            idempotency_state="new",
+                            configuration_hash=configuration_hash,
+                            policy_hash=policy_hash,
+                            producer_build_identity=root_ctx.producer_commit_sha
+                            or "workspace",
+                            cohort_disposition="final_validation",
+                            entity_terminal=False,
+                        ),
                     ),
-                ),
-                root_ctx,
-            )
+                    root_ctx,
+                )
         return
     outcome_by_id = {outcome.file_id: outcome for outcome in outcomes or []}
     for file in files:
@@ -1085,6 +1243,20 @@ def _record_cohort_ingest_manifest(
             if terminal
             else "blocked"
         )
+        if terminal and not successful:
+            _record_failed_cohort_stage_closure(
+                validation_run_id=validation_run_id,
+                settings=settings,
+                root_ctx=root_ctx,
+                file=file,
+                cohort_id=cohort_id,
+                configuration_hash=configuration_hash,
+                policy_hash=policy_hash,
+                timestamp=timestamp,
+                failure_code=(outcome.error or "ingest_failed")
+                if outcome
+                else "ingest_failed",
+            )
         record_validation_run_manifest_stage(
             ValidationRunManifestRecordRequest(
                 schema_version="1.0",
@@ -1095,7 +1267,7 @@ def _record_cohort_ingest_manifest(
                     cohort_id=cohort_id,
                     workflow_run_id=RunId(root_ctx.run_id),
                     entity_type="report",
-                    publisher_id="",
+                    publisher_id="unattributed",
                     report_id=file.file_id,
                     source_identity_id=file.md5_checksum or file.file_id,
                     stage="ingest",
@@ -1121,6 +1293,80 @@ def _record_cohort_ingest_manifest(
                     producer_build_identity=root_ctx.producer_commit_sha or "workspace",
                     cohort_disposition="final_validation",
                     entity_terminal=terminal,
+                ),
+            ),
+            root_ctx,
+        )
+
+
+def _record_failed_cohort_stage_closure(
+    *,
+    validation_run_id: ValidationRunId,
+    settings: IngestSettings,
+    root_ctx: RunContext,
+    file: DriveFile,
+    cohort_id: str,
+    configuration_hash: str,
+    policy_hash: str,
+    timestamp: str,
+    failure_code: str,
+) -> None:
+    """Close unreachable stages explicitly for a terminal failed cohort member.
+
+    A fixed validation cohort must retain a status for every mandatory stage even
+    when an earlier source or generation failure makes downstream work unsafe.
+    Existing successful stage records are idempotently retained by the manifest
+    service; only the not-reached stages become ``blocked``.
+    """
+    for stage in (
+        "acquisition",
+        "source_preparation",
+        "source_validation",
+        "evidence_generation",
+        "taxonomy",
+        "category_fit",
+        "artifact_generation",
+        "grounding_validation",
+        "semantic_validation",
+        "rendering",
+        "final_html_validation",
+        "publication_preflight",
+        "wordpress_lookup",
+        "authenticated_readback",
+        "repeat_publication",
+    ):
+        record_validation_run_manifest_stage(
+            ValidationRunManifestRecordRequest(
+                schema_version="1.0",
+                db_path=settings.reports_db,
+                record=ValidationRunManifestStageRecord(
+                    schema_version="1.0",
+                    validation_run_id=validation_run_id,
+                    cohort_id=cohort_id,
+                    workflow_run_id=RunId(root_ctx.run_id),
+                    entity_type="report",
+                    publisher_id="unattributed",
+                    report_id=file.file_id,
+                    source_identity_id=file.md5_checksum or file.file_id,
+                    stage=stage,
+                    attempt_number=1,
+                    parent_attempt_number=0,
+                    input_artifact_ids=(file.file_id,),
+                    output_artifact_ids=(),
+                    started_at_utc=timestamp,
+                    completed_at_utc=timestamp,
+                    terminal_outcome="blocked",
+                    failure_code=failure_code,
+                    retryable=False,
+                    repair_disposition="not_required",
+                    duplicate_disposition="none",
+                    supersession_state="current",
+                    idempotency_state="new",
+                    configuration_hash=configuration_hash,
+                    policy_hash=policy_hash,
+                    producer_build_identity=root_ctx.producer_commit_sha or "workspace",
+                    cohort_disposition="final_validation",
+                    entity_terminal=False,
                 ),
             ),
             root_ctx,
@@ -1316,6 +1562,7 @@ def _prefetch_cached_pdf(
         oauth_client_path=settings.google_oauth_client_path,
         oauth_token_path=settings.google_oauth_token_path,
         output_path=cache_path,
+        run_budget=_ingest_run_budget(settings, prefetch_ctx),
     )
     attempt = 0
     eof_check = None
@@ -1682,6 +1929,18 @@ def run_ingest(
     try:
         lock_info = acquire_ingest_lock(settings, lock_ctx)
         verify_ingest_db_access(settings, root_ctx)
+        if cohort_size is not None:
+            root_ctx = replace(
+                root_ctx,
+                workflow="report_generation",
+                stage="admission_preflight",
+                artifact_family="report",
+                configuration_hash=_cohort_configuration_hash(settings),
+                policy_hash=_cohort_policy_hash(settings),
+            )
+            assert_expensive_side_effects_allowed(
+                preflight_report_pipeline(settings, root_ctx), root_ctx
+            )
 
         logger.info(
             log_event(
@@ -1745,6 +2004,7 @@ def run_ingest(
             folder_id=folder_id,
             limit=selection_limit,
             modified_after=modified_after,
+            ctx=root_ctx,
         )
         if success_target is not None:
             if success_target < 1:
@@ -1790,9 +2050,10 @@ def run_ingest(
                 processed_so_far += sum(row.processed for row in batch)
         else:
             files_to_process = manifest_files
+            admission_decisions: list[dict[str, str]] | None = None
             if cohort_size is not None:
                 if manifest_files is None:
-                    files_to_process = _run_step_with_retry(
+                    files_to_process, admission_decisions = _run_step_with_retry(
                         "select_admitted_cohort",
                         root_ctx,
                         lambda: _select_admitted_cohort(
@@ -1815,6 +2076,7 @@ def run_ingest(
                     settings=settings,
                     deps=deps,
                     root_ctx=root_ctx,
+                    admission_decisions=admission_decisions,
                 )
             elif files_to_process is None:
                 files_to_process = _run_step_with_retry(
@@ -1833,6 +2095,16 @@ def run_ingest(
             if cohort_size is not None:
                 validation_run_id = ValidationRunId(
                     f"validation:{_cohort_id(files_to_process)}"
+                )
+                root_ctx = replace(
+                    root_ctx,
+                    validation_run_id=str(validation_run_id),
+                    cohort_id=_cohort_id(files_to_process),
+                    workflow="report_generation",
+                    stage="ingest",
+                    artifact_family="report",
+                    configuration_hash=_cohort_configuration_hash(settings),
+                    policy_hash=_cohort_policy_hash(settings),
                 )
                 _record_cohort_ingest_manifest(
                     validation_run_id=validation_run_id,
