@@ -21,3 +21,4 @@ text: |
   - Fix the listed failures directly.
   - Do not introduce unsupported claims, numbers, or quotes.
   - Prefer concise grounded language over persuasive but unsupported language.
+  - Return direct public prose without editorial labels such as "Executive takeaway:", "Observation:", or "Implication:".

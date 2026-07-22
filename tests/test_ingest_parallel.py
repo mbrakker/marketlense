@@ -342,7 +342,7 @@ def test_drive_cache_prefetch_downloads_and_hashes_before_report_workers(
 
     external_boundary_mocks_only.setattr(orch, "download_pdf_to_path", _download)
 
-    orch._prefetch_drive_cache_stage(
+    prefetched_files = orch._prefetch_drive_cache_stage(
         [file],
         settings=settings,
         deps=orch.IngestBatchDependencies.default(),
@@ -357,6 +357,7 @@ def test_drive_cache_prefetch_downloads_and_hashes_before_report_workers(
     assert download_requests[0].run_budget.usage_db_path == settings.usage_db_path
     assert cache_path.exists()
     assert sidecar_path.exists()
+    assert prefetched_files[0].md5_checksum
 
 
 def test_ingest_file_refreshes_cached_pdf_without_eof_before_generation(

@@ -4,12 +4,12 @@ schema_version: "1.0"
 # source identities and the explicitly configured sandbox WordPress target stay
 # environment-owned.
 paths:
-  output_dir: "./out/reliability_canary_20260722_retry7"
-  cache_dir: "./cache/reliability_canary_20260722_retry7"
-  state_db: "./state/reliability_canary_20260722_retry7/index.sqlite"
-  reports_db: "./state/reliability_canary_20260722_retry7/reports.sqlite"
-  signal_store_db: "./state/reliability_canary_20260722_retry7/signals.sqlite"
-  ingest_lock: "./state/reliability_canary_20260722_retry7/ingest.lock"
+  output_dir: "./out/reliability_canary_20260722_retry21"
+  cache_dir: "./cache/reliability_canary_20260722_retry21"
+  state_db: "./state/reliability_canary_20260722_retry21/index.sqlite"
+  reports_db: "./state/reliability_canary_20260722_retry21/reports.sqlite"
+  signal_store_db: "./state/reliability_canary_20260722_retry21/signals.sqlite"
+  ingest_lock: "./state/reliability_canary_20260722_retry21/ingest.lock"
 
 ingest:
   run_budget:
@@ -20,7 +20,7 @@ ingest:
     limit_decision: "stop"
 
 browser_download:
-  output_dir: "./out/reliability_canary_20260722_retry7/browser_downloads"
+  output_dir: "./out/reliability_canary_20260722_retry21/browser_downloads"
   max_steps: 4
   timeout_seconds: 120
   run_budget:
@@ -34,19 +34,19 @@ browser_download:
     limit_decision: "stop"
 
 mailbox_acquisition:
-  output_dir: "./out/reliability_canary_20260722_retry7/mailbox_acquisition"
+  output_dir: "./out/reliability_canary_20260722_retry21/mailbox_acquisition"
 
 publisher_discovery:
-  output_dir: "./out/reliability_canary_20260722_retry7/publisher_inventory_discovery"
+  output_dir: "./out/reliability_canary_20260722_retry21/publisher_inventory_discovery"
 
 analysis:
-  cost_ledger_path: "./state/reliability_canary_20260722_retry7/llm_cost_ledger.jsonl"
+  cost_ledger_path: "./state/reliability_canary_20260722_retry21/llm_cost_ledger.jsonl"
 
 cost:
-  usage_db_path: "./state/reliability_canary_20260722_retry7/llm_usage.sqlite"
-  daily_path: "./state/reliability_canary_20260722_retry7/llm_cost_daily.json"
-  ledger_path: "./state/reliability_canary_20260722_retry7/llm_cost_ledger.jsonl"
+  usage_db_path: "./state/reliability_canary_20260722_retry21/llm_usage.sqlite"
+  daily_path: "./state/reliability_canary_20260722_retry21/llm_cost_daily.json"
+  ledger_path: "./state/reliability_canary_20260722_retry21/llm_cost_ledger.jsonl"
 
 publish:
-  projection_daily_path: "./state/reliability_canary_20260722_retry7/projection_cost_daily.json"
-  projection_ledger_path: "./state/reliability_canary_20260722_retry7/projection_cost_ledger.jsonl"
+  projection_daily_path: "./state/reliability_canary_20260722_retry21/projection_cost_daily.json"
+  projection_ledger_path: "./state/reliability_canary_20260722_retry21/projection_cost_ledger.jsonl"

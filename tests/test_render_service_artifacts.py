@@ -248,7 +248,9 @@ def test_render_expands_covered_topics_with_briefs(tmp_path):
             "toc_topics_expanded": [
                 {
                     "topic": "Demand outlook",
-                    "summary": "Demand is strongest in APAC and improving in North America.",
+                    "summary": (
+                        "Demand is strongest in APAC and improving in North America."
+                    ),
                     "key_points": [
                         "APAC growth leads at +12%",
                         "North America recovered in Q4",
@@ -630,7 +632,9 @@ def test_render_surfaces_editorial_details_from_evidence_packs(tmp_path):
                 "methods": [
                     {
                         "name": "Market survey",
-                        "description": "Survey fielded in October 2025 across 12 markets.",
+                        "description": (
+                            "Survey fielded in October 2025 across 12 markets."
+                        ),
                     }
                 ]
             },

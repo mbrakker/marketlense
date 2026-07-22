@@ -23,3 +23,4 @@ text: |
   - Fix the listed failures directly.
   - Do not add claims that are absent from the supplied summary, insights, quotes, or grounding package.
   - Prefer deletion of unsupported material over speculation.
+  - Return direct public prose without editorial labels such as "Observation:", "Implication:", or "Executive action:".

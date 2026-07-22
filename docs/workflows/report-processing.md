@@ -50,7 +50,13 @@ written, no failure can trigger a replacement. Re-running with only
 `--cohort-manifest <path>` replays the same immutable members without a Drive
 reselection. A malformed manifest, duplicate member, size mismatch, rejected
 admission candidate cannot enter the cohort, and an insufficient eligible
-population fails closed.
+population fails closed. Admission prefetches each selected source PDF and
+carries its deterministic local MD5 into the cohort member when the Drive
+listing omitted that metadata. The same value is checked against PDF integrity
+before the manifest is frozen; it is not inferred from a title or replaced
+with a non-content identifier. A filename is optional in the metadata-only
+listing mode and is used only as an additional duplicate signal; it is resolved
+later when presentation needs it, never treated as required source identity.
 `--success-target N` is the only explicit mode allowed to select later
 candidates after a failure; it is prohibited for release/reliability rates.
 Publish a fixed cohort with the same `--cohort-manifest <path>` passed to
@@ -66,10 +72,25 @@ to close a reliability run. The second, unchanged publication must retain a
 
 Taxonomy, context-category, and cover-semantics JSON are schema constrained,
 deterministically parsed and normalized, then given exactly one source-backed
-structured-output repair when their first response is invalid. Category IDs
-without a matched canonical inclusion rule are withheld rather than published
-as a semantic guess. An exhausted repair remains a typed failure; it never
-becomes an empty successful analysis package.
+structured-output repair when their first response is invalid. A primary or
+secondary category candidate without a matched canonical inclusion rule is
+ambiguous: it triggers one category-only repair rather than being silently
+withheld. An exhausted repair remains a typed failure; it never becomes an
+empty successful analysis package. A response with no category candidates
+likewise triggers that one repair and then fails closed. By contrast, an
+all-rejected, schema-valid candidate set is an explicit uncategorized outcome:
+it is not mistaken for an empty model response. The canonical Technology & Innovation
+rules explicitly cover reports whose dominant subject is immersive experiences,
+spatial computing, virtual worlds, or Metaverse technology.
+
+Candidate ranking deterministically splits each candidate kind into at most
+four-item batches, then uses zero-temperature structured output with a bounded
+4,096-token completion allowance. This preserves a complete JSON result for
+every candidate without silently truncating a large batch. Concurrent ranking
+calls obtain distinct ledger ordinals;
+an occupied derived-projection lease is logged as a bounded deferral while the
+canonical SQLite event remains the source of truth and the workflow finalizer
+materializes the projection.
 Use `--rescan` only when the normal cursor should be bypassed. Queue operations and checkpoint recovery are
 documented in [asynchronous workflow queue](../architecture/asynchronous-workflow-queue.md).
 See [validation and regeneration](validation-and-regeneration.md), [artifact

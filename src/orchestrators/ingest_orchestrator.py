@@ -800,10 +800,10 @@ def _cohort_admission_preflight(
             reason = "missing_source_identity"
         elif normalized_mime and normalized_mime != "application/pdf":
             reason = "unsupported_document"
-        elif not source_identity or not title_key:
+        elif not source_identity:
             reason = "missing_source_identity"
-        elif (
-            source_identity in known_source_identities or title_key in known_title_keys
+        elif source_identity in known_source_identities or (
+            title_key and title_key in known_title_keys
         ):
             reason = "duplicate"
         else:
@@ -838,10 +838,9 @@ def _cohort_admission_preflight(
                         reason = "corrupt_source"
                     else:
                         integrity_md5 = str(getattr(integrity, "md5", "") or "")
-                        if (
-                            (integrity_md5 and integrity_md5 != source_identity)
-                            or int(getattr(integrity, "page_count", 1) or 0) < 1
-                        ):
+                        if (integrity_md5 and integrity_md5 != source_identity) or int(
+                            getattr(integrity, "page_count", 1) or 0
+                        ) < 1:
                             reason = "corrupt_source"
                         else:
                             text = deps.extract_pdf_text(
@@ -928,7 +927,8 @@ def _cohort_admission_preflight(
         if reason == "admitted":
             admitted.append(file)
             known_source_identities.add(source_identity)
-            known_title_keys.add(title_key)
+            if title_key:
+                known_title_keys.add(title_key)
     return admitted
 
 
@@ -982,7 +982,7 @@ def _select_admitted_cohort(
                 },
             )
         attempted_file_ids.update(file.file_id for file in candidates)
-        _prefetch_drive_cache_stage(
+        candidates = _prefetch_drive_cache_stage(
             candidates,
             settings=settings,
             deps=deps,
@@ -1640,9 +1640,9 @@ def _prefetch_drive_cache_stage(
     settings: IngestSettings,
     deps: IngestBatchDependencies,
     root_ctx: RunContext,
-) -> None:
+) -> list[DriveFile]:
     if not files_to_process or not _should_run_drive_cache_prefetch(deps):
-        return
+        return files_to_process
     worker_limit = min(
         max(1, int(settings.ingest_worker_limit or 1)),
         len(files_to_process),
@@ -1697,6 +1697,33 @@ def _prefetch_drive_cache_stage(
             },
         )
     )
+    results_by_file_id = {result.file_id: result for result in results}
+    resolved_files = [
+        replace(
+            file,
+            md5_checksum=(results_by_file_id[file.file_id].md5 or file.md5_checksum),
+        )
+        if results_by_file_id.get(file.file_id)
+        else file
+        for file in files_to_process
+    ]
+    logger.info(
+        log_event(
+            root_ctx,
+            role="orchestrator",
+            event="ingest_drive_cache_prefetch_source_identity_enriched",
+            module=logger.name,
+            fields={
+                "file_count": len(resolved_files),
+                "source_identity_enriched": sum(
+                    1
+                    for original, resolved in zip(files_to_process, resolved_files)
+                    if not original.md5_checksum and resolved.md5_checksum
+                ),
+            },
+        )
+    )
+    return resolved_files
 
 
 def _process_ingest_batch(
@@ -1708,7 +1735,7 @@ def _process_ingest_batch(
     force_report_cards: bool,
     start_index: int = 0,
 ) -> list[_FileProcessResult]:
-    _prefetch_drive_cache_stage(
+    files_to_process = _prefetch_drive_cache_stage(
         files_to_process,
         settings=settings,
         deps=deps,

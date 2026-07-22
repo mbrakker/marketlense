@@ -66,7 +66,9 @@ def test_retained_public_artifact_has_no_editorial_blockers() -> None:
     }
 
 
-def test_public_chart_card_requires_retained_candidate_evidence_and_insight_chain() -> None:
+def test_public_chart_card_requires_retained_candidate_evidence_and_insight_chain() -> (
+    None
+):
     artifacts = _retained_artifacts()
     artifacts["chart_insight_cards"] = [
         {
@@ -141,8 +143,12 @@ def test_public_html_source_section_requires_a_public_original_source_link() -> 
         ),
     )
 
-    assert "public_editorial_quality.public_source_provenance_missing" in _rule_ids(missing)
-    assert "public_editorial_quality.public_source_provenance_missing" not in _rule_ids(linked)
+    assert "public_editorial_quality.public_source_provenance_missing" in _rule_ids(
+        missing
+    )
+    assert "public_editorial_quality.public_source_provenance_missing" not in _rule_ids(
+        linked
+    )
 
 
 @pytest.mark.parametrize(

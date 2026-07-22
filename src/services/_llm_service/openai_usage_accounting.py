@@ -52,7 +52,7 @@ def record_usage_accounting(
     reservation_operation: str = "",
     total_tokens: int | None = None,
     source_request: Any | None = None,
-    call_ordinal: int = 0,
+    call_ordinal: int | None = None,
     parse_status: str = "not_applicable",
     schema_validation_status: str = "not_applicable",
 ) -> OpenAIUsageAccountingResponse:
@@ -162,7 +162,7 @@ def record_usage_accounting(
             producer_build_identity=str(
                 getattr(source, "producer_build_identity", "")
                 or ctx.producer_commit_sha
-                or ""
+                or "workspace"
             ),
             repair_attempt=max(
                 0,

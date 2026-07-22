@@ -240,6 +240,8 @@ categories:
     cybersecurity, hardware, or major technology shifts.
   - Technology change is the report main lens rather than a supporting enabler for
     another category.
+  - The report is primarily about immersive experiences, spatial computing, virtual
+    worlds, or Metaverse technology.
   exclude_when:
   - Reject when technology is only a supporting capability inside a category-specific
     commerce, media, or healthcare report.

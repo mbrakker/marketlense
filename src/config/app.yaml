@@ -357,9 +357,9 @@ llm_execution_policies:
     schema_version: "1.0"
     provider: openai
     model: "gpt-5-mini"
-    temperature: 1.0
+    temperature: 0.0
     seed_policy: inherit
-    max_output_tokens: 1024
+    max_output_tokens: 4096
     retrieval_mode: inherit
     timeout_seconds: 7200
     provider_retry_count: 0

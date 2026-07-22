@@ -1,6 +1,8 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+from src.generators._report_selection_generator import figure_selection
+
 from ._shared import *  # noqa: F401,F403
 
 
@@ -43,6 +45,68 @@ def test_prefilter_uses_typed_candidate_features_without_meta():
     assert rsg._candidate_prefilter_reject_reason(chart) == ""
     assert rsg._candidate_is_obvious_pass(table) is True
     assert rsg._candidate_is_obvious_pass(chart) is True
+
+
+def test_rank_candidate_batches_bound_each_model_response_to_four_candidates(
+    tmp_path,
+):
+    settings = _settings(tmp_path)
+    candidates = [
+        _candidate(
+            cid=f"chart_{index}",
+            kind="chart",
+            caption="Figure",
+            meta={"area_frac": 0.2, "text_ratio": 0.2},
+        )
+        for index in range(9)
+    ]
+    calls: list[list[str]] = []
+
+    def _render_prompt(req, ctx):
+        return SimpleNamespace(text=req.variables.get("candidates_json", "system"))
+
+    def _rank_candidates(req, ctx):
+        identifiers = [item["id"] for item in json.loads(req.user_prompt)]
+        calls.append(identifiers)
+        return SimpleNamespace(
+            results=[
+                RankedCandidate(
+                    id=identifier,
+                    type="chart",
+                    score=90,
+                    quality_score=90,
+                    insight_score=90,
+                    data_score=90,
+                    keep=True,
+                )
+                for identifier in identifiers
+            ],
+            prompt_tokens=1,
+            completion_tokens=1,
+            total_tokens=2,
+            request_id="rank",
+            raw_content="[]",
+        )
+
+    ranked, usage = figure_selection._rank_candidate_batches(
+        table_candidates=[],
+        chart_candidates=candidates,
+        runtime=SimpleNamespace(
+            settings=settings,
+            ctx=_ctx(),
+            report_worker_limit=1,
+            parallel_within_file=False,
+        ),
+        dependencies=_deps(
+            render_prompt=_render_prompt,
+            rank_candidates=_rank_candidates,
+        ),
+    )
+
+    assert [len(call) for call in calls] == [4, 4, 1]
+    assert [row.id for row in ranked] == [candidate.id for candidate in candidates]
+    assert usage == {"prompt_tokens": 3, "completion_tokens": 3, "total_tokens": 6}
+
 
 def test_rank_candidates_payload_includes_quality_signals(tmp_path, caplog):
     settings = _settings(
@@ -162,6 +226,7 @@ def test_rank_candidates_payload_includes_quality_signals(tmp_path, caplog):
     )
     assert payload_fields["input_cost_saved_usd_est"] > 0.0
 
+
 def test_rank_candidates_payload_compacts_table_fields_and_text(tmp_path):
     settings = _settings(tmp_path, rank_model="gpt-rank")
     captured_rows: list[dict[str, object]] = []
@@ -249,6 +314,7 @@ def test_rank_candidates_payload_compacts_table_fields_and_text(tmp_path):
         "table_confidence": 0.812,
     }
 
+
 def test_prefilter_rejects_low_signal_chart_fragment():
     candidate = Candidate(
         schema_version="1.0",
@@ -270,6 +336,7 @@ def test_prefilter_rejects_low_signal_chart_fragment():
     )
 
     assert rsg._candidate_prefilter_reject_reason(candidate) == "chart_low_confidence"
+
 
 def test_refine_selection_adaptive_obvious_pass_skips_llm(tmp_path):
     settings = _settings(
@@ -320,6 +387,7 @@ def test_refine_selection_adaptive_obvious_pass_skips_llm(tmp_path):
     assert len(items) == 1
     assert len(accepted) == 1
     assert items[0].id == "table_1"
+
 
 def test_refine_selection_adaptive_ambiguous_calls_llm(tmp_path):
     settings = _settings(
@@ -397,6 +465,7 @@ def test_refine_selection_adaptive_ambiguous_calls_llm(tmp_path):
     assert items[0].bbox[1] < refined_bbox[1]
     assert items[0].bbox[2] > refined_bbox[2]
     assert items[0].bbox[3] > refined_bbox[3]
+
 
 def test_refine_selection_batches_same_page_candidates_by_phase(tmp_path):
     settings = _settings(tmp_path, crop_refine_enabled=True, crop_refine_mode="always")
@@ -489,6 +558,7 @@ def test_refine_selection_batches_same_page_candidates_by_phase(tmp_path):
     assert len(items) == 2
     assert len(accepted) == 2
     assert [item.id for item in items] == ["chart_1", "chart_2"]
+
 
 def test_refine_selection_batched_page_maps_mixed_valid_invalid_decisions(tmp_path):
     settings = _settings(tmp_path, crop_refine_enabled=True, crop_refine_mode="always")
@@ -606,8 +676,10 @@ def test_refine_selection_batched_page_maps_mixed_valid_invalid_decisions(tmp_pa
     assert [item.id for item in items] == ["chart_keep"]
     assert [candidate.id for candidate in accepted] == ["chart_keep"]
 
+
 __all__ = [
     "test_prefilter_uses_typed_candidate_features_without_meta",
+    "test_rank_candidate_batches_bound_each_model_response_to_four_candidates",
     "test_rank_candidates_payload_includes_quality_signals",
     "test_rank_candidates_payload_compacts_table_fields_and_text",
     "test_prefilter_rejects_low_signal_chart_fragment",

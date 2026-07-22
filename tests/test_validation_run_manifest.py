@@ -14,11 +14,11 @@ from src.contracts.validation_run_manifest import (
     ValidationRunManifestRecordRequest,
     ValidationRunManifestStageRecord,
 )
-from src.orchestrators.publish_orchestrator import (
-    _record_validation_cohort_publish_outcomes,
-)
 from src.orchestrators._report_analysis_orchestrator.manifest import (
     record_validation_analysis_stage,
+)
+from src.orchestrators.publish_orchestrator import (
+    _record_validation_cohort_publish_outcomes,
 )
 from src.services.report_store_service import (
     audit_validation_run_manifest,
@@ -220,6 +220,53 @@ def test_analysis_stage_recorder_uses_inherited_validation_provenance(tmp_path) 
         (item.stage, item.terminal_outcome, item.entity_count)
         for item in audit.stage_totals
     } == {("taxonomy", "succeeded", 1)}
+
+
+def test_analysis_stage_recorder_uses_workspace_identity_for_local_runs(
+    tmp_path,
+) -> None:
+    db_path = str(tmp_path / "reports.sqlite")
+    create_validation_run_manifest(
+        ValidationRunManifestCreateRequest(
+            schema_version="1.0",
+            db_path=db_path,
+            validation_run_id="validation-1",
+            cohort_id="cohort-1",
+            workflow_run_id="workflow-1",
+            configuration_hash="config-hash",
+            policy_hash="policy-hash",
+            producer_build_identity="workspace",
+            created_at_utc="2026-07-21T10:00:00Z",
+        ),
+        _ctx(),
+    )
+    ctx = replace(
+        _ctx(),
+        validation_run_id="validation-1",
+        cohort_id="cohort-1",
+        report_id="report-1",
+        source_identity_id="source-1",
+        publisher_id="publisher-1",
+        configuration_hash="config-hash",
+        policy_hash="policy-hash",
+    )
+
+    record_validation_analysis_stage(
+        settings=SimpleNamespace(reports_db=db_path),
+        ctx=ctx,
+        stage="taxonomy",
+        source_identity_id="source-1",
+    )
+
+    audit = audit_validation_run_manifest(
+        ValidationRunManifestAuditRequest(
+            schema_version="1.0", db_path=db_path, validation_run_id="validation-1"
+        ),
+        ctx,
+    )
+    assert {(item.stage, item.entity_count) for item in audit.stage_totals} == {
+        ("taxonomy", 1)
+    }
 
 
 def test_analysis_stage_recorder_rejects_missing_validation_provenance(

@@ -54,7 +54,7 @@ def record_validation_manifest_stage(
         "source_identity_id": str(source_identity_id or "").strip(),
         "configuration_hash": str(getattr(ctx, "configuration_hash", "") or "").strip(),
         "policy_hash": str(getattr(ctx, "policy_hash", "") or "").strip(),
-        "producer": str(getattr(ctx, "producer_commit_sha", "") or "").strip(),
+        "producer": str(getattr(ctx, "producer_commit_sha", "") or "workspace").strip(),
     }
     missing = sorted(key for key, value in required.items() if not value)
     if missing:

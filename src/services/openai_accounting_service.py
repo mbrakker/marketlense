@@ -86,13 +86,18 @@ def _validate_request(request: OpenAIUsageAccountingRequest) -> None:
             "policy_hash": request.policy_hash,
             "producer_build_identity": request.producer_build_identity,
         }
-        missing = sorted(key for key, value in required.items() if not str(value).strip())
+        missing = sorted(
+            key for key, value in required.items() if not str(value).strip()
+        )
         if missing:
             raise AppError(
                 code="openai_accounting_validation_attribution_missing",
                 message="Validation-run OpenAI accounting requires complete runtime attribution",
                 retryable=False,
-                context={"validation_run_id": request.validation_run_id, "missing": missing},
+                context={
+                    "validation_run_id": request.validation_run_id,
+                    "missing": missing,
+                },
             )
 
 
@@ -433,7 +438,28 @@ def update_usage_outcome(
                 ),
                 ctx,
             )
-        except OPENAI_ACCOUNTING_EXCEPTIONS as exc:
+        except AppError as exc:
+            if exc.code == "llm_usage_projection_busy":
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="service",
+                        event="openai_usage_projection_finalize_deferred",
+                        module=logger.name,
+                        fields={"event_key": request.event_key, "code": exc.code},
+                    )
+                )
+            else:
+                logger.warning(
+                    log_event(
+                        ctx,
+                        role="service",
+                        event="openai_usage_projection_finalize_failed",
+                        module=logger.name,
+                        fields={"event_key": request.event_key, "error": str(exc)},
+                    )
+                )
+        except (OSError, ValueError, TypeError) as exc:
             logger.warning(
                 log_event(
                     ctx,

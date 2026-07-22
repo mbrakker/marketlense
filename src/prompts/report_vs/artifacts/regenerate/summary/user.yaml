@@ -35,4 +35,5 @@ text: |
   - Keep `claim_evidence_map` brief and fully grounded.
   - Author both TLDRs independently from the same evidence. The compact TLDR must not be a clipped prefix of the standard TLDR.
   - End each TLDR with complete sentence punctuation. Never use an ellipsis.
+  - Do not use mechanical lead-ins or labels such as "Answer:", "Observation:", or "Implication:"; write direct public prose throughout the executive summary.
   - Do not introduce unsupported numbers, entities, quotes, or conclusions.

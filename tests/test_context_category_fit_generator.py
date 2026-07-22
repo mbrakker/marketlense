@@ -691,6 +691,79 @@ def test_fit_report_categories_marks_ambiguous_topic_fit() -> None:
     assert response.fits[0].remediation_signal == "topic_semantics_ambiguous"
 
 
+def test_fit_report_categories_supports_spatial_computing_as_technology() -> None:
+    """Canonical Technology rules cover the report subject, not only generic wording."""
+    context = ReportCategoryContext(
+        schema_version="1.0",
+        report_id="file-1",
+        title="The Metaverse Matters Now",
+        publisher="Activate",
+        region="Global",
+        time_period="2023",
+        overview=(
+            "The report frames the Metaverse as a technology platform shaped by "
+            "spatial computing and virtual worlds."
+        ),
+        methods=[],
+        key_findings=[
+            "Immersive experiences and spatial computing are central to the report."
+        ],
+        limitations=[],
+        sections=[],
+    )
+    settings = SimpleNamespace(
+        openai_model="gpt-5-mini",
+        openai_models={},
+        openai_api_key="test-key",
+        openai_seed=None,
+        openai_timeout_seconds=30.0,
+        cost_ledger_path="./out/cost-ledger.jsonl",
+        cost_daily_path="./out/cost-daily.json",
+        model_pricing={"gpt-5-mini": {}},
+        llm_execution_policies=_execution_policies(),
+    )
+    response = fit_report_categories_from_context(
+        ContextCategoryFitRequest(
+            schema_version="1.0",
+            context=context,
+            settings=settings,
+            category_mapping_path="src/config/category-mappings.yaml",
+        ),
+        _ctx(),
+        openai_client=RecordingOpenAIClient(
+            {
+                "schema_version": "1.0",
+                "selected_category_ids": ["technology"],
+                "category_fits": [
+                    {
+                        "category_id": "technology",
+                        "label": "Technology & Innovation",
+                        "fit_score": 0.95,
+                        "decision": "primary",
+                        "why_fit": (
+                            "Spatial computing is the report's central technology "
+                            "platform."
+                        ),
+                        "why_not_fit": "",
+                        "evidence_sections": ["Overview"],
+                    }
+                ],
+            }
+        ),
+        prompt_client=RecordingPromptClient(),
+    )
+
+    assert response.categories == ["technology"]
+    assert response.category_labels == ["Technology & Innovation"]
+    assert response.fits[0].semantic_rule_status == "supported"
+    assert response.fits[0].supported_topic_rules == [
+        (
+            "The report is primarily about immersive experiences, spatial "
+            "computing, virtual worlds, or Metaverse technology."
+        )
+    ]
+
+
 def test_high_confidence_rejected_category_is_deterministically_promoted_when_central() -> (
     None
 ):

@@ -41,6 +41,33 @@ from .ranking import (
     _truncate_prefiltered_candidates,
 )
 
+_RANK_RESPONSE_CHUNK_SIZE = 4
+
+
+def _rank_candidates_in_chunks(
+    *,
+    candidates: list[Candidate],
+    kind: str,
+    runtime: ReportRuntimeState,
+    dependencies: ReportSelectionDependencies,
+) -> tuple[list[Any], list[dict[str, Optional[int]]]]:
+    """Rank bounded candidate subsets so every model response stays complete."""
+
+    ranked: list[Any] = []
+    usage_rows: list[dict[str, Optional[int]]] = []
+    for offset in range(0, len(candidates), _RANK_RESPONSE_CHUNK_SIZE):
+        candidate_chunk = candidates[offset : offset + _RANK_RESPONSE_CHUNK_SIZE]
+        batch_result = _rank_candidates_batch(
+            candidates=candidate_chunk,
+            kind=kind,
+            settings=runtime.settings,
+            ctx=runtime.ctx,
+            dependencies=dependencies,
+        )
+        ranked.extend(batch_result.ranked)
+        usage_rows.append(batch_result.usage)
+    return ranked, usage_rows
+
 
 def _rank_candidate_batches(
     *,
@@ -65,15 +92,14 @@ def _rank_candidate_batches(
     max_workers = min(2, max(1, int(getattr(runtime, "report_worker_limit", 1) or 1)))
     if len(active_batches) <= 1 or not runtime.parallel_within_file or max_workers <= 1:
         for kind, batch in active_batches:
-            batch_result = _rank_candidates_batch(
+            ranked_rows, chunk_usage_rows = _rank_candidates_in_chunks(
                 candidates=batch,
                 kind=kind,
-                settings=runtime.settings,
-                ctx=runtime.ctx,
+                runtime=runtime,
                 dependencies=dependencies,
             )
-            ranked_by_kind[kind] = list(batch_result.ranked)
-            usage_rows.append(batch_result.usage)
+            ranked_by_kind[kind] = ranked_rows
+            usage_rows.extend(chunk_usage_rows)
         return ranked_by_kind["table"] + ranked_by_kind["chart"], _merge_rank_usage(
             usage_rows
         )
@@ -94,19 +120,18 @@ def _rank_candidate_batches(
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {
             executor.submit(
-                _rank_candidates_batch,
+                _rank_candidates_in_chunks,
                 candidates=batch,
                 kind=kind,
-                settings=runtime.settings,
-                ctx=runtime.ctx,
+                runtime=runtime,
                 dependencies=dependencies,
             ): kind
             for kind, batch in active_batches
         }
         for future, kind in futures.items():
-            batch_result = future.result()
-            ranked_by_kind[kind] = list(batch_result.ranked)
-            usage_rows.append(batch_result.usage)
+            ranked_rows, chunk_usage_rows = future.result()
+            ranked_by_kind[kind] = ranked_rows
+            usage_rows.extend(chunk_usage_rows)
     logger.info(
         log_event(
             runtime.ctx,

@@ -339,6 +339,32 @@ def test_admission_preflight_rejects_duplicate_source_identity_before_freeze(
     assert [item.file_id for item in decisions] == ["first"]
 
 
+def test_admission_preflight_accepts_metadata_only_file_with_content_identity(
+    ingest_settings,
+    run_context,
+) -> None:
+    metadata_only_file = DriveFile(
+        "1.0", "metadata-only", None, None, "verified-content-md5"
+    )
+
+    admitted = orch._cohort_admission_preflight(
+        [metadata_only_file],
+        settings=ingest_settings,
+        deps=_batch_dependencies(
+            get_source_quarantine=lambda _request, _ctx: SimpleNamespace(record=None),
+            check_pdf_integrity=lambda _request, _ctx: SimpleNamespace(
+                failure_code="", page_count=8, md5="verified-content-md5"
+            ),
+            extract_pdf_text=lambda _request, _ctx: SimpleNamespace(
+                char_count=2_000, pages_extracted=3, text_density=666.0
+            ),
+        ),
+        root_ctx=run_context,
+    )
+
+    assert admitted == [metadata_only_file]
+
+
 def test_failed_fixed_cohort_member_records_blocked_remaining_stages(
     ingest_settings,
     run_context,

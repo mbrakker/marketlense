@@ -150,16 +150,29 @@ def _artifact_family_statuses(artifacts_payload: Any) -> dict[str, str]:
 
 
 def _category_fit_ambiguity_ids(category_state: Any) -> list[str]:
-    """Return the selected non-rejected categories that still need one repair."""
-    assignment = getattr(category_state, "category_assignment", None)
-    selected = set(getattr(assignment, "categories", ()) or ())
+    """Return non-rejected ambiguous category candidates requiring one repair."""
     fit_response = getattr(category_state, "fit_response", None)
     return [
         str(fit.category_id)
         for fit in (getattr(fit_response, "fits", ()) or ())
-        if str(fit.category_id) in selected
-        and str(fit.remediation_signal) == "topic_semantics_ambiguous"
+        if str(getattr(fit, "decision", "")) in {"primary", "secondary"}
+        and str(getattr(fit, "remediation_signal", "")) == "topic_semantics_ambiguous"
     ]
+
+
+def _category_fit_repair_code(category_state: Any) -> str:
+    """Return the one bounded repair reason for an unresolved category fit."""
+
+    fits = tuple(
+        getattr(getattr(category_state, "fit_response", None), "fits", ()) or ()
+    )
+    if not fits:
+        return "category_fit_empty"
+    return (
+        "category_fit_contradiction"
+        if _category_fit_ambiguity_ids(category_state)
+        else ""
+    )
 
 
 def _resolve_taxonomy_with_repair(
@@ -493,13 +506,15 @@ def run_report_analysis(
             dependencies=dependencies,
             openai_client=category_fit_openai_client,
         )
-        ambiguity_ids = _category_fit_ambiguity_ids(context_category_state)
-        if ambiguity_ids:
+        category_repair_code = _category_fit_repair_code(context_category_state)
+        if category_repair_code:
             raise AppError(
-                code="category_fit_contradiction",
-                message="Selected categories remain semantically ambiguous",
+                code=category_repair_code,
+                message="Category fit did not select one supported category",
                 retryable=False,
-                context={"category_ids": ambiguity_ids},
+                context={
+                    "category_ids": _category_fit_ambiguity_ids(context_category_state)
+                },
             )
     except AppError as exc:
         if exc.code not in {
@@ -508,6 +523,7 @@ def run_report_analysis(
             "openai_response_empty",
             "openai_response_invalid_json",
             "openai_response_json_type_invalid",
+            "category_fit_empty",
             "category_fit_contradiction",
         }:
             raise
@@ -540,14 +556,19 @@ def run_report_analysis(
             ),
         )
         category_repaired = True
-        ambiguity_ids = _category_fit_ambiguity_ids(context_category_state)
-        if ambiguity_ids:
+        category_repair_code = _category_fit_repair_code(context_category_state)
+        if category_repair_code:
             raise AppError(
-                code="category_fit_contradiction",
-                message="Targeted category repair left selected categories ambiguous",
+                code=category_repair_code,
+                message=(
+                    "Targeted category repair did not select one supported category"
+                ),
                 retryable=False,
-                context={"category_ids": ambiguity_ids, "repair_attempt": 1},
-            )
+                context={
+                    "category_ids": _category_fit_ambiguity_ids(context_category_state),
+                    "repair_attempt": 1,
+                },
+            ) from exc
     category_assignment = context_category_state.category_assignment
     data.categories = category_assignment.categories
     for pack_name, payload in (

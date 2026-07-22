@@ -20,9 +20,14 @@ allowlist:
     max_delta_percent: 3.0
   - pattern: "totals.total_tokens"
     owner: "market-lense"
-    reason: "Report-card prompts include bounded TLDR projections, grounded cover-semantics classification, and one constrained cover-semantics repair envelope; the fixture corpus retains no additional browser or OCR work."
+    reason: "Report-card prompts include bounded TLDR projections, grounded cover-semantics classification, one constrained cover-semantics repair envelope, direct-prose requirements for summary, expert-view, and LinkedIn repairs, and an explicit complete/concise rank-result contract; the fixture corpus retains no additional browser or OCR work."
     expires_on: "2026-07-31"
-    max_delta_absolute: 3700
+    max_delta_absolute: 3900
+  - pattern: "families.ranking.total_tokens"
+    owner: "market-lense"
+    reason: "The ranking contract now requires exactly one concise result per candidate and caps rejection reasons, adding 39 dry-run prompt tokens while retaining the existing model, browser, OCR, and candidate limits."
+    expires_on: "2026-07-31"
+    max_delta_absolute: 40
   - pattern: "families.cross_report_analysis.total_tokens"
     owner: "market-lense"
     reason: "Current cross-report synthesis fixture has a bounded 47-token input drift with no model, OCR, browser-attempt, or cost-threshold regression."
@@ -30,9 +35,9 @@ allowlist:
     max_delta_absolute: 47
   - pattern: "families.publishing.total_tokens"
     owner: "market-lense"
-    reason: "Publishing prompts include bounded TLDR contracts plus primary and one-repair cover-semantics JSON contracts."
+    reason: "Publishing prompts include bounded TLDR contracts, primary and one-repair cover-semantics JSON contracts, and direct-prose requirements for summary, expert-view, and LinkedIn repair."
     expires_on: "2026-07-31"
-    max_delta_absolute: 2356
+    max_delta_absolute: 2550
   - pattern: "namespaces.set"
     owner: "market-lense"
     reason: "Adds the approved crop-QA plus bounded taxonomy, category, and cover-semantics structured-repair namespaces; each has a dry-run fixture and a fail-closed runtime policy."

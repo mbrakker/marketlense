@@ -18,7 +18,7 @@ text: |
   - Assume an audience of senior business, ecommerce, digital, or strategy leaders
   - Use a confident, human tone (no AI patterns, no em dashes, no clichés)
   - Use metric spine entries and claim-level support from the summary/insights when they strengthen the argument
-  - Frame the comment as observation -> implication -> executive action or watchpoint
+  - Move from observation to implication to an executive action or watchpoint in direct prose; do not emit labels such as "Observation:", "Implication:", or "Executive action:"
   - If metrics conflict or are too weakly contextualized, state the supported tension instead of smoothing it over
   - No emojis, no hashtags
 

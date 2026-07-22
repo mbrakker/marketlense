@@ -7,19 +7,19 @@ from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 
+from src.contracts.llm_usage import (
+    LLMUsageMedianRebuildRequest,
+    LLMUsageSpendGuardrailRequest,
+)
 from src.contracts.openai import (
     OpenAIUsageAccountingRequest,
     OpenAIUsageAccountingResponse,
     OpenAIUsageOutcomeUpdateRequest,
 )
-from src.contracts.llm_usage import (
-    LLMUsageMedianRebuildRequest,
-    LLMUsageSpendGuardrailRequest,
-)
 from src.contracts.run_context import RunContext
+from src.services import llm_usage_ledger_service
 from src.services import openai_accounting_service as svc
 from src.services._llm_service.openai_usage_accounting import record_usage_accounting
-from src.services import llm_usage_ledger_service
 from src.utils.errors import AppError
 
 
@@ -201,6 +201,49 @@ def test_usage_accounting_inherits_complete_validation_attribution_from_context(
     )
 
 
+def test_usage_accounting_uses_workspace_identity_for_local_validation_run(
+    tmp_path,
+) -> None:
+    ctx = replace(
+        _ctx(),
+        validation_run_id="validation-1",
+        cohort_id="cohort-1",
+        report_id="report-1",
+        publisher_id="publisher-1",
+        workflow="report_analysis",
+        stage="taxonomy",
+        artifact_family="taxonomy",
+        configuration_hash="configuration-hash",
+        policy_hash="policy-hash",
+    )
+    usage_db = str(tmp_path / "usage.sqlite")
+
+    response = record_usage_accounting(
+        ctx=ctx,
+        step_name="openai_respond_with_vector_store",
+        model="gpt-test",
+        input_tokens=10,
+        output_tokens=5,
+        tool_calls=0,
+        cost_ledger_path=str(tmp_path / "ledger.jsonl"),
+        cost_daily_path=str(tmp_path / "daily.json"),
+        model_pricing={"gpt-test": {}},
+        request_id="request-1",
+        source_request=SimpleNamespace(
+            usage_db_path=usage_db,
+            prompt_namespace="report_vs/taxonomy",
+            publisher_name="Publisher",
+        ),
+    )
+
+    assert response.usage_db_recorded is True
+    with sqlite3.connect(usage_db) as conn:
+        producer = conn.execute(
+            "SELECT producer_build_identity FROM llm_usage_events"
+        ).fetchone()
+    assert producer == ("workspace",)
+
+
 def test_record_usage_releases_operation_reservation_when_action_is_namespaced(
     tmp_path: Path,
 ) -> None:
@@ -312,6 +355,49 @@ def test_finalized_model_outcome_uses_shared_projection_finalizer(tmp_path) -> N
     assert updated is True
     assert (tmp_path / "ledger.jsonl").is_file()
     assert (tmp_path / "daily.json").is_file()
+
+
+def test_finalized_model_outcome_defers_an_occupied_projection_lease(
+    external_boundary_mocks_only, tmp_path, caplog
+) -> None:
+    request = _request(tmp_path)
+    recorded = svc.record_usage(request, _ctx())
+
+    def _projection_busy(_request, _ctx):
+        raise AppError(
+            code="llm_usage_projection_busy",
+            message="Another process is materializing this usage projection",
+            retryable=True,
+        )
+
+    caplog.set_level(logging.INFO, logger="market_lense.openai_accounting_service")
+    external_boundary_mocks_only.setattr(
+        svc.llm_usage_ledger_service,
+        "finalize_usage_projection",
+        _projection_busy,
+    )
+
+    updated = svc.update_usage_outcome(
+        OpenAIUsageOutcomeUpdateRequest(
+            schema_version="1.0",
+            usage_db_path=request.usage_db_path,
+            event_key=recorded.event_key,
+            parse_status="valid",
+            schema_validation_status="valid",
+            cost_ledger_path=request.cost_ledger_path,
+            cost_daily_path=request.cost_daily_path,
+        ),
+        _ctx(),
+    )
+
+    assert updated is True
+    events = [
+        json.loads(record.message)["event"]
+        for record in caplog.records
+        if record.name == "market_lense.openai_accounting_service"
+    ]
+    assert "openai_usage_projection_finalize_deferred" in events
+    assert "openai_usage_projection_finalize_failed" not in events
 
 
 def test_record_usage_marks_unknown_model_pricing_instead_of_zero_cost_ambiguity(

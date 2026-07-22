@@ -25,6 +25,7 @@ _MONTH_PATTERN = re.compile(
 _YEAR_PATTERN = re.compile(r"\b(20\d{2})\b")
 _ISO_DATE_PATTERN = re.compile(r"\b20\d{2}-\d{2}-\d{2}\b")
 _SENTENCE_SPLIT_PATTERN = re.compile(r"(?<=[.!?])\s+")
+_SENTENCE_ABBREVIATION = re.compile(r"\b(?:U\.S|U\.K|e\.g|i\.e)\.", re.I)
 _INLINE_INTERNAL_REFERENCE = re.compile(
     r"(?:\s*[\[(](?:[a-z]{1,4}|finding|insight|claim)[_-]?\d{1,5}[\])]|"
     r"\b(?:[a-z]{1,4}|finding|insight|claim)[_-]?\d{1,5}\b)",
@@ -32,7 +33,7 @@ _INLINE_INTERNAL_REFERENCE = re.compile(
 )
 _PUBLIC_TRUNCATION_MARKER = re.compile(r"(?:\.\.\.|…)")
 _MECHANICAL_PUBLIC_SCAFFOLD = re.compile(
-    r"\b(?:answer|observation|implication|executive action|concrete finding|"
+    r"\b(?:answer|observation|implication|executive action|executive takeaway|concrete finding|"
     r"immediate implication)\s*:",
     re.IGNORECASE,
 )
@@ -74,11 +75,9 @@ def _sanitize_public_prose(value: object) -> str:
     if not text:
         return ""
     sanitized = re.sub(r"\s{2,}", " ", _INLINE_INTERNAL_REFERENCE.sub("", text)).strip()
-    if _PUBLIC_TRUNCATION_MARKER.search(
-        sanitized
-    ) or _MECHANICAL_PUBLIC_SCAFFOLD.search(sanitized):
+    if _PUBLIC_TRUNCATION_MARKER.search(sanitized):
         return ""
-    return sanitized
+    return _MECHANICAL_PUBLIC_SCAFFOLD.sub("", sanitized).strip()
 
 
 def _split_summary_bullets(text: str, *, max_items: int = 5) -> list[str]:
@@ -113,30 +112,91 @@ def _sentence_excerpt(text: str, *, max_chars: int) -> str:
     normalized = _s(text)
     if not normalized:
         return ""
-    first_sentence = (_SENTENCE_SPLIT_PATTERN.split(normalized) or [normalized])[0]
-    candidate = first_sentence.strip()
-    if len(candidate) <= max_chars:
-        return candidate
-    # A clipped fragment reads as a claim whose ending was withheld.  Prefer the
-    # renderer's explicit unavailable state to emitting a literal ellipsis.
+    sentences = _complete_sentences(normalized)
+    for raw_sentence in sentences:
+        candidate = raw_sentence.strip()
+        if candidate and len(candidate) <= max_chars:
+            return candidate
+    # A clipped fragment reads as a claim whose ending was withheld. Preserve a
+    # complete source sentence or let the caller use its explicit unavailable
+    # state; never emit a literal ellipsis.
     return ""
+
+
+def _complete_sentences(text: str) -> list[str]:
+    """Split public prose without treating common abbreviations as a full claim."""
+    sentinel = "\ufff0"
+    protected = _SENTENCE_ABBREVIATION.sub(
+        lambda match: match.group(0).replace(".", sentinel), text
+    )
+    return [
+        sentence.replace(sentinel, ".")
+        for sentence in (_SENTENCE_SPLIT_PATTERN.split(protected) or [protected])
+    ]
 
 
 def _build_core_signal(
     *, tldr_text: str, executive_summary: str, insights: list[dict[str, str]]
 ) -> dict[str, str]:
-    primary_text = _pick_first_text(
-        insights[0]["text"] if insights else "",
-        tldr_text,
-        executive_summary,
+    source_texts = [
+        _s(insight.get("text"))
+        for insight in insights
+        if isinstance(insight, dict) and _s(insight.get("text"))
+    ] + [_s(tldr_text), _s(executive_summary)]
+    candidates = [
+        sentence.strip()
+        for source_text in source_texts
+        for sentence in _complete_sentences(source_text)
+        if sentence.strip()
+    ]
+    ranked_candidates = sorted(
+        enumerate(candidates),
+        key=lambda item: (-_core_signal_score(item[1]), item[0]),
     )
-    supporting_text = _pick_first_text(tldr_text, executive_summary, primary_text)
+    primary_text = ranked_candidates[0][1] if ranked_candidates else ""
+    heading = _pick_first_text(
+        *(
+            _sentence_excerpt(candidate, max_chars=58)
+            for _, candidate in ranked_candidates
+        ),
+    )
+    body = _pick_first_text(
+        *(
+            _sentence_excerpt(candidate, max_chars=320)
+            for _, candidate in ranked_candidates
+        ),
+    )
     return {
-        "heading": _sentence_excerpt(primary_text, max_chars=58)
-        or "Executive signal pending",
-        "body": _sentence_excerpt(supporting_text, max_chars=185)
-        or "Source-supported signal unavailable for this report.",
+        "heading": heading or "Source-backed market signal",
+        "body": body or "Source-supported signal unavailable for this report.",
     }
+
+
+_CORE_SIGNAL_ANNOTATION = re.compile(
+    r"\b(?:report|study|document|paper|survey)\b.*\b(?:documents?|presents?|"
+    r"describes?|outlines?|examines?|covers?)\b",
+    re.IGNORECASE,
+)
+_CORE_SIGNAL_MARKERS = re.compile(
+    r"\b(?:adoption|accelerat(?:e|es|ed|ing)|barrier|constrain(?:t|ed|s)|"
+    r"declin(?:e|es|ed|ing)|demand|driv(?:e|es|en|ing)|forecast|growth|"
+    r"increas(?:e|es|ed|ing)|majority|market|monetiz(?:e|ation)|revenue|"
+    r"shift|subscription|under\s+\d+|more\s+than)\b|%|\b\d[\d,.]*\b",
+    re.IGNORECASE,
+)
+
+
+def _core_signal_score(text: str) -> int:
+    """Prefer a substantive source sentence over a report-description sentence."""
+    normalized = _s(text)
+    if not normalized:
+        return -10
+    score = min(4, len(_CORE_SIGNAL_MARKERS.findall(normalized)))
+    if 55 <= len(normalized) <= 185:
+        score += 1
+    if _CORE_SIGNAL_ANNOTATION.search(normalized):
+        score -= 5
+    return score
 
 
 def _extract_focus_year(*values: object) -> str:

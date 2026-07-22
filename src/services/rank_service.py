@@ -176,6 +176,23 @@ def rank_candidates(
                 execution_policy_hash=request.execution_policy_hash,
                 execution_policy=request.execution_policy,
                 execution_policy_source=request.execution_policy_source,
+                publisher_name=(
+                    request.run_budget.publisher_name
+                    if request.run_budget is not None
+                    else ""
+                ),
+                prompt_namespace="rank_candidates",
+                report_id=ctx.report_id,
+                workflow=ctx.workflow,
+                stage="figure_ranking",
+                plan_hash=ctx.execution_plan_hash,
+                artifact_family="figure_ranking",
+                validation_run_id=ctx.validation_run_id,
+                publisher_id=ctx.publisher_id or "unattributed",
+                configuration_hash=ctx.configuration_hash,
+                policy_hash=ctx.policy_hash or request.execution_policy_hash,
+                producer_build_identity=ctx.producer_commit_sha or "workspace",
+                repair_attempt=ctx.repair_attempt,
                 usage_db_path=(
                     request.run_budget.usage_db_path
                     if request.run_budget is not None

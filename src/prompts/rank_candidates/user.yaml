@@ -22,7 +22,9 @@ text: |
       }
     ]
   }
-  No extra keys or commentary.
+  Return exactly one result for every supplied candidate ID. Set reject_reason
+  to an empty string for kept items; for rejected items, use no more than 12
+  words. No extra keys or commentary.
 
   [CANDIDATES]
   {{ candidates_json }}

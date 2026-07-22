@@ -19,6 +19,7 @@ text: |
   - Avoid hashtags except 2–3 highly relevant industry hashtags as a part of generated text
   - Use the strongest metric spine entries as public-facing proof points when they are complete enough to cite
   - Make the executive takeaway clear before adding supporting detail
+  - Use direct prose rather than labels such as "Executive takeaway:", "Observation:", or "Implication:"
   - Prefer concise bullets only when they make quantified evidence easier to scan
 
   Content constraints (strict):

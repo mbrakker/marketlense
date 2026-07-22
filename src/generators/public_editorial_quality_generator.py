@@ -65,10 +65,12 @@ _PLACEHOLDER = re.compile(
 _MALFORMED = re.compile(r"\ufffd|\b\w{1,16}\s*\|\s*\w{1,16}\b|(?:\w\s+){5,}\w")
 _MOJIBAKE = re.compile(r"(?:Ã[\u0080-\u00bf]|Â[\u0080-\u00bf]|â€)")
 _MECHANICAL_SCAFFOLD = re.compile(
-    r"\b(?:answer|observation|implication|executive action|concrete finding|"
+    r"\b(?:answer|observation|implication|executive action|"
+    r"executive takeaway|concrete finding|"
     r"immediate implication)\s*:",
     re.IGNORECASE,
 )
+_LITERAL_TRUNCATION = re.compile(r"(?:\.\.\.|…)")
 _PRIVATE_OPERATIONAL_REFERENCE = re.compile(
     r"(?:https?://(?:drive\.google\.com|localhost|127\.0\.0\.1)\S*|"
     r"(?<![A-Za-z0-9])(?:[A-Za-z]:[\\/]|(?:^|[\"'])/(?:out|cache|state)/))",
@@ -254,6 +256,16 @@ def _text_issues(
             "public_editorial_quality.text_corruption",
             _MOJIBAKE,
             "contains a common UTF-8 mojibake sequence",
+        ),
+        (
+            "public_editorial_quality.mechanical_editorial_scaffold",
+            _MECHANICAL_SCAFFOLD,
+            "contains mechanical editorial scaffolding",
+        ),
+        (
+            "public_editorial_quality.literal_truncation",
+            _LITERAL_TRUNCATION,
+            "contains a literal truncation ellipsis",
         ),
     ):
         if pattern.search(text):

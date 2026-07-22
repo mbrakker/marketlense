@@ -10,7 +10,7 @@ Every public report is evaluated twice: before any validation-driven repair and 
 
 ## Blocking rules
 
-The gate blocks public release for unsupported numeric claims; material claims without retained evidence linkage; internal IDs; placeholders; malformed extraction and OCR fragments; missing rendered assets; exact or high-confidence duplicate insights; fragments; generic figure labels when a descriptive caption exists; generic fallback boilerplate; certainty unsupported by evidence status; empty or non-specific decision implications; unlinked public chart cards; private operational paths or URLs; mechanical labels; literal truncation; and a rendered source section without a public original-source link.
+The gate blocks public release for unsupported numeric claims; material claims without retained evidence linkage; internal IDs; placeholders; malformed extraction and OCR fragments; missing rendered assets; exact or high-confidence duplicate insights; fragments; generic figure labels when a descriptive caption exists; generic fallback boilerplate; certainty unsupported by evidence status; empty or non-specific decision implications; unlinked public chart cards; private operational paths or URLs; mechanical labels; literal truncation; and a rendered source section without a public original-source link. Summary, expert-comment, and LinkedIn-post labels are deterministically removed and literal truncation is omitted before rendering; the exact final HTML is still checked and blocked if either remains visible.
 
 Duplicate detection compares normalized claim-token sets and material-number overlap. Regexes are used only for deterministic syntax defects such as IDs and placeholders; semantic duplication is not determined by a regex alone.
 

@@ -1,4 +1,5 @@
 import json
+from dataclasses import replace
 
 import pytest
 
@@ -11,7 +12,19 @@ from src.utils.errors import AppError
 
 
 def _ctx() -> RunContext:
-    return RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
+    return RunContext(
+        schema_version="1.0",
+        run_id="r",
+        task_id="t",
+        span_id="s",
+        report_id="report-1",
+        publisher_id="publisher-1",
+        workflow="report_generation",
+        validation_run_id="validation-1",
+        configuration_hash="config-hash",
+        policy_hash="policy-hash",
+        producer_commit_sha="build-sha",
+    )
 
 
 def _request(tmp_path, *, user_prompt: str = "[]") -> RankRequest:
@@ -94,8 +107,32 @@ def test_rank_candidates_parses_extended_schema(tmp_path):
     assert row.data_score == 86
     assert row.keep is True
     assert row.reject_reason == ""
-    assert captured[0][0].run_budget == budget
-    assert captured[0][0].usage_db_path == budget.usage_db_path
+    request = captured[0][0]
+    assert request.run_budget == budget
+    assert request.usage_db_path == budget.usage_db_path
+    assert request.prompt_namespace == "rank_candidates"
+    assert request.report_id == "report-1"
+    assert request.workflow == "report_generation"
+    assert request.stage == "figure_ranking"
+    assert request.artifact_family == "figure_ranking"
+    assert request.validation_run_id == "validation-1"
+    assert request.publisher_id == "publisher-1"
+
+
+def test_rank_candidates_forwards_bounded_completion_capacity(tmp_path):
+    payload = {"results": []}
+    captured = []
+
+    response = rank_service.rank_candidates(
+        replace(_request(tmp_path), max_output_tokens=4096),
+        _ctx(),
+        openai_chat_json_client=_openai_chat_json_response(
+            text=json.dumps(payload), parsed_json=payload, captured=captured
+        ),
+    )
+
+    assert response.results == []
+    assert captured[0][0].max_output_tokens == 4096
 
 
 def test_rank_candidates_legacy_score_only_defaults_subscores(tmp_path):

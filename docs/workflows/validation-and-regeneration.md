@@ -13,7 +13,7 @@ validation: case, spaces, and hyphens are canonicalized only to an already
 approved enum token. This does not expand the allowed semantic vocabulary;
 unknown values still fail closed.
 
-The deterministic [public editorial quality gate](../quality/public-editorial-quality.md) runs before the regeneration loop and after its final attempt. Its enabled blocking findings are merged into canonical `validation.json`, while its private before/after reports retain repair eligibility and evidence IDs. A public-copy finding is regenerated only when retained source text, an explicit evidence ID, and a supported target exist; otherwise it is explicitly abstained and remains release-blocking. This preserves passing fields and prevents generic fallback copy.
+The deterministic [public editorial quality gate](../quality/public-editorial-quality.md) runs before the regeneration loop and after its final attempt. Its enabled blocking findings are merged into canonical `validation.json`, while its private before/after reports retain repair eligibility and evidence IDs. Renderer normalization removes a mechanical label only when direct prose remains and omits literal truncation; the final HTML gate then blocks either defect if it remains visible. A public-copy finding is regenerated only when retained source text, an explicit evidence ID, and a supported target exist; otherwise it is explicitly abstained and remains release-blocking. This preserves passing fields and prevents generic fallback copy.
 
 Prompt fixtures and regression controls are documented in [quality testing](../quality/testing.md). Operator recovery starts with [recovery](../ops/recovery.md).
 
@@ -40,7 +40,11 @@ idempotency state, and configuration/policy/build provenance. Terminal
 outcomes are deliberately constrained to `published_verified`,
 `publish_ready`, `blocked`, `permanent_failure`, `abstained`, `cancelled`, or
 `superseded`. A normal audit fails closed when a current admitted member has no
-such terminal outcome. The release audit additionally requires every mandatory
+such terminal outcome. For a local run without an injected commit identity,
+stage and OpenAI-usage records use the explicit `workspace` producer identity
+so they remain consistent with the cohort manifest; missing cohort, report,
+source, configuration, or policy provenance still fails closed. The release audit
+additionally requires every mandatory
 stage group for every final-cohort report; a terminal row alone cannot conceal
 an incomplete funnel.
 
