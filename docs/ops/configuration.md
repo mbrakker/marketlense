@@ -15,6 +15,8 @@ Configuration resolves in this order:
 
 `MARKET_LENSE_PRODUCER_COMMIT` is an optional, non-secret 40-character commit SHA. The canonical configuration service reads it when CLI or UI code creates a runtime context, so retained manifest and log provenance identify the producing build without giving utilities environment access.
 
+Loading general application settings is credential-free: an absent Drive folder ID or OpenAI credential is represented as an empty setting so dry runs, planning, and operator inspection work in a clean checkout. The workflow preflight and provider boundaries then fail closed immediately before the affected external operation, with the typed missing-credential code and corrective action. Browser-acquisition settings keep their existing stricter provider-key check because they configure the model-backed browser runtime itself. Live ingestion, browser acquisition, and model calls therefore still require their real `.env` values; no credential default is introduced.
+
 All runtime data paths in `paths`, acquisition, analysis, cost, publication,
 mailbox, and browser sections are resolved once to absolute paths. A profile
 inside the repository is relative to the repository workspace even when it is

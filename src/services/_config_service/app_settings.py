@@ -232,8 +232,6 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     )
     sections = _load_config_sections(request)
     resolver = sections.resolver
-    need = resolver.need
-    need_env = resolver.need_env
 
     paths_settings = _resolve_paths_settings(
         sections.paths,
@@ -315,12 +313,9 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     settings = AppSettings(
         schema_version=str(sections.data.get("schema_version", "1.0")),
         google_sa_path=drive_auth_settings["google_sa_path"],
-        gdrive_folder_id=need(
-            sections.ingest,
-            "gdrive_folder_id",
-            "ingest.gdrive_folder_id",
-            "GDRIVE_FOLDER_ID",
-        ),
+        gdrive_folder_id=str(
+            sections.ingest.get("gdrive_folder_id") or _env_value("GDRIVE_FOLDER_ID")
+        ).strip(),
         drive_auth_mode=drive_auth_settings["drive_auth_mode"],
         google_oauth_client_path=drive_auth_settings["google_oauth_client_path"],
         google_oauth_token_path=drive_auth_settings["google_oauth_token_path"],
@@ -330,7 +325,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         ],
         drive_id=drive_settings["drive_id"],
         drive_list_mode=drive_settings["drive_list_mode"],
-        openai_api_key=need_env("OPENAI_API_KEY"),
+        openai_api_key=_env_value("OPENAI_API_KEY"),
         openai_model=openai_model,
         openai_models=_normalize_openai_models(
             sections.data.get("openai_models")
