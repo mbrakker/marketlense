@@ -263,7 +263,7 @@ The original ten-item screenshot baseline is complete in the committed implement
 
 #### P14. Restrict cohort-manifest publication to its admitted artifacts
 
-- **Title:** Cohort-scoped WordPress publication selection
+- **Title:** Restrict cohort-manifest publication to its admitted artifacts
 - **Impact 5 / effort: 1**
 - **Context:** Validation manifests already close report outcomes correctly, but the `publish-wp --cohort-manifest` command still begins with output-directory discovery. A profile containing unrelated HTML can therefore surface an unrelated candidate before final cohort-outcome recording.
 - **Benefit:** The immutable cohort becomes the authoritative candidate set, preventing unrelated drafts from being preflighted or published and making bounded canaries safer to run in shared artifact namespaces.
