@@ -1,6 +1,8 @@
 from __future__ import annotations
+
 import logging
 from typing import Any
+
 import requests
 
 from src.contracts.publish import PublishSettings
@@ -10,49 +12,49 @@ from src.contracts.wordpress import (
     WordPressPublishTargetPreflightRequest,
     WordPressPublishTargetPreflightResponse,
 )
-from src.services._wordpress_service.transport import (
-    _WordPressRequestResult,
-    _SessionPool,
-    _SESSION_POOL,
-    _post_type_endpoint,
-    _requests_verify,
-    _build_session,
-    _session_pool_key,
-    _rest_query_fallback_url,
-    _should_retry_rest_query_mode,
-    _patched_direct_transport,
-    _execute_request,
-    _suppress_insecure_request_warning,
-    _truncate_text,
-    _sanitize_response_headers,
-    _http_error_context,
-    _raise_request_exception,
-    _raise_http_server_error,
-    _raise_http_redirect_error,
-    _safe_json,
-    preflight_publish_target as _preflight_publish_target_request,
-)
-
-from src.services._wordpress_service.posts import (
-    upload_media,
-    create_post,
-    update_card,
-    find_post_by_file_id,
-    find_posts_by_file_id_batch,
-    _update_media_alt_text,
-)
-
-from src.services._wordpress_service.media import prepare_media_upload
-
-from src.services._wordpress_service.taxonomy import (
-    _ensure_terms,
-    ensure_taxonomy_terms,
-    ensure_tags,
-    update_post_categories,
-)
 from src.services._wordpress_service.intelligence_projection import (
     read_published_intelligence_source,
     write_wordpress_intelligence_projection,
+)
+from src.services._wordpress_service.media import prepare_media_upload
+from src.services._wordpress_service.posts import (
+    _update_media_alt_text,
+    create_post,
+    find_post_by_file_id,
+    find_posts_by_file_id_batch,
+    read_post_by_id,
+    update_card,
+    upload_media,
+)
+from src.services._wordpress_service.taxonomy import (
+    _ensure_terms,
+    ensure_tags,
+    ensure_taxonomy_terms,
+    update_post_categories,
+)
+from src.services._wordpress_service.transport import (
+    _SESSION_POOL,
+    _build_session,
+    _execute_request,
+    _http_error_context,
+    _patched_direct_transport,
+    _post_type_endpoint,
+    _raise_http_redirect_error,
+    _raise_http_server_error,
+    _raise_request_exception,
+    _requests_verify,
+    _rest_query_fallback_url,
+    _safe_json,
+    _sanitize_response_headers,
+    _session_pool_key,
+    _SessionPool,
+    _should_retry_rest_query_mode,
+    _suppress_insecure_request_warning,
+    _truncate_text,
+    _WordPressRequestResult,
+)
+from src.services._wordpress_service.transport import (
+    preflight_publish_target as _preflight_publish_target_request,
 )
 from src.utils.wp_auth import build_auth_header
 
@@ -120,6 +122,7 @@ __all__ = [
     "update_card",
     "update_report_card",
     "find_post_by_file_id",
+    "read_post_by_id",
     "find_posts_by_file_id_batch",
     "_update_media_alt_text",
     "_ensure_terms",

@@ -52,6 +52,7 @@ def _ctx(task_id: str = "minimal-enforcement") -> RunContext:
         run_id=f"run-{task_id}",
         task_id=task_id,
         span_id="span",
+        admission_decision_hash="test-admission-decision",
     )
 
 

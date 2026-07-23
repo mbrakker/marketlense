@@ -738,5 +738,32 @@ class TestConfigService02TaxonomyTemperatureUsesConfig(_TestConfigServiceBase):
 
         self.assertIn("not found", str(ctx.exception).lower())
 
+    def test_load_settings_resolves_deterministic_admission_limits(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = self._write_config(tmp_dir, include_analysis=False)
+            cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
+            cfg_data["ingest"]["admission"] = {
+                "min_text_chars": 900,
+                "max_pages": 180,
+                "max_source_bytes": 12_000_000,
+                "required_evidence_families": ["doc_map", "findings"],
+            }
+            Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
+
+            with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
+                settings = load_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
+                )
+
+        self.assertEqual(900, settings.admission_min_text_chars)
+        self.assertEqual(180, settings.admission_max_pages)
+        self.assertEqual(12_000_000, settings.admission_max_source_bytes)
+        self.assertEqual(
+            ("doc_map", "findings"), settings.admission_required_evidence_families
+        )
+
 
 __all__ = ["TestConfigService02TaxonomyTemperatureUsesConfig"]

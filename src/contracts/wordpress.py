@@ -337,6 +337,28 @@ class WordPressPostLookupResponse:
 
 
 @dataclass(frozen=True)
+class WordPressPostReadRequest:
+    schema_version: str = field(metadata={"doc": "Post read request schema version."})
+    base_url: str = field(metadata={"doc": "WordPress site base URL."})
+    auth_header: str = field(metadata={"doc": "Authorization header value."})
+    post_id: int = field(metadata={"doc": "WordPress post ID to read."})
+    file_id: str = field(
+        metadata={"doc": "Expected immutable Drive file ID for verification."}
+    )
+    ssl_verify: bool = field(
+        default=True,
+        metadata={"doc": "Whether HTTPS certificates should be verified."},
+    )
+    ca_bundle_path: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Optional CA bundle path used when verifying HTTPS."},
+    )
+    post_type: str = field(
+        default="posts", metadata={"doc": "REST post type endpoint slug."}
+    )
+
+
+@dataclass(frozen=True)
 class WordPressPostLookupBatchRequest:
     schema_version: str = field(
         metadata={"doc": "Batch post lookup request schema version."}

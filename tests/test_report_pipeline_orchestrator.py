@@ -27,7 +27,13 @@ from src.utils.errors import AppError
 
 
 def _ctx() -> RunContext:
-    return RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
+    return RunContext(
+        schema_version="1.0",
+        run_id="r",
+        task_id="t",
+        span_id="s",
+        admission_decision_hash="test-admission-decision",
+    )
 
 
 def _settings() -> IngestSettings:

@@ -14,6 +14,7 @@ from src.contracts.wordpress import (
     WordPressPostLookupBatchRequest,
     WordPressPostCreateRequest,
     WordPressPostLookupRequest,
+    WordPressPostReadRequest,
     WordPressCardUpdateRequest,
     WordPressPostUpdateRequest,
     WordPressTaxonomyEnsureRequest,
@@ -209,6 +210,7 @@ def test_find_post_by_file_id_found(wordpress_http) -> None:
     assert response.post_id == 11
     assert response.link == "https://site/p/11"
     assert call.allow_redirects is False
+    assert call.params["status"] == "any"
 
 
 def test_find_post_by_file_id_fails_closed_for_multiple_matches(
@@ -238,6 +240,36 @@ def test_find_post_by_file_id_fails_closed_for_multiple_matches(
         assert_app_error(err, code="wp_post_lookup_ambiguous", retryable=False)
     else:  # pragma: no cover
         raise AssertionError("expected AppError")
+
+
+def test_read_post_by_id_verifies_expected_source_identity(wordpress_http) -> None:
+    wordpress_http.add_json(
+        "GET",
+        "https://site/wp-json/wp/v2/posts/11",
+        status_code=200,
+        payload={
+            "id": 11,
+            "link": "https://site/p/11",
+            "meta": {"ml_file_id": "file-1"},
+        },
+    )
+
+    response = svc.read_post_by_id(
+        WordPressPostReadRequest(
+            schema_version="1.0",
+            base_url="https://site",
+            auth_header="Bearer token",
+            post_id=11,
+            file_id="file-1",
+        ),
+        _ctx(),
+    )
+
+    assert response.found is True
+    assert response.post_id == 11
+    assert response.link == "https://site/p/11"
+    call = wordpress_http.calls_for("GET", "https://site/wp-json/wp/v2/posts/11")[0]
+    assert call.params == {"context": "edit"}
 
 
 def test_find_post_by_file_id_ssl_verify_disabled(wordpress_http) -> None:

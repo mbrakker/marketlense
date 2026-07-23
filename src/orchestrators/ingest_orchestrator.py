@@ -65,6 +65,15 @@ from src.orchestrators._ingest_orchestrator.lock_lifecycle import (
     acquire_ingest_lock,
     finalize_ingest_run,
 )
+from src.orchestrators.admission_preflight_orchestrator import (
+    AdmissionPreflightDependencies,
+    AdmissionPreflightRequest,
+    admission_configuration_hash,
+    admission_decision_payload,
+    admission_policy_hash,
+    pipeline_preflight_decision_hash,
+    run_admission_preflight,
+)
 from src.orchestrators.ingest_file_orchestrator import (
     FileProcessResult as _FileProcessResult,
 )
@@ -73,7 +82,6 @@ from src.orchestrators.ingest_file_orchestrator import (
     run_ingest_file,
 )
 from src.orchestrators.pipeline_preflight_orchestrator import (
-    assert_expensive_side_effects_allowed,
     preflight_report_pipeline,
 )
 from src.orchestrators.remediation_orchestrator import (
@@ -104,6 +112,7 @@ from src.services.file_service import (
     write_bytes,
 )
 from src.services.llm_usage_ledger_service import (
+    evaluate_budget_request,
     finalize_usage_projection,
 )
 from src.services.pdf_service import (
@@ -172,6 +181,9 @@ class IngestBatchDependencies:
     )
     get_source_quarantine: Callable[[SourceQuarantineGetRequest, RunContext], Any] = (
         field(default=get_source_quarantine)
+    )
+    evaluate_budget_request: Callable[[Any, RunContext], Any] = field(
+        default=evaluate_budget_request
     )
 
     @classmethod
@@ -727,48 +739,6 @@ def _materialize_files_to_process(
     return files_to_process
 
 
-def _cohort_configuration_hash(settings: IngestSettings) -> str:
-    """Hash non-secret ingest policy needed to replay a frozen cohort."""
-    values = _redact_cohort_hash_values(asdict(settings))
-    encoded = json.dumps(values, sort_keys=True, separators=(",", ":"), default=str)
-    return sha256(encoded.encode("utf-8")).hexdigest()
-
-
-def _cohort_policy_hash(settings: IngestSettings) -> str:
-    """Hash the admission and quality rules independently from runtime settings."""
-    policy = {
-        "strict_schema_validation": bool(settings.strict_schema_validation),
-        "validation_data_gap_policy": settings.validation_data_gap_policy,
-        "public_editorial_quality_disabled_rule_waivers": (
-            settings.public_editorial_quality_disabled_rule_waivers
-        ),
-        "run_budget_limit_decision": settings.run_budget_limit_decision,
-        "run_budget_max_pdfs": settings.run_budget_max_pdfs,
-        "run_budget_max_spend_usd": settings.run_budget_max_spend_usd,
-        "run_budget_max_runtime_seconds": settings.run_budget_max_runtime_seconds,
-    }
-    encoded = json.dumps(policy, sort_keys=True, separators=(",", ":"), default=str)
-    return sha256(encoded.encode("utf-8")).hexdigest()
-
-
-def _redact_cohort_hash_values(value: Any) -> Any:
-    """Exclude credentials from stable cohort configuration identity material."""
-    if isinstance(value, dict):
-        return {
-            key: _redact_cohort_hash_values(item)
-            for key, item in value.items()
-            if not any(
-                marker in key.casefold()
-                for marker in ("api_key", "secret", "password", "token", "auth_header")
-            )
-        }
-    if isinstance(value, list):
-        return [_redact_cohort_hash_values(item) for item in value]
-    if isinstance(value, tuple):
-        return tuple(_redact_cohort_hash_values(item) for item in value)
-    return value
-
-
 def _cohort_admission_preflight(
     files: list[DriveFile],
     *,
@@ -777,7 +747,9 @@ def _cohort_admission_preflight(
     root_ctx: RunContext,
     admitted_source_identities: set[str] | None = None,
     admitted_title_keys: set[str] | None = None,
-    admission_decisions: list[dict[str, str]] | None = None,
+    admission_decisions: list[dict[str, Any]] | None = None,
+    runtime_preflight_passed: bool = True,
+    runtime_preflight_hash: str = "",
 ) -> list[DriveFile]:
     """Admit deterministic, locally verifiable sources before freezing a cohort.
 
@@ -790,125 +762,41 @@ def _cohort_admission_preflight(
         admitted_source_identities if admitted_source_identities is not None else set()
     )
     known_title_keys = admitted_title_keys if admitted_title_keys is not None else set()
+    known_source_lookup = {identity: identity for identity in known_source_identities}
+    known_title_lookup = {title_key: title_key for title_key in known_title_keys}
+    admission_dependencies = AdmissionPreflightDependencies(
+        check_pdf_integrity=deps.check_pdf_integrity,
+        extract_pdf_text=deps.extract_pdf_text,
+        get_source_quarantine=deps.get_source_quarantine,
+        evaluate_budget_request=deps.evaluate_budget_request,
+    )
     for file in files:
         file_ctx = child_context(root_ctx, task_id=f"admission:{file.file_id}")
-        reason = "admitted"
-        source_identity = (file.md5_checksum or "").strip()
-        normalized_mime = (file.mime_type or "").strip().casefold()
-        title_key = _admission_title_key(file.name)
-        if not file.file_id.strip():
-            reason = "missing_source_identity"
-        elif normalized_mime and normalized_mime != "application/pdf":
-            reason = "unsupported_document"
-        elif not source_identity:
-            reason = "missing_source_identity"
-        elif source_identity in known_source_identities or (
-            title_key and title_key in known_title_keys
-        ):
-            reason = "duplicate"
-        else:
-            quarantine = deps.get_source_quarantine(
-                SourceQuarantineGetRequest(
-                    schema_version="1.0",
-                    state_db=settings.state_db,
-                    source_file_id=file.file_id,
-                    content_checksum=source_identity,
-                    validator_version="pdf-integrity-v1",
-                ),
-                file_ctx,
-            ).record
-            if quarantine is not None and quarantine.status == "active":
-                reason = "quarantined"
-            else:
-                try:
-                    integrity = deps.check_pdf_integrity(
-                        PdfIntegrityCheckRequest(
-                            schema_version="1.0",
-                            path=_cache_pdf_path(settings, file),
-                        ),
-                        file_ctx,
-                    )
-                except AppError as exc:
-                    if exc.code == "pdf_not_found":
-                        reason = "corrupt_source"
-                    else:
-                        raise
-                else:
-                    if integrity.failure_code:
-                        reason = "corrupt_source"
-                    else:
-                        integrity_md5 = str(getattr(integrity, "md5", "") or "")
-                        if (integrity_md5 and integrity_md5 != source_identity) or int(
-                            getattr(integrity, "page_count", 1) or 0
-                        ) < 1:
-                            reason = "corrupt_source"
-                        else:
-                            text = deps.extract_pdf_text(
-                                PdfTextExtractRequest(
-                                    schema_version="1.0",
-                                    path=_cache_pdf_path(settings, file),
-                                    max_pages=max(1, settings.pdf_text_sample_pages),
-                                    max_chars=max(1, settings.pdf_text_max_chars),
-                                ),
-                                file_ctx,
-                            )
-                            pages = max(
-                                1,
-                                int(
-                                    getattr(text, "pages_extracted", 0)
-                                    or settings.pdf_text_sample_pages
-                                    or 1
-                                ),
-                            )
-                            density = float(
-                                getattr(text, "text_density", 0.0)
-                                or float(getattr(text, "char_count", 0) or 0) / pages
-                            )
-                            if int(getattr(text, "char_count", 0) or 0) < 1 or (
-                                density < float(settings.pdf_text_min_density)
-                                and not settings.pdf_text_ocr_enabled
-                            ):
-                                reason = "insufficient_content"
-        decision_hash = sha256(
-            json.dumps(
-                {
-                    "file_id": file.file_id,
-                    "source_identity_id": source_identity,
-                    "title_key": title_key,
-                    "mime_type": normalized_mime,
-                    "outcome": reason,
-                    "preflight_version": "1.1",
-                    "publisher_id": "unattributed",
-                    "source_url_classification": "drive_pdf",
-                    "runtime_dependency_status": "validated_pre_freeze",
-                    "budget_policy": "run_budget_enforced",
-                    "evidence_potential": (
-                        "sufficient" if reason == "admitted" else "not_admitted"
-                    ),
-                },
-                sort_keys=True,
-                separators=(",", ":"),
-            ).encode("utf-8")
-        ).hexdigest()
+        result = run_admission_preflight(
+            AdmissionPreflightRequest(
+                file=file,
+                source_artifact_path=_cache_pdf_path(settings, file),
+                settings=settings,
+                runtime_preflight_passed=runtime_preflight_passed,
+                runtime_preflight_hash=runtime_preflight_hash,
+                configuration_hash=admission_configuration_hash(settings),
+                policy_hash=admission_policy_hash(settings),
+                known_source_identities=known_source_lookup,
+                known_title_keys=known_title_lookup,
+            ),
+            file_ctx,
+            dependencies=admission_dependencies,
+        )
+        decision = result.decision
         if admission_decisions is not None:
-            admission_decisions.append(
-                {
-                    "file_id": file.file_id,
-                    "source_identity_id": source_identity,
-                    "title_key": title_key,
-                    "mime_type": normalized_mime,
-                    "publisher_id": "unattributed",
-                    "source_url_classification": "drive_pdf",
-                    "runtime_dependency_status": "validated_pre_freeze",
-                    "budget_policy": "run_budget_enforced",
-                    "evidence_potential": (
-                        "sufficient" if reason == "admitted" else "not_admitted"
-                    ),
-                    "outcome": reason,
-                    "preflight_version": "1.1",
-                    "decision_hash": decision_hash,
-                }
+            row = admission_decision_payload(decision)
+            row["title_key"] = _admission_title_key(file.name)
+            row["runtime_dependency_status"] = (
+                "validated_pre_freeze"
+                if runtime_preflight_passed
+                else "blocked_pre_freeze"
             )
+            admission_decisions.append(row)
         logger.info(
             log_event(
                 file_ctx,
@@ -917,18 +805,23 @@ def _cohort_admission_preflight(
                 module=logger.name,
                 fields={
                     "file_id": file.file_id,
-                    "source_identity_id": source_identity,
-                    "outcome": reason,
-                    "admission_preflight_version": "1.1",
-                    "admission_decision_hash": decision_hash,
+                    "source_identity_id": decision.source_identity_id,
+                    "outcome": decision.outcome,
+                    "admission_preflight_version": decision.preflight_version,
+                    "admission_decision_hash": decision.decision_hash,
                 },
             )
         )
-        if reason == "admitted":
+        if result.admitted:
             admitted.append(file)
-            known_source_identities.add(source_identity)
+            known_source_identities.add(decision.source_identity_id)
+            known_source_lookup[decision.source_identity_id] = (
+                decision.source_identity_id
+            )
+            title_key = _admission_title_key(file.name)
             if title_key:
                 known_title_keys.add(title_key)
+                known_title_lookup[title_key] = title_key
     return admitted
 
 
@@ -946,7 +839,9 @@ def _select_admitted_cohort(
     deps: IngestBatchDependencies,
     root_ctx: RunContext,
     force_report_cards: bool,
-) -> tuple[list[DriveFile], list[dict[str, str]]]:
+    runtime_preflight_passed: bool,
+    runtime_preflight_hash: str,
+) -> tuple[list[DriveFile], list[dict[str, Any]]]:
     """Select the first ordered candidates that pass admission before freezing.
 
     A source rejected during admission is never a cohort member.  This differs
@@ -957,7 +852,7 @@ def _select_admitted_cohort(
     attempted_file_ids: set[str] = set()
     admitted_source_identities: set[str] = set()
     admitted_title_keys: set[str] = set()
-    admission_decisions: list[dict[str, str]] = []
+    admission_decisions: list[dict[str, Any]] = []
     admission_batches = 0
     while len(admitted) < cohort_size:
         remaining = cohort_size - len(admitted)
@@ -971,6 +866,12 @@ def _select_admitted_cohort(
             excluded_file_ids=attempted_file_ids,
         )
         if not candidates:
+            _persist_admission_funnel(
+                admission_decisions,
+                settings=settings,
+                deps=deps,
+                root_ctx=root_ctx,
+            )
             raise AppError(
                 code="ingest_cohort_insufficient_eligible_reports",
                 message="Insufficient eligible reports to freeze the requested cohort",
@@ -996,6 +897,8 @@ def _select_admitted_cohort(
             admitted_source_identities=admitted_source_identities,
             admitted_title_keys=admitted_title_keys,
             admission_decisions=admission_decisions,
+            runtime_preflight_passed=runtime_preflight_passed,
+            runtime_preflight_hash=runtime_preflight_hash,
         )
         admitted.extend(newly_admitted[:remaining])
         admission_batches += 1
@@ -1015,6 +918,12 @@ def _select_admitted_cohort(
                 },
             )
         )
+    _persist_admission_funnel(
+        admission_decisions,
+        settings=settings,
+        deps=deps,
+        root_ctx=root_ctx,
+    )
     return admitted, admission_decisions
 
 
@@ -1074,7 +983,7 @@ def _frozen_cohort(
     settings: IngestSettings,
     deps: IngestBatchDependencies,
     root_ctx: RunContext,
-    admission_decisions: list[dict[str, str]] | None = None,
+    admission_decisions: list[dict[str, Any]] | None = None,
 ) -> list[DriveFile]:
     """Load a replayable immutable cohort or persist it before processing."""
     if cohort_size < 1:
@@ -1114,7 +1023,7 @@ def _frozen_cohort(
             "budget_policy": "run_budget_enforced",
             "evidence_potential": "sufficient",
             "outcome": "admitted",
-            "preflight_version": "1.1",
+            "preflight_version": "2.0",
             "decision_hash": sha256(
                 json.dumps(asdict(file), sort_keys=True, separators=(",", ":")).encode(
                     "utf-8"
@@ -1123,8 +1032,8 @@ def _frozen_cohort(
         }
         for file in selected_files
     ]
-    configuration_hash = _cohort_configuration_hash(settings)
-    policy_hash = _cohort_policy_hash(settings)
+    configuration_hash = admission_configuration_hash(settings)
+    policy_hash = admission_policy_hash(settings)
     cohort_id = _cohort_id(selected_files)
     payload = {
         "schema_version": "1.0",
@@ -1133,7 +1042,7 @@ def _frozen_cohort(
         "configuration_hash": configuration_hash,
         "policy_hash": policy_hash,
         "selection_reason": "deterministic_admission_preflight",
-        "admission_preflight_version": "1.1",
+        "admission_preflight_version": "2.0",
         "admission_decision_hash": sha256(
             json.dumps(decisions, sort_keys=True, separators=(",", ":")).encode("utf-8")
         ).hexdigest(),
@@ -1168,8 +1077,8 @@ def _record_cohort_ingest_manifest(
     files: list[DriveFile],
     outcomes: list[IngestOutcome] | None = None,
 ) -> None:
-    configuration_hash = _cohort_configuration_hash(settings)
-    policy_hash = _cohort_policy_hash(settings)
+    configuration_hash = admission_configuration_hash(settings)
+    policy_hash = admission_policy_hash(settings)
     cohort_id = _cohort_id(files)
     create_validation_run_manifest(
         ValidationRunManifestCreateRequest(
@@ -1737,6 +1646,10 @@ def _process_ingest_batch(
     root_ctx: RunContext,
     force_report_cards: bool,
     start_index: int = 0,
+    runtime_preflight_passed: bool = True,
+    runtime_preflight_hash: str = "",
+    admission_decisions: list[dict[str, Any]] | None = None,
+    admission_already_decided: bool = False,
 ) -> list[_FileProcessResult]:
     files_to_process = _prefetch_drive_cache_stage(
         files_to_process,
@@ -1744,20 +1657,85 @@ def _process_ingest_batch(
         deps=deps,
         root_ctx=root_ctx,
     )
+    positions = {
+        file.file_id: index
+        for index, file in enumerate(files_to_process, start=start_index)
+    }
+    decisions = list(admission_decisions or [])
+    admitted = files_to_process
+    enforce_source_admission = _should_run_drive_cache_prefetch(deps) or bool(
+        admission_already_decided
+    )
+    if enforce_source_admission and (not admission_already_decided or not decisions):
+        decisions = []
+        admitted = _cohort_admission_preflight(
+            files_to_process,
+            settings=settings,
+            deps=deps,
+            root_ctx=root_ctx,
+            admission_decisions=decisions,
+            runtime_preflight_passed=runtime_preflight_passed,
+            runtime_preflight_hash=runtime_preflight_hash,
+        )
+        _persist_admission_funnel(
+            decisions,
+            settings=settings,
+            deps=deps,
+            root_ctx=root_ctx,
+        )
+    decisions_by_file_id = {
+        str(row.get("file_id") or ""): row for row in decisions if row.get("file_id")
+    }
+    admitted_ids = {file.file_id for file in admitted}
+    results: list[_FileProcessResult] = []
+    for file in files_to_process:
+        if file.file_id in admitted_ids:
+            continue
+        row = decisions_by_file_id.get(file.file_id, {})
+        outcome = str(row.get("outcome") or "policy_blocked")
+        results.append(
+            _FileProcessResult(
+                index=positions[file.file_id],
+                outcome=IngestOutcome(
+                    schema_version="1.0",
+                    file_id=file.file_id,
+                    name=file.name or file.file_id,
+                    md5=file.md5_checksum,
+                    html_path=None,
+                    status="skipped",
+                    error=f"admission_{outcome}",
+                ),
+                processed=0,
+                had_error=False,
+            )
+        )
+    files_to_process = admitted
+
+    def _admitted_context(file: DriveFile) -> RunContext:
+        row = decisions_by_file_id.get(file.file_id, {})
+        return replace(
+            root_ctx,
+            source_identity_id=str(
+                row.get("source_identity_id") or file.md5_checksum or file.file_id
+            ),
+            publisher_id=str(row.get("publisher_id") or "drive_unattributed"),
+            admission_decision_hash=str(row.get("decision_hash") or ""),
+        )
+
     worker_limit = _resolve_worker_limit(
         settings,
         file_count=len(files_to_process),
         root_ctx=root_ctx,
     )
-    results: list[_FileProcessResult] = []
     if worker_limit <= 1 or len(files_to_process) <= 1:
-        for idx, file in enumerate(files_to_process, start=start_index):
+        for file in files_to_process:
+            idx = positions[file.file_id]
             results.append(
                 deps.process_file(
                     file,
                     idx,
                     settings,
-                    root_ctx,
+                    _admitted_context(file),
                     force_report_cards,
                 )
             )
@@ -1768,15 +1746,15 @@ def _process_ingest_batch(
             executor.submit(
                 deps.process_file,
                 file,
-                idx,
+                positions[file.file_id],
                 settings,
-                root_ctx,
+                _admitted_context(file),
                 force_report_cards,
             ): (
-                idx,
+                positions[file.file_id],
                 file,
             )
-            for idx, file in enumerate(files_to_process, start=start_index)
+            for file in files_to_process
         }
         for future in as_completed(futures):
             idx, file = futures[future]
@@ -1834,6 +1812,72 @@ def _process_ingest_batch(
                 )
             results.append(result)
     return results
+
+
+def _persist_admission_funnel(
+    decisions: list[dict[str, Any]],
+    *,
+    settings: IngestSettings,
+    deps: IngestBatchDependencies,
+    root_ctx: RunContext,
+) -> None:
+    """Retain every selected candidate outside the admitted-cohort denominator."""
+
+    if not decisions:
+        return
+    decision_hash = sha256(
+        json.dumps(
+            decisions,
+            ensure_ascii=True,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
+    path = (
+        Path(settings.output_dir)
+        / "admission"
+        / f"{root_ctx.run_id}-{decision_hash[:16]}.json"
+    )
+    payload = {
+        "schema_version": "1.0",
+        "run_id": str(root_ctx.run_id),
+        "configuration_hash": admission_configuration_hash(settings),
+        "policy_hash": admission_policy_hash(settings),
+        "decision_set_hash": decision_hash,
+        "decisions": decisions,
+    }
+    deps.write_bytes(
+        WriteBytesRequest(
+            schema_version="1.0",
+            path=str(path),
+            content=json.dumps(
+                payload,
+                ensure_ascii=True,
+                sort_keys=True,
+                indent=2,
+            ).encode("utf-8"),
+            make_parents=True,
+        ),
+        root_ctx,
+    )
+    logger.info(
+        log_event(
+            root_ctx,
+            role="orchestrator",
+            event="ingest_admission_funnel_persisted",
+            module=logger.name,
+            fields={
+                "decision_count": len(decisions),
+                "admitted_count": sum(
+                    1 for decision in decisions if decision.get("outcome") == "admitted"
+                ),
+                "rejected_count": sum(
+                    1 for decision in decisions if decision.get("outcome") != "admitted"
+                ),
+                "decision_set_hash": decision_hash,
+            },
+        )
+    )
 
 
 def _update_ingest_cursor(
@@ -1959,18 +2003,19 @@ def run_ingest(
     try:
         lock_info = acquire_ingest_lock(settings, lock_ctx)
         verify_ingest_db_access(settings, root_ctx)
-        if cohort_size is not None:
-            root_ctx = replace(
-                root_ctx,
-                workflow="report_generation",
-                stage="admission_preflight",
-                artifact_family="report",
-                configuration_hash=_cohort_configuration_hash(settings),
-                policy_hash=_cohort_policy_hash(settings),
-            )
-            assert_expensive_side_effects_allowed(
-                preflight_report_pipeline(settings, root_ctx), root_ctx
-            )
+        root_ctx = replace(
+            root_ctx,
+            workflow="report_generation",
+            stage="admission_preflight",
+            artifact_family="report",
+            configuration_hash=admission_configuration_hash(settings),
+            policy_hash=admission_policy_hash(settings),
+        )
+        runtime_preflight = preflight_report_pipeline(settings, root_ctx)
+        runtime_preflight_passed = bool(runtime_preflight.passed)
+        runtime_preflight_decision_hash = pipeline_preflight_decision_hash(
+            runtime_preflight
+        )
 
         logger.info(
             log_event(
@@ -1986,6 +2031,8 @@ def run_ingest(
                     "success_target": success_target,
                     "force_report_cards": force_report_cards,
                     "rescan": rescan,
+                    "runtime_preflight_passed": runtime_preflight_passed,
+                    "runtime_preflight_hash": runtime_preflight_decision_hash,
                 },
             )
         )
@@ -2075,12 +2122,14 @@ def run_ingest(
                     root_ctx=root_ctx,
                     force_report_cards=force_report_cards,
                     start_index=len(results),
+                    runtime_preflight_passed=runtime_preflight_passed,
+                    runtime_preflight_hash=runtime_preflight_decision_hash,
                 )
                 results.extend(batch)
                 processed_so_far += sum(row.processed for row in batch)
         else:
             files_to_process = manifest_files
-            admission_decisions: list[dict[str, str]] | None = None
+            admission_decisions: list[dict[str, Any]] | None = None
             if cohort_size is not None:
                 if manifest_files is None:
                     files_to_process, admission_decisions = _run_step_with_retry(
@@ -2093,6 +2142,8 @@ def run_ingest(
                             deps=deps,
                             root_ctx=root_ctx,
                             force_report_cards=force_report_cards,
+                            runtime_preflight_passed=runtime_preflight_passed,
+                            runtime_preflight_hash=runtime_preflight_decision_hash,
                         ),
                         2,
                     )
@@ -2133,8 +2184,8 @@ def run_ingest(
                     workflow="report_generation",
                     stage="ingest",
                     artifact_family="report",
-                    configuration_hash=_cohort_configuration_hash(settings),
-                    policy_hash=_cohort_policy_hash(settings),
+                    configuration_hash=admission_configuration_hash(settings),
+                    policy_hash=admission_policy_hash(settings),
                 )
                 _record_cohort_ingest_manifest(
                     validation_run_id=validation_run_id,
@@ -2148,6 +2199,11 @@ def run_ingest(
                 deps=deps,
                 root_ctx=root_ctx,
                 force_report_cards=force_report_cards,
+                runtime_preflight_passed=runtime_preflight_passed,
+                runtime_preflight_hash=runtime_preflight_decision_hash,
+                admission_decisions=admission_decisions,
+                admission_already_decided=cohort_size is not None
+                and admission_decisions is not None,
             )
         results.sort(key=lambda r: r.index)
         outcomes = [result.outcome for result in results]

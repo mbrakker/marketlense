@@ -203,12 +203,16 @@ def _check_local_paths(
 ) -> list[PipelinePreflightCheck]:
     settings = request.settings
     checks: list[PipelinePreflightCheck] = []
-    for label, raw_path in (
+    paths = [
         ("output_dir", settings.output_dir),
         ("cache_dir", settings.cache_dir),
         ("state_db", settings.state_db),
         ("reports_db", settings.reports_db),
-    ):
+    ]
+    usage_db_path = str(getattr(settings, "usage_db_path", "") or "").strip()
+    if usage_db_path:
+        paths.append(("usage_db", usage_db_path))
+    for label, raw_path in paths:
         checks.append(_probe_writable_path(label, raw_path, ctx, deps))
     return checks
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import List
 
 from src.contracts.cover_images import (
@@ -20,6 +21,26 @@ from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.cover_image_generator")
 CARD_SIZES = ("small", "medium", "large")
+_MONTH_YEAR_PATTERN = re.compile(
+    r"\b(?P<month>jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|"
+    r"jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|"
+    r"nov(?:ember)?|dec(?:ember)?)\.?\s+(?P<year>20\d{2})\b",
+    flags=re.IGNORECASE,
+)
+_MONTH_ABBREVIATIONS = {
+    "jan": "Jan",
+    "feb": "Feb",
+    "mar": "Mar",
+    "apr": "Apr",
+    "may": "May",
+    "jun": "Jun",
+    "jul": "Jul",
+    "aug": "Aug",
+    "sep": "Sep",
+    "oct": "Oct",
+    "nov": "Nov",
+    "dec": "Dec",
+}
 
 
 def _normalize_report(report: CoverImageReport) -> CoverImageReport:
@@ -44,7 +65,27 @@ def _normalize_report(report: CoverImageReport) -> CoverImageReport:
 
 
 def _covered_period(report: CoverImageReport) -> str:
-    return " ".join(str(report.time_period or "").split())
+    """Return a complete visual label without expanding source metadata.
+
+    A month-by-month source range is precise but cannot fit a small card.  When
+    the whole value is a deterministic list or range of month/year entries,
+    show its first and last entries instead.  The complete retained period
+    remains in the report-card manifest and HTML.
+    """
+
+    period = " ".join(str(report.time_period or "").split())
+    matches = list(_MONTH_YEAR_PATTERN.finditer(period))
+    remaining = _MONTH_YEAR_PATTERN.sub("", period)
+    if len(matches) < 2 or re.search(r"[A-Za-z0-9]", remaining):
+        return period
+
+    def _format(match: re.Match[str]) -> str:
+        month = _MONTH_ABBREVIATIONS[match.group("month")[:3].casefold()]
+        return f"{month} {match.group('year')}"
+
+    first = _format(matches[0])
+    last = _format(matches[-1])
+    return first if first == last else f"{first}\u2013{last}"
 
 
 def _error_outcome(

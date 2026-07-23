@@ -916,6 +916,7 @@ def test_source_ingest_checkpoint_hands_off_to_report_selection(
     child = result.downstream[0]
     assert child.queue_name == "report_selection"
     assert child.parent_job_id == job.job_id
+    assert child.payload.attributes["admission_decision_hash"]
     assert child.idempotency_key == (
         f"ias-industry-pulse-2026:report_selection:{source_hash}:parser.v1"
     )
@@ -936,7 +937,7 @@ def test_source_ingest_checkpoint_hands_off_to_report_selection(
             input_reference=str(source_path),
             input_content_hash=source_hash,
             processing_version="parser.v1",
-            attributes={"config_path": str(config_path)},
+            attributes=child.payload.attributes,
         ),
         _ctx(),
     )

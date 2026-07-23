@@ -36,6 +36,23 @@ the policy preflight rejects unknown or incompatible routes before provider I/O.
 
 `ingest.source_quarantine.enabled` is the single rollback switch for the deterministic source-PDF integrity gate. When enabled (the default), a source that fails the header, EOF, parser-open, or page-count check is recorded in the canonical state database and an unchanged upstream checksum is skipped before extraction, OCR, or model work. It does not delete source or cache bytes. Operators can review records with `source-quarantines` and revalidate a retained file with `revalidate-source-pdf`; successful validation clears the matching record and supersedes an earlier active checksum for the same source. Disable the switch only for a time-bounded incident rollback, because malformed inputs then follow the ordinary typed failure path and may consume repeated acquisition work.
 
+`ingest.admission` controls the deterministic source-admission limits applied
+to every retained Drive source before vector-store creation or any model call.
+`min_text_chars` is evaluated with the existing bounded native-text sample;
+`max_pages` and `max_source_bytes` reject sources above the configured
+per-report limits (`null` disables either maximum); and
+`required_evidence_families` must be a subset of the configured
+`evidence_packs.registry`. `doc_map` is the required default because it is the
+first evidence-family hard gate. The preflight does not infer a public source
+URL or publisher from the Drive artifact: it records the explicit
+`drive_artifact_nonpublic` classification and `drive_unattributed` sentinel
+until later source-backed extraction can establish public metadata. Its
+retained decision hash includes only bounded inspection values, identities,
+and configuration/policy hashes, never source text or a rendered prompt. The
+same runtime preflight also write-probes the configured usage-ledger path,
+because the admission budget forecast and later provider reservations share
+that canonical SQLite authority.
+
 Corpus rehabilitation has no automatic switch: planning is read-only and campaign execution is explicit. `corpus-rehabilitation-create` persists a bounded retained-evidence plan; `corpus-rehabilitation-approve --yes` records a bounded operator approval; and `corpus-rehabilitation-submit --yes` queues only reusable, checksum-bound candidates through the existing maintenance queue. The submitter rechecks retained classification and lineage before handoff, while incomplete candidates remain operator-held. It has no public-write path.
 
 Use the generated [configuration reference](../generated/configuration-reference.md) for the current section inventory. It is generated from `src/config/app.example.yaml`; use the YAML and typed contracts as the final authority for values and validation.

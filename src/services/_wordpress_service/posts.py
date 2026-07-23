@@ -1,29 +1,33 @@
 from __future__ import annotations
+
 import json
 import logging
 from typing import Any, Optional
+
 import requests
+
 from src.contracts.run_context import RunContext
 from src.contracts.wordpress import (
+    WordPressCardUpdateRequest,
     WordPressMediaUploadRequest,
     WordPressMediaUploadResponse,
+    WordPressPostCreateRequest,
+    WordPressPostCreateResponse,
     WordPressPostLookupBatchItem,
     WordPressPostLookupBatchRequest,
     WordPressPostLookupBatchResponse,
-    WordPressPostCreateRequest,
-    WordPressPostCreateResponse,
     WordPressPostLookupRequest,
     WordPressPostLookupResponse,
-    WordPressCardUpdateRequest,
+    WordPressPostReadRequest,
     WordPressPostUpdateResponse,
 )
 from src.utils.errors import AppError
 from src.utils.logging import log_event
+
 from .budget import (
     assert_wordpress_write_authority,
     finalize_wordpress_write_authority,
 )
-
 from .transport import (
     _execute_request,
     _http_error_context,
@@ -468,6 +472,7 @@ def find_post_by_file_id(
         "search": f"Drive fileId: {request.file_id}",
         "per_page": request.per_page,
         "context": "edit",
+        "status": "any",
     }
     headers = {"Authorization": request.auth_header}
     request_result = _execute_request(
@@ -588,6 +593,116 @@ def find_post_by_file_id(
         found=found,
         post_id=int(post_id) if post_id else None,
         link=str(link) if link else None,
+    )
+
+
+def read_post_by_id(
+    request: WordPressPostReadRequest, ctx: RunContext
+) -> WordPressPostLookupResponse:
+    """Authenticated exact-post readback that verifies immutable source identity."""
+    post_type_endpoint = _post_type_endpoint(request.post_type)
+    url = (
+        f"{request.base_url.rstrip('/')}/wp-json/wp/v2/{post_type_endpoint}/"
+        f"{request.post_id}"
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="wp_post_readback_start",
+            module=logger.name,
+            fields={
+                "file_id": request.file_id,
+                "post_id": request.post_id,
+                "post_type": post_type_endpoint,
+                "ssl_verify": request.ssl_verify,
+                "ca_bundle_path": request.ca_bundle_path or "",
+            },
+        )
+    )
+    request_result = _execute_request(
+        method="GET",
+        url=url,
+        headers={"Authorization": request.auth_header},
+        params={"context": "edit"},
+        allow_redirects=False,
+        ssl_verify=request.ssl_verify,
+        ca_bundle_path=request.ca_bundle_path,
+        ctx=ctx,
+        request_error_event="wp_post_readback_request_error",
+        request_error_code="wp_post_readback_failed",
+        request_error_message="Failed to read back WordPress post",
+        request_error_fields={"file_id": request.file_id, "post_id": request.post_id},
+    )
+    resp = request_result.response
+    if 300 <= resp.status_code < 400:
+        _raise_http_redirect_error(
+            ctx=ctx,
+            event="wp_post_readback_http_redirect",
+            code="wp_post_readback_redirected",
+            message_prefix="Post readback redirected unexpectedly",
+            resp=resp,
+            fields={"url": url, "file_id": request.file_id, "post_id": request.post_id},
+        )
+    if resp.status_code >= 500:
+        _raise_http_server_error(
+            ctx=ctx,
+            event="wp_post_readback_http_error",
+            code="wp_post_readback_server_error",
+            message_prefix="Post readback server error",
+            resp=resp,
+            fields={"url": url, "file_id": request.file_id, "post_id": request.post_id},
+        )
+    if resp.status_code == 404:
+        return WordPressPostLookupResponse(schema_version="1.0", found=False)
+    if resp.status_code >= 400:
+        raise AppError(
+            code="wp_post_readback_client_error",
+            message=f"Post readback client error: {resp.status_code}",
+            retryable=False,
+        )
+    try:
+        payload = json.loads(resp.text)
+    except json.JSONDecodeError:
+        payload = {}
+    meta = payload.get("meta", {}) if isinstance(payload, dict) else {}
+    content = (
+        payload.get("content", {}).get("rendered", "")
+        if isinstance(payload, dict)
+        else ""
+    )
+    post_id = payload.get("id") if isinstance(payload, dict) else None
+    link = payload.get("link") if isinstance(payload, dict) else None
+    found = bool(
+        post_id == request.post_id
+        and link
+        and request.file_id
+        and (
+            str(meta.get("ml_file_id") or "") == request.file_id
+            or request.file_id in str(content or "")
+        )
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="wp_post_readback_complete",
+            module=logger.name,
+            fields={
+                "file_id": request.file_id,
+                "post_id": request.post_id,
+                "found": found,
+                "used_pooled_session": request_result.used_pooled_session,
+                "pool_key": request_result.pool_key,
+                "pool_reused": request_result.pool_reused,
+            },
+        )
+    )
+    return WordPressPostLookupResponse(
+        schema_version="1.0",
+        found=found,
+        post_id=request.post_id if found else None,
+        link=str(link) if found else None,
     )
 
 
@@ -779,6 +894,7 @@ __all__ = [
     "upload_media",
     "create_post",
     "find_post_by_file_id",
+    "read_post_by_id",
     "find_posts_by_file_id_batch",
     "_update_media_alt_text",
 ]

@@ -182,7 +182,9 @@ def test_retry_on_retryable_app_error(
             file=file,
             index=index,
             settings=current_settings,
-            root_ctx=root_ctx,
+            root_ctx=replace(
+                root_ctx, admission_decision_hash="test-admission-decision"
+            ),
             dependencies=dependencies,
             logger_name="market_lense.test_orchestrator_retry",
         )

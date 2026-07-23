@@ -115,6 +115,41 @@ class IngestSettings:
             "doc": "Whether deterministically invalid source PDFs are quarantined before expensive processing."
         },
     )
+    admission_min_text_chars: int = field(
+        default=500,
+        metadata={
+            "doc": (
+                "Minimum bounded native-text sample required before evidence generation."
+            )
+        },
+    )
+    admission_max_pages: int | None = field(
+        default=250,
+        metadata={
+            "doc": (
+                "Maximum readable source page count admitted for one report; "
+                "null disables the limit."
+            )
+        },
+    )
+    admission_max_source_bytes: int | None = field(
+        default=104_857_600,
+        metadata={
+            "doc": (
+                "Maximum retained source byte size admitted for one report; "
+                "null disables the limit."
+            )
+        },
+    )
+    admission_required_evidence_families: tuple[str, ...] = field(
+        default=("doc_map",),
+        metadata={
+            "doc": (
+                "Minimum configured evidence families that must have deterministic "
+                "potential before admission."
+            )
+        },
+    )
     openai_seed: Optional[int] = field(
         default=None, metadata={"doc": "Optional seed for report generation."}
     )

@@ -29,6 +29,7 @@ Generated from CLI registrations, configuration example, architecture policy, or
 
 - `src/orchestrators/acquisition_audit_orchestrator.py`
 - `src/orchestrators/acquisition_ingest_handoff_orchestrator.py`
+- `src/orchestrators/admission_preflight_orchestrator.py`
 - `src/orchestrators/analytics_projection_orchestrator.py`
 - `src/orchestrators/candidate_extraction_orchestrator.py`
 - `src/orchestrators/claim_embedding_orchestrator.py`

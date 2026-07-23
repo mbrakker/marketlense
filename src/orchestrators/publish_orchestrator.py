@@ -68,6 +68,7 @@ from src.contracts.wordpress import (
     WordPressPostLookupBatchRequest,
     WordPressPostLookupRequest,
     WordPressPostLookupResponse,
+    WordPressPostReadRequest,
     WordPressTagEnsureRequest,
     WordPressTagEnsureResponse,
     WordPressTaxonomyEnsureRequest,
@@ -161,6 +162,7 @@ from src.services.wordpress_service import (
     ensure_taxonomy_terms,
     find_post_by_file_id,
     find_posts_by_file_id_batch,
+    read_post_by_id,
 )
 from src.utils.errors import AppError
 from src.utils.html_utils import (
@@ -826,6 +828,16 @@ def run_publish(
     require_full_validation_manifest: bool = False,
 ) -> List[PublishOutcome]:
     root_ctx = ctx or new_run_context()
+    cohort_member_file_ids: set[str] | None = None
+    if cohort_manifest:
+        (
+            _validation_run_id,
+            _cohort_id,
+            _configuration_hash,
+            _policy_hash,
+            cohort_members,
+        ) = _load_validation_cohort_for_publish(cohort_manifest, root_ctx)
+        cohort_member_file_ids = set(cohort_members)
     publish_budget = build_publish_budget(settings, root_ctx)
     requested_post_status = str(settings.wp.post_status or "publish").strip().lower()
     effective_post_status = "draft" if force_draft else requested_post_status
@@ -951,6 +963,29 @@ def run_publish(
         ctx=root_ctx,
         skip_unowned_nonpublish_html=auto_discovery,
     )
+    if cohort_member_file_ids is not None:
+        candidates_before_cohort_filter = len(candidates)
+        candidates = [
+            candidate
+            for candidate in candidates
+            if str(candidate.file_id or "") in cohort_member_file_ids
+        ]
+        logger.info(
+            log_event(
+                root_ctx,
+                role="orchestrator",
+                event="publish_cohort_selection_applied",
+                module=logger.name,
+                fields={
+                    "cohort_member_count": len(cohort_member_file_ids),
+                    "candidates_before_filter": candidates_before_cohort_filter,
+                    "selected_candidates": len(candidates),
+                    "excluded_candidates": (
+                        candidates_before_cohort_filter - len(candidates)
+                    ),
+                },
+            )
+        )
     if force_report_cards:
         candidates = [
             candidate
@@ -1225,12 +1260,39 @@ def run_publish(
             )
         )
         if reused_outcome is not None:
+            idempotency_readback: WordPressPostLookupResponse | None = (
+                WordPressPostLookupResponse(
+                    schema_version="1.0",
+                    found=existing_post_lookup.found,
+                    post_id=existing_post_lookup.post_id,
+                    link=existing_post_lookup.link,
+                )
+                if existing_post_lookup is not None
+                else None
+            )
             if (
-                existing_post_lookup is None
-                or existing_post_lookup.error_code
-                or not existing_post_lookup.found
-                or not existing_post_lookup.post_id
-                or not existing_post_lookup.link
+                idempotency_readback is not None
+                and not idempotency_readback.found
+                and reused_outcome.post_id
+            ):
+                idempotency_readback = read_post_by_id(
+                    WordPressPostReadRequest(
+                        schema_version="1.0",
+                        base_url=base_url,
+                        auth_header=auth_header,
+                        post_id=reused_outcome.post_id or 0,
+                        file_id=file_id,
+                        ssl_verify=settings.wp.ssl_verify,
+                        ca_bundle_path=settings.wp.ca_bundle_path,
+                        post_type=entity_route.post_type,
+                    ),
+                    file_ctx,
+                )
+            if (
+                idempotency_readback is None
+                or not idempotency_readback.found
+                or not idempotency_readback.post_id
+                or not idempotency_readback.link
             ):
                 outcomes.append(
                     PublishOutcome(
@@ -1251,8 +1313,8 @@ def run_publish(
             verified_outcome = replace(
                 reused_outcome,
                 status="skipped",
-                post_id=existing_post_lookup.post_id,
-                post_url=existing_post_lookup.link,
+                post_id=idempotency_readback.post_id,
+                post_url=idempotency_readback.link,
                 error="already_exists",
                 publication_outcome="existing_post_matched",
                 requested_write_count=0,
@@ -1265,11 +1327,11 @@ def run_publish(
             state_record_publish(
                 StatePublishRecordRequest(
                     schema_version="1.0",
-                    state_db=settings.state_db,
-                    file_id=file_id,
-                    md5=state_row.md5,
-                    wp_post_id=existing_post_lookup.post_id,
-                    wp_post_url=existing_post_lookup.link,
+                        state_db=settings.state_db,
+                        file_id=file_id,
+                        md5=state_row.md5,
+                        wp_post_id=idempotency_readback.post_id,
+                        wp_post_url=idempotency_readback.link,
                     post_type=entity_route.post_type,
                 ),
                 file_ctx,
@@ -1467,6 +1529,47 @@ def run_publish(
                 file_ctx,
             )
             outcome = _with_validation(outcome, validation_status, validation_issues)
+            if outcome.status == "published" and cohort_manifest:
+                created_post_readback = read_post_by_id(
+                    WordPressPostReadRequest(
+                        schema_version="1.0",
+                        base_url=base_url,
+                        auth_header=auth_header,
+                        post_id=outcome.post_id or 0,
+                        file_id=file_id,
+                        ssl_verify=settings.wp.ssl_verify,
+                        ca_bundle_path=settings.wp.ca_bundle_path,
+                        post_type=entity_route.post_type,
+                    ),
+                    file_ctx,
+                )
+                if not (
+                    created_post_readback.found
+                    and created_post_readback.post_id
+                    and created_post_readback.link
+                ):
+                    logger.info(
+                        log_event(
+                            file_ctx,
+                            role="orchestrator",
+                            event="publish_create_readback_missing",
+                            module=logger.name,
+                            fields={"file_id": file_id},
+                        )
+                    )
+                    return replace(
+                        outcome,
+                        status="error",
+                        error="wordpress_post_create_readback_missing",
+                        publication_outcome="readback_failed",
+                    )
+                outcome = replace(
+                    outcome,
+                    post_id=created_post_readback.post_id,
+                    post_url=created_post_readback.link,
+                    lookup_count=outcome.lookup_count + 1,
+                    authenticated_readback_verified=True,
+                )
             if outcome.status == "published" and outcome.post_id and outcome.post_url:
                 state_record_publish(
                     StatePublishRecordRequest(

@@ -35,28 +35,61 @@ metadata remains a blocking error. This prevents internal labels from reaching
 WordPress without inventing metadata.
 The report-card contract permits those omitted optional labels and renders an
 unknown geography rather than manufacturing a period or location.
+When a covered period is a complete month-by-month list, the card image uses
+its deterministic first-to-last month range so the fixed small cover remains
+readable; the complete period is retained in the manifest and HTML.
 
 Run a configured batch with `python -m src.cli ingest --attempt-limit 1`. An
 attempt limit counts selected reports, including failures; it never continues
 selecting replacements to meet a success count. `--limit` remains a deprecated
-alias with the same attempt-limit meaning. Release and reliability validation
-use `--cohort-size N --cohort-manifest <path>`: files first pass deterministic
-admission (source identity, supported type, active-quarantine, PDF structure,
-and usable-source-content checks), then the exact admitted IDs are atomically
-persisted before report-generation work begins. The ordered candidate pool
-continues only while this pre-manifest admission has fewer than `N` accepted
-sources; a rejected candidate is not silently included. After the manifest is
-written, no failure can trigger a replacement. Re-running with only
-`--cohort-manifest <path>` replays the same immutable members without a Drive
-reselection. A malformed manifest, duplicate member, size mismatch, rejected
-admission candidate cannot enter the cohort, and an insufficient eligible
-population fails closed. Admission prefetches each selected source PDF and
-carries its deterministic local MD5 into the cohort member when the Drive
-listing omitted that metadata. The same value is checked against PDF integrity
-before the manifest is frozen; it is not inferred from a title or replaced
-with a non-content identifier. A filename is optional in the metadata-only
-listing mode and is used only as an additional duplicate signal; it is resolved
-later when presentation needs it, never treated as required source identity.
+alias with the same attempt-limit meaning. Every acquired source, including
+ordinary and success-target ingest, passes one deterministic admission
+preflight after local acquisition and before vector-store creation, evidence
+generation, OCR, or editorial model work. It verifies the retained artifact,
+supported PDF type, parser structure, checksum identity, exact duplicate and
+non-blocking near-title signal, active quarantine, bounded native text,
+configured size/page limits, a non-public Drive-source classification, stable
+title fallback, publisher sentinel, required evidence-family potential,
+runtime paths/dependencies, model-policy coverage, and a bounded budget
+forecast. The typed outcome is one of `admitted`, `duplicate`,
+`unsupported_document`, `corrupt_source`, `insufficient_content`,
+`missing_source_identity`, `policy_blocked`, `budget_blocked`, or
+`quarantined`. Each decision retains the preflight version, configuration and
+policy identities, deterministic decision hash, and bounded inspection and
+forecast values. It does not create a vector store.
+
+The report-pipeline entrypoint fails closed without that retained decision
+hash. The durable report queue performs admission only for the first source
+stage, retains the decision in the funnel, and carries its identity through
+later checkpoint payloads; a legacy checkpoint without the identity is
+admitted before it can resume. This prevents repeated text inspection while
+also preventing a vector-store or editorial call on an unadmitted source.
+
+Rejected sources return a skipped ingest outcome and are written to a retained
+`out/admission/<run>-<decision-set>.json` acquisition/admission funnel. Fixed
+cohorts also embed that decision set in their immutable manifest. They are not
+admitted cohort members and therefore never enter the ingest reliability
+denominator. A normalized title match remains only an operator
+signal: the workflow never merges different content identities merely because
+their titles are similar.
+
+Release and reliability validation use `--cohort-size N --cohort-manifest
+<path>`: files first pass that same admission, then the exact admitted IDs are
+atomically persisted before report-generation work begins. The ordered
+candidate pool continues only while this pre-manifest admission has fewer than
+`N` accepted sources; a rejected candidate is retained in the manifest funnel
+but is not silently included. After the manifest is written, no failure can
+trigger a replacement. Re-running with only `--cohort-manifest <path>` replays
+the same immutable members without a Drive reselection. A malformed manifest,
+duplicate member, size mismatch, rejected admission candidate cannot enter the
+cohort, and an insufficient eligible population fails closed. Admission
+prefetches each selected source PDF and carries its deterministic local MD5
+into the cohort member when the Drive listing omitted that metadata. The same
+value is checked against PDF integrity before the manifest is frozen; it is not
+inferred from a title or replaced with a non-content identifier. A filename is
+optional in the metadata-only listing mode and is used only as an additional
+duplicate signal; it is resolved later when presentation needs it, never
+treated as required source identity.
 `--success-target N` is the only explicit mode allowed to select later
 candidates after a failure; it is prohibited for release/reliability rates.
 Publish a fixed cohort with the same `--cohort-manifest <path>` passed to
@@ -88,6 +121,14 @@ is not enough: for a `published_verified` report the second, unchanged
 publication must retain a successful `repeat_publication` stage with reused
 idempotency and no write. An ambiguous WordPress lookup blocks before any
 WordPress create or update operation.
+
+Passing `--cohort-manifest` also scopes publish candidate selection to that
+immutable member set before WordPress lookup, taxonomy resolution, or writes;
+it is not merely an outcome-recording argument. This keeps a validation run
+from touching unrelated report artifacts. Authenticated WordPress lookup covers
+every visible status, including drafts, so a repeat can verify and reuse a
+sandbox-draft post without creating a duplicate. A cohort's initial creation
+also reads its exact returned post ID before its outcome is recorded.
 
 Taxonomy, context-category, and cover-semantics JSON are schema constrained,
 deterministically parsed and normalized, then given exactly one source-backed

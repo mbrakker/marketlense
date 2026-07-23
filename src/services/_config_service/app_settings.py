@@ -347,6 +347,12 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         ingest_lock_path=paths_settings["ingest_lock_path"],
         ingest_lock_ttl_seconds=ingest_runtime["ingest_lock_ttl_seconds"],
         source_quarantine_enabled=ingest_runtime["source_quarantine_enabled"],
+        admission_min_text_chars=ingest_runtime["admission_min_text_chars"],
+        admission_max_pages=ingest_runtime["admission_max_pages"],
+        admission_max_source_bytes=ingest_runtime["admission_max_source_bytes"],
+        admission_required_evidence_families=ingest_runtime[
+            "admission_required_evidence_families"
+        ],
         temperature=ingest_runtime["temperature"],
         taxonomy_temperature=ingest_runtime["taxonomy_temperature"],
         openai_seed=ingest_runtime["openai_seed"],

@@ -397,6 +397,50 @@ def test_pipeline_preflight_blocks_unwritable_db_path(
     assert report.blockers[0].next_action == "fix_path_permissions:state_db"
 
 
+def test_pipeline_preflight_blocks_unwritable_usage_ledger_path(
+    tmp_path,
+    ingest_settings,
+) -> None:
+    settings = replace(
+        ingest_settings, usage_db_path=str(tmp_path / "blocked-usage" / "usage.sqlite")
+    )
+    base_deps = _deps(tmp_path)
+
+    def _write_failed(req, ctx):
+        if "blocked-usage" not in str(req.path):
+            return base_deps.write_bytes(req, ctx)
+        raise AppError(code="file_write_failed", message="denied", retryable=False)
+
+    deps = PipelinePreflightDependencies(
+        file_stat=base_deps.file_stat,
+        write_bytes=_write_failed,
+        delete_file=base_deps.delete_file,
+        load_prompt_set=base_deps.load_prompt_set,
+        preflight_drive_write_access=base_deps.preflight_drive_write_access,
+        preflight_wordpress_publish_target=base_deps.preflight_wordpress_publish_target,
+    )
+    report = run_pipeline_preflight(
+        PipelinePreflightRequest(
+            schema_version="1.0",
+            workflow="report_pipeline",
+            planned_side_effects=["model"],
+            settings=settings,
+            prompt_namespaces=[],
+            require_llm=False,
+            require_drive=False,
+            require_publish=False,
+            require_browser=False,
+            require_live_endpoints=False,
+        ),
+        _ctx(),
+        dependencies=deps,
+    )
+
+    assert report.passed is False
+    assert report.blockers[-1].check_name == "path_writable:usage_db"
+    assert report.blockers[-1].next_action == "fix_path_permissions:usage_db"
+
+
 def test_pipeline_preflight_surfaces_drive_oauth_refresh_as_auto_fix(
     tmp_path,
     ingest_settings,

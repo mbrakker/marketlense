@@ -41,6 +41,13 @@ ingest:
   report_worker_limit: 2
   source_quarantine:
     enabled: true
+  admission:
+    # Bounded, native-text source inspection before any vector-store or editorial model work.
+    min_text_chars: 500
+    max_pages: 250
+    max_source_bytes: 104857600
+    required_evidence_families:
+      - "doc_map"
   run_budget:
     max_spend_usd: 6.0
     max_retries: 40

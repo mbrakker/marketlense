@@ -42,6 +42,14 @@ from src.contracts.run_budget import (
 from src.contracts.run_context import RunContext
 from src.contracts.semantic_ids import RunId
 from src.contracts.workflow_control import WorkflowControlSettings
+from src.orchestrators.admission_preflight_orchestrator import (
+    AdmissionPreflightRequest,
+    admission_configuration_hash,
+    admission_policy_hash,
+    persist_admission_funnel,
+    pipeline_preflight_decision_hash,
+    run_admission_preflight,
+)
 from src.orchestrators.pipeline_preflight_orchestrator import (
     assert_expensive_side_effects_allowed,
     preflight_report_pipeline,
@@ -361,7 +369,64 @@ def resume_deferred_report_pipeline(
         md5_checksum=item.source_id or None,
         mime_type="application/pdf",
     )
-    resume_ctx = replace(ctx, run_id=cast(RunId, item.run_id))
+    admission_ctx = replace(
+        ctx,
+        run_id=cast(RunId, item.run_id),
+        workflow="report_generation",
+        stage="admission_preflight",
+        artifact_family="report",
+        configuration_hash=admission_configuration_hash(settings),
+        policy_hash=admission_policy_hash(settings),
+    )
+    runtime_preflight = (
+        preflight_fn(settings, admission_ctx)
+        if preflight_fn is not None
+        else preflight_report_pipeline(settings, admission_ctx)
+    )
+    admission = run_admission_preflight(
+        AdmissionPreflightRequest(
+            file=file,
+            source_artifact_path=local_pdf_path,
+            settings=settings,
+            runtime_preflight_passed=runtime_preflight.passed,
+            runtime_preflight_hash=pipeline_preflight_decision_hash(runtime_preflight),
+            configuration_hash=admission_ctx.configuration_hash,
+            policy_hash=admission_ctx.policy_hash,
+            known_source_identities={},
+            known_title_keys={},
+        ),
+        admission_ctx,
+    )
+    persist_admission_funnel(
+        [admission.decision],
+        settings=settings,
+        ctx=admission_ctx,
+        configuration_hash=admission_ctx.configuration_hash,
+        policy_hash=admission_ctx.policy_hash,
+    )
+    if not admission.admitted:
+        raise AppError(
+            code=f"source_admission_{admission.decision.outcome}",
+            message=(
+                "Deferred report source did not pass deterministic admission preflight"
+            ),
+            retryable=False,
+            context={
+                "report_id": item.report_id,
+                "outcome": admission.decision.outcome,
+                "admission_decision_hash": admission.decision.decision_hash,
+            },
+        )
+    resume_ctx = replace(
+        admission_ctx,
+        source_identity_id=admission.decision.source_identity_id,
+        publisher_id=admission.decision.publisher_id,
+        admission_decision_hash=admission.decision.decision_hash,
+    )
+
+    def _admission_runtime_preflight(_settings, _ctx):
+        return runtime_preflight
+
     outcome = run_report_pipeline(
         file,
         local_pdf_path,
@@ -371,7 +436,7 @@ def resume_deferred_report_pipeline(
         retries=0,
         generate_report_fn=generate_report_fn,
         resume_from_stage=plan.resume_stage,
-        preflight_fn=preflight_fn,
+        preflight_fn=_admission_runtime_preflight,
         workflow_control_settings=workflow_control_settings,
         auto_resume_from_latest_safe=True,
         execution_plan_mode="enforce",
@@ -407,6 +472,26 @@ def run_report_pipeline(
     projection_only: bool = False,
     budget_override: BudgetOverrideContext | None = None,
 ) -> IngestOutcome:
+    if not str(ctx.admission_decision_hash or "").strip():
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="report_pipeline_admission_blocked",
+                module=logger.name,
+                fields={"file_id": file.file_id, "reason": "missing_decision_hash"},
+            )
+        )
+        raise AppError(
+            code="report_pipeline_admission_required",
+            message=(
+                "Report evidence and editorial work require a retained admission "
+                "decision"
+            ),
+            retryable=False,
+            severity="error",
+            context={"file_id": file.file_id},
+        )
     report_fn = generate_report_fn or generate_report_orchestrator
     preflight_report = (
         preflight_fn(settings, ctx)

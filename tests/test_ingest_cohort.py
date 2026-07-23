@@ -11,6 +11,10 @@ from src.contracts.ingest import IngestOutcome
 from src.contracts.semantic_ids import ValidationRunId
 from src.contracts.validation_run_manifest import ValidationRunManifestAuditRequest
 from src.orchestrators import ingest_orchestrator as orch
+from src.orchestrators.admission_preflight_orchestrator import (
+    admission_configuration_hash,
+    admission_policy_hash,
+)
 from src.services.report_store_service import audit_validation_run_manifest
 from src.utils.errors import AppError
 
@@ -311,6 +315,17 @@ def test_fixed_cohort_fills_only_pre_manifest_admission_slots(
         decision["runtime_dependency_status"] == "validated_pre_freeze"
         for decision in decisions
     )
+    funnel_payloads = [
+        json.loads(content)
+        for path, content in persisted.items()
+        if "/admission/" in path.replace("\\", "/")
+    ]
+    assert len(funnel_payloads) == 1
+    assert [decision["outcome"] for decision in funnel_payloads[0]["decisions"]] == [
+        "admitted",
+        "corrupt_source",
+        "admitted",
+    ]
 
 
 def test_admission_preflight_rejects_duplicate_source_identity_before_freeze(
@@ -487,7 +502,7 @@ def test_manifest_replay_does_not_reselect_or_replace_cohort_members(
 def test_cohort_configuration_and_policy_hashes_are_independent(
     ingest_settings,
 ) -> None:
-    assert orch._cohort_configuration_hash(ingest_settings) != orch._cohort_policy_hash(
+    assert admission_configuration_hash(ingest_settings) != admission_policy_hash(
         ingest_settings
     )
 

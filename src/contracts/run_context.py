@@ -83,6 +83,15 @@ class RunContext(SemanticIdContract):
         default="",
         metadata={"doc": "Resolved policy identity for validation attribution."},
     )
+    admission_decision_hash: str = field(
+        default="",
+        metadata={
+            "doc": (
+                "Deterministic source-admission decision required before report "
+                "evidence or editorial work."
+            )
+        },
+    )
     execution_plan_hash: str = field(
         default="",
         metadata={"doc": "Deterministic execution-plan identity when applicable."},

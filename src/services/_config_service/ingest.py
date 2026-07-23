@@ -132,6 +132,23 @@ def _resolve_ingest_runtime_settings(
     resolved["source_quarantine_enabled"] = _to_bool(
         quarantine_cfg.get("enabled"), True
     )
+    admission_cfg = ingest.get("admission") or {}
+    if not isinstance(admission_cfg, dict):
+        admission_cfg = {}
+    resolved["admission_min_text_chars"] = max(
+        1, _to_int(admission_cfg.get("min_text_chars"), 500)
+    )
+    resolved["admission_max_pages"] = _optional_positive_int(
+        admission_cfg.get("max_pages", 250)
+    )
+    resolved["admission_max_source_bytes"] = _optional_positive_int(
+        admission_cfg.get("max_source_bytes", 104_857_600)
+    )
+    resolved["admission_required_evidence_families"] = tuple(
+        str(family).strip()
+        for family in (admission_cfg.get("required_evidence_families") or ["doc_map"])
+        if str(family).strip()
+    )
     return resolved
 
 

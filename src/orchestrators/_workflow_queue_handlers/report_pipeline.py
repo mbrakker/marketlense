@@ -103,6 +103,14 @@ from src.generators.cover_image_generator import generate_cover_images
 from src.orchestrators.acquisition_ingest_handoff_orchestrator import (
     build_source_ingest_submission_from_verified_acquisition,
 )
+from src.orchestrators.admission_preflight_orchestrator import (
+    AdmissionPreflightRequest,
+    admission_configuration_hash,
+    admission_policy_hash,
+    persist_admission_funnel,
+    pipeline_preflight_decision_hash,
+    run_admission_preflight,
+)
 from src.orchestrators.claim_embedding_orchestrator import (
     run_claim_embedding_workflow,
 )
@@ -111,6 +119,9 @@ from src.orchestrators.cross_report_analysis_orchestrator import (
 )
 from src.orchestrators.mail_report_acquisition_orchestrator import (
     run_mail_report_acquisition,
+)
+from src.orchestrators.pipeline_preflight_orchestrator import (
+    preflight_report_pipeline,
 )
 from src.orchestrators.publish_orchestrator import publish_cross_report_package
 from src.orchestrators.publisher_inventory_orchestrator import (
@@ -225,23 +236,110 @@ def _report_stage_handler(
             IngestSettingsBuildRequest(schema_version="1.0", app_settings=app_settings),
             ctx,
         )
+        admission_ctx = replace(
+            ctx,
+            workflow="report_generation",
+            stage="admission_preflight",
+            artifact_family="report",
+            configuration_hash=admission_configuration_hash(settings),
+            policy_hash=admission_policy_hash(settings),
+        )
+        source_file = DriveFile(
+            schema_version="1.0",
+            file_id=report_id,
+            name=artifact_reference.replace("\\", "/").rsplit("/", 1)[-1],
+            modified_time=None,
+            md5_checksum=source_hash,
+            mime_type="application/pdf",
+        )
+        carried_admission_hash = str(
+            payload.attributes.get("admission_decision_hash", "")
+        ).strip()
+        runtime_preflight = (
+            None
+            if carried_admission_hash
+            else preflight_report_pipeline(settings, admission_ctx)
+        )
+        downstream_attributes = dict(payload.attributes)
+        if carried_admission_hash:
+            report_ctx = replace(
+                admission_ctx,
+                source_identity_id=str(
+                    payload.attributes.get("admission_source_identity_id", "")
+                    or source_hash
+                ),
+                publisher_id=str(
+                    payload.attributes.get("admission_publisher_id", "")
+                    or "drive_unattributed"
+                ),
+                admission_decision_hash=carried_admission_hash,
+            )
+            preflight_fn = None
+        else:
+            assert runtime_preflight is not None
+            admission = run_admission_preflight(
+                AdmissionPreflightRequest(
+                    file=source_file,
+                    source_artifact_path=artifact_reference,
+                    settings=settings,
+                    runtime_preflight_passed=runtime_preflight.passed,
+                    runtime_preflight_hash=pipeline_preflight_decision_hash(
+                        runtime_preflight
+                    ),
+                    configuration_hash=admission_ctx.configuration_hash,
+                    policy_hash=admission_ctx.policy_hash,
+                    known_source_identities={},
+                    known_title_keys={},
+                ),
+                admission_ctx,
+            )
+            persist_admission_funnel(
+                [admission.decision],
+                settings=settings,
+                ctx=admission_ctx,
+                configuration_hash=admission_ctx.configuration_hash,
+                policy_hash=admission_ctx.policy_hash,
+            )
+            if not admission.admitted:
+                raise AppError(
+                    code=f"source_admission_{admission.decision.outcome}",
+                    message="Report source did not pass deterministic admission preflight",
+                    retryable=False,
+                    context={
+                        "report_id": report_id,
+                        "outcome": admission.decision.outcome,
+                        "admission_decision_hash": admission.decision.decision_hash,
+                    },
+                )
+            report_ctx = replace(
+                admission_ctx,
+                source_identity_id=admission.decision.source_identity_id,
+                publisher_id=admission.decision.publisher_id,
+                admission_decision_hash=admission.decision.decision_hash,
+            )
+            downstream_attributes.update(
+                {
+                    "admission_decision_hash": admission.decision.decision_hash,
+                    "admission_source_identity_id": admission.decision.source_identity_id,
+                    "admission_publisher_id": admission.decision.publisher_id,
+                }
+            )
+
+            def _admission_runtime_preflight(_settings, _ctx):
+                return runtime_preflight
+
+            preflight_fn = _admission_runtime_preflight
         outcome = run_report_pipeline(
-            DriveFile(
-                schema_version="1.0",
-                file_id=report_id,
-                name=artifact_reference.replace("\\", "/").rsplit("/", 1)[-1],
-                modified_time=None,
-                md5_checksum=source_hash,
-                mime_type="application/pdf",
-            ),
+            source_file,
             artifact_reference,
             settings,
             source_hash,
-            ctx,
+            report_ctx,
             resume_from_stage=resume_from_stage,
             stop_after_stage=stop_after_stage,
             projection_only=projection_only,
             budget_override=_requested_budget_override(payload),
+            preflight_fn=preflight_fn,
         )
         if outcome.status == "error":
             raise AppError(
@@ -257,7 +355,7 @@ def _report_stage_handler(
                     input_reference=artifact_reference,
                     input_content_hash=source_hash,
                     processing_version=payload.processing_version,
-                    attributes=payload.attributes,
+                    attributes=downstream_attributes,
                     report_id=report_id,
                     source_prepared_checkpoint="source_prepared",
                 )
@@ -266,7 +364,7 @@ def _report_stage_handler(
                     input_reference=artifact_reference,
                     input_content_hash=source_hash,
                     processing_version=payload.processing_version,
-                    attributes=payload.attributes,
+                    attributes=downstream_attributes,
                     report_id=report_id,
                     selection_checkpoint="selection_complete",
                 )
@@ -275,7 +373,7 @@ def _report_stage_handler(
                     input_reference=artifact_reference,
                     input_content_hash=source_hash,
                     processing_version=payload.processing_version,
-                    attributes=payload.attributes,
+                    attributes=downstream_attributes,
                     report_id=report_id,
                     analysis_checkpoint="analysis_complete",
                 )
@@ -284,7 +382,7 @@ def _report_stage_handler(
                     input_reference=artifact_reference,
                     input_content_hash=source_hash,
                     processing_version=payload.processing_version,
-                    attributes=payload.attributes,
+                    attributes=downstream_attributes,
                     report_id=report_id,
                     validated_artifact_reference="analysis_complete",
                 )
