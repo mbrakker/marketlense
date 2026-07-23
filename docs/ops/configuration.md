@@ -13,6 +13,8 @@ Configuration resolves in this order:
 3. `app.local.yaml` next to the selected `app.yaml`, when present.
 4. Environment variables where the configuration loader supports an override.
 
+`MARKET_LENSE_PRODUCER_COMMIT` is an optional, non-secret 40-character commit SHA. The canonical configuration service reads it when CLI or UI code creates a runtime context, so retained manifest and log provenance identify the producing build without giving utilities environment access.
+
 All runtime data paths in `paths`, acquisition, analysis, cost, publication,
 mailbox, and browser sections are resolved once to absolute paths. A profile
 inside the repository is relative to the repository workspace even when it is

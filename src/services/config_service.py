@@ -19,6 +19,7 @@ from src.contracts.mailbox_acquisition import MailboxAcquisitionSettings
 from src.contracts.publish import PublishSettings
 from src.contracts.publisher_inventory import PublisherInventorySettings
 from src.contracts.run_context import RunContext
+from src.contracts.semantic_ids import TaskId
 from src.contracts.workflow_control import WorkflowControlSettings
 from src.contracts.workflow_queue import WorkflowQueuePolicy
 from src.services._config_service import app_settings as _app_settings
@@ -44,6 +45,7 @@ from src.services._config_service.common import (
     read_app_config,
     write_app_config,
 )
+from src.utils.logging import new_run_context as _new_run_context
 
 
 def _sync_runtime_patch_points() -> None:
@@ -133,6 +135,18 @@ def resolve_openai_credential(
     return _common.resolve_openai_credential(request, ctx)
 
 
+def new_runtime_context(
+    task_id: TaskId | str | None = None,
+    span_id: str | None = None,
+) -> RunContext:
+    """Create a run context with the runtime-supplied producer revision."""
+    return _new_run_context(
+        task_id=task_id,
+        span_id=span_id,
+        producer_commit_sha=_common._env_value("MARKET_LENSE_PRODUCER_COMMIT"),
+    )
+
+
 __all__ = [
     "CONFIG_PATH",
     "CONFIG_PATH_ENV_KEY",
@@ -151,6 +165,7 @@ __all__ = [
     "load_workflow_queue_policies",
     "load_model_pricing",
     "load_settings",
+    "new_runtime_context",
     "read_app_config",
     "resolve_openai_credential",
     "upsert_browser_download_identity_fields",

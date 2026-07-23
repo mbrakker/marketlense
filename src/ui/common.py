@@ -9,7 +9,7 @@ import yaml
 
 from src.ui import state as ui_state
 from src.utils.errors import AppError
-from src.utils.logging import new_run_context
+from src.services.config_service import new_runtime_context as new_run_context
 
 UI_SURFACE_EXCEPTIONS = (
     AppError,

@@ -48,7 +48,7 @@ from src.services.state_service import (
     read_remediation_soak_report,
 )
 from src.utils.clock import utc_now_seconds_z
-from src.utils.logging import new_run_context
+from src.services.config_service import new_runtime_context as new_run_context
 
 
 @cli_app.command("remediations")

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import re
 from collections.abc import Mapping
 from dataclasses import replace
@@ -30,14 +29,15 @@ def _coerce_task_id(task_id: TaskId | str | None) -> TaskId:
     return task_id if isinstance(task_id, TaskId) else TaskId(task_id or str(uuid4()))
 
 
-def _producer_commit_sha() -> str:
-    value = os.getenv("MARKET_LENSE_PRODUCER_COMMIT", "").strip().lower()
+def _normalize_producer_commit_sha(value: str) -> str:
+    value = value.strip().lower()
     return value if re.fullmatch(r"[0-9a-f]{40}", value) else ""
 
 
 def new_run_context(
     task_id: TaskId | str | None = None,
     span_id: str | None = None,
+    producer_commit_sha: str = "",
 ) -> RunContext:
     resolved_task_id = _coerce_task_id(task_id)
     resolved_span_id = span_id or str(uuid4())
@@ -50,7 +50,7 @@ def new_run_context(
         parent_span_id="",
         span_name=str(resolved_task_id),
         span_depth=0,
-        producer_commit_sha=_producer_commit_sha(),
+        producer_commit_sha=_normalize_producer_commit_sha(producer_commit_sha),
     )
 
 

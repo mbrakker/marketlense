@@ -62,7 +62,8 @@ from src.services.state_service import (
     list_source_quarantines,
     upsert_source_quarantine,
 )
-from src.utils.logging import log_event, new_run_context
+from src.services.config_service import new_runtime_context as new_run_context
+from src.utils.logging import log_event
 
 _CLI_PATCH_POINTS = (
     "authorize_oauth_user",

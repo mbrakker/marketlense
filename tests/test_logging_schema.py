@@ -2,6 +2,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import subprocess
+import sys
+from pathlib import Path
 
 from src.contracts.logging import MAX_LOG_EVENT_BYTES
 from src.contracts.browser_download import (
@@ -54,6 +58,41 @@ def test_child_context_preserves_trace_and_parent_span() -> None:
     assert child.parent_span_id == root.span_id
     assert child.span_name == "child"
     assert child.span_depth == root.span_depth + 1
+
+
+def test_new_run_context_accepts_only_full_producer_commit_sha() -> None:
+    assert (
+        new_run_context(
+            task_id="producer", producer_commit_sha="A" * 40
+        ).producer_commit_sha
+        == "a" * 40
+    )
+    assert (
+        new_run_context(
+            task_id="producer", producer_commit_sha="not-a-commit"
+        ).producer_commit_sha
+        == ""
+    )
+
+
+def test_runtime_context_reads_producer_commit_from_configuration_service() -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "from src.services.config_service import new_runtime_context; "
+                "print(new_runtime_context(task_id='producer').producer_commit_sha)"
+            ),
+        ],
+        cwd=Path(__file__).resolve().parents[1],
+        env={**os.environ, "MARKET_LENSE_PRODUCER_COMMIT": "a" * 40},
+        capture_output=True,
+        check=True,
+        text=True,
+    )
+
+    assert result.stdout.strip() == "a" * 40
 
 
 def test_log_event_schema_reports_missing_and_invalid_fields() -> None:

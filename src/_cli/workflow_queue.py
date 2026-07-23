@@ -60,7 +60,7 @@ from src.services.workflow_queue_service import (
     set_workflow_queue_control,
 )
 from src.utils.clock import utc_now_seconds_iso
-from src.utils.logging import new_run_context
+from src.services.config_service import new_runtime_context as new_run_context
 
 
 def _ctx(task: str):

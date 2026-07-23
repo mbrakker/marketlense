@@ -46,7 +46,8 @@ from src.services.logging_service import setup_logging
 from src.services.state_service import write_workflow_control_observation
 from src.utils.clock import utc_now_iso
 from src.utils.errors import AppError
-from src.utils.logging import log_event, new_run_context
+from src.services.config_service import new_runtime_context as new_run_context
+from src.utils.logging import log_event
 from src.utils.wp_auth import build_auth_header
 
 _CLI_PATCH_POINTS = (

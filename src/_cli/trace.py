@@ -17,7 +17,8 @@ from src.utils.gui_utils import (
     extract_log_date_from_filename,
     parse_structured_log_line,
 )
-from src.utils.logging import child_context, log_event, new_run_context
+from src.services.config_service import new_runtime_context as new_run_context
+from src.utils.logging import child_context, log_event
 
 from src._cli.app import cli_app, console, logger
 from src._cli.common import _default_log_path

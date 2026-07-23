@@ -17,7 +17,8 @@ from src.services.browser_report_download_service import (
 )
 from src.services.file_service import read_text
 from src.services.logging_service import setup_logging
-from src.utils.logging import log_event, new_run_context
+from src.services.config_service import new_runtime_context as new_run_context
+from src.utils.logging import log_event
 
 from src._cli.app import cli_app, console, logger
 from src._cli.runtime import sync_cli_patch_points

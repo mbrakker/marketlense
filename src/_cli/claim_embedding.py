@@ -29,7 +29,7 @@ from src.services.analytics_store_service import (
 from src.services.config_service import load_settings
 from src.services.file_service import write_bytes
 from src.services.logging_service import setup_logging
-from src.utils.logging import new_run_context
+from src.services.config_service import new_runtime_context as new_run_context
 
 
 def _health_request(

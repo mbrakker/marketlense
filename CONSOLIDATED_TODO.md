@@ -44,6 +44,7 @@ All work is listed below in one register. `Active` items have detailed completio
 | Active | P3 | Resolve hosted-site trust blockers | Safe-error boundary completed; hosted trust outcome remains. |
 | Active | P10 | Operate correlated public-render failure telemetry | Hosted release-observability outcome. |
 | Active | P12 | Release-locked sandbox publish canary | Repeatedly prove manifest-backed report recovery and final sandbox publication on a small, spend-governed real-report cohort. |
+| Active | P14 | Restrict cohort-manifest publication to its admitted artifacts | Make the manifest an authoritative publish candidate boundary, not only a final audit boundary. |
 | Closed | P13 | Make WordPress file-ID lookup independently authoritative | Authenticated immutable file-ID lookup now matches remote posts from isolated state, fails closed on ambiguity, and preserves no-write reuse. |
 | Active | P4 | Close public briefing, correction, and submission intake | Implemented; close after hosted smoke proves the live intake routes. |
 | Active | P5 | Finish responsive search and navigation | Responsive public-workflow outcome. |
@@ -259,6 +260,19 @@ The original ten-item screenshot baseline is complete in the committed implement
 - A release command selects a small, diverse, already-authorized real-report cohort and records deterministic cohort identity, configuration/policy hashes, and spend forecast before work begins.
 - Every member must pass semantic validation, public editorial quality, complete manifest/asset checks, canonical publish readback, and a repeat idempotency lookup; any failure stops the cohort and preserves the failed evidence.
 - Retained evidence compares the cohort's actual calls/tokens/spend, elapsed time, package completeness, created-versus-reused posts, and typed failures with the approved forecast; focused tests cover target isolation and no-write behavior when approval is absent.
+
+#### P14. Restrict cohort-manifest publication to its admitted artifacts
+
+- **Title:** Cohort-scoped WordPress publication selection
+- **Impact 5 / effort: 1**
+- **Context:** Validation manifests already close report outcomes correctly, but the `publish-wp --cohort-manifest` command still begins with output-directory discovery. A profile containing unrelated HTML can therefore surface an unrelated candidate before final cohort-outcome recording.
+- **Benefit:** The immutable cohort becomes the authoritative candidate set, preventing unrelated drafts from being preflighted or published and making bounded canaries safer to run in shared artifact namespaces.
+- **Risks to avoid:** Preserve the existing no-manifest bulk-publish behavior, canonical artifact/path validation, approval gates, idempotency lookup, and fail-closed handling for missing or ambiguous cohort artifacts.
+- **Success criteria:**
+
+- With `--cohort-manifest`, resolve each admitted member to exactly one compatible current HTML artifact before publication and reject missing, stale, ambiguous, or extra discovered candidates before any WordPress call.
+- Focused tests prove a shared output directory cannot preflight or write a non-cohort artifact, while valid cohort reuse, authenticated readback, and repeat-publication semantics remain unchanged.
+- A bounded isolated live cohort records the candidate-set hash and shows only admitted report IDs in publication-preflight and WordPress manifest records.
 
 #### P7. Improve hosted public-site performance without contract loss
 

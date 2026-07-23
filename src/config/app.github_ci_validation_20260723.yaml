@@ -1,0 +1,31 @@
+schema_version: "1.0"
+
+# One-report isolated namespace for validating the GitHub CI remediation. It
+# inherits normal policy and credentials from the base configuration and .env.
+paths:
+  output_dir: "./out/github_ci_validation_20260723"
+  cache_dir: "./cache/github_ci_validation_20260723"
+  state_db: "./state/github_ci_validation_20260723/index.sqlite"
+  reports_db: "./state/github_ci_validation_20260723/reports.sqlite"
+  signal_store_db: "./state/github_ci_validation_20260723/signals.sqlite"
+  ingest_lock: "./state/github_ci_validation_20260723/ingest.lock"
+
+ingest:
+  run_budget:
+    max_spend_usd: 1.0
+    max_pdfs: 1
+    max_retries: 2
+    max_runtime_seconds: 3600
+    limit_decision: "stop"
+
+analysis:
+  cost_ledger_path: "./state/github_ci_validation_20260723/llm_cost_ledger.jsonl"
+
+cost:
+  usage_db_path: "./state/github_ci_validation_20260723/llm_usage.sqlite"
+  daily_path: "./state/github_ci_validation_20260723/llm_cost_daily.json"
+  ledger_path: "./state/github_ci_validation_20260723/llm_cost_ledger.jsonl"
+
+publish:
+  projection_daily_path: "./state/github_ci_validation_20260723/projection_cost_daily.json"
+  projection_ledger_path: "./state/github_ci_validation_20260723/projection_cost_ledger.jsonl"

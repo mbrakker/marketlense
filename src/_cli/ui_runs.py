@@ -45,7 +45,8 @@ from src.services.run_registry_service import (
 )
 from src.services.ui_run_replay_service import write_ui_run_replay_manifest
 from src.utils.errors import AppError
-from src.utils.logging import log_event, new_run_context
+from src.services.config_service import new_runtime_context as new_run_context
+from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.cli.ui_runs")
 
