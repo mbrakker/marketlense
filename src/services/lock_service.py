@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import sys
 import time
 import errno
 import ctypes
@@ -36,7 +37,7 @@ def _owner_pid_is_alive(pid: int) -> bool:
     """
     if pid <= 0:
         return False
-    if os.name == "nt":
+    if sys.platform == "win32":
         # Windows does not support signal zero as a process-existence check.
         # Query-limited access succeeds for a running local owner and lets us
         # keep access-denied owners conservative without retaining a dead PID.

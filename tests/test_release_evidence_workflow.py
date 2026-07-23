@@ -45,6 +45,9 @@ def test_ci_workflow_archives_fresh_release_evidence_bundle() -> None:
     assert "out/workflow_queue_evidence_ci.json" in workflow
     assert '--expected-commit-sha "${GITHUB_SHA}"' in workflow
     assert "release_evidence_job_summary.py" in workflow
+    summary_step = workflow[summary_index:upload_index]
+    assert "hashFiles('out/release_evidence_review_ci.json')" in summary_step
+    assert "hashFiles('out/workflow_queue_evidence_ci.json')" in summary_step
     assert "out/pdf_candidate_benchmark_ci.json" in workflow
     assert "out/pdf_crop_refine_benchmark_ci.json" in workflow
     assert "out/pdf_benchmark_trends_ci.json" in workflow

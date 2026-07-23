@@ -182,7 +182,7 @@ jobs:
             --output-json out/release_evidence_review_ci.json \
             --output-md out/release_evidence_review_ci.md
       - name: Write release evidence job summary
-        if: always()
+        if: ${{ always() && hashFiles('out/release_evidence_review_ci.json') != '' && hashFiles('out/workflow_queue_evidence_ci.json') != '' }}
         run: python scripts/quality/release_evidence_job_summary.py --review-json out/release_evidence_review_ci.json --queue-evidence-json out/workflow_queue_evidence_ci.json --output-path "$GITHUB_STEP_SUMMARY"
       - name: Upload release evidence bundle
         if: always()

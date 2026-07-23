@@ -22,6 +22,10 @@ def _ctx() -> RunContext:
     return RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
 
 
+def test_running_local_pid_is_alive() -> None:
+    assert lock_service._owner_pid_is_alive(os.getpid()) is True
+
+
 def test_get_lock_reflects_lock_lifecycle(tmp_path: Path) -> None:
     lock_path = tmp_path / "ingest.lock"
     before = get_lock(
