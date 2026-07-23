@@ -194,6 +194,12 @@ class ContextCategoryFitRequest:
             "doc": "Original failed provider output held only in memory for the one targeted repair."
         },
     )
+    candidate_category_ids: List[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Declared category IDs permitted during semantic reclassification; empty keeps the normal full-profile fit."
+        },
+    )
     repair_attempt: int = field(
         default=0,
         metadata={

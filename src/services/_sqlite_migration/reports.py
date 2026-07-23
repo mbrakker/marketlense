@@ -33,6 +33,7 @@ from src.services._sqlite_migration._reports.routing import (
     _reports_db_021_create_acquisition_resource_telemetry,
     _reports_db_024_create_validation_run_manifest,
     _reports_db_025_expand_validation_run_manifest_provenance,
+    _reports_db_026_create_validation_run_cohort_members,
 )
 from src.services._sqlite_migration._reports.schema import (
     _ACQUISITION_ATTEMPT_RESOURCES_TABLE_SQL,
@@ -196,5 +197,10 @@ _REPORTS_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
         migration_id="reports_db_025_expand_validation_run_manifest_provenance",
         version=25,
         apply_fn=_reports_db_025_expand_validation_run_manifest_provenance,
+    ),
+    _MigrationSpec(
+        migration_id="reports_db_026_create_validation_run_cohort_members",
+        version=26,
+        apply_fn=_reports_db_026_create_validation_run_cohort_members,
     ),
 )

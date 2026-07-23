@@ -528,8 +528,7 @@ def find_post_by_file_id(
     except json.JSONDecodeError:
         payload = []
 
-    post_id = None
-    link = None
+    matches: dict[int, str] = {}
     if isinstance(payload, list):
         for post in payload:
             content = (post or {}).get("content", {}).get("rendered", "")
@@ -540,7 +539,33 @@ def find_post_by_file_id(
             ):
                 post_id = post.get("id")
                 link = post.get("link")
-                break
+                if post_id and link:
+                    matches[int(post_id)] = str(link)
+
+    if len(matches) > 1:
+        logger.error(
+            log_event(
+                ctx,
+                role="service",
+                event="wp_post_lookup_ambiguous",
+                module=logger.name,
+                fields={
+                    "file_id": request.file_id,
+                    "match_count": len(matches),
+                    "used_pooled_session": request_result.used_pooled_session,
+                    "pool_key": request_result.pool_key,
+                    "pool_reused": request_result.pool_reused,
+                },
+            )
+        )
+        raise AppError(
+            code="wp_post_lookup_ambiguous",
+            message="WordPress lookup found multiple active posts for one report",
+            retryable=False,
+            context={"file_id": request.file_id, "match_count": len(matches)},
+        )
+
+    post_id, link = next(iter(matches.items()), (None, None))
 
     found = bool(post_id and link)
     logger.info(

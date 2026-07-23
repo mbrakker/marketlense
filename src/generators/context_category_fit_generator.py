@@ -89,6 +89,7 @@ def fit_report_categories_from_context(
                 "title": request.context.title,
                 "prompt_namespace": request.prompt_namespace,
                 "category_mapping_path": request.category_mapping_path,
+                "declared_candidate_count": len(request.candidate_category_ids),
             },
         )
     )
@@ -113,6 +114,27 @@ def fit_report_categories_from_context(
         for category in mappings_resp.mappings.categories
         if category.portal_exposed
     ]
+    declared_candidate_ids = tuple(
+        dict.fromkeys(
+            str(category_id or "").strip()
+            for category_id in request.candidate_category_ids
+            if str(category_id or "").strip()
+        )
+    )
+    if declared_candidate_ids:
+        declared_candidate_id_set = set(declared_candidate_ids)
+        category_profiles = [
+            profile
+            for profile in category_profiles
+            if str(profile["id"]) in declared_candidate_id_set
+        ]
+        if not category_profiles:
+            raise AppError(
+                code="context_category_fit_candidate_set_empty",
+                message="Category reclassification has no declared portal candidates",
+                retryable=False,
+                context={"candidate_count": len(declared_candidate_ids)},
+            )
     prompt_bundle = prepare_prompt_bundle(
         namespace=request.prompt_namespace,
         settings=request.settings,
@@ -129,6 +151,7 @@ def fit_report_categories_from_context(
             "repair_error": request.repair_error,
             "repair_attempt": request.repair_attempt,
             "repair_response": request.repair_response,
+            "candidate_category_ids": list(declared_candidate_ids),
         },
         reload_if_changed=True,
     )

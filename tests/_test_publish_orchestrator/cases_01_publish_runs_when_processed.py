@@ -444,7 +444,10 @@ def test_publish_limit_applies_to_attempted_items_when_first_item_errors(
                 "GET", "https://example.com/wp-json/wp/v2/ml_report"
             )
         )
-        == 2
+        == 1
+    )
+    assert not wordpress_http.calls_for(
+        "POST", "https://example.com/wp-json/wp/v2/ml_report"
     )
 
 

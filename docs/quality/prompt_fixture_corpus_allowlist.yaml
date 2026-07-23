@@ -20,9 +20,9 @@ allowlist:
     max_delta_percent: 3.0
   - pattern: "totals.total_tokens"
     owner: "market-lense"
-    reason: "Report-card prompts include bounded TLDR projections, grounded cover-semantics classification, one constrained cover-semantics repair envelope, direct-prose requirements for summary, expert-view, and LinkedIn repairs, and an explicit complete/concise rank-result contract; the fixture corpus retains no additional browser or OCR work."
+    reason: "Report-card prompts include bounded TLDR projections, grounded cover-semantics classification, one constrained cover-semantics repair envelope, direct-prose requirements for summary, expert-view, and LinkedIn repairs, an explicit complete/concise rank-result contract, and an empty-or-declared candidate-set marker for bounded category reclassification; the fixture corpus retains no additional browser or OCR work."
     expires_on: "2026-07-31"
-    max_delta_absolute: 3900
+    max_delta_absolute: 4000
   - pattern: "families.ranking.total_tokens"
     owner: "market-lense"
     reason: "The ranking contract now requires exactly one concise result per candidate and caps rejection reasons, adding 39 dry-run prompt tokens while retaining the existing model, browser, OCR, and candidate limits."
@@ -70,6 +70,6 @@ allowlist:
     max_delta_absolute: 40
   - pattern: "families.report.total_tokens"
     owner: "market-lense"
-    reason: "The structured taxonomy and category repair fixtures add 970 bounded prompt tokens to the report-family envelope."
+    reason: "The structured taxonomy and category repair fixtures add a bounded declared-candidate-set marker and previous-decision envelope to the report-family prompt budget."
     expires_on: "2026-07-31"
-    max_delta_absolute: 970
+    max_delta_absolute: 1100

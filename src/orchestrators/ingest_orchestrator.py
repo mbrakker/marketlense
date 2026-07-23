@@ -1270,7 +1270,7 @@ def _record_cohort_ingest_manifest(
                     publisher_id="unattributed",
                     report_id=file.file_id,
                     source_identity_id=file.md5_checksum or file.file_id,
-                    stage="ingest",
+                    stage="ingestion",
                     attempt_number=1,
                     parent_attempt_number=0,
                     input_artifact_ids=(file.file_id,),
@@ -1281,7 +1281,7 @@ def _record_cohort_ingest_manifest(
                     completed_at_utc=timestamp,
                     terminal_outcome=terminal_outcome,
                     failure_code=(
-                        (outcome.error or "") if outcome else "ingest_unfinished"
+                        (outcome.error or "") if outcome else "cohort_report_missing"
                     ),
                     retryable=False,
                     repair_disposition="none",
@@ -1323,15 +1323,18 @@ def _record_failed_cohort_stage_closure(
         "source_preparation",
         "source_validation",
         "evidence_generation",
+        "structured_output_repair",
         "taxonomy",
         "category_fit",
         "artifact_generation",
+        "regeneration",
         "grounding_validation",
         "semantic_validation",
         "rendering",
         "final_html_validation",
         "publication_preflight",
         "wordpress_lookup",
+        "wordpress_write",
         "authenticated_readback",
         "repeat_publication",
     ):
@@ -2177,6 +2180,19 @@ def run_ingest(
                         "duplicate_current_entity_count": len(
                             manifest_audit.duplicate_current_entity_ids
                         ),
+                        "missing_cohort_report_count": len(
+                            manifest_audit.missing_cohort_report_ids
+                        ),
+                        "overlapping_current_report_count": len(
+                            manifest_audit.overlapping_current_report_ids
+                        ),
+                        "duplicate_source_identity_count": len(
+                            manifest_audit.duplicate_source_identity_ids
+                        ),
+                        "multiple_wordpress_post_report_count": len(
+                            manifest_audit.multiple_wordpress_post_report_ids
+                        ),
+                        "totals_reconciled": manifest_audit.totals_reconciled,
                     },
                 )
         processed = sum(result.processed for result in results)

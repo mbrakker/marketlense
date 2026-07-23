@@ -319,6 +319,7 @@ def _resolve_categories_from_report_context(
     repair_attempt: int = 0,
     repair_error: str = "",
     repair_response: str = "",
+    candidate_category_ids: list[str] | None = None,
 ) -> _ContextCategoryState:
     category_ctx = child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:categories")
     report_metadata = ReportMetadataGetResponse(
@@ -372,6 +373,7 @@ def _resolve_categories_from_report_context(
             repair_error=repair_error,
             repair_attempt=repair_attempt,
             repair_response=repair_response,
+            candidate_category_ids=list(candidate_category_ids or []),
         ),
         category_ctx,
         **kwargs,

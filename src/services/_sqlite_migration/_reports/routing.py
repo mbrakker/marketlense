@@ -296,3 +296,27 @@ def _reports_db_025_expand_validation_run_manifest_provenance(
         "CREATE INDEX IF NOT EXISTS idx_validation_manifest_cohort "
         "ON validation_run_entity_attempts(validation_run_id, cohort_id, is_current)"
     )
+
+
+def _reports_db_026_create_validation_run_cohort_members(
+    conn: sqlite3.Connection,
+) -> None:
+    """Retain immutable member identities independently from execution attempts."""
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS validation_run_cohort_members (
+          validation_run_id TEXT NOT NULL REFERENCES validation_runs(validation_run_id),
+          cohort_id TEXT NOT NULL,
+          entity_type TEXT NOT NULL,
+          publisher_id TEXT NOT NULL,
+          report_id TEXT NOT NULL,
+          source_identity_id TEXT NOT NULL,
+          discovered_at_utc TEXT NOT NULL,
+          PRIMARY KEY(validation_run_id, report_id)
+        )
+        """
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_validation_manifest_cohort_member_source "
+        "ON validation_run_cohort_members(validation_run_id, source_identity_id)"
+    )

@@ -113,6 +113,36 @@ class ValidationRunManifestAuditResponse(SemanticIdContract):
     stage_totals: tuple[ValidationRunManifestStageTotal, ...]
     incomplete_entity_ids: tuple[str, ...]
     duplicate_current_entity_ids: tuple[str, ...]
+    missing_cohort_report_ids: tuple[str, ...] = field(
+        default=(),
+        metadata={
+            "doc": "Admitted cohort reports that no longer have one current manifest attempt."
+        },
+    )
+    overlapping_current_report_ids: tuple[str, ...] = field(
+        default=(),
+        metadata={
+            "doc": "Reports with more than one current attempt or source identity."
+        },
+    )
+    duplicate_source_identity_ids: tuple[str, ...] = field(
+        default=(),
+        metadata={
+            "doc": "Source identities unexpectedly resolved by more than one cohort report."
+        },
+    )
+    multiple_wordpress_post_report_ids: tuple[str, ...] = field(
+        default=(),
+        metadata={
+            "doc": "Reports whose authenticated WordPress lookup found multiple active posts."
+        },
+    )
+    totals_reconciled: bool = field(
+        default=False,
+        metadata={
+            "doc": "Whether admitted-member, current-attempt, and terminal-state totals agree."
+        },
+    )
     missing_required_stage_entity_ids: tuple[str, ...] = field(
         default=(),
         metadata={

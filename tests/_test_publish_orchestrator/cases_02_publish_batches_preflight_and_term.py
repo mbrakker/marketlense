@@ -4,6 +4,55 @@ from __future__ import annotations
 from ._shared import *  # noqa: F401,F403
 
 
+def test_publish_blocks_ambiguous_wordpress_lookup_before_any_write(
+    publish_settings_factory,
+    run_context,
+    wordpress_http,
+    caplog,
+) -> None:
+    settings = publish_settings_factory(validation_policy="warn", ssl_verify=False)
+    html_path = _write_html(settings.output_dir, "report.html", "Drive fileId: file123")
+    _record_processed(settings.state_db, "file123", run_context)
+    _seed_report_metadata(
+        settings.reports_db,
+        str(html_path),
+        "file123",
+        run_context,
+    )
+
+    wordpress_http.add_json(
+        "GET",
+        "https://example.com/wp-json/wp/v2/ml_report",
+        status_code=200,
+        payload=[
+            {
+                "id": 501,
+                "link": "https://example.com/post/501",
+                "content": {"rendered": "Drive fileId: file123"},
+            },
+            {
+                "id": 502,
+                "link": "https://example.com/post/502",
+                "content": {"rendered": "Drive fileId: file123"},
+            },
+        ],
+    )
+
+    results = orch.run_publish(settings, limit=1, ctx=run_context)
+
+    assert len(results) == 1
+    assert results[0].status == "error"
+    assert results[0].error == "wp_post_lookup_ambiguous"
+    assert results[0].publication_outcome == "lookup_failed"
+    assert not wordpress_http.calls_for(
+        "POST", "https://example.com/wp-json/wp/v2/ml_report"
+    )
+    assert any(
+        event.get("event") == "publish_preflight_lookup_blocked"
+        for event in _json_events(caplog, orch.logger.name)
+    )
+
+
 def test_publish_batches_preflight_and_term_resolution(
     publish_settings_factory,
     run_context,

@@ -15304,6 +15304,12 @@
     "src.contracts.context_category_fit.ContextCategoryFitRequest": {
       "additionalProperties": false,
       "properties": {
+        "candidate_category_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "category_mapping_path": {
           "type": "string"
         },
@@ -39785,6 +39791,12 @@
           },
           "type": "array"
         },
+        "duplicate_source_identity_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "final_cohort_report_ids": {
           "items": {
             "type": "string"
@@ -39797,7 +39809,25 @@
           },
           "type": "array"
         },
+        "missing_cohort_report_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "missing_required_stage_entity_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "multiple_wordpress_post_report_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "overlapping_current_report_ids": {
           "items": {
             "type": "string"
           },
@@ -39811,6 +39841,9 @@
             "$ref": "#/$defs/src.contracts.validation_run_manifest.ValidationRunManifestStageTotal"
           },
           "type": "array"
+        },
+        "totals_reconciled": {
+          "type": "boolean"
         },
         "validation_run_id": {
           "type": "string"

@@ -306,10 +306,25 @@ def _record_validation_cohort_publish_outcomes(
                 failure_code="wordpress_publish_not_attempted",
             )
             record_stage(
+                "wordpress_lookup",
+                terminal_outcome="blocked",
+                failure_code="wordpress_publish_not_attempted",
+            )
+            record_stage(
+                "wordpress_write",
+                terminal_outcome="blocked",
+                failure_code="wordpress_publish_not_attempted",
+            )
+            record_stage(
                 "authenticated_readback",
                 terminal_outcome="blocked",
                 failure_code="wordpress_publish_not_attempted",
                 entity_terminal=True,
+            )
+            record_stage(
+                "repeat_publication",
+                terminal_outcome="blocked",
+                failure_code="wordpress_publish_not_attempted",
             )
             continue
 
@@ -341,30 +356,49 @@ def _record_validation_cohort_publish_outcomes(
                 idempotency_state="verified" if verified else "new",
                 output_artifact_ids=output_artifact_ids,
             )
-            if outcome.status == "skipped":
-                record_stage(
-                    "repeat_publication",
-                    terminal_outcome="succeeded" if verified else "failed",
-                    failure_code=""
-                    if verified
-                    else str(outcome.error or "readback_failed"),
-                    idempotency_state="reused" if verified else "new",
-                    output_artifact_ids=output_artifact_ids,
-                )
-        elif outcome.status == "published":
             record_stage(
                 "wordpress_write",
+                terminal_outcome="skipped",
+                idempotency_state="reused" if verified else "new",
+                output_artifact_ids=output_artifact_ids,
+            )
+            record_stage(
+                "repeat_publication",
                 terminal_outcome="succeeded" if verified else "failed",
                 failure_code=""
                 if verified
                 else str(outcome.error or "readback_failed"),
-                idempotency_state="verified" if verified else "new",
+                idempotency_state="reused" if verified else "new",
+                output_artifact_ids=output_artifact_ids,
+            )
+        elif outcome.status == "published":
+            record_stage(
+                "wordpress_lookup",
+                terminal_outcome="succeeded",
+                output_artifact_ids=output_artifact_ids,
+            )
+            record_stage(
+                "wordpress_write",
+                terminal_outcome="succeeded",
+                idempotency_state="new",
                 output_artifact_ids=output_artifact_ids,
             )
         else:
             record_stage(
                 "wordpress_lookup",
                 terminal_outcome="failed",
+                failure_code=str(outcome.error or "wordpress_transaction_failed"),
+                output_artifact_ids=output_artifact_ids,
+            )
+            record_stage(
+                "wordpress_write",
+                terminal_outcome="blocked",
+                failure_code=str(outcome.error or "wordpress_transaction_failed"),
+                output_artifact_ids=output_artifact_ids,
+            )
+            record_stage(
+                "repeat_publication",
+                terminal_outcome="blocked",
                 failure_code=str(outcome.error or "wordpress_transaction_failed"),
                 output_artifact_ids=output_artifact_ids,
             )
@@ -396,6 +430,17 @@ def _record_validation_cohort_publish_outcomes(
                 "duplicate_current_entity_count": len(
                     audit.duplicate_current_entity_ids
                 ),
+                "missing_cohort_report_count": len(audit.missing_cohort_report_ids),
+                "overlapping_current_report_count": len(
+                    audit.overlapping_current_report_ids
+                ),
+                "duplicate_source_identity_count": len(
+                    audit.duplicate_source_identity_ids
+                ),
+                "multiple_wordpress_post_report_count": len(
+                    audit.multiple_wordpress_post_report_ids
+                ),
+                "totals_reconciled": audit.totals_reconciled,
                 "missing_required_stage_count": len(
                     audit.missing_required_stage_entity_ids
                 ),
@@ -1093,7 +1138,7 @@ def run_publish(
                 log_event(
                     file_ctx,
                     role="orchestrator",
-                    event="publish_preflight_lookup_fallback",
+                    event="publish_preflight_lookup_blocked",
                     module=logger.name,
                     fields={
                         "file_id": file_id,
@@ -1102,6 +1147,18 @@ def run_publish(
                     },
                 )
             )
+            outcomes.append(
+                PublishOutcome(
+                    schema_version="1.0",
+                    html_path=html_path,
+                    file_id=file_id or None,
+                    status="error",
+                    error=existing_post_lookup.error_code,
+                    publication_outcome="lookup_failed",
+                    lookup_count=1,
+                )
+            )
+            continue
 
         if not file_id:
             logger.info(

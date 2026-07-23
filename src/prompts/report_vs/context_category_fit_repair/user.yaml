@@ -7,6 +7,7 @@ text: |
 
   The previous response failed with: {{ repair_error }}.
   This is bounded repair attempt {{ repair_attempt }}.
+  Declared candidate category IDs for this repair (empty means a structured-output repair, not semantic reclassification): {{ candidate_category_ids }}.
 
   Previous response to repair (untrusted; emit a replacement, never commentary):
   {{ repair_response }}

@@ -935,6 +935,14 @@ def run_ingest_file(
             input_artifact_ids=(runtime.cache_path,),
             output_artifact_ids=(runtime.md5 or runtime.file.file_id,),
         )
+        record_validation_manifest_stage(
+            settings=settings,
+            ctx=file_ctx,
+            stage="source_validation",
+            source_identity_id=runtime.md5 or runtime.file.file_id,
+            input_artifact_ids=(runtime.cache_path,),
+            output_artifact_ids=(runtime.md5 or runtime.file.file_id,),
+        )
         cache_eligible = bool(runtime.md5) and bool(settings.vector_store_keep)
         logger.info(
             log_event(

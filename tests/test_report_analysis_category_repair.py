@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from src.contracts.context_category_fit import CategoryFitCandidate
 from src.orchestrators.report_analysis_orchestrator import (
     _category_fit_ambiguity_ids,
+    _category_fit_reclassification_candidates,
     _category_fit_repair_code,
 )
 
@@ -44,6 +45,7 @@ def test_category_fit_ambiguity_requires_repair_when_selection_was_withheld() ->
     state.category_assignment = SimpleNamespace(categories=["technology"])
 
     assert _category_fit_ambiguity_ids(state) == ["technology"]
+    assert _category_fit_reclassification_candidates(state) == ["technology"]
     assert _category_fit_repair_code(state) == "category_fit_contradiction"
 
 

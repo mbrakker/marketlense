@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 from dataclasses import replace
 from types import SimpleNamespace
 
@@ -35,7 +36,15 @@ def _ctx() -> RunContext:
 
 
 def _record(
-    *, attempt: int, stage: str, terminal: bool = False, outcome: str = "succeeded"
+    *,
+    attempt: int,
+    stage: str,
+    terminal: bool = False,
+    outcome: str = "succeeded",
+    report_id: str = "report-1",
+    source_identity_id: str = "source-1",
+    failure_code: str = "",
+    idempotency_state: str = "new",
 ) -> ValidationRunManifestStageRecord:
     terminal_outcome = (
         "publish_ready" if terminal and outcome == "succeeded" else outcome
@@ -47,8 +56,8 @@ def _record(
         workflow_run_id="workflow-1",
         entity_type="report",
         publisher_id="publisher-1",
-        report_id="report-1",
-        source_identity_id="source-1",
+        report_id=report_id,
+        source_identity_id=source_identity_id,
         stage=stage,
         attempt_number=attempt,
         parent_attempt_number=attempt - 1 if attempt > 1 else 0,
@@ -58,15 +67,19 @@ def _record(
         completed_at_utc="2026-07-21T10:01:00Z",
         terminal_outcome=terminal_outcome,
         failure_code=(
-            ""
-            if terminal_outcome in {"succeeded", "publish_ready"}
-            else "typed_failure"
+            failure_code
+            or (
+                ""
+                if terminal_outcome
+                in {"succeeded", "publish_ready", "published_verified"}
+                else "typed_failure"
+            )
         ),
         retryable=terminal_outcome == "failed",
         repair_disposition="not_required",
         duplicate_disposition="new",
         supersession_state="current",
-        idempotency_state="new",
+        idempotency_state=idempotency_state,
         configuration_hash="config-hash",
         policy_hash="policy-hash",
         producer_build_identity="build-sha",
@@ -342,6 +355,7 @@ def test_wordpress_outcome_closes_the_matching_immutable_cohort_member(
     assert audit.final_cohort_report_ids == ("report-1",)
     assert {(item.stage, item.terminal_outcome) for item in audit.stage_totals} == {
         ("publication_preflight", "succeeded"),
+        ("wordpress_lookup", "succeeded"),
         ("wordpress_write", "succeeded"),
         ("authenticated_readback", "published_verified"),
     }
@@ -373,9 +387,196 @@ def test_full_manifest_audit_reports_missing_mandatory_stages(tmp_path) -> None:
     assert "report|report-1|source-1:admission_preflight" in (
         audit.missing_required_stage_entity_ids
     )
-    assert "report|report-1|source-1:ingest" in (
+    assert "report|report-1|source-1:ingestion" in (
         audit.missing_required_stage_entity_ids
     )
     assert "report|report-1|source-1:repeat_publication" in (
         audit.missing_required_stage_entity_ids
+    )
+
+
+def test_manifest_audit_fails_when_a_frozen_cohort_member_disappears(tmp_path) -> None:
+    db_path = str(tmp_path / "reports.sqlite")
+    _create(db_path)
+    for record in (
+        _record(attempt=1, stage="discovery"),
+        _record(attempt=1, stage="ingestion", terminal=True),
+    ):
+        record_validation_run_manifest_stage(
+            ValidationRunManifestRecordRequest(
+                schema_version="1.0", db_path=db_path, record=record
+            ),
+            _ctx(),
+        )
+    with sqlite3.connect(db_path) as conn:
+        conn.execute(
+            """
+            UPDATE validation_run_entity_attempts SET is_current=0
+            WHERE validation_run_id='validation-1' AND report_id='report-1'
+            """
+        )
+
+    audit = audit_validation_run_manifest(
+        ValidationRunManifestAuditRequest(
+            schema_version="1.0", db_path=db_path, validation_run_id="validation-1"
+        ),
+        _ctx(),
+    )
+
+    assert audit.complete is False
+    assert audit.missing_cohort_report_ids == ("report-1",)
+    assert audit.totals_reconciled is False
+
+
+def test_manifest_audit_rejects_overlapping_reports_and_source_identities(
+    tmp_path,
+) -> None:
+    db_path = str(tmp_path / "reports.sqlite")
+    _create(db_path)
+    records = (
+        _record(attempt=1, stage="discovery"),
+        _record(
+            attempt=1,
+            stage="acquisition",
+            report_id="report-1",
+            source_identity_id="source-2",
+            terminal=True,
+        ),
+        _record(
+            attempt=1,
+            stage="discovery",
+            report_id="report-2",
+            source_identity_id="source-1",
+        ),
+        _record(
+            attempt=1,
+            stage="ingestion",
+            report_id="report-2",
+            source_identity_id="source-1",
+            terminal=True,
+        ),
+    )
+    for record in records:
+        record_validation_run_manifest_stage(
+            ValidationRunManifestRecordRequest(
+                schema_version="1.0", db_path=db_path, record=record
+            ),
+            _ctx(),
+        )
+
+    audit = audit_validation_run_manifest(
+        ValidationRunManifestAuditRequest(
+            schema_version="1.0", db_path=db_path, validation_run_id="validation-1"
+        ),
+        _ctx(),
+    )
+
+    assert audit.complete is False
+    assert audit.overlapping_current_report_ids == ("report-1",)
+    assert audit.duplicate_source_identity_ids == ("source-1",)
+
+
+def test_manifest_audit_surfaces_ambiguous_wordpress_lookup(tmp_path) -> None:
+    db_path = str(tmp_path / "reports.sqlite")
+    _create(db_path)
+    for record in (
+        _record(attempt=1, stage="discovery"),
+        _record(
+            attempt=1,
+            stage="wordpress_lookup",
+            outcome="failed",
+            failure_code="wp_post_lookup_ambiguous",
+        ),
+        _record(
+            attempt=1,
+            stage="authenticated_readback",
+            terminal=True,
+            outcome="blocked",
+        ),
+    ):
+        record_validation_run_manifest_stage(
+            ValidationRunManifestRecordRequest(
+                schema_version="1.0", db_path=db_path, record=record
+            ),
+            _ctx(),
+        )
+    audit = audit_validation_run_manifest(
+        ValidationRunManifestAuditRequest(
+            schema_version="1.0", db_path=db_path, validation_run_id="validation-1"
+        ),
+        _ctx(),
+    )
+
+    assert audit.complete is False
+    assert audit.multiple_wordpress_post_report_ids == ("report-1",)
+
+
+def test_full_manifest_requires_a_reused_verified_repeat_for_publication(
+    tmp_path,
+) -> None:
+    db_path = str(tmp_path / "reports.sqlite")
+    _create(db_path)
+    for stage in (
+        "discovery",
+        "candidate_qualification",
+        "acquisition",
+        "admission_preflight",
+        "source_preparation",
+        "source_validation",
+        "evidence_generation",
+        "structured_output_repair",
+        "taxonomy",
+        "category_fit",
+        "artifact_generation",
+        "regeneration",
+        "grounding_validation",
+        "semantic_validation",
+        "rendering",
+        "final_html_validation",
+        "ingestion",
+        "publication_preflight",
+        "wordpress_lookup",
+        "wordpress_write",
+    ):
+        record_validation_run_manifest_stage(
+            ValidationRunManifestRecordRequest(
+                schema_version="1.0",
+                db_path=db_path,
+                record=_record(attempt=1, stage=stage),
+            ),
+            _ctx(),
+        )
+    for record in (
+        _record(
+            attempt=1,
+            stage="authenticated_readback",
+            terminal=True,
+            outcome="published_verified",
+        ),
+        _record(
+            attempt=1,
+            stage="repeat_publication",
+            idempotency_state="new",
+        ),
+    ):
+        record_validation_run_manifest_stage(
+            ValidationRunManifestRecordRequest(
+                schema_version="1.0", db_path=db_path, record=record
+            ),
+            _ctx(),
+        )
+
+    audit = audit_validation_run_manifest(
+        ValidationRunManifestAuditRequest(
+            schema_version="1.0",
+            db_path=db_path,
+            validation_run_id="validation-1",
+            require_full_workflow=True,
+        ),
+        _ctx(),
+    )
+
+    assert audit.complete is False
+    assert audit.missing_required_stage_entity_ids == (
+        "report|report-1|source-1:repeat_publication_verified_reuse",
     )

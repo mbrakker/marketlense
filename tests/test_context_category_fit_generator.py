@@ -441,6 +441,107 @@ def test_fit_report_categories_from_context_defaults_missing_optional_fields() -
     assert response.fits[0].semantic_rule_status == "supported"
 
 
+def test_semantic_reclassification_is_limited_to_declared_candidates() -> None:
+    context = ReportCategoryContext(
+        schema_version="1.0",
+        report_id="file-1",
+        title="AI Operations Outlook",
+        publisher="Deloitte",
+        region="Global",
+        time_period="2026",
+        overview="AI agents and automation systems are the report's central subject.",
+        methods=[],
+        key_findings=["AI operating models are becoming central to operations."],
+        limitations=[],
+        sections=[],
+    )
+    mappings = CategoryMappings(
+        schema_version="1.0",
+        categories=[
+            CategoryDefinition(
+                id="technology",
+                label="Technology & Innovation",
+                description="Reports about technology shifts.",
+                definition="Reports about enterprise technology.",
+                include_when=["Evidence centers on enterprise technology shifts."],
+                exclude_when=[],
+            ),
+            CategoryDefinition(
+                id="ai_automation",
+                label="AI & Automation",
+                description="Reports about AI automation.",
+                definition="Reports mainly about AI systems and automation.",
+                include_when=[
+                    "Evidence repeatedly focuses on AI agents, automation systems, or AI operating models."
+                ],
+                exclude_when=[],
+            ),
+        ],
+        inference_rules=[],
+        uncategorized=[],
+    )
+
+    def mapping_client(request, ctx):
+        del request, ctx
+        return CategoryMappingLoadResponse(schema_version="1.0", mappings=mappings)
+
+    settings = SimpleNamespace(
+        openai_model="gpt-5-mini",
+        openai_models={},
+        openai_api_key="test-key",
+        openai_seed=None,
+        openai_timeout_seconds=30.0,
+        cost_ledger_path="./out/cost-ledger.jsonl",
+        cost_daily_path="./out/cost-daily.json",
+        model_pricing={"gpt-5-mini": {}},
+        llm_execution_policies=_execution_policies(),
+    )
+    response = fit_report_categories_from_context(
+        ContextCategoryFitRequest(
+            schema_version="1.0",
+            context=context,
+            settings=settings,
+            category_mapping_path="unused",
+            prompt_namespace="report_vs/context_category_fit_repair",
+            repair_error="category_fit_contradiction",
+            repair_attempt=1,
+            candidate_category_ids=["ai_automation"],
+        ),
+        _ctx(),
+        openai_client=RecordingOpenAIClient(
+            {
+                "schema_version": "1.0",
+                "selected_category_ids": ["technology", "ai_automation"],
+                "category_fits": [
+                    {
+                        "category_id": "technology",
+                        "label": "Technology & Innovation",
+                        "fit_score": 0.98,
+                        "decision": "primary",
+                        "why_fit": "Technology is central.",
+                        "why_not_fit": "",
+                        "evidence_sections": ["Overview"],
+                    },
+                    {
+                        "category_id": "ai_automation",
+                        "label": "AI & Automation",
+                        "fit_score": 0.95,
+                        "decision": "primary",
+                        "why_fit": "AI agents are central.",
+                        "why_not_fit": "",
+                        "evidence_sections": ["Overview"],
+                    },
+                ],
+            }
+        ),
+        prompt_client=RecordingPromptClient(),
+        mapping_client=mapping_client,
+    )
+
+    assert response.categories == ["ai_automation"]
+    assert [fit.category_id for fit in response.fits] == ["ai_automation"]
+
+
 def test_fit_report_categories_marks_a_targeted_repair_request() -> None:
     context = ReportCategoryContext(
         schema_version="1.0",

@@ -60,26 +60,48 @@ later when presentation needs it, never treated as required source identity.
 `--success-target N` is the only explicit mode allowed to select later
 candidates after a failure; it is prohibited for release/reliability rates.
 Publish a fixed cohort with the same `--cohort-manifest <path>` passed to
-`publish-wp`. This closes each cohort member with a typed WordPress outcome:
-a verified write or authenticated idempotent readback becomes
-`published_verified`; an unattempted or unverified member is `blocked`.
-For the final repeat, pass `--require-full-validation-manifest`. It verifies
-the retained stage chain from discovery and admission through source
-preparation, analysis, rendering, publication preflight, authenticated
-readback, and repeat publication. A terminal outcome by itself is not enough
-to close a reliability run. The second, unchanged publication must retain a
-`repeat_publication` stage with reused idempotency and no write.
+`publish-wp`. A frozen cohort automatically creates and retains a validation
+run manifest. Its immutable member ledger is populated by discovery and is
+checked independently of execution attempts, so a cohort report cannot vanish
+from the final audit. Every stage record carries the validation and workflow
+run IDs, cohort, report/source/publisher identity, attempt lineage, artifact
+inputs and outputs, timestamps, typed result and retryability, repair and
+supersession disposition, idempotency state, configuration and policy hashes,
+and producer build identity.
+
+The required chain is discovery, candidate qualification, acquisition,
+admission preflight, source preparation and validation, evidence generation,
+structured-output repair, taxonomy, category fit, artifact generation,
+regeneration, grounding and semantic validation, rendering, final HTML
+validation, ingestion, publication preflight, WordPress lookup and write,
+authenticated readback, and repeat publication. A blocked downstream stage is
+recorded explicitly when a terminal earlier failure makes it unsafe to run.
+Each admitted report must finish with exactly one current state:
+`published_verified`, `publish_ready`, `blocked`, `permanent_failure`,
+`abstained`, `cancelled`, or `superseded`.
+
+For the final repeat, pass `--require-full-validation-manifest`. It rejects a
+closure with a missing terminal state, incorrect current-attempt overlap,
+unreconciled cohort/current/terminal totals, a missing cohort member, duplicate
+source identity, or an ambiguous WordPress lookup. A terminal outcome by itself
+is not enough: for a `published_verified` report the second, unchanged
+publication must retain a successful `repeat_publication` stage with reused
+idempotency and no write. An ambiguous WordPress lookup blocks before any
+WordPress create or update operation.
 
 Taxonomy, context-category, and cover-semantics JSON are schema constrained,
 deterministically parsed and normalized, then given exactly one source-backed
 structured-output repair when their first response is invalid. A primary or
 secondary category candidate without a matched canonical inclusion rule is
-ambiguous: it triggers one category-only repair rather than being silently
-withheld. An exhausted repair remains a typed failure; it never becomes an
-empty successful analysis package. A response with no category candidates
-likewise triggers that one repair and then fails closed. By contrast, an
-all-rejected, schema-valid candidate set is an explicit uncategorized outcome:
-it is not mistaken for an empty model response. The canonical Technology & Innovation
+ambiguous: it triggers one category-only semantic reclassification rather than
+being silently withheld. That reclassification receives only the declared
+ambiguous candidate IDs and cannot introduce another category; its retained
+decision payload is evidence for the category decision. An exhausted repair
+remains a typed failure; it never becomes an empty successful analysis package.
+A response with no category candidates likewise triggers that one repair and
+then fails closed. By contrast, an all-rejected, schema-valid candidate set is
+an explicit uncategorized outcome: it is not mistaken for an empty model
+response. The canonical Technology & Innovation
 rules explicitly cover reports whose dominant subject is immersive experiences,
 spatial computing, virtual worlds, or Metaverse technology.
 

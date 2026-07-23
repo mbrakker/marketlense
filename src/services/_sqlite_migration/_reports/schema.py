@@ -753,6 +753,16 @@ CREATE TABLE IF NOT EXISTS validation_runs (
   producer_build_identity TEXT NOT NULL,
   created_at_utc TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS validation_run_cohort_members (
+  validation_run_id TEXT NOT NULL REFERENCES validation_runs(validation_run_id),
+  cohort_id TEXT NOT NULL,
+  entity_type TEXT NOT NULL,
+  publisher_id TEXT NOT NULL,
+  report_id TEXT NOT NULL,
+  source_identity_id TEXT NOT NULL,
+  discovered_at_utc TEXT NOT NULL,
+  PRIMARY KEY(validation_run_id, report_id)
+);
 CREATE TABLE IF NOT EXISTS validation_run_entity_attempts (
   attempt_id TEXT PRIMARY KEY,
   validation_run_id TEXT NOT NULL REFERENCES validation_runs(validation_run_id),

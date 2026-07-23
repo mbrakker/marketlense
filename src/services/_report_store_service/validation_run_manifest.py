@@ -45,16 +45,19 @@ _FULL_WORKFLOW_REQUIRED_STAGE_GROUPS: tuple[tuple[str, ...], ...] = (
     ("source_preparation",),
     ("source_validation",),
     ("evidence_generation",),
+    ("structured_output_repair",),
     ("taxonomy",),
     ("category_fit",),
     ("artifact_generation",),
+    ("regeneration",),
     ("grounding_validation",),
     ("semantic_validation",),
     ("rendering",),
     ("final_html_validation",),
-    ("ingest",),
+    ("ingestion",),
     ("publication_preflight",),
-    ("wordpress_lookup", "wordpress_write"),
+    ("wordpress_lookup",),
+    ("wordpress_write",),
     ("authenticated_readback",),
     ("repeat_publication",),
 )
@@ -130,6 +133,9 @@ def record_validation_run_manifest_stage(
         record.cohort_id,
         str(record.workflow_run_id),
         record.entity_type,
+        record.publisher_id,
+        record.report_id,
+        record.source_identity_id,
         record.stage,
         record.started_at_utc,
         record.completed_at_utc,
@@ -137,7 +143,11 @@ def record_validation_run_manifest_stage(
         record.policy_hash,
         record.producer_build_identity,
     )
-    if record.attempt_number < 1 or record.parent_attempt_number < 0:
+    if (
+        record.attempt_number < 1
+        or record.parent_attempt_number < 0
+        or record.parent_attempt_number >= record.attempt_number
+    ):
         raise AppError(
             code="validation_manifest_stage_invalid",
             message="Validation manifest stage has an invalid attempt or outcome",
@@ -151,6 +161,20 @@ def record_validation_run_manifest_stage(
         raise AppError(
             code="validation_manifest_stage_invalid",
             message="Validation manifest stage has an invalid outcome",
+            retryable=False,
+        )
+    if (
+        record.terminal_outcome
+        in {
+            "failed",
+            "blocked",
+            "permanent_failure",
+        }
+        and not str(record.failure_code or "").strip()
+    ):
+        raise AppError(
+            code="validation_manifest_failure_code_missing",
+            message="Failed or blocked validation-manifest stages require a typed failure code",
             retryable=False,
         )
     if record.cohort_disposition not in _COHORTS:
@@ -179,16 +203,47 @@ def record_validation_run_manifest_stage(
     )
     stage_record_id = _digest(attempt_id, record.stage)
     with _metadata_conn(request.db_path, ctx) as conn:
-        if (
+        run_row = conn.execute(
+            """
+            SELECT cohort_id, configuration_hash, policy_hash, producer_build_identity
+            FROM validation_runs WHERE validation_run_id=?
+            """,
+            (str(record.validation_run_id),),
+        ).fetchone()
+        if run_row is None:
+            raise AppError(
+                code="validation_manifest_run_missing",
+                message="Validation manifest stage requires a created validation run",
+                retryable=False,
+            )
+        if tuple(str(value) for value in run_row) != (
+            str(record.cohort_id),
+            str(record.configuration_hash),
+            str(record.policy_hash),
+            str(record.producer_build_identity),
+        ):
+            raise AppError(
+                code="validation_manifest_stage_provenance_conflict",
+                message="Validation manifest stage provenance differs from its run",
+                retryable=False,
+            )
+        if record.attempt_number > 1 and (
             conn.execute(
-                "SELECT 1 FROM validation_runs WHERE validation_run_id=?",
-                (str(record.validation_run_id),),
+                """
+                SELECT 1 FROM validation_run_entity_attempts
+                WHERE validation_run_id=? AND entity_key=? AND attempt_number=?
+                """,
+                (
+                    str(record.validation_run_id),
+                    entity_key,
+                    record.parent_attempt_number,
+                ),
             ).fetchone()
             is None
         ):
             raise AppError(
-                code="validation_manifest_run_missing",
-                message="Validation manifest stage requires a created validation run",
+                code="validation_manifest_parent_attempt_missing",
+                message="Validation manifest retry requires its declared parent attempt",
                 retryable=False,
             )
         if (
@@ -204,6 +259,47 @@ def record_validation_run_manifest_stage(
                 inserted=False,
                 superseded_attempts=0,
             )
+        if (
+            record.stage == "discovery"
+            and record.cohort_disposition == "final_validation"
+        ):
+            member_row = conn.execute(
+                """
+                SELECT entity_type, publisher_id, source_identity_id
+                FROM validation_run_cohort_members
+                WHERE validation_run_id=? AND report_id=?
+                """,
+                (str(record.validation_run_id), record.report_id),
+            ).fetchone()
+            member_identity = (
+                record.entity_type,
+                record.publisher_id,
+                record.source_identity_id,
+            )
+            if member_row is None:
+                conn.execute(
+                    """
+                    INSERT INTO validation_run_cohort_members(
+                        validation_run_id, cohort_id, entity_type, publisher_id,
+                        report_id, source_identity_id, discovered_at_utc
+                    ) VALUES(?,?,?,?,?,?,?)
+                    """,
+                    (
+                        str(record.validation_run_id),
+                        record.cohort_id,
+                        record.entity_type,
+                        record.publisher_id,
+                        record.report_id,
+                        record.source_identity_id,
+                        record.started_at_utc,
+                    ),
+                )
+            elif tuple(str(value) for value in member_row) != member_identity:
+                raise AppError(
+                    code="validation_manifest_cohort_member_conflict",
+                    message="Discovery changed the immutable identity of a cohort report",
+                    retryable=False,
+                )
         superseded = conn.execute(
             """
             UPDATE validation_run_entity_attempts SET is_current=0
@@ -320,16 +416,18 @@ def audit_validation_run_manifest(
             )
         current = conn.execute(
             """
-            SELECT entity_key, report_id, terminal_outcome, cohort_disposition
+            SELECT entity_key, report_id, source_identity_id, terminal_outcome,
+                   cohort_disposition
             FROM validation_run_entity_attempts
             WHERE validation_run_id=? AND is_current=1 ORDER BY entity_key
             """,
             (str(request.validation_run_id),),
         ).fetchall()
+        current_final = [row for row in current if str(row[4]) == "final_validation"]
         incomplete = tuple(
             str(row[0])
-            for row in current
-            if str(row[2] or "") not in _TERMINAL_OUTCOMES
+            for row in current_final
+            if str(row[3] or "") not in _TERMINAL_OUTCOMES
         )
         duplicates = tuple(
             str(row[0])
@@ -358,9 +456,32 @@ def audit_validation_run_manifest(
                 (str(request.validation_run_id),),
             ).fetchall()
         )
+        member_rows = conn.execute(
+            """
+            SELECT report_id, source_identity_id
+            FROM validation_run_cohort_members
+            WHERE validation_run_id=?
+            ORDER BY report_id
+            """,
+            (str(request.validation_run_id),),
+        ).fetchall()
+        discovery_rows = conn.execute(
+            """
+            SELECT DISTINCT attempts.report_id, attempts.source_identity_id
+            FROM validation_run_entity_attempts AS attempts
+            JOIN validation_run_stage_records AS stages
+              ON stages.attempt_id = attempts.attempt_id
+            WHERE attempts.validation_run_id=?
+              AND attempts.cohort_disposition='final_validation'
+              AND stages.stage='discovery'
+            ORDER BY attempts.report_id, attempts.source_identity_id
+            """,
+            (str(request.validation_run_id),),
+        ).fetchall()
         stage_rows = conn.execute(
             """
-            SELECT attempts.entity_key, stages.stage
+            SELECT attempts.entity_key, stages.stage, stages.terminal_outcome,
+                   stages.idempotency_state
             FROM validation_run_entity_attempts AS attempts
             JOIN validation_run_stage_records AS stages
               ON stages.attempt_id = attempts.attempt_id
@@ -370,35 +491,157 @@ def audit_validation_run_manifest(
             """,
             (str(request.validation_run_id),),
         ).fetchall()
-    cohort = tuple(
+        wordpress_multiple_post_rows = conn.execute(
+            """
+            SELECT DISTINCT attempts.report_id
+            FROM validation_run_entity_attempts AS attempts
+            JOIN validation_run_stage_records AS stages
+              ON stages.attempt_id = attempts.attempt_id
+            WHERE attempts.validation_run_id=?
+              AND attempts.is_current=1
+              AND attempts.cohort_disposition='final_validation'
+              AND stages.failure_code='wp_post_lookup_ambiguous'
+            ORDER BY attempts.report_id
+            """,
+            (str(request.validation_run_id),),
+        ).fetchall()
+        marked_missing_rows = conn.execute(
+            """
+            SELECT DISTINCT attempts.report_id
+            FROM validation_run_entity_attempts AS attempts
+            JOIN validation_run_stage_records AS stages
+              ON stages.attempt_id = attempts.attempt_id
+            WHERE attempts.validation_run_id=?
+              AND attempts.is_current=1
+              AND attempts.cohort_disposition='final_validation'
+              AND stages.failure_code='cohort_report_missing'
+            ORDER BY attempts.report_id
+            """,
+            (str(request.validation_run_id),),
+        ).fetchall()
+    expected_rows = (
+        member_rows or discovery_rows or [(row[1], row[2]) for row in current_final]
+    )
+    expected_by_report: dict[str, set[str]] = {}
+    for row in expected_rows:
+        report_id = str(row[0])
+        if report_id:
+            expected_by_report.setdefault(report_id, set()).add(str(row[1]))
+    cohort = tuple(sorted(expected_by_report))
+    current_by_report: dict[str, list[tuple[str, str, str, str, str]]] = {}
+    for row in current_final:
+        current_by_report.setdefault(str(row[1]), []).append(
+            (
+                str(row[0]),
+                str(row[1]),
+                str(row[2]),
+                str(row[3] or ""),
+                str(row[4]),
+            )
+        )
+    missing_cohort_reports = tuple(
         sorted(
-            {str(row[1]) for row in current if row[1] and row[3] == "final_validation"}
+            {
+                *(
+                    report_id
+                    for report_id in cohort
+                    if report_id not in current_by_report
+                ),
+                *(
+                    str(row[0])
+                    for row in marked_missing_rows
+                    if str(row[0]) in expected_by_report
+                ),
+            }
         )
     )
-    stages_by_entity: dict[str, set[str]] = {}
+    overlapping_reports = tuple(
+        sorted(
+            report_id
+            for report_id, rows in current_by_report.items()
+            if (
+                len(rows) != 1
+                or report_id not in expected_by_report
+                or str(rows[0][2]) not in expected_by_report[report_id]
+            )
+        )
+    )
+    source_to_reports: dict[str, set[str]] = {}
+    for report_id, source_identity_ids in expected_by_report.items():
+        for source_identity_id in source_identity_ids:
+            if source_identity_id:
+                source_to_reports.setdefault(source_identity_id, set()).add(report_id)
+    for report_id, rows in current_by_report.items():
+        for row in rows:
+            source_identity_id = str(row[2])
+            if source_identity_id:
+                source_to_reports.setdefault(source_identity_id, set()).add(report_id)
+    duplicate_source_identities = tuple(
+        sorted(
+            source_identity_id
+            for source_identity_id, report_ids in source_to_reports.items()
+            if len(report_ids) > 1
+        )
+    )
+    wordpress_multiple_posts = tuple(
+        str(row[0]) for row in wordpress_multiple_post_rows
+    )
+    terminal_report_ids = {
+        str(row[1]) for row in current_final if str(row[3] or "") in _TERMINAL_OUTCOMES
+    }
+    totals_reconciled = (
+        not missing_cohort_reports
+        and not overlapping_reports
+        and not duplicate_source_identities
+        and len(current_final) == len(cohort)
+        and terminal_report_ids == set(cohort)
+    )
+    stages_by_entity: dict[str, list[tuple[str, str, str]]] = {}
     for row in stage_rows:
-        stages_by_entity.setdefault(str(row[0]), set()).add(str(row[1]))
+        stages_by_entity.setdefault(str(row[0]), []).append(
+            (str(row[1]), str(row[2]), str(row[3]))
+        )
     missing_required: list[str] = []
     if request.require_full_workflow:
-        for entity_key in sorted(
-            str(row[0]) for row in current if str(row[3]) == "final_validation"
-        ):
-            actual = stages_by_entity.get(entity_key, set())
+        for entity_key in sorted(str(row[0]) for row in current_final):
+            actual = stages_by_entity.get(entity_key, [])
             for alternatives in _FULL_WORKFLOW_REQUIRED_STAGE_GROUPS:
-                if not any(stage in actual for stage in alternatives):
+                if not any(stage in alternatives for stage, _, _ in actual):
                     missing_required.append(f"{entity_key}:{'|'.join(alternatives)}")
+            current_outcome = next(
+                str(row[3] or "") for row in current_final if str(row[0]) == entity_key
+            )
+            if current_outcome == "published_verified" and not any(
+                stage == "repeat_publication"
+                and outcome == "succeeded"
+                and idempotency == "reused"
+                for stage, outcome, idempotency in actual
+            ):
+                missing_required.append(
+                    f"{entity_key}:repeat_publication_verified_reuse"
+                )
     return ValidationRunManifestAuditResponse(
         schema_version="1.0",
         validation_run_id=request.validation_run_id,
         complete=(
             not incomplete
             and not duplicates
+            and not missing_cohort_reports
+            and not overlapping_reports
+            and not duplicate_source_identities
+            and not wordpress_multiple_posts
+            and totals_reconciled
             and (not request.require_full_workflow or not missing_required)
         ),
         final_cohort_report_ids=cohort,
         stage_totals=totals,
         incomplete_entity_ids=incomplete,
         duplicate_current_entity_ids=duplicates,
+        missing_cohort_report_ids=missing_cohort_reports,
+        overlapping_current_report_ids=overlapping_reports,
+        duplicate_source_identity_ids=duplicate_source_identities,
+        multiple_wordpress_post_report_ids=wordpress_multiple_posts,
+        totals_reconciled=totals_reconciled,
         missing_required_stage_entity_ids=tuple(missing_required),
     )
 

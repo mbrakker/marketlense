@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from dataclasses import asdict, replace
@@ -158,6 +159,12 @@ def _category_fit_ambiguity_ids(category_state: Any) -> list[str]:
         if str(getattr(fit, "decision", "")) in {"primary", "secondary"}
         and str(getattr(fit, "remediation_signal", "")) == "topic_semantics_ambiguous"
     ]
+
+
+def _category_fit_reclassification_candidates(category_state: Any) -> list[str]:
+    """Return the declared ambiguous candidates allowed in one semantic rerun."""
+
+    return list(dict.fromkeys(_category_fit_ambiguity_ids(category_state)))
 
 
 def _category_fit_repair_code(category_state: Any) -> str:
@@ -495,6 +502,8 @@ def run_report_analysis(
     )
 
     category_repaired = False
+    category_reclassification_candidates: list[str] = []
+    category_repair_response = ""
     try:
         context_category_state = _resolve_categories_from_report_context(
             runtime,
@@ -508,6 +517,17 @@ def run_report_analysis(
         )
         category_repair_code = _category_fit_repair_code(context_category_state)
         if category_repair_code:
+            if category_repair_code == "category_fit_contradiction":
+                category_reclassification_candidates = (
+                    _category_fit_reclassification_candidates(context_category_state)
+                )
+                category_repair_response = json.dumps(
+                    _serialize_context_category_fit_payload(
+                        context_category_state.fit_response
+                    ),
+                    ensure_ascii=True,
+                    separators=(",", ":"),
+                )
             raise AppError(
                 code=category_repair_code,
                 message="Category fit did not select one supported category",
@@ -552,8 +572,11 @@ def run_report_analysis(
             repair_attempt=1,
             repair_error=exc.code,
             repair_response=(
-                exc.response_text if isinstance(exc, StructuredOutputFailure) else ""
+                exc.response_text
+                if isinstance(exc, StructuredOutputFailure)
+                else category_repair_response
             ),
+            candidate_category_ids=category_reclassification_candidates,
         )
         category_repaired = True
         category_repair_code = _category_fit_repair_code(context_category_state)
@@ -612,6 +635,29 @@ def run_report_analysis(
             output_artifact_ids=tuple(category_assignment.categories),
             repair_disposition="targeted_repair",
         )
+    record_validation_analysis_stage(
+        settings=runtime.settings,
+        ctx=mode_ctx,
+        stage="structured_output_repair",
+        source_identity_id=runtime.md5 or runtime.file.file_id,
+        input_artifact_ids=(vector_state.vector_store_id or "",),
+        output_artifact_ids=tuple(
+            value
+            for value in (
+                *taxonomy_state.taxonomy,
+                *category_assignment.categories,
+            )
+            if value
+        ),
+        terminal_outcome=(
+            "succeeded" if taxonomy_repaired or category_repaired else "skipped"
+        ),
+        repair_disposition=(
+            "targeted_repair"
+            if taxonomy_repaired or category_repaired
+            else "not_required"
+        ),
+    )
     if vector_state.vector_store_id:
         dependencies.vector_store_update_metadata(
             VectorStoreUpdateMetadataRequest(
@@ -914,6 +960,17 @@ def run_report_analysis(
             terminal_outcome=validation_outcome,
             failure_code=validation_failure,
             repair_disposition="targeted_repair",
+        )
+    else:
+        record_validation_analysis_stage(
+            settings=runtime.settings,
+            ctx=mode_ctx,
+            stage="regeneration",
+            source_identity_id=runtime.md5 or runtime.file.file_id,
+            input_artifact_ids=(mode_evidence_paths.get("artifacts", ""),),
+            output_artifact_ids=(mode_evidence_paths.get("validation", ""),),
+            terminal_outcome="skipped",
+            repair_disposition="not_required",
         )
 
     _, editorial_after_path = _evaluate_and_store_public_editorial_quality(

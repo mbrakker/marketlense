@@ -211,6 +211,35 @@ def test_find_post_by_file_id_found(wordpress_http) -> None:
     assert call.allow_redirects is False
 
 
+def test_find_post_by_file_id_fails_closed_for_multiple_matches(
+    wordpress_http, assert_app_error
+) -> None:
+    wordpress_http.add_json(
+        "GET",
+        "https://site/wp-json/wp/v2/posts",
+        status_code=200,
+        payload=[
+            {"id": 11, "link": "https://site/p/11", "meta": {"ml_file_id": "file-1"}},
+            {"id": 12, "link": "https://site/p/12", "meta": {"ml_file_id": "file-1"}},
+        ],
+    )
+
+    try:
+        svc.find_post_by_file_id(
+            WordPressPostLookupRequest(
+                schema_version="1.0",
+                base_url="https://site",
+                auth_header="Bearer token",
+                file_id="file-1",
+            ),
+            _ctx(),
+        )
+    except Exception as err:
+        assert_app_error(err, code="wp_post_lookup_ambiguous", retryable=False)
+    else:  # pragma: no cover
+        raise AssertionError("expected AppError")
+
+
 def test_find_post_by_file_id_ssl_verify_disabled(wordpress_http) -> None:
     wordpress_http.add_json(
         "GET",

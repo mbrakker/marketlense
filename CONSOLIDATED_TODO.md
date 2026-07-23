@@ -1,6 +1,6 @@
 # Consolidated TODO
 
-Last audited: 2026-07-21
+Last audited: 2026-07-23
 
 This is the repository's single, source-neutral work register. Every task is evaluated by its current codebase evidence and project decision—not by where it was first proposed. Equivalent tasks are merged under one owner; deferred, closed, and excluded work stays visible in the same register.
 
@@ -44,7 +44,7 @@ All work is listed below in one register. `Active` items have detailed completio
 | Active | P3 | Resolve hosted-site trust blockers | Safe-error boundary completed; hosted trust outcome remains. |
 | Active | P10 | Operate correlated public-render failure telemetry | Hosted release-observability outcome. |
 | Active | P12 | Release-locked sandbox publish canary | Repeatedly prove manifest-backed report recovery and final sandbox publication on a small, spend-governed real-report cohort. |
-| Active | P13 | Make WordPress file-ID lookup independently authoritative | Ensure authenticated remote lookup finds every post by immutable file ID without relying on the local idempotency ledger. |
+| Closed | P13 | Make WordPress file-ID lookup independently authoritative | Authenticated immutable file-ID lookup now matches remote posts from isolated state, fails closed on ambiguity, and preserves no-write reuse. |
 | Active | P4 | Close public briefing, correction, and submission intake | Implemented; close after hosted smoke proves the live intake routes. |
 | Active | P5 | Finish responsive search and navigation | Responsive public-workflow outcome. |
 | Active | P6 | Raise report-card and evidence-exhibit editorial quality | Release gate is implemented and live-validated; blind human editorial acceptance remains. |
@@ -89,6 +89,7 @@ All work is listed below in one register. `Active` items have detailed completio
 
 ## Recently Closed
 
+- **P13 — Authoritative WordPress file-ID lookup (2026-07-23):** The canonical authenticated lookup now validates each returned post against immutable `ml_file_id`/content provenance and fails closed if more than one active post matches. A fresh isolated-state one-report canary matched an existing remote post without a local publish-idempotency record, performed zero WordPress writes, completed authenticated readback, recorded a reused repeat publication, and passed full validation-manifest closure. Focused ambiguity/no-write coverage and the full suite passed.
 - **P0/P1 remediation and sandbox end-to-end validation (2026-07-20):** The canonical runtime/path/policy and public-editorial remediation package was exercised against an isolated real-report namespace. The final recovery makes a missing report-card manifest invalidate render reuse, rebuilds the required assets/manifest, and treats blocked public metadata as a typed render error. Optional card placeholders now normalize to omission rather than leaking or blocking valid public cards; `--force-report-cards` requests the analysis checkpoint only for an existing rendered package, while new files take the normal pipeline. The 60-minute report-analysis lease and spend-only budget profile were active. A five-report live Drive cohort completed in 46.23 minutes; every package passed semantic and editorial validation and had all three card assets. Canonical sandbox publication created three new posts, reused two existing posts, and a repeat made zero new writes through durable idempotency. The affected regression suite passed 122 tests; the isolated ledger recorded 159 completed LLM calls, 1,883,341 tokens, and $1.152941 estimated spend, below the $6 cap.
 - **A16 — Durable corpus rehabilitation campaign execution (2026-07-19):** Reports schema v23 persists immutable candidate classification, source checksum/reference, immutable reusable-artifact IDs, campaign/approval hashes, planned-unavailable versus actual cost, and item-level queue identity. Submission rereads the current retained corpus before each queue handoff and holds changed evidence; it uses the canonical maintenance queue rather than reimplementing repair. The real retained-corpus canary classified 99 reports (25 reusable, 36 lineage-incomplete, 38 provenance-incomplete), approved one eligible report with 115 reusable artifacts, and idempotently retained one `artifact_repair` queue job across a second submission. It made zero provider calls, recorded $0 actual cost, and made no public write.
 - **A14 — Calibrate acquisition policy from retained route economics (2026-07-19):** The read-only route-economics command groups only policy-compatible publisher/route cohorts and reports count, verified-success rate, median/p95 elapsed time, browser/model cost, incomplete-field state, and avoided operations. It emits proposals only above deterministic sample/improvement thresholds and never mutates routing or history. A live StackAdapt direct-PDF canary reached the canonical PDF budget stop before provider I/O, persisted one complete 3,860 ms/$0 resource envelope, and correctly returned `no_recommendation: insufficient_direct_sample`; focused route-policy and telemetry regression tests passed.
@@ -258,18 +259,6 @@ The original ten-item screenshot baseline is complete in the committed implement
 - A release command selects a small, diverse, already-authorized real-report cohort and records deterministic cohort identity, configuration/policy hashes, and spend forecast before work begins.
 - Every member must pass semantic validation, public editorial quality, complete manifest/asset checks, canonical publish readback, and a repeat idempotency lookup; any failure stops the cohort and preserves the failed evidence.
 - Retained evidence compares the cohort's actual calls/tokens/spend, elapsed time, package completeness, created-versus-reused posts, and typed failures with the approved forecast; focused tests cover target isolation and no-write behavior when approval is absent.
-
-#### P13. Make WordPress file-ID lookup independently authoritative
-
-- **Impact 5 / effort: 1**
-- **Context:** The 2026-07-21 five-publisher sandbox cohort verified all five created posts by authenticated REST `GET` using their post IDs and reused all five local idempotency records with zero mutation. Its broad file-ID batch query returned no remote matches, however, so the remote lookup is not yet independently authoritative.
-- **Benefit:** Exact remote matching prevents duplicate creation when local state is unavailable, recovered, or shared across a new isolated namespace, while reducing unnecessary preflight work.
-- **Risks to avoid:** Keep the immutable `ml_file_id` contract, use authenticated REST only, and fail closed on ambiguous matches. Do not weaken local durable idempotency or add a broad post-search scan.
-- **Success criteria:**
-
-- The WordPress REST/plugin route exposes an authenticated exact `ml_file_id` lookup for each public entity type and returns one unambiguous post with canonical URL and status.
-- A controlled sandbox recovery with an empty local idempotency state matches the existing remote post, performs zero taxonomy/media/post writes, and records `existing_post_matched` plus authenticated readback.
-- Tests cover exact match, absent match, ambiguous match, and unavailable lookup without leaking credentials or public identifiers.
 
 #### P7. Improve hosted public-site performance without contract loss
 

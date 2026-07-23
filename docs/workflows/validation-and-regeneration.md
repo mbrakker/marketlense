@@ -26,12 +26,14 @@ the later ingest pipeline, so an isolated canary cannot silently reserve shared
 budget capacity before membership is frozen.
 The canonical validation-run manifest records every admitted member from
 `discovery`, `candidate_qualification`, and `admission_preflight` before
-report-processing work, then records acquisition, source preparation and
-validation, evidence, taxonomy/category/cover-semantics structured-output repair where used,
-artifact generation, validation/regeneration, rendering, final HTML
-validation, publication preflight, the WordPress transaction, authenticated
-readback, and unchanged-repeat publication. A failed member is never
-replaced.
+report-processing work in a separate immutable member ledger. It then records
+acquisition, source preparation and validation, evidence generation, a generic
+structured-output-repair disposition, taxonomy, category fit, artifact
+generation, regeneration, grounding and semantic validation, rendering, final
+HTML validation, ingestion, publication preflight, WordPress lookup and write,
+authenticated readback, and unchanged-repeat publication. A failed member is
+never replaced; stages that are unsafe after an earlier terminal failure retain
+an explicit `blocked` result.
 
 Each manifest record retains the validation-run and cohort IDs, report/source
 identity, workflow run, attempt and parent attempt, artifact inputs/outputs,
@@ -43,10 +45,13 @@ outcomes are deliberately constrained to `published_verified`,
 such terminal outcome. For a local run without an injected commit identity,
 stage and OpenAI-usage records use the explicit `workspace` producer identity
 so they remain consistent with the cohort manifest; missing cohort, report,
-source, configuration, or policy provenance still fails closed. The release audit
-additionally requires every mandatory
-stage group for every final-cohort report; a terminal row alone cannot conceal
-an incomplete funnel.
+source, configuration, or policy provenance still fails closed. The release
+audit additionally requires every mandatory stage group for every final-cohort
+report; a terminal row alone cannot conceal an incomplete funnel. It rejects a
+closed run when frozen/current/terminal totals do not reconcile, a member has
+disappeared, attempts overlap, two reports share a source identity, or one
+report has multiple active WordPress matches. A `published_verified` terminal
+state additionally needs a successful reuse-marked repeat publication.
 
 ## Retained claim validation
 
