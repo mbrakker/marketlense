@@ -11265,6 +11265,171 @@
       "required": [],
       "type": "object"
     },
+    "src.contracts.admission_preflight.AdmissionPreflightDecision": {
+      "additionalProperties": false,
+      "properties": {
+        "budget_decision": {
+          "type": "string"
+        },
+        "configuration_hash": {
+          "type": "string"
+        },
+        "decision_hash": {
+          "type": "string"
+        },
+        "duplicate_identity_match": {
+          "type": "string"
+        },
+        "estimated_cost_usd": {
+          "type": "number"
+        },
+        "estimated_provider_calls": {
+          "type": "integer"
+        },
+        "estimated_provider_tokens": {
+          "type": "integer"
+        },
+        "evidence_potential": {
+          "type": "string"
+        },
+        "file_id": {
+          "type": "string"
+        },
+        "media_type": {
+          "type": "string"
+        },
+        "model_policy_covered": {
+          "type": "boolean"
+        },
+        "near_duplicate_title_match": {
+          "type": "string"
+        },
+        "outcome": {
+          "enum": [
+            "admitted",
+            "duplicate",
+            "unsupported_document",
+            "corrupt_source",
+            "insufficient_content",
+            "missing_source_identity",
+            "policy_blocked",
+            "budget_blocked",
+            "quarantined"
+          ]
+        },
+        "page_count": {
+          "type": "integer"
+        },
+        "policy_hash": {
+          "type": "string"
+        },
+        "preflight_version": {
+          "type": "string"
+        },
+        "publisher_id": {
+          "type": "string"
+        },
+        "report_title": {
+          "type": "string"
+        },
+        "required_artifact_families": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "runtime_dependencies_ready": {
+          "type": "boolean"
+        },
+        "runtime_preflight_hash": {
+          "type": "string"
+        },
+        "sample_char_count": {
+          "type": "integer"
+        },
+        "sample_text_density": {
+          "type": "number"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "size_bytes": {
+          "type": "integer"
+        },
+        "source_artifact_exists": {
+          "type": "boolean"
+        },
+        "source_artifact_path": {
+          "type": "string"
+        },
+        "source_identity_id": {
+          "type": "string"
+        },
+        "source_url": {
+          "type": "string"
+        },
+        "source_url_classification": {
+          "type": "string"
+        },
+        "structure_readable": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "schema_version",
+        "preflight_version",
+        "outcome",
+        "file_id",
+        "source_identity_id",
+        "report_title",
+        "publisher_id",
+        "source_url",
+        "source_url_classification",
+        "media_type",
+        "source_artifact_path",
+        "source_artifact_exists",
+        "structure_readable",
+        "page_count",
+        "size_bytes",
+        "sample_char_count",
+        "sample_text_density",
+        "duplicate_identity_match",
+        "near_duplicate_title_match",
+        "required_artifact_families",
+        "evidence_potential",
+        "runtime_preflight_hash",
+        "runtime_dependencies_ready",
+        "model_policy_covered",
+        "estimated_provider_calls",
+        "estimated_provider_tokens",
+        "estimated_cost_usd",
+        "budget_decision",
+        "configuration_hash",
+        "policy_hash",
+        "decision_hash"
+      ],
+      "type": "object"
+    },
+    "src.contracts.admission_preflight.AdmissionPreflightResult": {
+      "additionalProperties": false,
+      "properties": {
+        "admitted": {
+          "type": "boolean"
+        },
+        "decision": {
+          "$ref": "#/$defs/src.contracts.admission_preflight.AdmissionPreflightDecision"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "admitted",
+        "decision"
+      ],
+      "type": "object"
+    },
     "src.contracts.analysis_family.AnalysisFamilyStatus": {
       "additionalProperties": false,
       "properties": {
@@ -14492,6 +14657,35 @@
     "src.contracts.config.AppSettings": {
       "additionalProperties": false,
       "properties": {
+        "admission_max_pages": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "admission_max_source_bytes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "admission_min_text_chars": {
+          "type": "integer"
+        },
+        "admission_required_evidence_families": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "artifact_global_max_in_flight": {
           "type": "integer"
         },
@@ -20992,6 +21186,35 @@
     "src.contracts.ingest.IngestSettings": {
       "additionalProperties": false,
       "properties": {
+        "admission_max_pages": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "admission_max_source_bytes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "admission_min_text_chars": {
+          "type": "integer"
+        },
+        "admission_required_evidence_families": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "artifact_global_max_in_flight": {
           "type": "integer"
         },
@@ -24037,6 +24260,12 @@
         "execution_intent": {
           "type": "string"
         },
+        "forced_invalidations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
         "report_id": {
           "type": "string"
         },
@@ -24846,6 +25075,13 @@
         "stage": {
           "type": "string"
         },
+        "structured_output_schema": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "structured_output_schema_identity": {
+          "type": "string"
+        },
         "system_prompt": {
           "type": "string"
         },
@@ -25167,6 +25403,13 @@
           "type": "string"
         },
         "stage": {
+          "type": "string"
+        },
+        "structured_output_schema": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "structured_output_schema_identity": {
           "type": "string"
         },
         "system_prompt": {
@@ -33655,6 +33898,9 @@
     "src.contracts.run_context.RunContext": {
       "additionalProperties": false,
       "properties": {
+        "admission_decision_hash": {
+          "type": "string"
+        },
         "artifact_family": {
           "type": "string"
         },
@@ -36854,6 +37100,76 @@
         "status",
         "severity",
         "chip_level"
+      ],
+      "type": "object"
+    },
+    "src.contracts.structured_output.StructuredOutputExecutionRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "allow_abstention": {
+          "type": "boolean"
+        },
+        "artifact_family": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "schema_name": {
+          "type": "string"
+        },
+        "schema_root_key": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "terminal_failure_code": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "report_id",
+        "artifact_family",
+        "schema_name"
+      ],
+      "type": "object"
+    },
+    "src.contracts.structured_output.StructuredOutputExecutionResult": {
+      "additionalProperties": false,
+      "properties": {
+        "attempts": {
+          "type": "integer"
+        },
+        "disposition": {
+          "type": "string"
+        },
+        "error_class": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "payload": {},
+        "request_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "payload",
+        "disposition",
+        "attempts"
       ],
       "type": "object"
     },
@@ -41257,6 +41573,50 @@
       "required": [
         "schema_version",
         "found"
+      ],
+      "type": "object"
+    },
+    "src.contracts.wordpress.WordPressPostReadRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "auth_header": {
+          "type": "string"
+        },
+        "base_url": {
+          "type": "string"
+        },
+        "ca_bundle_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "file_id": {
+          "type": "string"
+        },
+        "post_id": {
+          "type": "integer"
+        },
+        "post_type": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "ssl_verify": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "schema_version",
+        "base_url",
+        "auth_header",
+        "post_id",
+        "file_id"
       ],
       "type": "object"
     },

@@ -20,6 +20,7 @@ from src.contracts.files import ReadTextRequest
 from src.contracts.logging import LoggingSetupRequest
 from src.contracts.remediation import (
     RemediationListRequest,
+    RemediationReaperRequest,
     RemediationSoakReportRequest,
 )
 from src.contracts.run_context import RunContext
@@ -31,12 +32,14 @@ from src.orchestrators.recovery_adapter_registry import (
 )
 from src.orchestrators.remediation_orchestrator import (
     build_remediation_opportunity_report,
+    run_bounded_remediation_reaper,
 )
 from src.services.config_service import (
     build_ingest_settings,
     load_settings,
     load_workflow_control_settings,
 )
+from src.services.config_service import new_runtime_context as new_run_context
 from src.services.file_service import read_text
 from src.services.llm_usage_ledger_service import (
     deferred_work_metrics,
@@ -48,7 +51,6 @@ from src.services.state_service import (
     read_remediation_soak_report,
 )
 from src.utils.clock import utc_now_seconds_z
-from src.services.config_service import new_runtime_context as new_run_context
 
 
 @cli_app.command("remediations")
@@ -208,6 +210,83 @@ def remediation_opportunities(
     console.print_json(data=asdict(report))
 
 
+@cli_app.command("remediation-reap")
+def reap_remediations(
+    worker_id: str = typer.Option(
+        "", help="Stable worker identity; defaults to the current process."
+    ),
+    now_utc: str | None = typer.Option(
+        None, help="Optional ISO-8601 UTC time for reproducible invocation."
+    ),
+) -> None:
+    """Run one bounded, feature-gated, typed checkpoint-recovery pass."""
+
+    ctx = new_run_context(task_id="cli_remediation_reap")
+    setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
+    app_settings = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+    ingest_settings = build_ingest_settings(
+        IngestSettingsBuildRequest(schema_version="1.0", app_settings=app_settings), ctx
+    )
+    control = load_workflow_control_settings(
+        ConfigLoadRequest(schema_version="1.0", path=""), ctx
+    )
+    registry = build_recovery_adapter_registry(
+        ingest_settings=ingest_settings,
+        workflow_control_settings=control,
+    )
+    reaper = control.remediation_reaper
+    response = run_bounded_remediation_reaper(
+        RemediationReaperRequest(
+            schema_version="1.0",
+            state_db=ingest_settings.state_db,
+            worker_id=str(worker_id or f"cli-remediation:{os.getpid()}"),
+            now_utc=str(now_utc or "").strip() or utc_now_seconds_z(),
+            execution_enabled=reaper.execution_enabled,
+            limit=reaper.max_records_per_run,
+            lease_seconds=reaper.lease_seconds,
+        ),
+        ctx,
+        dependencies=registry.remediation_dependencies,
+    )
+    completed_ids = set(response.resolved_ids)
+    recovered = list_remediation_records(
+        RemediationListRequest(
+            schema_version="1.0",
+            state_db=ingest_settings.state_db,
+            limit=max(1, reaper.max_records_per_run),
+        ),
+        ctx,
+    ).records
+    avoided_stages = sorted(
+        {
+            stage
+            for record in recovered
+            if record.remediation_id in completed_ids
+            for stage in record.diagnostics.get("avoided_stages", [])
+            if isinstance(stage, str)
+        }
+    )
+    avoided_calls = sorted(
+        {
+            call
+            for record in recovered
+            if record.remediation_id in completed_ids
+            for call in record.diagnostics.get("avoided_provider_calls", [])
+            if isinstance(call, str)
+        }
+    )
+    console.print(
+        "Remediation reaper: "
+        f"inspected={response.inspected_count}, "
+        f"resolved={len(response.resolved_ids)}, "
+        f"deferred={len(response.deferred_ids)}, "
+        f"terminal_or_held={len(response.held_ids)}, "
+        f"avoided_stages={','.join(avoided_stages) or 'none'}, "
+        f"avoided_provider_calls={','.join(avoided_calls) or 'none'}, "
+        "avoided_tokens=unpriced, avoided_cost_usd=unpriced"
+    )
+
+
 @cli_app.command("deferred-work")
 def list_deferred_work_items(
     usage_db: str | None = typer.Option(
@@ -318,6 +397,7 @@ __all__ = [
     "list_deferred_work_items",
     "list_remediations",
     "remediation_opportunities",
+    "reap_remediations",
     "reap_deferred_work",
     "remediation_soak",
 ]

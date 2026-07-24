@@ -87,6 +87,15 @@ class MinimalExecutionPlanInput:
     current_compatibility: ExecutionCompatibilityVersions
     source_metadata_hash: str = ""
     current_publication_state: dict[str, str] = field(default_factory=dict)
+    forced_invalidations: dict[str, str] = field(
+        default_factory=dict,
+        metadata={
+            "doc": (
+                "Explicit failure-scoped artifact-family invalidations; values are "
+                "stable typed-failure reasons, never arbitrary user input."
+            )
+        },
+    )
 
 
 @dataclass(frozen=True)

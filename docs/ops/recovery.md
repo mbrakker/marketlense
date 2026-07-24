@@ -24,13 +24,40 @@ process.
 `src/orchestrators/failure_recovery_registry.py` is the finite recovery matrix
 for report-generation and publication failures. It records the narrow retry
 scope, maximum attempt, required validated checkpoint, reusable artifacts,
-invalidations, action, and terminal fallback in the durable remediation row.
-For example, invalid taxonomy JSON may rerun taxonomy only from a retained
-source checkpoint; a category contradiction may rerun category fit only; a
-final-HTML identifier failure may rerender only; and a WordPress readback
-failure may reconcile the existing publication only. A matrix entry creates a
-bounded durable job, but the reaper still requires checkpoint, budget,
-idempotency, and registered-executor proof before it performs any side effect.
+invalidations, action, terminal fallback, and bounded avoided-work estimate in
+the durable remediation row. A typed entry is enqueued automatically only when
+the exact checkpoint, its lineage/hash proof, and every required reusable
+artifact are already retained. Otherwise the same row is held for an operator;
+it never falls back to source preparation or vector-store creation.
+
+| Typed failure | Only recovery action | Required checkpoint | Terminal fallback |
+| --- | --- | --- | --- |
+| `taxonomy_invalid_json` / `taxonomy_schema_invalid` | Taxonomy from retained selection/vector state | `selection_complete` | `permanent_failure` |
+| `category_fit_contradiction` | Category fit from retained selection/vector state | `selection_complete` | `permanent_failure` |
+| `unsupported_material_claim` | Affected insights/claim family plus its required validation | `analysis_complete` | `permanent_failure` |
+| `final_html_internal_identifier` | Render and deterministic revalidation | `analysis_complete` | `permanent_failure` |
+| `missing_report_card_manifest` | Rebuild card assets/manifest and render validation | `analysis_complete` | `permanent_failure` |
+| `wordpress_readback_failed` | GET-only WordPress readback/reconciliation | `publication_preflight` | `blocked` |
+
+The bounded reaper validates the proof again immediately before execution,
+uses the existing execution-plan lease for report artifacts, increments the
+durable attempt count once, and finishes as `resolved`, `deferred`, or typed
+`terminal`. It converts executor exceptions to the rule's terminal fallback;
+it does not leave a recovery row stranded in `retrying`. Targeted local report
+repair does not need a publication idempotency key; the only WordPress action
+is the GET-only lookup. Publication writes still require their existing
+idempotency proof and human approval.
+
+Run one approved, feature-gated pass with:
+
+```powershell
+python -m src.cli remediation-reap
+```
+
+The command reports resolved/deferred/terminal counts, avoided stages, and
+avoided provider calls. The ledger retains `avoided_token_estimate` and
+`avoided_cost_estimate_usd`; these remain `unpriced` rather than guessed until
+the canonical usage ledger has a defensible per-family baseline.
 
 ## Read-only remediation soak and activation gate
 

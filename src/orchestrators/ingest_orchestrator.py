@@ -931,6 +931,9 @@ def _load_frozen_cohort(
     *,
     cohort_manifest: str,
     expected_size: int | None,
+    expected_configuration_hash: str = "",
+    expected_policy_hash: str = "",
+    expected_producer_build_identity: str = "",
     deps: IngestBatchDependencies,
     root_ctx: RunContext,
 ) -> tuple[int, list[DriveFile]]:
@@ -972,6 +975,29 @@ def _load_frozen_cohort(
             cause=exc,
             retryable=False,
         ) from exc
+    expected_provenance = {
+        "configuration_hash": expected_configuration_hash,
+        "policy_hash": expected_policy_hash,
+        "producer_build_identity": expected_producer_build_identity,
+    }
+    observed_provenance = {
+        "configuration_hash": str(payload.get("configuration_hash") or ""),
+        "policy_hash": str(payload.get("policy_hash") or ""),
+        # Cohorts before provenance-bound validation IDs were written from a
+        # workspace checkout and therefore have no explicit build identity.
+        "producer_build_identity": str(
+            payload.get("producer_build_identity") or "workspace"
+        ),
+    }
+    if any(expected_provenance.values()) and observed_provenance != expected_provenance:
+        raise AppError(
+            code="ingest_cohort_provenance_stale",
+            message=(
+                "Cohort manifest provenance differs from current admission "
+                "configuration, policy, or producer identity"
+            ),
+            retryable=False,
+        )
     return manifest_size, files
 
 
@@ -999,6 +1025,11 @@ def _frozen_cohort(
         _manifest_size, files = _load_frozen_cohort(
             cohort_manifest=cohort_manifest,
             expected_size=cohort_size,
+            expected_configuration_hash=admission_configuration_hash(settings),
+            expected_policy_hash=admission_policy_hash(settings),
+            expected_producer_build_identity=(
+                root_ctx.producer_commit_sha or "workspace"
+            ),
             deps=deps,
             root_ctx=root_ctx,
         )
@@ -1035,12 +1066,22 @@ def _frozen_cohort(
     configuration_hash = admission_configuration_hash(settings)
     policy_hash = admission_policy_hash(settings)
     cohort_id = _cohort_id(selected_files)
+    producer_build_identity = root_ctx.producer_commit_sha or "workspace"
     payload = {
         "schema_version": "1.0",
         "cohort_id": cohort_id,
         "cohort_size": cohort_size,
         "configuration_hash": configuration_hash,
         "policy_hash": policy_hash,
+        "producer_build_identity": producer_build_identity,
+        "validation_run_id": str(
+            _validation_run_id_for_cohort(
+                cohort_id=cohort_id,
+                configuration_hash=configuration_hash,
+                policy_hash=policy_hash,
+                producer_build_identity=producer_build_identity,
+            )
+        ),
         "selection_reason": "deterministic_admission_preflight",
         "admission_preflight_version": "2.0",
         "admission_decision_hash": sha256(
@@ -1067,6 +1108,27 @@ def _cohort_id(files: list[DriveFile]) -> str:
     return sha256(
         json.dumps(members, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
+
+
+def _validation_run_id_for_cohort(
+    *,
+    cohort_id: str,
+    configuration_hash: str,
+    policy_hash: str,
+    producer_build_identity: str,
+) -> ValidationRunId:
+    """Bind a validation run to its complete immutable provenance identity."""
+
+    identity = {
+        "cohort_id": cohort_id,
+        "configuration_hash": configuration_hash,
+        "policy_hash": policy_hash,
+        "producer_build_identity": producer_build_identity,
+    }
+    digest = sha256(
+        json.dumps(identity, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    return ValidationRunId(f"validation:{digest}")
 
 
 def _record_cohort_ingest_manifest(
@@ -1629,7 +1691,9 @@ def _prefetch_drive_cache_stage(
                 "file_count": len(resolved_files),
                 "source_identity_enriched": sum(
                     1
-                    for original, resolved in zip(files_to_process, resolved_files)
+                    for original, resolved in zip(
+                        files_to_process, resolved_files, strict=True
+                    )
                     if not original.md5_checksum and resolved.md5_checksum
                 ),
             },
@@ -2053,6 +2117,11 @@ def run_ingest(
                 cohort_size, manifest_files = _load_frozen_cohort(
                     cohort_manifest=cohort_manifest,
                     expected_size=cohort_size,
+                    expected_configuration_hash=admission_configuration_hash(settings),
+                    expected_policy_hash=admission_policy_hash(settings),
+                    expected_producer_build_identity=(
+                        root_ctx.producer_commit_sha or "workspace"
+                    ),
                     deps=deps,
                     root_ctx=root_ctx,
                 )
@@ -2174,18 +2243,24 @@ def run_ingest(
                     2,
                 )
             if cohort_size is not None:
-                validation_run_id = ValidationRunId(
-                    f"validation:{_cohort_id(files_to_process)}"
+                cohort_id = _cohort_id(files_to_process)
+                configuration_hash = admission_configuration_hash(settings)
+                policy_hash = admission_policy_hash(settings)
+                validation_run_id = _validation_run_id_for_cohort(
+                    cohort_id=cohort_id,
+                    configuration_hash=configuration_hash,
+                    policy_hash=policy_hash,
+                    producer_build_identity=root_ctx.producer_commit_sha or "workspace",
                 )
                 root_ctx = replace(
                     root_ctx,
                     validation_run_id=str(validation_run_id),
-                    cohort_id=_cohort_id(files_to_process),
+                    cohort_id=cohort_id,
                     workflow="report_generation",
                     stage="ingest",
                     artifact_family="report",
-                    configuration_hash=admission_configuration_hash(settings),
-                    policy_hash=admission_policy_hash(settings),
+                    configuration_hash=configuration_hash,
+                    policy_hash=policy_hash,
                 )
                 _record_cohort_ingest_manifest(
                     validation_run_id=validation_run_id,

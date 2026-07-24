@@ -27,6 +27,7 @@ from src.contracts.remediation import (
 from src.contracts.retry_decision import RetryDecision
 from src.contracts.run_context import RunContext
 from src.orchestrators.failure_recovery_registry import (
+    canonical_failure_code,
     recovery_rule_diagnostics,
     recovery_rule_for,
 )
@@ -39,7 +40,6 @@ logger = logging.getLogger("market_lense.remediation_orchestrator")
 
 _SIDE_EFFECTING_ACTIONS = {
     "retry_transient_service_call",
-    "rerun_targeted_artifact_family",
     "retry_idempotent_publication",
     "revalidate_replaced_source",
 }
@@ -288,16 +288,67 @@ def _allowlisted_actions(workflow: str, error_code: str) -> set[RemediationActio
     if rule is not None:
         return {rule.next_action}
     return _AUTO_REPAIR_ALLOWLIST.get(
-        (workflow.strip().lower(), error_code.strip().lower()), set()
+        (workflow.strip().lower(), canonical_failure_code(error_code)), set()
     )
 
 
 def is_automatically_repairable(record: RemediationRecord) -> bool:
     """Fail closed unless this exact workflow/error/action triple is approved."""
 
+    rule = recovery_rule_for(record.workflow, record.error_code)
+    if rule is not None:
+        return rule.retryability and record.action_code == rule.next_action
     return record.action_code in _allowlisted_actions(
         record.workflow, record.error_code
     )
+
+
+def _required_recovery_artifacts_present(
+    record: RemediationRecord,
+) -> bool:
+    rule = recovery_rule_for(record.workflow, record.error_code)
+    if rule is None:
+        return True
+    names = {item.name.strip() for item in record.reusable_artifacts if item.reference}
+    return set(rule.reusable_artifacts).issubset(names)
+
+
+def _recovery_checkpoint_matches_rule(record: RemediationRecord) -> bool:
+    rule = recovery_rule_for(record.workflow, record.error_code)
+    if rule is None:
+        return True
+    checkpoint = record.checkpoint
+    return bool(
+        checkpoint
+        and checkpoint.stage_name == rule.required_checkpoint
+        and checkpoint.validation_status == "validated"
+        and checkpoint.checksum_sha256
+        and checkpoint.lineage_ref
+        and _required_recovery_artifacts_present(record)
+    )
+
+
+def _recovery_inputs_proven(
+    rule,
+    checkpoint: RemediationCheckpointReference | None,
+    reusable_artifacts: list[RemediationArtifactReference],
+) -> bool:
+    names = {item.name.strip() for item in reusable_artifacts if item.reference}
+    return bool(
+        checkpoint
+        and checkpoint.stage_name == rule.required_checkpoint
+        and checkpoint.validation_status == "validated"
+        and checkpoint.checksum_sha256
+        and checkpoint.lineage_ref
+        and set(rule.reusable_artifacts).issubset(names)
+    )
+
+
+def _terminal_reason(record: RemediationRecord, suffix: str) -> str:
+    rule = recovery_rule_for(record.workflow, record.error_code)
+    if rule is None:
+        return suffix
+    return f"terminal_fallback:{rule.terminal_fallback}:{suffix}"
 
 
 def _action_for_failure(
@@ -307,7 +358,7 @@ def _action_for_failure(
     decision: RetryDecision | None,
     checkpoint: RemediationCheckpointReference | None,
 ) -> tuple[RemediationActionCode, RemediationStatus, str]:
-    code = _failure_code(error).lower()
+    code = canonical_failure_code(_failure_code(error))
     if not isinstance(error, AppError):
         return (
             "mark_terminal_blocker",
@@ -328,10 +379,19 @@ def _action_for_failure(
         return "defer_for_budget", "deferred", decision.next_action
     recovery_rule = recovery_rule_for(workflow, code)
     if recovery_rule is not None:
+        if not recovery_rule.retryability:
+            return (
+                "mark_terminal_blocker",
+                "terminal",
+                f"Recovery policy marks {recovery_rule.retry_scope} non-retryable.",
+            )
         return (
             recovery_rule.next_action,
             "pending",
-            f"Rerun only {recovery_rule.retry_scope} from {recovery_rule.required_checkpoint}.",
+            (
+                f"Rerun only {recovery_rule.retry_scope} from "
+                f"{recovery_rule.required_checkpoint}."
+            ),
         )
     allowed_actions = _allowlisted_actions(workflow, code)
     if (
@@ -398,7 +458,10 @@ def _action_for_failure(
     return (
         "mark_terminal_blocker",
         "operator_action_required",
-        "Operator review is required; the workflow/error combination is not allowlisted.",
+        (
+            "Operator review is required; the workflow/error combination is "
+            "not allowlisted."
+        ),
     )
 
 
@@ -421,6 +484,7 @@ def record_workflow_failure(
     committed_side_effects: list[str] | None = None,
     idempotency_keys: list[RemediationIdempotencyKey] | None = None,
     budget: RemediationBudgetSummary | None = None,
+    recovery_identity: dict[str, str] | None = None,
 ) -> RemediationRecord | None:
     """Persist terminal workflow failure evidence without changing retry policy."""
 
@@ -433,7 +497,7 @@ def record_workflow_failure(
         decision=retry_decision,
         checkpoint=checkpoint,
     )
-    code = _failure_code(error)
+    code = canonical_failure_code(_failure_code(error))
     recovery_rule = recovery_rule_for(workflow, code)
     fingerprint = {
         "workflow": workflow,
@@ -448,6 +512,15 @@ def record_workflow_failure(
     }
     digest = remediation_input_checksum(fingerprint)
     delay = max(0, int(retry_decision.delay_seconds)) if retry_decision else 0
+    retained_artifacts = list(reusable_artifacts or [])
+    if recovery_rule is not None and not _recovery_inputs_proven(
+        recovery_rule, checkpoint, retained_artifacts
+    ):
+        status = "operator_action_required"
+        operator_action = (
+            "Recovery proof is incomplete; retain the required checkpoint and "
+            "artifacts before retrying the scoped action."
+        )
     record = RemediationRecord(
         schema_version="1.0",
         remediation_id=f"rem_{digest[:32]}",
@@ -469,7 +542,7 @@ def record_workflow_failure(
         retry_decision=retry_decision,
         status=status,
         checkpoint=checkpoint,
-        reusable_artifacts=list(reusable_artifacts or []),
+        reusable_artifacts=retained_artifacts,
         committed_side_effects=list(committed_side_effects or []),
         idempotency_keys=list(idempotency_keys or []),
         budget=budget or RemediationBudgetSummary(schema_version="1.0"),
@@ -487,6 +560,11 @@ def record_workflow_failure(
         diagnostics={
             **_failure_diagnostics(error),
             **recovery_rule_diagnostics(recovery_rule),
+            **{
+                str(key): str(value)
+                for key, value in (recovery_identity or {}).items()
+                if str(value).strip()
+            },
         },
     )
     response = state_service.upsert_remediation_record(
@@ -521,6 +599,18 @@ def record_workflow_failure(
                     "recorded" if response.record.idempotency_keys else "absent"
                 ),
                 "operator_action": response.record.operator_next_action,
+                "avoided_stage_count": len(
+                    response.record.diagnostics.get("avoided_stages", [])
+                ),
+                "avoided_provider_call_count": len(
+                    response.record.diagnostics.get("avoided_provider_calls", [])
+                ),
+                "avoided_token_estimate": response.record.diagnostics.get(
+                    "avoided_token_estimate"
+                ),
+                "avoided_cost_estimate_usd": response.record.diagnostics.get(
+                    "avoided_cost_estimate_usd"
+                ),
                 "created": response.created,
                 "deduplicated": response.deduplicated,
             },
@@ -724,7 +814,31 @@ def run_bounded_remediation_reaper(
             )
             held.append(record.remediation_id)
             continue
-        if record.action_code == "resume_valid_checkpoint":
+        recovery_rule = recovery_rule_for(record.workflow, record.error_code)
+        if recovery_rule is not None:
+            valid = bool(
+                _recovery_checkpoint_matches_rule(record)
+                and deps.checkpoint_validator
+                and deps.checkpoint_validator(record, work_ctx)
+            )
+            if not valid:
+                record = _transition(
+                    state_db=request.state_db,
+                    record=record,
+                    status="terminal",
+                    reason=_terminal_reason(record, "checkpoint_or_artifact_rejected"),
+                    actor=request.worker_id,
+                    ctx=work_ctx,
+                )
+                _log_reaper_event(
+                    work_ctx,
+                    "remediation_terminal_blocker",
+                    record,
+                    "checkpoint_or_artifact_rejected",
+                )
+                held.append(record.remediation_id)
+                continue
+        elif record.action_code == "resume_valid_checkpoint":
             valid = bool(
                 deps.checkpoint_validator
                 and deps.checkpoint_validator(record, work_ctx)
@@ -823,7 +937,25 @@ def run_bounded_remediation_reaper(
         _log_reaper_event(
             work_ctx, "remediation_started", record, "remediation_started"
         )
-        outcome = executor(record, work_ctx)
+        try:
+            outcome = executor(record, work_ctx)
+        except Exception as exc:
+            record = _transition(
+                state_db=request.state_db,
+                record=record,
+                status="terminal",
+                reason=_terminal_reason(record, "executor_exception"),
+                actor=request.worker_id,
+                ctx=work_ctx,
+            )
+            _log_reaper_event(
+                work_ctx,
+                "remediation_terminal_blocker",
+                record,
+                f"executor_exception:{exc.__class__.__name__}",
+            )
+            held.append(record.remediation_id)
+            continue
         if outcome == "succeeded":
             record = _transition(
                 state_db=request.state_db,
@@ -855,13 +987,19 @@ def run_bounded_remediation_reaper(
             deferred.append(record.remediation_id)
         else:
             status: RemediationStatus = (
-                "terminal" if outcome == "terminal" else "operator_action_required"
+                "terminal"
+                if recovery_rule is not None or outcome == "terminal"
+                else "operator_action_required"
             )
             record = _transition(
                 state_db=request.state_db,
                 record=record,
                 status=status,
-                reason=f"executor_{outcome or 'held'}",
+                reason=(
+                    _terminal_reason(record, f"executor_{outcome or 'held'}")
+                    if status == "terminal"
+                    else f"executor_{outcome or 'held'}"
+                ),
                 actor=request.worker_id,
                 ctx=work_ctx,
             )

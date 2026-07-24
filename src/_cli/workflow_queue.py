@@ -30,6 +30,7 @@ from src.orchestrators.deferred_work_queue_adapter import (
 from src.orchestrators.recovery_adapter_registry import (
     build_recovery_adapter_registry,
     reap_deferred_work_from_supervisor,
+    reap_remediation_from_supervisor,
 )
 from src.orchestrators.workflow_supervisor_orchestrator import (
     SupervisorDependencies,
@@ -42,6 +43,7 @@ from src.services.config_service import (
     load_workflow_control_settings,
     load_workflow_queue_policies,
 )
+from src.services.config_service import new_runtime_context as new_run_context
 from src.services.file_service import file_stat
 from src.services.logging_service import setup_logging
 from src.services.workflow_queue_service import (
@@ -60,7 +62,6 @@ from src.services.workflow_queue_service import (
     set_workflow_queue_control,
 )
 from src.utils.clock import utc_now_seconds_iso
-from src.services.config_service import new_runtime_context as new_run_context
 
 
 def _ctx(task: str):
@@ -504,7 +505,13 @@ def supervise_workflows(
                     registry=registry,
                     settings=control,
                 )
-            )
+            ),
+            reap_remediation=lambda request, work_ctx: reap_remediation_from_supervisor(
+                request,
+                work_ctx,
+                registry=registry,
+                settings=control,
+            ),
         ),
     )
     console.print_json(data=asdict(result))

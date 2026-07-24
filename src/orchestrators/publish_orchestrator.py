@@ -13,6 +13,10 @@ from pathlib import Path
 from typing import Callable, List, Optional, TypedDict, cast
 from urllib.parse import urlparse
 
+from src.contracts.artifact_lineage import (
+    ARTIFACT_LINEAGE_SCHEMA_VERSION,
+    ArtifactLineageStorageLookupRequest,
+)
 from src.contracts.categories import CategoryMappingLoadRequest
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
@@ -22,7 +26,13 @@ from src.contracts.cross_report_analysis import (
     PublicationMode,
     validate_cross_report_contract,
 )
-from src.contracts.files import FileExistsRequest, ListHtmlRequest, ReadTextRequest
+from src.contracts.files import (
+    FileExistsRequest,
+    ListHtmlRequest,
+    PipelineCheckpointWriteRequest,
+    PipelineStageCheckpoint,
+    ReadTextRequest,
+)
 from src.contracts.idempotency import (
     OrchestratorIdempotencyGetRequest,
     OrchestratorIdempotencyRecordRequest,
@@ -45,7 +55,11 @@ from src.contracts.publish import (
     PublishResolvedTerms,
     PublishSettings,
 )
-from src.contracts.remediation import RemediationIdempotencyKey
+from src.contracts.remediation import (
+    RemediationArtifactReference,
+    RemediationCheckpointReference,
+    RemediationIdempotencyKey,
+)
 from src.contracts.report_store import (
     ReportMetadataGetResponse,
     ReportMetadataListRequest,
@@ -140,16 +154,25 @@ from src.orchestrators._publish_orchestrator.routing import (
     _sort_auto_discovered_html_paths,
 )
 from src.orchestrators.publish_shared import canonicalize_html_path
-from src.orchestrators.remediation_orchestrator import record_workflow_failure
+from src.orchestrators.remediation_orchestrator import (
+    record_workflow_failure,
+    remediation_budget_summary,
+)
 from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
 from src.services import idempotency_service
 from src.services.category_mapping_service import (
     load_mappings as load_category_mappings,
 )
-from src.services.file_service import file_exists, list_html, read_text
+from src.services.file_service import (
+    file_exists,
+    list_html,
+    read_text,
+    write_pipeline_checkpoint,
+)
 from src.services.report_store_service import (
     audit_validation_run_manifest,
     build_minimal_execution_plan,
+    get_artifact_lineage_for_storage,
     list_metadata,
     record_minimal_execution_plan,
     record_minimal_execution_plan_result,
@@ -164,6 +187,8 @@ from src.services.wordpress_service import (
     find_posts_by_file_id_batch,
     read_post_by_id,
 )
+from src.utils.cache_utils import sha256_json
+from src.utils.clock import utc_now_seconds_z
 from src.utils.errors import AppError
 from src.utils.html_utils import (
     build_publish_html_snapshot,
@@ -175,6 +200,103 @@ from src.utils.validation import parse_validation_report_payload
 from src.utils.wp_auth import build_auth_header
 
 logger = logging.getLogger("market_lense.publish_orchestrator")
+
+
+def _publication_recovery_evidence(
+    *,
+    settings: PublishSettings,
+    file_id: str,
+    html_path: str,
+    publish_checksum: str,
+    idempotency_key: str,
+    post_type: str,
+    ctx: RunContext,
+) -> tuple[
+    RemediationCheckpointReference | None,
+    list[RemediationArtifactReference],
+]:
+    """Persist the pre-write proof required for GET-only readback recovery.
+
+    Publication recovery must never infer a post or reconstruct a report.  The
+    preflight therefore retains only the verified rendered package lineage and
+    the immutable publication idempotency identity.  Missing active lineage is
+    intentionally not repaired here; a resulting readback failure remains an
+    operator-held remediation record.
+    """
+
+    lineage = get_artifact_lineage_for_storage(
+        ArtifactLineageStorageLookupRequest(
+            schema_version=ARTIFACT_LINEAGE_SCHEMA_VERSION,
+            db_path=settings.reports_db,
+            report_id=file_id,
+            artifact_kind="rendered_html",
+            storage_ref=html_path,
+        ),
+        ctx,
+    ).record
+    if (
+        lineage is None
+        or lineage.state != "active"
+        or lineage.lineage_status != "complete"
+        or not lineage.artifact_id
+    ):
+        return None, []
+    checkpoint = PipelineStageCheckpoint(
+        schema_version="1.0",
+        pipeline_name="publishing",
+        file_id=file_id,
+        report_slug=slugify(Path(html_path).stem) or file_id,
+        stage_name="publication_preflight",
+        stage_status="completed",
+        artifact_refs={
+            "rendered_html": html_path,
+            "publish_readiness": idempotency_key,
+        },
+        payload={
+            "schema_version": "1.0",
+            "artifact_lineage": {"rendered_html": lineage.artifact_id},
+            "publication": {
+                "idempotency_key": idempotency_key,
+                "post_type": post_type,
+                "publish_checksum": publish_checksum,
+            },
+        },
+        completed_at_utc=utc_now_seconds_z(),
+        source_run_id=str(ctx.run_id),
+        source_task_id=str(ctx.task_id),
+    )
+    checkpoint_write = write_pipeline_checkpoint(
+        PipelineCheckpointWriteRequest(
+            schema_version="1.0",
+            checkpoint_root=settings.output_dir,
+            checkpoint=checkpoint,
+        ),
+        ctx,
+    )
+    return (
+        RemediationCheckpointReference(
+            schema_version="1.0",
+            path=checkpoint_write.checkpoint_path,
+            stage_name=checkpoint.stage_name,
+            checksum_sha256=sha256_json(asdict(checkpoint)),
+            lineage_ref=lineage.artifact_id,
+        ),
+        [
+            RemediationArtifactReference(
+                schema_version="1.0",
+                name="rendered_html",
+                reference=html_path,
+                checksum_sha256=lineage.content_hash,
+                lineage_ref=lineage.artifact_id,
+            ),
+            RemediationArtifactReference(
+                schema_version="1.0",
+                name="publish_readiness",
+                reference=idempotency_key,
+                lineage_ref=lineage.artifact_id,
+            ),
+        ],
+    )
 
 
 def _load_validation_cohort_for_publish(
@@ -191,6 +313,7 @@ def _load_validation_cohort_for_publish(
         cohort_id = str(payload["cohort_id"])
         configuration_hash = str(payload["configuration_hash"])
         policy_hash = str(payload["policy_hash"])
+        validation_run_id = str(payload.get("validation_run_id") or "")
     except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
         raise AppError(
             code="validation_cohort_manifest_invalid",
@@ -221,7 +344,7 @@ def _load_validation_cohort_for_publish(
             retryable=False,
         )
     return (
-        ValidationRunId(f"validation:{cohort_id}"),
+        ValidationRunId(validation_run_id or f"validation:{cohort_id}"),
         cohort_id,
         configuration_hash,
         policy_hash,
@@ -1248,6 +1371,64 @@ def run_publish(
             validation_status=validation_status,
             validation_issues=validation_issues,
         )
+        publish_idempotency_key = _publish_idempotency_key(
+            file_id=file_id,
+            post_type=entity_route.post_type,
+        )
+        recovery_checkpoint, recovery_artifacts = _publication_recovery_evidence(
+            settings=settings,
+            file_id=file_id,
+            html_path=html_path,
+            publish_checksum=publish_checksum,
+            idempotency_key=publish_idempotency_key,
+            post_type=entity_route.post_type,
+            ctx=file_ctx,
+        )
+
+        def _record_publish_failure(
+            exc: Exception,
+            decision=None,
+            *,
+            _file_ctx: RunContext = file_ctx,
+            _workflow_run_id: str = str(root_ctx.run_id),
+            _input_checksum: str = publish_checksum,
+            _report_id: str = file_id,
+            _source_id: str = state_row.md5,
+            _checkpoint: RemediationCheckpointReference | None = recovery_checkpoint,
+            _artifacts: list[RemediationArtifactReference] = recovery_artifacts,
+            _idempotency_key: str = publish_idempotency_key,
+            _configuration_hash: str = str(file_ctx.configuration_hash or ""),
+            _policy_hash: str = str(file_ctx.policy_hash or ""),
+        ) -> None:
+            record_workflow_failure(
+                state_db=settings.state_db,
+                workflow="publishing",
+                stage="publish_html",
+                operation="publish_html",
+                error=exc,
+                ctx=_file_ctx,
+                retry_decision=decision,
+                workflow_run_id=_workflow_run_id,
+                input_checksum=_input_checksum,
+                report_id=_report_id,
+                source_id=_source_id,
+                checkpoint=_checkpoint,
+                reusable_artifacts=_artifacts,
+                idempotency_keys=[
+                    RemediationIdempotencyKey(
+                        schema_version="1.0",
+                        scope=_PUBLISH_IDEMPOTENCY_SCOPE,
+                        key=_idempotency_key,
+                        input_checksum=_input_checksum,
+                    )
+                ],
+                budget=remediation_budget_summary(publish_budget),
+                recovery_identity={
+                    "configuration_hash": _configuration_hash,
+                    "policy_hash": _policy_hash,
+                },
+            )
+
         reused_outcome = (
             None
             if force_report_cards
@@ -1294,6 +1475,16 @@ def run_publish(
                 or not idempotency_readback.post_id
                 or not idempotency_readback.link
             ):
+                _record_publish_failure(
+                    AppError(
+                        code="wordpress_idempotency_readback_missing",
+                        message=(
+                            "Idempotent publication could not be reconciled through "
+                            "authenticated WordPress readback"
+                        ),
+                        retryable=False,
+                    )
+                )
                 outcomes.append(
                     PublishOutcome(
                         schema_version="1.0",
@@ -1612,28 +1803,7 @@ def run_publish(
                     "attempt": attempt + 1,
                     "code": exc.code if isinstance(exc, AppError) else "",
                 },
-                on_terminal_failure=lambda exc, decision: record_workflow_failure(
-                    state_db=settings.state_db,
-                    workflow="publishing",
-                    stage="publish_html",
-                    operation="publish_html",
-                    error=exc,
-                    ctx=file_ctx,
-                    retry_decision=decision,
-                    input_checksum=publish_checksum,
-                    report_id=file_id,
-                    idempotency_keys=[
-                        RemediationIdempotencyKey(
-                            schema_version="1.0",
-                            scope=_PUBLISH_IDEMPOTENCY_SCOPE,
-                            key=_publish_idempotency_key(
-                                file_id=file_id,
-                                post_type=entity_route.post_type,
-                            ),
-                            input_checksum=publish_checksum,
-                        )
-                    ],
-                ),
+                on_terminal_failure=_record_publish_failure,
                 is_retryable=lambda exc: isinstance(exc, AppError) and exc.retryable,
                 sleep_fn=time.sleep,
             )

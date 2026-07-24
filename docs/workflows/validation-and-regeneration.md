@@ -21,6 +21,11 @@ Prompt fixtures and regression controls are documented in [quality testing](../q
 
 Release and reliability runs use an immutable admitted cohort. The cohort is
 persisted before report generation, and its content hash is the cohort ID.
+Its validation-run ID is separately derived from that cohort ID together with
+the admission configuration hash, policy hash, and producer-build identity.
+Consequently, replay is idempotent only for the same complete provenance; a
+stale cohort fails before report or provider work and must be refrozen under
+the current policy rather than being silently rebound to a new run.
 Drive discovery carries the same resolved run-budget and usage-ledger path as
 the later ingest pipeline, so an isolated canary cannot silently reserve shared
 budget capacity before membership is frozen.

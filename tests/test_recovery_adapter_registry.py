@@ -30,6 +30,9 @@ def test_registry_exposes_all_proven_deferred_work_resume_adapters(
         "report_download",
         "publisher_inventory",
     }
+    assert registry.remediation_dependencies.rerun_targeted_artifact_family
+    assert registry.remediation_dependencies.retry_idempotent_publication
+    assert registry.remediation_dependencies.checkpoint_validator
 
 
 def _item(workflow: str, source_id: str) -> DeferredWorkItem:

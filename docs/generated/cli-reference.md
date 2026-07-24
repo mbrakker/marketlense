@@ -51,6 +51,7 @@ For command options and help text, run `python -m src.cli <command> --help`.
 | `reap-ui-dead-letters` | [`src/_cli/ui_runs.py`](../../src/_cli/ui_runs.py) | Public |
 | `recategorize` | [`src/_cli/pipeline.py`](../../src/_cli/pipeline.py) | Public |
 | `remediation-opportunities` | [`src/_cli/remediation.py`](../../src/_cli/remediation.py) | Public |
+| `remediation-reap` | [`src/_cli/remediation.py`](../../src/_cli/remediation.py) | Public |
 | `remediation-soak` | [`src/_cli/remediation.py`](../../src/_cli/remediation.py) | Public |
 | `remediations` | [`src/_cli/remediation.py`](../../src/_cli/remediation.py) | Public |
 | `replay-run` | [`src/_cli/ui_runs.py`](../../src/_cli/ui_runs.py) | Public |

@@ -309,6 +309,79 @@ def test_prompt_family_repair_keeps_crop_and_source_reusable() -> None:
     assert plan.required_stages == ["analysis_complete", "render_complete"]
 
 
+def test_typed_claim_invalidation_regenerates_only_the_materialized_claim_family() -> (
+    None
+):
+    summary = _artifact(
+        "summary-family",
+        "prompt_family:report_vs/artifacts/summary",
+        dependencies=["artifacts"],
+        compatibility={"artifact_family": "report_vs/artifacts/summary"},
+    )
+    insight = _artifact(
+        "insight-family",
+        "prompt_family:report_vs/artifacts/insights_final",
+        dependencies=["artifacts"],
+        compatibility={"artifact_family": "report_vs/artifacts/insights_final"},
+    )
+    input_value = _input(intent="targeted_repair")
+    graph = RetainedArtifactGraph(
+        artifacts=[*input_value.retained_graph.artifacts, summary, insight],
+        edges=[
+            *input_value.retained_graph.edges,
+            ("summary-family", "artifacts"),
+            ("insight-family", "artifacts"),
+        ],
+    )
+
+    plan = plan_minimal_execution(
+        replace(
+            input_value,
+            retained_graph=graph,
+            forced_invalidations={
+                "report_vs/artifacts/insights_final": "unsupported_material_claim"
+            },
+        )
+    )
+
+    invalid = {item.artifact_id for item in plan.invalid_artifacts}
+    assert "insight-family" in invalid
+    assert "summary-family" not in invalid
+    assert "source" not in invalid
+    assert "crop" not in invalid
+    assert plan.required_prompt_families == ["report_vs/artifacts/insights_final"]
+    assert plan.required_external_calls == ["html_render", "report_analysis_model"]
+
+
+def test_typed_final_html_repair_does_not_expand_to_stale_prompt_families() -> None:
+    summary = _artifact(
+        "summary-family",
+        "prompt_family:report_vs/artifacts/summary",
+        dependencies=["artifacts"],
+        compatibility={
+            "artifact_family": "report_vs/artifacts/summary",
+            "prompt_versions": {"report_vs/artifacts/summary": "summary-v0"},
+        },
+    )
+    input_value = _input(intent="render_repair")
+    graph = RetainedArtifactGraph(
+        artifacts=[*input_value.retained_graph.artifacts, summary],
+        edges=[*input_value.retained_graph.edges, ("summary-family", "artifacts")],
+    )
+
+    plan = plan_minimal_execution(
+        replace(
+            input_value,
+            retained_graph=graph,
+            forced_invalidations={"rendered_html": "final_html_internal_identifier"},
+        )
+    )
+
+    assert plan.required_stages == ["render_complete"]
+    assert plan.required_prompt_families == []
+    assert plan.required_external_calls == ["html_render"]
+
+
 def test_publication_only_retry_has_no_model_or_render_calls() -> None:
     plan = plan_minimal_execution(_input(intent="publication_repair"))
 

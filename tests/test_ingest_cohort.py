@@ -190,6 +190,73 @@ def test_frozen_cohort_persists_and_replays_the_same_drive_members(
         json.loads(stored["cohorts/release.json"])["selection_reason"]
         == "deterministic_admission_preflight"
     )
+    payload = json.loads(stored["cohorts/release.json"])
+    assert payload["validation_run_id"] == str(
+        orch._validation_run_id_for_cohort(
+            cohort_id=payload["cohort_id"],
+            configuration_hash=payload["configuration_hash"],
+            policy_hash=payload["policy_hash"],
+            producer_build_identity=payload["producer_build_identity"],
+        )
+    )
+
+
+def test_frozen_cohort_rejects_stale_admission_provenance(
+    ingest_settings, run_context
+) -> None:
+    file = DriveFile("1.0", "file-a", "A.pdf", "2026-01-01", "md5-a")
+    stored: dict[str, bytes] = {}
+    deps = replace(
+        orch.IngestBatchDependencies.default(),
+        file_exists=lambda request, _ctx: SimpleNamespace(
+            exists=request.path in stored
+        ),
+        read_text=lambda request, _ctx: SimpleNamespace(
+            content=stored[request.path].decode("utf-8")
+        ),
+        write_bytes=lambda request, _ctx: (
+            stored.__setitem__(request.path, request.content)
+            or SimpleNamespace(bytes_written=len(request.content))
+        ),
+    )
+    orch._frozen_cohort(
+        cohort_size=1,
+        cohort_manifest="cohorts/provenance.json",
+        selected_files=[file],
+        settings=ingest_settings,
+        deps=deps,
+        root_ctx=run_context,
+    )
+
+    with pytest.raises(AppError, match="Cohort manifest provenance differs"):
+        orch._frozen_cohort(
+            cohort_size=1,
+            cohort_manifest="cohorts/provenance.json",
+            selected_files=[],
+            settings=replace(
+                ingest_settings,
+                run_budget_max_pdfs=(ingest_settings.run_budget_max_pdfs or 0) + 1,
+            ),
+            deps=deps,
+            root_ctx=run_context,
+        )
+
+
+def test_validation_run_identity_changes_with_cohort_provenance() -> None:
+    first = orch._validation_run_id_for_cohort(
+        cohort_id="cohort",
+        configuration_hash="configuration-one",
+        policy_hash="policy",
+        producer_build_identity="workspace",
+    )
+    changed_policy = orch._validation_run_id_for_cohort(
+        cohort_id="cohort",
+        configuration_hash="configuration-one",
+        policy_hash="policy-two",
+        producer_build_identity="workspace",
+    )
+
+    assert first != changed_policy
 
 
 def test_fixed_cohort_rejects_invalid_source_before_manifest_or_generation(

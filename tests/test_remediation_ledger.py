@@ -6,15 +6,21 @@ from dataclasses import asdict, replace
 import pytest
 
 from src.contracts.remediation import (
+    RemediationArtifactReference,
     RemediationCheckpointReference,
     RemediationClaimRequest,
     RemediationExpiredLeaseReleaseRequest,
+    RemediationIdempotencyKey,
     RemediationListRequest,
     RemediationReaperRequest,
     RemediationRecord,
     RemediationSoakReportRequest,
     RemediationTransitionRequest,
     RemediationUpsertRequest,
+)
+from src.orchestrators.failure_recovery_registry import (
+    canonical_failure_code,
+    recovery_rule_for,
 )
 from src.orchestrators.remediation_orchestrator import (
     RemediationReaperDependencies,
@@ -521,6 +527,19 @@ def test_failure_specific_recovery_rule_persists_narrow_scope(tmp_path) -> None:
             code="taxonomy_invalid_json", message="invalid", retryable=False
         ),
         ctx=_ctx(),
+        checkpoint=RemediationCheckpointReference(
+            schema_version="1.0",
+            path="selection.checkpoint.json",
+            stage_name="selection_complete",
+            checksum_sha256="checkpoint-sha",
+            lineage_ref="lineage-selection",
+        ),
+        reusable_artifacts=[
+            RemediationArtifactReference(
+                schema_version="1.0", name=name, reference=f"retained/{name}"
+            )
+            for name in ("source_pdf", "analysis_pdf", "vector_store")
+        ],
     )
 
     assert record is not None
@@ -528,7 +547,225 @@ def test_failure_specific_recovery_rule_persists_narrow_scope(tmp_path) -> None:
     assert record.action_code == "rerun_targeted_artifact_family"
     assert record.max_attempts == 1
     assert record.diagnostics["recovery_scope"] == "taxonomy"
-    assert record.diagnostics["required_checkpoint"] == "source_prepared"
+    assert record.diagnostics["required_checkpoint"] == "selection_complete"
+    assert record.diagnostics["avoided_provider_calls"] == [
+        "pdf_parse",
+        "ocr",
+        "crop_render",
+        "crop_qa",
+    ]
+
+
+def test_wordpress_readback_alias_is_auto_enqueued_only_with_preflight_proof(
+    tmp_path,
+) -> None:
+    state_db = str(tmp_path / "state.sqlite")
+    record = record_workflow_failure(
+        state_db=state_db,
+        workflow="publishing",
+        stage="authenticated_readback",
+        operation="publish_html",
+        error=AppError(
+            code="wordpress_post_create_readback_missing",
+            message="readback missing",
+            retryable=False,
+        ),
+        ctx=_ctx(),
+        workflow_run_id="publish-run",
+        input_checksum="publish-checksum",
+        report_id="report-1",
+        checkpoint=RemediationCheckpointReference(
+            schema_version="1.0",
+            path="publication-preflight.json",
+            stage_name="publication_preflight",
+            checksum_sha256="checkpoint-sha",
+            lineage_ref="rendered-lineage",
+        ),
+        reusable_artifacts=[
+            RemediationArtifactReference(
+                schema_version="1.0",
+                name="rendered_html",
+                reference="retained/report.html",
+            ),
+            RemediationArtifactReference(
+                schema_version="1.0",
+                name="publish_readiness",
+                reference="publish-idempotency-key",
+            ),
+        ],
+        idempotency_keys=[
+            RemediationIdempotencyKey(
+                schema_version="1.0",
+                scope="wordpress_publish",
+                key="publish-idempotency-key",
+                input_checksum="publish-checksum",
+            )
+        ],
+    )
+
+    assert record is not None
+    assert record.error_code == "wordpress_readback_failed"
+    assert record.status == "pending"
+    calls: list[str] = []
+    response = run_bounded_remediation_reaper(
+        RemediationReaperRequest(
+            schema_version="1.0",
+            state_db=state_db,
+            worker_id="reaper",
+            now_utc=record.next_eligible_at_utc,
+            execution_enabled=True,
+        ),
+        _ctx(),
+        dependencies=RemediationReaperDependencies(
+            checkpoint_validator=lambda _record, _ctx: True,
+            idempotency_check=lambda _record, _ctx: "safe_to_execute",
+            retry_idempotent_publication=lambda _record, _ctx: (
+                calls.append("readback") or "succeeded"
+            ),
+        ),
+    )
+
+    assert response.resolved_ids == [record.remediation_id]
+    assert calls == ["readback"]
+    persisted = _records(state_db)[0]
+    assert persisted.status == "resolved"
+    assert persisted.run_id == "publish-run"
+    assert persisted.report_id == "report-1"
+
+
+@pytest.mark.parametrize(
+    ("workflow", "error_code", "scope", "checkpoint", "artifacts"),
+    [
+        (
+            "report_generation",
+            "taxonomy_invalid_json",
+            "taxonomy",
+            "selection_complete",
+            ("source_pdf", "analysis_pdf", "vector_store"),
+        ),
+        (
+            "report_generation",
+            "category_fit_contradiction",
+            "category_fit",
+            "selection_complete",
+            ("source_pdf", "analysis_pdf", "vector_store"),
+        ),
+        (
+            "report_generation",
+            "unsupported_material_claim",
+            "affected_claim_or_insight",
+            "analysis_complete",
+            ("analysis_pdf", "artifacts", "validation"),
+        ),
+        (
+            "report_generation",
+            "final_html_internal_identifier",
+            "rendering",
+            "analysis_complete",
+            ("analysis_pdf", "artifacts", "validation"),
+        ),
+        (
+            "report_generation",
+            "missing_report_card_manifest",
+            "report_cards",
+            "analysis_complete",
+            ("analysis_pdf", "artifacts", "validation"),
+        ),
+        (
+            "publishing",
+            "wordpress_readback_failed",
+            "wordpress_readback",
+            "publication_preflight",
+            ("rendered_html", "publish_readiness"),
+        ),
+    ],
+)
+def test_failure_registry_has_finite_safe_recovery_contract(
+    workflow: str,
+    error_code: str,
+    scope: str,
+    checkpoint: str,
+    artifacts: tuple[str, ...],
+) -> None:
+    rule = recovery_rule_for(workflow, error_code)
+
+    assert rule is not None
+    assert rule.retryability is True
+    assert rule.retry_scope == scope
+    assert rule.max_attempts == 1
+    assert rule.required_checkpoint == checkpoint
+    assert rule.reusable_artifacts == artifacts
+    assert rule.required_invalidations
+    assert rule.terminal_fallback
+    assert rule.avoided_stages
+    assert rule.avoided_provider_calls
+
+
+def test_failure_registry_normalizes_only_its_typed_codes() -> None:
+    assert canonical_failure_code("TAXONOMY_INVALID_JSON") == "taxonomy_invalid_json"
+    assert canonical_failure_code("ValueError") == "ValueError"
+
+
+def test_typed_recovery_runs_once_with_verified_artifacts_and_finishes_terminally(
+    tmp_path,
+) -> None:
+    state_db = str(tmp_path / "state.sqlite")
+    checkpoint = RemediationCheckpointReference(
+        schema_version="1.0",
+        path="selection.checkpoint.json",
+        stage_name="selection_complete",
+        checksum_sha256="checkpoint-sha",
+        lineage_ref="lineage-selection",
+    )
+    record = record_workflow_failure(
+        state_db=state_db,
+        workflow="report_generation",
+        stage="taxonomy",
+        operation="resolve_taxonomy",
+        error=AppError(
+            code="taxonomy_invalid_json", message="invalid", retryable=False
+        ),
+        ctx=_ctx(),
+        workflow_run_id="retained-run",
+        report_id="report-1",
+        checkpoint=checkpoint,
+        reusable_artifacts=[
+            RemediationArtifactReference(
+                schema_version="1.0", name=name, reference=f"retained/{name}"
+            )
+            for name in ("source_pdf", "analysis_pdf", "vector_store")
+        ],
+    )
+    calls: list[tuple[str, str, str]] = []
+
+    response = run_bounded_remediation_reaper(
+        RemediationReaperRequest(
+            schema_version="1.0",
+            state_db=state_db,
+            worker_id="reaper",
+            now_utc=record.next_eligible_at_utc if record is not None else NOW,
+            execution_enabled=True,
+        ),
+        _ctx(),
+        dependencies=RemediationReaperDependencies(
+            checkpoint_validator=lambda candidate, _ctx: (
+                candidate.checkpoint == checkpoint
+            ),
+            rerun_targeted_artifact_family=lambda candidate, _ctx: (
+                calls.append(
+                    (candidate.run_id, candidate.report_id, candidate.error_code)
+                )
+                or "succeeded"
+            ),
+        ),
+    )
+
+    assert record is not None
+    assert response.resolved_ids == [record.remediation_id]
+    assert calls == [("retained-run", "report-1", "taxonomy_invalid_json")]
+    finished = _records(state_db)[0]
+    assert finished.status == "resolved"
+    assert finished.attempt_count == 1
 
 
 def test_reaper_holds_unknown_workflow_error_even_when_an_executor_exists(
@@ -571,7 +808,7 @@ def test_reaper_holds_unknown_workflow_error_even_when_an_executor_exists(
     assert _records(state_db)[0].status == "operator_action_required"
 
 
-def test_worker_termination_after_retrying_transition_recovers_from_lease(
+def test_reaper_converts_executor_exception_to_typed_terminal_fallback(
     tmp_path,
 ) -> None:
     state_db = str(tmp_path / "state.sqlite")
@@ -585,30 +822,20 @@ def test_worker_termination_after_retrying_transition_recovers_from_lease(
     def _crash(record: RemediationRecord, ctx) -> str:
         raise RuntimeError("worker terminated")
 
-    with pytest.raises(RuntimeError, match="worker terminated"):
-        run_bounded_remediation_reaper(
-            RemediationReaperRequest(
-                schema_version="1.0",
-                state_db=state_db,
-                worker_id="worker",
-                now_utc=NOW,
-                lease_seconds=1,
-                execution_enabled=True,
-            ),
-            _ctx(),
-            dependencies=RemediationReaperDependencies(
-                retry_transient_service_call=_crash,
-                idempotency_check=lambda record, ctx: "safe_to_execute",
-            ),
-        )
-    assert _records(state_db)[0].status == "retrying"
-    released = release_expired_remediation_leases(
-        RemediationExpiredLeaseReleaseRequest(
+    response = run_bounded_remediation_reaper(
+        RemediationReaperRequest(
             schema_version="1.0",
             state_db=state_db,
-            now_utc="2026-07-15T12:00:02Z",
+            worker_id="worker",
+            now_utc=NOW,
+            lease_seconds=1,
+            execution_enabled=True,
         ),
         _ctx(),
+        dependencies=RemediationReaperDependencies(
+            retry_transient_service_call=_crash,
+            idempotency_check=lambda record, ctx: "safe_to_execute",
+        ),
     )
-    assert released.released_ids == ["crashed"]
-    assert _records(state_db)[0].status == "pending"
+    assert response.held_ids == ["crashed"]
+    assert _records(state_db)[0].status == "terminal"

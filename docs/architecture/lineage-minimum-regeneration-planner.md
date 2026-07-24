@@ -44,6 +44,7 @@ same backfill is idempotent.
 | Crop profile | Crop/preview and rendered HTML | Selection plus render; no report analysis |
 | Prompt, schema, model policy, or validator | Affected analysis family and downstream outputs | Resume from selection plus analysis/render; preserve source PDF and selected crops |
 | Publication target | Publication record | Publication only |
+| Typed failure registry | Only the registry's named family and descendants | The matching validated checkpoint; no source restart when its source/vector evidence is still valid |
 
 ## Prompt-family materialisations
 
@@ -131,6 +132,27 @@ The policy switch remains `shadow`, `enforce`, or `disabled`. Rollout is:
    only after retained-fixture and bounded live evidence;
 4. revert to the existing latest-safe checkpoint behavior with `disabled` if
    needed. Plan/audit records remain available after rollback.
+
+## Typed failure recovery integration
+
+The failure-specific recovery registry supplies `forced_invalidations` to the
+same pure planner; it is not a second invalidation system. A material-claim
+failure therefore marks only the independently materialized
+`report_vs/artifacts/insights_final` family invalid, keeps source PDF, crop,
+taxonomy, category fit, evidence packs, and unrelated editorial families
+reusable, then performs the existing family validation and deterministic
+render. Render/card failures force only `rendered_html`. Taxonomy and category
+recovery resumes from `selection_complete`, retaining the completed source,
+selected figures, and the existing vector-store identifier. The recovery
+adapter rejects missing proof rather than invoking source preparation or
+creating a replacement vector store.
+
+Every recovery plan remains subject to the normal artifact-lineage checks and
+the existing artifact-scoped execution lease. Its durable remediation record
+retains the run/report/source/budget identity, required checkpoint/artifacts,
+invalidations, bounded attempts, terminal fallback, and deliberately
+conservative avoided-work estimates. Unknown token or cost baselines are
+stored as unpriced rather than presented as savings.
 
 ## Cross-report read boundary
 

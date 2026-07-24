@@ -14,7 +14,7 @@ from src.contracts.deferred_work import (
     DeferredWorkResumePlan,
 )
 from src.contracts.drive import DriveFile
-from src.contracts.files import FileStatRequest
+from src.contracts.files import FileStatRequest, PipelineCheckpointReadRequest
 from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.lock import LockAcquireRequest, LockReleaseRequest
 from src.contracts.minimal_execution_plan import (
@@ -30,6 +30,10 @@ from src.contracts.pipeline_preflight import PipelinePreflightReport
 from src.contracts.regeneration import (
     LineageRegenerationPlan,
     LineageRegenerationQualityReport,
+)
+from src.contracts.remediation import (
+    RemediationArtifactReference,
+    RemediationCheckpointReference,
 )
 from src.contracts.report_generation import ReportGenerationClientBundle
 from src.contracts.run_budget import (
@@ -50,6 +54,7 @@ from src.orchestrators.admission_preflight_orchestrator import (
     pipeline_preflight_decision_hash,
     run_admission_preflight,
 )
+from src.orchestrators.failure_recovery_registry import recovery_rule_for
 from src.orchestrators.pipeline_preflight_orchestrator import (
     assert_expensive_side_effects_allowed,
     preflight_report_pipeline,
@@ -71,6 +76,7 @@ from src.services.report_store_service import (
     record_minimal_execution_plan,
     record_minimal_execution_plan_result,
 )
+from src.utils.cache_utils import sha256_json
 from src.utils.coercion import coerce_int
 from src.utils.errors import AppError
 from src.utils.lineage_regeneration import (
@@ -123,6 +129,80 @@ def _enforced_resume_stage(plan: MinimalExecutionPlan) -> str | None:
             context={"plan_hash": plan.plan_hash, "required_stages": list(stages)},
         )
     return _ENFORCED_RESUME_STAGES[stages]
+
+
+def _report_failure_recovery_evidence(
+    *,
+    settings: IngestSettings,
+    file: DriveFile,
+    local_pdf_path: str,
+    error_code: str,
+    ctx: RunContext,
+) -> tuple[
+    RemediationCheckpointReference | None,
+    list[RemediationArtifactReference],
+]:
+    """Retain only already-proven restart material for a typed failure.
+
+    This reads the existing checkpoint; it never creates a source artifact,
+    vector store, or editorial output while recording a failure.
+    """
+
+    rule = recovery_rule_for("report_generation", error_code)
+    if rule is None:
+        return None, []
+    response = file_service.read_pipeline_checkpoint(
+        PipelineCheckpointReadRequest(
+            schema_version="1.0",
+            checkpoint_root=settings.output_dir,
+            pipeline_name="report_generation",
+            file_id=file.file_id,
+            stage_name=rule.required_checkpoint,
+        ),
+        ctx,
+    )
+    checkpoint = response.checkpoint
+    if (
+        not response.found
+        or checkpoint is None
+        or checkpoint.stage_status != "completed"
+        or checkpoint.stage_name != rule.required_checkpoint
+    ):
+        return None, []
+    refs = {
+        str(name): str(reference)
+        for name, reference in checkpoint.artifact_refs.items()
+        if str(name).strip() and str(reference).strip()
+    }
+    refs.setdefault("source_pdf", local_pdf_path)
+    vector = checkpoint.payload.get("vector_indexing")
+    if isinstance(vector, dict) and str(vector.get("vector_store_id") or "").strip():
+        refs["vector_store"] = str(vector["vector_store_id"])
+    lineage = checkpoint.payload.get("artifact_lineage")
+    lineage_ref = ""
+    if isinstance(lineage, dict):
+        lineage_ref = next(
+            (str(value) for value in lineage.values() if str(value or "").strip()),
+            "",
+        )
+    if not lineage_ref:
+        return None, []
+    checksum = sha256_json(asdict(checkpoint))
+    return (
+        RemediationCheckpointReference(
+            schema_version="1.0",
+            path=response.checkpoint_path,
+            stage_name=checkpoint.stage_name,
+            checksum_sha256=checksum,
+            lineage_ref=lineage_ref,
+        ),
+        [
+            RemediationArtifactReference(
+                schema_version="1.0", name=name, reference=reference
+            )
+            for name, reference in sorted(refs.items())
+        ],
+    )
 
 
 def _acquire_execution_lease(
@@ -468,6 +548,9 @@ def run_report_pipeline(
     lineage_change_kind: str = "",
     lineage_available: bool = False,
     execution_plan_mode: str = "shadow",
+    recovery_invalidations: dict[str, str] | None = None,
+    recovery_execution_intent: str = "",
+    requested_output_families: list[str] | None = None,
     stop_after_stage: str | None = None,
     projection_only: bool = False,
     budget_override: BudgetOverrideContext | None = None,
@@ -579,6 +662,11 @@ def run_report_pipeline(
             "model": "targeted_repair",
             "validator": "targeted_repair",
         }
+        execution_intent = str(recovery_execution_intent or "").strip().lower()
+        if not execution_intent:
+            execution_intent = intent_by_change.get(
+                str(lineage_change_kind).strip().lower(), "report_generation"
+            )
         plan_response = build_minimal_execution_plan(
             MinimalExecutionPlanBuildRequest(
                 schema_version=MINIMAL_EXECUTION_PLAN_SCHEMA_VERSION,
@@ -586,16 +674,16 @@ def run_report_pipeline(
                 source_path=local_pdf_path,
                 execution_input=MinimalExecutionPlanInput(
                     schema_version=MINIMAL_EXECUTION_PLAN_SCHEMA_VERSION,
-                    execution_intent=intent_by_change.get(
-                        str(lineage_change_kind).strip().lower(),
-                        "report_generation",
-                    ),
+                    execution_intent=execution_intent,
                     report_id=file.file_id,
                     source_id=str(md5 or "").strip().lower(),
                     current_source_content_hashes={},
                     retained_graph=RetainedArtifactGraph(),
-                    requested_output_families=["rendered_html"],
+                    requested_output_families=list(
+                        requested_output_families or ["rendered_html"]
+                    ),
                     current_compatibility=current_compatibility,
+                    forced_invalidations=dict(recovery_invalidations or {}),
                 ),
             ),
             ctx,
@@ -816,6 +904,42 @@ def run_report_pipeline(
 
     attempt_state = {"value": 0}
 
+    def _record_report_failure(error: Exception, decision=None) -> None:
+        error_code = error.code if isinstance(error, AppError) else ""
+        try:
+            checkpoint, reusable_artifacts = _report_failure_recovery_evidence(
+                settings=settings,
+                file=file,
+                local_pdf_path=local_pdf_path,
+                error_code=error_code,
+                ctx=ctx,
+            )
+        except AppError:
+            # Failure persistence must not obscure the original typed workflow
+            # failure. The ledger will retain an operator-held row without proof.
+            checkpoint, reusable_artifacts = None, []
+        record_workflow_failure(
+            state_db=settings.state_db,
+            workflow="report_generation",
+            stage="report_pipeline",
+            operation="generate_report",
+            error=error,
+            ctx=ctx,
+            retry_decision=decision,
+            workflow_run_id=str(ctx.run_id),
+            input_checksum=md5 or file.file_id,
+            report_id=file.file_id,
+            source_id=local_pdf_path,
+            publisher_id=str(ctx.publisher_id or ""),
+            checkpoint=checkpoint,
+            reusable_artifacts=reusable_artifacts,
+            recovery_identity={
+                "admission_decision_hash": str(ctx.admission_decision_hash or ""),
+                "configuration_hash": str(ctx.configuration_hash or ""),
+                "policy_hash": str(ctx.policy_hash or ""),
+            },
+        )
+
     def _report_attempt() -> IngestOutcome:
         current_attempt = attempt_state["value"]
         attempt_state["value"] += 1
@@ -1021,18 +1145,7 @@ def run_report_pipeline(
                 "attempt": attempt,
                 "retryable": retryable,
             },
-            on_terminal_failure=lambda exc, decision: record_workflow_failure(
-                state_db=settings.state_db,
-                workflow="report_generation",
-                stage="report_pipeline",
-                operation="generate_report",
-                error=exc,
-                ctx=ctx,
-                retry_decision=decision,
-                input_checksum=md5 or file.file_id,
-                report_id=file.file_id,
-                source_id=local_pdf_path,
-            ),
+            on_terminal_failure=_record_report_failure,
             is_retryable=lambda exc: isinstance(exc, AppError) and exc.retryable,
             sleep_fn=time.sleep,
         )
@@ -1090,16 +1203,13 @@ def run_report_pipeline(
             "taxonomy_invalid_json",
             "taxonomy_schema_invalid",
             "category_fit_contradiction",
+            "unsupported_material_claim",
             "final_html_internal_identifier",
             "missing_report_card_manifest",
             "wordpress_readback_failed",
         }
-        record_workflow_failure(
-            state_db=settings.state_db,
-            workflow="report_generation",
-            stage="report_pipeline",
-            operation="generate_report",
-            error=AppError(
+        _record_report_failure(
+            AppError(
                 code=(
                     outcome_code
                     if outcome_code in known_typed_codes
@@ -1107,11 +1217,7 @@ def run_report_pipeline(
                 ),
                 message=outcome.error or "Report pipeline returned an error outcome",
                 retryable=False,
-            ),
-            ctx=ctx,
-            input_checksum=md5 or file.file_id,
-            report_id=file.file_id,
-            source_id=local_pdf_path,
+            )
         )
     if minimal_plan is not None:
         divergence = record_minimal_execution_plan_result(

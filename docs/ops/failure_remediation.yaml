@@ -2,6 +2,118 @@ schema_version: "1.0"
 last_drill_date: "2026-04-25"
 owner: "operations"
 runbooks:
+  - failure_code: "taxonomy_invalid_json"
+    owner: "report_generation"
+    severity: "warning"
+    runbook_path: "docs/ops/top_failure_runbooks.md"
+    dashboard_link: "local://logs?event=remediation_failure_recorded"
+    alert_labels:
+      stage: "taxonomy"
+      family: "report_taxonomy"
+    detector_log_events:
+      - "remediation_failure_recorded"
+    remediation_hooks:
+      - name: "bounded_taxonomy_checkpoint_recovery"
+        trigger: "feature_gated_automatic"
+        dry_run: true
+        command: "python -m src.cli remediation-reap"
+        safety: "Requires the retained selection checkpoint, source/analysis PDFs, vector-store reference, lineage proof, and one bounded attempt."
+  - failure_code: "taxonomy_schema_invalid"
+    owner: "report_generation"
+    severity: "warning"
+    runbook_path: "docs/ops/top_failure_runbooks.md"
+    dashboard_link: "local://logs?event=remediation_failure_recorded"
+    alert_labels:
+      stage: "taxonomy"
+      family: "report_taxonomy"
+    detector_log_events:
+      - "remediation_failure_recorded"
+    remediation_hooks:
+      - name: "bounded_taxonomy_schema_recovery"
+        trigger: "feature_gated_automatic"
+        dry_run: true
+        command: "python -m src.cli remediation-reap"
+        safety: "Requires the retained selection checkpoint, source/analysis PDFs, vector-store reference, lineage proof, and one bounded attempt."
+  - failure_code: "category_fit_contradiction"
+    owner: "report_generation"
+    severity: "warning"
+    runbook_path: "docs/ops/top_failure_runbooks.md"
+    dashboard_link: "local://logs?event=remediation_failure_recorded"
+    alert_labels:
+      stage: "category_fit"
+      family: "context_category_fit"
+    detector_log_events:
+      - "remediation_failure_recorded"
+    remediation_hooks:
+      - name: "bounded_category_fit_checkpoint_recovery"
+        trigger: "feature_gated_automatic"
+        dry_run: true
+        command: "python -m src.cli remediation-reap"
+        safety: "Requires retained source/analysis PDFs, vector-store reference, selection lineage, and one bounded attempt."
+  - failure_code: "unsupported_material_claim"
+    owner: "report_generation"
+    severity: "error"
+    runbook_path: "docs/ops/top_failure_runbooks.md"
+    dashboard_link: "local://logs?event=remediation_failure_recorded"
+    alert_labels:
+      stage: "editorial_validation"
+      family: "insights_final"
+    detector_log_events:
+      - "remediation_failure_recorded"
+    remediation_hooks:
+      - name: "bounded_material_claim_family_recovery"
+        trigger: "feature_gated_automatic"
+        dry_run: true
+        command: "python -m src.cli remediation-reap"
+        safety: "Requires an analysis checkpoint with independently materialized insight and validation lineage; only the affected family may call a model."
+  - failure_code: "final_html_internal_identifier"
+    owner: "report_generation"
+    severity: "error"
+    runbook_path: "docs/ops/top_failure_runbooks.md"
+    dashboard_link: "local://logs?event=remediation_failure_recorded"
+    alert_labels:
+      stage: "render"
+      family: "rendered_html"
+    detector_log_events:
+      - "remediation_failure_recorded"
+    remediation_hooks:
+      - name: "bounded_html_render_recovery"
+        trigger: "feature_gated_automatic"
+        dry_run: true
+        command: "python -m src.cli remediation-reap"
+        safety: "Requires validated analysis/artifact/validation lineage; rerenders and revalidates without source, vector, or model work."
+  - failure_code: "missing_report_card_manifest"
+    owner: "report_generation"
+    severity: "error"
+    runbook_path: "docs/ops/top_failure_runbooks.md"
+    dashboard_link: "local://logs?event=remediation_failure_recorded"
+    alert_labels:
+      stage: "report_cards"
+      family: "rendered_html"
+    detector_log_events:
+      - "remediation_failure_recorded"
+    remediation_hooks:
+      - name: "bounded_report_card_manifest_recovery"
+        trigger: "feature_gated_automatic"
+        dry_run: true
+        command: "python -m src.cli remediation-reap"
+        safety: "Requires validated analysis/artifact/validation lineage; rebuilds card assets and manifest without a source or model replay."
+  - failure_code: "wordpress_readback_failed"
+    owner: "publishing"
+    severity: "warning"
+    runbook_path: "docs/ops/top_failure_runbooks.md"
+    dashboard_link: "local://logs?event=wp_post_lookup_start"
+    alert_labels:
+      stage: "wordpress_readback"
+      family: "publication"
+    detector_log_events:
+      - "wp_post_lookup_start"
+    remediation_hooks:
+      - name: "bounded_wordpress_readback_reconciliation"
+        trigger: "feature_gated_automatic"
+        dry_run: true
+        command: "python -m src.cli remediation-reap"
+        safety: "Requires publication-preflight and idempotency proof; performs only an authenticated GET lookup and never writes WordPress."
   - failure_code: "pdf_text_unextractable"
     owner: "pipeline"
     severity: "warning"

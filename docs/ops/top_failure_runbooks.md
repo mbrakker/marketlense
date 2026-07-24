@@ -46,3 +46,23 @@ Remediation hook:
 ```powershell
 python -m src.cli discover-publisher-inventory "https://example.com/insights"
 ```
+## Failure-specific checkpoint recovery
+
+Use `python -m src.cli remediations` to inspect the durable row, then run
+`python -m src.cli remediation-reap` only when
+`workflow_control.remediation_reaper.execution_enabled` is explicitly enabled.
+The reaper accepts no untyped or proof-free restart and consumes one durable
+attempt only.
+
+| Failure code | Safe recovery | Never do |
+| --- | --- | --- |
+| `taxonomy_invalid_json`, `taxonomy_schema_invalid` | Resume after the retained `selection_complete` checkpoint; reuse source PDFs and the existing vector store. | Reparse the source or create another vector store. |
+| `category_fit_contradiction` | Resume category-fit work from retained selection/vector evidence. | Regenerate unrelated editorial families. |
+| `unsupported_material_claim` | Regenerate the independently materialized affected insights/claim family, run its required validation, then render. | Broadly regenerate taxonomy, evidence packs, or unrelated artifacts. |
+| `final_html_internal_identifier` | Rerender and revalidate from `analysis_complete`. | Call an LLM, parse a PDF, or publish. |
+| `missing_report_card_manifest` | Rebuild card assets/manifest from `analysis_complete`, then render validation. | Re-run source/analysis/model work. |
+| `wordpress_readback_failed` | Perform the authenticated GET-only post lookup/reconciliation. | Repeat a WordPress write. |
+
+If checkpoint lineage, artifact references, admission identity, budget, or the
+one-attempt bound cannot be proven, the row is held or terminates with its
+typed fallback. Preserve the row; do not edit its checkpoint or reset attempts.

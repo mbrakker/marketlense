@@ -116,6 +116,7 @@ Generated from CLI registrations, configuration example, architecture policy, or
 - `reap-ui-dead-letters`
 - `recategorize`
 - `remediation-opportunities`
+- `remediation-reap`
 - `remediation-soak`
 - `remediations`
 - `replay-run`

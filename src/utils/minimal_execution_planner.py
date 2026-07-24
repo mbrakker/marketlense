@@ -524,6 +524,34 @@ def plan_minimal_execution(
                     reason=f"{kind}:{detail}" if detail else kind,
                 )
 
+    forced = {
+        str(family).strip(): str(reason).strip() or "typed_failure"
+        for family, reason in input_value.forced_invalidations.items()
+        if str(family).strip()
+    }
+    for family, reason in sorted(forced.items()):
+        matched = False
+        for artifact in artifacts:
+            if artifact.artifact_id not in relevant_artifact_ids:
+                continue
+            if family not in {artifact.artifact_kind, _family_for(artifact)}:
+                continue
+            matched = True
+            invalid_by_id[artifact.artifact_id] = ArtifactInvalidation(
+                artifact_id=artifact.artifact_id,
+                artifact_kind=artifact.artifact_kind,
+                artifact_family=_family_for(artifact),
+                reason=f"typed_failure:{reason}",
+            )
+        if not matched:
+            blockers_by_id[(f"forced:{family}", "missing_forced_artifact")] = (
+                MissingLineageBlocker(
+                    artifact_id=f"forced:{family}",
+                    artifact_kind=family,
+                    reason="missing_forced_artifact",
+                )
+            )
+
     queue = sorted(invalid_by_id)
     while queue:
         dependency = queue.pop(0)
@@ -586,11 +614,15 @@ def plan_minimal_execution(
             publication_prerequisites.append("validated_rendered_html_invalid")
         if blockers:
             publication_prerequisites.append("lineage_complete_required")
-    required_prompt_family_set = {
-        item.artifact_family
-        for item in invalid
-        if item.artifact_kind.startswith("prompt_family:")
-    }
+    required_prompt_family_set = (
+        set()
+        if intent == "render_repair"
+        else {
+            item.artifact_family
+            for item in invalid
+            if item.artifact_kind.startswith("prompt_family:")
+        }
+    )
     artifact_prompt_family_prefix = "report_vs/artifacts/"
     validation_prompt_families = {
         "report_vs/validate/grounding",
