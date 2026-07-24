@@ -47,6 +47,7 @@ def _legacy_chat_completion_call(
     temperature: float,
     seed: int | None,
     max_output_tokens: int | None,
+    response_format: dict[str, Any],
 ) -> _ChatCompletionRun:
     # Compatibility path for environments where OpenAI client instantiation
     # fails (e.g., unexpected kwargs like proxies in older dependencies).
@@ -77,7 +78,7 @@ def _legacy_chat_completion_call(
         if max_output_tokens is not None:
             payload_args["max_completion_tokens"] = max_output_tokens
         try:
-            payload_args["response_format"] = {"type": "json_object"}
+            payload_args["response_format"] = response_format
             resp = legacy_openai.ChatCompletion.create(**payload_args)
         except TypeError:
             payload_args.pop("response_format", None)
@@ -120,6 +121,7 @@ def _modern_chat_completion_call(
     temperature: float,
     seed: int | None,
     max_output_tokens: int | None,
+    response_format: dict[str, Any],
 ) -> _ChatCompletionRun:
     client_factory = _openai_client_factory()
     if client_factory is None:
@@ -134,7 +136,7 @@ def _modern_chat_completion_call(
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ],
-        "response_format": {"type": "json_object"},
+        "response_format": response_format,
     }
     payload_args.update(
         _chat_completion_model_kwargs(model=model, temperature=temperature, seed=seed)
@@ -172,6 +174,7 @@ def _run_chat_completion(
     temperature: float,
     seed: int | None,
     max_output_tokens: int | None,
+    response_format: dict[str, Any],
 ) -> _ChatCompletionRun:
     try:
         return _modern_chat_completion_call(
@@ -183,6 +186,7 @@ def _run_chat_completion(
             temperature=temperature,
             seed=seed,
             max_output_tokens=max_output_tokens,
+            response_format=response_format,
         )
     except TypeError:
         return _legacy_chat_completion_call(
@@ -194,7 +198,19 @@ def _run_chat_completion(
             temperature=temperature,
             seed=seed,
             max_output_tokens=max_output_tokens,
+            response_format=response_format,
         )
+
+
+def _response_format_for_request(request: OpenAIJSONPromptRequest) -> dict[str, Any]:
+    schema = request.structured_output_schema
+    identity = str(request.structured_output_schema_identity or "").strip()
+    if isinstance(schema, dict) and schema and identity:
+        return {
+            "type": "json_schema",
+            "json_schema": {"name": identity[:64], "strict": True, "schema": schema},
+        }
+    return {"type": "json_object"}
 
 
 def analyze_report(
@@ -235,6 +251,7 @@ def analyze_report(
             temperature=request.temperature,
             seed=request.seed,
             max_output_tokens=request.max_output_tokens,
+            response_format={"type": "json_object"},
         )
         payload = run.payload
         request_id = run.request_id
@@ -411,6 +428,7 @@ def openai_chat_json(
         operation="openai_chat_json",
         logger=logger,
     )
+    response_format = _response_format_for_request(request)
     logger.info(
         log_event(
             ctx,
@@ -434,7 +452,8 @@ def openai_chat_json(
             "temperature": request.temperature,
             "seed": request.seed,
             "max_output_tokens": request.max_output_tokens,
-            "response_format": "json_object",
+            "response_format": str(response_format.get("type") or "json_object"),
+            "structured_output_schema_identity": request.structured_output_schema_identity,
         },
     )
     if cache_spec is not None:
@@ -464,6 +483,7 @@ def openai_chat_json(
             temperature=request.temperature,
             seed=request.seed,
             max_output_tokens=request.max_output_tokens,
+            response_format=response_format,
         )
         metadata = _adapt_chat_completion_metadata(run)
     except OPENAI_REQUEST_EXCEPTIONS as exc:

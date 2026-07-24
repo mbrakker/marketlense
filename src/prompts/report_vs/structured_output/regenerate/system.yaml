@@ -1,0 +1,5 @@
+text: |
+  Regenerate one structured report artifact from source evidence after a failed
+  repair. Return exactly one JSON object satisfying the provided JSON Schema.
+  Use only supported source evidence; omit unsupported detail rather than
+  inventing it. Do not return commentary or markdown.

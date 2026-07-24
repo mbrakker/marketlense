@@ -24,10 +24,10 @@ from src.contracts.prompts import (
 from src.contracts.report_store import ReportMetadataGetResponse
 from src.contracts.run_context import RunContext
 from src.generators.context_category_fit_generator import (
-    _response_json_object,
     fit_report_categories_from_context,
 )
 from src.generators.report_context_generator import build_report_category_context
+from src.utils.json_recovery import parse_json_from_text
 
 
 def _ctx() -> RunContext:
@@ -89,18 +89,14 @@ class RecordingOpenAIClient:
         )
 
 
-def test_response_json_object_recovers_fenced_provider_json() -> None:
-    response = OpenAIResponseResult(
-        schema_version="1.0",
-        text='```json\n{"selected_category_ids":["retail"]}\n```',
-        parsed_json=None,
-        input_tokens=0,
-        output_tokens=0,
-        tool_calls=0,
-        model="test-model",
+def test_shared_json_recovery_parses_fenced_provider_json() -> None:
+    payload, strategy = parse_json_from_text(
+        '```json\n{"selected_category_ids":["retail"]}\n```',
+        accepted_types=(dict,),
     )
 
-    assert _response_json_object(response) == {"selected_category_ids": ["retail"]}
+    assert payload == {"selected_category_ids": ["retail"]}
+    assert strategy in {"fence", "direct_extracted"}
 
 
 def _execution_policies() -> dict[str, dict[str, object]]:

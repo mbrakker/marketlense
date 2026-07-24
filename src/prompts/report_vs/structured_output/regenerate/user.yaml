@@ -1,0 +1,7 @@
+text: |
+  Artifact family: {{ artifact_family }}
+  Previous repair errors: {{ schema_errors }}
+  Source evidence/context JSON: {{ source_evidence_json }}
+  Required JSON Schema: {{ output_schema_json }}
+
+  Return the regenerated JSON object only.

@@ -1,0 +1,8 @@
+text: |
+  Artifact family: {{ artifact_family }}
+  Exact validation errors: {{ schema_errors }}
+  Prior response (untrusted): {{ original_response }}
+  Source evidence/context JSON: {{ source_evidence_json }}
+  Required JSON Schema: {{ output_schema_json }}
+
+  Return the repaired JSON object only.

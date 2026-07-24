@@ -1,6 +1,6 @@
 # Consolidated TODO
 
-Last audited: 2026-07-23
+Last audited: 2026-07-24
 
 This is the repository's single, source-neutral work register. Every task is evaluated by its current codebase evidence and project decision—not by where it was first proposed. Equivalent tasks are merged under one owner; deferred, closed, and excluded work stays visible in the same register.
 
@@ -54,6 +54,7 @@ All work is listed below in one register. `Active` items have detailed completio
 | Active | P8 | Complete concise public evidence, methodology, and related-content surfaces | Public evidence/discovery outcome. |
 | Active | E6 | Retain a hash-pinned claim-embedding benchmark export | Semantic benchmark coverage outcome. |
 | Active | E10 | Attest active model-pricing rates before they become stale | Keep cost attribution and spend enforcement trustworthy as provider pricing changes. |
+| Active | E11 | Measure and optimize structured-output recovery effectiveness | Turn central recovery-attempt telemetry into bounded quality and cost improvements. |
 | Active | E8 | Use canonical source identity to suppress duplicate research work | Canonical source identity reuse outcome. |
 | Active | E9 | Materialize prompt-family outputs and route only their required model calls | Prompt-family repair and model-call reduction outcome. |
 | Closed | E3 | Lineage-driven minimum regeneration | Remains closed; E7 owns expansion beyond the proven rendered-HTML family. |
@@ -91,6 +92,7 @@ All work is listed below in one register. `Active` items have detailed completio
 
 ## Recently Closed
 
+- **Task 4 — Unified structured-output recovery (2026-07-24):** All required report JSON families now use one typed, schema-constrained execution service: document map, taxonomy, category fit, evidence packs, report artifacts, cover semantics, and semantic/grounding validation. It normalizes Unicode/fences, parses deterministically, validates and normalizes the canonical schema, performs one deterministic repair, one original-response/exact-error model repair, one source-evidence regeneration, then records either an explicit downstream-contract abstention or a typed terminal failure. Each attempt retains report/family, attempt, error class, provider/model, tokens, cost, and final disposition; empty output cannot become a successful artifact. Existing retained Stocksy empty document-map/taxonomy artifacts are covered by regression tests. A real fixed Drive cohort initially exposed two OpenAI strict-schema incompatibilities (`oneOf` and persisted-only fields); the provider projection now converts disjoint unions to `anyOf` and omits storage-owned fields while canonical validation remains unchanged. The same cohort then completed discovery through ingestion and rendering with real model calls, validation, targeted recovery/regeneration, one draft WordPress write/readback, and a zero-write idempotent repeat.
 - **Task 3 — Deterministic admission preflight (2026-07-24):** A typed, versioned preflight now gates every acquired source before vector-store creation, evidence generation, OCR, or editorial model work. It deterministically records supported-PDF and readable-structure checks, native-text and configured size/page thresholds, exact duplicate identity and near-title signal, quarantine, source/publisher/title/URL identity, evidence-family potential, canonical runtime dependencies/paths, model-policy coverage, and a budget forecast. The retained decision hash and bounded input summary are persisted both in the admission funnel and fixed cohort manifest; rejected sources remain visible in that funnel but are skipped and excluded from the ingest-reliability denominator. A fresh 24-page, 8.31 MB live Drive source was admitted with a `0.008281 USD` forecast, completed the full report pipeline, and its controlled WordPress draft creation and strict idempotent repeat passed with no second write. Focused admission-to-publication regression coverage passed (146 tests).
 - **P13 — Authoritative WordPress file-ID lookup (2026-07-23):** The canonical authenticated lookup now validates each returned post against immutable `ml_file_id`/content provenance and fails closed if more than one active post matches. A fresh isolated-state one-report canary matched an existing remote post without a local publish-idempotency record, performed zero WordPress writes, completed authenticated readback, recorded a reused repeat publication, and passed full validation-manifest closure. Focused ambiguity/no-write coverage and the full suite passed.
 - **P0/P1 remediation and sandbox end-to-end validation (2026-07-20):** The canonical runtime/path/policy and public-editorial remediation package was exercised against an isolated real-report namespace. The final recovery makes a missing report-card manifest invalidate render reuse, rebuilds the required assets/manifest, and treats blocked public metadata as a typed render error. Optional card placeholders now normalize to omission rather than leaking or blocking valid public cards; `--force-report-cards` requests the analysis checkpoint only for an existing rendered package, while new files take the normal pipeline. The 60-minute report-analysis lease and spend-only budget profile were active. A five-report live Drive cohort completed in 46.23 minutes; every package passed semantic and editorial validation and had all three card assets. Canonical sandbox publication created three new posts, reused two existing posts, and a repeat made zero new writes through durable idempotency. The affected regression suite passed 122 tests; the isolated ledger recorded 159 completed LLM calls, 1,883,341 tokens, and $1.152941 estimated spend, below the $6 cap.
@@ -336,6 +338,20 @@ The original ten-item screenshot baseline is complete in the committed implement
 - A bounded read-only check reports active, expiring, stale, held, and missing route rates against configured production routes with version/source metadata only.
 - Operator acknowledgement creates a reviewed rate-card transition with before/after estimates for recent canonical usage; activation remains an explicit configuration change.
 - Tests prove unknown, expired, held, and changed-rate routes cannot silently bypass canonical spend authority.
+
+#### E11. Measure and optimize structured-output recovery effectiveness
+
+- **Title:** Measure and optimize structured-output recovery effectiveness
+- **Impact 5 / effort: 2**
+- **Context:** The shared recovery service records each attempt, but operators do not yet have a compatible-cohort view of first-pass success, repair and regeneration use, abstentions, terminal failures, latency, tokens, and cost. Task 4's live validation showed that this view would surface provider-schema compatibility problems before they affect a cohort.
+- **Benefit:** Identify the highest-value schema, prompt, and provider fixes that improve first-pass validity and lower repair/regeneration cost without weakening schema or abstention contracts.
+- **Risks to avoid:** Aggregate only bounded metadata and never raw prompts, evidence, or model responses. Group by compatible artifact schema, provider, model, and policy versions. Produce operator recommendations and alerts only; do not automatically change routing, prompts, or failure policy.
+- **Success criteria:**
+
+- A read-only report groups compatible runs by artifact family and reports first-pass success, deterministic-repair success, model-repair success, regeneration success, abstention, terminal failure, latency, tokens, and cost.
+- The report identifies the dominant classified error classes and provider-schema incompatibilities without exposing retained content.
+- Configurable alert thresholds create actionable operator findings, not automatic behavior changes.
+- A retained and live cohort demonstrate a material first-pass-validity or recovery-cost improvement driven by a measured finding.
 
 #### E8. Use canonical source identity to suppress duplicate research work
 

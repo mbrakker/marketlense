@@ -1,11 +1,20 @@
 from __future__ import annotations
 
 import json
+import re
+import unicodedata
 from typing import Any
 
 
+def normalize_json_text(text: str) -> str:
+    """Normalize provider JSON transport quirks without changing JSON semantics."""
+
+    normalized = unicodedata.normalize("NFC", str(text or ""))
+    return normalized.lstrip("\ufeff").replace("\u00a0", " ").strip()
+
+
 def strip_json_fence(text: str) -> str:
-    stripped = (text or "").strip()
+    stripped = normalize_json_text(text)
     if not stripped.startswith("```"):
         return stripped
     lines = stripped.splitlines()
@@ -18,7 +27,7 @@ def strip_json_fence(text: str) -> str:
 
 
 def extract_json_value(text: str) -> str:
-    source = (text or "").strip()
+    source = normalize_json_text(text)
     start = -1
     for idx, ch in enumerate(source):
         if ch in {"{", "["}:
@@ -62,7 +71,7 @@ def parse_json_from_text(
     *,
     accepted_types: tuple[type[Any], ...],
 ) -> tuple[Any | None, str]:
-    raw = (text or "").strip()
+    raw = normalize_json_text(text)
     if not raw:
         return None, "empty"
     candidates: list[tuple[str, str]] = [("direct", raw)]
@@ -89,3 +98,26 @@ def parse_json_from_text(
             return parsed_extracted, f"{strategy}_extracted"
         return None, "json_non_object"
     return None, "invalid_json"
+
+
+def repair_json_once(text: str) -> tuple[str, str]:
+    """Apply one deliberately small, deterministic JSON repair attempt.
+
+    This runs only after regular parsing/extraction.  It corrects the two
+    transport defects observed in retained model responses (curly delimiters
+    and trailing commas) and never attempts to infer missing values or close
+    incomplete structures.
+    """
+
+    candidate = strip_json_fence(text)
+    extracted = extract_json_value(candidate)
+    if extracted:
+        candidate = extracted
+    repaired = (
+        candidate.replace("\u201c", '"')
+        .replace("\u201d", '"')
+        .replace("\u2018", "'")
+        .replace("\u2019", "'")
+    )
+    repaired = re.sub(r",\s*([}\]])", r"\1", repaired)
+    return repaired, "deterministic_json_repair"

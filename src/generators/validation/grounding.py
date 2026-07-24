@@ -4,12 +4,19 @@ import json
 import re
 from typing import Any, List, Sequence
 
-from src.contracts.openai import OpenAIJSONPromptRequest, OpenAIResponseRequest
+from src.contracts.schema_validation import SchemaValidateRequest
+from src.contracts.structured_output import StructuredOutputExecutionRequest
 from src.contracts.validation import ValidationIssue, ValidationRequest
-from src.generators.prompt_preparation import (
-    model_request_identity_fields,
-    prepare_prompt_bundle,
+from src.generators.prompt_preparation import prepare_prompt_bundle
+from src.generators.structured_output_execution import (
+    invoke_structured_output_model,
+    recovery_prompt_bundle,
 )
+from src.services.schema_validator_service import (
+    provider_output_schema,
+    validate_schema,
+)
+from src.services.structured_output_service import execute_structured_output
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 from src.utils.quantity import extract_quantities
@@ -137,60 +144,74 @@ def run_grounding_check(
         )
     )
     try:
-        if grounding_use_vector_store:
-            response = openai_client.openai_respond_with_vector_store(
-                OpenAIResponseRequest(
-                    schema_version="1.0",
-                    system_prompt=prompt_bundle.system_prompt,
-                    user_prompt=prompt_bundle.user_prompt,
-                    vector_store_id=request.vector_store_id or "",
-                    model=prompt_bundle.resolved_model,
-                    temperature=prompt_bundle.effective_temperature,
-                    api_key=settings.openai_api_key,
-                    seed=prompt_bundle.effective_seed,
-                    timeout_seconds=prompt_bundle.effective_timeout_seconds,
-                    cost_ledger_path=settings.cost_ledger_path,
-                    cost_daily_path=settings.cost_daily_path,
-                    usage_db_path=str(
-                        getattr(settings, "usage_db_path", "./state/llm_usage.sqlite")
+        output_schema = provider_output_schema("grounding_validation_output")
+
+        def call_model(mode: str, original_response: str, schema_errors: str):
+            bundle = prompt_bundle
+            if mode != "primary":
+                bundle = recovery_prompt_bundle(
+                    mode=mode,
+                    artifact_family="validation_grounding",
+                    schema_errors=schema_errors,
+                    original_response=original_response,
+                    output_schema=output_schema,
+                    source_evidence={
+                        "report_json": prompt_vars["report_json"],
+                        "evidence_json": prompt_vars["evidence_json"],
+                    },
+                    settings=settings,
+                    ctx=prompt_ctx,
+                    prompt_client=prompt_client,
+                    vector_store_id=(
+                        request.vector_store_id if grounding_use_vector_store else None
                     ),
-                    model_pricing=settings.model_pricing,
-                    publisher_name=request.publisher_name,
-                    report_name=request.report_name,
-                    source_url=request.source_url,
-                    prompt_namespace=prompt_namespace,
-                    **model_request_identity_fields(prompt_bundle),
+                )
+            return invoke_structured_output_model(
+                openai_client=openai_client,
+                prompt_bundle=bundle,
+                settings=settings,
+                ctx=prompt_ctx,
+                vector_store_id=(
+                    request.vector_store_id if grounding_use_vector_store else None
+                ),
+                report_id=str(request.report_id),
+                artifact_family="validation_grounding",
+                stage=f"validation_grounding_{mode}",
+                publisher_name=request.publisher_name,
+                report_name=request.report_name,
+                source_url=request.source_url,
+                output_schema=output_schema,
+                output_schema_identity="grounding_validation_output_v1",
+                repair_attempt={"primary": 0, "model_repair": 1, "regeneration": 2}[mode],
+            )
+
+        recovery = execute_structured_output(
+            StructuredOutputExecutionRequest(
+                schema_version="1.0",
+                report_id=str(request.report_id),
+                artifact_family="validation_grounding",
+                schema_name="grounding_validation_output",
+                model=prompt_bundle.resolved_model,
+                terminal_failure_code="validation_grounding_invalid_json",
+            ),
+            prompt_ctx,
+            call_model=call_model,
+            normalize_payload=lambda payload: dict(payload)
+            if isinstance(payload, dict)
+            else payload,
+            validate_payload=lambda payload: validate_schema(
+                SchemaValidateRequest(
+                    schema_version="1.0",
+                    payload=payload,
+                    schema_name="grounding_validation_output",
                 ),
                 prompt_ctx,
-            )
-        else:
-            response = openai_client.openai_chat_json(
-                OpenAIJSONPromptRequest(
-                    schema_version="1.0",
-                    system_prompt=prompt_bundle.system_prompt,
-                    user_prompt=prompt_bundle.user_prompt,
-                    model=prompt_bundle.resolved_model,
-                    temperature=prompt_bundle.effective_temperature,
-                    api_key=settings.openai_api_key,
-                    seed=prompt_bundle.effective_seed,
-                    timeout_seconds=prompt_bundle.effective_timeout_seconds,
-                    cost_ledger_path=settings.cost_ledger_path,
-                    cost_daily_path=settings.cost_daily_path,
-                    usage_db_path=str(
-                        getattr(settings, "usage_db_path", "./state/llm_usage.sqlite")
-                    ),
-                    model_pricing=settings.model_pricing,
-                    publisher_name=request.publisher_name,
-                    report_name=request.report_name,
-                    source_url=request.source_url,
-                    prompt_namespace=prompt_namespace,
-                    **model_request_identity_fields(prompt_bundle),
-                ),
-                prompt_ctx,
-            )
-        unsupported: list[Any] = []
-        if isinstance(response.parsed_json, dict):
-            unsupported = response.parsed_json.get("unsupported") or []
+            ),
+            is_substantive=lambda payload: isinstance(payload, dict)
+            and "unsupported" in payload,
+            model_pricing=settings.model_pricing,
+        )
+        unsupported: list[Any] = recovery.payload.get("unsupported") or []
         logger.info(
             log_event(
                 prompt_ctx,
@@ -198,7 +219,7 @@ def run_grounding_check(
                 event="grounding_response",
                 module=LOGGER_NAME,
                 fields={
-                    "has_json": isinstance(response.parsed_json, dict),
+                    "has_json": True,
                     "unsupported_count": len(unsupported)
                     if isinstance(unsupported, list)
                     else 0,

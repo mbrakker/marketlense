@@ -89,6 +89,10 @@ def build_list_pack_strategy(
         source, cache_meta = _extract_wrapped_pack_payload(payload, root_key=root_key)
         root = source if isinstance(source, dict) else {}
         normalized = build_empty_payload("")
+        if isinstance(root, dict):
+            normalized["not_found_reason"] = str(
+                root.get("not_found_reason") or ""
+            ).strip()
         raw_value = root.get(root_key) if isinstance(source, dict) else source
         if raw_value is None:
             for alias in source_aliases:
@@ -133,6 +137,10 @@ def build_scalar_pack_strategy(
         source, cache_meta = _extract_wrapped_pack_payload(payload, root_key=root_key)
         root = source if isinstance(source, dict) else {}
         normalized = build_empty_payload("")
+        if isinstance(root, dict):
+            normalized["not_found_reason"] = str(
+                root.get("not_found_reason") or ""
+            ).strip()
         raw_value = root.get(root_key) if isinstance(source, dict) else source
         if raw_value is None:
             for alias in source_aliases:

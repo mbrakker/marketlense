@@ -130,19 +130,33 @@ every visible status, including drafts, so a repeat can verify and reuse a
 sandbox-draft post without creating a duplicate. A cohort's initial creation
 also reads its exact returned post ID before its outcome is recorded.
 
-Taxonomy, context-category, and cover-semantics JSON are schema constrained,
-deterministically parsed and normalized, then given exactly one source-backed
-structured-output repair when their first response is invalid. A primary or
-secondary category candidate without a matched canonical inclusion rule is
-ambiguous: it triggers one category-only semantic reclassification rather than
-being silently withheld. That reclassification receives only the declared
-ambiguous candidate IDs and cannot introduce another category; its retained
-decision payload is evidence for the category decision. An exhausted repair
-remains a typed failure; it never becomes an empty successful analysis package.
-A response with no category candidates likewise triggers that one repair and
-then fails closed. By contrast, an all-rejected, schema-valid candidate set is
-an explicit uncategorized outcome: it is not mistaken for an empty model
-response. The canonical Technology & Innovation
+All required model-generated JSON artifacts use
+`structured_output_service`, including document maps, taxonomy, report context
+category fit, evidence packs (findings, methods, limitations, scope and quote
+candidates), report artifacts (summary, insights, expert commentary, LinkedIn
+material and cover semantics), and model-backed grounding and semantic
+validation output. The service requests provider JSON Schema constraints when
+the endpoint supports them, then applies Unicode and fence normalization,
+deterministic extraction/parsing, contract normalization, one deterministic
+JSON repair, one model repair using the original response plus exact errors,
+and one source-evidence regeneration. Every attempt writes a bounded audit
+event with report ID, artifact family, attempt, error class, provider/model,
+token/cost usage, and disposition. Empty or malformed output cannot be stored
+as a successful artifact. A schema-valid explicit insufficient-evidence result
+may abstain only for a downstream family contract that represents abstention;
+required non-abstainable families finish as a typed permanent failure when the
+bounded sequence is exhausted.
+
+A primary or secondary category candidate without a matched canonical
+inclusion rule is ambiguous: it triggers one category-only semantic
+reclassification rather than being silently withheld. That reclassification
+receives only the declared ambiguous candidate IDs and cannot introduce
+another category; its retained decision payload is evidence for the category
+decision. An exhausted recovery remains a typed failure; it never becomes an
+empty successful analysis package. A response with no category candidates
+likewise triggers the bounded recovery and then fails closed. By contrast, an
+all-rejected, schema-valid candidate set is an explicit uncategorized outcome:
+it is not mistaken for an empty model response. The canonical Technology & Innovation
 rules explicitly cover reports whose dominant subject is immersive experiences,
 spatial computing, virtual worlds, or Metaverse technology.
 

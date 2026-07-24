@@ -5,13 +5,20 @@ import json
 from typing import Any, Dict, List, Sequence
 
 from src.contracts.config import AppSettings
-from src.contracts.openai import OpenAIJSONPromptRequest
 from src.contracts.run_context import RunContext
+from src.contracts.schema_validation import SchemaValidateRequest
+from src.contracts.structured_output import StructuredOutputExecutionRequest
 from src.contracts.validation import ValidationIssue
-from src.generators.prompt_preparation import (
-    model_request_identity_fields,
-    prepare_prompt_bundle,
+from src.generators.prompt_preparation import prepare_prompt_bundle
+from src.generators.structured_output_execution import (
+    invoke_structured_output_model,
+    recovery_prompt_bundle,
 )
+from src.services.schema_validator_service import (
+    provider_output_schema,
+    validate_schema,
+)
+from src.services.structured_output_service import execute_structured_output
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 
@@ -34,6 +41,7 @@ def run_semantic_rule(runtime: ValidationRuntime) -> List[ValidationIssue]:
         publisher_name=runtime.request.publisher_name,
         report_name=runtime.request.report_name,
         source_url=runtime.request.source_url,
+        report_id=str(runtime.request.report_id),
     )
     runtime.semantic_outcome = outcome
     return outcome.issues
@@ -50,6 +58,7 @@ def run_semantic_validation(
     publisher_name: str = "",
     report_name: str = "",
     source_url: str = "",
+    report_id: str = "",
 ) -> SemanticCheckOutcome:
     if not evidence_texts or (not insights and not quotes):
         return SemanticCheckOutcome(metric_support={}, quote_support={}, issues=[])
@@ -68,6 +77,7 @@ def run_semantic_validation(
         )
     )
     prompt_namespace = "report_vs/validate/semantic"
+    resolved_report_id = str(report_id or report_name)
     payload = semantic_payload(insights, quotes)
     prompt_vars = {
         "metrics_json": json.dumps(payload["metrics"], ensure_ascii=False),
@@ -153,33 +163,68 @@ def run_semantic_validation(
         )
     )
     try:
-        response = openai_client.openai_chat_json(
-            OpenAIJSONPromptRequest(
-                schema_version="1.0",
-                system_prompt=prompt_bundle.system_prompt,
-                user_prompt=prompt_bundle.user_prompt,
-                model=prompt_bundle.resolved_model,
-                temperature=prompt_bundle.effective_temperature,
-                api_key=settings.openai_api_key,
-                seed=prompt_bundle.effective_seed,
-                timeout_seconds=prompt_bundle.effective_timeout_seconds,
-                cost_ledger_path=settings.cost_ledger_path,
-                cost_daily_path=settings.cost_daily_path,
-                usage_db_path=str(
-                    getattr(settings, "usage_db_path", "./state/llm_usage.sqlite")
-                ),
-                model_pricing=settings.model_pricing,
+        output_schema = provider_output_schema("semantic_validation_output")
+
+        def call_model(mode: str, original_response: str, schema_errors: str):
+            bundle = prompt_bundle
+            if mode != "primary":
+                bundle = recovery_prompt_bundle(
+                    mode=mode,
+                    artifact_family="validation_semantic",
+                    schema_errors=schema_errors,
+                    original_response=original_response,
+                    output_schema=output_schema,
+                    source_evidence=prompt_vars,
+                    settings=settings,
+                    ctx=semantic_ctx,
+                    prompt_client=prompt_client,
+                    vector_store_id=None,
+                )
+            return invoke_structured_output_model(
+                openai_client=openai_client,
+                prompt_bundle=bundle,
+                settings=settings,
+                ctx=semantic_ctx,
+                vector_store_id=None,
+                report_id=resolved_report_id,
+                artifact_family="validation_semantic",
+                stage=f"validation_semantic_{mode}",
                 publisher_name=publisher_name,
                 report_name=report_name,
                 source_url=source_url,
-                prompt_namespace=prompt_namespace,
-                **model_request_identity_fields(prompt_bundle),
+                output_schema=output_schema,
+                output_schema_identity="semantic_validation_output_v1",
+                repair_attempt={"primary": 0, "model_repair": 1, "regeneration": 2}[mode],
+            )
+
+        recovery = execute_structured_output(
+            StructuredOutputExecutionRequest(
+                schema_version="1.0",
+                report_id=resolved_report_id,
+                artifact_family="validation_semantic",
+                schema_name="semantic_validation_output",
+                model=prompt_bundle.resolved_model,
+                terminal_failure_code="validation_semantic_invalid_json",
             ),
             semantic_ctx,
+            call_model=call_model,
+            normalize_payload=lambda payload: dict(payload)
+            if isinstance(payload, dict)
+            else payload,
+            validate_payload=lambda payload: validate_schema(
+                SchemaValidateRequest(
+                    schema_version="1.0",
+                    payload=payload,
+                    schema_name="semantic_validation_output",
+                ),
+                semantic_ctx,
+            ),
+            is_substantive=lambda payload: isinstance(payload, dict)
+            and "metrics" in payload
+            and "quotes" in payload,
+            model_pricing=settings.model_pricing,
         )
-        parsed = (
-            response.parsed_json if isinstance(response.parsed_json, dict) else None
-        )
+        parsed = recovery.payload
         logger.info(
             log_event(
                 semantic_ctx,
@@ -188,8 +233,8 @@ def run_semantic_validation(
                 module=LOGGER_NAME,
                 fields={
                     "has_json": isinstance(parsed, dict),
-                    "input_tokens": response.input_tokens,
-                    "output_tokens": response.output_tokens,
+                    "attempt_count": recovery.attempts,
+                    "final_disposition": recovery.disposition,
                 },
             )
         )

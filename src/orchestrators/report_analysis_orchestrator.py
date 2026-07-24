@@ -89,7 +89,6 @@ from src.orchestrators._report_analysis_orchestrator.vector_store import (
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 from src.utils.run_budget import report_runtime_run_budget
-from src.utils.structured_output import StructuredOutputFailure
 
 __all__ = [
     "run_report_analysis",
@@ -190,55 +189,18 @@ def _resolve_taxonomy_with_repair(
     *,
     openai_client=None,
 ):
-    """Run taxonomy once, then one source-backed repair for output-contract failures."""
-    try:
-        return (
-            _resolve_taxonomy(
-                runtime,
-                mode_ctx,
-                vector_store_id,
-                dependencies,
-                openai_client=openai_client,
-            ),
-            False,
-        )
-    except AppError as exc:
-        if exc.code not in {"taxonomy_invalid_json", "taxonomy_schema_invalid"}:
-            raise
-        logger.info(
-            log_event(
-                mode_ctx,
-                role="orchestrator",
-                event="taxonomy_targeted_repair_started",
-                module=logger.name,
-                fields={
-                    "file_id": runtime.file.file_id,
-                    "error_code": exc.code,
-                    "repair_attempt": 1,
-                },
-            )
-        )
-        return (
-            _resolve_taxonomy(
-                runtime,
-                mode_ctx,
-                vector_store_id,
-                dependencies,
-                openai_client=openai_client,
-                repair_attempt=1,
-                repair_error=(
-                    exc.schema_errors
-                    if isinstance(exc, StructuredOutputFailure) and exc.schema_errors
-                    else exc.code
-                ),
-                repair_response=(
-                    exc.response_text
-                    if isinstance(exc, StructuredOutputFailure)
-                    else ""
-                ),
-            ),
-            True,
-        )
+    """Delegate the complete bounded taxonomy recovery sequence to its service."""
+
+    return (
+        _resolve_taxonomy(
+            runtime,
+            mode_ctx,
+            vector_store_id,
+            dependencies,
+            openai_client=openai_client,
+        ),
+        False,
+    )
 
 
 def run_report_analysis(
@@ -538,11 +500,6 @@ def run_report_analysis(
             )
     except AppError as exc:
         if exc.code not in {
-            "context_category_fit_invalid_json",
-            "context_category_fit_schema_invalid",
-            "openai_response_empty",
-            "openai_response_invalid_json",
-            "openai_response_json_type_invalid",
             "category_fit_empty",
             "category_fit_contradiction",
         }:
@@ -571,11 +528,7 @@ def run_report_analysis(
             openai_client=category_fit_openai_client,
             repair_attempt=1,
             repair_error=exc.code,
-            repair_response=(
-                exc.response_text
-                if isinstance(exc, StructuredOutputFailure)
-                else category_repair_response
-            ),
+            repair_response=category_repair_response,
             candidate_category_ids=category_reclassification_candidates,
         )
         category_repaired = True

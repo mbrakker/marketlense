@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 def test_generate_evidence_packs_generates_variety_packs_when_enabled(tmp_path):
     fake_openai = RoutedOpenAIClient(
         payloads_by_pack={
@@ -88,7 +89,7 @@ def test_generate_evidence_packs_generates_variety_packs_when_enabled(tmp_path):
     assert packs["recommendations"]["recommendations"][0]["id"] == "rec1"
     assert packs["contradictions"]["contradictions"][0]["id"] == "c1"
 
-def test_generate_evidence_packs_variety_pack_non_json_falls_back_with_reason(tmp_path):
+def test_generate_evidence_packs_variety_pack_non_json_terminally_fails(tmp_path):
     fake_openai = RoutedOpenAIClient(
         payloads_by_pack={
             "doc_map": {
@@ -102,22 +103,26 @@ def test_generate_evidence_packs_variety_pack_non_json_falls_back_with_reason(tm
             "key_metrics": "not-json",
         },
     )
-    packs = generate_evidence_packs(
-        report_id="r1",
-        report_name="report",
-        vector_store_id="vs_1",
-        settings=_settings(
-            tmp_path,
-            evidence_pack_registry=["doc_map", "key_metrics"],
-            evidence_pack_enable_new_variety_packs=True,
-        ),
-        ctx=_ctx(),
-        openai_client=fake_openai,
-        prompt_client=FakePromptClient(),
-        analysis_store=FakeAnalysisStore(),
-    )
-    assert packs["key_metrics"]["key_metrics"] == []
-    assert packs["key_metrics"]["not_found_reason"] == "model_returned_no_json"
+    analysis_store = FakeAnalysisStore()
+    with pytest.raises(AppError) as exc_info:
+        generate_evidence_packs(
+            report_id="r1",
+            report_name="report",
+            vector_store_id="vs_1",
+            settings=_settings(
+                tmp_path,
+                evidence_pack_registry=["doc_map", "key_metrics"],
+                evidence_pack_enable_new_variety_packs=True,
+            ),
+            ctx=_ctx(),
+            openai_client=fake_openai,
+            prompt_client=FakePromptClient(),
+            analysis_store=analysis_store,
+        )
+    assert exc_info.value.code == "evidence_pack_invalid_json"
+    stored_packs = [entry[1] for entry in analysis_store.stored]
+    assert "doc_map" in stored_packs
+    assert "key_metrics" not in stored_packs
 
 def test_strip_json_fence_requires_closing_fence():
     raw = '```json\n{"key":1}\n'
@@ -202,7 +207,7 @@ def test_load_cached_evidence_pack_normalizes_legacy_payload_before_validation(
 
 __all__ = [
     "test_generate_evidence_packs_generates_variety_packs_when_enabled",
-    "test_generate_evidence_packs_variety_pack_non_json_falls_back_with_reason",
+    "test_generate_evidence_packs_variety_pack_non_json_terminally_fails",
     "test_strip_json_fence_requires_closing_fence",
     "test_strip_json_fence_strips_allowed_json_fence",
     "test_resolve_pack_steps_prepends_doc_map_when_missing",

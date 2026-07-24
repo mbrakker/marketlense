@@ -569,6 +569,16 @@ class OpenAIResponseRequest:
         default="", metadata={"doc": "Producer build identity."}
     )
     repair_attempt: int = field(default=0, metadata={"doc": "Repair attempt number."})
+    structured_output_schema: Dict[str, Any] = field(
+        default_factory=dict,
+        metadata={
+            "doc": "Optional provider JSON Schema used when the selected endpoint supports constrained output."
+        },
+    )
+    structured_output_schema_identity: str = field(
+        default="",
+        metadata={"doc": "Stable identity for the constrained output schema."},
+    )
     same_provider_fallback: bool = field(
         default=False,
         metadata={
@@ -765,6 +775,16 @@ class OpenAIJSONPromptRequest:
     )
     repair_attempt: int = field(
         default=0, metadata={"doc": "Bounded structured-output repair attempt number."}
+    )
+    structured_output_schema: Dict[str, Any] = field(
+        default_factory=dict,
+        metadata={
+            "doc": "Optional provider JSON Schema used when the selected endpoint supports constrained output."
+        },
+    )
+    structured_output_schema_identity: str = field(
+        default="",
+        metadata={"doc": "Stable identity for the constrained output schema."},
     )
 
 

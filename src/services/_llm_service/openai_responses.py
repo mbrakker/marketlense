@@ -276,6 +276,15 @@ def openai_respond_with_vector_store(
             {"type": "file_search", "vector_store_ids": [request.vector_store_id]}
         ],
     }
+    if request.structured_output_schema and request.structured_output_schema_identity:
+        payload_args["text"] = {
+            "format": {
+                "type": "json_schema",
+                "name": str(request.structured_output_schema_identity)[:64],
+                "strict": True,
+                "schema": request.structured_output_schema,
+            }
+        }
     if request.max_output_tokens is not None:
         payload_args["max_output_tokens"] = request.max_output_tokens
     known_unsupported = _known_unsupported_responses_params(request.model)
@@ -347,17 +356,13 @@ def openai_respond_with_vector_store(
 
     metadata = _adapt_responses_metadata(resp, recover_json_object=True)
     parse_error_code = ""
-    parse_error_message = ""
     if metadata.parsed_json is None:
         if metadata.parse_strategy == "empty":
             parse_error_code = "openai_response_empty"
-            parse_error_message = "OpenAI response from vector store is empty"
         elif metadata.parse_strategy == "json_non_object":
             parse_error_code = "openai_response_json_type_invalid"
-            parse_error_message = "OpenAI response JSON must be an object"
         else:
             parse_error_code = "openai_response_invalid_json"
-            parse_error_message = "OpenAI response is not valid JSON"
 
     accounting = _record_usage_accounting(
         ctx=ctx,
@@ -403,23 +408,13 @@ def openai_respond_with_vector_store(
             error_stage="output_validation",
             error_code=parse_error_code,
         )
-        raise AppError(
-            code=parse_error_code,
-            message=parse_error_message,
-            retryable=False,
-            context={
-                "model": request.model,
-                "vector_store_id": request.vector_store_id,
-                "parse_strategy": metadata.parse_strategy,
-                "response_char_count": len(metadata.text or ""),
-            },
+    else:
+        _finalize_usage_accounting(
+            accounting=accounting,
+            ctx=ctx,
+            parse_status="valid",
+            schema_validation_status="valid",
         )
-    _finalize_usage_accounting(
-        accounting=accounting,
-        ctx=ctx,
-        parse_status="valid",
-        schema_validation_status="valid",
-    )
     result = OpenAIResponseResult(
         schema_version="1.0",
         text=metadata.text,

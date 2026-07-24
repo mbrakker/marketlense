@@ -61,7 +61,7 @@ def test_generate_evidence_packs_marks_optional_empty_pack_as_abstained(tmp_path
                         }
                     ],
                 },
-                "findings": {},
+                "findings": {"not_found_reason": "source_has_no_findings"},
             }
         ),
         prompt_client=FakePromptClient(),
@@ -71,7 +71,7 @@ def test_generate_evidence_packs_marks_optional_empty_pack_as_abstained(tmp_path
     assert packs["findings"]["findings"] == []
     assert packs["findings"]["family_status"]["status"] == "abstained"
     assert packs["findings"]["family_status"]["policy_action"] == "abstain"
-    assert packs["findings"]["family_status"]["reason"] == "insufficient_pack_content"
+    assert packs["findings"]["family_status"]["reason"] == "source_has_no_findings"
 
 
 def test_generate_evidence_packs_logs_prompt_observability_and_response_metadata(
@@ -147,12 +147,8 @@ def test_generate_evidence_packs_handles_missing_json(tmp_path):
             prompt_client=FakePromptClient(),
             analysis_store=analysis_store,
         )
-    assert exc_info.value.code == "doc_map_empty"
-    assert len(analysis_store.stored) == 1
-    stored_report_id, stored_pack, stored_payload = analysis_store.stored[0]
-    assert stored_report_id == "r1"
-    assert stored_pack == "doc_map"
-    assert stored_payload["not_found_reason"] == "model_returned_no_json"
+    assert exc_info.value.code == "doc_map_invalid_json"
+    assert len(analysis_store.stored) == 0
 
 
 def test_generate_evidence_packs_propagates_retryable_app_error(
@@ -205,23 +201,22 @@ def test_generate_evidence_packs_rejects_doc_map_with_only_doc_id(tmp_path):
     assert len(analysis_store.stored) == 1
 
 
-def test_generate_evidence_packs_does_not_retry_doc_map_inside_generator(tmp_path):
+def test_generate_evidence_packs_recovers_doc_map_once_inside_shared_service(tmp_path):
     fake_openai = RetryingDocMapClient()
     analysis_store = FakeAnalysisStore()
-    with pytest.raises(AppError) as exc_info:
-        generate_evidence_packs(
-            report_id="r1",
-            report_name="report",
-            vector_store_id="vs_1",
-            settings=_settings(tmp_path),
-            ctx=_ctx(),
-            openai_client=fake_openai,
-            prompt_client=FakePromptClient(),
-            analysis_store=analysis_store,
-        )
-    assert exc_info.value.code == "doc_map_empty"
-    assert fake_openai.call_count == 1
-    assert len(analysis_store.stored) == 1
+    packs = generate_evidence_packs(
+        report_id="r1",
+        report_name="report",
+        vector_store_id="vs_1",
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=fake_openai,
+        prompt_client=FakePromptClient(),
+        analysis_store=analysis_store,
+    )
+    assert packs["doc_map"]["doc_id"] == "d1"
+    assert fake_openai.call_count == 7
+    assert len(analysis_store.stored) == 6
 
 
 def test_generate_evidence_packs_parses_doc_map_json_from_text_fallback(tmp_path):
@@ -663,7 +658,7 @@ __all__ = [
     "test_generate_evidence_packs_handles_missing_json",
     "test_generate_evidence_packs_propagates_retryable_app_error",
     "test_generate_evidence_packs_rejects_doc_map_with_only_doc_id",
-    "test_generate_evidence_packs_does_not_retry_doc_map_inside_generator",
+    "test_generate_evidence_packs_recovers_doc_map_once_inside_shared_service",
     "test_generate_evidence_packs_parses_doc_map_json_from_text_fallback",
     "test_generate_evidence_packs_normalizes_docmap_wrapper",
     "test_generate_evidence_packs_normalizes_docmap_camelcase_wrapper",

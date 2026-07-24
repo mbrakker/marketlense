@@ -34,6 +34,8 @@ REPORT_GENERATION_NAMESPACES: tuple[str, ...] = (
     "report_vs/taxonomy_repair",
     "report_vs/context_category_fit",
     "report_vs/context_category_fit_repair",
+    "report_vs/structured_output/repair",
+    "report_vs/structured_output/regenerate",
 )
 
 # This is the finite production prompt/provider inventory. It is intentionally
@@ -72,6 +74,8 @@ PRODUCTION_LLM_NAMESPACES: tuple[str, ...] = (
     "report_vs/artifacts/summary",
     "report_vs/context_category_fit",
     "report_vs/context_category_fit_repair",
+    "report_vs/structured_output/repair",
+    "report_vs/structured_output/regenerate",
     "report_vs/doc_map",
     "report_vs/evidence_packs/contradictions",
     "report_vs/evidence_packs/findings",

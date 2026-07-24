@@ -13,22 +13,26 @@ from src.contracts.context_category_fit import (
     ContextCategoryFitResponse,
     ReportCategoryContext,
 )
-from src.contracts.openai import OpenAIJSONPromptRequest, OpenAIResponseResult
 from src.contracts.schema_validation import SchemaValidateRequest
 from src.contracts.semantic_ids import ReportId
-from src.generators.prompt_preparation import (
-    model_request_identity_fields,
-    prepare_prompt_bundle,
+from src.contracts.structured_output import StructuredOutputExecutionRequest
+from src.generators.prompt_preparation import prepare_prompt_bundle
+from src.generators.structured_output_execution import (
+    invoke_structured_output_model,
+    recovery_prompt_bundle,
 )
 from src.services import prompt_service
 from src.services.category_mapping_service import (
     load_mappings as load_category_mappings,
 )
-from src.services.schema_validator_service import validate_schema
+from src.services.schema_validator_service import (
+    provider_output_schema,
+    validate_schema,
+)
+from src.services.structured_output_service import execute_structured_output
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.model_client_contract import require_injected_model_client
-from src.utils.structured_output import StructuredOutputFailure
 
 logger = logging.getLogger("market_lense.context_category_fit_generator")
 
@@ -175,96 +179,88 @@ def fit_report_categories_from_context(
             },
         )
     )
-    try:
-        response: OpenAIResponseResult = openai_client.openai_chat_json(
-            OpenAIJSONPromptRequest(
-                schema_version="1.0",
-                system_prompt=prompt_bundle.system_prompt,
-                user_prompt=prompt_bundle.user_prompt,
-                model=prompt_bundle.resolved_model,
-                temperature=prompt_bundle.effective_temperature,
-                api_key=request.settings.openai_api_key,
-                seed=prompt_bundle.effective_seed,
-                max_output_tokens=prompt_bundle.effective_max_output_tokens,
-                timeout_seconds=prompt_bundle.effective_timeout_seconds,
-                cost_ledger_path=request.settings.cost_ledger_path,
-                cost_daily_path=request.settings.cost_daily_path,
-                usage_db_path=str(
-                    getattr(
-                        request.settings, "usage_db_path", "./state/llm_usage.sqlite"
-                    )
-                ),
-                model_pricing=request.settings.model_pricing,
-                publisher_name=request.publisher_name,
-                report_name=request.report_name,
-                source_url=request.source_url,
-                prompt_namespace=request.prompt_namespace,
-                report_id=str(request.context.report_id),
-                workflow="report_analysis",
-                stage=(
-                    "category_fit_repair" if request.repair_attempt else "category_fit"
-                ),
-                artifact_family="category_fit",
-                validation_run_id=str(getattr(ctx, "validation_run_id", "") or ""),
-                publisher_id=(
-                    request.publisher_name
-                    or str(getattr(ctx, "publisher_id", "") or "")
-                ),
-                configuration_hash=str(getattr(ctx, "configuration_hash", "") or ""),
-                policy_hash=str(getattr(ctx, "policy_hash", "") or ""),
-                repair_attempt=request.repair_attempt,
-                **model_request_identity_fields(prompt_bundle),
-            ),
-            ctx,
-        )
-    except AppError:
-        raise
-    except Exception as exc:  # pragma: no cover - defensive guard
-        raise AppError(
-            code="context_category_fit_failed",
-            message="Context-first category fit request failed",
-            cause=exc,
-            retryable=True,
-            context={"report_id": request.context.report_id},
-        ) from exc
+    output_schema = provider_output_schema("context_category_fit")
+    source_evidence = {
+        "report_context": _serialize_context(request.context),
+        "category_profiles": category_profiles,
+        "candidate_category_ids": list(declared_candidate_ids),
+    }
 
-    payload = _response_json_object(response)
-    if payload is None:
-        raise StructuredOutputFailure(
-            code="context_category_fit_invalid_json",
-            message="Context-first category fit returned no JSON object",
+    def call_model(mode: str, original_response: str, schema_errors: str):
+        bundle = prompt_bundle
+        if mode != "primary":
+            bundle = recovery_prompt_bundle(
+                mode=mode,
+                artifact_family="category_fit",
+                schema_errors=schema_errors,
+                original_response=original_response,
+                output_schema=output_schema,
+                source_evidence=source_evidence,
+                settings=request.settings,
+                ctx=ctx,
+                prompt_client=prompt_client,
+                vector_store_id=None,
+            )
+        return invoke_structured_output_model(
+            openai_client=openai_client,
+            prompt_bundle=bundle,
+            settings=request.settings,
+            ctx=ctx,
+            vector_store_id=None,
+            report_id=str(request.context.report_id),
             artifact_family="category_fit",
-            response_text=str(response.text or ""),
-            repair_attempt=request.repair_attempt,
+            stage=(
+                "category_fit_repair"
+                if request.repair_attempt or mode != "primary"
+                else "category_fit"
+            ),
+            publisher_name=request.publisher_name,
+            report_name=request.report_name,
+            source_url=request.source_url,
+            output_schema=output_schema,
+            output_schema_identity="context_category_fit_v1",
+            repair_attempt=(
+                request.repair_attempt
+                if mode == "primary" and request.repair_attempt
+                else {"primary": 0, "model_repair": 1, "regeneration": 2}[mode]
+            ),
         )
-    payload = _normalize_fit_payload(payload)
-    try:
-        validate_schema(
+
+    recovery = execute_structured_output(
+        StructuredOutputExecutionRequest(
+            schema_version="1.0",
+            report_id=str(request.context.report_id),
+            artifact_family="category_fit",
+            schema_name="context_category_fit",
+            model=prompt_bundle.resolved_model,
+            terminal_failure_code="context_category_fit_invalid_json",
+        ),
+        ctx,
+        call_model=call_model,
+        normalize_payload=lambda payload: _normalize_fit_payload(dict(payload)),
+        validate_payload=lambda payload: validate_schema(
             SchemaValidateRequest(
                 schema_version="1.0",
                 payload=payload,
                 schema_name="context_category_fit",
             ),
             ctx,
-        )
-    except AppError as exc:
-        raise StructuredOutputFailure(
-            code="context_category_fit_schema_invalid",
-            message="Context-first category fit did not satisfy its output schema",
-            artifact_family="category_fit",
-            response_text=str(response.text or ""),
-            schema_errors=exc.code,
-            repair_attempt=request.repair_attempt,
-        ) from exc
+        ),
+        is_substantive=lambda payload: bool(
+            isinstance(payload, dict) and payload.get("category_fits")
+        ),
+        model_pricing=request.settings.model_pricing,
+    )
+    payload = recovery.payload
     fit_response = _coerce_fit_response(
         payload=payload,
         report_id=request.context.report_id,
         category_profiles=category_profiles,
         context=request.context,
         ctx=ctx,
-        model=str(response.model or prompt_bundle.resolved_model or ""),
-        raw_response=str(response.text or ""),
-        request_id=str(response.request_id or "") or None,
+        model=str(recovery.model or prompt_bundle.resolved_model or ""),
+        raw_response=json.dumps(payload, ensure_ascii=False),
+        request_id=str(recovery.request_id or "") or None,
     )
     logger.info(
         log_event(
@@ -285,23 +281,6 @@ def fit_report_categories_from_context(
         )
     )
     return fit_response
-
-
-def _response_json_object(response: OpenAIResponseResult) -> dict[str, Any] | None:
-    """Recover the first JSON object from a provider response without guessing."""
-    if isinstance(response.parsed_json, dict):
-        return response.parsed_json
-    text = str(response.text or "").strip()
-    if text.startswith("```"):
-        text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text, flags=re.IGNORECASE)
-    start = text.find("{")
-    if start < 0:
-        return None
-    try:
-        payload, _ = json.JSONDecoder().raw_decode(text[start:])
-    except json.JSONDecodeError:
-        return None
-    return payload if isinstance(payload, dict) else None
 
 
 def _serialize_context(context: ReportCategoryContext) -> Dict[str, Any]:

@@ -7,7 +7,6 @@ from typing import Dict, Optional, Tuple
 
 from src.contracts.analysis_family import AnalysisFamilyStatus
 from src.contracts.config import AppSettings
-from src.contracts.openai import OpenAIResponseRequest, OpenAIResponseResult
 from src.contracts.report_analysis import (
     AnalysisPackPathRequest,
     AnalysisStorePackRequest,
@@ -15,6 +14,7 @@ from src.contracts.report_analysis import (
 from src.contracts.run_context import RunContext
 from src.contracts.schema_validation import SchemaValidateRequest
 from src.contracts.semantic_ids import ReportId
+from src.contracts.structured_output import StructuredOutputExecutionRequest
 from src.generators.analysis_pack_cache import (
     CachedPackAdaptResult,
     load_cached_pack,
@@ -40,12 +40,17 @@ from src.generators.evidence_packs.registry import (
     PACK_STRATEGIES,
     VARIETY_PACKS,
 )
-from src.generators.prompt_preparation import (
-    model_request_identity_fields,
-    prepare_prompt_bundle,
+from src.generators.prompt_preparation import prepare_prompt_bundle
+from src.generators.structured_output_execution import (
+    invoke_structured_output_model,
+    recovery_prompt_bundle,
 )
 from src.services import file_service, prompt_service, report_analysis_store_service
-from src.services.schema_validator_service import validate_schema
+from src.services.schema_validator_service import (
+    provider_output_schema,
+    validate_schema,
+)
+from src.services.structured_output_service import execute_structured_output
 from src.utils.analysis_family import serialize_family_status
 from src.utils.cache_utils import sha256_json
 from src.utils.coercion import coerce_int
@@ -599,35 +604,43 @@ def _generate_pack(
             },
         )
     )
-    parsed_json: Optional[dict] = None
     not_found_reason = ""
-    max_attempts = 1
-    attempts_used = 1
-    try:
-        resp: OpenAIResponseResult = openai_client.openai_respond_with_vector_store(
-            OpenAIResponseRequest(
-                schema_version="1.0",
-                system_prompt=prompt_bundle.system_prompt,
-                user_prompt=prompt_bundle.user_prompt,
+    output_schema = provider_output_schema(schema_name)
+
+    def call_model(mode: str, original_response: str, schema_errors: str):
+        bundle = prompt_bundle
+        if mode != "primary":
+            bundle = recovery_prompt_bundle(
+                mode=mode,
+                artifact_family=pack_name,
+                schema_errors=schema_errors,
+                original_response=original_response,
+                output_schema=output_schema,
+                source_evidence={
+                    "report_name": report_name,
+                    "vector_store_id": vector_store_id,
+                    "pack_name": pack_name,
+                },
+                settings=settings,
+                ctx=ctx,
+                prompt_client=prompt_client,
                 vector_store_id=vector_store_id,
-                model=prompt_bundle.resolved_model,
-                temperature=prompt_bundle.effective_temperature,
-                api_key=settings.openai_api_key,
-                seed=prompt_bundle.effective_seed,
-                timeout_seconds=prompt_bundle.effective_timeout_seconds,
-                cost_ledger_path=settings.cost_ledger_path,
-                cost_daily_path=settings.cost_daily_path,
-                usage_db_path=str(
-                    getattr(settings, "usage_db_path", "./state/llm_usage.sqlite")
-                ),
-                model_pricing=settings.model_pricing,
-                publisher_name=publisher_name,
-                report_name=report_name,
-                source_url=source_url,
-                prompt_namespace=prompt_namespace,
-                **model_request_identity_fields(prompt_bundle),
-            ),
-            ctx,
+            )
+        resp = invoke_structured_output_model(
+            openai_client=openai_client,
+            prompt_bundle=bundle,
+            settings=settings,
+            ctx=ctx,
+            vector_store_id=vector_store_id,
+            report_id=report_id,
+            artifact_family=pack_name,
+            stage=f"evidence_pack_{mode}",
+            publisher_name=publisher_name,
+            report_name=report_name,
+            source_url=source_url,
+            output_schema=output_schema,
+            output_schema_identity=f"{pack_name}_v1",
+            repair_attempt={"primary": 0, "model_repair": 1, "regeneration": 2}[mode],
         )
         logger.info(
             log_event(
@@ -638,8 +651,8 @@ def _generate_pack(
                 fields={
                     "report_id": report_id,
                     "pack": pack_name,
-                    "namespace": prompt_namespace,
-                    "model": str(resp.model or prompt_bundle.resolved_model or ""),
+                    "namespace": bundle.prompt_set.dependency_manifest.namespace,
+                    "model": str(resp.model or bundle.resolved_model or ""),
                     "request_id": resp.request_id or "",
                     "input_tokens": resp.input_tokens,
                     "output_tokens": resp.output_tokens,
@@ -652,123 +665,47 @@ def _generate_pack(
                 },
             )
         )
-        parsed_payload: Optional[object] = (
-            resp.parsed_json if isinstance(resp.parsed_json, (dict, list)) else None
-        )
-        if parsed_payload is None:
-            parsed_payload = _parse_json_payload_from_text(resp.text or "")
-            if parsed_payload is not None:
-                logger.info(
-                    log_event(
-                        ctx,
-                        role="generator",
-                        event="evidence_pack_json_text_fallback",
-                        module=logger.name,
-                        fields={
-                            "report_id": report_id,
-                            "pack": pack_name,
-                            "attempt": 1,
-                        },
-                    )
-                )
-        if parsed_payload is None:
-            not_found_reason = "model_returned_no_json"
-        else:
-            try:
-                if pack_name == "doc_map" and not isinstance(parsed_payload, dict):
-                    raise AppError(
-                        code="schema_type_mismatch",
-                        message="doc_map payload must be a JSON object",
-                        retryable=False,
-                    )
-                normalized_result = strategy.normalize_payload(
-                    parsed_payload, report_id, report_name
-                )
-                parsed_json = normalized_result.payload
-                if pack_name == "doc_map" and normalized_result.changed:
-                    logger.info(
-                        log_event(
-                            ctx,
-                            role="generator",
-                            event="doc_map_normalized",
-                            module=logger.name,
-                            fields={
-                                "report_id": report_id,
-                                "wrapper_key": normalized_result.metadata[
-                                    "wrapper_key"
-                                ],
-                                "sections_with_ids": normalized_result.metadata[
-                                    "sections_with_ids"
-                                ],
-                                "added_section_ids": normalized_result.metadata[
-                                    "added_section_ids"
-                                ],
-                                "dropped_sections": normalized_result.metadata[
-                                    "dropped_sections"
-                                ],
-                                "doc_id_filled": normalized_result.metadata[
-                                    "doc_id_filled"
-                                ],
-                            },
-                        )
-                    )
-                if getattr(settings, "strict_schema_validation", True):
-                    validate_schema(
-                        SchemaValidateRequest(
-                            schema_version="1.0",
-                            payload=parsed_json,
-                            schema_name=schema_name,
-                        ),
-                        ctx,
-                    )
-            except AppError as exc:
-                if exc.retryable:
-                    logger.info(
-                        log_event(
-                            ctx,
-                            role="generator",
-                            event="evidence_pack_retryable_error_propagated",
-                            module=logger.name,
-                            fields={
-                                "report_id": report_id,
-                                "pack": pack_name,
-                                "code": exc.code,
-                                "message": exc.message,
-                                "source": "schema_validation",
-                            },
-                        )
-                    )
-                    raise
-                not_found_reason = f"schema_validation_failed:{exc.code}"
-                parsed_json = None
-    except AppError as exc:
-        if exc.retryable:
-            logger.info(
-                log_event(
-                    ctx,
-                    role="generator",
-                    event="evidence_pack_retryable_error_propagated",
-                    module=logger.name,
-                    fields={
-                        "report_id": report_id,
-                        "pack": pack_name,
-                        "code": exc.code,
-                        "message": exc.message,
-                        "source": "model_call",
-                    },
-                )
+        return resp
+
+    def normalize_payload(payload: object) -> dict:
+        if pack_name == "doc_map" and not isinstance(payload, dict):
+            raise AppError(
+                code="schema_type_mismatch",
+                message="doc_map payload must be a JSON object",
+                retryable=False,
             )
-            raise
-        if exc.code in {
-            "openai_response_empty",
-            "openai_response_invalid_json",
-            "openai_response_json_type_invalid",
-        }:
-            not_found_reason = "model_returned_no_json"
-        else:
-            not_found_reason = exc.code
-        parsed_json = None
-    result_payload = parsed_json or _empty_payload(pack_name, not_found_reason)
+        return strategy.normalize_payload(payload, report_id, report_name).payload
+
+    recovery = execute_structured_output(
+        StructuredOutputExecutionRequest(
+            schema_version="1.0",
+            report_id=report_id,
+            artifact_family=pack_name,
+            schema_name=schema_name,
+            model=prompt_bundle.resolved_model,
+            allow_abstention=pack_name in _OPTIONAL_EVIDENCE_PACKS,
+            terminal_failure_code=("doc_map_invalid_json" if pack_name == "doc_map" else "evidence_pack_invalid_json"),
+        ),
+        ctx,
+        call_model=call_model,
+        normalize_payload=normalize_payload,
+        validate_payload=lambda payload: validate_schema(
+            SchemaValidateRequest(
+                schema_version="1.0", payload=payload, schema_name=schema_name
+            ),
+            ctx,
+        ),
+        is_substantive=lambda payload: _pack_confidence_score(pack_name, payload) > 0.0,
+        model_pricing=settings.model_pricing,
+        is_formal_abstention=lambda payload: bool(
+            isinstance(payload, dict)
+            and str(payload.get("not_found_reason") or "").strip()
+        ),
+    )
+    result_payload = recovery.payload
+    not_found_reason = str(result_payload.get("not_found_reason") or "")
+    attempts_used = recovery.attempts
+    max_attempts = 3
     result_payload = _attach_pack_family_status(pack_name, result_payload)
     if cache_meta and isinstance(result_payload, dict):
         result_payload = dict(result_payload)

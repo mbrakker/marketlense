@@ -75,11 +75,14 @@ class FakeOpenAIClient:
         self._parsed = parsed
 
     def openai_respond_with_vector_store(self, req, ctx):
-        text = "{}" if isinstance(self._parsed, dict) else ""
+        parsed = self._parsed
+        if getattr(req, "artifact_family", "") != "doc_map" and parsed is not None:
+            parsed = {"not_found_reason": "fixture_insufficient_evidence"}
+        text = "{}" if isinstance(parsed, dict) else ""
         return OpenAIResponseResult(
             schema_version="1.0",
             text=text,
-            parsed_json=self._parsed,
+            parsed_json=parsed,
             input_tokens=10,
             output_tokens=20,
             tool_calls=0,
@@ -110,7 +113,9 @@ class RoutedOpenAIClient:
             if task_id.endswith(f":{candidate}"):
                 pack = candidate
                 break
-        parsed = self._payloads_by_pack.get(pack)
+        parsed = self._payloads_by_pack.get(
+            pack, {"not_found_reason": "fixture_insufficient_evidence"}
+        )
         text = self._text_by_pack.get(pack, "")
         if not text and isinstance(parsed, (dict, list)):
             text = json.dumps(parsed)
@@ -142,13 +147,7 @@ class RetryingDocMapClient:
             }
             text = "{}"
         else:
-            payload = {
-                "scope": "ok",
-                "methods": [],
-                "findings": [],
-                "limitations": [],
-                "quote_candidates": [],
-            }
+            payload = {"not_found_reason": "fixture_insufficient_evidence"}
             text = "{}"
         return OpenAIResponseResult(
             schema_version="1.0",
@@ -180,13 +179,7 @@ class TextFallbackDocMapClient:
         return OpenAIResponseResult(
             schema_version="1.0",
             text="{}",
-            parsed_json={
-                "scope": "ok",
-                "methods": [],
-                "findings": [],
-                "limitations": [],
-                "quote_candidates": [],
-            },
+            parsed_json={"not_found_reason": "fixture_insufficient_evidence"},
             input_tokens=1,
             output_tokens=1,
             tool_calls=0,

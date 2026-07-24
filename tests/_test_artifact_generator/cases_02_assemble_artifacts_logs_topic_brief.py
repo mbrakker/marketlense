@@ -817,7 +817,7 @@ def test_cover_semantics_repairs_one_invalid_structured_response(tmp_path) -> No
     assert result["cover_semantics"] == _cover_semantics()
     assert [request.prompt_namespace for request in client.requests] == [
         "report_vs/artifacts/cover_semantics",
-        "report_vs/artifacts/cover_semantics_repair",
+        "report_vs/structured_output/repair",
     ]
     assert client.requests[1].repair_attempt == 1
 

@@ -17,8 +17,8 @@ from src.contracts.openai import (
     OpenAIVectorStoreStatusRequest,
     OpenAIVectorStoreUpdateMetadataRequest,
 )
-from src.contracts.run_context import RunContext
 from src.contracts.run_budget import RunBudget, RunBudgetUsageReadRequest
+from src.contracts.run_context import RunContext
 from src.services import llm_service as svc
 from src.services.llm_usage_ledger_service import read_run_budget_usage
 
@@ -116,8 +116,8 @@ def test_openai_response_with_vector_store_requires_vector_store_id(
         raise AssertionError("expected AppError")
 
 
-def test_openai_response_with_vector_store_rejects_non_json(
-    fake_openai, assert_app_error
+def test_openai_response_with_vector_store_returns_non_json_for_shared_recovery(
+    fake_openai,
 ) -> None:
     fake_openai.queue_response_text("not-json")
     req = OpenAIResponseRequest(
@@ -130,16 +130,14 @@ def test_openai_response_with_vector_store_rejects_non_json(
         api_key="key",
     )
 
-    try:
-        svc.openai_respond_with_vector_store(req, _ctx())
-    except Exception as err:
-        assert_app_error(err, code="openai_response_invalid_json", retryable=False)
-    else:  # pragma: no cover
-        raise AssertionError("expected AppError")
+    result = svc.openai_respond_with_vector_store(req, _ctx())
+
+    assert result.text == "not-json"
+    assert result.parsed_json is None
 
 
-def test_openai_response_with_vector_store_rejects_json_arrays(
-    fake_openai, assert_app_error
+def test_openai_response_with_vector_store_returns_json_arrays_for_shared_recovery(
+    fake_openai,
 ) -> None:
     fake_openai.queue_response_text(json.dumps([{"result": "ok"}]))
     req = OpenAIResponseRequest(
@@ -152,12 +150,10 @@ def test_openai_response_with_vector_store_rejects_json_arrays(
         api_key="key",
     )
 
-    try:
-        svc.openai_respond_with_vector_store(req, _ctx())
-    except Exception as err:
-        assert_app_error(err, code="openai_response_json_type_invalid", retryable=False)
-    else:  # pragma: no cover
-        raise AssertionError("expected AppError")
+    result = svc.openai_respond_with_vector_store(req, _ctx())
+
+    assert result.text == json.dumps([{"result": "ok"}])
+    assert result.parsed_json is None
 
 
 def test_openai_response_with_vector_store_parses_fenced_json(fake_openai) -> None:

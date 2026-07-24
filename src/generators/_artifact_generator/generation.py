@@ -136,6 +136,7 @@ def generate_artifacts(
             publisher_name=publisher_name,
             report_name=report_name or "",
             source_url=source_url,
+            report_id=report_id,
         )
 
     logger.info(
@@ -319,6 +320,7 @@ def generate_artifacts(
         publisher_name=publisher_name,
         report_name=report_name or "",
         source_url=source_url,
+        report_id=report_id,
     )
     insights_final = pad_artifact_insights(
         normalize_artifact_insights(
@@ -353,6 +355,7 @@ def generate_artifacts(
         publisher_name=publisher_name,
         report_name=report_name or "",
         source_url=source_url,
+        report_id=report_id,
         payload_validator=lambda payload: _validate_cover_semantics(
             payload.get("cover_semantics"),
             ctx=cover_semantics_ctx,

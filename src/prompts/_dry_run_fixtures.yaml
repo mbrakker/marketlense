@@ -554,6 +554,40 @@ fixtures:
       repair_error: "schema_validation_failed"
       repair_attempt: 1
       repair_response: "{}"
+  - namespace: "report_vs/structured_output/repair"
+    family: "report"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    benchmark: *benchmark_report_extract
+    system_variables:
+      artifact_family: "taxonomy"
+      schema_errors: "schema_missing_required: root.taxonomy is required"
+      original_response: "{}"
+      source_evidence_json: *report_context_json
+      output_schema_json: '{"type":"object","properties":{"taxonomy":{"type":"array"}},"required":["taxonomy"],"additionalProperties":false}'
+    user_variables:
+      artifact_family: "taxonomy"
+      schema_errors: "schema_missing_required: root.taxonomy is required"
+      original_response: "{}"
+      source_evidence_json: *report_context_json
+      output_schema_json: '{"type":"object","properties":{"taxonomy":{"type":"array"}},"required":["taxonomy"],"additionalProperties":false}'
+  - namespace: "report_vs/structured_output/regenerate"
+    family: "report"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    benchmark: *benchmark_report_extract
+    system_variables:
+      artifact_family: "taxonomy"
+      schema_errors: "schema_missing_required: root.taxonomy is required"
+      original_response: "{}"
+      source_evidence_json: *report_context_json
+      output_schema_json: '{"type":"object","properties":{"taxonomy":{"type":"array"}},"required":["taxonomy"],"additionalProperties":false}'
+    user_variables:
+      artifact_family: "taxonomy"
+      schema_errors: "schema_missing_required: root.taxonomy is required"
+      original_response: "{}"
+      source_evidence_json: *report_context_json
+      output_schema_json: '{"type":"object","properties":{"taxonomy":{"type":"array"}},"required":["taxonomy"],"additionalProperties":false}'
   - namespace: "report_vs/validate/grounding"
     family: "validation"
     model: "openai/gpt-5-mini"

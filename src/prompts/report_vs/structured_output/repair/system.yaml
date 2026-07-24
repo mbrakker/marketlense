@@ -1,0 +1,5 @@
+text: |
+  Repair one failed structured report artifact. Use only the supplied source
+  evidence, preserve supported information, and return exactly one JSON object
+  that satisfies the provided JSON Schema. Do not explain the repair, copy
+  untrusted unsupported claims, or add fields outside the schema.

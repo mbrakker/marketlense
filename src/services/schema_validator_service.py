@@ -19,6 +19,7 @@ logger = logging.getLogger("market_lense.schema_validator_service")
 SCHEMAS_ROOT = Path(__file__).resolve().parents[1] / "schemas"
 _SCHEMA_CACHE: Dict[str, dict] = {}
 _VALIDATOR_CACHE: Dict[str, Draft202012Validator] = {}
+_PROVIDER_OMITTED_PROPERTIES = frozenset({"_cache", "family_status"})
 
 
 def _load_schema(name: str) -> dict:
@@ -42,6 +43,82 @@ def _load_schema(name: str) -> dict:
         ) from exc
     _SCHEMA_CACHE[name] = data
     return data
+
+
+def load_schema(name: str) -> dict:
+    """Return a defensive JSON-schema copy for provider constrained output."""
+
+    return json.loads(json.dumps(_load_schema(name)))
+
+
+def output_schema_fragment(schema_name: str, root_key: str = "") -> dict:
+    """Return a response schema for a full contract or one root property."""
+
+    schema = load_schema(schema_name)
+    root = str(root_key or "").strip()
+    if not root:
+        return schema
+    properties = schema.get("properties")
+    if not isinstance(properties, dict) or root not in properties:
+        raise AppError(
+            code="schema_output_root_missing",
+            message=f"Schema {schema_name} has no output root {root}",
+            retryable=False,
+            context={"schema": schema_name, "root_key": root},
+        )
+    return {
+        "$schema": schema.get("$schema", "https://json-schema.org/draft/2020-12/schema"),
+        "type": "object",
+        "required": [root],
+        "additionalProperties": False,
+        "properties": {root: properties[root]},
+    }
+
+
+def provider_output_schema(schema_name: str, root_key: str = "") -> dict:
+    """Project a canonical contract into OpenAI strict-JSON-Schema form.
+
+    Canonical schemas retain optional fields for stored-artifact compatibility.
+    OpenAI strict structured output requires every object to reject unknown
+    properties and to name every declared property in ``required``.  This
+    projection tightens only the provider response constraint; canonical
+    validation still uses ``validate_schema`` below.
+    """
+
+    return _strict_provider_schema(output_schema_fragment(schema_name, root_key))
+
+
+def _strict_provider_schema(value: Any) -> Any:
+    if isinstance(value, list):
+        return [_strict_provider_schema(item) for item in value]
+    if not isinstance(value, dict):
+        return value
+    projected: dict[str, Any] = {}
+    for key, item in value.items():
+        if key in {"additionalProperties", "required"}:
+            continue
+        # OpenAI's strict response-format subset accepts ``anyOf`` but rejects
+        # ``oneOf``.  These report schemas use oneOf only for disjoint scalar
+        # and object alternatives, so this provider-only projection preserves
+        # the accepted values while canonical validation keeps exact oneOf.
+        provider_key = "anyOf" if key == "oneOf" else key
+        if key == "properties" and isinstance(item, dict):
+            projected[provider_key] = {
+                name: _strict_provider_schema(property_schema)
+                for name, property_schema in item.items()
+                if name not in _PROVIDER_OMITTED_PROPERTIES
+            }
+        else:
+            projected[provider_key] = _strict_provider_schema(item)
+    properties = projected.get("properties")
+    type_value = projected.get("type")
+    is_object = type_value == "object" or (
+        isinstance(type_value, list) and "object" in type_value
+    )
+    if is_object or isinstance(properties, dict):
+        projected["additionalProperties"] = False
+        projected["required"] = list(properties) if isinstance(properties, dict) else []
+    return projected
 
 
 def _validator(name: str) -> Draft202012Validator:
@@ -135,6 +212,35 @@ def validate_schema(
     )
     return SchemaValidateResponse(
         schema_version="1.0", schema_name=request.schema_name, valid=True
+    )
+
+
+def validate_output_schema(
+    *,
+    payload: object,
+    schema_name: str,
+    root_key: str,
+    ctx: RunContext,
+) -> None:
+    """Validate one structured model response against a canonical schema root."""
+
+    root = str(root_key or "").strip()
+    schema = output_schema_fragment(schema_name, root)
+    validator = Draft202012Validator(schema)
+    first_error = _first_error(validator.iter_errors(payload))
+    if first_error is None:
+        return
+    code = _error_code(first_error)
+    location = _path(first_error)
+    raise AppError(
+        code=code,
+        message=f"{location} {first_error.message}",
+        retryable=False,
+        context={
+            "schema": schema_name,
+            "root_key": root,
+            "validator": first_error.validator,
+        },
     )
 
 

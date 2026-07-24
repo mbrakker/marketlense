@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["unsupported"],
+  "properties": {
+    "unsupported": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["section", "text", "reason"],
+        "properties": {
+          "section": {"type": "string"},
+          "text": {"type": "string"},
+          "classification": {"type": "string"},
+          "violation_type": {"type": "string"},
+          "reason": {"type": "string"}
+        }
+      }
+    }
+  }
+}
