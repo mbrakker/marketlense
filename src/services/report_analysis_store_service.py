@@ -5,16 +5,16 @@ import logging
 import re
 from pathlib import Path
 
+from src.contracts.files import WriteBytesRequest
 from src.contracts.report_analysis import (
     AnalysisPackPathRequest,
     AnalysisPackPathResponse,
     AnalysisStorePackRequest,
     AnalysisStorePackResponse,
 )
-from src.contracts.files import WriteBytesRequest
 from src.contracts.run_context import RunContext
-from src.services import file_service
 from src.contracts.schema_validation import SchemaValidateRequest
+from src.services import file_service
 from src.services.schema_validator_service import validate_schema
 from src.utils.errors import AppError
 from src.utils.logging import log_event
@@ -52,8 +52,14 @@ def _resolve_report_slug(report_slug: str | None, report_id: str) -> str:
 
 def _schema_name_for_pack(pack_name: str) -> str:
     normalized = str(pack_name or "").strip()
+    if normalized.startswith("artifacts_regen_candidate_"):
+        return "artifacts"
     if normalized.startswith("artifacts_regen_attempt_"):
         return "artifacts"
+    if normalized.startswith("regeneration_candidate_audit_"):
+        return "regeneration_candidate_audit"
+    if normalized.startswith("validation_regen_candidate_"):
+        return "validation_report"
     if normalized.startswith("validation_regen_attempt_"):
         return "validation_report"
     return _PACK_SCHEMA_NAMES.get(normalized, "")

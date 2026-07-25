@@ -254,31 +254,24 @@ def regenerate_artifacts(
         source_status=availability,
         family_status=family_status,
         ctx=ctx,
+        validate_references=False,
     )
-    artifacts_path = store_artifacts_payload(
+    candidate_artifacts_path = store_artifacts_payload(
         analysis_store=analysis_store,
         output_dir=request.settings.output_dir,
         report_id=request.report_id,
         report_name=request.report_name,
         payload=updated_artifacts,
         ctx=ctx,
-        pack_name="artifacts",
-    )
-    artifacts_snapshot_path = store_artifacts_payload(
-        analysis_store=analysis_store,
-        output_dir=request.settings.output_dir,
-        report_id=request.report_id,
-        report_name=request.report_name,
-        payload=updated_artifacts,
-        ctx=ctx,
-        pack_name=f"artifacts_regen_attempt_{request.attempt_index}",
+        pack_name=f"artifacts_regen_candidate_{request.attempt_index}",
     )
     response = ArtifactRegenerationResponse(
         updated_artifacts=updated_artifacts,
         regenerated_sections=state.regenerated_sections,
         prompt_namespaces=state.prompt_namespaces,
-        artifacts_path=artifacts_path,
-        artifacts_snapshot_path=artifacts_snapshot_path,
+        artifacts_path="",
+        artifacts_snapshot_path=candidate_artifacts_path,
+        candidate_artifacts_path=candidate_artifacts_path,
     )
     logger.info(
         log_event(
@@ -290,8 +283,7 @@ def regenerate_artifacts(
                 "report_id": request.report_id,
                 "attempt_index": request.attempt_index,
                 "regenerated_sections": state.regenerated_sections,
-                "artifacts_path": artifacts_path,
-                "artifacts_snapshot_path": artifacts_snapshot_path,
+                "candidate_artifacts_path": candidate_artifacts_path,
             },
         )
     )

@@ -117,6 +117,15 @@ class ValidationRequest(SemanticIdContract):
             "doc": "Validation execution mode: full, inline_deterministic, or deferred_grounding."
         },
     )
+    deterministic_grounding_passed: bool = field(
+        default=False,
+        metadata={
+            "doc": (
+                "True only when complete deterministic evidence-ID, source-page, "
+                "and lineage checks passed before provider grounding."
+            )
+        },
+    )
     publisher_name: str = field(
         default="",
         metadata={"doc": "Publisher context recorded with downstream LLM usage."},

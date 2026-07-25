@@ -13,9 +13,15 @@ logger = logging.getLogger(LOGGER_NAME)
 
 GROUNDING_HARD_FAILURES = {
     "hallucinated_entity_or_event",
+    "hallucinated_evidence_id",
+    "contradicted",
+    "invalid_comparison",
     "misattributed_quote",
+    "missing_material_evidence",
+    "numerically_inconsistent",
     "report_directive_misattribution",
     "unsupported_factual_claim",
+    "unsupported_number",
 }
 STRICT_SECTION_PREFIXES = {"insights", "quotes", "key_data_insights", "claims_list"}
 MIXED_SECTION_PREFIXES = {"summary", "executive_summary"}

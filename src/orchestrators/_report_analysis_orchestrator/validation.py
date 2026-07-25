@@ -8,11 +8,13 @@ from __future__ import annotations
 
 import inspect
 from copy import deepcopy
+from dataclasses import asdict, replace
 from typing import Any, Dict, List, Optional
 
 from src.contracts.regeneration import (
     ArtifactRegenerationRequest,
     RegenerationAttemptResult,
+    RegenerationCandidateAudit,
     RegenerationLoopState,
 )
 from src.contracts.report_analysis import (
@@ -33,6 +35,10 @@ from src.generators.public_editorial_quality_generator import (
 )
 from src.generators.report_generation_dependencies import ReportAnalysisDependencies
 from src.generators.report_generation_shared import merge_artifacts_into_payload
+from src.generators.validation.regeneration_candidate import (
+    CandidateIntegrityResult,
+    validate_regeneration_candidate,
+)
 from src.orchestrators._report_analysis_orchestrator.payload import (
     _ensure_report_payload_complete,
 )
@@ -40,6 +46,7 @@ from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
     _build_regeneration_plan,
 )
 from src.orchestrators._report_analysis_orchestrator.shared import logger
+from src.utils.cache_utils import sha256_json
 from src.utils.logging import child_context, log_event
 
 __all__ = [
@@ -47,6 +54,8 @@ __all__ = [
     "_run_validation_regeneration_loop",
     "_run_validation_with_fallback",
     "_store_validation_snapshot",
+    "_promote_regeneration_candidate",
+    "_store_regeneration_candidate_audit",
 ]
 
 
@@ -270,6 +279,123 @@ def _run_validation_with_fallback(
         return fallback_report
 
 
+def _candidate_artifacts_path(response) -> str:
+    """Use the candidate-only response field; tolerate legacy test doubles."""
+
+    return str(getattr(response, "candidate_artifacts_path", "") or "").strip()
+
+
+def _candidate_validation_report(
+    validation: ValidationReport,
+    candidate: CandidateIntegrityResult,
+) -> ValidationReport:
+    issues = list(candidate.issues) + list(validation.issues)
+    severity = "error" if any(item.severity == "error" for item in issues) else (
+        "warning" if any(item.severity == "warning" for item in issues) else "pass"
+    )
+    return ValidationReport(
+        schema_version=validation.schema_version,
+        status="fail" if severity == "error" else "pass",
+        issues=issues,
+        severity=severity,
+        source_path=validation.source_path,
+    )
+
+
+def _validation_issue_keys(report: ValidationReport) -> list[str]:
+    return sorted(
+        {
+            ":".join(
+                value
+                for value in (
+                    str(item.rule_id or "validation").strip(),
+                    str(item.affected_section or "").strip(),
+                )
+                if value
+            )
+            for item in report.issues
+        }
+    )
+
+
+def _candidate_audit(
+    *,
+    attempt_index: int,
+    transformation_scope: List[str],
+    current_artifacts: Dict[str, Any],
+    candidate_artifacts: Dict[str, Any],
+    current_artifacts_path: str,
+    candidate_artifacts_path: str,
+    candidate_result: CandidateIntegrityResult,
+    validation_report: ValidationReport | None = None,
+    promotion_outcome: str = "candidate",
+) -> RegenerationCandidateAudit:
+    report = validation_report or ValidationReport(
+        schema_version="1.1",
+        status="fail" if not candidate_result.passed else "pass",
+        issues=list(candidate_result.issues),
+        severity="error" if not candidate_result.passed else "pass",
+    )
+    return RegenerationCandidateAudit(
+        attempt_index=attempt_index,
+        transformation_scope=list(transformation_scope),
+        before_sha256=sha256_json(current_artifacts),
+        after_sha256=sha256_json(candidate_artifacts),
+        current_artifacts_path=current_artifacts_path,
+        candidate_artifacts_path=candidate_artifacts_path,
+        validation_status=report.status,
+        promotion_outcome=promotion_outcome,
+        validation_issues=_validation_issue_keys(report),
+        evidence_lineage=list(candidate_result.evidence_lineage),
+    )
+
+
+def _store_regeneration_candidate_audit(
+    *,
+    runtime: ReportRuntimeState,
+    dependencies: ReportAnalysisDependencies,
+    audit: RegenerationCandidateAudit,
+    ctx,
+) -> str:
+    return dependencies.analysis_store_pack(
+        AnalysisStorePackRequest(
+            schema_version="1.0",
+            output_dir=runtime.settings.output_dir,
+            report_id=ReportId(runtime.file.file_id),
+            pack_name=f"regeneration_candidate_audit_{audit.attempt_index}",
+            payload=asdict(audit),
+            report_slug=runtime.report_name,
+        ),
+        ctx,
+    ).output_path
+
+
+def _promote_regeneration_candidate(
+    *,
+    runtime: ReportRuntimeState,
+    dependencies: ReportAnalysisDependencies,
+    candidate_artifacts: Dict[str, Any],
+    ctx,
+) -> str:
+    """Atomically replace the current artifacts only after all gates pass.
+
+    ``analysis_store_pack`` delegates to the canonical atomic file service;
+    the prior current file remains readable until its final replacement wins.
+    """
+
+    return dependencies.analysis_store_pack(
+        AnalysisStorePackRequest(
+            schema_version="1.0",
+            output_dir=runtime.settings.output_dir,
+            report_id=ReportId(runtime.file.file_id),
+            pack_name="artifacts",
+            payload=candidate_artifacts,
+            report_slug=runtime.report_name,
+        ),
+        ctx,
+    ).output_path
+
+
 def _run_validation_regeneration_loop(
     *,
     runtime: ReportRuntimeState,
@@ -295,6 +421,18 @@ def _run_validation_regeneration_loop(
     attempts: List[RegenerationAttemptResult] = []
     evidence_paths: Dict[str, str] = {}
     broad_retry_used = False
+    current_artifacts_path = dependencies.analysis_pack_path(
+        AnalysisPackPathRequest(
+            schema_version="1.0",
+            output_dir=runtime.settings.output_dir,
+            report_id=ReportId(runtime.file.file_id),
+            pack_name="artifacts",
+            report_slug=runtime.report_name,
+        ),
+        mode_ctx,
+    ).output_path
+    promoted_artifacts = deepcopy(current_artifacts)
+    working_artifacts = deepcopy(current_artifacts)
     logger.info(
         log_event(
             mode_ctx,
@@ -315,7 +453,7 @@ def _run_validation_regeneration_loop(
             break
         plan = _build_regeneration_plan(
             issues=current_validation_report.issues,
-            artifacts=current_artifacts,
+            artifacts=working_artifacts,
             broad_retry_available=not broad_retry_used,
         )
         public_issues = [
@@ -427,7 +565,8 @@ def _run_validation_regeneration_loop(
             )
         )
         validation_before_status = current_validation_report.status
-        artifacts_before = deepcopy(current_artifacts)
+        artifacts_before = deepcopy(working_artifacts)
+        candidate_parent_path = current_artifacts_path
         regeneration_kwargs = {}
         if regeneration_openai_client is not None and _accepts_keyword(
             dependencies.regenerate_artifacts, "openai_client"
@@ -439,7 +578,7 @@ def _run_validation_regeneration_loop(
                 report_name=runtime.report_name,
                 attempt_index=attempt_index,
                 plan=plan,
-                current_artifacts=current_artifacts,
+                current_artifacts=working_artifacts,
                 doc_map=evidence_packs.get("doc_map", {}),
                 evidence_packs=evidence_packs,
                 settings=runtime.settings,
@@ -453,21 +592,60 @@ def _run_validation_regeneration_loop(
             ),
             **regeneration_kwargs,
         )
-        current_artifacts = regeneration_response.updated_artifacts
-        artifact_diff = _artifact_diff_summary(artifacts_before, current_artifacts)
-        evidence_paths["artifacts"] = regeneration_response.artifacts_path
-        evidence_paths[f"artifacts_regen_attempt_{attempt_index}"] = (
-            regeneration_response.artifacts_snapshot_path
+        candidate_artifacts = regeneration_response.updated_artifacts
+        artifact_diff = _artifact_diff_summary(artifacts_before, candidate_artifacts)
+        candidate_artifacts_path = _candidate_artifacts_path(regeneration_response)
+        candidate_enforced = bool(candidate_artifacts_path)
+        candidate_result = (
+            validate_regeneration_candidate(
+                current_artifacts=working_artifacts,
+                candidate_artifacts=candidate_artifacts,
+                evidence_packs=evidence_packs,
+                ctx=attempt_ctx,
+            )
+            if candidate_enforced
+            else CandidateIntegrityResult(issues=[], evidence_lineage=[])
         )
+        candidate_audit_path = ""
+        if candidate_enforced:
+            candidate_audit_path = _store_regeneration_candidate_audit(
+                runtime=runtime,
+                dependencies=dependencies,
+                audit=_candidate_audit(
+                    attempt_index=attempt_index,
+                    transformation_scope=regeneration_response.regenerated_sections,
+                    current_artifacts=working_artifacts,
+                    candidate_artifacts=candidate_artifacts,
+                    current_artifacts_path=candidate_parent_path,
+                    candidate_artifacts_path=candidate_artifacts_path,
+                    candidate_result=candidate_result,
+                ),
+                ctx=attempt_ctx,
+            )
+            evidence_paths[f"artifacts_regen_candidate_{attempt_index}"] = (
+                candidate_artifacts_path
+            )
+            evidence_paths[f"regeneration_candidate_audit_{attempt_index}"] = (
+                candidate_audit_path
+            )
+        if regeneration_response.artifacts_snapshot_path:
+            evidence_paths[f"artifacts_regen_attempt_{attempt_index}"] = (
+                regeneration_response.artifacts_snapshot_path
+            )
         regenerated_payload = merge_artifacts_into_payload(
-            deepcopy(base_payload), current_artifacts
+            deepcopy(base_payload), candidate_artifacts
         )
         _ensure_report_payload_complete(
             regenerated_payload,
-            artifacts=current_artifacts,
+            artifacts=candidate_artifacts,
             ctx=attempt_ctx,
             file_id=runtime.file.file_id,
             stage=f"regeneration_attempt_{attempt_index}",
+        )
+        validation_pack_name = (
+            f"validation_regen_candidate_{attempt_index}"
+            if candidate_enforced
+            else "validation"
         )
         current_validation_report = _run_validation_with_fallback(
             runtime=runtime,
@@ -477,21 +655,25 @@ def _run_validation_regeneration_loop(
                 schema_version="1.0",
                 report_id=ReportId(runtime.file.file_id),
                 report=regenerated_payload,
-                artifacts=current_artifacts,
+                artifacts=candidate_artifacts,
                 evidence_packs=evidence_packs,
                 vector_store_id=vector_store_id,
+                deterministic_grounding_passed=candidate_result.passed,
                 publisher_name=runtime.publisher_name,
                 report_name=runtime.source_report_name or runtime.report_title,
                 source_url=runtime.source_url,
             ),
-            pack_name="validation",
+            pack_name=validation_pack_name,
             openai_client=validation_openai_client,
+        )
+        current_validation_report = _candidate_validation_report(
+            current_validation_report, candidate_result
         )
         editorial_validation, editorial_path = (
             _evaluate_and_store_public_editorial_quality(
                 runtime=runtime,
                 dependencies=dependencies,
-                artifacts=current_artifacts,
+                artifacts=candidate_artifacts,
                 pack_name=f"public_editorial_quality_regen_attempt_{attempt_index}",
                 ctx=attempt_ctx,
             )
@@ -499,12 +681,15 @@ def _run_validation_regeneration_loop(
         current_validation_report = _merge_public_editorial_quality(
             current_validation_report, editorial_validation
         )
-        _store_validation_snapshot(
+        candidate_validation_path = _store_validation_snapshot(
             runtime=runtime,
             dependencies=dependencies,
             report=current_validation_report,
-            pack_name="validation",
+            pack_name=validation_pack_name,
             ctx=attempt_ctx,
+        )
+        current_validation_report = replace(
+            current_validation_report, source_path=candidate_validation_path
         )
         evidence_paths[f"public_editorial_quality_regen_attempt_{attempt_index}"] = (
             editorial_path
@@ -516,21 +701,99 @@ def _run_validation_regeneration_loop(
             pack_name=f"validation_regen_attempt_{attempt_index}",
             ctx=attempt_ctx,
         )
-        if current_validation_report.source_path:
-            evidence_paths["validation"] = current_validation_report.source_path
         evidence_paths[f"validation_regen_attempt_{attempt_index}"] = (
             validation_snapshot_path
         )
+        promotion_outcome = "not_attempted"
+        artifacts_path = regeneration_response.artifacts_path
+        if candidate_enforced:
+            if current_validation_report.status == "pass":
+                try:
+                    artifacts_path = _promote_regeneration_candidate(
+                        runtime=runtime,
+                        dependencies=dependencies,
+                        candidate_artifacts=candidate_artifacts,
+                        ctx=attempt_ctx,
+                    )
+                except Exception:
+                    _store_regeneration_candidate_audit(
+                        runtime=runtime,
+                        dependencies=dependencies,
+                        audit=_candidate_audit(
+                            attempt_index=attempt_index,
+                            transformation_scope=(
+                                regeneration_response.regenerated_sections
+                            ),
+                            current_artifacts=working_artifacts,
+                            candidate_artifacts=candidate_artifacts,
+                            current_artifacts_path=candidate_parent_path,
+                            candidate_artifacts_path=candidate_artifacts_path,
+                            candidate_result=candidate_result,
+                            validation_report=current_validation_report,
+                            promotion_outcome="rolled_back",
+                        ),
+                        ctx=attempt_ctx,
+                    )
+                    raise
+                promotion_outcome = "promoted"
+                promoted_artifacts = candidate_artifacts
+                working_artifacts = candidate_artifacts
+                current_artifacts_path = artifacts_path
+                canonical_validation_path = _store_validation_snapshot(
+                    runtime=runtime,
+                    dependencies=dependencies,
+                    report=current_validation_report,
+                    pack_name="validation",
+                    ctx=attempt_ctx,
+                )
+                current_validation_report = replace(
+                    current_validation_report, source_path=canonical_validation_path
+                )
+                evidence_paths["artifacts"] = artifacts_path
+                evidence_paths["validation"] = canonical_validation_path
+            else:
+                promotion_outcome = "rolled_back"
+                artifacts_path = current_artifacts_path
+                working_artifacts = candidate_artifacts
+            candidate_audit_path = _store_regeneration_candidate_audit(
+                runtime=runtime,
+                dependencies=dependencies,
+                audit=_candidate_audit(
+                    attempt_index=attempt_index,
+                    transformation_scope=regeneration_response.regenerated_sections,
+                    current_artifacts=artifacts_before,
+                    candidate_artifacts=candidate_artifacts,
+                    current_artifacts_path=candidate_parent_path,
+                    candidate_artifacts_path=candidate_artifacts_path,
+                    candidate_result=candidate_result,
+                    validation_report=current_validation_report,
+                    promotion_outcome=promotion_outcome,
+                ),
+                ctx=attempt_ctx,
+            )
+        else:
+            # Legacy dependency doubles predate candidate promotion. Production
+            # regeneration always supplies candidate_artifacts_path above.
+            promoted_artifacts = candidate_artifacts
+            working_artifacts = candidate_artifacts
+            if artifacts_path:
+                current_artifacts_path = artifacts_path
+                evidence_paths["artifacts"] = artifacts_path
+            if current_validation_report.source_path:
+                evidence_paths["validation"] = current_validation_report.source_path
         attempt_result = RegenerationAttemptResult(
             attempt_index=attempt_index,
             plan_mode=plan.mode,
             regenerated_sections=regeneration_response.regenerated_sections,
             validation_before_status=validation_before_status,
             validation_after_status=current_validation_report.status,
-            artifacts_path=regeneration_response.artifacts_path,
+            artifacts_path=artifacts_path,
             artifacts_snapshot_path=regeneration_response.artifacts_snapshot_path,
             validation_path=current_validation_report.source_path,
             validation_snapshot_path=validation_snapshot_path,
+            candidate_artifacts_path=candidate_artifacts_path,
+            candidate_audit_path=candidate_audit_path,
+            promotion_outcome=promotion_outcome,
         )
         attempts.append(attempt_result)
         logger.info(
@@ -545,7 +808,10 @@ def _run_validation_regeneration_loop(
                     "mode": plan.mode,
                     "regenerated_sections": regeneration_response.regenerated_sections,
                     "prompt_namespaces": regeneration_response.prompt_namespaces,
-                    "artifacts_path": regeneration_response.artifacts_path,
+                    "artifacts_path": artifacts_path,
+                    "candidate_artifacts_path": candidate_artifacts_path,
+                    "candidate_audit_path": candidate_audit_path,
+                    "promotion_outcome": promotion_outcome,
                     "artifacts_snapshot_path": (
                         regeneration_response.artifacts_snapshot_path
                     ),
@@ -633,7 +899,7 @@ def _run_validation_regeneration_loop(
         max_reached=max_reached,
     )
     return (
-        current_artifacts,
+        promoted_artifacts,
         current_validation_report,
         attempts,
         loop_state,

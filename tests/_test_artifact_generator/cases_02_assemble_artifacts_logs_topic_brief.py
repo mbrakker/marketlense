@@ -125,7 +125,10 @@ def test_assemble_artifacts_logs_topic_brief_mapping_audit(
     ]
 
 
-def test_generate_artifacts_normalizes_malformed_evidence_ids(tmp_path):
+def test_generate_artifacts_rejects_hallucinated_evidence_ids(
+    tmp_path,
+    assert_app_error,
+):
     responses = {
         "toc": {"toc_topics": ["Topic 1"]},
         "summary": {
@@ -223,34 +226,27 @@ def test_generate_artifacts_normalizes_malformed_evidence_ids(tmp_path):
         "expert_comment": {"expert_comment": "Grounded comment"},
         "linkedin_post": {"linkedin_post": "Post summary"},
     }
-    payload = generate_artifacts(
-        report_id="r_malformed",
-        report_name="report",
-        doc_map=_doc_map(),
-        evidence_packs=_evidence_packs(),
-        settings=_settings(tmp_path),
-        vector_store_id="vs_1",
-        ctx=_ctx(),
-        openai_client=FakeOpenAI(responses),
-        prompt_client=FakePromptClient(),
-        analysis_store=FakeAnalysisStore(),
+    with pytest.raises(AppError) as captured:
+        generate_artifacts(
+            report_id="r_malformed",
+            report_name="report",
+            doc_map=_doc_map(),
+            evidence_packs=_evidence_packs(),
+            settings=_settings(tmp_path),
+            vector_store_id="vs_1",
+            ctx=_ctx(),
+            openai_client=FakeOpenAI(responses),
+            prompt_client=FakePromptClient(),
+            analysis_store=FakeAnalysisStore(),
+        )
+
+    assert_app_error(
+        captured.value,
+        code="schema_reference_missing",
+        retryable=False,
     )
-
-    assert payload["summary"]["claim_evidence_map"][0]["evidence_id"] == "f1"
-    assert payload["insights_candidates"][0]["evidence_id"] == "f2"
-    assert payload["insights_candidates"][1]["evidence_id"] == ""
-    assert payload["insights_final"][0]["evidence_id"] == "f3"
-    assert payload["insights_final"][1]["evidence_id"] == ""
-    assert payload["insights_final"][2]["evidence_id"] == "f5"
-    assert payload["insights_final"][3]["evidence_id"] == "f1"
-    assert payload["insights_final"][4]["evidence_id"] == "f2"
-    assert payload["quotes_final"][0]["evidence_id"] == "q1"
-
-    validate_schema(
-        SchemaValidateRequest(
-            schema_version="1.0", payload=payload, schema_name="artifacts"
-        ),
-        _ctx(),
+    assert {"MISSING_REF", "missing_final"} <= set(
+        captured.value.context["missing_references"]
     )
 
 
@@ -824,7 +820,7 @@ def test_cover_semantics_repairs_one_invalid_structured_response(tmp_path) -> No
 
 __all__ = [
     "test_assemble_artifacts_logs_topic_brief_mapping_audit",
-    "test_generate_artifacts_normalizes_malformed_evidence_ids",
+    "test_generate_artifacts_rejects_hallucinated_evidence_ids",
     "test_generate_artifacts_backfills_missing_ids",
     "test_generate_artifacts_ignores_low_text_when_vector_store",
     "test_generate_artifacts_fails_when_inputs_unavailable_without_vector_store",

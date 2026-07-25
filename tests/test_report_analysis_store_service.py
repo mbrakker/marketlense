@@ -55,6 +55,22 @@ def _valid_artifacts_payload() -> dict:
     }
 
 
+def _valid_candidate_audit_payload() -> dict:
+    return {
+        "schema_version": "1.0",
+        "attempt_index": 1,
+        "transformation_scope": ["summary"],
+        "before_sha256": "a" * 64,
+        "after_sha256": "b" * 64,
+        "current_artifacts_path": "artifacts.json",
+        "candidate_artifacts_path": "artifacts_regen_candidate_1.json",
+        "validation_status": "pass",
+        "promotion_outcome": "promoted",
+        "validation_issues": [],
+        "evidence_lineage": [],
+    }
+
+
 def test_store_pack_writes_only_report_scoped_path_when_slug_present(
     run_context, tmp_path: Path
 ) -> None:
@@ -148,6 +164,37 @@ def test_store_pack_validates_schema_backed_snapshot_pack_names(
     )
 
     assert Path(response.output_path).exists()
+
+
+def test_store_pack_validates_schema_backed_candidate_packs(
+    run_context, tmp_path: Path
+) -> None:
+    output_dir = tmp_path / "out"
+    artifact_response = store_pack(
+        AnalysisStorePackRequest(
+            schema_version="1.0",
+            output_dir=str(output_dir),
+            report_id="file123",
+            pack_name="artifacts_regen_candidate_1",
+            payload=_valid_artifacts_payload(),
+            report_slug="report",
+        ),
+        run_context,
+    )
+    audit_response = store_pack(
+        AnalysisStorePackRequest(
+            schema_version="1.0",
+            output_dir=str(output_dir),
+            report_id="file123",
+            pack_name="regeneration_candidate_audit_1",
+            payload=_valid_candidate_audit_payload(),
+            report_slug="report",
+        ),
+        run_context,
+    )
+
+    assert Path(artifact_response.output_path).exists()
+    assert Path(audit_response.output_path).exists()
 
 
 def test_store_pack_rejects_pack_name_path_traversal(

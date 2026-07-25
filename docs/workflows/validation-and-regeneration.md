@@ -73,3 +73,35 @@ When a queue payload sets `claim_validation_required`, publication readiness
 accepts only a readable package in `awaiting_review` with zero unsupported and
 unresolved factual claims. This is a pre-publication gate, not automatic
 publication approval.
+
+## Grounding-safe candidate regeneration
+
+Regeneration never writes a repaired payload directly to `artifacts.json`.
+Each attempt first persists the schema-backed candidate as
+`artifacts_regen_candidate_<attempt>.json`. Before it can become current, the
+workflow requires artifact-schema validation, canonical evidence-ID validation,
+source-page validation against retained evidence, deterministic material
+claim/insight lineage comparison, grounding validation, semantic validation,
+and the public-editorial check. The corresponding validation result is retained
+under `validation_regen_candidate_<attempt>.json`; a candidate failure cannot
+replace either canonical artifact or canonical validation output.
+
+The deterministic candidate check is complete only when all evidence IDs,
+source pages, and material lineage relationships validate. A grounding-provider
+failure is release-blocking unless that complete deterministic check passed. In
+all cases, material claims classified as unsupported, numerically inconsistent,
+contradicted, using an invalid comparison, missing material evidence, or citing
+a hallucinated evidence ID are blocking failures. An explicitly declared,
+schema-valid family abstention is retained as abstention rather than being
+mistaken for lost evidence; it remains subject to the normal publication policy.
+
+Every candidate writes a schema-backed
+`regeneration_candidate_audit_<attempt>.json`. It records the original
+claim/insight identity, original and candidate evidence IDs and source pages,
+validation issue codes, transformation scope, before/after canonical hashes,
+candidate/current artifact paths, and whether the attempt was promoted or
+rolled back. Promotion uses the canonical atomic artifact store only after every
+gate passes, so the prior current artifact stays recoverable until the atomic
+replacement succeeds. A failed candidate remains retained for diagnosis while
+the existing current artifact remains publishable only if it independently
+satisfies readiness policy.

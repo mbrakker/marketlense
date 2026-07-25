@@ -442,6 +442,11 @@ def test_regenerate_artifacts_insights_bundle_uses_targeted_steps_and_preserves_
     assert response.updated_artifacts["expert_comment"] == "Old expert"
     assert response.updated_artifacts["linkedin_post"] == "Old linkedin"
     assert [call.path for call in response.updated_artifacts and []] == []
+    assert response.artifacts_path == ""
+    assert Path(response.candidate_artifacts_path).is_file()
+    assert not (
+        tmp_path / "out" / "report-1" / "report_analysis" / "artifacts.json"
+    ).exists()
 
     rendered_paths = [call["path"] for call in prompt_client.render_calls]
     assert rendered_paths == [

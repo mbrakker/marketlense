@@ -1,0 +1,38 @@
+schema_version: "1.0"
+
+# Fresh isolated namespace for the bounded Task 6 grounding/regeneration
+# validation. Credentials continue to resolve only from the local .env.
+paths:
+  output_dir: "./out/grounding_safe_task6_20260725"
+  cache_dir: "./cache/grounding_safe_task6_20260725"
+  state_db: "./state/grounding_safe_task6_20260725/index.sqlite"
+  reports_db: "./state/grounding_safe_task6_20260725/reports.sqlite"
+  signal_store_db: "./state/grounding_safe_task6_20260725/signals.sqlite"
+  ingest_lock: "./state/grounding_safe_task6_20260725/ingest.lock"
+
+ingest:
+  run_budget:
+    max_spend_usd: 1.0
+    max_pdfs: 1
+    max_retries: 2
+    max_runtime_seconds: 3600
+    limit_decision: "stop"
+
+analysis:
+  cost_ledger_path: "./state/grounding_safe_task6_20260725/llm_cost_ledger.jsonl"
+
+cost:
+  usage_db_path: "./state/grounding_safe_task6_20260725/llm_usage.sqlite"
+  daily_path: "./state/grounding_safe_task6_20260725/llm_cost_daily.json"
+  ledger_path: "./state/grounding_safe_task6_20260725/llm_cost_ledger.jsonl"
+
+publish:
+  projection_daily_path: "./state/grounding_safe_task6_20260725/projection_cost_daily.json"
+  projection_ledger_path: "./state/grounding_safe_task6_20260725/projection_cost_ledger.jsonl"
+
+workflow_control:
+  remediation_reaper:
+    schema_version: "1.0"
+    execution_enabled: false
+    max_records_per_run: 1
+    lease_seconds: 60

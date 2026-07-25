@@ -298,7 +298,11 @@ def run_grounding_check(
             issue(
                 rule_id=RULE_ID,
                 message=f"Grounding check failed: {exc.message}",
-                severity="warning",
+                severity=(
+                    "warning"
+                    if request.deterministic_grounding_passed
+                    else "error"
+                ),
                 section="grounding",
             )
         )
@@ -405,6 +409,16 @@ def normalize_violation_type(value: str) -> str:
         "report_said_x": "report_directive_misattribution",
         "unsupported_factual_claim": "unsupported_factual_claim",
         "factual_claim": "unsupported_factual_claim",
+        "numerically_inconsistent": "numerically_inconsistent",
+        "numeric_inconsistency": "numerically_inconsistent",
+        "contradicted": "contradicted",
+        "contradiction": "contradicted",
+        "invalid_comparison": "invalid_comparison",
+        "invalid_comparator": "invalid_comparison",
+        "missing_material_evidence": "missing_material_evidence",
+        "missing_evidence": "missing_material_evidence",
+        "hallucinated_evidence_id": "hallucinated_evidence_id",
+        "unknown_evidence_id": "hallucinated_evidence_id",
         "evidence_retrieval_failure": "evidence_retrieval_failure",
         "non_fatal_interpretation": "non_fatal_interpretation",
     }
@@ -427,6 +441,18 @@ def infer_violation_type(
         or "report recommends" in combined
     ):
         return "report_directive_misattribution"
+    if "invalid comparison" in combined or "incompatible comparison" in combined:
+        return "invalid_comparison"
+    if "numeric inconsisten" in combined or "numerically inconsisten" in combined:
+        return "numerically_inconsistent"
+    if "missing material evidence" in combined:
+        return "missing_material_evidence"
+    if "evidence id" in combined and any(
+        keyword in combined for keyword in ("hallucin", "unknown", "invented")
+    ):
+        return "hallucinated_evidence_id"
+    if "contradict" in combined:
+        return "contradicted"
     if section_key.startswith("quotes") or "quote" in combined:
         return "misattributed_quote"
     if extract_quantities(text) and any(
@@ -480,8 +506,6 @@ def grounding_issue_severity(
         return "error"
     if violation_type == "evidence_retrieval_failure":
         return "warning"
-    if violation_type == "unsupported_number":
-        return "error"
     if section_policy_value == "soft" and classification in {
         "analyst_interpretation",
         "prescriptive_recommendation",

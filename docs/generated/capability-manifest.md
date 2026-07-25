@@ -146,6 +146,7 @@ Generated from CLI registrations, configuration example, architecture policy, or
 - `src/schemas/methods_pack.schema.json`
 - `src/schemas/quote_candidates_pack.schema.json`
 - `src/schemas/recommendations_pack.schema.json`
+- `src/schemas/regeneration_candidate_audit.schema.json`
 - `src/schemas/risk_register_pack.schema.json`
 - `src/schemas/scope_pack.schema.json`
 - `src/schemas/semantic_validation_output.schema.json`

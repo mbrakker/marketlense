@@ -331,11 +331,11 @@ def normalize_artifact_evidence_ids(
         doc_map=doc_map, evidence_packs=evidence_packs
     )
     normalized_count = 0
-    cleared_count = 0
+    unresolved_count = 0
     checked_count = 0
 
     def _normalize_item(item: Any) -> None:
-        nonlocal normalized_count, cleared_count, checked_count
+        nonlocal normalized_count, unresolved_count, checked_count
         if not isinstance(item, dict):
             return
         original = _s(item.get("evidence_id")).strip()
@@ -343,10 +343,15 @@ def normalize_artifact_evidence_ids(
         normalized = _canonicalize_evidence_id(
             original, known_ids=known_ids, alias_to_id=alias_to_id
         )
-        if normalized != original:
+        if normalized and normalized != original:
             normalized_count += 1
-            if not normalized:
-                cleared_count += 1
+        if original and not normalized:
+            # Preserve an unrecognized model-supplied ID so the validation
+            # gate can reject and audit the hallucination instead of silently
+            # converting it into an indistinguishable missing reference.
+            unresolved_count += 1
+            item["evidence_id"] = original
+            return
         item["evidence_id"] = normalized
 
     claim_map = summary.get("claim_evidence_map")
@@ -364,7 +369,7 @@ def normalize_artifact_evidence_ids(
         "known_reference_count": len(known_ids),
         "checked_count": checked_count,
         "normalized_count": normalized_count,
-        "cleared_count": cleared_count,
+        "unresolved_count": unresolved_count,
     }
 
 

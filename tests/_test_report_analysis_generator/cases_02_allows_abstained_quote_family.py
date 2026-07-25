@@ -174,6 +174,89 @@ def test_run_report_analysis_regenerates_failed_section_until_pass(
         "validation_regen_pass",
     }
 
+
+def test_run_report_analysis_rolls_back_failed_candidate_regeneration(tmp_path):
+    runtime = _runtime(tmp_path)
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    original = _artifacts(
+        summary={
+            "tldr": "current artifact",
+            "executive_summary": "Current summary",
+            "claim_evidence_map": [],
+        }
+    )
+    candidate = _artifacts(
+        summary={
+            "tldr": "candidate artifact",
+            "executive_summary": "Candidate summary",
+            "claim_evidence_map": [],
+        }
+    )
+    candidate["insights_final"][0]["evidence_id"] = ""
+    validation_calls = 0
+
+    def _run_validation(req, settings, ctx, *, pack_name, report_name, md5):
+        nonlocal validation_calls
+        del req, settings, ctx, pack_name, report_name, md5
+        validation_calls += 1
+        if validation_calls == 1:
+            return ValidationReport(
+                schema_version="1.1",
+                status="fail",
+                issues=[
+                    ValidationIssue(
+                        schema_version="1.0",
+                        message="[grounding] Unsupported summary claim",
+                        severity="error",
+                        affected_section="summary",
+                        rule_id="grounding",
+                        repair_target="summary",
+                    )
+                ],
+                severity="error",
+            )
+        return ValidationReport(
+            schema_version="1.1", status="pass", issues=[], severity="pass"
+        )
+
+    deps = _deps(
+        generate_evidence_packs=lambda **kwargs: {
+            "doc_map": {"docMap": {"title": "Doc Title"}},
+            "findings": {"findings": [{"id": "f1", "pages": [1]}]},
+            "quote_candidates": {"quote_candidates": [{"id": "q1", "page": 1}]},
+        },
+        generate_artifacts=lambda **kwargs: original,
+        run_validation=_run_validation,
+        regenerate_artifacts=lambda request: ArtifactRegenerationResponse(
+            updated_artifacts=candidate,
+            regenerated_sections=["summary"],
+            prompt_namespaces=["report_vs/artifacts/regenerate/summary"],
+            candidate_artifacts_path=str(
+                tmp_path / "out" / "artifacts_regen_candidate_1.json"
+            ),
+        ),
+    )
+
+    state = run_report_analysis(
+        runtime,
+        source,
+        selection,
+        VectorStoreIndexingState(
+            vector_store_id="vs_1",
+            openai_file_id="file_1",
+            vector_store_status="completed",
+            indexed_at_utc="2026-01-01T00:00:00Z",
+            last_error=None,
+        ),
+        deps,
+    )
+
+    assert state.artifacts_payload["summary"]["tldr"] == "current artifact"
+    assert state.regeneration_attempts[0].promotion_outcome == "rolled_back"
+    assert state.regeneration_attempts[0].candidate_audit_path
+    assert state.validation_report.status == "fail"
+
 def test_run_report_analysis_maps_topic_section_failures_to_topics_regeneration(
     tmp_path,
 ):

@@ -7,6 +7,8 @@ from src.contracts.regeneration import (
     ArtifactRegenerationRequest,
     ArtifactRegenerationResponse,
     RegenerationAttemptResult,
+    RegenerationCandidateAudit,
+    RegenerationEvidenceLineage,
     RegenerationIssue,
     RegenerationLoopState,
     RegenerationPlan,
@@ -103,8 +105,39 @@ def test_regeneration_contracts_roundtrip(assert_no_defaulted_required_fields) -
         artifacts_path="./out/report/report_analysis/artifacts.json",
         artifacts_snapshot_path="./out/report/report_analysis/artifacts_regen_attempt_1.json",
     )
+    lineage = RegenerationEvidenceLineage(
+        entity_kind="insight",
+        entity_id="insight-1",
+        original_evidence_ids=["f1"],
+        candidate_evidence_ids=["f2"],
+        original_source_pages=[1],
+        candidate_source_pages=[2],
+        validation_issues=[],
+    )
+    audit = RegenerationCandidateAudit(
+        attempt_index=1,
+        transformation_scope=["summary"],
+        before_sha256="a" * 64,
+        after_sha256="b" * 64,
+        current_artifacts_path="./out/report/report_analysis/artifacts.json",
+        candidate_artifacts_path="./out/report/report_analysis/artifacts_regen_candidate_1.json",
+        validation_status="pass",
+        promotion_outcome="promoted",
+        validation_issues=[],
+        evidence_lineage=[lineage],
+    )
 
-    for contract in (issue, target, plan, attempt, loop, request, response):
+    for contract in (
+        issue,
+        target,
+        plan,
+        attempt,
+        loop,
+        request,
+        response,
+        lineage,
+        audit,
+    ):
         assert_no_defaulted_required_fields(contract)
 
     issue_raw = asdict(issue)
@@ -114,6 +147,8 @@ def test_regeneration_contracts_roundtrip(assert_no_defaulted_required_fields) -
     loop_raw = asdict(loop)
     request_raw = asdict(request)
     response_raw = asdict(response)
+    lineage_raw = asdict(lineage)
+    audit_raw = asdict(audit)
 
     assert RegenerationIssue(**issue_raw) == issue
     assert (
@@ -182,3 +217,16 @@ def test_regeneration_contracts_roundtrip(assert_no_defaulted_required_fields) -
         == request
     )
     assert ArtifactRegenerationResponse(**response_raw) == response
+    assert RegenerationEvidenceLineage(**lineage_raw) == lineage
+    assert (
+        RegenerationCandidateAudit(
+            **{
+                **audit_raw,
+                "evidence_lineage": [
+                    RegenerationEvidenceLineage(**item)
+                    for item in audit_raw["evidence_lineage"]
+                ],
+            }
+        )
+        == audit
+    )

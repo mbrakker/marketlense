@@ -58,14 +58,23 @@ from src.generators.report_signal_artifact_generator import (
     build_ingestion_signal_extraction_request,
     planned_signal_artifact_path,
 )
+from src.generators.validation.regeneration_candidate import (
+    CandidateIntegrityResult,
+    validate_regeneration_candidate,
+)
 from src.orchestrators._report_analysis_orchestrator.payload import (
     _attach_payload_analysis_metadata,
     _ensure_report_payload_complete,
 )
 from src.orchestrators._report_analysis_orchestrator.validation import (
+    _candidate_artifacts_path,
+    _candidate_audit,
+    _candidate_validation_report,
     _evaluate_and_store_public_editorial_quality,
     _merge_public_editorial_quality,
+    _promote_regeneration_candidate,
     _run_validation_with_fallback,
+    _store_regeneration_candidate_audit,
     _store_validation_snapshot,
 )
 from src.orchestrators.analytics_projection_orchestrator import run_analytics_projection
@@ -1059,20 +1068,53 @@ def _resume_prompt_family_repair(
         ),
         **regeneration_kwargs,
     )
+    candidate_artifacts = regeneration.updated_artifacts
+    candidate_artifacts_path = _candidate_artifacts_path(regeneration)
+    candidate_enforced = bool(candidate_artifacts_path)
+    current_artifacts_path = str(analysis.evidence_paths.get("artifacts") or "")
+    candidate_result = (
+        validate_regeneration_candidate(
+            current_artifacts=analysis.artifacts_payload,
+            candidate_artifacts=candidate_artifacts,
+            evidence_packs=analysis.evidence_packs,
+            ctx=repair_ctx,
+        )
+        if candidate_enforced
+        else CandidateIntegrityResult(issues=[], evidence_lineage=[])
+    )
+    candidate_audit_path = ""
+    if candidate_enforced:
+        candidate_audit_path = _store_regeneration_candidate_audit(
+            runtime=runtime,
+            dependencies=dependencies.analysis,
+            audit=_candidate_audit(
+                attempt_index=1,
+                transformation_scope=regeneration.regenerated_sections,
+                current_artifacts=analysis.artifacts_payload,
+                candidate_artifacts=candidate_artifacts,
+                current_artifacts_path=current_artifacts_path,
+                candidate_artifacts_path=candidate_artifacts_path,
+                candidate_result=candidate_result,
+            ),
+            ctx=repair_ctx,
+        )
     regenerated_payload = _attach_payload_analysis_metadata(
         merge_artifacts_into_payload(
             deepcopy(normalize_report(analysis.payload, runtime.ctx)),
-            regeneration.updated_artifacts,
+            candidate_artifacts,
         ),
         vector_store_id=analysis.vector_store_id,
         evidence_paths=analysis.evidence_paths,
     )
     _ensure_report_payload_complete(
         regenerated_payload,
-        artifacts=regeneration.updated_artifacts,
+        artifacts=candidate_artifacts,
         ctx=repair_ctx,
         file_id=runtime.file.file_id,
         stage="prompt_family_repair",
+    )
+    validation_pack_name = (
+        "validation_regen_candidate_1" if candidate_enforced else "validation"
     )
     validation = _run_validation_with_fallback(
         runtime=runtime,
@@ -1082,48 +1124,123 @@ def _resume_prompt_family_repair(
             schema_version="1.0",
             report_id=ReportId(runtime.file.file_id),
             report=regenerated_payload,
-            artifacts=regeneration.updated_artifacts,
+            artifacts=candidate_artifacts,
             evidence_packs=analysis.evidence_packs,
             vector_store_id=analysis.vector_store_id,
+            deterministic_grounding_passed=candidate_result.passed,
             publisher_name=runtime.publisher_name,
             report_name=runtime.source_report_name or runtime.report_title,
             source_url=runtime.source_url,
         ),
-        pack_name="validation",
+        pack_name=validation_pack_name,
         openai_client=validation_openai_client,
     )
+    validation = _candidate_validation_report(validation, candidate_result)
     editorial_validation, editorial_path = _evaluate_and_store_public_editorial_quality(
         runtime=runtime,
         dependencies=dependencies.analysis,
-        artifacts=regeneration.updated_artifacts,
+        artifacts=candidate_artifacts,
         pack_name="public_editorial_quality_prompt_repair",
         ctx=repair_ctx,
     )
     validation = _merge_public_editorial_quality(validation, editorial_validation)
-    _store_validation_snapshot(
+    candidate_validation_path = _store_validation_snapshot(
         runtime=runtime,
         dependencies=dependencies.analysis,
         report=validation,
-        pack_name="validation",
+        pack_name=validation_pack_name,
         ctx=repair_ctx,
     )
+    validation = replace(validation, source_path=candidate_validation_path)
     if validation.status != "pass":
+        if candidate_enforced:
+            _store_regeneration_candidate_audit(
+                runtime=runtime,
+                dependencies=dependencies.analysis,
+                audit=_candidate_audit(
+                    attempt_index=1,
+                    transformation_scope=regeneration.regenerated_sections,
+                    current_artifacts=analysis.artifacts_payload,
+                    candidate_artifacts=candidate_artifacts,
+                    current_artifacts_path=current_artifacts_path,
+                    candidate_artifacts_path=candidate_artifacts_path,
+                    candidate_result=candidate_result,
+                    validation_report=validation,
+                    promotion_outcome="rolled_back",
+                ),
+                ctx=repair_ctx,
+            )
         raise AppError(
             code="minimal_execution_prompt_family_validation_failed",
             message="Targeted prompt-family repair did not pass required validation",
             retryable=False,
             context={"file_id": runtime.file.file_id},
         )
+    artifacts_path = regeneration.artifacts_path
+    if candidate_enforced:
+        try:
+            artifacts_path = _promote_regeneration_candidate(
+                runtime=runtime,
+                dependencies=dependencies.analysis,
+                candidate_artifacts=candidate_artifacts,
+                ctx=repair_ctx,
+            )
+        except Exception:
+            _store_regeneration_candidate_audit(
+                runtime=runtime,
+                dependencies=dependencies.analysis,
+                audit=_candidate_audit(
+                    attempt_index=1,
+                    transformation_scope=regeneration.regenerated_sections,
+                    current_artifacts=analysis.artifacts_payload,
+                    candidate_artifacts=candidate_artifacts,
+                    current_artifacts_path=current_artifacts_path,
+                    candidate_artifacts_path=candidate_artifacts_path,
+                    candidate_result=candidate_result,
+                    validation_report=validation,
+                    promotion_outcome="rolled_back",
+                ),
+                ctx=repair_ctx,
+            )
+            raise
+        validation_path = _store_validation_snapshot(
+            runtime=runtime,
+            dependencies=dependencies.analysis,
+            report=validation,
+            pack_name="validation",
+            ctx=repair_ctx,
+        )
+        validation = replace(validation, source_path=validation_path)
+        candidate_audit_path = _store_regeneration_candidate_audit(
+            runtime=runtime,
+            dependencies=dependencies.analysis,
+            audit=_candidate_audit(
+                attempt_index=1,
+                transformation_scope=regeneration.regenerated_sections,
+                current_artifacts=analysis.artifacts_payload,
+                candidate_artifacts=candidate_artifacts,
+                current_artifacts_path=current_artifacts_path,
+                candidate_artifacts_path=candidate_artifacts_path,
+                candidate_result=candidate_result,
+                validation_report=validation,
+                promotion_outcome="promoted",
+            ),
+            ctx=repair_ctx,
+        )
     evidence_paths = dict(analysis.evidence_paths)
-    evidence_paths["artifacts"] = regeneration.artifacts_path
+    evidence_paths["artifacts"] = artifacts_path
     if regeneration.artifacts_snapshot_path:
         evidence_paths["artifacts_prompt_repair"] = regeneration.artifacts_snapshot_path
+    if candidate_artifacts_path:
+        evidence_paths["artifacts_regen_candidate_1"] = candidate_artifacts_path
+    if candidate_audit_path:
+        evidence_paths["regeneration_candidate_audit_1"] = candidate_audit_path
     if validation.source_path:
         evidence_paths["validation"] = validation.source_path
     if editorial_path:
         evidence_paths["public_editorial_quality_prompt_repair"] = editorial_path
     data_dict = regenerated_payload.to_dict()
-    data_dict["artifacts"] = regeneration.updated_artifacts
+    data_dict["artifacts"] = candidate_artifacts
     data_dict["evidence_packs"] = analysis.evidence_packs
     data_dict["validation_report"] = validation.to_dict()
     analysis = replace(
@@ -1131,7 +1248,7 @@ def _resume_prompt_family_repair(
         normalized_payload=regenerated_payload,
         data_dict=data_dict,
         evidence_paths=evidence_paths,
-        artifacts_payload=regeneration.updated_artifacts,
+        artifacts_payload=candidate_artifacts,
         validation_report=validation,
     )
     preview_resp = _preview_from_checkpoint(checkpoint_payload.get("preview"))

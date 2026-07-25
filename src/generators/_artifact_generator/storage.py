@@ -99,6 +99,7 @@ def assemble_artifacts_payload(
     family_status: Dict[str, Dict[str, Any]],
     ctx: RunContext,
     cache_meta: Optional[Dict[str, Any]] = None,
+    validate_references: bool = True,
 ) -> Dict[str, Any]:
     del report_name
     toc_entries = normalize_artifact_toc_entries(toc_bundle.get("toc_entries"))
@@ -243,7 +244,8 @@ def assemble_artifacts_payload(
             ),
             ctx,
         )
-        validate_evidence_references(artifacts_payload, evidence_packs, ctx)
+        if validate_references:
+            validate_evidence_references(artifacts_payload, evidence_packs, ctx)
     except AppError as exc:
         logger.info(
             log_event(

@@ -688,6 +688,120 @@ def test_validation_propagates_retryable_grounding_error(tmp_path, assert_app_er
         severity="error",
     )
 
+
+def test_nonretryable_grounding_failure_blocks_without_deterministic_success(tmp_path):
+    settings = _settings(tmp_path, report_worker_limit=1)
+    artifacts = {
+        "insights_final": [
+            {
+                "id": "i1",
+                "text": "Revenue grew 5%.",
+                "evidence_id": "e1",
+                "evidence": "Revenue grew 5% in 2024.",
+                "metric": {"value": "5", "unit": "%", "timeframe": "2024"},
+            }
+        ]
+    }
+    failure = AppError(
+        code="grounding_provider_failed",
+        message="provider unavailable",
+        retryable=False,
+    )
+    report = _report()
+    report.quote.text = ""
+
+    blocked = validate_report(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="r-grounding-blocked",
+            report=report,
+            artifacts=artifacts,
+            evidence_packs={},
+        ),
+        settings,
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=FailingOpenAI(grounding_exc=failure),
+        analysis_store=FakeAnalysisStore(),
+    )
+    deterministic_success = validate_report(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="r-grounding-deterministic",
+            report=report,
+            artifacts=artifacts,
+            evidence_packs={},
+            deterministic_grounding_passed=True,
+        ),
+        settings,
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=FailingOpenAI(grounding_exc=failure),
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    assert blocked.status == "fail"
+    assert any(
+        issue.rule_id == "grounding" and issue.severity == "error"
+        for issue in blocked.issues
+    )
+    assert deterministic_success.status == "pass"
+    assert any(
+        issue.rule_id == "grounding" and issue.severity == "warning"
+        for issue in deterministic_success.issues
+    )
+
+
+@pytest.mark.parametrize(
+    "violation_type",
+    [
+        "unsupported_factual_claim",
+        "numerically_inconsistent",
+        "contradicted",
+        "invalid_comparison",
+        "missing_material_evidence",
+        "hallucinated_evidence_id",
+    ],
+)
+def test_material_grounding_classifications_always_block_publish_readiness(
+    tmp_path, violation_type
+):
+    report = _report()
+    report.quote.text = ""
+    result = validate_report(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id=f"r-grounding-{violation_type}",
+            report=report,
+            artifacts={},
+            evidence_packs={},
+        ),
+        _settings(tmp_path, report_worker_limit=1),
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=FakeOpenAI(
+            semantic_payload={"metrics": [], "quotes": []},
+            grounding_payload={
+                "unsupported": [
+                    {
+                        "text": "Material report claim.",
+                        "section": "summary",
+                        "classification": "factual_claim",
+                        "violation_type": violation_type,
+                        "reason": "Grounding validator rejected the material claim.",
+                    }
+                ]
+            },
+        ),
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    assert result.status == "fail"
+    assert any(
+        issue.rule_id == "grounding" and issue.severity == "error"
+        for issue in result.issues
+    )
+
 __all__ = [
     "test_load_cached_validation_rejects_schema_invalid_payload",
     "test_validation_parallel_branch_with_auto_context_logs_parallel_event",
@@ -702,4 +816,6 @@ __all__ = [
     "test_validation_failures_include_rule_identity_prefix",
     "test_validation_propagates_retryable_semantic_error",
     "test_validation_propagates_retryable_grounding_error",
+    "test_nonretryable_grounding_failure_blocks_without_deterministic_success",
+    "test_material_grounding_classifications_always_block_publish_readiness",
 ]

@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RegenerationCandidateAudit",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "attempt_index",
+    "transformation_scope",
+    "before_sha256",
+    "after_sha256",
+    "current_artifacts_path",
+    "candidate_artifacts_path",
+    "validation_status",
+    "promotion_outcome",
+    "validation_issues",
+    "evidence_lineage"
+  ],
+  "properties": {
+    "schema_version": { "type": "string" },
+    "attempt_index": { "type": "integer", "minimum": 1 },
+    "transformation_scope": { "type": "array", "items": { "type": "string" } },
+    "before_sha256": { "type": "string", "minLength": 64, "maxLength": 64 },
+    "after_sha256": { "type": "string", "minLength": 64, "maxLength": 64 },
+    "current_artifacts_path": { "type": "string" },
+    "candidate_artifacts_path": { "type": "string" },
+    "validation_status": { "type": "string" },
+    "promotion_outcome": { "enum": ["candidate", "promoted", "rolled_back"] },
+    "validation_issues": { "type": "array", "items": { "type": "string" } },
+    "evidence_lineage": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "schema_version",
+          "entity_kind",
+          "entity_id",
+          "original_evidence_ids",
+          "candidate_evidence_ids",
+          "original_source_pages",
+          "candidate_source_pages",
+          "validation_issues"
+        ],
+        "properties": {
+          "schema_version": { "type": "string" },
+          "entity_kind": { "type": "string" },
+          "entity_id": { "type": "string" },
+          "original_evidence_ids": { "type": "array", "items": { "type": "string" } },
+          "candidate_evidence_ids": { "type": "array", "items": { "type": "string" } },
+          "original_source_pages": { "type": "array", "items": { "type": "integer", "minimum": 1 } },
+          "candidate_source_pages": { "type": "array", "items": { "type": "integer", "minimum": 1 } },
+          "validation_issues": { "type": "array", "items": { "type": "string" } }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

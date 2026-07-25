@@ -172,6 +172,27 @@ class RegenerationAttemptResult:
         default="",
         metadata={"doc": "Per-attempt validation snapshot path."},
     )
+    candidate_artifacts_path: str = field(
+        default="",
+        metadata={
+            "doc": (
+                "Immutable per-attempt candidate artifact path evaluated before "
+                "promotion."
+            )
+        },
+    )
+    candidate_audit_path: str = field(
+        default="",
+        metadata={
+            "doc": "Retained grounding and lineage audit for the candidate artifact."
+        },
+    )
+    promotion_outcome: str = field(
+        default="not_attempted",
+        metadata={
+            "doc": "Candidate disposition: promoted, rolled_back, or not_attempted."
+        },
+    )
     schema_version: str = field(
         default="1.0", metadata={"doc": "Regeneration attempt result schema version."}
     )
@@ -271,7 +292,102 @@ class ArtifactRegenerationResponse:
         default="",
         metadata={"doc": "Per-attempt artifacts snapshot path."},
     )
+    candidate_artifacts_path: str = field(
+        default="",
+        metadata={
+            "doc": (
+                "Candidate artifact path; it is not the current artifact until "
+                "promotion."
+            )
+        },
+    )
     schema_version: str = field(
         default="1.0",
         metadata={"doc": "Artifact regeneration response schema version."},
+    )
+
+
+@dataclass(frozen=True)
+class RegenerationEvidenceLineage:
+    """Evidence continuity retained for one material candidate entity."""
+
+    entity_kind: str = field(
+        metadata={"doc": "Artifact family: summary_claim, insight, or quote."}
+    )
+    entity_id: str = field(
+        metadata={
+            "doc": "Stable original claim or insight identity within its family."
+        }
+    )
+    original_evidence_ids: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Evidence IDs carried by the current artifact."},
+    )
+    candidate_evidence_ids: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Evidence IDs carried by the candidate artifact."},
+    )
+    original_source_pages: List[int] = field(
+        default_factory=list,
+        metadata={"doc": "Source pages carried by the current artifact."},
+    )
+    candidate_source_pages: List[int] = field(
+        default_factory=list,
+        metadata={"doc": "Source pages carried by the candidate artifact."},
+    )
+    validation_issues: List[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Bounded validation issue codes associated with the entity."
+        },
+    )
+    schema_version: str = field(
+        default="1.0",
+        metadata={"doc": "Regeneration evidence-lineage schema version."},
+    )
+
+
+@dataclass(frozen=True)
+class RegenerationCandidateAudit:
+    """Durable audit record for a candidate before its atomic promotion."""
+
+    attempt_index: int = field(metadata={"doc": "One-based regeneration attempt."})
+    before_sha256: str = field(
+        metadata={"doc": "Canonical JSON hash of the current artifact before repair."}
+    )
+    after_sha256: str = field(
+        metadata={"doc": "Canonical JSON hash of the candidate artifact."}
+    )
+    transformation_scope: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Regenerated artifact families in this candidate."},
+    )
+    current_artifacts_path: str = field(
+        default="",
+        metadata={
+            "doc": "Current artifact path retained until atomic promotion succeeds."
+        },
+    )
+    candidate_artifacts_path: str = field(
+        default="", metadata={"doc": "Persisted candidate artifact path."}
+    )
+    validation_status: str = field(
+        default="candidate",
+        metadata={"doc": "Candidate validation status before promotion."},
+    )
+    promotion_outcome: str = field(
+        default="candidate",
+        metadata={"doc": "candidate, promoted, or rolled_back."},
+    )
+    validation_issues: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Bounded validation issue codes found for the candidate."},
+    )
+    evidence_lineage: List[RegenerationEvidenceLineage] = field(
+        default_factory=list,
+        metadata={"doc": "Original-to-candidate material evidence continuity."},
+    )
+    schema_version: str = field(
+        default="1.0",
+        metadata={"doc": "Regeneration candidate-audit schema version."},
     )
