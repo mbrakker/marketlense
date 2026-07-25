@@ -337,18 +337,28 @@ def build_recovery_adapter_registry(
             modified_time=None,
             md5_checksum=record.input_checksum or "",
         )
-        kwargs: dict[str, object] = {
-            "retries": 0,
-            "workflow_control_settings": workflow_control_settings,
-        }
         if rule.retry_scope in {"rendering", "report_cards"}:
-            kwargs.update(
+            outcome = run_report_pipeline(
+                file,
+                local_pdf_path,
+                ingest_settings,
+                record.input_checksum or None,
+                recovery_ctx,
+                retries=0,
+                workflow_control_settings=workflow_control_settings,
                 execution_plan_mode="enforce",
                 recovery_execution_intent="render_repair",
                 recovery_invalidations={"rendered_html": rule.error_code},
             )
         elif rule.retry_scope == "affected_claim_or_insight":
-            kwargs.update(
+            outcome = run_report_pipeline(
+                file,
+                local_pdf_path,
+                ingest_settings,
+                record.input_checksum or None,
+                recovery_ctx,
+                retries=0,
+                workflow_control_settings=workflow_control_settings,
                 execution_plan_mode="enforce",
                 recovery_execution_intent="targeted_repair",
                 recovery_invalidations={
@@ -359,18 +369,17 @@ def build_recovery_adapter_registry(
             # Taxonomy/category recovery starts after the retained selection
             # checkpoint. The existing vector identifier is validated above;
             # source preparation and vector creation are never re-entered.
-            kwargs.update(
+            outcome = run_report_pipeline(
+                file,
+                local_pdf_path,
+                ingest_settings,
+                record.input_checksum or None,
+                recovery_ctx,
+                retries=0,
+                workflow_control_settings=workflow_control_settings,
                 execution_plan_mode="disabled",
                 resume_from_stage="selection_complete",
             )
-        outcome = run_report_pipeline(
-            file,
-            local_pdf_path,
-            ingest_settings,
-            record.input_checksum or None,
-            recovery_ctx,
-            **kwargs,
-        )
         return (
             "succeeded"
             if outcome.status in {"processed", "checkpointed"}

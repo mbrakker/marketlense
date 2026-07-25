@@ -1384,6 +1384,7 @@ def run_publish(
             post_type=entity_route.post_type,
             ctx=file_ctx,
         )
+        source_id = state_row.md5
 
         def _record_publish_failure(
             exc: Exception,
@@ -1393,7 +1394,7 @@ def run_publish(
             _workflow_run_id: str = str(root_ctx.run_id),
             _input_checksum: str = publish_checksum,
             _report_id: str = file_id,
-            _source_id: str = state_row.md5,
+            _source_id: str = source_id,
             _checkpoint: RemediationCheckpointReference | None = recovery_checkpoint,
             _artifacts: list[RemediationArtifactReference] = recovery_artifacts,
             _idempotency_key: str = publish_idempotency_key,

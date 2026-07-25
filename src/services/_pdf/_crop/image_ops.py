@@ -13,6 +13,7 @@ from PIL import Image
 
 from src.services._pdf._crop.boundary_detectors import (
     detect_rendered_crop_boundaries,
+    rgb_pixel,
 )
 from src.utils.errors import AppError
 
@@ -52,9 +53,9 @@ def _dominant_border_color(img: Image.Image, box: int = 4) -> tuple[int, int, in
     for x0, y0 in corners:
         for y in range(y0, min(height, y0 + box)):
             for x in range(x0, min(width, x0 + box)):
-                colors.append(img.getpixel((x, y)))
+                colors.append(rgb_pixel(img, (x, y)))
     if not colors:
-        return img.getpixel((0, 0))
+        return rgb_pixel(img, (0, 0))
     counts: dict[tuple[int, int, int], int] = {}
     for color in colors:
         counts[color] = counts.get(color, 0) + 1
@@ -68,7 +69,7 @@ def _row_is_bg(img: Image.Image, y: int, bg: tuple[int, int, int], tol: int) -> 
     match = 0
     for x in range(0, width, step):
         samples += 1
-        px = img.getpixel((x, y))
+        px = rgb_pixel(img, (x, y))
         if all(abs(px[i] - bg[i]) <= tol for i in range(3)):
             match += 1
     return (match / max(1, samples)) >= CROP_TRIM_MIN_BG_FRAC
@@ -81,7 +82,7 @@ def _col_is_bg(img: Image.Image, x: int, bg: tuple[int, int, int], tol: int) -> 
     match = 0
     for y in range(0, height, step):
         samples += 1
-        px = img.getpixel((x, y))
+        px = rgb_pixel(img, (x, y))
         if all(abs(px[i] - bg[i]) <= tol for i in range(3)):
             match += 1
     return (match / max(1, samples)) >= CROP_TRIM_MIN_BG_FRAC
@@ -339,17 +340,17 @@ def _edge_change_density(img: Image.Image, *, horizontal: bool, index: int) -> f
     samples = 0
     changed = 0
     if horizontal:
-        previous = img.getpixel((0, index))
+        previous = rgb_pixel(img, (0, index))
         for x in range(1, width):
-            current = img.getpixel((x, index))
+            current = rgb_pixel(img, (x, index))
             samples += 1
             if _pixel_delta(previous, current) > 18:
                 changed += 1
             previous = current
     else:
-        previous = img.getpixel((index, 0))
+        previous = rgb_pixel(img, (index, 0))
         for y in range(1, height):
-            current = img.getpixel((index, y))
+            current = rgb_pixel(img, (index, y))
             samples += 1
             if _pixel_delta(previous, current) > 18:
                 changed += 1
@@ -421,7 +422,7 @@ def _box_content_density(
     for y in range(y0, y1):
         for x in range(x0, x1):
             total += 1
-            if _pixel_delta(img.getpixel((x, y)), bg) > CROP_TRIM_TOLERANCE:
+            if _pixel_delta(rgb_pixel(img, (x, y)), bg) > CROP_TRIM_TOLERANCE:
                 content += 1
     return content / max(1, total)
 
@@ -437,7 +438,7 @@ def _image_content_density(img: Image.Image) -> float:
     for y in range(0, height, step):
         for x in range(0, width, step):
             total += 1
-            if _pixel_delta(img.getpixel((x, y)), bg) > CROP_TRIM_TOLERANCE:
+            if _pixel_delta(rgb_pixel(img, (x, y)), bg) > CROP_TRIM_TOLERANCE:
                 content += 1
     return content / max(1, total)
 
@@ -459,9 +460,11 @@ def _visual_crispness_score(img: Image.Image) -> float:
         for x in range(1, width - 1, step):
             total += 1
             horizontal = _pixel_delta(
-                img.getpixel((x - 1, y)), img.getpixel((x + 1, y))
+                rgb_pixel(img, (x - 1, y)), rgb_pixel(img, (x + 1, y))
             )
-            vertical = _pixel_delta(img.getpixel((x, y - 1)), img.getpixel((x, y + 1)))
+            vertical = _pixel_delta(
+                rgb_pixel(img, (x, y - 1)), rgb_pixel(img, (x, y + 1))
+            )
             if max(horizontal, vertical) > 12:
                 edges += 1
     return min(1.0, max(0.35, edges / max(1, total) * 4.0))

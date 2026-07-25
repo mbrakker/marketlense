@@ -800,6 +800,16 @@ def test_crop_and_preview_sanitize_report_and_subdir_segments(tmp_path):
     assert (out_dir / preview_response.image_path).exists()
 
 
+def test_dominant_border_color_normalizes_grayscale_and_alpha_pixels():
+    assert _dominant_border_color(Image.new("L", (4, 4), 17)) == (17, 17, 17)
+    assert _dominant_border_color(Image.new("LA", (4, 4), (19, 128))) == (19, 19, 19)
+    assert _dominant_border_color(Image.new("RGBA", (4, 4), (10, 20, 30, 128))) == (
+        10,
+        20,
+        30,
+    )
+
+
 __all__ = [
     "test_strict_crop_filenames_do_not_collide_across_table_and_chart_calls",
     "test_crop_regions_compacts_filename_for_long_report_slug",
@@ -827,4 +837,5 @@ __all__ = [
     "test_apply_crop_refine_bbox_rejects_page_out_of_range",
     "test_apply_crop_refine_bbox_does_not_over_trim_for_long_crossing_text",
     "test_crop_and_preview_sanitize_report_and_subdir_segments",
+    "test_dominant_border_color_normalizes_grayscale_and_alpha_pixels",
 ]

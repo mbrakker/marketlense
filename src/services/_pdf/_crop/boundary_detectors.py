@@ -12,11 +12,34 @@ from typing import Any
 import pymupdf as fitz
 from PIL import Image
 
+from src.utils.errors import AppError
+
 TABLE_RULE_SNAP_MAX_DISTANCE = 32.0
 TABLE_RULE_MIN_OVERLAP_RATIO = 0.62
 TABLE_RULE_THINNESS_MAX = 3.0
 CARD_EDGE_DENSITY_THRESHOLD = 0.42
 CHART_EDGE_DENSITY_THRESHOLD = 0.32
+
+
+def rgb_pixel(img: Image.Image, coordinate: tuple[int, int]) -> tuple[int, int, int]:
+    """Normalize Pillow's supported pixel forms to the RGB data crop checks use."""
+
+    pixel = img.getpixel(coordinate)
+    if isinstance(pixel, tuple):
+        if len(pixel) >= 3:
+            return int(pixel[0]), int(pixel[1]), int(pixel[2])
+        if len(pixel) >= 1:
+            value = int(pixel[0])
+            return value, value, value
+    if isinstance(pixel, (int, float)):
+        value = int(pixel)
+        return value, value, value
+    raise AppError(
+        code="pdf_crop_pixel_invalid",
+        message="Rendered crop image contains an unsupported pixel value",
+        retryable=False,
+        context={"coordinate": list(coordinate), "mode": str(img.mode or "")},
+    )
 
 
 def snap_table_rect_to_outer_rules(page: fitz.Page, rect: fitz.Rect) -> fitz.Rect:
@@ -270,9 +293,9 @@ def _dominant_border_color(img: Image.Image, box: int = 4) -> tuple[int, int, in
     for x0, y0 in corners:
         for y in range(y0, min(height, y0 + box)):
             for x in range(x0, min(width, x0 + box)):
-                colors.append(img.getpixel((x, y)))
+                colors.append(rgb_pixel(img, (x, y)))
     if not colors:
-        return img.getpixel((0, 0))
+        return rgb_pixel(img, (0, 0))
     counts: dict[tuple[int, int, int], int] = {}
     for color in colors:
         counts[color] = counts.get(color, 0) + 1
@@ -290,7 +313,7 @@ def _box_content_density(
     for y in range(y0, y1):
         for x in range(x0, x1):
             total += 1
-            if _pixel_delta(img.getpixel((x, y)), bg) > 8:
+            if _pixel_delta(rgb_pixel(img, (x, y)), bg) > 8:
                 content += 1
     return content / max(1, total)
 
@@ -309,6 +332,7 @@ __all__ = [
     "TABLE_RULE_THINNESS_MAX",
     "CARD_EDGE_DENSITY_THRESHOLD",
     "CHART_EDGE_DENSITY_THRESHOLD",
+    "rgb_pixel",
     "snap_table_rect_to_outer_rules",
     "detect_rendered_crop_boundaries",
 ]

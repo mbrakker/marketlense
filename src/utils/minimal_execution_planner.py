@@ -529,7 +529,7 @@ def plan_minimal_execution(
         for family, reason in input_value.forced_invalidations.items()
         if str(family).strip()
     }
-    for family, reason in sorted(forced.items()):
+    for family, forced_reason in sorted(forced.items()):
         matched = False
         for artifact in artifacts:
             if artifact.artifact_id not in relevant_artifact_ids:
@@ -541,7 +541,7 @@ def plan_minimal_execution(
                 artifact_id=artifact.artifact_id,
                 artifact_kind=artifact.artifact_kind,
                 artifact_family=_family_for(artifact),
-                reason=f"typed_failure:{reason}",
+                reason=f"typed_failure:{forced_reason}",
             )
         if not matched:
             blockers_by_id[(f"forced:{family}", "missing_forced_artifact")] = (

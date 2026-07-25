@@ -85,7 +85,7 @@ def _text_bbox(
     font: ImageFont.FreeTypeFont,
 ) -> Tuple[int, int]:
     bbox = draw.textbbox((0, 0), text, font=font)
-    return bbox[2] - bbox[0], bbox[3] - bbox[1]
+    return int(bbox[2] - bbox[0]), int(bbox[3] - bbox[1])
 
 
 def _wrap_text(

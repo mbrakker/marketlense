@@ -27,7 +27,7 @@ logger = logging.getLogger("market_lense.structured_output_service")
 
 StructuredOutputCall = Callable[[str, str, str], OpenAIResponseResult]
 PayloadNormalizer = Callable[[Any], Any]
-PayloadValidator = Callable[[Any], None]
+PayloadValidator = Callable[[Any], object | None]
 SubstantiveCheck = Callable[[Any], bool]
 FormalAbstentionCheck = Callable[[Any], bool]
 

@@ -222,7 +222,7 @@ def render_artifact_json_model(
                 event="artifact_model_response",
                 module=logger.name,
                 fields={
-                    "namespace": bundle.prompt_set.dependency_manifest.namespace,
+                    "namespace": bundle.dependency_manifest.namespace,
                     "model": getattr(response, "model", bundle.resolved_model),
                     "has_json": bool(response.parsed_json),
                     "request_id": getattr(response, "request_id", "") or "",

@@ -651,7 +651,7 @@ def _generate_pack(
                 fields={
                     "report_id": report_id,
                     "pack": pack_name,
-                    "namespace": bundle.prompt_set.dependency_manifest.namespace,
+                    "namespace": bundle.dependency_manifest.namespace,
                     "model": str(resp.model or bundle.resolved_model or ""),
                     "request_id": resp.request_id or "",
                     "input_tokens": resp.input_tokens,
