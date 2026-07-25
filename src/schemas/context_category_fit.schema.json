@@ -95,6 +95,12 @@
               "type": "string"
             }
           },
+          "centrality_evidence_sections": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "remediation_signal": {
             "type": "string"
           }

@@ -1,0 +1,148 @@
+[
+  {
+    "id": "high_fit_supported_no_exclusion",
+    "source_sha256": "e3572be9f5a903f2f09b9e4909d3d884e1d9b3f3118a508362722dafc2f0ef5c",
+    "context": {
+      "report_id": "1V8dj5u4RZkbhvJFSZP7GKn9n3NLSJ30P",
+      "title": "Activate-Technology-and-Media-Outlook-2024",
+      "overview": "ACTIVATE TECHNOLOGY & MEDIA OUTLOOK 2024 by Activate covers consumer behavior, creator ecosystems, major technology trends, generative AI, eCommerce, gaming, the metaverse, spatial computing, and media revenues.",
+      "key_findings": [
+        "Hybrid work challenges are driving sustained IT and software spend; security, privacy, and collaboration tools are top planned investments."
+      ]
+    },
+    "candidate": {
+      "category_id": "technology",
+      "fit_score": 0.95,
+      "decision": "reject",
+      "why_fit": "The report is titled and framed as a Technology & Media Outlook and repeatedly analyzes core technology trends and infrastructure.",
+      "why_not_fit": "",
+      "evidence_sections": ["Generative AI", "B2B and Enterprise Software"]
+    },
+    "expected": {"decision": "primary", "selected": true, "status": "supported"}
+  },
+  {
+    "id": "activate_social_video_contradiction",
+    "source_sha256": "65dae3f3365d3f8e27817f001a376757e31b70e174aae042df1f4112f445fc73",
+    "context": {
+      "report_id": "1nrXx69QT4pqye59eEi2CS6WaoZEt9Cb5",
+      "title": "Activate-2025-Social-Video",
+      "overview": "ACTIVATE CONSULTING TECHNOLOGY & MEDIA OUTLOOK 2025 — SOCIAL VIDEO is focused on the social video market: platform user demographics, advertising revenue trends, creator engagement rankings, and social video platforms.",
+      "key_findings": [
+        "A diverse group of creators drives the majority of social video engagement, with limited overlap across platforms.",
+        "Top creators concentrate very large view and engagement counts across YouTube, TikTok, Instagram, and Facebook."
+      ]
+    },
+    "candidate": {
+      "category_id": "social_video_creator",
+      "fit_score": 0.95,
+      "decision": "reject",
+      "why_fit": "The report is explicitly centered on social video platforms, creator ecosystems, short-form engagement and creator rankings.",
+      "why_not_fit": "Not focused on commerce-in-platform mechanics.",
+      "evidence_sections": ["Top creators and creator engagement", "Forecast — Average daily social video time spent"]
+    },
+    "expected": {"decision": "primary", "selected": true, "status": "supported"}
+  },
+  {
+    "id": "creator_influencer_category",
+    "source_sha256": "46c4498499e408b69823b71e8e6dc7958bfc7601af1b2047323bac7db717a123",
+    "context": {
+      "report_id": "acquired-8dead8e63b52b05cc4f89874b80cb67f",
+      "title": "influencer-portfolio-ebook-0426",
+      "overview": "A practical guide to influencer marketing that explains creator tiers, portfolio construction, platform deployment, compensation, measurement frameworks, and scaling a creator program.",
+      "key_findings": [
+        "A diversified influencer portfolio is necessary to cover the full funnel.",
+        "Modern compensation and clear briefs improve creator experience and recruitment."
+      ]
+    },
+    "candidate": {
+      "category_id": "social_video_creator",
+      "fit_score": 0.95,
+      "decision": "reject",
+      "why_fit": "The report repeatedly centers creators, creator tiers, creator economics, and platform deployment.",
+      "why_not_fit": "Not focused on in-app commerce mechanics.",
+      "evidence_sections": ["Chapter 2: Understanding your creator options", "Chapter 3: Building your influencer portfolio"]
+    },
+    "expected": {"decision": "primary", "selected": true, "status": "supported"}
+  },
+  {
+    "id": "social_commerce_category",
+    "source_sha256": "8c68d0a07e5e8bc1b890084323f81be4e4f98d36edcb79e706150118972b150d",
+    "context": {
+      "report_id": "acquired-8dead8e63b52b05cc4f89874b80cb67f",
+      "title": "influencer-portfolio-ebook-0426",
+      "overview": "A practical guide to influencer marketing that explains creator tiers, portfolio construction, platform deployment, compensation, measurement frameworks, and scaling a creator program.",
+      "key_findings": [
+        "Measurement infrastructure connects creator activity to revenue.",
+        "Repurposing creator content supports multi-touch journeys."
+      ]
+    },
+    "candidate": {
+      "category_id": "social_commerce",
+      "fit_score": 0.4,
+      "decision": "reject",
+      "why_fit": "The report links creators to revenue and discusses repurposing creator content across platforms to drive purchases.",
+      "why_not_fit": "The report is not about in-platform checkout, live shopping, or TikTok Shop mechanics.",
+      "evidence_sections": ["Chapter 6: Measuring your influencer portfolio performance"]
+    },
+    "expected": {"decision": "reject", "selected": false, "status": "rejected"}
+  },
+  {
+    "id": "secondary_creator_content",
+    "source_sha256": "a599877552b506c5bf78edf18d855c200a85b6fbf56c5a2640295a917efd5123",
+    "context": {
+      "report_id": "1rRwLwZRWNWm2FRl8prb4ZOeQHzO0EZG7",
+      "title": "Activate Consumer Internet and Media Trends",
+      "overview": "Slide report presenting consumer internet and media forecasts across revenue, smart speakers, reality computing, web video, premium video, ecommerce, and podcasts.",
+      "key_findings": [
+        "Web video views are highly concentrated: a relatively small subset of creators capture the majority of views, and influencers and media companies dominate top-view shares on YouTube and Facebook."
+      ]
+    },
+    "candidate": {
+      "category_id": "social_video_creator",
+      "fit_score": 0.78,
+      "decision": "secondary",
+      "why_fit": "The report calls out creator dynamics, top creators, and influencer reach in web video.",
+      "why_not_fit": "Creator coverage exists within a broader media and revenue forecast context.",
+      "evidence_sections": ["WEB VIDEO", "key_findings"]
+    },
+    "expected": {"decision": "secondary", "selected": true, "status": "supported"}
+  },
+  {
+    "id": "explicit_exclusion_conflict",
+    "source_sha256": "pre-existing-test-fixture",
+    "context": {
+      "report_id": "file-1",
+      "title": "Consumer Media Outlook",
+      "overview": "Technology is only an enabling theme inside a broader consumer media report.",
+      "key_findings": ["Audience behavior, media spend, and consumer demand dominate."]
+    },
+    "candidate": {
+      "category_id": "technology",
+      "fit_score": 0.88,
+      "decision": "primary",
+      "why_fit": "Technology appears in the report.",
+      "why_not_fit": "",
+      "evidence_sections": ["overview"]
+    },
+    "expected": {"decision": "reject", "selected": false, "status": "rejected"}
+  },
+  {
+    "id": "low_fit_rejection",
+    "source_sha256": "7d0d951fe9590c31ee5af6007c06741bdcf56123f040681a6da39fac92cd5977",
+    "context": {
+      "report_id": "1nrXx69QT4pqye59eEi2CS6WaoZEt9Cb5",
+      "title": "Activate-2025-Social-Video",
+      "overview": "ACTIVATE CONSULTING TECHNOLOGY & MEDIA OUTLOOK 2025 — SOCIAL VIDEO is focused on social video platforms, advertising revenue, creator engagement, and audience time spent.",
+      "key_findings": ["A diverse group of creators drives the majority of social video engagement."]
+    },
+    "candidate": {
+      "category_id": "social_commerce",
+      "fit_score": 0.1,
+      "decision": "reject",
+      "why_fit": "The report is about social platforms and creators, which can relate to commerce in some contexts.",
+      "why_not_fit": "No in-platform purchasing or checkout mechanism is central.",
+      "evidence_sections": ["overview"]
+    },
+    "expected": {"decision": "reject", "selected": false, "status": "rejected"}
+  }
+]

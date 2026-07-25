@@ -66,6 +66,38 @@ def _clean_int(value: object, default: int) -> int:
         return default
 
 
+def _clean_fit_threshold(value: object, default: float) -> float:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        raise AppError(
+            code="category_mapping_invalid_fit_threshold",
+            message="Category fit high-confidence threshold must be a number in (0, 1)",
+            retryable=False,
+            severity="error",
+            context={"value_type": "bool"},
+        )
+    try:
+        threshold = float(value)
+    except (TypeError, ValueError):
+        raise AppError(
+            code="category_mapping_invalid_fit_threshold",
+            message="Category fit high-confidence threshold must be a number in (0, 1)",
+            retryable=False,
+            severity="error",
+            context={"value_type": type(value).__name__},
+        ) from None
+    if 0.0 < threshold < 1.0:
+        return threshold
+    raise AppError(
+        code="category_mapping_invalid_fit_threshold",
+        message="Category fit high-confidence threshold must be in (0, 1)",
+        retryable=False,
+        severity="error",
+        context={"threshold": threshold},
+    )
+
+
 def _clean_bool(value: object, default: bool) -> bool:
     if isinstance(value, bool):
         return value
@@ -183,6 +215,7 @@ def _sanitize_mapping_data(raw: dict) -> dict:
             continue
         tags = _clean_tags(item.get("tags") or [])
         core_tags = _clean_tags(item.get("core_tags") or [])
+        semantic_concepts = _clean_tags(item.get("semantic_concepts") or [])
         supporting_tags = _clean_tags(item.get("supporting_tags") or [])
         secondary_supporting_tags = _clean_tags(
             item.get("secondary_supporting_tags") or []
@@ -211,6 +244,7 @@ def _sanitize_mapping_data(raw: dict) -> dict:
                 ],
                 "tags": tags,
                 "core_tags": core_tags,
+                "semantic_concepts": semantic_concepts,
                 "supporting_tags": supporting_tags,
                 "secondary_supporting_tags": secondary_supporting_tags,
                 "descriptor_tags": descriptor_tags,
@@ -245,10 +279,13 @@ def _sanitize_mapping_data(raw: dict) -> dict:
         if tags_cleaned:
             uncategorized.append({"title": title, "tags": tags_cleaned})
     return {
-        "schema_version": str(raw.get("schema_version", "1.2")),
+        "schema_version": str(raw.get("schema_version", "1.3")),
         "categories": categories,
         "inference_rules": inference_rules,
         "uncategorized": uncategorized,
+        "high_confidence_fit_threshold": _clean_fit_threshold(
+            raw.get("high_confidence_fit_threshold"), 0.85
+        ),
     }
 
 
@@ -294,6 +331,7 @@ def _build_mappings(data: dict) -> CategoryMappings:
             exclude_when=item.get("exclude_when", []),
             tags=item.get("tags", []),
             core_tags=item.get("core_tags", []),
+            semantic_concepts=item.get("semantic_concepts", []),
             supporting_tags=item.get("supporting_tags", []),
             secondary_supporting_tags=item.get("secondary_supporting_tags", []),
             descriptor_tags=item.get("descriptor_tags", []),
@@ -323,10 +361,13 @@ def _build_mappings(data: dict) -> CategoryMappings:
         for item in data.get("inference_rules") or []
     ]
     return CategoryMappings(
-        schema_version=str(data.get("schema_version", "1.2")),
+        schema_version=str(data.get("schema_version", "1.3")),
         categories=categories,
         inference_rules=inference_rules,
         uncategorized=uncategorized,
+        high_confidence_fit_threshold=float(
+            data.get("high_confidence_fit_threshold", 0.85)
+        ),
     )
 
 

@@ -52,6 +52,9 @@ def _serialize_context_category_fit_payload(fit_response) -> dict[str, Any]:
                 "rule_evidence_sections": list(
                     getattr(fit, "rule_evidence_sections", []) or []
                 ),
+                "centrality_evidence_sections": list(
+                    getattr(fit, "centrality_evidence_sections", []) or []
+                ),
                 "remediation_signal": str(getattr(fit, "remediation_signal", "") or ""),
             }
             for fit in fit_response.fits

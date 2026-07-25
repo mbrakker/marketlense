@@ -14071,6 +14071,12 @@
           },
           "type": "array"
         },
+        "semantic_concepts": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "supporting_tags": {
           "items": {
             "type": "string"
@@ -14137,6 +14143,9 @@
             "$ref": "#/$defs/src.contracts.categories.CategoryDefinition"
           },
           "type": "array"
+        },
+        "high_confidence_fit_threshold": {
+          "type": "number"
         },
         "inference_rules": {
           "items": {
@@ -15424,6 +15433,12 @@
       "properties": {
         "category_id": {
           "type": "string"
+        },
+        "centrality_evidence_sections": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "decision": {
           "type": "string"
@@ -29050,6 +29065,9 @@
         "artifacts_snapshot_path": {
           "type": "string"
         },
+        "candidate_artifacts_path": {
+          "type": "string"
+        },
         "prompt_namespaces": {
           "items": {
             "type": "string"
@@ -29182,7 +29200,16 @@
         "attempt_index": {
           "type": "integer"
         },
+        "candidate_artifacts_path": {
+          "type": "string"
+        },
+        "candidate_audit_path": {
+          "type": "string"
+        },
         "plan_mode": {
+          "type": "string"
+        },
+        "promotion_outcome": {
           "type": "string"
         },
         "regenerated_sections": {
@@ -29212,6 +29239,108 @@
         "plan_mode",
         "validation_before_status",
         "validation_after_status"
+      ],
+      "type": "object"
+    },
+    "src.contracts.regeneration.RegenerationCandidateAudit": {
+      "additionalProperties": false,
+      "properties": {
+        "after_sha256": {
+          "type": "string"
+        },
+        "attempt_index": {
+          "type": "integer"
+        },
+        "before_sha256": {
+          "type": "string"
+        },
+        "candidate_artifacts_path": {
+          "type": "string"
+        },
+        "current_artifacts_path": {
+          "type": "string"
+        },
+        "evidence_lineage": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.regeneration.RegenerationEvidenceLineage"
+          },
+          "type": "array"
+        },
+        "promotion_outcome": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "transformation_scope": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "validation_issues": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "validation_status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "attempt_index",
+        "before_sha256",
+        "after_sha256"
+      ],
+      "type": "object"
+    },
+    "src.contracts.regeneration.RegenerationEvidenceLineage": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "candidate_source_pages": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "entity_id": {
+          "type": "string"
+        },
+        "entity_kind": {
+          "type": "string"
+        },
+        "original_evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "original_source_pages": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "validation_issues": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "entity_kind",
+        "entity_id"
       ],
       "type": "object"
     },
@@ -40025,6 +40154,9 @@
       "properties": {
         "artifacts": {
           "type": "string"
+        },
+        "deterministic_grounding_passed": {
+          "type": "boolean"
         },
         "evidence_packs": {
           "additionalProperties": {

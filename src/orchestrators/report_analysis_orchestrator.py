@@ -150,13 +150,12 @@ def _artifact_family_statuses(artifacts_payload: Any) -> dict[str, str]:
 
 
 def _category_fit_ambiguity_ids(category_state: Any) -> list[str]:
-    """Return non-rejected ambiguous category candidates requiring one repair."""
+    """Return every unresolved category candidate for the one targeted repair."""
     fit_response = getattr(category_state, "fit_response", None)
     return [
         str(fit.category_id)
         for fit in (getattr(fit_response, "fits", ()) or ())
-        if str(getattr(fit, "decision", "")) in {"primary", "secondary"}
-        and str(getattr(fit, "remediation_signal", "")) == "topic_semantics_ambiguous"
+        if str(getattr(fit, "remediation_signal", "")) == "topic_semantics_ambiguous"
     ]
 
 

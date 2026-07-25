@@ -94,6 +94,8 @@ def test_category_mapping_service_loads_context_schema(tmp_path: Path) -> None:
 
     assert not hasattr(response.mappings, "classification")
     assert response.mappings.categories[0].core_tags == ["macroeconomic_outlook"]
+    assert response.mappings.categories[0].semantic_concepts == []
+    assert response.mappings.high_confidence_fit_threshold == 0.85
     assert response.mappings.categories[0].supporting_tags == ["country_analysis"]
     assert response.mappings.categories[0].secondary_supporting_tags == [
         "interest_rates"
@@ -152,6 +154,8 @@ def test_repo_category_mapping_config_is_normalized() -> None:
     categories = payload.get("categories") or []
     inference_rules = payload.get("inference_rules") or []
 
+    assert payload["high_confidence_fit_threshold"] == 0.85
+
     legacy_categories = [
         str(item.get("id"))
         for item in categories
@@ -183,6 +187,37 @@ def test_repo_category_mapping_config_is_normalized() -> None:
         )
     ]
     assert incomplete_inference_rules == []
+
+
+def test_category_mapping_service_rejects_invalid_high_confidence_threshold(
+    tmp_path: Path,
+    assert_app_error,
+) -> None:
+    mapping_path = tmp_path / "category-mappings.yaml"
+    mapping_path.write_text(
+        "\n".join(
+            [
+                "high_confidence_fit_threshold: 1.0",
+                "categories: []",
+                "uncategorized: []",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        load_mappings(
+            CategoryMappingLoadRequest(schema_version="1.0", path=str(mapping_path)),
+            _ctx(),
+        )
+
+    assert_app_error(
+        exc_info.value,
+        code="category_mapping_invalid_fit_threshold",
+        retryable=False,
+        severity="error",
+    )
 
 
 def test_repo_category_mapping_context_profiles_are_complete() -> None:

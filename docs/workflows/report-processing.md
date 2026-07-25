@@ -147,12 +147,26 @@ may abstain only for a downstream family contract that represents abstention;
 required non-abstainable families finish as a typed permanent failure when the
 bounded sequence is exhausted.
 
-A primary or secondary category candidate without a matched canonical
-inclusion rule is ambiguous: it triggers one category-only semantic
-reclassification rather than being silently withheld. That reclassification
-receives only the declared ambiguous candidate IDs and cannot introduce
-another category; its retained decision payload is evidence for the category
-decision. An exhausted recovery remains a typed failure; it never becomes an
+Category-fit reconciliation is deterministic after the model returns its
+schema-valid candidate set. Each rule audit records its stable mapping-rule ID,
+explicit configured semantic concepts, and the exact retained context labels
+that support the rule. Exclusion rules can match only an explicit diminishing
+concept in central context (`title`, `overview`, or `key_findings`); loose token
+overlap and unreferenced model rationale cannot reject a category.
+
+A rejected category above the configured
+`high_confidence_fit_threshold` is promoted to primary when an inclusion rule
+is supported, its category concepts are central, and no evidenced exclusion
+matches. Supported but non-central high-confidence coverage is normalized to
+secondary. An evidenced exclusion deterministically rejects the candidate.
+Selected category IDs are always derived from those normalized decisions, never
+from the provider's advisory selection list.
+
+A primary or secondary candidate without deterministic inclusion support, and a
+high-confidence rejected candidate without enough evidence to resolve it, are
+ambiguous. They trigger exactly one category-only semantic reclassification
+routed only to their declared category IDs; that repair cannot introduce another
+category. An exhausted recovery remains a typed failure; it never becomes an
 empty successful analysis package. A response with no category candidates
 likewise triggers the bounded recovery and then fails closed. By contrast, an
 all-rejected, schema-valid candidate set is an explicit uncategorized outcome:

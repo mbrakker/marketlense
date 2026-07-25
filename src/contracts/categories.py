@@ -37,6 +37,15 @@ class CategoryDefinition:
         default_factory=list,
         metadata={"doc": "High-signal tags that strongly indicate this category."},
     )
+    semantic_concepts: List[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": (
+                "Explicit category concepts used by deterministic context-rule "
+                "matching; empty falls back to core tags."
+            )
+        },
+    )
     supporting_tags: List[str] = field(
         default_factory=list,
         metadata={"doc": "Supporting tags that indicate this category."},
@@ -143,6 +152,15 @@ class CategoryMappings:
     )
     uncategorized: List[UncategorizedTagsEntry] = field(
         default_factory=list, metadata={"doc": "Unmapped tag records."}
+    )
+    high_confidence_fit_threshold: float = field(
+        default=0.85,
+        metadata={
+            "doc": (
+                "Configured category-fit score above which a rejected category "
+                "must be reconciled against deterministic semantic evidence."
+            )
+        },
     )
 
 

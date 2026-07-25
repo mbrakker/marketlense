@@ -141,6 +141,15 @@ class CategoryFitCandidate:
             "doc": "Referenced report-context sections used by deterministic rule evaluation."
         },
     )
+    centrality_evidence_sections: List[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": (
+                "Title, overview, or key-finding references that deterministically "
+                "establish the category as central."
+            )
+        },
+    )
     remediation_signal: str = field(
         default="",
         metadata={

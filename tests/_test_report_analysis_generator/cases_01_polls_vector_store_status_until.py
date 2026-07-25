@@ -67,11 +67,13 @@ def test_run_report_analysis_polls_vector_store_status_until_ready(
     assert [request.vector_store_id for request in status_requests] == ["vs_1", "vs_1"]
     assert all(request.run_budget is not None for request in status_requests)
     assert {
-        request.run_budget.usage_db_path for request in status_requests if request.run_budget
+        request.run_budget.usage_db_path
+        for request in status_requests
+        if request.run_budget
     } == {runtime.settings.usage_db_path}
-    assert {request.run_budget.run_id for request in status_requests if request.run_budget} == {
-        runtime.ctx.run_id
-    }
+    assert {
+        request.run_budget.run_id for request in status_requests if request.run_budget
+    } == {runtime.ctx.run_id}
     events = _orchestrator_events(caplog)
     assert_logs_have_required_fields(events)
     assert any(
@@ -702,6 +704,7 @@ def test_run_report_analysis_uses_context_fit_categories_not_taxonomy_tags(tmp_p
                 "rejected_topic_rules": [],
                 "rejected_topic_rule_ids": [],
                 "rule_evidence_sections": [],
+                "centrality_evidence_sections": [],
                 "remediation_signal": "",
             }
         ],
@@ -712,7 +715,9 @@ def test_run_report_analysis_uses_context_fit_categories_not_taxonomy_tags(tmp_p
         "ai_automation",
     ]
     assert metadata_updates[0].run_budget is not None
-    assert metadata_updates[0].run_budget.usage_db_path == runtime.settings.usage_db_path
+    assert (
+        metadata_updates[0].run_budget.usage_db_path == runtime.settings.usage_db_path
+    )
     assert metadata_updates[0].run_budget.run_id == runtime.ctx.run_id
 
 

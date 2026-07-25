@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+from dataclasses import dataclass
 from hashlib import sha256
 from typing import Any, Dict, List
 
@@ -67,7 +68,7 @@ _STOP_WORDS = {
     "where",
     "whose",
 }
-_HIGH_CONFIDENCE_FIT_THRESHOLD = 0.85
+_DEFAULT_HIGH_CONFIDENCE_FIT_THRESHOLD = 0.85
 
 
 def fit_report_categories_from_context(
@@ -113,7 +114,9 @@ def fit_report_categories_from_context(
             "definition": category.definition or category.description,
             "include_when": list(category.include_when or []),
             "exclude_when": list(category.exclude_when or []),
-            "semantic_concepts": list(category.core_tags or []),
+            "semantic_concepts": list(
+                category.semantic_concepts or category.core_tags or []
+            ),
         }
         for category in mappings_resp.mappings.categories
         if category.portal_exposed
@@ -261,6 +264,9 @@ def fit_report_categories_from_context(
         model=str(recovery.model or prompt_bundle.resolved_model or ""),
         raw_response=json.dumps(payload, ensure_ascii=False),
         request_id=str(recovery.request_id or "") or None,
+        high_confidence_fit_threshold=(
+            mappings_resp.mappings.high_confidence_fit_threshold
+        ),
     )
     logger.info(
         log_event(
@@ -274,6 +280,9 @@ def fit_report_categories_from_context(
                 "candidate_count": len(fit_response.fits),
                 "topic_semantic_status_counts": _semantic_status_counts(
                     fit_response.fits
+                ),
+                "high_confidence_fit_threshold": (
+                    mappings_resp.mappings.high_confidence_fit_threshold
                 ),
                 "request_id": fit_response.request_id or "",
                 "model": fit_response.model,
@@ -333,24 +342,92 @@ def _normalize_fit_payload(payload: dict[str, Any]) -> dict[str, Any]:
     return normalized
 
 
-def _context_search_text(context: ReportCategoryContext) -> str:
-    parts: list[str] = [
-        context.title,
-        context.publisher,
-        context.region,
-        context.time_period,
-        context.overview,
-        *context.methods,
-        *context.key_findings,
-        *context.limitations,
+@dataclass(frozen=True)
+class _ContextEvidence:
+    """A bounded report-context excerpt with its canonical evidence reference."""
+
+    reference: str
+    text: str
+    is_central: bool
+
+
+@dataclass(frozen=True)
+class _RuleMatch:
+    """A deterministic rule decision and the context references that prove it."""
+
+    rule_id: str
+    rule: str
+    evidence_sections: list[str]
+
+
+_CONCEPT_NOISE = _STOP_WORDS | {
+    "a",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "be",
+    "by",
+    "but",
+    "for",
+    "from",
+    "in",
+    "into",
+    "is",
+    "it",
+    "not",
+    "of",
+    "on",
+    "or",
+    "that",
+    "the",
+    "than",
+    "to",
+    "was",
+    "will",
+    "with",
+}
+_EXCLUSION_CONCEPT_ANCHORS = {
+    "broader",
+    "just",
+    "mainly",
+    "minor",
+    "only",
+    "primarily",
+    "really",
+    "side",
+    "specifically",
+    "supporting",
+    "truly",
+}
+_CONCEPT_EQUIVALENTS = {"tech": "technology"}
+
+
+def _context_evidence(context: ReportCategoryContext) -> list[_ContextEvidence]:
+    """Return only retained context with stable labels usable in category audits."""
+
+    evidence = [
+        _ContextEvidence("title", context.title, True),
+        _ContextEvidence("overview", context.overview, True),
+        _ContextEvidence("methods", " ".join(context.methods), False),
+        _ContextEvidence("key_findings", " ".join(context.key_findings), True),
+        _ContextEvidence("limitations", " ".join(context.limitations), False),
     ]
-    for section in context.sections:
-        parts.extend([section.section_label, section.summary, *section.key_points])
-    return " ".join(str(part or "") for part in parts).casefold()
+    evidence.extend(
+        _ContextEvidence(
+            section.section_label,
+            " ".join((section.summary, *section.key_points)),
+            False,
+        )
+        for section in context.sections
+    )
+    return [item for item in evidence if item.text.strip()]
 
 
 def _semantic_terms(value: str) -> list[str]:
-    """Return ordered, explicit concepts while discarding only prose connectors."""
+    """Return the historical rule-ID normalization terms without semantic inference."""
+
     return [
         token.strip("_-' ")
         for token in re.findall(r"[a-z0-9][a-z0-9_'-]{1,}", value.casefold())
@@ -363,101 +440,250 @@ def _normalized_phrase(value: str) -> str:
 
 
 def _rule_id(category_id: str, rule_kind: str, position: int, rule: str) -> str:
+    """Keep rule identifiers stable across semantic-matching improvements."""
+
     stable_payload = "\x1f".join(
         (category_id, rule_kind, str(position), _normalized_phrase(rule))
     )
-    return f"{category_id}:{rule_kind}:{sha256(stable_payload.encode('utf-8')).hexdigest()[:16]}"
+    rule_hash = sha256(stable_payload.encode("utf-8")).hexdigest()[:16]
+    return f"{category_id}:{rule_kind}:{rule_hash}"
 
 
-def _rule_has_explicit_concept(rule: str, context_text: str) -> bool:
-    """Match a rule by an exact multi-term concept, never independent token overlap."""
-    context = _normalized_phrase(context_text)
-    terms = _semantic_terms(rule)
-    if not context or len(terms) < 2:
-        return False
+def _concept_terms(value: str) -> tuple[str, ...]:
+    """Normalize concepts without converting independent token overlap into a match."""
+
+    terms: list[str] = []
+    for raw_token in re.findall(r"[a-z0-9][a-z0-9_'-]*", value.casefold()):
+        token = raw_token.replace("_", "-").strip("-'")
+        if token.endswith("ies") and len(token) > 4:
+            token = f"{token[:-3]}y"
+        elif token.endswith("s") and len(token) > 3 and not token.endswith("ss"):
+            token = token[:-1]
+        token = _CONCEPT_EQUIVALENTS.get(token, token)
+        if token:
+            terms.append(token)
+    return tuple(terms)
+
+
+def _rule_semantic_concepts(rule: str) -> tuple[tuple[str, ...], ...]:
+    """Extract explicit, contiguous multi-term concepts from an inclusion rule."""
+
+    terms = tuple(term for term in _concept_terms(rule) if term not in _CONCEPT_NOISE)
+    concepts: list[tuple[str, ...]] = []
     for width in range(min(4, len(terms)), 1, -1):
         for start in range(0, len(terms) - width + 1):
-            if " ".join(terms[start : start + width]) in context:
-                return True
-    return False
+            concept = terms[start : start + width]
+            if concept not in concepts:
+                concepts.append(concept)
+    return tuple(concepts)
 
 
-def _matching_rules(
+def _exclusion_semantic_concepts(rule: str) -> tuple[tuple[str, ...], ...]:
+    """Extract the explicit diminishing concepts required for an exclusion match."""
+
+    terms = _concept_terms(rule)
+    concepts: list[tuple[str, ...]] = []
+    for index, term in enumerate(terms):
+        if term not in _EXCLUSION_CONCEPT_ANCHORS:
+            continue
+        suffix = tuple(
+            candidate
+            for candidate in terms[index + 1 : index + 5]
+            if candidate not in _CONCEPT_NOISE
+        )
+        for width in range(min(3, len(suffix)), 1, -1):
+            for start in range(0, len(suffix) - width + 1):
+                concept = suffix[start : start + width]
+                if concept not in concepts:
+                    concepts.append(concept)
+    return tuple(concepts)
+
+
+def _has_explicit_concept(concept: tuple[str, ...], evidence_text: str) -> bool:
+    """Match one exact semantic concept; independent token overlap never qualifies."""
+
+    evidence_terms = _concept_terms(evidence_text)
+    if not concept or not evidence_terms or len(concept) > len(evidence_terms):
+        return False
+    return any(
+        evidence_terms[index : index + len(concept)] == concept
+        for index in range(0, len(evidence_terms) - len(concept) + 1)
+    )
+
+
+def _evidence_references_for_concepts(
+    concepts: tuple[tuple[str, ...], ...],
+    evidence: list[_ContextEvidence],
+) -> list[str]:
+    return [
+        item.reference
+        for item in evidence
+        if any(_has_explicit_concept(concept, item.text) for concept in concepts)
+    ]
+
+
+def _category_semantic_concepts(profile: dict[str, Any]) -> tuple[tuple[str, ...], ...]:
+    """Use configured category concepts, never incidental prose-token overlap."""
+
+    concepts: list[tuple[str, ...]] = []
+    for raw_concept in profile.get("semantic_concepts") or []:
+        concept = _concept_terms(str(raw_concept))
+        if concept and concept not in concepts:
+            concepts.append(concept)
+    return tuple(concepts)
+
+
+def _matching_inclusion_rules(
     rules: list[str],
     *,
     category_id: str,
-    rule_kind: str,
-    context_text: str,
-) -> list[tuple[str, str]]:
-    matched: list[tuple[str, str]] = []
+    evidence: list[_ContextEvidence],
+    category_concepts: tuple[tuple[str, ...], ...],
+) -> list[_RuleMatch]:
+    """Match inclusion rules against their explicit concepts and retained evidence."""
+
+    matched: list[_RuleMatch] = []
     for position, raw_rule in enumerate(rules):
         rule = str(raw_rule or "").strip()
-        if rule and _rule_has_explicit_concept(rule, context_text):
-            matched.append((_rule_id(category_id, rule_kind, position, rule), rule))
+        if not rule:
+            continue
+        references = _evidence_references_for_concepts(
+            _rule_semantic_concepts(rule), evidence
+        )
+        # Category mappings already declare high-signal concepts.  They are a
+        # deterministic support path for the first inclusion rule when prose
+        # paraphrases the rule instead of repeating it verbatim.
+        if not references and position == 0:
+            references = _evidence_references_for_concepts(category_concepts, evidence)
+        if references:
+            matched.append(
+                _RuleMatch(
+                    rule_id=_rule_id(category_id, "include", position, rule),
+                    rule=rule,
+                    evidence_sections=references,
+                )
+            )
     return matched
 
 
-def _central_context_text(context: ReportCategoryContext) -> str:
-    """Use the report's title, overview and key findings as centrality evidence."""
-    return " ".join((context.title, context.overview, *context.key_findings))
+def _matching_exclusion_rules(
+    rules: list[str],
+    *,
+    category_id: str,
+    evidence: list[_ContextEvidence],
+) -> list[_RuleMatch]:
+    """Require explicit exclusion concepts in central evidence before rejecting."""
+
+    central_evidence = [item for item in evidence if item.is_central]
+    matched: list[_RuleMatch] = []
+    for position, raw_rule in enumerate(rules):
+        rule = str(raw_rule or "").strip()
+        if not rule:
+            continue
+        references = _evidence_references_for_concepts(
+            _exclusion_semantic_concepts(rule), central_evidence
+        )
+        if references:
+            matched.append(
+                _RuleMatch(
+                    rule_id=_rule_id(category_id, "exclude", position, rule),
+                    rule=rule,
+                    evidence_sections=references,
+                )
+            )
+    return matched
+
+
+def _centrality_evidence_references(
+    *,
+    inclusion_rules: list[str],
+    category_concepts: tuple[tuple[str, ...], ...],
+    evidence: list[_ContextEvidence],
+) -> list[str]:
+    central_evidence = [item for item in evidence if item.is_central]
+    concepts: list[tuple[str, ...]] = list(category_concepts)
+    for rule in inclusion_rules:
+        for concept in _rule_semantic_concepts(rule):
+            if concept not in concepts:
+                concepts.append(concept)
+    return _evidence_references_for_concepts(tuple(concepts), central_evidence)
 
 
 def _apply_topic_semantics(
     *,
     candidate: CategoryFitCandidate,
     profile: dict[str, Any],
-    context_text: str,
-    central_text: str,
+    evidence: list[_ContextEvidence],
+    high_confidence_fit_threshold: float,
 ) -> CategoryFitCandidate:
     include_rules = [str(item) for item in profile.get("include_when") or []]
     exclude_rules = [str(item) for item in profile.get("exclude_when") or []]
-    supported_matches = _matching_rules(
+    category_concepts = _category_semantic_concepts(profile)
+    supported_matches = _matching_inclusion_rules(
         include_rules,
         category_id=candidate.category_id,
-        rule_kind="include",
-        context_text=context_text,
+        evidence=evidence,
+        category_concepts=category_concepts,
     )
-    rejected_matches = _matching_rules(
+    rejected_matches = _matching_exclusion_rules(
         exclude_rules,
         category_id=candidate.category_id,
-        rule_kind="exclude",
-        context_text=context_text,
+        evidence=evidence,
     )
-    central_matches = _matching_rules(
-        include_rules,
-        category_id=candidate.category_id,
-        rule_kind="include",
-        context_text=central_text,
+    centrality_evidence_sections = _centrality_evidence_references(
+        inclusion_rules=include_rules,
+        category_concepts=category_concepts,
+        evidence=evidence,
     )
-    supported_rule_ids = [rule_id for rule_id, _rule in supported_matches]
-    supported_rules = [rule for _rule_id_value, rule in supported_matches]
-    rejected_rule_ids = [rule_id for rule_id, _rule in rejected_matches]
-    rejected_rules = [rule for _rule_id_value, rule in rejected_matches]
+    supported_rule_ids = [match.rule_id for match in supported_matches]
+    supported_rules = [match.rule for match in supported_matches]
+    rejected_rule_ids = [match.rule_id for match in rejected_matches]
+    rejected_rules = [match.rule for match in rejected_matches]
+    rule_evidence_sections = list(
+        dict.fromkeys(
+            reference
+            for match in (*supported_matches, *rejected_matches)
+            for reference in match.evidence_sections
+        )
+    )
     decision = candidate.decision
     status = "not_evaluated"
     remediation_signal = ""
     why_not_fit = candidate.why_not_fit
-    if rejected_rules and decision != "reject":
+    has_inclusion_support = bool(supported_matches)
+    is_central = bool(centrality_evidence_sections)
+    is_high_confidence = candidate.fit_score > high_confidence_fit_threshold
+
+    if rejected_rules:
         decision = "reject"
         status = "rejected"
         remediation_signal = "topic_semantics_exclusion_conflict"
         if not why_not_fit:
-            why_not_fit = "Canonical Topic exclusion rule matched the report context."
+            why_not_fit = (
+                "Canonical Topic exclusion rule matched central report context."
+            )
     elif (
-        decision == "reject"
-        and candidate.fit_score >= _HIGH_CONFIDENCE_FIT_THRESHOLD
-        and supported_rules
-        and central_matches
+        has_inclusion_support
+        and is_central
+        and decision == "reject"
+        and is_high_confidence
     ):
         decision = "primary"
         status = "supported"
-    elif decision == "reject":
-        status = "rejected"
-    elif supported_rules:
+    elif (
+        has_inclusion_support
+        and not is_central
+        and (decision == "primary" or (decision == "reject" and is_high_confidence))
+    ):
+        decision = "secondary"
         status = "supported"
-    else:
+    elif has_inclusion_support:
+        status = "supported" if decision != "reject" else "rejected"
+    elif decision != "reject" or is_high_confidence:
         status = "ambiguous"
         remediation_signal = "topic_semantics_ambiguous"
+    else:
+        status = "rejected"
 
     return CategoryFitCandidate(
         schema_version=candidate.schema_version,
@@ -473,7 +699,8 @@ def _apply_topic_semantics(
         supported_topic_rule_ids=supported_rule_ids,
         rejected_topic_rules=rejected_rules,
         rejected_topic_rule_ids=rejected_rule_ids,
-        rule_evidence_sections=list(candidate.evidence_sections),
+        rule_evidence_sections=rule_evidence_sections,
+        centrality_evidence_sections=centrality_evidence_sections,
         remediation_signal=remediation_signal,
     )
 
@@ -496,10 +723,10 @@ def _coerce_fit_response(
     model: str,
     raw_response: str,
     request_id: str | None,
+    high_confidence_fit_threshold: float = _DEFAULT_HIGH_CONFIDENCE_FIT_THRESHOLD,
 ) -> ContextCategoryFitResponse:
     profile_by_id = {str(item["id"]): item for item in category_profiles}
-    context_text = _context_search_text(context)
-    central_text = _central_context_text(context)
+    evidence = _context_evidence(context)
     fits: List[CategoryFitCandidate] = []
     for item in payload.get("category_fits") or []:
         if not isinstance(item, dict):
@@ -538,8 +765,8 @@ def _coerce_fit_response(
             _apply_topic_semantics(
                 candidate=fit,
                 profile=profile_by_id[category_id],
-                context_text=context_text,
-                central_text=central_text,
+                evidence=evidence,
+                high_confidence_fit_threshold=high_confidence_fit_threshold,
             )
         )
     fits.sort(
@@ -553,33 +780,15 @@ def _coerce_fit_response(
             item.category_id,
         )
     )
-    selected_ids: List[str] = []
-    for category_id in payload.get("selected_category_ids") or []:
-        text = str(category_id or "").strip()
-        selected_fit = next((fit for fit in fits if fit.category_id == text), None)
-        if (
-            text in profile_by_id
-            and text not in selected_ids
-            and (
-                selected_fit is None
-                or (
-                    selected_fit.decision != "reject"
-                    and selected_fit.semantic_rule_status != "ambiguous"
-                )
-            )
-        ):
-            selected_ids.append(text)
-    if not selected_ids:
-        for fit in fits:
-            if (
-                fit.decision in {"primary", "secondary"}
-                and fit.semantic_rule_status != "ambiguous"
-                and fit.category_id not in selected_ids
-            ):
-                selected_ids.append(fit.category_id)
-            if len(selected_ids) >= 2:
-                break
-    selected_ids = selected_ids[:2]
+    # Provider selections are advisory.  Persisted category IDs must be derived
+    # from the normalized deterministic decisions so no rejected category leaks
+    # through and a deterministic promotion cannot be omitted.
+    selected_ids = [
+        fit.category_id
+        for fit in fits
+        if fit.decision in {"primary", "secondary"}
+        and fit.semantic_rule_status != "ambiguous"
+    ][:2]
     rejected_conflicts = [
         fit.category_id
         for fit in fits

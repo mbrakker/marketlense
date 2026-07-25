@@ -49,6 +49,31 @@ def test_category_fit_ambiguity_requires_repair_when_selection_was_withheld() ->
     assert _category_fit_repair_code(state) == "category_fit_contradiction"
 
 
+def test_high_fit_rejected_ambiguity_is_repaired_before_fail_closed() -> None:
+    state = SimpleNamespace(
+        fit_response=SimpleNamespace(
+            fits=[
+                CategoryFitCandidate(
+                    schema_version="1.0",
+                    category_id="technology",
+                    label="Technology & Innovation",
+                    fit_score=0.96,
+                    decision="reject",
+                    why_fit="The category may be central.",
+                    why_not_fit="Deterministic context evidence is incomplete.",
+                    evidence_sections=["overview"],
+                    semantic_rule_status="ambiguous",
+                    remediation_signal="topic_semantics_ambiguous",
+                )
+            ]
+        )
+    )
+
+    assert _category_fit_ambiguity_ids(state) == ["technology"]
+    assert _category_fit_reclassification_candidates(state) == ["technology"]
+    assert _category_fit_repair_code(state) == "category_fit_contradiction"
+
+
 def test_empty_category_fit_requires_one_targeted_repair() -> None:
     state = SimpleNamespace(
         category_assignment=SimpleNamespace(categories=[]),

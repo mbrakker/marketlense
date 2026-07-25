@@ -53,6 +53,15 @@ same runtime preflight also write-probes the configured usage-ledger path,
 because the admission budget forecast and later provider reservations share
 that canonical SQLite authority.
 
+`src/config/category-mappings.yaml` owns the category-fit semantic policy.
+Its `high_confidence_fit_threshold` must be strictly between zero and one and
+defaults to `0.85` only when absent from an older mapping. A rejected model
+candidate above that threshold is reconciled against the category's explicit
+`semantic_concepts` (or its `core_tags` fallback), inclusion rules, central
+report context, and evidenced exclusions. Keep semantic concepts specific and
+reviewable; they are the deterministic basis for closure, while prose rules
+remain the editorial guidance sent to the provider.
+
 Corpus rehabilitation has no automatic switch: planning is read-only and campaign execution is explicit. `corpus-rehabilitation-create` persists a bounded retained-evidence plan; `corpus-rehabilitation-approve --yes` records a bounded operator approval; and `corpus-rehabilitation-submit --yes` queues only reusable, checksum-bound candidates through the existing maintenance queue. The submitter rechecks retained classification and lineage before handoff, while incomplete candidates remain operator-held. It has no public-write path.
 
 Use the generated [configuration reference](../generated/configuration-reference.md) for the current section inventory. It is generated from `src/config/app.example.yaml`; use the YAML and typed contracts as the final authority for values and validation.

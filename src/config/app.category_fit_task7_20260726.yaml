@@ -1,0 +1,36 @@
+schema_version: "1.0"
+
+# Fresh isolated namespace for Task 7 category-fit validation.  Credentials
+# resolve only from the local environment; all workflow state and artifacts are
+# isolated, and the zero-write WordPress budget preserves publication safety.
+paths:
+  output_dir: "./out/category_fit_task7_20260726"
+  cache_dir: "./cache/category_fit_task7_20260726"
+  state_db: "./state/category_fit_task7_20260726/index.sqlite"
+  reports_db: "./state/category_fit_task7_20260726/reports.sqlite"
+  signal_store_db: "./state/category_fit_task7_20260726/signals.sqlite"
+  ingest_lock: "./state/category_fit_task7_20260726/ingest.lock"
+
+ingest:
+  run_budget:
+    max_spend_usd: 1.0
+    max_pdfs: 1
+    max_retries: 2
+    max_runtime_seconds: 3600
+    limit_decision: "stop"
+
+analysis:
+  cost_ledger_path: "./state/category_fit_task7_20260726/llm_cost_ledger.jsonl"
+
+cost:
+  usage_db_path: "./state/category_fit_task7_20260726/llm_usage.sqlite"
+  daily_path: "./state/category_fit_task7_20260726/llm_cost_daily.json"
+  ledger_path: "./state/category_fit_task7_20260726/llm_cost_ledger.jsonl"
+
+publish:
+  projection_daily_path: "./state/category_fit_task7_20260726/projection_cost_daily.json"
+  projection_ledger_path: "./state/category_fit_task7_20260726/projection_cost_ledger.jsonl"
+  run_budget:
+    enabled: true
+    max_wordpress_writes: 0
+    limit_decision: "stop"

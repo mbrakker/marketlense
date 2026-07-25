@@ -853,12 +853,10 @@ def test_fit_report_categories_supports_spatial_computing_as_technology() -> Non
     assert response.categories == ["technology"]
     assert response.category_labels == ["Technology & Innovation"]
     assert response.fits[0].semantic_rule_status == "supported"
-    assert response.fits[0].supported_topic_rules == [
-        (
-            "The report is primarily about immersive experiences, spatial "
-            "computing, virtual worlds, or Metaverse technology."
-        )
-    ]
+    assert (
+        "The report is primarily about immersive experiences, spatial "
+        "computing, virtual worlds, or Metaverse technology."
+    ) in response.fits[0].supported_topic_rules
 
 
 def test_high_confidence_rejected_category_is_deterministically_promoted_when_central() -> (
@@ -943,4 +941,9 @@ def test_high_confidence_rejected_category_is_deterministically_promoted_when_ce
     assert candidate.decision == "primary"
     assert candidate.semantic_rule_status == "supported"
     assert candidate.supported_topic_rule_ids == ["technology:include:2aa37e1280a21972"]
-    assert candidate.rule_evidence_sections == ["Overview"]
+    assert candidate.rule_evidence_sections == ["title", "overview", "key_findings"]
+    assert candidate.centrality_evidence_sections == [
+        "title",
+        "overview",
+        "key_findings",
+    ]
