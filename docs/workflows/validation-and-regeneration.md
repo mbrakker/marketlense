@@ -26,6 +26,12 @@ the admission configuration hash, policy hash, and producer-build identity.
 Consequently, replay is idempotent only for the same complete provenance; a
 stale cohort fails before report or provider work and must be refrozen under
 the current policy rather than being silently rebound to a new run.
+Schema-`1.1` cohort members retain the Drive report ID, canonical source
+identity, and deterministic selection reason directly alongside the complete
+source metadata. Cohort loading recomputes the content hash and derived
+validation-run identity, so an edited member list cannot reuse the original
+cohort or validation identity. Legacy schema-`1.0` manifests remain readable
+only for replay compatibility.
 Drive discovery carries the same resolved run-budget and usage-ledger path as
 the later ingest pipeline, so an isolated canary cannot silently reserve shared
 budget capacity before membership is frozen.

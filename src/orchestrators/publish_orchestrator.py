@@ -453,7 +453,9 @@ def _record_validation_cohort_publish_outcomes(
     timestamp = datetime.now(timezone.utc).isoformat()
     for file_id, member in members.items():
         outcome = outcomes_by_file_id.get(file_id)
-        source_identity_id = str(member.get("md5_checksum") or file_id)
+        source_identity_id = str(
+            member.get("source_identity_id") or member.get("md5_checksum") or file_id
+        )
 
         def record_stage(
             stage: str,

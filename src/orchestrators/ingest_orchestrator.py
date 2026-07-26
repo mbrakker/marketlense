@@ -157,6 +157,10 @@ logger = logging.getLogger("market_lense.ingest_orchestrator")
 EOF_RETRY_LIMIT = 1
 STATE_PREFILTER_BATCH_SIZE = 200
 DOC_MAP_EMPTY_ERROR_PREFIX = "doc_map_empty:"
+COHORT_MANIFEST_SCHEMA_VERSION = "1.1"
+_SUPPORTED_COHORT_MANIFEST_SCHEMA_VERSIONS = frozenset(
+    {"1.0", COHORT_MANIFEST_SCHEMA_VERSION}
+)
 
 
 @dataclass(frozen=True)
@@ -956,8 +960,9 @@ def _load_frozen_cohort(
         )
         members = payload["members"]
         manifest_size = int(payload["cohort_size"])
+        manifest_schema_version = str(payload.get("schema_version") or "")
         if (
-            payload.get("schema_version") != "1.0"
+            manifest_schema_version not in _SUPPORTED_COHORT_MANIFEST_SCHEMA_VERSIONS
             or manifest_size < 1
             or expected_size not in {None, manifest_size}
             or not isinstance(members, list)
@@ -977,6 +982,23 @@ def _load_frozen_cohort(
         ]
         if len({file.file_id for file in files}) != manifest_size:
             raise ValueError("manifest contains duplicate file IDs")
+        computed_cohort_id = _cohort_id(files)
+        if str(payload.get("cohort_id") or "") != computed_cohort_id:
+            raise ValueError("manifest cohort identity does not match its members")
+        if manifest_schema_version == COHORT_MANIFEST_SCHEMA_VERSION:
+            for member, file in zip(members, files, strict=True):
+                if not isinstance(member, dict):
+                    raise ValueError("manifest member must be an object")
+                if str(member.get("report_id") or "") != file.file_id:
+                    raise ValueError("manifest member report identity is invalid")
+                if str(member.get("source_identity_id") or "") != (
+                    file.md5_checksum or file.file_id
+                ):
+                    raise ValueError("manifest member source identity is invalid")
+                if str(member.get("selection_reason") or "") != (
+                    "deterministic_admission_preflight"
+                ):
+                    raise ValueError("manifest member selection reason is invalid")
     except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
         raise AppError(
             code="ingest_cohort_manifest_invalid",
@@ -1007,6 +1029,21 @@ def _load_frozen_cohort(
             ),
             retryable=False,
         )
+    if manifest_schema_version == COHORT_MANIFEST_SCHEMA_VERSION:
+        expected_validation_run_id = _validation_run_id_for_cohort(
+            cohort_id=computed_cohort_id,
+            configuration_hash=observed_provenance["configuration_hash"],
+            policy_hash=observed_provenance["policy_hash"],
+            producer_build_identity=observed_provenance["producer_build_identity"],
+        )
+        if str(payload.get("validation_run_id") or "") != str(
+            expected_validation_run_id
+        ):
+            raise AppError(
+                code="ingest_cohort_manifest_invalid",
+                message="Cohort manifest validation identity is inconsistent",
+                retryable=False,
+            )
     return manifest_size, files
 
 
@@ -1050,7 +1087,15 @@ def _frozen_cohort(
             retryable=False,
             context={"requested": cohort_size, "selected": len(selected_files)},
         )
-    members = [asdict(file) for file in selected_files]
+    members = [
+        {
+            **asdict(file),
+            "report_id": file.file_id,
+            "source_identity_id": file.md5_checksum or file.file_id,
+            "selection_reason": "deterministic_admission_preflight",
+        }
+        for file in selected_files
+    ]
     decisions = admission_decisions or [
         {
             "file_id": file.file_id,
@@ -1077,7 +1122,7 @@ def _frozen_cohort(
     cohort_id = _cohort_id(selected_files)
     producer_build_identity = root_ctx.producer_commit_sha or "workspace"
     payload = {
-        "schema_version": "1.0",
+        "schema_version": COHORT_MANIFEST_SCHEMA_VERSION,
         "cohort_id": cohort_id,
         "cohort_size": cohort_size,
         "configuration_hash": configuration_hash,
@@ -1958,10 +2003,10 @@ def _update_ingest_cursor(
     *,
     processed: int,
     had_errors: bool,
-    limit: Optional[int],
+    attempt_limit: Optional[int],
     root_ctx: RunContext,
 ) -> None:
-    if not had_errors and processed > 0 and limit is None:
+    if not had_errors and processed > 0 and attempt_limit is None:
         try:
             now_utc = (
                 datetime.now(timezone.utc)
@@ -2006,9 +2051,9 @@ def _update_ingest_cursor(
             fields={
                 "reason": "errors_detected"
                 if had_errors
-                else "no_processed_or_limit_override",
+                else "no_processed_or_attempt_limit_override",
                 "processed": processed,
-                "limit": limit,
+                "attempt_limit": attempt_limit,
             },
         )
     )
@@ -2059,6 +2104,7 @@ def run_ingest(
     settings: IngestSettings,
     *,
     folder_id: Optional[str] = None,
+    attempt_limit: Optional[int] = None,
     limit: Optional[int] = None,
     cohort_size: Optional[int] = None,
     cohort_manifest: Optional[str] = None,
@@ -2068,6 +2114,19 @@ def run_ingest(
     force_report_cards: bool = False,
     rescan: bool = False,
 ) -> List[IngestOutcome]:
+    if attempt_limit is not None and limit is not None:
+        raise AppError(
+            code="ingest_attempt_limit_conflict",
+            message="Provide either attempt_limit or the deprecated limit, not both",
+            retryable=False,
+        )
+    resolved_attempt_limit = attempt_limit if attempt_limit is not None else limit
+    if resolved_attempt_limit is not None and resolved_attempt_limit < 1:
+        raise AppError(
+            code="ingest_attempt_limit_invalid",
+            message="Attempt limit must be positive",
+            retryable=False,
+        )
     deps = dependencies or IngestBatchDependencies.default()
     root_ctx = ctx or new_run_context()
     lock_ctx = child_context(root_ctx, task_id="ingest_lock")
@@ -2098,7 +2157,8 @@ def run_ingest(
                 module=logger.name,
                 fields={
                     "folder_id": folder_id or settings.gdrive_folder_id,
-                    "limit": limit,
+                    "attempt_limit": resolved_attempt_limit,
+                    "legacy_limit_used": limit is not None,
                     "cohort_size": cohort_size,
                     "cohort_manifest": cohort_manifest or "",
                     "success_target": success_target,
@@ -2112,7 +2172,7 @@ def run_ingest(
 
         modified_after = _resolve_modified_after(
             settings,
-            limit=limit,
+            limit=resolved_attempt_limit,
             force_report_cards=force_report_cards,
             rescan=rescan,
             root_ctx=root_ctx,
@@ -2141,7 +2201,8 @@ def run_ingest(
                     retryable=False,
                 )
         selected_modes = sum(
-            value is not None for value in (limit, cohort_size, success_target)
+            value is not None
+            for value in (resolved_attempt_limit, cohort_size, success_target)
         )
         if selected_modes > 1:
             raise AppError(
@@ -2152,7 +2213,9 @@ def run_ingest(
                 ),
                 retryable=False,
             )
-        selection_limit = cohort_size if cohort_size is not None else limit
+        selection_limit = (
+            cohort_size if cohort_size is not None else resolved_attempt_limit
+        )
         max_n = selection_limit if selection_limit is not None else settings.batch_limit
         list_req = _build_drive_list_request(
             settings,
@@ -2385,7 +2448,7 @@ def run_ingest(
             settings,
             processed=processed,
             had_errors=had_errors,
-            limit=limit,
+            attempt_limit=resolved_attempt_limit,
             root_ctx=root_ctx,
         )
         return outcomes
@@ -2400,7 +2463,8 @@ def run_ingest(
             input_checksum=remediation_input_checksum(
                 {
                     "folder_id": folder_id or settings.gdrive_folder_id,
-                    "limit": limit,
+                    "attempt_limit": resolved_attempt_limit,
+                    "legacy_limit_used": limit is not None,
                     "force_report_cards": force_report_cards,
                     "rescan": rescan,
                 }

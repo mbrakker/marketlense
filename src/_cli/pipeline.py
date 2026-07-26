@@ -332,14 +332,18 @@ def plan_execution(
 @cli_app.command("ingest")
 def ingest(
     folder: str = typer.Option(None, help="Override Drive folder ID"),
-    limit: int = typer.Option(
+    attempt_limit: int = typer.Option(
         None,
         "--attempt-limit",
-        "--limit",
         help=(
             "Maximum unique report attempts. Failed attempts remain in the "
-            "result; this is not a success target. --limit is deprecated."
+            "result; this is not a success target."
         ),
+    ),
+    limit: int = typer.Option(
+        None,
+        "--limit",
+        help="Deprecated alias for --attempt-limit; use --attempt-limit instead.",
     ),
     cohort_size: int = typer.Option(
         None,
@@ -371,6 +375,32 @@ def ingest(
     ),
 ):
     _sync_cli_patch_points()
+    # Direct compatibility callers invoke the decorated command as a Python
+    # function, where omitted Typer options remain OptionInfo placeholders.
+    if isinstance(folder, typer.models.OptionInfo):
+        folder = None
+    if isinstance(attempt_limit, typer.models.OptionInfo):
+        attempt_limit = None
+    if isinstance(limit, typer.models.OptionInfo):
+        limit = None
+    if isinstance(cohort_size, typer.models.OptionInfo):
+        cohort_size = None
+    if isinstance(cohort_manifest, typer.models.OptionInfo):
+        cohort_manifest = None
+    if isinstance(success_target, typer.models.OptionInfo):
+        success_target = None
+    if isinstance(force_report_cards, typer.models.OptionInfo):
+        force_report_cards = False
+    if isinstance(rescan, typer.models.OptionInfo):
+        rescan = False
+    if attempt_limit is not None and limit is not None:
+        raise typer.BadParameter(
+            "Use either --attempt-limit or the deprecated --limit, not both."
+        )
+    if limit is not None:
+        console.print(
+            "[yellow]--limit is deprecated; treating it as --attempt-limit.[/yellow]"
+        )
     ctx = new_run_context(task_id="cli_ingest")
     setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
     console.print("[cyan]Loading settings...[/cyan]")
@@ -399,6 +429,7 @@ def ingest(
         outcomes = run_ingest(
             settings,
             folder_id=folder,
+            attempt_limit=attempt_limit,
             limit=limit,
             cohort_size=cohort_size,
             cohort_manifest=cohort_manifest,
