@@ -39,7 +39,10 @@ from src.services._config_service.settings_resolvers import (
     _resolve_rank_settings,
     _resolve_validation_settings,
 )
-from src.utils.model_resolver import execution_policies_from_config
+from src.utils.model_resolver import (
+    execution_policies_from_config,
+    preflight_execution_policy_coverage,
+)
 
 
 def _normalize_mapping(raw_value: object) -> dict[str, dict[str, object]]:
@@ -297,13 +300,23 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     )
     # Validate once at configuration ingress.  Runtime resolves the resulting
     # mapping again into typed policies so callers never trust raw YAML.
-    execution_policies_from_config(
+    execution_policies = execution_policies_from_config(
         llm_execution_policies,
         model_overrides=_normalize_openai_models(
             sections.data.get("openai_models")
             or _default_config_value("openai_models", fallback={})
         ),
         legacy_routing=llm_routing,
+        default_model=openai_model,
+        default_temperature=float(ingest_runtime["temperature"]),
+        default_seed=ingest_runtime["openai_seed"],
+        default_timeout_seconds=float(ingest_runtime["openai_timeout_seconds"]),
+    )
+    # This is deliberately part of settings startup rather than the later
+    # workflow preflight: every configured production namespace must resolve
+    # before a caller can construct a provider client or issue provider I/O.
+    preflight_execution_policy_coverage(
+        execution_policies,
         default_model=openai_model,
         default_temperature=float(ingest_runtime["temperature"]),
         default_seed=ingest_runtime["openai_seed"],

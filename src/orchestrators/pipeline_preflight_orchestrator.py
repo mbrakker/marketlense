@@ -26,6 +26,7 @@ from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.model_resolver import (
     execution_policies_from_config,
+    execution_policy_matrix,
     preflight_execution_policy_coverage,
 )
 
@@ -354,16 +355,7 @@ def _check_llm_policy_coverage(
                 "policy_hashes": sorted(
                     {decision.policy_hash for decision in decisions}
                 ),
-                "resolved_matrix": [
-                    {
-                        "namespace": decision.namespace,
-                        "policy_source": decision.policy_source,
-                        "provider": decision.policy.provider,
-                        "model": decision.policy.model,
-                        "policy_hash": decision.policy_hash,
-                    }
-                    for decision in decisions
-                ],
+                "resolved_matrix": execution_policy_matrix(decisions),
             },
         )
     ]

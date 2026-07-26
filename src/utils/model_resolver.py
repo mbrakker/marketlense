@@ -144,6 +144,24 @@ def preflight_execution_policy_coverage(
     )
 
 
+def execution_policy_matrix(
+    decisions: tuple[LLMExecutionPolicyDecision, ...],
+) -> list[dict[str, Any]]:
+    """Return the canonical, non-secret resolution matrix for retention."""
+
+    return [
+        {
+            "namespace": decision.namespace,
+            "policy_source": decision.policy_source,
+            "provider": decision.policy.provider,
+            "model": decision.policy.model,
+            "policy": asdict(decision.policy),
+            "policy_hash": decision.policy_hash,
+        }
+        for decision in decisions
+    ]
+
+
 def _stable_policy_hash(policy: LLMExecutionPolicy) -> str:
     payload = asdict(policy)
     return hashlib.sha256(

@@ -315,6 +315,7 @@ def test_pipeline_preflight_persists_complete_resolved_policy_matrix(
         registered_production_llm_namespaces()
     )
     assert payload["resolved_matrix"][0]["provider"] == "openai"
+    assert payload["resolved_matrix"][0]["policy"]["model"] == "gpt-4.1-mini"
 
 
 def test_pipeline_preflight_blocks_missing_prompt_namespace(

@@ -5,6 +5,39 @@ from ._shared import *  # noqa: F401,F403
 
 
 class TestConfigService01DefaultsUseVectorMode(_TestConfigServiceBase):
+    def test_startup_rejects_an_incomplete_production_policy_matrix(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = self._write_config(tmp_dir, include_analysis=False)
+            cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
+            cfg_data["llm_execution_policies"] = {
+                "report_vs": {
+                    "provider": "openai",
+                    "model": "gpt-5-mini",
+                    "temperature": 0.0,
+                    "provider_retry_count": 0,
+                }
+            }
+            Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
+
+            with (
+                patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True),
+                self.assertRaises(AppError) as exc_info,
+            ):
+                load_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                    RunContext(
+                        schema_version="1.0",
+                        run_id="r",
+                        task_id="t",
+                        span_id="s",
+                    ),
+                )
+
+        self.assertEqual(
+            "llm_execution_policy_unknown_namespace", exc_info.exception.code
+        )
+        self.assertFalse(exc_info.exception.retryable)
+
     def test_nonzero_llm_service_retry_configuration_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             cfg_path = self._write_config(tmp_dir, include_analysis=False)
