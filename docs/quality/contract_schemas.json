@@ -22465,6 +22465,9 @@
             }
           ]
         },
+        "cohort_id": {
+          "type": "string"
+        },
         "configuration_hash": {
           "type": "string"
         },
@@ -22500,6 +22503,9 @@
           "type": "string"
         },
         "policy_hash": {
+          "type": "string"
+        },
+        "policy_namespace": {
           "type": "string"
         },
         "pricing_status": {
@@ -22570,6 +22576,9 @@
             }
           ]
         },
+        "semantic_task": {
+          "type": "string"
+        },
         "source_url": {
           "type": "string"
         },
@@ -22618,6 +22627,9 @@
           "type": "string"
         },
         "workflow": {
+          "type": "string"
+        },
+        "workflow_run_id": {
           "type": "string"
         }
       },
@@ -25588,6 +25600,9 @@
             }
           ]
         },
+        "cohort_id": {
+          "type": "string"
+        },
         "configuration_hash": {
           "type": "string"
         },
@@ -25647,6 +25662,9 @@
           "type": "string"
         },
         "policy_hash": {
+          "type": "string"
+        },
+        "policy_namespace": {
           "type": "string"
         },
         "producer_build_identity": {
@@ -25711,6 +25729,9 @@
             }
           ]
         },
+        "semantic_task": {
+          "type": "string"
+        },
         "source_url": {
           "type": "string"
         },
@@ -25760,6 +25781,9 @@
           "type": "string"
         },
         "workflow": {
+          "type": "string"
+        },
+        "workflow_run_id": {
           "type": "string"
         }
       },
@@ -40309,6 +40333,304 @@
         "schema_version",
         "report_id",
         "report"
+      ],
+      "type": "object"
+    },
+    "src.contracts.validation_reliability.ValidationFailureParetoEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "cumulative_failure_count": {
+          "type": "integer"
+        },
+        "cumulative_failure_rate": {
+          "type": "number"
+        },
+        "failure_code": {
+          "type": "string"
+        },
+        "failure_count": {
+          "type": "integer"
+        },
+        "rank": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "transition_pairs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "rank",
+        "failure_code",
+        "failure_count",
+        "cumulative_failure_count",
+        "cumulative_failure_rate",
+        "transition_pairs"
+      ],
+      "type": "object"
+    },
+    "src.contracts.validation_reliability.ValidationReliabilityArtifact": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_hash": {
+          "type": "string"
+        },
+        "cohort_id": {
+          "type": "string"
+        },
+        "configuration_hash": {
+          "type": "string"
+        },
+        "failed_transitions": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.validation_reliability.ValidationReliabilityFailureTransition"
+          },
+          "type": "array"
+        },
+        "failure_pareto": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.validation_reliability.ValidationFailureParetoEntry"
+          },
+          "type": "array"
+        },
+        "policy_hash": {
+          "type": "string"
+        },
+        "producer_build_identity": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "transitions": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.validation_reliability.ValidationReliabilityTransition"
+          },
+          "type": "array"
+        },
+        "validation_run_id": {
+          "type": "string"
+        },
+        "workflow_run_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "validation_run_id",
+        "cohort_id",
+        "workflow_run_id",
+        "configuration_hash",
+        "policy_hash",
+        "producer_build_identity",
+        "transitions",
+        "failed_transitions",
+        "failure_pareto"
+      ],
+      "type": "object"
+    },
+    "src.contracts.validation_reliability.ValidationReliabilityBuildRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "reports_db_path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "usage_db_path": {
+          "type": "string"
+        },
+        "validation_run_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "reports_db_path",
+        "usage_db_path",
+        "validation_run_id"
+      ],
+      "type": "object"
+    },
+    "src.contracts.validation_reliability.ValidationReliabilityFailureCode": {
+      "additionalProperties": false,
+      "properties": {
+        "failure_code": {
+          "type": "string"
+        },
+        "failure_count": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "failure_code",
+        "failure_count"
+      ],
+      "type": "object"
+    },
+    "src.contracts.validation_reliability.ValidationReliabilityFailureTransition": {
+      "additionalProperties": false,
+      "properties": {
+        "estimated_cost_usd_before_failure": {
+          "type": "number"
+        },
+        "failure_codes": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.validation_reliability.ValidationReliabilityFailureCode"
+          },
+          "type": "array"
+        },
+        "failure_count": {
+          "type": "integer"
+        },
+        "from_state": {
+          "type": "string"
+        },
+        "full_rerun_count": {
+          "type": "integer"
+        },
+        "full_rerun_rate": {
+          "type": "number"
+        },
+        "input_tokens_before_failure": {
+          "type": "integer"
+        },
+        "median_duration_ms": {
+          "type": "integer"
+        },
+        "operator_intervention_count": {
+          "type": "integer"
+        },
+        "operator_intervention_rate": {
+          "type": "number"
+        },
+        "output_tokens_before_failure": {
+          "type": "integer"
+        },
+        "p95_duration_ms": {
+          "type": "integer"
+        },
+        "provider_call_count_before_failure": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "successful_recovery_count": {
+          "type": "integer"
+        },
+        "successful_recovery_rate": {
+          "type": "number"
+        },
+        "to_state": {
+          "type": "string"
+        },
+        "total_tokens_before_failure": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "from_state",
+        "to_state",
+        "failure_count",
+        "failure_codes",
+        "median_duration_ms",
+        "p95_duration_ms",
+        "provider_call_count_before_failure",
+        "input_tokens_before_failure",
+        "output_tokens_before_failure",
+        "total_tokens_before_failure",
+        "estimated_cost_usd_before_failure",
+        "successful_recovery_count",
+        "successful_recovery_rate",
+        "operator_intervention_count",
+        "operator_intervention_rate",
+        "full_rerun_count",
+        "full_rerun_rate"
+      ],
+      "type": "object"
+    },
+    "src.contracts.validation_reliability.ValidationReliabilityTransition": {
+      "additionalProperties": false,
+      "properties": {
+        "completed_entity_count": {
+          "type": "integer"
+        },
+        "conversion_rate": {
+          "type": "number"
+        },
+        "eligible_entity_count": {
+          "type": "integer"
+        },
+        "from_state": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "to_state": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "from_state",
+        "to_state",
+        "eligible_entity_count",
+        "completed_entity_count",
+        "conversion_rate"
+      ],
+      "type": "object"
+    },
+    "src.contracts.validation_reliability.ValidationReliabilityWriteRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact": {
+          "$ref": "#/$defs/src.contracts.validation_reliability.ValidationReliabilityArtifact"
+        },
+        "artifact_path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "artifact_path",
+        "artifact"
+      ],
+      "type": "object"
+    },
+    "src.contracts.validation_reliability.ValidationReliabilityWriteResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_hash": {
+          "type": "string"
+        },
+        "artifact_path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "artifact_path",
+        "artifact_hash"
       ],
       "type": "object"
     },

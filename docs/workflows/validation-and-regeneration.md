@@ -58,6 +58,30 @@ disappeared, attempts overlap, two reports share a source identity, or one
 report has multiple active WordPress matches. A `published_verified` terminal
 state additionally needs a successful reuse-marked repeat publication.
 
+## Reliability telemetry and usage attribution
+
+Every model-usage event in a validation run must carry its validation/cohort/
+workflow-run/report/publisher identity; workflow, stage, artifact family,
+action, and semantic task; prompt and policy namespace; provider/model, token
+and cost totals, cache decision, repair attempt; and configuration/policy/build
+identity. Accounting rejects incomplete validation attribution before the event
+can enter the canonical usage ledger.
+
+The workflow materializes one deterministic
+`validation-runs/<run-hash>/reliability_telemetry.json` artifact after ingest
+and again after publication. Its funnel is `admitted → source prepared →
+evidence complete → analysis complete → validation complete → rendered →
+publish ready → published → readback verified`. Failed-transition rows provide
+typed failure-code counts, median and p95 duration, calls/tokens/cost consumed
+before failure, successful-recovery rate, operator-intervention rate, and
+full-rerun rate. A code-count Pareto is ordered by descending count then code,
+so repeated builds over unchanged canonical records are byte-stable.
+
+Publication continues to consume the signed/hash-bound `publish_readiness.json`
+decision for the exact HTML and WordPress projection; it does not reinterpret
+the package or validation artifacts independently. The reliability artifact is
+an auditable operational result, not a second publication-policy engine.
+
 ## Retained claim validation
 
 Before publication readiness, a report may require a deterministic retained

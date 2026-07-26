@@ -76,11 +76,18 @@ def _validate_request(request: OpenAIUsageAccountingRequest) -> None:
         )
     if request.validation_run_id:
         required = {
+            "cohort_id": request.cohort_id,
+            "workflow_run_id": request.workflow_run_id,
             "workflow": request.workflow,
             "stage": request.stage,
             "report_id": request.report_id,
             "artifact_family": request.artifact_family,
             "publisher_id": request.publisher_id,
+            "action": request.action or request.step_name,
+            "semantic_task": request.semantic_task,
+            "prompt_namespace": request.prompt_namespace,
+            "policy_namespace": request.policy_namespace,
+            "cache_decision": request.cache_decision,
             "model_policy_namespace": request.model_policy_namespace,
             "configuration_hash": request.configuration_hash,
             "policy_hash": request.policy_hash,
@@ -92,7 +99,10 @@ def _validate_request(request: OpenAIUsageAccountingRequest) -> None:
         if missing:
             raise AppError(
                 code="openai_accounting_validation_attribution_missing",
-                message="Validation-run OpenAI accounting requires complete runtime attribution",
+                message=(
+                    "Validation-run OpenAI accounting requires complete runtime "
+                    "attribution"
+                ),
                 retryable=False,
                 context={
                     "validation_run_id": request.validation_run_id,
@@ -130,8 +140,12 @@ def _usage_metadata(
         ).hexdigest(),
         "emit_cost_ledger": request.emit_cost_ledger,
         "validation_run_id": request.validation_run_id,
+        "cohort_id": request.cohort_id,
+        "workflow_run_id": request.workflow_run_id,
         "publisher_id": request.publisher_id,
         "model_policy_namespace": request.model_policy_namespace,
+        "policy_namespace": request.policy_namespace,
+        "semantic_task": request.semantic_task,
         "configuration_hash": request.configuration_hash,
         "policy_hash": request.policy_hash,
         "producer_build_identity": request.producer_build_identity,
@@ -263,13 +277,17 @@ def record_usage(
                     schema_validation_status=request.schema_validation_status,
                     error_stage=request.error_stage,
                     error_code=request.error_code,
+                    semantic_task=request.semantic_task or action,
                     workflow=request.workflow,
                     stage=request.stage,
                     plan_hash=request.plan_hash,
                     artifact_family=request.artifact_family,
                     validation_run_id=request.validation_run_id,
+                    cohort_id=request.cohort_id,
+                    workflow_run_id=request.workflow_run_id,
                     publisher_id=request.publisher_id,
                     model_policy_namespace=request.model_policy_namespace,
+                    policy_namespace=request.policy_namespace,
                     configuration_hash=request.configuration_hash,
                     policy_hash=request.policy_hash,
                     producer_build_identity=request.producer_build_identity,

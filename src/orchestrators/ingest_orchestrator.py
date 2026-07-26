@@ -51,6 +51,10 @@ from src.contracts.state import (
     StateIngestCursorGetRequest,
     StateIngestCursorSetRequest,
 )
+from src.contracts.validation_reliability import (
+    ValidationReliabilityBuildRequest,
+    ValidationReliabilityWriteRequest,
+)
 from src.contracts.validation_run_manifest import (
     ValidationRunManifestAuditRequest,
     ValidationRunManifestCreateRequest,
@@ -140,6 +144,11 @@ from src.services.state_service import (
     upsert_source_quarantine,
 )
 from src.services.state_service import record as state_record
+from src.services.validation_reliability_service import (
+    build_validation_reliability_artifact,
+    validation_reliability_artifact_path,
+    write_validation_reliability_artifact,
+)
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.path_utils import safe_pdf_name
@@ -2326,6 +2335,39 @@ def run_ingest(
                         "totals_reconciled": manifest_audit.totals_reconciled,
                     },
                 )
+            reliability_artifact = build_validation_reliability_artifact(
+                ValidationReliabilityBuildRequest(
+                    schema_version="1.0",
+                    reports_db_path=settings.reports_db,
+                    usage_db_path=settings.usage_db_path,
+                    validation_run_id=validation_run_id,
+                ),
+                root_ctx,
+            )
+            reliability_write = write_validation_reliability_artifact(
+                ValidationReliabilityWriteRequest(
+                    schema_version="1.0",
+                    artifact_path=validation_reliability_artifact_path(
+                        output_dir=settings.output_dir,
+                        validation_run_id=str(validation_run_id),
+                    ),
+                    artifact=reliability_artifact,
+                ),
+                root_ctx,
+            )
+            logger.info(
+                log_event(
+                    root_ctx,
+                    role="orchestrator",
+                    event="ingest_validation_reliability_retained",
+                    module=logger.name,
+                    fields={
+                        "validation_run_id": str(validation_run_id),
+                        "artifact_path": reliability_write.artifact_path,
+                        "artifact_hash": reliability_write.artifact_hash,
+                    },
+                )
+            )
         processed = sum(result.processed for result in results)
         had_errors = any(result.had_error for result in results)
 

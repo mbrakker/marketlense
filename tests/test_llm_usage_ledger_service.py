@@ -203,8 +203,12 @@ def test_usage_attribution_dimensions_project_from_canonical_events(
                 plan_hash="plan-1",
                 artifact_family="findings",
                 validation_run_id="validation-20260721",
+                cohort_id="cohort-20260721",
+                workflow_run_id="run",
                 publisher_id="publisher-1",
                 model_policy_namespace="report_vs/analysis/findings",
+                policy_namespace="report_vs/analysis/findings",
+                semantic_task="analysis_findings",
                 configuration_hash="config-hash",
                 policy_hash="policy-hash",
                 producer_build_identity="build-sha",
@@ -237,13 +241,14 @@ def test_usage_attribution_dimensions_project_from_canonical_events(
     assert payload["totals_by_artifact_family"]["findings"]["total_tool_calls"] == 0
     assert payload["totals_by_stage"]["analysis"]["estimated_cost_usd"] == 0.001
     assert (
-        payload["totals_by_semantic_task"]["openai_chat_json"]["total_output_tokens"]
+        payload["totals_by_semantic_task"]["analysis_findings"]["total_output_tokens"]
         == 5
     )
     with sqlite3.connect(db_path) as conn:
         row = conn.execute(
             "SELECT report_id,workflow,stage,plan_hash,artifact_family,validation_run_id,"
-            "publisher_id,model_policy_namespace,configuration_hash,policy_hash,"
+            "cohort_id,workflow_run_id,publisher_id,model_policy_namespace,"
+            "policy_namespace,semantic_task,configuration_hash,policy_hash,"
             "producer_build_identity,repair_attempt,pricing_version,pricing_status "
             "FROM llm_usage_events"
         ).fetchone()
@@ -254,8 +259,12 @@ def test_usage_attribution_dimensions_project_from_canonical_events(
         "plan-1",
         "findings",
         "validation-20260721",
+        "cohort-20260721",
+        "run",
         "publisher-1",
         "report_vs/analysis/findings",
+        "report_vs/analysis/findings",
+        "analysis_findings",
         "config-hash",
         "policy-hash",
         "build-sha",

@@ -71,6 +71,10 @@ from src.contracts.state import (
     StateGetResponse,
     StatePublishRecordRequest,
 )
+from src.contracts.validation_reliability import (
+    ValidationReliabilityBuildRequest,
+    ValidationReliabilityWriteRequest,
+)
 from src.contracts.validation_run_manifest import (
     ValidationRunManifestAuditRequest,
     ValidationRunManifestRecordRequest,
@@ -179,6 +183,11 @@ from src.services.report_store_service import (
 )
 from src.services.state_service import get as state_get
 from src.services.state_service import record_publish as state_record_publish
+from src.services.validation_reliability_service import (
+    build_validation_reliability_artifact,
+    validation_reliability_artifact_path,
+    write_validation_reliability_artifact,
+)
 from src.services.wordpress_service import (
     ensure_tags,
     ensure_taxonomy_terms,
@@ -1943,5 +1952,45 @@ def run_publish(
             outcomes=outcomes,
             ctx=root_ctx,
             require_full_workflow=require_full_validation_manifest,
+        )
+        validation_run_id, _, _, _, _ = _load_validation_cohort_for_publish(
+            cohort_manifest,
+            root_ctx,
+        )
+        reliability_artifact = build_validation_reliability_artifact(
+            ValidationReliabilityBuildRequest(
+                schema_version="1.0",
+                reports_db_path=settings.reports_db,
+                usage_db_path=(
+                    settings.usage_db_path
+                    or str(Path(settings.state_db).with_name("llm_usage.sqlite"))
+                ),
+                validation_run_id=validation_run_id,
+            ),
+            root_ctx,
+        )
+        reliability_write = write_validation_reliability_artifact(
+            ValidationReliabilityWriteRequest(
+                schema_version="1.0",
+                artifact_path=validation_reliability_artifact_path(
+                    output_dir=settings.output_dir,
+                    validation_run_id=str(validation_run_id),
+                ),
+                artifact=reliability_artifact,
+            ),
+            root_ctx,
+        )
+        logger.info(
+            log_event(
+                root_ctx,
+                role="orchestrator",
+                event="publish_validation_reliability_retained",
+                module=logger.name,
+                fields={
+                    "validation_run_id": str(validation_run_id),
+                    "artifact_path": reliability_write.artifact_path,
+                    "artifact_hash": reliability_write.artifact_hash,
+                },
+            )
         )
     return outcomes
