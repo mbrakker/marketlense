@@ -13,6 +13,7 @@ if (! defined('WP_UNINSTALL_PLUGIN')) {
 
 $meta_keys = [
     'ml_file_id',
+    'ml_content_sha256',
     'ml_publisher_name',
     'ml_time_period',
     'ml_region',

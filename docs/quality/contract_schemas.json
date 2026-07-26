@@ -28493,7 +28493,38 @@
           ]
         },
         "publication_outcome": {
-          "type": "string"
+          "enum": [
+            "preflight_passed",
+            "preflight_blocked",
+            "existing_post_matched",
+            "post_created",
+            "post_updated",
+            "idempotent_checksum_skip",
+            "already_published_state_skip",
+            "authenticated_lookup_matched",
+            "authenticated_content_readback_verified",
+            "metadata_readback_verified",
+            "readback_failed",
+            "rollback_started",
+            "rollback_completed",
+            "rollback_failed"
+          ]
+        },
+        "readback_checks": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.wordpress.WordPressPostReadCheck"
+          },
+          "type": "array"
+        },
+        "readback_expectation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.wordpress.WordPressPostReadExpectation"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "requested_write_count": {
           "type": "integer"
@@ -28503,6 +28534,27 @@
         },
         "status": {
           "type": "string"
+        },
+        "transaction_outcomes": {
+          "items": {
+            "enum": [
+              "preflight_passed",
+              "preflight_blocked",
+              "existing_post_matched",
+              "post_created",
+              "post_updated",
+              "idempotent_checksum_skip",
+              "already_published_state_skip",
+              "authenticated_lookup_matched",
+              "authenticated_content_readback_verified",
+              "metadata_readback_verified",
+              "readback_failed",
+              "rollback_started",
+              "rollback_completed",
+              "rollback_failed"
+            ]
+          },
+          "type": "array"
         },
         "validation_issues": {
           "items": {
@@ -42138,6 +42190,107 @@
       ],
       "type": "object"
     },
+    "src.contracts.wordpress.WordPressPostReadCheck": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "enum": [
+            "post_id",
+            "post_type",
+            "status",
+            "report_file_identity",
+            "content_checksum",
+            "metadata",
+            "canonical_url",
+            "open_graph_url",
+            "source_attribution",
+            "taxonomy_assignments",
+            "media_associations",
+            "final_rendered_content_hash"
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "verified",
+            "mismatch",
+            "not_exposed",
+            "not_requested",
+            "captured"
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "name",
+        "status"
+      ],
+      "type": "object"
+    },
+    "src.contracts.wordpress.WordPressPostReadExpectation": {
+      "additionalProperties": false,
+      "properties": {
+        "canonical_url": {
+          "type": "string"
+        },
+        "content_sha256": {
+          "type": "string"
+        },
+        "file_id": {
+          "type": "string"
+        },
+        "media_associations": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "metadata": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "post_type": {
+          "type": "string"
+        },
+        "rendered_content_sha256": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_attribution": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "status": {
+          "type": "string"
+        },
+        "taxonomy_assignments": {
+          "additionalProperties": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "schema_version",
+        "post_type",
+        "status",
+        "file_id",
+        "content_sha256",
+        "canonical_url"
+      ],
+      "type": "object"
+    },
     "src.contracts.wordpress.WordPressPostReadRequest": {
       "additionalProperties": false,
       "properties": {
@@ -42151,6 +42304,16 @@
           "anyOf": [
             {
               "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "expectation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.wordpress.WordPressPostReadExpectation"
             },
             {
               "type": "null"
@@ -42179,6 +42342,54 @@
         "auth_header",
         "post_id",
         "file_id"
+      ],
+      "type": "object"
+    },
+    "src.contracts.wordpress.WordPressPostReadResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "checks": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.wordpress.WordPressPostReadCheck"
+          },
+          "type": "array"
+        },
+        "content_sha256": {
+          "type": "string"
+        },
+        "found": {
+          "type": "boolean"
+        },
+        "link": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "post_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rendered_content_sha256": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "found"
       ],
       "type": "object"
     },
@@ -42303,6 +42514,12 @@
         "post_type": {
           "type": "string"
         },
+        "required_meta_keys": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "schema_version": {
           "type": "string"
         },
@@ -42338,6 +42555,12 @@
         },
         "status_code": {
           "type": "integer"
+        },
+        "verified_meta_keys": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         }
       },
       "required": [

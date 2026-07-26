@@ -86,6 +86,8 @@ from src.contracts.wordpress import (
     WordPressPostLookupRequest,
     WordPressPostLookupResponse,
     WordPressPostReadRequest,
+    WordPressPostReadResponse,
+    WordPressTransactionOutcome,
     WordPressTagEnsureRequest,
     WordPressTagEnsureResponse,
     WordPressTaxonomyEnsureRequest,
@@ -193,6 +195,7 @@ from src.services.wordpress_service import (
     ensure_taxonomy_terms,
     find_post_by_file_id,
     find_posts_by_file_id_batch,
+    preflight_publish_target,
     read_post_by_id,
 )
 from src.utils.cache_utils import sha256_json
@@ -208,6 +211,74 @@ from src.utils.validation import parse_validation_report_payload
 from src.utils.wp_auth import build_auth_header
 
 logger = logging.getLogger("market_lense.publish_orchestrator")
+
+
+def _with_transaction_outcomes(
+    outcome: PublishOutcome,
+    *transaction_outcomes: WordPressTransactionOutcome,
+    prepend: bool = False,
+) -> PublishOutcome:
+    """Keep persisted transaction evidence ordered, typed, and duplicate-free."""
+
+    current = list(outcome.transaction_outcomes)
+    additions = [
+        transaction_outcome
+        for transaction_outcome in transaction_outcomes
+        if transaction_outcome not in current
+    ]
+    if prepend:
+        current = additions + current
+    else:
+        current.extend(additions)
+    return replace(outcome, transaction_outcomes=current)
+
+
+def _with_authenticated_readback_proof(
+    outcome: PublishOutcome, response: WordPressPostReadResponse
+) -> PublishOutcome:
+    """Attach a bounded readback proof and advance only verified transaction states."""
+
+    if not response.found:
+        return _with_transaction_outcomes(
+            replace(
+                outcome,
+                status="error",
+                error=outcome.error or "wordpress_post_readback_mismatch",
+                publication_outcome="readback_failed",
+                authenticated_readback_verified=False,
+                readback_checks=list(response.checks),
+                lookup_count=outcome.lookup_count + 1,
+            ),
+            "readback_failed",
+        )
+    expectation = outcome.readback_expectation
+    if expectation is not None and response.rendered_content_sha256:
+        expectation = replace(
+            expectation,
+            rendered_content_sha256=response.rendered_content_sha256,
+        )
+    verified = replace(
+        outcome,
+        post_id=response.post_id,
+        post_url=response.link,
+        lookup_count=outcome.lookup_count + 1,
+        authenticated_readback_verified=True,
+        readback_expectation=expectation,
+        readback_checks=list(response.checks),
+    )
+    if expectation is not None:
+        verified = _with_transaction_outcomes(
+            verified,
+            "authenticated_content_readback_verified",
+            "metadata_readback_verified",
+        )
+    return verified
+
+
+def _with_preflight_passed(outcome: PublishOutcome) -> PublishOutcome:
+    if outcome.publication_outcome == "preflight_blocked":
+        return _with_transaction_outcomes(outcome, "preflight_blocked", prepend=True)
+    return _with_transaction_outcomes(outcome, "preflight_passed", prepend=True)
 
 
 def _publication_recovery_evidence(
@@ -1139,6 +1210,60 @@ def run_publish(
         ]
     if auto_discovery and limit is not None:
         candidates = candidates[:limit]
+    blocked_post_types: dict[str, str] = {}
+    for post_type in sorted(
+        {
+            candidate.entity_route.post_type
+            for candidate in candidates
+            if candidate.entity_route is not None and candidate.entity_error is None
+        }
+    ):
+        try:
+            preflight_publish_target(
+                _publish_settings_for_post_type(settings, post_type),
+                child_context(
+                    root_ctx, task_id=f"wordpress_target_preflight:{post_type}"
+                ),
+            )
+        except AppError as exc:
+            blocked_post_types[post_type] = exc.code
+    if blocked_post_types:
+        blocked_candidates = [
+            candidate
+            for candidate in candidates
+            if (
+                candidate.entity_route is not None
+                and candidate.entity_error is None
+                and candidate.entity_route.post_type in blocked_post_types
+            )
+        ]
+        for candidate in blocked_candidates:
+            outcomes.append(
+                PublishOutcome(
+                    schema_version="1.0",
+                    html_path=candidate.html_path,
+                    file_id=str(candidate.file_id or ""),
+                    status="error",
+                    error=blocked_post_types[candidate.entity_route.post_type],
+                    publication_outcome="preflight_blocked",
+                    transaction_outcomes=["preflight_blocked"],
+                )
+            )
+        candidates = [
+            candidate for candidate in candidates if candidate not in blocked_candidates
+        ]
+        logger.info(
+            log_event(
+                root_ctx,
+                role="orchestrator",
+                event="publish_target_preflight_blocked",
+                module=logger.name,
+                fields={
+                    "blocked_post_type_count": len(blocked_post_types),
+                    "blocked_candidate_count": len(blocked_candidates),
+                },
+            )
+        )
     publication_plans: dict[str, MinimalExecutionPlan] = {}
     publication_plan_started_at: dict[str, float] = {}
     blocked_paths: set[str] = set()
@@ -1290,6 +1415,8 @@ def run_publish(
                     file_id=file_id or None,
                     status="error",
                     error=entity_error.code,
+                    publication_outcome="preflight_blocked",
+                    transaction_outcomes=["preflight_blocked"],
                 )
             )
             continue
@@ -1301,6 +1428,8 @@ def run_publish(
                     file_id=file_id or None,
                     status="error",
                     error="publish_entity_metadata_missing",
+                    publication_outcome="preflight_blocked",
+                    transaction_outcomes=["preflight_blocked"],
                 )
             )
             continue
@@ -1326,7 +1455,8 @@ def run_publish(
                     file_id=file_id or None,
                     status="error",
                     error=existing_post_lookup.error_code,
-                    publication_outcome="lookup_failed",
+                    publication_outcome="preflight_blocked",
+                    transaction_outcomes=["preflight_blocked"],
                     lookup_count=1,
                 )
             )
@@ -1349,6 +1479,8 @@ def run_publish(
                     file_id=None,
                     status="error",
                     error="missing_file_id",
+                    publication_outcome="preflight_blocked",
+                    transaction_outcomes=["preflight_blocked"],
                 )
             )
             continue
@@ -1369,6 +1501,8 @@ def run_publish(
                     file_id=file_id,
                     status="error",
                     error="not_processed",
+                    publication_outcome="preflight_blocked",
+                    transaction_outcomes=["preflight_blocked"],
                 )
             )
             continue
@@ -1456,34 +1590,31 @@ def run_publish(
             )
         )
         if reused_outcome is not None:
-            idempotency_readback: WordPressPostLookupResponse | None = (
-                WordPressPostLookupResponse(
-                    schema_version="1.0",
-                    found=existing_post_lookup.found,
-                    post_id=existing_post_lookup.post_id,
-                    link=existing_post_lookup.link,
-                )
-                if existing_post_lookup is not None
-                else None
+            readback_post_id = reused_outcome.post_id or (
+                existing_post_lookup.post_id if existing_post_lookup else None
             )
-            if (
-                idempotency_readback is not None
-                and not idempotency_readback.found
-                and reused_outcome.post_id
-            ):
-                idempotency_readback = read_post_by_id(
+            idempotency_readback: WordPressPostReadResponse | None = (
+                read_post_by_id(
                     WordPressPostReadRequest(
                         schema_version="1.0",
                         base_url=base_url,
                         auth_header=auth_header,
-                        post_id=reused_outcome.post_id or 0,
+                        post_id=readback_post_id or 0,
                         file_id=file_id,
                         ssl_verify=settings.wp.ssl_verify,
                         ca_bundle_path=settings.wp.ca_bundle_path,
                         post_type=entity_route.post_type,
+                        expectation=(
+                            reused_outcome.readback_expectation
+                            if reused_outcome.authenticated_readback_verified
+                            else None
+                        ),
                     ),
                     file_ctx,
                 )
+                if readback_post_id
+                else None
+            )
             if (
                 idempotency_readback is None
                 or not idempotency_readback.found
@@ -1510,6 +1641,11 @@ def run_publish(
                         validation_status=validation_status,
                         validation_issues=validation_issues,
                         publication_outcome="readback_failed",
+                        transaction_outcomes=[
+                            "preflight_passed",
+                            "idempotent_checksum_skip",
+                            "readback_failed",
+                        ],
                         requested_write_count=0,
                         actual_write_count=0,
                         lookup_count=1,
@@ -1523,12 +1659,23 @@ def run_publish(
                 post_url=idempotency_readback.link,
                 error="already_exists",
                 publication_outcome="existing_post_matched",
+                transaction_outcomes=[
+                    "preflight_passed",
+                    "idempotent_checksum_skip",
+                    "authenticated_lookup_matched",
+                    "already_published_state_skip",
+                    "existing_post_matched",
+                ],
                 requested_write_count=0,
                 actual_write_count=0,
-                lookup_count=1,
-                authenticated_readback_verified=True,
+                lookup_count=0,
+                authenticated_readback_verified=False,
                 validation_status=validation_status,
                 validation_issues=validation_issues,
+            )
+            verified_outcome = _with_authenticated_readback_proof(
+                verified_outcome,
+                idempotency_readback,
             )
             state_record_publish(
                 StatePublishRecordRequest(
@@ -1541,6 +1688,13 @@ def run_publish(
                     post_type=entity_route.post_type,
                 ),
                 file_ctx,
+            )
+            _record_publish_idempotency(
+                settings=settings,
+                outcome=verified_outcome,
+                post_type=entity_route.post_type,
+                checksum=publish_checksum,
+                ctx=file_ctx,
             )
             logger.info(
                 log_event(
@@ -1584,6 +1738,7 @@ def run_publish(
                     validation_status=validation_status,
                     validation_issues=validation_issues,
                     publication_outcome="preflight_blocked",
+                    transaction_outcomes=["preflight_blocked"],
                 )
             )
             continue
@@ -1687,6 +1842,11 @@ def run_publish(
                     post_url=lookup_resp.link,
                     error="already_exists",
                     publication_outcome="existing_post_matched",
+                    transaction_outcomes=[
+                        "authenticated_lookup_matched",
+                        "already_published_state_skip",
+                        "existing_post_matched",
+                    ],
                     lookup_count=1,
                     authenticated_readback_verified=True,
                 )
@@ -1732,6 +1892,7 @@ def run_publish(
                         ssl_verify=settings.wp.ssl_verify,
                         ca_bundle_path=settings.wp.ca_bundle_path,
                         post_type=entity_route.post_type,
+                        expectation=outcome.readback_expectation,
                     ),
                     file_ctx,
                 )
@@ -1749,18 +1910,16 @@ def run_publish(
                             fields={"file_id": file_id},
                         )
                     )
-                    return replace(
-                        outcome,
-                        status="error",
-                        error="wordpress_post_create_readback_missing",
-                        publication_outcome="readback_failed",
+                    return _with_authenticated_readback_proof(
+                        replace(
+                            outcome,
+                            error="wordpress_post_create_readback_missing",
+                        ),
+                        created_post_readback,
                     )
-                outcome = replace(
+                outcome = _with_authenticated_readback_proof(
                     outcome,
-                    post_id=created_post_readback.post_id,
-                    post_url=created_post_readback.link,
-                    lookup_count=outcome.lookup_count + 1,
-                    authenticated_readback_verified=True,
+                    created_post_readback,
                 )
             if outcome.status == "published" and outcome.post_id and outcome.post_url:
                 state_record_publish(
@@ -1848,6 +2007,7 @@ def run_publish(
             outcome = _with_validation(outcome, validation_status, validation_issues)
 
         if outcome is not None:
+            outcome = _with_preflight_passed(outcome)
             outcomes.append(outcome)
             if outcome.status == "published":
                 published += 1

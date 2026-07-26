@@ -43,7 +43,8 @@ def test_publish_blocks_ambiguous_wordpress_lookup_before_any_write(
     assert len(results) == 1
     assert results[0].status == "error"
     assert results[0].error == "wp_post_lookup_ambiguous"
-    assert results[0].publication_outcome == "lookup_failed"
+    assert results[0].publication_outcome == "preflight_blocked"
+    assert results[0].transaction_outcomes == ["preflight_blocked"]
     assert not wordpress_http.calls_for(
         "POST", "https://example.com/wp-json/wp/v2/ml_report"
     )

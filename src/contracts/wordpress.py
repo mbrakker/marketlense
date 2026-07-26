@@ -1,9 +1,50 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List, Literal, Optional, Tuple
 
 from src.contracts.run_budget import RunBudget, RunBudgetUsage
+
+
+WordPressTransactionOutcome = Literal[
+    "preflight_passed",
+    "preflight_blocked",
+    "existing_post_matched",
+    "post_created",
+    "post_updated",
+    "idempotent_checksum_skip",
+    "already_published_state_skip",
+    "authenticated_lookup_matched",
+    "authenticated_content_readback_verified",
+    "metadata_readback_verified",
+    "readback_failed",
+    "rollback_started",
+    "rollback_completed",
+    "rollback_failed",
+]
+
+WordPressReadbackCheckName = Literal[
+    "post_id",
+    "post_type",
+    "status",
+    "report_file_identity",
+    "content_checksum",
+    "metadata",
+    "canonical_url",
+    "open_graph_url",
+    "source_attribution",
+    "taxonomy_assignments",
+    "media_associations",
+    "final_rendered_content_hash",
+]
+
+WordPressReadbackCheckStatus = Literal[
+    "verified",
+    "mismatch",
+    "not_exposed",
+    "not_requested",
+    "captured",
+]
 
 
 @dataclass(frozen=True)
@@ -58,6 +99,15 @@ class WordPressPublishTargetPreflightRequest:
         default=None,
         metadata={"doc": "Optional CA bundle path used for HTTPS verification."},
     )
+    required_meta_keys: Tuple[str, ...] = field(
+        default=(),
+        metadata={
+            "doc": (
+                "WordPress meta keys that must be exposed through the authenticated "
+                "REST schema before publication may write."
+            )
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -70,6 +120,15 @@ class WordPressPublishTargetPreflightResponse:
     endpoint: str = field(metadata={"doc": "Resolved REST endpoint checked."})
     reachable: bool = field(metadata={"doc": "True when the REST target is usable."})
     status_code: int = field(metadata={"doc": "HTTP status code returned."})
+    verified_meta_keys: Tuple[str, ...] = field(
+        default=(),
+        metadata={
+            "doc": (
+                "Required meta keys confirmed in the authenticated REST schema; "
+                "contains field names only."
+            )
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -356,6 +415,131 @@ class WordPressPostReadRequest:
     post_type: str = field(
         default="posts", metadata={"doc": "REST post type endpoint slug."}
     )
+    expectation: "WordPressPostReadExpectation | None" = field(
+        default=None,
+        metadata={
+            "doc": "Optional exact transaction proof expected from authenticated readback."
+        },
+    )
+
+
+@dataclass(frozen=True)
+class WordPressPostReadExpectation:
+    """Stable public fields that an authenticated post readback must prove."""
+
+    schema_version: str = field(
+        metadata={"doc": "WordPress readback expectation schema version."}
+    )
+    post_type: str = field(metadata={"doc": "Expected REST post type."})
+    status: str = field(metadata={"doc": "Expected WordPress post status."})
+    file_id: str = field(metadata={"doc": "Expected immutable report/file identity."})
+    content_sha256: str = field(
+        metadata={"doc": "SHA-256 of the final raw WordPress content payload."}
+    )
+    canonical_url: str = field(
+        metadata={"doc": "Expected canonical WordPress post URL."}
+    )
+    metadata: Dict[str, str] = field(
+        default_factory=dict,
+        metadata={
+            "doc": "SHA-256 by REST metadata key; raw metadata is never persisted."
+        },
+    )
+    source_attribution: Dict[str, str] = field(
+        default_factory=dict,
+        metadata={
+            "doc": "SHA-256 by source-attribution key; source text is never persisted."
+        },
+    )
+    taxonomy_assignments: Dict[str, List[int]] = field(
+        default_factory=dict,
+        metadata={"doc": "Expected taxonomy REST-base to term-ID assignments."},
+    )
+    media_associations: Dict[str, int] = field(
+        default_factory=dict,
+        metadata={"doc": "Expected featured and card-media associations."},
+    )
+    rendered_content_sha256: str = field(
+        default="",
+        metadata={
+            "doc": "Expected final rendered-content hash when a prior authenticated readback captured one."
+        },
+    )
+
+
+@dataclass(frozen=True)
+class WordPressPostReadCheck:
+    """One bounded readback verification result; values are never retained here."""
+
+    schema_version: str = field(
+        metadata={"doc": "WordPress readback check schema version."}
+    )
+    name: WordPressReadbackCheckName = field(
+        metadata={"doc": "Stable readback field/check identity."}
+    )
+    status: WordPressReadbackCheckStatus = field(
+        metadata={"doc": "Verification disposition for the check."}
+    )
+
+
+@dataclass(frozen=True)
+class WordPressPostReadResponse:
+    """Authenticated post-readback proof without retaining post content or metadata."""
+
+    schema_version: str = field(
+        metadata={"doc": "WordPress post read response schema version."}
+    )
+    found: bool = field(
+        metadata={"doc": "True only when every requested required check verified."}
+    )
+    post_id: Optional[int] = field(
+        default=None, metadata={"doc": "Verified WordPress post ID, if found."}
+    )
+    link: Optional[str] = field(
+        default=None, metadata={"doc": "Verified canonical WordPress URL, if found."}
+    )
+    checks: List[WordPressPostReadCheck] = field(
+        default_factory=list,
+        metadata={"doc": "Bounded per-field verification proof."},
+    )
+    content_sha256: str = field(
+        default="", metadata={"doc": "Observed raw-content SHA-256, if exposed."}
+    )
+    rendered_content_sha256: str = field(
+        default="",
+        metadata={"doc": "Observed rendered-content SHA-256, if exposed."},
+    )
+
+    @property
+    def content_verified(self) -> bool:
+        return any(
+            check.name == "content_checksum" and check.status == "verified"
+            for check in self.checks
+        )
+
+    @property
+    def metadata_verified(self) -> bool:
+        return all(
+            check.status == "verified"
+            for check in self.checks
+            if check.name
+            in {
+                "metadata",
+                "source_attribution",
+                "taxonomy_assignments",
+                "media_associations",
+            }
+        ) and any(
+            check.status == "verified"
+            for check in self.checks
+            if check.name
+            in {
+                "metadata",
+                "source_attribution",
+                "taxonomy_assignments",
+                "media_associations",
+            }
+        )
 
 
 @dataclass(frozen=True)

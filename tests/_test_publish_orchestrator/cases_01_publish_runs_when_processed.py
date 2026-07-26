@@ -528,6 +528,166 @@ def test_publish_reuses_idempotent_outcome_without_second_post(
     )
 
 
+def test_publish_canary_persists_complete_readback_proof_and_zero_write_repeat(
+    publish_settings_factory, run_context, wordpress_http, tmp_path
+) -> None:
+    settings = publish_settings_factory(validation_policy="warn")
+    _write_html(settings.output_dir, "report.html", "Drive fileId: file123")
+    _record_processed(settings.state_db, "file123", run_context)
+    cohort_manifest = tmp_path / "cohort.json"
+    cohort_manifest.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "cohort_id": "transaction-proof-canary",
+                "validation_run_id": "validation:transaction-proof-canary",
+                "configuration_hash": "configuration-hash",
+                "policy_hash": "policy-hash",
+                "members": [
+                    {
+                        "schema_version": "1.0",
+                        "file_id": "file123",
+                        "md5_checksum": "file123-md5",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    create_validation_run_manifest(
+        ValidationRunManifestCreateRequest(
+            schema_version="1.0",
+            db_path=settings.reports_db,
+            validation_run_id="validation:transaction-proof-canary",
+            cohort_id="transaction-proof-canary",
+            workflow_run_id=run_context.run_id,
+            configuration_hash="configuration-hash",
+            policy_hash="policy-hash",
+            producer_build_identity="workspace",
+            created_at_utc="2026-07-26T12:00:00Z",
+        ),
+        run_context,
+    )
+
+    wordpress_http.add(
+        "GET",
+        "https://example.com/wp-json/wp/v2/ml_report",
+        lambda _call: FakeHttpResponse.from_payload(status_code=200, payload=[]),
+    )
+    wordpress_http.add_json(
+        "POST",
+        "https://example.com/wp-json/wp/v2/ml_report",
+        status_code=201,
+        payload={"id": 10, "link": "https://example.com/post/10", "status": "publish"},
+    )
+
+    def _strict_readback(_call: RecordedHttpRequest) -> FakeHttpResponse:
+        post_call = wordpress_http.calls_for(
+            "POST", "https://example.com/wp-json/wp/v2/ml_report"
+        )[0]
+        payload = post_call.json_data
+        return FakeHttpResponse.from_payload(
+            status_code=200,
+            payload={
+                "id": 10,
+                "type": "ml_report",
+                "status": payload["status"],
+                "link": "https://example.com/post/10",
+                "featured_media": payload.get("featured_media", 0),
+                "categories": payload.get("categories", []),
+                "tags": payload.get("tags", []),
+                "content": {
+                    "raw": payload["content"],
+                    "rendered": payload["content"],
+                },
+                "meta": payload["meta"],
+            },
+        )
+
+    wordpress_http.add(
+        "GET",
+        "https://example.com/wp-json/wp/v2/ml_report/10",
+        _strict_readback,
+    )
+
+    first = orch.run_publish(
+        settings,
+        ctx=run_context,
+        cohort_manifest=str(cohort_manifest),
+    )
+    second = orch.run_publish(
+        settings,
+        ctx=run_context,
+        cohort_manifest=str(cohort_manifest),
+    )
+
+    assert first[0].status == "published"
+    assert first[0].publication_outcome == "post_created"
+    assert first[0].authenticated_readback_verified is True
+    assert {
+        "preflight_passed",
+        "post_created",
+        "authenticated_content_readback_verified",
+        "metadata_readback_verified",
+    } <= set(first[0].transaction_outcomes)
+    assert second[0].status == "skipped"
+    assert second[0].publication_outcome == "existing_post_matched"
+    assert second[0].authenticated_readback_verified is True
+    assert second[0].requested_write_count == 0
+    assert second[0].actual_write_count == 0
+    assert {
+        "preflight_passed",
+        "idempotent_checksum_skip",
+        "authenticated_lookup_matched",
+        "authenticated_content_readback_verified",
+        "metadata_readback_verified",
+        "already_published_state_skip",
+        "existing_post_matched",
+    } <= set(second[0].transaction_outcomes)
+    readback_statuses = {
+        check.name: check.status for check in second[0].readback_checks
+    }
+    assert readback_statuses["final_rendered_content_hash"] == "verified", (
+        readback_statuses
+    )
+    assert (
+        len(
+            wordpress_http.calls_for(
+                "POST", "https://example.com/wp-json/wp/v2/ml_report"
+            )
+        )
+        == 1
+    )
+    with sqlite3.connect(settings.state_db) as conn:
+        persisted_row = conn.execute(
+            """
+            SELECT outcome_json, artifact_refs_json
+            FROM orchestrator_idempotency
+            WHERE scope=? AND idempotency_key=?
+            """,
+            ("publish_orchestrator.publish_html", "ml_report:file123"),
+        ).fetchone()
+    assert persisted_row is not None
+    persisted_outcome = json.loads(persisted_row[0])
+    persisted_references = json.loads(persisted_row[1])
+    assert persisted_outcome["requested_write_count"] == 0
+    assert persisted_outcome["actual_write_count"] == 0
+    assert (
+        "authenticated_content_readback_verified"
+        in persisted_outcome["transaction_outcomes"]
+    )
+    assert persisted_references["publication_outcome"] == "existing_post_matched"
+    published_post_call = wordpress_http.calls_for(
+        "POST", "https://example.com/wp-json/wp/v2/ml_report"
+    )[0]
+    persisted_metadata = persisted_outcome["readback_expectation"]["metadata"]
+    assert all(len(value) == 64 for value in persisted_metadata.values())
+    assert (
+        persisted_metadata["ml_source_note"]
+        != published_post_call.json_data["meta"]["ml_source_note"]
+    )
+
+
 def test_publish_limit_applies_to_attempted_items_when_first_item_errors(
     publish_settings_factory, run_context, wordpress_http
 ) -> None:
@@ -858,6 +1018,7 @@ __all__ = [
     "test_publish_auto_discovery_skips_unowned_html_before_limit",
     "test_publish_auto_discovery_orders_reports_by_metadata_updated_at_before_limit",
     "test_publish_reuses_idempotent_outcome_without_second_post",
+    "test_publish_canary_persists_complete_readback_proof_and_zero_write_repeat",
     "test_publish_limit_applies_to_attempted_items_when_first_item_errors",
     "test_publish_consumes_retained_readiness_without_reinterpreting_validation_file",
     "test_publish_missing_entity_metadata_fails_before_wordpress",
