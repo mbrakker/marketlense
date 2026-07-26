@@ -26,7 +26,6 @@ from src.contracts.report_generation import (
 from src.contracts.report_models import Figure, Quote, ReportPayload
 from src.contracts.report_store import (
     ReportMetadataGetResponse,
-    SourcePublicationMetadata,
 )
 from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationReport
@@ -380,10 +379,7 @@ def test_render_report_output_passes_db_source_url_to_public_renderer(tmp_path):
         preview_resp=render_preview_asset(runtime, source, deps),
     )
 
-    assert captured == {
-        "source": "https://publisher.example/reports/original-study",
-        "canonical_url": "",
-    }
+    assert captured == {"source": "", "canonical_url": ""}
 
 
 def test_render_report_output_preserves_analysis_metadata_when_db_metadata_missing(
@@ -426,7 +422,7 @@ def test_render_report_output_preserves_analysis_metadata_when_db_metadata_missi
     }
 
 
-def test_render_report_output_passes_relative_pdf_download_href(tmp_path):
+def test_render_report_output_omits_private_pdf_download_href(tmp_path):
     runtime = _runtime(tmp_path, md5="md5")
     Path(runtime.local_pdf_path).write_bytes(b"%PDF-1.4\n")
     source = _source(runtime)
@@ -438,7 +434,7 @@ def test_render_report_output_passes_relative_pdf_download_href(tmp_path):
 
     def _render_report(req, ctx):
         del ctx
-        captured["download_href"] = req.data["_source_download_href"]
+        captured["has_download_href"] = "_source_download_href" in req.data
         html_path.write_text("<html></html>", encoding="utf-8")
         return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
 
@@ -453,7 +449,7 @@ def test_render_report_output_passes_relative_pdf_download_href(tmp_path):
         preview_resp=render_preview_asset(runtime, source, deps),
     )
 
-    assert captured["download_href"] == "../report.pdf"
+    assert captured["has_download_href"] is False
 
 
 def test_render_report_citations_use_report_page_labels_without_internal_targets(
@@ -550,6 +546,7 @@ def test_render_report_output_uses_html_cache_hit_and_skips_render(tmp_path):
         "publisher": "DB Publisher",
         "time_period": "Q1 2026",
         "canonical_url": "",
+        "source": "",
     }
     template_contents = {
         "report.html.j2": "template",
@@ -565,6 +562,8 @@ def test_render_report_output_uses_html_cache_hit_and_skips_render(tmp_path):
     )
 
     def _read_text(req, ctx):
+        if req.path == str(expected_html):
+            return SimpleNamespace(content=expected_html.read_text(encoding="utf-8"))
         if req.path.endswith(f"{runtime.report_name}.html.cache.json"):
             return SimpleNamespace(content=json.dumps({"key": cache_key}))
         for name, content in template_contents.items():
@@ -625,6 +624,7 @@ def test_render_report_output_invalidates_cache_when_css_template_changes(tmp_pa
         "title": "DB Title",
         "publisher": "DB Publisher",
         "time_period": "Q1 2026",
+        "source": "",
     }
     stale_template_contents = {
         "report.html.j2": "template",
@@ -646,6 +646,8 @@ def test_render_report_output_invalidates_cache_when_css_template_changes(tmp_pa
     render_calls: list[str] = []
 
     def _read_text(req, ctx):
+        if req.path == str(expected_html):
+            return SimpleNamespace(content=expected_html.read_text(encoding="utf-8"))
         if req.path.endswith(f"{runtime.report_name}.html.cache.json"):
             return SimpleNamespace(content=json.dumps({"key": stale_cache_key}))
         for name, content in current_template_contents.items():

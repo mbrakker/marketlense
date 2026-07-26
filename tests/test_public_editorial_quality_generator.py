@@ -73,6 +73,7 @@ def test_public_chart_card_requires_retained_candidate_evidence_and_insight_chai
     artifacts["chart_insight_cards"] = [
         {
             "status": "generated",
+            "crop_qa_accepted": True,
             "title": "Demand shifts by channel",
             "caption": "Demand shifts by channel.",
             "evidence_id": "retained-70",
@@ -92,6 +93,7 @@ def test_linked_non_generic_public_chart_card_passes_figure_rules() -> None:
     artifacts["chart_insight_cards"] = [
         {
             "status": "generated",
+            "crop_qa_accepted": True,
             "title": "Demand shifts by channel",
             "caption": "Demand shifts by channel.",
             "candidate_id": "candidate-1",
@@ -212,6 +214,8 @@ def test_public_html_source_section_requires_a_public_original_source_link() -> 
                 {
                     "chart_insight_cards": [
                         {
+                            "status": "generated",
+                            "crop_qa_accepted": True,
                             "title": "Figure 1",
                             "caption": "Retail demand moves across channels.",
                             "evidence_id": "retained-figure",

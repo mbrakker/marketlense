@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import List, Optional, TypedDict
+
 from src.contracts.publish import (
     PublishHtmlSnapshot,
     PublishResolvedTerms,
 )
+from src.contracts.publish_readiness import PublishReadinessArtifact
 from src.contracts.state import (
     StateGetResponse,
 )
@@ -80,6 +82,7 @@ class _PublishPreflightEntry:
     state_row: StateGetResponse | None
     validation_status: str
     validation_issues: List[str] = field(default_factory=list)
+    publish_readiness: PublishReadinessArtifact | None = None
     existing_post_lookup: WordPressPostLookupBatchItem | None = None
     resolved_terms: PublishResolvedTerms | None = None
 

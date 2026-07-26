@@ -153,7 +153,6 @@ def _build_core_signal(
         enumerate(candidates),
         key=lambda item: (-_core_signal_score(item[1]), item[0]),
     )
-    primary_text = ranked_candidates[0][1] if ranked_candidates else ""
     heading = _pick_first_text(
         *(
             _sentence_excerpt(candidate, max_chars=58)
@@ -443,7 +442,7 @@ def _public_label_from_token(value: object) -> str:
 def _coerce_text_items(value: object, limit: int = 4) -> list[str]:
     items: list[str] = []
     for raw_item in _coerce_list(value):
-        text = _s(raw_item)
+        text = _sanitize_public_prose(raw_item)
         if text and text not in items:
             items.append(text)
         if len(items) >= limit:
@@ -461,7 +460,9 @@ def _coerce_advisory_items(
     rows: list[dict[str, str]] = []
     for raw_item in _coerce_list(section.get("items")):
         item = _coerce_dict(raw_item)
-        text = _pick_first_text(*(item.get(key) for key in text_keys), raw_item)
+        text = _sanitize_public_prose(
+            _pick_first_text(*(item.get(key) for key in text_keys), raw_item)
+        )
         if not text:
             continue
         rows.append(
@@ -520,7 +521,7 @@ def _coerce_public_claim_support(
     claims: list[dict[str, str]] = []
     for raw_item in _coerce_list(artifacts.get("claim_ledgers")):
         item = _coerce_dict(raw_item)
-        claim_text = _s(item.get("claim_text"))
+        claim_text = _sanitize_public_prose(item.get("claim_text"))
         if not claim_text:
             continue
         support_type = _public_label_from_token(item.get("support_type"))
@@ -544,7 +545,9 @@ def _coerce_public_advisory(artifacts: dict[str, Any]) -> dict[str, Any]:
     status = _s(decision_brief.get("status")).casefold()
     decision = {
         "available": status == "generated",
-        "strategic_context": _s(decision_brief.get("strategic_context")),
+        "strategic_context": _sanitize_public_prose(
+            decision_brief.get("strategic_context")
+        ),
         "decision_implications": _coerce_text_items(
             decision_brief.get("decision_implications"), limit=4
         ),
@@ -552,7 +555,9 @@ def _coerce_public_advisory(artifacts: dict[str, Any]) -> dict[str, Any]:
             decision_brief.get("priority_moves"), limit=4
         ),
         "watchouts": _coerce_text_items(decision_brief.get("watchouts"), limit=4),
-        "confidence_note": _s(decision_brief.get("confidence_note")),
+        "confidence_note": _sanitize_public_prose(
+            decision_brief.get("confidence_note")
+        ),
     }
     recommendations = _coerce_advisory_items(
         advisory.get("recommendations"),
@@ -673,13 +678,40 @@ def _coerce_public_chart_insight_cards(
     cards: list[dict[str, str]] = []
     for raw_item in _coerce_list(artifacts.get("chart_insight_cards")):
         item = _coerce_dict(raw_item)
+        status = _s(item.get("status")).casefold()
+        if status in {
+            "weak",
+            "weak_evidence",
+            "limited",
+            "abstained",
+            "text_only",
+            "not_applicable",
+            "omitted",
+            "unavailable",
+        }:
+            continue
+        candidate_id = _s(item.get("candidate_id"))
+        evidence_id = _s(item.get("evidence_id"))
+        source_page = _s(item.get("source_page"))
+        insight_id = _s(item.get("insight_id"))
+        caption = _pick_first_text(item.get("caption"), item.get("retained_caption"))
+        takeaway = _s(item.get("public_takeaway"))
+        if not (
+            item.get("crop_qa_accepted") is True
+            and candidate_id
+            and evidence_id
+            and source_page
+            and insight_id
+            and caption
+            and takeaway
+        ):
+            continue
         title = _pick_first_text(
             item.get("title"),
             item.get("chart_title"),
-            item.get("caption"),
-            item.get("takeaway"),
+            caption,
+            takeaway,
         )
-        status = _s(item.get("status")).casefold()
         limitation = _pick_first_text(
             item.get("limitation"),
             item.get("avoid_reason"),
@@ -688,26 +720,16 @@ def _coerce_public_chart_insight_cards(
         )
         if not title:
             continue
-        if status in {"weak", "weak_evidence", "limited", "abstained"}:
-            continue
-        else:
-            insight = _pick_first_text(
-                item.get("insight"),
-                item.get("takeaway"),
-                item.get("business_implication"),
-            )
-            if not insight:
-                continue
-            cards.append(
-                {
-                    "title": title,
-                    "insight": insight,
-                    "so_what": _s(item.get("so_what")),
-                    "now_what": _s(item.get("now_what")),
-                    "status_label": "Chart-backed",
-                    "limitation": limitation,
-                }
-            )
+        cards.append(
+            {
+                "title": title,
+                "insight": takeaway,
+                "so_what": _s(item.get("so_what")),
+                "now_what": _s(item.get("now_what")),
+                "status_label": "Chart-backed",
+                "limitation": limitation,
+            }
+        )
         if len(cards) >= limit:
             break
     return cards
@@ -893,7 +915,8 @@ def _public_citation_label(value: str) -> str:
     if lowered.endswith((".json", ".jsonl", ".txt", ".sqlite", ".db")):
         return ""
     if re.fullmatch(
-        r"(?:[a-z]{1,4}|finding|insight|figure|claim)[-_]?\d{1,5}", lowered
+        r"(?:[a-z]{1,4}[-_]?\d{1,5}|(?:finding|insight|figure|claim)[_-][a-z0-9_-]+)",
+        lowered,
     ):
         return ""
     if "internal" in lowered or "canonical" in lowered:

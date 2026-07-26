@@ -408,6 +408,11 @@ def _figure_issues(
 ) -> list[PublicEditorialQualityIssue]:
     issues: list[PublicEditorialQualityIssue] = []
     for index, figure in enumerate(_dict_items(artifacts.get("chart_insight_cards"))):
+        if figure.get("crop_qa_accepted") is not True:
+            # The renderer omits cards that are not explicit accepted-crop
+            # projections, including text-only insights. They are not public
+            # figure cards and must not create a contradictory repair demand.
+            continue
         title = str(figure.get("title") or figure.get("chart_title") or "").strip()
         caption = str(
             figure.get("caption") or figure.get("retained_caption") or ""
@@ -601,6 +606,7 @@ def _measurements(artifacts: dict[str, Any]) -> list[PublicEditorialQualityMeasu
         for item in chart_cards
         if str(item.get("status") or "").strip().lower()
         not in {"weak", "weak_evidence", "limited", "abstained"}
+        and item.get("crop_qa_accepted") is True
     ]
     card_to_insight = sum(
         1 for item in public_chart_cards if str(item.get("insight_id") or "").strip()

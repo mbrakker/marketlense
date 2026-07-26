@@ -28643,6 +28643,16 @@
             }
           ]
         },
+        "publish_readiness": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.publish_readiness.PublishReadinessArtifact"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "resolved_terms": {
           "anyOf": [
             {
@@ -28832,6 +28842,104 @@
         "reports_db",
         "category_mapping_path",
         "wp"
+      ],
+      "type": "object"
+    },
+    "src.contracts.publish_readiness.PublishReadinessArtifact": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_hash": {
+          "type": "string"
+        },
+        "artifact_hashes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "configuration_hash": {
+          "type": "string"
+        },
+        "created_at_utc": {
+          "type": "string"
+        },
+        "expires_at_utc": {
+          "type": "string"
+        },
+        "final_html_hash": {
+          "type": "string"
+        },
+        "policy_hash": {
+          "type": "string"
+        },
+        "producer_revision": {
+          "type": "string"
+        },
+        "provenance": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "publication_projection_hash": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "rule_results": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.publish_readiness.PublishReadinessRuleResult"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "staleness_conditions": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "status": {
+          "type": "string"
+        },
+        "validator_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "report_id",
+        "status"
+      ],
+      "type": "object"
+    },
+    "src.contracts.publish_readiness.PublishReadinessRuleResult": {
+      "additionalProperties": false,
+      "properties": {
+        "detail": {
+          "type": "string"
+        },
+        "rule_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "surfaces": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "rule_id",
+        "status"
       ],
       "type": "object"
     },

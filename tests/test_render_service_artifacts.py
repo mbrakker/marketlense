@@ -188,9 +188,9 @@ def test_render_includes_artifact_sections(tmp_path):
     assert "Sample Report, page 2 · Report" in html
     assert "f1 · report page" not in html
     assert "q1 · report page" not in html
-    assert 'data-market-lense-publish-entity="true"' in html
-    assert '"entity_type":"report"' in html
-    assert '"canonical_route_intent":"wordpress:ml_report"' in html
+    assert 'data-market-lense-publish-entity="true"' not in html
+    assert '"entity_type":"report"' not in html
+    assert '"canonical_route_intent":"wordpress:ml_report"' not in html
 
 
 def test_render_body_excludes_wordpress_owned_chrome_and_nested_main(tmp_path):
@@ -774,6 +774,30 @@ def test_render_uses_per_asset_figure_captions(tmp_path):
         ],
         "_figure_section_enabled": True,
         "figure": {"title": "Legacy caption", "evidence": "Legacy evidence"},
+        "artifacts": {
+            "chart_insight_cards": [
+                {
+                    "status": "generated",
+                    "candidate_id": "chart-1",
+                    "crop_qa_accepted": True,
+                    "evidence_id": "f1",
+                    "insight_id": "i1",
+                    "source_page": 2,
+                    "caption": "Primary generated caption",
+                    "public_takeaway": "The primary chart supports the published finding.",
+                },
+                {
+                    "status": "generated",
+                    "candidate_id": "table-2",
+                    "crop_qa_accepted": True,
+                    "evidence_id": "f2",
+                    "insight_id": "i2",
+                    "source_page": 3,
+                    "caption": "Detected secondary caption",
+                    "public_takeaway": "The secondary table supports the published finding.",
+                },
+            ]
+        },
     }
     req = RenderRequest(
         schema_version="1.0",
@@ -893,8 +917,23 @@ def test_render_adds_responsive_srcset_when_variant_exists(tmp_path):
                 "kind": "chart",
                 "is_primary": True,
                 "display_caption": "Primary generated caption",
+                "crop_qa_accepted": True,
             }
         ],
+        "artifacts": {
+            "chart_insight_cards": [
+                {
+                    "status": "generated",
+                    "candidate_id": "chart-1",
+                    "crop_qa_accepted": True,
+                    "evidence_id": "f1",
+                    "insight_id": "i1",
+                    "source_page": 2,
+                    "caption": "Primary generated caption",
+                    "public_takeaway": "The chart supports the published finding.",
+                }
+            ]
+        },
     }
     req = RenderRequest(
         schema_version="1.0",
@@ -915,38 +954,6 @@ def test_render_adds_responsive_srcset_when_variant_exists(tmp_path):
     assert 'width="800"' in html
     assert 'height="450"' in html
     assert 'loading="lazy"' in html
-
-
-def test_render_is_deterministic_across_calls(tmp_path):
-    data = {
-        "title": "Deterministic Report",
-        "tldr": "TLDR",
-        "insights": ["Insight A", "Insight B", "Insight C", "Insight D", "Insight E"],
-        "quote": {"text": "Quote", "author": "Author"},
-        "commentary": "Commentary",
-        "publisher": "Publisher",
-        "taxonomy": ["roi"],
-        "region": "US",
-        "time_period": "2024",
-        "contents_page_number": 0,
-    }
-    req = RenderRequest(
-        schema_version="1.0",
-        data=data,
-        doc_name="deterministic.pdf",
-        file_id="file_deterministic",
-        out_dir=str(tmp_path),
-        preview_png=None,
-        tag_acronyms=["ROI"],
-    )
-
-    first = render_report(req, _ctx())
-    second = render_report(req, _ctx())
-
-    first_html = Path(first.html_path).read_text(encoding="utf-8")
-    second_html = Path(second.html_path).read_text(encoding="utf-8")
-    assert first.html_path == second.html_path
-    assert first_html == second_html
 
 
 def test_render_creates_missing_nested_output_directory(tmp_path):

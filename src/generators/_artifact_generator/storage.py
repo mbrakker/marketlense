@@ -761,14 +761,17 @@ def build_chart_insight_cards(
             weak_reason = "No retained insight is linked to the chart evidence."
         elif confidence.lower() in {"low", "weak"}:
             weak_reason = "Chart candidate confidence is below source-backed threshold."
+        public_takeaway = _chart_takeaway(figure, insights_by_evidence)
         cards.append(
             {
                 "schema_version": "1.0",
                 "card_id": candidate_id or f"chart-card-{index}",
                 "status": "generated" if not weak_reason else "weak_evidence",
                 "candidate_id": candidate_id,
+                "crop_qa_accepted": bool((chart or {}).get("crop_qa_accepted")),
                 "caption": caption,
-                "takeaway": _chart_takeaway(figure, insights_by_evidence),
+                "takeaway": public_takeaway,
+                "public_takeaway": public_takeaway,
                 "business_implication": _business_implication(
                     figure, insights_by_evidence
                 ),

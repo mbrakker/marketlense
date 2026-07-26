@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import logging
 from dataclasses import replace
+
 from src.contracts.files import ReadTextRequest
 from src.contracts.publish import (
     PublishEntityMetadata,
@@ -15,20 +16,19 @@ from src.contracts.report_store import (
     ReportMetadataListRequest,
 )
 from src.contracts.run_context import RunContext
-from src.services.file_service import read_text
-from src.services.report_store_service import list_metadata
-from src.orchestrators.publish_shared import canonicalize_html_path
-from src.utils.html_utils import build_publish_html_snapshot
-from src.utils.errors import AppError
-from src.utils.logging import child_context, log_event
-from src.utils.slugify import slugify
-
 from src.orchestrators._publish_orchestrator.models import (
     _PUBLISH_ENTITY_ROUTES,
     _PUBLISH_ROUTES_BY_INTENT,
     _PublishCandidate,
     _PublishEntityRoute,
 )
+from src.orchestrators.publish_shared import canonicalize_html_path
+from src.services.file_service import read_text
+from src.services.report_store_service import list_metadata
+from src.utils.errors import AppError
+from src.utils.html_utils import build_publish_html_snapshot
+from src.utils.logging import child_context, log_event
+from src.utils.slugify import slugify
 
 logger = logging.getLogger("market_lense.publish_orchestrator")
 
@@ -226,10 +226,20 @@ def _resolve_publish_candidates(
         entity_route: _PublishEntityRoute | None = None
         entity_error: AppError | None = None
         try:
-            entity_route = _route_publish_entity_metadata(
-                metadata=html_snapshot.entity_metadata,
-                html_path=html_path,
-            )
+            if (
+                html_snapshot.entity_metadata is None
+                and file_id
+                and file_id_source == "reports_db"
+            ):
+                # Report HTML intentionally contains no internal source ID or
+                # hidden publication marker. The report-store mapping is the
+                # authoritative private routing seam.
+                entity_route = _PUBLISH_ENTITY_ROUTES["report"]
+            else:
+                entity_route = _route_publish_entity_metadata(
+                    metadata=html_snapshot.entity_metadata,
+                    html_path=html_path,
+                )
             logger.info(
                 log_event(
                     file_ctx,

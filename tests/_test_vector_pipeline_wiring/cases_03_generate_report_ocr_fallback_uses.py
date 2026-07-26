@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 def test_generate_report_ocr_fallback_uses_ocr_pdf_for_vector_and_original_for_visuals(
     tmp_path,
 ) -> None:
@@ -79,6 +80,11 @@ def test_generate_report_ocr_fallback_uses_ocr_pdf_for_vector_and_original_for_v
         vector_upload_paths.append(req.file_path)
         return SimpleNamespace(openai_file_id="file_upload")
 
+    def _render_report(req, ctx):
+        output_path = tmp_path / "out.html"
+        output_path.write_text("<html><body>Published</body></html>", encoding="utf-8")
+        return RenderResponse(schema_version="1.0", html_path=str(output_path))
+
     deps = _base_vector_report_dependencies(
         tmp_path,
         sample_pdf_text=_sample,
@@ -127,10 +133,7 @@ def test_generate_report_ocr_fallback_uses_ocr_pdf_for_vector_and_original_for_v
             issues=[],
             source_path=str(tmp_path / "validation.json"),
         ),
-        render_report=lambda req, ctx: RenderResponse(
-            schema_version="1.0",
-            html_path=str(tmp_path / "out.html"),
-        ),
+        render_report=_render_report,
     )
 
     outcome = rgo.run_report_generation(
@@ -149,6 +152,7 @@ def test_generate_report_ocr_fallback_uses_ocr_pdf_for_vector_and_original_for_v
     assert preview_paths == [str(pdf_path)]
     assert figure_paths == [str(pdf_path)]
     assert candidate_paths == [str(pdf_path)]
+
 
 def test_generate_report_vector_store_figure_caption_fail_open_runs_before_validation(
     tmp_path,
@@ -348,6 +352,7 @@ def test_generate_report_vector_store_figure_caption_fail_open_runs_before_valid
     assert execution_trace.index("validation") < execution_trace.index("render")
     pack_names = [name for name, _payload in analysis_store]
     assert "figure_captions" in pack_names
+
 
 __all__ = [
     "test_generate_report_ocr_fallback_uses_ocr_pdf_for_vector_and_original_for_visuals",

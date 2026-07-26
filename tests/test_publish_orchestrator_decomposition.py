@@ -3,7 +3,6 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / "src" / "orchestrators" / "_publish_orchestrator"
 FACADE = PACKAGE.parent / "publish_orchestrator.py"
@@ -37,8 +36,8 @@ PREFLIGHT = {
     "_batch_lookup_existing_posts",
     "_resolve_batch_term_assignments",
     "_build_publish_preflight_entries",
-    "_validation_paths",
-    "_load_validation_report",
+    "_publish_readiness_paths",
+    "_load_publish_readiness",
     "_with_validation",
 }
 

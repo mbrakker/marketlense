@@ -71,7 +71,6 @@ from src.contracts.state import (
     StateGetResponse,
     StatePublishRecordRequest,
 )
-from src.contracts.validation import ValidationReport
 from src.contracts.validation_run_manifest import (
     ValidationRunManifestAuditRequest,
     ValidationRunManifestRecordRequest,
@@ -94,6 +93,7 @@ from src.contracts.wordpress_entities import (
     SignalPublishProjection,
 )
 from src.generators.publish_generator import publish_html
+from src.generators.publish_readiness_generator import verify_publish_readiness
 from src.orchestrators._publish_orchestrator.budget import (
     build_publish_budget,
     read_publish_budget_usage,
@@ -137,9 +137,8 @@ from src.orchestrators._publish_orchestrator.models import (
 from src.orchestrators._publish_orchestrator.preflight import (
     _batch_lookup_existing_posts,
     _build_publish_preflight_entries,
-    _load_validation_report,
+    _load_publish_readiness,
     _resolve_batch_term_assignments,
-    _validation_paths,
     _with_validation,
 )
 from src.orchestrators._publish_orchestrator.routing import (
@@ -1209,20 +1208,25 @@ def run_publish(
             )
             if state_row is None or candidate.html_snapshot is None:
                 continue
-            validation_report = _load_validation_report(
-                file_id=file_id,
-                html_path=candidate.html_path,
-                settings=settings,
-                ctx=file_ctx,
-            )
-            validation_status = (
-                validation_report.status if validation_report else "missing"
-            )
-            validation_issues = (
-                [issue.message for issue in validation_report.issues]
-                if validation_report
-                else []
-            )
+            if entity_route.entity_type == "report":
+                readiness = _load_publish_readiness(
+                    file_id=file_id,
+                    html_path=candidate.html_path,
+                    settings=settings,
+                    ctx=file_ctx,
+                )
+                readiness_verification = verify_publish_readiness(
+                    artifact=readiness,
+                    report_id=file_id,
+                    final_html=candidate.html_snapshot.html_text,
+                    configuration_hash=root_ctx.configuration_hash,
+                    policy_hash=root_ctx.policy_hash,
+                    producer_revision=root_ctx.producer_commit_sha,
+                )
+                validation_status = readiness_verification.status
+                validation_issues = readiness_verification.issues
+            else:
+                validation_status, validation_issues = "pass", []
             checksum = _publish_checksum(
                 file_id=file_id,
                 html_path=candidate.html_path,
@@ -1266,6 +1270,7 @@ def run_publish(
         validation_issues = list(entry.validation_issues)
         existing_post_lookup = entry.existing_post_lookup
         resolved_terms = entry.resolved_terms
+        publish_readiness = entry.publish_readiness
 
         if entry.candidate.entity_error is not None:
             entity_error = entry.candidate.entity_error
@@ -1519,11 +1524,11 @@ def run_publish(
             state_record_publish(
                 StatePublishRecordRequest(
                     schema_version="1.0",
-                        state_db=settings.state_db,
-                        file_id=file_id,
-                        md5=state_row.md5,
-                        wp_post_id=idempotency_readback.post_id,
-                        wp_post_url=idempotency_readback.link,
+                    state_db=settings.state_db,
+                    file_id=file_id,
+                    md5=state_row.md5,
+                    wp_post_id=idempotency_readback.post_id,
+                    wp_post_url=idempotency_readback.link,
                     post_type=entity_route.post_type,
                 ),
                 file_ctx,
@@ -1546,12 +1551,12 @@ def run_publish(
             if verified_outcome.status == "published":
                 published += 1
             continue
-        if settings.validation_policy == "block" and validation_status != "pass":
+        if validation_status != "pass":
             logger.info(
                 log_event(
                     file_ctx,
                     role="orchestrator",
-                    event="publish_validation_blocked",
+                    event="publish_readiness_blocked",
                     module=logger.name,
                     fields={
                         "file_id": file_id,
@@ -1566,29 +1571,13 @@ def run_publish(
                     html_path=html_path,
                     file_id=file_id,
                     status="error",
-                    error="validation_failed",
+                    error="publish_readiness_failed",
                     validation_status=validation_status,
                     validation_issues=validation_issues,
                     publication_outcome="preflight_blocked",
                 )
             )
             continue
-        if validation_status != "pass":
-            logger.info(
-                log_event(
-                    file_ctx,
-                    role="orchestrator",
-                    event="publish_validation_warning",
-                    module=logger.name,
-                    fields={
-                        "file_id": file_id,
-                        "validation_status": validation_status,
-                        "issues": validation_issues,
-                        "policy": settings.validation_policy,
-                    },
-                )
-            )
-
         outcome: Optional[PublishOutcome] = None
 
         def _publish_attempt() -> PublishOutcome:
@@ -1628,6 +1617,7 @@ def run_publish(
                             run_budget_usage=read_publish_budget_usage(
                                 publish_budget, file_ctx
                             ),
+                            publish_readiness=publish_readiness,
                         ),
                         route_settings,
                         file_ctx,
@@ -1716,6 +1706,7 @@ def run_publish(
                     run_budget_usage=read_publish_budget_usage(
                         publish_budget, file_ctx
                     ),
+                    publish_readiness=publish_readiness,
                 ),
                 route_settings,
                 file_ctx,

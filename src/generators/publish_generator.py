@@ -1,17 +1,13 @@
 from __future__ import annotations
 
-import html
 import json
 import logging
 import mimetypes
-import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 from urllib.parse import unquote, urlparse
-
-from bs4 import BeautifulSoup
 
 from src.contracts.categories import CategoryMappingLoadRequest
 from src.contracts.files import FileExistsRequest, ReadBytesRequest, ReadTextRequest
@@ -34,6 +30,10 @@ from src.contracts.wordpress import (
     WordPressTaxonomyEnsureRequest,
     WordPressTaxonomyTerm,
 )
+from src.generators.publish_readiness_generator import (
+    verify_publication_projection,
+    verify_publish_readiness,
+)
 from src.services.category_mapping_service import (
     load_mappings as load_category_mappings,
 )
@@ -50,15 +50,14 @@ from src.services.wordpress_service import (
 from src.utils.errors import AppError
 from src.utils.html_utils import (
     build_publish_html_snapshot,
-    replace_image_sources,
-    strip_image_srcset_and_sizes,
-    strip_publication_internal_metadata,
 )
 from src.utils.logging import log_event
+from src.utils.publication_projection import (
+    apply_publication_media_projection,
+)
 from src.utils.slugify import slugify
 
 logger = logging.getLogger("market_lense.publish_generator")
-EDITORIAL_CONTRACT_VERSION = "public-report-editorial-v1"
 
 
 @dataclass(frozen=True)
@@ -129,39 +128,74 @@ def publish_html(
             message="Publish request must include a resolved WordPress auth header",
             retryable=False,
         )
-    editorial_issues = _validate_publish_editorial_contract(html_snapshot.html_text)
-    blocking_editorial_issues = _blocking_editorial_issues(editorial_issues)
-    if editorial_issues:
+    readiness_status = "pass"
+    readiness_issues: list[str] = []
+    if settings.wp.post_type == "ml_report":
+        readiness = verify_publish_readiness(
+            artifact=request.publish_readiness,
+            report_id=file_id,
+            final_html=html_snapshot.html_text,
+            configuration_hash=ctx.configuration_hash,
+            policy_hash=ctx.policy_hash,
+            producer_revision=ctx.producer_commit_sha,
+        )
+        readiness_status = readiness.status
+        readiness_issues = readiness.issues
+    if readiness_status != "pass":
         logger.info(
             log_event(
                 ctx,
                 role="generator",
-                event=(
-                    "publish_editorial_contract_failed"
-                    if blocking_editorial_issues
-                    else "publish_editorial_contract_warned"
-                ),
+                event="publish_readiness_rejected",
                 module=logger.name,
                 fields={
                     "html_path": request.html_path,
                     "policy": settings.validation_policy,
-                    "rule_ids": [
-                        issue.split("|", 1)[0] for issue in editorial_issues if issue
-                    ],
+                    "rule_ids": readiness_issues,
                 },
             )
         )
-        if settings.validation_policy == "block" and blocking_editorial_issues:
-            return PublishOutcome(
-                schema_version="1.0",
-                html_path=request.html_path,
-                file_id=file_id,
-                status="skipped",
-                error="publish_editorial_contract_failed",
-                validation_status="fail",
-                validation_issues=editorial_issues,
-                publication_outcome="preflight_blocked",
+        return PublishOutcome(
+            schema_version="1.0",
+            html_path=request.html_path,
+            file_id=file_id,
+            status="skipped",
+            error="publish_readiness_failed",
+            validation_status="fail",
+            validation_issues=readiness_issues,
+            publication_outcome="preflight_blocked",
+        )
+    projection_verification = (
+        verify_publication_projection(
+            artifact=request.publish_readiness,
+            projected_body_html=html_snapshot.html_text,
+        )
+        if settings.wp.post_type == "ml_report"
+        else None
+    )
+    if projection_verification is not None and projection_verification.status != "pass":
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="publish_readiness_projection_rejected",
+                module=logger.name,
+                fields={
+                    "html_path": request.html_path,
+                    "rule_ids": projection_verification.issues,
+                },
             )
+        )
+        return PublishOutcome(
+            schema_version="1.0",
+            html_path=request.html_path,
+            file_id=file_id,
+            status="skipped",
+            error="publish_readiness_projection_failed",
+            validation_status="fail",
+            validation_issues=projection_verification.issues,
+            publication_outcome="preflight_blocked",
+        )
     base_url = settings.wp.site_url.rstrip("/")
     card_manifest = None
     if settings.wp.post_type in {
@@ -344,11 +378,29 @@ def publish_html(
             ctx=ctx,
         )
         featured_media_id = card_media_ids["large"]
-    rendered_body_html = replace_image_sources(html_snapshot.body_html, image_map)
-    # Proxy-backed digest images stay more reliable on the WP frontend without
-    # responsive srcset/sizes candidates that still point at synthetic query URLs.
-    rendered_body_html = strip_image_srcset_and_sizes(rendered_body_html)
-    body_html = strip_publication_internal_metadata(rendered_body_html)
+    body_html = apply_publication_media_projection(html_snapshot.html_text, image_map)
+    completed_projection_verification = (
+        verify_publication_projection(
+            artifact=request.publish_readiness,
+            projected_body_html=body_html,
+        )
+        if settings.wp.post_type == "ml_report"
+        else None
+    )
+    if (
+        completed_projection_verification is not None
+        and completed_projection_verification.status != "pass"
+    ):
+        return PublishOutcome(
+            schema_version="1.0",
+            html_path=request.html_path,
+            file_id=file_id,
+            status="error",
+            error="publish_readiness_projection_failed",
+            validation_status="fail",
+            validation_issues=completed_projection_verification.issues,
+            publication_outcome="preflight_blocked",
+        )
     logger.info(
         log_event(
             ctx,
@@ -357,7 +409,8 @@ def publish_html(
             module=logger.name,
             fields={
                 "file_id": file_id,
-                "removed_internal_publication_metadata": body_html != rendered_body_html,
+                "projection_verified": completed_projection_verification is None
+                or completed_projection_verification.status == "pass",
             },
         )
     )
@@ -429,172 +482,12 @@ def publish_html(
         status="published",
         post_id=post_id,
         post_url=post_url,
-        validation_status="fail" if editorial_issues else "pass",
-        validation_issues=editorial_issues,
+        validation_status=readiness_status,
+        validation_issues=readiness_issues,
         publication_outcome="post_created",
         requested_write_count=1,
         actual_write_count=1,
     )
-
-
-def _editorial_issue(
-    *,
-    rule_id: str,
-    field: str,
-    severity: str,
-    remediation: str,
-) -> str:
-    return f"{rule_id}|field={field}|severity={severity}|remediation={remediation}"
-
-
-def _blocking_editorial_issues(issues: list[str]) -> list[str]:
-    return [issue for issue in issues if "|severity=blocker|" in f"{issue}|"]
-
-
-def _validate_publish_editorial_contract(html_text: str) -> list[str]:
-    issues: list[str] = []
-    if (
-        f'name="editorial-contract-version" content="{EDITORIAL_CONTRACT_VERSION}"'
-        not in html_text
-    ):
-        issues.append(
-            _editorial_issue(
-                rule_id="editorial.contract_version_missing",
-                field="head.meta.editorial-contract-version",
-                severity="warning",
-                remediation=(
-                    "Regenerate the public HTML with the current editorial contract."
-                ),
-            )
-        )
-    text_content = _visible_text_for_editorial_checks(html_text)
-    lowered_text = text_content.casefold()
-    generic_patterns = (
-        "valuable insights",
-        "in today's rapidly evolving",
-        "it is important to note",
-        "overall, this report",
-    )
-    if any(pattern in lowered_text for pattern in generic_patterns):
-        issues.append(
-            _editorial_issue(
-                rule_id="editorial.generic_phrasing",
-                field="body",
-                severity="blocker",
-                remediation=(
-                    "Regenerate the affected public copy with source-specific wording."
-                ),
-            )
-        )
-    if re.search(
-        r"\b(?:canonical_claim_id|report:[a-z0-9_.:-]+|[a-z]+-internal-\d+)\b",
-        text_content,
-    ):
-        issues.append(
-            _editorial_issue(
-                rule_id="editorial.internal_reference",
-                field="body",
-                severity="blocker",
-                remediation=(
-                    "Render public source labels instead of internal claim or "
-                    "evidence identifiers."
-                ),
-            )
-        )
-    if re.search(
-        r"\b(?:will|must|proves?|transform)\b.{0,80}\b(?:without source support|without evidence|unsupported)\b",
-        lowered_text,
-    ):
-        issues.append(
-            _editorial_issue(
-                rule_id="editorial.unsupported_implication",
-                field="body",
-                severity="warning",
-                remediation=(
-                    "Add source support or soften the implication before publishing."
-                ),
-            )
-        )
-    if _has_duplicate_sentence(text_content):
-        issues.append(
-            _editorial_issue(
-                rule_id="editorial.duplicate_insight",
-                field="body",
-                severity="warning",
-                remediation="Remove duplicated public insight wording.",
-            )
-        )
-    if re.search(r"\b(?:no caveats|without caveats|no limitations)\b", lowered_text):
-        issues.append(
-            _editorial_issue(
-                rule_id="editorial.missing_caveat",
-                field="body",
-                severity="warning",
-                remediation=(
-                    "Restore caveat-aware wording or limitation context for the claim."
-                ),
-            )
-        )
-    if re.search(r"\b(?:monitor the trend|act now|take action)\b", lowered_text):
-        issues.append(
-            _editorial_issue(
-                rule_id="editorial.weak_actionability",
-                field="body",
-                severity="warning",
-                remediation="Replace generic action language with a concrete next step.",
-            )
-        )
-    if re.search(
-        r"\b(?:revenue|growth|share|market|percentage|metric)\b", lowered_text
-    ) and re.search(
-        r"\b(?:no metric support|without metric support|without quantified support)\b",
-        lowered_text,
-    ):
-        issues.append(
-            _editorial_issue(
-                rule_id="editorial.missing_metric_support",
-                field="body",
-                severity="warning",
-                remediation="Attach a source-backed metric or remove the metric claim.",
-            )
-        )
-    if re.search(
-        r"\b(?:awesome|everyone must|game[- ]changing|revolutionary)\b", lowered_text
-    ):
-        issues.append(
-            _editorial_issue(
-                rule_id="editorial.tone_defect",
-                field="body",
-                severity="warning",
-                remediation="Use neutral, evidence-led editorial tone.",
-            )
-        )
-    return issues
-
-
-def _visible_text_for_editorial_checks(html_text: str) -> str:
-    document = BeautifulSoup(html_text, "html.parser")
-    for node in document(("script", "style")):
-        node.decompose()
-    return html.unescape(" ".join(document.get_text(" ", strip=True).split()))
-
-
-def _has_duplicate_sentence(text: str) -> bool:
-    sentences = [
-        sentence.strip().casefold()
-        for sentence in re.split(r"(?<=[.!?])\s+", text)
-        if len(sentence.strip()) >= 18
-    ]
-    seen: set[str] = set()
-    for sentence in sentences:
-        normalized = re.sub(r"[^a-z0-9 ]+", "", sentence)
-        normalized = " ".join(normalized.split())
-        if not normalized:
-            continue
-        if normalized in seen:
-            return True
-        seen.add(normalized)
-    return False
 
 
 def _load_report_card_manifest(

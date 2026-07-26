@@ -119,8 +119,7 @@ def test_render_surfaces_public_advisory_metric_spine_and_claim_support(tmp_path
                         "report:executive_advisory.recommendations:r1"
                     ),
                     "claim_text": (
-                        "Use margin-safe pricing scenarios in the next planning "
-                        "cycle."
+                        "Use margin-safe pricing scenarios in the next planning cycle."
                     ),
                     "artifact_section": "executive_advisory.recommendations",
                     "evidence_ids": ["f1"],
@@ -145,10 +144,8 @@ def test_render_surfaces_public_advisory_metric_spine_and_claim_support(tmp_path
     html = Path(resp.html_path).read_text(encoding="utf-8")
 
     assert "Decision brief" in html
-    assert (
-        'name="editorial-contract-version" content="public-report-editorial-v1"'
-        in html
-    )
+    assert 'name="editorial-contract-version"' not in html
+    assert 'name="drive-file-id"' not in html
     assert "Pricing discipline is the core decision." in html
     assert "Priority moves" in html
     assert "Use margin-safe pricing scenarios in the next planning cycle." in html
@@ -208,6 +205,12 @@ def test_render_surfaces_topics_key_figures_and_chart_insight_cards(tmp_path):
                 {
                     "card_id": "chart-1",
                     "status": "generated",
+                    "candidate_id": "candidate-1",
+                    "crop_qa_accepted": True,
+                    "evidence_id": "f1",
+                    "insight_id": "i1",
+                    "caption": "Premium demand weakens in the measured segment.",
+                    "public_takeaway": "The chart points to sharper pressure among premium buyers.",
                     "title": "Premium demand weakens",
                     "insight": "The chart points to sharper pressure among premium buyers.",
                     "so_what": "Planning cannot rely on blended category averages.",
@@ -249,3 +252,32 @@ def test_render_surfaces_topics_key_figures_and_chart_insight_cards(tmp_path):
     assert "Planning cannot rely on blended category averages." in html
     assert "Chart link is too weak for a public implication." not in html
     assert "Do not publish as a claim." not in html
+
+
+def test_render_removes_mechanical_scaffolding_from_commentary(tmp_path):
+    response = render_report(
+        RenderRequest(
+            schema_version="1.0",
+            data={
+                "title": "Commentary Safety Report",
+                "tldr": "The report has a supported finding.",
+                "insights": ["The report has a supported finding."],
+                "quote": {"text": "Quote", "author": "Author"},
+                "commentary": "Answer: The supported finding informs the next decision.",
+                "publisher": "Publisher",
+                "taxonomy": ["strategy"],
+                "region": "Global",
+                "time_period": "2026",
+            },
+            doc_name="commentary-safety.pdf",
+            file_id="file_commentary_safety",
+            out_dir=str(tmp_path),
+            preview_png=None,
+        ),
+        _ctx(),
+    )
+
+    html = Path(response.html_path).read_text(encoding="utf-8")
+
+    assert "Answer:" not in html
+    assert "The supported finding informs the next decision." in html

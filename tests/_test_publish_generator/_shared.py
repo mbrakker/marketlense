@@ -1,28 +1,89 @@
 from __future__ import annotations
 
-# ruff: noqa: F401
+import hashlib
 
+# ruff: noqa: F401
 import json
 import threading
 import time
-from dataclasses import replace
+from dataclasses import asdict, replace
+from datetime import UTC, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from PIL import Image
 import pytest
+from PIL import Image
 
-from src.contracts.publish import PublishRequest, PublishResolvedTerms
+from src.contracts.publish import PublishRequest as _PublishRequest
+from src.contracts.publish import PublishResolvedTerms
+from src.contracts.publish_readiness import PublishReadinessArtifact
 from src.contracts.report_store import ReportMetadataUpsertRequest
 from src.generators import publish_generator as pg
 from src.services.report_store_service import upsert_metadata
 from src.utils.errors import AppError
 from src.utils.html_utils import build_publish_html_snapshot
+from src.utils.publication_projection import publication_projection_hash
 from tests.support.fakes import FakeHttpResponse, RecordedHttpRequest
 from tests.support.publish_fixtures import (
     add_card_media_responses,
     write_report_card_fixture,
 )
+
+
+def _ready_publish_readiness(html_text: str, file_id: str) -> PublishReadinessArtifact:
+    created_at = datetime.now(UTC)
+    artifact = PublishReadinessArtifact(
+        report_id=file_id,
+        status="pass",
+        artifact_hashes={},
+        rule_results=[],
+        final_html_hash=hashlib.sha256(html_text.encode("utf-8")).hexdigest(),
+        publication_projection_hash=publication_projection_hash(html_text),
+        configuration_hash=hashlib.sha256(
+            b"publish-readiness:configuration:unavailable"
+        ).hexdigest(),
+        policy_hash=hashlib.sha256(b"publish-readiness:policy:unavailable").hexdigest(),
+        producer_revision="workspace",
+        created_at_utc=created_at.isoformat(),
+        expires_at_utc=(created_at + timedelta(hours=1)).isoformat(),
+        staleness_conditions=["final_html_hash_changed"],
+        provenance={},
+    )
+    signature_payload = asdict(replace(artifact, artifact_hash=""))
+    signature = hashlib.sha256(
+        json.dumps(
+            signature_payload,
+            ensure_ascii=True,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
+    return replace(artifact, artifact_hash=signature)
+
+
+def PublishRequest(*args, **kwargs):  # noqa: N802
+    """Create a request bound to its exact test HTML unless explicitly omitted."""
+    request = _PublishRequest(*args, **kwargs)
+    if "publish_readiness" in kwargs or request.publish_readiness is not None:
+        return request
+    html_text = request.html_text
+    if html_text is None and request.html_snapshot is not None:
+        html_text = request.html_snapshot.html_text
+    if html_text is None:
+        html_path = Path(request.html_path)
+        if html_path.is_file():
+            html_text = html_path.read_text(encoding="utf-8")
+    file_id = request.file_id or (
+        request.html_snapshot.file_id if request.html_snapshot is not None else None
+    )
+    if not file_id and html_text:
+        file_id = build_publish_html_snapshot(html_text).file_id
+    if not html_text or not file_id:
+        return request
+    return replace(
+        request,
+        publish_readiness=_ready_publish_readiness(html_text, str(file_id)),
+    )
 
 
 class _WordPressPublishStubHandler(BaseHTTPRequestHandler):

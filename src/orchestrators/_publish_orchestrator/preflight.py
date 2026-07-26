@@ -7,13 +7,15 @@ import logging
 from dataclasses import replace
 from pathlib import Path
 from typing import List, Optional
-from src.contracts.files import ReadTextRequest
+
 from src.contracts.categories import CategoryMappingLoadRequest
+from src.contracts.files import ReadTextRequest
 from src.contracts.publish import (
     PublishOutcome,
     PublishResolvedTerms,
     PublishSettings,
 )
+from src.contracts.publish_readiness import PublishReadinessArtifact
 from src.contracts.report_store import (
     ReportMetadataGetResponse,
 )
@@ -22,13 +24,24 @@ from src.contracts.state import (
     StateGetRequest,
     StateGetResponse,
 )
-from src.contracts.validation import ValidationReport
 from src.contracts.wordpress import (
     WordPressPostLookupBatchItem,
     WordPressPostLookupBatchRequest,
+    WordPressTagEnsureRequest,
     WordPressTaxonomyEnsureRequest,
     WordPressTaxonomyTerm,
-    WordPressTagEnsureRequest,
+)
+from src.generators.publish_readiness_generator import (
+    parse_publish_readiness_payload,
+    verify_publish_readiness,
+)
+from src.orchestrators._publish_orchestrator.models import (
+    _PublishCandidate,
+    _PublishPreflightEntry,
+)
+from src.orchestrators._publish_orchestrator.routing import (
+    _normalize_string_list,
+    _normalize_tag_slugs,
 )
 from src.services.category_mapping_service import (
     load_mappings as load_category_mappings,
@@ -43,17 +56,6 @@ from src.services.wordpress_service import (
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 from src.utils.slugify import slugify
-from src.utils.validation import parse_validation_report_payload
-
-from src.orchestrators._publish_orchestrator.models import (
-    _PublishCandidate,
-    _PublishPreflightEntry,
-)
-
-from src.orchestrators._publish_orchestrator.routing import (
-    _normalize_string_list,
-    _normalize_tag_slugs,
-)
 
 logger = logging.getLogger("market_lense.publish_orchestrator")
 
@@ -333,6 +335,7 @@ def _build_publish_preflight_entries(
 ) -> list[_PublishPreflightEntry]:
     state_rows_by_file_id: dict[str, StateGetResponse] = {}
     validation_by_file_id: dict[str, tuple[str, list[str]]] = {}
+    readiness_by_file_id: dict[str, PublishReadinessArtifact | None] = {}
     eligible_network_preflight_file_ids: list[str] = []
 
     for candidate in candidates:
@@ -352,22 +355,31 @@ def _build_publish_preflight_entries(
         )
         if state_row is not None:
             state_rows_by_file_id[file_id] = state_row
-        validation_report = _load_validation_report(
-            file_id=file_id,
-            html_path=candidate.html_path,
-            settings=settings,
-            ctx=file_ctx,
-        )
-        validation_by_file_id[file_id] = (
-            validation_report.status if validation_report else "missing",
-            [issue.message for issue in validation_report.issues]
-            if validation_report
-            else [],
-        )
-        if state_row is not None and not (
-            settings.validation_policy == "block"
-            and validation_by_file_id[file_id][0] != "pass"
-        ):
+        if candidate.entity_route and candidate.entity_route.entity_type == "report":
+            readiness = _load_publish_readiness(
+                file_id=file_id,
+                html_path=candidate.html_path,
+                settings=settings,
+                ctx=file_ctx,
+            )
+            readiness_by_file_id[file_id] = readiness
+            verification = verify_publish_readiness(
+                artifact=readiness,
+                report_id=file_id,
+                final_html=(
+                    candidate.html_snapshot.html_text if candidate.html_snapshot else ""
+                ),
+                configuration_hash=ctx.configuration_hash,
+                policy_hash=ctx.policy_hash,
+                producer_revision=ctx.producer_commit_sha,
+            )
+            validation_by_file_id[file_id] = (
+                verification.status,
+                verification.issues,
+            )
+        else:
+            validation_by_file_id[file_id] = ("pass", [])
+        if state_row is not None and validation_by_file_id[file_id][0] == "pass":
             eligible_network_preflight_file_ids.append(file_id)
 
     eligible_candidates = [
@@ -434,6 +446,7 @@ def _build_publish_preflight_entries(
                 state_row=state_rows_by_file_id.get(file_id),
                 validation_status=validation_status,
                 validation_issues=list(validation_issues),
+                publish_readiness=readiness_by_file_id.get(file_id),
                 existing_post_lookup=existing_posts_by_file_id.get(file_id),
                 resolved_terms=resolved_terms_by_file_id.get(file_id),
             )
@@ -456,19 +469,19 @@ def _build_publish_preflight_entries(
     return entries
 
 
-def _validation_paths(output_dir: str, file_id: str, html_path: str) -> list[Path]:
-    """
-    Validation path in the per-report folder: out/<report-slug>/report_analysis/validation.json.
-    """
+def _publish_readiness_paths(
+    output_dir: str, file_id: str, html_path: str
+) -> list[Path]:
+    """Readiness path in out/<report-slug>/report_analysis/publish_readiness.json."""
     _ = file_id
     html_slug = Path(html_path).stem
-    return [Path(output_dir) / html_slug / "report_analysis" / "validation.json"]
+    return [Path(output_dir) / html_slug / "report_analysis" / "publish_readiness.json"]
 
 
-def _load_validation_report(
+def _load_publish_readiness(
     file_id: str, html_path: str, settings: PublishSettings, ctx
-) -> Optional[ValidationReport]:
-    candidates = _validation_paths(settings.output_dir, file_id, html_path)
+) -> Optional[PublishReadinessArtifact]:
+    candidates = _publish_readiness_paths(settings.output_dir, file_id, html_path)
     data = None
     used_path: Optional[Path] = None
     for path in candidates:
@@ -479,7 +492,7 @@ def _load_validation_report(
                 log_event(
                     ctx,
                     role="orchestrator",
-                    event="publish_validation_missing",
+                    event="publish_readiness_missing",
                     module=logger.name,
                     fields={
                         "file_id": file_id,
@@ -498,7 +511,7 @@ def _load_validation_report(
                 log_event(
                     ctx,
                     role="orchestrator",
-                    event="publish_validation_parse_failed",
+                    event="publish_readiness_parse_failed",
                     module=logger.name,
                     fields={"file_id": file_id, "path": str(path)},
                 )
@@ -506,7 +519,19 @@ def _load_validation_report(
             continue
     if data is None or used_path is None:
         return None
-    return parse_validation_report_payload(data, source_path=str(used_path))
+    try:
+        return parse_publish_readiness_payload(data)
+    except (TypeError, ValueError):
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="publish_readiness_contract_invalid",
+                module=logger.name,
+                fields={"file_id": file_id, "path": str(used_path)},
+            )
+        )
+        return None
 
 
 def _with_validation(

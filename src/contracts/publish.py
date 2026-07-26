@@ -3,8 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
-from src.contracts.wordpress import WordPressAuthSettings
+from src.contracts.publish_readiness import PublishReadinessArtifact
 from src.contracts.run_budget import RunBudget, RunBudgetLimits, RunBudgetUsage
+from src.contracts.wordpress import WordPressAuthSettings
 
 
 @dataclass(frozen=True)
@@ -243,6 +244,12 @@ class PublishRequest:
         default=None,
         metadata={
             "doc": "Observed canonical usage supplied to final WordPress publication writes."
+        },
+    )
+    publish_readiness: PublishReadinessArtifact | None = field(
+        default=None,
+        metadata={
+            "doc": "Hash-bound readiness decision verified before any publication side effect."
         },
     )
 

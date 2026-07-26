@@ -44,7 +44,6 @@ from .normalization import (
 )
 
 logger = logging.getLogger("market_lense.render_service")
-PUBLIC_EDITORIAL_CONTRACT_VERSION = "public-report-editorial-v1"
 TEMPLATES_DIR = Path(__file__).resolve().parents[3] / "templates"
 JINJA_ENV = Environment(
     loader=FileSystemLoader(str(TEMPLATES_DIR)),
@@ -66,71 +65,46 @@ def _build_figure_slides(
 ) -> list[dict[str, Any]]:
     figure_assets = _coerce_list(data.get("_figure_assets"))
     slides: list[dict[str, Any]] = []
-    if figure_assets:
-        for index, raw_asset in enumerate(figure_assets, start=1):
-            asset = _coerce_dict(raw_asset)
-            image_path = _s(asset.get("image_path"))
-            if not image_path:
-                continue
-            is_primary = bool(asset.get("is_primary")) or index == 1
-            slides.append(
-                {
-                    **_build_media(
-                        relative_path=image_path,
-                        out_dir=out_dir,
-                        alt=(
-                            f"Selected figure from {report_title}"
-                            if is_primary
-                            else f"Additional figure {index} from {report_title}"
-                        ),
-                        default_width=1600,
-                        default_height=900,
-                        sizes="(max-width: 800px) 100vw, 980px",
-                        caption=_pick_first_text(
-                            asset.get("display_caption"),
-                            "Representative figure from the source report.",
-                        ),
-                    ),
-                    "caption": _pick_first_text(
-                        asset.get("display_caption"),
-                        "Representative figure from the source report.",
-                    ),
-                    "page": int(asset.get("page") or -1)
-                    if isinstance(asset.get("page"), int)
-                    else -1,
-                    "kind": _s(asset.get("kind")),
-                    "candidate_id": _s(asset.get("candidate_id")),
-                    "is_primary": is_primary,
-                    "thumb": _build_media(
-                        relative_path=image_path,
-                        out_dir=out_dir,
-                        alt=f"Figure thumbnail {index}",
-                        default_width=320,
-                        default_height=180,
-                        sizes="84px",
-                    ),
-                }
-            )
-        return slides
-    primary_figure = _pick_first_text(
-        data.get("_figure_top"), data.get("_figure_image")
-    )
-    figure_gallery = [
-        _s(item) for item in _coerce_list(data.get("_figure_gallery")) if _s(item)
-    ]
-    seen: set[str] = set()
-    ordered_paths: list[str] = []
-    for path in [primary_figure, *figure_gallery]:
-        if path and path not in seen:
-            ordered_paths.append(path)
-            seen.add(path)
-    fallback_caption = ""
-    legacy_figure = _coerce_dict(data.get("figure"))
-    fallback_caption = _pick_first_text(
-        legacy_figure.get("title"),
-        legacy_figure.get("evidence"),
-    )
-    for index, image_path in enumerate(ordered_paths, start=1):
+    cards_by_candidate = {
+        _s(card.get("candidate_id")): card
+        for raw_card in _coerce_list(
+            _coerce_dict(data.get("artifacts")).get("chart_insight_cards")
+        )
+        if (card := _coerce_dict(raw_card))
+        and _s(card.get("status")).casefold()
+        not in {
+            "abstained",
+            "limited",
+            "not_applicable",
+            "omitted",
+            "text_only",
+            "unavailable",
+            "weak",
+            "weak_evidence",
+        }
+        and card.get("crop_qa_accepted") is True
+        and _s(card.get("candidate_id"))
+        and _s(card.get("evidence_id"))
+        and _s(card.get("insight_id"))
+        and _s(card.get("caption"))
+        and _s(card.get("public_takeaway"))
+        and card.get("source_page") is not None
+    }
+    for raw_asset in figure_assets:
+        asset = _coerce_dict(raw_asset)
+        candidate_id = _s(asset.get("candidate_id"))
+        card = cards_by_candidate.get(candidate_id)
+        image_path = _s(asset.get("image_path"))
+        if (
+            asset.get("crop_qa_accepted") is not True
+            or not image_path
+            or card is None
+            or str(asset.get("page")) != str(card.get("source_page"))
+        ):
+            continue
+        index = len(slides) + 1
+        is_primary = not slides
+        caption = _s(card.get("caption"))
         slides.append(
             {
                 **_build_media(
@@ -138,27 +112,19 @@ def _build_figure_slides(
                     out_dir=out_dir,
                     alt=(
                         f"Selected figure from {report_title}"
-                        if index == 1
+                        if is_primary
                         else f"Additional figure {index} from {report_title}"
                     ),
                     default_width=1600,
                     default_height=900,
                     sizes="(max-width: 800px) 100vw, 980px",
-                    caption=(
-                        fallback_caption
-                        if index == 1 and fallback_caption
-                        else f"Additional figure {index}"
-                    ),
+                    caption=caption,
                 ),
-                "caption": (
-                    fallback_caption
-                    if index == 1 and fallback_caption
-                    else f"Additional figure {index}"
-                ),
-                "page": -1,
-                "kind": "image",
-                "candidate_id": "",
-                "is_primary": index == 1,
+                "caption": caption,
+                "page": int(asset.get("page")),
+                "kind": _s(asset.get("kind")),
+                "candidate_id": candidate_id,
+                "is_primary": is_primary,
                 "thumb": _build_media(
                     relative_path=image_path,
                     out_dir=out_dir,
@@ -315,7 +281,6 @@ def _build_render_view(
     chapters = _coerce_chapters(artifacts, doc_map)
     return {
         "report_title": report_title,
-        "editorial_contract_version": PUBLIC_EDITORIAL_CONTRACT_VERSION,
         "publisher": publisher,
         "region": region,
         "focus_year": focus_year,
@@ -392,7 +357,7 @@ def _build_render_view(
         "chapters": chapters,
         "insights": insights,
         "quotes": quotes,
-        "commentary": _s(data.get("commentary")),
+        "commentary": _sanitize_public_prose(data.get("commentary")),
         "expert_comment": _sanitize_public_prose(artifacts.get("expert_comment")),
         "linkedin_post": _sanitize_public_prose(artifacts.get("linkedin_post")),
         "figures": {
@@ -497,7 +462,8 @@ def _public_http_url(value: object) -> str:
         or not parsed.hostname
         or parsed.username
         or parsed.password
-        or parsed.hostname.casefold() in {"localhost", "127.0.0.1", "::1"}
+        or parsed.hostname.casefold()
+        in {"drive.google.com", "localhost", "127.0.0.1", "::1"}
     ):
         return ""
     return candidate

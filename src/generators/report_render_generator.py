@@ -1,19 +1,20 @@
 from __future__ import annotations
 
-import os
 import re
 from copy import deepcopy
 from dataclasses import asdict
 from pathlib import Path
-from urllib.parse import quote, urlsplit
+from urllib.parse import urlsplit
 
 from src.contracts.cover_images import CoverImageGenerationRequest, CoverImageReport
 from src.contracts.files import (
     FileBundleHashRequest,
     FileExistsRequest,
     FileStatRequest,
+    ReadTextRequest,
 )
 from src.contracts.ingest import IngestOutcome
+from src.contracts.report_analysis import AnalysisStorePackRequest
 from src.contracts.report_assets import PreviewRequest, PreviewResponse, RenderRequest
 from src.contracts.report_cards import (
     CardCoverAssetSet,
@@ -30,6 +31,11 @@ from src.contracts.report_generation import (
 from src.contracts.report_store import (
     ReportMetadataGetRequest,
     ReportMetadataUpsertRequest,
+)
+from src.contracts.semantic_ids import ReportId
+from src.generators.publish_readiness_generator import (
+    evaluate_publish_readiness,
+    publish_readiness_payload,
 )
 from src.generators.report_card_projection import (
     build_cover_fingerprint,
@@ -119,7 +125,15 @@ def _public_source_note(runtime: ReportRuntimeState) -> str:
 def _safe_public_source_url(value: object) -> str:
     url = str(value or "").strip()
     parsed = urlsplit(url)
-    return url if parsed.scheme in {"http", "https"} and parsed.netloc else ""
+    return (
+        url
+        if parsed.scheme in {"http", "https"}
+        and parsed.netloc
+        and parsed.hostname
+        and parsed.hostname.casefold()
+        not in {"drive.google.com", "localhost", "127.0.0.1", "::1"}
+        else ""
+    )
 
 
 def _relative_cover_assets(
@@ -229,16 +243,6 @@ def _build_metadata_upsert_request(
     )
 
 
-def _relative_href(from_dir: str, target_path: str) -> str:
-    base = Path(from_dir).resolve()
-    target = Path(target_path).resolve()
-    try:
-        relative = os.path.relpath(target, start=base)
-    except ValueError:
-        return target.as_uri()
-    return quote(relative.replace(os.sep, "/"), safe="/#?=&:%")
-
-
 def _report_template_bundle_sha(
     runtime: ReportRuntimeState, dependencies
 ) -> str | None:
@@ -344,16 +348,6 @@ def render_report_output(
         child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:render_metadata"),
     )
     render_data_dict = deepcopy(analysis.data_dict)
-    if runtime.local_pdf_path and _file_exists_via_service(
-        runtime,
-        dependencies,
-        runtime.local_pdf_path,
-        "source_pdf_stat",
-    ):
-        render_data_dict["_source_download_href"] = _relative_href(
-            runtime.settings.output_dir,
-            runtime.local_pdf_path,
-        )
     existing_title = str(render_data_dict.get("title") or "").strip()
     existing_publisher = str(render_data_dict.get("publisher") or "").strip()
     existing_time_period = str(render_data_dict.get("time_period") or "").strip()
@@ -384,9 +378,6 @@ def render_report_output(
         render_data_dict["time_period"] = str(
             render_meta.time_period or existing_time_period
         ).strip()
-        source_url = str(render_meta.source_url or "").strip()
-        if source_url:
-            render_data_dict["source"] = source_url
         # A source document is attribution, never the canonical URL of the
         # MarketLense article. WordPress supplies its own article URL after
         # the final publication route and metadata are known.
@@ -406,6 +397,10 @@ def render_report_output(
                 },
             )
         )
+    # Only a resolved publisher URL is eligible for public original-source
+    # attribution. Acquisition and archive locations remain retained-only.
+    render_data_dict["source"] = _verified_public_source_url(runtime)
+    render_data_dict.pop("_source_download_href", None)
 
     doc_name = runtime.file_name
     out_html = ""
@@ -537,6 +532,13 @@ def render_report_output(
             else None
         )
         if report_card_manifest_path:
+            _persist_publish_readiness(
+                runtime=runtime,
+                analysis=analysis,
+                dependencies=dependencies,
+                final_html_path=out_html,
+                report_card_manifest_path=report_card_manifest_path,
+            )
             logger.info(
                 log_event(
                     runtime.ctx,
@@ -823,6 +825,14 @@ def render_report_output(
         )
     )
 
+    _persist_publish_readiness(
+        runtime=runtime,
+        analysis=analysis,
+        dependencies=dependencies,
+        final_html_path=out_html,
+        report_card_manifest_path=report_card_manifest_path,
+    )
+
     return IngestOutcome(
         schema_version="1.1",
         file_id=runtime.file.file_id,
@@ -844,3 +854,113 @@ def render_report_output(
         ocr_pdf_path=source.ocr_pdf_path or None,
         report_card_manifest_path=report_card_manifest_path,
     )
+
+
+def _persist_publish_readiness(
+    *,
+    runtime: ReportRuntimeState,
+    analysis: ReportAnalysisState,
+    dependencies: ReportRenderDependencies,
+    final_html_path: str,
+    report_card_manifest_path: str | None,
+) -> str:
+    """Persist the single readiness decision after the final render is complete."""
+    final_html = dependencies.read_text(
+        ReadTextRequest(schema_version="1.0", path=final_html_path),
+        child_context(
+            runtime.ctx, task_id=f"{runtime.ctx.task_id}:publish_readiness_html"
+        ),
+    ).content
+    artifacts = analysis.artifacts_payload or {}
+    artifact_hashes = {
+        "artifacts": sha256_json(artifacts),
+        "validation": sha256_json(
+            analysis.validation_report.to_dict() if analysis.validation_report else {}
+        ),
+        **{
+            f"evidence:{name}": sha256_json(payload)
+            for name, payload in sorted(analysis.evidence_packs.items())
+            if isinstance(payload, dict)
+        },
+    }
+    if report_card_manifest_path:
+        artifact_hashes["report_card_manifest_path"] = sha256_json(
+            {"path": Path(report_card_manifest_path).name}
+        )
+    readiness = evaluate_publish_readiness(
+        report_id=runtime.file.file_id,
+        artifacts=artifacts,
+        evidence_packs=analysis.evidence_packs,
+        validation_report=analysis.validation_report,
+        final_html=final_html,
+        final_html_path=final_html_path,
+        category_ids=analysis.payload.categories,
+        regeneration_attempts=analysis.regeneration_attempts,
+        artifact_hashes=artifact_hashes,
+        configuration_hash=runtime.ctx.configuration_hash,
+        policy_hash=runtime.ctx.policy_hash,
+        producer_revision=runtime.ctx.producer_commit_sha,
+        provenance=_source_provenance(runtime),
+    )
+    response = dependencies.analysis_store_pack(
+        AnalysisStorePackRequest(
+            schema_version="1.0",
+            output_dir=runtime.settings.output_dir,
+            report_id=ReportId(runtime.file.file_id),
+            pack_name="publish_readiness",
+            payload=publish_readiness_payload(readiness),
+            report_slug=runtime.report_name,
+        ),
+        child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:publish_readiness"),
+    )
+    logger.info(
+        log_event(
+            runtime.ctx,
+            role="generator",
+            event="publish_readiness_persisted",
+            module=logger.name,
+            fields={
+                "file_id": runtime.file.file_id,
+                "status": readiness.status,
+                "rule_count": len(readiness.rule_results),
+                "path": response.output_path,
+                "final_html_hash": readiness.final_html_hash,
+                "publication_projection_hash": readiness.publication_projection_hash,
+            },
+        )
+    )
+    return response.output_path
+
+
+def _verified_public_source_url(runtime: ReportRuntimeState) -> str:
+    identity = runtime.source_identity
+    if str(getattr(identity, "identity_status", "") or "").casefold() != "resolved":
+        return ""
+    for value in (
+        getattr(identity, "canonical_landing_page_url", ""),
+        getattr(identity, "source_page_url", ""),
+    ):
+        safe = _safe_public_source_url(value)
+        if safe:
+            return safe
+    return ""
+
+
+def _source_provenance(runtime: ReportRuntimeState) -> dict[str, str]:
+    identity = runtime.source_identity
+    public_url = _verified_public_source_url(runtime)
+    canonical = _safe_public_source_url(
+        getattr(identity, "canonical_landing_page_url", "")
+    )
+    source_page = _safe_public_source_url(getattr(identity, "source_page_url", ""))
+    return {
+        "internal_acquisition_path_hash": sha256_json(
+            {"path": runtime.local_pdf_path or ""}
+        ),
+        "internal_archive_url_hash": sha256_json(
+            {"url": getattr(identity, "acquired_artifact_url", "") or ""}
+        ),
+        "publisher_landing_page_url": canonical if public_url else "",
+        "original_report_url": source_page if public_url else "",
+        "marketlense_article_url": "",
+    }

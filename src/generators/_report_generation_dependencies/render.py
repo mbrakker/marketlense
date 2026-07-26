@@ -13,6 +13,7 @@ from src.contracts.files import (
     ReadTextRequest,
     WriteBytesRequest,
 )
+from src.contracts.report_analysis import AnalysisStorePackRequest
 from src.contracts.report_assets import PreviewRequest, RenderRequest, RenderResponse
 from src.contracts.report_cards import (
     ReportCardManifestWriteRequest,
@@ -39,6 +40,7 @@ from src.services.file_service import (
 )
 from src.services.pdf_service import render_preview as render_preview_service
 from src.services.render_service import render_report as render_report_service
+from src.services.report_analysis_store_service import store_pack as analysis_store_pack
 from src.services.report_store_service import (
     get_metadata as get_report_metadata,
 )
@@ -84,6 +86,9 @@ class ReportRenderDependencies:
     get_report_source_identity: Callable[
         [ReportSourceIdentityGetRequest, RunContext], Any
     ] = get_report_source_identity
+    analysis_store_pack: Callable[[AnalysisStorePackRequest, RunContext], Any] = (
+        analysis_store_pack
+    )
 
     @classmethod
     def default(cls) -> "ReportRenderDependencies":
@@ -104,4 +109,5 @@ class ReportRenderDependencies:
             hash_file_bundle=hash_file_bundle,
             get_report_publication_metadata=get_report_publication_metadata,
             get_report_source_identity=get_report_source_identity,
+            analysis_store_pack=analysis_store_pack,
         )

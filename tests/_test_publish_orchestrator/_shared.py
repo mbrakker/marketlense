@@ -7,34 +7,29 @@ __file__ = str(
     _SplitPath(__file__).resolve().parent.parent / "test_publish_orchestrator.py"
 )
 
+import hashlib
 import json
-
 import logging
-
+import re
 import sqlite3
-
-from dataclasses import replace
-
+from dataclasses import asdict, replace
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
 
+from src.contracts.publish_readiness import PublishReadinessArtifact
 from src.contracts.report_store import ReportMetadataUpsertRequest
-
 from src.contracts.state import (
     StatePublishCheckRequest,
     StatePublishRecordRequest,
     StateRecordRequest,
 )
-
 from src.orchestrators import publish_orchestrator as orch
-
 from src.orchestrators import retry_orchestrator
-
 from src.services.report_store_service import upsert_metadata
-
 from src.services.state_service import get_publish, record, record_publish
-
+from src.utils.publication_projection import publication_projection_hash
 from tests.support.fakes import FakeHttpResponse, RecordedHttpRequest
 
 
@@ -106,22 +101,67 @@ def _write_html(
 ) -> Path:
     html_path = Path(output_dir) / name
     html_path.parent.mkdir(parents=True, exist_ok=True)
+    marker = re.search(r"Drive fileId:\s*([A-Za-z0-9:_-]+)", body)
+    effective_file_id = marker.group(1) if marker else source_artifact_id
     metadata = (
         _publish_entity_metadata_script(
             entity_type=entity_type,
-            source_artifact_id=source_artifact_id,
+            source_artifact_id=effective_file_id,
             canonical_route_intent=canonical_route_intent,
         )
         if include_entity_metadata
         else ""
     )
-    html_path.write_text(
-        f"<html><head><title>Report</title>{metadata}</head><body>{body}</body></html>",
-        encoding="utf-8",
+    html_text = (
+        f"<html><head><title>Report</title>{metadata}</head><body>{body}</body></html>"
     )
+    html_path.write_text(html_text, encoding="utf-8")
     if entity_type == "report":
         _write_report_card_manifest(html_path)
+        _write_publish_readiness(
+            html_path=html_path,
+            html_text=html_text,
+            file_id=effective_file_id,
+        )
     return html_path
+
+
+def _write_publish_readiness(*, html_path: Path, html_text: str, file_id: str) -> None:
+    created_at = datetime.now(UTC)
+    artifact = PublishReadinessArtifact(
+        report_id=file_id,
+        status="pass",
+        artifact_hashes={},
+        rule_results=[],
+        final_html_hash=hashlib.sha256(html_text.encode("utf-8")).hexdigest(),
+        publication_projection_hash=publication_projection_hash(html_text),
+        configuration_hash=hashlib.sha256(
+            b"publish-readiness:configuration:unavailable"
+        ).hexdigest(),
+        policy_hash=hashlib.sha256(b"publish-readiness:policy:unavailable").hexdigest(),
+        producer_revision="workspace",
+        created_at_utc=created_at.isoformat(),
+        expires_at_utc=(created_at + timedelta(hours=1)).isoformat(),
+        staleness_conditions=["final_html_hash_changed"],
+        provenance={},
+    )
+    signature_payload = asdict(replace(artifact, artifact_hash=""))
+    artifact = replace(
+        artifact,
+        artifact_hash=hashlib.sha256(
+            json.dumps(
+                signature_payload,
+                ensure_ascii=True,
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("utf-8")
+        ).hexdigest(),
+    )
+    readiness_path = (
+        html_path.with_suffix("") / "report_analysis" / "publish_readiness.json"
+    )
+    readiness_path.parent.mkdir(parents=True, exist_ok=True)
+    readiness_path.write_text(json.dumps(asdict(artifact)), encoding="utf-8")
 
 
 def _write_report_card_manifest(html_path: Path) -> None:
@@ -218,6 +258,12 @@ def _seed_report_metadata(
             evidence_pack_paths={},
         ),
         run_context,
+    )
+    path = Path(html_path)
+    _write_publish_readiness(
+        html_path=path,
+        html_text=path.read_text(encoding="utf-8"),
+        file_id=file_id,
     )
 
 

@@ -31,6 +31,7 @@ _PACK_SCHEMA_NAMES: dict[str, str] = {
     "key_metrics": "key_metrics_pack",
     "limitations": "limitations_pack",
     "methods": "methods_pack",
+    "publish_readiness": "publish_readiness",
     "quote_candidates": "quote_candidates_pack",
     "recommendations": "recommendations_pack",
     "risk_register": "risk_register_pack",
