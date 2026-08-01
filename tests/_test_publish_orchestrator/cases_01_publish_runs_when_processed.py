@@ -787,11 +787,12 @@ def test_publish_uses_hash_bound_readiness_over_regen_snapshots(
     report_analysis_dir.mkdir(parents=True, exist_ok=True)
     readiness = evaluate_publish_readiness(
         report_id="file123",
-        artifacts={},
+        artifacts={"categories": ["markets"]},
         evidence_packs={},
         validation_report=ValidationReport(schema_version="1.1", status="pass"),
         final_html=html,
         final_html_path=str(html_path),
+        category_ids=["markets"],
         provenance={
             "publisher_landing_page_url": "https://publisher.example/reports/report",
             "original_report_url": "",

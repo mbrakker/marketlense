@@ -142,24 +142,30 @@ def publish_readiness_payload(artifact: PublishReadinessArtifact) -> dict[str, A
 def parse_publish_readiness_payload(payload: object) -> PublishReadinessArtifact:
     """Parse the persisted artifact strictly enough for fail-closed publication."""
     data = payload if isinstance(payload, dict) else {}
-    raw_results = (
-        data.get("rule_results") if isinstance(data.get("rule_results"), list) else []
-    )
-    results = [
-        PublishReadinessRuleResult(
-            rule_id=str(item.get("rule_id") or ""),
-            status=str(item.get("status") or "fail"),
-            surfaces=[
-                str(surface) for surface in item.get("surfaces", []) if str(surface)
-            ],
-            detail=str(item.get("detail") or ""),
-            schema_version=str(
-                item.get("schema_version") or PUBLISH_READINESS_SCHEMA_VERSION
-            ),
+    raw_results = data.get("rule_results")
+    malformed = not isinstance(payload, dict) or not isinstance(raw_results, list)
+    results: list[PublishReadinessRuleResult] = []
+    for item in raw_results if isinstance(raw_results, list) else []:
+        if not isinstance(item, dict):
+            malformed = True
+            continue
+        surfaces = item.get("surfaces")
+        if not isinstance(surfaces, list) or any(
+            not isinstance(surface, str) for surface in surfaces
+        ):
+            malformed = True
+            continue
+        results.append(
+            PublishReadinessRuleResult(
+                rule_id=str(item.get("rule_id") or ""),
+                status=str(item.get("status") or "fail"),
+                surfaces=[surface for surface in surfaces if surface],
+                detail=str(item.get("detail") or ""),
+                schema_version=str(
+                    item.get("schema_version") or PUBLISH_READINESS_SCHEMA_VERSION
+                ),
+            )
         )
-        for item in raw_results
-        if isinstance(item, dict)
-    ]
     return PublishReadinessArtifact(
         report_id=str(data.get("report_id") or ""),
         status=str(data.get("status") or "fail"),
@@ -191,7 +197,7 @@ def parse_publish_readiness_payload(payload: object) -> PublishReadinessArtifact
         else {},
         artifact_hash=str(data.get("artifact_hash") or ""),
         validator_version=str(data.get("validator_version") or ""),
-        schema_version=str(data.get("schema_version") or ""),
+        schema_version="" if malformed else str(data.get("schema_version") or ""),
     )
 
 
@@ -288,7 +294,19 @@ def _category_result(
     artifact_values = _normalized_strings(
         artifacts.get("categories") or artifacts.get("category_decisions") or []
     )
-    if artifact_values and canonical and artifact_values != canonical:
+    if not canonical:
+        return _fail(
+            "publish_readiness.category_consistency",
+            ["categories", "artifacts.category_decisions"],
+            "canonical category assignment missing",
+        )
+    if not artifact_values:
+        return _fail(
+            "publish_readiness.category_consistency",
+            ["categories", "artifacts.category_decisions"],
+            "retained category assignment missing",
+        )
+    if artifact_values != canonical:
         return _fail(
             "publish_readiness.category_consistency",
             ["categories", "artifacts.category_decisions"],
@@ -302,12 +320,22 @@ def _material_evidence_result(
 ) -> PublishReadinessRuleResult:
     valid_ids = _evidence_ids(evidence_packs)
     missing: list[str] = []
+    invalid: list[str] = []
     for family, item in _material_claim_items(artifacts):
         evidence_ids = _claim_evidence_ids(item)
+        if evidence_ids is None:
+            invalid.append(family)
+            continue
         if not evidence_ids or any(
             evidence_id not in valid_ids for evidence_id in evidence_ids
         ):
             missing.append(family)
+    if invalid:
+        return _fail(
+            "publish_readiness.material_claim_evidence",
+            ["artifacts", "evidence_packs"],
+            f"{len(invalid)} material claims have an invalid evidence reference shape",
+        )
     if missing:
         return _fail(
             "publish_readiness.material_claim_evidence",
@@ -647,8 +675,16 @@ def _material_claim_items(
     return items
 
 
-def _claim_evidence_ids(item: dict[str, Any]) -> set[str]:
-    values = [item.get("evidence_id"), *(item.get("evidence_ids") or [])]
+def _claim_evidence_ids(item: dict[str, Any]) -> set[str] | None:
+    scalar = item.get("evidence_id")
+    plural = item.get("evidence_ids", [])
+    if scalar is not None and not isinstance(scalar, str):
+        return None
+    if not isinstance(plural, (list, tuple)) or any(
+        not isinstance(value, str) or not value.strip() for value in plural
+    ):
+        return None
+    values = [scalar, *plural]
     return {
         str(value).strip()
         for value in values
