@@ -3,8 +3,7 @@
 > **Documentation type:** Point-in-time review
 > **Scope:** Repository logic and default fast-suite behavior at the reviewed
 > revision
-> **Status:** Proposed remediation; this document does not claim the findings
-> are fixed
+> **Status:** Remediated; regression coverage records the fixed behavior
 
 ## Method and limits
 
@@ -35,7 +34,7 @@ both a date-dependent assertion error and a default-suite isolation error:
 the test's failure path performs uncontrolled external work instead of failing
 immediately at the intended seam.
 
-**Proposed solution.**
+**Implemented solution.**
 
 1. Generate `expires_at_utc` relative to the test's current UTC time (or inject
    the cache clock if a current clock seam already exists), with enough margin
@@ -72,7 +71,7 @@ a persisted payload used by publication preflight, one malformed or partially
 migrated artifact can abort the workflow rather than produce the intended
 non-ready decision.
 
-**Proposed solution.**
+**Implemented solution.**
 
 Validate every nested collection before iteration and parse through the
 versioned contract/schema boundary. Unsupported shapes should either return a
@@ -107,7 +106,7 @@ assignment comparison. A report can consequently receive a passing category
 rule without proving that its rendered/retained decision matches the canonical
 publication assignment.
 
-**Proposed solution.**
+**Implemented solution.**
 
 Define the required category presence explicitly at this gate. For report
 publication, require both normalized lists to be non-empty and equal. If a
@@ -139,7 +138,7 @@ accepted character-by-character, producing misleading validation rather than
 a clear contract failure. Artifacts are retained boundary data, so invalid
 shape must block deterministically rather than crash or be reinterpreted.
 
-**Proposed solution.**
+**Implemented solution.**
 
 Normalize evidence references with a typed helper: accept a scalar
 `evidence_id` and a list/tuple of scalar `evidence_ids`; reject mappings,
@@ -174,13 +173,20 @@ checks.
 - The focused existing publish-readiness tests passed (`7 passed`). They do not
   cover the malformed shapes or missing-side category cases above.
 
-## Recommended remediation order
+## Remediation outcome
 
-1. Fix LE-1 first to restore a bounded, deterministic default suite.
-2. Fix LE-2 and LE-4 together at the persisted readiness contract boundary,
-   while keeping their acceptance cases distinct.
-3. Fix LE-3 after confirming the documented product policy for uncategorized
-   reports; default to fail-closed if no supported state is documented.
-4. Run the focused suites and all fast gates, then run the approved isolated
-   discovery → acquisition → ingest → publish validation workflow because the
-   readiness fixes affect the publication control path.
+1. LE-1 now uses a relative UTC expiry and a fail-fast fake at the public
+   browser boundary, while retaining the real SQLite cache and cached file.
+2. LE-2 now treats malformed rule collections and nested surfaces as an
+   unsupported contract, which publication verification rejects fail-closed.
+3. LE-3 now requires equal, non-empty normalized category assignments. An
+   all-rejected analysis result remains representable, but cannot be published
+   while uncategorized.
+4. LE-4 now validates scalar and plural evidence-reference shapes before
+   membership checks and returns a stable material-evidence rule failure for
+   malformed references.
+
+The focused regression suite covers valid round trips, malformed readiness
+surfaces, every missing-side category combination, malformed plural evidence
+references, and cache isolation. The repository completion record and commit
+checks remain the source of truth for the exact commands run after remediation.

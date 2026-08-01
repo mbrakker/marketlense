@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import sys
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -27,7 +28,19 @@ def _valid_pdf_bytes() -> bytes:
     return b"%PDF-1.4\n1 0 obj <</Type/Catalog>> endobj\n%%EOF\n"
 
 
-def test_browser_download_reuses_valid_artifact_acquisition_cache(tmp_path: Path):
+def test_browser_download_reuses_valid_artifact_acquisition_cache(
+    tmp_path: Path, external_boundary_mocks_only
+):
+    import src.services.browser_report_download_service as browser_download_service
+
+    def fail_if_browser_is_called(**_kwargs):
+        raise AssertionError("browser boundary must not run for a valid cache hit")
+
+    external_boundary_mocks_only.setattr(
+        browser_download_service,
+        "run_browser_report_download_agent",
+        fail_if_browser_is_called,
+    )
     settings = _settings(tmp_path)
     pdf_path = tmp_path / "cached-report.pdf"
     payload = _valid_pdf_bytes()
@@ -67,7 +80,7 @@ def test_browser_download_reuses_valid_artifact_acquisition_cache(tmp_path: Path
             downloaded_mime_type="application/pdf",
             size_bytes=len(payload),
             cache_version="browser_artifact_cache_v1",
-            expires_at_utc="2026-08-01T00:00:00Z",
+            expires_at_utc=(datetime.now(UTC) + timedelta(days=1)).isoformat(),
         ),
         _ctx(),
     )
