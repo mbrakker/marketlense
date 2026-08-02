@@ -242,7 +242,8 @@ def test_publish_readiness_category_consistency_fails_for_missing_side() -> None
             provenance=provenance,
         )
         rule = next(
-            item for item in readiness.rule_results
+            item
+            for item in readiness.rule_results
             if item.rule_id == "publish_readiness.category_consistency"
         )
         assert rule.status == "fail"
@@ -265,7 +266,8 @@ def test_publish_readiness_rejects_malformed_plural_evidence_references() -> Non
             provenance=provenance,
         )
         rule = next(
-            item for item in readiness.rule_results
+            item
+            for item in readiness.rule_results
             if item.rule_id == "publish_readiness.material_claim_evidence"
         )
         assert rule.status == "fail"

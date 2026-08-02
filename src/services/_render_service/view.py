@@ -66,12 +66,12 @@ def _build_figure_slides(
     figure_assets = _coerce_list(data.get("_figure_assets"))
     slides: list[dict[str, Any]] = []
     cards_by_candidate = {
-        _s(card.get("candidate_id")): card
+        _s(candidate_card.get("candidate_id")): candidate_card
         for raw_card in _coerce_list(
             _coerce_dict(data.get("artifacts")).get("chart_insight_cards")
         )
-        if (card := _coerce_dict(raw_card))
-        and _s(card.get("status")).casefold()
+        if (candidate_card := _coerce_dict(raw_card))
+        and _s(candidate_card.get("status")).casefold()
         not in {
             "abstained",
             "limited",
@@ -82,24 +82,26 @@ def _build_figure_slides(
             "weak",
             "weak_evidence",
         }
-        and card.get("crop_qa_accepted") is True
-        and _s(card.get("candidate_id"))
-        and _s(card.get("evidence_id"))
-        and _s(card.get("insight_id"))
-        and _s(card.get("caption"))
-        and _s(card.get("public_takeaway"))
-        and card.get("source_page") is not None
+        and candidate_card.get("crop_qa_accepted") is True
+        and _s(candidate_card.get("candidate_id"))
+        and _s(candidate_card.get("evidence_id"))
+        and _s(candidate_card.get("insight_id"))
+        and _s(candidate_card.get("caption"))
+        and _s(candidate_card.get("public_takeaway"))
+        and candidate_card.get("source_page") is not None
     }
     for raw_asset in figure_assets:
         asset = _coerce_dict(raw_asset)
         candidate_id = _s(asset.get("candidate_id"))
         card = cards_by_candidate.get(candidate_id)
         image_path = _s(asset.get("image_path"))
+        page = asset.get("page")
         if (
             asset.get("crop_qa_accepted") is not True
             or not image_path
             or card is None
-            or str(asset.get("page")) != str(card.get("source_page"))
+            or page is None
+            or str(page) != str(card.get("source_page"))
         ):
             continue
         index = len(slides) + 1
@@ -121,7 +123,7 @@ def _build_figure_slides(
                     caption=caption,
                 ),
                 "caption": caption,
-                "page": int(asset.get("page")),
+                "page": int(page),
                 "kind": _s(asset.get("kind")),
                 "candidate_id": candidate_id,
                 "is_primary": is_primary,

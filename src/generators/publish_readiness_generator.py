@@ -653,9 +653,8 @@ def _material_claim_items(
     artifacts: dict[str, Any],
 ) -> list[tuple[str, dict[str, Any]]]:
     items: list[tuple[str, dict[str, Any]]] = []
-    summary = (
-        artifacts.get("summary") if isinstance(artifacts.get("summary"), dict) else {}
-    )
+    raw_summary = artifacts.get("summary")
+    summary = raw_summary if isinstance(raw_summary, dict) else {}
     for item in _dict_items(summary.get("claim_evidence_map")):
         if str(item.get("claim") or "").strip():
             items.append(("summary.claim_evidence_map", item))

@@ -3,7 +3,23 @@ from __future__ import annotations
 import ast
 import importlib
 from pathlib import Path
+from types import SimpleNamespace
 
+import pytest
+
+from src.contracts.artifact_generation import ArtifactRenderTask
+from src.contracts.run_context import RunContext
+from src.generators.report_analysis_generator import VectorStoreIndexingState
+from src.orchestrators._report_analysis_orchestrator.artifact_batches import (
+    _execute_artifact_step_batch,
+)
+from src.orchestrators._report_analysis_orchestrator.payload import (
+    _ensure_report_payload_complete,
+)
+from src.orchestrators._report_analysis_orchestrator.vector_store import (
+    _await_vector_store_indexing,
+)
+from src.utils.errors import AppError
 
 FACADE = Path("src/orchestrators/report_analysis_orchestrator.py")
 PACKAGE = Path("src/orchestrators/_report_analysis_orchestrator")
@@ -13,6 +29,64 @@ ARTIFACT_BATCH_SYMBOLS = {
     "_artifact_batch_workers",
     "_execute_artifact_step_batch",
 }
+
+
+def test_artifact_batch_propagates_sequential_render_failure() -> None:
+    ctx = RunContext("1.0", "run", "analysis", "span")
+    task = ArtifactRenderTask("1.0", "summary", "summary", {}, ctx)
+
+    def fail_render(_task):
+        raise RuntimeError("render failed")
+
+    with pytest.raises(RuntimeError, match="render failed"):
+        _execute_artifact_step_batch(
+            SimpleNamespace(
+                artifact_parallel_workers=1,
+                artifact_global_max_in_flight=1,
+            ),
+            [task],
+            fail_render,
+            ctx,
+            "core",
+        )
+
+
+def test_report_payload_completeness_lists_all_missing_public_surfaces() -> None:
+    payload = SimpleNamespace(
+        title="",
+        tldr="",
+        commentary="",
+        insights=[],
+        quote=SimpleNamespace(text=""),
+        figure=SimpleNamespace(title="", evidence=""),
+    )
+
+    with pytest.raises(AppError) as error:
+        _ensure_report_payload_complete(
+            payload,
+            artifacts={},
+            ctx=RunContext("1.0", "run", "analysis", "span"),
+            file_id="file-1",
+            stage="initial",
+        )
+
+    assert error.value.code == "report_payload_incomplete"
+    assert set(error.value.context["missing_fields"]) >= {
+        "title",
+        "tldr",
+        "commentary",
+        "insights",
+        "figure.title",
+        "figure.evidence",
+    }
+
+
+def test_vector_store_wait_rejects_missing_store_identity() -> None:
+    state = VectorStoreIndexingState(None, None, None, None, None)
+
+    with pytest.raises(AppError, match="vector_store_id is required"):
+        _await_vector_store_indexing(state, None, None, None)
+
 
 VECTOR_STORE_SYMBOLS = {
     "VECTOR_STORE_READY_STATUSES",
@@ -128,15 +202,15 @@ def test_report_analysis_orchestrator_uses_semantic_private_modules() -> None:
     assert manifest.is_file()
 
     facade_owned = _owned_symbols(FACADE)
-    assert PUBLIC_COORDINATOR_SYMBOLS <= facade_owned
+    assert facade_owned >= PUBLIC_COORDINATOR_SYMBOLS
     assert facade_owned.isdisjoint(ALL_MOVED_SYMBOLS)
 
-    assert ARTIFACT_BATCH_SYMBOLS <= _owned_symbols(artifact_batches)
-    assert VECTOR_STORE_SYMBOLS <= _owned_symbols(vector_store)
-    assert PAYLOAD_SYMBOLS <= _owned_symbols(payload)
-    assert VALIDATION_SYMBOLS <= _owned_symbols(validation)
-    assert REGENERATION_PLAN_SYMBOLS <= _owned_symbols(regeneration_plan)
-    assert MANIFEST_SYMBOLS <= _owned_symbols(manifest)
+    assert _owned_symbols(artifact_batches) >= ARTIFACT_BATCH_SYMBOLS
+    assert _owned_symbols(vector_store) >= VECTOR_STORE_SYMBOLS
+    assert _owned_symbols(payload) >= PAYLOAD_SYMBOLS
+    assert _owned_symbols(validation) >= VALIDATION_SYMBOLS
+    assert _owned_symbols(regeneration_plan) >= REGENERATION_PLAN_SYMBOLS
+    assert _owned_symbols(manifest) >= MANIFEST_SYMBOLS
 
     assert _imported_siblings(shared) == set()
     assert _imported_siblings(artifact_batches) <= {"shared"}

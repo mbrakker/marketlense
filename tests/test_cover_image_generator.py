@@ -209,3 +209,35 @@ def test_generate_cover_images_compacts_monthly_period_range_for_card_coverage(
 
     assert outcome.status == "generated"
     assert {item.time_period for item in captured} == {"Jan 2024\u2013Jan 2026"}
+
+
+def test_generate_cover_images_preserves_descriptive_month_range(
+    tmp_path, external_boundary_mocks_only
+):
+    source = _request(tmp_path)
+    report = replace(
+        source.reports[0], time_period="Jan 2024 through adjusted Feb 2024"
+    )
+    captured = []
+
+    def _capture(render_request, ctx):
+        del ctx
+        captured.append(render_request)
+        return CoverImageRenderResponse(
+            schema_version="2.0",
+            output_path=render_request.output_path,
+            width=render_request.layout.width,
+            height=render_request.layout.height,
+            title_font_size=render_request.layout.title_font_max,
+        )
+
+    external_boundary_mocks_only.setattr(
+        cover_image_service, "render_cover_image", _capture
+    )
+
+    outcome = generate_cover_images(replace(source, reports=[report]), _ctx())[0]
+
+    assert outcome.status == "generated"
+    assert {item.time_period for item in captured} == {
+        "Jan 2024 through adjusted Feb 2024"
+    }
