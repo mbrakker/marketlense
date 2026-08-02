@@ -77,6 +77,14 @@ def _clean_fit_threshold(value: object, default: float) -> float:
             severity="error",
             context={"value_type": "bool"},
         )
+    if not isinstance(value, (int, float, str, bytes, bytearray)):
+        raise AppError(
+            code="category_mapping_invalid_fit_threshold",
+            message="Category fit high-confidence threshold must be a number in (0, 1)",
+            retryable=False,
+            severity="error",
+            context={"value_type": type(value).__name__},
+        )
     try:
         threshold = float(value)
     except (TypeError, ValueError):

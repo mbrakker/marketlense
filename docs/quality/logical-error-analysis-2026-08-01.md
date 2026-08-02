@@ -163,13 +163,11 @@ checks.
 - Python compilation, the repository lint gate, architecture-import gate,
   role-I/O boundary gate, contract-schema snapshot gate, service-boundary map
   gate, and documentation gate passed during the review.
-- The type gate did not pass in this environment. Most reported errors were
-  missing installed `types-PyYAML` and `types-requests` packages even though
-  they are declared in `requirements-dev.txt`; it also reported unbaselined
-  nullable-value errors in publish readiness and render/category services.
-  These diagnostics should be triaged before changing the baseline, but this
-  review does not label them as additional runtime errors without a focused
-  behavioral reproduction.
+- The type diagnostics found during the review were resolved without changing
+  the baseline. Nullable values are narrowed before use in publish readiness
+  and rendering, and category thresholds reject unsupported value types before
+  numeric conversion. The declared `types-PyYAML` and `types-requests`
+  packages remain required when running the type gate locally.
 - The focused existing publish-readiness tests passed (`7 passed`). They do not
   cover the malformed shapes or missing-side category cases above.
 
