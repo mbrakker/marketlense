@@ -15,7 +15,8 @@ def test_quality_gate_covers_canonical_ci_checks_in_order() -> None:
     commands = quality_gate_commands()
     rendered = [" ".join(command) for command in commands]
 
-    assert rendered[0].endswith("scripts/ci/check_formatting.py")
+    assert rendered[0].endswith("scripts/ci/check_dependency_consistency.py")
+    assert rendered[1].endswith("scripts/ci/check_formatting.py")
     assert any("run_type_check.py" in command for command in rendered)
     assert any("check_architecture_imports.py" in command for command in rendered)
     assert any("check_forbidden_patching.py" in command for command in rendered)
