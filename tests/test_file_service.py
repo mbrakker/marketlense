@@ -195,6 +195,8 @@ def test_read_latest_pdf_cache_text_reads_latest_cache_file(tmp_path: Path) -> N
     newer = cache_root / "text_new.json"
     older.write_text(json.dumps({"text": "older"}), encoding="utf-8")
     newer.write_text(json.dumps({"text": "newer"}), encoding="utf-8")
+    os.utime(older, (1, 1))
+    os.utime(newer, (2, 2))
 
     response = read_latest_pdf_cache_text(
         PdfCacheTextReadRequest(
