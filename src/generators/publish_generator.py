@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import mimetypes
@@ -26,6 +27,7 @@ from src.contracts.wordpress import (
     WordPressMediaPrepareRequest,
     WordPressMediaUploadRequest,
     WordPressPostCreateRequest,
+    WordPressPostReadExpectation,
     WordPressTagEnsureRequest,
     WordPressTaxonomyEnsureRequest,
     WordPressTaxonomyTerm,
@@ -56,6 +58,7 @@ from src.utils.publication_projection import (
     apply_publication_media_projection,
 )
 from src.utils.slugify import slugify
+from src.utils.wordpress_readback import wordpress_readback_value_sha256
 
 logger = logging.getLogger("market_lense.publish_generator")
 
@@ -119,6 +122,8 @@ def publish_html(
             file_id=None,
             status="error",
             error="missing_file_id",
+            publication_outcome="preflight_blocked",
+            transaction_outcomes=["preflight_blocked"],
         )
 
     auth_header = str(request.auth_header or "").strip()
@@ -164,6 +169,7 @@ def publish_html(
             validation_status="fail",
             validation_issues=readiness_issues,
             publication_outcome="preflight_blocked",
+            transaction_outcomes=["preflight_blocked"],
         )
     projection_verification = (
         verify_publication_projection(
@@ -195,6 +201,7 @@ def publish_html(
             validation_status="fail",
             validation_issues=projection_verification.issues,
             publication_outcome="preflight_blocked",
+            transaction_outcomes=["preflight_blocked"],
         )
     base_url = settings.wp.site_url.rstrip("/")
     card_manifest = None
@@ -294,6 +301,7 @@ def publish_html(
             post_id=update_resp.post_id,
             post_url=str(update_resp.link or ""),
             publication_outcome="post_updated",
+            transaction_outcomes=["post_updated"],
             requested_write_count=1,
             actual_write_count=1,
         )
@@ -400,6 +408,7 @@ def publish_html(
             validation_status="fail",
             validation_issues=completed_projection_verification.issues,
             publication_outcome="preflight_blocked",
+            transaction_outcomes=["preflight_blocked"],
         )
     logger.info(
         log_event(
@@ -435,7 +444,11 @@ def publish_html(
         if signal_card
         else None
     )
-    post_meta = {"ml_file_id": file_id, **(card_post_meta or {})}
+    post_meta = {
+        "ml_file_id": file_id,
+        "ml_content_sha256": hashlib.sha256(body_html.encode("utf-8")).hexdigest(),
+        **(card_post_meta or {}),
+    }
     create_resp = create_post(
         WordPressPostCreateRequest(
             schema_version="1.0",
@@ -460,6 +473,16 @@ def publish_html(
     )
     post_id = create_resp.post_id
     post_url = create_resp.link
+    readback_expectation = _post_readback_expectation(
+        file_id=file_id,
+        post_type=settings.wp.post_type,
+        status=settings.wp.post_status,
+        canonical_url=post_url,
+        body_html=body_html,
+        post_meta=post_meta,
+        resolved_terms=resolved_terms,
+        featured_media_id=featured_media_id,
+    )
 
     logger.info(
         log_event(
@@ -485,8 +508,68 @@ def publish_html(
         validation_status=readiness_status,
         validation_issues=readiness_issues,
         publication_outcome="post_created",
+        transaction_outcomes=["post_created"],
         requested_write_count=1,
         actual_write_count=1,
+        readback_expectation=readback_expectation,
+    )
+
+
+def _post_readback_expectation(
+    *,
+    file_id: str,
+    post_type: str,
+    status: str,
+    canonical_url: str,
+    body_html: str,
+    post_meta: Dict[str, object],
+    resolved_terms: PublishResolvedTerms,
+    featured_media_id: int | None,
+) -> WordPressPostReadExpectation:
+    """Build the public, hash-only transaction proof retained for post readback."""
+
+    metadata_sha256 = {
+        key: wordpress_readback_value_sha256(value)
+        for key, value in post_meta.items()
+        if key != "ml_content_sha256"
+    }
+    source_attribution = {
+        key: metadata_sha256[key]
+        for key, value in post_meta.items()
+        if key
+        in {
+            "ml_source_title",
+            "ml_source_url",
+            "ml_source_note",
+            "ml_source_publication_date",
+        }
+        and str(value or "").strip()
+    }
+    media_associations = {
+        key: int(value)
+        for key, value in post_meta.items()
+        if key.endswith("_id") and isinstance(value, int) and value > 0
+    }
+    if featured_media_id:
+        media_associations["featured_media"] = featured_media_id
+    return WordPressPostReadExpectation(
+        schema_version="1.0",
+        post_type=post_type,
+        status=status,
+        file_id=file_id,
+        content_sha256=hashlib.sha256(body_html.encode("utf-8")).hexdigest(),
+        canonical_url=canonical_url,
+        metadata=metadata_sha256,
+        source_attribution=source_attribution,
+        taxonomy_assignments={
+            "categories": list(resolved_terms.category_ids),
+            "tags": list(resolved_terms.tag_ids),
+            **{
+                rest_base: list(term_ids)
+                for rest_base, term_ids in resolved_terms.taxonomy_terms.items()
+            },
+        },
+        media_associations=media_associations,
     )
 
 

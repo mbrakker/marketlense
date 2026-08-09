@@ -80,7 +80,7 @@ def test_attempt_limited_ingest_keeps_failed_candidate_in_the_result(
         process_file=_fake_process_file,
     )
 
-    results = orch.run_ingest(settings, limit=1, dependencies=deps)
+    results = orch.run_ingest(settings, attempt_limit=1, dependencies=deps)
 
     assert attempted == ["file_bad"]
     assert [row.file_id for row in results] == ["file_bad"]
@@ -191,6 +191,31 @@ def test_frozen_cohort_persists_and_replays_the_same_drive_members(
         == "deterministic_admission_preflight"
     )
     payload = json.loads(stored["cohorts/release.json"])
+    assert payload["schema_version"] == "1.1"
+    assert payload["members"] == [
+        {
+            "schema_version": "1.0",
+            "file_id": "file-a",
+            "name": "A.pdf",
+            "modified_time": "2026-01-01",
+            "md5_checksum": "md5-a",
+            "mime_type": None,
+            "report_id": "file-a",
+            "source_identity_id": "md5-a",
+            "selection_reason": "deterministic_admission_preflight",
+        },
+        {
+            "schema_version": "1.0",
+            "file_id": "file-b",
+            "name": "B.pdf",
+            "modified_time": "2026-01-02",
+            "md5_checksum": "md5-b",
+            "mime_type": None,
+            "report_id": "file-b",
+            "source_identity_id": "md5-b",
+            "selection_reason": "deterministic_admission_preflight",
+        },
+    ]
     assert payload["validation_run_id"] == str(
         orch._validation_run_id_for_cohort(
             cohort_id=payload["cohort_id"],
@@ -199,6 +224,19 @@ def test_frozen_cohort_persists_and_replays_the_same_drive_members(
             producer_build_identity=payload["producer_build_identity"],
         )
     )
+    payload["members"][1]["file_id"] = "file-replaced"
+    payload["members"][1]["report_id"] = "file-replaced"
+    stored["cohorts/release.json"] = json.dumps(payload).encode("utf-8")
+
+    with pytest.raises(AppError, match="immutable ingest cohort"):
+        orch._frozen_cohort(
+            cohort_size=2,
+            cohort_manifest="cohorts/release.json",
+            selected_files=[],
+            settings=ingest_settings,
+            deps=deps,
+            root_ctx=run_context,
+        )
 
 
 def test_frozen_cohort_rejects_stale_admission_provenance(
@@ -257,6 +295,14 @@ def test_validation_run_identity_changes_with_cohort_provenance() -> None:
     )
 
     assert first != changed_policy
+
+
+def test_cohort_identity_changes_with_immutable_member_set() -> None:
+    first = DriveFile("1.0", "file-a", "A.pdf", "2026-01-01", "md5-a")
+    second = DriveFile("1.0", "file-b", "B.pdf", "2026-01-02", "md5-b")
+
+    assert orch._cohort_id([first]) != orch._cohort_id([second])
+    assert orch._cohort_id([first]) != orch._cohort_id([first, second])
 
 
 def test_fixed_cohort_rejects_invalid_source_before_manifest_or_generation(
@@ -608,3 +654,71 @@ def test_success_target_is_the_only_mode_that_selects_a_replacement(
     )
 
     assert [outcome.file_id for outcome in outcomes] == ["bad", "good"]
+
+
+def test_fixed_cohort_keeps_a_failed_member_without_selecting_a_replacement(
+    ingest_settings,
+) -> None:
+    settings = replace(ingest_settings, ingest_worker_limit=1)
+    files = [
+        DriveFile("1.0", "failed", "Failed.pdf", None, "md5-failed"),
+        DriveFile("1.0", "replacement", "Replacement.pdf", None, "md5-good"),
+    ]
+    persisted: dict[str, bytes] = {}
+    attempted: list[str] = []
+
+    def _process(file, index, _settings, _ctx, _force):
+        attempted.append(file.file_id)
+        return orch._FileProcessResult(
+            index=index,
+            outcome=IngestOutcome(
+                schema_version="1.0",
+                file_id=file.file_id,
+                name=file.name or file.file_id,
+                md5=file.md5_checksum,
+                html_path=None,
+                status="error",
+                error="typed_processing_failure",
+            ),
+            processed=0,
+            had_error=True,
+        )
+
+    outcomes = orch.run_ingest(
+        settings,
+        cohort_size=1,
+        cohort_manifest="cohorts/failure-is-not-replaced.json",
+        dependencies=_batch_dependencies(
+            list_pdfs=lambda _request, _ctx: files,
+            process_file=_process,
+            file_exists=lambda request, _ctx: SimpleNamespace(
+                exists=request.path in persisted
+            ),
+            write_bytes=lambda request, _ctx: (
+                persisted.__setitem__(request.path, request.content)
+                or SimpleNamespace(bytes_written=len(request.content))
+            ),
+            get_source_quarantine=lambda _request, _ctx: SimpleNamespace(record=None),
+            check_pdf_integrity=lambda _request, _ctx: SimpleNamespace(
+                failure_code="", page_count=8, md5="md5-failed"
+            ),
+            extract_pdf_text=lambda _request, _ctx: SimpleNamespace(
+                char_count=2_000, pages_extracted=3, text_density=666.0
+            ),
+        ),
+    )
+
+    assert attempted == ["failed"]
+    assert [(outcome.file_id, outcome.status) for outcome in outcomes] == [
+        ("failed", "error")
+    ]
+    manifest = json.loads(persisted["cohorts/failure-is-not-replaced.json"])
+    assert [member["report_id"] for member in manifest["members"]] == ["failed"]
+
+
+def test_attempt_limit_rejects_ambiguous_or_nonpositive_values(ingest_settings) -> None:
+    with pytest.raises(AppError, match="either attempt_limit"):
+        orch.run_ingest(ingest_settings, attempt_limit=1, limit=1)
+
+    with pytest.raises(AppError, match="Attempt limit must be positive"):
+        orch.run_ingest(ingest_settings, attempt_limit=0)

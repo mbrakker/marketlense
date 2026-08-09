@@ -70,7 +70,23 @@ WORDPRESS_HTTP_POOL_MAXSIZE = 8
 _ORIGINAL_REQUEST_CALLS: dict[str, Any] = {
     "GET": requests.get,
     "POST": requests.post,
+    "OPTIONS": requests.options,
 }
+
+
+def _required_publish_meta_keys(post_type: str) -> tuple[str, ...]:
+    """Return the persisted proof fields required for a publishable entity route."""
+
+    common = ("ml_file_id", "ml_content_sha256")
+    if str(post_type).strip() != "ml_report":
+        return common
+    return (
+        *common,
+        "ml_source_title",
+        "ml_source_url",
+        "ml_source_note",
+        "ml_source_publication_date",
+    )
 
 
 def preflight_publish_target(
@@ -90,6 +106,7 @@ def preflight_publish_target(
             post_type=wp.post_type,
             ssl_verify=wp.ssl_verify,
             ca_bundle_path=wp.ca_bundle_path,
+            required_meta_keys=_required_publish_meta_keys(wp.post_type),
         ),
         ctx,
     )

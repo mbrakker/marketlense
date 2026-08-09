@@ -445,6 +445,80 @@ def preflight_publish_target(
             retryable=False,
             context={"post_type": request.post_type},
         )
+    metadata_url = f"{base}/wp-json/wp/v2/{endpoint}"
+    metadata_result = _execute_request(
+        method="OPTIONS",
+        url=metadata_url,
+        headers={"Authorization": request.auth_header},
+        ssl_verify=request.ssl_verify,
+        ca_bundle_path=request.ca_bundle_path,
+        ctx=ctx,
+        request_error_event="wordpress_publish_target_metadata_preflight_failed",
+        request_error_code="wordpress_publish_target_metadata_unavailable",
+        request_error_message="WordPress publish target metadata preflight failed",
+        request_error_fields={"post_type": request.post_type, "endpoint": endpoint},
+    )
+    metadata_response = metadata_result.response
+    metadata_status_code = int(getattr(metadata_response, "status_code", 0) or 0)
+    if metadata_status_code >= 500:
+        _raise_http_server_error(
+            ctx=ctx,
+            event="wordpress_publish_target_metadata_preflight_failed",
+            code="wordpress_publish_target_metadata_unavailable",
+            message_prefix="WordPress publish target metadata preflight failed",
+            resp=metadata_response,
+            fields={"post_type": request.post_type, "endpoint": endpoint},
+        )
+    if metadata_status_code >= 400:
+        raise AppError(
+            code="wordpress_publish_target_metadata_unavailable",
+            message=(
+                "WordPress publish target metadata preflight failed: "
+                f"{metadata_status_code}"
+            ),
+            retryable=False,
+            context={
+                "post_type": request.post_type,
+                "status_code": metadata_status_code,
+            },
+        )
+    metadata_payload = _safe_json(getattr(metadata_response, "text", "") or "")
+    schema = (
+        metadata_payload.get("schema") if isinstance(metadata_payload, dict) else {}
+    )
+    properties = schema.get("properties") if isinstance(schema, dict) else {}
+    meta = properties.get("meta") if isinstance(properties, dict) else {}
+    meta_properties = meta.get("properties") if isinstance(meta, dict) else {}
+    registered_meta_keys = {
+        str(key).strip() for key in (meta_properties or {}) if str(key).strip()
+    }
+    missing_meta_keys = tuple(
+        key for key in request.required_meta_keys if key not in registered_meta_keys
+    )
+    if missing_meta_keys:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="wordpress_publish_target_metadata_preflight_blocked",
+                module=logger.name,
+                fields={
+                    "post_type": request.post_type,
+                    "endpoint": endpoint,
+                    "required_meta_key_count": len(request.required_meta_keys),
+                    "missing_meta_key_count": len(missing_meta_keys),
+                },
+            )
+        )
+        raise AppError(
+            code="wordpress_publish_target_metadata_missing",
+            message="WordPress publish target is missing required proof metadata",
+            retryable=False,
+            context={
+                "post_type": request.post_type,
+                "missing_meta_key_count": len(missing_meta_keys),
+            },
+        )
     logger.info(
         log_event(
             ctx,
@@ -456,6 +530,8 @@ def preflight_publish_target(
                 "endpoint": endpoint,
                 "status_code": status_code,
                 "pool_reused": result.pool_reused,
+                "verified_meta_key_count": len(request.required_meta_keys),
+                "metadata_pool_reused": metadata_result.pool_reused,
             },
         )
     )
@@ -466,6 +542,7 @@ def preflight_publish_target(
         endpoint=endpoint,
         reachable=True,
         status_code=status_code,
+        verified_meta_keys=tuple(request.required_meta_keys),
     )
 
 

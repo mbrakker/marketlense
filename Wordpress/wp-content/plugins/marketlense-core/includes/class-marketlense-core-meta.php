@@ -21,6 +21,8 @@ final class Meta
 
     public const META_FILE_ID = 'ml_file_id';
 
+    public const META_CONTENT_SHA256 = 'ml_content_sha256';
+
     public const META_DIGEST_FLAG = 'ml_is_digest';
 
     public const META_PUBLISHER = 'ml_publisher_name';
@@ -70,6 +72,7 @@ final class Meta
     {
         $keys = [
             self::META_FILE_ID,
+            self::META_CONTENT_SHA256,
             self::META_DIGEST_FLAG,
             self::META_PUBLISHER,
             self::META_TIME_PERIOD,

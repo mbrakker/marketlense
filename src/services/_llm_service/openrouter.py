@@ -340,7 +340,7 @@ def _record_openrouter_usage_accounting(
     parse_status: str,
     schema_validation_status: str,
 ) -> OpenAIUsageAccountingResponse:
-    cache_decision = ""
+    cache_decision = "not_applicable"
     if hasattr(request, "response_cache_enabled"):
         cache_decision = (
             "enabled"
@@ -381,6 +381,9 @@ def _record_openrouter_usage_accounting(
                 or getattr(request, "title", "")
                 or ""
             ),
+            report_id=str(
+                getattr(request, "report_id", "") or getattr(ctx, "report_id", "")
+            ),
             source_url=str(
                 getattr(request, "source_url", "")
                 or getattr(request, "landing_page_url", "")
@@ -403,6 +406,74 @@ def _record_openrouter_usage_accounting(
             timeout_seconds=getattr(request, "timeout_seconds", None),
             parse_status=parse_status,
             schema_validation_status=schema_validation_status,
+            workflow=str(
+                getattr(request, "workflow", "") or getattr(ctx, "workflow", "")
+            ),
+            stage=str(
+                getattr(request, "stage", "")
+                or getattr(ctx, "stage", "")
+                or "openrouter_chat_json"
+            ),
+            plan_hash=str(
+                getattr(request, "plan_hash", "")
+                or getattr(ctx, "execution_plan_hash", "")
+                or ""
+            ),
+            artifact_family=str(
+                getattr(request, "artifact_family", "")
+                or getattr(ctx, "artifact_family", "")
+                or "openrouter_chat_json"
+            ),
+            validation_run_id=str(
+                getattr(request, "validation_run_id", "")
+                or getattr(ctx, "validation_run_id", "")
+            ),
+            cohort_id=str(
+                getattr(request, "cohort_id", "") or getattr(ctx, "cohort_id", "")
+            ),
+            workflow_run_id=str(getattr(request, "workflow_run_id", "") or ctx.run_id),
+            publisher_id=str(
+                getattr(request, "publisher_id", "")
+                or getattr(ctx, "publisher_id", "")
+                or getattr(request, "publisher_name", "")
+                or "unattributed"
+            ),
+            model_policy_namespace=str(
+                getattr(request, "model_policy_namespace", "")
+                or getattr(request, "prompt_namespace", "")
+                or "direct/openrouter_chat_json"
+            ),
+            policy_namespace=str(
+                getattr(request, "policy_namespace", "")
+                or getattr(request, "model_policy_namespace", "")
+                or getattr(request, "prompt_namespace", "")
+                or "direct/openrouter_chat_json"
+            ),
+            semantic_task=str(
+                getattr(request, "semantic_task", "") or "openrouter_chat_json"
+            ),
+            configuration_hash=str(
+                getattr(request, "configuration_hash", "")
+                or getattr(ctx, "configuration_hash", "")
+            ),
+            policy_hash=str(
+                getattr(request, "policy_hash", "")
+                or getattr(ctx, "policy_hash", "")
+                or getattr(request, "execution_policy_hash", "")
+            ),
+            producer_build_identity=str(
+                getattr(request, "producer_build_identity", "")
+                or ctx.producer_commit_sha
+                or "workspace"
+            ),
+            repair_attempt=max(
+                0,
+                int(
+                    getattr(request, "repair_attempt", 0)
+                    or getattr(ctx, "repair_attempt", 0)
+                    or 0
+                ),
+            ),
             extra={
                 "http_referer_present": bool(
                     str(getattr(request, "openrouter_http_referer", "") or "").strip()

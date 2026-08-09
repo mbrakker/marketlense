@@ -25,6 +25,7 @@ from src.contracts.publish import (
     PublishSettings,
 )
 from src.contracts.run_context import RunContext
+from src.contracts.wordpress import WordPressPostReadCheck, WordPressPostReadExpectation
 from src.orchestrators._publish_orchestrator.models import (
     _CROSS_REPORT_PUBLISH_IDEMPOTENCY_SCOPE,
     _PUBLISH_IDEMPOTENCY_SCOPE,
@@ -89,7 +90,18 @@ def _lookup_publish_idempotency(
     )
     if not lookup.found or lookup.record is None:
         return None
-    return PublishOutcome(**dict(lookup.record.outcome_payload or {}))
+    payload = dict(lookup.record.outcome_payload or {})
+    expectation = payload.get("readback_expectation")
+    if isinstance(expectation, dict):
+        payload["readback_expectation"] = WordPressPostReadExpectation(**expectation)
+    checks = payload.get("readback_checks")
+    if isinstance(checks, list):
+        payload["readback_checks"] = [
+            WordPressPostReadCheck(**check)
+            for check in checks
+            if isinstance(check, dict)
+        ]
+    return PublishOutcome(**payload)
 
 
 def _record_publish_idempotency(
@@ -126,6 +138,8 @@ def _record_publish_idempotency(
             artifact_references={
                 "html_path": outcome.html_path,
                 "status": outcome.status,
+                "publication_outcome": outcome.publication_outcome,
+                "transaction_outcome_count": len(outcome.transaction_outcomes),
                 "post_id": outcome.post_id,
                 "post_url": outcome.post_url,
                 "lineage_artifact_id": (

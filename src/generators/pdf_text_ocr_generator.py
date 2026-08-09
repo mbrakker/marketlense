@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from hashlib import sha256
 from pathlib import Path
 
@@ -39,7 +39,15 @@ def recover_pdf_text_with_ocr(
     llm_client=None,
 ) -> PdfOcrFallbackResponse:
     logger = logging.getLogger("market_lense.pdf_text_ocr_generator")
-    ocr_ctx = child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:ocr_fallback")
+    ocr_ctx = replace(
+        child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:ocr_fallback"),
+        report_id=runtime.file.file_id,
+        source_identity_id=runtime.md5 or runtime.file.file_id,
+        publisher_id=runtime.publisher_name or "unattributed",
+        workflow="report_generation",
+        stage="source_preparation",
+        artifact_family="source_ocr",
+    )
     prompt_namespace = runtime.settings.pdf_text_ocr_prompt_namespace
     prompt_set = dependencies.load_prompt_set(
         PromptLoadRequest(

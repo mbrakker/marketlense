@@ -65,8 +65,12 @@ def _request(tmp_path: Path) -> OpenAIUsageAccountingRequest:
         report_id="report-1",
         artifact_family="insights",
         validation_run_id="validation-1",
+        cohort_id="cohort-1",
+        workflow_run_id="r",
         publisher_id="publisher-1",
         model_policy_namespace="report_vs/validate/semantic",
+        policy_namespace="report_vs/validate/semantic",
+        semantic_task="semantic_validation",
         configuration_hash="configuration-hash",
         policy_hash="policy-hash",
         producer_build_identity="build-sha",
@@ -126,8 +130,12 @@ def test_record_usage_defers_compatibility_exports_until_projection_interval(
     assert row["prompt_namespace"] == "test/prompt"
     metadata = json.loads(row["metadata_json"])
     assert metadata["validation_run_id"] == "validation-1"
+    assert metadata["cohort_id"] == "cohort-1"
+    assert metadata["workflow_run_id"] == "r"
     assert metadata["publisher_id"] == "publisher-1"
     assert metadata["model_policy_namespace"] == "report_vs/validate/semantic"
+    assert metadata["policy_namespace"] == "report_vs/validate/semantic"
+    assert metadata["semantic_task"] == "semantic_validation"
     assert metadata["configuration_hash"] == "configuration-hash"
     assert metadata["policy_hash"] == "policy-hash"
     assert metadata["producer_build_identity"] == "build-sha"
@@ -185,7 +193,9 @@ def test_usage_accounting_inherits_complete_validation_attribution_from_context(
     with sqlite3.connect(usage_db) as conn:
         row = conn.execute(
             "SELECT report_id, workflow, stage, artifact_family, validation_run_id, "
-            "publisher_id, configuration_hash, policy_hash, producer_build_identity "
+            "cohort_id, workflow_run_id, publisher_id, semantic_task, "
+            "policy_namespace, cache_decision, configuration_hash, policy_hash, "
+            "producer_build_identity "
             "FROM llm_usage_events"
         ).fetchone()
     assert row == (
@@ -194,7 +204,12 @@ def test_usage_accounting_inherits_complete_validation_attribution_from_context(
         "taxonomy",
         "taxonomy",
         "validation-1",
+        "cohort-1",
+        "r",
         "publisher-1",
+        "taxonomy",
+        "report_vs/taxonomy",
+        "not_applicable",
         "configuration-hash",
         "policy-hash",
         "build-sha",
@@ -250,6 +265,7 @@ def test_record_usage_releases_operation_reservation_when_action_is_namespaced(
     request = replace(
         _request(tmp_path),
         action="artifacts:summary",
+        semantic_task="artifacts:summary",
         reservation_operation="openai_chat_json",
         request_id="reserved-request",
         prompt_namespace="report_vs/artifacts/summary",

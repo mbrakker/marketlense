@@ -39,10 +39,17 @@ When a covered period is a complete month-by-month list, the card image uses
 its deterministic first-to-last month range so the fixed small cover remains
 readable; the complete period is retained in the manifest and HTML.
 
-Run a configured batch with `python -m src.cli ingest --attempt-limit 1`. An
-attempt limit counts selected reports, including failures; it never continues
-selecting replacements to meet a success count. `--limit` remains a deprecated
-alias with the same attempt-limit meaning. Every acquired source, including
+Run a configured batch with `python -m src.cli ingest --attempt-limit 1`. The
+selection controls have deliberately distinct semantics:
+
+| Control | Meaning | Release/reliability use |
+| --- | --- | --- |
+| `--cohort-size N --cohort-manifest <path>` | Freeze exactly `N` admitted reports, persist the immutable ordered membership, and retain every later failure in the denominator. | Required mode. |
+| `--attempt-limit N` | Process no more than `N` unique selected reports; an error remains an attempted result, not a missing success. | Bounded ordinary operation only. |
+| `--success-target N` | Explicitly continue with later candidates until `N` reports succeed or no candidates remain. | Prohibited. |
+
+`--limit` is a deprecated alias for `--attempt-limit`; it emits a migration
+notice and cannot be combined with the first-class option. Every acquired source, including
 ordinary and success-target ingest, passes one deterministic admission
 preflight after local acquisition and before vector-store creation, evidence
 generation, OCR, or editorial model work. It verifies the retained artifact,
@@ -90,8 +97,16 @@ inferred from a title or replaced with a non-content identifier. A filename is
 optional in the metadata-only listing mode and is used only as an additional
 duplicate signal; it is resolved later when presentation needs it, never
 treated as required source identity.
-`--success-target N` is the only explicit mode allowed to select later
-candidates after a failure; it is prohibited for release/reliability rates.
+
+New cohort manifests use schema `1.1`. Each member records its immutable
+`report_id` (the Drive file ID), `source_identity_id`, and selection reason;
+the manifest records the configuration hash, policy hash, cohort ID, and
+derived validation-run ID. Loading recomputes the cohort and validation
+identities from those records, so an edited member list fails closed rather
+than silently changing an existing cohort. Schema `1.0` manifests remain
+readable for replay compatibility; a new membership must be frozen into a new
+schema-`1.1` manifest and cohort identity.
+
 Publish a fixed cohort with the same `--cohort-manifest <path>` passed to
 `publish-wp`. A frozen cohort automatically creates and retains a validation
 run manifest. Its immutable member ledger is populated by discovery and is

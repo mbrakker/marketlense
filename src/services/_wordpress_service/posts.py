@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 from typing import Any, Optional
@@ -18,11 +19,20 @@ from src.contracts.wordpress import (
     WordPressPostLookupBatchResponse,
     WordPressPostLookupRequest,
     WordPressPostLookupResponse,
+    WordPressPostReadCheck,
+    WordPressPostReadExpectation,
     WordPressPostReadRequest,
+    WordPressPostReadResponse,
     WordPressPostUpdateResponse,
+    WordPressReadbackCheckName,
+    WordPressReadbackCheckStatus,
 )
 from src.utils.errors import AppError
 from src.utils.logging import log_event
+from src.utils.wordpress_readback import (
+    canonical_wordpress_readback_value,
+    wordpress_readback_value_sha256,
+)
 
 from .budget import (
     assert_wordpress_write_authority,
@@ -596,10 +606,43 @@ def find_post_by_file_id(
     )
 
 
+def _check(
+    name: WordPressReadbackCheckName,
+    *,
+    expected: object,
+    observed: object,
+    exposed: bool = True,
+    required: bool = False,
+) -> WordPressPostReadCheck:
+    status: WordPressReadbackCheckStatus
+    if not exposed:
+        status = "mismatch" if required else "not_exposed"
+    elif canonical_wordpress_readback_value(
+        expected
+    ) == canonical_wordpress_readback_value(observed):
+        status = "verified"
+    else:
+        status = "mismatch"
+    return WordPressPostReadCheck(schema_version="1.0", name=name, status=status)
+
+
+def _readback_expectation(
+    request: WordPressPostReadRequest,
+) -> WordPressPostReadExpectation:
+    return request.expectation or WordPressPostReadExpectation(
+        schema_version="1.0",
+        post_type="",
+        status="",
+        file_id=request.file_id,
+        content_sha256="",
+        canonical_url="",
+    )
+
+
 def read_post_by_id(
     request: WordPressPostReadRequest, ctx: RunContext
-) -> WordPressPostLookupResponse:
-    """Authenticated exact-post readback that verifies immutable source identity."""
+) -> WordPressPostReadResponse:
+    """Return a bounded, authenticated proof of the exact published transaction."""
     post_type_endpoint = _post_type_endpoint(request.post_type)
     url = (
         f"{request.base_url.rstrip('/')}/wp-json/wp/v2/{post_type_endpoint}/"
@@ -654,7 +697,7 @@ def read_post_by_id(
             fields={"url": url, "file_id": request.file_id, "post_id": request.post_id},
         )
     if resp.status_code == 404:
-        return WordPressPostLookupResponse(schema_version="1.0", found=False)
+        return WordPressPostReadResponse(schema_version="1.0", found=False)
     if resp.status_code >= 400:
         raise AppError(
             code="wp_post_readback_client_error",
@@ -665,22 +708,168 @@ def read_post_by_id(
         payload = json.loads(resp.text)
     except json.JSONDecodeError:
         payload = {}
-    meta = payload.get("meta", {}) if isinstance(payload, dict) else {}
-    content = (
-        payload.get("content", {}).get("rendered", "")
-        if isinstance(payload, dict)
-        else ""
-    )
+    payload = payload if isinstance(payload, dict) else {}
+    expectation = _readback_expectation(request)
+    meta = payload.get("meta", {})
+    meta = meta if isinstance(meta, dict) else {}
+    content_payload = payload.get("content", {})
+    content_payload = content_payload if isinstance(content_payload, dict) else {}
+    raw_value = content_payload.get("raw")
+    rendered_value = content_payload.get("rendered")
+    raw_exposed = isinstance(raw_value, str)
+    rendered_exposed = isinstance(rendered_value, str)
+    raw_content = str(raw_value or "")
+    rendered_content = str(rendered_value or "")
     post_id = payload.get("id") if isinstance(payload, dict) else None
     link = payload.get("link") if isinstance(payload, dict) else None
-    found = bool(
-        post_id == request.post_id
-        and link
-        and request.file_id
-        and (
-            str(meta.get("ml_file_id") or "") == request.file_id
-            or request.file_id in str(content or "")
+    checks: list[WordPressPostReadCheck] = [
+        _check("post_id", expected=request.post_id, observed=post_id),
+        _check(
+            "report_file_identity",
+            expected=expectation.file_id,
+            observed=meta.get("ml_file_id"),
+        ),
+        _check(
+            "canonical_url",
+            expected=expectation.canonical_url or str(link or ""),
+            observed=link,
+        ),
+    ]
+    if expectation.post_type:
+        checks.append(
+            _check(
+                "post_type",
+                expected=expectation.post_type,
+                observed=payload.get("type"),
+            )
         )
+    if expectation.status:
+        checks.append(
+            _check(
+                "status", expected=expectation.status, observed=payload.get("status")
+            )
+        )
+
+    content_sha256 = (
+        hashlib.sha256(raw_content.encode("utf-8")).hexdigest() if raw_exposed else ""
+    )
+    if expectation.content_sha256:
+        checks.append(
+            _check(
+                "content_checksum",
+                expected=expectation.content_sha256,
+                observed=content_sha256,
+                exposed=raw_exposed,
+                required=True,
+            )
+        )
+    else:
+        checks.append(
+            WordPressPostReadCheck(
+                schema_version="1.0", name="content_checksum", status="not_requested"
+            )
+        )
+
+    expected_metadata_sha256 = expectation.metadata
+    if expected_metadata_sha256:
+        checks.append(
+            _check(
+                "source_attribution",
+                expected=expectation.source_attribution,
+                observed={
+                    key: wordpress_readback_value_sha256(meta.get(key))
+                    for key in expectation.source_attribution
+                },
+            )
+        )
+        checks.append(
+            _check(
+                "metadata",
+                expected=expected_metadata_sha256,
+                observed={
+                    key: wordpress_readback_value_sha256(meta.get(key))
+                    for key in expected_metadata_sha256
+                },
+            )
+        )
+    else:
+        checks.append(
+            WordPressPostReadCheck(
+                schema_version="1.0", name="source_attribution", status="not_requested"
+            )
+        )
+
+    taxonomy_matches = all(
+        canonical_wordpress_readback_value(expected_ids)
+        == canonical_wordpress_readback_value(payload.get(rest_base, []))
+        for rest_base, expected_ids in expectation.taxonomy_assignments.items()
+    )
+    checks.append(
+        WordPressPostReadCheck(
+            schema_version="1.0",
+            name="taxonomy_assignments",
+            status="verified" if taxonomy_matches else "mismatch",
+        )
+    )
+    observed_media = {
+        key: (
+            payload.get("featured_media") if key == "featured_media" else meta.get(key)
+        )
+        for key in expectation.media_associations
+    }
+    media_matches = all(
+        canonical_wordpress_readback_value(expectation.media_associations[key])
+        == canonical_wordpress_readback_value(observed_media.get(key))
+        for key in expectation.media_associations
+    )
+    checks.append(
+        WordPressPostReadCheck(
+            schema_version="1.0",
+            name="media_associations",
+            status="verified" if media_matches else "mismatch",
+        )
+    )
+
+    yoast = payload.get("yoast_head_json", {})
+    yoast = yoast if isinstance(yoast, dict) else {}
+    open_graph_url = str(
+        payload.get("open_graph_url")
+        or yoast.get("og_url")
+        or yoast.get("og:url")
+        or ""
+    )
+    checks.append(
+        _check(
+            "open_graph_url",
+            expected=expectation.canonical_url or str(link or ""),
+            observed=open_graph_url,
+            exposed=bool(open_graph_url),
+        )
+    )
+    rendered_content_sha256 = (
+        hashlib.sha256(rendered_content.encode("utf-8")).hexdigest()
+        if rendered_exposed
+        else ""
+    )
+    if expectation.rendered_content_sha256:
+        checks.append(
+            _check(
+                "final_rendered_content_hash",
+                expected=expectation.rendered_content_sha256,
+                observed=rendered_content_sha256,
+                exposed=rendered_exposed,
+            )
+        )
+    else:
+        checks.append(
+            WordPressPostReadCheck(
+                schema_version="1.0",
+                name="final_rendered_content_hash",
+                status="captured" if rendered_content_sha256 else "not_exposed",
+            )
+        )
+    found = bool(post_id == request.post_id and link) and not any(
+        check.status == "mismatch" for check in checks
     )
     logger.info(
         log_event(
@@ -698,11 +887,14 @@ def read_post_by_id(
             },
         )
     )
-    return WordPressPostLookupResponse(
+    return WordPressPostReadResponse(
         schema_version="1.0",
         found=found,
         post_id=request.post_id if found else None,
         link=str(link) if found else None,
+        checks=checks,
+        content_sha256=content_sha256,
+        rendered_content_sha256=rendered_content_sha256,
     )
 
 

@@ -25,9 +25,13 @@ from src.contracts.state import (
     StatePublishRecordRequest,
     StateRecordRequest,
 )
+from src.contracts.validation_run_manifest import ValidationRunManifestCreateRequest
 from src.orchestrators import publish_orchestrator as orch
 from src.orchestrators import retry_orchestrator
-from src.services.report_store_service import upsert_metadata
+from src.services.report_store_service import (
+    create_validation_run_manifest,
+    upsert_metadata,
+)
 from src.services.state_service import get_publish, record, record_publish
 from src.utils.publication_projection import publication_projection_hash
 from tests.support.fakes import FakeHttpResponse, RecordedHttpRequest
@@ -35,6 +39,36 @@ from tests.support.fakes import FakeHttpResponse, RecordedHttpRequest
 
 @pytest.fixture(autouse=True)
 def _report_card_media_routes(wordpress_http) -> None:
+    proof_meta_schema = {
+        "schema": {
+            "properties": {
+                "meta": {
+                    "properties": {
+                        "ml_file_id": {"type": "string"},
+                        "ml_content_sha256": {"type": "string"},
+                        "ml_source_title": {"type": "string"},
+                        "ml_source_url": {"type": "string"},
+                        "ml_source_note": {"type": "string"},
+                        "ml_source_publication_date": {"type": "string"},
+                    }
+                }
+            }
+        }
+    }
+    for post_type in ("ml_report", "ml_signal", "ml_briefing", "posts"):
+        wordpress_http.add_json(
+            "GET",
+            f"https://example.com/wp-json/wp/v2/types/{post_type}",
+            status_code=200,
+            payload={"rest_base": post_type},
+        )
+        wordpress_http.add_json(
+            "OPTIONS",
+            f"https://example.com/wp-json/wp/v2/{post_type}",
+            status_code=200,
+            payload=proof_meta_schema,
+        )
+
     def upload(call: RecordedHttpRequest) -> FakeHttpResponse:
         filename = call.files["file"][0]
         media_id = {

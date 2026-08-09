@@ -328,6 +328,9 @@ def wordpress_http(
     external_boundary_mocks_only.setattr(
         wordpress_service.requests, "post", router.post
     )
+    external_boundary_mocks_only.setattr(
+        wordpress_service.requests, "options", router.options
+    )
     return router
 
 

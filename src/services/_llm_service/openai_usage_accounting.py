@@ -57,7 +57,7 @@ def record_usage_accounting(
     schema_validation_status: str = "not_applicable",
 ) -> OpenAIUsageAccountingResponse:
     source = source_request
-    cache_decision = ""
+    cache_decision = "not_applicable"
     if source is not None and hasattr(source, "response_cache_enabled"):
         cache_decision = (
             "enabled"
@@ -145,6 +145,10 @@ def record_usage_accounting(
                 or prompt_namespace.rsplit("/", 1)[-1]
             ),
             validation_run_id=_attribution_value(source, ctx, "validation_run_id"),
+            cohort_id=_attribution_value(source, ctx, "cohort_id"),
+            workflow_run_id=(
+                _attribution_value(source, ctx, "workflow_run_id") or str(ctx.run_id)
+            ),
             publisher_id=(
                 _attribution_value(source, ctx, "publisher_id")
                 or str(getattr(source, "publisher_name", "") or "").strip()
@@ -152,6 +156,16 @@ def record_usage_accounting(
             ),
             model_policy_namespace=str(
                 getattr(source, "model_policy_namespace", "") or prompt_namespace
+            ),
+            policy_namespace=str(
+                getattr(source, "policy_namespace", "")
+                or getattr(source, "model_policy_namespace", "")
+                or prompt_namespace
+            ),
+            semantic_task=(
+                _attribution_value(source, ctx, "semantic_task")
+                or action
+                or _semantic_usage_action(step_name=step_name, source_request=source)
             ),
             configuration_hash=_attribution_value(source, ctx, "configuration_hash"),
             policy_hash=str(
@@ -202,6 +216,10 @@ def record_usage_accounting(
                 "artifact_family": str(getattr(source, "artifact_family", "") or ""),
                 "validation_run_id": str(
                     getattr(source, "validation_run_id", "") or ""
+                ),
+                "cohort_id": str(getattr(source, "cohort_id", "") or ""),
+                "workflow_run_id": str(
+                    getattr(source, "workflow_run_id", "") or ctx.run_id
                 ),
             },
         ),

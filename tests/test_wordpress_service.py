@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 from typing import Any
@@ -10,10 +11,12 @@ import urllib3  # type: ignore[import-untyped]
 
 from src.contracts.run_context import RunContext
 from src.contracts.wordpress import (
+    WordPressAuthSettings,
     WordPressMediaUploadRequest,
     WordPressPostLookupBatchRequest,
     WordPressPostCreateRequest,
     WordPressPostLookupRequest,
+    WordPressPostReadExpectation,
     WordPressPostReadRequest,
     WordPressCardUpdateRequest,
     WordPressPostUpdateRequest,
@@ -22,11 +25,103 @@ from src.contracts.wordpress import (
 )
 from src.services import wordpress_service as svc
 from src.utils.errors import AppError
+from src.utils.wordpress_readback import wordpress_readback_value_sha256
 from tests.support.fakes import FakeHttpResponse, RecordedHttpRequest
 
 
 def _ctx() -> RunContext:
     return RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
+
+
+def _wp_auth_settings(*, post_type: str = "ml_report") -> WordPressAuthSettings:
+    return WordPressAuthSettings(
+        schema_version="1.0",
+        site_url="https://site",
+        username="user",
+        app_password="app-password",
+        bearer_token=None,
+        post_status="draft",
+        post_type=post_type,
+    )
+
+
+def _preflight_meta_schema(*meta_keys: str) -> dict[str, object]:
+    return {
+        "schema": {
+            "properties": {
+                "meta": {"properties": {key: {"type": "string"} for key in meta_keys}}
+            }
+        }
+    }
+
+
+def test_preflight_publish_target_verifies_authenticated_proof_meta_schema(
+    wordpress_http,
+) -> None:
+    wordpress_http.add_json(
+        "GET",
+        "https://site/wp-json/wp/v2/types/ml_report",
+        status_code=200,
+        payload={"rest_base": "ml_report"},
+    )
+    wordpress_http.add_json(
+        "OPTIONS",
+        "https://site/wp-json/wp/v2/ml_report",
+        status_code=200,
+        payload=_preflight_meta_schema(
+            "ml_file_id",
+            "ml_content_sha256",
+            "ml_source_title",
+            "ml_source_url",
+            "ml_source_note",
+            "ml_source_publication_date",
+        ),
+    )
+
+    response = svc.preflight_publish_target(_wp_auth_settings(), _ctx())
+
+    assert response.reachable is True
+    assert response.verified_meta_keys == (
+        "ml_file_id",
+        "ml_content_sha256",
+        "ml_source_title",
+        "ml_source_url",
+        "ml_source_note",
+        "ml_source_publication_date",
+    )
+    assert (
+        wordpress_http.calls_for("OPTIONS", "https://site/wp-json/wp/v2/ml_report")[0]
+        .headers["Authorization"]
+        .startswith("Basic ")
+    )
+
+
+def test_preflight_publish_target_blocks_missing_proof_meta_schema(
+    wordpress_http, assert_app_error
+) -> None:
+    wordpress_http.add_json(
+        "GET",
+        "https://site/wp-json/wp/v2/types/ml_report",
+        status_code=200,
+        payload={"rest_base": "ml_report"},
+    )
+    wordpress_http.add_json(
+        "OPTIONS",
+        "https://site/wp-json/wp/v2/ml_report",
+        status_code=200,
+        payload=_preflight_meta_schema("ml_file_id"),
+    )
+
+    try:
+        svc.preflight_publish_target(_wp_auth_settings(), _ctx())
+    except Exception as err:
+        assert_app_error(
+            err,
+            code="wordpress_publish_target_metadata_missing",
+            retryable=False,
+        )
+    else:  # pragma: no cover
+        raise AssertionError("expected AppError")
 
 
 def test_create_post_success(wordpress_http) -> None:
@@ -270,6 +365,191 @@ def test_read_post_by_id_verifies_expected_source_identity(wordpress_http) -> No
     assert response.link == "https://site/p/11"
     call = wordpress_http.calls_for("GET", "https://site/wp-json/wp/v2/posts/11")[0]
     assert call.params == {"context": "edit"}
+
+
+def test_read_post_by_id_proves_complete_authenticated_transaction(
+    wordpress_http,
+) -> None:
+    raw_content = "<p>Verified report content.</p>"
+    rendered_content = "<p>Verified report content.</p>"
+    content_sha256 = hashlib.sha256(raw_content.encode("utf-8")).hexdigest()
+    rendered_sha256 = hashlib.sha256(rendered_content.encode("utf-8")).hexdigest()
+    wordpress_http.add_json(
+        "GET",
+        "https://site/wp-json/wp/v2/ml_report/11",
+        status_code=200,
+        payload={
+            "id": 11,
+            "type": "ml_report",
+            "status": "publish",
+            "link": "https://site/reports/verified-report/",
+            "featured_media": 91,
+            "categories": [2, 4],
+            "tags": [7],
+            "ml_publisher": [19],
+            "content": {"raw": raw_content, "rendered": rendered_content},
+            "yoast_head_json": {"og_url": "https://site/reports/verified-report/"},
+            "meta": {
+                "ml_file_id": "file-1",
+                "ml_content_sha256": content_sha256,
+                "ml_source_title": "Verified report",
+                "ml_source_url": "https://publisher.example/report",
+                "ml_card_cover_large_id": 91,
+            },
+        },
+    )
+
+    response = svc.read_post_by_id(
+        WordPressPostReadRequest(
+            schema_version="1.0",
+            base_url="https://site",
+            auth_header="Bearer token",
+            post_id=11,
+            file_id="file-1",
+            post_type="ml_report",
+            expectation=WordPressPostReadExpectation(
+                schema_version="1.0",
+                post_type="ml_report",
+                status="publish",
+                file_id="file-1",
+                content_sha256=content_sha256,
+                canonical_url="https://site/reports/verified-report/",
+                metadata={
+                    key: _field_sha256(value)
+                    for key, value in {
+                        "ml_file_id": "file-1",
+                        "ml_content_sha256": content_sha256,
+                        "ml_source_title": "Verified report",
+                        "ml_source_url": "https://publisher.example/report",
+                        "ml_card_cover_large_id": 91,
+                    }.items()
+                },
+                source_attribution={
+                    "ml_source_title": _field_sha256("Verified report"),
+                    "ml_source_url": _field_sha256("https://publisher.example/report"),
+                },
+                taxonomy_assignments={
+                    "categories": [2, 4],
+                    "tags": [7],
+                    "ml_publisher": [19],
+                },
+                media_associations={
+                    "featured_media": 91,
+                    "ml_card_cover_large_id": 91,
+                },
+                rendered_content_sha256=rendered_sha256,
+            ),
+        ),
+        _ctx(),
+    )
+
+    assert response.found is True
+    assert response.content_verified is True
+    assert response.metadata_verified is True
+    assert {check.name: check.status for check in response.checks} == {
+        "post_id": "verified",
+        "report_file_identity": "verified",
+        "canonical_url": "verified",
+        "post_type": "verified",
+        "status": "verified",
+        "content_checksum": "verified",
+        "source_attribution": "verified",
+        "metadata": "verified",
+        "taxonomy_assignments": "verified",
+        "media_associations": "verified",
+        "open_graph_url": "verified",
+        "final_rendered_content_hash": "verified",
+    }
+
+
+def _field_sha256(value: object) -> str:
+    return wordpress_readback_value_sha256(value)
+
+
+def test_read_post_by_id_fails_closed_when_content_checksum_differs(
+    wordpress_http,
+) -> None:
+    wordpress_http.add_json(
+        "GET",
+        "https://site/wp-json/wp/v2/ml_report/11",
+        status_code=200,
+        payload={
+            "id": 11,
+            "type": "ml_report",
+            "status": "publish",
+            "link": "https://site/reports/verified-report/",
+            "content": {"raw": "unexpected"},
+            "meta": {"ml_file_id": "file-1"},
+        },
+    )
+
+    response = svc.read_post_by_id(
+        WordPressPostReadRequest(
+            schema_version="1.0",
+            base_url="https://site",
+            auth_header="Bearer token",
+            post_id=11,
+            file_id="file-1",
+            post_type="ml_report",
+            expectation=WordPressPostReadExpectation(
+                schema_version="1.0",
+                post_type="ml_report",
+                status="publish",
+                file_id="file-1",
+                content_sha256="different",
+                canonical_url="https://site/reports/verified-report/",
+            ),
+        ),
+        _ctx(),
+    )
+
+    assert response.found is False
+    assert {check.name: check.status for check in response.checks}[
+        "content_checksum"
+    ] == ("mismatch")
+
+
+def test_read_post_by_id_fails_closed_when_required_raw_content_is_not_exposed(
+    wordpress_http,
+) -> None:
+    wordpress_http.add_json(
+        "GET",
+        "https://site/wp-json/wp/v2/ml_report/11",
+        status_code=200,
+        payload={
+            "id": 11,
+            "type": "ml_report",
+            "status": "publish",
+            "link": "https://site/reports/verified-report/",
+            "content": {"rendered": "<p>Rendered only</p>"},
+            "meta": {"ml_file_id": "file-1"},
+        },
+    )
+
+    response = svc.read_post_by_id(
+        WordPressPostReadRequest(
+            schema_version="1.0",
+            base_url="https://site",
+            auth_header="Bearer token",
+            post_id=11,
+            file_id="file-1",
+            post_type="ml_report",
+            expectation=WordPressPostReadExpectation(
+                schema_version="1.0",
+                post_type="ml_report",
+                status="publish",
+                file_id="file-1",
+                content_sha256="required-checksum",
+                canonical_url="https://site/reports/verified-report/",
+            ),
+        ),
+        _ctx(),
+    )
+
+    assert response.found is False
+    assert {check.name: check.status for check in response.checks}[
+        "content_checksum"
+    ] == ("mismatch")
 
 
 def test_find_post_by_file_id_ssl_verify_disabled(wordpress_http) -> None:

@@ -219,11 +219,18 @@ def _validate_request(request: LLMUsageLedgerAppendRequest) -> None:
     )
     if request.entry.validation_run_id:
         required = {
+            "cohort_id": request.entry.cohort_id,
+            "workflow_run_id": request.entry.workflow_run_id,
             "workflow": request.entry.workflow,
             "stage": request.entry.stage,
             "report_id": request.entry.report_id,
             "artifact_family": request.entry.artifact_family,
             "publisher_id": request.entry.publisher_id,
+            "action": request.entry.action,
+            "semantic_task": request.entry.semantic_task,
+            "prompt_namespace": request.entry.prompt_namespace,
+            "policy_namespace": request.entry.policy_namespace,
+            "cache_decision": request.entry.cache_decision,
             "model_policy_namespace": request.entry.model_policy_namespace,
             "configuration_hash": request.entry.configuration_hash,
             "policy_hash": request.entry.policy_hash,
@@ -298,14 +305,18 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
             schema_validation_status text not null default 'not_applicable',
             error_stage text not null default '',
             error_code text not null default '',
+            semantic_task text not null default '',
             report_id text not null default '',
             workflow text not null default '',
             stage text not null default '',
             plan_hash text not null default '',
             artifact_family text not null default '',
             validation_run_id text not null default '',
+            cohort_id text not null default '',
+            workflow_run_id text not null default '',
             publisher_id text not null default '',
             model_policy_namespace text not null default '',
+            policy_namespace text not null default '',
             configuration_hash text not null default '',
             policy_hash text not null default '',
             producer_build_identity text not null default '',
@@ -334,8 +345,11 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
         "plan_hash": "text not null default ''",
         "artifact_family": "text not null default ''",
         "validation_run_id": "text not null default ''",
+        "cohort_id": "text not null default ''",
+        "workflow_run_id": "text not null default ''",
         "publisher_id": "text not null default ''",
         "model_policy_namespace": "text not null default ''",
+        "policy_namespace": "text not null default ''",
         "configuration_hash": "text not null default ''",
         "policy_hash": "text not null default ''",
         "producer_build_identity": "text not null default ''",
@@ -392,7 +406,7 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
     conn.execute(
         """
         create index if not exists idx_llm_usage_events_attribution
-        on llm_usage_events(validation_run_id, report_id, workflow, stage, artifact_family)
+        on llm_usage_events(validation_run_id, cohort_id, workflow_run_id, report_id, workflow, stage, artifact_family)
         """
     )
     conn.execute(
@@ -3460,14 +3474,15 @@ def append_usage(
                     timeout_seconds, event_key, call_ordinal, provider_call_status,
                     parse_status, schema_validation_status, error_stage, error_code,
                     semantic_task, report_id, workflow, stage, plan_hash,
-                    artifact_family, validation_run_id, publisher_id,
-                    model_policy_namespace, configuration_hash, policy_hash,
+                    artifact_family, validation_run_id, cohort_id, workflow_run_id,
+                    publisher_id, model_policy_namespace, policy_namespace,
+                    configuration_hash, policy_hash,
                     producer_build_identity, repair_attempt, pricing_version,
                     pricing_status, metadata_json
                 ) values (
                     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
                 )
                 on conflict(event_key) do nothing
                 """,
@@ -3505,15 +3520,19 @@ def append_usage(
                     entry.schema_validation_status,
                     entry.error_stage,
                     entry.error_code,
-                    _semantic_task(str(entry.task_id), entry.action),
+                    entry.semantic_task
+                    or _semantic_task(str(entry.task_id), entry.action),
                     entry.report_id,
                     entry.workflow,
                     entry.stage,
                     entry.plan_hash,
                     entry.artifact_family,
                     entry.validation_run_id,
+                    entry.cohort_id,
+                    entry.workflow_run_id,
                     entry.publisher_id,
                     entry.model_policy_namespace,
+                    entry.policy_namespace,
                     entry.configuration_hash,
                     entry.policy_hash,
                     entry.producer_build_identity,
@@ -3717,7 +3736,8 @@ def _canonical_export_rows(
                plan_hash, artifact_family, validation_run_id, publisher_id,
                model_policy_namespace, configuration_hash, policy_hash,
                producer_build_identity, repair_attempt, pricing_version,
-               pricing_status, metadata_json
+                pricing_status, metadata_json, cohort_id, workflow_run_id,
+                policy_namespace, semantic_task
         from llm_usage_events where id > ? order by id
         """,
         (after_event_id,),
@@ -3773,11 +3793,15 @@ def _canonical_export_rows(
                         "policy_hash": str(row[37]) or "unknown",
                         "producer_build_identity": str(row[38]) or "unknown",
                         "repair_attempt": int(row[39] or 0),
-                        "semantic_task": _semantic_task(str(row[3]), str(row[5])),
+                        "semantic_task": str(row[46])
+                        or _semantic_task(str(row[3]), str(row[5])),
                         "pricing_version": str(row[40]) or "unknown",
                         "pricing_status": str(row[41]) or "unknown",
                         "prompt_namespace": str(row[17]) or "unknown",
                         "publisher_name": str(row[14]) or "unknown",
+                        "cohort_id": str(row[43]) or "unknown",
+                        "workflow_run_id": str(row[44]) or "unknown",
+                        "policy_namespace": str(row[45]) or "unknown",
                     },
                     "metadata": metadata,
                 },

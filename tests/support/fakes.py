@@ -150,6 +150,26 @@ class RequestsRouter:
             verify=verify,
         )
 
+    def options(
+        self,
+        url: str,
+        *,
+        headers: dict[str, Any] | None = None,
+        timeout: Any = None,
+        verify: Any = None,
+    ) -> FakeHttpResponse:
+        return self._dispatch(
+            "OPTIONS",
+            url,
+            headers=headers,
+            params=None,
+            data=None,
+            files=None,
+            allow_redirects=True,
+            timeout=timeout,
+            verify=verify,
+        )
+
     def _dispatch(
         self,
         method: str,

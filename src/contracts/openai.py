@@ -240,11 +240,23 @@ class OpenAIUsageAccountingRequest:
     validation_run_id: str = field(
         default="", metadata={"doc": "Canonical validation-run ID, if applicable."}
     )
+    cohort_id: str = field(
+        default="", metadata={"doc": "Immutable validation cohort ID, if applicable."}
+    )
+    workflow_run_id: str = field(
+        default="", metadata={"doc": "Workflow-run ID owning the validation event."}
+    )
     publisher_id: str = field(
         default="", metadata={"doc": "Canonical publisher ID, if known."}
     )
     model_policy_namespace: str = field(
         default="", metadata={"doc": "Resolved model-policy namespace."}
+    )
+    policy_namespace: str = field(
+        default="", metadata={"doc": "Resolved execution-policy namespace."}
+    )
+    semantic_task: str = field(
+        default="", metadata={"doc": "Stable semantic task represented by this call."}
     )
     configuration_hash: str = field(
         default="", metadata={"doc": "Resolved configuration hash."}

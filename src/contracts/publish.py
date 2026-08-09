@@ -5,7 +5,12 @@ from typing import Dict, List, Optional
 
 from src.contracts.publish_readiness import PublishReadinessArtifact
 from src.contracts.run_budget import RunBudget, RunBudgetLimits, RunBudgetUsage
-from src.contracts.wordpress import WordPressAuthSettings
+from src.contracts.wordpress import (
+    WordPressAuthSettings,
+    WordPressPostReadCheck,
+    WordPressPostReadExpectation,
+    WordPressTransactionOutcome,
+)
 
 
 @dataclass(frozen=True)
@@ -282,10 +287,16 @@ class PublishOutcome:
             "doc": "Validation issues summarised for the publish attempt, if any."
         },
     )
-    publication_outcome: str = field(
-        default="",
+    publication_outcome: WordPressTransactionOutcome = field(
+        default="preflight_blocked",
         metadata={
-            "doc": "Typed publication disposition for the completed publication path."
+            "doc": "Terminal typed publication disposition; never a generic completed marker."
+        },
+    )
+    transaction_outcomes: List[WordPressTransactionOutcome] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Ordered distinct WordPress transaction outcomes retained with idempotency evidence."
         },
     )
     requested_write_count: int = field(
@@ -300,6 +311,18 @@ class PublishOutcome:
     authenticated_readback_verified: bool = field(
         default=False,
         metadata={"doc": "Whether authenticated WordPress readback matched the post."},
+    )
+    readback_expectation: WordPressPostReadExpectation | None = field(
+        default=None,
+        metadata={
+            "doc": "Expected WordPress transaction identity persisted for future authenticated readback."
+        },
+    )
+    readback_checks: List[WordPressPostReadCheck] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Bounded authenticated readback proof without post content or source prose."
+        },
     )
 
 

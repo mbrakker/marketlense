@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import hashlib
+
+from src.utils.wordpress_readback import wordpress_readback_value_sha256
+
 from ._shared import *  # noqa: F401,F403
 
 # ruff: noqa: F401,F403,F405
@@ -87,6 +91,9 @@ def test_publish_html_uploads_three_card_covers_and_sends_registered_meta(
     )
     assert post_call.json_data["meta"] == {
         "ml_file_id": "file123",
+        "ml_content_sha256": hashlib.sha256(
+            post_call.json_data["content"].encode("utf-8")
+        ).hexdigest(),
         "ml_time_period": "Q2 2026",
         "ml_region": "Global",
         "ml_publisher_name": "McKinsey & Company",
@@ -113,6 +120,23 @@ def test_publish_html_uploads_three_card_covers_and_sends_registered_meta(
         ),
         "ml_source_publication_date": "2026-06-09",
     }
+    assert outcome.readback_expectation is not None
+    assert (
+        outcome.readback_expectation.content_sha256
+        == post_call.json_data["meta"]["ml_content_sha256"]
+    )
+    assert "ml_content_sha256" not in outcome.readback_expectation.metadata
+    assert outcome.readback_expectation.taxonomy_assignments == {
+        "categories": [],
+        "tags": [],
+    }
+    assert outcome.readback_expectation.metadata[
+        "ml_source_note"
+    ] == wordpress_readback_value_sha256(post_call.json_data["meta"]["ml_source_note"])
+    assert (
+        post_call.json_data["meta"]["ml_source_note"]
+        not in outcome.readback_expectation.metadata.values()
+    )
 
 
 def test_publish_html_updates_existing_report_card_post_in_place(
@@ -228,8 +252,7 @@ def test_publish_html_preserves_public_intelligence_for_existing_report_card(
     assert first.post_id == second.post_id == 42
     assert len(update_calls) == 2
     assert all(
-        call.json_data["meta"]["ml_public_intelligence"] == "1"
-        for call in update_calls
+        call.json_data["meta"]["ml_public_intelligence"] == "1" for call in update_calls
     )
     assert update_calls[0].json_data["meta"] == update_calls[1].json_data["meta"]
 
