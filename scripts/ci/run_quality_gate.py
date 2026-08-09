@@ -10,12 +10,17 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def quality_gate_commands() -> tuple[tuple[str, ...], ...]:
     return (
+        ("python", "scripts/ci/check_dependency_consistency.py"),
         ("python", "scripts/ci/check_formatting.py"),
+        ("python", "scripts/ci/check_ruff_lint.py"),
         ("python", "scripts/ci/check_risk_policy.py"),
         ("python", "scripts/ci/check_split_symbol_links.py"),
         ("python", "scripts/ci/run_type_check.py"),
         ("python", "scripts/ci/check_architecture_imports.py"),
         ("python", "scripts/ci/check_agent_policy.py"),
+        ("python", "scripts/ci/check_role_io_boundaries.py"),
+        ("python", "scripts/ci/check_service_boundary_map.py"),
+        ("python", "scripts/ci/check_refactor_movement_evidence.py"),
         ("python", "scripts/ci/check_forbidden_patching.py"),
         ("python", "scripts/ci/check_bounded_logging.py"),
         ("python", "scripts/ci/check_repository_hygiene.py"),

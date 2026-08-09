@@ -185,7 +185,9 @@ category. An exhausted recovery remains a typed failure; it never becomes an
 empty successful analysis package. A response with no category candidates
 likewise triggers the bounded recovery and then fails closed. By contrast, an
 all-rejected, schema-valid candidate set is an explicit uncategorized outcome:
-it is not mistaken for an empty model response. The canonical Technology & Innovation
+it is not mistaken for an empty model response during analysis. Publication is
+nevertheless prohibited until both the canonical and retained category assignments
+contain the same non-empty normalized category set. The canonical Technology & Innovation
 rules explicitly cover reports whose dominant subject is immersive experiences,
 spatial computing, virtual worlds, or Metaverse technology.
 

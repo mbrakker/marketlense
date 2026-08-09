@@ -12,6 +12,9 @@
 
 ## Setup
 
+Codex Cloud uses the repository bootstrap and its hash-locked dependencies; see
+[Codex Cloud environment](codex-cloud-environment.md). The local Windows setup is:
+
 From the repository root:
 
 ```powershell

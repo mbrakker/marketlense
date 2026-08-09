@@ -3,6 +3,8 @@ from __future__ import annotations
 from src.contracts.validation import ValidationReport
 from src.generators.publish_readiness_generator import (
     evaluate_publish_readiness,
+    parse_publish_readiness_payload,
+    publish_readiness_payload,
     verify_publish_readiness,
 )
 
@@ -20,6 +22,7 @@ Open original source</a></section>
 "headline":"Revenue outlook 2026"}</script>
 </body></html>"""
     artifacts = {
+        "categories": ["markets"],
         "summary": {
             "claim_evidence_map": [
                 {
@@ -194,3 +197,78 @@ def test_publish_readiness_ignores_absent_scalar_evidence_id_in_claim_ledger() -
         if item.rule_id == "publish_readiness.material_claim_evidence"
     )
     assert material_rule.status == "pass"
+
+
+def test_publish_readiness_payload_round_trips_and_rejects_malformed_surfaces() -> None:
+    artifacts, evidence_packs, html, provenance = _ready_inputs()
+    readiness = evaluate_publish_readiness(
+        report_id="report-1",
+        artifacts=artifacts,
+        evidence_packs=evidence_packs,
+        validation_report=ValidationReport(schema_version="1.1", status="pass"),
+        final_html=html,
+        final_html_path="",
+        category_ids=["markets"],
+        provenance=provenance,
+    )
+
+    assert (
+        parse_publish_readiness_payload(publish_readiness_payload(readiness))
+        == readiness
+    )
+    for surfaces in (None, "categories", {"category": True}, ["categories", 1]):
+        malformed = publish_readiness_payload(readiness)
+        malformed["rule_results"][0]["surfaces"] = surfaces
+        parsed = parse_publish_readiness_payload(malformed)
+        verification = verify_publish_readiness(
+            artifact=parsed, report_id="report-1", final_html=html
+        )
+        assert "publish_readiness.schema_unsupported" in verification.issues
+
+
+def test_publish_readiness_category_consistency_fails_for_missing_side() -> None:
+    artifacts, evidence_packs, html, provenance = _ready_inputs()
+    cases = [([], ["markets"]), (["markets"], []), ([], []), (["other"], ["markets"])]
+    for retained, canonical in cases:
+        artifacts["categories"] = retained
+        readiness = evaluate_publish_readiness(
+            report_id="report-1",
+            artifacts=artifacts,
+            evidence_packs=evidence_packs,
+            validation_report=ValidationReport(schema_version="1.1", status="pass"),
+            final_html=html,
+            final_html_path="",
+            category_ids=canonical,
+            provenance=provenance,
+        )
+        rule = next(
+            item
+            for item in readiness.rule_results
+            if item.rule_id == "publish_readiness.category_consistency"
+        )
+        assert rule.status == "fail"
+
+
+def test_publish_readiness_rejects_malformed_plural_evidence_references() -> None:
+    artifacts, evidence_packs, html, provenance = _ready_inputs()
+    for invalid in (1, {"id": "F1"}, "F1", ["F1", None], [["F1"]]):
+        artifacts["claim_ledgers"] = [
+            {"claim_text": "Revenue grew.", "evidence_ids": invalid}
+        ]
+        readiness = evaluate_publish_readiness(
+            report_id="report-1",
+            artifacts=artifacts,
+            evidence_packs=evidence_packs,
+            validation_report=ValidationReport(schema_version="1.1", status="pass"),
+            final_html=html,
+            final_html_path="",
+            category_ids=["markets"],
+            provenance=provenance,
+        )
+        rule = next(
+            item
+            for item in readiness.rule_results
+            if item.rule_id == "publish_readiness.material_claim_evidence"
+        )
+        assert rule.status == "fail"
+        assert "invalid evidence reference shape" in rule.detail
