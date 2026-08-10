@@ -51,6 +51,11 @@ from src.generators.report_generation_shared import (
 from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
+from src.utils.slugify import slugify
+
+_GENERATED_REPORT_TITLE = re.compile(
+    r"^[0-9a-f]{32,64}(?:[-_.](?:pdf|report))?$", re.IGNORECASE
+)
 
 
 def _publication_date(runtime: ReportRuntimeState) -> str:
@@ -116,10 +121,16 @@ def _public_source_note(runtime: ReportRuntimeState) -> str:
     title = str(getattr(identity, "canonical_title", "") or "").strip()
     publisher = str(getattr(identity, "publisher_name", "") or "").strip()
     if publisher and title:
-        return f"Source: {publisher} — {title}"
-    if title:
-        return f"Source: {title}"
-    return ""
+        note = f"Source: {publisher} — {title}"
+    elif title:
+        note = f"Source: {title}"
+    else:
+        return ""
+    if str(
+        getattr(identity, "identity_status", "") or ""
+    ).casefold() == "resolved" and not _verified_public_source_url(runtime):
+        return f"{note} — Source URL: Not available"
+    return note
 
 
 def _safe_public_source_url(value: object) -> str:
@@ -186,18 +197,66 @@ def _is_card_contract_error(exc: AppError) -> bool:
     }
 
 
+def _is_generated_report_title(value: object) -> bool:
+    return bool(_GENERATED_REPORT_TITLE.fullmatch(str(value or "").strip()))
+
+
+def _is_runtime_generated_title(runtime: ReportRuntimeState, value: object) -> bool:
+    title = str(value or "").strip()
+    if _is_generated_report_title(title):
+        return True
+    file_id = str(runtime.file.file_id or "").strip()
+    if not title or not file_id:
+        return False
+    aliases = {file_id.casefold(), slugify(file_id).casefold()}
+    normalized = title.casefold().removesuffix(".pdf")
+    return normalized in aliases or any(
+        normalized == f"{alias}-pdf" for alias in aliases
+    )
+
+
+def _resolved_identity_title(runtime: ReportRuntimeState) -> str:
+    identity = runtime.source_identity
+    if str(getattr(identity, "identity_status", "") or "").casefold() != "resolved":
+        return ""
+    title = str(getattr(identity, "canonical_title", "") or "").strip()
+    return "" if _is_generated_report_title(title) else title
+
+
+def _resolved_identity_publisher(runtime: ReportRuntimeState) -> str:
+    identity = runtime.source_identity
+    if str(getattr(identity, "identity_status", "") or "").casefold() != "resolved":
+        return ""
+    return str(getattr(identity, "publisher_name", "") or "").strip()
+
+
+def _resolved_render_title(
+    runtime: ReportRuntimeState,
+    source: ReportSourceState,
+    candidate: object,
+) -> str:
+    title = str(candidate or runtime.report_title).strip()
+    if title and not _is_runtime_generated_title(runtime, title):
+        return title
+    identity_title = _resolved_identity_title(runtime)
+    if identity_title:
+        return identity_title
+    metadata_title = str(source.info_response.metadata.get("Title") or "").strip()
+    if metadata_title and not _is_runtime_generated_title(runtime, metadata_title):
+        return metadata_title
+    return title
+
+
 def _resolved_report_title(
     runtime: ReportRuntimeState,
     source: ReportSourceState,
     analysis: ReportAnalysisState,
 ) -> str:
-    candidate = str(analysis.payload.title or runtime.report_title).strip()
-    if not re.fullmatch(r"[0-9a-fA-F]{32,64}", candidate):
-        return candidate
-    metadata_title = str(source.info_response.metadata.get("Title") or "").strip()
-    if metadata_title and not re.fullmatch(r"[0-9a-fA-F]{32,64}", metadata_title):
-        return metadata_title
-    return candidate
+    return _resolved_render_title(
+        runtime,
+        source,
+        analysis.payload.title or runtime.report_title,
+    )
 
 
 def _build_metadata_upsert_request(
@@ -213,7 +272,7 @@ def _build_metadata_upsert_request(
         file_id=runtime.file.file_id,
         title=_resolved_report_title(runtime, source, analysis),
         file_name=runtime.file_name,
-        publisher=payload.publisher or None,
+        publisher=_resolved_identity_publisher(runtime) or payload.publisher or None,
         taxonomy=payload.taxonomy,
         categories=payload.categories,
         region=payload.region or None,
@@ -352,8 +411,12 @@ def render_report_output(
     existing_publisher = str(render_data_dict.get("publisher") or "").strip()
     existing_time_period = str(render_data_dict.get("time_period") or "").strip()
     if render_meta is None:
-        render_data_dict["title"] = existing_title
-        render_data_dict["publisher"] = existing_publisher
+        render_data_dict["title"] = _resolved_render_title(
+            runtime, source, existing_title
+        )
+        render_data_dict["publisher"] = (
+            _resolved_identity_publisher(runtime) or existing_publisher
+        )
         render_data_dict["time_period"] = existing_time_period
         logger.info(
             log_event(
@@ -371,8 +434,10 @@ def render_report_output(
             )
         )
     else:
-        render_data_dict["title"] = str(render_meta.title or existing_title).strip()
-        render_data_dict["publisher"] = str(
+        render_data_dict["title"] = _resolved_render_title(
+            runtime, source, render_meta.title or existing_title
+        )
+        render_data_dict["publisher"] = _resolved_identity_publisher(runtime) or str(
             render_meta.publisher or existing_publisher
         ).strip()
         render_data_dict["time_period"] = str(
@@ -595,8 +660,12 @@ def render_report_output(
         ),
         child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:cover_metadata"),
     )
-    cover_title = (cover_meta.title if cover_meta else runtime.report_title).strip()
-    cover_publisher = (
+    cover_title = _resolved_render_title(
+        runtime,
+        source,
+        cover_meta.title if cover_meta else render_data_dict["title"],
+    )
+    cover_publisher = _resolved_identity_publisher(runtime) or (
         (cover_meta.publisher or "").strip()
         if cover_meta
         else (analysis.payload.publisher or "")

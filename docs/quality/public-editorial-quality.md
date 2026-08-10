@@ -20,13 +20,13 @@ Duplicate detection compares normalized claim-token sets and material-number ove
 
 ## Provenance and staleness
 
-The retained provenance distinguishes the internal acquisition path, internal archive URL, publisher landing page, original report URL, and MarketLense article URL. Internal locations are recorded only as retained hashes and are never legal public original-source links. A public source hyperlink is allowed only when it matches resolved publisher provenance; otherwise the source section retains safe attribution text without a link.
+The retained provenance distinguishes the internal acquisition path, internal archive URL, publisher landing page, original report URL, and MarketLense article URL. Internal locations are recorded only as retained hashes and are never legal public original-source links. A public source hyperlink is allowed only when it matches resolved publisher provenance; otherwise the source section renders `Source URL: Not available` without a link. Missing a public URL alone is not a publish blocker; unresolved publisher identity, unsafe URLs, or missing source disclosure remain blockers.
 
 The readiness decision becomes stale if the final HTML, normalized publication projection, any hashed artifact, configuration, policy, producer revision, or expiry changes. The WordPress projection verifies the same body hash after image URLs are replaced by WordPress media URLs, so the upload step cannot silently change public text, links, or metadata.
 
 ## Advisory measurements and repair
 
-The retained report includes non-blocking measurements for insight-role diversity, repeated syntax, excessive verbosity, card-to-insight, figure-to-evidence and figure-to-insight linkage, source-note completeness, and action specificity. They are review signals, not a public score. A public card is accepted only when it carries the retained candidate ID, evidence ID, source page, insight ID, and caption; weak or incomplete cards are omitted by rendering rather than displayed as limited evidence. A source section without a public original-source link must instead state that no verified publisher source link is available; a local path, Drive URL, or unverified URL is never an acceptable substitute.
+The retained report includes non-blocking measurements for insight-role diversity, repeated syntax, excessive verbosity, card-to-insight, figure-to-evidence and figure-to-insight linkage, source-note completeness, and action specificity. They are review signals, not a public score. A public card is accepted only when it carries the retained candidate ID, evidence ID, source page, insight ID, and caption; weak or incomplete cards are omitted by rendering rather than displayed as limited evidence. A source section without a public original-source link must instead state `Source URL: Not available`; a local path, Drive URL, or unverified URL is never an acceptable substitute.
 
 ## Repair and waivers
 

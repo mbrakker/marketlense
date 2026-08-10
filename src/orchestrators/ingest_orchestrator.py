@@ -37,6 +37,8 @@ from src.contracts.pdf_utils import (
 from src.contracts.report_cards import ReportCardManifest
 from src.contracts.report_store import (
     ReportMetadataGetRequest,
+    ReportSourceIdentityGetRequest,
+    SourceIdentityObservationRecordRequest,
 )
 from src.contracts.run_budget import RunBudget
 from src.contracts.run_context import RunContext
@@ -127,6 +129,8 @@ from src.services.pdf_service import (
 from src.services.report_store_service import (
     audit_validation_run_manifest,
     create_validation_run_manifest,
+    get_report_source_identity,
+    record_source_identity_observation,
     record_validation_run_manifest_stage,
 )
 from src.services.report_store_service import (
@@ -198,6 +202,12 @@ class IngestBatchDependencies:
     evaluate_budget_request: Callable[[Any, RunContext], Any] = field(
         default=evaluate_budget_request
     )
+    get_source_identity: Callable[[ReportSourceIdentityGetRequest, RunContext], Any] = (
+        field(default=get_report_source_identity)
+    )
+    record_source_identity_observation: Callable[
+        [SourceIdentityObservationRecordRequest, RunContext], Any
+    ] = field(default=record_source_identity_observation)
 
     @classmethod
     def default(cls) -> "IngestBatchDependencies":
@@ -782,6 +792,8 @@ def _cohort_admission_preflight(
         extract_pdf_text=deps.extract_pdf_text,
         get_source_quarantine=deps.get_source_quarantine,
         evaluate_budget_request=deps.evaluate_budget_request,
+        get_source_identity=deps.get_source_identity,
+        record_source_identity_observation=deps.record_source_identity_observation,
     )
     for file in files:
         file_ctx = child_context(root_ctx, task_id=f"admission:{file.file_id}")

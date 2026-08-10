@@ -84,7 +84,7 @@ _PUBLIC_SOURCE_LINK = re.compile(
     re.IGNORECASE,
 )
 _SOURCE_PROVENANCE_UNAVAILABLE = re.compile(
-    r"No verified publisher source link is available for this briefing\.",
+    r"Source URL:\s*Not available",
     re.IGNORECASE,
 )
 _GENERIC_FIGURE = re.compile(r"^(?:figure|chart|exhibit)\s*(?:\d+|[ivxlcdm]+)?$", re.I)

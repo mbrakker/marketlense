@@ -223,6 +223,49 @@ def test_source_identity_keeps_unknown_dates_unknown(tmp_path) -> None:
     assert recorded.resolution.publication_date_status == "unknown"
 
 
+def test_source_identity_reads_stored_publisher_when_resolution_is_incomplete(
+    tmp_path,
+) -> None:
+    ctx = new_run_context(task_id="source_identity_stored_publisher_fallback")
+    db_path = str(tmp_path / "reports.sqlite")
+    source = _record_source(
+        db_path=db_path,
+        title="Publisher Evidence Report",
+        md5="source-md5-stored-publisher",
+        url="https://publisher.example/reports/evidence",
+        ctx=ctx,
+    )
+    record_source_identity_observation(
+        SourceIdentityObservationRecordRequest(
+            schema_version="1.0",
+            db_path=db_path,
+            observation=replace(
+                _observation(
+                    source_record_id=source.record_id,
+                    date="",
+                    date_status="unknown",
+                ),
+                publisher_name="",
+                content_hash="md5:source-md5-stored-publisher",
+            ),
+        ),
+        ctx,
+    )
+
+    resolved = get_report_source_identity(
+        ReportSourceIdentityGetRequest(
+            schema_version="1.0",
+            db_path=db_path,
+            report_title="Publisher Evidence Report",
+            md5="source-md5-stored-publisher",
+        ),
+        ctx,
+    ).resolution
+
+    assert resolved.publisher_name == "Publisher Example"
+    assert resolved.resolution_method == "legacy_report_sources_publisher_fallback"
+
+
 def test_source_identity_rejects_unsafe_public_urls(tmp_path) -> None:
     ctx = new_run_context(task_id="source_identity_unsafe_url")
     db_path = str(tmp_path / "reports.sqlite")

@@ -144,12 +144,20 @@ def test_public_html_source_section_requires_a_public_original_source_link() -> 
             "Open original source</a></section>"
         ),
     )
+    unavailable = evaluate_public_editorial_quality(
+        report_id="retained-report",
+        artifacts=_retained_artifacts(),
+        html='<section id="source"><p>Source URL: Not available</p></section>',
+    )
 
     assert "public_editorial_quality.public_source_provenance_missing" in _rule_ids(
         missing
     )
     assert "public_editorial_quality.public_source_provenance_missing" not in _rule_ids(
         linked
+    )
+    assert "public_editorial_quality.public_source_provenance_missing" not in _rule_ids(
+        unavailable
     )
 
 

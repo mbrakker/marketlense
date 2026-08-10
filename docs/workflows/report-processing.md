@@ -28,6 +28,14 @@ The same render outcome fails closed when required report-card metadata, such
 as publisher, fails public-metadata governance. Such a package remains a render
 error with the typed reason and cannot be mistaken for a publication candidate.
 
+Before rendering, a resolved canonical source identity supplies the title and
+publisher when analysis or stored report metadata contains a generated
+file/checksum name or a placeholder publisher. This is a deterministic
+attribution fallback, not an inference: unresolved identities still reach the
+same blocking public-metadata gate. A missing verified public source URL does
+not block that package; the public attribution states `Source URL: Not
+available`.
+
 `region` and `covered_period` are optional card labels: placeholder, extraction
 leakage, and prose-like values are deterministically omitted before manifest
 validation, while a placeholder publisher or extraction leakage in required
@@ -161,6 +169,15 @@ as a successful artifact. A schema-valid explicit insufficient-evidence result
 may abstain only for a downstream family contract that represents abstention;
 required non-abstainable families finish as a typed permanent failure when the
 bounded sequence is exhausted.
+
+Each non-prunable, reference-bearing artifact response (candidate insights,
+final insights, and quotes) is also checked against the canonical document map
+and evidence packs before it leaves that bounded structured-output recovery
+path. An unknown evidence identifier therefore supplies the recovery prompt
+with the exact grounding error; it cannot be deferred until shared artifact
+assembly. Summary claims remain deterministically prunable when no source span
+can be bound. The final assembly grounding and semantic gates remain blocking
+defence-in-depth checks.
 
 Category-fit reconciliation is deterministic after the model returns its
 schema-valid candidate set. Each rule audit records its stable mapping-rule ID,

@@ -789,6 +789,19 @@ def get_report_source_identity(
                 if resolution_row is not None
                 else _legacy_identity_resolution(conn, source_record_id)
             )
+            legacy_resolution = _legacy_identity_resolution(conn, source_record_id)
+            if not resolution.publisher_name and legacy_resolution.publisher_name:
+                resolution = replace(
+                    resolution,
+                    publisher_id=legacy_resolution.publisher_id,
+                    publisher_name=legacy_resolution.publisher_name,
+                    resolution_method="legacy_report_sources_publisher_fallback",
+                    identity_confidence="medium",
+                )
+                resolution = replace(
+                    resolution,
+                    source_metadata_hash=_identity_resolution_hash(resolution),
+                )
     logger.info(
         log_event(
             ctx,

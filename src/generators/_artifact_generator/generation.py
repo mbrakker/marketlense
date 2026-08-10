@@ -39,6 +39,7 @@ from src.generators.artifact_normalization import (
     strip_artifact_inline_reference_ids,
 )
 from src.services import prompt_service, report_analysis_store_service
+from src.services.schema_validator_service import validate_evidence_references
 from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event, new_run_context
@@ -109,6 +110,13 @@ def generate_artifacts(
     )
     safe_doc_map = doc_map or {}
     safe_evidence = evidence_packs or {}
+    reference_evidence_packs = {**safe_evidence, "doc_map": safe_doc_map}
+
+    def validate_required_evidence_references(
+        payload: Dict[str, Any], task_ctx: RunContext
+    ) -> None:
+        validate_evidence_references(payload, reference_evidence_packs, task_ctx)
+
     has_density_input = isinstance(source_status, dict) and (
         "text_density" in source_status or "density_threshold" in source_status
     )
@@ -124,6 +132,11 @@ def generate_artifacts(
     step_executor = artifact_step_executor or _execute_artifact_tasks_serial
 
     def render_task(task: ArtifactRenderTask) -> Dict[str, Any]:
+        payload_validator = None
+        if task.step_name in {"insights_candidates", "quotes"}:
+            def payload_validator(payload: Dict[str, Any]) -> None:
+                validate_required_evidence_references(payload, task.ctx)
+
         return render_artifact_json_model(
             namespace=task.namespace,
             variables=task.variables,
@@ -137,6 +150,7 @@ def generate_artifacts(
             report_name=report_name or "",
             source_url=source_url,
             report_id=report_id,
+            payload_validator=payload_validator,
         )
 
     logger.info(
@@ -321,6 +335,9 @@ def generate_artifacts(
         report_name=report_name or "",
         source_url=source_url,
         report_id=report_id,
+        payload_validator=lambda payload: validate_required_evidence_references(
+            payload, insights_final_ctx
+        ),
     )
     insights_final = pad_artifact_insights(
         normalize_artifact_insights(
@@ -357,8 +374,7 @@ def generate_artifacts(
         source_url=source_url,
         report_id=report_id,
         payload_validator=lambda payload: _validate_cover_semantics(
-            payload.get("cover_semantics"),
-            ctx=cover_semantics_ctx,
+            payload.get("cover_semantics"), ctx=cover_semantics_ctx
         ),
         repair_namespace="report_vs/artifacts/cover_semantics_repair",
     )

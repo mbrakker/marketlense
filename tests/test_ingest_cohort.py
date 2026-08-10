@@ -20,7 +20,19 @@ from src.utils.errors import AppError
 
 
 def _batch_dependencies(**overrides):
-    return replace(orch.IngestBatchDependencies.default(), **overrides)
+    defaults = {
+        "get_source_identity": lambda request, _ctx: SimpleNamespace(
+            resolution=SimpleNamespace(
+                source_identity_id=f"source:{request.md5}",
+                publisher_id="publisher:fixture",
+                publisher_name="Publisher Example",
+                canonical_landing_page_url="",
+                identity_status="resolved",
+            )
+        )
+    }
+    defaults.update(overrides)
+    return replace(orch.IngestBatchDependencies.default(), **defaults)
 
 
 def test_attempt_limited_ingest_keeps_failed_candidate_in_the_result(
