@@ -37,8 +37,8 @@ ingest:
   lock_ttl_seconds: 7200
   seed: null
   batch_limit: 20
-  worker_limit: 2
-  report_worker_limit: 2
+  worker_limit: 5
+  report_worker_limit: 5
   source_quarantine:
     enabled: true
   admission:
@@ -96,8 +96,8 @@ ingest:
     min_recall_pages: 12
     min_recall_page_fraction: 0.65
   evidence_packs:
-    parallel_workers: 3
-    global_max_in_flight: 2
+    parallel_workers: 5
+    global_max_in_flight: 5
     global_min_interval_ms: 250
     doc_map_max_attempts: 3
     doc_map_retry_delay_ms: 500
@@ -110,8 +110,8 @@ ingest:
       - "quote_candidates"
     enable_new_variety_packs: false
   artifacts:
-    parallel_workers: 4
-    global_max_in_flight: 2
+    parallel_workers: 5
+    global_max_in_flight: 5
     global_min_interval_ms: 250
 
 openai_models:
@@ -526,8 +526,8 @@ browser_download:
   headed: false
   warm_worker_pool:
     enabled: false
-    max_workers: 1
-    max_runs_per_worker: 3
+    max_workers: 5
+    max_runs_per_worker: 5
     max_memory_mb: 768
     idle_ttl_seconds: 300
     fallback_to_subprocess: true
@@ -683,23 +683,23 @@ cost:
   pricing_path: "./src/config/llm-costs.yaml"
 
 workflow_queues:
-  publisher_discovery: {enabled: true, max_workers: 1, max_attempts: 3, lease_seconds: 900, maximum_pending: 200, maximum_fanout: 100, budget_profile: publisher_inventory}
-  report_acquisition: {enabled: true, max_workers: 2, max_attempts: 3, lease_seconds: 1200, maximum_pending: 500, maximum_fanout: 5, budget_profile: browser_acquisition}
-  mailbox_delivery: {enabled: true, max_workers: 1, max_attempts: 3, lease_seconds: 900, maximum_pending: 100, maximum_fanout: 3, budget_profile: mailbox_delivery}
-  source_ingest: {enabled: true, max_workers: 1, max_attempts: 3, lease_seconds: 1800, maximum_pending: 300, maximum_fanout: 3, budget_profile: report_ingest}
-  report_selection: {enabled: true, max_workers: 1, max_attempts: 3, lease_seconds: 1800, maximum_pending: 150, maximum_fanout: 2, budget_profile: report_ingest}
-  report_analysis: {enabled: true, max_workers: 1, max_attempts: 2, lease_seconds: 3600, maximum_pending: 100, maximum_fanout: 5, budget_profile: high_quality}
-  report_render: {enabled: true, max_workers: 1, max_attempts: 3, lease_seconds: 1200, maximum_pending: 150, maximum_fanout: 5, budget_profile: report_render}
-  analytics_projection: {enabled: true, max_workers: 1, max_attempts: 3, lease_seconds: 900, maximum_pending: 200, maximum_fanout: 5, budget_profile: analytics_projection}
-  claim_embedding: {enabled: true, max_workers: 1, max_attempts: 3, lease_seconds: 900, maximum_pending: 500, maximum_fanout: 50, budget_profile: embedding}
-  signal_candidate: {enabled: true, max_workers: 1, max_attempts: 3, lease_seconds: 900, maximum_pending: 100, maximum_fanout: 10, budget_profile: signal_candidate}
-  signal_generation: {enabled: true, max_workers: 1, max_attempts: 2, lease_seconds: 3600, maximum_pending: 50, maximum_fanout: 5, budget_profile: high_quality}
-  briefing_opportunity: {enabled: true, max_workers: 1, max_attempts: 3, lease_seconds: 600, maximum_pending: 300, maximum_fanout: 1, budget_profile: briefing_opportunity}
-  briefing_generation: {enabled: true, max_workers: 1, max_attempts: 2, lease_seconds: 3600, maximum_pending: 25, maximum_fanout: 5, budget_profile: cross_report_analysis}
-  cover_generation: {enabled: true, max_workers: 1, max_attempts: 3, lease_seconds: 1200, maximum_pending: 100, maximum_fanout: 5, budget_profile: cover_generation}
-  publication_readiness: {enabled: true, max_workers: 1, max_attempts: 3, lease_seconds: 600, maximum_pending: 200, maximum_fanout: 2, budget_profile: publishing}
-  wordpress_publish: {enabled: true, max_workers: 1, max_attempts: 3, lease_seconds: 900, maximum_pending: 100, maximum_fanout: 10, budget_profile: publishing}
-  wordpress_projection: {enabled: true, max_workers: 1, max_attempts: 3, lease_seconds: 900, maximum_pending: 200, maximum_fanout: 5, budget_profile: wordpress_projection}
+  publisher_discovery: {enabled: true, max_workers: 5, max_attempts: 3, lease_seconds: 900, maximum_pending: 200, maximum_fanout: 100, budget_profile: publisher_inventory}
+  report_acquisition: {enabled: true, max_workers: 5, max_attempts: 3, lease_seconds: 1200, maximum_pending: 500, maximum_fanout: 5, budget_profile: browser_acquisition}
+  mailbox_delivery: {enabled: true, max_workers: 5, max_attempts: 3, lease_seconds: 900, maximum_pending: 100, maximum_fanout: 3, budget_profile: mailbox_delivery}
+  source_ingest: {enabled: true, max_workers: 5, max_attempts: 3, lease_seconds: 1800, maximum_pending: 300, maximum_fanout: 3, budget_profile: report_ingest}
+  report_selection: {enabled: true, max_workers: 5, max_attempts: 3, lease_seconds: 1800, maximum_pending: 150, maximum_fanout: 2, budget_profile: report_ingest}
+  report_analysis: {enabled: true, max_workers: 5, max_attempts: 2, lease_seconds: 3600, maximum_pending: 100, maximum_fanout: 5, budget_profile: high_quality}
+  report_render: {enabled: true, max_workers: 5, max_attempts: 3, lease_seconds: 1200, maximum_pending: 150, maximum_fanout: 5, budget_profile: report_render}
+  analytics_projection: {enabled: true, max_workers: 5, max_attempts: 3, lease_seconds: 900, maximum_pending: 200, maximum_fanout: 5, budget_profile: analytics_projection}
+  claim_embedding: {enabled: true, max_workers: 5, max_attempts: 3, lease_seconds: 900, maximum_pending: 500, maximum_fanout: 50, budget_profile: embedding}
+  signal_candidate: {enabled: true, max_workers: 5, max_attempts: 3, lease_seconds: 900, maximum_pending: 100, maximum_fanout: 10, budget_profile: signal_candidate}
+  signal_generation: {enabled: true, max_workers: 5, max_attempts: 2, lease_seconds: 3600, maximum_pending: 50, maximum_fanout: 5, budget_profile: high_quality}
+  briefing_opportunity: {enabled: true, max_workers: 5, max_attempts: 3, lease_seconds: 600, maximum_pending: 300, maximum_fanout: 1, budget_profile: briefing_opportunity}
+  briefing_generation: {enabled: true, max_workers: 5, max_attempts: 2, lease_seconds: 3600, maximum_pending: 25, maximum_fanout: 5, budget_profile: cross_report_analysis}
+  cover_generation: {enabled: true, max_workers: 5, max_attempts: 3, lease_seconds: 1200, maximum_pending: 100, maximum_fanout: 5, budget_profile: cover_generation}
+  publication_readiness: {enabled: true, max_workers: 5, max_attempts: 3, lease_seconds: 600, maximum_pending: 200, maximum_fanout: 2, budget_profile: publishing}
+  wordpress_publish: {enabled: true, max_workers: 5, max_attempts: 3, lease_seconds: 900, maximum_pending: 100, maximum_fanout: 10, budget_profile: publishing}
+  wordpress_projection: {enabled: true, max_workers: 5, max_attempts: 3, lease_seconds: 900, maximum_pending: 200, maximum_fanout: 5, budget_profile: wordpress_projection}
 
 workflow_control:
   schema_version: "1.0"

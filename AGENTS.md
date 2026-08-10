@@ -61,6 +61,78 @@ Before regenerating or recalling an external system, check canonical persisted a
 
 Proceed autonomously on repository-local, reversible, in-scope work. Report material assumptions and tradeoffs, but do not turn routine naming or internal structure into blockers. Stop when authority is missing for an irreversible or externally consequential action.
 
+### 2.6 Tools, MCPs, skills, and plugins
+
+Use available tools autonomously when they materially improve correctness, evidence, or execution. Do not use tools ceremonially or call every available tool. Prefer the minimum sufficient set of authoritative tools needed to complete and verify the task.
+
+#### Tool-selection order
+
+1. Inspect repository code, contracts, tests, configuration, logs, and canonical documentation first when they can answer the question directly.
+2. Use a Skill when the task matches a defined repeatable workflow.
+3. Use an MCP when current external documentation, remote state, browser execution, or another external capability is required.
+4. Use a plugin only on a surface where plugins are supported and only when its bundled capability materially contributes to the task.
+
+Do not duplicate work across tools when one authoritative source is sufficient. Do not repeatedly fetch the same evidence unless it may have changed or the first result was insufficient.
+
+#### Skills
+
+Skills are workflows, not mandatory ceremony. Select the narrowest skill or combination of complementary skills whose descriptions match the task.
+
+- Prefer repository-local MarketLense skills over generic skills for MarketLense-specific behavior.
+- Do not invoke multiple overlapping skills that perform substantially the same workflow.
+- Generic engineering skills may complement, but MUST NOT override, repository architecture, testing, safety, or completion policy.
+- When a subsystem-specific regression skill applies, use it before claiming the affected behavior is verified.
+- For significant implementation work, use `marketlense-quality-gate` as the final repository-specific verification workflow when available.
+- Do not invoke a skill merely because it is installed.
+
+Expected MarketLense routing when available:
+
+- acquisition/discovery/download/browser-route changes -> `acquisition-regression`
+- PDF/chart/table/crop/OCR/evidence changes -> `pdf-extraction-regression`
+- prompts/model/schema/LLM-pipeline changes -> `llm-change-eval`
+- generated editorial/user-facing intelligence changes -> `editorial-output-eval`
+- WordPress/theme/plugin/published-UI changes -> `wordpress-regression`
+- dependency additions/upgrades -> `dependency-upgrade`
+- performance optimization -> existing `speedup-proof`
+- security-focused review -> existing security-audit skill
+
+Use generic skills such as systematic debugging, TDD, planning, code review, or verification only when their workflow is useful to the task; do not automatically run the full generic skill chain for routine changes.
+
+#### MCPs
+
+Use MCP tools when their external capability or authoritative context is relevant. Do not use an MCP when repository-local evidence is sufficient.
+
+When configured:
+
+- **OpenAI Developer Docs MCP**: MUST be consulted before relying on current OpenAI API, SDK, model, Codex, Responses API, or other OpenAI platform behavior that could have changed.
+- **Context7**: SHOULD be consulted when implementation depends materially on current third-party library/API behavior not established by the installed source, lockfile, or repository tests.
+- **Playwright MCP**: MUST be used for material browser/UI behavior changes when deterministic browser verification is practical. Check relevant rendering/flows plus console and network failures where applicable.
+- **GitHub MCP**: use for remote GitHub state such as PRs, issues, review threads, Actions/CI, or repository state that cannot be established from the local checkout. Do not call it merely to inspect code already available locally.
+- **Sentry MCP**: when configured, use for production/runtime incident investigation where traces, errors, or operational evidence are relevant.
+
+Prefer primary/official documentation over secondary explanations. If authoritative documentation and remembered behavior conflict, follow the authoritative current source and verify against the repository's installed version where relevant.
+
+Use read-only MCP operations before write operations where possible. External writes, publication, destructive operations, credential changes, uncontrolled spend, and other consequential actions remain subject to this repository's authority and safety rules.
+
+If an MCP is unavailable, authentication fails, or required evidence cannot be obtained, do not invent the result or silently treat remembered information as verification. Use the strongest available local evidence and explicitly report the missing verification if it matters to completion.
+
+#### Plugins and execution surface
+
+Do not assume a plugin is available merely because its skill or functionality exists elsewhere.
+
+The Codex IDE extension does not currently support plugins. When operating in the IDE, use standalone skills and directly configured MCP servers instead.
+
+When operating on a plugin-capable Codex surface, a relevant installed plugin MAY be used when it provides a required skill, connector, or MCP capability. Do not require a plugin when an equivalent repository-local skill or configured MCP already provides the needed capability.
+
+#### Efficiency
+
+- Prefer one authoritative lookup over several overlapping searches.
+- Prefer targeted tool calls over broad discovery.
+- Parallelize independent read-only investigation when this reduces latency without increasing ambiguity.
+- Do not perform remote calls, browser runs, live API calls, or expensive evaluations unless they provide evidence unavailable from cheaper deterministic checks.
+- Cache/reuse already obtained evidence within the task when still valid.
+- Escalate verification depth with change risk rather than applying the maximum toolchain to every edit.
+
 ## 3. Architecture boundaries
 
 The role map, import directions, permitted I/O, and canonical external-system entrypoints live in `docs/quality/architecture_policy.yaml`. Do not duplicate that inventory here.
