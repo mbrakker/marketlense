@@ -377,8 +377,12 @@ def run_admission_preflight(
                         publisher
                         and str(getattr(source_response, "resolution_source", "") or "")
                         == "md5"
-                        and str(getattr(resolved, "identity_status", "") or "")
-                        != "resolved"
+                        and (
+                            str(getattr(resolved, "identity_status", "") or "")
+                            != "resolved"
+                            or str(getattr(resolved, "resolution_method", "") or "")
+                            == "legacy_report_sources_publisher_fallback"
+                        )
                         and source_record_id > 0
                     ):
                         resolved = deps.record_source_identity_observation(

@@ -248,6 +248,39 @@ def test_admission_promotes_exact_checksum_database_publisher(
     assert recorded_observations[0].resolution_method == "exact_md5_database_record"
 
 
+def test_admission_promotes_database_publisher_from_incomplete_resolution(
+    ingest_settings, run_context
+) -> None:
+    resolution = SimpleNamespace(
+        source_record_id=9,
+        source_identity_id="source:existing",
+        publisher_id="",
+        publisher_name="Acme Research",
+        canonical_landing_page_url="",
+        source_page_url="",
+        identity_status="resolved",
+        resolution_method="legacy_report_sources_publisher_fallback",
+    )
+    recorded_observations = []
+    result = run_admission_preflight(
+        _request(ingest_settings),
+        run_context,
+        dependencies=replace(
+            _dependencies(),
+            get_source_identity=lambda _request, _ctx: SimpleNamespace(
+                resolution=resolution, resolution_source="md5"
+            ),
+            record_source_identity_observation=lambda request, _ctx: (
+                recorded_observations.append(request.observation)
+                or SimpleNamespace(resolution=resolution)
+            ),
+        ),
+    )
+
+    assert result.admitted is True
+    assert recorded_observations[0].resolution_method == "exact_md5_database_record"
+
+
 def test_admission_validation_run_promotes_retained_checksum_publisher(
     ingest_settings, run_context, tmp_path
 ) -> None:
