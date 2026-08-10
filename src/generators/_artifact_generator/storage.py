@@ -98,6 +98,7 @@ def assemble_artifacts_payload(
     source_status: Dict[str, Any],
     family_status: Dict[str, Dict[str, Any]],
     ctx: RunContext,
+    category_ids: Optional[List[str]] = None,
     cache_meta: Optional[Dict[str, Any]] = None,
     validate_references: bool = True,
 ) -> Dict[str, Any]:
@@ -195,6 +196,13 @@ def assemble_artifacts_payload(
     )
     artifacts_payload: Dict[str, Any] = {
         "schema_version": "3.0",
+        "categories": list(
+            dict.fromkeys(
+                _s(category_id).strip()
+                for category_id in (category_ids or [])
+                if _s(category_id).strip()
+            )
+        ),
         "toc_entries": toc_entries,
         "toc_topics": toc_topics,
         "toc_topics_expanded": topic_briefs,
@@ -1141,6 +1149,7 @@ def _artifact_cache_meta(
     evidence_packs: Dict[str, Any],
     availability: Dict[str, Any],
     expert_domain: str,
+    category_ids: List[str],
     retrieval_mode: str,
     settings: AppSettings,
     prompt_client,
@@ -1240,6 +1249,7 @@ def _artifact_cache_meta(
             "evidence_packs": evidence_packs,
             "availability": availability,
             "expert_domain": expert_domain,
+            "category_ids": category_ids,
         }
     )
     return {

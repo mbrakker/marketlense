@@ -17,6 +17,7 @@ from src.generators._artifact_generator.storage import (
     _has_evidence_content,
     _load_cached_artifacts,
     _s,
+    _validate_card_tldrs,
     _validate_cover_semantics,
     assemble_artifacts_payload,
     derive_metric_spine,
@@ -86,6 +87,7 @@ def generate_artifacts(
     vector_store_id: Optional[str] = None,
     source_status: Optional[Dict[str, Any]] = None,
     categories: Optional[List[str]] = None,
+    category_ids: Optional[List[str]] = None,
     ctx: Optional[RunContext] = None,
     publisher_name: str = "",
     source_url: str = "",
@@ -134,8 +136,18 @@ def generate_artifacts(
     def render_task(task: ArtifactRenderTask) -> Dict[str, Any]:
         payload_validator = None
         if task.step_name in {"insights_candidates", "quotes"}:
+
             def payload_validator(payload: Dict[str, Any]) -> None:
                 validate_required_evidence_references(payload, task.ctx)
+
+        elif task.step_name == "summary":
+
+            def payload_validator(payload: Dict[str, Any]) -> None:
+                _validate_card_tldrs(
+                    normalize_artifact_summary(payload.get("summary")),
+                    summary_abstained=False,
+                    ctx=task.ctx,
+                )
 
         return render_artifact_json_model(
             namespace=task.namespace,
@@ -189,6 +201,7 @@ def generate_artifacts(
             evidence_packs=safe_evidence,
             availability=availability,
             expert_domain=expert_domain,
+            category_ids=category_ids or [],
             retrieval_mode=artifact_retrieval_mode(artifact_use_vector_store),
             settings=settings,
             prompt_client=prompt_client,
@@ -498,6 +511,7 @@ def generate_artifacts(
         linkedin_post=linkedin_post,
         source_status=availability,
         family_status=family_status,
+        category_ids=category_ids,
         ctx=ctx,
         cache_meta={**cache_meta, "key": cache_key} if cache_meta else None,
     )

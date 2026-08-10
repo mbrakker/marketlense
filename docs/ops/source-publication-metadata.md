@@ -25,13 +25,18 @@ rows are suppressed before any public projection.
 
 Drive-sourced reports use the same observation model before cohort admission.
 The preflight first looks up the retained `report_sources` record by the PDF's
-exact MD5. A non-empty publisher on that checksum-bound record is promoted to
-an immutable `exact_md5_database_record` observation. If that record has no
-publisher, the bounded first-pages text sample may contribute one unambiguous
-explicit imprint (`Published by`, `A report by`, or copyright notice) as a
-`document_imprint_extraction` observation. Filenames, generic prose, multiple
-different imprints, and placeholder-like values are never accepted. Neither
-fallback invents a landing-page URL.
+exact MD5. When no source row exists, it may resolve the canonical title and
+publisher from retained `reports` metadata with the same exact MD5 (including
+`source_md5`). That compatibility lookup accepts only one non-placeholder,
+non-leaked title/publisher pair; conflicting rows fail closed and neither a
+title, filename, URL, nor partial publisher match is a lookup key. A non-empty
+publisher on a checksum-bound `report_sources` record is promoted to an
+immutable `exact_md5_database_record` observation. If no database fallback
+resolves identity, the bounded first-pages text sample may contribute one
+unambiguous explicit imprint (`Published by`, `A report by`, or copyright
+notice) as a `document_imprint_extraction` observation. Filenames, generic
+prose, multiple different imprints, and placeholder-like values are never
+accepted. Neither fallback invents a landing-page URL.
 
 The current implemented extraction order is JSON-LD `datePublished`, Open
 Graph `article:published_time`, named publication-date metadata, then a

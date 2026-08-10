@@ -44,14 +44,18 @@ per-report limits (`null` disables either maximum); and
 `required_evidence_families` must be a subset of the configured
 `evidence_packs.registry`. `doc_map` is the required default because it is the
 first evidence-family hard gate. The preflight does not treat a Drive artifact
-as public provenance. It resolves publisher identity in this fixed order:
-an existing exact-MD5 `report_sources` publisher record, then one explicit
-publisher imprint from the bounded PDF text sample. Either result is persisted
-as an immutable source-identity observation before admission. Ambiguous,
-placeholder, or missing publisher identity still rejects the source before
-model work. A public source URL remains optional: it is retained only when it
-is a safe HTTP(S) publisher URL and otherwise renders as `Source URL: Not
-available`, without creating a public link or blocking publication. The
+as public provenance. It resolves publisher identity in this fixed order: an
+existing exact-MD5 `report_sources` publisher record; otherwise one
+unambiguous non-placeholder title/publisher pair from the retained `reports`
+record with that exact MD5 (or `source_md5`); then one explicit publisher
+imprint from the bounded PDF text sample. The retained-report fallback rejects
+conflicting rows and never matches by title, filename, URL, or partial
+publisher. Database and imprint results are persisted as immutable
+source-identity observations whenever a `report_sources` row is available.
+Ambiguous, placeholder, or missing publisher identity still rejects the source
+before model work. A public source URL remains optional: it is retained only
+when it is a safe HTTP(S) publisher URL and otherwise renders as `Source URL:
+Not available`, without creating a public link or blocking publication. The
 retained decision hash includes only bounded inspection values, identities,
 and configuration/policy hashes, never source text or a rendered prompt. The
 same runtime preflight also write-probes the configured usage-ledger path,

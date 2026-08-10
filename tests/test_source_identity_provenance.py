@@ -6,6 +6,7 @@ from dataclasses import asdict, replace
 import pytest
 
 from src.contracts.report_store import (
+    ReportMetadataUpsertRequest,
     ReportSourceIdentityGetRequest,
     ReportSourceRecordRequest,
     SourceIdentityObservation,
@@ -16,6 +17,7 @@ from src.services.report_store_service import (
     get_report_source_identity,
     record_report_source,
     record_source_identity_observation,
+    upsert_metadata,
 )
 from src.utils.errors import AppError
 from src.utils.logging import new_run_context
@@ -264,6 +266,80 @@ def test_source_identity_reads_stored_publisher_when_resolution_is_incomplete(
 
     assert resolved.publisher_name == "Publisher Example"
     assert resolved.resolution_method == "legacy_report_sources_publisher_fallback"
+
+
+def test_source_identity_resolves_exact_md5_report_metadata_without_source_record(
+    tmp_path,
+) -> None:
+    ctx = new_run_context(task_id="source_identity_report_metadata_fallback")
+    db_path = str(tmp_path / "reports.sqlite")
+    upsert_metadata(
+        ReportMetadataUpsertRequest(
+            schema_version="1.0",
+            db_path=db_path,
+            file_id="stored-report",
+            title="Stored Publisher Report",
+            publisher="Publisher Example",
+            source_url="https://publisher.example/reports/stored",
+            md5="stored-report-md5",
+        ),
+        ctx,
+    )
+
+    response = get_report_source_identity(
+        ReportSourceIdentityGetRequest(
+            schema_version="1.0",
+            db_path=db_path,
+            report_title="drive-file-identifier",
+            md5="stored-report-md5",
+        ),
+        ctx,
+    )
+
+    assert response.resolution_source == "report_metadata_md5"
+    assert response.resolution.identity_status == "resolved"
+    assert response.resolution.canonical_title == "Stored Publisher Report"
+    assert response.resolution.publisher_name == "Publisher Example"
+    assert response.resolution.canonical_landing_page_url == (
+        "https://publisher.example/reports/stored"
+    )
+    assert response.resolution.content_hash == "md5:stored-report-md5"
+
+
+def test_source_identity_rejects_conflicting_exact_md5_report_metadata(
+    tmp_path,
+) -> None:
+    ctx = new_run_context(task_id="source_identity_report_metadata_conflict")
+    db_path = str(tmp_path / "reports.sqlite")
+    for file_id, title, publisher in (
+        ("stored-report-one", "Stored Report One", "Publisher One"),
+        ("stored-report-two", "Stored Report Two", "Publisher Two"),
+    ):
+        upsert_metadata(
+            ReportMetadataUpsertRequest(
+                schema_version="1.0",
+                db_path=db_path,
+                file_id=file_id,
+                title=title,
+                publisher=publisher,
+                md5="conflicting-report-metadata-md5",
+            ),
+            ctx,
+        )
+
+    response = get_report_source_identity(
+        ReportSourceIdentityGetRequest(
+            schema_version="1.0",
+            db_path=db_path,
+            report_title="drive-file-identifier",
+            md5="conflicting-report-metadata-md5",
+        ),
+        ctx,
+    )
+
+    assert response.resolution_source == "report_metadata_md5_conflicting"
+    assert response.resolution.identity_status == "unknown"
+    assert "report_metadata_identity_conflict" in response.resolution.identity_issues
 
 
 def test_source_identity_rejects_unsafe_public_urls(tmp_path) -> None:

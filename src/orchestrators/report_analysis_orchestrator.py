@@ -702,6 +702,7 @@ def run_report_analysis(
             vector_store_id=vector_state.vector_store_id,
             source_status=source.text_status,
             categories=category_assignment.category_labels,
+            category_ids=category_assignment.categories,
             ctx=artifact_ctx,
             md5=runtime.md5,
             publisher_name=runtime.publisher_name,

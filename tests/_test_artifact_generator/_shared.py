@@ -141,7 +141,10 @@ class FakeOpenAI:
         if isinstance(self.responses, dict):
             if step == "cover_semantics" and step not in self.responses:
                 return _cover_semantics_response()
-            return self.responses.get(step, {})
+            response = self.responses.get(step, {})
+            if isinstance(response, list):
+                return response.pop(0) if response else {}
+            return response
         if not self.responses:
             return {}
         return self.responses.pop(0)

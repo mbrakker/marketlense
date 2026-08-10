@@ -5,6 +5,10 @@
   "required": ["toc_topics", "summary", "cover_semantics", "insights_candidates", "insights_final", "quotes_final", "expert_comment", "linkedin_post"],
   "properties": {
     "schema_version": { "type": "string" },
+    "categories": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
     "toc_entries": {
       "type": "array",
       "items": {

@@ -62,6 +62,44 @@ def test_assemble_artifacts_accepts_complete_card_tldrs():
     assert payload["summary"]["card_tldr_compact"].endswith(".")
 
 
+def test_assemble_artifacts_retains_canonical_category_ids():
+    summary = {
+        "tldr": "Retail growth depends on retained source evidence through 2026.",
+        "card_tldr_compact": "Retail growth depends on retained source evidence.",
+        "executive_summary": "The report describes evidence-backed retail shifts.",
+        "claim_evidence_map": [],
+    }
+    family_status = build_artifact_family_status(
+        summary=summary,
+        insights_candidates=[],
+        insights_final=[],
+        quotes_final=[],
+        expert_comment="",
+        linkedin_post="",
+    )
+
+    payload = assemble_artifacts_payload(
+        report_id="report-card-categories",
+        report_name="Report Card Categories",
+        doc_map={"sections": []},
+        evidence_packs={},
+        toc_bundle={"toc_entries": []},
+        summary=summary,
+        cover_semantics=_cover_semantics(),
+        insights_candidates=[],
+        insights_final=[],
+        quotes_final=[],
+        expert_comment="",
+        linkedin_post="",
+        source_status={"not_available": False, "reason": ""},
+        family_status=family_status,
+        category_ids=["consumer-retail", "digital-commerce"],
+        ctx=_ctx(),
+    )
+
+    assert payload["categories"] == ["consumer-retail", "digital-commerce"]
+
+
 def test_cover_semantics_normalizes_provider_enum_formatting():
     result = _validate_cover_semantics(
         {
@@ -124,8 +162,17 @@ def test_assemble_artifacts_rejects_invalid_card_tldrs(
 def test_generate_artifacts_validates_schema_and_evidence_ids(tmp_path):
     responses = {
         "toc": {"toc_topics": ["Topic 1", "Topic 2"]},
-        "summary": {
-            "summary": {
+        "summary": [
+            {
+                "summary": {
+                    "tldr": "Incomplete standard summary",
+                    "card_tldr_compact": "Grounded TLDR.",
+                    "executive_summary": "Exec",
+                    "claim_evidence_map": [],
+                }
+            },
+            {
+                "summary": {
                 "tldr": "Grounded TLDR.",
                 "card_tldr_compact": "Grounded TLDR.",
                 "executive_summary": "Exec",
@@ -137,8 +184,9 @@ def test_generate_artifacts_validates_schema_and_evidence_ids(tmp_path):
                         "pages": [2],
                     }
                 ],
-            }
-        },
+                }
+            },
+        ],
         "insights_candidates": {
             "insights_candidates": [
                 {
@@ -325,7 +373,7 @@ def test_generate_artifacts_validates_schema_and_evidence_ids(tmp_path):
     ]
     assert payload["family_status"]["summary"]["status"] == "generated"
     assert payload["family_status"]["quotes"]["status"] == "generated"
-    assert len([req for req in fake_openai.requests if req[0] == "chat"]) == 7
+    assert len([req for req in fake_openai.requests if req[0] == "chat"]) == 8
     assert len([req for req in fake_openai.requests if req[0] == "vector"]) == 0
     assert payload["toc_entries"][0]["section_title"] == "Intro"
     assert payload["toc_topics"] == ["Intro"]

@@ -915,7 +915,7 @@ def _public_citation_label(value: str) -> str:
     if lowered.endswith((".json", ".jsonl", ".txt", ".sqlite", ".db")):
         return ""
     if re.fullmatch(
-        r"(?:[a-z]{1,4}[-_]?\d{1,5}|(?:finding|insight|figure|claim)[_-][a-z0-9_-]+)",
+        r"(?:[a-z]{1,4}[-_]?\d{1,5}|(?:quote|finding|insight|figure|claim)[_-][a-z0-9_-]+)",
         lowered,
     ):
         return ""

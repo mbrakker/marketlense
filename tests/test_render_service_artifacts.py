@@ -146,10 +146,10 @@ def test_render_includes_artifact_sections(tmp_path):
                     "speaker": "Speaker",
                     "citation": "Report",
                     "page": 2,
-                    "evidence_id": "q1",
+                    "evidence_id": "quote_02",
                     "evidence_spans": [
                         {
-                            "evidence_id": "q1",
+                            "evidence_id": "quote_02",
                             "source_pack": "quote_candidates",
                             "page": 2,
                         }
@@ -187,7 +187,8 @@ def test_render_includes_artifact_sections(tmp_path):
     assert "Sample Report, page 4" in html
     assert "Sample Report, page 2 · Report" in html
     assert "f1 · report page" not in html
-    assert "q1 · report page" not in html
+    assert "quote_02" not in html
+    assert "quote_02 · report page" not in html
     assert 'data-market-lense-publish-entity="true"' not in html
     assert '"entity_type":"report"' not in html
     assert '"canonical_route_intent":"wordpress:ml_report"' not in html

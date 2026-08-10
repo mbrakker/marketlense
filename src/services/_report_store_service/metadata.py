@@ -74,12 +74,127 @@ _IDENTITY_PUBLICATION_RANK = {
     "document_inferred": 2,
     "unknown": 3,
 }
+_REPORT_METADATA_IDENTITY_PLACEHOLDERS = {
+    "",
+    "...",
+    "not extracted",
+    "not specified",
+    "unknown",
+    "unknown publisher",
+    "n/a",
+    "na",
+    "-",
+}
+_REPORT_METADATA_IDENTITY_LEAKAGE_MARKERS = {
+    "ocr text block",
+    "table row",
+    "table ",
+    "row:",
+    "cell_",
+    "raw_page_text",
+    "extracted_text",
+    "text block",
+}
 
 
 def _safe_identity_url(value: object) -> str:
     url = str(value or "").strip()
     parsed = urlsplit(url)
     return url if parsed.scheme in {"http", "https"} and parsed.netloc else ""
+
+
+def _safe_report_metadata_identity_text(value: object) -> str:
+    text = " ".join(str(value or "").split())
+    folded = text.casefold()
+    if (
+        folded in _REPORT_METADATA_IDENTITY_PLACEHOLDERS
+        or any(marker in folded for marker in _REPORT_METADATA_IDENTITY_LEAKAGE_MARKERS)
+    ):
+        return ""
+    return text
+
+
+def _report_metadata_identity_resolution(
+    conn: sqlite3.Connection, *, md5: Optional[str]
+) -> tuple[SourceIdentityResolution, str]:
+    """Resolve a canonical identity from unambiguous stored report metadata.
+
+    This compatibility path is deliberately exact-content-hash-only. It does
+    not use a title, filename, URL, or partial publisher match as an identity
+    key, and it declines to choose between conflicting retained records.
+    """
+
+    clean_md5 = str(md5 or "").strip().casefold()
+    if not clean_md5 or not _table_exists(conn, "reports"):
+        return _resolve_identity_observations(()), "unresolved"
+    rows = conn.execute(
+        """
+        SELECT file_id, title, publisher, publisher_id, source_url
+        FROM reports
+        WHERE lower(COALESCE(md5, ''))=? OR lower(COALESCE(source_md5, ''))=?
+        ORDER BY file_id ASC
+        """,
+        (clean_md5, clean_md5),
+    ).fetchall()
+    candidates = [
+        (
+            _safe_report_metadata_identity_text(row[1]),
+            _safe_report_metadata_identity_text(row[2]),
+            str(row[3] or "").strip(),
+            _safe_identity_url(row[4]),
+        )
+        for row in rows
+    ]
+    candidates = [
+        candidate for candidate in candidates if candidate[0] and candidate[1]
+    ]
+    if not candidates:
+        return _resolve_identity_observations(()), "report_metadata_md5_unusable"
+    identities = {
+        (title.casefold(), publisher.casefold())
+        for title, publisher, _, _ in candidates
+    }
+    if len(identities) != 1:
+        resolution = _resolve_identity_observations(())
+        resolution = replace(
+            resolution,
+            identity_issues=(
+                "identity_observation_missing",
+                "report_metadata_identity_conflict",
+            ),
+            source_metadata_hash="",
+        )
+        return (
+            replace(
+                resolution,
+                source_metadata_hash=_identity_resolution_hash(resolution),
+            ),
+            "report_metadata_md5_conflicting",
+        )
+    title, publisher, publisher_id, source_url = candidates[0]
+    content_hash = f"md5:{clean_md5}"
+    resolution = SourceIdentityResolution(
+        schema_version="1.0",
+        source_identity_id=f"source:{sha256_json({'identity': content_hash})[:32]}",
+        canonical_title=title,
+        title_evidence_locator="reports.title",
+        publisher_id=publisher_id,
+        publisher_name=publisher,
+        canonical_landing_page_url=source_url,
+        acquired_artifact_url=source_url,
+        source_page_url=source_url,
+        content_hash=content_hash,
+        resolution_method="exact_md5_report_metadata",
+        identity_confidence="medium",
+        identity_issues=(
+            () if source_url else ("canonical_landing_page_url_missing",)
+        ),
+        identity_status="resolved",
+    )
+    return (
+        replace(resolution, source_metadata_hash=_identity_resolution_hash(resolution)),
+        "report_metadata_md5",
+    )
 
 
 def _validate_identity_observation_urls(observation: SourceIdentityObservation) -> None:
@@ -766,7 +881,10 @@ def get_report_source_identity(
             md5=request.md5,
         )
         if row is None:
-            resolution = _resolve_identity_observations(())
+            resolution, resolution_source = _report_metadata_identity_resolution(
+                conn,
+                md5=request.md5,
+            )
         else:
             source_record_id = coerce_int(row[0], min_value=0)
             resolution_row = conn.execute(

@@ -253,6 +253,9 @@ def regenerate_artifacts(
         linkedin_post=linkedin_post,
         source_status=availability,
         family_status=family_status,
+        category_ids=safe_artifacts.get("categories")
+        if isinstance(safe_artifacts.get("categories"), list)
+        else [],
         ctx=ctx,
         validate_references=False,
     )

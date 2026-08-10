@@ -179,6 +179,15 @@ assembly. Summary claims remain deterministically prunable when no source span
 can be bound. The final assembly grounding and semantic gates remain blocking
 defence-in-depth checks.
 
+The summary's public card TLDR sentence contract is also checked inside that
+same structured-output recovery path, rather than only after all artifact calls
+have completed. Generated artifact payloads retain the canonical selected
+category IDs separately from the human-readable category labels used to ground
+prompts, so the publish-readiness category-consistency gate can compare the
+same persisted assignment at analysis and render time. Public citation lines
+may show report title and page references, but never internal evidence tokens
+such as `quote_02`; those identifiers remain in private artifact lineage.
+
 Category-fit reconciliation is deterministic after the model returns its
 schema-valid candidate set. Each rule audit records its stable mapping-rule ID,
 explicit configured semantic concepts, and the exact retained context labels
