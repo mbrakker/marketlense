@@ -116,10 +116,16 @@ def _public_source_note(runtime: ReportRuntimeState) -> str:
     title = str(getattr(identity, "canonical_title", "") or "").strip()
     publisher = str(getattr(identity, "publisher_name", "") or "").strip()
     if publisher and title:
-        return f"Source: {publisher} — {title}"
-    if title:
-        return f"Source: {title}"
-    return ""
+        note = f"Source: {publisher} — {title}"
+    elif title:
+        note = f"Source: {title}"
+    else:
+        return ""
+    if str(
+        getattr(identity, "identity_status", "") or ""
+    ).casefold() == "resolved" and not _verified_public_source_url(runtime):
+        return f"{note} — Source URL: Not available"
+    return note
 
 
 def _safe_public_source_url(value: object) -> str:

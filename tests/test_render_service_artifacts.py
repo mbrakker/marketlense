@@ -310,7 +310,7 @@ def test_render_fallbacks_without_artifacts(tmp_path):
     assert "Legacy quote" in html
     assert "Legacy commentary" in html
     assert "What leaders should take from the report" in html
-    assert "No verified publisher source link is available for this briefing." in html
+    assert "Source URL: Not available" in html
 
 
 def test_render_surfaces_report_quality_score_and_verified_source_link(tmp_path):
@@ -507,7 +507,7 @@ def test_render_surfaces_report_identity_line_and_source_note(tmp_path):
     assert "Publisher: Capgemini" in html
     assert "Year: 2026" in html
     assert "Author: Mark Ruston" in html
-    assert "No verified publisher source link is available for this briefing." in html
+    assert "Source URL: Not available" in html
 
 
 def test_render_relabels_unknown_quote_speakers_and_shows_citation_micro_lines(

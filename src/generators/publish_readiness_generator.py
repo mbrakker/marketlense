@@ -549,9 +549,7 @@ def _provenance_result(
             "public source link is not verified publisher provenance",
         )
     if not hrefs:
-        safe_attribution = (
-            "No verified publisher source link is available for this briefing."
-        )
+        safe_attribution = "Source URL: Not available"
         source_text = source.get_text(" ", strip=True) if source else ""
         if safe_verified or safe_attribution not in source_text:
             return _fail(

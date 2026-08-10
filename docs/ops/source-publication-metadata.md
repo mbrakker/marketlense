@@ -23,6 +23,16 @@ reference. It never stores page text in provenance tables or standard logs.
 New observations accept only absolute HTTP(S) URLs; unsafe URLs from historic
 rows are suppressed before any public projection.
 
+Drive-sourced reports use the same observation model before cohort admission.
+The preflight first looks up the retained `report_sources` record by the PDF's
+exact MD5. A non-empty publisher on that checksum-bound record is promoted to
+an immutable `exact_md5_database_record` observation. If that record has no
+publisher, the bounded first-pages text sample may contribute one unambiguous
+explicit imprint (`Published by`, `A report by`, or copyright notice) as a
+`document_imprint_extraction` observation. Filenames, generic prose, multiple
+different imprints, and placeholder-like values are never accepted. Neither
+fallback invents a landing-page URL.
+
 The current implemented extraction order is JSON-LD `datePublished`, Open
 Graph `article:published_time`, named publication-date metadata, then a
 semantically marked HTML `time` element. Values are normalized only to the
@@ -56,6 +66,12 @@ rendered without a date, so private report processing remains possible.
 Conflicting date provenance is fail-closed at the existing publication-metadata
 boundary: it writes durable remediation evidence and prevents public use of an
 invented date.
+
+Publisher identity is required for public output; a public publisher URL is
+not. When no resolved safe HTTP(S) URL exists, the rendered source section
+shows `Source URL: Not available` and contains no original-source anchor. That
+disclosure satisfies source-link readiness while retaining the identity and
+grounding gates.
 
 The render-only lineage compatibility hash now uses the resolved v19 source
 metadata hash, falling back to v18 only for historic rows. A metadata-only

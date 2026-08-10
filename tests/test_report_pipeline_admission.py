@@ -14,8 +14,10 @@ from src.contracts.deferred_work import (
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.pipeline_preflight import PipelinePreflightReport
+from src.contracts.report_store import ReportSourceRecordRequest
 from src.contracts.run_context import RunContext
 from src.orchestrators import report_pipeline_orchestrator as orch
+from src.services.report_store_service import record_report_source
 from src.utils.errors import AppError
 
 
@@ -186,6 +188,19 @@ def test_deferred_report_recovery_never_falls_back_to_fresh_generation(
         cache_dir=str(tmp_path / "cache"),
         state_db=str(tmp_path / "state.sqlite"),
         reports_db=str(tmp_path / "reports.sqlite"),
+    )
+    record_report_source(
+        ReportSourceRecordRequest(
+            schema_version="1.0",
+            db_path=settings.reports_db,
+            source_domain="publisher.example",
+            report_name="Industry Pulse Report 2026",
+            landing_page_url="https://publisher.example/reports/industry-pulse-2026",
+            downloaded_at_utc="2026-08-10T12:00:00Z",
+            md5=source_md5,
+            publisher_name="Industry Analytics Summit",
+        ),
+        _ctx(),
     )
     item = DeferredWorkItem(
         schema_version="1.0",

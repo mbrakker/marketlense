@@ -43,10 +43,15 @@ to every retained Drive source before vector-store creation or any model call.
 per-report limits (`null` disables either maximum); and
 `required_evidence_families` must be a subset of the configured
 `evidence_packs.registry`. `doc_map` is the required default because it is the
-first evidence-family hard gate. The preflight does not infer a public source
-URL or publisher from the Drive artifact: it records the explicit
-`drive_artifact_nonpublic` classification and `drive_unattributed` sentinel
-until later source-backed extraction can establish public metadata. Its
+first evidence-family hard gate. The preflight does not treat a Drive artifact
+as public provenance. It resolves publisher identity in this fixed order:
+an existing exact-MD5 `report_sources` publisher record, then one explicit
+publisher imprint from the bounded PDF text sample. Either result is persisted
+as an immutable source-identity observation before admission. Ambiguous,
+placeholder, or missing publisher identity still rejects the source before
+model work. A public source URL remains optional: it is retained only when it
+is a safe HTTP(S) publisher URL and otherwise renders as `Source URL: Not
+available`, without creating a public link or blocking publication. The
 retained decision hash includes only bounded inspection values, identities,
 and configuration/policy hashes, never source text or a rendered prompt. The
 same runtime preflight also write-probes the configured usage-ledger path,

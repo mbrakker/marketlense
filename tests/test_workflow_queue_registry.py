@@ -20,6 +20,7 @@ from src.contracts.analytics_projection import (
 )
 from src.contracts.files import WriteBytesRequest
 from src.contracts.report_cards import CoverFingerprint
+from src.contracts.report_store import ReportSourceRecordRequest
 from src.contracts.run_context import RunContext
 from src.contracts.semantic_ids import EntityUid, PublisherId, ReportId
 from src.contracts.signal_cards import SignalCardContent
@@ -55,6 +56,7 @@ from src.orchestrators.workflow_queue_orchestrator import (
 )
 from src.services.analytics_store_service import upsert_projection
 from src.services.file_service import write_bytes
+from src.services.report_store_service import record_report_source
 from src.services.workflow_queue_service import (
     approve_publication_package,
 )
@@ -888,6 +890,19 @@ def test_source_ingest_checkpoint_hands_off_to_report_selection(
         "tests/fixtures/pdf_benchmark/golden/IAS - Industry_Pulse_Report_2026_ACIG.pdf"
     ).resolve()
     source_hash = hashlib.md5(source_path.read_bytes()).hexdigest()
+    record_report_source(
+        ReportSourceRecordRequest(
+            schema_version="1.0",
+            db_path=str(tmp_path / "reports.sqlite"),
+            source_domain="publisher.example",
+            report_name="Industry Pulse Report 2026",
+            landing_page_url="https://publisher.example/reports/industry-pulse-2026",
+            downloaded_at_utc="2026-08-10T12:00:00Z",
+            md5=source_hash,
+            publisher_name="Industry Analytics Summit",
+        ),
+        _ctx(),
+    )
     job = _workflow_job(queue_name="source_ingest", job_type="source_ingest.v1")
 
     result = queue_orchestrator._report_stage_handler(

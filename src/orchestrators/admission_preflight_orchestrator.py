@@ -16,12 +16,22 @@ from src.contracts.drive import DriveFile
 from src.contracts.files import WriteBytesRequest
 from src.contracts.pdf_text import PdfTextExtractRequest
 from src.contracts.pdf_utils import PdfIntegrityCheckRequest
+from src.contracts.report_store import (
+    ReportSourceIdentityGetRequest,
+    SourceIdentityObservation,
+    SourceIdentityObservationRecordRequest,
+)
 from src.contracts.run_budget import BudgetRequest, RunBudget
 from src.contracts.run_context import RunContext
 from src.contracts.state import SourceQuarantineGetRequest
+from src.services.document_identity_service import extract_publisher_imprint
 from src.services.file_service import write_bytes
 from src.services.llm_usage_ledger_service import evaluate_budget_request
 from src.services.pdf_service import check_pdf_integrity, extract_pdf_text
+from src.services.report_store_service import (
+    get_report_source_identity,
+    record_source_identity_observation,
+)
 from src.services.state_service import get_source_quarantine
 from src.utils.costing import estimate_cost_usd
 from src.utils.errors import AppError
@@ -176,6 +186,12 @@ class AdmissionPreflightDependencies:
     evaluate_budget_request: Callable[[BudgetRequest, RunContext], Any] = (
         evaluate_budget_request
     )
+    get_source_identity: Callable[[ReportSourceIdentityGetRequest, RunContext], Any] = (
+        get_report_source_identity
+    )
+    record_source_identity_observation: Callable[
+        [SourceIdentityObservationRecordRequest, RunContext], Any
+    ] = record_source_identity_observation
 
 
 @dataclass(frozen=True)
@@ -227,6 +243,9 @@ def run_admission_preflight(
     estimated_calls = 0
     estimated_tokens = 0
     estimated_cost = 0.0
+    publisher_id = "drive_unattributed"
+    source_url = f"drive://{file.file_id}"
+    identity_resolved = False
 
     if not str(file.file_id or "").strip():
         outcome = "missing_source_identity"
@@ -337,6 +356,131 @@ def run_admission_preflight(
                 evidence_potential = "policy_blocked"
             else:
                 evidence_potential = "sufficient"
+                try:
+                    source_response = deps.get_source_identity(
+                        ReportSourceIdentityGetRequest(
+                            schema_version="1.0",
+                            db_path=str(request.settings.reports_db),
+                            report_title=title,
+                            md5=source_identity,
+                        ),
+                        ctx,
+                    )
+                    resolved = source_response.resolution
+                    publisher = str(
+                        getattr(resolved, "publisher_name", "") or ""
+                    ).strip()
+                    source_record_id = int(
+                        getattr(resolved, "source_record_id", 0) or 0
+                    )
+                    if (
+                        publisher
+                        and str(getattr(source_response, "resolution_source", "") or "")
+                        == "md5"
+                        and str(getattr(resolved, "identity_status", "") or "")
+                        != "resolved"
+                        and source_record_id > 0
+                    ):
+                        resolved = deps.record_source_identity_observation(
+                            SourceIdentityObservationRecordRequest(
+                                schema_version="1.0",
+                                db_path=str(request.settings.reports_db),
+                                observation=SourceIdentityObservation(
+                                    schema_version="1.0",
+                                    source_record_id=source_record_id,
+                                    canonical_title=str(
+                                        getattr(resolved, "canonical_title", "")
+                                        or title
+                                    ),
+                                    title_evidence_locator="legacy_report_sources.report_name",
+                                    publisher_id=str(
+                                        getattr(resolved, "publisher_id", "") or ""
+                                    ),
+                                    publisher_name=publisher,
+                                    canonical_landing_page_url=str(
+                                        getattr(
+                                            resolved,
+                                            "canonical_landing_page_url",
+                                            "",
+                                        )
+                                        or ""
+                                    ),
+                                    source_page_url=str(
+                                        getattr(resolved, "source_page_url", "") or ""
+                                    ),
+                                    content_hash=f"md5:{source_identity}",
+                                    resolution_method="exact_md5_database_record",
+                                    identity_confidence="medium",
+                                ),
+                            ),
+                            ctx,
+                        ).resolution
+                        publisher = str(
+                            getattr(resolved, "publisher_name", "") or ""
+                        ).strip()
+                    if not publisher:
+                        imprint = extract_publisher_imprint(
+                            str(getattr(text, "text", "") or "")
+                        )
+                        if imprint is not None and source_record_id > 0:
+                            resolved = deps.record_source_identity_observation(
+                                SourceIdentityObservationRecordRequest(
+                                    schema_version="1.0",
+                                    db_path=str(request.settings.reports_db),
+                                    observation=SourceIdentityObservation(
+                                        schema_version="1.0",
+                                        source_record_id=source_record_id,
+                                        canonical_title=title,
+                                        title_evidence_locator=imprint.evidence_locator,
+                                        publisher_name=imprint.publisher_name,
+                                        canonical_landing_page_url=str(
+                                            getattr(
+                                                resolved,
+                                                "canonical_landing_page_url",
+                                                "",
+                                            )
+                                            or ""
+                                        ),
+                                        source_page_url=str(
+                                            getattr(resolved, "source_page_url", "")
+                                            or ""
+                                        ),
+                                        content_hash=f"md5:{source_identity}",
+                                        resolution_method=imprint.resolution_method,
+                                        identity_confidence="medium",
+                                    ),
+                                ),
+                                ctx,
+                            ).resolution
+                            publisher = str(
+                                getattr(resolved, "publisher_name", "") or ""
+                            ).strip()
+                    if (
+                        str(getattr(resolved, "identity_status", "") or "")
+                        == "resolved"
+                        and publisher
+                    ):
+                        identity_resolved = True
+                        source_identity = str(
+                            getattr(resolved, "source_identity_id", "")
+                            or source_identity
+                        )
+                        publisher_id = str(
+                            getattr(resolved, "publisher_id", "") or publisher
+                        )
+                        source_url = str(
+                            getattr(resolved, "canonical_landing_page_url", "") or ""
+                        )
+                except (AppError, AttributeError, TypeError, ValueError):
+                    pass
+                if not identity_resolved:
+                    outcome = "missing_source_identity"
+                else:
+                    duplicate_identity_match = request.known_source_identities.get(
+                        source_identity, duplicate_identity_match
+                    )
+                    if duplicate_identity_match:
+                        outcome = "duplicate"
 
     if outcome == "admitted" and not request.runtime_preflight_passed:
         outcome = "policy_blocked"
@@ -370,6 +514,8 @@ def run_admission_preflight(
         outcome=outcome,
         file=file,
         source_identity=source_identity,
+        publisher_id=publisher_id,
+        source_url=source_url,
         title=title,
         media_type=media_type,
         source_artifact_path=request.source_artifact_path,
@@ -609,6 +755,8 @@ def _decision(
     outcome: AdmissionOutcome,
     file: DriveFile,
     source_identity: str,
+    publisher_id: str,
+    source_url: str,
     title: str,
     media_type: str,
     source_artifact_path: str,
@@ -638,8 +786,8 @@ def _decision(
         file_id=file.file_id,
         source_identity_id=source_identity,
         report_title=title,
-        publisher_id="drive_unattributed",
-        source_url=f"drive://{file.file_id}",
+        publisher_id=publisher_id,
+        source_url=source_url,
         source_url_classification="drive_artifact_nonpublic",
         media_type=media_type,
         source_artifact_path=source_artifact_path,
