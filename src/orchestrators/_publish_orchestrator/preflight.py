@@ -6,7 +6,7 @@ import json
 import logging
 from dataclasses import replace
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Mapping, Optional
 
 from src.contracts.categories import CategoryMappingLoadRequest
 from src.contracts.files import ReadTextRequest
@@ -43,6 +43,7 @@ from src.orchestrators._publish_orchestrator.routing import (
     _normalize_string_list,
     _normalize_tag_slugs,
 )
+from src.orchestrators.publish_shared import canonicalize_html_path
 from src.services.category_mapping_service import (
     load_mappings as load_category_mappings,
 )
@@ -332,6 +333,7 @@ def _build_publish_preflight_entries(
     auth_header: str,
     ctx: RunContext,
     skip_term_resolution_file_ids: set[str] | None = None,
+    report_readiness_references: Mapping[str, str] | None = None,
 ) -> list[_PublishPreflightEntry]:
     state_rows_by_file_id: dict[str, StateGetResponse] = {}
     validation_by_file_id: dict[str, tuple[str, list[str]]] = {}
@@ -361,6 +363,14 @@ def _build_publish_preflight_entries(
                 html_path=candidate.html_path,
                 settings=settings,
                 ctx=file_ctx,
+                readiness_reference=str(
+                    (report_readiness_references or {}).get(
+                        candidate.html_path,
+                        (report_readiness_references or {}).get(
+                            canonicalize_html_path(candidate.html_path), ""
+                        ),
+                    )
+                ),
             )
             readiness_by_file_id[file_id] = readiness
             verification = verify_publish_readiness(
@@ -479,9 +489,17 @@ def _publish_readiness_paths(
 
 
 def _load_publish_readiness(
-    file_id: str, html_path: str, settings: PublishSettings, ctx
+    file_id: str,
+    html_path: str,
+    settings: PublishSettings,
+    ctx,
+    readiness_reference: str = "",
 ) -> Optional[PublishReadinessArtifact]:
-    candidates = _publish_readiness_paths(settings.output_dir, file_id, html_path)
+    candidates = (
+        [Path(readiness_reference)]
+        if readiness_reference.strip()
+        else _publish_readiness_paths(settings.output_dir, file_id, html_path)
+    )
     data = None
     used_path: Optional[Path] = None
     for path in candidates:

@@ -77,109 +77,6 @@ def test_publish_can_force_draft_for_review(
     assert post_call.json_data["status"] == "draft"
 
 
-def test_publish_cohort_manifest_limits_selection_to_cohort_members(
-    publish_settings_factory, run_context, wordpress_http, tmp_path, caplog
-) -> None:
-    settings = publish_settings_factory(validation_policy="warn")
-    _write_html(settings.output_dir, "other.html", "Drive fileId: other-file")
-    _write_html(settings.output_dir, "target.html", "Drive fileId: target-file")
-    _record_processed(settings.state_db, "other-file", run_context)
-    _record_processed(settings.state_db, "target-file", run_context)
-    cohort_manifest = tmp_path / "cohort.json"
-    cohort_manifest.write_text(
-        json.dumps(
-            {
-                "schema_version": "1.0",
-                "cohort_id": "cohort-target-only",
-                "configuration_hash": "configuration-hash",
-                "policy_hash": "policy-hash",
-                "members": [
-                    {
-                        "schema_version": "1.0",
-                        "file_id": "target-file",
-                        "md5_checksum": "target-md5",
-                    }
-                ],
-            }
-        ),
-        encoding="utf-8",
-    )
-    wordpress_http.add_json(
-        "GET",
-        "https://example.com/wp-json/wp/v2/ml_report",
-        status_code=200,
-        payload=[],
-    )
-    wordpress_http.add_json(
-        "GET",
-        "https://example.com/wp-json/wp/v2/ml_report/10",
-        status_code=200,
-        payload={
-            "id": 10,
-            "link": "https://example.com/post/10",
-            "content": {"rendered": "Drive fileId: target-file"},
-        },
-    )
-    wordpress_http.add_json(
-        "POST",
-        "https://example.com/wp-json/wp/v2/ml_report",
-        status_code=201,
-        payload={
-            "id": 10,
-            "link": "https://example.com/post/10",
-            "status": "publish",
-        },
-    )
-
-    with caplog.at_level(logging.INFO, logger=orch.logger.name):
-        outcomes = orch.run_publish(
-            settings,
-            ctx=run_context,
-            cohort_manifest=str(cohort_manifest),
-        )
-
-    assert [(outcome.file_id, outcome.status) for outcome in outcomes] == [
-        ("target-file", "published")
-    ]
-    assert (
-        len(
-            wordpress_http.calls_for(
-                "POST", "https://example.com/wp-json/wp/v2/ml_report"
-            )
-        )
-        == 1
-    )
-    assert (
-        len(
-            wordpress_http.calls_for(
-                "GET", "https://example.com/wp-json/wp/v2/ml_report"
-            )
-        )
-        == 1
-    )
-    assert (
-        len(
-            wordpress_http.calls_for(
-                "GET", "https://example.com/wp-json/wp/v2/ml_report/10"
-            )
-        )
-        == 1
-    )
-    assert outcomes[0].authenticated_readback_verified is True
-    events = _json_events(caplog, orch.logger.name)
-    cohort_event = next(
-        event
-        for event in events
-        if event.get("event") == "publish_cohort_selection_applied"
-    )
-    assert cohort_event["fields"] == {
-        "cohort_member_count": 1,
-        "candidates_before_filter": 2,
-        "selected_candidates": 1,
-        "excluded_candidates": 1,
-    }
-
-
 def test_force_report_cards_updates_existing_post_in_place(
     publish_settings_factory, run_context, wordpress_http
 ) -> None:
@@ -241,8 +138,11 @@ def test_publish_routes_report_by_embedded_entity_metadata(
 ) -> None:
     settings = publish_settings_factory(validation_policy="warn")
     settings = replace(settings, wp=replace(settings.wp, post_type="posts"))
-    _write_html(settings.output_dir, "report.html", "Drive fileId: file123")
+    report_path = _write_html(
+        settings.output_dir, "report.html", "Drive fileId: file123"
+    )
     _record_processed(settings.state_db, "file123", run_context)
+    _seed_report_metadata(settings.reports_db, str(report_path), "file123", run_context)
     wordpress_http.add_json(
         "GET",
         "https://example.com/wp-json/wp/v2/ml_report",
@@ -347,6 +247,29 @@ def test_publish_uses_explicit_html_paths_over_output_listing(
         "https://example.com/wp-json/wp/v2/ml_report",
         status_code=201,
         payload={"id": 10, "link": "https://example.com/post/10", "status": "publish"},
+    )
+
+    def _readback(_call: RecordedHttpRequest) -> FakeHttpResponse:
+        payload = wordpress_http.calls_for(
+            "POST", "https://example.com/wp-json/wp/v2/ml_report"
+        )[0].json_data
+        return FakeHttpResponse.from_payload(
+            status_code=200,
+            payload={
+                "id": 10,
+                "type": "ml_report",
+                "status": payload["status"],
+                "link": "https://example.com/post/10",
+                "featured_media": payload.get("featured_media", 0),
+                "categories": payload.get("categories", []),
+                "tags": payload.get("tags", []),
+                "content": {"raw": payload["content"], "rendered": payload["content"]},
+                "meta": payload["meta"],
+            },
+        )
+
+    wordpress_http.add(
+        "GET", "https://example.com/wp-json/wp/v2/ml_report/10", _readback
     )
 
     results = orch.run_publish(settings, limit=1, html_paths=[str(target)])
@@ -532,7 +455,9 @@ def test_publish_canary_persists_complete_readback_proof_and_zero_write_repeat(
     publish_settings_factory, run_context, wordpress_http, tmp_path
 ) -> None:
     settings = publish_settings_factory(validation_policy="warn")
-    _write_html(settings.output_dir, "report.html", "Drive fileId: file123")
+    report_path = _write_html(
+        settings.output_dir, "report.html", "Drive fileId: file123"
+    )
     _record_processed(settings.state_db, "file123", run_context)
     cohort_manifest = tmp_path / "cohort.json"
     cohort_manifest.write_text(
@@ -548,6 +473,7 @@ def test_publish_canary_persists_complete_readback_proof_and_zero_write_repeat(
                         "schema_version": "1.0",
                         "file_id": "file123",
                         "md5_checksum": "file123-md5",
+                        "html_path": str(report_path),
                     }
                 ],
             }

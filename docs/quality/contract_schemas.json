@@ -47615,6 +47615,9 @@
         "prompt_policy_version": {
           "type": "string"
         },
+        "readiness_reference": {
+          "type": "string"
+        },
         "required_artifact_references": {
           "items": {
             "$ref": "#/$defs/src.contracts.workflow_queue.WorkflowArtifactReference"

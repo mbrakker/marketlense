@@ -184,6 +184,15 @@ def approve_publication_package(
                 retryable=False,
             )
         readiness = _readiness_from_row(row)
+        if (
+            readiness.entity_type != payload.entity_type
+            or readiness.package_reference != payload.entity_package_reference
+        ):
+            raise AppError(
+                code="workflow_publication_approval_reference_mismatch",
+                message="Publication submission must use the exact readiness package reference",
+                retryable=False,
+            )
         if readiness.readiness_status == "approved":
             prior = conn.execute(
                 "SELECT approval_id,package_checksum,actor_id,note,action,created_at_utc "
@@ -228,7 +237,15 @@ def approve_publication_package(
                 now,
             ),
         )
-        approved_payload = replace(payload, approval_id=approval_id)
+        approved_payload = replace(
+            payload,
+            approval_id=approval_id,
+            readiness_reference=(
+                readiness.validation_reference
+                if payload.entity_type == "report"
+                else payload.readiness_reference
+            ),
+        )
         approved_submission = replace(publish_submission, payload=approved_payload)
         event_key = ":".join(
             (

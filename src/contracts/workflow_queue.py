@@ -246,6 +246,7 @@ class WordPressPublishPayload(WorkflowQueuePayload):
     entity_type: str = ""
     entity_package_reference: str = ""
     package_checksum: str = ""
+    readiness_reference: str = ""
     approval_id: str = ""
     target_site: str = ""
     dry_run: bool = False

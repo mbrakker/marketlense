@@ -3,10 +3,12 @@ from __future__ import annotations
 """Routing helpers for publication orchestration."""
 
 import copy
+import hashlib
+import json
 import logging
 from dataclasses import replace
 
-from src.contracts.files import ReadTextRequest
+from src.contracts.files import ReadBytesRequest, ReadTextRequest
 from src.contracts.publish import (
     PublishEntityMetadata,
     PublishSettings,
@@ -23,7 +25,7 @@ from src.orchestrators._publish_orchestrator.models import (
     _PublishEntityRoute,
 )
 from src.orchestrators.publish_shared import canonicalize_html_path
-from src.services.file_service import read_text
+from src.services.file_service import read_bytes, read_text
 from src.services.report_store_service import list_metadata
 from src.utils.errors import AppError
 from src.utils.html_utils import build_publish_html_snapshot
@@ -31,6 +33,28 @@ from src.utils.logging import child_context, log_event
 from src.utils.slugify import slugify
 
 logger = logging.getLogger("market_lense.publish_orchestrator")
+
+
+def report_publish_package_checksum(
+    *, html_path: str, readiness_reference: str, ctx: RunContext
+) -> str:
+    """Hash the exact immutable Report surfaces approved for queue publication."""
+
+    html = read_bytes(ReadBytesRequest(schema_version="1.0", path=html_path), ctx)
+    readiness = read_bytes(
+        ReadBytesRequest(schema_version="1.0", path=readiness_reference), ctx
+    )
+    payload = {
+        "schema_version": "1.0",
+        "entity_type": "report",
+        "html_sha256": hashlib.sha256(html.content).hexdigest(),
+        "readiness_sha256": hashlib.sha256(readiness.content).hexdigest(),
+    }
+    return hashlib.sha256(
+        json.dumps(
+            payload, ensure_ascii=True, sort_keys=True, separators=(",", ":")
+        ).encode("utf-8")
+    ).hexdigest()
 
 
 def _metadata_index(

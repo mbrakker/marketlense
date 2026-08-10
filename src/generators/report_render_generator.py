@@ -532,7 +532,7 @@ def render_report_output(
             else None
         )
         if report_card_manifest_path:
-            _persist_publish_readiness(
+            readiness_path = _persist_publish_readiness(
                 runtime=runtime,
                 analysis=analysis,
                 dependencies=dependencies,
@@ -562,7 +562,10 @@ def render_report_output(
                 vector_store_status=analysis.vector_store_status,
                 indexed_at_utc=analysis.indexed_at_utc,
                 openai_file_id=analysis.openai_file_id,
-                evidence_packs=analysis.evidence_paths or None,
+                evidence_packs={
+                    **analysis.evidence_paths,
+                    "publish_readiness": readiness_path,
+                },
                 vector_store_last_error=analysis.last_error,
                 text_validation_status=source.text_validation_status,
                 text_validation_reason=source.text_validation_reason,
@@ -825,7 +828,7 @@ def render_report_output(
         )
     )
 
-    _persist_publish_readiness(
+    readiness_path = _persist_publish_readiness(
         runtime=runtime,
         analysis=analysis,
         dependencies=dependencies,
@@ -845,7 +848,10 @@ def render_report_output(
         vector_store_status=analysis.vector_store_status,
         indexed_at_utc=analysis.indexed_at_utc,
         openai_file_id=analysis.openai_file_id,
-        evidence_packs=analysis.evidence_paths or None,
+        evidence_packs={
+            **analysis.evidence_paths,
+            "publish_readiness": readiness_path,
+        },
         vector_store_last_error=analysis.last_error,
         text_validation_status=source.text_validation_status,
         text_validation_reason=source.text_validation_reason,

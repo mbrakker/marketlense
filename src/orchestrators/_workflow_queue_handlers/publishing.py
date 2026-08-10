@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import uuid
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field, replace
@@ -113,6 +114,7 @@ from src.orchestrators.mail_report_acquisition_orchestrator import (
     run_mail_report_acquisition,
 )
 from src.orchestrators.publish_orchestrator import publish_cross_report_package
+from src.orchestrators.publish_orchestrator import run_publish
 from src.orchestrators.publisher_inventory_orchestrator import (
     run_publisher_inventory_discovery,
 )
@@ -145,9 +147,13 @@ from src.services.workflow_queue_service import (
 )
 from src.utils.clock import utc_now_iso
 from src.utils.errors import AppError
+from src.utils.logging import log_event
 from src.utils.wp_auth import build_auth_header
 
 from .shared import WorkflowQueueHandlerResult, _boolean_attribute, _digest
+
+
+logger = logging.getLogger("market_lense.workflow_queue_publishing")
 
 
 def _publication_readiness_handler(
@@ -167,6 +173,85 @@ def _publication_readiness_handler(
             retryable=False,
         )
     required_assets = str(payload.required_asset_status or "optional").strip().lower()
+    if payload.entity_type == "report":
+        from src.generators.publish_readiness_generator import (
+            parse_publish_readiness_payload,
+        )
+        from src.orchestrators._publish_orchestrator.routing import (
+            report_publish_package_checksum,
+        )
+
+        try:
+            package_checksum = report_publish_package_checksum(
+                html_path=payload.entity_package_reference,
+                readiness_reference=payload.validation_reference,
+                ctx=ctx,
+            )
+            readiness_payload = json.loads(
+                read_bytes(
+                    ReadBytesRequest(
+                        schema_version="1.0", path=payload.validation_reference
+                    ),
+                    ctx,
+                ).content.decode("utf-8")
+            )
+            report_readiness = parse_publish_readiness_payload(readiness_payload)
+        except (
+            AppError,
+            UnicodeDecodeError,
+            json.JSONDecodeError,
+            TypeError,
+            ValueError,
+        ) as exc:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="orchestrator",
+                    event="report_publication_readiness_rejected",
+                    module=logger.name,
+                    fields={
+                        "reason": "unreadable_or_invalid",
+                        "report_id": job.report_id,
+                    },
+                )
+            )
+            raise AppError(
+                code="workflow_queue_report_publish_readiness_invalid",
+                message="Report publication requires a readable immutable readiness decision",
+                cause=exc,
+                retryable=False,
+            ) from exc
+        if (
+            package_checksum != payload.package_checksum
+            or report_readiness.status != "pass"
+        ):
+            logger.info(
+                log_event(
+                    ctx,
+                    role="orchestrator",
+                    event="report_publication_readiness_rejected",
+                    module=logger.name,
+                    fields={
+                        "reason": "checksum_or_status",
+                        "report_id": job.report_id,
+                        "readiness_status": report_readiness.status,
+                    },
+                )
+            )
+            required_assets = "readiness_blocked"
+        else:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="orchestrator",
+                    event="report_publication_readiness_accepted",
+                    module=logger.name,
+                    fields={
+                        "report_id": job.report_id,
+                        "readiness_status": report_readiness.status,
+                    },
+                )
+            )
     if _boolean_attribute(payload, "claim_validation_required", False):
         response = read_bytes(
             ReadBytesRequest(schema_version="1.0", path=payload.validation_reference),
@@ -195,7 +280,7 @@ def _publication_readiness_handler(
     )
     config_path = str(payload.attributes.get("config_path", ""))
     app = load_settings(ConfigLoadRequest(schema_version="1.0", path=config_path), ctx)
-    readiness = record_publication_readiness(
+    readiness_record = record_publication_readiness(
         app.state_db,
         package_checksum=payload.package_checksum,
         entity_type=payload.entity_type,
@@ -209,11 +294,11 @@ def _publication_readiness_handler(
     )
     return WorkflowQueueHandlerResult(
         result=WorkflowStageResult(
-            output_reference=readiness.package_reference,
-            output_content_hash=readiness.package_checksum,
+            output_reference=readiness_record.package_reference,
+            output_content_hash=readiness_record.package_checksum,
             execution_plan_hash=job.execution_plan_hash,
-            output_verified=readiness.readiness_status == "awaiting_review",
-            summary={"readiness_status": readiness.readiness_status},
+            output_verified=readiness_record.readiness_status == "awaiting_review",
+            summary={"readiness_status": readiness_record.readiness_status},
         )
     )
 
@@ -318,10 +403,10 @@ def _wordpress_publish_handler(
     """Perform an approval-gated, idempotent WordPress entity publication."""
 
     assert isinstance(payload, WordPressPublishPayload)
-    if payload.entity_type not in {"briefing", "signal"}:
+    if payload.entity_type not in {"briefing", "signal", "report"}:
         raise AppError(
             code="workflow_queue_publish_entity_unsupported",
-            message="WordPress queue supports retained Briefing and Signal packages only",
+            message="WordPress queue supports retained Report, Briefing, and Signal packages only",
             retryable=False,
             context={"entity_type": payload.entity_type},
         )
@@ -346,6 +431,117 @@ def _wordpress_publish_handler(
             code="stale_approval",
             message="WordPress publication requires a current approval for this package",
             retryable=False,
+        )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="workflow_queue_publication_approval_validated",
+            module=logger.name,
+            fields={
+                "entity_type": payload.entity_type,
+                "package_checksum": payload.package_checksum,
+            },
+        )
+    )
+    if payload.entity_type == "report":
+        from src.orchestrators._publish_orchestrator.routing import (
+            report_publish_package_checksum,
+        )
+
+        readiness_reference = str(payload.readiness_reference or "").strip()
+        if not readiness_reference:
+            raise AppError(
+                code="workflow_queue_report_publish_readiness_missing",
+                message="Approved Report publication requires its immutable readiness reference",
+                retryable=False,
+            )
+        actual_checksum = report_publish_package_checksum(
+            html_path=payload.entity_package_reference,
+            readiness_reference=readiness_reference,
+            ctx=ctx,
+        )
+        if actual_checksum != payload.package_checksum:
+            raise AppError(
+                code="workflow_queue_report_publish_package_checksum_mismatch",
+                message="Approved Report package no longer matches its immutable references",
+                retryable=False,
+            )
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="report_publication_package_resolved",
+                module=logger.name,
+                fields={"report_id": job.report_id, "candidate_count": 1},
+            )
+        )
+        if payload.dry_run:
+            return WorkflowQueueHandlerResult(
+                result=WorkflowStageResult(
+                    output_reference=payload.entity_package_reference,
+                    output_content_hash=payload.package_checksum,
+                    execution_plan_hash=job.execution_plan_hash,
+                    output_verified=True,
+                    summary={
+                        "publication_status": "dry_run",
+                        "wordpress_id": 0,
+                        "requested_writes": 0,
+                        "actual_writes": 0,
+                    },
+                )
+            )
+        outcomes = run_publish(
+            load_publish_settings(
+                ConfigLoadRequest(schema_version="1.0", path=config_path), ctx
+            ),
+            html_paths=[payload.entity_package_reference],
+            ctx=ctx,
+            report_readiness_references={
+                payload.entity_package_reference: readiness_reference
+            },
+        )
+        if len(outcomes) != 1 or outcomes[0].status == "error":
+            outcome = outcomes[0] if outcomes else None
+            raise AppError(
+                code=(
+                    outcome.error
+                    if outcome and outcome.error
+                    else "workflow_queue_wordpress_publish_failed"
+                ),
+                message="Canonical Report publication did not complete",
+                retryable=False,
+            )
+        outcome = outcomes[0]
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="report_publication_wordpress_observed",
+                module=logger.name,
+                fields={
+                    "requested_writes": outcome.requested_write_count,
+                    "actual_writes": outcome.actual_write_count,
+                    "idempotent": outcome.actual_write_count == 0,
+                    "authenticated_readback_verified": outcome.authenticated_readback_verified,
+                },
+            )
+        )
+        return WorkflowQueueHandlerResult(
+            result=WorkflowStageResult(
+                output_reference=outcome.post_url or payload.entity_package_reference,
+                output_content_hash=payload.package_checksum,
+                execution_plan_hash=job.execution_plan_hash,
+                output_verified=payload.dry_run
+                or outcome.authenticated_readback_verified,
+                summary={
+                    "publication_status": outcome.status,
+                    "wordpress_id": outcome.post_id or 0,
+                    "requested_writes": outcome.requested_write_count,
+                    "actual_writes": outcome.actual_write_count,
+                },
+            ),
+            external_effects=[] if payload.dry_run else ["wordpress"],
         )
     package = _cross_report_package_from_artifact(payload.entity_package_reference, ctx)
     expected_route = f"wordpress:ml_{payload.entity_type}"

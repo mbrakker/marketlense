@@ -161,6 +161,7 @@ from src.utils.wp_auth import build_auth_header
 from .shared import (
     WorkflowQueueHandler,
     WorkflowQueueHandlerResult,
+    _digest,
     _requested_budget_override,
 )
 
@@ -194,6 +195,57 @@ def _stage_child_submission(
         source_identity_id=job.source_identity_id,
         report_id=report_id,
         budget_profile="report_ingest",
+    )
+
+
+def _report_publication_readiness_submission(
+    *,
+    job: WorkflowJob,
+    payload: QueuePayload,
+    html_path: str,
+    readiness_reference: str,
+    ctx: RunContext,
+) -> WorkflowJobSubmission:
+    """Hand one rendered Report to the approval-gated durable publication path."""
+
+    from src.orchestrators._publish_orchestrator.routing import (
+        report_publish_package_checksum,
+    )
+
+    package_checksum = report_publish_package_checksum(
+        html_path=html_path,
+        readiness_reference=readiness_reference,
+        ctx=ctx,
+    )
+    report_id = str(getattr(payload, "report_id", "") or job.report_id).strip()
+    return WorkflowJobSubmission(
+        schema_version="1.0",
+        queue_name="publication_readiness",
+        job_type="publication_readiness.v1",
+        payload=PublicationReadinessPayload(
+            entity_type="report",
+            entity_package_reference=html_path,
+            package_checksum=package_checksum,
+            validation_reference=readiness_reference,
+            lineage_reference=payload.input_reference,
+            required_asset_status="ready",
+            input_reference=html_path,
+            input_content_hash=package_checksum,
+            processing_version=payload.processing_version,
+            attributes=dict(payload.attributes),
+        ),
+        idempotency_key=_digest("publication-readiness", "report", package_checksum),
+        deduplication_scope="validated-publication-package",
+        root_workflow_id=job.root_workflow_id or job.job_id,
+        parent_job_id=job.job_id,
+        trigger_event_id=job.trigger_event_id or job.job_id,
+        correlation_id=job.correlation_id or job.root_workflow_id or job.job_id,
+        entity_type="report",
+        entity_id=report_id,
+        publisher_id=job.publisher_id,
+        source_identity_id=job.source_identity_id,
+        report_id=report_id,
+        budget_profile="publishing",
     )
 
 
@@ -399,6 +451,27 @@ def _report_stage_handler(
                     payload=payload,
                     next_queue=next_queue,
                     next_payload=next_payload,
+                )
+            )
+        if job.queue_name == "report_render":
+            html_path = str(outcome.html_path or "").strip()
+            readiness_reference = str(
+                (outcome.evidence_packs or {}).get("publish_readiness", "")
+            ).strip()
+            if not html_path or not readiness_reference:
+                raise AppError(
+                    code="workflow_queue_report_publish_package_incomplete",
+                    message="Rendered Report requires immutable HTML and publish-readiness references",
+                    retryable=False,
+                    context={"report_id": report_id},
+                )
+            downstream.append(
+                _report_publication_readiness_submission(
+                    job=job,
+                    payload=payload,
+                    html_path=html_path,
+                    readiness_reference=readiness_reference,
+                    ctx=ctx,
                 )
             )
         return WorkflowQueueHandlerResult(

@@ -16,14 +16,21 @@ Every `PublishOutcome` retains an ordered, persisted transaction proof alongside
 
 A bounded release canary must separately verify a created post through authenticated `context=edit` REST readback, then repeat the exact package with zero requested and actual post writes. Its readback checks post ID, post type, status, report/file identity, raw-content checksum, canonical URL, Open Graph URL when WordPress exposes it, source-attribution metadata, taxonomy assignments, featured/card media associations, and the prior captured rendered-content hash when supported. The first verified readback captures the rendered hash; later idempotent readbacks must match it. Candidates with a matching idempotency record remain eligible for authenticated lookup/readback, but skip taxonomy resolution as well as post mutation, because an `ensure` request may itself write. This verification is permitted only against an explicitly configured sandbox target.
 
-Queue-driven Signal and Briefing publication is approval-gated. Generation
-persists a source-linked package; `cover_generation` produces the mandatory
-card assets and freezes the approval checksum; `publication_readiness` records
-`awaiting_review`; and an explicit approval writes one `wordpress_publish`
-outbox event. The worker rechecks approval, checksum, taxonomy/media/idempotency
-and readback before writing. A verified post schedules the separate
+Queue-driven Report, Signal, and Briefing publication is approval-gated. Report
+rendering writes the canonical readiness decision, then records one immutable
+readiness package containing the exact HTML and readiness references. Signal and
+Briefing generation persist source-linked packages, and `cover_generation`
+freezes their mandatory card assets. `publication_readiness` records
+`awaiting_review`; an explicit approval writes one `wordpress_publish` outbox
+event. The Report worker rechecks approval and the two-surface package checksum,
+then calls the existing report publisher with exactly that one candidate and
+readiness reference. It never scans `output_dir`. A cohort manifest resolves
+only admitted Report members before candidate construction.
+
+All workers recheck approval, checksum, taxonomy/media/idempotency and readback
+before writing. A verified Briefing or Signal post schedules the separate
 `wordpress_projection` queue, which rebuilds the public intelligence projection
 through the existing WordPress projection boundary. Live workers remain feature
 gated. `queue-approve-publication --dry-run --yes` records the same durable
-approval and executes the publish worker's complete local preflight without a
-WordPress write; it does not fabricate a published event or projection.
+approval without a WordPress write; it does not fabricate a published event or
+projection.

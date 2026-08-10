@@ -474,7 +474,7 @@ def test_operational_handlers_reject_incomplete_inputs_before_external_work() ->
         queue_orchestrator._mailbox_delivery_handler(
             job, MailboxDeliveryPayload(), _ctx()
         )
-    with pytest.raises(AppError, match="supports retained Briefing and Signal"):
+    with pytest.raises(AppError, match="requires a current approval"):
         queue_orchestrator._wordpress_publish_handler(
             job, WordPressPublishPayload(entity_type="report"), _ctx()
         )

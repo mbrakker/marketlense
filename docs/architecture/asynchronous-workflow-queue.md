@@ -26,6 +26,7 @@ flowchart LR
   SI --> RS[report_selection] --> AN[report_analysis] --> RR[report_render]
   AN --> AR[artifact_repair]
   RR --> AP[analytics_projection]
+  RR --> PR[publication_readiness]
   AP --> CE[claim_embedding]
   AP --> SC[signal_candidate] --> SG[signal_generation] --> CG[cover_generation]
   AP --> BO[briefing_opportunity] --> BG[briefing_generation] --> CG
@@ -60,6 +61,9 @@ flowchart LR
   G --> H[report_render]
   H --> I[render_complete checkpoint]
   I --> J[analytics_projection]
+  I --> R[publication_readiness]
+  R --> REVIEW[human review]
+  REVIEW --> WP[wordpress_publish]
 ```
 
 The report-stage handlers invoke the existing report-generation entrypoint,
@@ -232,12 +236,23 @@ deduplicated `signal_generation` job per approved candidate group. Both workers
 reject malformed bounded attributes before resolving application configuration
 or opening a projection or provider operation.
 
-`wordpress_publish` accepts only an approved immutable Briefing or Signal artifact. The
-approval transaction injects its durable approval ID into the outbox submission;
-the worker verifies that ID and the artifact checksum before loading the package
-or contacting WordPress. It then delegates taxonomy, media, idempotency, and
-readback to the established publisher. Live writes remain feature-gated; a
-verified WordPress post emits one deduplicated `wordpress_projection` job.
+`report_render` emits two independent durable handoffs: analytics projection and
+Report publication readiness. The Report handoff carries the exact rendered HTML
+reference and its retained `publish_readiness.json`; its checksum hashes both
+immutable surfaces. A cohort manifest resolves only its admitted members' exact
+HTML references (from the manifest or retained report metadata) before any
+output-directory listing, so unrelated HTML is never a publication candidate.
+
+`wordpress_publish` accepts an approved immutable Report, Briefing, or Signal
+artifact. The approval transaction injects its durable approval ID and, for a
+Report, the readiness reference from the retained readiness record into the
+outbox submission; the worker rechecks that ID and checksum before contacting
+WordPress. Report publication delegates to the existing canonical report
+publisher with exactly one supplied candidate and the same readiness, lineage,
+taxonomy/media, budget, idempotency, and authenticated-readback safeguards.
+Briefing and Signal retain their established publisher path. Live writes remain
+feature-gated; a verified Briefing or Signal post emits one deduplicated
+`wordpress_projection` job.
 `wordpress_projection` validates that verified post reference, then delegates
 the public-entity read, deterministic intelligence build, and WordPress
 readback-backed projection write to the existing projection orchestrator. It is

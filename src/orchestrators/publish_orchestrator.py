@@ -10,7 +10,7 @@ import time
 from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable, List, Optional, TypedDict, cast
+from typing import Callable, List, Mapping, Optional, TypedDict, cast
 from urllib.parse import urlparse
 
 from src.contracts.artifact_lineage import (
@@ -1030,6 +1030,7 @@ def run_publish(
     execution_plan_mode: str = "shadow",
     cohort_manifest: str | None = None,
     require_full_validation_manifest: bool = False,
+    report_readiness_references: Mapping[str, str] | None = None,
 ) -> List[PublishOutcome]:
     root_ctx = ctx or new_run_context()
     cohort_member_file_ids: set[str] | None = None
@@ -1080,7 +1081,7 @@ def run_publish(
         )
     )
 
-    auto_discovery = html_paths is None
+    auto_discovery = html_paths is None and cohort_member_file_ids is None
     normalized_plan_mode = str(execution_plan_mode or "shadow").strip().lower()
     if normalized_plan_mode not in {"shadow", "enforce", "disabled"}:
         raise AppError(
@@ -1088,14 +1089,6 @@ def run_publish(
             message="Execution planning mode must be shadow, enforce, or disabled",
             retryable=False,
         )
-    if auto_discovery:
-        list_resp = list_html(
-            ListHtmlRequest(schema_version="1.0", root_dir=settings.output_dir),
-            root_ctx,
-        )
-        discovered_html_paths = list_resp.html_paths
-    else:
-        discovered_html_paths = [str(path) for path in html_paths]  # type: ignore[union-attr]
     outcomes: List[PublishOutcome] = []
     attempted = 0
     published = 0
@@ -1134,6 +1127,50 @@ def run_publish(
         html_file_id_map = {}
         metadata_by_file_id = {}
 
+    if cohort_member_file_ids is not None:
+        missing_members = sorted(
+            file_id
+            for file_id in cohort_member_file_ids
+            if not str(
+                cohort_members[file_id].get("html_path")
+                or getattr(metadata_by_file_id.get(file_id), "html_path", "")
+            ).strip()
+        )
+        if missing_members:
+            raise AppError(
+                code="validation_cohort_report_reference_missing",
+                message="Cohort publication requires each admitted Report's retained HTML reference",
+                retryable=False,
+                context={"missing_member_count": len(missing_members)},
+            )
+        discovered_html_paths = [
+            str(
+                cohort_members[file_id].get("html_path")
+                or metadata_by_file_id[file_id].html_path
+            )
+            for file_id in sorted(cohort_member_file_ids)
+        ]
+        logger.info(
+            log_event(
+                root_ctx,
+                role="orchestrator",
+                event="publish_cohort_members_resolved",
+                module=logger.name,
+                fields={
+                    "cohort_member_count": len(cohort_member_file_ids),
+                    "resolved_candidate_count": len(discovered_html_paths),
+                },
+            )
+        )
+    elif auto_discovery:
+        list_resp = list_html(
+            ListHtmlRequest(schema_version="1.0", root_dir=settings.output_dir),
+            root_ctx,
+        )
+        discovered_html_paths = list_resp.html_paths
+    else:
+        discovered_html_paths = [str(path) for path in html_paths]  # type: ignore[union-attr]
+
     if auto_discovery:
         selected_html_paths = _sort_auto_discovered_html_paths(
             discovered_html_paths,
@@ -1168,7 +1205,9 @@ def run_publish(
         skip_unowned_nonpublish_html=auto_discovery,
     )
     if cohort_member_file_ids is not None:
-        candidates_before_cohort_filter = len(candidates)
+        # The input list was resolved from admitted members above.  Keep this
+        # assertion-like filter as a fail-closed boundary should report-store
+        # metadata change between resolution and candidate construction.
         candidates = [
             candidate
             for candidate in candidates
@@ -1182,11 +1221,9 @@ def run_publish(
                 module=logger.name,
                 fields={
                     "cohort_member_count": len(cohort_member_file_ids),
-                    "candidates_before_filter": candidates_before_cohort_filter,
+                    "candidates_before_filter": len(discovered_html_paths),
                     "selected_candidates": len(candidates),
-                    "excluded_candidates": (
-                        candidates_before_cohort_filter - len(candidates)
-                    ),
+                    "excluded_candidates": len(discovered_html_paths) - len(candidates),
                 },
             )
         )
@@ -1240,13 +1277,16 @@ def run_publish(
             )
         ]
         for candidate in blocked_candidates:
+            entity_route = candidate.entity_route
+            if entity_route is None:
+                continue
             outcomes.append(
                 PublishOutcome(
                     schema_version="1.0",
                     html_path=candidate.html_path,
                     file_id=str(candidate.file_id or ""),
                     status="error",
-                    error=blocked_post_types[candidate.entity_route.post_type],
+                    error=blocked_post_types[entity_route.post_type],
                     publication_outcome="preflight_blocked",
                     transaction_outcomes=["preflight_blocked"],
                 )
@@ -1350,6 +1390,14 @@ def run_publish(
                     html_path=candidate.html_path,
                     settings=settings,
                     ctx=file_ctx,
+                    readiness_reference=str(
+                        (report_readiness_references or {}).get(
+                            candidate.html_path,
+                            (report_readiness_references or {}).get(
+                                canonicalize_html_path(candidate.html_path), ""
+                            ),
+                        )
+                    ),
                 )
                 readiness_verification = verify_publish_readiness(
                     artifact=readiness,
@@ -1391,6 +1439,7 @@ def run_publish(
         auth_header=auth_header,
         ctx=root_ctx,
         skip_term_resolution_file_ids=idempotent_term_skip_file_ids,
+        report_readiness_references=report_readiness_references,
     )
 
     for entry in preflight_entries:
