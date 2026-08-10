@@ -93,6 +93,47 @@ def test_collect_prompt_fixture_corpus_metrics_aggregates_runtime_tokens_and_cos
     assert row.runtime_ms >= 0.0
 
 
+def test_collect_prompt_fixture_corpus_metrics_warms_the_full_fixture_corpus(
+    tmp_path: Path,
+    external_boundary_mocks_only,
+) -> None:
+    prompts_root = tmp_path / "prompts"
+    _write_prompt_namespace(prompts_root, "alpha", "hello", "task")
+    fixture_path = prompts_root / "_dry_run_fixtures.yaml"
+    fixture_path.write_text(
+        "\n".join(
+            [
+                'schema_version: "1.0"',
+                "fixtures:",
+                '  - namespace: "alpha"',
+                '    family: "report"',
+                '    model: "openai/gpt-5-mini"',
+                "    test_only_execution_override: true",
+                "    benchmark:",
+                "      expected_output_tokens: 120",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    external_boundary_mocks_only.setattr(prompt_service, "PROMPTS_ROOT", prompts_root)
+    external_boundary_mocks_only.setattr(
+        prompt_service,
+        "PROMPT_DRY_RUN_FIXTURE_PATH",
+        fixture_path,
+    )
+
+    metrics = collect_prompt_fixture_corpus_metrics(
+        pricing={},
+        iterations=1,
+        force_reload=True,
+    )
+
+    # A warm-up must not become a second measured corpus row.
+    assert metrics.fixture_count == 1
+    assert set(metrics.namespaces) == {"alpha"}
+
+
 def test_prompt_fixture_regression_allowlist_requires_unexpired_bound() -> None:
     baseline = {
         "families": {

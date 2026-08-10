@@ -31,7 +31,7 @@ All work is listed below in one register. `Active` items have detailed completio
 | Closed | A4 | Quarantine irreparably malformed Drive PDFs | Deterministic structural validation, durable quarantine, and retained-file revalidation are active. |
 | Closed | A6 | Budget-manager closeout and operational proof | Live Drive, OpenAI vector-store, and LLM calls recorded actual use; next governed calls were stopped before provider I/O and strict evidence passed. |
 | Closed | A5 | Business-email, CAPTCHA, anti-bot, terminal-evidence, and avoided-browser-spend route policy | TTL-bound route policy now avoids browser/mailbox work for retained hard blockers and allows explicit revalidation. |
-| Active | A10 | Budget-deferred-work recovery and operator requeue | Turn durable budget deferrals into safe, visible, idempotent resumption. |
+| Closed | A10 | Budget-deferred-work recovery and operator requeue | Autonomous-MVP recovery is enabled only for three proof-bound adapters; unsupported work remains held. |
 | Closed | A11 | Ledger-driven recurring-failure prevention and operator prioritization | Read-only deterministic remediation-opportunity report groups recurring failures and holds every item without a runtime executor. |
 | Closed | A7 | Budget-aware model routing, compaction, and failure-class fallback | YAML routing, anchor-preserving compaction, same-provider fallback, retained-corpus evidence gate, and regression coverage are active. |
 | Active | A8 | Compare retained model-call replay bundles | Standalone read-only regression outcome. |
@@ -96,6 +96,8 @@ All work is listed below in one register. `Active` items have detailed completio
 
 ## Recently Closed
 
+- **A10 — Budget-deferred-work recovery and operator requeue (2026-08-10):** The reviewed `autonomous_mvp` configuration overlay enables the one-shot supervisor plus bounded deferred-work and remediation reapers at two records per pass, without enabling queue-worker batches or a second scheduler. The only legacy deferred-work adapters are `report_generation`, `report_download`, and `publisher_inventory`; unknown workflows remain remediation-held. Report recovery now forbids `latest_safe` fresh fallback, so invalid checkpoint proof cannot restart PDF/OCR/extraction/model work. Structured recovery events retain adapter, due time, plan hash, reused-artifact summary, attempt, terminal result, and bounded reason. Focused recovery/configuration tests passed (61). A retained real render recovery resolved from `analysis_complete` with one attempt and zero new provider calls/cost, avoiding source preparation, selection, analysis, PDF/OCR/crop, vector, analysis-model, and validator-model work. Real report-download and publisher-inventory recovery handoffs each converged on one durable pending canonical queue job across repeated submissions. Existing E11 owns recovery-effectiveness measurement, so no duplicate follow-up task was added.
+
 - **Task 1 — Fixed cohort and execution-limit semantics (2026-07-26):** Ingest now exposes distinct `--cohort-size`, `--attempt-limit`, `--success-target`, and `--cohort-manifest` controls; the legacy `--limit` remains only as an explicit deprecated attempt-limit alias and cannot be combined with its replacement. New schema-`1.1` cohort manifests freeze immutable Drive members before model-backed report work and retain each report ID, canonical source identity, deterministic selection reason, configuration hash, policy hash, cohort ID, and derived validation-run ID. Replay recomputes and verifies both identities so tampered membership fails closed, while schema-`1.0` manifests remain readable. Fixed-cohort and attempt-limit failures stay in the denominator and never trigger replacement; only explicit `--success-target` may continue selection. Focused regression coverage proves manifest replay, identity changes on membership changes, tamper rejection, distinct CLI controls, and the failed-member/no-replacement case. A fresh isolated real Drive/OpenAI run froze a one-report cohort before 22 provider calls (144,203 tokens; $0.114671); its independent category-fit gate failure remained the sole cohort denominator member with zero replacements, and a second manifest replay selected no substitute. P12 owns the significant next step of repeat sandbox publishing, while P14 owns manifest-authoritative publication selection, so no duplicate follow-up item was added.
 
 - **Task 9 — Validation-run attribution and reliability telemetry (2026-07-26):** Settings startup resolves the complete finite production model-policy namespace inventory and rejects an unknown or uncovered route before provider I/O; run preflight retains the resolved namespace/provider/model/full-policy matrix. Validation-run model usage also fails closed without complete validation/cohort/workflow/report/publisher identity; workflow/stage/artifact/action/semantic-task context; prompt/policy namespaces; provider/model/cache/token/cost/repair data; and configuration/policy/build provenance. Ingest and publication materialize the same deterministic manifest-and-ledger-derived reliability artifact, with the complete admitted-to-readback funnel, per-transition failure code/count/duration/usage/recovery/intervention/rerun metrics, and stable failure Pareto. Publication continues to verify the existing signed `publish_readiness.json` instead of reinterpreting a report package. A fresh isolated Drive/OpenAI run (52 attributed calls, 474,235 tokens, $0.309298) and its guarded publish pass exercised both artifact writes; the live failure telemetry exposed and then verified the optional-repair-skip accounting correction. The active E11 recovery-effectiveness item remains the significant follow-on owner, so no duplicate backlog item was added.
@@ -143,19 +145,6 @@ The original ten-item screenshot baseline is complete in the committed implement
 ## Active Backlog
 
 ### 1. Autonomous Safety and Cost Control
-
-#### A10. Budget-deferred-work recovery and operator requeue
-
-- **Title:** Budget-deferred-work recovery and operator requeue
-- **Impact 5 / effort: 2**
-- **Context:** Durable budget-deferred recovery now safely resumes report generation through a fresh minimal plan. Budget decisions from acquisition workflows are recorded and visible, but workflows without a typed resume adapter deliberately hand off to remediation rather than guessing their source state.
-- **Benefit:** Recovering Drive, browser, and acquisition capacity can complete retained report-download and publisher-inventory work automatically while reusing route evidence, artifact caches, and existing public-write gates.
-- **Risks to avoid:** Do not replay browser, Drive, mailbox, or public-write work without a fresh canonical budget decision, typed route/checkpoint validation, original idempotency proof, and the existing review gate.
-- **Success criteria:**
-
-- Approved adapters rebuild the workflow-specific minimum plan from retained route and artifact evidence, fail closed on missing source state, and resume only the latest safe stage.
-- A single bounded invocation proves release-capacity and UTC-day recovery for each adapter, with duplicate worker suppression and no bypass of publishing/mail authorization.
-- Dashboard projections distinguish supported auto-resume workflows from remediation-only deferred records with bounded scalar counts.
 
 #### A15. Complete explicit model-policy coverage and policy-effectiveness evidence
 

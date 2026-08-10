@@ -8,7 +8,7 @@
 2. Confirm the failure category and whether it is retryable; do not repeat permanent failures without fixing the prerequisite.
 3. Inspect the execution plan, preflight output, and relevant retained checkpoint before launching another side effect. A missing, stale, corrupt, or lineage-free checkpoint is a blocker, not a resume target.
 4. Confirm idempotency evidence before publication, Drive-family, email-request, or any other external write. If proof is missing, keep the record in `operator_action_required`.
-5. Use the smallest safe restart or explicit workflow command after correcting the cause. The reaper is feature-gated off by default; enabling it does not authorize unbounded retries or unknown-error recovery.
+5. Use the smallest safe restart or explicit workflow command after correcting the cause. The base configuration keeps recovery gated; the reviewed `autonomous_mvp` overlay enables only the documented finite allowlist and does not authorize unbounded retries or unknown-error recovery.
 6. Resolve or supersede the durable remediation record when the operator action is complete; do not delete historical retry logs.
 
 The [top failure runbooks](top_failure_runbooks.md) contain typed failure-specific checks and bounded remediation commands. `docs/ops/failure_remediation.yaml` is the machine-validated runbook registry.
@@ -100,11 +100,11 @@ of the following before an operator approves any execution-enabled change:
 5. The activation decision, exact allowlisted workflow/error/action triples,
    review date, and rollback owner are retained with the soak output.
 
-`workflow_control.remediation_reaper.execution_enabled` remains `false` by
-default. Turning it on requires an explicit, reviewed configuration change
-after this gate; it authorizes only the documented allowlist. Roll back by
-setting it back to `false`, which leaves recording and operator visibility
-active.
+The base `workflow_control.remediation_reaper.execution_enabled` remains
+`false`. The reviewed `autonomous_mvp` overlay turns it on with a two-record
+per-pass limit and authorizes only the documented allowlist. Roll back by
+selecting the base profile or setting the gate to `false`; recording and
+operator visibility remain active.
 
 ## Budget-deferred work recovery
 
@@ -126,18 +126,31 @@ artifact, or exhausted legacy attempt budget remain visible as `unresolved` in
 the command output; they are never silently discarded or guessed into another
 workflow.
 
-The old `deferred-work-reap` command remains an emergency compatibility path
-while legacy rows are being handed off. Do not enable it alongside normal queue
-workers for a migrated record; use the canonical queue controls, retry state,
-and remediation flow for all new work.
+The reviewed `autonomous_mvp` overlay activates the bounded legacy reaper for
+the finite adapter inventory below. It does not alter the queue's normal
+`budget_deferred` lifecycle and it does not enable normal queue-worker batches.
+Do not run it alongside a migration of the same legacy record; use the
+canonical queue controls, retry state, and remediation flow for all new work.
+
+| Durable recovery source | Workflow / scope | Automatic action | Fail-closed result |
+| --- | --- | --- | --- |
+| Legacy deferred-work ledger | `report_generation` | Resume only the enforced `latest_safe` checkpoint/family with retained PDF, hash, and lineage proof | Hand off to remediation; never fresh-restart PDF/OCR/extraction/model work |
+| Legacy deferred-work ledger | `report_download` | Submit canonical durable `report_acquisition.v1` job | Remediation-held if retained URL/idempotency proof is missing |
+| Legacy deferred-work ledger | `publisher_inventory` | Submit canonical durable `publisher_discovery.v1` job | Remediation-held if retained publisher URL/idempotency proof is missing |
+| Legacy deferred-work ledger | Any other workflow | None | Explicit remediation hold (`workflow_resume_handler_missing`) |
+| Durable workflow queue | Any registered queue job in `budget_deferred` | Existing canonical queue worker claims the due job | Existing queue attempt/budget/dead-letter policy; no recovery adapter |
+| Remediation ledger | Exact report-generation failure registry and GET-only WordPress readback | Existing typed remediation executor | Terminal or operator-held when checkpoint, lineage, action, budget, or idempotency proof fails |
 
 Every invocation first rechecks the canonical budget, then rebuilds the
-minimal plan and validates reusable artifacts. It preserves the original
-idempotency key and uses a SQLite lease, so a second worker cannot execute the
-same record. A continued `defer` is rescheduled after the configured delay;
-`pause` and `stop` always enter actionable remediation rather than becoming a
-new pending retry. Set the feature flag back to `false` for rollback: queued
-records remain intact for inspection and manual recovery.
+minimal plan and validates reusable artifacts. It retains the work identity,
+workflow/adapter, due time, plan hash, reusable-artifact kinds/count, attempt
+count, terminal result, and bounded reason in durable state and structured
+events. It preserves the original idempotency key and uses a SQLite lease, so a
+second worker cannot execute the same record. A continued `defer` is
+rescheduled after the configured delay; `pause` and `stop` always enter
+actionable remediation rather than becoming a new pending retry. Set the
+feature flag back to `false` for rollback: queued records remain intact for
+inspection and manual recovery.
 
 For report processing, checkpoint resume is orchestrator-owned and validates retained artifacts and lineage. Do not manually edit checkpoint state to bypass validation. For publication recovery or rollback, use [WordPress operations](wordpress.md).
 

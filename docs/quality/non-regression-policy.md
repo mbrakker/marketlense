@@ -89,6 +89,9 @@ For the prompt dry-run fixture corpus, the comparator enforces non-regression fo
 - estimated model cost per family and corpus
 
 The gate also fails when the active prompt namespace set or family set changes without a refreshed committed baseline.
+Each corpus measurement performs one unmeasured warm-up dry run first, excluding
+one-time file-cache and policy-registry initialization from the render-runtime
+metric while preserving the fixed measured iteration count.
 
 Approved temporary regressions must be recorded in:
 

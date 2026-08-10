@@ -167,6 +167,12 @@ def test_defer_is_durable_idempotent_and_not_immediately_due(tmp_path) -> None:
     )
     assert metrics.queue_depth == 1
     assert metrics.due_count == 0
+    not_due = run_bounded_deferred_work_reaper(
+        _reaper_request(tmp_path, now_utc=records[0].deferred_at_utc),
+        _ctx(),
+        dependencies=_deps(),
+    )
+    assert not_due.inspected_count == 0
 
 
 def test_atomic_claim_prevents_duplicate_execution_and_restart_recovers_expired_lease(
@@ -285,18 +291,28 @@ def test_stop_and_attempt_exhaustion_are_terminal_remediation_not_defer(
     )
     assert stopped_result.remediation_work_keys == [stopped.work_key]
 
-    first = run_bounded_deferred_work_reaper(
+    resumed: list[str] = []
+    exhausted_result = run_bounded_deferred_work_reaper(
         _reaper_request(tmp_path, now_utc=_iso(30), limit=1),
         _ctx(),
-        dependencies=_deps(budget="defer"),
+        dependencies=DeferredWorkReaperDependencies(
+            plan_builders={
+                "report_generation": lambda item, ctx: DeferredWorkResumePlan(
+                    schema_version="1.0",
+                    plan_hash=item.plan_hash,
+                    resume_stage="latest_safe",
+                )
+            },
+            resumers={
+                "report_generation": lambda item, plan, ctx: (
+                    resumed.append(item.work_key) or "completed"
+                )
+            },
+            budget_check=lambda item, ctx: "allow",
+        ),
     )
-    assert first.deferred_work_keys == [exhausted.work_key]
-    second = run_bounded_deferred_work_reaper(
-        _reaper_request(tmp_path, now_utc=_iso(120), limit=1),
-        _ctx(),
-        dependencies=_deps(budget="allow"),
-    )
-    assert second.remediation_work_keys == [exhausted.work_key]
+    assert exhausted_result.remediation_work_keys == [exhausted.work_key]
+    assert resumed == []
     by_key = {record.work_key: record for record in _records(tmp_path)}
     assert by_key[stopped.work_key].terminal_status == "budget_stop"
     assert by_key[exhausted.work_key].terminal_status == "attempt_budget_exhausted"

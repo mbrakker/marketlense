@@ -73,6 +73,19 @@ prior validated checkpoint rather than re-running PDF extraction or earlier
 model work. Analytics projection has a projection-only path from validated
 analysis and render checkpoints.
 
+## Bounded deferred recovery handoffs
+
+The workflow queue remains the canonical owner of normal `budget_deferred`
+jobs. The separate legacy deferred-work ledger has exactly three approved
+adapters: `report_generation` resumes only from an enforced, lineage-validated
+`latest_safe` checkpoint; `report_download` enqueues one durable
+`report_acquisition.v1` job; and `publisher_inventory` enqueues one durable
+`publisher_discovery.v1` job. Both queue handoffs retain a deterministic key
+derived from the original deferred identity and recovery-plan hash, so repeated
+supervisor passes converge on one pending job. Any other legacy workflow is
+held in remediation; there is no generic resume adapter. A missing, stale, or
+incompatible report checkpoint is likewise held rather than reconstructed.
+
 The foundation retains a verified-reference compatibility handler for domain
 adapters that have not yet been migrated. It deliberately cannot manufacture
 domain outputs or perform external writes; each remaining adapter must replace

@@ -437,6 +437,7 @@ def resume_deferred_report_pipeline(
     generate_report_fn: Callable[..., IngestOutcome] | None = None,
     preflight_fn: Callable[..., PipelinePreflightReport] | None = None,
     workflow_control_settings: WorkflowControlSettings | None = None,
+    run_report_pipeline_fn: Callable[..., IngestOutcome] | None = None,
 ) -> str:
     """Resume one validated report plan using its original budget run identity."""
 
@@ -507,7 +508,8 @@ def resume_deferred_report_pipeline(
     def _admission_runtime_preflight(_settings, _ctx):
         return runtime_preflight
 
-    outcome = run_report_pipeline(
+    pipeline_runner = run_report_pipeline_fn or run_report_pipeline
+    outcome = pipeline_runner(
         file,
         local_pdf_path,
         settings,
@@ -518,7 +520,10 @@ def resume_deferred_report_pipeline(
         resume_from_stage=plan.resume_stage,
         preflight_fn=_admission_runtime_preflight,
         workflow_control_settings=workflow_control_settings,
-        auto_resume_from_latest_safe=True,
+        # Deferred recovery has no fresh-restart authority. If the retained
+        # latest-safe proof cannot be used, the reaper hands the row to
+        # remediation rather than re-entering PDF/OCR/extraction work.
+        auto_resume_from_latest_safe=False,
         execution_plan_mode="enforce",
     )
     if outcome.status == "error":

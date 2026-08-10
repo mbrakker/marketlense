@@ -148,14 +148,22 @@ def _log(ctx: RunContext, event: str, item: DeferredWorkItem, reason: str) -> No
             fields={
                 "work_key": item.work_key,
                 "workflow": item.workflow,
+                "recovery_adapter": item.workflow,
                 "stage": item.stage,
                 "status": item.status,
                 "reason": reason,
+                "due_time": item.earliest_run_at_utc,
+                "plan_hash": item.plan_hash,
+                "reused_artifact_count": len(item.reusable_artifacts),
+                "reused_artifact_kinds": sorted(
+                    {artifact.kind for artifact in item.reusable_artifacts}
+                ),
                 "attempt_count": item.attempt_count,
                 "max_attempts": item.max_attempts,
                 "defer_count": item.defer_count,
                 "affected_limit": item.affected_limit,
                 "lease_owner": item.lease_owner,
+                "terminal_status": item.terminal_status,
             },
         )
     )
@@ -218,7 +226,7 @@ def run_bounded_deferred_work_reaper(
             _log(work_ctx, "deferred_work_deadline_expired", held, "deadline_expired")
             remediation.append(item.work_key)
             continue
-        if item.attempt_count > item.max_attempts:
+        if item.attempt_count >= item.max_attempts:
             held = _handoff_to_remediation(
                 request,
                 item,
