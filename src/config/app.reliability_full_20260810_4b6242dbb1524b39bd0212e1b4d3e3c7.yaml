@@ -1,0 +1,54 @@
+schema_version: "1.0"
+
+# Immutable, isolated 20-report reliability execution namespace. Credentials and
+# external targets remain environment-owned through the base configuration.
+paths:
+  output_dir: "./out/reliability_full_20260810_4b6242dbb1524b39bd0212e1b4d3e3c7"
+  cache_dir: "./cache/reliability_full_20260810_4b6242dbb1524b39bd0212e1b4d3e3c7"
+  state_db: "./state/reliability_full_20260810_4b6242dbb1524b39bd0212e1b4d3e3c7/index.sqlite"
+  reports_db: "./state/reliability_full_20260810_4b6242dbb1524b39bd0212e1b4d3e3c7/reports.sqlite"
+  signal_store_db: "./state/reliability_full_20260810_4b6242dbb1524b39bd0212e1b4d3e3c7/signals.sqlite"
+  ingest_lock: "./state/reliability_full_20260810_4b6242dbb1524b39bd0212e1b4d3e3c7/ingest.lock"
+
+ingest:
+  run_budget:
+    max_spend_usd: 20.0
+    max_pdfs: 20
+    max_retries: 40
+    max_runtime_seconds: 43200
+    limit_decision: "stop"
+
+browser_download:
+  output_dir: "./out/reliability_full_20260810_4b6242dbb1524b39bd0212e1b4d3e3c7/browser_downloads"
+  run_budget:
+    enabled: true
+    max_browser_launches: 20
+    max_pdfs: 20
+    max_drive_writes: 24
+    max_drive_reads: 80
+    max_mailbox_reads: 8
+    max_retries: 20
+    max_runtime_seconds: 21600
+    limit_decision: "stop"
+
+mailbox_acquisition:
+  output_dir: "./out/reliability_full_20260810_4b6242dbb1524b39bd0212e1b4d3e3c7/mailbox_acquisition"
+
+publisher_discovery:
+  output_dir: "./out/reliability_full_20260810_4b6242dbb1524b39bd0212e1b4d3e3c7/publisher_inventory_discovery"
+
+analysis:
+  cost_ledger_path: "./state/reliability_full_20260810_4b6242dbb1524b39bd0212e1b4d3e3c7/llm_cost_ledger.jsonl"
+
+cost:
+  usage_db_path: "./state/reliability_full_20260810_4b6242dbb1524b39bd0212e1b4d3e3c7/llm_usage.sqlite"
+  daily_path: "./state/reliability_full_20260810_4b6242dbb1524b39bd0212e1b4d3e3c7/llm_cost_daily.json"
+  ledger_path: "./state/reliability_full_20260810_4b6242dbb1524b39bd0212e1b4d3e3c7/llm_cost_ledger.jsonl"
+
+publish:
+  projection_daily_path: "./state/reliability_full_20260810_4b6242dbb1524b39bd0212e1b4d3e3c7/projection_cost_daily.json"
+  projection_ledger_path: "./state/reliability_full_20260810_4b6242dbb1524b39bd0212e1b4d3e3c7/projection_cost_ledger.jsonl"
+  run_budget:
+    enabled: true
+    max_wordpress_writes: 20
+    limit_decision: "stop"
