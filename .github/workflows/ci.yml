@@ -82,7 +82,7 @@ jobs:
       - name: Mark release evidence freshness start
         run: echo "RELEASE_EVIDENCE_STARTED_AT=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
       - name: Run default pytest suite with coverage and timing telemetry
-        run: python scripts/quality/run_pytest_with_telemetry.py --output-json out/test_telemetry_ci.json -- --cov=src --cov-report=xml --cov-report=term-missing
+        run: python scripts/quality/run_pytest_with_telemetry.py --output-json out/test_telemetry_ci.json -- -n 8 --dist=worksteal --cov=src --cov-report=xml --cov-report=term-missing
       - name: Coverage gate
         run: python scripts/quality/run_command_with_telemetry.py --output-json out/quality_command_telemetry_ci.json --stage coverage -- python scripts/ci/check_coverage.py --coverage-xml coverage.xml
       - name: Mutation gate
