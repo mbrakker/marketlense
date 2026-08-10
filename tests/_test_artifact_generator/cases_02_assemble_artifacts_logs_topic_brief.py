@@ -125,131 +125,6 @@ def test_assemble_artifacts_logs_topic_brief_mapping_audit(
     ]
 
 
-def test_generate_artifacts_rejects_hallucinated_evidence_ids(
-    tmp_path,
-    assert_app_error,
-):
-    responses = {
-        "toc": {"toc_topics": ["Topic 1"]},
-        "summary": {
-            "summary": {
-                "tldr": "Grounded TLDR.",
-                "card_tldr_compact": "Grounded TLDR.",
-                "executive_summary": "Exec",
-                "claim_evidence_map": [
-                    {
-                        "claim": "Claim",
-                        "evidence_id": "F1,F2",
-                        "evidence": "Revenue +10%",
-                        "pages": [2],
-                    }
-                ],
-            }
-        },
-        "insights_candidates": {
-            "insights_candidates": [
-                {
-                    "id": "c1",
-                    "text": "Candidate 1",
-                    "evidence_id": "['F2', 'F3']",
-                    "evidence": "E2",
-                    "metric": {},
-                    "pages": [3],
-                    "score": 0.9,
-                },
-                {
-                    "id": "c2",
-                    "text": "Candidate 2",
-                    "evidence_id": "MISSING_REF",
-                    "evidence": "E-missing",
-                    "metric": {},
-                    "pages": [4],
-                    "score": 0.6,
-                },
-            ]
-        },
-        "insights_final": {
-            "insights_final": [
-                {
-                    "id": "i1",
-                    "text": "Final 1",
-                    "evidence_id": "F3/F4",
-                    "evidence": "E3",
-                    "metric": {},
-                    "pages": [4],
-                },
-                {
-                    "id": "i2",
-                    "text": "Final 2",
-                    "evidence_id": "missing_final",
-                    "evidence": "E-missing",
-                    "metric": {},
-                    "pages": [5],
-                },
-                {
-                    "id": "i3",
-                    "text": "Final 3",
-                    "evidence_id": "f5",
-                    "evidence": "E5",
-                    "metric": {},
-                    "pages": [6],
-                },
-                {
-                    "id": "i4",
-                    "text": "Final 4",
-                    "evidence_id": "F1",
-                    "evidence": "E1",
-                    "metric": {},
-                    "pages": [2],
-                },
-                {
-                    "id": "i5",
-                    "text": "Final 5",
-                    "evidence_id": "['f2']",
-                    "evidence": "E2",
-                    "metric": {},
-                    "pages": [3],
-                },
-            ]
-        },
-        "quotes": {
-            "quotes_final": [
-                {
-                    "text": "We are expanding rapidly",
-                    "speaker": "CEO",
-                    "citation": "Earnings call",
-                    "page": 3,
-                    "evidence_id": "quote_1",
-                }
-            ]
-        },
-        "expert_comment": {"expert_comment": "Grounded comment"},
-        "linkedin_post": {"linkedin_post": "Post summary"},
-    }
-    with pytest.raises(AppError) as captured:
-        generate_artifacts(
-            report_id="r_malformed",
-            report_name="report",
-            doc_map=_doc_map(),
-            evidence_packs=_evidence_packs(),
-            settings=_settings(tmp_path),
-            vector_store_id="vs_1",
-            ctx=_ctx(),
-            openai_client=FakeOpenAI(responses),
-            prompt_client=FakePromptClient(),
-            analysis_store=FakeAnalysisStore(),
-        )
-
-    assert_app_error(
-        captured.value,
-        code="schema_reference_missing",
-        retryable=False,
-    )
-    assert {"MISSING_REF", "missing_final"} <= set(
-        captured.value.context["missing_references"]
-    )
-
-
 def test_generate_artifacts_backfills_missing_ids(tmp_path):
     responses = {
         "toc": {"toc_topics": ["Topic"]},
@@ -818,9 +693,91 @@ def test_cover_semantics_repairs_one_invalid_structured_response(tmp_path) -> No
     assert client.requests[1].repair_attempt == 1
 
 
+def test_generate_artifacts_repairs_unknown_insight_evidence_before_assembly(
+    tmp_path,
+) -> None:
+    client = FakeOpenAI(
+        [
+            {
+                "summary": {
+                    "tldr": "Grounded TLDR.",
+                    "card_tldr_compact": "Grounded TLDR.",
+                    "executive_summary": "Executive summary.",
+                    "claim_evidence_map": [],
+                }
+            },
+            {
+                "insights_candidates": [
+                    {
+                        "id": "candidate-1",
+                        "text": "Candidate insight.",
+                        "evidence_id": "f1",
+                        "evidence": "Revenue rose.",
+                        "metric": {},
+                        "pages": [2],
+                        "score": 0.9,
+                    }
+                ]
+            },
+            {
+                "quotes_final": [
+                    {
+                        "text": "We are expanding rapidly",
+                        "speaker": "CEO",
+                        "citation": "Earnings call",
+                        "page": 3,
+                        "evidence_id": "q1",
+                    }
+                ]
+            },
+            {
+                "insights_final": [
+                    {
+                        "id": "insight-1",
+                        "text": "Final insight.",
+                        "evidence_id": "unknown-reference",
+                        "evidence": "Unsupported source.",
+                        "metric": {},
+                        "pages": [2],
+                    }
+                ]
+            },
+            {
+                "insights_final": [
+                    {
+                        "id": "insight-1",
+                        "text": "Final insight.",
+                        "evidence_id": "f1",
+                        "evidence": "Revenue rose.",
+                        "metric": {},
+                        "pages": [2],
+                    }
+                ]
+            },
+            _cover_semantics_response(),
+            {"expert_comment": "Grounded comment."},
+            {"linkedin_post": "Grounded post."},
+        ]
+    )
+
+    payload = generate_artifacts(
+        report_id="reference-repair",
+        report_name="reference-repair",
+        doc_map=_doc_map(),
+        evidence_packs=_evidence_packs(),
+        settings=_settings(tmp_path),
+        vector_store_id="vs_1",
+        ctx=_ctx(),
+        openai_client=client,
+        prompt_client=FakePromptClient(),
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    assert payload["insights_final"][0]["evidence_id"] == "f1"
+
+
 __all__ = [
     "test_assemble_artifacts_logs_topic_brief_mapping_audit",
-    "test_generate_artifacts_rejects_hallucinated_evidence_ids",
     "test_generate_artifacts_backfills_missing_ids",
     "test_generate_artifacts_ignores_low_text_when_vector_store",
     "test_generate_artifacts_fails_when_inputs_unavailable_without_vector_store",
@@ -828,4 +785,5 @@ __all__ = [
     "test_generate_artifacts_strips_inline_reference_tokens_from_summary_and_linkedin",
     "test_generate_artifacts_uses_vector_path_when_flag_enabled",
     "test_cover_semantics_repairs_one_invalid_structured_response",
+    "test_generate_artifacts_repairs_unknown_insight_evidence_before_assembly",
 ]
