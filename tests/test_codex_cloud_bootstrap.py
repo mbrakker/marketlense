@@ -4,11 +4,15 @@ import os
 import subprocess
 from pathlib import Path
 
+import pytest
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 BOOTSTRAP_SCRIPT = REPOSITORY_ROOT / "scripts" / "bootstrap_codex_cloud.sh"
 
 
+@pytest.mark.skipif(
+    os.name == "nt", reason="The POSIX bootstrap is validated on a POSIX runner."
+)
 def test_bootstrap_rejects_non_python_312(tmp_path: Path) -> None:
     fake_python = tmp_path / "python"
     fake_python.write_text("#!/bin/sh\necho 3.11\n", encoding="utf-8")

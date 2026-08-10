@@ -47,6 +47,7 @@ external_system_ownership:
       - src/services/_state_service/
       - src/services/_report_store_service/
       - src/services/_analytics_store/
+      - src/services/validation_reliability_service.py
       - src/services/_sqlite_common.py
       - src/services/_sqlite_migration/
       - src/services/sqlite_migration_service.py

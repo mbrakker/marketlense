@@ -42,11 +42,11 @@ from src.services.config_service import (
     load_settings,
     load_workflow_control_settings,
 )
+from src.services.config_service import new_runtime_context as new_run_context
 from src.services.logging_service import setup_logging
 from src.services.state_service import write_workflow_control_observation
 from src.utils.clock import utc_now_iso
 from src.utils.errors import AppError
-from src.services.config_service import new_runtime_context as new_run_context
 from src.utils.logging import log_event
 from src.utils.wp_auth import build_auth_header
 
@@ -331,8 +331,8 @@ def plan_execution(
 
 @cli_app.command("ingest")
 def ingest(
-    folder: str = typer.Option(None, help="Override Drive folder ID"),
-    attempt_limit: int = typer.Option(
+    folder: str | None = typer.Option(None, help="Override Drive folder ID"),
+    attempt_limit: int | None = typer.Option(
         None,
         "--attempt-limit",
         help=(
@@ -340,22 +340,22 @@ def ingest(
             "result; this is not a success target."
         ),
     ),
-    limit: int = typer.Option(
+    limit: int | None = typer.Option(
         None,
         "--limit",
         help="Deprecated alias for --attempt-limit; use --attempt-limit instead.",
     ),
-    cohort_size: int = typer.Option(
+    cohort_size: int | None = typer.Option(
         None,
         "--cohort-size",
         help="Freeze exactly this many eligible reports before any report processing.",
     ),
-    cohort_manifest: str = typer.Option(
+    cohort_manifest: str | None = typer.Option(
         None,
         "--cohort-manifest",
         help="Immutable cohort manifest path; reuse it to replay the same members.",
     ),
-    success_target: int = typer.Option(
+    success_target: int | None = typer.Option(
         None,
         "--success-target",
         help=(
