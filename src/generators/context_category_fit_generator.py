@@ -69,6 +69,7 @@ _STOP_WORDS = {
     "whose",
 }
 _DEFAULT_HIGH_CONFIDENCE_FIT_THRESHOLD = 0.85
+_MAX_SELECTED_CATEGORIES = 5
 
 
 def fit_report_categories_from_context(
@@ -662,12 +663,11 @@ def _apply_topic_semantics(
             why_not_fit = (
                 "Canonical Topic exclusion rule matched central report context."
             )
-    elif (
-        has_inclusion_support
-        and is_central
-        and decision == "reject"
-        and is_high_confidence
-    ):
+    elif has_inclusion_support and is_central and decision == "reject":
+        # Explicit configured evidence in a central report field is stronger
+        # than an advisory model rejection or score. Otherwise a low-scored
+        # false negative can prevent an evidence-backed category from reaching
+        # the one bounded repair and, ultimately, the publish-readiness check.
         decision = "primary"
         status = "supported"
     elif (
@@ -780,15 +780,52 @@ def _coerce_fit_response(
             item.category_id,
         )
     )
+    selected_ids = _selected_category_ids(fits)
+    if not selected_ids:
+        # The model returns only a bounded candidate list. When it omits every
+        # category that has explicit, central configured support, recover those
+        # deterministic candidates before treating the report as uncategorized.
+        # This remains narrower than a semantic guess: exclusions still win and
+        # only exact configured concepts/rules can promote a category.
+        seen_category_ids = {fit.category_id for fit in fits}
+        for category_id, profile in profile_by_id.items():
+            if category_id in seen_category_ids:
+                continue
+            rescued = _apply_topic_semantics(
+                candidate=CategoryFitCandidate(
+                    schema_version="1.0",
+                    category_id=category_id,
+                    label=str(profile["label"]),
+                    fit_score=0.0,
+                    decision="reject",
+                    why_fit=(
+                        "Explicit configured category evidence is central to "
+                        "the retained report context."
+                    ),
+                    why_not_fit="",
+                    evidence_sections=[],
+                ),
+                profile=profile,
+                evidence=evidence,
+                high_confidence_fit_threshold=high_confidence_fit_threshold,
+            )
+            if rescued.decision in {"primary", "secondary"}:
+                fits.append(rescued)
+        fits.sort(
+            key=lambda item: (
+                0
+                if item.decision == "primary"
+                else 1
+                if item.decision == "secondary"
+                else 2,
+                -item.fit_score,
+                item.category_id,
+            )
+        )
     # Provider selections are advisory.  Persisted category IDs must be derived
     # from the normalized deterministic decisions so no rejected category leaks
     # through and a deterministic promotion cannot be omitted.
-    selected_ids = [
-        fit.category_id
-        for fit in fits
-        if fit.decision in {"primary", "secondary"}
-        and fit.semantic_rule_status != "ambiguous"
-    ][:2]
+    selected_ids = _selected_category_ids(fits)
     rejected_conflicts = [
         fit.category_id
         for fit in fits
@@ -824,3 +861,12 @@ def _coerce_fit_response(
         model=model,
         raw_response=raw_response,
     )
+
+
+def _selected_category_ids(fits: list[CategoryFitCandidate]) -> list[str]:
+    return [
+        fit.category_id
+        for fit in fits
+        if fit.decision in {"primary", "secondary"}
+        and fit.semantic_rule_status != "ambiguous"
+    ][:_MAX_SELECTED_CATEGORIES]

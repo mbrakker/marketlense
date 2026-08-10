@@ -8,7 +8,7 @@ text: |
   Task:
   Evaluate which portal categories best fit this report based only on the report context above.
   Use each category's definition plus its include/exclude guidance to decide fit.
-  Return at most 2 selected categories.
+  Return at most 5 selected categories: one primary and up to four independently central secondary categories.
   A secondary category is valid only if the report would still be discoverable under it on its own merits.
 
   Return a JSON object:

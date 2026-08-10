@@ -169,20 +169,26 @@ that support the rule. Exclusion rules can match only an explicit diminishing
 concept in central context (`title`, `overview`, or `key_findings`); loose token
 overlap and unreferenced model rationale cannot reject a category.
 
-A rejected category above the configured
-`high_confidence_fit_threshold` is promoted to primary when an inclusion rule
-is supported, its category concepts are central, and no evidenced exclusion
-matches. Supported but non-central high-confidence coverage is normalized to
-secondary. An evidenced exclusion deterministically rejects the candidate.
-Selected category IDs are always derived from those normalized decisions, never
-from the provider's advisory selection list.
+An evidenced exclusion deterministically rejects the candidate. Otherwise,
+explicit configured inclusion support in the title, overview, or key findings
+deterministically promotes a candidate to primary, regardless of the model's
+advisory rejection or score. Supported but non-central high-confidence coverage
+is normalized to secondary. This prevents a low-scored model false negative from
+blocking an evidence-backed category. Selected category IDs are always derived
+from those normalized decisions, never from the provider's advisory selection
+list, and retain at most five independently central categories (one primary and
+up to four secondary categories under the model contract).
 
 A primary or secondary candidate without deterministic inclusion support, and a
 high-confidence rejected candidate without enough evidence to resolve it, are
-ambiguous. They trigger exactly one category-only semantic reclassification
-routed only to their declared category IDs; that repair cannot introduce another
-category. An exhausted recovery remains a typed failure; it never becomes an
-empty successful analysis package. A response with no category candidates
+ambiguous. They trigger exactly one category-only semantic reclassification only
+when no supported assignment survives; that repair is routed to its declared
+ambiguous IDs plus already supported selections and cannot introduce another
+category or discard a supported selection. When the model omits all candidates
+but an unreturned configured category has explicit central inclusion evidence,
+the deterministic mapper selects it before the report can be treated as
+uncategorized. An exhausted recovery remains a typed failure; it never becomes
+an empty successful analysis package. A response with no category candidates
 likewise triggers the bounded recovery and then fails closed. By contrast, an
 all-rejected, schema-valid candidate set is an explicit uncategorized outcome:
 it is not mistaken for an empty model response during analysis. Publication is

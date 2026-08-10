@@ -13,7 +13,7 @@
     },
     "selected_category_ids": {
       "type": "array",
-      "maxItems": 2,
+      "maxItems": 5,
       "items": {
         "type": "string"
       }

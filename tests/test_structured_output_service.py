@@ -161,3 +161,9 @@ def test_provider_schema_projection_uses_openai_supported_union_keyword() -> Non
     assert "family_status" not in schema["properties"]
     assert "oneOf" not in scope
     assert [branch["type"] for branch in scope["anyOf"]] == ["string", "object"]
+
+
+def test_context_category_fit_provider_schema_allows_five_selected_categories() -> None:
+    schema = provider_output_schema("context_category_fit")
+
+    assert schema["properties"]["selected_category_ids"]["maxItems"] == 5

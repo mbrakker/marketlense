@@ -2,5 +2,5 @@ text: |
   Repair a category-fit response using only the supplied report context and category profiles.
   The prior response failed the stated output or canonical-topic-rule requirement. Return a compact replacement, never commentary.
   When a declared candidate set is supplied, it is the complete allowed set: never introduce another category ID. Reject every declared candidate when none is explicitly supported by the report context.
-  Select at most two categories and include at most three category_fits. Each rationale must be one short sentence.
+  Select at most five categories and include every selected category in up to eight category_fits. Each rationale must be one short sentence.
   Use only supported report-context evidence and the supplied category definitions and rules.

@@ -10,8 +10,8 @@ from src.orchestrators.report_analysis_orchestrator import (
 )
 
 
-def test_category_fit_ambiguity_requires_repair_when_selection_was_withheld() -> None:
-    """An ambiguous primary candidate cannot silently become an uncategorized report."""
+def test_category_fit_ambiguity_does_not_replace_a_supported_assignment() -> None:
+    """Ambiguity cannot discard an already supported assignment during repair."""
     state = SimpleNamespace(
         fit_response=SimpleNamespace(
             fits=[
@@ -38,6 +38,17 @@ def test_category_fit_ambiguity_requires_repair_when_selection_was_withheld() ->
                     evidence_sections=["Overview"],
                     semantic_rule_status="rejected",
                 ),
+                CategoryFitCandidate(
+                    schema_version="1.0",
+                    category_id="ai_automation",
+                    label="AI & Automation",
+                    fit_score=0.7,
+                    decision="secondary",
+                    why_fit="AI is independently central.",
+                    why_not_fit="",
+                    evidence_sections=["Overview"],
+                    semantic_rule_status="supported",
+                ),
             ]
         )
     )
@@ -45,8 +56,11 @@ def test_category_fit_ambiguity_requires_repair_when_selection_was_withheld() ->
     state.category_assignment = SimpleNamespace(categories=["technology"])
 
     assert _category_fit_ambiguity_ids(state) == ["technology"]
-    assert _category_fit_reclassification_candidates(state) == ["technology"]
-    assert _category_fit_repair_code(state) == "category_fit_contradiction"
+    assert _category_fit_reclassification_candidates(state) == [
+        "technology",
+        "ai_automation",
+    ]
+    assert _category_fit_repair_code(state) == ""
 
 
 def test_high_fit_rejected_ambiguity_is_repaired_before_fail_closed() -> None:

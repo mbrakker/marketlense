@@ -207,8 +207,8 @@ def test_retained_category_fit_regression_cases(recorded_case: dict) -> None:
         assert fit.centrality_evidence_sections
 
 
-def test_configured_high_confidence_threshold_controls_rejection_closure() -> None:
-    """A score at or below the mapping threshold cannot be auto-promoted."""
+def test_central_inclusion_evidence_overrides_a_low_score_model_rejection() -> None:
+    """A provider score cannot suppress an explicit central mapping match."""
 
     context = ReportCategoryContext(
         schema_version="1.0",
@@ -270,5 +270,148 @@ def test_configured_high_confidence_threshold_controls_rejection_closure() -> No
         mapping_client=mapping_client,
     )
 
-    assert response.categories == []
-    assert response.fits[0].decision == "reject"
+    assert response.categories == ["technology"]
+    assert response.fits[0].decision == "primary"
+    assert response.fits[0].semantic_rule_status == "supported"
+
+
+def test_fit_report_categories_retains_five_evidence_backed_categories() -> None:
+    """The public category contract permits one primary and four secondaries."""
+
+    category_ids = ["commerce", "media", "ai", "search", "consumer"]
+    mappings = CategoryMappings(
+        schema_version="1.0",
+        categories=[
+            CategoryDefinition(
+                id=category_id,
+                label=category_id.title(),
+                description=f"{category_id} reports.",
+                definition=f"Reports about {category_id}.",
+                include_when=[f"Evidence centers on {category_id} strategy."],
+                semantic_concepts=[category_id],
+            )
+            for category_id in category_ids
+        ],
+        inference_rules=[],
+        uncategorized=[],
+    )
+
+    def mapping_client(request, ctx):
+        del request, ctx
+        return CategoryMappingLoadResponse(schema_version="1.0", mappings=mappings)
+
+    response = fit_report_categories_from_context(
+        ContextCategoryFitRequest(
+            schema_version="1.0",
+            context=ReportCategoryContext(
+                schema_version="1.0",
+                report_id="file-1",
+                title="Commerce, media, AI, search, and consumer behavior outlook",
+                publisher="Publisher",
+                region="Global",
+                time_period="2026",
+                overview="The report centrally examines commerce, media, AI, search, and consumer behavior strategy.",
+            ),
+            settings=_settings(),
+            category_mapping_path="unused",
+        ),
+        _ctx(),
+        openai_client=_RecordingOpenAIClient(
+            {
+                "schema_version": "1.0",
+                "selected_category_ids": category_ids,
+                "category_fits": [
+                    {
+                        "category_id": category_id,
+                        "label": category_id.title(),
+                        "fit_score": 1.0 - (index * 0.1),
+                        "decision": "primary" if index == 0 else "secondary",
+                        "why_fit": f"{category_id} is central.",
+                        "why_not_fit": "",
+                        "evidence_sections": ["overview"],
+                    }
+                    for index, category_id in enumerate(category_ids)
+                ],
+            }
+        ),
+        prompt_client=_RecordingPromptClient(),
+        mapping_client=mapping_client,
+    )
+
+    assert response.categories == category_ids
+    assert response.category_labels == [
+        category_id.title() for category_id in category_ids
+    ]
+    assert all(fit.semantic_rule_status == "supported" for fit in response.fits)
+
+
+def test_fit_report_categories_rescues_an_omitted_central_mapping() -> None:
+    """An incomplete model candidate list cannot suppress exact central support."""
+
+    mappings = CategoryMappings(
+        schema_version="1.0",
+        categories=[
+            CategoryDefinition(
+                id="consumer_behavior",
+                label="Consumer Behavior & Insights",
+                description="Consumer behavior reports.",
+                definition="Reports about consumer behavior.",
+                include_when=["Evidence studies consumer behavior."],
+                semantic_concepts=["consumer time"],
+            ),
+            CategoryDefinition(
+                id="technology",
+                label="Technology & Innovation",
+                description="Technology reports.",
+                definition="Reports about technology.",
+                include_when=["Evidence studies enterprise technology."],
+            ),
+        ],
+        inference_rules=[],
+        uncategorized=[],
+    )
+
+    def mapping_client(request, ctx):
+        del request, ctx
+        return CategoryMappingLoadResponse(schema_version="1.0", mappings=mappings)
+
+    response = fit_report_categories_from_context(
+        ContextCategoryFitRequest(
+            schema_version="1.0",
+            context=ReportCategoryContext(
+                schema_version="1.0",
+                report_id="file-1",
+                title="Consumer Time & Attention",
+                publisher="Publisher",
+                region="Global",
+                time_period="2026",
+                overview="A report about how consumers allocate their daily time.",
+            ),
+            settings=_settings(),
+            category_mapping_path="unused",
+        ),
+        _ctx(),
+        openai_client=_RecordingOpenAIClient(
+            {
+                "schema_version": "1.0",
+                "selected_category_ids": [],
+                "category_fits": [
+                    {
+                        "category_id": "technology",
+                        "label": "Technology & Innovation",
+                        "fit_score": 0.1,
+                        "decision": "reject",
+                        "why_fit": "",
+                        "why_not_fit": "Technology is not central.",
+                        "evidence_sections": [],
+                    }
+                ],
+            }
+        ),
+        prompt_client=_RecordingPromptClient(),
+        mapping_client=mapping_client,
+    )
+
+    assert response.categories == ["consumer_behavior"]
+    assert response.fits[0].category_id == "consumer_behavior"
+    assert response.fits[0].semantic_rule_status == "supported"

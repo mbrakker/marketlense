@@ -160,9 +160,17 @@ def _category_fit_ambiguity_ids(category_state: Any) -> list[str]:
 
 
 def _category_fit_reclassification_candidates(category_state: Any) -> list[str]:
-    """Return the declared ambiguous candidates allowed in one semantic rerun."""
+    """Retain supported IDs while rerunning the unresolved candidate set."""
 
-    return list(dict.fromkeys(_category_fit_ambiguity_ids(category_state)))
+    fit_response = getattr(category_state, "fit_response", None)
+    return list(
+        dict.fromkeys(
+            str(fit.category_id)
+            for fit in (getattr(fit_response, "fits", ()) or ())
+            if fit.decision in {"primary", "secondary"}
+            or fit.remediation_signal == "topic_semantics_ambiguous"
+        )
+    )
 
 
 def _category_fit_repair_code(category_state: Any) -> str:
@@ -173,6 +181,8 @@ def _category_fit_repair_code(category_state: Any) -> str:
     )
     if not fits:
         return "category_fit_empty"
+    if getattr(getattr(category_state, "category_assignment", None), "categories", ()):
+        return ""
     return (
         "category_fit_contradiction"
         if _category_fit_ambiguity_ids(category_state)
