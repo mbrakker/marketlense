@@ -1,0 +1,119 @@
+{
+  "terminal_failures": [
+    {
+      "failure_code": "public_metadata_governance_blocked: Public metadata contains placeholder or extraction-leakage values",
+      "report_id": "1-EtVlnUyPXrb7luj88lSBREJZjPIcDCB",
+      "terminal_outcome": "permanent_failure",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "[Errno 2] No such file or directory: 'C:\\\\Programing\\\\Market lense\\\\out\\\\reliability_full_20260810_62d021b3b57440eb8113ff5d5e105578\\\\2412-activate-technology-and-media-outlook-2025-ecommerce-pdf\\\\slices\\\\2412-activate-technology-and-media-outlook-2025-ecommerce-pdf-chart-2-0.png.fingerprint.json.tmp-write-10344'",
+      "report_id": "19BcPSRlpaxSSLFsitNaoRLTUgptmvPq1",
+      "terminal_outcome": "permanent_failure",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "summary.tldr must be a complete sentence of 1 to 45 words",
+      "report_id": "1IJJ6ab3oZ04FhYB7ArG1TggUqWLILhws",
+      "terminal_outcome": "permanent_failure",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "public_metadata_governance_blocked: Public metadata contains placeholder or extraction-leakage values",
+      "report_id": "1IJhpjavmEXAOoSdPqQUsRbBGMPU7cyp0",
+      "terminal_outcome": "permanent_failure",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "public_metadata_governance_blocked: Public metadata contains placeholder or extraction-leakage values",
+      "report_id": "1S9mOwtnk55ar4F4KRLYBwRhsAYW1-vyV",
+      "terminal_outcome": "permanent_failure",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "public_metadata_governance_blocked: Public metadata contains placeholder or extraction-leakage values",
+      "report_id": "1VooWIbaZG6_RtRMcCgfU_reDZgrsit3L",
+      "terminal_outcome": "permanent_failure",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "cover_asset_set_incomplete: Complete cover title text does not fit the medium zone",
+      "report_id": "1YWo18NdOzGjRNmTG7C32gnn8dMgFJ1fg",
+      "terminal_outcome": "permanent_failure",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "insights_final did not produce a substantive schema-valid JSON artifact",
+      "report_id": "1hYmr26mm2XMt4kXLYTa3u0oN0nKHZNZt",
+      "terminal_outcome": "permanent_failure",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "Artifact evidence references contain unknown identifiers",
+      "report_id": "1iMmqocOUBzzgzM_Eqtu_NgPezptVlWi_",
+      "terminal_outcome": "permanent_failure",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "public_metadata_governance_blocked: Public metadata contains placeholder or extraction-leakage values",
+      "report_id": "1jJOJaWKlxw3qFz_Ap1pw2-TrEBYtTmTe",
+      "terminal_outcome": "permanent_failure",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "public_metadata_governance_blocked: Public metadata contains placeholder or extraction-leakage values",
+      "report_id": "1mXGpczPyU-BCF9nhgQPsMQ7xoUQ7QGM1",
+      "terminal_outcome": "permanent_failure",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "public_metadata_governance_blocked: Public metadata contains placeholder or extraction-leakage values",
+      "report_id": "1nrXx69QT4pqye59eEi2CS6WaoZEt9Cb5",
+      "terminal_outcome": "permanent_failure",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "cover_asset_set_incomplete: Complete cover title text does not fit the medium zone",
+      "report_id": "1rRwLwZRWNWm2FRl8prb4ZOeQHzO0EZG7",
+      "terminal_outcome": "permanent_failure",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "public_metadata_governance_blocked: Public metadata contains placeholder or extraction-leakage values",
+      "report_id": "1sIowfhpjK9CTHlUgkCWwgaCQVwIf_Gpn",
+      "terminal_outcome": "permanent_failure",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "public_metadata_governance_blocked: Public metadata contains placeholder or extraction-leakage values",
+      "report_id": "1snMTUyfA1GMDKMMT5Y8XZs8kivti7m1f",
+      "terminal_outcome": "permanent_failure",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "public_metadata_governance_blocked: Public metadata contains placeholder or extraction-leakage values",
+      "report_id": "1vnLPEBR8UyybsI3WSlAyoWPM2fyjeE2L",
+      "terminal_outcome": "permanent_failure",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "public_metadata_governance_blocked: Public metadata contains placeholder or extraction-leakage values",
+      "report_id": "1w47WnDlvZFYsO-Ia3xSI7vOSGNmk2p6h",
+      "terminal_outcome": "permanent_failure",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "Artifact evidence references contain unknown identifiers",
+      "report_id": "1wCC1bJXIhHirxxwtoaBBMuyRKH-vgy8d",
+      "terminal_outcome": "permanent_failure",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "public_metadata_governance_blocked: Public metadata contains placeholder or extraction-leakage values",
+      "report_id": "1yVgurETAbk5nQwOLOlsmLDlnf6lUZml4",
+      "terminal_outcome": "permanent_failure",
+      "terminal_stage": "ingestion"
+    }
+  ],
+  "validation_run_id": "validation:312089980ce549c6c4a4f9ad7c39c57d63f44b8a5c6c6ef8dc357292a03bc032"
+}

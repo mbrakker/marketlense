@@ -1,0 +1,7 @@
+{
+  "artifact_dir": "out/reliability_full_20260810_62d021b3b57440eb8113ff5d5e105578",
+  "safe_fields_only": true,
+  "schema_version": "1.0",
+  "state_dir": "state/reliability_full_20260810_62d021b3b57440eb8113ff5d5e105578",
+  "validation_run_id": "validation:312089980ce549c6c4a4f9ad7c39c57d63f44b8a5c6c6ef8dc357292a03bc032"
+}

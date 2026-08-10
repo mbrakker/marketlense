@@ -1,0 +1,158 @@
+{
+  "contract_schema_version": "1.0",
+  "implementation": "src/generators/public_editorial_quality_generator.py",
+  "rules": [
+    {
+      "kind": "blocking",
+      "rule_id": "public_editorial_quality.duplicate_insight",
+      "severity": "error",
+      "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
+    },
+    {
+      "kind": "blocking",
+      "rule_id": "public_editorial_quality.fallback_boilerplate",
+      "severity": "error",
+      "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
+    },
+    {
+      "kind": "blocking",
+      "rule_id": "public_editorial_quality.figure_linkage_missing",
+      "severity": "error",
+      "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
+    },
+    {
+      "kind": "blocking",
+      "rule_id": "public_editorial_quality.generic_figure_label",
+      "severity": "error",
+      "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
+    },
+    {
+      "kind": "blocking",
+      "rule_id": "public_editorial_quality.internal_identifier",
+      "severity": "error",
+      "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
+    },
+    {
+      "kind": "blocking",
+      "rule_id": "public_editorial_quality.literal_truncation",
+      "severity": "error",
+      "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
+    },
+    {
+      "kind": "blocking",
+      "rule_id": "public_editorial_quality.malformed_extraction_fragment",
+      "severity": "error",
+      "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
+    },
+    {
+      "kind": "blocking",
+      "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+      "severity": "error",
+      "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
+    },
+    {
+      "kind": "blocking",
+      "rule_id": "public_editorial_quality.mechanical_editorial_scaffold",
+      "severity": "error",
+      "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
+    },
+    {
+      "kind": "blocking",
+      "rule_id": "public_editorial_quality.missing_asset",
+      "severity": "error",
+      "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
+    },
+    {
+      "kind": "blocking",
+      "rule_id": "public_editorial_quality.nonspecific_decision_implication",
+      "severity": "error",
+      "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
+    },
+    {
+      "kind": "blocking",
+      "rule_id": "public_editorial_quality.ocr_fragment",
+      "severity": "error",
+      "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
+    },
+    {
+      "kind": "blocking",
+      "rule_id": "public_editorial_quality.placeholder",
+      "severity": "error",
+      "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
+    },
+    {
+      "kind": "blocking",
+      "rule_id": "public_editorial_quality.private_operational_reference",
+      "severity": "error",
+      "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
+    },
+    {
+      "kind": "blocking",
+      "rule_id": "public_editorial_quality.public_source_provenance_missing",
+      "severity": "error",
+      "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
+    },
+    {
+      "kind": "blocking",
+      "rule_id": "public_editorial_quality.sentence_fragment",
+      "severity": "error",
+      "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
+    },
+    {
+      "kind": "blocking",
+      "rule_id": "public_editorial_quality.text_corruption",
+      "severity": "error",
+      "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
+    },
+    {
+      "kind": "blocking",
+      "rule_id": "public_editorial_quality.unsupported_certainty",
+      "severity": "error",
+      "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
+    },
+    {
+      "kind": "blocking",
+      "rule_id": "public_editorial_quality.unsupported_numeric_claim",
+      "severity": "error",
+      "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
+    },
+    {
+      "kind": "advisory_measurement",
+      "rule_id": "public_editorial_quality.action_specificity",
+      "severity": "warning",
+      "waivable_via": null
+    },
+    {
+      "kind": "advisory_measurement",
+      "rule_id": "public_editorial_quality.chart_insight_linkage",
+      "severity": "warning",
+      "waivable_via": null
+    },
+    {
+      "kind": "advisory_measurement",
+      "rule_id": "public_editorial_quality.excessive_verbosity",
+      "severity": "warning",
+      "waivable_via": null
+    },
+    {
+      "kind": "advisory_measurement",
+      "rule_id": "public_editorial_quality.insight_role_diversity",
+      "severity": "warning",
+      "waivable_via": null
+    },
+    {
+      "kind": "advisory_measurement",
+      "rule_id": "public_editorial_quality.repeated_syntax",
+      "severity": "warning",
+      "waivable_via": null
+    },
+    {
+      "kind": "advisory_measurement",
+      "rule_id": "public_editorial_quality.source_note_completeness",
+      "severity": "warning",
+      "waivable_via": null
+    }
+  ],
+  "schema_version": "1.0",
+  "validator_version": "public-editorial-quality:v1"
+}

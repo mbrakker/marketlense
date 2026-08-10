@@ -1,0 +1,21 @@
+report_id,terminal_outcome,terminal_stage,failure_code
+1-EtVlnUyPXrb7luj88lSBREJZjPIcDCB,permanent_failure,ingestion,public_metadata_governance_blocked: Public metadata contains placeholder or extraction-leakage values
+19BcPSRlpaxSSLFsitNaoRLTUgptmvPq1,permanent_failure,ingestion,[Errno 2] No such file or directory: 'C:\\Programing\\Market lense\\out\\reliability_full_20260810_62d021b3b57440eb8113ff5d5e105578\\2412-activate-technology-and-media-outlook-2025-ecommerce-pdf\\slices\\2412-activate-technology-and-media-outlook-2025-ecommerce-pdf-chart-2-0.png.fingerprint.json.tmp-write-10344'
+1IJJ6ab3oZ04FhYB7ArG1TggUqWLILhws,permanent_failure,ingestion,summary.tldr must be a complete sentence of 1 to 45 words
+1IJhpjavmEXAOoSdPqQUsRbBGMPU7cyp0,permanent_failure,ingestion,public_metadata_governance_blocked: Public metadata contains placeholder or extraction-leakage values
+1S9mOwtnk55ar4F4KRLYBwRhsAYW1-vyV,permanent_failure,ingestion,public_metadata_governance_blocked: Public metadata contains placeholder or extraction-leakage values
+1VooWIbaZG6_RtRMcCgfU_reDZgrsit3L,permanent_failure,ingestion,public_metadata_governance_blocked: Public metadata contains placeholder or extraction-leakage values
+1WSylL4_O1OrVtXA6SVTr7hjEZPbM8110,publish_ready,ingestion,
+1YWo18NdOzGjRNmTG7C32gnn8dMgFJ1fg,permanent_failure,ingestion,cover_asset_set_incomplete: Complete cover title text does not fit the medium zone
+1hYmr26mm2XMt4kXLYTa3u0oN0nKHZNZt,permanent_failure,ingestion,insights_final did not produce a substantive schema-valid JSON artifact
+1iMmqocOUBzzgzM_Eqtu_NgPezptVlWi_,permanent_failure,ingestion,Artifact evidence references contain unknown identifiers
+1jJOJaWKlxw3qFz_Ap1pw2-TrEBYtTmTe,permanent_failure,ingestion,public_metadata_governance_blocked: Public metadata contains placeholder or extraction-leakage values
+1mXGpczPyU-BCF9nhgQPsMQ7xoUQ7QGM1,permanent_failure,ingestion,public_metadata_governance_blocked: Public metadata contains placeholder or extraction-leakage values
+1nrXx69QT4pqye59eEi2CS6WaoZEt9Cb5,permanent_failure,ingestion,public_metadata_governance_blocked: Public metadata contains placeholder or extraction-leakage values
+1rRwLwZRWNWm2FRl8prb4ZOeQHzO0EZG7,permanent_failure,ingestion,cover_asset_set_incomplete: Complete cover title text does not fit the medium zone
+1sIowfhpjK9CTHlUgkCWwgaCQVwIf_Gpn,permanent_failure,ingestion,public_metadata_governance_blocked: Public metadata contains placeholder or extraction-leakage values
+1snMTUyfA1GMDKMMT5Y8XZs8kivti7m1f,permanent_failure,ingestion,public_metadata_governance_blocked: Public metadata contains placeholder or extraction-leakage values
+1vnLPEBR8UyybsI3WSlAyoWPM2fyjeE2L,permanent_failure,ingestion,public_metadata_governance_blocked: Public metadata contains placeholder or extraction-leakage values
+1w47WnDlvZFYsO-Ia3xSI7vOSGNmk2p6h,permanent_failure,ingestion,public_metadata_governance_blocked: Public metadata contains placeholder or extraction-leakage values
+1wCC1bJXIhHirxxwtoaBBMuyRKH-vgy8d,permanent_failure,ingestion,Artifact evidence references contain unknown identifiers
+1yVgurETAbk5nQwOLOlsmLDlnf6lUZml4,permanent_failure,ingestion,public_metadata_governance_blocked: Public metadata contains placeholder or extraction-leakage values

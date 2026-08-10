@@ -1,0 +1,967 @@
+{
+  "evidence_run_id": "77b380edbe9b42cdb00478385e993987",
+  "generated_at": "2026-08-10T16:11:08.652911+00:00",
+  "metrics": {
+    "acquisition_metrics.csv": [],
+    "browser_metrics.csv": [],
+    "crop_quality_metrics.csv": [
+      {
+        "limitation": "No .qa.json visual-defect sidecars retained.",
+        "model": "gpt-5-mini",
+        "refinement_records": 2,
+        "report": "2412-activate-technology-and-media-outlook-2025-ecommerce-pdf",
+        "valid_candidates": 1
+      },
+      {
+        "limitation": "No .qa.json visual-defect sidecars retained.",
+        "model": "gpt-5-mini",
+        "refinement_records": 10,
+        "report": "90bbb6f141259489c1a1cfebc200a905a628186c-pdf",
+        "valid_candidates": 10
+      },
+      {
+        "limitation": "No .qa.json visual-defect sidecars retained.",
+        "model": "gpt-5-mini",
+        "refinement_records": 3,
+        "report": "activate-2021-post-covid-agenda-pdf",
+        "valid_candidates": 3
+      },
+      {
+        "limitation": "No .qa.json visual-defect sidecars retained.",
+        "model": "gpt-5-mini",
+        "refinement_records": 0,
+        "report": "activate-2025-consumer-internet-and-media-revenues-pdf",
+        "valid_candidates": 0
+      },
+      {
+        "limitation": "No .qa.json visual-defect sidecars retained.",
+        "model": "gpt-5-mini",
+        "refinement_records": 1,
+        "report": "activate-2025-consumer-time-and-attention-pdf",
+        "valid_candidates": 1
+      },
+      {
+        "limitation": "No .qa.json visual-defect sidecars retained.",
+        "model": "gpt-5-mini",
+        "refinement_records": 4,
+        "report": "activate-2025-discovery-and-generative-ai-pdf",
+        "valid_candidates": 4
+      },
+      {
+        "limitation": "No .qa.json visual-defect sidecars retained.",
+        "model": "gpt-5-mini",
+        "refinement_records": 1,
+        "report": "activate-2025-social-video-pdf",
+        "valid_candidates": 1
+      },
+      {
+        "limitation": "No .qa.json visual-defect sidecars retained.",
+        "model": "gpt-5-mini",
+        "refinement_records": 2,
+        "report": "activate-2025-sports-media-and-betting-pdf",
+        "valid_candidates": 2
+      },
+      {
+        "limitation": "No .qa.json visual-defect sidecars retained.",
+        "model": "gpt-5-mini",
+        "refinement_records": 2,
+        "report": "activate-2025-super-users-pdf",
+        "valid_candidates": 2
+      },
+      {
+        "limitation": "No .qa.json visual-defect sidecars retained.",
+        "model": "gpt-5-mini",
+        "refinement_records": 6,
+        "report": "activate-2025-video-gaming-pdf",
+        "valid_candidates": 4
+      },
+      {
+        "limitation": "No .qa.json visual-defect sidecars retained.",
+        "model": "gpt-5-mini",
+        "refinement_records": 1,
+        "report": "activate-2025-video-pdf",
+        "valid_candidates": 1
+      },
+      {
+        "limitation": "No .qa.json visual-defect sidecars retained.",
+        "model": "gpt-5-mini",
+        "refinement_records": 6,
+        "report": "activate-technology-and-media-outlook-2017-pdf",
+        "valid_candidates": 6
+      },
+      {
+        "limitation": "No .qa.json visual-defect sidecars retained.",
+        "model": "gpt-5-mini",
+        "refinement_records": 6,
+        "report": "activate-technology-and-media-outlook-2019-pdf",
+        "valid_candidates": 5
+      },
+      {
+        "limitation": "No .qa.json visual-defect sidecars retained.",
+        "model": "gpt-5-mini",
+        "refinement_records": 6,
+        "report": "activate-technology-and-media-outlook-2021-pdf",
+        "valid_candidates": 6
+      },
+      {
+        "limitation": "No .qa.json visual-defect sidecars retained.",
+        "model": "gpt-5-mini",
+        "refinement_records": 6,
+        "report": "activate-technology-and-media-outlook-2023-pdf",
+        "valid_candidates": 4
+      },
+      {
+        "limitation": "No .qa.json visual-defect sidecars retained.",
+        "model": "gpt-5-mini",
+        "refinement_records": 5,
+        "report": "activate-technology-and-media-outlook-2025-pdf",
+        "valid_candidates": 5
+      },
+      {
+        "limitation": "No .qa.json visual-defect sidecars retained.",
+        "model": "gpt-5-mini",
+        "refinement_records": 8,
+        "report": "activate-technology-media-outlook-2026-acig-pdf",
+        "valid_candidates": 7
+      },
+      {
+        "limitation": "No .qa.json visual-defect sidecars retained.",
+        "model": "gpt-5-mini",
+        "refinement_records": 4,
+        "report": "cf091e263a2b6ed29222c5c60b6ed133a90fbe0c-pdf",
+        "valid_candidates": 4
+      },
+      {
+        "limitation": "No .qa.json visual-defect sidecars retained.",
+        "model": "gpt-5-mini",
+        "refinement_records": 8,
+        "report": "d01c72af1b10260d54ec45e891bfc7af40a041ce-pdf",
+        "valid_candidates": 6
+      },
+      {
+        "limitation": "No .qa.json visual-defect sidecars retained.",
+        "model": "gpt-5-mini",
+        "refinement_records": 6,
+        "report": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf",
+        "valid_candidates": 5
+      }
+    ],
+    "failure_metrics.csv": [],
+    "lineage_reuse_metrics.csv": [
+      {
+        "artifact_count": 20,
+        "artifact_kind": "analysis_pdf",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "source_prepared",
+        "report_count": 20,
+        "state": "active"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "analysis_vector_store",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "artifacts",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 8,
+        "artifact_kind": "artifacts_regen_attempt_1",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 8,
+        "state": "active"
+      },
+      {
+        "artifact_count": 2,
+        "artifact_kind": "artifacts_regen_attempt_2",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 2,
+        "state": "active"
+      },
+      {
+        "artifact_count": 1,
+        "artifact_kind": "artifacts_regen_attempt_3",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 1,
+        "state": "active"
+      },
+      {
+        "artifact_count": 8,
+        "artifact_kind": "artifacts_regen_candidate_1",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 8,
+        "state": "active"
+      },
+      {
+        "artifact_count": 2,
+        "artifact_kind": "artifacts_regen_candidate_2",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 2,
+        "state": "active"
+      },
+      {
+        "artifact_count": 1,
+        "artifact_kind": "artifacts_regen_candidate_3",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 1,
+        "state": "active"
+      },
+      {
+        "artifact_count": 12,
+        "artifact_kind": "contents_image",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "source_prepared",
+        "report_count": 12,
+        "state": "active"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "context_category_fit",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "doc_map",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "findings",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "limitations",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "methods",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "preview_image",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "prompt_family:report_vs/artifacts/cover_semantics",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "prompt_family:report_vs/artifacts/expert_comment",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "prompt_family:report_vs/artifacts/insights_candidates",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "prompt_family:report_vs/artifacts/insights_final",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "prompt_family:report_vs/artifacts/linkedin_post",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "prompt_family:report_vs/artifacts/quotes",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "prompt_family:report_vs/artifacts/summary",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "prompt_family:report_vs/context_category_fit",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "prompt_family:report_vs/doc_map",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "prompt_family:report_vs/evidence_packs/context_category_fit",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "prompt_family:report_vs/evidence_packs/findings",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "prompt_family:report_vs/evidence_packs/limitations",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "prompt_family:report_vs/evidence_packs/methods",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "prompt_family:report_vs/evidence_packs/quote_candidates",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "prompt_family:report_vs/evidence_packs/report_context",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "prompt_family:report_vs/evidence_packs/scope",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "prompt_family:report_vs/taxonomy",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "prompt_family:report_vs/validate/grounding",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "prompt_family:report_vs/validate/semantic",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "prompt_family_materialization",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "public_editorial_quality_after",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "public_editorial_quality_before",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 8,
+        "artifact_kind": "public_editorial_quality_regen_attempt_1",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 8,
+        "state": "active"
+      },
+      {
+        "artifact_count": 2,
+        "artifact_kind": "public_editorial_quality_regen_attempt_2",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 2,
+        "state": "active"
+      },
+      {
+        "artifact_count": 1,
+        "artifact_kind": "public_editorial_quality_regen_attempt_3",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 1,
+        "state": "active"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "publish_readiness",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "render_complete",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "quote_candidates",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 8,
+        "artifact_kind": "regeneration_candidate_audit_1",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 8,
+        "state": "active"
+      },
+      {
+        "artifact_count": 2,
+        "artifact_kind": "regeneration_candidate_audit_2",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 2,
+        "state": "active"
+      },
+      {
+        "artifact_count": 1,
+        "artifact_kind": "regeneration_candidate_audit_3",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 1,
+        "state": "active"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "rendered_html",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "render_complete",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 30,
+        "artifact_kind": "rendered_html",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "render_complete",
+        "report_count": 15,
+        "state": "superseded"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "report_context",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "scope",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "signals",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "render_complete",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 20,
+        "artifact_kind": "source_pdf",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "source_prepared",
+        "report_count": 20,
+        "state": "active"
+      },
+      {
+        "artifact_count": 15,
+        "artifact_kind": "validation",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 15,
+        "state": "active"
+      },
+      {
+        "artifact_count": 8,
+        "artifact_kind": "validation_regen_attempt_1",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 8,
+        "state": "active"
+      },
+      {
+        "artifact_count": 2,
+        "artifact_kind": "validation_regen_attempt_2",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 2,
+        "state": "active"
+      },
+      {
+        "artifact_count": 1,
+        "artifact_kind": "validation_regen_attempt_3",
+        "limitation": "persisted lineage; reuse-decision event count is not retained",
+        "producer": "analysis_complete",
+        "report_count": 1,
+        "state": "active"
+      }
+    ],
+    "llm_usage_metrics.csv": [
+      {
+        "action": "artifacts:cover_semantics",
+        "cached_input_tokens": 0,
+        "date": "2026-08-10",
+        "estimated_cost_usd": "0.064994",
+        "input_tokens": 180730,
+        "model": "gpt-5-mini",
+        "output_tokens": 9905,
+        "prompt_namespace": "report_vs/artifacts/cover_semantics",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 18,
+        "semantic_task": "artifacts:cover_semantics",
+        "total_tokens": 190635,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "artifacts:expert_comment",
+        "cached_input_tokens": 0,
+        "date": "2026-08-10",
+        "estimated_cost_usd": "0.084155",
+        "input_tokens": 76500,
+        "model": "gpt-5-mini",
+        "output_tokens": 32516,
+        "prompt_namespace": "report_vs/artifacts/expert_comment",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 18,
+        "semantic_task": "artifacts:expert_comment",
+        "total_tokens": 109016,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "artifacts:insights_candidates",
+        "cached_input_tokens": 0,
+        "date": "2026-08-10",
+        "estimated_cost_usd": "0.190005",
+        "input_tokens": 157103,
+        "model": "gpt-5-mini",
+        "output_tokens": 75364,
+        "prompt_namespace": "report_vs/artifacts/insights_candidates",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 19,
+        "semantic_task": "artifacts:insights_candidates",
+        "total_tokens": 232467,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "artifacts:insights_final",
+        "cached_input_tokens": 0,
+        "date": "2026-08-10",
+        "estimated_cost_usd": "0.192898",
+        "input_tokens": 174670,
+        "model": "gpt-5-mini",
+        "output_tokens": 74616,
+        "prompt_namespace": "report_vs/artifacts/insights_final",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 19,
+        "semantic_task": "artifacts:insights_final",
+        "total_tokens": 249286,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "artifacts:linkedin_post",
+        "cached_input_tokens": 0,
+        "date": "2026-08-10",
+        "estimated_cost_usd": "0.071495",
+        "input_tokens": 66123,
+        "model": "gpt-5-mini",
+        "output_tokens": 27482,
+        "prompt_namespace": "report_vs/artifacts/linkedin_post",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 18,
+        "semantic_task": "artifacts:linkedin_post",
+        "total_tokens": 93605,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "artifacts:quotes",
+        "cached_input_tokens": 0,
+        "date": "2026-08-10",
+        "estimated_cost_usd": "0.126343",
+        "input_tokens": 154967,
+        "model": "gpt-5-mini",
+        "output_tokens": 43800,
+        "prompt_namespace": "report_vs/artifacts/quotes",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 19,
+        "semantic_task": "artifacts:quotes",
+        "total_tokens": 198767,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "artifacts:regenerate:insights_candidates",
+        "cached_input_tokens": 0,
+        "date": "2026-08-10",
+        "estimated_cost_usd": "0.077421",
+        "input_tokens": 133603,
+        "model": "gpt-5-mini",
+        "output_tokens": 22009,
+        "prompt_namespace": "report_vs/artifacts/regenerate/insights_candidates",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 10,
+        "semantic_task": "artifacts:regenerate:insights_candidates",
+        "total_tokens": 155612,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "artifacts:regenerate:insights_final",
+        "cached_input_tokens": 0,
+        "date": "2026-08-10",
+        "estimated_cost_usd": "0.095919",
+        "input_tokens": 153368,
+        "model": "gpt-5-mini",
+        "output_tokens": 28788,
+        "prompt_namespace": "report_vs/artifacts/regenerate/insights_final",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 10,
+        "semantic_task": "artifacts:regenerate:insights_final",
+        "total_tokens": 182156,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "artifacts:regenerate:summary",
+        "cached_input_tokens": 0,
+        "date": "2026-08-10",
+        "estimated_cost_usd": "0.029471",
+        "input_tokens": 35883,
+        "model": "gpt-5-mini",
+        "output_tokens": 10250,
+        "prompt_namespace": "report_vs/artifacts/regenerate/summary",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 3,
+        "semantic_task": "artifacts:regenerate:summary",
+        "total_tokens": 46133,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "artifacts:summary",
+        "cached_input_tokens": 0,
+        "date": "2026-08-10",
+        "estimated_cost_usd": "0.147142",
+        "input_tokens": 150681,
+        "model": "gpt-5-mini",
+        "output_tokens": 54736,
+        "prompt_namespace": "report_vs/artifacts/summary",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 19,
+        "semantic_task": "artifacts:summary",
+        "total_tokens": 205417,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "context_category_fit",
+        "cached_input_tokens": 0,
+        "date": "2026-08-10",
+        "estimated_cost_usd": "0.178799",
+        "input_tokens": 176011,
+        "model": "gpt-5-mini",
+        "output_tokens": 67398,
+        "prompt_namespace": "report_vs/context_category_fit",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 19,
+        "semantic_task": "context_category_fit",
+        "total_tokens": 243409,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "doc_map",
+        "cached_input_tokens": 0,
+        "date": "2026-08-10",
+        "estimated_cost_usd": "0.200509",
+        "input_tokens": 189017,
+        "model": "gpt-5-mini",
+        "output_tokens": 76628,
+        "prompt_namespace": "report_vs/doc_map",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 19,
+        "semantic_task": "doc_map",
+        "total_tokens": 265645,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "evidence_packs:findings",
+        "cached_input_tokens": 0,
+        "date": "2026-08-10",
+        "estimated_cost_usd": "0.139536",
+        "input_tokens": 187427,
+        "model": "gpt-5-mini",
+        "output_tokens": 46339,
+        "prompt_namespace": "report_vs/evidence_packs/findings",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 19,
+        "semantic_task": "evidence_packs:findings",
+        "total_tokens": 233766,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "evidence_packs:limitations",
+        "cached_input_tokens": 0,
+        "date": "2026-08-10",
+        "estimated_cost_usd": "0.14793",
+        "input_tokens": 185963,
+        "model": "gpt-5-mini",
+        "output_tokens": 50719,
+        "prompt_namespace": "report_vs/evidence_packs/limitations",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 19,
+        "semantic_task": "evidence_packs:limitations",
+        "total_tokens": 236682,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "evidence_packs:methods",
+        "cached_input_tokens": 0,
+        "date": "2026-08-10",
+        "estimated_cost_usd": "0.160402",
+        "input_tokens": 187476,
+        "model": "gpt-5-mini",
+        "output_tokens": 56766,
+        "prompt_namespace": "report_vs/evidence_packs/methods",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 19,
+        "semantic_task": "evidence_packs:methods",
+        "total_tokens": 244242,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "evidence_packs:quote_candidates",
+        "cached_input_tokens": 0,
+        "date": "2026-08-10",
+        "estimated_cost_usd": "0.146234",
+        "input_tokens": 191334,
+        "model": "gpt-5-mini",
+        "output_tokens": 49199,
+        "prompt_namespace": "report_vs/evidence_packs/quote_candidates",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 19,
+        "semantic_task": "evidence_packs:quote_candidates",
+        "total_tokens": 240533,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "evidence_packs:scope",
+        "cached_input_tokens": 0,
+        "date": "2026-08-10",
+        "estimated_cost_usd": "0.105759",
+        "input_tokens": 190286,
+        "model": "gpt-5-mini",
+        "output_tokens": 29093,
+        "prompt_namespace": "report_vs/evidence_packs/scope",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 19,
+        "semantic_task": "evidence_packs:scope",
+        "total_tokens": 219379,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "rank_candidates",
+        "cached_input_tokens": 0,
+        "date": "2026-08-10",
+        "estimated_cost_usd": "0.431126",
+        "input_tokens": 113511,
+        "model": "gpt-5-mini",
+        "output_tokens": 201371,
+        "prompt_namespace": "rank_candidates",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 141,
+        "semantic_task": "rank_candidates",
+        "total_tokens": 314882,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "structured_output:regenerate",
+        "cached_input_tokens": 0,
+        "date": "2026-08-10",
+        "estimated_cost_usd": "0.010929",
+        "input_tokens": 10950,
+        "model": "gpt-5-mini",
+        "output_tokens": 4096,
+        "prompt_namespace": "report_vs/structured_output/regenerate",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 1,
+        "semantic_task": "structured_output:regenerate",
+        "total_tokens": 15046,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "structured_output:repair",
+        "cached_input_tokens": 0,
+        "date": "2026-08-10",
+        "estimated_cost_usd": "0.343764",
+        "input_tokens": 532168,
+        "model": "gpt-5-mini",
+        "output_tokens": 105359,
+        "prompt_namespace": "report_vs/structured_output/repair",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 78,
+        "semantic_task": "structured_output:repair",
+        "total_tokens": 637527,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "taxonomy",
+        "cached_input_tokens": 0,
+        "date": "2026-08-10",
+        "estimated_cost_usd": "0.204437",
+        "input_tokens": 252803,
+        "model": "gpt-5-mini",
+        "output_tokens": 70617,
+        "prompt_namespace": "report_vs/taxonomy",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 19,
+        "semantic_task": "taxonomy",
+        "total_tokens": 323420,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "validate:grounding",
+        "cached_input_tokens": 0,
+        "date": "2026-08-10",
+        "estimated_cost_usd": "0.138486",
+        "input_tokens": 169879,
+        "model": "gpt-5-mini",
+        "output_tokens": 48008,
+        "prompt_namespace": "report_vs/validate/grounding",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 27,
+        "semantic_task": "validate:grounding",
+        "total_tokens": 217887,
+        "unknown_pricing_count": 0
+      },
+      {
+        "action": "validate:semantic",
+        "cached_input_tokens": 0,
+        "date": "2026-08-10",
+        "estimated_cost_usd": "0.097671",
+        "input_tokens": 109147,
+        "model": "gpt-5-mini",
+        "output_tokens": 35192,
+        "prompt_namespace": "report_vs/validate/semantic",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "request_count": 28,
+        "semantic_task": "validate:semantic",
+        "total_tokens": 144339,
+        "unknown_pricing_count": 0
+      }
+    ],
+    "ocr_vision_metrics.csv": [],
+    "wordpress_metrics.csv": []
+  },
+  "repository_commit_sha": "ef0da57423d1ec039c148b378a5f110b5f11ee8e",
+  "schema_version": "1.0"
+}

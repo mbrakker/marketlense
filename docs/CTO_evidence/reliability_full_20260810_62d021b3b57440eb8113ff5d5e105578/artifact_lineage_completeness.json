@@ -1,0 +1,925 @@
+{
+  "definition": "Completeness is reported separately for active and all-history records; planner-safe rows require all canonical fields and lineage_status=complete.",
+  "families": [
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 20,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 20,
+      "artifact_family": "analysis_pdf",
+      "complete_active_count": 20,
+      "complete_history_count": 20,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 20
+      },
+      "schema_version_distribution": {
+        "1.0": 20
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "analysis_vector_store",
+      "complete_active_count": 15,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "artifacts",
+      "complete_active_count": 15,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 8,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 8,
+      "artifact_family": "artifacts_regen_attempt_1",
+      "complete_active_count": 8,
+      "complete_history_count": 8,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 8
+      },
+      "schema_version_distribution": {
+        "1.0": 8
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 2,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 2,
+      "artifact_family": "artifacts_regen_attempt_2",
+      "complete_active_count": 2,
+      "complete_history_count": 2,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 2
+      },
+      "schema_version_distribution": {
+        "1.0": 2
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 1,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 1,
+      "artifact_family": "artifacts_regen_attempt_3",
+      "complete_active_count": 1,
+      "complete_history_count": 1,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 1
+      },
+      "schema_version_distribution": {
+        "1.0": 1
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 8,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 8,
+      "artifact_family": "artifacts_regen_candidate_1",
+      "complete_active_count": 8,
+      "complete_history_count": 8,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 8
+      },
+      "schema_version_distribution": {
+        "1.0": 8
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 2,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 2,
+      "artifact_family": "artifacts_regen_candidate_2",
+      "complete_active_count": 2,
+      "complete_history_count": 2,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 2
+      },
+      "schema_version_distribution": {
+        "1.0": 2
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 1,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 1,
+      "artifact_family": "artifacts_regen_candidate_3",
+      "complete_active_count": 1,
+      "complete_history_count": 1,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 1
+      },
+      "schema_version_distribution": {
+        "1.0": 1
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 12,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 12,
+      "artifact_family": "contents_image",
+      "complete_active_count": 12,
+      "complete_history_count": 12,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 12
+      },
+      "schema_version_distribution": {
+        "1.0": 12
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "context_category_fit",
+      "complete_active_count": 15,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "doc_map",
+      "complete_active_count": 15,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "findings",
+      "complete_active_count": 15,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "limitations",
+      "complete_active_count": 15,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "methods",
+      "complete_active_count": 15,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "preview_image",
+      "complete_active_count": 15,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "prompt_family:report_vs/artifacts/cover_semantics",
+      "complete_active_count": 15,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "prompt_family:report_vs/artifacts/expert_comment",
+      "complete_active_count": 15,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "prompt_family:report_vs/artifacts/insights_candidates",
+      "complete_active_count": 15,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "prompt_family:report_vs/artifacts/insights_final",
+      "complete_active_count": 15,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "prompt_family:report_vs/artifacts/linkedin_post",
+      "complete_active_count": 15,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "prompt_family:report_vs/artifacts/quotes",
+      "complete_active_count": 15,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "prompt_family:report_vs/artifacts/summary",
+      "complete_active_count": 15,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "prompt_family:report_vs/context_category_fit",
+      "complete_active_count": 15,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "prompt_family:report_vs/doc_map",
+      "complete_active_count": 15,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "prompt_family:report_vs/evidence_packs/context_category_fit",
+      "complete_active_count": 15,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "prompt_family:report_vs/evidence_packs/findings",
+      "complete_active_count": 15,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "prompt_family:report_vs/evidence_packs/limitations",
+      "complete_active_count": 15,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "prompt_family:report_vs/evidence_packs/methods",
+      "complete_active_count": 15,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "prompt_family:report_vs/evidence_packs/quote_candidates",
+      "complete_active_count": 15,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "prompt_family:report_vs/evidence_packs/report_context",
+      "complete_active_count": 15,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "prompt_family:report_vs/evidence_packs/scope",
+      "complete_active_count": 15,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "prompt_family:report_vs/taxonomy",
+      "complete_active_count": 15,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "prompt_family:report_vs/validate/grounding",
+      "complete_active_count": 15,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "prompt_family:report_vs/validate/semantic",
+      "complete_active_count": 15,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "public_editorial_quality_after",
+      "complete_active_count": 15,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "public_editorial_quality_before",
+      "complete_active_count": 15,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 8,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 8,
+      "artifact_family": "public_editorial_quality_regen_attempt_1",
+      "complete_active_count": 8,
+      "complete_history_count": 8,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 8
+      },
+      "schema_version_distribution": {
+        "1.0": 8
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 2,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 2,
+      "artifact_family": "public_editorial_quality_regen_attempt_2",
+      "complete_active_count": 2,
+      "complete_history_count": 2,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 2
+      },
+      "schema_version_distribution": {
+        "1.0": 2
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 1,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 1,
+      "artifact_family": "public_editorial_quality_regen_attempt_3",
+      "complete_active_count": 1,
+      "complete_history_count": 1,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 1
+      },
+      "schema_version_distribution": {
+        "1.0": 1
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "publish_readiness",
+      "complete_active_count": 15,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "quote_candidates",
+      "complete_active_count": 15,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 8,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 8,
+      "artifact_family": "regeneration_candidate_audit_1",
+      "complete_active_count": 8,
+      "complete_history_count": 8,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 8
+      },
+      "schema_version_distribution": {
+        "1.0": 8
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 2,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 2,
+      "artifact_family": "regeneration_candidate_audit_2",
+      "complete_active_count": 2,
+      "complete_history_count": 2,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 2
+      },
+      "schema_version_distribution": {
+        "1.0": 2
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 1,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 1,
+      "artifact_family": "regeneration_candidate_audit_3",
+      "complete_active_count": 1,
+      "complete_history_count": 1,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 1
+      },
+      "schema_version_distribution": {
+        "1.0": 1
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 45,
+      "artifact_family": "rendered_html",
+      "complete_active_count": 15,
+      "complete_history_count": 45,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 45
+      },
+      "schema_version_distribution": {
+        "1.0": 45
+      },
+      "superseded_count": 30
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "report_context",
+      "complete_active_count": 15,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "scope",
+      "complete_active_count": 15,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "signals",
+      "complete_active_count": 15,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 20,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 20,
+      "artifact_family": "source_pdf",
+      "complete_active_count": 20,
+      "complete_history_count": 20,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 20
+      },
+      "schema_version_distribution": {
+        "1.0": 20
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 15,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "validation",
+      "complete_active_count": 15,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 8,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 8,
+      "artifact_family": "validation_regen_attempt_1",
+      "complete_active_count": 8,
+      "complete_history_count": 8,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 8
+      },
+      "schema_version_distribution": {
+        "1.0": 8
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 2,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 2,
+      "artifact_family": "validation_regen_attempt_2",
+      "complete_active_count": 2,
+      "complete_history_count": 2,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 2
+      },
+      "schema_version_distribution": {
+        "1.0": 2
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 1,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 1,
+      "artifact_family": "validation_regen_attempt_3",
+      "complete_active_count": 1,
+      "complete_history_count": 1,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 1
+      },
+      "schema_version_distribution": {
+        "1.0": 1
+      },
+      "superseded_count": 0
+    }
+  ],
+  "schema_version": "1.0",
+  "status": "available"
+}

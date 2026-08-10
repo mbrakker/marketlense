@@ -1,0 +1,41 @@
+stage,outcome,repair_disposition,failure_code
+regeneration,blocked,not_required,Artifact evidence references contain unknown identifiers
+regeneration,blocked,not_required,[Errno 2] No such file or directory: 'C:\\Programing\\Market lense\\out\\reliability_full_20260810_62d021b3b57440eb8113ff5d5e105578\\2412-activate-technology-and-media-outlook-2025-ecommerce-pdf\\slices\\2412-activate-technology-and-media-outlook-2025-ecommerce-pdf-chart-2-0.png.fingerprint.json.tmp-write-10344'
+regeneration,blocked,not_required,summary.tldr must be a complete sentence of 1 to 45 words
+regeneration,blocked,not_required,insights_final did not produce a substantive schema-valid JSON artifact
+regeneration,blocked,not_required,Artifact evidence references contain unknown identifiers
+regeneration,failed,targeted_repair,validation_failed
+regeneration,skipped,not_required,
+regeneration,skipped,not_required,
+regeneration,skipped,not_required,
+regeneration,skipped,not_required,
+regeneration,skipped,not_required,
+regeneration,skipped,not_required,
+regeneration,skipped,not_required,
+regeneration,succeeded,targeted_repair,
+regeneration,succeeded,targeted_repair,
+regeneration,succeeded,targeted_repair,
+regeneration,succeeded,targeted_repair,
+regeneration,succeeded,targeted_repair,
+regeneration,succeeded,targeted_repair,
+regeneration,succeeded,targeted_repair,
+structured_output_repair,blocked,not_required,[Errno 2] No such file or directory: 'C:\\Programing\\Market lense\\out\\reliability_full_20260810_62d021b3b57440eb8113ff5d5e105578\\2412-activate-technology-and-media-outlook-2025-ecommerce-pdf\\slices\\2412-activate-technology-and-media-outlook-2025-ecommerce-pdf-chart-2-0.png.fingerprint.json.tmp-write-10344'
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,

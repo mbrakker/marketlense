@@ -1,0 +1,284 @@
+{
+  "immutable_cohort_size": 20,
+  "schema_version": "1.0",
+  "stage_outcomes": [
+    {
+      "cohort_size": 20,
+      "conversion_percent": 100.0,
+      "count": 20,
+      "outcome": "succeeded",
+      "stage": "acquisition"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 100.0,
+      "count": 20,
+      "outcome": "succeeded",
+      "stage": "admission_preflight"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 5.0,
+      "count": 1,
+      "outcome": "failed",
+      "stage": "analysis_complete"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 70.0,
+      "count": 14,
+      "outcome": "succeeded",
+      "stage": "analysis_complete"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 20.0,
+      "count": 4,
+      "outcome": "blocked",
+      "stage": "artifact_generation"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 80.0,
+      "count": 16,
+      "outcome": "succeeded",
+      "stage": "artifact_generation"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 95.0,
+      "count": 19,
+      "outcome": "blocked",
+      "stage": "authenticated_readback"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 100.0,
+      "count": 20,
+      "outcome": "succeeded",
+      "stage": "candidate_qualification"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 5.0,
+      "count": 1,
+      "outcome": "blocked",
+      "stage": "category_fit"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 95.0,
+      "count": 19,
+      "outcome": "succeeded",
+      "stage": "category_fit"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 100.0,
+      "count": 20,
+      "outcome": "succeeded",
+      "stage": "discovery"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 5.0,
+      "count": 1,
+      "outcome": "blocked",
+      "stage": "evidence_generation"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 95.0,
+      "count": 19,
+      "outcome": "succeeded",
+      "stage": "evidence_generation"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 25.0,
+      "count": 5,
+      "outcome": "blocked",
+      "stage": "final_html_validation"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 75.0,
+      "count": 15,
+      "outcome": "succeeded",
+      "stage": "final_html_validation"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 25.0,
+      "count": 5,
+      "outcome": "blocked",
+      "stage": "grounding_validation"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 5.0,
+      "count": 1,
+      "outcome": "failed",
+      "stage": "grounding_validation"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 70.0,
+      "count": 14,
+      "outcome": "succeeded",
+      "stage": "grounding_validation"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 95.0,
+      "count": 19,
+      "outcome": "permanent_failure",
+      "stage": "ingestion"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 5.0,
+      "count": 1,
+      "outcome": "publish_ready",
+      "stage": "ingestion"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 95.0,
+      "count": 19,
+      "outcome": "blocked",
+      "stage": "publication_preflight"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 25.0,
+      "count": 5,
+      "outcome": "blocked",
+      "stage": "regeneration"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 5.0,
+      "count": 1,
+      "outcome": "failed",
+      "stage": "regeneration"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 35.0,
+      "count": 7,
+      "outcome": "skipped",
+      "stage": "regeneration"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 35.0,
+      "count": 7,
+      "outcome": "succeeded",
+      "stage": "regeneration"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 25.0,
+      "count": 5,
+      "outcome": "blocked",
+      "stage": "rendering"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 75.0,
+      "count": 15,
+      "outcome": "succeeded",
+      "stage": "rendering"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 95.0,
+      "count": 19,
+      "outcome": "blocked",
+      "stage": "repeat_publication"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 25.0,
+      "count": 5,
+      "outcome": "blocked",
+      "stage": "semantic_validation"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 5.0,
+      "count": 1,
+      "outcome": "failed",
+      "stage": "semantic_validation"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 70.0,
+      "count": 14,
+      "outcome": "succeeded",
+      "stage": "semantic_validation"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 100.0,
+      "count": 20,
+      "outcome": "succeeded",
+      "stage": "source_preparation"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 100.0,
+      "count": 20,
+      "outcome": "succeeded",
+      "stage": "source_validation"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 5.0,
+      "count": 1,
+      "outcome": "blocked",
+      "stage": "structured_output_repair"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 95.0,
+      "count": 19,
+      "outcome": "skipped",
+      "stage": "structured_output_repair"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 5.0,
+      "count": 1,
+      "outcome": "blocked",
+      "stage": "taxonomy"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 95.0,
+      "count": 19,
+      "outcome": "succeeded",
+      "stage": "taxonomy"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 95.0,
+      "count": 19,
+      "outcome": "blocked",
+      "stage": "wordpress_lookup"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 95.0,
+      "count": 19,
+      "outcome": "blocked",
+      "stage": "wordpress_write"
+    }
+  ],
+  "terminal_outcomes": {
+    "permanent_failure": 19,
+    "publish_ready": 1
+  },
+  "validation_run_id": "validation:312089980ce549c6c4a4f9ad7c39c57d63f44b8a5c6c6ef8dc357292a03bc032"
+}

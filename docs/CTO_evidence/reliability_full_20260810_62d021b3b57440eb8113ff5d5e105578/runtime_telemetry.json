@@ -1,0 +1,332 @@
+{
+  "acquisition_by_publisher_and_route": {
+    "limitations": [],
+    "source": "reports.publisher_download_route_history",
+    "status": "empty",
+    "values": {
+      "rows": []
+    }
+  },
+  "browser_per_acquired_report": {
+    "limitations": [
+      "Session, page-load, screenshot, and duration fields are not retained for every route record; values are aggregate evidence counts, not a per-report trace."
+    ],
+    "source": "reports.publisher_download_route_history; llm_usage.budget_authority_actuals",
+    "status": "empty",
+    "values": {
+      "acquired_report_count": 0,
+      "browser_sessions": 0,
+      "browser_steps": 0,
+      "duration_seconds": 0,
+      "page_loads": 0,
+      "screenshots": 0
+    }
+  },
+  "cache_and_reuse_by_artifact_family": {
+    "limitations": [
+      "The retained plan audit records reusable artifacts but not cache lookup hit/miss decisions by family."
+    ],
+    "source": "reports.artifact_execution_plan_runs; reports.artifact_lineage_records",
+    "status": "partial",
+    "values": {
+      "plan_count": 20,
+      "planned_reusable_artifact_count": 0
+    }
+  },
+  "cost_by_llm_scope_and_artifact_family": {
+    "limitations": [
+      "LLM events do not retain an artifact-family identifier, so a cost allocation by family is not asserted."
+    ],
+    "source": "llm_usage.llm_usage_events; reports.artifact_execution_plan_runs",
+    "status": "partial",
+    "values": {
+      "execution_plan_cost_usd": 0.0,
+      "llm_scopes": [
+        {
+          "action": "artifacts:cover_semantics",
+          "call_count": 18,
+          "estimated_cost_usd": 0.064994,
+          "prompt_namespace": "report_vs/artifacts/cover_semantics",
+          "semantic_task": "artifacts:cover_semantics"
+        },
+        {
+          "action": "artifacts:expert_comment",
+          "call_count": 18,
+          "estimated_cost_usd": 0.084155,
+          "prompt_namespace": "report_vs/artifacts/expert_comment",
+          "semantic_task": "artifacts:expert_comment"
+        },
+        {
+          "action": "artifacts:insights_candidates",
+          "call_count": 19,
+          "estimated_cost_usd": 0.190005,
+          "prompt_namespace": "report_vs/artifacts/insights_candidates",
+          "semantic_task": "artifacts:insights_candidates"
+        },
+        {
+          "action": "artifacts:insights_final",
+          "call_count": 19,
+          "estimated_cost_usd": 0.192898,
+          "prompt_namespace": "report_vs/artifacts/insights_final",
+          "semantic_task": "artifacts:insights_final"
+        },
+        {
+          "action": "artifacts:linkedin_post",
+          "call_count": 18,
+          "estimated_cost_usd": 0.071495,
+          "prompt_namespace": "report_vs/artifacts/linkedin_post",
+          "semantic_task": "artifacts:linkedin_post"
+        },
+        {
+          "action": "artifacts:quotes",
+          "call_count": 19,
+          "estimated_cost_usd": 0.126343,
+          "prompt_namespace": "report_vs/artifacts/quotes",
+          "semantic_task": "artifacts:quotes"
+        },
+        {
+          "action": "artifacts:regenerate:insights_candidates",
+          "call_count": 10,
+          "estimated_cost_usd": 0.077421,
+          "prompt_namespace": "report_vs/artifacts/regenerate/insights_candidates",
+          "semantic_task": "artifacts:regenerate:insights_candidates"
+        },
+        {
+          "action": "artifacts:regenerate:insights_final",
+          "call_count": 10,
+          "estimated_cost_usd": 0.095919,
+          "prompt_namespace": "report_vs/artifacts/regenerate/insights_final",
+          "semantic_task": "artifacts:regenerate:insights_final"
+        },
+        {
+          "action": "artifacts:regenerate:summary",
+          "call_count": 3,
+          "estimated_cost_usd": 0.029471,
+          "prompt_namespace": "report_vs/artifacts/regenerate/summary",
+          "semantic_task": "artifacts:regenerate:summary"
+        },
+        {
+          "action": "artifacts:summary",
+          "call_count": 19,
+          "estimated_cost_usd": 0.147142,
+          "prompt_namespace": "report_vs/artifacts/summary",
+          "semantic_task": "artifacts:summary"
+        },
+        {
+          "action": "context_category_fit",
+          "call_count": 19,
+          "estimated_cost_usd": 0.178799,
+          "prompt_namespace": "report_vs/context_category_fit",
+          "semantic_task": "context_category_fit"
+        },
+        {
+          "action": "doc_map",
+          "call_count": 19,
+          "estimated_cost_usd": 0.200509,
+          "prompt_namespace": "report_vs/doc_map",
+          "semantic_task": "doc_map"
+        },
+        {
+          "action": "evidence_packs:findings",
+          "call_count": 19,
+          "estimated_cost_usd": 0.139536,
+          "prompt_namespace": "report_vs/evidence_packs/findings",
+          "semantic_task": "evidence_packs:findings"
+        },
+        {
+          "action": "evidence_packs:limitations",
+          "call_count": 19,
+          "estimated_cost_usd": 0.14793,
+          "prompt_namespace": "report_vs/evidence_packs/limitations",
+          "semantic_task": "evidence_packs:limitations"
+        },
+        {
+          "action": "evidence_packs:methods",
+          "call_count": 19,
+          "estimated_cost_usd": 0.160402,
+          "prompt_namespace": "report_vs/evidence_packs/methods",
+          "semantic_task": "evidence_packs:methods"
+        },
+        {
+          "action": "evidence_packs:quote_candidates",
+          "call_count": 19,
+          "estimated_cost_usd": 0.146234,
+          "prompt_namespace": "report_vs/evidence_packs/quote_candidates",
+          "semantic_task": "evidence_packs:quote_candidates"
+        },
+        {
+          "action": "evidence_packs:scope",
+          "call_count": 19,
+          "estimated_cost_usd": 0.105759,
+          "prompt_namespace": "report_vs/evidence_packs/scope",
+          "semantic_task": "evidence_packs:scope"
+        },
+        {
+          "action": "rank_candidates",
+          "call_count": 141,
+          "estimated_cost_usd": 0.431126,
+          "prompt_namespace": "rank_candidates",
+          "semantic_task": "rank_candidates"
+        },
+        {
+          "action": "structured_output:regenerate",
+          "call_count": 1,
+          "estimated_cost_usd": 0.010929,
+          "prompt_namespace": "report_vs/structured_output/regenerate",
+          "semantic_task": "structured_output:regenerate"
+        },
+        {
+          "action": "structured_output:repair",
+          "call_count": 78,
+          "estimated_cost_usd": 0.343764,
+          "prompt_namespace": "report_vs/structured_output/repair",
+          "semantic_task": "structured_output:repair"
+        },
+        {
+          "action": "taxonomy",
+          "call_count": 19,
+          "estimated_cost_usd": 0.204437,
+          "prompt_namespace": "report_vs/taxonomy",
+          "semantic_task": "taxonomy"
+        },
+        {
+          "action": "validate:grounding",
+          "call_count": 27,
+          "estimated_cost_usd": 0.138486,
+          "prompt_namespace": "report_vs/validate/grounding",
+          "semantic_task": "validate:grounding"
+        },
+        {
+          "action": "validate:semantic",
+          "call_count": 28,
+          "estimated_cost_usd": 0.097671,
+          "prompt_namespace": "report_vs/validate/semantic",
+          "semantic_task": "validate:semantic"
+        }
+      ]
+    }
+  },
+  "cost_per_acquired_and_published_report": {
+    "limitations": [
+      "The retained ledger does not associate a complete cost total with one acquired or published report across all providers and side effects."
+    ],
+    "source": "reports.artifact_execution_plan_runs; index.workflow_control_observations",
+    "status": "partial",
+    "values": {
+      "execution_plan_cost_usd": 0.0,
+      "published_workflow_observation_count": 0,
+      "successful_publication_observation_count": 0
+    }
+  },
+  "crop_qa": {
+    "limitations": [
+      "Crop cache sidecars identify retained results but do not record whether a request was a cache hit, so reuse rate is unavailable."
+    ],
+    "source": "retained crop_refine.json; llm_usage.llm_usage_events",
+    "status": "partial",
+    "values": {
+      "acceptance_rate": 0.885057,
+      "accepted_candidate_count": 77,
+      "crop_candidate_count": 87,
+      "crop_qa_call_count": 0,
+      "crop_refinement_file_count": 20
+    }
+  },
+  "deferred_work_age_and_completion": {
+    "limitations": [],
+    "source": "llm_usage.budget_authority_deferred_work",
+    "status": "empty",
+    "values": {
+      "completion_rate": null,
+      "mean_age_seconds": null,
+      "status_counts": {}
+    }
+  },
+  "embedding_queue_and_avoided_reembedding": {
+    "limitations": [
+      "The queue proves content-hash-aware admission but does not retain a dedicated avoided-re-embedding counter."
+    ],
+    "source": "reports.vector_projection_queue; reports.claim_embedding_queue_transitions",
+    "status": "partial",
+    "values": {
+      "mean_open_queue_age_seconds": 4173.115,
+      "queue_status_counts": {
+        "pending": 296
+      },
+      "transition_reason_counts": {}
+    }
+  },
+  "human_editorial_quality_ratings": {
+    "limitations": [
+      "No completed, retained human-rating corpus is present in the canonical runtime stores."
+    ],
+    "source": "operator-maintained blinded review corpus",
+    "status": "unavailable",
+    "values": {}
+  },
+  "minimal_plan_actual_call_divergence": {
+    "limitations": [],
+    "source": "reports.artifact_execution_plan_runs",
+    "status": "available",
+    "values": {
+      "rows": [
+        {
+          "actual_call_count": 120,
+          "divergent_plan_count": 0,
+          "enforcement_deferred_or_blocked_count": 0,
+          "execution_intent": "report_generation",
+          "execution_mode": "shadow",
+          "matching_plan_count": 20,
+          "plan_count": 20,
+          "planned_call_count": 160,
+          "unreconciled_plan_count": 0
+        }
+      ]
+    }
+  },
+  "ocr_incidence_and_success": {
+    "limitations": [],
+    "source": "llm_usage.llm_usage_events",
+    "status": "available",
+    "values": {
+      "ocr_call_count": 0,
+      "ocr_incidence_among_llm_calls": 0.0,
+      "ocr_success_rate": null
+    }
+  },
+  "public_page_performance_and_errors": {
+    "limitations": [
+      "Hosted public-page performance and visitor-facing error telemetry are not retained in the local evidence stores."
+    ],
+    "source": "hosted public-page observability",
+    "status": "unavailable",
+    "values": {}
+  },
+  "remediation_outcomes": {
+    "limitations": [],
+    "source": "index.remediation_records; index.remediation_transitions",
+    "status": "available",
+    "values": {
+      "human_intervention_rate": 1.0,
+      "recurrence_rate": 0.0,
+      "status_counts": {
+        "operator_action_required": 38
+      },
+      "success_rate": 0.0
+    }
+  },
+  "schema_version": "1.0",
+  "wordpress_publication": {
+    "limitations": [
+      "Duplicate and rollback outcomes are not distinguished in the retained workflow observation schema."
+    ],
+    "source": "index.workflow_control_observations",
+    "status": "empty",
+    "values": {
+      "failure_rate": null,
+      "mean_latency_ms": null,
+      "observation_count": 0,
+      "outcome_counts": {}
+    }
+  }
+}

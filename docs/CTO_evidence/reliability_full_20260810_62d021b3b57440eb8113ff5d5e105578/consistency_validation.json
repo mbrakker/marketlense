@@ -1,0 +1,21 @@
+{
+  "checks": {
+    "artifact_hashes": "passed",
+    "editorial_canary_coverage": "passed",
+    "exact_head": "passed",
+    "log_content_leakage": "passed",
+    "log_freshness": "passed",
+    "snapshot_integrity": "passed",
+    "source_canary_coverage": "passed",
+    "summary_consistency": "passed"
+  },
+  "cost_tolerance_usd": "0.000001",
+  "evidence_run_id": "77b380edbe9b42cdb00478385e993987",
+  "exact_head_verified": true,
+  "generated_at": "2026-08-10T16:11:09.626430+00:00",
+  "passed": true,
+  "repository_commit_sha": "ef0da57423d1ec039c148b378a5f110b5f11ee8e",
+  "run_manifest_sha256": "c0539bd2e38625ac4db7232df5617690b0b59072089c4108fa2ea01dbb59af05",
+  "schema_version": "1.0",
+  "status": "passed"
+}
