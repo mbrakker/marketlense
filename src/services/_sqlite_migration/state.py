@@ -602,6 +602,47 @@ def _state_db_014_create_source_quarantine(conn: sqlite3.Connection) -> None:
         )
         """
     )
+
+
+def _state_db_015_create_performance_telemetry(conn: sqlite3.Connection) -> None:
+    """Store bounded run/stage telemetry beside canonical workflow state."""
+
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS performance_telemetry_spans (
+          span_id TEXT PRIMARY KEY,
+          schema_version TEXT NOT NULL,
+          run_id TEXT NOT NULL,
+          stage TEXT NOT NULL,
+          status TEXT NOT NULL,
+          measurement_profile_hash TEXT NOT NULL,
+          queue_name TEXT NOT NULL DEFAULT '',
+          worker_id TEXT NOT NULL DEFAULT '',
+          queued_at_utc TEXT NOT NULL DEFAULT '',
+          started_at_utc TEXT NOT NULL DEFAULT '',
+          completed_at_utc TEXT NOT NULL DEFAULT '',
+          attributes_json TEXT NOT NULL DEFAULT '{}'
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS performance_telemetry_measurements (
+          span_id TEXT NOT NULL REFERENCES performance_telemetry_spans(span_id),
+          metric TEXT NOT NULL,
+          status TEXT NOT NULL,
+          integer_value INTEGER,
+          decimal_value TEXT NOT NULL DEFAULT '',
+          cache_family TEXT NOT NULL DEFAULT '',
+          database_role TEXT NOT NULL DEFAULT '',
+          PRIMARY KEY(span_id, metric, cache_family, database_role)
+        )
+        """
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_performance_telemetry_spans_run_stage "
+        "ON performance_telemetry_spans(run_id, stage, completed_at_utc)"
+    )
     conn.execute(
         """
         CREATE INDEX IF NOT EXISTS idx_source_quarantine_active_lookup
@@ -680,5 +721,10 @@ _STATE_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
         migration_id="state_db_014_create_source_quarantine",
         version=14,
         apply_fn=_state_db_014_create_source_quarantine,
+    ),
+    _MigrationSpec(
+        migration_id="state_db_015_create_performance_telemetry",
+        version=15,
+        apply_fn=_state_db_015_create_performance_telemetry,
     ),
 )

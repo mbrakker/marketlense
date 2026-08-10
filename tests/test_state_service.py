@@ -129,8 +129,8 @@ def test_migration_adds_vector_columns_and_preserves_data(tmp_path: Path) -> Non
     assert resp.last_error is None
     assert resp.openai_file_id == "of_123"
     assert resp.doc_map_summary is None
-    assert schema_version == (14,)
-    assert ledger_count == 14
+    assert schema_version == (15,)
+    assert ledger_count == 15
 
 
 def test_source_quarantine_is_superseded_by_a_verified_replacement(

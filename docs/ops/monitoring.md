@@ -14,6 +14,31 @@ python -m src.cli trace-run --run-id <run_id> --log-path logs/market_lense_YYYY-
 
 Use `--trace-id` for a trace-scoped view. Start with the run ID before narrowing to a task so parent-span context is retained. The Streamlit cockpit exposes run registry, dead-letter, log, storage, and cost views for operator workflows.
 
+## Performance telemetry
+
+Stage performance is persisted in the canonical state database. Queue-backed
+stages currently record wall time and queue wait. The shared artifact also
+accepts database wait, LLM/browser latency, cache counts, worker-capacity
+utilisation, and total duration as their owning boundaries emit them. A metric
+marked `unavailable` was not measured; it is not zero and cannot support a
+speed-improvement claim.
+
+Compare retained before/after JSON artifacts only when their measurement-profile
+hashes match:
+
+```powershell
+python scripts/quality/performance_telemetry_baseline.py --baseline <before.json> --candidate <after.json> --output-json out/performance-comparison.json
+```
+
+The comparator rejects a claimed improvement when the candidate is not faster,
+quality did not pass, cost increased, or either run is incompatible.
+
+For CI, inspect `out/ci_performance_benchmark.json` together with
+`out/test_telemetry_ci.json` and `out/quality_command_telemetry_ci.json`. The
+combined artifact contains the pytest session and the standalone deterministic
+quality/regression gates; it deliberately excludes setup, dependency install,
+and opt-in staging checks.
+
 Quality evidence and release bundles are described in [evidence](../quality/evidence.md). For failure handling, continue to [recovery](recovery.md).
 
 ## Validation-run LLM attribution

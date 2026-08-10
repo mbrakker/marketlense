@@ -27183,6 +27183,304 @@
       ],
       "type": "object"
     },
+    "src.contracts.performance_telemetry.PerformanceTelemetryMeasurement": {
+      "additionalProperties": false,
+      "properties": {
+        "cache_family": {
+          "type": "string"
+        },
+        "database_role": {
+          "type": "string"
+        },
+        "decimal_value": {
+          "type": "string"
+        },
+        "integer_value": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "metric": {
+          "enum": [
+            "queue_wait_ms",
+            "wall_time_ms",
+            "db_wait_ms",
+            "llm_latency_ms",
+            "browser_latency_ms",
+            "cache_hits",
+            "cache_misses",
+            "worker_utilisation",
+            "total_run_duration_ms"
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "span_id": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "unavailable",
+            "not_applicable",
+            "observed"
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "span_id",
+        "metric",
+        "status"
+      ],
+      "type": "object"
+    },
+    "src.contracts.performance_telemetry.PerformanceTelemetryMeasurementRecordResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "inserted": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "inserted"
+      ],
+      "type": "object"
+    },
+    "src.contracts.performance_telemetry.PerformanceTelemetryMetricSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "metric": {
+          "enum": [
+            "queue_wait_ms",
+            "wall_time_ms",
+            "db_wait_ms",
+            "llm_latency_ms",
+            "browser_latency_ms",
+            "cache_hits",
+            "cache_misses",
+            "worker_utilisation",
+            "total_run_duration_ms"
+          ]
+        },
+        "not_applicable_count": {
+          "type": "integer"
+        },
+        "observed_sample_count": {
+          "type": "integer"
+        },
+        "p50_integer_value": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "p95_integer_value": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "total_integer_value": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "unavailable_count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "metric",
+        "observed_sample_count",
+        "unavailable_count",
+        "not_applicable_count",
+        "total_integer_value",
+        "p50_integer_value",
+        "p95_integer_value"
+      ],
+      "type": "object"
+    },
+    "src.contracts.performance_telemetry.PerformanceTelemetryRunArtifact": {
+      "additionalProperties": false,
+      "properties": {
+        "measurement_profile_hash": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "stage_summaries": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.performance_telemetry.PerformanceTelemetryStageSummary"
+          },
+          "type": "array"
+        },
+        "total_run_duration_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "run_id",
+        "measurement_profile_hash",
+        "total_run_duration_ms",
+        "stage_summaries"
+      ],
+      "type": "object"
+    },
+    "src.contracts.performance_telemetry.PerformanceTelemetrySpan": {
+      "additionalProperties": false,
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        "completed_at_utc": {
+          "type": "string"
+        },
+        "measurement_profile_hash": {
+          "type": "string"
+        },
+        "queue_name": {
+          "type": "string"
+        },
+        "queued_at_utc": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "span_id": {
+          "type": "string"
+        },
+        "stage": {
+          "type": "string"
+        },
+        "started_at_utc": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "queued",
+            "running",
+            "completed",
+            "failed"
+          ]
+        },
+        "worker_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "span_id",
+        "run_id",
+        "stage",
+        "status",
+        "measurement_profile_hash"
+      ],
+      "type": "object"
+    },
+    "src.contracts.performance_telemetry.PerformanceTelemetryStageSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "metric_summaries": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.performance_telemetry.PerformanceTelemetryMetricSummary"
+          },
+          "type": "array"
+        },
+        "p50_wall_time_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "p95_wall_time_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sample_count": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "stage": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "stage",
+        "sample_count",
+        "p50_wall_time_ms",
+        "p95_wall_time_ms"
+      ],
+      "type": "object"
+    },
     "src.contracts.pipeline_preflight.PipelinePreflightCheck": {
       "additionalProperties": false,
       "properties": {

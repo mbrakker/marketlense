@@ -81,26 +81,26 @@ jobs:
         run: python scripts/ci/check_wordpress_staging_rest_gate.py
       - name: Mark release evidence freshness start
         run: echo "RELEASE_EVIDENCE_STARTED_AT=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
-      - name: Run default pytest suite with coverage
-        run: python -m pytest --cov=src --cov-report=xml --cov-report=term-missing
+      - name: Run default pytest suite with coverage and timing telemetry
+        run: python scripts/quality/run_pytest_with_telemetry.py --output-json out/test_telemetry_ci.json -- --cov=src --cov-report=xml --cov-report=term-missing
       - name: Coverage gate
-        run: python scripts/ci/check_coverage.py --coverage-xml coverage.xml
+        run: python scripts/quality/run_command_with_telemetry.py --output-json out/quality_command_telemetry_ci.json --stage coverage -- python scripts/ci/check_coverage.py --coverage-xml coverage.xml
       - name: Mutation gate
-        run: python scripts/ci/run_mutation_gate.py --json-out mutation_results.json
+        run: python scripts/quality/run_command_with_telemetry.py --output-json out/quality_command_telemetry_ci.json --stage mutation -- python scripts/ci/run_mutation_gate.py --json-out mutation_results.json
       - name: Quality non-regression gate
-        run: python scripts/ci/check_quality_regression.py --baseline docs/quality/baseline_2026-02-21.json --coverage-xml coverage.xml --mutation-json mutation_results.json --docpack-root tests/fixtures/docpacks/golden
+        run: python scripts/quality/run_command_with_telemetry.py --output-json out/quality_command_telemetry_ci.json --stage quality_non_regression -- python scripts/ci/check_quality_regression.py --baseline docs/quality/baseline_2026-02-21.json --coverage-xml coverage.xml --mutation-json mutation_results.json --docpack-root tests/fixtures/docpacks/golden
       - name: PDF candidate benchmark gate
-        run: python scripts/ci/check_pdf_candidate_benchmark.py --baseline docs/quality/pdf_candidate_extraction_benchmark_baseline.json --output-json out/pdf_candidate_benchmark_ci.json
+        run: python scripts/quality/run_command_with_telemetry.py --output-json out/quality_command_telemetry_ci.json --stage pdf_candidate_benchmark -- python scripts/ci/check_pdf_candidate_benchmark.py --baseline docs/quality/pdf_candidate_extraction_benchmark_baseline.json --output-json out/pdf_candidate_benchmark_ci.json
       - name: PDF crop-refine benchmark gate
-        run: python scripts/ci/check_pdf_crop_refine_benchmark.py --baseline docs/quality/pdf_crop_refine_benchmark_baseline.json --output-json out/pdf_crop_refine_benchmark_ci.json
+        run: python scripts/quality/run_command_with_telemetry.py --output-json out/quality_command_telemetry_ci.json --stage pdf_crop_refine_benchmark -- python scripts/ci/check_pdf_crop_refine_benchmark.py --baseline docs/quality/pdf_crop_refine_benchmark_baseline.json --output-json out/pdf_crop_refine_benchmark_ci.json
       - name: PDF benchmark trend gate
-        run: python scripts/ci/check_pdf_benchmark_trends.py --candidate-json out/pdf_candidate_benchmark_ci.json --crop-refine-json out/pdf_crop_refine_benchmark_ci.json --history-json out/pdf_benchmark_trend_history_ci.json --output-json out/pdf_benchmark_trends_ci.json --update-history --allow-missing-inputs
+        run: python scripts/quality/run_command_with_telemetry.py --output-json out/quality_command_telemetry_ci.json --stage pdf_benchmark_trends -- python scripts/ci/check_pdf_benchmark_trends.py --candidate-json out/pdf_candidate_benchmark_ci.json --crop-refine-json out/pdf_crop_refine_benchmark_ci.json --history-json out/pdf_benchmark_trend_history_ci.json --output-json out/pdf_benchmark_trends_ci.json --update-history --allow-missing-inputs
       - name: Public report render-quality gate
-        run: python scripts/ci/check_public_report_quality.py --minimum-reports 15 --output-dir out/public_report_quality_ci --output-json out/public_report_quality_ci.json
+        run: python scripts/quality/run_command_with_telemetry.py --output-json out/quality_command_telemetry_ci.json --stage public_report_quality -- python scripts/ci/check_public_report_quality.py --minimum-reports 15 --output-dir out/public_report_quality_ci --output-json out/public_report_quality_ci.json
       - name: Retained LLM-routing evidence gate
-        run: python scripts/quality/llm_routing_retained_benchmark.py --minimum-reports 15 --output-json out/llm_routing_retained_benchmark_ci.json
+        run: python scripts/quality/run_command_with_telemetry.py --output-json out/quality_command_telemetry_ci.json --stage llm_routing_retained_benchmark -- python scripts/quality/llm_routing_retained_benchmark.py --minimum-reports 15 --output-json out/llm_routing_retained_benchmark_ci.json
       - name: Generate deterministic workflow queue evidence
-        run: python scripts/quality/generate_workflow_queue_evidence.py --expected-commit-sha "${GITHUB_SHA}" --output-json out/workflow_queue_evidence_ci.json
+        run: python scripts/quality/run_command_with_telemetry.py --output-json out/quality_command_telemetry_ci.json --stage workflow_queue_evidence -- python scripts/quality/generate_workflow_queue_evidence.py --expected-commit-sha "${GITHUB_SHA}" --output-json out/workflow_queue_evidence_ci.json
       - name: Build CI health scorecard
         run: |
           mkdir -p out
@@ -132,7 +132,10 @@ jobs:
             --daily out/ci_llm_accounting/cost-daily.json \
             --output-json out/llm_accounting_reconciliation_ci.json
       - name: Prompt fixture corpus regression gate
-        run: python scripts/ci/check_prompt_fixture_regression.py --baseline docs/quality/prompt_fixture_corpus_baseline_2026-04-26.json --config src/config/app.yaml --iterations 3
+        run: python scripts/quality/run_command_with_telemetry.py --output-json out/quality_command_telemetry_ci.json --stage prompt_fixture_regression -- python scripts/ci/check_prompt_fixture_regression.py --baseline docs/quality/prompt_fixture_corpus_baseline_2026-04-26.json --config src/config/app.yaml --iterations 3
+      - name: Build CI performance benchmark
+        if: ${{ always() }}
+        run: python scripts/quality/build_ci_performance_benchmark.py --test-telemetry out/test_telemetry_ci.json --command-telemetry out/quality_command_telemetry_ci.json --output-json out/ci_performance_benchmark.json
       - name: Build release evidence manifest
         run: |
           COVERAGE_SCHEMA=$(python - <<'PY'
@@ -206,3 +209,6 @@ jobs:
             out/public_report_quality_ci.json
             out/run_health_scorecard_ci.json
             out/llm_accounting_reconciliation_ci.json
+            out/test_telemetry_ci.json
+            out/quality_command_telemetry_ci.json
+            out/ci_performance_benchmark.json

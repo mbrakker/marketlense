@@ -35,7 +35,7 @@ def test_state_db_migrations_create_schema_version_and_ledger_on_fresh_db(
                 schema_version="1.0",
                 database_key="state_db",
                 db_path=str(db_path),
-                target_version=14,
+                target_version=15,
                 ctx=_ctx(),
             ),
             conn,
@@ -103,7 +103,7 @@ def test_state_db_migrations_create_schema_version_and_ledger_on_fresh_db(
             """
         ).fetchone()
 
-    assert response.current_version == 14
+    assert response.current_version == 15
     assert [step.migration_id for step in response.applied_steps] == [
         "state_db_001_create_base_tables",
         "state_db_002_add_processed_vector_columns",
@@ -119,6 +119,7 @@ def test_state_db_migrations_create_schema_version_and_ledger_on_fresh_db(
         "state_db_012_create_queue_publication_and_briefing_state",
         "state_db_013_create_supervisor_lease",
         "state_db_014_create_source_quarantine",
+        "state_db_015_create_performance_telemetry",
     ]
     assert ledger_rows == [
         ("state_db_001_create_base_tables", 1),
@@ -135,8 +136,9 @@ def test_state_db_migrations_create_schema_version_and_ledger_on_fresh_db(
         ("state_db_012_create_queue_publication_and_briefing_state", 12),
         ("state_db_013_create_supervisor_lease", 13),
         ("state_db_014_create_source_quarantine", 14),
+        ("state_db_015_create_performance_telemetry", 15),
     ]
-    assert version_row == (14,)
+    assert version_row == (15,)
     assert workflow_table == ("workflow_control_observations",)
     assert mail_table == ("mail_delivery_requests",)
     assert rejection_table == ("mailbox_candidate_rejections",)
