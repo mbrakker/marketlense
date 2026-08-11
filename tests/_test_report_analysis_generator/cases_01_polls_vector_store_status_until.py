@@ -721,6 +721,71 @@ def test_run_report_analysis_uses_context_fit_categories_not_taxonomy_tags(tmp_p
     assert metadata_updates[0].run_budget.run_id == runtime.ctx.run_id
 
 
+def test_run_report_analysis_repairs_taxonomy_invalid_json_on_first_attempt(tmp_path):
+    runtime = _runtime(tmp_path)
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    requests = []
+
+    def extract_taxonomy(request, ctx):
+        requests.append(request)
+        if request.repair_attempt == 0:
+            raise StructuredOutputFailure(
+                code="taxonomy_invalid_json",
+                message=(
+                    "taxonomy did not produce a substantive schema-valid JSON artifact"
+                ),
+                artifact_family="taxonomy",
+                response_text='{"schema_version":"1.0","taxonomy":[]}',
+                schema_errors="structured_output_empty:normalized output is empty",
+                repair_attempt=2,
+            )
+        return TaxonomyExtractResponse(
+            schema_version="1.0",
+            taxonomy=["retail_logistics"],
+            region="US",
+            time_period="2024",
+        )
+
+    deps = _deps(
+        extract_taxonomy=extract_taxonomy,
+        generate_evidence_packs=lambda **kwargs: {
+            "doc_map": {"docMap": {"title": "Doc Title", "publisher": "Publisher"}}
+        },
+        generate_artifacts=lambda **kwargs: _artifacts(),
+        run_validation=lambda *args, **kwargs: ValidationReport(
+            schema_version="1.1",
+            status="pass",
+            issues=[],
+            severity="pass",
+            source_path=str(tmp_path / "out" / "validation.json"),
+        ),
+    )
+
+    state = run_report_analysis(
+        runtime,
+        source,
+        selection,
+        VectorStoreIndexingState(
+            vector_store_id="vs_1",
+            openai_file_id="file_1",
+            vector_store_status="completed",
+            indexed_at_utc="2026-01-01T00:00:00Z",
+            last_error=None,
+        ),
+        deps,
+    )
+
+    assert state.payload.taxonomy == ["retail_logistics"]
+    assert [request.prompt_namespace for request in requests] == [
+        "report_vs/taxonomy",
+        "report_vs/taxonomy_repair",
+    ]
+    assert [request.repair_attempt for request in requests] == [0, 1]
+    assert requests[1].repair_error == "taxonomy_invalid_json"
+    assert requests[1].repair_response == '{"schema_version":"1.0","taxonomy":[]}'
+
+
 def test_run_report_analysis_returns_complete_report_payload_contract(
     tmp_path,
     assert_no_defaulted_required_fields,
@@ -844,6 +909,7 @@ __all__ = [
     "test_run_report_analysis_falls_back_when_validation_raises",
     "test_run_report_analysis_surfaces_doc_map_empty",
     "test_run_report_analysis_uses_context_fit_categories_not_taxonomy_tags",
+    "test_run_report_analysis_repairs_taxonomy_invalid_json_on_first_attempt",
     "test_run_report_analysis_returns_complete_report_payload_contract",
     "test_run_report_analysis_fails_on_incomplete_report_payload_contract",
 ]
