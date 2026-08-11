@@ -1,0 +1,16 @@
+schema_version: "1.0"
+fields:
+  - schema_version: "1.0"
+    key: "work_email"
+    label: "Work email"
+    value: null
+    aliases:
+      - "email"
+      - "email address"
+    option_aliases: []
+delivery_emails: []
+publisher_overrides: []
+consent_policy:
+  schema_version: "1.0"
+  default_checkbox_policy: "mandatory_privacy_terms_only"
+  allow_marketing_opt_in: false
