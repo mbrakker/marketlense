@@ -1226,9 +1226,7 @@ def _record_cohort_ingest_manifest(
     )
     timestamp = datetime.now(timezone.utc).isoformat()
     attempt_number = max(1, int(root_ctx.validation_attempt_number or 1))
-    parent_attempt_number = max(
-        0, int(root_ctx.validation_parent_attempt_number or 0)
-    )
+    parent_attempt_number = max(0, int(root_ctx.validation_parent_attempt_number or 0))
     if outcomes is None:
         for file in files:
             for stage in (
@@ -1278,15 +1276,16 @@ def _record_cohort_ingest_manifest(
     for file in files:
         outcome = outcome_by_id.get(file.file_id)
         terminal = outcome is not None
-        reused_validated_html = bool(
-            outcome
+        reused_validated_html_path = (
+            outcome.html_path
+            if outcome
             and outcome.status == "skipped"
             and outcome.error == "html_exists"
             and outcome.html_path
+            else None
         )
         successful = bool(
-            outcome
-            and (outcome.status == "processed" or reused_validated_html)
+            outcome and (outcome.status == "processed" or reused_validated_html_path)
         )
         terminal_outcome = (
             "publish_ready"
@@ -1311,7 +1310,7 @@ def _record_cohort_ingest_manifest(
                 if outcome
                 else "ingest_failed",
             )
-        elif reused_validated_html:
+        elif reused_validated_html_path:
             _record_reused_cohort_stage_closure(
                 validation_run_id=validation_run_id,
                 settings=settings,
@@ -1323,7 +1322,7 @@ def _record_cohort_ingest_manifest(
                 timestamp=timestamp,
                 attempt_number=attempt_number,
                 parent_attempt_number=parent_attempt_number,
-                html_path=outcome.html_path or "",
+                html_path=reused_validated_html_path,
             )
         record_validation_run_manifest_stage(
             ValidationRunManifestRecordRequest(

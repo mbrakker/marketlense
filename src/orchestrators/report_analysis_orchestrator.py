@@ -91,6 +91,7 @@ from src.orchestrators._report_analysis_orchestrator.vector_store import (
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 from src.utils.run_budget import report_runtime_run_budget
+from src.utils.structured_output import StructuredOutputFailure
 
 __all__ = [
     "run_report_analysis",
@@ -230,18 +231,55 @@ def _resolve_taxonomy_with_repair(
     *,
     openai_client=None,
 ):
-    """Delegate the complete bounded taxonomy recovery sequence to its service."""
+    """Run taxonomy once, then use its one prompt-specific output repair if needed."""
 
-    return (
-        _resolve_taxonomy(
-            runtime,
-            mode_ctx,
-            vector_store_id,
-            dependencies,
-            openai_client=openai_client,
-        ),
-        False,
-    )
+    try:
+        return (
+            _resolve_taxonomy(
+                runtime,
+                mode_ctx,
+                vector_store_id,
+                dependencies,
+                openai_client=openai_client,
+            ),
+            False,
+        )
+    except AppError as exc:
+        if exc.code not in {"taxonomy_invalid_json", "taxonomy_schema_invalid"}:
+            raise
+
+        # The failed provider text is private, in-memory repair context only.  It
+        # must not enter ordinary log events or any persisted failure record.
+        repair_response = (
+            exc.response_text if isinstance(exc, StructuredOutputFailure) else ""
+        )
+        logger.info(
+            log_event(
+                mode_ctx,
+                role="orchestrator",
+                event="taxonomy_targeted_repair_started",
+                module=logger.name,
+                fields={
+                    "file_id": runtime.file.file_id,
+                    "error_code": exc.code,
+                    "repair_attempt": 1,
+                    "prior_response_chars": len(repair_response),
+                },
+            )
+        )
+        return (
+            _resolve_taxonomy(
+                runtime,
+                mode_ctx,
+                vector_store_id,
+                dependencies,
+                openai_client=openai_client,
+                repair_attempt=1,
+                repair_error=exc.code,
+                repair_response=repair_response,
+            ),
+            True,
+        )
 
 
 def run_report_analysis(

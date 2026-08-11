@@ -36,9 +36,9 @@ Added a deterministic concurrency matrix; no production worker configuration cha
 
 ### Changed files
 
-- [benchmark_evidence_pack_parallelism.py](<C:/Programing/Market lense/scripts/quality/benchmark_evidence_pack_parallelism.py:160>) — Evidence-pack worker and rate-cap matrix.
-- [test_evidence_pack_parallelism_benchmark.py](<C:/Programing/Market lense/tests/test_evidence_pack_parallelism_benchmark.py:13>) — Selection and rate-cap regression tests.
-- [benchmarks.md](<C:/Programing/Market lense/docs/quality/benchmarks.md:54>) — Evidence-pack benchmark method.
+- [benchmark_evidence_pack_parallelism.py](../scripts/quality/benchmark_evidence_pack_parallelism.py) — Evidence-pack worker and rate-cap matrix.
+- [test_evidence_pack_parallelism_benchmark.py](../tests/test_evidence_pack_parallelism_benchmark.py) — Selection and rate-cap regression tests.
+- [benchmarks.md](../docs/quality/benchmarks.md) — Evidence-pack benchmark method.
 
 ## Correctness checks
 

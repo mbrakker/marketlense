@@ -1,0 +1,28 @@
+stage,outcome,failure_code
+artifact_generation,blocked,taxonomy did not produce a substantive schema-valid JSON artifact
+artifact_generation,blocked,insights_candidates did not produce a substantive schema-valid JSON artifact
+artifact_generation,blocked,taxonomy did not produce a substantive schema-valid JSON artifact
+artifact_generation,blocked,Artifact evidence references contain unknown identifiers
+artifact_generation,blocked,card_title_overflow: Complete report title does not fit the approved card title scale
+artifact_generation,blocked,card_key_insights_invalid: Exactly two complete card insights are required
+artifact_generation,blocked,cover_asset_set_incomplete: Complete cover title text does not fit the medium zone
+artifact_generation,blocked,insights_candidates did not produce a substantive schema-valid JSON artifact
+artifact_generation,succeeded,
+artifact_generation,succeeded,
+artifact_generation,succeeded,
+artifact_generation,succeeded,
+artifact_generation,succeeded,
+artifact_generation,succeeded,
+artifact_generation,succeeded,
+artifact_generation,succeeded,
+artifact_generation,succeeded,
+artifact_generation,succeeded,
+artifact_generation,succeeded,
+artifact_generation,succeeded,
+artifact_generation,succeeded,
+artifact_generation,succeeded,
+artifact_generation,succeeded,
+artifact_generation,succeeded,
+artifact_generation,succeeded,
+artifact_generation,succeeded,
+artifact_generation,succeeded,

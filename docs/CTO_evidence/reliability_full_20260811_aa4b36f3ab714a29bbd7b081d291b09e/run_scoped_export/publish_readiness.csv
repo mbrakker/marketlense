@@ -1,0 +1,13 @@
+stage,outcome,failure_code
+publication_preflight,blocked,card_title_overflow: Complete report title does not fit the approved card title scale
+publication_preflight,blocked,card_key_insights_invalid: Exactly two complete card insights are required
+publication_preflight,blocked,taxonomy did not produce a substantive schema-valid JSON artifact
+publication_preflight,blocked,cover_asset_set_incomplete: Complete cover title text does not fit the medium zone
+publication_preflight,blocked,insights_candidates did not produce a substantive schema-valid JSON artifact
+publication_preflight,blocked,taxonomy did not produce a substantive schema-valid JSON artifact
+publication_preflight,blocked,Artifact evidence references contain unknown identifiers
+publication_preflight,blocked,card_title_overflow: Complete report title does not fit the approved card title scale
+publication_preflight,blocked,card_key_insights_invalid: Exactly two complete card insights are required
+publication_preflight,blocked,card_title_overflow: Complete report title does not fit the approved card title scale
+publication_preflight,blocked,cover_asset_set_incomplete: Complete cover title text does not fit the medium zone
+publication_preflight,blocked,insights_candidates did not produce a substantive schema-valid JSON artifact

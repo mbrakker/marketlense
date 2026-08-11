@@ -36,9 +36,9 @@ Added a real-PDF worker matrix; no production worker setting changed because the
 
 ### Changed files
 
-- [benchmark_pdf_candidate_parallelism.py](<C:/Programing/Market lense/scripts/quality/benchmark_pdf_candidate_parallelism.py:43>) — Real PDF worker-count matrix.
-- [test_pdf_candidate_parallelism_benchmark.py](<C:/Programing/Market lense/tests/test_pdf_candidate_parallelism_benchmark.py:9>) — Selection regression tests.
-- [benchmarks.md](<C:/Programing/Market lense/docs/quality/benchmarks.md:80>) — PDF worker benchmark method.
+- [benchmark_pdf_candidate_parallelism.py](../scripts/quality/benchmark_pdf_candidate_parallelism.py) — Real PDF worker-count matrix.
+- [test_pdf_candidate_parallelism_benchmark.py](../tests/test_pdf_candidate_parallelism_benchmark.py) — Selection regression tests.
+- [benchmarks.md](../docs/quality/benchmarks.md) — PDF worker benchmark method.
 
 ## Correctness checks
 

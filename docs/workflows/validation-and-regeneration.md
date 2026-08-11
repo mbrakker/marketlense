@@ -8,6 +8,15 @@ Generated report artifacts are checked for contract completeness, schema validit
 
 When a repair is supported, the workflow maps validation issues to the narrowest appropriate artifact family and revalidates the result. Retry and backoff are controlled by orchestration; generators surface typed errors rather than retrying provider calls themselves. Publication policy determines whether unresolved validation issues block WordPress side effects.
 
+Taxonomy extraction has one orchestration-owned, prompt-specific recovery for
+`taxonomy_invalid_json` and `taxonomy_schema_invalid`. After the primary
+taxonomy call exhausts its shared structured-output recovery, the orchestrator
+issues exactly one `report_vs/taxonomy_repair` call before evidence generation
+or downstream analysis. The original provider response is held only in memory
+for that call; audit records and standard logs retain only the typed failure
+code, repair attempt, and response length. A failed targeted repair remains a
+terminal taxonomy failure rather than silently producing an empty taxonomy.
+
 Provider enum formatting is normalized deterministically before artifact schema
 validation: case, spaces, and hyphens are canonicalized only to an already
 approved enum token. This does not expand the allowed semantic vocabulary;

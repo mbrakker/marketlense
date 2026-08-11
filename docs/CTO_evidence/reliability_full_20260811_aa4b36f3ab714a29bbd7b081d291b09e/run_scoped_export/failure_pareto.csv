@@ -1,0 +1,5 @@
+failure_code,affected_reports
+card_title_overflow: Complete report title does not fit the approved card title scale,2
+card_key_insights_invalid: Exactly two complete card insights are required,1
+insights_candidates did not produce a substantive schema-valid JSON artifact,1
+cover_asset_set_incomplete: Complete cover title text does not fit the medium zone,1

@@ -75,6 +75,8 @@ from src.orchestrators.report_analysis_orchestrator import run_report_analysis
 
 from src.utils.errors import AppError
 
+from src.utils.structured_output import StructuredOutputFailure
+
 
 def _runtime(tmp_path: Path) -> ReportRuntimeState:
     file = DriveFile(

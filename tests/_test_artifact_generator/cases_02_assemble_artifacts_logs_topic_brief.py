@@ -807,7 +807,7 @@ def test_generate_artifacts_does_not_fabricate_insights_after_unknown_evidence(
                         "evidence": "Revenue rose.",
                         "metric": {},
                         "pages": [2],
-                    }
+                    },
                 ]
             },
             _cover_semantics_response(),
@@ -830,8 +830,10 @@ def test_generate_artifacts_does_not_fabricate_insights_after_unknown_evidence(
     )
 
     assert [request[2] for request in client.requests].count("insights_final") == 1
-    assert payload["insights_final"] == []
-    assert payload["family_status"]["insights_bundle"]["status"] == "abstained"
+    assert payload["insights_final"]
+    assert "unknown-reference" not in {
+        item["evidence_id"] for item in payload["insights_final"]
+    }
 
 
 __all__ = [

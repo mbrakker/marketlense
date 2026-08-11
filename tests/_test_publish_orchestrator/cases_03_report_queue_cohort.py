@@ -27,6 +27,7 @@ def test_publish_cohort_manifest_limits_selection_to_cohort_members(
                     {
                         "schema_version": "1.0",
                         "file_id": "target-file",
+                        "source_identity_id": "target-file",
                         "md5_checksum": "target-md5",
                         "html_path": str(target_path),
                     }
@@ -48,6 +49,13 @@ def test_publish_cohort_manifest_limits_selection_to_cohort_members(
             created_at_utc="2026-07-26T12:00:00Z",
         ),
         run_context,
+    )
+    _record_final_validation_attempt(
+        settings,
+        validation_run_id="validation:cohort-target-only",
+        cohort_id="cohort-target-only",
+        file_id="target-file",
+        ctx=run_context,
     )
     wordpress_http.add_json(
         "GET",

@@ -1,0 +1,55 @@
+stage,outcome,repair_disposition,failure_code
+regeneration,blocked,not_required,taxonomy did not produce a substantive schema-valid JSON artifact
+regeneration,blocked,not_required,insights_candidates did not produce a substantive schema-valid JSON artifact
+regeneration,blocked,not_required,taxonomy did not produce a substantive schema-valid JSON artifact
+regeneration,blocked,not_required,Artifact evidence references contain unknown identifiers
+regeneration,blocked,not_required,card_title_overflow: Complete report title does not fit the approved card title scale
+regeneration,blocked,not_required,card_key_insights_invalid: Exactly two complete card insights are required
+regeneration,blocked,not_required,cover_asset_set_incomplete: Complete cover title text does not fit the medium zone
+regeneration,blocked,not_required,insights_candidates did not produce a substantive schema-valid JSON artifact
+regeneration,failed,targeted_repair,validation_failed
+regeneration,failed,targeted_repair,validation_failed
+regeneration,failed,targeted_repair,validation_failed
+regeneration,skipped,not_required,
+regeneration,skipped,not_required,
+regeneration,skipped,not_required,
+regeneration,skipped,not_required,
+regeneration,skipped,not_required,
+regeneration,skipped,not_required,
+regeneration,skipped,not_required,
+regeneration,skipped,not_required,
+regeneration,succeeded,targeted_repair,
+regeneration,succeeded,targeted_repair,
+regeneration,succeeded,targeted_repair,
+regeneration,succeeded,targeted_repair,
+regeneration,succeeded,targeted_repair,
+regeneration,succeeded,targeted_repair,
+regeneration,succeeded,targeted_repair,
+regeneration,succeeded,targeted_repair,
+structured_output_repair,blocked,not_required,taxonomy did not produce a substantive schema-valid JSON artifact
+structured_output_repair,blocked,not_required,taxonomy did not produce a substantive schema-valid JSON artifact
+structured_output_repair,blocked,not_required,card_title_overflow: Complete report title does not fit the approved card title scale
+structured_output_repair,blocked,not_required,card_key_insights_invalid: Exactly two complete card insights are required
+structured_output_repair,blocked,not_required,cover_asset_set_incomplete: Complete cover title text does not fit the medium zone
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,skipped,not_required,
+structured_output_repair,succeeded,targeted_repair,

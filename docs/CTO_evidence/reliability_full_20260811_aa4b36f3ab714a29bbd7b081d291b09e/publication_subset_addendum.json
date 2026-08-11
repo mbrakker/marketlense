@@ -1,0 +1,136 @@
+{
+  "evidence_collector_commit": "87ef9b02a1b13d12dbdebfc0d7dfff2300422d6d",
+  "evidence_kind": "authorized_partial_publication_addendum",
+  "external_blocker": {
+    "classification": "wordpress_target_availability_or_configuration",
+    "evidence": "WordPress REST media requests returned redirects to /wp-admin/install.php and exhausted the normal three-attempt bounded retry policy.",
+    "failure_code": "wp_media_upload_failed",
+    "operator_action_required_records": 5
+  },
+  "generated_at_utc": "2026-08-11T16:43:43.503263+00:00",
+  "producer_commit": "0bdd91998e39a796ec958c43518ca2827e99faeb",
+  "publication_attempt": {
+    "blocked_count": 5,
+    "blocked_reports": [
+      {
+        "error": "Failed to upload WordPress media",
+        "outcome": "preflight_blocked",
+        "report_id": "1M5VaPBPbtHQ3ml8p0VrAvv66EvhepMoh"
+      },
+      {
+        "error": "Failed to upload WordPress media",
+        "outcome": "preflight_blocked",
+        "report_id": "1OsXbyNCsNLEjQY9W2Q7G6Js4A2dUm2yS"
+      },
+      {
+        "error": "Failed to upload WordPress media",
+        "outcome": "preflight_blocked",
+        "report_id": "1QZRr-J1F8TF5lYTLGgGMmHZRhw7S1uvR"
+      },
+      {
+        "error": "Failed to upload WordPress media",
+        "outcome": "preflight_blocked",
+        "report_id": "1Z_aly8CHsNVujQatuhea4ExEipxentSu"
+      },
+      {
+        "error": "Failed to upload WordPress media",
+        "outcome": "preflight_blocked",
+        "report_id": "1bJnQ7jlL722xNU66HHG1T-hM0yFjpa8Z"
+      }
+    ],
+    "created_count": 6,
+    "created_posts": [
+      {
+        "outcome": "post_created",
+        "post_id": 1886,
+        "post_url": "http://marketlense.medianewsonline.com/reports/rewire-to-restart-the-post-covid-19-agenda-for-technology-and-media-companies/",
+        "report_id": "12UH8cwAPjL7s5ZD7XjloUyy5BC-2LtRV"
+      },
+      {
+        "outcome": "post_created",
+        "post_id": 1891,
+        "post_url": "http://marketlense.medianewsonline.com/reports/2019-outlook/",
+        "report_id": "18XjxJsiekZkIwm9r7me9iQLnS72MKQHn"
+      },
+      {
+        "outcome": "post_created",
+        "post_id": 1896,
+        "post_url": "http://marketlense.medianewsonline.com/reports/mobile-app-trends-2026-japan-edition/",
+        "report_id": "1961uXvA8mramzTWf3UHbz4C5y--IBiAW"
+      },
+      {
+        "outcome": "post_created",
+        "post_id": 1901,
+        "post_url": "http://marketlense.medianewsonline.com/reports/activate-technology-media-outlook-2025/",
+        "report_id": "1AEUmS5YH9vDUdbL_DeJqxa-eCkEOctAm"
+      },
+      {
+        "outcome": "post_created",
+        "post_id": 1906,
+        "post_url": "http://marketlense.medianewsonline.com/reports/a-deep-dive-into-deep-links/",
+        "report_id": "1AcXQD-nc-9TwIlLGEh6s-Hi2oGAoEb8E"
+      },
+      {
+        "outcome": "post_created",
+        "post_id": 1911,
+        "post_url": "http://marketlense.medianewsonline.com/reports/ebook-mobile-app-trends-2026-edition/",
+        "report_id": "1LORffipx4RaXwnqRbEA89zLpKXGxpDtu"
+      }
+    ],
+    "outcome_counts": {
+      "error": 5,
+      "published": 6
+    },
+    "requested_report_ids": [
+      "12UH8cwAPjL7s5ZD7XjloUyy5BC-2LtRV",
+      "18XjxJsiekZkIwm9r7me9iQLnS72MKQHn",
+      "1961uXvA8mramzTWf3UHbz4C5y--IBiAW",
+      "1AEUmS5YH9vDUdbL_DeJqxa-eCkEOctAm",
+      "1AcXQD-nc-9TwIlLGEh6s-Hi2oGAoEb8E",
+      "1LORffipx4RaXwnqRbEA89zLpKXGxpDtu",
+      "1M5VaPBPbtHQ3ml8p0VrAvv66EvhepMoh",
+      "1OsXbyNCsNLEjQY9W2Q7G6Js4A2dUm2yS",
+      "1QZRr-J1F8TF5lYTLGgGMmHZRhw7S1uvR",
+      "1Z_aly8CHsNVujQatuhea4ExEipxentSu",
+      "1bJnQ7jlL722xNU66HHG1T-hM0yFjpa8Z"
+    ]
+  },
+  "readback": {
+    "authenticated_full_readback_verified_count": 0,
+    "reason": "WordPress REST target became unavailable after six creations; authenticated preflight subsequently entered a redirect loop.",
+    "status": "not_completed"
+  },
+  "repeat_publication": {
+    "actual_writes": null,
+    "reason": "Blocked until authenticated readback can be performed safely against a healthy target.",
+    "requested_writes": null,
+    "status": "not_run"
+  },
+  "run_id": "reliability_full_20260811_aa4b36f3ab714a29bbd7b081d291b09e",
+  "schema_version": "1.0",
+  "scope": {
+    "authorized_publication_subset_size": 11,
+    "immutable_cohort_size": 20,
+    "replacement_policy": "no replacements; all 11 IDs derive from the frozen 20-report cohort",
+    "selection_rule": "current publish_ready terminal outcome and final publish_readiness status=pass"
+  },
+  "source_artifacts": [
+    {
+      "path": "state/<run-id>/publish_ready_11.stdout.log",
+      "sha256": "df29dc56196ad3a37e7a68e2247e0a15abf33a13cb3cf547f156e2287cbc8188"
+    },
+    {
+      "path": "state/<run-id>/publish_ready_11.stderr.log",
+      "sha256": "7d2a674f38218205f68ff80f8301093ab6fce8b250a2ebd7921e05307e78c720"
+    },
+    {
+      "path": "out/<run-id>/evidence_export/audit_findings.json",
+      "sha256": "d69274ac2a2cc850bce6fe366a251596d5de271f91ae87181f06faad0ddb4c93"
+    }
+  ],
+  "strict_cto_collection": {
+    "reason": "The strict collector refused a dirty worktree containing unrelated user changes; this run-scoped export does not claim exact-head strict attestation.",
+    "status": "not_collected"
+  },
+  "validation_run_id": "validation:35531bbe386ed80fe47a18c0c19e21c8c20d86044ad71aef0ce2c9e7b56ccb2a"
+}

@@ -6874,6 +6874,13 @@
         "llm_circuit_breaker_recovery_seconds": {
           "type": "number"
         },
+        "llm_execution_policies": {
+          "additionalProperties": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "type": "object"
+        },
         "llm_retry_backoff_step_seconds": {
           "type": "number"
         },
@@ -34569,6 +34576,12 @@
         "trace_id": {
           "type": "string"
         },
+        "validation_attempt_number": {
+          "type": "integer"
+        },
+        "validation_parent_attempt_number": {
+          "type": "integer"
+        },
         "validation_run_id": {
           "type": "string"
         },
@@ -40981,6 +40994,50 @@
         "schema_version",
         "artifact_path",
         "artifact_hash"
+      ],
+      "type": "object"
+    },
+    "src.contracts.validation_run_manifest.ValidationRunManifestAttemptResolveRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "validation_run_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "validation_run_id",
+        "mode"
+      ],
+      "type": "object"
+    },
+    "src.contracts.validation_run_manifest.ValidationRunManifestAttemptResolveResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "attempt_number": {
+          "type": "integer"
+        },
+        "parent_attempt_number": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "attempt_number",
+        "parent_attempt_number"
       ],
       "type": "object"
     },
