@@ -25,6 +25,7 @@ from src.contracts.browser_download import (
 )
 from src.contracts.logging import LoggingSetupRequest
 from src.contracts.publisher_inventory import PublisherInventoryCandidateTrace
+from src.contracts.run_budget import RunBudgetLimits
 from src.contracts.run_context import RunContext
 from src.contracts.semantic_ids import RunId, TaskId
 from src.services._browser_report_download._browser_runtime.runtime import (
@@ -111,6 +112,9 @@ def _build_settings(payload: dict) -> BrowserDownloadSettings:
     route_suppression_payload = payload.get("route_suppression_policy")
     route_budgets_payload = payload.get("route_budgets")
     model_pricing_payload = payload.get("model_pricing")
+    run_budget_limits_run_payload = payload.get("run_budget_limits_run")
+    run_budget_limits_day_payload = payload.get("run_budget_limits_day")
+    run_budget_limits_publisher_payload = payload.get("run_budget_limits_publisher")
     session_reuse_policy = _build_session_reuse_policy(
         session_reuse_payload if isinstance(session_reuse_payload, dict) else {}
     )
@@ -139,11 +143,40 @@ def _build_settings(payload: dict) -> BrowserDownloadSettings:
             payload.get("retry_backoff_step_seconds", 1.0)
         ),
         retry_jitter_seconds=float(payload.get("retry_jitter_seconds", 0.0)),
+        drive_upload_enabled=bool(payload.get("drive_upload_enabled", False)),
+        drive_upload_required=bool(payload.get("drive_upload_required", True)),
+        drive_upload_parent_folder_id=str(
+            payload.get("drive_upload_parent_folder_id") or ""
+        ),
+        drive_upload_google_sa_path=str(
+            payload.get("drive_upload_google_sa_path") or ""
+        ),
+        drive_upload_auth_mode=str(
+            payload.get("drive_upload_auth_mode") or "service_account"
+        ),
+        drive_upload_oauth_client_path=payload.get("drive_upload_oauth_client_path"),
+        drive_upload_oauth_token_path=payload.get("drive_upload_oauth_token_path"),
+        drive_upload_supports_all_drives=bool(
+            payload.get("drive_upload_supports_all_drives", True)
+        ),
+        drive_upload_include_items_from_all_drives=bool(
+            payload.get("drive_upload_include_items_from_all_drives", True)
+        ),
+        drive_upload_drive_id=payload.get("drive_upload_drive_id"),
+        failure_forensics_enabled=bool(
+            payload.get("failure_forensics_enabled", True)
+        ),
+        failure_forensics_policy=str(
+            payload.get("failure_forensics_policy") or "copy_artifacts"
+        ),
         route_playbook_dir=str(
             payload.get("route_playbook_dir") or "./src/playbooks/browser_routes"
         ),
         route_playbook_stale_policy=str(
             payload.get("route_playbook_stale_policy") or "fallback"
+        ),
+        route_memory_ttl_seconds=int(
+            payload.get("route_memory_ttl_seconds", 2592000)
         ),
         route_playbook_promotion_mode=str(
             payload.get("route_playbook_promotion_mode") or "disabled"
@@ -166,11 +199,6 @@ def _build_settings(payload: dict) -> BrowserDownloadSettings:
         captcha_handoff_policy=_build_captcha_handoff_policy(
             captcha_handoff_payload if isinstance(captcha_handoff_payload, dict) else {}
         ),
-        route_suppression_policy=_build_route_suppression_policy(
-            route_suppression_payload
-            if isinstance(route_suppression_payload, dict)
-            else {}
-        ),
         route_budgets=[
             _build_route_budget(item)
             for item in route_budgets_payload
@@ -181,9 +209,94 @@ def _build_settings(payload: dict) -> BrowserDownloadSettings:
         model_pricing=(
             model_pricing_payload if isinstance(model_pricing_payload, dict) else {}
         ),
+        cost_ledger_path=str(
+            payload.get("cost_ledger_path") or "./out/cost-ledger.jsonl"
+        ),
+        cost_daily_path=str(
+            payload.get("cost_daily_path") or "./out/cost-daily.json"
+        ),
+        usage_db_path=str(payload.get("usage_db_path") or "./state/llm_usage.sqlite"),
+        run_budget_enabled=bool(payload.get("run_budget_enabled", False)),
+        run_budget_max_browser_launches=_optional_int(
+            payload.get("run_budget_max_browser_launches")
+        ),
+        run_budget_max_pdfs=_optional_int(payload.get("run_budget_max_pdfs")),
+        run_budget_max_drive_writes=_optional_int(
+            payload.get("run_budget_max_drive_writes")
+        ),
+        route_suppression_policy=_build_route_suppression_policy(
+            route_suppression_payload
+            if isinstance(route_suppression_payload, dict)
+            else {}
+        ),
+        run_budget_max_drive_reads=_optional_int(
+            payload.get("run_budget_max_drive_reads")
+        ),
+        run_budget_max_mailbox_reads=_optional_int(
+            payload.get("run_budget_max_mailbox_reads")
+        ),
+        run_budget_max_retries=_optional_int(payload.get("run_budget_max_retries")),
+        run_budget_max_runtime_seconds=_optional_int(
+            payload.get("run_budget_max_runtime_seconds")
+        ),
+        run_budget_enabled_effect_kinds=tuple(
+            str(kind).strip()
+            for kind in payload.get("run_budget_enabled_effect_kinds", [])
+            if str(kind).strip()
+        ),
+        run_budget_limit_decision=str(
+            payload.get("run_budget_limit_decision") or "stop"
+        ),
+        run_budget_policy_version=str(
+            payload.get("run_budget_policy_version") or "budget-authority-v2"
+        ),
+        run_budget_reservation_ttl_seconds=int(
+            payload.get("run_budget_reservation_ttl_seconds", 300)
+        ),
+        run_budget_limits_run=_build_run_budget_limits(
+            run_budget_limits_run_payload
+        ),
+        run_budget_limits_day=_build_run_budget_limits(
+            run_budget_limits_day_payload
+        ),
+        run_budget_limits_publisher=_build_run_budget_limits(
+            run_budget_limits_publisher_payload
+        ),
         daily_spend_warn_usd=float(payload.get("daily_spend_warn_usd", 3.0)),
-        daily_spend_pause_usd=float(payload.get("daily_spend_pause_usd", 5.0)),
-        daily_spend_stop_usd=float(payload.get("daily_spend_stop_usd", 6.0)),
+        daily_spend_pause_usd=_optional_float(payload.get("daily_spend_pause_usd")),
+        daily_spend_stop_usd=_optional_float(payload.get("daily_spend_stop_usd")),
+        accounting_queue_size=int(payload.get("accounting_queue_size", 256)),
+        accounting_flush_timeout_seconds=float(
+            payload.get("accounting_flush_timeout_seconds", 5.0)
+        ),
+    )
+
+
+def _optional_int(value: object) -> int | None:
+    return int(value) if value is not None else None
+
+
+def _optional_float(value: object) -> float | None:
+    return float(value) if value is not None else None
+
+
+def _build_run_budget_limits(payload: object) -> RunBudgetLimits | None:
+    if not isinstance(payload, dict):
+        return None
+    return RunBudgetLimits(
+        schema_version=str(payload.get("schema_version", "1.0")),
+        max_spend_usd=_optional_float(payload.get("max_spend_usd")),
+        max_tokens=_optional_int(payload.get("max_tokens")),
+        max_calls=_optional_int(payload.get("max_calls")),
+        max_steps=_optional_int(payload.get("max_steps")),
+        max_runtime_seconds=_optional_int(payload.get("max_runtime_seconds")),
+        max_retries=_optional_int(payload.get("max_retries")),
+        max_browser_launches=_optional_int(payload.get("max_browser_launches")),
+        max_drive_writes=_optional_int(payload.get("max_drive_writes")),
+        max_drive_reads=_optional_int(payload.get("max_drive_reads")),
+        max_wordpress_writes=_optional_int(payload.get("max_wordpress_writes")),
+        max_pdfs=_optional_int(payload.get("max_pdfs")),
+        max_mailbox_reads=_optional_int(payload.get("max_mailbox_reads")),
     )
 
 
