@@ -8,7 +8,7 @@ from src._cli.app import cli_app
 
 
 def test_ingest_help_exposes_distinct_selection_controls() -> None:
-    result = CliRunner().invoke(get_command(cli_app), ["ingest", "--help"])
+    result = CliRunner().invoke(get_command(cli_app), ["ingest", "--help"], color=False)
 
     assert result.exit_code == 0, result.output
     assert "--cohort-size" in result.output
@@ -22,6 +22,7 @@ def test_ingest_rejects_ambiguous_legacy_and_attempt_limit() -> None:
     result = CliRunner().invoke(
         get_command(cli_app),
         ["ingest", "--attempt-limit", "1", "--limit", "1"],
+        color=False,
     )
 
     assert result.exit_code != 0

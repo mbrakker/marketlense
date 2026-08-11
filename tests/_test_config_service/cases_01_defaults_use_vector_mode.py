@@ -290,7 +290,7 @@ class TestConfigService01DefaultsUseVectorMode(_TestConfigServiceBase):
         self.assertEqual(pricing, inventory_settings.model_pricing)
         self.assertEqual("gpt-5", app_settings.openai_model)
         self.assertEqual(0.5, app_settings.temperature)
-        self.assertEqual(2, app_settings.report_worker_limit)
+        self.assertEqual(5, app_settings.report_worker_limit)
 
     def test_cross_report_analysis_settings_load_defaults_and_config_values(
         self,
@@ -534,7 +534,7 @@ class TestConfigService01DefaultsUseVectorMode(_TestConfigServiceBase):
                         schema_version="1.0", run_id="r", task_id="t", span_id="s"
                     ),
                 )
-                self.assertEqual(2, settings.ingest_worker_limit)
+                self.assertEqual(5, settings.ingest_worker_limit)
 
             with patch.dict(
                 os.environ,
@@ -576,7 +576,7 @@ class TestConfigService01DefaultsUseVectorMode(_TestConfigServiceBase):
                         schema_version="1.0", run_id="r", task_id="t", span_id="s"
                     ),
                 )
-                self.assertEqual(2, settings.report_worker_limit)
+                self.assertEqual(5, settings.report_worker_limit)
 
             with patch.dict(
                 os.environ,
@@ -601,8 +601,8 @@ class TestConfigService01DefaultsUseVectorMode(_TestConfigServiceBase):
                         schema_version="1.0", run_id="r", task_id="t", span_id="s"
                     ),
                 )
-                self.assertEqual(4, settings.artifact_parallel_workers)
-                self.assertEqual(2, settings.artifact_global_max_in_flight)
+                self.assertEqual(5, settings.artifact_parallel_workers)
+                self.assertEqual(5, settings.artifact_global_max_in_flight)
                 self.assertEqual(250, settings.artifact_global_min_interval_ms)
 
             env = {
