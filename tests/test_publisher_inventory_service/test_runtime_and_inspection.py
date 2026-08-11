@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import time
+
 from .builders import *  # noqa: F401,F403
 
 
@@ -252,6 +254,27 @@ def test_discover_publisher_inventory_browser_timeout_is_typed_error(
         err.value,
         code="publisher_inventory_browser_timeout",
         retryable=True,
+    )
+
+
+def test_browser_cleanup_timeout_does_not_block_inventory_workflow(
+    run_context,
+    caplog,
+) -> None:
+    class BlockingBrowser:
+        async def kill(self) -> None:
+            await asyncio.Event().wait()
+
+    caplog.set_level(logging.INFO, logger=service.logger.name)
+    started = time.monotonic()
+
+    service._kill_browser(BlockingBrowser(), run_context, timeout_seconds=0.01)
+
+    assert time.monotonic() - started < 1.0
+    assert any(
+        json.loads(record.message).get("event")
+        == "publisher_inventory_browser_kill_failed"
+        for record in caplog.records
     )
 
 

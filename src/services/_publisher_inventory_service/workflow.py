@@ -545,9 +545,20 @@ def _load_browser_use_runtime(normalized_url: str) -> Any:
     ) from final_error
 
 
-def _kill_browser(browser: Any, ctx: RunContext) -> None:
+def _kill_browser(
+    browser: Any,
+    ctx: RunContext,
+    *,
+    timeout_seconds: float = 5.0,
+) -> None:
+    async def _kill_with_timeout() -> None:
+        await asyncio.wait_for(
+            browser.kill(),
+            timeout=max(float(timeout_seconds), 0.1),
+        )
+
     try:
-        asyncio.run(browser.kill())
+        asyncio.run(_kill_with_timeout())
     except Exception:
         logger.info(
             log_event(
