@@ -1,0 +1,35 @@
+schema_version: "1.0"
+
+# Isolated live validation of the document-map origin call. It intentionally
+# stops after local HTML rendering; no WordPress publication command is run.
+paths:
+  output_dir: "./out/docmap_live_20260811_7d3e9c4a"
+  cache_dir: "./cache/docmap_live_20260811_7d3e9c4a"
+  state_db: "./state/docmap_live_20260811_7d3e9c4a/index.sqlite"
+  reports_db: "./state/docmap_live_20260811_7d3e9c4a/reports.sqlite"
+  signal_store_db: "./state/docmap_live_20260811_7d3e9c4a/signals.sqlite"
+  ingest_lock: "./state/docmap_live_20260811_7d3e9c4a/ingest.lock"
+
+ingest:
+  run_budget:
+    max_spend_usd: 12.0
+    max_pdfs: 2
+    max_retries: 8
+    max_runtime_seconds: 21600
+    limit_decision: "stop"
+
+analysis:
+  cost_ledger_path: "./state/docmap_live_20260811_7d3e9c4a/llm_cost_ledger.jsonl"
+
+cost:
+  usage_db_path: "./state/docmap_live_20260811_7d3e9c4a/llm_usage.sqlite"
+  daily_path: "./state/docmap_live_20260811_7d3e9c4a/llm_cost_daily.json"
+  ledger_path: "./state/docmap_live_20260811_7d3e9c4a/llm_cost_ledger.jsonl"
+
+publish:
+  projection_daily_path: "./state/docmap_live_20260811_7d3e9c4a/projection_cost_daily.json"
+  projection_ledger_path: "./state/docmap_live_20260811_7d3e9c4a/projection_cost_ledger.jsonl"
+  run_budget:
+    enabled: true
+    max_wordpress_writes: 0
+    limit_decision: "stop"

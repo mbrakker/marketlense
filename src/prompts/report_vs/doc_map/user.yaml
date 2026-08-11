@@ -16,5 +16,9 @@ text: |
     - pages (when explicit in the source)
     - references (when explicit in the source)
   - Use schema field names exactly (for example `title`, not `document_title`).
+  - Do not substitute runtime metadata for report content. Report IDs, vector-store IDs,
+    file names, pack names, field names, and metadata-only sections are not a document map.
+    Include a source-derived document brief and at least one section with subject-specific
+    content whenever the report contains readable content.
   - If a field is unknown, use an empty string or empty array (do not invent values).
   - Output JSON only (no markdown, no commentary).

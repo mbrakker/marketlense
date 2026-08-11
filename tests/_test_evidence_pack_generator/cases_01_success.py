@@ -5,7 +5,7 @@ from ._shared import *  # noqa: F401,F403
 
 
 def test_generate_evidence_packs_success(tmp_path):
-    parsed = {"doc_id": "d1", "title": "title", "sections": []}
+    parsed = substantive_doc_map()
     fake_openai = FakeOpenAIClient(parsed)
     analysis_store = FakeAnalysisStore()
     packs = generate_evidence_packs(
@@ -25,7 +25,7 @@ def test_generate_evidence_packs_success(tmp_path):
 
 
 def test_generate_evidence_packs_creates_context_when_missing(tmp_path):
-    parsed = {"doc_id": "d1", "title": "title", "sections": []}
+    parsed = substantive_doc_map()
     fake_openai = FakeOpenAIClient(parsed)
     packs = generate_evidence_packs(
         report_id="r1",
@@ -50,16 +50,7 @@ def test_generate_evidence_packs_marks_optional_empty_pack_as_abstained(tmp_path
         openai_client=RoutedOpenAIClient(
             {
                 "doc_map": {
-                    "doc_id": "d1",
-                    "title": "title",
-                    "sections": [
-                        {
-                            "id": "s1",
-                            "title": "Overview",
-                            "summary": "Summary",
-                            "key_points": [],
-                        }
-                    ],
+                    **substantive_doc_map(),
                 },
                 "findings": {"not_found_reason": "source_has_no_findings"},
             }
@@ -84,9 +75,7 @@ def test_generate_evidence_packs_logs_prompt_observability_and_response_metadata
         vector_store_id="vs_1",
         settings=_settings(tmp_path),
         ctx=_ctx(),
-        openai_client=FakeOpenAIClient(
-            {"doc_id": "d1", "title": "title", "sections": []}
-        ),
+        openai_client=FakeOpenAIClient(substantive_doc_map()),
         prompt_client=FakePromptClient(),
         analysis_store=FakeAnalysisStore(),
     )
@@ -193,12 +182,99 @@ def test_generate_evidence_packs_rejects_doc_map_with_only_doc_id(tmp_path):
             prompt_client=FakePromptClient(),
             analysis_store=analysis_store,
         )
-    assert exc_info.value.code == "doc_map_empty"
-    assert exc_info.value.context["has_content"] is False
-    assert exc_info.value.context["doc_id_present"] is True
-    assert exc_info.value.context["title_present"] is False
-    assert exc_info.value.context["sections_count"] == 0
-    assert len(analysis_store.stored) == 1
+    assert exc_info.value.code == "doc_map_invalid_json"
+    assert len(analysis_store.stored) == 0
+
+
+def test_generate_evidence_packs_recovers_identifier_only_doc_map(tmp_path):
+    class PlaceholderThenSubstantiveClient:
+        def __init__(self):
+            self.doc_map_calls = 0
+
+        def openai_respond_with_vector_store(self, req, ctx):
+            if req.artifact_family != "doc_map":
+                payload = {"not_found_reason": "fixture_insufficient_evidence"}
+            else:
+                self.doc_map_calls += 1
+                payload = (
+                    {
+                        "doc_id": "report-42",
+                        "title": "doc_map",
+                        "summary": "report-42 | vs_42 | doc_map",
+                        "sections": [
+                            {
+                                "id": "s1",
+                                "title": "Metadata",
+                                "summary": (
+                                    "Key metadata fields extracted from source "
+                                    "evidence."
+                                ),
+                                "key_points": [
+                                    "report_name: report-42",
+                                    "vector_store_id: vs_42",
+                                ],
+                                "pages": [],
+                                "references": [],
+                            }
+                        ],
+                    }
+                    if self.doc_map_calls == 1
+                    else {
+                        "doc_id": "report-42",
+                        "title": "Retail Measurement Outlook 2026",
+                        "summary": (
+                            "The report examines how retailers use cross-channel "
+                            "measurement to improve campaign decisions."
+                        ),
+                        "sections": [
+                            {
+                                "id": "measurement-methods",
+                                "title": "Cross-channel measurement methods",
+                                "summary": (
+                                    "Explains how campaign data connects retail media, "
+                                    "stores, and ecommerce activity."
+                                ),
+                                "key_points": [
+                                    (
+                                        "Retail media requires comparable campaign "
+                                        "signals."
+                                    ),
+                                    (
+                                        "Store and ecommerce activity need a shared "
+                                        "measurement view."
+                                    ),
+                                ],
+                                "pages": [3],
+                                "references": [],
+                            }
+                        ],
+                    }
+                )
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text=json.dumps(payload),
+                parsed_json=payload,
+                input_tokens=1,
+                output_tokens=1,
+                tool_calls=0,
+                model=req.model,
+            )
+
+    client = PlaceholderThenSubstantiveClient()
+    packs = generate_evidence_packs(
+        report_id="report-42",
+        report_name="retail-measurement-outlook.pdf",
+        vector_store_id="vs_42",
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=client,
+        prompt_client=FakePromptClient(),
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    assert client.doc_map_calls == 2
+    assert packs["doc_map"]["title"] == "Retail Measurement Outlook 2026"
+    assert packs["doc_map"]["family_status"]["status"] == "generated"
 
 
 def test_generate_evidence_packs_recovers_doc_map_once_inside_shared_service(tmp_path):
@@ -232,13 +308,25 @@ def test_generate_evidence_packs_parses_doc_map_json_from_text_fallback(tmp_path
         analysis_store=FakeAnalysisStore(),
     )
     assert packs["doc_map"]["doc_id"] == "d1"
-    assert packs["doc_map"]["title"] == "title"
+    assert packs["doc_map"]["title"] == "Retail Measurement Outlook"
     assert fake_openai.call_count == 6
 
 
 def test_generate_evidence_packs_normalizes_docmap_wrapper(tmp_path):
     parsed = {
-        "docmap": {"title": "Retail trends", "sections": [{"title": "Section A"}]}
+        "docmap": {
+            "title": "Retail trends",
+            "summary": "Examines changing retail demand and media performance.",
+            "sections": [
+                {
+                    "title": "Retail demand trends",
+                    "summary": (
+                        "Describes how consumer demand changes across retail "
+                        "categories."
+                    ),
+                }
+            ],
+        }
     }
     fake_openai = FakeOpenAIClient(parsed)
     analysis_store = FakeAnalysisStore()
@@ -257,7 +345,9 @@ def test_generate_evidence_packs_normalizes_docmap_wrapper(tmp_path):
     assert doc_map["title"] == "Retail trends"
     assert isinstance(doc_map["sections"], list)
     assert doc_map["sections"][0].get("id")
-    assert doc_map["sections"][0]["summary"] == ""
+    assert doc_map["sections"][0]["summary"] == (
+        "Describes how consumer demand changes across retail categories."
+    )
     assert doc_map["sections"][0]["key_points"] == []
     assert len(analysis_store.stored) == 6
 
@@ -268,7 +358,14 @@ def test_generate_evidence_packs_normalizes_docmap_camelcase_wrapper(tmp_path):
             "title": "THE 2026 INDUSTRY PULSE REPORT",
             "publisher": "Integral Ad Science",
             "sections": [
-                {"title": "Top media challenges and opportunities", "page": 5}
+                {
+                    "title": "Top media challenges and opportunities",
+                    "summary": (
+                        "Explains the measurement and quality challenges facing "
+                        "digital media buyers."
+                    ),
+                    "page": 5,
+                }
             ],
         }
     }
@@ -290,7 +387,9 @@ def test_generate_evidence_packs_normalizes_docmap_camelcase_wrapper(tmp_path):
     assert doc_map["publisher"] == "Integral Ad Science"
     assert isinstance(doc_map["sections"], list)
     assert doc_map["sections"][0]["id"] == "top-media-challenges-and-opportunities"
-    assert doc_map["sections"][0]["summary"] == ""
+    assert doc_map["sections"][0]["summary"] == (
+        "Explains the measurement and quality challenges facing digital media buyers."
+    )
     assert doc_map["sections"][0]["key_points"] == []
     assert doc_map["sections"][0]["pages"] == [5]
     assert len(analysis_store.stored) == 6
@@ -363,7 +462,9 @@ def test_generate_evidence_packs_normalizes_docmap_brief_aliases(tmp_path):
     parsed = {
         "docMap": {
             "title": "Retail Outlook 2026",
-            "brief": "A concise outlook covering demand, channels, and margin pressure.",
+            "brief": (
+                "A concise outlook covering demand, channels, and margin pressure."
+            ),
             "sections": [
                 {
                     "title": "Demand outlook",
@@ -373,7 +474,9 @@ def test_generate_evidence_packs_normalizes_docmap_brief_aliases(tmp_path):
                 },
                 {
                     "title": "Methodology",
-                    "overview": "The report combines survey data with transaction panels.",
+                    "overview": (
+                        "The report combines survey data with transaction panels."
+                    ),
                     "highlights": ["Survey + panel blend"],
                 },
             ],
@@ -519,9 +622,7 @@ def test_generate_evidence_packs_normalizes_legacy_findings_shape(tmp_path):
     fake_openai = RoutedOpenAIClient(
         payloads_by_pack={
             "doc_map": {
-                "doc_id": "d1",
-                "title": "title",
-                "sections": [{"title": "Overview"}],
+                **substantive_doc_map(),
             },
             "findings": {
                 "findings": [
@@ -560,9 +661,7 @@ def test_generate_evidence_packs_parses_limitations_json_array_from_text(tmp_pat
     fake_openai = RoutedOpenAIClient(
         payloads_by_pack={
             "doc_map": {
-                "doc_id": "d1",
-                "title": "title",
-                "sections": [{"title": "Overview"}],
+                **substantive_doc_map(),
             },
             "limitations": None,
         },
@@ -591,9 +690,7 @@ def test_generate_evidence_packs_normalizes_quote_candidates_shape(tmp_path):
     fake_openai = RoutedOpenAIClient(
         payloads_by_pack={
             "doc_map": {
-                "doc_id": "d1",
-                "title": "title",
-                "sections": [{"title": "Overview"}],
+                **substantive_doc_map(),
             },
             "quote_candidates": {
                 "quotes": [
@@ -627,9 +724,7 @@ def test_generate_evidence_packs_uses_registry_subset(tmp_path):
     fake_openai = RoutedOpenAIClient(
         payloads_by_pack={
             "doc_map": {
-                "doc_id": "d1",
-                "title": "title",
-                "sections": [{"title": "Overview"}],
+                **substantive_doc_map(),
             },
             "findings": {
                 "findings": [{"id": "f1", "text": "Finding", "evidence": "Evidence"}]
@@ -658,6 +753,7 @@ __all__ = [
     "test_generate_evidence_packs_handles_missing_json",
     "test_generate_evidence_packs_propagates_retryable_app_error",
     "test_generate_evidence_packs_rejects_doc_map_with_only_doc_id",
+    "test_generate_evidence_packs_recovers_identifier_only_doc_map",
     "test_generate_evidence_packs_recovers_doc_map_once_inside_shared_service",
     "test_generate_evidence_packs_parses_doc_map_json_from_text_fallback",
     "test_generate_evidence_packs_normalizes_docmap_wrapper",

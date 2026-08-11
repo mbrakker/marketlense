@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from src.generators.evidence_packs.base import (
     EvidencePackStrategy,
     PackNormalizationResult,
@@ -14,6 +16,46 @@ from src.generators.evidence_packs.common import (
     text,
     to_dict,
 )
+
+_CONTROL_TERMS = frozenset(
+    {
+        "available",
+        "brief",
+        "content",
+        "data",
+        "doc",
+        "document",
+        "evidence",
+        "extract",
+        "extracted",
+        "field",
+        "fields",
+        "file",
+        "from",
+        "identifier",
+        "identifiers",
+        "key",
+        "map",
+        "major",
+        "metadata",
+        "name",
+        "pack",
+        "point",
+        "points",
+        "provided",
+        "report",
+        "section",
+        "source",
+        "store",
+        "supplied",
+        "summary",
+        "title",
+        "uploaded",
+        "vector",
+        "overview",
+    }
+)
+_WORD_PATTERN = re.compile(r"[A-Za-z]+(?:['’-][A-Za-z]+)?")
 
 
 def build_empty_payload(reason: str) -> dict[str, object]:
@@ -44,15 +86,58 @@ def summarize_payload(payload: dict[str, object]) -> dict[str, object]:
     sections = payload.get("sections")
     sections_count = len(sections) if isinstance(sections, list) else 0
     not_found_reason = str(payload.get("not_found_reason") or "").strip()
-    has_substantive_content = bool(title or summary_text or sections_count)
+    substantive_sections = 0
+    topic_terms: set[str] = set()
+    topic_terms.update(_topic_terms(title))
+    topic_terms.update(_topic_terms(summary_text))
+    if isinstance(sections, list):
+        for section in sections:
+            if not isinstance(section, dict):
+                continue
+            section_terms: set[str] = set()
+            for value in (
+                text(section.get("title")),
+                text(section.get("summary")),
+                *coerce_text_list(section.get("key_points")),
+            ):
+                section_terms.update(_topic_terms(value))
+            if section_terms:
+                substantive_sections += 1
+                topic_terms.update(section_terms)
+    if not (title or summary_text or sections_count):
+        quality_reason = "no_content"
+    elif not sections_count:
+        quality_reason = "no_sections"
+    elif not substantive_sections:
+        quality_reason = "metadata_only"
+    elif len(topic_terms) < 2:
+        quality_reason = "insufficient_topic_terms"
+    else:
+        quality_reason = ""
+    has_substantive_content = not quality_reason
     return {
         "has_content": has_substantive_content,
         "sections_count": sections_count,
+        "substantive_sections": substantive_sections,
+        "topic_terms_count": len(topic_terms),
+        "quality_reason": quality_reason,
         "title_present": bool(title),
         "doc_id_present": bool(doc_id),
         "summary_present": bool(summary_text),
         "not_found_reason": not_found_reason,
     }
+
+
+def _topic_terms(value: str) -> set[str]:
+    terms: set[str] = set()
+    for match in _WORD_PATTERN.finditer(value):
+        token = match.group(0)
+        normalized = token.casefold()
+        if normalized in _CONTROL_TERMS:
+            continue
+        if len(normalized) >= 3 or (token.isupper() and len(normalized) >= 2):
+            terms.add(normalized)
+    return terms
 
 
 def summarize_completeness(payload: dict[str, object]) -> dict[str, object]:

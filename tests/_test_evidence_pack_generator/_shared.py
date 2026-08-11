@@ -142,8 +142,20 @@ class RetryingDocMapClient:
         elif self.call_count == 2:
             payload = {
                 "doc_id": "d1",
-                "title": "title",
-                "sections": [{"title": "Overview"}],
+                "title": "Retail Measurement Outlook",
+                "summary": (
+                    "Examines cross-channel measurement practices for retail media "
+                    "campaigns."
+                ),
+                "sections": [
+                    {
+                        "title": "Cross-channel measurement methods",
+                        "summary": (
+                            "Connects retail media, ecommerce, and store activity "
+                            "for campaign evaluation."
+                        ),
+                    }
+                ],
             }
             text = "{}"
         else:
@@ -169,7 +181,15 @@ class TextFallbackDocMapClient:
         if self.call_count == 1:
             return OpenAIResponseResult(
                 schema_version="1.0",
-                text='```json\n{"doc_id":"d1","title":"title","sections":[{"title":"Overview"}]}\n```',
+                text=(
+                    "```json\n"
+                    '{"doc_id":"d1","title":"Retail Measurement Outlook",'
+                    '"summary":"Examines cross-channel measurement practices for '
+                    'retail media campaigns.","sections":[{"title":'
+                    '"Cross-channel measurement methods","summary":"Connects '
+                    'retail media, ecommerce, and store activity for campaign '
+                    'evaluation."}]}\n```'
+                ),
                 parsed_json=None,
                 input_tokens=1,
                 output_tokens=1,
@@ -207,6 +227,28 @@ class FakeAnalysisStore:
         slug = slugify(report_slug or report_id)
         self.stored.append((report_id, pack_name, payload))
         return f"{output_dir}/{slug}/report_analysis/{pack_name}.json"
+
+
+def substantive_doc_map(doc_id="d1"):
+    return {
+        "doc_id": doc_id,
+        "title": "Retail Measurement Outlook",
+        "summary": (
+            "Examines cross-channel measurement practices for retail media "
+            "campaigns."
+        ),
+        "sections": [
+            {
+                "id": "measurement-methods",
+                "title": "Cross-channel measurement methods",
+                "summary": (
+                    "Connects retail media, ecommerce, and store activity for "
+                    "campaign evaluation."
+                ),
+                "key_points": ["Campaign signals need a shared measurement view."],
+            }
+        ],
+    }
 
 
 def _settings(

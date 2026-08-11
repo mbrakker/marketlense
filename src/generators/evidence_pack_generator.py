@@ -175,6 +175,9 @@ def _pack_confidence_score(pack_name: str, payload: dict) -> float:
 
 
 def _doc_map_confidence_score(payload: dict) -> float:
+    summary = _summarize_doc_map(payload)
+    if not summary["has_content"]:
+        return 0.0
     raw_sections = payload.get("sections")
     sections = raw_sections if isinstance(raw_sections, list) else []
     title_present = bool(str(payload.get("title") or "").strip())
@@ -320,7 +323,9 @@ def generate_evidence_packs(
         )
     summary = _summarize_doc_map(results[step_name])
     if not summary["has_content"]:
-        reason = summary["not_found_reason"] or "no_content"
+        reason = (
+            summary["not_found_reason"] or summary["quality_reason"] or "no_content"
+        )
         logger.info(
             log_event(
                 step_ctx,
@@ -331,6 +336,9 @@ def generate_evidence_packs(
                     "report_id": report_id,
                     "vector_store_id": vector_store_id,
                     "sections_count": summary["sections_count"],
+                    "substantive_sections": summary["substantive_sections"],
+                    "topic_terms_count": summary["topic_terms_count"],
+                    "quality_reason": summary["quality_reason"],
                     "title_present": summary["title_present"],
                     "doc_id_present": summary["doc_id_present"],
                     "summary_present": summary["summary_present"],
@@ -684,7 +692,11 @@ def _generate_pack(
             schema_name=schema_name,
             model=prompt_bundle.resolved_model,
             allow_abstention=pack_name in _OPTIONAL_EVIDENCE_PACKS,
-            terminal_failure_code=("doc_map_invalid_json" if pack_name == "doc_map" else "evidence_pack_invalid_json"),
+            terminal_failure_code=(
+                "doc_map_invalid_json"
+                if pack_name == "doc_map"
+                else "evidence_pack_invalid_json"
+            ),
         ),
         ctx,
         call_model=call_model,
@@ -895,6 +907,29 @@ def _load_cached_pack(
                 status="cache_rejected",
                 value=None,
             )
+        if pack_name == "doc_map":
+            summary = _summarize_doc_map(normalized_payload)
+            if not summary["has_content"]:
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="generator",
+                        event="evidence_pack_cache_rejected",
+                        module=logger.name,
+                        fields={
+                            "report_id": report_id,
+                            "pack": pack_name,
+                            "reason": summary["quality_reason"] or "doc_map_no_content",
+                            "substantive_sections": summary["substantive_sections"],
+                            "topic_terms_count": summary["topic_terms_count"],
+                        },
+                    )
+                )
+                return CachedPackAdaptResult(
+                    schema_version="1.0",
+                    status="cache_rejected",
+                    value=None,
+                )
         return CachedPackAdaptResult(
             schema_version="1.0",
             status="hit",

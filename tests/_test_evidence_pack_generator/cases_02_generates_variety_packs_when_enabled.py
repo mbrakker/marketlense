@@ -8,9 +8,7 @@ def test_generate_evidence_packs_generates_variety_packs_when_enabled(tmp_path):
     fake_openai = RoutedOpenAIClient(
         payloads_by_pack={
             "doc_map": {
-                "doc_id": "d1",
-                "title": "title",
-                "sections": [{"title": "Overview"}],
+                **substantive_doc_map(),
             },
             "scope": {"scope": "Scope summary"},
             "methods": {"methods": ["Survey"]},
@@ -89,13 +87,12 @@ def test_generate_evidence_packs_generates_variety_packs_when_enabled(tmp_path):
     assert packs["recommendations"]["recommendations"][0]["id"] == "rec1"
     assert packs["contradictions"]["contradictions"][0]["id"] == "c1"
 
+
 def test_generate_evidence_packs_variety_pack_non_json_terminally_fails(tmp_path):
     fake_openai = RoutedOpenAIClient(
         payloads_by_pack={
             "doc_map": {
-                "doc_id": "d1",
-                "title": "title",
-                "sections": [{"title": "Overview"}],
+                **substantive_doc_map(),
             },
             "key_metrics": None,
         },
@@ -124,13 +121,16 @@ def test_generate_evidence_packs_variety_pack_non_json_terminally_fails(tmp_path
     assert "doc_map" in stored_packs
     assert "key_metrics" not in stored_packs
 
+
 def test_strip_json_fence_requires_closing_fence():
     raw = '```json\n{"key":1}\n'
     assert _strip_json_fence(raw) == raw.strip()
 
+
 def test_strip_json_fence_strips_allowed_json_fence():
     raw = '```json\n{"key":1}\n```'
     assert _strip_json_fence(raw) == '{"key":1}'
+
 
 def test_resolve_pack_steps_prepends_doc_map_when_missing():
     settings = SimpleNamespace(
@@ -144,6 +144,7 @@ def test_resolve_pack_steps_prepends_doc_map_when_missing():
         "scope",
         "methods",
     ]
+
 
 def test_pack_strategy_registry_exposes_expected_prompt_and_schema_metadata():
     expected = {
@@ -170,6 +171,7 @@ def test_pack_strategy_registry_exposes_expected_prompt_and_schema_metadata():
         assert strategy.prompt_namespace_suffix == prompt_ns
         assert strategy.schema_name == schema_name
 
+
 def test_load_cached_evidence_pack_normalizes_legacy_payload_before_validation(
     tmp_path,
 ):
@@ -181,8 +183,17 @@ def test_load_cached_evidence_pack_normalizes_legacy_payload_before_validation(
             {
                 "_cache": {"key": "cache-key"},
                 "doc_map": {
-                    "title": "Legacy title",
-                    "sections": [{"heading": "Overview"}],
+                    "title": "Legacy Retail Outlook",
+                    "summary": "Examines retail demand and measurement changes.",
+                    "sections": [
+                        {
+                            "heading": "Retail demand trends",
+                            "summary": (
+                                "Describes consumer demand changes across retail "
+                                "categories."
+                            ),
+                        }
+                    ],
                 },
             }
         ),
@@ -201,9 +212,49 @@ def test_load_cached_evidence_pack_normalizes_legacy_payload_before_validation(
 
     assert cached is not None
     assert cached["doc_id"] == "evidence-cache-invalid"
-    assert cached["title"] == "Legacy title"
-    assert cached["sections"][0]["title"] == "Overview"
+    assert cached["title"] == "Legacy Retail Outlook"
+    assert cached["sections"][0]["title"] == "Retail demand trends"
     assert cached["sections"][0]["id"]
+
+
+def test_load_cached_evidence_pack_rejects_identifier_only_doc_map(tmp_path):
+    report_name = "identifier only cached report"
+    cache_path = tmp_path / slugify(report_name) / "report_analysis" / "doc_map.json"
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    cache_path.write_text(
+        json.dumps(
+            {
+                "_cache": {"key": "cache-key"},
+                "doc_id": "identifier-only-report",
+                "title": "doc_map",
+                "summary": "identifier-only-report | vs_123 | doc_map",
+                "sections": [
+                    {
+                        "id": "s1",
+                        "title": "Metadata",
+                        "summary": (
+                            "Key metadata fields extracted from source evidence."
+                        ),
+                        "key_points": ["report_name: identifier-only-report"],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    cached = _load_cached_pack(
+        output_dir=str(tmp_path),
+        report_id="identifier-only-report",
+        pack_name="doc_map",
+        report_name=report_name,
+        cache_key="cache-key",
+        ctx=_ctx(),
+        analysis_store=None,
+    )
+
+    assert cached is None
+
 
 __all__ = [
     "test_generate_evidence_packs_generates_variety_packs_when_enabled",
@@ -213,4 +264,5 @@ __all__ = [
     "test_resolve_pack_steps_prepends_doc_map_when_missing",
     "test_pack_strategy_registry_exposes_expected_prompt_and_schema_metadata",
     "test_load_cached_evidence_pack_normalizes_legacy_payload_before_validation",
+    "test_load_cached_evidence_pack_rejects_identifier_only_doc_map",
 ]

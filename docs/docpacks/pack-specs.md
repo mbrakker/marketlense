@@ -41,6 +41,14 @@ Typed contracts live in:
 - `summary` (brief section synopsis)
 - `key_points` (array of concise supporting bullets; may be empty when source is sparse)
 
+Schema validity alone does not make a `doc_map` usable. Before a map can advance
+generation or be reused from cache, the generator verifies that it has at least
+one subject-specific section and source-derived narrative terms. Runtime control
+metadata—such as report, vector-store, or pack identifiers; file names; field
+labels; and metadata-only prose—does not count as document content. A failed
+check is rejected for bounded structured-output recovery (or cache regeneration)
+without any publisher-specific allowlist.
+
 ## Referential Integrity
 
 Cross-pack checks require `artifacts` evidence references to resolve to known IDs extracted from:
