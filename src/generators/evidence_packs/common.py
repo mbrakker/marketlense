@@ -71,6 +71,25 @@ def derive_publisher_from_report_name(report_name: str) -> str:
     return ""
 
 
+def derive_publisher_from_document_text(document_text: object) -> str:
+    """Return a high-confidence publisher named in report branding text."""
+    value = text(document_text)
+    if not value:
+        return ""
+    copyright_match = re.search(
+        r"(?:©|\bcopyright\b)\s*"
+        r"([A-Z][A-Za-z0-9&.-]*(?:\s+[A-Z][A-Za-z0-9&.-]*){0,3})",
+        value,
+        flags=re.IGNORECASE,
+    )
+    if copyright_match:
+        candidate = clean_publisher_token(copyright_match.group(1))
+        if candidate:
+            return candidate
+    possessive_match = re.search(r"\b([A-Z]{2,10})[’']s\b", value)
+    return clean_publisher_token(possessive_match.group(1)) if possessive_match else ""
+
+
 def coerce_pages(value: object) -> list[int]:
     items = value if isinstance(value, list) else [value]
     pages: list[int] = []

@@ -24,6 +24,7 @@ text: |
 
   Content constraints (strict):
   - Every statement must be directly supported by the supplied artifacts
+  - Do not assert causal operational outcomes (for example, fewer vendors, lower costs, faster delivery, or improved performance) unless the supplied artifacts explicitly state that outcome.
   - Quotes may inform interpretation but must not be reworded into new claims
   - Do not restate insights verbatim; synthesize across them
   - If an implication is not clearly supported, omit it

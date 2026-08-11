@@ -18,6 +18,10 @@ It inspects headings, body text, captions, quotations, link labels and hrefs, al
 
 Duplicate detection compares normalized claim-token sets and material-number overlap. Regexes are used only for deterministic syntax defects such as IDs and placeholders; semantic duplication is not determined by a regex alone.
 
+## First-run prevention
+
+First-run artifact assembly removes editorial scaffold labels from executive-summary prose (for example, `Answer:` and `Implication:`) before the artifact is retained or rendered. The summary prompt also requires direct public prose. Doc-map extraction retains an explicitly named source publisher for the public report-card boundary. Expert-comment generation must not infer causal operational outcomes—such as fewer vendors, lower cost, or faster delivery—unless retained source material explicitly states them. An incomplete model-produced insight candidate set is completed with distinct, evidence-backed findings before final insight selection, avoiding a regeneration solely to satisfy the required bundle size. When the public coverage map is present, the renderer uses topic key points for signal cards and suppresses repeated chapter summaries, so a table-of-contents sentence is not printed in multiple public sections. These publisher-agnostic controls prevent known readiness defects at their origin; semantic and grounding validation remain the release defence-in-depth.
+
 ## Provenance and staleness
 
 The retained provenance distinguishes the internal acquisition path, internal archive URL, publisher landing page, original report URL, and MarketLense article URL. Internal locations are recorded only as retained hashes and are never legal public original-source links. A public source hyperlink is allowed only when it matches resolved publisher provenance; otherwise the source section renders `Source URL: Not available` without a link. Missing a public URL alone is not a publish blocker; unresolved publisher identity, unsafe URLs, or missing source disclosure remain blockers.

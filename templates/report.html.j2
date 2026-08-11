@@ -488,7 +488,7 @@
             <summary>Ordered chapters</summary>
             <div class="topic-body">
               {% for chapter in view.chapters %}
-              <p><strong>{{ chapter.order }}. {{ chapter.title }}</strong>{% if chapter.pages %}<br><span class="muted">Pages: {{ chapter.pages|join(", ") }}</span>{% endif %}{% if chapter.summary %}<br>{{ chapter.summary }}{% endif %}</p>
+              <p><strong>{{ chapter.order }}. {{ chapter.title }}</strong>{% if chapter.pages %}<br><span class="muted">Pages: {{ chapter.pages|join(", ") }}</span>{% endif %}{% if chapter.summary and not view.public_intelligence.topics_covered %}<br>{{ chapter.summary }}{% endif %}</p>
               {% endfor %}
             </div>
           </details>

@@ -28,5 +28,6 @@ text: |
   - Include no more than one caveat, and only when the evidence explicitly supports it.
   - Author both TLDRs independently from the same evidence. The compact TLDR must not be a clipped prefix of the standard TLDR.
   - End each TLDR with complete sentence punctuation. Never use an ellipsis.
+  - Write direct public prose throughout the executive summary; do not emit labels such as "Answer:" or "Implication:".
   - evidence_id must be one ID only (no arrays or comma-separated values); if uncertain, use an empty string.
   - Keep the claim_evidence_map brief (3-5 items).

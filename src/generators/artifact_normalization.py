@@ -77,6 +77,10 @@ INLINE_REFERENCE_GROUP_RE = re.compile(
 )
 EVIDENCE_TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z0-9_-]*")
 QUOTE_ALIAS_RE = re.compile(r"^quote[-_]?(\d+)$", re.IGNORECASE)
+PUBLIC_EDITORIAL_SCAFFOLD_RE = re.compile(
+    r"\b(?:answer|scale|implication|delivery and workflow|evidence note|caveat)\s*:\s*",
+    re.IGNORECASE,
+)
 
 
 def artifact_base_variables(
@@ -133,11 +137,15 @@ def normalize_artifact_summary(value: Any) -> Dict[str, Any]:
     return {
         "tldr": _s(data.get("tldr")),
         "card_tldr_compact": _s(data.get("card_tldr_compact")),
-        "executive_summary": strip_artifact_inline_reference_ids(
-            _s(data.get("executive_summary"))
+        "executive_summary": _strip_public_editorial_scaffold(
+            strip_artifact_inline_reference_ids(_s(data.get("executive_summary")))
         ),
         "claim_evidence_map": _normalize_claims(claim_map),
     }
+
+
+def _strip_public_editorial_scaffold(value: str) -> str:
+    return PUBLIC_EDITORIAL_SCAFFOLD_RE.sub("", value).strip()
 
 
 def normalize_artifact_insights(items: Any, *, prefix: str) -> List[Dict[str, Any]]:

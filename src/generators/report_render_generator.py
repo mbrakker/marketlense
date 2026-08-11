@@ -33,6 +33,7 @@ from src.contracts.report_store import (
     ReportMetadataUpsertRequest,
 )
 from src.contracts.semantic_ids import ReportId
+from src.generators.evidence_packs.common import derive_publisher_from_document_text
 from src.generators.publish_readiness_generator import (
     evaluate_publish_readiness,
     publish_readiness_payload,
@@ -236,6 +237,25 @@ def _resolved_identity_publisher(runtime: ReportRuntimeState) -> str:
     return str(getattr(identity, "publisher_name", "") or "").strip()
 
 
+def _source_derived_publisher(analysis: ReportAnalysisState) -> str:
+    doc_map = analysis.evidence_packs.get("doc_map") or {}
+    if not isinstance(doc_map, dict):
+        return ""
+    publisher = str(doc_map.get("publisher") or "").strip()
+    if publisher:
+        return publisher
+    return derive_publisher_from_document_text(
+        " ".join(
+            part
+            for part in (
+                str(doc_map.get("title") or "").strip(),
+                str(doc_map.get("summary") or "").strip(),
+            )
+            if part
+        )
+    )
+
+
 def _resolved_render_title(
     runtime: ReportRuntimeState,
     source: ReportSourceState,
@@ -287,7 +307,12 @@ def _build_metadata_upsert_request(
         file_id=runtime.file.file_id,
         title=_resolved_report_title(runtime, source, analysis),
         file_name=runtime.file_name,
-        publisher=_resolved_identity_publisher(runtime) or payload.publisher or None,
+        publisher=(
+            _resolved_identity_publisher(runtime)
+            or payload.publisher
+            or _source_derived_publisher(analysis)
+            or None
+        ),
         taxonomy=payload.taxonomy,
         categories=payload.categories,
         region=payload.region or None,
@@ -430,7 +455,9 @@ def render_report_output(
             runtime, source, existing_title
         )
         render_data_dict["publisher"] = (
-            _resolved_identity_publisher(runtime) or existing_publisher
+            _resolved_identity_publisher(runtime)
+            or existing_publisher
+            or _source_derived_publisher(analysis)
         )
         render_data_dict["time_period"] = existing_time_period
         logger.info(
@@ -452,9 +479,11 @@ def render_report_output(
         render_data_dict["title"] = _resolved_render_title(
             runtime, source, render_meta.title or existing_title
         )
-        render_data_dict["publisher"] = _resolved_identity_publisher(runtime) or str(
-            render_meta.publisher or existing_publisher
-        ).strip()
+        render_data_dict["publisher"] = (
+            _resolved_identity_publisher(runtime)
+            or str(render_meta.publisher or existing_publisher).strip()
+            or _source_derived_publisher(analysis)
+        )
         render_data_dict["time_period"] = str(
             render_meta.time_period or existing_time_period
         ).strip()
@@ -682,10 +711,11 @@ def render_report_output(
         source,
         cover_meta.title if cover_meta else render_data_dict["title"],
     )
-    cover_publisher = _resolved_identity_publisher(runtime) or (
-        (cover_meta.publisher or "").strip()
-        if cover_meta
-        else (analysis.payload.publisher or "")
+    cover_publisher = (
+        _resolved_identity_publisher(runtime)
+        or ((cover_meta.publisher or "").strip() if cover_meta else "")
+        or analysis.payload.publisher
+        or _source_derived_publisher(analysis)
     )
     cover_time_period = (
         cover_meta.time_period if cover_meta else (analysis.payload.time_period or None)

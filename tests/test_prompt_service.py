@@ -106,6 +106,40 @@ def test_artifact_prompts_include_shared_editorial_constitution() -> None:
     )
 
 
+def test_summary_and_expert_prompts_prevent_first_run_readiness_failures() -> None:
+    doc_map_prompt = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/doc_map",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+    summary_prompt = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/summary",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+    expert_prompt = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/expert_comment",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+
+    assert (
+        'do not emit labels such as "Answer:" or "Implication:"'
+        in summary_prompt.user.text
+    )
+    assert "Do not assert causal operational outcomes" in expert_prompt.user.text
+    assert "explicitly named publisher or organization" in doc_map_prompt.user.text
+
+
 def test_list_prompt_namespaces_returns_hashes() -> None:
     response = list_prompt_namespaces(
         PromptNamespaceListRequest(

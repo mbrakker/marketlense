@@ -516,19 +516,113 @@ def test_generate_artifacts_abstains_low_confidence_families_and_marks_regenerat
 
     assert payload["summary"]["tldr"] == ""
     assert payload["summary"]["executive_summary"] == ""
-    assert payload["insights_candidates"] == []
-    assert payload["insights_final"] == []
+    assert len(payload["insights_candidates"]) == 5
+    assert len(payload["insights_final"]) == 5
     assert payload["quotes_final"] == []
     assert payload["family_status"]["summary"]["status"] == "abstained"
     assert payload["family_status"]["summary"]["policy_action"] == "regenerate"
-    assert payload["family_status"]["insights_bundle"]["status"] == "abstained"
-    assert payload["family_status"]["insights_bundle"]["policy_action"] == "regenerate"
+    assert payload["family_status"]["insights_bundle"]["status"] == "generated"
+    assert payload["family_status"]["insights_bundle"]["policy_action"] == "keep"
     assert payload["family_status"]["quotes"]["status"] == "abstained"
     assert payload["family_status"]["quotes"]["policy_action"] == "regenerate"
     assert payload["family_status"]["expert_comment"]["status"] == "generated"
     assert payload["family_status"]["expert_comment"]["policy_action"] == "keep"
     assert payload["family_status"]["linkedin_post"]["status"] == "generated"
     assert payload["family_status"]["linkedin_post"]["policy_action"] == "keep"
+
+
+def test_generate_artifacts_completes_partial_insight_candidates_from_findings(
+    tmp_path,
+):
+    responses = {
+        "summary": {
+            "summary": {
+                "tldr": "Revenue and demand signals support planning.",
+                "card_tldr_compact": "Revenue and demand signals support planning.",
+                "executive_summary": "The report provides grounded market signals.",
+                "claim_evidence_map": [],
+            }
+        },
+        "insights_candidates": {
+            "insights_candidates": [
+                {
+                    "id": "c1",
+                    "text": "Revenue increased by 10% year over year.",
+                    "evidence_id": "f1",
+                    "evidence": "Revenue +10% YoY",
+                    "pages": [2],
+                },
+                {
+                    "id": "c2",
+                    "text": "European margins are under pressure.",
+                    "evidence_id": "f2",
+                    "evidence": "Margin declined",
+                    "pages": [3],
+                },
+                {
+                    "id": "c3",
+                    "text": "Retention has stabilized.",
+                    "evidence_id": "f3",
+                    "evidence": "Retention improved",
+                    "pages": [4],
+                },
+                {
+                    "id": "c4",
+                    "text": "",
+                    "evidence_id": "f4",
+                    "evidence": "APAC growth accelerated",
+                    "pages": [5],
+                },
+                {
+                    "id": "c5",
+                    "text": "",
+                    "evidence_id": "f5",
+                    "evidence": "CPA improved",
+                    "pages": [6],
+                },
+                {
+                    "id": "c6",
+                    "text": "Revenue increased by 10% year over year.",
+                    "evidence_id": "f1",
+                    "evidence": "Revenue +10% YoY",
+                    "pages": [2],
+                },
+                {
+                    "id": "c7",
+                    "text": "European margins are under pressure.",
+                    "evidence_id": "f2",
+                    "evidence": "Margin declined",
+                    "pages": [3],
+                },
+            ]
+        },
+        "insights_final": {"insights_final": []},
+        "quotes": {"quotes_final": []},
+        "expert_comment": {"expert_comment": "Grounded expert commentary."},
+        "linkedin_post": {"linkedin_post": "Grounded LinkedIn summary."},
+    }
+
+    payload = generate_artifacts(
+        report_id="r_partial_candidates",
+        report_name="report",
+        doc_map=_doc_map(),
+        evidence_packs=_evidence_packs(),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=FakeOpenAI(responses),
+        prompt_client=FakePromptClient(),
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    assert [item["evidence_id"] for item in payload["insights_candidates"]] == [
+        "f1",
+        "f2",
+        "f3",
+        "f4",
+        "f5",
+    ]
+    assert len(payload["insights_final"]) == 5
+    assert payload["family_status"]["insights_bundle"]["status"] == "generated"
 
 
 def test_summary_family_status_accepts_claim_evidence_ids_without_spans() -> None:

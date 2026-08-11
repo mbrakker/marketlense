@@ -1030,7 +1030,11 @@ def _coerce_chapters(
 
 
 def _build_signal_cards(
-    *, topics: list[str], topic_briefs: list[dict[str, Any]], tags: list[Any]
+    *,
+    topics: list[str],
+    topic_briefs: list[dict[str, Any]],
+    tags: list[Any],
+    prefer_key_points: bool = False,
 ) -> list[dict[str, str]]:
     cards: list[dict[str, str]] = []
     briefs_by_title = {
@@ -1045,7 +1049,9 @@ def _build_signal_cards(
         points = [
             _s(point) for point in _coerce_list(brief.get("key_points")) if _s(point)
         ]
-        if summary and points:
+        if prefer_key_points and points:
+            summary = " ".join(points)
+        elif summary and points:
             summary = f"{summary} {' '.join(points)}"
         if not summary:
             summary = points[0] if points else ""

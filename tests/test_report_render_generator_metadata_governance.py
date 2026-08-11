@@ -9,6 +9,7 @@ from src.contracts.report_store import (
     SourcePublicationMetadata,
 )
 from src.generators.report_render_generator import (
+    _source_derived_publisher,
     render_preview_asset,
     render_report_output,
 )
@@ -20,6 +21,20 @@ from tests.test_report_render_generator import (
     _selection,
     _source,
 )
+
+
+def test_source_derived_publisher_uses_explicit_document_branding() -> None:
+    analysis = SimpleNamespace(
+        evidence_packs={
+            "doc_map": {
+                "title": "How GWI's brand tracking transforms metrics.",
+                "publisher": "",
+                "summary": "A concise guide to GWI's tracker. © GWI 2025.",
+            }
+        }
+    )
+
+    assert _source_derived_publisher(analysis) == "GWI"
 
 
 def test_render_report_output_fails_closed_for_ungoverned_card_metadata(tmp_path):

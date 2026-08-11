@@ -87,6 +87,61 @@ def test_render_removes_inline_internal_evidence_tokens_from_public_prose(
     assert "The retained signal is actionable." in html
 
 
+def test_render_does_not_repeat_toc_summaries_across_public_sections(
+    tmp_path: Path,
+) -> None:
+    repeated_summary = (
+        "This report explains how a source-backed market signal informs decisions."
+    )
+    response = render_report(
+        RenderRequest(
+            schema_version="1.0",
+            data={
+                "title": "Signal report",
+                "artifacts": {
+                    "toc_topics": ["Market signal"],
+                    "topics_covered": [
+                        {
+                            "topic": "Market signal",
+                            "why_it_matters": repeated_summary,
+                            "subtopics": [
+                                "Prioritise the decision the signal supports."
+                            ],
+                            "pages": [2],
+                        }
+                    ],
+                    "toc_topics_expanded": [
+                        {
+                            "topic": "Market signal",
+                            "summary": repeated_summary,
+                            "key_points": [
+                                "Prioritise the decision the signal supports."
+                            ],
+                        }
+                    ],
+                    "toc_entries": [
+                        {
+                            "display_title": "Market signal",
+                            "summary": repeated_summary,
+                            "pages": [2],
+                            "order": 1,
+                        }
+                    ],
+                },
+            },
+            doc_name="signal.pdf",
+            file_id="file-signal",
+            out_dir=str(tmp_path),
+            preview_png=None,
+        ),
+        _ctx(),
+    )
+
+    html = Path(response.html_path).read_text(encoding="utf-8")
+
+    assert html.count(repeated_summary) == 1
+
+
 def test_render_includes_artifact_sections(tmp_path):
     data = {
         "title": "Sample Report",

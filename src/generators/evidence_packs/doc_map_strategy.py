@@ -10,6 +10,7 @@ from src.generators.evidence_packs.common import (
     build_section_id,
     coerce_pages,
     coerce_text_list,
+    derive_publisher_from_document_text,
     derive_publisher_from_document_title,
     derive_publisher_from_report_name,
     first_non_empty_text,
@@ -240,6 +241,16 @@ def normalize_payload(
             )
         ),
         derive_publisher_from_report_name(report_name),
+        derive_publisher_from_document_text(
+            " ".join(
+                part
+                for part in (
+                    resolved_title,
+                    text(normalized.get("summary")),
+                )
+                if part
+            )
+        ),
     )
     if raw_publisher != resolved_publisher or "publisher" not in normalized:
         normalized["publisher"] = resolved_publisher

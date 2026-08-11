@@ -318,26 +318,53 @@ def generate_artifacts(
         stage_one_results.get("insights_candidates", {}).get("insights_candidates"),
         prefix="candidate",
     )
+    insights_candidates = pad_artifact_insights([], insights_candidates)
+    insights_candidates = [
+        candidate
+        for candidate in insights_candidates
+        if _s(candidate.get("text")).strip()
+    ]
     initial_candidate_count = len(
-        [candidate for candidate in insights_candidates if _s(candidate.get("text"))]
+        insights_candidates
     )
-    if not insights_candidates:
-        insights_candidates = fallback_artifact_insights_from_findings(
+    if initial_candidate_count < 5:
+        fallback_candidates = fallback_artifact_insights_from_findings(
             safe_evidence.get("findings")
+        )
+        existing_evidence_ids = {
+            _s(candidate.get("evidence_id")).strip()
+            for candidate in insights_candidates
+            if _s(candidate.get("evidence_id")).strip()
+        }
+        fallback_candidates = [
+            candidate
+            for candidate in fallback_candidates
+            if _s(candidate.get("evidence_id")).strip() not in existing_evidence_ids
+        ]
+        insights_candidates = pad_artifact_insights(
+            insights_candidates,
+            fallback_candidates,
+        )
+        completed_candidate_count = len(
+            [
+                candidate
+                for candidate in insights_candidates
+                if _s(candidate.get("text"))
+            ]
         )
         logger.info(
             log_event(
                 ctx,
                 role="generator",
                 event=(
-                    "artifact_insights_candidates_fallback_from_findings"
-                    if initial_candidate_count == 0 and insights_candidates
-                    else "artifact_insights_candidates_empty"
+                    "artifact_insights_candidates_completed_from_findings"
+                    if completed_candidate_count > initial_candidate_count
+                    else "artifact_insights_candidates_incomplete"
                 ),
                 module=logger.name,
                 fields={
                     "initial_candidate_count": initial_candidate_count,
-                    "candidate_count": len(insights_candidates),
+                    "candidate_count": completed_candidate_count,
                 },
             )
         )

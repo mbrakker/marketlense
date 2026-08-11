@@ -7,6 +7,7 @@ text: |
     - title
     - publisher
     - summary (document-level brief)
+  - When an explicitly named publisher or organization appears in branding, title, byline, copyright, contact, or report prose, set `publisher` to that exact organization name. Do not leave it empty in that case.
   - Capture all major report sections in source order.
   - For each section, include:
     - id

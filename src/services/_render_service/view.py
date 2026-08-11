@@ -248,6 +248,12 @@ def _build_render_view(
     topics_covered = _coerce_public_topics_covered(artifacts)
     key_figures = _coerce_public_key_figures(artifacts)
     chart_insight_cards = _coerce_public_chart_insight_cards(artifacts)
+    signal_cards = _build_signal_cards(
+        topics=topics,
+        topic_briefs=topic_briefs,
+        tags=snapshot_tags,
+        prefer_key_points=bool(topics_covered),
+    )
     core_signal = _build_core_signal(
         tldr_text=tldr_text,
         executive_summary=executive_summary,
@@ -352,9 +358,7 @@ def _build_render_view(
         },
         "topics": topics,
         "topic_briefs": topic_briefs,
-        "signal_cards": _build_signal_cards(
-            topics=topics, topic_briefs=topic_briefs, tags=snapshot_tags
-        ),
+        "signal_cards": signal_cards,
         "editorial_cards": editorial_cards,
         "chapters": chapters,
         "insights": insights,
@@ -395,11 +399,7 @@ def _build_render_view(
             "has_editorial": any(card["items"] for card in editorial_cards),
             "has_chapters": bool(chapters),
             "has_source_download": bool(source_download_href),
-            "has_signal_cards": bool(
-                _build_signal_cards(
-                    topics=topics, topic_briefs=topic_briefs, tags=snapshot_tags
-                )
-            ),
+            "has_signal_cards": bool(signal_cards),
             "has_advisory": bool(
                 advisory["decision"]["available"]
                 or advisory["recommendations"]

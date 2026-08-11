@@ -1,10 +1,11 @@
+from src.generators._artifact_generator.family_policy import (
+    build_artifact_family_status,
+)
 from src.generators.artifact_normalization import (
     fallback_artifact_insights_from_findings,
     normalize_artifact_insights,
+    normalize_artifact_summary,
     pad_artifact_insights,
-)
-from src.generators._artifact_generator.family_policy import (
-    build_artifact_family_status,
 )
 
 
@@ -115,6 +116,23 @@ def test_pad_artifact_insights_does_not_repeat_one_candidate_to_fill_the_bundle(
     assert [item["text"] for item in padded if item["text"]] == [
         "Podcast ad-supported audio share is 19%."
     ]
+
+
+def test_normalize_artifact_summary_removes_editorial_scaffold_labels() -> None:
+    summary = normalize_artifact_summary(
+        {
+            "executive_summary": (
+                "Answer: Brand tracking joins survey design and activation. "
+                "Scale: The service covers 50 markets. "
+                "Implication: Teams can compare markets."
+            )
+        }
+    )
+
+    assert summary["executive_summary"] == (
+        "Brand tracking joins survey design and activation. "
+        "The service covers 50 markets. Teams can compare markets."
+    )
 
 
 def test_fallback_artifact_insights_uses_distinct_grounded_findings_only():
