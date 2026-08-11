@@ -1,0 +1,175 @@
+{
+  "recommendations": [
+    {
+      "baseline_median_ms": 2065,
+      "baseline_profile": {
+        "max_jobs_per_queue": 1,
+        "max_parallel_workers": 1
+      },
+      "report_count": 1,
+      "selected_median_ms": 2065,
+      "selected_profile": {
+        "max_jobs_per_queue": 1,
+        "max_parallel_workers": 1
+      },
+      "speedup_proven": false,
+      "speedup_ratio": 1.0
+    },
+    {
+      "baseline_median_ms": 6098,
+      "baseline_profile": {
+        "max_jobs_per_queue": 1,
+        "max_parallel_workers": 1
+      },
+      "report_count": 5,
+      "selected_median_ms": 6098,
+      "selected_profile": {
+        "max_jobs_per_queue": 1,
+        "max_parallel_workers": 1
+      },
+      "speedup_proven": false,
+      "speedup_ratio": 1.0
+    },
+    {
+      "baseline_median_ms": 11087,
+      "baseline_profile": {
+        "max_jobs_per_queue": 1,
+        "max_parallel_workers": 1
+      },
+      "report_count": 10,
+      "selected_median_ms": 11087,
+      "selected_profile": {
+        "max_jobs_per_queue": 1,
+        "max_parallel_workers": 1
+      },
+      "speedup_proven": false,
+      "speedup_ratio": 1.0
+    }
+  ],
+  "results": [
+    {
+      "attempt_digest": "3148d35e55120e1fd23e45e5189372720479fa853bd358e86a4a77ea4ef77c0a",
+      "estimated_cost_usd": "0",
+      "outcome_digest": "531879cb2313600d6c8c43903b73faec1ba80e0d99425a7d98d276338b2914f6",
+      "profile": {
+        "max_jobs_per_queue": 1,
+        "max_parallel_workers": 1
+      },
+      "quality_passed": true,
+      "report_count": 1,
+      "samples_ms": [
+        3975,
+        1939,
+        3999,
+        1939,
+        2374,
+        1960,
+        2065
+      ]
+    },
+    {
+      "attempt_digest": "3148d35e55120e1fd23e45e5189372720479fa853bd358e86a4a77ea4ef77c0a",
+      "estimated_cost_usd": "0",
+      "outcome_digest": "531879cb2313600d6c8c43903b73faec1ba80e0d99425a7d98d276338b2914f6",
+      "profile": {
+        "max_jobs_per_queue": 5,
+        "max_parallel_workers": 5
+      },
+      "quality_passed": true,
+      "report_count": 1,
+      "samples_ms": [
+        5882,
+        4920,
+        3130,
+        3264,
+        3151,
+        5082,
+        3182
+      ]
+    },
+    {
+      "attempt_digest": "1b4e671e1812b917f07e878888782c765d40f7b3e1a29ff48581ec8bf91edcc0",
+      "estimated_cost_usd": "0",
+      "outcome_digest": "33d767116a7c0604c4de070882caddeff59bfb100475f4211e770d371a78caa3",
+      "profile": {
+        "max_jobs_per_queue": 1,
+        "max_parallel_workers": 1
+      },
+      "quality_passed": true,
+      "report_count": 5,
+      "samples_ms": [
+        5822,
+        7014,
+        5605,
+        6098,
+        6707,
+        5709,
+        6855
+      ]
+    },
+    {
+      "attempt_digest": "1b4e671e1812b917f07e878888782c765d40f7b3e1a29ff48581ec8bf91edcc0",
+      "estimated_cost_usd": "0",
+      "outcome_digest": "33d767116a7c0604c4de070882caddeff59bfb100475f4211e770d371a78caa3",
+      "profile": {
+        "max_jobs_per_queue": 5,
+        "max_parallel_workers": 5
+      },
+      "quality_passed": true,
+      "report_count": 5,
+      "samples_ms": [
+        8686,
+        8398,
+        9536,
+        8049,
+        11242,
+        9629,
+        11060
+      ]
+    },
+    {
+      "attempt_digest": "e9fd3f941c80d4b420e320ca29a76fa32606c2baa720d610d8e61b226a487d3a",
+      "estimated_cost_usd": "0",
+      "outcome_digest": "1101fd8c27fdfe50b873b545a59e196b3a59ea21217413f7ec2661c07f6c7854",
+      "profile": {
+        "max_jobs_per_queue": 1,
+        "max_parallel_workers": 1
+      },
+      "quality_passed": true,
+      "report_count": 10,
+      "samples_ms": [
+        13848,
+        11099,
+        13806,
+        11087,
+        10927,
+        10668,
+        10431
+      ]
+    },
+    {
+      "attempt_digest": "e9fd3f941c80d4b420e320ca29a76fa32606c2baa720d610d8e61b226a487d3a",
+      "estimated_cost_usd": "0",
+      "outcome_digest": "1101fd8c27fdfe50b873b545a59e196b3a59ea21217413f7ec2661c07f6c7854",
+      "profile": {
+        "max_jobs_per_queue": 5,
+        "max_parallel_workers": 5
+      },
+      "quality_passed": true,
+      "report_count": 10,
+      "samples_ms": [
+        12921,
+        12105,
+        12709,
+        12762,
+        12149,
+        11556,
+        12629
+      ]
+    }
+  ],
+  "runs": 7,
+  "schema_version": "1.0",
+  "stage_work_ms": 20,
+  "warmups": 2
+}

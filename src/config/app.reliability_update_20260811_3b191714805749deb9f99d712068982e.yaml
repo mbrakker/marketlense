@@ -1,0 +1,55 @@
+schema_version: "1.0"
+# Isolated retained-artifact replay of the five terminal failures from the frozen 20-report reliability cohort.
+paths:
+  output_dir: "./out/reliability_update_20260811_3b191714805749deb9f99d712068982e"
+  cache_dir: "./cache/reliability_update_20260811_3b191714805749deb9f99d712068982e"
+  state_db: "./state/reliability_update_20260811_3b191714805749deb9f99d712068982e/index.sqlite"
+  reports_db: "./state/reliability_update_20260811_3b191714805749deb9f99d712068982e/reports.sqlite"
+  signal_store_db: "./state/reliability_update_20260811_3b191714805749deb9f99d712068982e/signals.sqlite"
+  ingest_lock: "./state/reliability_update_20260811_3b191714805749deb9f99d712068982e/ingest.lock"
+
+ingest:
+  run_budget:
+    max_spend_usd: 500.0
+    max_pdfs: 5
+    max_retries: 20
+    max_runtime_seconds: 86400
+    limit_decision: "stop"
+
+browser_download:
+  output_dir: "./out/reliability_update_20260811_3b191714805749deb9f99d712068982e/browser_downloads"
+  identity_config_path: "./browser_download_identity_reliability_full_20260811_aa4b36f3ab714a29bbd7b081d291b09e.yaml"
+  route_playbook_promotion_mode: "disabled"
+  private_api_playbook_promotion_mode: "disabled"
+  run_budget:
+    enabled: true
+    max_browser_launches: 5
+    max_pdfs: 5
+    max_drive_writes: 0
+    max_drive_reads: 0
+    max_mailbox_reads: 0
+    max_retries: 20
+    max_runtime_seconds: 43200
+    limit_decision: "stop"
+
+mailbox_acquisition:
+  output_dir: "./out/reliability_update_20260811_3b191714805749deb9f99d712068982e/mailbox_acquisition"
+
+publisher_discovery:
+  output_dir: "./out/reliability_update_20260811_3b191714805749deb9f99d712068982e/publisher_inventory_discovery"
+
+analysis:
+  cost_ledger_path: "./state/reliability_update_20260811_3b191714805749deb9f99d712068982e/llm_cost_ledger.jsonl"
+
+cost:
+  usage_db_path: "./state/reliability_update_20260811_3b191714805749deb9f99d712068982e/llm_usage.sqlite"
+  daily_path: "./state/reliability_update_20260811_3b191714805749deb9f99d712068982e/llm_cost_daily.json"
+  ledger_path: "./state/reliability_update_20260811_3b191714805749deb9f99d712068982e/llm_cost_ledger.jsonl"
+
+publish:
+  projection_daily_path: "./state/reliability_update_20260811_3b191714805749deb9f99d712068982e/projection_cost_daily.json"
+  projection_ledger_path: "./state/reliability_update_20260811_3b191714805749deb9f99d712068982e/projection_cost_ledger.jsonl"
+  run_budget:
+    enabled: true
+    max_wordpress_writes: 0
+    limit_decision: "stop"

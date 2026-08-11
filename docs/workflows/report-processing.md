@@ -265,6 +265,30 @@ assembly. Summary claims remain deterministically prunable when no source span
 can be bound. The final assembly grounding and semantic gates remain blocking
 defence-in-depth checks.
 
+<<<<<<< Updated upstream
+=======
+When primary candidate-insight output is incomplete, the first-run deterministic
+fallback selects only distinct findings with both a retained finding ID and
+substantive finding text. The finding ID remains the evidence reference. If an
+optional evidence excerpt is absent, the retained finding text is used as that
+candidate's excerpt; no new claim or evidence ID is invented. Fewer than two
+such grounded items remains a typed card-content failure rather than triggering
+an ungrounded card insight.
+
+Before the reference check, the artifact boundary deterministically resolves
+only unambiguous source aliases to their retained canonical identifiers: case
+and compact finding forms such as `F1` for `F1_digital_identity`, document-map
+section forms such as `doc_map:section-1`, and the document source identifier.
+Ambiguous aliases and identifiers absent from retained evidence remain unknown
+and enter the bounded recovery path; no publisher-specific mapping or
+ungrounded fallback is permitted.
+
+If final-insight generation abstains after that reference check, its empty
+result remains empty. Candidate insights may complete a partial substantive
+final-insight response, but they never replace a safety abstention or an
+unknown-evidence rejection.
+
+>>>>>>> Stashed changes
 If a model returns no candidate insights despite a generated findings pack,
 artifact assembly uses up to five distinct findings that each retain a finding
 ID, text, and source evidence. This first-run fallback does not invent

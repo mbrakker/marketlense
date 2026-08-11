@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0",
+  "verdict": "REGRESSION",
+  "workload": "Local typed four-stage SQLite queue graph; 2 warmups and 7 samples at 20 ms deterministic work per stage; 0 provider cost.",
+  "profiles": {
+    "baseline": "serial supervisor: 1 global worker, 1 job per queue",
+    "candidate": "parallel supervisor: 5 global workers, 5 jobs per queue"
+  },
+  "results": [
+    {
+      "reports": 1,
+      "baseline_median_ms": 2065,
+      "candidate_median_ms": 3264,
+      "change_percent": -58.1,
+      "quality_equivalent": true
+    },
+    {
+      "reports": 5,
+      "baseline_median_ms": 6098,
+      "candidate_median_ms": 9536,
+      "change_percent": -56.4,
+      "quality_equivalent": true
+    },
+    {
+      "reports": 10,
+      "baseline_median_ms": 11087,
+      "candidate_median_ms": 12629,
+      "change_percent": -13.9,
+      "quality_equivalent": true
+    }
+  ],
+  "retained_change": false,
+  "reason": "Concurrent SQLite claim, completion, and outbox transactions added more contention than they removed."
+}
