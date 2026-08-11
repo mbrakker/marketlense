@@ -1,6 +1,6 @@
 # Consolidated TODO
 
-Last audited: 2026-08-10
+Last audited: 2026-08-11
 
 This is the repository's single, source-neutral work register. Every task is evaluated by its current codebase evidence and project decision—not by where it was first proposed. Equivalent tasks are merged under one owner; deferred, closed, and excluded work stays visible in the same register.
 
@@ -150,14 +150,14 @@ The original ten-item screenshot baseline is complete in the committed implement
 
 - **Title:** Complete explicit model-policy coverage and policy-effectiveness evidence
 - **Impact 5 / effort: 2**
-- **Context:** Report generation, taxonomy, and candidate ranking now use explicit hash-pinned execution policies, but older model-backed namespaces still use compatibility defaults and operators cannot compare observed cost, latency, validation, and cache outcomes by policy identity. The 2026-07-19 live validation stopped five publisher discoveries at `llm_execution_policy_unknown_namespace`, confirming that the remaining compatibility coverage is a production-path blocker rather than a theoretical gap.
+- **Context:** Settings startup now resolves the finite reachable production namespace inventory before provider use, and `policy-effectiveness` emits bounded execution-identity cohorts from the canonical ledger. The 2026-07-19 unknown-namespace failure is historical evidence for this guard, not a current description of the path. Remaining work is to retire the compatibility adapter for every reachable namespace and retain enough compatible production evidence to make the report decision-useful.
 - **Benefit:** Every materially expensive model call can be governed by an auditable policy and operators can safely identify policies that reduce cost or improve validated output quality.
 - **Risks to avoid:** Preserve each namespace's current semantic contract, provider boundary, retry ownership, and cache compatibility; do not infer a policy from one noisy run or change routing autonomously.
 - **Success criteria:**
 
-- Inventory every active model-backed namespace, migrate each from compatibility fallback to an explicit versioned policy with bounded output, timeout, retrieval, and structured-output controls, and reject unregistered production namespaces at preflight.
-- Emit a bounded policy-effectiveness report that compares compatible policy identities by provider calls, validated-output rate, cache reuse, elapsed time, tokens, and cost without retaining prompts, sources, or model output.
-- Retained-corpus and bounded live checks prove policy hashes invalidate incompatible cache reuse, preserve output contracts, and identify at least one operator-reviewable cost or quality improvement without autonomous policy changes.
+- Eliminate compatibility fallback for every reachable production namespace while preserving the current versioned output, timeout, retrieval, and structured-output controls; an unregistered reachable namespace must continue to fail at preflight.
+- Keep `policy-effectiveness` bounded and complete for compatible execution identities, including provider calls, validated-output rate, cache reuse, elapsed time, tokens, and cost, without retaining prompts, sources, or model output.
+- Retained-corpus and bounded live checks prove policy hashes invalidate incompatible cache reuse, preserve output contracts, and produce an operator-reviewable cost or quality conclusion without autonomous policy changes.
 
 #### A17. Calibrate deterministic admission thresholds from retained preflight funnels
 
@@ -269,7 +269,7 @@ The original ten-item screenshot baseline is complete in the committed implement
 
 - **Title:** Release-locked sandbox publish canary
 - **Impact 5 / effort: 2**
-- **Context:** The 2026-07-20 live run proved one complete report can recover a missing report-card manifest, pass public-quality gates, publish to the authorized sandbox, and be duplicate-suppressed. That evidence is intentionally one bounded report, not a recurring release confidence measure.
+- **Context:** The 2026-07-20 bounded sandbox run processed five reports, created or matched posts, and repeated with zero new writes. It predates the release-locked cohort-manifest workflow, so it is useful transaction evidence but not the recurring, immutable-cohort release proof this item requires.
 - **Benefit:** A small, real, manifest-backed cohort catches render-reuse, card-asset, WordPress-readback, and idempotency regressions before a release affects a wider report set.
 - **Risks to avoid:** Run only against the named sandbox and isolated state; require explicit approval, canonical spend authority, the existing validation/editorial gates, a fixed low cohort cap, and retained non-sensitive evidence. Never turn this into production auto-publishing.
 - **Success criteria:**
@@ -282,14 +282,14 @@ The original ten-item screenshot baseline is complete in the committed implement
 
 - **Title:** Restrict cohort-manifest publication to its admitted artifacts
 - **Impact 5 / effort: 1**
-- **Context:** Validation manifests already close report outcomes correctly, but the `publish-wp --cohort-manifest` command still begins with output-directory discovery. A profile containing unrelated HTML can therefore surface an unrelated candidate before final cohort-outcome recording.
+- **Context:** `publish-wp --cohort-manifest` now resolves the admitted members' retained HTML references instead of scanning `output_dir`, and applies a cohort-membership filter before publication. The remaining gap is a stricter one-to-one compatibility check: a changed mapping must fail rather than being silently excluded, and the resolved candidate set still needs a retained hash and isolated live proof.
 - **Benefit:** The immutable cohort becomes the authoritative candidate set, preventing unrelated drafts from being preflighted or published and making bounded canaries safer to run in shared artifact namespaces.
 - **Risks to avoid:** Preserve the existing no-manifest bulk-publish behavior, canonical artifact/path validation, approval gates, idempotency lookup, and fail-closed handling for missing or ambiguous cohort artifacts.
 - **Success criteria:**
 
-- With `--cohort-manifest`, resolve each admitted member to exactly one compatible current HTML artifact before publication and reject missing, stale, ambiguous, or extra discovered candidates before any WordPress call.
-- Focused tests prove a shared output directory cannot preflight or write a non-cohort artifact, while valid cohort reuse, authenticated readback, and repeat-publication semantics remain unchanged.
-- A bounded isolated live cohort records the candidate-set hash and shows only admitted report IDs in publication-preflight and WordPress manifest records.
+- With `--cohort-manifest`, resolve each admitted member to exactly one compatible current HTML artifact and fail before any WordPress call on a missing, stale, ambiguous, mismatched, or unexpectedly excluded member.
+- Focused tests prove a shared output directory cannot preflight or write a non-cohort artifact, and that a changed report-store/HTML mapping fails closed while valid cohort reuse, authenticated readback, and repeat-publication semantics remain unchanged.
+- A bounded isolated live cohort retains a candidate-set hash and shows only admitted report IDs in publication-preflight and WordPress manifest records.
 
 #### P15. Operate canonical publish-readiness telemetry and refresh planning
 
@@ -343,7 +343,7 @@ The original ten-item screenshot baseline is complete in the committed implement
 
 - **Title:** Attest active model-pricing rates before they become stale
 - **Impact 5 / effort: 1**
-- **Context:** Cost-governed routes now fail closed when their canonical pricing is missing, stale, invalid, or explicitly held, but price-source review and expiry remain a manual operator responsibility.
+- **Context:** Cost-governed routes fail closed when canonical pricing is missing, stale, invalid, or explicitly held. The bundled OpenAI GPT-5.6 family rates were refreshed on 2026-08-11, but price-source review, expiry visibility, and the reviewed-rate transition remain manual operator work.
 - **Benefit:** Spend estimates and report-level attribution remain trustworthy as providers update model pricing, without restoring silent zero-cost execution.
 - **Risks to avoid:** Do not scrape or activate a provider rate automatically; preserve explicit operator approval, effective dates, source provenance, and the existing hold-before-I/O behavior.
 - **Success criteria:**
@@ -356,7 +356,7 @@ The original ten-item screenshot baseline is complete in the committed implement
 
 - **Title:** Measure and optimize structured-output recovery effectiveness
 - **Impact 5 / effort: 2**
-- **Context:** The shared recovery service records each attempt, but operators do not yet have a compatible-cohort view of first-pass success, repair and regeneration use, abstentions, terminal failures, latency, tokens, and cost. Task 4's live validation showed that this view would surface provider-schema compatibility problems before they affect a cohort.
+- **Context:** Validation-run reliability artifacts now retain an attributed cohort funnel and per-attempt usage, repair, and failure data. They are not yet the compatible cross-run recovery scorecard required to compare first-pass success, repair/regeneration use, abstentions, latency, tokens, and cost by artifact and policy identity.
 - **Benefit:** Identify the highest-value schema, prompt, and provider fixes that improve first-pass validity and lower repair/regeneration cost without weakening schema or abstention contracts.
 - **Risks to avoid:** Aggregate only bounded metadata and never raw prompts, evidence, or model responses. Group by compatible artifact schema, provider, model, and policy versions. Produce operator recommendations and alerts only; do not automatically change routing, prompts, or failure policy.
 - **Success criteria:**
@@ -418,60 +418,60 @@ The original ten-item screenshot baseline is complete in the committed implement
 - Equivalent identities reuse validated retained artifacts and record avoided parsing/embedding/model calls; conflicting or unknown identity remains non-reusable.
 - Retained-corpus and bounded live evidence measure duplicate-work suppression, false-merge prevention, and zero unintended public writes.
 
-#### E9. Materialize prompt families for single-family repair
+#### E9. Prove prompt-family repair savings on retained and live cohorts
 
-- **Title:** Materialize prompt-family outputs and route only their required model calls
+- **Title:** Prove prompt-family repair savings on retained and live cohorts
 - **Impact 5 / effort: 3**
-- **Context:** E7 now safely reuses source and crop checkpoints and records exact stage/call categories, but the retained analysis payload is still a composite. A real model-policy repair therefore invoked 17 LLM calls even though only the analysis family changed.
+- **Context:** Prompt-family outputs are now typed, hash-pinned materializations; the planner names required and reused families, and enforced repair reconciles its actual family calls against the plan. The prior 17-call composite repair is now the baseline to beat, not the current architecture. What remains is representative retained and bounded live evidence of the claimed saving.
 - **Benefit:** Prompt, validator, and advisory changes can regenerate the one affected family plus deterministic downstream assembly, reducing LLM time and spend while retaining E7's plan/actual enforcement.
 - **Risks to avoid:** Preserve immutable evidence, validation, claims, and rendered-HTML dependency edges; do not duplicate model routing, bypass the LLM ledger, or treat an incomplete family as reusable.
 - **Success criteria:**
 
-- Persist typed, hash-pinned per-family materializations and their direct dependencies under the current report-analysis boundary.
-- Planner output names the exact family call set; executor constructs only those scoped clients and reconciles actual ledger calls against the plan.
-- Retained-corpus and bounded live comparisons show a material call/time/cost reduction from the observed 17-call composite repair while preserving semantic validation and zero unplanned side effects.
+- Preserve typed, hash-pinned per-family materializations and their direct dependencies under the current report-analysis boundary; planner and executor must continue to reconcile required, reused, and actual family calls.
+- Retained-corpus and bounded live comparisons demonstrate a material call/time/cost reduction against the 17-call composite baseline, while preserving semantic validation and zero unplanned side effects.
+- Record scope, policy/prompt identities, actual ledger usage, and the reason for any no-improvement result so an operator can distinguish an unsupported repair family from a failed saving claim.
 
 ### 4. Release Integrity and Architectural Enforcement
 
-#### R1. Publish release-evidence reviews where reviewers work
+#### R1. Complete reviewer-surface release evidence and runtime-corpus coverage
 
-- **Title:** Publish release-evidence reviews where reviewers work
+- **Title:** Complete reviewer-surface release evidence and runtime-corpus coverage
 - **Impact 3 / effort: 2**
-- **Context:** Release-evidence review Markdown is generated and archived, but reviewers must open the artifact bundle to learn approval status, owners, expiry dates, and unwaived issues. Strict CTO evidence already validates a clean, exact repository HEAD; that exact-tested-HEAD linkage and the expansion of its retained runtime corpus are not yet consistently surfaced in CI/PR review.
+- **Context:** CI now generates the release-evidence review and appends a bounded GitHub job summary with the exact tested SHA, queue-evidence status, and unwaived issues. The remaining work is to make the archived-bundle link and final approval state available on the relevant PR/release surface, and to expand the strict retained runtime corpus with an explicit representativeness label.
 - **Benefit:** Release readiness, the exact tested revision, and the scope of runtime evidence are visible where reviewers already work, reducing missed evidence and review latency.
 - **Risks to avoid:** Keep summaries bounded and links stable while preserving all unwaived issue detail. Do not imply that a smoke-only corpus proves representative report processing.
 - **Success criteria:**
 
-- CI appends bounded review Markdown after approval gating, including the exact tested HEAD or an explicit unavailable/mismatch result.
-- PR/release automation links the bundle, final approval status, and exact tested HEAD to the reviewed commit.
+- Keep the CI review and bounded job summary linked to the exact tested HEAD or an explicit unavailable/mismatch result.
+- PR/release automation links the archived bundle and final approval status to the reviewed commit.
 - The retained runtime corpus expands under the existing strict collector with declared scope/provenance; inline review distinguishes representative processing from smoke-only evidence.
 - README distinguishes inline review from full archived evidence, and tests cover bounded summaries, exact-HEAD mismatch, runtime-corpus scope, and unwaived detail retention.
 
-#### R2. Enforce role boundaries, direct-I/O discipline, and controlled module growth
+#### R2. Close remaining architecture-enforcement gaps
 
-- **Title:** Enforce role boundaries, direct-I/O discipline, and controlled module growth
+- **Title:** Close remaining architecture-enforcement gaps
 - **Impact 4 / effort: 3**
-- **Context:** CI enforces imports, forbidden patching, direct `fields=asdict(...)` rejection, coverage, and mutation, but role mixing, direct-I/O drift, service-integration coverage, facade thickness, and long-file growth are not yet uniformly executable.
+- **Context:** CI already enforces role imports, direct-I/O ownership, service-boundary mapping, forbidden patching, refactor-movement evidence, coverage, mutation, and repository hygiene. The remaining gaps are targeted: require evidence for missing service-boundary coverage where it matters, and turn approved facade/waiver exceptions into narrow, expiring, owner-accountable records without creating generic governance noise.
 - **Benefit:** Architectural constraints prevent drift before merge instead of relying on manual review and retrospective refactors.
 - **Risks to avoid:** Use narrow, expiry-owned waivers and avoid noisy generic governance checks.
 - **Success criteria:**
 
-- Gates target first-party files and require owner/expiry for every waiver.
-- Service integration-test absence is a failure unless explicitly waived.
-- Documentation explains adding and retiring a waiver; tests prove violations fail and valid waivers expire as intended.
+- New gates target first-party files only and require owner, reason, and expiry for every new waiver.
+- A targeted service-boundary coverage gap is a failure unless explicitly waived; do not infer an integration-test requirement for pure or inaccessible boundaries.
+- Documentation explains adding and retiring a waiver; tests prove the targeted violations fail and valid waivers expire as intended.
 
-#### R3. Restore service quality coverage above the retained baseline
+#### R3. Re-establish an evidenced service-coverage baseline
 
-- **Title:** Restore service quality coverage above the retained baseline
+- **Title:** Re-establish an evidenced service-coverage baseline
 - **Impact 4 / effort: 3**
-- **Context:** Full-suite service coverage is 82.5763%, above the enforced floor but below the retained 82.9680% snapshot after accounting, browser, PDF, and lineage service growth.
+- **Context:** The committed baseline currently records `src/services` coverage of 82.5763%, above the enforced 75% floor. The former 82.9680% comparison target has no retained baseline artifact in this repository, so it cannot serve as a verifiable acceptance threshold. Recent service growth still needs behavior-focused coverage and a clean, exact-commit full-suite measurement before the baseline is reset.
 - **Benefit:** The retained quality baseline continues to reflect real protection for durable external and stateful boundaries.
 - **Risks to avoid:** Add behavior tests with observable contracts or state; do not weaken floors, add exemptions, or add coverage-only paths.
 - **Success criteria:**
 
 - New behavior-focused coverage prioritizes ledger recovery, browser-worker lifecycle, and artifact-lineage failure paths.
 - Assertions cover returned contracts or persisted state, not coverage-only paths.
-- The quality baseline is refreshed only by a passing full CI run, records its exact SHA, and demonstrates no reduction in global/generator/orchestrator coverage.
+- The quality baseline is refreshed only by a passing full CI run, records its exact SHA and measured service coverage, and demonstrates no reduction in global/generator/orchestrator coverage.
 
 #### R6. Review bounded-log reduction telemetry and remediate recurring callers
 
@@ -490,16 +490,16 @@ The original ten-item screenshot baseline is complete in the committed implement
 
 All work in this lane is movement-only unless behavior change receives explicit approval. Public facades, order, retries, idempotency, logs, and side effects must remain stable.
 
-#### S3. Simplify the PDF visual-heuristics boundary
+#### S3. Simplify only evidenced remaining PDF visual-heuristics coupling
 
-- **Title:** Simplify the PDF visual-heuristics boundary
+- **Title:** Simplify only evidenced remaining PDF visual-heuristics coupling
 - **Impact 4 / effort: 4**
-- **Context:** PDF visual extraction has accumulated facade re-exports, rendering/cache concerns, and heuristic helpers that can obscure the single canonical external/library boundary.
+- **Context:** The visual-heuristics, panel-detection, visual-candidate, crop, and table families have already been decomposed behind compatibility facades and documented movement evidence. This item no longer authorizes a broad facade cleanup; it owns only a measured remaining coupling that demonstrably obscures the canonical PDF boundary.
 - **Benefit:** A smaller semantic surface keeps the PDF capability navigable, replaceable, and testable without scattering external-library access.
 - **Risks to avoid:** Preserve candidate/crop outputs, artifact paths, and the one canonical external/library boundary.
 - **Success criteria:**
 
-- Remove unnecessary re-exports and forwarding chains without changing callers or outputs.
+- Identify a specific remaining coupling with a dependency or ownership audit before changing it; retain compatibility facades that preserve approved callers.
 - Keep visual heuristics capability-owned and testable behind the canonical PDF boundary.
 - Equivalence tests preserve candidate/crop behavior, artifact paths, cache semantics, and benchmark signatures.
 
@@ -543,4 +543,4 @@ Automation may plan, resume, retry, repair, validate, render, draft, hold, and n
 ## Audit Notes
 
 - This register replaces duplicated simplification context, migrated x100 intake, and repeated launch plans with source-neutral status rows. No task is excluded because of its origin.
-- The active backlog contains 26 outcome-owned items. Deferred, closed, and excluded rows remain visible above; any newly discovered work must be merged into an existing outcome or justified as a new one.
+- The active backlog contains 28 outcome-owned items. Deferred, closed, and excluded rows remain visible above; any newly discovered work must be merged into an existing outcome or justified as a new one.
