@@ -39,4 +39,17 @@ exercise bounded polling must provide deliberately incomplete or transient
 terminal evidence. The browser suite has a regression test that asserts the
 normal fixture takes zero stabilization polls.
 
+## Ingest worker matrix
+
+`scripts/quality/benchmark_ingest_parallelism.py` measures the real bounded
+ingest batch scheduler with deterministic local work for one, five, and ten
+reports. It compares the current `5x5` worker profile with bounded outer/inner
+alternatives, performs two warmups and seven measured runs per profile, and
+retains only scalar timings and outcome digests. It neither calls providers nor
+publishes or writes outside its temporary namespace. Use it to reject a worker
+setting unless an eligible profile has the same outcome digest, passes quality,
+and has no higher cost. It selects the lowest measured median; exact ties use
+the lower-concurrency profile. This is a scheduler benchmark; browser and
+live-provider saturation require a separate controlled canary.
+
 See [non-regression policy](non-regression-policy.md) and [release gates](release-gates.md).
