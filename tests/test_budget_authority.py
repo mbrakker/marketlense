@@ -461,6 +461,51 @@ def test_authority_day_scope_spans_runs_and_publisher_scope_isolated(tmp_path) -
     assert isolated.decision == "allow"
 
 
+def test_legacy_limits_do_not_apply_to_other_runs_on_the_same_day(tmp_path) -> None:
+    prior_budget = _budget(tmp_path, run_id="prior-run")
+    prior_request = _request(
+        prior_budget,
+        run_id="prior-run",
+        resource_type="drive_write",
+        operation="drive_upload_bytes",
+        estimated_cost_usd=None,
+        estimated_calls=0,
+        estimated_writes=1,
+        idempotency_key="drive:prior-run:upload",
+    )
+    prior_decision = evaluate_budget_request(prior_request, _ctx())
+    finalize_budget_side_effect(
+        BudgetSideEffectFinalizeRequest(
+            schema_version="1.0",
+            usage_db_path=prior_budget.usage_db_path,
+            reservation_key=prior_decision.reservation_key,
+            actual_usage=RunBudgetUsage(schema_version="1.0", drive_writes=2),
+        ),
+        _ctx(),
+    )
+    current_budget = _budget(
+        tmp_path,
+        run_id="current-run",
+        max_drive_writes=1,
+    )
+
+    decision = evaluate_budget_request(
+        _request(
+            current_budget,
+            run_id="current-run",
+            resource_type="pdf_process",
+            operation="acquire_report_pdf",
+            estimated_cost_usd=None,
+            estimated_calls=0,
+            estimated_pdfs=1,
+            idempotency_key="pdf:current-run:acquire",
+        ),
+        _ctx(),
+    )
+
+    assert decision.decision == "allow"
+
+
 def test_defer_persists_actionable_work_and_cold_start_forecast_is_audited(
     tmp_path,
 ) -> None:

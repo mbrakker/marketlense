@@ -49,6 +49,10 @@ class BrowserUseRequiredSelectEvidence(BaseModel):
     options: list[str] = Field(
         default_factory=list, description="Visible option labels."
     )
+    selected_value: str = Field(
+        default="",
+        description="Visible option selected through an allowed fallback, when any.",
+    )
     classifier_confidence: float = Field(
         default=0.0, description="Confidence that this is a required select."
     )

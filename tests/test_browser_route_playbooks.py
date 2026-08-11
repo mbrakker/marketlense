@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
 
@@ -184,6 +185,50 @@ def test_prompt_uses_route_family_namespace_for_email_form(
     assert "Route-family guidance for `browser_email_form`" in bundle.task_prompt
 
 
+def test_email_form_prompt_completes_safe_missing_fields_and_selects(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url="https://example.com/research/report",
+        settings=BrowserDownloadSettings(
+            schema_version="1.0",
+            openrouter_api_key="key",
+            model="openai/gpt-5-mini",
+            temperature=0.0,
+            timeout_seconds=30.0,
+            max_steps=5,
+            output_dir=str(tmp_path / "downloads"),
+            state_db=str(tmp_path / "state.sqlite"),
+            reports_db=str(tmp_path / "reports.sqlite"),
+            identity_config_path=str(tmp_path / "identity.yaml"),
+            identity_profile=BrowserDownloadIdentity(
+                schema_version="1.0",
+                fields=[],
+                delivery_emails=[],
+            ),
+            route_playbook_dir=str(tmp_path / "playbooks"),
+        ),
+        route_family_hint="browser_email_form",
+    )
+
+    bundle = render_browser_report_download_prompt(
+        request=request,
+        ctx=run_context,
+        normalized_url="https://example.com/research/report",
+        execution_url="https://example.com/research/report",
+        download_dir=tmp_path / "downloads",
+        delivery_email="reports@example.com",
+    )
+
+    assert "generate a bounded non-sensitive value" in bundle.task_prompt
+    assert "choose the first visible non-placeholder option" in bundle.task_prompt
+    assert "record that field and selected option in `required_select_evidence`" in (
+        bundle.task_prompt
+    )
+
+
 def test_validated_route_promotion_writes_reviewable_file_and_rejects_unverified(
     tmp_path: Path,
     run_context,
@@ -217,6 +262,47 @@ def test_validated_route_promotion_writes_reviewable_file_and_rejects_unverified
         )
     assert excinfo.value.code == "browser_route_playbook_promotion_unverified"
     assert excinfo.value.retryable is False
+
+
+def test_validated_route_promotion_excludes_unverified_route_steps(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    result = replace(
+        _result(route_status="verified"),
+        route_steps=[
+            BrowserDownloadRouteStep(
+                schema_version="1.0",
+                index=0,
+                action="submit",
+                target_text="Submit",
+                target_role="button",
+                target_url="https://example.com/research/report",
+                result="Submission was not verified.",
+            ),
+            BrowserDownloadRouteStep(
+                schema_version="1.0",
+                index=1,
+                action="submit",
+                target_text="Access The Resource",
+                target_role="button",
+                target_url="https://example.com/research/report",
+                result="Confirmed report email request.",
+            ),
+        ],
+    )
+
+    response = promote_validated_browser_route_result_to_playbook(
+        playbook_dir=str(tmp_path / "playbooks"),
+        result=result,
+        ctx=run_context,
+        observed_at="2026-08-11T18:50:18+00:00",
+    )
+    payload = yaml.safe_load(Path(response.path).read_text(encoding="utf-8"))
+
+    assert [step["target"] for step in payload["steps"]] == [
+        "Access The Resource"
+    ]
 
 
 def test_validated_route_promotion_dry_run_returns_review_diff_without_write(

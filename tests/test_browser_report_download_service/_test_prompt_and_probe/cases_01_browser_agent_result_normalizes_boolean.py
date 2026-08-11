@@ -124,11 +124,11 @@ def test_browser_report_download_prompt_marks_unverified_memory_as_weak(
     )
     assert "Invisible reCAPTCHA badges" in bundle.task_prompt
     assert "not operator-solvable" in bundle.task_prompt
-    assert "Never choose a first enabled option" in bundle.task_prompt
-    assert (
-        "Research for business type, industry, department, role, or priority"
-        in bundle.task_prompt
+    assert "choose the first visible non-placeholder option" in bundle.task_prompt
+    assert "Never select a placeholder, an optional marketing choice" in (
+        bundle.task_prompt
     )
+    assert "generate a bounded non-sensitive value" in bundle.task_prompt
     assert (
         "open the iframe `src` or same-origin popup/form target directly"
         in bundle.task_prompt

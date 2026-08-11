@@ -1361,7 +1361,11 @@ def _scope_limits(budget: RunBudget, scope: str) -> RunBudgetLimits:
         "day": budget.day_limits,
         "publisher": budget.publisher_limits,
     }[scope]
-    return configured or _legacy_limits(budget)
+    if configured is not None:
+        return configured
+    if scope == "run":
+        return _legacy_limits(budget)
+    return RunBudgetLimits(schema_version="1.0")
 
 
 def _reservation_usage_for_scope(

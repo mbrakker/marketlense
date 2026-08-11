@@ -174,6 +174,12 @@ class BrowserDownloadRequiredSelectEvidence:
             "doc": "Confidence that the select was live, required, and relevant."
         },
     )
+    selected_value: str = field(
+        default="",
+        metadata={
+            "doc": "Visible option selected through an allowed fallback, when any."
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -193,7 +199,10 @@ class BrowserDownloadRequiredSelectOverrideProposal:
     )
     match_source: str = field(
         metadata={
-            "doc": "Selection source: identity_fact, approved_default, or refused."
+            "doc": (
+                "Selection source: identity_fact, approved_default, "
+                "observed_safe_fallback, or refused."
+            )
         }
     )
     status: str = field(

@@ -92,6 +92,8 @@ Profiles cannot disable validation, evidence checks, human publication approval,
 
 `cost.budget_authority` configures the single SQLite-backed authority used before provider calls, browser launches and Browser Use model calls, material Drive reads and writes, WordPress writes, PDF processing, retry attempts, and mailbox polls. Its `run`, `day`, and `publisher` sections accept the typed limits in `RunBudgetLimits`, including spend, calls, runtime, retries, browser launches, Drive reads/writes, WordPress writes, and mailbox reads. PDF processing remains an auditable effect, but it has no count-based admission limit in the committed configuration: processing admission is governed by the configured spend forecast and spend limit.
 
+Legacy workflow fields such as `browser_download.run_budget.max_drive_writes` apply only to that run. Cross-run enforcement is opt-in through the explicit `cost.budget_authority.day` or `publisher` scope; usage from an earlier run must not block an unrelated run merely because its legacy per-run limit was lower.
+
 Limits are inclusive: a prospective side effect that brings a metric exactly to its configured maximum is admitted and warned; the next prospective side effect is stopped. This keeps a configured one-PDF run capable of processing one PDF while retaining a hard bound.
 
 `cost.pricing_path` points to the versioned operator rate card. Each active

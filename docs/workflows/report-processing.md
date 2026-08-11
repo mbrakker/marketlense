@@ -91,6 +91,31 @@ An accepted email request has no artifact to hash, so its telemetry status is
 is never treated as a resolved or cohort-eligible report merely because the
 form submission succeeded.
 
+Browser-form blocker claims are untrusted terminal evidence. The
+`blocked_missing_identity_field` classification is emitted only when
+deterministic matching of the encountered required fields against the resolved
+identity profile (including publisher overrides and semantic aliases) finds an
+effective value missing. A model claim alone cannot suppress an otherwise
+configured form flow.
+
+For a required browser-form field with no configured identity value, acquisition
+generates only bounded non-sensitive business-profile text values. For an
+unmatched required dropdown, it may choose the first visible non-placeholder
+option only for company size, revenue band, country/location, industry,
+department, or organization type. The selected option must be retained in
+required-select evidence and is then eligible to become a publisher-specific
+override. Passwords, personal or financial data, job-title/role dropdowns,
+marketing/newsletter choices, and consent remain ineligible for a generated
+or fallback selection and continue to block the form when required.
+
+After repairing a required lookup, the browser helper recognizes the report
+form's visible `Access`, `Unlock`, and `Resource` CTAs as submit actions, in
+addition to conventional submit/download/send labels. It applies that matching
+only on the discovered form and still requires terminal confirmation evidence.
+When a route is promoted for reuse, failed or unverified actions remain in the
+attempt audit but are excluded from the active playbook; only successful,
+verifiable steps become reusable guidance.
+
 `region` and `covered_period` are optional card labels: placeholder, extraction
 leakage, and prose-like values are deterministically omitted before manifest
 validation, while a placeholder publisher or extraction leakage in required

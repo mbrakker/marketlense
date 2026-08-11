@@ -120,6 +120,7 @@ def promote_validated_browser_route_result_to_playbook(
             outcome=result.outcome,
         )
         for step in result.route_steps[:8]
+        if _route_step_is_promotable(step)
     ]
     if not route_steps:
         route_steps = [
@@ -921,6 +922,21 @@ def _adapt_route_step_for_playbook(
         action=step.action or "follow_route",
         target=target,
         verification=verification,
+    )
+
+
+def _route_step_is_promotable(step: BrowserDownloadRouteStep) -> bool:
+    """Keep failed model actions in audit evidence, not active route guidance."""
+    result = str(step.result or "").casefold()
+    return not any(
+        marker in result
+        for marker in (
+            "not verified",
+            "unverified",
+            "blocked",
+            "could not",
+            "failed",
+        )
     )
 
 

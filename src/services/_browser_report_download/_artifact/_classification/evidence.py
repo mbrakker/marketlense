@@ -686,6 +686,14 @@ def _normalize_explicit_blocked_reason(
         or _message_mentions_enum_selection_failure(blocker_haystack)
     ):
         return "blocked_unknown_required_enum"
+    if token == "blocked_missing_identity_field":
+        if _has_missing_identity_field(
+            request=request,
+            delivery_email=delivery_email,
+            encountered_form_fields=encountered_form_fields,
+        ):
+            return token
+        return None
     if token != "blocked_unknown_required_enum":
         return token
     if any(marker in blocker_haystack for marker in _UNKNOWN_ENUM_MARKERS):

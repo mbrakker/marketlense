@@ -1,0 +1,42 @@
+schema_version: '1.0'
+playbook_id: learned-www-algolia-com-browser-email-form
+version: 1.0.0
+status: active
+updated_at: '2026-08-11T18:50:18Z'
+stale_after_days: 120
+publisher_pattern: www.algolia.com
+host_patterns:
+- www.algolia.com
+url_path_markers:
+- resources
+- asset
+- report-searchteamstrends
+route_family: browser_email_form
+route_kind: email_delivery
+summary: Open the report form, resolve the required Country lookup, then use the
+  Access The Resource CTA and verify the email-request terminal state.
+steps:
+- schema_version: '1.0'
+  action: submit
+  target: Access The Resource
+  verification: Confirmed report email request.
+  selector_type: ''
+  selector: ''
+  value: ''
+  expected_url_contains: ''
+  expected_text: ''
+traps: []
+evidence_notes:
+- Promoted only after verified route evidence with outcome email_requested.
+source_evidence:
+- submit_observed
+- success_text
+- structured_result
+- verified
+- email_delivery
+private_api_evidence: []
+history:
+- schema_version: '1.0'
+  changed_at: '2026-08-11T18:50:18Z'
+  source: validated_route_promotion
+  summary: Promoted browser_email_form/email_delivery after email_requested evidence.

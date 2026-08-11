@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from src.services._browser_report_download._artifact.classification import (
+    _normalize_explicit_blocked_reason,
+)
+
 from .builders import *  # noqa: F401,F403
 
 
@@ -118,6 +122,86 @@ def test_resolve_effective_identity_fields_hydrates_semantic_alias_values(
 
     assert by_key["professional_email"].value == "ops@example.com"
     assert by_key["company_name"].value == "Market Lense"
+
+
+def test_explicit_missing_identity_blocker_is_evidence_based(
+    tmp_path: Path,
+) -> None:
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url="https://www.algolia.com/lp/algolia-forrester-tei-report-2026",
+        settings=replace(
+            _settings(tmp_path),
+            identity_profile=BrowserDownloadIdentity(
+                schema_version="1.0",
+                fields=[
+                    BrowserDownloadIdentityField(
+                        schema_version="1.0",
+                        key="first_name",
+                        label="First Name",
+                        value="Market",
+                        aliases=["first name", "given name"],
+                    ),
+                    BrowserDownloadIdentityField(
+                        schema_version="1.0",
+                        key="last_name",
+                        label="Last Name",
+                        value="Lense",
+                        aliases=["last name", "family name"],
+                    ),
+                    BrowserDownloadIdentityField(
+                        schema_version="1.0",
+                        key="work_email",
+                        label="Work email",
+                        value="ops@example.com",
+                        aliases=["email", "business email"],
+                    ),
+                    BrowserDownloadIdentityField(
+                        schema_version="1.0",
+                        key="company",
+                        label="Company",
+                        value="Market Lense",
+                        aliases=["company", "organization"],
+                    ),
+                    BrowserDownloadIdentityField(
+                        schema_version="1.0",
+                        key="country",
+                        label="Country",
+                        value="Austria",
+                        aliases=["country"],
+                    ),
+                ],
+            ),
+        ),
+    )
+
+    blocked_reason = _normalize_explicit_blocked_reason(
+        request=request,
+        delivery_email="ops@example.com",
+        explicit_blocked_reason="blocked_missing_identity_field",
+        encountered_form_fields=[
+            "First Name",
+            "Last Name",
+            "Business Email Address",
+            "Company Name",
+            "Country",
+        ],
+        blocker_haystack="The form requires these identity fields before submission.",
+    )
+
+    assert blocked_reason is None
+    assert (
+        _normalize_explicit_blocked_reason(
+            request=request,
+            delivery_email="ops@example.com",
+            explicit_blocked_reason="blocked_missing_identity_field",
+            encountered_form_fields=["Phone"],
+            blocker_haystack=(
+                "The form requires this identity field before submission."
+            ),
+        )
+        == "blocked_missing_identity_field"
+    )
 
 
 def test_prompt_identity_entries_apply_delivery_email_to_email_aliases(

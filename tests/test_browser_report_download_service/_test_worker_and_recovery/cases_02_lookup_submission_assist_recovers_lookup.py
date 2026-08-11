@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 from src.services._browser_report_download._browser_runtime import timeout_recovery
+from src.services._browser_report_download._helpers.interaction import (
+    browser_helper_form_autocomplete,
+)
 
 from ._shared import *  # noqa: F401,F403
 
@@ -288,6 +291,42 @@ def test_lookup_submission_assist_targets_blocked_lookup_label(
     )
 
     assert [item["key"] for item in broad_values] == ["country", "state_region"]
+
+
+def test_lookup_submission_assist_submits_access_resource_cta(
+    run_context,
+) -> None:
+    class AccessResourcePage:
+        def evaluate(self, script):
+            assert "text.includes('access')" in str(script)
+            return {
+                "attempted_count": 1,
+                "selected_count": 1,
+                "selected_fields": ["Country"],
+                "selection_verification": [],
+                "unresolved_fields": [],
+                "submitted": True,
+                "final_url": "https://example.com/report#requested",
+            }
+
+    result = browser_helper_form_autocomplete(
+        page=AccessResourcePage(),
+        field_values=[
+            {
+                "key": "country",
+                "label": "Country",
+                "value": "Austria",
+                "aliases": ["country"],
+                "option_aliases": ["Austria"],
+            }
+        ],
+        ctx=run_context,
+        normalized_url="https://example.com/report",
+        submit=True,
+    )
+
+    assert result.status == "ok"
+    assert result.submitted is True
 
 
 def test_download_report_with_browser_use_standard_form_assist_checks_mandatory_opt_in(

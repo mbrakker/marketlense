@@ -344,3 +344,36 @@ def test_required_select_evidence_matches_existing_identity_fact(tmp_path: Path)
     assert response.applied_count == 1
     assert response.proposals[0].match_source == "identity_fact"
     assert payload["publisher_overrides"][0]["field_values"][0]["key"] == "country"
+
+
+def test_required_select_evidence_persists_observed_safe_fallback(tmp_path: Path) -> None:
+    _, identity_path = _write_app_config_fixture(tmp_path)
+
+    response = upsert_browser_download_required_select_overrides(
+        BrowserDownloadRequiredSelectOverrideRequest(
+            schema_version="1.0",
+            path=str(identity_path),
+            evidence=[
+                BrowserDownloadRequiredSelectEvidence(
+                    schema_version="1.0",
+                    host="forms.example.com",
+                    url="https://forms.example.com/a",
+                    field_label="Company Size",
+                    field_name="company_size",
+                    options=["Select...", "1-10 employees", "11-50 employees"],
+                    classifier_confidence=0.91,
+                    selected_value="1-10 employees",
+                )
+            ],
+            approved_defaults={},
+        ),
+        _ctx(),
+    )
+
+    payload = yaml.safe_load(identity_path.read_text(encoding="utf-8"))
+
+    assert response.applied_count == 1
+    assert response.proposals[0].match_source == "observed_safe_fallback"
+    assert payload["publisher_overrides"][0]["field_values"][0]["value"] == (
+        "1-10 employees"
+    )

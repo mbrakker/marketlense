@@ -634,6 +634,7 @@ def _required_select_evidence(
                     for option in item.options
                     if str(option).strip()
                 ],
+                selected_value=str(item.selected_value or "").strip(),
                 classifier_confidence=max(
                     0.0, min(1.0, float(item.classifier_confidence or 0.0))
                 ),

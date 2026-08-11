@@ -217,6 +217,7 @@ def _plan_required_select_override(
         family=family,
         options=options,
         approved_defaults=approved_defaults,
+        observed_fallback=evidence.selected_value,
     )
     if not host or not label:
         return (
@@ -376,6 +377,7 @@ def _required_select_value(
     family: str,
     options: list[str],
     approved_defaults: dict[str, str],
+    observed_fallback: object,
 ) -> tuple[str, str]:
     if not family or not options:
         return "", ""
@@ -395,6 +397,9 @@ def _required_select_value(
     default_key = normalize_browser_download_identity_key(default)
     if default_key in option_by_key:
         return option_by_key[default_key], "approved_default"
+    observed_fallback_key = normalize_browser_download_identity_key(observed_fallback)
+    if observed_fallback_key in option_by_key:
+        return option_by_key[observed_fallback_key], "observed_safe_fallback"
     return "", ""
 
 

@@ -476,7 +476,10 @@ def browser_helper_form_autocomplete(
                 text === 'submit' ||
                 text.includes('submit') ||
                 text.includes('download') ||
-                text.includes('send')
+                text.includes('send') ||
+                text.includes('access') ||
+                text.includes('unlock') ||
+                text.includes('resource')
               );
             }});
             if (submitButton) {{
@@ -808,7 +811,10 @@ def browser_helper_standard_form_submit(
                 text.includes('download') ||
                 text.includes('send') ||
                 text.includes('request') ||
-                text.includes('get')
+                text.includes('get') ||
+                text.includes('access') ||
+                text.includes('unlock') ||
+                text.includes('resource')
               );
             }});
             if (submitButton) {{
