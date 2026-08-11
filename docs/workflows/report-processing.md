@@ -18,6 +18,12 @@ regenerates the deterministic cover set and manifest before the package can
 reach the blocking publication boundary; it never reports a package as ready
 with orphaned card assets.
 
+PDF previews, refinements, and crop regions keep fingerprint sidecars beside
+their rendered artifacts. Concurrent workers may produce the same eligible
+artifact, so each sidecar write uses a unique temporary file followed by an
+atomic replace. This makes the cache race-safe without treating a missing
+sidecar as a valid cache hit; an interrupted write is simply regenerated.
+
 `ingest --force-report-cards` resumes from the validated analysis checkpoint,
 not `latest_safe`, only when an existing rendered package has a missing or
 invalid card manifest. It rebuilds that render/card package and avoids a second

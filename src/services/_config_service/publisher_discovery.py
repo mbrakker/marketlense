@@ -422,6 +422,10 @@ def load_publisher_inventory_settings(
             data.get("openai_models")
             or _default_config_value("openai_models", fallback={})
         ),
+        llm_execution_policies=dict(
+            data.get("llm_execution_policies")
+            or _default_config_value("llm_execution_policies", fallback={})
+        ),
         openai_seed=_opt_int(
             ingest.get("seed") if not _is_missing(ingest.get("seed")) else None
         ),

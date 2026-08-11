@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import tempfile
 from typing import Any
 
 import pymupdf as fitz
@@ -174,9 +175,22 @@ def write_artifact_sidecar(
     sidecar_path = _sidecar_path(artifact_path)
     sidecar_path.parent.mkdir(parents=True, exist_ok=True)
     payload = json.dumps(asdict(record), ensure_ascii=True, sort_keys=True)
-    temp_path = sidecar_path.with_name(f"{sidecar_path.name}.tmp-write-{os.getpid()}")
-    temp_path.write_text(payload, encoding="utf-8")
-    os.replace(temp_path, sidecar_path)
+    # Several crop workers can materialize the same cached artifact at once.
+    # A PID-only temporary name collides within a worker process, allowing one
+    # writer to move the other's file before it reaches ``os.replace``.
+    file_descriptor, temp_name = tempfile.mkstemp(
+        prefix=f"{sidecar_path.name}.tmp-write-",
+        dir=sidecar_path.parent,
+        text=True,
+    )
+    temp_path = Path(temp_name)
+    try:
+        with os.fdopen(file_descriptor, "w", encoding="utf-8") as handle:
+            handle.write(payload)
+        os.replace(temp_path, sidecar_path)
+    finally:
+        if temp_path.exists():
+            temp_path.unlink()
     return sidecar_path.as_posix()
 
 

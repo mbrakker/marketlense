@@ -142,6 +142,12 @@ class PublisherInventorySettings:
             "doc": "Optional per-namespace OpenAI model overrides used by publisher-inventory candidate screening."
         },
     )
+    llm_execution_policies: dict[str, dict[str, object]] = field(
+        default_factory=dict,
+        metadata={
+            "doc": "Versioned provider-call policies retained for publisher-inventory prompt preparation."
+        },
+    )
     openai_seed: Optional[int] = field(
         default=None,
         metadata={

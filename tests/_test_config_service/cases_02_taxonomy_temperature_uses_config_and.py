@@ -5,6 +5,37 @@ from ._shared import *  # noqa: F401,F403
 
 
 class TestConfigService02TaxonomyTemperatureUsesConfig(_TestConfigServiceBase):
+    def test_inventory_settings_retain_candidate_screening_execution_policy(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = self._write_config(tmp_dir, include_analysis=False)
+            cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
+            cfg_data["llm_execution_policies"] = {
+                "publisher_inventory/meaningful_candidate_screen": {
+                    "provider": "openai",
+                    "model": "gpt-5-nano",
+                    "temperature": 0.0,
+                    "provider_retry_count": 0,
+                }
+            }
+            Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
+
+            with patch.dict(
+                os.environ,
+                {"OPENAI_API_KEY": "openai-key", "OPENROUTER_API_KEY": "openrouter-key"},
+                clear=True,
+            ):
+                settings = load_publisher_inventory_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                    RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+                )
+
+        self.assertEqual(
+            "gpt-5-nano",
+            settings.llm_execution_policies[
+                "publisher_inventory/meaningful_candidate_screen"
+            ]["model"],
+        )
+
     def test_taxonomy_temperature_uses_config_and_env_override(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             cfg_path = self._write_config(tmp_dir, include_analysis=False)

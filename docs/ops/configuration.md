@@ -29,7 +29,10 @@ The important operator sections are `paths`, `ingest`, `publish`, `browser_downl
 
 The `publisher_inventory/meaningful_candidate_screen` namespace is deliberately
 routed and priced as `gpt-5-nano`, matching the bounded candidate-screening
-configuration. Namespace policy and workflow-specific settings must agree;
+configuration. Publisher-inventory settings retain the same resolved
+`llm_execution_policies` map as application settings, so discovery and
+candidate screening use the registered namespace policy rather than an
+empty local policy set. Namespace policy and workflow-specific settings must agree;
 the policy preflight rejects unknown or incompatible routes before provider I/O.
 
 `ingest.validation.public_editorial_quality.disabled_rule_waivers` is the temporary staged-rollout escape hatch for the deterministic public-editorial release gate. Each mapping key is a stable rule ID and each value must be a concrete non-empty release-waiver reason. An empty or malformed entry has no effect; do not use this setting to suppress an unresolved reader-facing defect.
