@@ -15,7 +15,5 @@ from src.services._browser_report_download import browser_worker
 def test_worker_rejects_non_numeric_optional_numeric_configuration(
     key: str, error_message: str
 ) -> None:
-    with pytest.raises(
-        TypeError, match=error_message
-    ):
+    with pytest.raises(TypeError, match=error_message):
         browser_worker._build_settings({key: []})

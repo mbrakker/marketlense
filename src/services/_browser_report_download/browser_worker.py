@@ -163,9 +163,7 @@ def _build_settings(payload: dict) -> BrowserDownloadSettings:
             payload.get("drive_upload_include_items_from_all_drives", True)
         ),
         drive_upload_drive_id=payload.get("drive_upload_drive_id"),
-        failure_forensics_enabled=bool(
-            payload.get("failure_forensics_enabled", True)
-        ),
+        failure_forensics_enabled=bool(payload.get("failure_forensics_enabled", True)),
         failure_forensics_policy=str(
             payload.get("failure_forensics_policy") or "copy_artifacts"
         ),
@@ -175,9 +173,7 @@ def _build_settings(payload: dict) -> BrowserDownloadSettings:
         route_playbook_stale_policy=str(
             payload.get("route_playbook_stale_policy") or "fallback"
         ),
-        route_memory_ttl_seconds=int(
-            payload.get("route_memory_ttl_seconds", 2592000)
-        ),
+        route_memory_ttl_seconds=int(payload.get("route_memory_ttl_seconds", 2592000)),
         route_playbook_promotion_mode=str(
             payload.get("route_playbook_promotion_mode") or "disabled"
         ),
@@ -212,9 +208,7 @@ def _build_settings(payload: dict) -> BrowserDownloadSettings:
         cost_ledger_path=str(
             payload.get("cost_ledger_path") or "./out/cost-ledger.jsonl"
         ),
-        cost_daily_path=str(
-            payload.get("cost_daily_path") or "./out/cost-daily.json"
-        ),
+        cost_daily_path=str(payload.get("cost_daily_path") or "./out/cost-daily.json"),
         usage_db_path=str(payload.get("usage_db_path") or "./state/llm_usage.sqlite"),
         run_budget_enabled=bool(payload.get("run_budget_enabled", False)),
         run_budget_max_browser_launches=_optional_int(
@@ -253,12 +247,8 @@ def _build_settings(payload: dict) -> BrowserDownloadSettings:
         run_budget_reservation_ttl_seconds=int(
             payload.get("run_budget_reservation_ttl_seconds", 300)
         ),
-        run_budget_limits_run=_build_run_budget_limits(
-            run_budget_limits_run_payload
-        ),
-        run_budget_limits_day=_build_run_budget_limits(
-            run_budget_limits_day_payload
-        ),
+        run_budget_limits_run=_build_run_budget_limits(run_budget_limits_run_payload),
+        run_budget_limits_day=_build_run_budget_limits(run_budget_limits_day_payload),
         run_budget_limits_publisher=_build_run_budget_limits(
             run_budget_limits_publisher_payload
         ),

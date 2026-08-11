@@ -1226,9 +1226,7 @@ def _record_cohort_ingest_manifest(
     )
     timestamp = datetime.now(timezone.utc).isoformat()
     attempt_number = max(1, int(root_ctx.validation_attempt_number or 1))
-    parent_attempt_number = max(
-        0, int(root_ctx.validation_parent_attempt_number or 0)
-    )
+    parent_attempt_number = max(0, int(root_ctx.validation_parent_attempt_number or 0))
     if outcomes is None:
         for file in files:
             for stage in (
