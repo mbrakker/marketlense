@@ -480,7 +480,8 @@ def _normalize_public_title(value: str, *, max_length: int = 110) -> str:
     title = re.sub(r"\s+", " ", title).strip(" -|:.")
     if len(title) <= max_length:
         return title
-    return title[:max_length].rsplit(" ", 1)[0].strip(" -|:.")
+    primary_title = re.split(r"\s*(?::|[–—])\s+", title, maxsplit=1)[0]
+    return primary_title.strip(" -|:.") or title
 
 
 def _seo_description(value: str, *, fallback: str, max_length: int = 180) -> str:

@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import pytest
 from PIL import Image
 
 from src.contracts.report_assets import RenderRequest
@@ -51,6 +52,45 @@ def test_public_title_and_meta_description_are_bounded_editorial_prose() -> None
         )
         == "Digest for Retail Trends 2026."
     )
+
+
+@pytest.mark.parametrize(
+    ("source_title", "max_length", "public_title"),
+    [
+        (
+            "Trusted Execution Environments in Digital Advertising: "
+            "A Pathway to Enhanced Data Privacy, Security, and Regulatory Compliance",
+            110,
+            "Trusted Execution Environments in Digital Advertising",
+        ),
+        (
+            "The gaming app insights report: 2026 edition",
+            110,
+            "The gaming app insights report: 2026 edition",
+        ),
+        (
+            "Mobile app trends spotlight edition: LATAM 2026",
+            110,
+            "Mobile app trends spotlight edition: LATAM 2026",
+        ),
+        (
+            "A deliberately long primary report name that must remain intact",
+            20,
+            "A deliberately long primary report name that must remain intact",
+        ),
+        (
+            "Long primary report name — explanatory subtitle that exceeds the limit",
+            20,
+            "Long primary report name",
+        ),
+    ],
+)
+def test_public_title_preserves_full_title_when_it_fits_and_never_cuts_primary_name(
+    source_title: str,
+    max_length: int,
+    public_title: str,
+) -> None:
+    assert _normalize_public_title(source_title, max_length=max_length) == public_title
 
 
 def test_render_removes_inline_internal_evidence_tokens_from_public_prose(
