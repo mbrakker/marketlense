@@ -8,7 +8,6 @@ from pathlib import Path
 
 import pytest
 
-
 ROOT = Path(__file__).resolve().parents[1]
 HARNESS = ROOT / "tests" / "wordpress_runtime" / "report_card_renderer_harness.php"
 
@@ -150,6 +149,26 @@ def test_renderer_preserves_full_title_and_tldr_without_clamp_markup(
     assert expected_tldr in html
     assert "line-clamp" not in html
     assert "ellipsis" not in html
+
+
+@pytest.mark.parametrize("variant", ("small", "medium", "large"))
+def test_renderer_truncates_overflowing_title_and_exposes_full_hover_text(
+    variant: str,
+) -> None:
+    title = (
+        "Evidence-led regional transition pathways "
+        + "with validated market signals " * 5
+    ).strip()
+    html = unescape(_render(variant, title=title)["html"])
+    title_match = re.search(
+        r'<h3 class="ml-card__title" title="([^"]+)" aria-label="([^"]+)">([^<]+)</h3>',
+        html,
+    )
+
+    assert title_match is not None
+    assert title_match.group(1) == title
+    assert title_match.group(2) == title
+    assert title_match.group(3) == title[:137].rstrip() + "..."
 
 
 def test_renderer_rejects_noncanonical_variant() -> None:

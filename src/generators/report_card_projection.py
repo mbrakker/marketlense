@@ -44,8 +44,6 @@ _EXTRACTION_LEAKAGE_MARKERS = {
     "extracted_text",
     "text block",
 }
-_MAX_XLONG_CARD_TITLE_CHARACTERS = 140
-
 
 def select_geometry_family(semantics: dict[str, object]) -> str:
     shape = str(semantics.get("evidence_shape") or "").strip()
@@ -120,23 +118,11 @@ def classify_geography(region: str) -> tuple[str, str]:
 def select_title_scale(title: str) -> str:
     normalized = " ".join(str(title or "").split())
     count = len(normalized)
-    longest_token = max(
-        (len(token) for token in normalized.replace("-", " ").split()),
-        default=0,
-    )
-    if (
-        not normalized
-        or count > _MAX_XLONG_CARD_TITLE_CHARACTERS
-        or longest_token > 32
-    ):
+    if not normalized:
         raise AppError(
             code="card_title_overflow",
-            message="Complete report title does not fit the approved card title scale",
+            message="Complete report title is required for a report card",
             retryable=False,
-            context={
-                "character_count": count,
-                "longest_token": longest_token,
-            },
         )
     if count <= 42:
         return "short"

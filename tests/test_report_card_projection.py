@@ -172,15 +172,21 @@ def test_select_title_scale_accepts_breakable_hyphenated_title() -> None:
 
 
 @pytest.mark.parametrize(
-    "title",
+    ("title", "expected_scale"),
     (
-        _title_with_length(141),
-        "A title with SupercalifragilisticexpialidociousToken overflow",
+        (_title_with_length(141), "xlong"),
+        ("A title with SupercalifragilisticexpialidociousToken overflow", "medium"),
     ),
 )
-def test_select_title_scale_rejects_overflow(title: str, assert_app_error) -> None:
+def test_select_title_scale_accepts_titles_that_exceed_the_previous_limits(
+    title: str, expected_scale: str
+) -> None:
+    assert select_title_scale(title) == expected_scale
+
+
+def test_select_title_scale_rejects_blank_title(assert_app_error) -> None:
     with pytest.raises(AppError) as captured:
-        select_title_scale(title)
+        select_title_scale("")
 
     assert_app_error(captured.value, code="card_title_overflow", retryable=False)
 

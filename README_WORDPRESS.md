@@ -55,7 +55,7 @@ All report placements use one renderer with three reusable variants:
 - `medium`: homepage hero/snapshot placements; additional report facts plus the complete standard TLDR.
 - `large`: featured report placement; vertical hero cover, complete standard TLDR, and exactly two key insights.
 
-Card grids reserve consistent content zones so cards stay aligned when report names occupy two or three lines and TLDR lengths vary. Copy is never visually truncated. Compact TLDRs are limited to 18 words and standard TLDRs to 45 words.
+Card grids reserve consistent content zones so cards stay aligned when report names occupy two or three lines and TLDR lengths vary. A title exceeding the approved 140-character `xlong` display scale is rendered as a 140-character label ending in `...`; the canonical title remains unchanged and is available from the title's native hover hint and accessible label. This shared behavior applies to small, medium, and large cards. Compact TLDRs are limited to 18 words and standard TLDRs to 45 words.
 
 Every report has one deterministic cover identity selected from 16 geometry families using report-content differentiators. The persisted fingerprint records `geometry_family`, `primary_signal`, `secondary_signal`, and `seed`. The same identity is rendered at `1600x900` for small cards, `1200x1500` for medium cards, and `1200x1600` for large cards. Covers use the restrained project palette and fixed zones for the complete report name, publisher, and covered period.
 

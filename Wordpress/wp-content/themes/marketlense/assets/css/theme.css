@@ -11589,6 +11589,7 @@ body {
   font-weight: 720;
   letter-spacing: -0.025em;
   line-height: 1.16;
+  overflow-wrap: anywhere;
   text-wrap: balance;
 }
 

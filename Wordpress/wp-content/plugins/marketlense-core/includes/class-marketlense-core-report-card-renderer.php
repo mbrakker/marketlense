@@ -17,6 +17,10 @@ final class Report_Card_Renderer
 {
     private const VARIANTS = ['small', 'medium', 'large'];
 
+    private const MAX_DISPLAY_TITLE_CHARACTERS = 140;
+
+    private const DISPLAY_TITLE_SUFFIX = '...';
+
     /**
      * Renders a validated report view model at one canonical density.
      *
@@ -38,6 +42,7 @@ final class Report_Card_Renderer
         if (in_array('', [$title, $permalink, $publisher, $title_scale], true)) {
             return '';
         }
+        [$display_title, $title_is_truncated] = $this->display_title($title);
         $covers = is_array($report['covers'] ?? null) ? $report['covers'] : [];
         $cover_url = trim((string) ($covers[$variant] ?? ''));
         if ($cover_url === '') {
@@ -76,7 +81,7 @@ final class Report_Card_Renderer
                 </div>
                 <div class="ml-card__body">
                     <p class="ml-card__publisher"><?php echo esc_html($publisher); ?></p>
-                    <h3 class="ml-card__title"><?php echo esc_html($title); ?></h3>
+                    <h3 class="ml-card__title"<?php if ($title_is_truncated) : ?> title="<?php echo esc_attr($title); ?>" aria-label="<?php echo esc_attr($title); ?>"<?php endif; ?>><?php echo esc_html($display_title); ?></h3>
                     <?php $this->render_facts($date, $geography, $geography_icon, $time_period); ?>
                     <p class="ml-card__tldr"><?php echo esc_html($tldr); ?></p>
                     <?php if ($variant === 'large') : ?>
@@ -105,6 +110,26 @@ final class Report_Card_Renderer
         }
 
         return $value;
+    }
+
+    /**
+     * Keeps the canonical title intact while fitting public card labels into
+     * the largest approved title scale. The shared renderer applies this to
+     * every card variant and exposes the full title in a native hover hint.
+     *
+     * @return array{0:string,1:bool}
+     */
+    private function display_title(string $title): array
+    {
+        $characters = preg_split('//u', $title, -1, PREG_SPLIT_NO_EMPTY);
+        if (! is_array($characters) || count($characters) <= self::MAX_DISPLAY_TITLE_CHARACTERS) {
+            return [$title, false];
+        }
+
+        $visible_length = self::MAX_DISPLAY_TITLE_CHARACTERS - strlen(self::DISPLAY_TITLE_SUFFIX);
+        $visible_title = rtrim(implode('', array_slice($characters, 0, $visible_length)));
+
+        return [$visible_title . self::DISPLAY_TITLE_SUFFIX, true];
     }
 
     private function render_facts(
