@@ -1,0 +1,37 @@
+schema_version: "1.0"
+fields:
+  - schema_version: "1.0"
+    key: work_email
+    label: "Work email"
+    value: null
+    aliases: ["email", "email address"]
+    option_aliases: []
+  - schema_version: "1.0"
+    key: first_name
+    label: "First Name"
+    value: null
+    aliases: []
+    option_aliases: []
+  - schema_version: "1.0"
+    key: last_name
+    label: "Last Name"
+    value: null
+    aliases: []
+    option_aliases: []
+  - schema_version: "1.0"
+    key: company_name
+    label: "Company Name"
+    value: null
+    aliases: []
+    option_aliases: []
+  - schema_version: "1.0"
+    key: country
+    label: "Country"
+    value: null
+    aliases: []
+    option_aliases: []
+consent_policy:
+  schema_version: "1.0"
+  default_checkbox_policy: "mandatory_privacy_terms_only"
+  allow_marketing_opt_in: false
+  allow_optional_newsletter: false

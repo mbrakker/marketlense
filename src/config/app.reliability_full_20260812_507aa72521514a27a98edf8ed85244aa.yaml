@@ -1,0 +1,55 @@
+schema_version: "1.0"
+# Fresh isolated full-funnel reliability namespace. Secrets remain process/env-owned.
+paths:
+  output_dir: "./out/reliability_full_20260812_507aa72521514a27a98edf8ed85244aa"
+  cache_dir: "./cache/reliability_full_20260812_507aa72521514a27a98edf8ed85244aa"
+  state_db: "./state/reliability_full_20260812_507aa72521514a27a98edf8ed85244aa/index.sqlite"
+  reports_db: "./state/reliability_full_20260812_507aa72521514a27a98edf8ed85244aa/reports.sqlite"
+  signal_store_db: "./state/reliability_full_20260812_507aa72521514a27a98edf8ed85244aa/signals.sqlite"
+  ingest_lock: "./state/reliability_full_20260812_507aa72521514a27a98edf8ed85244aa/ingest.lock"
+
+ingest:
+  run_budget:
+    max_spend_usd: 500.0
+    max_pdfs: 100
+    max_retries: 150
+    max_runtime_seconds: 172800
+    limit_decision: "stop"
+
+browser_download:
+  output_dir: "./out/reliability_full_20260812_507aa72521514a27a98edf8ed85244aa/browser_downloads"
+  identity_config_path: "./browser_download_identity_reliability_full_20260812_507aa72521514a27a98edf8ed85244aa.yaml"
+  route_playbook_promotion_mode: "disabled"
+  private_api_playbook_promotion_mode: "disabled"
+  run_budget:
+    enabled: true
+    max_browser_launches: 100
+    max_pdfs: 100
+    max_drive_writes: 120
+    max_drive_reads: 300
+    max_mailbox_reads: 24
+    max_retries: 150
+    max_runtime_seconds: 172800
+    limit_decision: "stop"
+
+mailbox_acquisition:
+  output_dir: "./out/reliability_full_20260812_507aa72521514a27a98edf8ed85244aa/mailbox_acquisition"
+
+publisher_discovery:
+  output_dir: "./out/reliability_full_20260812_507aa72521514a27a98edf8ed85244aa/publisher_inventory_discovery"
+
+analysis:
+  cost_ledger_path: "./state/reliability_full_20260812_507aa72521514a27a98edf8ed85244aa/llm_cost_ledger.jsonl"
+
+cost:
+  usage_db_path: "./state/reliability_full_20260812_507aa72521514a27a98edf8ed85244aa/llm_usage.sqlite"
+  daily_path: "./state/reliability_full_20260812_507aa72521514a27a98edf8ed85244aa/llm_cost_daily.json"
+  ledger_path: "./state/reliability_full_20260812_507aa72521514a27a98edf8ed85244aa/llm_cost_ledger.jsonl"
+
+publish:
+  projection_daily_path: "./state/reliability_full_20260812_507aa72521514a27a98edf8ed85244aa/projection_cost_daily.json"
+  projection_ledger_path: "./state/reliability_full_20260812_507aa72521514a27a98edf8ed85244aa/projection_cost_ledger.jsonl"
+  run_budget:
+    enabled: true
+    max_wordpress_writes: 20
+    limit_decision: "stop"
