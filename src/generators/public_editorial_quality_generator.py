@@ -10,9 +10,10 @@ from __future__ import annotations
 import re
 from collections import Counter
 from dataclasses import asdict
-from html import unescape
 from pathlib import Path
 from typing import Any, Iterable
+
+from bs4 import BeautifulSoup
 
 from src.contracts.public_editorial_quality import (
     PublicEditorialQualityIssue,
@@ -857,13 +858,10 @@ def _broken_local_images(*, html: str, html_path: str) -> list[str]:
 
 
 def _visible_html_text(html: str) -> str:
-    without_nonpublic = re.sub(
-        r"<(?:head|script|style|template)\b[^>]*>.*?</(?:head|script|style|template)>",
-        " ",
-        html,
-        flags=re.IGNORECASE | re.DOTALL,
-    )
-    return unescape(re.sub(r"<[^>]+>", " ", without_nonpublic))
+    document = BeautifulSoup(html, "html.parser")
+    for element in document(("head", "script", "style", "template")):
+        element.decompose()
+    return document.get_text(" ")
 
 
 def _visible_report_id(report_id: str, text: str) -> bool:

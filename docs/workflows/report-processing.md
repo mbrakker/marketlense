@@ -273,8 +273,6 @@ assembly. Summary claims remain deterministically prunable when no source span
 can be bound. The final assembly grounding and semantic gates remain blocking
 defence-in-depth checks.
 
-<<<<<<< Updated upstream
-=======
 When primary candidate-insight output is incomplete, the first-run deterministic
 fallback selects only distinct findings with both a retained finding ID and
 substantive finding text. The finding ID remains the evidence reference. If an
@@ -296,7 +294,6 @@ result remains empty. Candidate insights may complete a partial substantive
 final-insight response, but they never replace a safety abstention or an
 unknown-evidence rejection.
 
->>>>>>> Stashed changes
 If a model returns no candidate insights despite a generated findings pack,
 artifact assembly uses up to five distinct findings that each retain a finding
 ID, text, and source evidence. This first-run fallback does not invent

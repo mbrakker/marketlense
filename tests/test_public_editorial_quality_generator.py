@@ -129,6 +129,17 @@ def test_public_html_blocks_operational_source_and_editorial_scaffolding() -> No
     } <= _rule_ids(report)
 
 
+def test_public_html_ignores_non_visible_text_in_spaced_script_tags() -> None:
+    report = evaluate_public_editorial_quality(
+        report_id="retained-report",
+        artifacts=_retained_artifacts(),
+        html="<script >Drive file ID: private-123</script >",
+    )
+
+    assert report.status == "pass"
+    assert "public_editorial_quality.internal_identifier" not in _rule_ids(report)
+
+
 def test_public_html_source_section_requires_a_public_original_source_link() -> None:
     missing = evaluate_public_editorial_quality(
         report_id="retained-report",
