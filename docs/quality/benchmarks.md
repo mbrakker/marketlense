@@ -52,4 +52,32 @@ and has no higher cost. It selects the lowest measured median; exact ties use
 the lower-concurrency profile. This is a scheduler benchmark; browser and
 live-provider saturation require a separate controlled canary.
 
+## Evidence-pack worker matrix
+
+`scripts/quality/benchmark_evidence_pack_parallelism.py` exercises the real
+evidence-pack generator for one, five, and ten reports. It evaluates every
+combination of one to five per-report workers and one to five shared in-flight
+model slots. The model boundary has deterministic latency and complete,
+schema-valid responses, while the generator, prompt preparation, pack
+normalization, persistence calls, and rate-cap contention remain real. Each
+profile must produce an identical output digest, complete family statuses, no
+rate-cap breach, and no estimated cost increase. The selector retains the
+current `5x5` baseline unless a candidate's median gain exceeds both 3% and
+twice the greater coefficient of variation. This proves local scheduler and
+rate-cap behavior only; a controlled live-provider canary is required before
+changing production limits.
+
+## Artifact worker matrix
+
+`scripts/quality/benchmark_artifact_parallelism.py` exercises the real artifact
+step-batch executor for one, five, and ten reports. It evaluates every
+combination of one to five configured workers and one to five shared in-flight
+renderer slots across both the three-task stage-one batch and the two-task
+distribution batch. The benchmark requires matching task-output digests,
+complete step coverage, shared-cap compliance, and no estimated cost increase.
+It retains the `5x5` baseline unless an alternative's median improves by at
+least 3% and by more than twice the greater coefficient of variation. The
+renderer is deterministic and local, so a live-provider canary remains
+required before changing production model-concurrency settings.
+
 See [non-regression policy](non-regression-policy.md) and [release gates](release-gates.md).
