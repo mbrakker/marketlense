@@ -38,8 +38,8 @@ def record_validation_manifest_stage(
     repair_disposition: str = "not_required",
     duplicate_disposition: str = "none",
     idempotency_state: str = "new",
-    attempt_number: int = 1,
-    parent_attempt_number: int = 0,
+    attempt_number: int | None = None,
+    parent_attempt_number: int | None = None,
     entity_terminal: bool = False,
 ) -> None:
     """Append a completed workflow stage, or no-op outside a validation cohort."""
@@ -81,8 +81,22 @@ def record_validation_manifest_stage(
                 report_id=required["report_id"],
                 source_identity_id=required["source_identity_id"],
                 stage=stage,
-                attempt_number=max(1, int(attempt_number or 1)),
-                parent_attempt_number=max(0, int(parent_attempt_number or 0)),
+                attempt_number=max(
+                    1,
+                    int(
+                        attempt_number
+                        if attempt_number is not None
+                        else getattr(ctx, "validation_attempt_number", 1)
+                    ),
+                ),
+                parent_attempt_number=max(
+                    0,
+                    int(
+                        parent_attempt_number
+                        if parent_attempt_number is not None
+                        else getattr(ctx, "validation_parent_attempt_number", 0)
+                    ),
+                ),
                 input_artifact_ids=tuple(
                     str(value) for value in input_artifact_ids if value
                 ),

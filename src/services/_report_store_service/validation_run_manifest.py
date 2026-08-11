@@ -9,6 +9,8 @@ from src.contracts.run_context import RunContext
 from src.contracts.validation_run_manifest import (
     ValidationRunManifestAuditRequest,
     ValidationRunManifestAuditResponse,
+    ValidationRunManifestAttemptResolveRequest,
+    ValidationRunManifestAttemptResolveResponse,
     ValidationRunManifestCreateRequest,
     ValidationRunManifestRecordRequest,
     ValidationRunManifestRecordResponse,
@@ -31,6 +33,7 @@ _TERMINAL_OUTCOMES = {
 _COHORTS = {"final_validation", "repair_attempt", "out_of_cohort"}
 _SUPERSESSION_STATES = {"current", "superseded"}
 _IDEMPOTENCY_STATES = {"new", "replayed", "reused", "verified"}
+_ATTEMPT_RESOLUTION_MODES = {"current", "next_replay"}
 
 # Full-run closure is intentionally stricter than an intermediate ingest or
 # first-publication audit.  Each tuple is one required stage group: every final
@@ -394,6 +397,78 @@ def record_validation_run_manifest_stage(
         stage_record_id=stage_record_id,
         inserted=True,
         superseded_attempts=max(0, int(superseded or 0)),
+    )
+
+
+def resolve_validation_run_manifest_attempt(
+    request: ValidationRunManifestAttemptResolveRequest, ctx: RunContext
+) -> ValidationRunManifestAttemptResolveResponse:
+    """Resolve a single coherent lineage for all current frozen-cohort members.
+
+    A replay must never mix attempt numbers across its immutable members: doing
+    so would make a later publish closure look complete while referring to
+    different processing passes.  The report-store owns this read because the
+    attempt ledger is persisted validation state.
+    """
+    _require_schema(request.schema_version)
+    _require_fields(request.db_path, str(request.validation_run_id), request.mode)
+    if request.mode not in _ATTEMPT_RESOLUTION_MODES:
+        raise AppError(
+            code="validation_manifest_attempt_resolution_invalid",
+            message="Validation manifest attempt resolution mode is invalid",
+            retryable=False,
+        )
+    with _metadata_conn(request.db_path, ctx) as conn:
+        if (
+            conn.execute(
+                "SELECT 1 FROM validation_runs WHERE validation_run_id=?",
+                (str(request.validation_run_id),),
+            ).fetchone()
+            is None
+        ):
+            raise AppError(
+                code="validation_manifest_run_missing",
+                message="Validation manifest attempt resolution requires a created run",
+                retryable=False,
+            )
+        rows = conn.execute(
+            """
+            SELECT DISTINCT attempt_number, parent_attempt_number
+            FROM validation_run_entity_attempts
+            WHERE validation_run_id=? AND cohort_disposition='final_validation'
+              AND is_current=1
+            ORDER BY attempt_number, parent_attempt_number
+            """,
+            (str(request.validation_run_id),),
+        ).fetchall()
+    if not rows:
+        if request.mode == "next_replay":
+            return ValidationRunManifestAttemptResolveResponse(
+                schema_version="1.0", attempt_number=1, parent_attempt_number=0
+            )
+        raise AppError(
+            code="validation_manifest_current_attempt_missing",
+            message="Validation manifest has no current cohort attempt",
+            retryable=False,
+        )
+    if len(rows) != 1:
+        raise AppError(
+            code="validation_manifest_attempt_lineage_ambiguous",
+            message="Frozen cohort members do not share one current attempt lineage",
+            retryable=False,
+            context={"current_lineage_count": len(rows)},
+        )
+    current_attempt, current_parent = (int(rows[0][0]), int(rows[0][1]))
+    if request.mode == "current":
+        return ValidationRunManifestAttemptResolveResponse(
+            schema_version="1.0",
+            attempt_number=current_attempt,
+            parent_attempt_number=current_parent,
+        )
+    return ValidationRunManifestAttemptResolveResponse(
+        schema_version="1.0",
+        attempt_number=current_attempt + 1,
+        parent_attempt_number=current_attempt,
     )
 
 

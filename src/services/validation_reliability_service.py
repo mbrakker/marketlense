@@ -95,7 +95,6 @@ def build_validation_reliability_artifact(
         usage_events=usage_events,
         validation_run_id=str(request.validation_run_id),
         cohort_id=str(run["cohort_id"]),
-        workflow_run_id=str(run["workflow_run_id"]),
     )
     current_attempts = [
         row
@@ -408,7 +407,6 @@ def _validate_usage_attribution(
     usage_events: list[dict[str, Any]],
     validation_run_id: str,
     cohort_id: str,
-    workflow_run_id: str,
 ) -> None:
     for index, event in enumerate(usage_events, start=1):
         missing = [
@@ -422,8 +420,6 @@ def _validate_usage_attribution(
             missing.append("validation_run_id_mismatch")
         if str(event.get("cohort_id") or "") != cohort_id:
             missing.append("cohort_id_mismatch")
-        if str(event.get("workflow_run_id") or "") != workflow_run_id:
-            missing.append("workflow_run_id_mismatch")
         if missing:
             raise AppError(
                 code="validation_usage_attribution_missing",

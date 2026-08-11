@@ -240,6 +240,64 @@ def test_run_report_pipeline_surfaces_retryable_error_after_retry_exhaustion(
     assert failure_fields["error"] == "retry"
 
 
+def test_run_report_pipeline_retries_transient_artifact_file_not_found(
+    caplog,
+    external_boundary_mocks_only,
+    assert_logs_have_required_fields,
+) -> None:
+    caplog.set_level(logging.INFO, logger="market_lense.report_pipeline_orchestrator")
+    file = DriveFile(
+        schema_version="1.0",
+        file_id="f1",
+        name="a.pdf",
+        modified_time=None,
+        md5_checksum="md5",
+    )
+    calls = {"count": 0}
+    outcome = IngestOutcome(
+        schema_version="1.0",
+        file_id="f1",
+        name="a.pdf",
+        md5="md5",
+        html_path="./out/a.html",
+        status="processed",
+    )
+
+    def _gen(*_args, **_kwargs):
+        calls["count"] += 1
+        if calls["count"] == 1:
+            raise FileNotFoundError(2, "artifact disappeared", "./out/a.png")
+        return outcome
+
+    external_boundary_mocks_only.setattr(
+        retry_orch.random, "uniform", lambda _a, _b: 0.0
+    )
+    external_boundary_mocks_only.setattr(
+        orch.time, "sleep", lambda _seconds: None
+    )
+
+    response = orch.run_report_pipeline(
+        file,
+        local_pdf_path="./cache/a.pdf",
+        settings=_settings(),
+        md5="md5",
+        ctx=_ctx(),
+        retries=1,
+        generate_report_fn=_gen,
+    )
+
+    assert response.status == "processed"
+    assert calls["count"] == 2
+    retry_events = [
+        event
+        for event in _events(caplog)
+        if event.get("event") == "report_pipeline_retry"
+    ]
+    assert len(retry_events) == 1
+    assert retry_events[0]["fields"]["code"] == "report_pipeline_artifact_missing"
+    assert_logs_have_required_fields(retry_events)
+
+
 def test_run_report_pipeline_retries_doc_map_transition_with_logs(
     caplog, external_boundary_mocks_only
 ) -> None:

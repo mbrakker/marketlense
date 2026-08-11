@@ -10,6 +10,8 @@ from src.contracts.regeneration import (
     RegenerationAttemptResult,
     RegenerationLoopState,
 )
+from src.contracts.categories import CategoryAssignment
+from src.contracts.context_category_fit import ContextCategoryFitResponse
 from src.contracts.report_analysis import (
     AnalysisStorePackRequest,
 )
@@ -188,6 +190,36 @@ def _category_fit_repair_code(category_state: Any) -> str:
         if _category_fit_ambiguity_ids(category_state)
         else ""
     )
+
+
+def _abstain_unresolved_category_fits(
+    fit_response: ContextCategoryFitResponse,
+) -> ContextCategoryFitResponse:
+    """Make a persistently unsupported category fit an explicit abstention.
+
+    The model is advisory. After its bounded targeted repair still leaves a
+    candidate ambiguous and no category has deterministic support, retaining
+    that ambiguity must not block an otherwise valid report or manufacture a
+    portal category. The rejected fit remains in the audit payload.
+    """
+
+    fits = [
+        replace(
+            fit,
+            decision="reject",
+            semantic_rule_status="rejected",
+            remediation_signal="topic_semantics_unresolved_abstained",
+            why_not_fit=(
+                fit.why_not_fit
+                or "No configured central evidence supported this category after "
+                "the bounded category-fit repair."
+            ),
+        )
+        if fit.remediation_signal == "topic_semantics_ambiguous"
+        else fit
+        for fit in fit_response.fits
+    ]
+    return replace(fit_response, categories=[], category_labels=[], fits=fits)
 
 
 def _resolve_taxonomy_with_repair(
@@ -542,6 +574,37 @@ def run_report_analysis(
         )
         category_repaired = True
         category_repair_code = _category_fit_repair_code(context_category_state)
+        if category_repair_code:
+            if category_repair_code == "category_fit_contradiction":
+                abstained_fit_response = _abstain_unresolved_category_fits(
+                    context_category_state.fit_response
+                )
+                context_category_state = replace(
+                    context_category_state,
+                    category_assignment=CategoryAssignment(
+                        schema_version="1.1",
+                        categories=[],
+                        category_labels=[],
+                        unmapped_tags=[],
+                    ),
+                    fit_response=abstained_fit_response,
+                )
+                logger.info(
+                    log_event(
+                        mode_ctx,
+                        role="orchestrator",
+                        event="context_category_fit_abstained_after_repair",
+                        module=logger.name,
+                        fields={
+                            "file_id": runtime.file.file_id,
+                            "candidate_ids": _category_fit_ambiguity_ids(
+                                context_category_state
+                            ),
+                            "repair_attempt": 1,
+                        },
+                    )
+                )
+                category_repair_code = ""
         if category_repair_code:
             raise AppError(
                 code=category_repair_code,

@@ -78,6 +78,7 @@ from src.services._report_store_service.validation_run_manifest import (
     audit_validation_run_manifest,
     create_validation_run_manifest,
     record_validation_run_manifest_stage,
+    resolve_validation_run_manifest_attempt,
 )
 
 __all__ = [
@@ -114,6 +115,7 @@ __all__ = [
     "record_publisher_private_api_candidate_observation",
     "record_acquisition_attempt_resource",
     "record_validation_run_manifest_stage",
+    "resolve_validation_run_manifest_attempt",
     "read_acquisition_route_economics",
     "read_corpus_rehabilitation_plan",
     "create_corpus_rehabilitation_campaign",

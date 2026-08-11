@@ -23,12 +23,38 @@ their rendered artifacts. Concurrent workers may produce the same eligible
 artifact, so each sidecar write uses a unique temporary file followed by an
 atomic replace. This makes the cache race-safe without treating a missing
 sidecar as a valid cache hit; an interrupted write is simply regenerated.
+If a report pipeline still observes a missing local processing artifact, it
+maps that OS-level condition to the configured bounded report-pipeline retry;
+a persistent missing source or artifact remains a typed terminal failure.
+
+Category selection is evidence-first. After the normal structured-output
+recovery and one targeted category repair, a candidate that still has no
+configured central support is explicitly recorded as an uncategorized
+abstention. The report is not blocked and no portal category is invented;
+the rejected candidate and its remediation status remain in the retained
+category-fit audit payload. Publication readiness accepts only that exact
+audited all-rejected outcome; an absent or malformed category assignment still
+blocks publication.
+
+Card titles retain the complete canonical title. The approved `xlong` scale
+supports readable, normally spaced titles through 140 characters; only an
+unbreakable token or a longer title is a render error, rather than silently
+truncating public source metadata.
 
 `ingest --force-report-cards` resumes from the validated analysis checkpoint,
 not `latest_safe`, only when an existing rendered package has a missing or
 invalid card manifest. It rebuilds that render/card package and avoids a second
 analysis or model-generation pass. New files follow the normal pipeline and
 therefore never request a nonexistent checkpoint.
+
+A frozen-cohort replay receives one new, cohort-wide validation attempt number
+with its previous attempt as parent. Every stage in that replay uses that same
+lineage, so a recovered result supersedes a prior terminal failure without
+mixing reports from different passes. Only a skipped result that explicitly
+reuses a retained HTML package is eligible for a `publish_ready` closure;
+state-only skips remain typed failures. A forced card/render repair also bypasses
+the ordinary state “already processed” shortcut, so it can actually reach the
+approved resume stage.
 
 The same render outcome fails closed when required report-card metadata, such
 as publisher, fails public-metadata governance. Such a package remains a render
@@ -130,6 +156,12 @@ run IDs, cohort, report/source/publisher identity, attempt lineage, artifact
 inputs and outputs, timestamps, typed result and retryability, repair and
 supersession disposition, idempotency state, configuration and policy hashes,
 and producer build identity.
+
+An immutable validation run may contain bounded recovery replays, each with a
+new workflow-run ID. Usage telemetry therefore requires a non-empty workflow
+run ID plus exact validation-run and cohort identity; it does not require a
+replay to impersonate the original workflow invocation. Configuration, policy,
+and producer identities remain mandatory for every usage event.
 
 The required chain is discovery, candidate qualification, acquisition,
 admission preflight, source preparation and validation, evidence generation,

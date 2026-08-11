@@ -44,6 +44,7 @@ _EXTRACTION_LEAKAGE_MARKERS = {
     "extracted_text",
     "text block",
 }
+_MAX_XLONG_CARD_TITLE_CHARACTERS = 140
 
 
 def select_geometry_family(semantics: dict[str, object]) -> str:
@@ -123,7 +124,11 @@ def select_title_scale(title: str) -> str:
         (len(token) for token in normalized.replace("-", " ").split()),
         default=0,
     )
-    if not normalized or count > 120 or longest_token > 32:
+    if (
+        not normalized
+        or count > _MAX_XLONG_CARD_TITLE_CHARACTERS
+        or longest_token > 32
+    ):
         raise AppError(
             code="card_title_overflow",
             message="Complete report title does not fit the approved card title scale",

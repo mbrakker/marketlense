@@ -102,3 +102,21 @@ class RunContext(SemanticIdContract):
             "doc": "Bounded targeted-repair attempt number for the current span."
         },
     )
+    validation_attempt_number: int = field(
+        default=1,
+        metadata={
+            "doc": (
+                "Cohort-wide validation-manifest attempt number propagated to "
+                "every stage in one immutable cohort replay."
+            )
+        },
+    )
+    validation_parent_attempt_number: int = field(
+        default=0,
+        metadata={
+            "doc": (
+                "Immediate parent of validation_attempt_number; zero denotes the "
+                "initial immutable-cohort attempt."
+            )
+        },
+    )

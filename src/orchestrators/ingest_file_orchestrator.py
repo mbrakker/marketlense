@@ -866,6 +866,7 @@ def run_ingest_file(
         if (
             runtime.md5
             and runtime.md5 != runtime.state_checked_md5
+            and not dependencies.bypass_existing_report_html
             and dependencies.should_skip(
                 runtime.file,
                 runtime.md5,

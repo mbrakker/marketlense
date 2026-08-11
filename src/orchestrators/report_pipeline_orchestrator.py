@@ -1003,6 +1003,21 @@ def run_report_pipeline(
                 )
             else:
                 raise
+        except FileNotFoundError as exc:
+            # Crop/cache materialization can race with another worker on an
+            # otherwise intact source. Convert that OS-level transient into
+            # the pipeline's bounded, observable retry contract. A persistent
+            # missing source still fails closed after the configured attempts.
+            raise AppError(
+                code="report_pipeline_artifact_missing",
+                message="A report-processing artifact was unavailable during materialization",
+                cause=exc,
+                retryable=True,
+                context={
+                    "file_id": file.file_id,
+                    "missing_path": str(exc.filename or ""),
+                },
+            ) from exc
         doc_map_reason = _doc_map_reason(outcome)
         should_retry_doc_map = (
             outcome.status == "error"

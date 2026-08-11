@@ -77,6 +77,7 @@ from src.contracts.validation_reliability import (
 )
 from src.contracts.validation_run_manifest import (
     ValidationRunManifestAuditRequest,
+    ValidationRunManifestAttemptResolveRequest,
     ValidationRunManifestRecordRequest,
     ValidationRunManifestStageRecord,
 )
@@ -182,6 +183,7 @@ from src.services.report_store_service import (
     record_minimal_execution_plan,
     record_minimal_execution_plan_result,
     record_validation_run_manifest_stage,
+    resolve_validation_run_manifest_attempt,
 )
 from src.services.state_service import get as state_get
 from src.services.state_service import record_publish as state_record_publish
@@ -480,8 +482,12 @@ def _record_validation_cohort_publish_outcomes(
                         report_id=file_id,
                         source_identity_id=source_identity_id,
                         stage=stage,
-                        attempt_number=1,
-                        parent_attempt_number=0,
+                        attempt_number=max(
+                            1, int(ctx.validation_attempt_number or 1)
+                        ),
+                        parent_attempt_number=max(
+                            0, int(ctx.validation_parent_attempt_number or 0)
+                        ),
                         input_artifact_ids=(file_id,),
                         output_artifact_ids=output_artifact_ids,
                         started_at_utc=timestamp,
@@ -1036,13 +1042,31 @@ def run_publish(
     cohort_member_file_ids: set[str] | None = None
     if cohort_manifest:
         (
-            _validation_run_id,
-            _cohort_id,
-            _configuration_hash,
-            _policy_hash,
+            validation_run_id,
+            cohort_id,
+            configuration_hash,
+            policy_hash,
             cohort_members,
         ) = _load_validation_cohort_for_publish(cohort_manifest, root_ctx)
         cohort_member_file_ids = set(cohort_members)
+        attempt = resolve_validation_run_manifest_attempt(
+            ValidationRunManifestAttemptResolveRequest(
+                schema_version="1.0",
+                db_path=settings.reports_db,
+                validation_run_id=validation_run_id,
+                mode="current",
+            ),
+            root_ctx,
+        )
+        root_ctx = replace(
+            root_ctx,
+            validation_run_id=str(validation_run_id),
+            cohort_id=cohort_id,
+            configuration_hash=configuration_hash,
+            policy_hash=policy_hash,
+            validation_attempt_number=attempt.attempt_number,
+            validation_parent_attempt_number=attempt.parent_attempt_number,
+        )
     publish_budget = build_publish_budget(settings, root_ctx)
     requested_post_status = str(settings.wp.post_status or "publish").strip().lower()
     effective_post_status = "draft" if force_draft else requested_post_status

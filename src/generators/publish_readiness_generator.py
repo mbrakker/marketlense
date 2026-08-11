@@ -88,7 +88,7 @@ def evaluate_publish_readiness(
     now = created_at or datetime.now(UTC)
     results: list[PublishReadinessRuleResult] = []
     results.append(_validation_result(validation_report))
-    results.append(_category_result(safe_artifacts, category_ids))
+    results.append(_category_result(safe_artifacts, category_ids, safe_packs))
     results.append(_material_evidence_result(safe_artifacts, safe_packs))
     results.append(_regeneration_result(regeneration_attempts))
     results.append(_figure_linkage_result(safe_artifacts, safe_packs, final_html))
@@ -288,13 +288,20 @@ def _validation_result(
 
 
 def _category_result(
-    artifacts: dict[str, Any], category_ids: Iterable[object]
+    artifacts: dict[str, Any],
+    category_ids: Iterable[object],
+    evidence_packs: dict[str, dict[str, Any]],
 ) -> PublishReadinessRuleResult:
     canonical = _normalized_strings(category_ids)
     artifact_values = _normalized_strings(
         artifacts.get("categories") or artifacts.get("category_decisions") or []
     )
     if not canonical:
+        if _has_explicit_uncategorized_abstention(evidence_packs):
+            return _pass(
+                "publish_readiness.category_consistency",
+                ["categories", "context_category_fit"],
+            )
         return _fail(
             "publish_readiness.category_consistency",
             ["categories", "artifacts.category_decisions"],
@@ -313,6 +320,25 @@ def _category_result(
             "rendered category decisions differ from retained category assignment",
         )
     return _pass("publish_readiness.category_consistency", ["categories"])
+
+
+def _has_explicit_uncategorized_abstention(
+    evidence_packs: dict[str, dict[str, Any]],
+) -> bool:
+    """Accept only the audited no-category outcome produced after bounded repair."""
+    fit_payload = evidence_packs.get("context_category_fit")
+    if not isinstance(fit_payload, dict):
+        return False
+    if _normalized_strings(fit_payload.get("selected_category_ids") or []):
+        return False
+    fits = _dict_items(fit_payload.get("category_fits"))
+    return bool(fits) and all(
+        str(item.get("decision") or "").casefold() == "reject"
+        and str(item.get("semantic_rule_status") or "").casefold() == "rejected"
+        and str(item.get("remediation_signal") or "")
+        == "topic_semantics_unresolved_abstained"
+        for item in fits
+    )
 
 
 def _material_evidence_result(

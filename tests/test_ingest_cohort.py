@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 from dataclasses import replace
 from types import SimpleNamespace
 
@@ -548,6 +549,125 @@ def test_failed_fixed_cohort_member_records_blocked_remaining_stages(
 
     assert audit.complete is True
     assert audit.missing_required_stage_entity_ids == ()
+
+
+def test_fixed_cohort_replay_supersedes_a_failure_with_validated_reuse(
+    ingest_settings,
+    run_context,
+) -> None:
+    file = DriveFile("1.0", "replayed", "Replayed.pdf", None, "md5-replayed")
+    validation_run_id = ValidationRunId(f"validation:{orch._cohort_id([file])}")
+
+    orch._record_cohort_ingest_manifest(
+        validation_run_id=validation_run_id,
+        settings=ingest_settings,
+        root_ctx=run_context,
+        files=[file],
+    )
+    orch._record_cohort_ingest_manifest(
+        validation_run_id=validation_run_id,
+        settings=ingest_settings,
+        root_ctx=run_context,
+        files=[file],
+        outcomes=[
+            IngestOutcome(
+                schema_version="1.0",
+                file_id=file.file_id,
+                name=file.name or file.file_id,
+                md5=file.md5_checksum,
+                html_path=None,
+                status="error",
+                error="typed_source_failure",
+            )
+        ],
+    )
+    replay_ctx = replace(
+        run_context,
+        validation_attempt_number=2,
+        validation_parent_attempt_number=1,
+    )
+    orch._record_cohort_ingest_manifest(
+        validation_run_id=validation_run_id,
+        settings=ingest_settings,
+        root_ctx=replay_ctx,
+        files=[file],
+    )
+    orch._record_cohort_ingest_manifest(
+        validation_run_id=validation_run_id,
+        settings=ingest_settings,
+        root_ctx=replay_ctx,
+        files=[file],
+        outcomes=[
+            IngestOutcome(
+                schema_version="1.0",
+                file_id=file.file_id,
+                name=file.name or file.file_id,
+                md5=file.md5_checksum,
+                html_path="out/replayed.html",
+                status="skipped",
+                error="html_exists",
+            )
+        ],
+    )
+
+    audit = audit_validation_run_manifest(
+        ValidationRunManifestAuditRequest(
+            schema_version="1.0",
+            db_path=ingest_settings.reports_db,
+            validation_run_id=validation_run_id,
+        ),
+        replay_ctx,
+    )
+
+    assert audit.complete is True
+    assert audit.missing_required_stage_entity_ids == ()
+    with sqlite3.connect(ingest_settings.reports_db) as conn:
+        current = conn.execute(
+            "SELECT attempt_number, terminal_outcome FROM validation_run_entity_attempts "
+            "WHERE validation_run_id=? AND is_current=1",
+            (str(validation_run_id),),
+        ).fetchone()
+    assert current == (2, "publish_ready")
+
+
+def test_fixed_cohort_does_not_treat_state_only_skip_as_publish_ready(
+    ingest_settings,
+    run_context,
+) -> None:
+    file = DriveFile("1.0", "state-skip", "State Skip.pdf", None, "md5-state")
+    validation_run_id = ValidationRunId(f"validation:{orch._cohort_id([file])}")
+
+    orch._record_cohort_ingest_manifest(
+        validation_run_id=validation_run_id,
+        settings=ingest_settings,
+        root_ctx=run_context,
+        files=[file],
+    )
+    orch._record_cohort_ingest_manifest(
+        validation_run_id=validation_run_id,
+        settings=ingest_settings,
+        root_ctx=run_context,
+        files=[file],
+        outcomes=[
+            IngestOutcome(
+                schema_version="1.0",
+                file_id=file.file_id,
+                name=file.name or file.file_id,
+                md5=file.md5_checksum,
+                html_path=None,
+                status="skipped",
+                error="already_processed",
+            )
+        ],
+    )
+
+    with sqlite3.connect(ingest_settings.reports_db) as conn:
+        current = conn.execute(
+            "SELECT terminal_outcome, failure_code FROM validation_run_entity_attempts "
+            "WHERE validation_run_id=? AND is_current=1",
+            (str(validation_run_id),),
+        ).fetchone()
+    assert current == ("permanent_failure", "already_processed")
 
 
 def test_manifest_replay_does_not_reselect_or_replace_cohort_members(

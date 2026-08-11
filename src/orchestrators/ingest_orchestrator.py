@@ -59,6 +59,7 @@ from src.contracts.validation_reliability import (
 )
 from src.contracts.validation_run_manifest import (
     ValidationRunManifestAuditRequest,
+    ValidationRunManifestAttemptResolveRequest,
     ValidationRunManifestCreateRequest,
     ValidationRunManifestRecordRequest,
     ValidationRunManifestStageRecord,
@@ -132,6 +133,7 @@ from src.services.report_store_service import (
     get_report_source_identity,
     record_source_identity_observation,
     record_validation_run_manifest_stage,
+    resolve_validation_run_manifest_attempt,
 )
 from src.services.report_store_service import (
     get_metadata as get_report_metadata,
@@ -1223,6 +1225,10 @@ def _record_cohort_ingest_manifest(
         root_ctx,
     )
     timestamp = datetime.now(timezone.utc).isoformat()
+    attempt_number = max(1, int(root_ctx.validation_attempt_number or 1))
+    parent_attempt_number = max(
+        0, int(root_ctx.validation_parent_attempt_number or 0)
+    )
     if outcomes is None:
         for file in files:
             for stage in (
@@ -1244,8 +1250,8 @@ def _record_cohort_ingest_manifest(
                             report_id=file.file_id,
                             source_identity_id=file.md5_checksum or file.file_id,
                             stage=stage,
-                            attempt_number=1,
-                            parent_attempt_number=0,
+                            attempt_number=attempt_number,
+                            parent_attempt_number=parent_attempt_number,
                             input_artifact_ids=(file.file_id,),
                             output_artifact_ids=(cohort_id,),
                             started_at_utc=timestamp,
@@ -1272,7 +1278,16 @@ def _record_cohort_ingest_manifest(
     for file in files:
         outcome = outcome_by_id.get(file.file_id)
         terminal = outcome is not None
-        successful = bool(outcome and outcome.status == "processed")
+        reused_validated_html = bool(
+            outcome
+            and outcome.status == "skipped"
+            and outcome.error == "html_exists"
+            and outcome.html_path
+        )
+        successful = bool(
+            outcome
+            and (outcome.status == "processed" or reused_validated_html)
+        )
         terminal_outcome = (
             "publish_ready"
             if successful
@@ -1290,9 +1305,25 @@ def _record_cohort_ingest_manifest(
                 configuration_hash=configuration_hash,
                 policy_hash=policy_hash,
                 timestamp=timestamp,
+                attempt_number=attempt_number,
+                parent_attempt_number=parent_attempt_number,
                 failure_code=(outcome.error or "ingest_failed")
                 if outcome
                 else "ingest_failed",
+            )
+        elif reused_validated_html:
+            _record_reused_cohort_stage_closure(
+                validation_run_id=validation_run_id,
+                settings=settings,
+                root_ctx=root_ctx,
+                file=file,
+                cohort_id=cohort_id,
+                configuration_hash=configuration_hash,
+                policy_hash=policy_hash,
+                timestamp=timestamp,
+                attempt_number=attempt_number,
+                parent_attempt_number=parent_attempt_number,
+                html_path=outcome.html_path or "",
             )
         record_validation_run_manifest_stage(
             ValidationRunManifestRecordRequest(
@@ -1308,8 +1339,8 @@ def _record_cohort_ingest_manifest(
                     report_id=file.file_id,
                     source_identity_id=file.md5_checksum or file.file_id,
                     stage="ingestion",
-                    attempt_number=1,
-                    parent_attempt_number=0,
+                    attempt_number=attempt_number,
+                    parent_attempt_number=parent_attempt_number,
                     input_artifact_ids=(file.file_id,),
                     output_artifact_ids=(
                         (outcome.html_path,) if outcome and outcome.html_path else ()
@@ -1346,6 +1377,8 @@ def _record_failed_cohort_stage_closure(
     configuration_hash: str,
     policy_hash: str,
     timestamp: str,
+    attempt_number: int,
+    parent_attempt_number: int,
     failure_code: str,
 ) -> None:
     """Close unreachable stages explicitly for a terminal failed cohort member.
@@ -1389,8 +1422,8 @@ def _record_failed_cohort_stage_closure(
                     report_id=file.file_id,
                     source_identity_id=file.md5_checksum or file.file_id,
                     stage=stage,
-                    attempt_number=1,
-                    parent_attempt_number=0,
+                    attempt_number=attempt_number,
+                    parent_attempt_number=parent_attempt_number,
                     input_artifact_ids=(file.file_id,),
                     output_artifact_ids=(),
                     started_at_utc=timestamp,
@@ -1402,6 +1435,74 @@ def _record_failed_cohort_stage_closure(
                     duplicate_disposition="none",
                     supersession_state="current",
                     idempotency_state="new",
+                    configuration_hash=configuration_hash,
+                    policy_hash=policy_hash,
+                    producer_build_identity=root_ctx.producer_commit_sha or "workspace",
+                    cohort_disposition="final_validation",
+                    entity_terminal=False,
+                ),
+            ),
+            root_ctx,
+        )
+
+
+def _record_reused_cohort_stage_closure(
+    *,
+    validation_run_id: ValidationRunId,
+    settings: IngestSettings,
+    root_ctx: RunContext,
+    file: DriveFile,
+    cohort_id: str,
+    configuration_hash: str,
+    policy_hash: str,
+    timestamp: str,
+    attempt_number: int,
+    parent_attempt_number: int,
+    html_path: str,
+) -> None:
+    """Record the validated artifact reuse that closes an idempotent replay."""
+    for stage in (
+        "acquisition",
+        "source_preparation",
+        "source_validation",
+        "evidence_generation",
+        "structured_output_repair",
+        "taxonomy",
+        "category_fit",
+        "artifact_generation",
+        "regeneration",
+        "grounding_validation",
+        "semantic_validation",
+        "rendering",
+        "final_html_validation",
+    ):
+        record_validation_run_manifest_stage(
+            ValidationRunManifestRecordRequest(
+                schema_version="1.0",
+                db_path=settings.reports_db,
+                record=ValidationRunManifestStageRecord(
+                    schema_version="1.0",
+                    validation_run_id=validation_run_id,
+                    cohort_id=cohort_id,
+                    workflow_run_id=RunId(root_ctx.run_id),
+                    entity_type="report",
+                    publisher_id="unattributed",
+                    report_id=file.file_id,
+                    source_identity_id=file.md5_checksum or file.file_id,
+                    stage=stage,
+                    attempt_number=attempt_number,
+                    parent_attempt_number=parent_attempt_number,
+                    input_artifact_ids=(file.file_id,),
+                    output_artifact_ids=(html_path,) if html_path else (),
+                    started_at_utc=timestamp,
+                    completed_at_utc=timestamp,
+                    terminal_outcome="succeeded",
+                    failure_code="",
+                    retryable=False,
+                    repair_disposition="not_required",
+                    duplicate_disposition="reused",
+                    supersession_state="current",
+                    idempotency_state="reused",
                     configuration_hash=configuration_hash,
                     policy_hash=policy_hash,
                     producer_build_identity=root_ctx.producer_commit_sha or "workspace",
@@ -2345,6 +2446,35 @@ def run_ingest(
                     artifact_family="report",
                     configuration_hash=configuration_hash,
                     policy_hash=policy_hash,
+                )
+                create_validation_run_manifest(
+                    ValidationRunManifestCreateRequest(
+                        schema_version="1.0",
+                        db_path=settings.reports_db,
+                        validation_run_id=validation_run_id,
+                        cohort_id=cohort_id,
+                        workflow_run_id=RunId(root_ctx.run_id),
+                        configuration_hash=configuration_hash,
+                        policy_hash=policy_hash,
+                        producer_build_identity=root_ctx.producer_commit_sha
+                        or "workspace",
+                        created_at_utc=datetime.now(timezone.utc).isoformat(),
+                    ),
+                    root_ctx,
+                )
+                attempt = resolve_validation_run_manifest_attempt(
+                    ValidationRunManifestAttemptResolveRequest(
+                        schema_version="1.0",
+                        db_path=settings.reports_db,
+                        validation_run_id=validation_run_id,
+                        mode="next_replay",
+                    ),
+                    root_ctx,
+                )
+                root_ctx = replace(
+                    root_ctx,
+                    validation_attempt_number=attempt.attempt_number,
+                    validation_parent_attempt_number=attempt.parent_attempt_number,
                 )
                 _record_cohort_ingest_manifest(
                     validation_run_id=validation_run_id,

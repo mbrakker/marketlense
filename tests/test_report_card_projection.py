@@ -153,6 +153,7 @@ def test_build_cover_fingerprint_is_stable_and_selects_geometry() -> None:
         (43, "medium"),
         (65, "long"),
         (89, "xlong"),
+        (126, "xlong"),
     ),
 )
 def test_select_title_scale_uses_fixed_character_bands(
@@ -173,7 +174,7 @@ def test_select_title_scale_accepts_breakable_hyphenated_title() -> None:
 @pytest.mark.parametrize(
     "title",
     (
-        "A complete report title " + ("x " * 60),
+        _title_with_length(141),
         "A title with SupercalifragilisticexpialidociousToken overflow",
     ),
 )

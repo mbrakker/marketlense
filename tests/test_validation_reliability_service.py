@@ -246,6 +246,35 @@ def test_reliability_artifact_rejects_usage_without_required_attribution(
     assert exc_info.value.code == "llm_usage_validation_attribution_missing"
 
 
+def test_reliability_artifact_accepts_usage_from_a_frozen_cohort_replay(
+    tmp_path,
+) -> None:
+    reports_db = str(tmp_path / "reports.sqlite")
+    usage_db = str(tmp_path / "usage.sqlite")
+    _create_run(reports_db)
+    _record(reports_db, attempt=1, stage="admission_preflight")
+    append_usage(
+        LLMUsageLedgerAppendRequest(
+            schema_version="1.0",
+            db_path=usage_db,
+            entry=replace(_usage_entry(), workflow_run_id="workflow-replay"),
+        ),
+        _ctx(),
+    )
+
+    artifact = build_validation_reliability_artifact(
+        ValidationReliabilityBuildRequest(
+            schema_version="1.0",
+            reports_db_path=reports_db,
+            usage_db_path=usage_db,
+            validation_run_id="validation-1",
+        ),
+        _ctx(),
+    )
+
+    assert artifact.validation_run_id == "validation-1"
+
+
 def test_reliability_artifact_reports_optional_repair_skips_and_downstream_blocks(
     tmp_path,
 ) -> None:

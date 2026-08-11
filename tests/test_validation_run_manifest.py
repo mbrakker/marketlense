@@ -11,6 +11,7 @@ from src.contracts.publish import PublishOutcome
 from src.contracts.run_context import RunContext
 from src.contracts.validation_run_manifest import (
     ValidationRunManifestAuditRequest,
+    ValidationRunManifestAttemptResolveRequest,
     ValidationRunManifestCreateRequest,
     ValidationRunManifestRecordRequest,
     ValidationRunManifestStageRecord,
@@ -25,6 +26,7 @@ from src.services.report_store_service import (
     audit_validation_run_manifest,
     create_validation_run_manifest,
     record_validation_run_manifest_stage,
+    resolve_validation_run_manifest_attempt,
 )
 from src.utils.errors import AppError
 
@@ -177,6 +179,44 @@ def test_manifest_audit_fails_closed_without_a_current_terminal_state(tmp_path) 
 
     assert audit.complete is False
     assert audit.incomplete_entity_ids == ("report|report-1|source-1",)
+
+
+def test_manifest_attempt_resolution_requires_one_cohort_wide_lineage(tmp_path) -> None:
+    db_path = str(tmp_path / "reports.sqlite")
+    _create(db_path)
+    record_validation_run_manifest_stage(
+        ValidationRunManifestRecordRequest(
+            schema_version="1.0",
+            db_path=db_path,
+            record=_record(attempt=1, stage="discovery"),
+        ),
+        _ctx(),
+    )
+
+    next_attempt = resolve_validation_run_manifest_attempt(
+        ValidationRunManifestAttemptResolveRequest(
+            schema_version="1.0",
+            db_path=db_path,
+            validation_run_id="validation-1",
+            mode="next_replay",
+        ),
+        _ctx(),
+    )
+    current_attempt = resolve_validation_run_manifest_attempt(
+        ValidationRunManifestAttemptResolveRequest(
+            schema_version="1.0",
+            db_path=db_path,
+            validation_run_id="validation-1",
+            mode="current",
+        ),
+        _ctx(),
+    )
+
+    assert (next_attempt.attempt_number, next_attempt.parent_attempt_number) == (2, 1)
+    assert (current_attempt.attempt_number, current_attempt.parent_attempt_number) == (
+        1,
+        0,
+    )
 
 
 def test_manifest_rejects_nonterminal_outcomes_at_closure(tmp_path) -> None:

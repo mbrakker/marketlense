@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+from src.contracts.context_category_fit import ContextCategoryFitResponse
 from src.contracts.context_category_fit import CategoryFitCandidate
+from src.contracts.semantic_ids import ReportId
 from src.orchestrators.report_analysis_orchestrator import (
+    _abstain_unresolved_category_fits,
     _category_fit_ambiguity_ids,
     _category_fit_reclassification_candidates,
     _category_fit_repair_code,
@@ -118,3 +121,36 @@ def test_all_rejected_category_fit_is_an_explicit_uncategorized_outcome() -> Non
     )
 
     assert _category_fit_repair_code(state) == ""
+
+
+def test_unresolved_category_repair_abstains_without_inventing_a_category() -> None:
+    response = ContextCategoryFitResponse(
+        schema_version="1.0",
+        report_id=ReportId("report-1"),
+        categories=[],
+        category_labels=[],
+        fits=[
+            CategoryFitCandidate(
+                schema_version="1.0",
+                category_id="technology",
+                label="Technology & Innovation",
+                fit_score=0.96,
+                decision="reject",
+                why_fit="The report may be about technology.",
+                why_not_fit="",
+                evidence_sections=["Overview"],
+                semantic_rule_status="ambiguous",
+                remediation_signal="topic_semantics_ambiguous",
+            )
+        ],
+    )
+
+    resolved = _abstain_unresolved_category_fits(response)
+
+    assert resolved.categories == []
+    assert resolved.category_labels == []
+    fit = resolved.fits[0]
+    assert fit.decision == "reject"
+    assert fit.semantic_rule_status == "rejected"
+    assert fit.remediation_signal == "topic_semantics_unresolved_abstained"
+    assert fit.why_not_fit

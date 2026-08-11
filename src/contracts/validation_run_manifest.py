@@ -75,6 +75,33 @@ class ValidationRunManifestRecordResponse:
 
 
 @dataclass(frozen=True)
+class ValidationRunManifestAttemptResolveRequest(SemanticIdContract):
+    """Request a coherent current or next attempt for a frozen cohort."""
+
+    schema_version: str = field(
+        metadata={"doc": "Manifest-attempt resolution request schema version."}
+    )
+    db_path: str
+    validation_run_id: ValidationRunId
+    mode: str = field(
+        metadata={
+            "doc": "Either current for publication or next_replay for a cohort replay."
+        }
+    )
+
+
+@dataclass(frozen=True)
+class ValidationRunManifestAttemptResolveResponse(SemanticIdContract):
+    """One coherent attempt lineage shared by all current cohort members."""
+
+    schema_version: str = field(
+        metadata={"doc": "Manifest-attempt resolution response schema version."}
+    )
+    attempt_number: int
+    parent_attempt_number: int
+
+
+@dataclass(frozen=True)
 class ValidationRunManifestAuditRequest(SemanticIdContract):
     schema_version: str = field(
         metadata={"doc": "Manifest audit request schema version."}
