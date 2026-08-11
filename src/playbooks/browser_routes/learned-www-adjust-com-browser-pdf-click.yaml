@@ -1,0 +1,60 @@
+schema_version: '1.0'
+playbook_id: learned-www-adjust-com-browser-pdf-click
+version: 1.0.0
+status: active
+updated_at: '2026-08-11T13:20:19Z'
+stale_after_days: 120
+publisher_pattern: www.adjust.com
+host_patterns:
+- www.adjust.com
+url_path_markers:
+- resources
+- guides
+- ai-machine-learning
+route_family: browser_pdf_click
+route_kind: pdf_download
+summary: click Decline all (Cookie banner dismissed); then scroll Scroll down to reveal
+  page content (Scrolled page to reveal content and check for CTAs or form); then
+  save_as_pdf Save full page as PDF (Saved page as PDF artifact)
+steps:
+- schema_version: '1.0'
+  action: click
+  target: Decline all
+  verification: Cookie banner dismissed
+  selector_type: ''
+  selector: ''
+  value: ''
+  expected_url_contains: ''
+  expected_text: ''
+- schema_version: '1.0'
+  action: scroll
+  target: Scroll down to reveal page content
+  verification: Scrolled page to reveal content and check for CTAs or form
+  selector_type: ''
+  selector: ''
+  value: ''
+  expected_url_contains: ''
+  expected_text: ''
+- schema_version: '1.0'
+  action: save_as_pdf
+  target: Save full page as PDF
+  verification: Saved page as PDF artifact
+  selector_type: ''
+  selector: ''
+  value: ''
+  expected_url_contains: ''
+  expected_text: ''
+traps: []
+evidence_notes:
+- Promoted only after verified route evidence with outcome downloaded.
+source_evidence:
+- network_submission_request
+- structured_result
+- verified
+- application/pdf
+private_api_evidence: []
+history:
+- schema_version: '1.0'
+  changed_at: '2026-08-11T13:20:19Z'
+  source: validated_route_promotion
+  summary: Promoted browser_pdf_click/pdf_download after downloaded evidence.

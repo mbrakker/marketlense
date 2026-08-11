@@ -1272,6 +1272,72 @@ fields:
   value: null
   aliases: []
   option_aliases: []
+- schema_version: '1.0'
+  key: first_name_input_shadow_dom_index_47_name_firstname
+  label: First Name (input, shadow DOM index=47, name=firstname)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: last_name_input_shadow_dom_index_48_name_lastname
+  label: Last Name (input, shadow DOM index=48, name=lastname)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: company_name_input_shadow_dom_index_49_name_companyname
+  label: Company Name (input, shadow DOM index=49, name=companyname)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: job_title_input_shadow_dom_index_50_name_jobtitle
+  label: Job Title (input, shadow DOM index=50, name=jobtitle)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: professional_email_input_type_email_shadow_dom_index_51_name_emailaddress1
+  label: Professional Email (input[type=email], shadow DOM index=51, name=emailaddress1)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: business_phone_input_type_tel_shadow_dom_index_52_name_telephone1
+  label: Business Phone (input[type=tel], shadow DOM index=52, name=telephone1)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: country_input_shadow_dom_index_53_name_address1_country
+  label: Country (input, shadow DOM index=53, name=address1_country)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: request_purpose_select_shadow_dom_index_54_name_bf_requestpurpose
+  label: Request Purpose (select, shadow DOM index=54, name=bf_requestpurpose)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: description_additional_info_textarea_shadow_dom_index_55_name_description
+  label: Description / Additional info (textarea, shadow DOM index=55, name=description)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: preferred_method_of_contact_select_shadow_dom_index_56_name_preferredcontactmethodcode
+  label: Preferred Method of Contact (select, shadow DOM index=56, name=preferredcontactmethodcode)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: consent_checkboxes_for_topics_checkboxes_indices_59_60_61_62_63_etc
+  label: Consent checkboxes for topics (checkboxes indices 59, 60, 61, 62, 63 etc.)
+  value: null
+  aliases: []
+  option_aliases: []
 delivery_emails:
 - reports@marketbearing.eu
 consent_policy:

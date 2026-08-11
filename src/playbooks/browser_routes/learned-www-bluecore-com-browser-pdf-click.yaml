@@ -1,0 +1,58 @@
+schema_version: '1.0'
+playbook_id: learned-www-bluecore-com-browser-pdf-click
+version: 1.0.0
+status: active
+updated_at: '2026-08-11T13:10:43Z'
+stale_after_days: 120
+publisher_pattern: www.bluecore.com
+host_patterns:
+- www.bluecore.com
+url_path_markers:
+- black-friday-benchmarks
+route_family: browser_pdf_click
+route_kind: pdf_download
+summary: Accepted cookie banner, clicked 'Get the data' CTA on the Bluecore Black
+  Friday Benchmarks page, then saved the on-page longread as a PDF artifact.
+steps:
+- schema_version: '1.0'
+  action: click
+  target: Accept All Cookies
+  verification: Cookie banner accepted; page remained and content interactive
+  selector_type: ''
+  selector: ''
+  value: ''
+  expected_url_contains: ''
+  expected_text: ''
+- schema_version: '1.0'
+  action: click
+  target: Get the data
+  verification: On-site report content (longread) revealed on the page; no gating
+    form required
+  selector_type: ''
+  selector: ''
+  value: ''
+  expected_url_contains: ''
+  expected_text: ''
+- schema_version: '1.0'
+  action: save_as_pdf
+  target: Save page as PDF
+  verification: On-page longread saved locally as PDF artifact
+  selector_type: ''
+  selector: ''
+  value: ''
+  expected_url_contains: ''
+  expected_text: ''
+traps: []
+evidence_notes:
+- Promoted only after verified route evidence with outcome downloaded.
+source_evidence:
+- network_submission_request
+- structured_result
+- verified
+- application/pdf
+private_api_evidence: []
+history:
+- schema_version: '1.0'
+  changed_at: '2026-08-11T13:10:43Z'
+  source: validated_route_promotion
+  summary: Promoted browser_pdf_click/pdf_download after downloaded evidence.

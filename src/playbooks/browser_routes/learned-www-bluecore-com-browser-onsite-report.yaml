@@ -1,0 +1,67 @@
+schema_version: '1.0'
+playbook_id: learned-www-bluecore-com-browser-onsite-report
+version: 1.0.0
+status: active
+updated_at: '2026-08-11T13:09:05Z'
+stale_after_days: 120
+publisher_pattern: www.bluecore.com
+host_patterns:
+- www.bluecore.com
+url_path_markers:
+- bfcm-resources
+- black-friday-trends-and-benchmarks
+route_family: browser_onsite_report
+route_kind: onsite_report
+summary: "Navigated to Bluecore report page, accepted cookie banner, scrolled to bottom\
+  \ and inspected page \u2014 no PDF download or gated form found; captured the on-page\
+  \ longread instead."
+steps:
+- schema_version: '1.0'
+  action: navigate
+  target: Open candidate URL
+  verification: Page loaded with on-site report content
+  selector_type: ''
+  selector: ''
+  value: ''
+  expected_url_contains: ''
+  expected_text: ''
+- schema_version: '1.0'
+  action: click
+  target: Accept All Cookies
+  verification: Cookie banner dismissed
+  selector_type: ''
+  selector: ''
+  value: ''
+  expected_url_contains: ''
+  expected_text: ''
+- schema_version: '1.0'
+  action: scroll
+  target: Scroll to bottom
+  verification: Scrolled to page end; footer and Related Resources visible
+  selector_type: ''
+  selector: ''
+  value: ''
+  expected_url_contains: ''
+  expected_text: ''
+- schema_version: '1.0'
+  action: inspect
+  target: Search for download CTA or gated form
+  verification: No download PDF link or lead form present on page
+  selector_type: ''
+  selector: ''
+  value: ''
+  expected_url_contains: ''
+  expected_text: ''
+traps: []
+evidence_notes:
+- Promoted only after verified route evidence with outcome captured.
+source_evidence:
+- structured_result
+- captured
+- onsite_report
+private_api_evidence: []
+history:
+- schema_version: '1.0'
+  changed_at: '2026-08-11T13:09:05Z'
+  source: validated_route_promotion
+  summary: Promoted browser_onsite_report/onsite_report after captured evidence.

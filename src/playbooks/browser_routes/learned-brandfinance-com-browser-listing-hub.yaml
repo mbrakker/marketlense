@@ -1,0 +1,61 @@
+schema_version: '1.0'
+playbook_id: learned-brandfinance-com-browser-listing-hub
+version: 1.0.1
+status: active
+updated_at: '2026-08-11T13:14:44Z'
+stale_after_days: 120
+publisher_pattern: brandfinance.com
+host_patterns:
+- brandfinance.com
+url_path_markers:
+- insights
+- https-brandirectory-com-reports-hotels
+route_family: browser_listing_hub
+route_kind: pdf_download
+summary: 'Dismissed cookie modal, opened ''Minor Hotels: Building a global hospitality
+  portfolio'' article and saved the on-site article page as a local PDF.'
+steps:
+- schema_version: '1.0'
+  action: click
+  target: Accept (cookie modal)
+  verification: Cookie modal dismissed; page content visible
+  selector_type: ''
+  selector: ''
+  value: ''
+  expected_url_contains: ''
+  expected_text: ''
+- schema_version: '1.0'
+  action: click
+  target: 'Minor Hotels: Building a global hospitality portfolio'
+  verification: Article page opened and displayed
+  selector_type: ''
+  selector: ''
+  value: ''
+  expected_url_contains: ''
+  expected_text: ''
+- schema_version: '1.0'
+  action: save_as_pdf
+  target: Save page as PDF
+  verification: Saved local PDF artifact of the on-site article
+  selector_type: ''
+  selector: ''
+  value: ''
+  expected_url_contains: ''
+  expected_text: ''
+traps: []
+evidence_notes:
+- Promoted only after verified route evidence with outcome downloaded.
+source_evidence:
+- structured_result
+- verified
+- application/pdf
+private_api_evidence: []
+history:
+- schema_version: '1.0'
+  changed_at: '2026-08-11T13:13:08Z'
+  source: validated_route_promotion
+  summary: Promoted browser_listing_hub/pdf_download after downloaded evidence.
+- schema_version: '1.0'
+  changed_at: '2026-08-11T13:14:44Z'
+  source: validated_route_promotion
+  summary: Promoted browser_listing_hub/pdf_download after downloaded evidence.
