@@ -26,7 +26,8 @@ from src.generators.public_editorial_quality_generator import (
 from src.utils.publication_projection import publication_projection_hash
 
 _INTERNAL_TOKEN = re.compile(
-    r"\b(?:evidence|claim|file|finding|insight|quote|figure)[_-][a-z0-9][a-z0-9_-]*\b",
+    r"\b(?:evidence|claim|file|finding|insight|quote|figure)"
+    r"(?:_[a-z0-9][a-z0-9_]*|-[a-z0-9-]*\d[a-z0-9-]*)\b",
     re.IGNORECASE,
 )
 _RAW_EVIDENCE_TOKEN = re.compile(

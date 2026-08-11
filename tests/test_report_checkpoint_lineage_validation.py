@@ -21,6 +21,7 @@ from src.generators.report_generation_dependencies import ReportGenerationDepend
 from src.generators.report_render_generator import render_preview_asset
 from src.orchestrators._report_generation_orchestrator.checkpoints import (
     _record_rendered_html_prompt_family_lineage,
+    _regeneration_attempts_from_list,
     _vector_indexing_state_from_checkpoint,
 )
 from src.orchestrators._report_generation_orchestrator.resume import (
@@ -126,6 +127,26 @@ def test_checkpoint_lineage_validation_accepts_active_content(tmp_path: Path) ->
         _checkpoint(artifact_id=record.record.artifact_id),
         "checkpoint.json",
     )
+
+
+def test_regeneration_attempt_checkpoint_preserves_promotion_lineage() -> None:
+    attempts = _regeneration_attempts_from_list(
+        [
+            {
+                "attempt_index": 1,
+                "plan_mode": "targeted",
+                "validation_before_status": "fail",
+                "validation_after_status": "pass",
+                "candidate_artifacts_path": "out/candidate-artifacts.json",
+                "candidate_audit_path": "out/candidate-audit.json",
+                "promotion_outcome": "promoted",
+            }
+        ]
+    )
+
+    assert attempts[0].promotion_outcome == "promoted"
+    assert attempts[0].candidate_artifacts_path.endswith("candidate-artifacts.json")
+    assert attempts[0].candidate_audit_path.endswith("candidate-audit.json")
 
 
 def test_rendered_html_lineage_explicitly_depends_on_prompt_materializations(

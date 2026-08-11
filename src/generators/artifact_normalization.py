@@ -7,6 +7,7 @@ from src.contracts.config import AppSettings
 from src.contracts.ingest import IngestSettings
 from src.utils.coercion import stripped_string_value as _s
 from src.utils.json_utils import dump_json_object as _dump_json
+from src.utils.text_normalization import normalize_text
 
 METRIC_FIELDS = (
     "value",
@@ -179,10 +180,24 @@ def pad_artifact_insights(
     insights_final: List[Dict[str, Any]],
     insights_candidates: List[Dict[str, Any]],
 ) -> List[Dict[str, Any]]:
-    padded = list(insights_final)[:5]
-    idx = 0
-    while len(padded) < 5 and insights_candidates:
-        source = insights_candidates[idx % len(insights_candidates)]
+    padded: List[Dict[str, Any]] = []
+    seen_keys: set[tuple[str, str]] = set()
+    for insight in insights_final:
+        duplicate_key = _insight_duplicate_key(insight)
+        if duplicate_key and duplicate_key in seen_keys:
+            continue
+        if duplicate_key:
+            seen_keys.add(duplicate_key)
+        padded.append(insight)
+        if len(padded) == 5:
+            return padded
+
+    for source in insights_candidates:
+        duplicate_key = _insight_duplicate_key(source)
+        if duplicate_key and duplicate_key in seen_keys:
+            continue
+        if duplicate_key:
+            seen_keys.add(duplicate_key)
         metric_raw = _to_dict(source.get("metric"))
         source_pages_raw = source.get("pages")
         source_pages = source_pages_raw if isinstance(source_pages_raw, list) else []
@@ -210,10 +225,62 @@ def pad_artifact_insights(
                 **score_fields,
             }
         )
-        idx += 1
+        if len(padded) == 5:
+            return padded
     while len(padded) < 5:
         padded.append(_empty_insight(len(padded) + 1))
     return padded
+
+
+def fallback_artifact_insights_from_findings(
+    findings_pack: Any,
+    *,
+    limit: int = 5,
+) -> List[Dict[str, Any]]:
+    """Build a bounded insight candidate set from addressable findings.
+
+    This only applies when model-produced candidates are empty. It preserves the
+    evidence-pack claim verbatim enough to retain deterministic grounding rather
+    than inventing editorial copy or repeating an otherwise weak candidate.
+    """
+    if not isinstance(findings_pack, dict) or limit <= 0:
+        return []
+    raw_findings = findings_pack.get("findings")
+    if not isinstance(raw_findings, list):
+        return []
+    raw_candidates: List[Dict[str, Any]] = []
+    seen_evidence_ids: set[str] = set()
+    for finding in raw_findings:
+        if not isinstance(finding, dict):
+            continue
+        evidence_id = _s(finding.get("id"))
+        text = _s(finding.get("text"))
+        evidence = _s(finding.get("evidence"))
+        if not evidence_id or not text or not evidence:
+            continue
+        normalized_evidence_id = normalize_text(evidence_id)
+        if normalized_evidence_id in seen_evidence_ids:
+            continue
+        seen_evidence_ids.add(normalized_evidence_id)
+        raw_candidates.append(
+            {
+                "id": evidence_id,
+                "text": text,
+                "evidence_id": evidence_id,
+                "evidence": evidence,
+                "pages": finding.get("pages"),
+            }
+        )
+        if len(raw_candidates) == limit:
+            break
+    return normalize_artifact_insights(raw_candidates, prefix="finding")
+
+
+def _insight_duplicate_key(item: Dict[str, Any]) -> tuple[str, str] | None:
+    text = normalize_text(_s(item.get("text")))
+    if not text:
+        return None
+    return (text, normalize_text(_s(item.get("evidence_id"))))
 
 
 def normalize_artifact_quotes(items: Any) -> List[Dict[str, Any]]:

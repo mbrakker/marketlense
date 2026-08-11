@@ -248,6 +248,8 @@ def _insights_confidence_score(
         score += 0.24 * (len(evidence_supported) / len(nonempty_final))
     if isinstance(insights_candidates, list) and insights_candidates:
         score += 0.16 * (min(len(insights_candidates), 5) / 5.0)
+    if len(nonempty_final) < 5:
+        return 0.0
     return score
 
 

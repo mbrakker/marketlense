@@ -30,6 +30,7 @@ from src.generators.artifact_normalization import (
     artifact_retrieval_mode,
     artifact_vector_store_enabled,
     bind_artifact_evidence_spans,
+    fallback_artifact_insights_from_findings,
     normalize_artifact_evidence_ids,
     normalize_artifact_insights,
     normalize_artifact_quotes,
@@ -317,14 +318,27 @@ def generate_artifacts(
         stage_one_results.get("insights_candidates", {}).get("insights_candidates"),
         prefix="candidate",
     )
+    initial_candidate_count = len(
+        [candidate for candidate in insights_candidates if _s(candidate.get("text"))]
+    )
     if not insights_candidates:
+        insights_candidates = fallback_artifact_insights_from_findings(
+            safe_evidence.get("findings")
+        )
         logger.info(
             log_event(
                 ctx,
                 role="generator",
-                event="artifact_insights_candidates_empty",
+                event=(
+                    "artifact_insights_candidates_fallback_from_findings"
+                    if initial_candidate_count == 0 and insights_candidates
+                    else "artifact_insights_candidates_empty"
+                ),
                 module=logger.name,
-                fields={},
+                fields={
+                    "initial_candidate_count": initial_candidate_count,
+                    "candidate_count": len(insights_candidates),
+                },
             )
         )
     quotes_final = normalize_artifact_quotes(

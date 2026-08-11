@@ -693,7 +693,7 @@ def test_cover_semantics_repairs_one_invalid_structured_response(tmp_path) -> No
     assert client.requests[1].repair_attempt == 1
 
 
-def test_generate_artifacts_repairs_unknown_insight_evidence_before_assembly(
+def test_generate_artifacts_does_not_fabricate_insights_after_unknown_evidence(
     tmp_path,
 ) -> None:
     client = FakeOpenAI(
@@ -716,7 +716,31 @@ def test_generate_artifacts_repairs_unknown_insight_evidence_before_assembly(
                         "metric": {},
                         "pages": [2],
                         "score": 0.9,
-                    }
+                    },
+                    {
+                        "id": "candidate-2",
+                        "text": "Second candidate insight.",
+                        "evidence_id": "f1",
+                        "evidence": "Revenue rose.",
+                        "metric": {},
+                        "pages": [2],
+                    },
+                    {
+                        "id": "candidate-3",
+                        "text": "Third candidate insight.",
+                        "evidence_id": "f1",
+                        "evidence": "Revenue rose.",
+                        "metric": {},
+                        "pages": [2],
+                    },
+                    {
+                        "id": "candidate-4",
+                        "text": "Fourth candidate insight.",
+                        "evidence_id": "f1",
+                        "evidence": "Revenue rose.",
+                        "metric": {},
+                        "pages": [2],
+                    },
                 ]
             },
             {
@@ -751,6 +775,38 @@ def test_generate_artifacts_repairs_unknown_insight_evidence_before_assembly(
                         "evidence": "Revenue rose.",
                         "metric": {},
                         "pages": [2],
+                    },
+                    {
+                        "id": "insight-2",
+                        "text": "Second final insight.",
+                        "evidence_id": "f1",
+                        "evidence": "Revenue rose.",
+                        "metric": {},
+                        "pages": [2],
+                    },
+                    {
+                        "id": "insight-3",
+                        "text": "Third final insight.",
+                        "evidence_id": "f1",
+                        "evidence": "Revenue rose.",
+                        "metric": {},
+                        "pages": [2],
+                    },
+                    {
+                        "id": "insight-4",
+                        "text": "Fourth final insight.",
+                        "evidence_id": "f1",
+                        "evidence": "Revenue rose.",
+                        "metric": {},
+                        "pages": [2],
+                    },
+                    {
+                        "id": "insight-5",
+                        "text": "Fifth final insight.",
+                        "evidence_id": "f1",
+                        "evidence": "Revenue rose.",
+                        "metric": {},
+                        "pages": [2],
                     }
                 ]
             },
@@ -773,7 +829,9 @@ def test_generate_artifacts_repairs_unknown_insight_evidence_before_assembly(
         analysis_store=FakeAnalysisStore(),
     )
 
-    assert payload["insights_final"][0]["evidence_id"] == "f1"
+    assert [request[2] for request in client.requests].count("insights_final") == 1
+    assert payload["insights_final"] == []
+    assert payload["family_status"]["insights_bundle"]["status"] == "abstained"
 
 
 __all__ = [
@@ -785,5 +843,5 @@ __all__ = [
     "test_generate_artifacts_strips_inline_reference_tokens_from_summary_and_linkedin",
     "test_generate_artifacts_uses_vector_path_when_flag_enabled",
     "test_cover_semantics_repairs_one_invalid_structured_response",
-    "test_generate_artifacts_repairs_unknown_insight_evidence_before_assembly",
+    "test_generate_artifacts_does_not_fabricate_insights_after_unknown_evidence",
 ]

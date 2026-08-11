@@ -289,9 +289,18 @@ def _regeneration_attempts_from_list(
                 artifacts_snapshot_path=str(
                     raw_attempt.get("artifacts_snapshot_path") or ""
                 ),
+                candidate_artifacts_path=str(
+                    raw_attempt.get("candidate_artifacts_path") or ""
+                ),
+                candidate_audit_path=str(
+                    raw_attempt.get("candidate_audit_path") or ""
+                ),
                 validation_path=str(raw_attempt.get("validation_path") or ""),
                 validation_snapshot_path=str(
                     raw_attempt.get("validation_snapshot_path") or ""
+                ),
+                promotion_outcome=str(
+                    raw_attempt.get("promotion_outcome") or "not_attempted"
                 ),
                 schema_version=str(raw_attempt.get("schema_version") or "1.0"),
             )

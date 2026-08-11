@@ -12,6 +12,12 @@ The pipeline delegates stage sequencing to `src/orchestrators/report_generation_
 
 `resume_from_stage` supports `source_prepared`, `selection_complete`, `analysis_complete`, `render_complete`, and `latest_safe` when the applicable retained checkpoint passes validation.
 
+Regeneration-attempt lineage is part of the retained analysis checkpoint. A
+resume preserves each candidate artifact location, candidate audit location,
+and promotion outcome, so render/readiness evaluates the artifact that the
+analysis stage actually promoted; a missing value in a legacy checkpoint keeps
+the contract default rather than being inferred.
+
 A render-only resume reuses report-card assets only when the complete validated
 report-card manifest is also retained. If that manifest is missing, the renderer
 regenerates the deterministic cover set and manifest before the package can
@@ -224,6 +230,23 @@ with the exact grounding error; it cannot be deferred until shared artifact
 assembly. Summary claims remain deterministically prunable when no source span
 can be bound. The final assembly grounding and semantic gates remain blocking
 defence-in-depth checks.
+
+If a model returns no candidate insights despite a generated findings pack,
+artifact assembly uses up to five distinct findings that each retain a finding
+ID, text, and source evidence. This first-run fallback does not invent
+editorial claims or duplicate a weak candidate; it provides the final-insight
+family with addressable grounded inputs before any regeneration is considered.
+
+Insight padding never turns one grounded candidate into several apparently
+independent claims. It retains each normalized text-and-evidence pair once and
+uses empty slots for the rest; the existing family policy then records an
+insufficient distinct-evidence outcome for bounded recovery or explicit
+abstention rather than sending fabricated duplicates to validation.
+
+The publish-readiness identifier gate targets identifier-shaped internal tokens
+and private locations, not ordinary editorial language such as
+“evidence-backed” or “evidence-linked.” This preserves the public safety check
+without rejecting grounded prose solely for describing its evidence quality.
 
 The summary's public card TLDR sentence contract is also checked inside that
 same structured-output recovery path, rather than only after all artifact calls

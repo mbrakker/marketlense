@@ -115,6 +115,35 @@ def test_publish_readiness_rejects_public_identifier_and_private_source_leaks() 
     assert "publish_readiness.public_identifier_leak" in failed
 
 
+def test_publish_readiness_allows_public_evidence_quality_language() -> None:
+    artifacts, evidence_packs, html, provenance = _ready_inputs()
+    html = html.replace(
+        "<p>Revenue grew in the measured market.</p>",
+        (
+            "<p>Evidence-linked analysis supports evidence-backed and "
+            "evidence-aligned planning.</p>"
+        ),
+    )
+
+    artifact = evaluate_publish_readiness(
+        report_id="report-1",
+        artifacts=artifacts,
+        evidence_packs=evidence_packs,
+        validation_report=ValidationReport(schema_version="1.1", status="pass"),
+        final_html=html,
+        final_html_path="",
+        category_ids=["markets"],
+        provenance=provenance,
+    )
+
+    identifier_rule = next(
+        item
+        for item in artifact.rule_results
+        if item.rule_id == "publish_readiness.public_identifier_leak"
+    )
+    assert identifier_rule.status == "pass"
+
+
 def test_publish_readiness_requires_an_accepted_crop_for_each_rendered_chart_card() -> (
     None
 ):
