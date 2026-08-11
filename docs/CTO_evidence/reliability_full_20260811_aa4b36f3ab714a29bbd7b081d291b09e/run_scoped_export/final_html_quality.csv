@@ -1,0 +1,21 @@
+stage,outcome,failure_code
+final_html_validation,blocked,card_title_overflow: Complete report title does not fit the approved card title scale
+final_html_validation,blocked,taxonomy did not produce a substantive schema-valid JSON artifact
+final_html_validation,blocked,cover_asset_set_incomplete: Complete cover title text does not fit the medium zone
+final_html_validation,blocked,insights_candidates did not produce a substantive schema-valid JSON artifact
+final_html_validation,blocked,taxonomy did not produce a substantive schema-valid JSON artifact
+final_html_validation,blocked,Artifact evidence references contain unknown identifiers
+final_html_validation,blocked,card_title_overflow: Complete report title does not fit the approved card title scale
+final_html_validation,blocked,card_key_insights_invalid: Exactly two complete card insights are required
+final_html_validation,blocked,card_title_overflow: Complete report title does not fit the approved card title scale
+final_html_validation,blocked,cover_asset_set_incomplete: Complete cover title text does not fit the medium zone
+final_html_validation,blocked,insights_candidates did not produce a substantive schema-valid JSON artifact
+final_html_validation,succeeded,
+final_html_validation,succeeded,
+final_html_validation,succeeded,
+final_html_validation,succeeded,
+final_html_validation,succeeded,
+final_html_validation,succeeded,
+final_html_validation,succeeded,
+final_html_validation,succeeded,
+final_html_validation,succeeded,

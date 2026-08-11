@@ -1,0 +1,13 @@
+stage,outcome,failure_code
+wordpress_write,blocked,card_title_overflow: Complete report title does not fit the approved card title scale
+wordpress_write,blocked,card_key_insights_invalid: Exactly two complete card insights are required
+wordpress_write,blocked,taxonomy did not produce a substantive schema-valid JSON artifact
+wordpress_write,blocked,cover_asset_set_incomplete: Complete cover title text does not fit the medium zone
+wordpress_write,blocked,insights_candidates did not produce a substantive schema-valid JSON artifact
+wordpress_write,blocked,taxonomy did not produce a substantive schema-valid JSON artifact
+wordpress_write,blocked,Artifact evidence references contain unknown identifiers
+wordpress_write,blocked,card_title_overflow: Complete report title does not fit the approved card title scale
+wordpress_write,blocked,card_key_insights_invalid: Exactly two complete card insights are required
+wordpress_write,blocked,card_title_overflow: Complete report title does not fit the approved card title scale
+wordpress_write,blocked,cover_asset_set_incomplete: Complete cover title text does not fit the medium zone
+wordpress_write,blocked,insights_candidates did not produce a substantive schema-valid JSON artifact

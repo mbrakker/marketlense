@@ -1,0 +1,35 @@
+{
+  "terminal_failures": [
+    {
+      "failure_code": "card_key_insights_invalid: Exactly two complete card insights are required",
+      "report_id": "115sTWnEaPvpOo9krsnZqQ6ev5dav-L31",
+      "terminal_outcome": "permanent_failure",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "card_title_overflow: Complete report title does not fit the approved card title scale",
+      "report_id": "1SxN2Ncv98aXiv7CkTUZ5SHN0XdO3w9i1",
+      "terminal_outcome": "permanent_failure",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "insights_candidates did not produce a substantive schema-valid JSON artifact",
+      "report_id": "1Y6gEFvvBcsabWsOX-t0LDxtlDo87Ue3h",
+      "terminal_outcome": "permanent_failure",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "cover_asset_set_incomplete: Complete cover title text does not fit the medium zone",
+      "report_id": "1_xSIv8iu5YfGbSrY9nq2MjWCnpBgRaaU",
+      "terminal_outcome": "permanent_failure",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "card_title_overflow: Complete report title does not fit the approved card title scale",
+      "report_id": "1yBe1G4jo1B9xpKvC-zent6bWiC-jywjU",
+      "terminal_outcome": "permanent_failure",
+      "terminal_stage": "ingestion"
+    }
+  ],
+  "validation_run_id": "validation:35531bbe386ed80fe47a18c0c19e21c8c20d86044ad71aef0ce2c9e7b56ccb2a"
+}

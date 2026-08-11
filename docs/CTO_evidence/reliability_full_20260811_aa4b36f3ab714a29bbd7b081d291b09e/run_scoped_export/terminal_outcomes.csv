@@ -1,0 +1,21 @@
+report_id,terminal_outcome,terminal_stage,failure_code
+115sTWnEaPvpOo9krsnZqQ6ev5dav-L31,permanent_failure,ingestion,card_key_insights_invalid: Exactly two complete card insights are required
+12UH8cwAPjL7s5ZD7XjloUyy5BC-2LtRV,publish_ready,ingestion,
+18XjxJsiekZkIwm9r7me9iQLnS72MKQHn,publish_ready,ingestion,
+1961uXvA8mramzTWf3UHbz4C5y--IBiAW,publish_ready,ingestion,
+1AEUmS5YH9vDUdbL_DeJqxa-eCkEOctAm,publish_ready,ingestion,
+1AcXQD-nc-9TwIlLGEh6s-Hi2oGAoEb8E,publish_ready,ingestion,
+1CPI7Ay6ig85U5a5s5x72DVvdHb2U8vPH,publish_ready,ingestion,
+1E0Laq6I9uDo3IY_DygZo_GaJH-MGMYMI,publish_ready,ingestion,
+1LORffipx4RaXwnqRbEA89zLpKXGxpDtu,publish_ready,ingestion,
+1M5VaPBPbtHQ3ml8p0VrAvv66EvhepMoh,publish_ready,ingestion,
+1OsXbyNCsNLEjQY9W2Q7G6Js4A2dUm2yS,publish_ready,ingestion,
+1QZRr-J1F8TF5lYTLGgGMmHZRhw7S1uvR,publish_ready,ingestion,
+1SxN2Ncv98aXiv7CkTUZ5SHN0XdO3w9i1,permanent_failure,ingestion,card_title_overflow: Complete report title does not fit the approved card title scale
+1Y6gEFvvBcsabWsOX-t0LDxtlDo87Ue3h,permanent_failure,ingestion,insights_candidates did not produce a substantive schema-valid JSON artifact
+1Z_aly8CHsNVujQatuhea4ExEipxentSu,publish_ready,ingestion,
+1_xSIv8iu5YfGbSrY9nq2MjWCnpBgRaaU,permanent_failure,ingestion,cover_asset_set_incomplete: Complete cover title text does not fit the medium zone
+1bJnQ7jlL722xNU66HHG1T-hM0yFjpa8Z,publish_ready,ingestion,
+1hD8l1d4iLwzNZ5cBvi1U79rZMBzhnDKK,publish_ready,ingestion,
+1iBXRY67jiTsq617mQH0gSmG7ooOwI0w1,publish_ready,ingestion,
+1yBe1G4jo1B9xpKvC-zent6bWiC-jywjU,permanent_failure,ingestion,card_title_overflow: Complete report title does not fit the approved card title scale

@@ -1,0 +1,167 @@
+{
+  "stage_records": [
+    {
+      "failure_code": "taxonomy did not produce a substantive schema-valid JSON artifact",
+      "outcome": "blocked",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "insights_candidates did not produce a substantive schema-valid JSON artifact",
+      "outcome": "blocked",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "taxonomy did not produce a substantive schema-valid JSON artifact",
+      "outcome": "blocked",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "Artifact evidence references contain unknown identifiers",
+      "outcome": "blocked",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "card_title_overflow: Complete report title does not fit the approved card title scale",
+      "outcome": "blocked",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "card_key_insights_invalid: Exactly two complete card insights are required",
+      "outcome": "blocked",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "cover_asset_set_incomplete: Complete cover title text does not fit the medium zone",
+      "outcome": "blocked",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "insights_candidates did not produce a substantive schema-valid JSON artifact",
+      "outcome": "blocked",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "validation_failed",
+      "outcome": "failed",
+      "repair_disposition": "targeted_repair",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "validation_failed",
+      "outcome": "failed",
+      "repair_disposition": "targeted_repair",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "validation_failed",
+      "outcome": "failed",
+      "repair_disposition": "targeted_repair",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "skipped",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "skipped",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "skipped",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "skipped",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "skipped",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "skipped",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "skipped",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "skipped",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "succeeded",
+      "repair_disposition": "targeted_repair",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "succeeded",
+      "repair_disposition": "targeted_repair",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "succeeded",
+      "repair_disposition": "targeted_repair",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "succeeded",
+      "repair_disposition": "targeted_repair",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "succeeded",
+      "repair_disposition": "targeted_repair",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "succeeded",
+      "repair_disposition": "targeted_repair",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "succeeded",
+      "repair_disposition": "targeted_repair",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "succeeded",
+      "repair_disposition": "targeted_repair",
+      "stage": "regeneration"
+    }
+  ],
+  "validation_run_id": "validation:35531bbe386ed80fe47a18c0c19e21c8c20d86044ad71aef0ce2c9e7b56ccb2a"
+}
