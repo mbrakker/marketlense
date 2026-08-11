@@ -215,6 +215,7 @@ def test_frozen_cohort_persists_and_replays_the_same_drive_members(
             "mime_type": None,
             "report_id": "file-a",
             "source_identity_id": "md5-a",
+            "publisher_id": "unattributed",
             "selection_reason": "deterministic_admission_preflight",
         },
         {
@@ -226,6 +227,7 @@ def test_frozen_cohort_persists_and_replays_the_same_drive_members(
             "mime_type": None,
             "report_id": "file-b",
             "source_identity_id": "md5-b",
+            "publisher_id": "unattributed",
             "selection_reason": "deterministic_admission_preflight",
         },
     ]
@@ -452,6 +454,67 @@ def test_fixed_cohort_fills_only_pre_manifest_admission_slots(
         "corrupt_source",
         "admitted",
     ]
+
+
+def test_frozen_cohort_preserves_admitted_publisher_in_manifest_and_stage_records(
+    ingest_settings,
+    run_context,
+) -> None:
+    file = DriveFile(
+        "1.0", "publisher-owned", "Publisher-owned.pdf", None, "md5-owned"
+    )
+    stored: dict[str, bytes] = {}
+
+    deps = _batch_dependencies(
+        list_pdfs=lambda _request, _ctx: [file],
+        process_file=lambda current, index, _settings, _ctx, _force: (
+            orch._FileProcessResult(
+                index=index,
+                outcome=IngestOutcome(
+                    schema_version="1.0",
+                    file_id=current.file_id,
+                    name=current.name or current.file_id,
+                    md5=current.md5_checksum,
+                    html_path=f"out/{current.file_id}.html",
+                    status="processed",
+                ),
+                processed=1,
+                had_error=False,
+            )
+        ),
+        file_exists=lambda request, _ctx: SimpleNamespace(
+            exists=request.path in stored
+        ),
+        write_bytes=lambda request, _ctx: (
+            stored.__setitem__(request.path, request.content)
+            or SimpleNamespace(bytes_written=len(request.content))
+        ),
+        get_source_quarantine=lambda _request, _ctx: SimpleNamespace(record=None),
+        check_pdf_integrity=lambda _request, _ctx: SimpleNamespace(
+            failure_code="", page_count=8, md5="md5-owned"
+        ),
+        extract_pdf_text=lambda _request, _ctx: SimpleNamespace(
+            char_count=2_000, pages_extracted=3, text_density=666.0
+        ),
+    )
+
+    orch.run_ingest(
+        ingest_settings,
+        cohort_size=1,
+        cohort_manifest="cohorts/publisher-owned.json",
+        dependencies=deps,
+        ctx=run_context,
+    )
+
+    manifest = json.loads(stored["cohorts/publisher-owned.json"])
+    assert manifest["members"][0]["publisher_id"] == "publisher:fixture"
+    with sqlite3.connect(ingest_settings.reports_db) as connection:
+        publisher_ids = connection.execute(
+            "SELECT DISTINCT publisher_id FROM validation_run_cohort_members "
+            "WHERE validation_run_id=?",
+            (manifest["validation_run_id"],),
+        ).fetchall()
+    assert publisher_ids == [("publisher:fixture",)]
 
 
 def test_admission_preflight_rejects_duplicate_source_identity_before_freeze(

@@ -195,13 +195,17 @@ duplicate signal; it is resolved later when presentation needs it, never
 treated as required source identity.
 
 New cohort manifests use schema `1.1`. Each member records its immutable
-`report_id` (the Drive file ID), `source_identity_id`, and selection reason;
-the manifest records the configuration hash, policy hash, cohort ID, and
-derived validation-run ID. Loading recomputes the cohort and validation
+`report_id` (the Drive file ID), admitted `publisher_id`, `source_identity_id`,
+and selection reason. The manifest records the configuration hash, policy hash,
+cohort ID, and derived validation-run ID. Loading recomputes the cohort and validation
 identities from those records, so an edited member list fails closed rather
 than silently changing an existing cohort. Schema `1.0` manifests remain
 readable for replay compatibility; a new membership must be frozen into a new
 schema-`1.1` manifest and cohort identity.
+
+The publisher accepted by admission is retained unchanged in every frozen-cohort
+stage record and in the immutable member ledger; later processing must not
+replace it with an `unattributed` fallback.
 
 Publish a fixed cohort with the same `--cohort-manifest <path>` passed to
 `publish-wp`. A frozen cohort automatically creates and retains a validation
