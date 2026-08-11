@@ -80,4 +80,17 @@ least 3% and by more than twice the greater coefficient of variation. The
 renderer is deterministic and local, so a live-provider canary remains
 required before changing production model-concurrency settings.
 
+## PDF candidate worker matrix
+
+`scripts/quality/benchmark_pdf_candidate_parallelism.py` measures the real PDF
+visual-candidate extractor on the committed three-PDF golden corpus. It
+compares every supported worker count from one through eight against the
+five-worker report-pipeline baseline, with two warmups and seven retained
+samples per profile. A profile is eligible only when every source PDF retains
+its exact hash, candidate count, candidate signature, and degraded-page count.
+The selector requires a median improvement of at least 3% and more than twice
+the greater coefficient of variation; otherwise it retains the five-worker
+baseline. This corpus measures visual-candidate extraction only, so other PDF
+stages require their own worker matrices.
+
 See [non-regression policy](non-regression-policy.md) and [release gates](release-gates.md).
