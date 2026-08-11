@@ -1,0 +1,11 @@
+{
+  "command": "python scripts/quality/benchmark_artifact_parallelism.py --output-json out/artifact_worker_matrix.json --warmups 2 --runs 7 --model-latency-ms 30",
+  "cv": 0.03124,
+  "max_ms": 340,
+  "mean_ms": 316.143,
+  "median_ms": 312,
+  "min_ms": 311,
+  "p95_ms": 340,
+  "runs": 7,
+  "warmups": 2
+}

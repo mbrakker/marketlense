@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "verdict": "INCONCLUSIVE",
+  "reason": "The observed difference does not exceed the noise threshold.",
+  "correctness": "passed",
+  "before_median_ms": 32.0,
+  "after_median_ms": 32.0,
+  "change_ms": 0.0,
+  "improvement_pct": 0.0,
+  "speedup_ratio": 1.0,
+  "noise_threshold_pct": 4.68,
+  "max_cv": 0.02341,
+  "before": {
+    "command": "python scripts/quality/benchmark_ingest_parallelism.py --output-json out/ingest_worker_matrix_scheduler.json --warmups 2 --runs 7 --work-unit-ms 30",
+    "cv": 0.02341,
+    "max_ms": 33,
+    "mean_ms": 32.286,
+    "median_ms": 32,
+    "min_ms": 31,
+    "p95_ms": 33.0,
+    "runs": 7,
+    "warmups": 2
+  },
+  "after": {
+    "command": "python scripts/quality/benchmark_ingest_parallelism.py --output-json out/ingest_worker_matrix_scheduler.json --warmups 2 --runs 7 --work-unit-ms 30",
+    "cv": 0.01648,
+    "max_ms": 33,
+    "mean_ms": 32.429,
+    "median_ms": 32,
+    "min_ms": 32,
+    "p95_ms": 33.0,
+    "runs": 7,
+    "warmups": 2
+  }
+}

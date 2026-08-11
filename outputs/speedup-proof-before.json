@@ -1,0 +1,11 @@
+{
+  "command": "python scripts/quality/benchmark_ingest_parallelism.py --output-json out/ingest_worker_matrix_scheduler.json --warmups 2 --runs 7 --work-unit-ms 30",
+  "cv": 0.02341,
+  "max_ms": 33,
+  "mean_ms": 32.286,
+  "median_ms": 32,
+  "min_ms": 31,
+  "p95_ms": 33.0,
+  "runs": 7,
+  "warmups": 2
+}

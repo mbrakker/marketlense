@@ -1,0 +1,11 @@
+{
+  "command": "python scripts/quality/benchmark_evidence_pack_parallelism.py --output-json out/evidence_pack_worker_matrix.json --warmups 2 --runs 7 --model-latency-ms 30",
+  "cv": 0.03672,
+  "max_ms": 453,
+  "mean_ms": 420.286,
+  "median_ms": 415,
+  "min_ms": 407,
+  "p95_ms": 453,
+  "runs": 7,
+  "warmups": 2
+}

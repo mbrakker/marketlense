@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "verdict": "INCONCLUSIVE",
+  "reason": "The observed difference does not exceed the noise threshold.",
+  "correctness": "passed",
+  "before_median_ms": 415.0,
+  "after_median_ms": 405.0,
+  "change_ms": -10.0,
+  "improvement_pct": 2.41,
+  "speedup_ratio": 1.025,
+  "noise_threshold_pct": 7.34,
+  "max_cv": 0.03672,
+  "before": {
+    "command": "python scripts/quality/benchmark_evidence_pack_parallelism.py --output-json out/evidence_pack_worker_matrix.json --warmups 2 --runs 7 --model-latency-ms 30",
+    "cv": 0.03672,
+    "max_ms": 453,
+    "mean_ms": 420.286,
+    "median_ms": 415,
+    "min_ms": 407,
+    "p95_ms": 453,
+    "runs": 7,
+    "warmups": 2
+  },
+  "after": {
+    "command": "python scripts/quality/benchmark_evidence_pack_parallelism.py --output-json out/evidence_pack_worker_matrix.json --warmups 2 --runs 7 --model-latency-ms 30",
+    "cv": 0.00414,
+    "max_ms": 408,
+    "mean_ms": 405.571,
+    "median_ms": 405,
+    "min_ms": 404,
+    "p95_ms": 408,
+    "runs": 7,
+    "warmups": 2
+  }
+}

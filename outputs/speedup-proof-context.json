@@ -1,0 +1,27 @@
+{
+  "title": "Ingest worker matrix",
+  "project": "MarketLense",
+  "generated_at": "2026-08-11",
+  "target": "Bounded ingest batch scheduler for one, five, and ten reports",
+  "contract": "Processed outcome ordering and digest, quality status, and zero provider cost remain identical.",
+  "summary": "Added an isolated matrix benchmark; no production worker setting changed because no alternative profile proved faster.",
+  "why_equivalent": "Every profile invokes the same ingest batch scheduler and deterministic bounded work; only outer and inner worker limits vary.",
+  "complexity_before": "Bounded worker scheduling",
+  "complexity_after": "Bounded worker scheduling",
+  "files": [
+    {"path": "C:/Programing/Market lense/scripts/quality/benchmark_ingest_parallelism.py", "line": 64, "summary": "Deterministic ingest worker matrix."},
+    {"path": "C:/Programing/Market lense/tests/test_ingest_parallelism_benchmark.py", "line": 14, "summary": "Selection and runner regression tests."},
+    {"path": "C:/Programing/Market lense/docs/quality/benchmarks.md", "line": 41, "summary": "Benchmark procedure."}
+  ],
+  "checks": [
+    {"name": "Benchmark tests", "status": "passed", "detail": "3 passed"},
+    {"name": "Matrix outcomes", "status": "passed", "detail": "All 18 profiles retained processed outcome digests and zero cost."}
+  ],
+  "workload": "One, five, and ten reports; four bounded local resource units per report; resource limit four; two warmups and seven measured runs.",
+  "reproduce": [
+    "python scripts/quality/benchmark_ingest_parallelism.py --output-json out/ingest_worker_matrix_scheduler.json --warmups 2 --runs 7 --work-unit-ms 30"
+  ],
+  "limitations": ["The deterministic local workload proves scheduler behavior, not live provider or browser saturation."],
+  "residual_risks": ["A live canary is needed before changing global resource caps or browser concurrency."],
+  "notes": ["For five and ten reports, the current 5x5 profile had the lowest observed median; no production configuration change is justified."]
+}

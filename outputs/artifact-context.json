@@ -1,0 +1,28 @@
+{
+  "title": "Artifact concurrency matrix",
+  "project": "MarketLense",
+  "generated_at": "2026-08-11",
+  "target": "Artifact step-batch executor for one, five, and ten reports",
+  "contract": "Task-output digest, step coverage, renderer-call count, shared-cap enforcement, and estimated cost remain unchanged.",
+  "summary": "Added a deterministic scheduler matrix; no production worker configuration changed because no alternative proved faster across the supported batch sizes.",
+  "why_equivalent": "Every profile invokes the real artifact step-batch executor for the same stage-one and distribution tasks; only worker and shared-slot limits vary.",
+  "complexity_before": "Bounded artifact task scheduling",
+  "complexity_after": "Bounded artifact task scheduling",
+  "files": [
+    {"path": "C:/Programing/Market lense/scripts/quality/benchmark_artifact_parallelism.py", "line": 95, "summary": "Artifact worker and rate-cap matrix."},
+    {"path": "C:/Programing/Market lense/tests/test_artifact_parallelism_benchmark.py", "line": 12, "summary": "Selection and rate-cap regression tests."},
+    {"path": "C:/Programing/Market lense/docs/quality/benchmarks.md", "line": 68, "summary": "Artifact benchmark method."}
+  ],
+  "checks": [
+    {"name": "Artifact benchmark tests", "status": "passed", "detail": "2 passed"},
+    {"name": "Full matrix outcomes", "status": "passed", "detail": "All 75 profile/batch results retained matching task digests, quality, rate caps, and zero estimated cost."},
+    {"name": "Broader artifact suite", "status": "unknown", "detail": "35 passed and 1 failed in pre-existing unrelated dirty artifact-generation behavior."}
+  ],
+  "workload": "Three stage-one and two distribution tasks per report; one, five, and ten reports; every 1-5 worker and 1-5 shared-slot pair; two warmups and seven measured runs; deterministic 30 ms renderer latency.",
+  "reproduce": [
+    "python scripts/quality/benchmark_artifact_parallelism.py --output-json out/artifact_worker_matrix.json --warmups 2 --runs 7 --model-latency-ms 30"
+  ],
+  "limitations": ["The deterministic renderer proves scheduler and shared-slot behavior, not provider latency or artifact semantic generation."],
+  "residual_risks": ["A controlled live-provider canary is required before changing production model-concurrency limits.", "The broader artifact suite currently has one unrelated failing test in a dirty production path."],
+  "notes": ["The fastest raw ten-report profile was 1x5, but its 0.96% median gain did not clear the 6.25% noise threshold and it is not suitable for single-report workload; the current 5x5 setting remains unchanged."]
+}

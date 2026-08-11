@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "verdict": "INCONCLUSIVE",
+  "reason": "The observed difference does not exceed the noise threshold.",
+  "correctness": "passed",
+  "before_median_ms": 20166.0,
+  "after_median_ms": 19650.0,
+  "change_ms": -516.0,
+  "improvement_pct": 2.56,
+  "speedup_ratio": 1.026,
+  "noise_threshold_pct": 12.02,
+  "max_cv": 0.0601,
+  "before": {
+    "command": "python scripts/quality/benchmark_pdf_candidate_parallelism.py --output-root out/pdf_candidate_worker_matrix --output-json out/pdf_candidate_worker_matrix.json --warmups 2 --runs 7",
+    "cv": 0.03431,
+    "max_ms": 21963,
+    "mean_ms": 20200.867,
+    "median_ms": 20166,
+    "min_ms": 19228,
+    "p95_ms": 21963,
+    "runs": 15,
+    "warmups": 4
+  },
+  "after": {
+    "command": "python scripts/quality/benchmark_pdf_candidate_parallelism.py --output-root out/pdf_candidate_worker_matrix --output-json out/pdf_candidate_worker_matrix.json --warmups 2 --runs 7",
+    "cv": 0.0601,
+    "max_ms": 20715,
+    "mean_ms": 19240.4,
+    "median_ms": 19650,
+    "min_ms": 17628,
+    "p95_ms": 20715,
+    "runs": 15,
+    "warmups": 4
+  }
+}

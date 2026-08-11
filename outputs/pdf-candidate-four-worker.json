@@ -1,0 +1,11 @@
+{
+  "command": "python scripts/quality/benchmark_pdf_candidate_parallelism.py --output-root out/pdf_candidate_worker_matrix --output-json out/pdf_candidate_worker_matrix.json --warmups 2 --runs 7",
+  "cv": 0.0601,
+  "max_ms": 20715,
+  "mean_ms": 19240.4,
+  "median_ms": 19650,
+  "min_ms": 17628,
+  "p95_ms": 20715,
+  "runs": 15,
+  "warmups": 4
+}
