@@ -5,6 +5,34 @@ from ._shared import *  # noqa: F401,F403
 
 
 class TestConfigService01DefaultsUseVectorMode(_TestConfigServiceBase):
+    def test_bundled_rate_card_contains_current_gpt_5_6_family_rates(self) -> None:
+        rate_card = yaml.safe_load(
+            Path("src/config/llm-costs.yaml").read_text(encoding="utf-8")
+        )["pricing"]
+
+        expected_rates = {
+            "gpt-5.6": (0.005, 0.0005, 0.03),
+            "gpt-5.6-sol": (0.005, 0.0005, 0.03),
+            "gpt-5.6-terra": (0.002, 0.0002, 0.012),
+            "gpt-5.6-luna": (0.0002, 0.00002, 0.0012),
+        }
+
+        for model, rates in expected_rates.items():
+            input_rate, cached_input_rate, output_rate = rates
+            with self.subTest(model=model):
+                self.assertEqual(
+                    input_rate,
+                    rate_card[model]["input_tokens_per_1k_usd"],
+                )
+                self.assertEqual(
+                    cached_input_rate,
+                    rate_card[model]["cached_input_tokens_per_1k_usd"],
+                )
+                self.assertEqual(
+                    output_rate,
+                    rate_card[model]["output_tokens_per_1k_usd"],
+                )
+
     def test_startup_rejects_an_incomplete_production_policy_matrix(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             cfg_path = self._write_config(tmp_dir, include_analysis=False)

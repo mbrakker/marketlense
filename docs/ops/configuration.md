@@ -103,6 +103,12 @@ selected pricing version and explicit report, workflow, prompt, publisher, and
 artifact-family context when the caller has it. Historical events remain in an
 `unknown` attribution bucket.
 
+The bundled rate card includes the current OpenAI standard-processing GPT-5.6
+family: `gpt-5.6` (the Sol alias), `gpt-5.6-sol`, `gpt-5.6-terra`, and
+`gpt-5.6-luna`. Terra and Luna use the lower rates effective July 30, 2026;
+each record is versioned separately so historical usage retains the rate in
+effect when it was recorded.
+
 `enabled_effect_kinds` is an independent additive feature gate for each effect category. Removing a kind rolls back its pre-effect enforcement while retaining all earlier reservations, decisions, and actual-use records. Reservations expire after `reservation_ttl_seconds` (one hour maximum); completed effects finalize observed non-monetary use and release unused capacity. Provider monetary actuals remain in the existing LLM usage events and only reconcile their reservation.
 
 `ingest.run_budget` sets retry and elapsed-runtime safeguards; it does not cap the number of PDFs. `browser_download.run_budget` and `publish.run_budget` remain the scoped acquisition and publication controls; all use the same `cost.usage_db_path` authority. Vector-store requests, including readiness-status polling and metadata updates, inherit the active report runtime's `RunBudget`, so their forecasts and actual usage are written to that same isolated ledger rather than a process-default ledger. `browser_download.route_suppression` is independently reversible: it requires a minimum of three compatible typed terminal failures, records a policy-compatibility hash and TTL, and can always be bypassed with the explicit acquisition revalidation option. It never permanently blacklists a publisher.

@@ -42,6 +42,42 @@ pricing:
     cached_input_tokens_per_1k_usd: 0.000005
     output_tokens_per_1k_usd: 0.0004
     tool_call_usd: 0.0025
+  gpt-5.6:
+    provider: "openai"
+    pricing_version: "openai-2026-08-11.v1"
+    effective_date: "2026-08-11"
+    source_note: "OpenAI API pricing page, standard processing under 270K context; USD per 1K tokens. Alias for gpt-5.6-sol."
+    input_tokens_per_1k_usd: 0.005
+    cached_input_tokens_per_1k_usd: 0.0005
+    output_tokens_per_1k_usd: 0.03
+    tool_call_usd: 0.0025
+  gpt-5.6-sol:
+    provider: "openai"
+    pricing_version: "openai-2026-08-11.v1"
+    effective_date: "2026-08-11"
+    source_note: "OpenAI API pricing page, standard processing under 270K context; USD per 1K tokens."
+    input_tokens_per_1k_usd: 0.005
+    cached_input_tokens_per_1k_usd: 0.0005
+    output_tokens_per_1k_usd: 0.03
+    tool_call_usd: 0.0025
+  gpt-5.6-terra:
+    provider: "openai"
+    pricing_version: "openai-2026-07-30.v1"
+    effective_date: "2026-07-30"
+    source_note: "OpenAI July 30, 2026 GPT-5.6 price update; USD per 1K tokens."
+    input_tokens_per_1k_usd: 0.002
+    cached_input_tokens_per_1k_usd: 0.0002
+    output_tokens_per_1k_usd: 0.012
+    tool_call_usd: 0.0025
+  gpt-5.6-luna:
+    provider: "openai"
+    pricing_version: "openai-2026-07-30.v1"
+    effective_date: "2026-07-30"
+    source_note: "OpenAI July 30, 2026 GPT-5.6 price update; USD per 1K tokens."
+    input_tokens_per_1k_usd: 0.0002
+    cached_input_tokens_per_1k_usd: 0.00002
+    output_tokens_per_1k_usd: 0.0012
+    tool_call_usd: 0.0025
   o3:
     provider: "openai"
     pricing_version: "openai-2026-07-18.v1"
