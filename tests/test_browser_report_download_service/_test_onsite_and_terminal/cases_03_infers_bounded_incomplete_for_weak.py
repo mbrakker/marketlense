@@ -3,6 +3,46 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
+def test_default_onsite_runtime_has_terminal_quorum_without_polling(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+    caplog,
+) -> None:
+    caplog.set_level(logging.INFO)
+    runtime = _runtime(
+        tmp_path,
+        route_kind="onsite_report",
+        route_summary="Open the report page and capture the article.",
+        create_pdf=False,
+        email_submission_completed=None,
+    )
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/research/report-2026",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_onsite_report",
+        ),
+        run_context,
+    )
+
+    assessments = [
+        json.loads(record.message)
+        for record in caplog.records
+        if '"event": "browser_report_download_terminal_state_assessed"'
+        in record.message
+    ]
+    assert assessments[-1]["fields"]["attempts"] == 0
+
+
 def test_download_report_with_browser_use_infers_bounded_incomplete_for_weak_onsite_capture(
     tmp_path: Path,
     run_context,
@@ -652,6 +692,7 @@ def test_download_report_with_browser_use_marks_paginated_onsite_capture_partial
     assert response.route_status == "inferred"
 
 __all__ = [
+    "test_default_onsite_runtime_has_terminal_quorum_without_polling",
     "test_download_report_with_browser_use_infers_bounded_incomplete_for_weak_onsite_capture",
     "test_download_report_with_browser_use_auto_captures_onsite_html_when_agent_omits_capture_path",
     "test_download_report_with_browser_use_prints_printable_onsite_report_to_pdf",

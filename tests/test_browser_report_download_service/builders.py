@@ -223,6 +223,13 @@ def _runtime(
             self.browser.html = (
                 "<html><body><h1>Example report terminal</h1></body></html>"
             )
+            if route_kind == "onsite_report":
+                self.browser.network_events = [
+                    {
+                        "url": self.browser.url,
+                        "initiator_type": "navigation",
+                    }
+                ]
             download_dir = Path(self.browser.downloads_path)
             download_dir.mkdir(parents=True, exist_ok=True)
             if create_pdf:

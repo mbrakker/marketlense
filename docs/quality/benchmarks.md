@@ -32,4 +32,11 @@ suite and every measured gate passed. Its estimated provider cost is zero
 because CI makes no live provider call; that is not evidence of live-pipeline
 cost.
 
+The shared browser-download test runtime represents a completed onsite report
+with both report text and a navigation network event. This lets ordinary tests
+meet the production terminal-evidence quorum immediately. Tests that need to
+exercise bounded polling must provide deliberately incomplete or transient
+terminal evidence. The browser suite has a regression test that asserts the
+normal fixture takes zero stabilization polls.
+
 See [non-regression policy](non-regression-policy.md) and [release gates](release-gates.md).
