@@ -138,11 +138,17 @@ def _complete_sentences(text: str) -> list[str]:
 def _build_core_signal(
     *, tldr_text: str, executive_summary: str, insights: list[dict[str, str]]
 ) -> dict[str, str]:
-    source_texts = [
+    insight_texts = [
         _s(insight.get("text"))
         for insight in insights
         if isinstance(insight, dict) and _s(insight.get("text"))
-    ] + [_s(tldr_text), _s(executive_summary)]
+    ]
+    strategic_texts = [
+        _s(insight.get("so_what"))
+        for insight in insights
+        if isinstance(insight, dict) and _s(insight.get("so_what"))
+    ]
+    source_texts = insight_texts + [_s(tldr_text), _s(executive_summary)]
     candidates = [
         sentence.strip()
         for source_text in source_texts
@@ -154,10 +160,8 @@ def _build_core_signal(
         key=lambda item: (-_core_signal_score(item[1]), item[0]),
     )
     heading = _pick_first_text(
-        *(
-            _sentence_excerpt(candidate, max_chars=58)
-            for _, candidate in ranked_candidates
-        ),
+        *(_core_signal_heading(candidate) for candidate in strategic_texts),
+        *(_core_signal_heading(candidate) for candidate in source_texts),
     )
     body = _pick_first_text(
         *(
@@ -169,6 +173,33 @@ def _build_core_signal(
         "heading": heading or "Source-backed market signal",
         "body": body or "Source-supported signal unavailable for this report.",
     }
+
+
+def _core_signal_heading(text: str) -> str:
+    """Keep a complete strategic clause when a full source sentence is too long."""
+    sentence = _sentence_excerpt(text, max_chars=80)
+    if sentence:
+        return sentence
+    for raw_sentence in _complete_sentences(_s(text)):
+        strategic_tail = re.search(
+            r"(?:,|—)\s+(?:enabling|supporting|reducing|driving)\s+(.+?)[.?!]?$",
+            raw_sentence,
+            flags=re.IGNORECASE,
+        )
+        if strategic_tail:
+            candidate = strategic_tail.group(1).strip().rstrip(".?! ") + "."
+            if len(candidate) <= 80 and len(candidate.split()) >= 4:
+                return candidate[0].upper() + candidate[1:]
+        clause = re.split(
+            r"\s+(?:and|but|while)\s+|;|:|,\s+|\s+to\s+(?=(?:"
+            r"contextualize|enable|support|reduce|improve|accelerate|inform|guide)\b)",
+            raw_sentence,
+            maxsplit=1,
+        )[0]
+        candidate = clause.rstrip(".?! ") + "."
+        if len(candidate) <= 80 and len(candidate.split()) >= 5:
+            return candidate
+    return ""
 
 
 _CORE_SIGNAL_ANNOTATION = re.compile(

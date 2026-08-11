@@ -37,6 +37,7 @@ from src.generators.report_generation_shared import (
 )
 from src.generators.report_render_generator import (
     _public_source_note,
+    _resolved_report_title,
     render_preview_asset,
     render_report_output,
 )
@@ -313,6 +314,52 @@ def test_public_source_note_keeps_title_when_publisher_is_absent(tmp_path) -> No
     assert _public_source_note(runtime) == "Source: Publisher Evidence Report"
 
 
+def test_public_source_note_decodes_a_url_encoded_canonical_title(tmp_path) -> None:
+    runtime = replace(
+        _runtime(tmp_path, md5="md5"),
+        source_identity=SimpleNamespace(
+            canonical_title="GWI%20Brand%20tracking%20guide",
+            publisher_name="GWI",
+        ),
+    )
+
+    assert _public_source_note(runtime) == "Source: GWI — GWI Brand tracking guide"
+
+
+def test_resolved_report_title_replaces_a_runtime_slug_with_document_map_title(
+    tmp_path,
+) -> None:
+    runtime = replace(
+        _runtime(tmp_path, md5="md5"),
+        file=DriveFile(
+            schema_version="1.0",
+            file_id="file-1",
+            name="gwi-20brand-20tracking-20guide-pdf",
+            modified_time="2026-06-10T08:30:00Z",
+            md5_checksum="md5",
+        ),
+        file_name="gwi-20brand-20tracking-20guide-pdf",
+        report_name="gwi-20brand-20tracking-20guide-pdf",
+        report_title="gwi-20brand-20tracking-20guide-pdf",
+        source_identity=SimpleNamespace(
+            identity_status="resolved",
+            canonical_title="GWI%20Brand%20tracking%20guide",
+            publisher_name="GWI",
+        ),
+    )
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    analysis = replace(
+        _analysis(runtime, source, selection),
+        payload=replace(source.payload, title=runtime.report_title),
+        evidence_packs={"doc_map": {"title": "GWI%20Brand%20tracking%20guide"}},
+    )
+
+    assert _resolved_report_title(runtime, source, analysis) == (
+        "GWI Brand tracking guide"
+    )
+
+
 def test_render_report_output_sources_metadata_from_db_and_returns_complete_outcome(
     tmp_path, assert_no_defaulted_required_fields
 ):
@@ -559,6 +606,7 @@ def test_render_report_output_uses_html_cache_hit_and_skips_render(tmp_path):
         sha256_json(cached_data),
         "preview.png",
         runtime.file_name,
+        render_contract_version="2.0",
     )
 
     def _read_text(req, ctx):
@@ -642,6 +690,7 @@ def test_render_report_output_invalidates_cache_when_css_template_changes(tmp_pa
         sha256_json(cached_data),
         "preview.png",
         runtime.file_name,
+        render_contract_version="2.0",
     )
     render_calls: list[str] = []
 
@@ -695,6 +744,21 @@ def test_render_report_output_invalidates_cache_when_css_template_changes(tmp_pa
     assert outcome.html_path == str(expected_html)
     assert render_calls == ["DB Title"]
     assert expected_html.read_text(encoding="utf-8") == "<html>fresh</html>"
+
+
+def test_html_cache_key_changes_when_render_contract_changes() -> None:
+    shared = (
+        "md5",
+        "template-sha",
+        "data-sha",
+        "preview.png",
+        "report.pdf",
+    )
+
+    assert html_cache_key(*shared, render_contract_version="1.0") != html_cache_key(
+        *shared,
+        render_contract_version="2.0",
+    )
 
 
 def test_render_preview_asset_reuses_contents_preview_when_contents_is_first_page(

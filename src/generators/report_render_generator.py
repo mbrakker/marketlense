@@ -4,7 +4,7 @@ import re
 from copy import deepcopy
 from dataclasses import asdict
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
 from src.contracts.cover_images import CoverImageGenerationRequest, CoverImageReport
 from src.contracts.files import (
@@ -56,6 +56,7 @@ from src.utils.slugify import slugify
 _GENERATED_REPORT_TITLE = re.compile(
     r"^[0-9a-f]{32,64}(?:[-_.](?:pdf|report))?$", re.IGNORECASE
 )
+_HTML_RENDER_CONTRACT_VERSION = "2.0"
 
 
 def _publication_date(runtime: ReportRuntimeState) -> str:
@@ -118,7 +119,7 @@ def _publication_date(runtime: ReportRuntimeState) -> str:
 def _public_source_note(runtime: ReportRuntimeState) -> str:
     """Build concise public attribution without exposing confidence mechanics."""
     identity = runtime.source_identity
-    title = str(getattr(identity, "canonical_title", "") or "").strip()
+    title = unquote(str(getattr(identity, "canonical_title", "") or "")).strip()
     publisher = str(getattr(identity, "publisher_name", "") or "").strip()
     if publisher and title:
         note = f"Source: {publisher} — {title}"
@@ -209,6 +210,11 @@ def _is_runtime_generated_title(runtime: ReportRuntimeState, value: object) -> b
     if not title or not file_id:
         return False
     aliases = {file_id.casefold(), slugify(file_id).casefold()}
+    for runtime_name in (runtime.file_name, runtime.report_name, runtime.report_title):
+        raw_name = str(runtime_name or "").strip().casefold()
+        if raw_name:
+            aliases.add(raw_name.removesuffix(".pdf"))
+            aliases.add(slugify(raw_name).casefold())
     normalized = title.casefold().removesuffix(".pdf")
     return normalized in aliases or any(
         normalized == f"{alias}-pdf" for alias in aliases
@@ -219,8 +225,8 @@ def _resolved_identity_title(runtime: ReportRuntimeState) -> str:
     identity = runtime.source_identity
     if str(getattr(identity, "identity_status", "") or "").casefold() != "resolved":
         return ""
-    title = str(getattr(identity, "canonical_title", "") or "").strip()
-    return "" if _is_generated_report_title(title) else title
+    title = unquote(str(getattr(identity, "canonical_title", "") or "")).strip()
+    return "" if _is_runtime_generated_title(runtime, title) else title
 
 
 def _resolved_identity_publisher(runtime: ReportRuntimeState) -> str:
@@ -241,7 +247,9 @@ def _resolved_render_title(
     identity_title = _resolved_identity_title(runtime)
     if identity_title:
         return identity_title
-    metadata_title = str(source.info_response.metadata.get("Title") or "").strip()
+    metadata_title = unquote(
+        str(source.info_response.metadata.get("Title") or "")
+    ).strip()
     if metadata_title and not _is_runtime_generated_title(runtime, metadata_title):
         return metadata_title
     return title
@@ -252,11 +260,18 @@ def _resolved_report_title(
     source: ReportSourceState,
     analysis: ReportAnalysisState,
 ) -> str:
-    return _resolved_render_title(
+    resolved = _resolved_render_title(
         runtime,
         source,
         analysis.payload.title or runtime.report_title,
     )
+    if resolved and not _is_runtime_generated_title(runtime, resolved):
+        return resolved
+    doc_map = analysis.evidence_packs.get("doc_map") or {}
+    doc_map_title = unquote(str(doc_map.get("title") or "")).strip()
+    if doc_map_title and not _is_runtime_generated_title(runtime, doc_map_title):
+        return doc_map_title
+    return resolved
 
 
 def _build_metadata_upsert_request(
@@ -485,6 +500,7 @@ def render_report_output(
                 "md5": runtime.md5,
                 "template_sha256": template_sha,
                 "data_sha256": data_sha,
+                "render_contract_version": _HTML_RENDER_CONTRACT_VERSION,
                 "preview_png": preview_resp.image_path or "",
                 "doc_name": doc_name,
             }
@@ -494,6 +510,7 @@ def render_report_output(
                 data_sha,
                 preview_resp.image_path or "",
                 doc_name,
+                render_contract_version=_HTML_RENDER_CONTRACT_VERSION,
             )
             html_cache_path = Path(f"{expected_html_path}.cache.json")
             cached = read_cache_json(html_cache_path, runtime.ctx, dependencies)

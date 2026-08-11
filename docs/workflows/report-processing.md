@@ -74,6 +74,15 @@ same blocking public-metadata gate. A missing verified public source URL does
 not block that package; the public attribution states `Source URL: Not
 available`.
 
+Public title selection rejects runtime file-name slugs and decodes URL-encoded
+canonical, PDF-metadata, and document-map titles before they reach the HTML,
+metadata record, or source attribution. The cover's core signal prefers the
+ordered, grounded strategic implication of a final insight, then its ordered
+factual claim. When the retained claim is too long, deterministic clause
+selection keeps a short complete strategic clause (including a supported
+outcome phrase) and never splits numeric thousands separators; generic signal
+copy remains only for an absent usable claim.
+
 Acquisition persists canonical source identity before its terminal telemetry
 for every retained, hashable successful artifact: a downloaded PDF and a
 verified on-site capture follow the same source-record and observation path.

@@ -192,6 +192,8 @@ def html_cache_key(
     data_sha256: str,
     preview_png: str,
     doc_name: str,
+    *,
+    render_contract_version: str = "1.0",
 ) -> str:
     return sha256_json(
         {
@@ -201,6 +203,7 @@ def html_cache_key(
             "data_sha256": data_sha256,
             "preview_png": preview_png,
             "doc_name": doc_name,
+            "render_contract_version": render_contract_version,
         }
     )
 

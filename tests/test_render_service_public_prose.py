@@ -49,6 +49,70 @@ def test_core_signal_prefers_market_evidence_over_report_annotation() -> None:
     assert "documents nine foundational" not in signal["body"]
 
 
+def test_core_signal_derives_a_short_heading_from_a_long_strategic_claim() -> None:
+    signal = _build_core_signal(
+        tldr_text="",
+        executive_summary="",
+        insights=[
+            {
+                "text": (
+                    "Brand tracking pinpoints where audiences drop out of the "
+                    "purchase funnel and reveals emotional gaps that weaken "
+                    "conversion."
+                )
+            }
+        ],
+    )
+
+    assert signal["heading"] == (
+        "Brand tracking pinpoints where audiences drop out of the purchase funnel."
+    )
+    assert signal["heading"] != "Source-backed market signal"
+
+
+def test_core_signal_prefers_a_curated_strategic_implication() -> None:
+    signal = _build_core_signal(
+        tldr_text="",
+        executive_summary="",
+        insights=[
+            {
+                "text": (
+                    "GWI harmonizes bespoke studies against a Core of 960,000+ "
+                    "global datapoints across 50+ markets."
+                ),
+                "so_what": (
+                    "You can benchmark bespoke tracker results against a large "
+                    "harmonized dataset to contextualize brand performance across "
+                    "markets and competitors."
+                ),
+            }
+        ],
+    )
+
+    assert signal["heading"] == (
+        "You can benchmark bespoke tracker results against a large harmonized dataset."
+    )
+    assert signal["heading"] != "Source-backed market signal"
+
+
+def test_core_signal_does_not_break_a_numeric_fact_at_its_thousands_separator() -> None:
+    signal = _build_core_signal(
+        tldr_text="",
+        executive_summary="",
+        insights=[
+            {
+                "text": (
+                    "GWI harmonizes bespoke studies against a Core of 960,000+ "
+                    "global datapoints across 50+ markets, enabling large-scale "
+                    "cross-market and cross-brand benchmarking."
+                )
+            }
+        ],
+    )
+
+    assert signal["heading"] == "Large-scale cross-market and cross-brand benchmarking."
+
+
 def test_core_signal_does_not_split_common_geographic_abbreviations() -> None:
     signal = _build_core_signal(
         tldr_text="",
