@@ -193,6 +193,7 @@ def _record_source_identity_observation(
                 source_record_id=source_record.record_id,
                 canonical_title=canonical_title,
                 title_evidence_locator=title_locator,
+                publisher_name=str(request.publisher_name or "").strip(),
                 canonical_landing_page_url=landing_url,
                 acquired_artifact_url=artifact_url,
                 source_page_url=source_page_url,
@@ -591,12 +592,13 @@ def record_downloaded_source(
     ctx: RunContext,
     dependencies: ReportDownloadDependencies,
 ) -> tuple[str, str]:
-    """Return canonical source identity and verified hash after successful recording."""
-    if result.outcome == "downloaded" and result.downloaded_file_path:
+    """Return canonical source identity and verified hash for a retained artifact."""
+    artifact_path = _verified_acquisition_artifact_path(result)
+    if artifact_path:
         file_hash = dependencies.file_md5(
             FileHashRequest(
                 schema_version="1.0",
-                path=result.downloaded_file_path,
+                path=artifact_path,
             ),
             ctx,
         )
@@ -604,10 +606,17 @@ def record_downloaded_source(
             schema_version="1.0",
             db_path=request.reports_db,
             source_domain=_source_domain_for_url(result.source_url),
-            report_name=_report_name_for_result(result),
+            report_name=_report_name_for_result(
+                result,
+                report_title=request.report_title,
+            ),
             landing_page_url=result.source_url,
             downloaded_at_utc=_utc_now_iso(),
             md5=file_hash.md5,
+            publisher_name=str(request.publisher_name or "").strip(),
+            source_page_url=str(
+                result.final_page_url or result.source_url or ""
+            ).strip(),
         )
         source_record_checksum = sha256_json(
             {
@@ -763,6 +772,17 @@ def record_downloaded_source(
         )
         return source_identity_id, f"md5:{source_record.md5}"
     return "", ""
+
+
+def _verified_acquisition_artifact_path(
+    result: BrowserReportDownloadResult,
+) -> str:
+    """Return the local artifact for a successful acquisition that can be hashed."""
+    if result.outcome == "downloaded":
+        return str(result.downloaded_file_path or "").strip()
+    if result.outcome == "captured":
+        return str(result.onsite_capture_path or "").strip()
+    return ""
 
 
 def record_identity_update(
@@ -921,9 +941,18 @@ def _source_domain_for_url(url: str) -> str:
     return str(urlsplit(str(url).strip()).hostname or "").strip().lower()
 
 
-def _report_name_for_result(result: BrowserReportDownloadResult) -> str:
+def _report_name_for_result(
+    result: BrowserReportDownloadResult,
+    *,
+    report_title: str = "",
+) -> str:
+    configured_title = " ".join(str(report_title or "").split()).strip()
+    if configured_title:
+        return configured_title
     file_name = str(result.downloaded_file_name or "").strip()
-    path_value = str(result.downloaded_file_path or "").strip()
+    path_value = str(
+        result.downloaded_file_path or result.onsite_capture_path or ""
+    ).strip()
     if file_name:
         base_name = Path(file_name).stem
     elif path_value:

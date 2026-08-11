@@ -1,0 +1,42 @@
+schema_version: "1.0"
+
+# Isolated one-route validation for canonical identity persistence on a
+# previously retained browser on-site capture. Provider credentials and Drive
+# targets remain environment-owned through the base configuration.
+paths:
+  output_dir: "./out/acquisition_identity_live_20260811_0fe0b975"
+  cache_dir: "./cache/acquisition_identity_live_20260811_0fe0b975"
+  state_db: "./state/acquisition_identity_live_20260811_0fe0b975/index.sqlite"
+  reports_db: "./state/acquisition_identity_live_20260811_0fe0b975/reports.sqlite"
+  signal_store_db: "./state/acquisition_identity_live_20260811_0fe0b975/signals.sqlite"
+  ingest_lock: "./state/acquisition_identity_live_20260811_0fe0b975/ingest.lock"
+
+browser_download:
+  output_dir: "./out/acquisition_identity_live_20260811_0fe0b975/browser_downloads"
+  run_budget:
+    enabled: true
+    max_browser_launches: 2
+    max_pdfs: 2
+    max_drive_writes: 2
+    max_drive_reads: 8
+    max_mailbox_reads: 0
+    max_retries: 2
+    max_runtime_seconds: 1800
+    limit_decision: "stop"
+
+mailbox_acquisition:
+  output_dir: "./out/acquisition_identity_live_20260811_0fe0b975/mailbox_acquisition"
+
+analysis:
+  cost_ledger_path: "./state/acquisition_identity_live_20260811_0fe0b975/llm_cost_ledger.jsonl"
+
+cost:
+  usage_db_path: "./state/acquisition_identity_live_20260811_0fe0b975/llm_usage.sqlite"
+  daily_path: "./state/acquisition_identity_live_20260811_0fe0b975/llm_cost_daily.json"
+  ledger_path: "./state/acquisition_identity_live_20260811_0fe0b975/llm_cost_ledger.jsonl"
+
+publish:
+  run_budget:
+    enabled: true
+    max_wordpress_writes: 0
+    limit_decision: "stop"

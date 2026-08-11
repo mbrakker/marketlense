@@ -1,4 +1,4 @@
-# ruff: noqa: F401,F403,F405
+# ruff: noqa: F401,F403,F405,I001
 from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
@@ -372,6 +372,8 @@ def test_run_report_download_uploads_only_report_artifacts(
     html_snapshot_path.write_text("<html>terminal</html>", encoding="utf-8")
     screenshot_path.write_bytes(b"png-bytes")
     uploaded_paths: list[str] = []
+    recorded_sources: list[object] = []
+    recorded_identity_observations: list[object] = []
 
     def _upload_file(req, ctx):
         uploaded_paths.append(req.source_path)
@@ -390,6 +392,30 @@ def test_run_report_download_uploads_only_report_artifacts(
             md5=_md5_for_path(Path(req.source_path)),
         )
 
+    def _record_source(req, ctx):
+        recorded_sources.append(req)
+        return ReportSourceRecordResponse(
+            schema_version="1.0",
+            record_id=1,
+            source_domain=req.source_domain,
+            report_name=req.report_name,
+            landing_page_url=req.landing_page_url,
+            downloaded_at_utc=req.downloaded_at_utc,
+            md5=req.md5,
+        )
+
+    def _record_source_identity_observation(req, ctx):
+        recorded_identity_observations.append(req)
+        return SimpleNamespace(
+            created=True,
+            resolution=SimpleNamespace(
+                source_identity_id="source-identity-onsite",
+                identity_status="resolved",
+                publication_date_status="unknown",
+                source_metadata_hash="source-metadata-hash",
+            ),
+        )
+
     deps = ReportDownloadDependencies(
         download_report_with_browser_use=lambda req, ctx: _captured_result(
             url="https://example.com/report",
@@ -404,9 +430,7 @@ def test_run_report_download_uploads_only_report_artifacts(
             path=req.path,
             md5=_md5_for_path(Path(req.path)),
         ),
-        record_report_source=lambda req, ctx: (_ for _ in ()).throw(
-            AssertionError("captured reports should not record PDF sources")
-        ),
+        record_report_source=_record_source,
         upsert_browser_download_identity_fields=lambda req, ctx: type(
             "IdentityUpdate",
             (),
@@ -416,6 +440,13 @@ def test_run_report_download_uploads_only_report_artifacts(
                 "total_fields": len(settings.identity_profile.fields),
             },
         )(),
+        record_source_identity_observation=_record_source_identity_observation,
+        score_report_value=lambda req, ctx: SimpleNamespace(
+            overall_score=1.0,
+            value_band="high",
+            components=(),
+            rationale="test score",
+        ),
         record_report_value_score=lambda req, ctx: None,
         sleep_fn=lambda seconds: None,
         get_report_download_drive_folder=lambda req, ctx: (
@@ -439,9 +470,11 @@ def test_run_report_download_uploads_only_report_artifacts(
             url="https://example.com/report",
             settings=settings,
             state_db=settings.state_db,
-            reports_db=settings.reports_db,
-            publisher_insights_url="https://example.com/insights",
-        ),
+                reports_db=settings.reports_db,
+                publisher_insights_url="https://example.com/insights",
+                report_title="On-site report title",
+                publisher_name="Example Publisher",
+            ),
         ctx=run_context,
         dependencies=deps,
     )
@@ -452,6 +485,18 @@ def test_run_report_download_uploads_only_report_artifacts(
     assert response.drive_uploads[0].mime_type == "text/html"
     assert response.terminal_evidence.html_snapshot_path == str(html_snapshot_path)
     assert response.terminal_evidence.screenshot_path == str(screenshot_path)
+    assert [item.md5 for item in recorded_sources] == [_md5_for_path(onsite_path)]
+    assert [item.report_name for item in recorded_sources] == ["On-site report title"]
+    assert [item.publisher_name for item in recorded_sources] == ["Example Publisher"]
+    assert len(recorded_identity_observations) == 1
+    assert (
+        recorded_identity_observations[0].observation.publisher_name
+        == "Example Publisher"
+    )
+    assert (
+        recorded_identity_observations[0].observation.content_hash
+        == f"md5:{_md5_for_path(onsite_path)}"
+    )
 
 def test_run_report_download_deduplicates_equivalent_drive_artifact_paths(
     tmp_path: Path,

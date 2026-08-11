@@ -100,7 +100,10 @@ def record_acquisition_resource_summary(
         ),
         publisher_id=str(request.publisher_name or "").strip(),
         source_identity_id=source_identity_id,
-        source_identity_status="resolved" if source_identity_id else "unresolved",
+        source_identity_status=_source_identity_status(
+            result=result,
+            source_identity_id=source_identity_id,
+        ),
         normalized_url=_normalized_url(request, result),
         route_family=route_family or "unknown",
         route_policy_version=policy.schema_version,
@@ -140,6 +143,18 @@ def record_acquisition_resource_summary(
         ),
         ctx,
     )
+
+
+def _source_identity_status(
+    *,
+    result: BrowserReportDownloadResult | None,
+    source_identity_id: str,
+) -> str:
+    if source_identity_id:
+        return "resolved"
+    if result is not None and result.outcome == "email_requested":
+        return "provisional"
+    return "unresolved"
 
 
 def _normalized_url(

@@ -696,6 +696,14 @@ def test_run_report_download_enqueues_mail_delivery_request_for_email_outcome(
     assert len(observations.observations) == 1
     assert observations.observations[0].outcome == "deferred"
     assert observations.observations[0].route == "browser_email_form"
+    with sqlite3.connect(settings.reports_db) as conn:
+        resource_row = conn.execute(
+            """
+            SELECT source_identity_id, source_identity_status
+            FROM acquisition_attempt_resources
+            """
+        ).fetchone()
+    assert resource_row == ("", "provisional")
 
 
 def test_run_report_download_does_not_enqueue_unconfirmed_email_required_outcome(

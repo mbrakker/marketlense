@@ -68,6 +68,14 @@ same blocking public-metadata gate. A missing verified public source URL does
 not block that package; the public attribution states `Source URL: Not
 available`.
 
+Acquisition persists canonical source identity before its terminal telemetry
+for every retained, hashable successful artifact: a downloaded PDF and a
+verified on-site capture follow the same source-record and observation path.
+An accepted email request has no artifact to hash, so its telemetry status is
+`provisional` until mailbox delivery retains and verifies the attachment; it
+is never treated as a resolved or cohort-eligible report merely because the
+form submission succeeded.
+
 `region` and `covered_period` are optional card labels: placeholder, extraction
 leakage, and prose-like values are deterministically omitted before manifest
 validation, while a placeholder publisher or extraction leakage in required

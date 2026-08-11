@@ -19,7 +19,12 @@ class AcquisitionAttemptResourceSummary:
         metadata={"doc": "Canonical source identity when resolved, else empty."}
     )
     source_identity_status: str = field(
-        metadata={"doc": "resolved, unresolved, or legacy_incomplete."}
+        metadata={
+            "doc": (
+                "resolved, provisional (awaiting a delivered artifact), unresolved, "
+                "or legacy_incomplete."
+            )
+        }
     )
     normalized_url: str = field(metadata={"doc": "Normalized acquisition URL."})
     route_family: str = field(metadata={"doc": "Route family used or suppressed."})

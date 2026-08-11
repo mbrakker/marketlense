@@ -1,0 +1,41 @@
+schema_version: "1.0"
+
+# Fresh isolated replay after publisher attribution was added to acquisition
+# source persistence. Credentials and remote targets remain environment-owned.
+paths:
+  output_dir: "./out/acquisition_identity_live_20260811_695be0d6"
+  cache_dir: "./cache/acquisition_identity_live_20260811_695be0d6"
+  state_db: "./state/acquisition_identity_live_20260811_695be0d6/index.sqlite"
+  reports_db: "./state/acquisition_identity_live_20260811_695be0d6/reports.sqlite"
+  signal_store_db: "./state/acquisition_identity_live_20260811_695be0d6/signals.sqlite"
+  ingest_lock: "./state/acquisition_identity_live_20260811_695be0d6/ingest.lock"
+
+browser_download:
+  output_dir: "./out/acquisition_identity_live_20260811_695be0d6/browser_downloads"
+  run_budget:
+    enabled: true
+    max_browser_launches: 1
+    max_pdfs: 1
+    max_drive_writes: 1
+    max_drive_reads: 4
+    max_mailbox_reads: 0
+    max_retries: 1
+    max_runtime_seconds: 1200
+    limit_decision: "stop"
+
+mailbox_acquisition:
+  output_dir: "./out/acquisition_identity_live_20260811_695be0d6/mailbox_acquisition"
+
+analysis:
+  cost_ledger_path: "./state/acquisition_identity_live_20260811_695be0d6/llm_cost_ledger.jsonl"
+
+cost:
+  usage_db_path: "./state/acquisition_identity_live_20260811_695be0d6/llm_usage.sqlite"
+  daily_path: "./state/acquisition_identity_live_20260811_695be0d6/llm_cost_daily.json"
+  ledger_path: "./state/acquisition_identity_live_20260811_695be0d6/llm_cost_ledger.jsonl"
+
+publish:
+  run_budget:
+    enabled: true
+    max_wordpress_writes: 0
+    limit_decision: "stop"
