@@ -142,6 +142,35 @@ def test_real_cover_renderer_preserves_breakable_hyphenated_title(
     assert all(event["fields"]["title"] == title for event in complete_events)
 
 
+def test_real_cover_renderer_wraps_unbreakable_title_on_medium_cover(tmp_path) -> None:
+    title = "doc_map: cf091e263a2b6ed29222c5c60b6ed133a90fbe0c-pdf"
+
+    outcomes = generate_cover_images(
+        CoverImageGenerationRequest(
+            schema_version="2.0",
+            output_dir=str(tmp_path / "out"),
+            style_config_path=str(STYLE_PATH),
+            reports=[
+                CoverImageReport(
+                    schema_version="2.0",
+                    file_id="drive-unbreakable-title",
+                    title=title,
+                    publisher="Activate",
+                    report_slug="unbreakable-title",
+                    time_period="2019",
+                    region="Global",
+                    fingerprint=_fingerprint(),
+                )
+            ],
+        ),
+        _ctx(),
+    )
+
+    assert outcomes[0].status == "generated"
+    assert outcomes[0].assets is not None
+    assert Image.open(outcomes[0].assets.medium.output_path).size == (1200, 1500)
+
+
 def test_briefing_cover_renderer_writes_three_exact_assets(tmp_path) -> None:
     outcomes = generate_cover_images(
         CoverImageGenerationRequest(
@@ -252,7 +281,7 @@ def test_real_cover_renderer_rejects_impossible_unbroken_title(
                 schema_version="2.0",
                 output_path=str(tmp_path / "impossible.png"),
                 size="small",
-                title="X" * 80,
+                title="X" * 1000,
                 publisher="Market Lense Research",
                 time_period="Global | Q2 2026",
                 style=config.profiles["report"].style,

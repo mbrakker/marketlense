@@ -83,6 +83,13 @@ selection keeps a short complete strategic clause (including a supported
 outcome phrase) and never splits numeric thousands separators; generic signal
 copy remains only for an absent usable claim.
 
+Card-cover title layout preserves the complete normalized title. When an
+title word or hyphen segment is wider than an empty title line, the deterministic
+cover renderer may wrap it at character boundaries for visual layout; it never
+truncates, replaces, or adds title content. The configured title rectangle and
+minimum font size remain binding, so a title that still cannot fit fails with
+the typed cover-title overflow rather than producing an unreadable asset.
+
 Acquisition persists canonical source identity before its terminal telemetry
 for every retained, hashable successful artifact: a downloaded PDF and a
 verified on-site capture follow the same source-record and observation path.

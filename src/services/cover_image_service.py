@@ -110,15 +110,29 @@ def _wrap_text(
             continue
         fragments = re.findall(r"[^-]+-?", word)
         if len(fragments) <= 1:
-            current = word
+            for character in word:
+                candidate = f"{current}{character}"
+                if current and _text_bbox(draw, candidate, font)[0] > max_width:
+                    lines.append(current)
+                    current = character
+                else:
+                    current = candidate
             continue
         for fragment in fragments:
             candidate = f"{current}{fragment}"
             if current and _text_bbox(draw, candidate, font)[0] > max_width:
                 lines.append(current)
-                current = fragment
-            else:
-                current = candidate
+                current = ""
+            if _text_bbox(draw, fragment, font)[0] <= max_width:
+                current = f"{current}{fragment}"
+                continue
+            for character in fragment:
+                candidate = f"{current}{character}"
+                if current and _text_bbox(draw, candidate, font)[0] > max_width:
+                    lines.append(current)
+                    current = character
+                else:
+                    current = candidate
     if current:
         lines.append(current)
     return lines
