@@ -1,0 +1,861 @@
+{
+  "classification": "PROVEN",
+  "commit": "d8efec428d86872a5906907dfad7c3e51aedd25a",
+  "comparison": {
+    "baseline_workers": 1,
+    "completed": true,
+    "cost_non_regression": true,
+    "median_speedup_percent": 176.81,
+    "median_speedup_ratio": 2.7681,
+    "parallel_workers": 3,
+    "quality_non_regression": true
+  },
+  "model": "gpt-5-mini",
+  "preflight": {
+    "case_id_sha256": "a144a36275bb477a23736bede49914209e120163dead0de2cc5389736c4dba37",
+    "error_type": "",
+    "estimated_cost_usd": 0.00032375,
+    "input_tokens": 47,
+    "output_tokens": 156,
+    "provider_wall_ms": 3621.419,
+    "quality_passed": true,
+    "queue_wait_ms": 0.075
+  },
+  "provider": "openai",
+  "request_shape": {
+    "max_output_tokens": 512,
+    "max_parallel_workers": 3,
+    "maximum_calls": 55,
+    "measured_samples_per_profile": 7,
+    "preflight_calls": 1,
+    "request_timeout_seconds": 30.0,
+    "semantic_response_cache": "disabled",
+    "side_effects": "read-only provider calls; isolated non-production accounting paths; no publish or email",
+    "tasks_per_sample": 3,
+    "warmups_per_profile": 2
+  },
+  "samples": [
+    {
+      "cost_known": true,
+      "estimated_cost_usd": 0.00084325,
+      "phase": "warmup",
+      "profile": {
+        "max_parallel_workers": 1,
+        "tasks_per_sample": 3
+      },
+      "quality_passed": true,
+      "sequence": 0,
+      "tasks": [
+        {
+          "case_id_sha256": "b868ae3e17b3cfc034c8a8dc89c4056e2116b0aab60e1eac1b0c33a2a6c718ca",
+          "error_type": "",
+          "estimated_cost_usd": 0.00019575000000000001,
+          "input_tokens": 47,
+          "output_tokens": 92,
+          "provider_wall_ms": 2354.974,
+          "quality_passed": true,
+          "queue_wait_ms": 0.609
+        },
+        {
+          "case_id_sha256": "6c40fc322a81f567f0b381e5d6a348f5581e50d172a336bc4d96c2974945851e",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032375,
+          "input_tokens": 47,
+          "output_tokens": 156,
+          "provider_wall_ms": 2719.907,
+          "quality_passed": true,
+          "queue_wait_ms": 2354.474
+        },
+        {
+          "case_id_sha256": "2ccd3f5dd769305d24232c84fb5fce35648752ae764683c586db4a6cdd02d32f",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032375,
+          "input_tokens": 47,
+          "output_tokens": 156,
+          "provider_wall_ms": 3004.391,
+          "quality_passed": true,
+          "queue_wait_ms": 5074.471
+        }
+      ],
+      "wall_ms": 8080.583
+    },
+    {
+      "cost_known": true,
+      "estimated_cost_usd": 0.00084325,
+      "phase": "warmup",
+      "profile": {
+        "max_parallel_workers": 3,
+        "tasks_per_sample": 3
+      },
+      "quality_passed": true,
+      "sequence": 0,
+      "tasks": [
+        {
+          "case_id_sha256": "28fc7ab4a2059a44202bdc3facc04e9bd6d0a8501755597f3d8d071ced60cef7",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032375,
+          "input_tokens": 47,
+          "output_tokens": 156,
+          "provider_wall_ms": 3101.687,
+          "quality_passed": true,
+          "queue_wait_ms": 0.528
+        },
+        {
+          "case_id_sha256": "a193bcf0db2bf0bad7eb6c99b741335456616fafb226a2130766d54c96ce1bc5",
+          "error_type": "",
+          "estimated_cost_usd": 0.00019575000000000001,
+          "input_tokens": 47,
+          "output_tokens": 92,
+          "provider_wall_ms": 3113.918,
+          "quality_passed": true,
+          "queue_wait_ms": 0.519
+        },
+        {
+          "case_id_sha256": "6f035d5183e3dcdcc61c88cb79db60fb821c2c4a3807e74f789174bcab5a9daa",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032375,
+          "input_tokens": 47,
+          "output_tokens": 156,
+          "provider_wall_ms": 3239.099,
+          "quality_passed": true,
+          "queue_wait_ms": 0.46
+        }
+      ],
+      "wall_ms": 3240.035
+    },
+    {
+      "cost_known": true,
+      "estimated_cost_usd": 0.00084325,
+      "phase": "warmup",
+      "profile": {
+        "max_parallel_workers": 3,
+        "tasks_per_sample": 3
+      },
+      "quality_passed": true,
+      "sequence": 1,
+      "tasks": [
+        {
+          "case_id_sha256": "c5e645f1dbfe83fb8941a45ed004e2dfe2e83fb9ea75ba9b8b5e223ece3cc082",
+          "error_type": "",
+          "estimated_cost_usd": 0.00019575000000000001,
+          "input_tokens": 47,
+          "output_tokens": 92,
+          "provider_wall_ms": 3005.089,
+          "quality_passed": true,
+          "queue_wait_ms": 0.384
+        },
+        {
+          "case_id_sha256": "12ccc8e388d8fed46a7dec8496f746e216fcf0e9ecf3cce5893cb9266d813c9e",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032375,
+          "input_tokens": 47,
+          "output_tokens": 156,
+          "provider_wall_ms": 3135.796,
+          "quality_passed": true,
+          "queue_wait_ms": 0.344
+        },
+        {
+          "case_id_sha256": "6137bb6db20cb4e015f84e21e3edf185c40da56094b6e749c9f7b45255ba681f",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032375,
+          "input_tokens": 47,
+          "output_tokens": 156,
+          "provider_wall_ms": 3446.187,
+          "quality_passed": true,
+          "queue_wait_ms": 0.343
+        }
+      ],
+      "wall_ms": 3448.654
+    },
+    {
+      "cost_known": true,
+      "estimated_cost_usd": 0.00084325,
+      "phase": "warmup",
+      "profile": {
+        "max_parallel_workers": 1,
+        "tasks_per_sample": 3
+      },
+      "quality_passed": true,
+      "sequence": 1,
+      "tasks": [
+        {
+          "case_id_sha256": "44fa46f5e2ddd44b6b85b464cc6578b8d4b5d6ad8bc899e5b16f6f727c23458c",
+          "error_type": "",
+          "estimated_cost_usd": 0.00045175,
+          "input_tokens": 47,
+          "output_tokens": 220,
+          "provider_wall_ms": 4033.106,
+          "quality_passed": true,
+          "queue_wait_ms": 0.429
+        },
+        {
+          "case_id_sha256": "eb5a0af7f84013b2ad5b38649447d92028bf679975b00d1f90b27613aab16a2f",
+          "error_type": "",
+          "estimated_cost_usd": 0.00019575000000000001,
+          "input_tokens": 47,
+          "output_tokens": 92,
+          "provider_wall_ms": 2417.069,
+          "quality_passed": true,
+          "queue_wait_ms": 4032.655
+        },
+        {
+          "case_id_sha256": "791dc6e0403daaf65a9851e489698d6a50f1995ceb0e0b603cc4b63550e865de",
+          "error_type": "",
+          "estimated_cost_usd": 0.00019575000000000001,
+          "input_tokens": 47,
+          "output_tokens": 92,
+          "provider_wall_ms": 2241.713,
+          "quality_passed": true,
+          "queue_wait_ms": 6449.74
+        }
+      ],
+      "wall_ms": 8692.741
+    },
+    {
+      "cost_known": true,
+      "estimated_cost_usd": 0.00084325,
+      "phase": "measured",
+      "profile": {
+        "max_parallel_workers": 1,
+        "tasks_per_sample": 3
+      },
+      "quality_passed": true,
+      "sequence": 0,
+      "tasks": [
+        {
+          "case_id_sha256": "83a82fb0a8071edc9f3aa482b88f3acee1fed37533b10c87814643087153d3e2",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032375,
+          "input_tokens": 47,
+          "output_tokens": 156,
+          "provider_wall_ms": 3473.018,
+          "quality_passed": true,
+          "queue_wait_ms": 1.382
+        },
+        {
+          "case_id_sha256": "1047c6905d248876f85f809208a01076f3fec8ff9a46e85aa54f535d82be894b",
+          "error_type": "",
+          "estimated_cost_usd": 0.00019575000000000001,
+          "input_tokens": 47,
+          "output_tokens": 92,
+          "provider_wall_ms": 2918.502,
+          "quality_passed": true,
+          "queue_wait_ms": 3472.096
+        },
+        {
+          "case_id_sha256": "d6574569f18ae1cbaf0a862843a220c4407d30ec3e657bd849ed57d8c98b0edc",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032375,
+          "input_tokens": 47,
+          "output_tokens": 156,
+          "provider_wall_ms": 3287.51,
+          "quality_passed": true,
+          "queue_wait_ms": 6390.587
+        }
+      ],
+      "wall_ms": 9681.076
+    },
+    {
+      "cost_known": true,
+      "estimated_cost_usd": 0.00097125,
+      "phase": "measured",
+      "profile": {
+        "max_parallel_workers": 3,
+        "tasks_per_sample": 3
+      },
+      "quality_passed": true,
+      "sequence": 0,
+      "tasks": [
+        {
+          "case_id_sha256": "43838905983b3271cb1374e70808c21c2ff4a5ea90edca2e7494b5340a6f37a2",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032375,
+          "input_tokens": 47,
+          "output_tokens": 156,
+          "provider_wall_ms": 3005.039,
+          "quality_passed": true,
+          "queue_wait_ms": 0.343
+        },
+        {
+          "case_id_sha256": "8d7e4e6a8b14a54bdc0af3b28762115484e56c74376f72e8c9d5f087e41a3404",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032375,
+          "input_tokens": 47,
+          "output_tokens": 156,
+          "provider_wall_ms": 3535.194,
+          "quality_passed": true,
+          "queue_wait_ms": 0.329
+        },
+        {
+          "case_id_sha256": "df67c39f3e6ffa2ba43c0aed58edcf8acf48a44c66c5528f41eef7a24d646048",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032375,
+          "input_tokens": 47,
+          "output_tokens": 156,
+          "provider_wall_ms": 3696.389,
+          "quality_passed": true,
+          "queue_wait_ms": 0.359
+        }
+      ],
+      "wall_ms": 3697.951
+    },
+    {
+      "cost_known": true,
+      "estimated_cost_usd": 0.00071525,
+      "phase": "measured",
+      "profile": {
+        "max_parallel_workers": 3,
+        "tasks_per_sample": 3
+      },
+      "quality_passed": true,
+      "sequence": 1,
+      "tasks": [
+        {
+          "case_id_sha256": "00dfb08e917404a41c2844b559f3250b28b2fec3cabebe3e388cc1739eb78cbd",
+          "error_type": "",
+          "estimated_cost_usd": 0.00019575000000000001,
+          "input_tokens": 47,
+          "output_tokens": 92,
+          "provider_wall_ms": 2999.958,
+          "quality_passed": true,
+          "queue_wait_ms": 0.285
+        },
+        {
+          "case_id_sha256": "d4213f01efb1faacfc8681ba6317f935b1e4869858a01e8bd06a590dae6f0343",
+          "error_type": "",
+          "estimated_cost_usd": 0.00019575000000000001,
+          "input_tokens": 47,
+          "output_tokens": 92,
+          "provider_wall_ms": 3123.924,
+          "quality_passed": true,
+          "queue_wait_ms": 0.385
+        },
+        {
+          "case_id_sha256": "af39621fb9ad79a008887cadff112600a3f35bbb0bb70d4622494d676da03593",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032375,
+          "input_tokens": 47,
+          "output_tokens": 156,
+          "provider_wall_ms": 4647.28,
+          "quality_passed": true,
+          "queue_wait_ms": 0.332
+        }
+      ],
+      "wall_ms": 4649.155
+    },
+    {
+      "cost_known": true,
+      "estimated_cost_usd": 0.00097125,
+      "phase": "measured",
+      "profile": {
+        "max_parallel_workers": 1,
+        "tasks_per_sample": 3
+      },
+      "quality_passed": true,
+      "sequence": 1,
+      "tasks": [
+        {
+          "case_id_sha256": "315e9d6fd11a9ed44f97a8f1ef715f09035b45676b0b3f389b8b5737f7090b48",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032375,
+          "input_tokens": 47,
+          "output_tokens": 156,
+          "provider_wall_ms": 2503.351,
+          "quality_passed": true,
+          "queue_wait_ms": 0.405
+        },
+        {
+          "case_id_sha256": "041cc45b604f3b8fb9fd6fe7196bb4b38489a85d20b611db0c9fde71f0d08757",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032375,
+          "input_tokens": 47,
+          "output_tokens": 156,
+          "provider_wall_ms": 5627.185,
+          "quality_passed": true,
+          "queue_wait_ms": 2502.986
+        },
+        {
+          "case_id_sha256": "9beb9afe7fa3419d5cfad107c9477d83ce03f2c94f3fe011766adc6b5a870d87",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032375,
+          "input_tokens": 47,
+          "output_tokens": 156,
+          "provider_wall_ms": 3510.818,
+          "quality_passed": true,
+          "queue_wait_ms": 8130.194
+        }
+      ],
+      "wall_ms": 11642.258
+    },
+    {
+      "cost_known": true,
+      "estimated_cost_usd": 0.00097125,
+      "phase": "measured",
+      "profile": {
+        "max_parallel_workers": 1,
+        "tasks_per_sample": 3
+      },
+      "quality_passed": true,
+      "sequence": 2,
+      "tasks": [
+        {
+          "case_id_sha256": "3c07c46b1abda4d4291824135d4da27b95cf70657d6561d44fe4830664052fc2",
+          "error_type": "",
+          "estimated_cost_usd": 0.00019575000000000001,
+          "input_tokens": 47,
+          "output_tokens": 92,
+          "provider_wall_ms": 2643.045,
+          "quality_passed": true,
+          "queue_wait_ms": 0.543
+        },
+        {
+          "case_id_sha256": "8e6a8beecb5fbd4b235f2417f1c0a5fc345b7473c4be1fb1b4d4fa2e4df76522",
+          "error_type": "",
+          "estimated_cost_usd": 0.00045175,
+          "input_tokens": 47,
+          "output_tokens": 220,
+          "provider_wall_ms": 4074.02,
+          "quality_passed": true,
+          "queue_wait_ms": 2642.413
+        },
+        {
+          "case_id_sha256": "82c0b7f39485f4524dc2575511d7749754514fb5273e0225c140d5da6ada1e19",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032375,
+          "input_tokens": 47,
+          "output_tokens": 156,
+          "provider_wall_ms": 4337.309,
+          "quality_passed": true,
+          "queue_wait_ms": 6716.46
+        }
+      ],
+      "wall_ms": 11055.432
+    },
+    {
+      "cost_known": true,
+      "estimated_cost_usd": 0.00097125,
+      "phase": "measured",
+      "profile": {
+        "max_parallel_workers": 3,
+        "tasks_per_sample": 3
+      },
+      "quality_passed": true,
+      "sequence": 2,
+      "tasks": [
+        {
+          "case_id_sha256": "4d7f99c51b886cb0c4d7c4a7dcd4f1c9cfc81697c9ee0eee0a7f8380d7425a7f",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032375,
+          "input_tokens": 47,
+          "output_tokens": 156,
+          "provider_wall_ms": 3179.522,
+          "quality_passed": true,
+          "queue_wait_ms": 0.319
+        },
+        {
+          "case_id_sha256": "5efc743abf3aa72c0a7a12be66007b0cc04082ff5515c930042f7927e2ab9c23",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032375,
+          "input_tokens": 47,
+          "output_tokens": 156,
+          "provider_wall_ms": 3374.047,
+          "quality_passed": true,
+          "queue_wait_ms": 0.398
+        },
+        {
+          "case_id_sha256": "77145e28485f6f204abdd6195895d3aad7727dd52e7576d8e434f48355cc1739",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032375,
+          "input_tokens": 47,
+          "output_tokens": 156,
+          "provider_wall_ms": 3495.783,
+          "quality_passed": true,
+          "queue_wait_ms": 0.293
+        }
+      ],
+      "wall_ms": 3497.394
+    },
+    {
+      "cost_known": true,
+      "estimated_cost_usd": 0.00084325,
+      "phase": "measured",
+      "profile": {
+        "max_parallel_workers": 3,
+        "tasks_per_sample": 3
+      },
+      "quality_passed": true,
+      "sequence": 3,
+      "tasks": [
+        {
+          "case_id_sha256": "1562aa39c4b54f1d185674b0838cbb3d8dc0bc48dbc0f2f8b5cbcadbfadb593e",
+          "error_type": "",
+          "estimated_cost_usd": 0.00019575000000000001,
+          "input_tokens": 47,
+          "output_tokens": 92,
+          "provider_wall_ms": 2628.831,
+          "quality_passed": true,
+          "queue_wait_ms": 0.348
+        },
+        {
+          "case_id_sha256": "9a5d26c456306b5930c113b53c725db6d2094e83782611ce56af67113dd352dd",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032375,
+          "input_tokens": 47,
+          "output_tokens": 156,
+          "provider_wall_ms": 3283.16,
+          "quality_passed": true,
+          "queue_wait_ms": 0.51
+        },
+        {
+          "case_id_sha256": "c0ff6ae6eb042ccf9c3abf9eecf1d7e19c26f8ddb84b6becaa094cf419880056",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032375,
+          "input_tokens": 47,
+          "output_tokens": 156,
+          "provider_wall_ms": 3377.007,
+          "quality_passed": true,
+          "queue_wait_ms": 0.54
+        }
+      ],
+      "wall_ms": 3380.283
+    },
+    {
+      "cost_known": true,
+      "estimated_cost_usd": 0.00097125,
+      "phase": "measured",
+      "profile": {
+        "max_parallel_workers": 1,
+        "tasks_per_sample": 3
+      },
+      "quality_passed": true,
+      "sequence": 3,
+      "tasks": [
+        {
+          "case_id_sha256": "2c46004ae82316a62f36506d82eecf4d3acac3ea0bdfea08ac41ac544c1b8081",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032375,
+          "input_tokens": 47,
+          "output_tokens": 156,
+          "provider_wall_ms": 3116.265,
+          "quality_passed": true,
+          "queue_wait_ms": 0.504
+        },
+        {
+          "case_id_sha256": "3c523e30943889e67c8f0c28913007ba46fbadfb196416a5db0e8a44859f8dd2",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032375,
+          "input_tokens": 47,
+          "output_tokens": 156,
+          "provider_wall_ms": 3219.659,
+          "quality_passed": true,
+          "queue_wait_ms": 3115.781
+        },
+        {
+          "case_id_sha256": "b5d2e4a985e21d54bdd128034de262ae7b9b02eefeea031501db441f0d34ad2c",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032375,
+          "input_tokens": 47,
+          "output_tokens": 156,
+          "provider_wall_ms": 2947.626,
+          "quality_passed": true,
+          "queue_wait_ms": 6335.469
+        }
+      ],
+      "wall_ms": 9284.532
+    },
+    {
+      "cost_known": true,
+      "estimated_cost_usd": 0.00071525,
+      "phase": "measured",
+      "profile": {
+        "max_parallel_workers": 1,
+        "tasks_per_sample": 3
+      },
+      "quality_passed": true,
+      "sequence": 4,
+      "tasks": [
+        {
+          "case_id_sha256": "5d3b7b6b1df97289a14f7a3df667ee41231210100c58af75cda8ee9a06199b2c",
+          "error_type": "",
+          "estimated_cost_usd": 0.00019575000000000001,
+          "input_tokens": 47,
+          "output_tokens": 92,
+          "provider_wall_ms": 2592.297,
+          "quality_passed": true,
+          "queue_wait_ms": 0.359
+        },
+        {
+          "case_id_sha256": "283131894f8626cbd171c7a5364f7837ed427b57c2980ad08b5a64618ebb9f7d",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032375,
+          "input_tokens": 47,
+          "output_tokens": 156,
+          "provider_wall_ms": 3602.168,
+          "quality_passed": true,
+          "queue_wait_ms": 2591.865
+        },
+        {
+          "case_id_sha256": "cb4f7c1f31813033665ea9c1ad0071789677e3e8bbd99774c306ab29e1eeaa28",
+          "error_type": "",
+          "estimated_cost_usd": 0.00019575000000000001,
+          "input_tokens": 47,
+          "output_tokens": 92,
+          "provider_wall_ms": 2421.483,
+          "quality_passed": true,
+          "queue_wait_ms": 6194.107
+        }
+      ],
+      "wall_ms": 8616.913
+    },
+    {
+      "cost_known": true,
+      "estimated_cost_usd": 0.00097125,
+      "phase": "measured",
+      "profile": {
+        "max_parallel_workers": 3,
+        "tasks_per_sample": 3
+      },
+      "quality_passed": true,
+      "sequence": 4,
+      "tasks": [
+        {
+          "case_id_sha256": "73db540bd7eb9304415ed6dc7f5f7937bf4a158085f18e1c14b63612fc56aab7",
+          "error_type": "",
+          "estimated_cost_usd": 0.00019575000000000001,
+          "input_tokens": 47,
+          "output_tokens": 92,
+          "provider_wall_ms": 2900.812,
+          "quality_passed": true,
+          "queue_wait_ms": 0.37
+        },
+        {
+          "case_id_sha256": "7ca9078f070f25d3304e8f3de9a1087d1e8581f3661c31de4e575235d6f06493",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032375,
+          "input_tokens": 47,
+          "output_tokens": 156,
+          "provider_wall_ms": 3398.048,
+          "quality_passed": true,
+          "queue_wait_ms": 0.27
+        },
+        {
+          "case_id_sha256": "1a68cc68c87fe7d27683e66fbcee7895dc4906bbace33b61c73bad64e5c90952",
+          "error_type": "",
+          "estimated_cost_usd": 0.00045175,
+          "input_tokens": 47,
+          "output_tokens": 220,
+          "provider_wall_ms": 3626.91,
+          "quality_passed": true,
+          "queue_wait_ms": 0.358
+        }
+      ],
+      "wall_ms": 3627.937
+    },
+    {
+      "cost_known": true,
+      "estimated_cost_usd": 0.00071525,
+      "phase": "measured",
+      "profile": {
+        "max_parallel_workers": 3,
+        "tasks_per_sample": 3
+      },
+      "quality_passed": true,
+      "sequence": 5,
+      "tasks": [
+        {
+          "case_id_sha256": "3f8144ce77b9e92ddd42e2b12baad2b4e0be9a3ffabe22b0aebfe273ab7246b4",
+          "error_type": "",
+          "estimated_cost_usd": 0.00019575000000000001,
+          "input_tokens": 47,
+          "output_tokens": 92,
+          "provider_wall_ms": 2751.003,
+          "quality_passed": true,
+          "queue_wait_ms": 0.603
+        },
+        {
+          "case_id_sha256": "862be78f9411b7b561528afbf3ee8ed3defaa706f599a67a64fb6822019a6339",
+          "error_type": "",
+          "estimated_cost_usd": 0.00019575000000000001,
+          "input_tokens": 47,
+          "output_tokens": 92,
+          "provider_wall_ms": 2843.378,
+          "quality_passed": true,
+          "queue_wait_ms": 0.297
+        },
+        {
+          "case_id_sha256": "a2c91b27f48ad19262e2a77f31aeb0f00ddae91539f6129de7558a80cfed0eec",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032375,
+          "input_tokens": 47,
+          "output_tokens": 156,
+          "provider_wall_ms": 3100.675,
+          "quality_passed": true,
+          "queue_wait_ms": 0.326
+        }
+      ],
+      "wall_ms": 3102.71
+    },
+    {
+      "cost_known": true,
+      "estimated_cost_usd": 0.00084325,
+      "phase": "measured",
+      "profile": {
+        "max_parallel_workers": 1,
+        "tasks_per_sample": 3
+      },
+      "quality_passed": true,
+      "sequence": 5,
+      "tasks": [
+        {
+          "case_id_sha256": "c24112039b81b35e51bd97e46e6a12d97f8a05f33e78791e658c36b0b7fc2c28",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032375,
+          "input_tokens": 47,
+          "output_tokens": 156,
+          "provider_wall_ms": 3444.719,
+          "quality_passed": true,
+          "queue_wait_ms": 4.039
+        },
+        {
+          "case_id_sha256": "3e5ca3910c955e1894fbd422b61dda216823b2525cb7ced0c2542cb29f311924",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032375,
+          "input_tokens": 47,
+          "output_tokens": 156,
+          "provider_wall_ms": 3190.767,
+          "quality_passed": true,
+          "queue_wait_ms": 3443.825
+        },
+        {
+          "case_id_sha256": "f3d0323ed4acaf89cc97f5badfd6b3d10f72e05dede79b0dd2e1d863f3ec380a",
+          "error_type": "",
+          "estimated_cost_usd": 0.00019575000000000001,
+          "input_tokens": 47,
+          "output_tokens": 92,
+          "provider_wall_ms": 2793.223,
+          "quality_passed": true,
+          "queue_wait_ms": 6634.637
+        }
+      ],
+      "wall_ms": 9433.345
+    },
+    {
+      "cost_known": true,
+      "estimated_cost_usd": 0.00084325,
+      "phase": "measured",
+      "profile": {
+        "max_parallel_workers": 1,
+        "tasks_per_sample": 3
+      },
+      "quality_passed": true,
+      "sequence": 6,
+      "tasks": [
+        {
+          "case_id_sha256": "dd20e4a677bd3e9b96fa0a26291d70d5032f1a0e0e5fa145cc451401fb3cd646",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032375,
+          "input_tokens": 47,
+          "output_tokens": 156,
+          "provider_wall_ms": 3086.048,
+          "quality_passed": true,
+          "queue_wait_ms": 5.915
+        },
+        {
+          "case_id_sha256": "323d2f6a6d7183db343063117aa2ac61dc3709334d0265b5c3508594066b6547",
+          "error_type": "",
+          "estimated_cost_usd": 0.00019575000000000001,
+          "input_tokens": 47,
+          "output_tokens": 92,
+          "provider_wall_ms": 2795.426,
+          "quality_passed": true,
+          "queue_wait_ms": 3084.586
+        },
+        {
+          "case_id_sha256": "bbfdd8af431c4c41f5a78f192d5244681e742e32cb21a447ba50c96f5fcfbcb9",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032375,
+          "input_tokens": 47,
+          "output_tokens": 156,
+          "provider_wall_ms": 4060.546,
+          "quality_passed": true,
+          "queue_wait_ms": 5880.012
+        }
+      ],
+      "wall_ms": 9948.638
+    },
+    {
+      "cost_known": true,
+      "estimated_cost_usd": 0.00084325,
+      "phase": "measured",
+      "profile": {
+        "max_parallel_workers": 3,
+        "tasks_per_sample": 3
+      },
+      "quality_passed": true,
+      "sequence": 6,
+      "tasks": [
+        {
+          "case_id_sha256": "204482bd0dce4b186b84b1f18e99d3952101b12dee40f8d5289dadc77e14591c",
+          "error_type": "",
+          "estimated_cost_usd": 0.00019575000000000001,
+          "input_tokens": 47,
+          "output_tokens": 92,
+          "provider_wall_ms": 2832.841,
+          "quality_passed": true,
+          "queue_wait_ms": 0.594
+        },
+        {
+          "case_id_sha256": "e875573e93b25b19802ba780de336ee5776ec8b3234c427240a92c8e0ecac21c",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032375,
+          "input_tokens": 47,
+          "output_tokens": 156,
+          "provider_wall_ms": 2995.828,
+          "quality_passed": true,
+          "queue_wait_ms": 0.573
+        },
+        {
+          "case_id_sha256": "81b24f2adab0cfc1e38bf97e6e80921abe019053a5ad5de011c320a90164cd9e",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032375,
+          "input_tokens": 47,
+          "output_tokens": 156,
+          "provider_wall_ms": 3187.93,
+          "quality_passed": true,
+          "queue_wait_ms": 1.038
+        }
+      ],
+      "wall_ms": 3189.546
+    }
+  ],
+  "schema_version": "1.0",
+  "scope": "controlled live-provider overlap potential; not a workflow-scheduler benchmark",
+  "summary": {
+    "1": {
+      "cost_known": true,
+      "cv_wall": 0.0979,
+      "error_types": [],
+      "median_cost_usd": 0.00084325,
+      "median_provider_wall_ms": 3190.767,
+      "median_queue_wait_ms": 3084.586,
+      "median_wall_ms": 9681.076,
+      "p95_wall_ms": 11466.21,
+      "quality_passed": true,
+      "sample_count": 7,
+      "total_cost_usd": 0.00615875
+    },
+    "3": {
+      "cost_known": true,
+      "cv_wall": 0.1325,
+      "error_types": [],
+      "median_cost_usd": 0.00084325,
+      "median_provider_wall_ms": 3179.522,
+      "median_queue_wait_ms": 0.358,
+      "median_wall_ms": 3497.394,
+      "p95_wall_ms": 4363.794,
+      "quality_passed": true,
+      "sample_count": 7,
+      "total_cost_usd": 0.00603075
+    }
+  }
+}
