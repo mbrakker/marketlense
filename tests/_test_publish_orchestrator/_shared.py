@@ -25,16 +25,61 @@ from src.contracts.state import (
     StatePublishRecordRequest,
     StateRecordRequest,
 )
-from src.contracts.validation_run_manifest import ValidationRunManifestCreateRequest
+from src.contracts.validation_run_manifest import (
+    ValidationRunManifestCreateRequest,
+    ValidationRunManifestRecordRequest,
+    ValidationRunManifestStageRecord,
+)
 from src.orchestrators import publish_orchestrator as orch
 from src.orchestrators import retry_orchestrator
 from src.services.report_store_service import (
     create_validation_run_manifest,
+    record_validation_run_manifest_stage,
     upsert_metadata,
 )
 from src.services.state_service import get_publish, record, record_publish
 from src.utils.publication_projection import publication_projection_hash
 from tests.support.fakes import FakeHttpResponse, RecordedHttpRequest
+
+
+def _record_final_validation_attempt(
+    settings, *, validation_run_id: str, cohort_id: str, file_id: str, ctx
+) -> None:
+    record_validation_run_manifest_stage(
+        ValidationRunManifestRecordRequest(
+            schema_version="1.0",
+            db_path=settings.reports_db,
+            record=ValidationRunManifestStageRecord(
+                schema_version="1.0",
+                validation_run_id=validation_run_id,
+                cohort_id=cohort_id,
+                workflow_run_id=ctx.run_id,
+                entity_type="report",
+                publisher_id="publisher-1",
+                report_id=file_id,
+                source_identity_id=file_id,
+                stage="process",
+                attempt_number=1,
+                parent_attempt_number=0,
+                input_artifact_ids=(file_id,),
+                output_artifact_ids=(file_id,),
+                started_at_utc="2026-07-26T12:00:00Z",
+                completed_at_utc="2026-07-26T12:01:00Z",
+                terminal_outcome="publish_ready",
+                failure_code="",
+                retryable=False,
+                repair_disposition="not_required",
+                duplicate_disposition="new",
+                supersession_state="current",
+                idempotency_state="new",
+                configuration_hash="configuration-hash",
+                policy_hash="policy-hash",
+                producer_build_identity="workspace",
+                entity_terminal=True,
+            ),
+        ),
+        ctx,
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -169,10 +214,8 @@ def _write_publish_readiness(*, html_path: Path, html_text: str, file_id: str) -
         rule_results=[],
         final_html_hash=hashlib.sha256(html_text.encode("utf-8")).hexdigest(),
         publication_projection_hash=publication_projection_hash(html_text),
-        configuration_hash=hashlib.sha256(
-            b"publish-readiness:configuration:unavailable"
-        ).hexdigest(),
-        policy_hash=hashlib.sha256(b"publish-readiness:policy:unavailable").hexdigest(),
+        configuration_hash="configuration-hash",
+        policy_hash="policy-hash",
         producer_revision="workspace",
         created_at_utc=created_at.isoformat(),
         expires_at_utc=(created_at + timedelta(hours=1)).isoformat(),

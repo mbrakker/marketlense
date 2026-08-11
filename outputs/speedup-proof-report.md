@@ -36,9 +36,9 @@ Added an isolated matrix benchmark; no production worker setting changed because
 
 ### Changed files
 
-- [benchmark_ingest_parallelism.py](<C:/Programing/Market lense/scripts/quality/benchmark_ingest_parallelism.py:64>) — Deterministic ingest worker matrix.
-- [test_ingest_parallelism_benchmark.py](<C:/Programing/Market lense/tests/test_ingest_parallelism_benchmark.py:14>) — Selection and runner regression tests.
-- [benchmarks.md](<C:/Programing/Market lense/docs/quality/benchmarks.md:41>) — Benchmark procedure.
+- [benchmark_ingest_parallelism.py](../scripts/quality/benchmark_ingest_parallelism.py) — Deterministic ingest worker matrix.
+- [test_ingest_parallelism_benchmark.py](../tests/test_ingest_parallelism_benchmark.py) — Selection and runner regression tests.
+- [benchmarks.md](../docs/quality/benchmarks.md) — Benchmark procedure.
 
 ## Correctness checks
 

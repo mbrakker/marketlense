@@ -418,9 +418,9 @@ The original ten-item screenshot baseline is complete in the committed implement
 - Equivalent identities reuse validated retained artifacts and record avoided parsing/embedding/model calls; conflicting or unknown identity remains non-reusable.
 - Retained-corpus and bounded live evidence measure duplicate-work suppression, false-merge prevention, and zero unintended public writes.
 
-#### E9. Prove prompt-family repair savings on retained and live cohorts
+#### E9. Materialize prompt-family outputs and route only their required model calls
 
-- **Title:** Prove prompt-family repair savings on retained and live cohorts
+- **Title:** Materialize prompt-family outputs and route only their required model calls
 - **Impact 5 / effort: 3**
 - **Context:** Prompt-family outputs are now typed, hash-pinned materializations; the planner names required and reused families, and enforced repair reconciles its actual family calls against the plan. The prior 17-call composite repair is now the baseline to beat, not the current architecture. What remains is representative retained and bounded live evidence of the claimed saving.
 - **Benefit:** Prompt, validator, and advisory changes can regenerate the one affected family plus deterministic downstream assembly, reducing LLM time and spend while retaining E7's plan/actual enforcement.
@@ -433,9 +433,9 @@ The original ten-item screenshot baseline is complete in the committed implement
 
 ### 4. Release Integrity and Architectural Enforcement
 
-#### R1. Complete reviewer-surface release evidence and runtime-corpus coverage
+#### R1. Publish release-evidence reviews where reviewers work
 
-- **Title:** Complete reviewer-surface release evidence and runtime-corpus coverage
+- **Title:** Publish release-evidence reviews where reviewers work
 - **Impact 3 / effort: 2**
 - **Context:** CI now generates the release-evidence review and appends a bounded GitHub job summary with the exact tested SHA, queue-evidence status, and unwaived issues. The remaining work is to make the archived-bundle link and final approval state available on the relevant PR/release surface, and to expand the strict retained runtime corpus with an explicit representativeness label.
 - **Benefit:** Release readiness, the exact tested revision, and the scope of runtime evidence are visible where reviewers already work, reducing missed evidence and review latency.
@@ -447,9 +447,9 @@ The original ten-item screenshot baseline is complete in the committed implement
 - The retained runtime corpus expands under the existing strict collector with declared scope/provenance; inline review distinguishes representative processing from smoke-only evidence.
 - README distinguishes inline review from full archived evidence, and tests cover bounded summaries, exact-HEAD mismatch, runtime-corpus scope, and unwaived detail retention.
 
-#### R2. Close remaining architecture-enforcement gaps
+#### R2. Enforce role boundaries, direct-I/O discipline, and controlled module growth
 
-- **Title:** Close remaining architecture-enforcement gaps
+- **Title:** Enforce role boundaries, direct-I/O discipline, and controlled module growth
 - **Impact 4 / effort: 3**
 - **Context:** CI already enforces role imports, direct-I/O ownership, service-boundary mapping, forbidden patching, refactor-movement evidence, coverage, mutation, and repository hygiene. The remaining gaps are targeted: require evidence for missing service-boundary coverage where it matters, and turn approved facade/waiver exceptions into narrow, expiring, owner-accountable records without creating generic governance noise.
 - **Benefit:** Architectural constraints prevent drift before merge instead of relying on manual review and retrospective refactors.
@@ -460,9 +460,9 @@ The original ten-item screenshot baseline is complete in the committed implement
 - A targeted service-boundary coverage gap is a failure unless explicitly waived; do not infer an integration-test requirement for pure or inaccessible boundaries.
 - Documentation explains adding and retiring a waiver; tests prove the targeted violations fail and valid waivers expire as intended.
 
-#### R3. Re-establish an evidenced service-coverage baseline
+#### R3. Restore service quality coverage above the retained baseline
 
-- **Title:** Re-establish an evidenced service-coverage baseline
+- **Title:** Restore service quality coverage above the retained baseline
 - **Impact 4 / effort: 3**
 - **Context:** The committed baseline currently records `src/services` coverage of 82.5763%, above the enforced 75% floor. The former 82.9680% comparison target has no retained baseline artifact in this repository, so it cannot serve as a verifiable acceptance threshold. Recent service growth still needs behavior-focused coverage and a clean, exact-commit full-suite measurement before the baseline is reset.
 - **Benefit:** The retained quality baseline continues to reflect real protection for durable external and stateful boundaries.
@@ -490,9 +490,9 @@ The original ten-item screenshot baseline is complete in the committed implement
 
 All work in this lane is movement-only unless behavior change receives explicit approval. Public facades, order, retries, idempotency, logs, and side effects must remain stable.
 
-#### S3. Simplify only evidenced remaining PDF visual-heuristics coupling
+#### S3. Simplify the PDF visual-heuristics boundary
 
-- **Title:** Simplify only evidenced remaining PDF visual-heuristics coupling
+- **Title:** Simplify the PDF visual-heuristics boundary
 - **Impact 4 / effort: 4**
 - **Context:** The visual-heuristics, panel-detection, visual-candidate, crop, and table families have already been decomposed behind compatibility facades and documented movement evidence. This item no longer authorizes a broad facade cleanup; it owns only a measured remaining coupling that demonstrably obscures the canonical PDF boundary.
 - **Benefit:** A smaller semantic surface keeps the PDF capability navigable, replaceable, and testable without scattering external-library access.

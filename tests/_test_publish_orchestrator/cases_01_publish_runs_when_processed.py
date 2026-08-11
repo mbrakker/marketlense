@@ -472,6 +472,7 @@ def test_publish_canary_persists_complete_readback_proof_and_zero_write_repeat(
                     {
                         "schema_version": "1.0",
                         "file_id": "file123",
+                        "source_identity_id": "file123",
                         "md5_checksum": "file123-md5",
                         "html_path": str(report_path),
                     }
@@ -493,6 +494,13 @@ def test_publish_canary_persists_complete_readback_proof_and_zero_write_repeat(
             created_at_utc="2026-07-26T12:00:00Z",
         ),
         run_context,
+    )
+    _record_final_validation_attempt(
+        settings,
+        validation_run_id="validation:transaction-proof-canary",
+        cohort_id="transaction-proof-canary",
+        file_id="file123",
+        ctx=run_context,
     )
 
     wordpress_http.add(

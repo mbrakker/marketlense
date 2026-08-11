@@ -36,9 +36,9 @@ Added a deterministic scheduler matrix; no production worker configuration chang
 
 ### Changed files
 
-- [benchmark_artifact_parallelism.py](<C:/Programing/Market lense/scripts/quality/benchmark_artifact_parallelism.py:95>) — Artifact worker and rate-cap matrix.
-- [test_artifact_parallelism_benchmark.py](<C:/Programing/Market lense/tests/test_artifact_parallelism_benchmark.py:12>) — Selection and rate-cap regression tests.
-- [benchmarks.md](<C:/Programing/Market lense/docs/quality/benchmarks.md:68>) — Artifact benchmark method.
+- [benchmark_artifact_parallelism.py](../scripts/quality/benchmark_artifact_parallelism.py) — Artifact worker and rate-cap matrix.
+- [test_artifact_parallelism_benchmark.py](../tests/test_artifact_parallelism_benchmark.py) — Selection and rate-cap regression tests.
+- [benchmarks.md](../docs/quality/benchmarks.md) — Artifact benchmark method.
 
 ## Correctness checks
 

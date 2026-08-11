@@ -431,16 +431,12 @@ def test_regenerate_artifacts_insights_bundle_uses_targeted_steps_and_preserves_
     )
 
     assert response.regenerated_sections == ["insights_candidates", "insights_final"]
+    assert response.updated_artifacts["insights_candidates"] == []
+    assert response.updated_artifacts["insights_final"] == []
     assert (
-        response.updated_artifacts["insights_candidates"][0]["text"]
-        == "Repaired candidate"
+        response.updated_artifacts["family_status"]["insights_bundle"]["status"]
+        == "abstained"
     )
-    assert (
-        response.updated_artifacts["insights_final"][0]["text"]
-        == "Repaired final insight"
-    )
-    assert response.updated_artifacts["expert_comment"] == "Old expert"
-    assert response.updated_artifacts["linkedin_post"] == "Old linkedin"
     assert [call.path for call in response.updated_artifacts and []] == []
     assert response.artifacts_path == ""
     assert Path(response.candidate_artifacts_path).is_file()

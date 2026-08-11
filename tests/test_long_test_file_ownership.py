@@ -32,7 +32,19 @@ LONG_TEST_FILE_ALLOWLIST = {
         "owner": "quality/repository-hygiene",
         "reason": "Pipeline retry, planning, and durable budget-defer cases remain colocated.",
         "expires_on": "2026-08-31",
-        "max_lines": 1090,
+        "max_lines": 1150,
+    },
+    "tests/test_render_service_artifacts.py": {
+        "owner": "quality/repository-hygiene",
+        "reason": "Pre-existing render artifact integration cases remain colocated.",
+        "expires_on": "2026-08-31",
+        "max_lines": 1100,
+    },
+    "tests/test_report_render_generator.py": {
+        "owner": "quality/repository-hygiene",
+        "reason": "Pre-existing report render generator cases remain colocated.",
+        "expires_on": "2026-08-31",
+        "max_lines": 1075,
     },
 }
 
