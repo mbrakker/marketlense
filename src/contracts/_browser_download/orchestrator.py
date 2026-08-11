@@ -76,6 +76,15 @@ class ReportDownloadOrchestratorRequest:
         default="",
         metadata={"doc": "Optional report title for deferred mail acquisition."},
     )
+    publisher_id: str = field(
+        default="",
+        metadata={
+            "doc": (
+                "Optional stable publisher identifier retained in source identity "
+                "and acquisition telemetry."
+            )
+        },
+    )
     publisher_name: str = field(
         default="",
         metadata={"doc": "Optional publisher name for deferred mail acquisition."},

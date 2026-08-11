@@ -98,7 +98,10 @@ def record_acquisition_resource_summary(
                 "terminal_reason": terminal_reason,
             }
         ),
-        publisher_id=str(request.publisher_name or "").strip(),
+        publisher_id=(
+            str(request.publisher_id or "").strip()
+            or str(request.publisher_name or "").strip()
+        ),
         source_identity_id=source_identity_id,
         source_identity_status=_source_identity_status(
             result=result,

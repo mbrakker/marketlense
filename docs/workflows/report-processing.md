@@ -94,6 +94,11 @@ the typed cover-title overflow rather than producing an unreadable asset.
 Acquisition persists canonical source identity before its terminal telemetry
 for every retained, hashable successful artifact: a downloaded PDF and a
 verified on-site capture follow the same source-record and observation path.
+A configured publisher carries both its stable `publisher_id` and display name
+on the acquisition request. The stable ID is retained in source identity and
+resource accounting so admission can enforce a per-publisher cohort limit
+without inferring provenance from a Drive filename or folder. An artifact
+without a known stable publisher ID is not eligible for that limited cohort.
 An accepted email request has no artifact to hash, so its telemetry status is
 `provisional` until mailbox delivery retains and verifies the attachment; it
 is never treated as a resolved or cohort-eligible report merely because the

@@ -327,6 +327,8 @@ def test_run_report_download_uses_memory_and_records_route(
             settings=settings,
             state_db=settings.state_db,
             reports_db=settings.reports_db,
+            publisher_id="publisher:example",
+            publisher_name="Example Publisher",
         ),
         ctx=run_context,
         dependencies=deps,
@@ -344,6 +346,8 @@ def test_run_report_download_uses_memory_and_records_route(
     assert len(saved_source_identity_observations) == 1
     observation = saved_source_identity_observations[0].observation
     assert observation.source_record_id == 1
+    assert observation.publisher_id == "publisher:example"
+    assert observation.publisher_name == "Example Publisher"
     assert observation.acquisition_route == "pdf_download"
     assert observation.content_hash == "md5:abc123"
     assert observation.publication_date_status == "unknown"
