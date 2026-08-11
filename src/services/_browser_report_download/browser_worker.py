@@ -273,11 +273,19 @@ def _build_settings(payload: dict) -> BrowserDownloadSettings:
 
 
 def _optional_int(value: object) -> int | None:
-    return int(value) if value is not None else None
+    if value is None:
+        return None
+    if isinstance(value, (str, bytes, bytearray, int, float)):
+        return int(value)
+    raise TypeError("optional integer configuration must be numeric")
 
 
 def _optional_float(value: object) -> float | None:
-    return float(value) if value is not None else None
+    if value is None:
+        return None
+    if isinstance(value, (str, bytes, bytearray, int, float)):
+        return float(value)
+    raise TypeError("optional float configuration must be numeric")
 
 
 def _build_run_budget_limits(payload: object) -> RunBudgetLimits | None:
