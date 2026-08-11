@@ -1,0 +1,207 @@
+{
+  "classification": "PROVEN",
+  "comparison": {
+    "baseline_workers": 1,
+    "cost_non_regression": true,
+    "parallel_workers": 3,
+    "quality_non_regression": true,
+    "speedup_percent": 199.86,
+    "speedup_ratio": 2.9986
+  },
+  "profiles": {
+    "1": {
+      "cv_wall": 0.0,
+      "estimated_cost_usd": 0.0,
+      "median_wall_ms": 9602.157,
+      "p95_wall_ms": 9602.535,
+      "quality_passed": true,
+      "samples": [
+        {
+          "completed_job_count": 3,
+          "estimated_cost_usd": 0.0,
+          "quality_passed": true,
+          "queue_names": [
+            "mailbox_delivery",
+            "publisher_discovery",
+            "report_acquisition"
+          ],
+          "terminal_status": "healthy",
+          "wall_ms": 9602.28
+        },
+        {
+          "completed_job_count": 3,
+          "estimated_cost_usd": 0.0,
+          "quality_passed": true,
+          "queue_names": [
+            "mailbox_delivery",
+            "publisher_discovery",
+            "report_acquisition"
+          ],
+          "terminal_status": "healthy",
+          "wall_ms": 9602.157
+        },
+        {
+          "completed_job_count": 3,
+          "estimated_cost_usd": 0.0,
+          "quality_passed": true,
+          "queue_names": [
+            "mailbox_delivery",
+            "publisher_discovery",
+            "report_acquisition"
+          ],
+          "terminal_status": "healthy",
+          "wall_ms": 9602.606
+        },
+        {
+          "completed_job_count": 3,
+          "estimated_cost_usd": 0.0,
+          "quality_passed": true,
+          "queue_names": [
+            "mailbox_delivery",
+            "publisher_discovery",
+            "report_acquisition"
+          ],
+          "terminal_status": "healthy",
+          "wall_ms": 9602.04
+        },
+        {
+          "completed_job_count": 3,
+          "estimated_cost_usd": 0.0,
+          "quality_passed": true,
+          "queue_names": [
+            "mailbox_delivery",
+            "publisher_discovery",
+            "report_acquisition"
+          ],
+          "terminal_status": "healthy",
+          "wall_ms": 9602.369
+        },
+        {
+          "completed_job_count": 3,
+          "estimated_cost_usd": 0.0,
+          "quality_passed": true,
+          "queue_names": [
+            "mailbox_delivery",
+            "publisher_discovery",
+            "report_acquisition"
+          ],
+          "terminal_status": "healthy",
+          "wall_ms": 9601.818
+        },
+        {
+          "completed_job_count": 3,
+          "estimated_cost_usd": 0.0,
+          "quality_passed": true,
+          "queue_names": [
+            "mailbox_delivery",
+            "publisher_discovery",
+            "report_acquisition"
+          ],
+          "terminal_status": "healthy",
+          "wall_ms": 9602.001
+        }
+      ]
+    },
+    "3": {
+      "cv_wall": 0.0,
+      "estimated_cost_usd": 0.0,
+      "median_wall_ms": 3202.201,
+      "p95_wall_ms": 3202.408,
+      "quality_passed": true,
+      "samples": [
+        {
+          "completed_job_count": 3,
+          "estimated_cost_usd": 0.0,
+          "quality_passed": true,
+          "queue_names": [
+            "mailbox_delivery",
+            "publisher_discovery",
+            "report_acquisition"
+          ],
+          "terminal_status": "healthy",
+          "wall_ms": 3202.29
+        },
+        {
+          "completed_job_count": 3,
+          "estimated_cost_usd": 0.0,
+          "quality_passed": true,
+          "queue_names": [
+            "mailbox_delivery",
+            "publisher_discovery",
+            "report_acquisition"
+          ],
+          "terminal_status": "healthy",
+          "wall_ms": 3202.127
+        },
+        {
+          "completed_job_count": 3,
+          "estimated_cost_usd": 0.0,
+          "quality_passed": true,
+          "queue_names": [
+            "mailbox_delivery",
+            "publisher_discovery",
+            "report_acquisition"
+          ],
+          "terminal_status": "healthy",
+          "wall_ms": 3202.175
+        },
+        {
+          "completed_job_count": 3,
+          "estimated_cost_usd": 0.0,
+          "quality_passed": true,
+          "queue_names": [
+            "mailbox_delivery",
+            "publisher_discovery",
+            "report_acquisition"
+          ],
+          "terminal_status": "healthy",
+          "wall_ms": 3202.201
+        },
+        {
+          "completed_job_count": 3,
+          "estimated_cost_usd": 0.0,
+          "quality_passed": true,
+          "queue_names": [
+            "mailbox_delivery",
+            "publisher_discovery",
+            "report_acquisition"
+          ],
+          "terminal_status": "healthy",
+          "wall_ms": 3202.458
+        },
+        {
+          "completed_job_count": 3,
+          "estimated_cost_usd": 0.0,
+          "quality_passed": true,
+          "queue_names": [
+            "mailbox_delivery",
+            "publisher_discovery",
+            "report_acquisition"
+          ],
+          "terminal_status": "healthy",
+          "wall_ms": 3202.224
+        },
+        {
+          "completed_job_count": 3,
+          "estimated_cost_usd": 0.0,
+          "quality_passed": true,
+          "queue_names": [
+            "mailbox_delivery",
+            "publisher_discovery",
+            "report_acquisition"
+          ],
+          "terminal_status": "healthy",
+          "wall_ms": 3202.148
+        }
+      ]
+    }
+  },
+  "schema_version": "1.0",
+  "workload": {
+    "model_calls": 0,
+    "provider_latency_ms": 3200,
+    "runs": 7,
+    "tasks_per_sample": 3,
+    "warmups": 2
+  }
+}

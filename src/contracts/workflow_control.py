@@ -265,6 +265,7 @@ class WorkflowSupervisorSettings:
     worker_batches_enabled: bool = field(default=False)
     reconcile_enabled: bool = field(default=True)
     evidence_enabled: bool = field(default=True)
+    max_parallel_workers: int = field(default=1)
     max_jobs_per_queue: int = field(default=1)
     max_total_jobs: int = field(default=20)
     max_runtime_seconds: int = field(default=120)

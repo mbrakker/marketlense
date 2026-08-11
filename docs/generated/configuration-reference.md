@@ -12,5 +12,5 @@ The example file shows supported environment-specific overlay areas. The configu
 | `mailbox_acquisition` | `gmail_oauth_client_path`, `gmail_oauth_token_path`, `gmail_user_id`, `imap_host`, `imap_mailbox`, `imap_port`, `imap_user`, `max_results`, `output_dir`, `poll_interval_seconds`, `poll_timeout_seconds`, `provider`, `search_window_minutes` |
 | `publish` | `run_budget`, `wp` |
 | `publisher_discovery` | `enable_deferred_candidate_recovery`, `enable_preflight_classifier_and_direct_detail`, `enable_structured_route_reuse`, `model`, `resource_quality_ranking` |
-| `workflow_control` | `concurrency`, `deferred_work_reaper`, `operational_memory`, `preflight_profiles`, `remediation_reaper`, `retry_policies`, `run_profiles`, `workflow_contracts` |
+| `workflow_control` | `concurrency`, `deferred_work_reaper`, `operational_memory`, `preflight_profiles`, `remediation_reaper`, `retry_policies`, `run_profiles`, `supervisor`, `workflow_contracts` |
 | `workflow_queues` | `briefing_generation`, `publisher_discovery`, `report_acquisition`, `report_analysis`, `source_ingest`, `wordpress_publish` |

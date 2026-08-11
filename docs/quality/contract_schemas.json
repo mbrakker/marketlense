@@ -794,6 +794,9 @@
         "schema_version": {
           "type": "string"
         },
+        "selected_value": {
+          "type": "string"
+        },
         "url": {
           "type": "string"
         }
@@ -45990,6 +45993,9 @@
           "type": "boolean"
         },
         "max_jobs_per_queue": {
+          "type": "integer"
+        },
+        "max_parallel_workers": {
           "type": "integer"
         },
         "max_runtime_seconds": {

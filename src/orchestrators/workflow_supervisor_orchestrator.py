@@ -4,13 +4,17 @@ from __future__ import annotations
 
 import logging
 import time
+from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from dataclasses import dataclass
 from typing import Callable
 
 from src.contracts.run_context import RunContext
 from src.contracts.workflow_control import SupervisorRunRequest, SupervisorRunResult
 from src.contracts.workflow_queue import WORKFLOW_QUEUE_NAMES
-from src.orchestrators.workflow_worker_orchestrator import run_workflow_worker_once
+from src.orchestrators.workflow_worker_orchestrator import (
+    WorkflowWorkerRunResult,
+    run_workflow_worker_once,
+)
 from src.services import workflow_queue_service
 from src.utils.logging import child_context, log_event
 
@@ -89,39 +93,28 @@ def run_supervisor_once(
             else:
                 remediation_reaped = deps.reap_remediation(request, ctx)
         if settings.worker_batches_enabled:
-            remaining = settings.max_total_jobs
-            for queue_name in WORKFLOW_QUEUE_NAMES:
-                if (
-                    remaining <= 0
-                    or time.monotonic() - started >= settings.max_runtime_seconds
-                ):
-                    if remaining > 0:
-                        deferred += 1
-                    break
-                for ordinal in range(min(settings.max_jobs_per_queue, remaining)):
-                    result = deps.run_worker(
-                        state_db=request.state_db,
-                        queue_name=queue_name,
-                        worker_id=f"{request.worker_id}:{queue_name}",
-                        ctx=child_context(
-                            ctx, task_id=f"supervisor:{queue_name}:{ordinal + 1}"
-                        ),
-                        now_utc=request.now_utc,
-                    )
-                    recovered += len(result.released_lease_job_ids)
-                    if result.terminal_status == "idle":
-                        break
-                    remaining -= 1
-                    if result.terminal_status == "succeeded":
-                        completed += 1
-                    elif result.terminal_status in {
-                        "budget_deferred",
-                        "retry_wait",
-                        "blocked",
-                    }:
-                        deferred += 1
-                    else:
-                        errors.append(f"worker:{queue_name}:{result.terminal_status}")
+            if settings.max_parallel_workers <= 1:
+                (
+                    worker_recovered,
+                    worker_completed,
+                    worker_deferred,
+                    worker_errors,
+                ) = _run_worker_batches_serial(
+                    request=request, ctx=ctx, deps=deps, started=started
+                )
+            else:
+                (
+                    worker_recovered,
+                    worker_completed,
+                    worker_deferred,
+                    worker_errors,
+                ) = _run_worker_batches_parallel(
+                    request=request, ctx=ctx, deps=deps, started=started
+                )
+            recovered += worker_recovered
+            completed += worker_completed
+            deferred += worker_deferred
+            errors.extend(worker_errors)
         if settings.reconcile_enabled:
             reconciliation = deps.reconcile(
                 request.state_db, ctx, now_utc=request.now_utc
@@ -180,3 +173,142 @@ def run_supervisor_once(
             now_utc=request.now_utc,
             ctx=ctx,
         )
+
+
+def _run_worker_batches_serial(
+    *,
+    request: SupervisorRunRequest,
+    ctx: RunContext,
+    deps: SupervisorDependencies,
+    started: float,
+) -> tuple[int, int, int, list[str]]:
+    """Preserve the existing queue-order execution for the default worker cap."""
+    remaining = request.settings.max_total_jobs
+    recovered = completed = deferred = 0
+    errors: list[str] = []
+    for queue_name in WORKFLOW_QUEUE_NAMES:
+        if (
+            remaining <= 0
+            or time.monotonic() - started >= request.settings.max_runtime_seconds
+        ):
+            if remaining > 0:
+                deferred += 1
+            break
+        for ordinal in range(min(request.settings.max_jobs_per_queue, remaining)):
+            result = _run_worker(
+                request=request,
+                ctx=ctx,
+                deps=deps,
+                queue_name=queue_name,
+                ordinal=ordinal,
+            )
+            result_recovered, result_completed, result_deferred, result_errors = (
+                _worker_result_counts(queue_name=queue_name, result=result)
+            )
+            recovered += result_recovered
+            completed += result_completed
+            deferred += result_deferred
+            errors.extend(result_errors)
+            if result.terminal_status == "idle":
+                break
+            remaining -= 1
+    return recovered, completed, deferred, errors
+
+
+def _run_worker_batches_parallel(
+    *,
+    request: SupervisorRunRequest,
+    ctx: RunContext,
+    deps: SupervisorDependencies,
+    started: float,
+) -> tuple[int, int, int, list[str]]:
+    """Fairly overlap independent queue work without exceeding the job allowance."""
+    remaining = request.settings.max_total_jobs
+    recovered = completed = deferred = 0
+    errors: list[str] = []
+    candidates = [
+        (queue_name, ordinal)
+        for ordinal in range(request.settings.max_jobs_per_queue)
+        for queue_name in WORKFLOW_QUEUE_NAMES
+    ]
+    inactive_queues: set[str] = set()
+    next_candidate = 0
+    runtime_exhausted = False
+    with ThreadPoolExecutor(
+        max_workers=request.settings.max_parallel_workers,
+        thread_name_prefix="workflow-supervisor",
+    ) as executor:
+        in_flight: dict[Future[WorkflowWorkerRunResult], str] = {}
+        while in_flight or next_candidate < len(candidates):
+            while (
+                not runtime_exhausted
+                and next_candidate < len(candidates)
+                and len(in_flight) < request.settings.max_parallel_workers
+                and len(in_flight) < remaining
+            ):
+                if time.monotonic() - started >= request.settings.max_runtime_seconds:
+                    runtime_exhausted = True
+                    break
+                queue_name, ordinal = candidates[next_candidate]
+                next_candidate += 1
+                if queue_name in inactive_queues:
+                    continue
+                future = executor.submit(
+                    _run_worker,
+                    request=request,
+                    ctx=ctx,
+                    deps=deps,
+                    queue_name=queue_name,
+                    ordinal=ordinal,
+                )
+                in_flight[future] = queue_name
+            if not in_flight:
+                break
+            done, _ = wait(in_flight, return_when=FIRST_COMPLETED)
+            for future in done:
+                queue_name = in_flight.pop(future)
+                result = future.result()
+                result_recovered, result_completed, result_deferred, result_errors = (
+                    _worker_result_counts(queue_name=queue_name, result=result)
+                )
+                recovered += result_recovered
+                completed += result_completed
+                deferred += result_deferred
+                errors.extend(result_errors)
+                if result.terminal_status == "idle":
+                    inactive_queues.add(queue_name)
+                else:
+                    remaining -= 1
+        if runtime_exhausted and remaining > 0:
+            deferred += 1
+    return recovered, completed, deferred, errors
+
+
+def _run_worker(
+    *,
+    request: SupervisorRunRequest,
+    ctx: RunContext,
+    deps: SupervisorDependencies,
+    queue_name: str,
+    ordinal: int,
+):
+    return deps.run_worker(
+        state_db=request.state_db,
+        queue_name=queue_name,
+        worker_id=f"{request.worker_id}:{queue_name}",
+        ctx=child_context(ctx, task_id=f"supervisor:{queue_name}:{ordinal + 1}"),
+        now_utc=request.now_utc,
+    )
+
+
+def _worker_result_counts(
+    *, queue_name: str, result
+) -> tuple[int, int, int, list[str]]:
+    recovered = len(result.released_lease_job_ids)
+    if result.terminal_status == "succeeded":
+        return recovered, 1, 0, []
+    if result.terminal_status in {"budget_deferred", "retry_wait", "blocked"}:
+        return recovered, 0, 1, []
+    if result.terminal_status == "idle":
+        return recovered, 0, 0, []
+    return recovered, 0, 0, [f"worker:{queue_name}:{result.terminal_status}"]

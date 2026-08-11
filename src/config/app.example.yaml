@@ -143,6 +143,14 @@ workflow_queues:
   wordpress_publish: {enabled: true, max_workers: 1, max_attempts: 3, lease_seconds: 900, maximum_pending: 100, maximum_fanout: 10, budget_profile: publishing}
 
 workflow_control:
+  supervisor:
+    # The feature gate remains off until queue health and recovery evidence are reviewed.
+    enabled: false
+    max_parallel_workers: 3
+    max_jobs_per_queue: 1
+    max_total_jobs: 20
+    max_runtime_seconds: 120
+    lease_seconds: 180
   # These profiles only select existing budget/preflight/model-policy controls.
   # Explicit CLI/UI selection wins; no-profile execution remains safe_default.
   run_profiles:

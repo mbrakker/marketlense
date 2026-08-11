@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
 import hashlib
 import json
 import os
-from pathlib import Path
 import tempfile
+import time
+from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Any
 
 import pymupdf as fitz
@@ -187,7 +188,7 @@ def write_artifact_sidecar(
     try:
         with os.fdopen(file_descriptor, "w", encoding="utf-8") as handle:
             handle.write(payload)
-        os.replace(temp_path, sidecar_path)
+        _replace_sidecar(temp_path, sidecar_path)
     finally:
         if temp_path.exists():
             temp_path.unlink()
@@ -196,6 +197,19 @@ def write_artifact_sidecar(
 
 def _sidecar_path(artifact_path: Path) -> Path:
     return artifact_path.with_name(f"{artifact_path.name}.fingerprint.json")
+
+
+def _replace_sidecar(temp_path: Path, sidecar_path: Path) -> None:
+    """Tolerate a bounded Windows replace race between cache writers."""
+
+    for attempt in range(5):
+        try:
+            os.replace(temp_path, sidecar_path)
+            return
+        except PermissionError:
+            if attempt == 4:
+                raise
+            time.sleep(0.01 * (attempt + 1))
 
 
 def _parser_fingerprint() -> str:

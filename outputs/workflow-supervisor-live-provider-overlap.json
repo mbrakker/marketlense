@@ -1,0 +1,790 @@
+{
+  "classification": "PROVEN",
+  "comparison": {
+    "cost_non_regression": true,
+    "quality_non_regression": true,
+    "speedup_percent": 169.46,
+    "speedup_ratio": 2.6946
+  },
+  "preflight": {
+    "case_id_sha256": "e6f692f937206c97647da70687c299694f5b082e1aadd97d76fa95861dc9f631",
+    "error_type": "",
+    "estimated_cost_usd": 0.00031025,
+    "input_tokens": 41,
+    "output_tokens": 150,
+    "provider_wall_ms": 4735.421,
+    "quality_passed": true,
+    "queue_wait_ms": 0.002
+  },
+  "request_shape": {
+    "max_output_tokens": 512,
+    "max_parallel_workers": 3,
+    "maximum_calls": 55
+  },
+  "samples": [
+    {
+      "calls": [
+        {
+          "case_id_sha256": "2a6bf1002087d0c37d651a4b7e2bc61c4feb72a58d347d6b433bb86a6c43bcc7",
+          "error_type": "",
+          "estimated_cost_usd": 0.0005865,
+          "input_tokens": 50,
+          "output_tokens": 287,
+          "provider_wall_ms": 4196.377,
+          "quality_passed": true,
+          "queue_wait_ms": 0.107
+        },
+        {
+          "case_id_sha256": "60d94af9d18d31455a5e23c4b2aff4f3654ae1ac907a1645baaad06363afadeb",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032825,
+          "input_tokens": 49,
+          "output_tokens": 158,
+          "provider_wall_ms": 4139.267,
+          "quality_passed": true,
+          "queue_wait_ms": 4196.585
+        },
+        {
+          "case_id_sha256": "280e1d1c69717c5334fb0cb6fe9df2b5dc5f5d93a30c197b09f5f50e9b4c95f2",
+          "error_type": "",
+          "estimated_cost_usd": 0.00020025000000000002,
+          "input_tokens": 49,
+          "output_tokens": 94,
+          "provider_wall_ms": 3698.427,
+          "quality_passed": true,
+          "queue_wait_ms": 8335.92
+        }
+      ],
+      "cost_known": true,
+      "estimated_cost_usd": 0.001115,
+      "phase": "warmup",
+      "quality_passed": true,
+      "sequence": 0,
+      "wall_ms": 12034.517,
+      "workers": 1
+    },
+    {
+      "calls": [
+        {
+          "case_id_sha256": "a571bafa6e52eadffa63edf56ccc89e758e9477468d74ce1cb7134d97a4cdc46",
+          "error_type": "",
+          "estimated_cost_usd": 0.0003305,
+          "input_tokens": 50,
+          "output_tokens": 159,
+          "provider_wall_ms": 3930.174,
+          "quality_passed": true,
+          "queue_wait_ms": 0.671
+        },
+        {
+          "case_id_sha256": "c89088427b0d847dfc7899a8d0bfe98ee9e924cb18e9647c2025286b474961c9",
+          "error_type": "",
+          "estimated_cost_usd": 0.00045625,
+          "input_tokens": 49,
+          "output_tokens": 222,
+          "provider_wall_ms": 4300.67,
+          "quality_passed": true,
+          "queue_wait_ms": 2.522
+        },
+        {
+          "case_id_sha256": "45162b0446b9384e518cc5f3ebdb5b8edde3c0d591b49eb3e4a4255d2cba6463",
+          "error_type": "",
+          "estimated_cost_usd": 0.00045625,
+          "input_tokens": 49,
+          "output_tokens": 222,
+          "provider_wall_ms": 4453.723,
+          "quality_passed": true,
+          "queue_wait_ms": 1.627
+        }
+      ],
+      "cost_known": true,
+      "estimated_cost_usd": 0.001243,
+      "phase": "warmup",
+      "quality_passed": true,
+      "sequence": 0,
+      "wall_ms": 4456.155,
+      "workers": 3
+    },
+    {
+      "calls": [
+        {
+          "case_id_sha256": "e0bb27242cb8bf49993c7bd33004d78f6ff72f5e3adafb25516802d3b386016a",
+          "error_type": "",
+          "estimated_cost_usd": 7.225000000000001e-05,
+          "input_tokens": 49,
+          "output_tokens": 30,
+          "provider_wall_ms": 2493.244,
+          "quality_passed": true,
+          "queue_wait_ms": 2.511
+        },
+        {
+          "case_id_sha256": "5022d13dc5a9609cf057806af397c3243a5b68887e5a9e3f636965146beaf45d",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032825,
+          "input_tokens": 49,
+          "output_tokens": 158,
+          "provider_wall_ms": 3255.237,
+          "quality_passed": true,
+          "queue_wait_ms": 1.821
+        },
+        {
+          "case_id_sha256": "c796710533fc8afdcec682d113706633c26d81ca5b27f3417b7976c5df4a9309",
+          "error_type": "",
+          "estimated_cost_usd": 0.0003305,
+          "input_tokens": 50,
+          "output_tokens": 159,
+          "provider_wall_ms": 4030.684,
+          "quality_passed": true,
+          "queue_wait_ms": 0.807
+        }
+      ],
+      "cost_known": true,
+      "estimated_cost_usd": 0.000731,
+      "phase": "warmup",
+      "quality_passed": true,
+      "sequence": 1,
+      "wall_ms": 4032.325,
+      "workers": 3
+    },
+    {
+      "calls": [
+        {
+          "case_id_sha256": "929e9c8b47ed0ca5f3f3fe59e71b9328b036106c638d4104e1aa75dbd35fd9f7",
+          "error_type": "",
+          "estimated_cost_usd": 0.0003305,
+          "input_tokens": 50,
+          "output_tokens": 159,
+          "provider_wall_ms": 3177.143,
+          "quality_passed": true,
+          "queue_wait_ms": 0.093
+        },
+        {
+          "case_id_sha256": "5e79776b8374d3454c9be878482c5a22668bea8cdf70d131ad5ae811dc6773ac",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032825,
+          "input_tokens": 49,
+          "output_tokens": 158,
+          "provider_wall_ms": 2677.846,
+          "quality_passed": true,
+          "queue_wait_ms": 3177.307
+        },
+        {
+          "case_id_sha256": "7050c020d06fde12ace35d586c0572cc94316e2f29cddc7ed26980a11220dd93",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032825,
+          "input_tokens": 49,
+          "output_tokens": 158,
+          "provider_wall_ms": 3444.553,
+          "quality_passed": true,
+          "queue_wait_ms": 5855.226
+        }
+      ],
+      "cost_known": true,
+      "estimated_cost_usd": 0.000987,
+      "phase": "warmup",
+      "quality_passed": true,
+      "sequence": 1,
+      "wall_ms": 9299.952,
+      "workers": 1
+    },
+    {
+      "calls": [
+        {
+          "case_id_sha256": "ed97bc66e6247783e1a6ca52f5220e3b3a1668587dcb47be8e31a5b38e497d23",
+          "error_type": "",
+          "estimated_cost_usd": 0.0003305,
+          "input_tokens": 50,
+          "output_tokens": 159,
+          "provider_wall_ms": 3446.573,
+          "quality_passed": true,
+          "queue_wait_ms": 0.167
+        },
+        {
+          "case_id_sha256": "9b91d9b28b38bce3574411b79388d6bac82f0928d52f5142aa7a9e83a363b7d4",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032825,
+          "input_tokens": 49,
+          "output_tokens": 158,
+          "provider_wall_ms": 3327.876,
+          "quality_passed": true,
+          "queue_wait_ms": 3446.813
+        },
+        {
+          "case_id_sha256": "b4c7280b75b42166e5d751b061a4e4dcbf392652d4c87010f0573d9c0d7773ff",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032825,
+          "input_tokens": 49,
+          "output_tokens": 158,
+          "provider_wall_ms": 3123.372,
+          "quality_passed": true,
+          "queue_wait_ms": 6774.824
+        }
+      ],
+      "cost_known": true,
+      "estimated_cost_usd": 0.000987,
+      "phase": "measured",
+      "quality_passed": true,
+      "sequence": 0,
+      "wall_ms": 9898.377,
+      "workers": 1
+    },
+    {
+      "calls": [
+        {
+          "case_id_sha256": "7186c576a0e9cae9bd0ddc704cf53e5af02815a091dba26cb81adcd68f6c593f",
+          "error_type": "",
+          "estimated_cost_usd": 0.00020025000000000002,
+          "input_tokens": 49,
+          "output_tokens": 94,
+          "provider_wall_ms": 2653.87,
+          "quality_passed": true,
+          "queue_wait_ms": 2.965
+        },
+        {
+          "case_id_sha256": "e25d3a8e4a24750d09a7f7df32c67696ce8a97405c68753d3b315aa103151bc1",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032825,
+          "input_tokens": 49,
+          "output_tokens": 158,
+          "provider_wall_ms": 2953.969,
+          "quality_passed": true,
+          "queue_wait_ms": 1.772
+        },
+        {
+          "case_id_sha256": "af21a3afb8baeebb7853a7b49ecbe1783b971da8f012fef40a9dc540e248596c",
+          "error_type": "",
+          "estimated_cost_usd": 0.0004585,
+          "input_tokens": 50,
+          "output_tokens": 223,
+          "provider_wall_ms": 3578.636,
+          "quality_passed": true,
+          "queue_wait_ms": 0.738
+        }
+      ],
+      "cost_known": true,
+      "estimated_cost_usd": 0.000987,
+      "phase": "measured",
+      "quality_passed": true,
+      "sequence": 0,
+      "wall_ms": 3580.183,
+      "workers": 3
+    },
+    {
+      "calls": [
+        {
+          "case_id_sha256": "707250e5c3c48ffc684cfd05dabaa4b705df0597cbb02b2dab186b564f249059",
+          "error_type": "",
+          "estimated_cost_usd": 0.00020025000000000002,
+          "input_tokens": 49,
+          "output_tokens": 94,
+          "provider_wall_ms": 2729.474,
+          "quality_passed": true,
+          "queue_wait_ms": 1.415
+        },
+        {
+          "case_id_sha256": "c4b61f647f842a7b29bf862fffc2359526a4e1e4db1484e91d823a133c950b73",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032825,
+          "input_tokens": 49,
+          "output_tokens": 158,
+          "provider_wall_ms": 2971.439,
+          "quality_passed": true,
+          "queue_wait_ms": 2.35
+        },
+        {
+          "case_id_sha256": "b689adde83275219e10a346fbfa28682d117dca0eb027e99c86fa2fec67bad56",
+          "error_type": "",
+          "estimated_cost_usd": 0.0003305,
+          "input_tokens": 50,
+          "output_tokens": 159,
+          "provider_wall_ms": 3508.605,
+          "quality_passed": true,
+          "queue_wait_ms": 0.466
+        }
+      ],
+      "cost_known": true,
+      "estimated_cost_usd": 0.000859,
+      "phase": "measured",
+      "quality_passed": true,
+      "sequence": 1,
+      "wall_ms": 3510.029,
+      "workers": 3
+    },
+    {
+      "calls": [
+        {
+          "case_id_sha256": "946924c5820e2e869f6c74cb898ddc7df4ce3fb34ffdb1e90d70c6acaa158c36",
+          "error_type": "",
+          "estimated_cost_usd": 0.0003305,
+          "input_tokens": 50,
+          "output_tokens": 159,
+          "provider_wall_ms": 2975.848,
+          "quality_passed": true,
+          "queue_wait_ms": 0.127
+        },
+        {
+          "case_id_sha256": "181be7dedb0a709b927a08ba4e75cd132c3d96f05c6315834eaaedd2d35a8440",
+          "error_type": "",
+          "estimated_cost_usd": 0.00020025000000000002,
+          "input_tokens": 49,
+          "output_tokens": 94,
+          "provider_wall_ms": 2401.509,
+          "quality_passed": true,
+          "queue_wait_ms": 2976.115
+        },
+        {
+          "case_id_sha256": "a859b2ef571968189e9a6e48ab672591afab200155a2f3401ec98cca1c833b4c",
+          "error_type": "",
+          "estimated_cost_usd": 0.00020025000000000002,
+          "input_tokens": 49,
+          "output_tokens": 94,
+          "provider_wall_ms": 2614.128,
+          "quality_passed": true,
+          "queue_wait_ms": 5377.743
+        }
+      ],
+      "cost_known": true,
+      "estimated_cost_usd": 0.000731,
+      "phase": "measured",
+      "quality_passed": true,
+      "sequence": 1,
+      "wall_ms": 7992.095,
+      "workers": 1
+    },
+    {
+      "calls": [
+        {
+          "case_id_sha256": "0bee21dd729790670357726e9d6aac649ccb828be6bcfb601c9afc728698b4c0",
+          "error_type": "",
+          "estimated_cost_usd": 0.0004585,
+          "input_tokens": 50,
+          "output_tokens": 223,
+          "provider_wall_ms": 3430.23,
+          "quality_passed": true,
+          "queue_wait_ms": 0.143
+        },
+        {
+          "case_id_sha256": "18f4ef69c8dcf22c4fb257507666aea5422ab4f6b74b1f12d480b3ec28a7b9f3",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032825,
+          "input_tokens": 49,
+          "output_tokens": 158,
+          "provider_wall_ms": 3361.883,
+          "quality_passed": true,
+          "queue_wait_ms": 3430.484
+        },
+        {
+          "case_id_sha256": "cfdbec7ad5b9a395cca3d8c412d2d1bf79ad0aedd831ca9be66c75e2f9b5be89",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032825,
+          "input_tokens": 49,
+          "output_tokens": 158,
+          "provider_wall_ms": 2825.735,
+          "quality_passed": true,
+          "queue_wait_ms": 6792.463
+        }
+      ],
+      "cost_known": true,
+      "estimated_cost_usd": 0.001115,
+      "phase": "measured",
+      "quality_passed": true,
+      "sequence": 2,
+      "wall_ms": 9618.36,
+      "workers": 1
+    },
+    {
+      "calls": [
+        {
+          "case_id_sha256": "0aeeb7f2347265f72993f27340811c9232a1ab2626b2289f561d36dc8ec65704",
+          "error_type": "",
+          "estimated_cost_usd": 0.00020250000000000002,
+          "input_tokens": 50,
+          "output_tokens": 95,
+          "provider_wall_ms": 2806.846,
+          "quality_passed": true,
+          "queue_wait_ms": 0.592
+        },
+        {
+          "case_id_sha256": "171ea7efa04fdafa652d5950ceb84ddeafa5b5c80e1d859034eb492403e325da",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032825,
+          "input_tokens": 49,
+          "output_tokens": 158,
+          "provider_wall_ms": 3233.955,
+          "quality_passed": true,
+          "queue_wait_ms": 1.682
+        },
+        {
+          "case_id_sha256": "aa69ea0ed56509b6b95a171b4aba00bd9d308ace5c471f7b8c174019807b7e69",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032825,
+          "input_tokens": 49,
+          "output_tokens": 158,
+          "provider_wall_ms": 3338.881,
+          "quality_passed": true,
+          "queue_wait_ms": 2.485
+        }
+      ],
+      "cost_known": true,
+      "estimated_cost_usd": 0.000859,
+      "phase": "measured",
+      "quality_passed": true,
+      "sequence": 2,
+      "wall_ms": 3342.567,
+      "workers": 3
+    },
+    {
+      "calls": [
+        {
+          "case_id_sha256": "b0889cff91968b62af39b597b6d71f01a5b7ec9f8de5c2563c17cdba3265c99e",
+          "error_type": "",
+          "estimated_cost_usd": 0.00020025000000000002,
+          "input_tokens": 49,
+          "output_tokens": 94,
+          "provider_wall_ms": 2773.921,
+          "quality_passed": true,
+          "queue_wait_ms": 1.28
+        },
+        {
+          "case_id_sha256": "a2b93062092a3d1831b72d06ff1926e8495970daf8c22acf51725bfbbb612666",
+          "error_type": "",
+          "estimated_cost_usd": 0.00020025000000000002,
+          "input_tokens": 49,
+          "output_tokens": 94,
+          "provider_wall_ms": 2837.487,
+          "quality_passed": true,
+          "queue_wait_ms": 2.235
+        },
+        {
+          "case_id_sha256": "55927a6d376f7834c7598c68a4937b04ec1039816c78aea93f4ad4b9520b10fa",
+          "error_type": "",
+          "estimated_cost_usd": 0.0003305,
+          "input_tokens": 50,
+          "output_tokens": 159,
+          "provider_wall_ms": 2986.427,
+          "quality_passed": true,
+          "queue_wait_ms": 0.506
+        }
+      ],
+      "cost_known": true,
+      "estimated_cost_usd": 0.000731,
+      "phase": "measured",
+      "quality_passed": true,
+      "sequence": 3,
+      "wall_ms": 2987.849,
+      "workers": 3
+    },
+    {
+      "calls": [
+        {
+          "case_id_sha256": "7df56705dfbe43265fb28cb1bdb754fa84bab77b58aa2c0c03748879bbefe52b",
+          "error_type": "",
+          "estimated_cost_usd": 0.0003305,
+          "input_tokens": 50,
+          "output_tokens": 159,
+          "provider_wall_ms": 2829.263,
+          "quality_passed": true,
+          "queue_wait_ms": 0.105
+        },
+        {
+          "case_id_sha256": "307def6703f2034a16445a18c9d4b8667af38a169853c0a502baa9a1c80c89bc",
+          "error_type": "",
+          "estimated_cost_usd": 0.00020025000000000002,
+          "input_tokens": 49,
+          "output_tokens": 94,
+          "provider_wall_ms": 2373.845,
+          "quality_passed": true,
+          "queue_wait_ms": 2829.47
+        },
+        {
+          "case_id_sha256": "e7b59f2e8e1721f6a6b96a8aedb5f43a0dd8ef72677533baf7b5503dcf749ca4",
+          "error_type": "",
+          "estimated_cost_usd": 0.00045625,
+          "input_tokens": 49,
+          "output_tokens": 222,
+          "provider_wall_ms": 4580.53,
+          "quality_passed": true,
+          "queue_wait_ms": 5203.464
+        }
+      ],
+      "cost_known": true,
+      "estimated_cost_usd": 0.000987,
+      "phase": "measured",
+      "quality_passed": true,
+      "sequence": 3,
+      "wall_ms": 9784.117,
+      "workers": 1
+    },
+    {
+      "calls": [
+        {
+          "case_id_sha256": "29b786e80c33ab9b6224643695690cbe8bb89c99850f7dcd9758202ca783c3a9",
+          "error_type": "",
+          "estimated_cost_usd": 0.0003305,
+          "input_tokens": 50,
+          "output_tokens": 159,
+          "provider_wall_ms": 3526.895,
+          "quality_passed": true,
+          "queue_wait_ms": 0.087
+        },
+        {
+          "case_id_sha256": "b61c1a97da8fd7eed4627f22477d064cfa93be5c1f90ea70f917e3d429a47c90",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032825,
+          "input_tokens": 49,
+          "output_tokens": 158,
+          "provider_wall_ms": 3242.707,
+          "quality_passed": true,
+          "queue_wait_ms": 3527.069
+        },
+        {
+          "case_id_sha256": "6e00d35254cee211fbcfe0b4e98a38264b995d4a2a2c68ec434b76f24a5b24c4",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032825,
+          "input_tokens": 49,
+          "output_tokens": 158,
+          "provider_wall_ms": 2877.081,
+          "quality_passed": true,
+          "queue_wait_ms": 6769.867
+        }
+      ],
+      "cost_known": true,
+      "estimated_cost_usd": 0.000987,
+      "phase": "measured",
+      "quality_passed": true,
+      "sequence": 4,
+      "wall_ms": 9647.065,
+      "workers": 1
+    },
+    {
+      "calls": [
+        {
+          "case_id_sha256": "2c397f7d537ece1c01372a7ba7c2593b2b57952b5dc1b41bfa93a005e974e9b7",
+          "error_type": "",
+          "estimated_cost_usd": 0.00020025000000000002,
+          "input_tokens": 49,
+          "output_tokens": 94,
+          "provider_wall_ms": 2936.641,
+          "quality_passed": true,
+          "queue_wait_ms": 2.631
+        },
+        {
+          "case_id_sha256": "617e4de7df8e8c7d454ad9f1846df3dd5170276f43acfa9cc88a279598fac325",
+          "error_type": "",
+          "estimated_cost_usd": 0.00020250000000000002,
+          "input_tokens": 50,
+          "output_tokens": 95,
+          "provider_wall_ms": 2957.594,
+          "quality_passed": true,
+          "queue_wait_ms": 0.609
+        },
+        {
+          "case_id_sha256": "ff9b2d23ba45118aed24d2ae32730917d2f0a1ce6bb590c5a5299e3930cb9787",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032825,
+          "input_tokens": 49,
+          "output_tokens": 158,
+          "provider_wall_ms": 3646.923,
+          "quality_passed": true,
+          "queue_wait_ms": 1.748
+        }
+      ],
+      "cost_known": true,
+      "estimated_cost_usd": 0.000731,
+      "phase": "measured",
+      "quality_passed": true,
+      "sequence": 4,
+      "wall_ms": 3649.413,
+      "workers": 3
+    },
+    {
+      "calls": [
+        {
+          "case_id_sha256": "209b27c4e17c17bfffd9454d2b1dac40dd87ad7d84670a352db855b43c236768",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032825,
+          "input_tokens": 49,
+          "output_tokens": 158,
+          "provider_wall_ms": 3242.489,
+          "quality_passed": true,
+          "queue_wait_ms": 1.757
+        },
+        {
+          "case_id_sha256": "42134830c61e5ef331ea6a0646758b811cf902ee94ff1200c358927adf6e8985",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032825,
+          "input_tokens": 49,
+          "output_tokens": 158,
+          "provider_wall_ms": 3322.85,
+          "quality_passed": true,
+          "queue_wait_ms": 0.958
+        },
+        {
+          "case_id_sha256": "28526bb2a3fb6a0f9efd472b2ccd75db73c28e45f6ba64345b981116bb99d1ee",
+          "error_type": "",
+          "estimated_cost_usd": 0.0004585,
+          "input_tokens": 50,
+          "output_tokens": 223,
+          "provider_wall_ms": 3935.356,
+          "quality_passed": true,
+          "queue_wait_ms": 0.384
+        }
+      ],
+      "cost_known": true,
+      "estimated_cost_usd": 0.001115,
+      "phase": "measured",
+      "quality_passed": true,
+      "sequence": 5,
+      "wall_ms": 3936.478,
+      "workers": 3
+    },
+    {
+      "calls": [
+        {
+          "case_id_sha256": "fab4334d2e7082b5a529767b694337117e77371c89814e394fca84e412ebe097",
+          "error_type": "",
+          "estimated_cost_usd": 0.0003305,
+          "input_tokens": 50,
+          "output_tokens": 159,
+          "provider_wall_ms": 2796.718,
+          "quality_passed": true,
+          "queue_wait_ms": 0.087
+        },
+        {
+          "case_id_sha256": "bd4d4b5bc1e4e5a2f48bf659fb025ff771c1d942b2655592ecc11c0e6163f7a5",
+          "error_type": "",
+          "estimated_cost_usd": 0.00045625,
+          "input_tokens": 49,
+          "output_tokens": 222,
+          "provider_wall_ms": 3306.449,
+          "quality_passed": true,
+          "queue_wait_ms": 2796.877
+        },
+        {
+          "case_id_sha256": "dd00d09c38bba2b35d17fd19dd4af9462db0f7e7eaef6a441d5a9aaede1d5287",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032825,
+          "input_tokens": 49,
+          "output_tokens": 158,
+          "provider_wall_ms": 2769.36,
+          "quality_passed": true,
+          "queue_wait_ms": 6103.395
+        }
+      ],
+      "cost_known": true,
+      "estimated_cost_usd": 0.001115,
+      "phase": "measured",
+      "quality_passed": true,
+      "sequence": 5,
+      "wall_ms": 8872.866,
+      "workers": 1
+    },
+    {
+      "calls": [
+        {
+          "case_id_sha256": "9da6dd372963dcf4d414e83a34b5a52c71d632a20a9ddee9b7d5d923a268cab3",
+          "error_type": "",
+          "estimated_cost_usd": 0.0003305,
+          "input_tokens": 50,
+          "output_tokens": 159,
+          "provider_wall_ms": 2839.232,
+          "quality_passed": true,
+          "queue_wait_ms": 0.086
+        },
+        {
+          "case_id_sha256": "1df1f0ebca4aa379d851c21eca3a96b985956ef39a0527a6646f10dab52c44d9",
+          "error_type": "",
+          "estimated_cost_usd": 0.00020025000000000002,
+          "input_tokens": 49,
+          "output_tokens": 94,
+          "provider_wall_ms": 4243.39,
+          "quality_passed": true,
+          "queue_wait_ms": 2839.45
+        },
+        {
+          "case_id_sha256": "59e1f2408bd9e16e020eca5d92d726aeb7a272838556b3003fcfaf19b6fb936f",
+          "error_type": "",
+          "estimated_cost_usd": 0.0005842499999999999,
+          "input_tokens": 49,
+          "output_tokens": 286,
+          "provider_wall_ms": 4978.111,
+          "quality_passed": true,
+          "queue_wait_ms": 7082.908
+        }
+      ],
+      "cost_known": true,
+      "estimated_cost_usd": 0.001115,
+      "phase": "measured",
+      "quality_passed": true,
+      "sequence": 6,
+      "wall_ms": 12061.125,
+      "workers": 1
+    },
+    {
+      "calls": [
+        {
+          "case_id_sha256": "124595ed814217379d2248c149ceb71167e26cca79dd158e95776bc46c720b8f",
+          "error_type": "",
+          "estimated_cost_usd": 0.0003305,
+          "input_tokens": 50,
+          "output_tokens": 159,
+          "provider_wall_ms": 2915.986,
+          "quality_passed": true,
+          "queue_wait_ms": 0.421
+        },
+        {
+          "case_id_sha256": "4c25ab8982d3654c2763732d0c43d9fb42a1b98038ab19dad57e3f47fd1e1495",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032825,
+          "input_tokens": 49,
+          "output_tokens": 158,
+          "provider_wall_ms": 2967.959,
+          "quality_passed": true,
+          "queue_wait_ms": 1.867
+        },
+        {
+          "case_id_sha256": "4f621d905a8f3f05050f50369706600e158994f7efbf54d19cb7a91a6517c264",
+          "error_type": "",
+          "estimated_cost_usd": 0.00032825,
+          "input_tokens": 49,
+          "output_tokens": 158,
+          "provider_wall_ms": 3794.421,
+          "quality_passed": true,
+          "queue_wait_ms": 1.11
+        }
+      ],
+      "cost_known": true,
+      "estimated_cost_usd": 0.000987,
+      "phase": "measured",
+      "quality_passed": true,
+      "sequence": 6,
+      "wall_ms": 3796.225,
+      "workers": 3
+    }
+  ],
+  "schema_version": "1.0",
+  "scope": "live provider overlap through production run_supervisor_once; no queue mutation or publication",
+  "summary": {
+    "1": {
+      "cost_known": true,
+      "cv_wall": 0.1184,
+      "median_cost_usd": 0.000987,
+      "median_provider_wall_ms": 3123.372,
+      "median_queue_wait_ms": 2976.115,
+      "median_wall_ms": 9647.065,
+      "p95_wall_ms": 11412.301,
+      "quality_passed": true,
+      "sample_count": 7
+    },
+    "3": {
+      "cost_known": true,
+      "cv_wall": 0.0813,
+      "median_cost_usd": 0.000859,
+      "median_provider_wall_ms": 2971.439,
+      "median_queue_wait_ms": 1.415,
+      "median_wall_ms": 3580.183,
+      "p95_wall_ms": 3894.402,
+      "quality_passed": true,
+      "sample_count": 7
+    }
+  }
+}

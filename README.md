@@ -145,7 +145,9 @@ canonical documentation pack.
 
 The supported pipeline is configuration-driven and uses the documented validation and publication gates. Cross-report analysis, OCR fallback, and browser session reuse are configuration-gated capabilities; inspect their settings and workflow documentation before enabling them.
 
-Active work is tracked only in [CONSOLIDATED_TODO.md](CONSOLIDATED_TODO.md). [x100tasks.md](x100tasks.md) is archived. Historical implementation detail belongs in Git history or [release summaries](docs/releases/README.md), not this README.
+Active work is tracked only in [CONSOLIDATED_TODO.md](CONSOLIDATED_TODO.md).
+Historical implementation detail belongs in Git history or
+[release summaries](docs/releases/README.md), not this README.
 
 ## Contributing
 

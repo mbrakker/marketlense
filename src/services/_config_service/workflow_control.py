@@ -474,6 +474,9 @@ def _parse_supervisor(raw_supervisor: object) -> WorkflowSupervisorSettings:
         ),
         reconcile_enabled=_to_bool(supervisor.get("reconcile_enabled"), True),
         evidence_enabled=_to_bool(supervisor.get("evidence_enabled"), True),
+        max_parallel_workers=min(
+            3, max(1, _to_int(supervisor.get("max_parallel_workers"), 1))
+        ),
         max_jobs_per_queue=max(1, _to_int(supervisor.get("max_jobs_per_queue"), 1)),
         max_total_jobs=max(1, _to_int(supervisor.get("max_total_jobs"), 20)),
         max_runtime_seconds=max(1, _to_int(supervisor.get("max_runtime_seconds"), 120)),

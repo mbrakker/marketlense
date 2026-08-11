@@ -778,6 +778,8 @@ workflow_control:
     worker_batches_enabled: false
     reconcile_enabled: true
     evidence_enabled: true
+    # Provider-wait work is validated at a bounded three-worker cap.
+    max_parallel_workers: 3
     max_jobs_per_queue: 1
     max_total_jobs: 20
     max_runtime_seconds: 120
