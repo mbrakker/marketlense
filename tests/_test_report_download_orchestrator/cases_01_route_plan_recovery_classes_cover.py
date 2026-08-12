@@ -195,7 +195,12 @@ def test_run_report_download_uses_memory_and_records_route(
     assert_logs_have_required_fields,
     assert_no_defaulted_required_fields,
 ) -> None:
-    settings = _settings(tmp_path)
+    settings = replace(
+        _settings(tmp_path),
+        run_budget_enabled=True,
+        run_budget_max_pdfs=1,
+        usage_db_path=str(tmp_path / "usage.sqlite"),
+    )
     saved_records = []
     saved_sources = []
     saved_source_identity_observations = []

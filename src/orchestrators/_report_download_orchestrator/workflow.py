@@ -228,10 +228,7 @@ def run_report_download(
                 schema_version="1.0",
                 db_path=request.reports_db,
                 normalized_url=normalized_url,
-                publisher_id=(
-                    str(request.publisher_id or "").strip()
-                    or str(request.publisher_name or "").strip()
-                ),
+                publisher_id=str(request.publisher_name or "").strip(),
                 route_family=planned_step.route_family,
                 policy_version=route_suppression_policy.schema_version,
                 source_policy_compatibility_hash=suppression_hash,
@@ -402,7 +399,7 @@ def run_report_download(
                     ctx=ctx,
                     input_checksum=normalized_url,
                     source_id=normalized_url,
-                    publisher_id=request.publisher_id or request.publisher_name,
+                    publisher_id=request.publisher_name,
                 )
                 raise
             last_retryable_error = exc
@@ -428,7 +425,7 @@ def run_report_download(
                     ctx=ctx,
                     input_checksum=normalized_url,
                     source_id=normalized_url,
-                    publisher_id=request.publisher_id or request.publisher_name,
+                    publisher_id=request.publisher_name,
                 )
                 raise
     if result is None:
@@ -457,7 +454,7 @@ def run_report_download(
                 ctx=ctx,
                 input_checksum=normalized_url,
                 source_id=normalized_url,
-                publisher_id=request.publisher_id or request.publisher_name,
+                publisher_id=request.publisher_name,
             )
             raise last_retryable_error
         error = AppError(
@@ -487,7 +484,7 @@ def run_report_download(
             ctx=ctx,
             input_checksum=normalized_url,
             source_id=normalized_url,
-            publisher_id=request.publisher_id or request.publisher_name,
+            publisher_id=request.publisher_name,
         )
         raise error
 
@@ -671,7 +668,7 @@ def _run_download_attempt(
                     budget=run_budget,
                     run_id=ctx.run_id,
                     workflow_id="report_download",
-                    publisher_id=request.publisher_id or request.publisher_name,
+                    publisher_id=request.publisher_name,
                     report_id=request.report_title or service_request.url,
                     resource_type="pdf_process",
                     operation="acquire_report_pdf",
