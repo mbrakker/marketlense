@@ -72,6 +72,10 @@ If checkpoint lineage is subsequently found non-reusable, its retained processed
 state does not suppress the next normal immutable-cohort replay. The ingest
 selector explicitly returns that source to the repair path while preserving the
 idempotent skip for reports whose retained readiness decision still passes.
+When every `latest_safe` checkpoint is non-reusable, the repair pipeline starts
+fresh from the already retained source PDF instead of consuming a rejected
+checkpoint or aborting; the normal source, analysis, validation, and render
+checks then establish replacement lineage.
 
 The same render outcome fails closed when required report-card metadata, such
 as publisher, fails public-metadata governance. Such a package remains a render

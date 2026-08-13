@@ -33,6 +33,9 @@ from src.orchestrators._report_generation_orchestrator.resume import (
     _validate_checkpoint_artifact_lineage,
     _validate_checkpoint_artifacts,
 )
+from src.orchestrators._report_generation_orchestrator.workflow import (
+    _should_fresh_start_after_latest_safe_rejection,
+)
 from src.services.report_store_service import (
     invalidate_artifacts,
     record_artifact_lineage,
@@ -456,6 +459,16 @@ def test_read_validated_checkpoint_and_latest_safe_restart_fail_closed_when_miss
 
     assert read_error.value.code == "report_pipeline_checkpoint_missing"
     assert restart_error.value.code == "report_pipeline_checkpoint_missing"
+
+
+def test_nonreusable_latest_safe_checkpoint_selects_fresh_pipeline_start() -> None:
+    error = AppError(
+        code="report_pipeline_checkpoint_lineage_not_reusable",
+        message="Checkpoint artifact lineage cannot be reused",
+        retryable=False,
+    )
+
+    assert _should_fresh_start_after_latest_safe_rejection(error) is True
 
 
 def test_render_only_resume_avoids_post_render_side_effects(tmp_path: Path) -> None:

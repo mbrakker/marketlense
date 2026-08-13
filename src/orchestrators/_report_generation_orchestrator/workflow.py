@@ -68,6 +68,7 @@ from .resume import (
     _run_projection,
     _run_signal_artifact_generation,
     _score_ingested_report_source,
+    _select_latest_safe_restart_stage,
 )
 
 logger = logging.getLogger("market_lense.report_generation_orchestrator")
@@ -76,6 +77,12 @@ STAGE_SOURCE_PREPARED = "source_prepared"
 STAGE_SELECTION_COMPLETE = "selection_complete"
 STAGE_ANALYSIS_COMPLETE = "analysis_complete"
 STAGE_RENDER_COMPLETE = "render_complete"
+
+
+def _should_fresh_start_after_latest_safe_rejection(error: AppError) -> bool:
+    """Allow a clean retained-source rebuild only after lineage rejection."""
+
+    return error.code == "report_pipeline_checkpoint_lineage_not_reusable"
 
 
 def _default_report_generation_dependencies() -> ReportGenerationDependencies:
@@ -356,6 +363,25 @@ def run_report_generation(
             )
         )
     requested_resume_stage = str(resume_from_stage or "").strip()
+    if requested_resume_stage == "latest_safe":
+        try:
+            requested_resume_stage = _select_latest_safe_restart_stage(runtime)
+        except AppError as exc:
+            if not _should_fresh_start_after_latest_safe_rejection(exc):
+                raise
+            requested_resume_stage = ""
+            logger.info(
+                log_event(
+                    runtime.ctx,
+                    role="orchestrator",
+                    event="report_pipeline_latest_safe_fresh_start_selected",
+                    module=logger.name,
+                    fields={
+                        "file_id": runtime.file.file_id,
+                        "error_code": exc.code,
+                    },
+                )
+            )
     requested_stop_stage = str(stop_after_stage or "").strip()
     if projection_only and requested_resume_stage != STAGE_ANALYSIS_COMPLETE:
         raise AppError(
