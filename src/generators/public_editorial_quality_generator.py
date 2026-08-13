@@ -63,7 +63,10 @@ _PLACEHOLDER = re.compile(
     r"\{\{[^}]+\}\}|\[\[(?:[^\]]+)\]\]|\b(?:todo|tbd|lorem ipsum|insert [a-z]+)\b",
     re.IGNORECASE,
 )
-_MALFORMED = re.compile(r"\ufffd|\b\w{1,16}\s*\|\s*\w{1,16}\b|(?:\w\s+){5,}\w")
+_MALFORMED = re.compile(
+    r"\ufffd|\b(?:\w{3,16}\s*\|\s*\w{1,2}|\w{1,2}\s*\|\s*\w{3,16})\b|"
+    r"(?:\w\s+){5,}\w"
+)
 _MOJIBAKE = re.compile(r"(?:Ã[\u0080-\u00bf]|Â[\u0080-\u00bf]|â€)")
 _MECHANICAL_SCAFFOLD = re.compile(
     r"\b(?:answer|observation|implication|executive action|"
@@ -71,7 +74,7 @@ _MECHANICAL_SCAFFOLD = re.compile(
     r"immediate implication)\s*:",
     re.IGNORECASE,
 )
-_LITERAL_TRUNCATION = re.compile(r"(?:\.\.\.|…)")
+_LITERAL_TRUNCATION = re.compile(r"(?:\.\.\.|…)(?![\"'”’])")
 _PRIVATE_OPERATIONAL_REFERENCE = re.compile(
     r"(?:https?://(?:drive\.google\.com|localhost|127\.0\.0\.1)\S*|"
     r"(?<![A-Za-z0-9])(?:[A-Za-z]:[\\/]|(?:^|[\"'])/(?:out|cache|state)/))",
@@ -490,7 +493,7 @@ def _html_issues(
                 "renders mechanical editorial scaffolding",
             )
         )
-    if "..." in visible_text or "…" in visible_text:
+    if _LITERAL_TRUNCATION.search(visible_text):
         issues.append(
             _issue(
                 report_id,

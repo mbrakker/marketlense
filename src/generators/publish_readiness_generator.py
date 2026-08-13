@@ -483,10 +483,13 @@ def _html_results(
     document = BeautifulSoup(final_html, "html.parser")
     surfaces = _html_surfaces(document)
     joined = " ".join(value for _, value in surfaces)
+    visible_or_metadata = " ".join(
+        value for name, value in surfaces if name != "link_href"
+    )
     results = [editorial_result]
     if (
-        _INTERNAL_TOKEN.search(joined)
-        or _RAW_EVIDENCE_TOKEN.search(joined)
+        _INTERNAL_TOKEN.search(visible_or_metadata)
+        or _RAW_EVIDENCE_TOKEN.search(visible_or_metadata)
         or _PRIVATE_LOCATION.search(joined)
     ):
         results.append(

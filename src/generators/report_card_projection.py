@@ -61,6 +61,8 @@ def select_geometry_family(semantics: dict[str, object]) -> str:
         return "split_horizon"
     if shape == "trend" and direction == "converging":
         return "signal_lattice"
+    if shape == "trend" and direction == "cyclical":
+        return "cycle_orbit"
     if shape == "trend" and direction == "neutral":
         return "interlaced_mesh"
     if shape == "comparison" and direction == "converging":

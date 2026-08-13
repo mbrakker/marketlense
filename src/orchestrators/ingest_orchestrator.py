@@ -276,6 +276,23 @@ def _processed_record_should_skip(
             )
         )
         return False
+    if last_error == "publish_readiness_failed" or last_error.startswith(
+        "cover_fingerprint_invalid:"
+    ):
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="processed_state_report_generation_repair_selected",
+                module=logger.name,
+                fields={
+                    "file_id": file_id,
+                    "md5": md5,
+                    "last_error": last_error,
+                },
+            )
+        )
+        return False
     if not last_error and text_validation_status not in {"pass", "fail"}:
         logger.info(
             log_event(

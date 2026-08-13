@@ -12,6 +12,7 @@ CASES = (
     ("trend", "volatile", "volatility_corridor"),
     ("trend", "diverging", "split_horizon"),
     ("trend", "converging", "signal_lattice"),
+    ("trend", "cyclical", "cycle_orbit"),
     ("comparison", "converging", "convergence_funnel"),
     ("comparison", "diverging", "divergence_fan"),
     ("comparison", "volatile", "parallel_bands"),

@@ -140,6 +140,28 @@ def test_public_html_ignores_non_visible_text_in_spaced_script_tags() -> None:
     assert "public_editorial_quality.internal_identifier" not in _rule_ids(report)
 
 
+def test_public_html_allows_pipe_separated_public_taxonomy_labels() -> None:
+    report = evaluate_public_editorial_quality(
+        report_id="retained-report",
+        artifacts=_retained_artifacts(),
+        html="<small>luxury | premium | midscale, Global, announced 2026</small>",
+    )
+
+    assert "public_editorial_quality.malformed_extraction_fragment" not in _rule_ids(
+        report
+    )
+
+
+def test_public_html_allows_ellipsis_that_closes_a_quoted_prompt() -> None:
+    report = evaluate_public_editorial_quality(
+        report_id="retained-report",
+        artifacts=_retained_artifacts(),
+        html='<p>Use the prompt “We are doing this because we believe…” to surface assumptions.</p>',
+    )
+
+    assert "public_editorial_quality.literal_truncation" not in _rule_ids(report)
+
+
 def test_public_html_source_section_requires_a_public_original_source_link() -> None:
     missing = evaluate_public_editorial_quality(
         report_id="retained-report",

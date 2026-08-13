@@ -343,6 +343,8 @@ The publish-readiness identifier gate targets identifier-shaped internal tokens
 and private locations, not ordinary editorial language such as
 “evidence-backed” or “evidence-linked.” This preserves the public safety check
 without rejecting grounded prose solely for describing its evidence quality.
+Identifier-shaped strings in a public source URL's `href` are likewise not
+rendered identifiers; private Drive and local-location URLs remain blocked.
 
 The summary's public card TLDR sentence contract is also checked inside that
 same structured-output recovery path, rather than only after all artifact calls
