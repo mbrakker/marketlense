@@ -360,6 +360,25 @@ def test_resolved_report_title_replaces_a_runtime_slug_with_document_map_title(
     )
 
 
+def test_resolved_report_title_replaces_source_identifier_with_document_map_title(
+    tmp_path,
+) -> None:
+    runtime = _runtime(tmp_path, md5="md5")
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    analysis = replace(
+        _analysis(runtime, source, selection),
+        evidence_packs={"doc_map": {"title": "Document Map Report Title"}},
+    )
+
+    assert _resolved_report_title(
+        runtime,
+        source,
+        analysis,
+        "source-12345678901234567890",
+    ) == "Document Map Report Title"
+
+
 def test_render_report_output_sources_metadata_from_db_and_returns_complete_outcome(
     tmp_path, assert_no_defaulted_required_fields
 ):

@@ -58,6 +58,7 @@ from src.utils.time_period import normalize_time_period
 _GENERATED_REPORT_TITLE = re.compile(
     r"^[0-9a-f]{32,64}(?:[-_.](?:pdf|report))?$", re.IGNORECASE
 )
+_SOURCE_ID_TITLE = re.compile(r"^source[-_:][A-Za-z0-9_-]{20,}$", re.IGNORECASE)
 _HTML_RENDER_CONTRACT_VERSION = "2.0"
 
 
@@ -201,7 +202,10 @@ def _is_card_contract_error(exc: AppError) -> bool:
 
 
 def _is_generated_report_title(value: object) -> bool:
-    return bool(_GENERATED_REPORT_TITLE.fullmatch(str(value or "").strip()))
+    title = str(value or "").strip()
+    return bool(
+        _GENERATED_REPORT_TITLE.fullmatch(title) or _SOURCE_ID_TITLE.fullmatch(title)
+    )
 
 
 def _is_runtime_generated_title(runtime: ReportRuntimeState, value: object) -> bool:
@@ -280,11 +284,12 @@ def _resolved_report_title(
     runtime: ReportRuntimeState,
     source: ReportSourceState,
     analysis: ReportAnalysisState,
+    candidate: object | None = None,
 ) -> str:
     resolved = _resolved_render_title(
         runtime,
         source,
-        analysis.payload.title or runtime.report_title,
+        candidate if candidate is not None else (analysis.payload.title or runtime.report_title),
     )
     if resolved and not _is_runtime_generated_title(runtime, resolved):
         return resolved
@@ -452,8 +457,8 @@ def render_report_output(
     existing_publisher = str(render_data_dict.get("publisher") or "").strip()
     existing_time_period = str(render_data_dict.get("time_period") or "").strip()
     if render_meta is None:
-        render_data_dict["title"] = _resolved_render_title(
-            runtime, source, existing_title
+        render_data_dict["title"] = _resolved_report_title(
+            runtime, source, analysis, existing_title
         )
         render_data_dict["publisher"] = (
             _resolved_identity_publisher(runtime)
@@ -477,8 +482,8 @@ def render_report_output(
             )
         )
     else:
-        render_data_dict["title"] = _resolved_render_title(
-            runtime, source, render_meta.title or existing_title
+        render_data_dict["title"] = _resolved_report_title(
+            runtime, source, analysis, render_meta.title or existing_title
         )
         render_data_dict["publisher"] = (
             _resolved_identity_publisher(runtime)
@@ -713,9 +718,10 @@ def render_report_output(
         ),
         child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:cover_metadata"),
     )
-    cover_title = _resolved_render_title(
+    cover_title = _resolved_report_title(
         runtime,
         source,
+        analysis,
         cover_meta.title if cover_meta else render_data_dict["title"],
     )
     cover_publisher = (
