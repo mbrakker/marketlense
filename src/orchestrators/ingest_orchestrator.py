@@ -261,6 +261,21 @@ def _processed_record_should_skip(
     md5 = record.md5
     last_error = str(record.last_error or "").strip()
     text_validation_status = str(record.text_validation_status or "").strip().lower()
+    if last_error.startswith("report_pipeline_checkpoint_lineage_not_reusable:"):
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="processed_state_checkpoint_repair_selected",
+                module=logger.name,
+                fields={
+                    "file_id": file_id,
+                    "md5": md5,
+                    "last_error": last_error,
+                },
+            )
+        )
+        return False
     if not last_error and text_validation_status not in {"pass", "fail"}:
         logger.info(
             log_event(

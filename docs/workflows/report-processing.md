@@ -68,6 +68,11 @@ A completed render checkpoint is reusable only with an explicit passing
 rejects that checkpoint and makes `latest_safe` fall back to an earlier validated
 checkpoint; HTML existence never supplies readiness by inference.
 
+If checkpoint lineage is subsequently found non-reusable, its retained processed
+state does not suppress the next normal immutable-cohort replay. The ingest
+selector explicitly returns that source to the repair path while preserving the
+idempotent skip for reports whose retained readiness decision still passes.
+
 The same render outcome fails closed when required report-card metadata, such
 as publisher, fails public-metadata governance. Such a package remains a render
 error with the typed reason and cannot be mistaken for a publication candidate.
