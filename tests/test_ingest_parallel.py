@@ -17,6 +17,7 @@ from src.contracts.file_cache import (
 from src.contracts.ingest import IngestOutcome
 from src.contracts.remediation import RemediationListRequest
 from src.contracts.state import (
+    StateGetResponse,
     StateIngestCursorSetRequest,
     StateProcessedListRequest,
     StateRecordRequest,
@@ -951,6 +952,43 @@ def test_report_cards_force_mode_skips_valid_manifest(ingest_settings) -> None:
     )
 
     assert processed == []
+
+
+def test_checkpoint_lineage_failure_is_selected_for_repair() -> None:
+    record = StateGetResponse(
+        schema_version="1.0",
+        file_id="failed-report",
+        md5="failed-md5",
+        processed_at=1,
+        last_error=(
+            "report_pipeline_checkpoint_lineage_not_reusable: "
+            "Checkpoint artifact lineage cannot be reused"
+        ),
+    )
+
+    assert orch._processed_record_should_skip(record, orch.new_run_context()) is False
+
+
+@pytest.mark.parametrize(
+    "last_error",
+    [
+        "publish_readiness_failed",
+        "cover_fingerprint_invalid: Cover semantics do not map to an approved geometry family",
+    ],
+)
+def test_repairable_report_generation_failure_is_selected_for_replay(
+    last_error: str,
+) -> None:
+    record = StateGetResponse(
+        schema_version="1.0",
+        file_id="failed-report",
+        md5="failed-md5",
+        processed_at=1,
+        last_error=last_error,
+        text_validation_status="pass",
+    )
+
+    assert orch._processed_record_should_skip(record, orch.new_run_context()) is False
 
 
 def test_report_card_backfill_uses_canonical_report_metadata_path(

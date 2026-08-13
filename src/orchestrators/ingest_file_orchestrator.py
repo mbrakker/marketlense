@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import inspect
+import json
 import logging
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Callable, Optional, Protocol, cast
 
 from src.contracts.drive import DriveDownloadToPathRequest, DriveFile
@@ -12,7 +14,7 @@ from src.contracts.file_cache import (
     FileCacheMd5SidecarWriteRequest,
     FileCacheMd5SidecarWriteResponse,
 )
-from src.contracts.files import DeleteFileRequest, FileStatRequest
+from src.contracts.files import DeleteFileRequest, FileStatRequest, ReadTextRequest
 from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.pdf_utils import PdfEofCheckRequest, PdfIntegrityCheckRequest
 from src.contracts.remediation import RemediationArtifactReference
@@ -121,6 +123,7 @@ class IngestFileDependencies:
     ) = None
     quarantine_enabled: bool = True
     run_budget: RunBudget | None = None
+    read_text: Callable[[ReadTextRequest, RunContext], Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -194,6 +197,7 @@ def _skip_result(
     md5: str | None,
     html_path: str | None,
     error: str,
+    publish_readiness_status: str | None = None,
 ) -> FileProcessResult:
     return _file_result(
         index=index,
@@ -205,8 +209,36 @@ def _skip_result(
             html_path=html_path,
             status="skipped",
             error=error,
+            publish_readiness_status=publish_readiness_status,
         ),
     )
+
+
+def _existing_publish_readiness_status(
+    html_path: str,
+    *,
+    dependencies: IngestFileDependencies,
+    file_ctx: RunContext,
+) -> str | None:
+    """Return a persisted readiness result only when its artifact is readable."""
+    if dependencies.read_text is None:
+        return None
+    readiness_path = (
+        Path(html_path).with_suffix("") / "report_analysis" / "publish_readiness.json"
+    )
+    try:
+        payload = json.loads(
+            dependencies.read_text(
+                ReadTextRequest(schema_version="1.0", path=str(readiness_path)),
+                file_ctx,
+            ).content
+        )
+    except (AppError, OSError, TypeError, ValueError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    status = str(payload.get("status") or "").strip().casefold()
+    return status if status in {"pass", "fail"} else None
 
 
 def _maybe_skip_existing_report_html(
@@ -244,6 +276,27 @@ def _maybe_skip_existing_report_html(
     runtime.report_checked_md5 = runtime.md5
     if not existing_html:
         return None
+    readiness_status = _existing_publish_readiness_status(
+        existing_html,
+        dependencies=dependencies,
+        file_ctx=file_ctx,
+    )
+    if readiness_status != "pass":
+        logging.getLogger(logger_name).info(
+            log_event(
+                file_ctx,
+                role="orchestrator",
+                event="report_html_cache_rejected",
+                module=logger_name,
+                fields={
+                    "file_id": runtime.file.file_id,
+                    "md5": runtime.md5,
+                    "html_path": existing_html,
+                    "readiness_status": readiness_status or "unverified",
+                },
+            )
+        )
+        return None
     logging.getLogger(logger_name).info(
         log_event(
             file_ctx,
@@ -264,6 +317,7 @@ def _maybe_skip_existing_report_html(
         md5=runtime.md5,
         html_path=existing_html,
         error="html_exists",
+        publish_readiness_status=readiness_status,
     )
 
 

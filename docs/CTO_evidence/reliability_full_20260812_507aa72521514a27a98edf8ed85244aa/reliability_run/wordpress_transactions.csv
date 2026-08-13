@@ -1,0 +1,3 @@
+stage,outcome,failure_code
+wordpress_write,blocked,publish_readiness_failed
+wordpress_write,blocked,publish_readiness_failed

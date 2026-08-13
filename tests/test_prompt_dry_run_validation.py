@@ -50,6 +50,20 @@ def _write_prompt_namespace(
     (namespace_dir / "user.yaml").write_text(f"text: {user}", encoding="utf-8")
 
 
+def test_final_insights_regeneration_prompt_requires_decision_implications() -> None:
+    prompt_set = prompt_service.load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/regenerate/insights_final",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+
+    assert "so_what" in prompt_set.user.text
+    assert "now_what" in prompt_set.user.text
+
+
 def test_validate_prompt_dry_run_repository_covers_all_discovered_namespaces(
     caplog,
     assert_logs_have_required_fields,

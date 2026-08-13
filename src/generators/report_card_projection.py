@@ -45,6 +45,7 @@ _EXTRACTION_LEAKAGE_MARKERS = {
     "text block",
 }
 
+
 def select_geometry_family(semantics: dict[str, object]) -> str:
     shape = str(semantics.get("evidence_shape") or "").strip()
     direction = str(semantics.get("direction") or "neutral").strip()
@@ -61,6 +62,8 @@ def select_geometry_family(semantics: dict[str, object]) -> str:
         return "split_horizon"
     if shape == "trend" and direction == "converging":
         return "signal_lattice"
+    if shape == "trend" and direction == "cyclical":
+        return "cycle_orbit"
     if shape == "trend" and direction == "neutral":
         return "interlaced_mesh"
     if shape == "comparison" and direction == "converging":
@@ -149,9 +152,7 @@ def validate_public_metadata_governance(
         field_key = str(field_name)
         is_optional = field_key in _OPTIONAL_CARD_METADATA_FIELDS
         normalized[field_key] = text
-        if (
-            is_optional and folded in _PLACEHOLDER_METADATA
-        ):
+        if is_optional and folded in _PLACEHOLDER_METADATA:
             # A missing optional label must be omitted from public metadata,
             # never published as an extraction placeholder.
             normalized[field_key] = ""
@@ -165,8 +166,7 @@ def validate_public_metadata_governance(
                 and (
                     prefix.strip().casefold() in _LEAKED_FIELD_PREFIXES
                     or any(
-                        f" {label}:" in f" {folded}"
-                        for label in _LEAKED_FIELD_PREFIXES
+                        f" {label}:" in f" {folded}" for label in _LEAKED_FIELD_PREFIXES
                     )
                 )
             )

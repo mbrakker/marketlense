@@ -53,10 +53,12 @@ from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 from src.utils.slugify import slugify
+from src.utils.time_period import normalize_time_period
 
 _GENERATED_REPORT_TITLE = re.compile(
     r"^[0-9a-f]{32,64}(?:[-_.](?:pdf|report))?$", re.IGNORECASE
 )
+_SOURCE_ID_TITLE = re.compile(r"^source[-_:][A-Za-z0-9_-]{20,}$", re.IGNORECASE)
 _HTML_RENDER_CONTRACT_VERSION = "2.0"
 
 
@@ -200,7 +202,10 @@ def _is_card_contract_error(exc: AppError) -> bool:
 
 
 def _is_generated_report_title(value: object) -> bool:
-    return bool(_GENERATED_REPORT_TITLE.fullmatch(str(value or "").strip()))
+    title = str(value or "").strip()
+    return bool(
+        _GENERATED_REPORT_TITLE.fullmatch(title) or _SOURCE_ID_TITLE.fullmatch(title)
+    )
 
 
 def _is_runtime_generated_title(runtime: ReportRuntimeState, value: object) -> bool:
@@ -279,11 +284,14 @@ def _resolved_report_title(
     runtime: ReportRuntimeState,
     source: ReportSourceState,
     analysis: ReportAnalysisState,
+    candidate: object | None = None,
 ) -> str:
     resolved = _resolved_render_title(
         runtime,
         source,
-        analysis.payload.title or runtime.report_title,
+        candidate
+        if candidate is not None
+        else (analysis.payload.title or runtime.report_title),
     )
     if resolved and not _is_runtime_generated_title(runtime, resolved):
         return resolved
@@ -451,8 +459,8 @@ def render_report_output(
     existing_publisher = str(render_data_dict.get("publisher") or "").strip()
     existing_time_period = str(render_data_dict.get("time_period") or "").strip()
     if render_meta is None:
-        render_data_dict["title"] = _resolved_render_title(
-            runtime, source, existing_title
+        render_data_dict["title"] = _resolved_report_title(
+            runtime, source, analysis, existing_title
         )
         render_data_dict["publisher"] = (
             _resolved_identity_publisher(runtime)
@@ -476,8 +484,8 @@ def render_report_output(
             )
         )
     else:
-        render_data_dict["title"] = _resolved_render_title(
-            runtime, source, render_meta.title or existing_title
+        render_data_dict["title"] = _resolved_report_title(
+            runtime, source, analysis, render_meta.title or existing_title
         )
         render_data_dict["publisher"] = (
             _resolved_identity_publisher(runtime)
@@ -643,7 +651,7 @@ def render_report_output(
             else None
         )
         if report_card_manifest_path:
-            readiness_path = _persist_publish_readiness(
+            readiness_path, readiness_status = _persist_publish_readiness(
                 runtime=runtime,
                 analysis=analysis,
                 dependencies=dependencies,
@@ -668,7 +676,11 @@ def render_report_output(
                 name=runtime.file_name,
                 md5=runtime.md5,
                 html_path=out_html,
-                status="processed",
+                status="error" if readiness_status != "pass" else "processed",
+                error=(
+                    "publish_readiness_failed" if readiness_status != "pass" else None
+                ),
+                publish_readiness_status=readiness_status,
                 vector_store_id=analysis.vector_store_id,
                 vector_store_status=analysis.vector_store_status,
                 indexed_at_utc=analysis.indexed_at_utc,
@@ -706,9 +718,10 @@ def render_report_output(
         ),
         child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:cover_metadata"),
     )
-    cover_title = _resolved_render_title(
+    cover_title = _resolved_report_title(
         runtime,
         source,
+        analysis,
         cover_meta.title if cover_meta else render_data_dict["title"],
     )
     cover_publisher = (
@@ -717,7 +730,7 @@ def render_report_output(
         or analysis.payload.publisher
         or _source_derived_publisher(analysis)
     )
-    cover_time_period = (
+    cover_time_period = normalize_time_period(
         cover_meta.time_period if cover_meta else (analysis.payload.time_period or None)
     )
     cover_region = (
@@ -944,7 +957,7 @@ def render_report_output(
         )
     )
 
-    readiness_path = _persist_publish_readiness(
+    readiness_path, readiness_status = _persist_publish_readiness(
         runtime=runtime,
         analysis=analysis,
         dependencies=dependencies,
@@ -958,8 +971,14 @@ def render_report_output(
         name=runtime.file_name,
         md5=runtime.md5,
         html_path=out_html,
-        status="error" if report_card_error else "processed",
-        error=report_card_error,
+        status=(
+            "error" if report_card_error or readiness_status != "pass" else "processed"
+        ),
+        error=(
+            report_card_error
+            or ("publish_readiness_failed" if readiness_status != "pass" else None)
+        ),
+        publish_readiness_status=readiness_status,
         vector_store_id=analysis.vector_store_id,
         vector_store_status=analysis.vector_store_status,
         indexed_at_utc=analysis.indexed_at_utc,
@@ -985,7 +1004,7 @@ def _persist_publish_readiness(
     dependencies: ReportRenderDependencies,
     final_html_path: str,
     report_card_manifest_path: str | None,
-) -> str:
+) -> tuple[str, str]:
     """Persist the single readiness decision after the final render is complete."""
     final_html = dependencies.read_text(
         ReadTextRequest(schema_version="1.0", path=final_html_path),
@@ -1051,7 +1070,7 @@ def _persist_publish_readiness(
             },
         )
     )
-    return response.output_path
+    return response.output_path, readiness.status
 
 
 def _verified_public_source_url(runtime: ReportRuntimeState) -> str:

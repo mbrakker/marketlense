@@ -1,0 +1,9 @@
+route_family,acquisition_records,attempts,browser_steps,structured_browser_records,onsite_capture_records,limitation
+browser_email_form,15,16,31,3,0,launch/navigation/screenshot/network/duration fields not retained
+browser_listing_hub,7,8,28,7,1,launch/navigation/screenshot/network/duration fields not retained
+browser_onsite_report,8,8,17,1,7,launch/navigation/screenshot/network/duration fields not retained
+browser_pdf_click,2,2,6,2,1,launch/navigation/screenshot/network/duration fields not retained
+browser_preflight_js_pdf_probe,3,3,9,0,0,launch/navigation/screenshot/network/duration fields not retained
+browser_tracker_redirect,1,1,5,1,0,launch/navigation/screenshot/network/duration fields not retained
+direct_pdf_probe,9,13,9,0,0,launch/navigation/screenshot/network/duration fields not retained
+report_page_pdf_link_probe,8,8,24,0,0,launch/navigation/screenshot/network/duration fields not retained

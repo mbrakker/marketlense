@@ -936,7 +936,11 @@ def _public_citation_label(value: str) -> str:
     label = _s(value)
     if not label:
         return ""
-    lowered = label.casefold()
+    # Some model outputs wrap an otherwise internal evidence identifier in
+    # quotes.  It is still an internal identifier and must not become public
+    # merely because the wrapper prevents a full-string token match.
+    comparison_label = label.strip("'\"")
+    lowered = comparison_label.casefold()
     if lowered.startswith("local-"):
         return ""
     if "\\" in label or "/" in label:
@@ -944,6 +948,14 @@ def _public_citation_label(value: str) -> str:
     if ":" in label and len(label) >= 2 and label[1] == ":":
         return ""
     if lowered.endswith((".json", ".jsonl", ".txt", ".sqlite", ".db")):
+        return ""
+    if lowered in {
+        "context_category_fit",
+        "quote_candidates",
+        "report_context",
+    }:
+        return ""
+    if re.match(r"(?:quote|finding|insight|figure|claim)[_-]", lowered):
         return ""
     if re.fullmatch(
         r"(?:[a-z]{1,4}[-_]?\d{1,5}|(?:quote|finding|insight|figure|claim)[_-][a-z0-9_-]+)",

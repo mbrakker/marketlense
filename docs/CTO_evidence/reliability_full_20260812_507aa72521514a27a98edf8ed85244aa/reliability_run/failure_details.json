@@ -1,0 +1,125 @@
+{
+  "terminal_failures": [
+    {
+      "failure_code": "html_exists",
+      "report_id": "1597Id8743JAsW3SHd_3WWngRk6X726VX",
+      "terminal_outcome": "publish_ready",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "html_exists",
+      "report_id": "166LocR4HCDzBwTfl1dOf6YIdxQZd_u4K",
+      "terminal_outcome": "publish_ready",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "html_exists",
+      "report_id": "1BKhlmuwCgFMbADrdvP8tB-EvGHFgc7uF",
+      "terminal_outcome": "publish_ready",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "html_exists",
+      "report_id": "1IEcPHWWv97RKsUCF1Qzt2BH7T54aDeq1",
+      "terminal_outcome": "publish_ready",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "html_exists",
+      "report_id": "1LylPDHZYO6pHhUHA-jxNBbflfc1Fr7nC",
+      "terminal_outcome": "publish_ready",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "html_exists",
+      "report_id": "1NY43tL30T-fd44U6i5-ZznkAx0LQSkDQ",
+      "terminal_outcome": "publish_ready",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "html_exists",
+      "report_id": "1PoXml-tpkL2VDMUgxtj0Tx2e46jccDKW",
+      "terminal_outcome": "publish_ready",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "publish_readiness_failed",
+      "report_id": "1Qz2Eay-EiRMMcygOTT9cD_C4_PiMPUpp",
+      "terminal_outcome": "permanent_failure",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "html_exists",
+      "report_id": "1USCHRNH8yLwKgWFGFp_bU7hfZBeVfv3n",
+      "terminal_outcome": "publish_ready",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "html_exists",
+      "report_id": "1V8a4cBK4U3VNAAJVVZsoTnxJib9rmpjW",
+      "terminal_outcome": "publish_ready",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "html_exists",
+      "report_id": "1bU1ji5HVxHwPxtdT365UVZ5N10zy0dCE",
+      "terminal_outcome": "publish_ready",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "html_exists",
+      "report_id": "1eD6vUZEICQWi6cI8uKNZuL1idkv-kAfk",
+      "terminal_outcome": "publish_ready",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "html_exists",
+      "report_id": "1f0jh1SIfd39hxQN21wvQT0mH2IgGklbu",
+      "terminal_outcome": "publish_ready",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "html_exists",
+      "report_id": "1hkdASxtqI_n27kMgLtlHN6uXxB4XxvxZ",
+      "terminal_outcome": "publish_ready",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "publish_readiness_failed",
+      "report_id": "1injIblyoZsMhFhcsDxFw8uk0IsWHRQmh",
+      "terminal_outcome": "permanent_failure",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "html_exists",
+      "report_id": "1iwZS85W9sg1rYwLikwgmi0vmtyh6lUnO",
+      "terminal_outcome": "publish_ready",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "html_exists",
+      "report_id": "1ojaFaRfntjV4BUHPlgrVedwQQ5ycyzeh",
+      "terminal_outcome": "publish_ready",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "html_exists",
+      "report_id": "1pL6t1hhdun3Iqenliwi-odc2Rr-EHKx4",
+      "terminal_outcome": "publish_ready",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "html_exists",
+      "report_id": "1vTf0IkhAnB2XHQQmR0-HcoQeEEslv7M2",
+      "terminal_outcome": "publish_ready",
+      "terminal_stage": "ingestion"
+    },
+    {
+      "failure_code": "html_exists",
+      "report_id": "1y5uWIo-HpEOojg4vdc9dW1e28KIN2z85",
+      "terminal_outcome": "publish_ready",
+      "terminal_stage": "ingestion"
+    }
+  ],
+  "validation_run_id": "validation:92cdd2e1e862f9099e85723468418d33cadfb5b501cd7869b8ab7f7bf24b4be7"
+}

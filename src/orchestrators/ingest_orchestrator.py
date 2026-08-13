@@ -76,6 +76,7 @@ from src.orchestrators.admission_preflight_orchestrator import (
     AdmissionPreflightDependencies,
     AdmissionPreflightRequest,
     admission_configuration_hash,
+    admission_configuration_snapshot,
     admission_decision_payload,
     admission_policy_hash,
     pipeline_preflight_decision_hash,
@@ -260,6 +261,38 @@ def _processed_record_should_skip(
     md5 = record.md5
     last_error = str(record.last_error or "").strip()
     text_validation_status = str(record.text_validation_status or "").strip().lower()
+    if last_error.startswith("report_pipeline_checkpoint_lineage_not_reusable:"):
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="processed_state_checkpoint_repair_selected",
+                module=logger.name,
+                fields={
+                    "file_id": file_id,
+                    "md5": md5,
+                    "last_error": last_error,
+                },
+            )
+        )
+        return False
+    if last_error == "publish_readiness_failed" or last_error.startswith(
+        "cover_fingerprint_invalid:"
+    ):
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="processed_state_report_generation_repair_selected",
+                module=logger.name,
+                fields={
+                    "file_id": file_id,
+                    "md5": md5,
+                    "last_error": last_error,
+                },
+            )
+        )
+        return False
     if not last_error and text_validation_status not in {"pass", "fail"}:
         logger.info(
             log_event(
@@ -504,7 +537,7 @@ def _process_file(
         root_ctx,
         report_id=file.file_id,
         source_identity_id=(file.md5_checksum or file.file_id),
-        publisher_id="unattributed",
+        publisher_id=(root_ctx.publisher_id or "unattributed"),
         workflow="report_generation",
         stage="report_pipeline",
         artifact_family="report",
@@ -560,6 +593,7 @@ def _process_file(
         run_report_pipeline=_run_pipeline,
         state_record=state_record,
         eof_retry_limit=EOF_RETRY_LIMIT,
+        read_text=read_text,
         bypass_existing_report_html=force_report_cards,
         check_pdf_integrity=check_pdf_integrity,
         get_source_quarantine=get_source_quarantine,
@@ -1009,6 +1043,8 @@ def _load_frozen_cohort(
                     file.md5_checksum or file.file_id
                 ):
                     raise ValueError("manifest member source identity is invalid")
+                if not str(member.get("publisher_id") or "").strip():
+                    raise ValueError("manifest member publisher identity is invalid")
                 if str(member.get("selection_reason") or "") != (
                     "deterministic_admission_preflight"
                 ):
@@ -1061,6 +1097,131 @@ def _load_frozen_cohort(
     return manifest_size, files
 
 
+def recover_frozen_cohort_provenance(
+    *,
+    source_manifest: str,
+    recovery_manifest: str,
+    recovery_reason: str,
+    allow_producer_transition: bool = False,
+    allow_policy_transition: bool = False,
+    settings: IngestSettings,
+    deps: IngestBatchDependencies,
+    root_ctx: RunContext,
+) -> list[DriveFile]:
+    """Create a linked validation manifest for an immutable-cohort recovery.
+
+    The source remains immutable and every member is preserved exactly.
+    Producer and policy transitions each require explicit operator opt-in.
+    """
+    if not source_manifest or source_manifest == recovery_manifest:
+        raise AppError(
+            code="ingest_cohort_provenance_recovery_target_invalid",
+            message="Provenance recovery requires a distinct target manifest",
+            retryable=False,
+        )
+    if not recovery_reason.strip():
+        raise AppError(
+            code="ingest_cohort_provenance_recovery_reason_required",
+            message="Provenance recovery requires an operator-recorded reason",
+            retryable=False,
+        )
+    if deps.file_exists(
+        FileExistsRequest(schema_version="1.0", path=recovery_manifest), root_ctx
+    ).exists:
+        raise AppError(
+            code="ingest_cohort_provenance_recovery_target_exists",
+            message="Provenance recovery target manifest already exists",
+            retryable=False,
+        )
+
+    manifest_size, files = _load_frozen_cohort(
+        cohort_manifest=source_manifest,
+        expected_size=None,
+        deps=deps,
+        root_ctx=root_ctx,
+    )
+    source_payload = json.loads(
+        deps.read_text(
+            ReadTextRequest(schema_version="1.0", path=source_manifest), root_ctx
+        ).content
+    )
+    current_policy_hash = admission_policy_hash(settings)
+    current_producer_build_identity = root_ctx.producer_commit_sha or "workspace"
+    source_producer_build_identity = str(
+        source_payload.get("producer_build_identity") or "workspace"
+    )
+    source_policy_hash = str(source_payload.get("policy_hash") or "")
+    policy_changed = source_policy_hash != current_policy_hash
+    producer_identity_changed = (
+        source_producer_build_identity != current_producer_build_identity
+    )
+    if (policy_changed and not allow_policy_transition) or (
+        producer_identity_changed and not allow_producer_transition
+    ):
+        raise AppError(
+            code="ingest_cohort_provenance_recovery_incompatible",
+            message=(
+                "Frozen cohort policy or producer identity differs from the "
+                "requested recovery runtime"
+            ),
+            retryable=False,
+        )
+
+    configuration_hash = admission_configuration_hash(settings)
+    payload = dict(source_payload)
+    payload["configuration_hash"] = configuration_hash
+    payload["configuration_snapshot"] = admission_configuration_snapshot(settings)
+    payload["policy_hash"] = current_policy_hash
+    payload["producer_build_identity"] = current_producer_build_identity
+    payload["validation_run_id"] = str(
+        _validation_run_id_for_cohort(
+            cohort_id=_cohort_id(files),
+            configuration_hash=configuration_hash,
+            policy_hash=current_policy_hash,
+            producer_build_identity=current_producer_build_identity,
+        )
+    )
+    payload["provenance_recovery"] = {
+        "source_manifest": source_manifest,
+        "source_validation_run_id": str(source_payload.get("validation_run_id") or ""),
+        "source_configuration_hash": str(
+            source_payload.get("configuration_hash") or ""
+        ),
+        "source_policy_hash": source_policy_hash,
+        "policy_changed": policy_changed,
+        "source_producer_build_identity": str(source_producer_build_identity),
+        "producer_identity_changed": producer_identity_changed,
+        "reason": recovery_reason.strip(),
+        "recovered_at_utc": datetime.now(timezone.utc).isoformat(),
+    }
+    deps.write_bytes(
+        WriteBytesRequest(
+            schema_version="1.0",
+            path=recovery_manifest,
+            content=json.dumps(payload, sort_keys=True, indent=2).encode("utf-8"),
+        ),
+        root_ctx,
+    )
+    logger.info(
+        log_event(
+            root_ctx,
+            role="orchestrator",
+            event="ingest_cohort_provenance_recovery_created",
+            module=logger.name,
+            fields={
+                "source_manifest": source_manifest,
+                "recovery_manifest": recovery_manifest,
+                "cohort_size": manifest_size,
+                "cohort_id": _cohort_id(files),
+                "validation_run_id": payload["validation_run_id"],
+                "policy_changed": policy_changed,
+                "producer_identity_changed": producer_identity_changed,
+            },
+        )
+    )
+    return files
+
+
 def _frozen_cohort(
     *,
     cohort_size: int,
@@ -1101,15 +1262,6 @@ def _frozen_cohort(
             retryable=False,
             context={"requested": cohort_size, "selected": len(selected_files)},
         )
-    members = [
-        {
-            **asdict(file),
-            "report_id": file.file_id,
-            "source_identity_id": file.md5_checksum or file.file_id,
-            "selection_reason": "deterministic_admission_preflight",
-        }
-        for file in selected_files
-    ]
     decisions = admission_decisions or [
         {
             "file_id": file.file_id,
@@ -1131,6 +1283,22 @@ def _frozen_cohort(
         }
         for file in selected_files
     ]
+    decisions_by_file_id = {
+        str(decision.get("file_id") or ""): decision for decision in decisions
+    }
+    members = [
+        {
+            **asdict(file),
+            "report_id": file.file_id,
+            "source_identity_id": file.md5_checksum or file.file_id,
+            "publisher_id": str(
+                decisions_by_file_id.get(file.file_id, {}).get("publisher_id")
+                or "unattributed"
+            ),
+            "selection_reason": "deterministic_admission_preflight",
+        }
+        for file in selected_files
+    ]
     configuration_hash = admission_configuration_hash(settings)
     policy_hash = admission_policy_hash(settings)
     cohort_id = _cohort_id(selected_files)
@@ -1140,6 +1308,7 @@ def _frozen_cohort(
         "cohort_id": cohort_id,
         "cohort_size": cohort_size,
         "configuration_hash": configuration_hash,
+        "configuration_snapshot": admission_configuration_snapshot(settings),
         "policy_hash": policy_hash,
         "producer_build_identity": producer_build_identity,
         "validation_run_id": str(
@@ -1206,6 +1375,7 @@ def _record_cohort_ingest_manifest(
     root_ctx: RunContext,
     files: list[DriveFile],
     outcomes: list[IngestOutcome] | None = None,
+    admission_decisions: list[dict[str, Any]] | None = None,
 ) -> None:
     configuration_hash = admission_configuration_hash(settings)
     policy_hash = admission_policy_hash(settings)
@@ -1227,8 +1397,18 @@ def _record_cohort_ingest_manifest(
     timestamp = datetime.now(timezone.utc).isoformat()
     attempt_number = max(1, int(root_ctx.validation_attempt_number or 1))
     parent_attempt_number = max(0, int(root_ctx.validation_parent_attempt_number or 0))
+    decisions_by_file_id = {
+        str(decision.get("file_id") or ""): decision
+        for decision in admission_decisions or []
+    }
+
+    def _publisher_id(file: DriveFile) -> str:
+        decision = decisions_by_file_id.get(file.file_id, {})
+        return str(decision.get("publisher_id") or "unattributed")
+
     if outcomes is None:
         for file in files:
+            publisher_id = _publisher_id(file)
             for stage in (
                 "discovery",
                 "candidate_qualification",
@@ -1244,7 +1424,7 @@ def _record_cohort_ingest_manifest(
                             cohort_id=cohort_id,
                             workflow_run_id=RunId(root_ctx.run_id),
                             entity_type="report",
-                            publisher_id="unattributed",
+                            publisher_id=publisher_id,
                             report_id=file.file_id,
                             source_identity_id=file.md5_checksum or file.file_id,
                             stage=stage,
@@ -1274,18 +1454,27 @@ def _record_cohort_ingest_manifest(
         return
     outcome_by_id = {outcome.file_id: outcome for outcome in outcomes or []}
     for file in files:
+        publisher_id = _publisher_id(file)
         outcome = outcome_by_id.get(file.file_id)
         terminal = outcome is not None
+        readiness_status = (
+            str(outcome.publish_readiness_status if outcome else "").strip().casefold()
+        )
         reused_validated_html_path = (
             outcome.html_path
             if outcome
             and outcome.status == "skipped"
             and outcome.error == "html_exists"
             and outcome.html_path
+            and readiness_status == "pass"
             else None
         )
         successful = bool(
-            outcome and (outcome.status == "processed" or reused_validated_html_path)
+            outcome
+            and (
+                (outcome.status == "processed" and readiness_status == "pass")
+                or reused_validated_html_path
+            )
         )
         terminal_outcome = (
             "publish_ready"
@@ -1306,7 +1495,15 @@ def _record_cohort_ingest_manifest(
                 timestamp=timestamp,
                 attempt_number=attempt_number,
                 parent_attempt_number=parent_attempt_number,
-                failure_code=(outcome.error or "ingest_failed")
+                publisher_id=publisher_id,
+                failure_code=(
+                    outcome.error
+                    or (
+                        "publish_readiness_unverified"
+                        if not readiness_status
+                        else f"publish_readiness_{readiness_status}"
+                    )
+                )
                 if outcome
                 else "ingest_failed",
             )
@@ -1322,6 +1519,7 @@ def _record_cohort_ingest_manifest(
                 timestamp=timestamp,
                 attempt_number=attempt_number,
                 parent_attempt_number=parent_attempt_number,
+                publisher_id=publisher_id,
                 html_path=reused_validated_html_path,
             )
         record_validation_run_manifest_stage(
@@ -1334,7 +1532,7 @@ def _record_cohort_ingest_manifest(
                     cohort_id=cohort_id,
                     workflow_run_id=RunId(root_ctx.run_id),
                     entity_type="report",
-                    publisher_id="unattributed",
+                    publisher_id=publisher_id,
                     report_id=file.file_id,
                     source_identity_id=file.md5_checksum or file.file_id,
                     stage="ingestion",
@@ -1348,7 +1546,20 @@ def _record_cohort_ingest_manifest(
                     completed_at_utc=timestamp,
                     terminal_outcome=terminal_outcome,
                     failure_code=(
-                        (outcome.error or "") if outcome else "cohort_report_missing"
+                        (
+                            outcome.error
+                            or (
+                                ""
+                                if successful
+                                else (
+                                    "publish_readiness_unverified"
+                                    if not readiness_status
+                                    else f"publish_readiness_{readiness_status}"
+                                )
+                            )
+                        )
+                        if outcome
+                        else "cohort_report_missing"
                     ),
                     retryable=False,
                     repair_disposition="none",
@@ -1378,6 +1589,7 @@ def _record_failed_cohort_stage_closure(
     timestamp: str,
     attempt_number: int,
     parent_attempt_number: int,
+    publisher_id: str,
     failure_code: str,
 ) -> None:
     """Close unreachable stages explicitly for a terminal failed cohort member.
@@ -1417,7 +1629,7 @@ def _record_failed_cohort_stage_closure(
                     cohort_id=cohort_id,
                     workflow_run_id=RunId(root_ctx.run_id),
                     entity_type="report",
-                    publisher_id="unattributed",
+                    publisher_id=publisher_id,
                     report_id=file.file_id,
                     source_identity_id=file.md5_checksum or file.file_id,
                     stage=stage,
@@ -1457,6 +1669,7 @@ def _record_reused_cohort_stage_closure(
     timestamp: str,
     attempt_number: int,
     parent_attempt_number: int,
+    publisher_id: str,
     html_path: str,
 ) -> None:
     """Record the validated artifact reuse that closes an idempotent replay."""
@@ -1485,7 +1698,7 @@ def _record_reused_cohort_stage_closure(
                     cohort_id=cohort_id,
                     workflow_run_id=RunId(root_ctx.run_id),
                     entity_type="report",
-                    publisher_id="unattributed",
+                    publisher_id=publisher_id,
                     report_id=file.file_id,
                     source_identity_id=file.md5_checksum or file.file_id,
                     stage=stage,
@@ -2480,6 +2693,7 @@ def run_ingest(
                     settings=settings,
                     root_ctx=root_ctx,
                     files=files_to_process,
+                    admission_decisions=admission_decisions,
                 )
             results = _process_ingest_batch(
                 files_to_process,
@@ -2502,6 +2716,7 @@ def run_ingest(
                 root_ctx=root_ctx,
                 files=files_to_process,
                 outcomes=outcomes,
+                admission_decisions=admission_decisions,
             )
             manifest_audit = audit_validation_run_manifest(
                 ValidationRunManifestAuditRequest(

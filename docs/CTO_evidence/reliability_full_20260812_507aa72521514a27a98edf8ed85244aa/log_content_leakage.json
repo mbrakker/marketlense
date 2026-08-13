@@ -1,0 +1,482 @@
+{
+  "canaries": [
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[3].summary[0]",
+      "normalized_character_count": 160,
+      "relative_artifact_path": "007-14753399583bf518-pdf/report_analysis/doc_map.json",
+      "report_identity": "007-14753399583bf518-pdf",
+      "sha256": "22bb8f8db1c8f58fc054bc1d538e8802cbb9fabd6513cace6b637c0ca0f62bc5",
+      "token_count": 24
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "findings.json:findings[0].text[0]",
+      "normalized_character_count": 164,
+      "relative_artifact_path": "008-bbd9417d89fd81c0-pdf/report_analysis/findings.json",
+      "report_identity": "008-bbd9417d89fd81c0-pdf",
+      "sha256": "eed84d2f7a86541c73648bb69480ead3b13f75923a3e5f8516cd37a69fdadbb4",
+      "token_count": 27
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "findings.json:findings[1].text[0]",
+      "normalized_character_count": 215,
+      "relative_artifact_path": "010-a12c0095f00d2d61-pdf/report_analysis/findings.json",
+      "report_identity": "010-a12c0095f00d2d61-pdf",
+      "sha256": "9f8685abbd7fd52df61e219a9272c773c01163e31739a803db9a9d47d00c5a43",
+      "token_count": 30
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[1].summary[0]",
+      "normalized_character_count": 194,
+      "relative_artifact_path": "011-3dab51f640a0ecf9-pdf/report_analysis/doc_map.json",
+      "report_identity": "011-3dab51f640a0ecf9-pdf",
+      "sha256": "3cb203281fe8511831b2968972e222094dd42dc2166c3b9ea10c5ed7de0afa3c",
+      "token_count": 27
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[0].summary[0]",
+      "normalized_character_count": 244,
+      "relative_artifact_path": "012-f7d68f931ff04c2f-pdf/report_analysis/doc_map.json",
+      "report_identity": "012-f7d68f931ff04c2f-pdf",
+      "sha256": "94e483b95701440805797ed1d979bf9983b5e39af3eb43d849abe5e5657f632b",
+      "token_count": 39
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[1].summary[0]",
+      "normalized_character_count": 287,
+      "relative_artifact_path": "013-a4d31aa82f41872e-pdf/report_analysis/doc_map.json",
+      "report_identity": "013-a4d31aa82f41872e-pdf",
+      "sha256": "5ace709bad7ea0b7c62de009ddff9e87f9fc1f4039338ce7e1f8a21eb71bd5a2",
+      "token_count": 33
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[1].summary[0]",
+      "normalized_character_count": 177,
+      "relative_artifact_path": "015-7c0d9d73eb136b39-pdf/report_analysis/doc_map.json",
+      "report_identity": "015-7c0d9d73eb136b39-pdf",
+      "sha256": "30bf9c28869e219eebb62cc90fae295de73c402aa8a8fd3c94d9cac1d09c063b",
+      "token_count": 28
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "findings.json:findings[0].text[0]",
+      "normalized_character_count": 209,
+      "relative_artifact_path": "017-f941db63137c1368-pdf/report_analysis/findings.json",
+      "report_identity": "017-f941db63137c1368-pdf",
+      "sha256": "f0bc81a4e61c4bab7c90c1c157675de0d0a8ecfe22a13660c3c73002d2fe0755",
+      "token_count": 29
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[0].summary[0]",
+      "normalized_character_count": 168,
+      "relative_artifact_path": "021-7b6cc5db29d6e0ba-pdf/report_analysis/doc_map.json",
+      "report_identity": "021-7b6cc5db29d6e0ba-pdf",
+      "sha256": "808a6487257cab5825a58fc606ec0f4cf5e76412928cc74073c2d3b8211c20ed",
+      "token_count": 26
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[0].summary[0]",
+      "normalized_character_count": 202,
+      "relative_artifact_path": "022-c36cc7a276a520cc-pdf/report_analysis/doc_map.json",
+      "report_identity": "022-c36cc7a276a520cc-pdf",
+      "sha256": "cf1b23121173d7f186bbeae7a9893813ffd1e0bd5b937c27bd2956dd27998394",
+      "token_count": 26
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[1].summary[0]",
+      "normalized_character_count": 239,
+      "relative_artifact_path": "023-544660adcff53d93-pdf/report_analysis/doc_map.json",
+      "report_identity": "023-544660adcff53d93-pdf",
+      "sha256": "616e9518bfba6ed27b4e5cade3b82b8e699d26a3e63de32a10bdb70da762b26f",
+      "token_count": 34
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[0].summary[0]",
+      "normalized_character_count": 212,
+      "relative_artifact_path": "024-d6ea0829c4587489-pdf/report_analysis/doc_map.json",
+      "report_identity": "024-d6ea0829c4587489-pdf",
+      "sha256": "114ea7201730d392db42414ea6a56beb3a008e28bce8569cbf5f288aac795d60",
+      "token_count": 32
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "findings.json:findings[4].text[0]",
+      "normalized_character_count": 185,
+      "relative_artifact_path": "025-7f9724f024f95930-pdf/report_analysis/findings.json",
+      "report_identity": "025-7f9724f024f95930-pdf",
+      "sha256": "c26823fbb80fdf4298cb451263412a867a4c2045c9c313e99b5094f0b9e6db83",
+      "token_count": 26
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[0].summary[0]",
+      "normalized_character_count": 184,
+      "relative_artifact_path": "061-4921809841a74309-pdf/report_analysis/doc_map.json",
+      "report_identity": "061-4921809841a74309-pdf",
+      "sha256": "692486cc5c226d5ed4055ada5eddf38d48a934e60b64993a8c45d27273d40e53",
+      "token_count": 27
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "findings.json:findings[0].text[0]",
+      "normalized_character_count": 327,
+      "relative_artifact_path": "069-276b5ff5c03c10a2-pdf/report_analysis/findings.json",
+      "report_identity": "069-276b5ff5c03c10a2-pdf",
+      "sha256": "3bb96e87061b1d9b8f208a3b38b06c2891cf42fc958af8c0b46fa2a9f1c29692",
+      "token_count": 52
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "findings.json:findings[2].text[0]",
+      "normalized_character_count": 173,
+      "relative_artifact_path": "1597id8743jasw3shd-3wwngrk6x726vx/report_analysis/findings.json",
+      "report_identity": "1597id8743jasw3shd-3wwngrk6x726vx",
+      "sha256": "b34cb7c3cc7f2da7bbdce865fcc468e80f9cb1cd9e98061aab452f979e96fb90",
+      "token_count": 25
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[1].summary[0]",
+      "normalized_character_count": 244,
+      "relative_artifact_path": "166locr4hcdzbwtfl1dof6yidxqzd-u4k/report_analysis/doc_map.json",
+      "report_identity": "166locr4hcdzbwtfl1dof6yidxqzd-u4k",
+      "sha256": "2c8c5360609ead0d88f093e1b23f19252aae85f171108b34988baddc983c105a",
+      "token_count": 34
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[0].summary[0]",
+      "normalized_character_count": 388,
+      "relative_artifact_path": "1bkhlmuwcgfmbadrdvp8tb-evghfgc7uf/report_analysis/doc_map.json",
+      "report_identity": "1bkhlmuwcgfmbadrdvp8tb-evghfgc7uf",
+      "sha256": "43b451befa76896d4de6c94d56d5d5fd12cef9db318b050aa7e2234e3a436243",
+      "token_count": 49
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[1].summary[0]",
+      "normalized_character_count": 197,
+      "relative_artifact_path": "1ed6vuzeicqwi6ci8uknzul1idkv-kafk/report_analysis/doc_map.json",
+      "report_identity": "1ed6vuzeicqwi6ci8uknzul1idkv-kafk",
+      "sha256": "a670de4f55347c995fc7656f491cee1cedbf064f00e60dc0157a3e893c01cf93",
+      "token_count": 28
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[1].summary[0]",
+      "normalized_character_count": 199,
+      "relative_artifact_path": "1hkdasxtqi-n27kmgltlhn6uxxb4xxvxz/report_analysis/doc_map.json",
+      "report_identity": "1hkdasxtqi-n27kmgltlhn6uxxb4xxvxz",
+      "sha256": "9fdc78abf2cefda1d2737871f6bb76ae54bc23616f2b06c37ac757cbd8190fc9",
+      "token_count": 27
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[0].summary[0]",
+      "normalized_character_count": 366,
+      "relative_artifact_path": "1iecphwwv97rksucf1qzt2bh7t54adeq1/report_analysis/doc_map.json",
+      "report_identity": "1iecphwwv97rksucf1qzt2bh7t54adeq1",
+      "sha256": "4b51c8b14afee9dde2453fbb8813b5c2cbd86aaa5bfebd5a4ce75d1565f38266",
+      "token_count": 46
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[0].summary[0]",
+      "normalized_character_count": 232,
+      "relative_artifact_path": "1injiblyozsmhfhcsdxfw8uk0iswhrqmh/report_analysis/doc_map.json",
+      "report_identity": "1injiblyozsmhfhcsdxfw8uk0iswhrqmh",
+      "sha256": "aa8ffd541d627e57fb0e7e089e84eed335e0dce0a2e6e4ffd00b2d5c23249552",
+      "token_count": 33
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[0].summary[0]",
+      "normalized_character_count": 217,
+      "relative_artifact_path": "1ny43tl30t-fd44u6i5-zznkax0lqskdq/report_analysis/doc_map.json",
+      "report_identity": "1ny43tl30t-fd44u6i5-zznkax0lqskdq",
+      "sha256": "4818a7b35c2b513c2c0c6688e0defcca7e0ddac1a67e6b1180ce09195dcc0089",
+      "token_count": 33
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "findings.json:findings[3].evidence[0]",
+      "normalized_character_count": 182,
+      "relative_artifact_path": "1ojafarfntjv4buhplgrvedwqq5ycyzeh/report_analysis/findings.json",
+      "report_identity": "1ojafarfntjv4buhplgrvedwqq5ycyzeh",
+      "sha256": "730ea0d62bec7f2471b70fb3bfa66d963c0e3392ca432ea5173e945dc3d90cfd",
+      "token_count": 28
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "findings.json:findings[0].text[0]",
+      "normalized_character_count": 198,
+      "relative_artifact_path": "1poxml-tpkl2vdmugxtj0tx2e46jccdkw/report_analysis/findings.json",
+      "report_identity": "1poxml-tpkl2vdmugxtj0tx2e46jccdkw",
+      "sha256": "2f631bf307d0b8c1782b9d03ecd609bac7c3c7cd9c6e4c48c2e4801a4f5ccd41",
+      "token_count": 32
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 697,
+      "relative_artifact_path": "010-a12c0095f00d2d61-pdf/report_analysis/artifacts.json",
+      "report_identity": "010-a12c0095f00d2d61-pdf",
+      "sha256": "e05c9a6569457eeddeb2a2a7a81417dbdf2d5a12f27e6b51e2b001f92b0c505d",
+      "token_count": 102
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 537,
+      "relative_artifact_path": "011-3dab51f640a0ecf9-pdf/report_analysis/artifacts.json",
+      "report_identity": "011-3dab51f640a0ecf9-pdf",
+      "sha256": "832aa15d79d0c616a7fd67714be3cd6883e0ba212a3ef0bce3bfc117b1c85b6a",
+      "token_count": 76
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 622,
+      "relative_artifact_path": "012-f7d68f931ff04c2f-pdf/report_analysis/artifacts.json",
+      "report_identity": "012-f7d68f931ff04c2f-pdf",
+      "sha256": "1262526640365d854b5696ed16a97e3fbce7bf72e4515db8e3d722780f30d39e",
+      "token_count": 89
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 503,
+      "relative_artifact_path": "013-a4d31aa82f41872e-pdf/report_analysis/artifacts.json",
+      "report_identity": "013-a4d31aa82f41872e-pdf",
+      "sha256": "dcb7317d835e372db98c34fd3f14c6aee5910d7a99bbdb71f4f657f5002047f6",
+      "token_count": 78
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 515,
+      "relative_artifact_path": "015-7c0d9d73eb136b39-pdf/report_analysis/artifacts.json",
+      "report_identity": "015-7c0d9d73eb136b39-pdf",
+      "sha256": "87dffad40c7cadd55239161521425b1070a38961d6cde55001bb9453d3fb9547",
+      "token_count": 71
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 661,
+      "relative_artifact_path": "021-7b6cc5db29d6e0ba-pdf/report_analysis/artifacts.json",
+      "report_identity": "021-7b6cc5db29d6e0ba-pdf",
+      "sha256": "f9faa534a1b4ac884680ba0be020c309c6e86fda6abd476c3c3ed11cb1f8d1d2",
+      "token_count": 89
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 686,
+      "relative_artifact_path": "022-c36cc7a276a520cc-pdf/report_analysis/artifacts.json",
+      "report_identity": "022-c36cc7a276a520cc-pdf",
+      "sha256": "448d24fb1edb38aed662618eb07408625d24469baa5ab7e5fb56f4a010d1cb06",
+      "token_count": 98
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 594,
+      "relative_artifact_path": "023-544660adcff53d93-pdf/report_analysis/artifacts.json",
+      "report_identity": "023-544660adcff53d93-pdf",
+      "sha256": "5393c8e8c38e3c38ad724f72da18089c41b32198df5f955be0b859afe8cca114",
+      "token_count": 89
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 451,
+      "relative_artifact_path": "024-d6ea0829c4587489-pdf/report_analysis/artifacts.json",
+      "report_identity": "024-d6ea0829c4587489-pdf",
+      "sha256": "63f997d74e45cdc3c693034789b322288356faa29cd8ab5f55dd55ad127d35cc",
+      "token_count": 70
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 603,
+      "relative_artifact_path": "025-7f9724f024f95930-pdf/report_analysis/artifacts.json",
+      "report_identity": "025-7f9724f024f95930-pdf",
+      "sha256": "89fa6dd6955d384ee8a06f2a7f532331261af1a0f5f909b9ae657328e24e8449",
+      "token_count": 81
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 639,
+      "relative_artifact_path": "061-4921809841a74309-pdf/report_analysis/artifacts.json",
+      "report_identity": "061-4921809841a74309-pdf",
+      "sha256": "b9fc5043e65fe04400ddcd46b44f7dff0105be586c95e05ee58d02ce121bcca6",
+      "token_count": 85
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 766,
+      "relative_artifact_path": "069-276b5ff5c03c10a2-pdf/report_analysis/artifacts.json",
+      "report_identity": "069-276b5ff5c03c10a2-pdf",
+      "sha256": "9303cde75b4fca10e769173e13a420c75dc2a865c27f698cf40a20ef857aca7a",
+      "token_count": 113
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 443,
+      "relative_artifact_path": "1597id8743jasw3shd-3wwngrk6x726vx/report_analysis/artifacts.json",
+      "report_identity": "1597id8743jasw3shd-3wwngrk6x726vx",
+      "sha256": "d58dd4fb45112969ec110d938d7391d7c3d0c902651a21d29ae9969175135ced",
+      "token_count": 63
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 507,
+      "relative_artifact_path": "166locr4hcdzbwtfl1dof6yidxqzd-u4k/report_analysis/artifacts.json",
+      "report_identity": "166locr4hcdzbwtfl1dof6yidxqzd-u4k",
+      "sha256": "e08cf0120e36c988a6f23842b039172ca8c4297745ee453ee59b2683c8ed84c2",
+      "token_count": 74
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 426,
+      "relative_artifact_path": "1bkhlmuwcgfmbadrdvp8tb-evghfgc7uf/report_analysis/artifacts.json",
+      "report_identity": "1bkhlmuwcgfmbadrdvp8tb-evghfgc7uf",
+      "sha256": "10938707ae877cc42fa4349fc58d9b07bc1e7c9d133af0cb9f73cb0314f2d49d",
+      "token_count": 56
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 436,
+      "relative_artifact_path": "1ed6vuzeicqwi6ci8uknzul1idkv-kafk/report_analysis/artifacts.json",
+      "report_identity": "1ed6vuzeicqwi6ci8uknzul1idkv-kafk",
+      "sha256": "5be86f49758bc86bdb5b724319e1a9f471b0bdefa3dbbb96c7393b55a3de039a",
+      "token_count": 64
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 555,
+      "relative_artifact_path": "1hkdasxtqi-n27kmgltlhn6uxxb4xxvxz/report_analysis/artifacts.json",
+      "report_identity": "1hkdasxtqi-n27kmgltlhn6uxxb4xxvxz",
+      "sha256": "70a2de62d3e6e10febf6a337e71169ff4f5b90221c27366cbe6ea969494c91be",
+      "token_count": 79
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 545,
+      "relative_artifact_path": "1iecphwwv97rksucf1qzt2bh7t54adeq1/report_analysis/artifacts.json",
+      "report_identity": "1iecphwwv97rksucf1qzt2bh7t54adeq1",
+      "sha256": "e479f0ee522e7c815fa7d3489ca865c66a652f1b69fa6f93f5cf75fec2d4e6cc",
+      "token_count": 83
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 609,
+      "relative_artifact_path": "1injiblyozsmhfhcsdxfw8uk0iswhrqmh/report_analysis/artifacts.json",
+      "report_identity": "1injiblyozsmhfhcsdxfw8uk0iswhrqmh",
+      "sha256": "cdb137d91a4c90dd680a103c0246ab0fa0f1a5e3f1d468c1cd5a4951c7b34ce7",
+      "token_count": 83
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 556,
+      "relative_artifact_path": "1ny43tl30t-fd44u6i5-zznkax0lqskdq/report_analysis/artifacts.json",
+      "report_identity": "1ny43tl30t-fd44u6i5-zznkax0lqskdq",
+      "sha256": "25dca77e79943e4f56f07586e3c5020ce51f020006b2b5450abd8376ae163c44",
+      "token_count": 76
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 713,
+      "relative_artifact_path": "1ojafarfntjv4buhplgrvedwqq5ycyzeh/report_analysis/artifacts.json",
+      "report_identity": "1ojafarfntjv4buhplgrvedwqq5ycyzeh",
+      "sha256": "cb6f0d2cd9790887aa1814f39b109986facafc643cd2fc0f03db3c154dfa632b",
+      "token_count": 103
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 543,
+      "relative_artifact_path": "1poxml-tpkl2vdmugxtj0tx2e46jccdkw/report_analysis/artifacts.json",
+      "report_identity": "1poxml-tpkl2vdmugxtj0tx2e46jccdkw",
+      "sha256": "9273a1ba2cf5a63b7acd576fd0014a2cfcfc90718420a7f8a1714dc149d25951",
+      "token_count": 68
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 576,
+      "relative_artifact_path": "1qz2eay-eirmmcygott9cd-c4-pimpupp/report_analysis/artifacts.json",
+      "report_identity": "1qz2eay-eirmmcygott9cd-c4-pimpupp",
+      "sha256": "fe216c516954a6c594cde4ee52c02bf130b0d87d5b949018f98997a918df5794",
+      "token_count": 82
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 487,
+      "relative_artifact_path": "1uschrnh8ylwkgwfgfp-bu7hfzbevfv3n/report_analysis/artifacts.json",
+      "report_identity": "1uschrnh8ylwkgwfgfp-bu7hfzbevfv3n",
+      "sha256": "cca9199833a79bb6781b5fa448c43d2dd7bc055512353d17b1c1b5748ab48e54",
+      "token_count": 75
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 540,
+      "relative_artifact_path": "1vtf0ikhanb2xhqqmr0-hcoqeeeslv7m2/report_analysis/artifacts.json",
+      "report_identity": "1vtf0ikhanb2xhqqmr0-hcoqeeeslv7m2",
+      "sha256": "ac260964d72047244d9b2a2c970015364d6940e97393d08a9fc8876e10c76974",
+      "token_count": 79
+    }
+  ],
+  "coverage": {
+    "artifact_files_examined": 214,
+    "editorial_canary_count": 25,
+    "log_bytes_scanned": 169039595,
+    "log_files_scanned": 1,
+    "log_lines_scanned": 204601,
+    "reports_sampled": 28,
+    "source_canary_count": 25,
+    "structured_event_metadata_mode": "full",
+    "structured_events_parsed": 202718,
+    "unparsed_lines": 1883
+  },
+  "evidence_run_id": "4e1f10d654594fd4b3289de2c7212b93",
+  "fresh_after": "2026-08-13T09:58:31+00:00",
+  "fresh_log_seen": true,
+  "freshness_state": "passed",
+  "generated_at": "2026-08-13T17:18:17.565332+00:00",
+  "limitations": [],
+  "log_corpus": {
+    "operator_declared_scope": "representative_report_processing",
+    "repository_provenance": "The repository commit identifies the evidence collector revision; it does not attest to the producer revision of historical log records.",
+    "scope_attestation": "The collector verifies the snapshotted corpus and content coverage, not whether the declared workflow scope was actually executed."
+  },
+  "matches": [],
+  "passed": true,
+  "repository_commit_sha": "56e09a30f96ef2482b496b217049c59d7d7e0def",
+  "schema_version": "1.0",
+  "status": "passed"
+}

@@ -198,10 +198,10 @@ def test_render_report_output_uses_resolved_identity_for_generated_metadata(
         preview_resp=render_preview_asset(runtime, source, deps),
     )
 
-    assert outcome.status == "processed"
+    assert outcome.status == "error"
+    assert outcome.error == "publish_readiness_failed"
     assert (
-        captured["render_data"]["title"]
-        == "Metaverse: Time for Practical Applications"
+        captured["render_data"]["title"] == "Metaverse: Time for Practical Applications"
     )
     assert captured["render_data"]["publisher"] == "Activate"
     assert captured["cover"].title == "Metaverse: Time for Practical Applications"

@@ -733,7 +733,11 @@ def test_find_post_by_file_id_redirect_logs_response_diagnostics(
     try:
         svc.find_post_by_file_id(request, _ctx())
     except Exception as err:
-        assert_app_error(err, code="wp_post_lookup_redirected", retryable=True)
+        assert_app_error(
+            err,
+            code="wordpress_target_installation_redirect",
+            retryable=False,
+        )
         assert err.context["status_code"] == 302
         assert err.context["reason"] == "Found"
         assert err.context["response_headers"]["Location"] == "wp-admin/install.php"
@@ -748,7 +752,7 @@ def test_find_post_by_file_id_redirect_logs_response_diagnostics(
     events = [
         json.loads(record.message)
         for record in caplog.records
-        if "wp_post_lookup_http_redirect" in record.message
+        if "wordpress_target_installation_redirect" in record.message
     ]
     assert len(events) == 1
     assert events[0]["fields"]["status_code"] == 302

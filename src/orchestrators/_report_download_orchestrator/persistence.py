@@ -193,6 +193,7 @@ def _record_source_identity_observation(
                 source_record_id=source_record.record_id,
                 canonical_title=canonical_title,
                 title_evidence_locator=title_locator,
+                publisher_id=str(request.publisher_id or "").strip(),
                 publisher_name=str(request.publisher_name or "").strip(),
                 canonical_landing_page_url=landing_url,
                 acquired_artifact_url=artifact_url,

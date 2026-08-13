@@ -33,6 +33,15 @@ class TestTimePeriodUtils(unittest.TestCase):
     def test_unrecognized_value_is_trimmed_not_dropped(self) -> None:
         self.assertEqual("FY25", normalize_time_period(" FY25 "))
 
+    def test_long_malformed_model_value_keeps_only_recognized_periods(self) -> None:
+        value = (
+            "2025 (primary coverage) with outlook into 2026 and beyond; "
+            "return a valid JSON object with no text after it. "
+            "The response must be complete and schema-valid."
+        )
+
+        self.assertEqual("2025, 2026", normalize_time_period(value))
+
 
 if __name__ == "__main__":
     unittest.main()

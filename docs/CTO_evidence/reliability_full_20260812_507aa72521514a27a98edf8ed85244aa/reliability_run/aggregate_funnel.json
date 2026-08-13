@@ -1,0 +1,242 @@
+{
+  "immutable_cohort_size": 20,
+  "schema_version": "1.0",
+  "stage_outcomes": [
+    {
+      "cohort_size": 20,
+      "conversion_percent": 100.0,
+      "count": 20,
+      "outcome": "succeeded",
+      "stage": "acquisition"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 100.0,
+      "count": 20,
+      "outcome": "succeeded",
+      "stage": "admission_preflight"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 10.0,
+      "count": 2,
+      "outcome": "blocked",
+      "stage": "artifact_generation"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 90.0,
+      "count": 18,
+      "outcome": "succeeded",
+      "stage": "artifact_generation"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 10.0,
+      "count": 2,
+      "outcome": "blocked",
+      "stage": "authenticated_readback"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 100.0,
+      "count": 20,
+      "outcome": "succeeded",
+      "stage": "candidate_qualification"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 10.0,
+      "count": 2,
+      "outcome": "blocked",
+      "stage": "category_fit"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 90.0,
+      "count": 18,
+      "outcome": "succeeded",
+      "stage": "category_fit"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 100.0,
+      "count": 20,
+      "outcome": "succeeded",
+      "stage": "discovery"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 10.0,
+      "count": 2,
+      "outcome": "blocked",
+      "stage": "evidence_generation"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 90.0,
+      "count": 18,
+      "outcome": "succeeded",
+      "stage": "evidence_generation"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 10.0,
+      "count": 2,
+      "outcome": "blocked",
+      "stage": "final_html_validation"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 90.0,
+      "count": 18,
+      "outcome": "succeeded",
+      "stage": "final_html_validation"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 10.0,
+      "count": 2,
+      "outcome": "blocked",
+      "stage": "grounding_validation"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 90.0,
+      "count": 18,
+      "outcome": "succeeded",
+      "stage": "grounding_validation"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 10.0,
+      "count": 2,
+      "outcome": "permanent_failure",
+      "stage": "ingestion"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 90.0,
+      "count": 18,
+      "outcome": "publish_ready",
+      "stage": "ingestion"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 10.0,
+      "count": 2,
+      "outcome": "blocked",
+      "stage": "publication_preflight"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 10.0,
+      "count": 2,
+      "outcome": "blocked",
+      "stage": "regeneration"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 90.0,
+      "count": 18,
+      "outcome": "succeeded",
+      "stage": "regeneration"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 10.0,
+      "count": 2,
+      "outcome": "blocked",
+      "stage": "rendering"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 90.0,
+      "count": 18,
+      "outcome": "succeeded",
+      "stage": "rendering"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 10.0,
+      "count": 2,
+      "outcome": "blocked",
+      "stage": "repeat_publication"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 10.0,
+      "count": 2,
+      "outcome": "blocked",
+      "stage": "semantic_validation"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 90.0,
+      "count": 18,
+      "outcome": "succeeded",
+      "stage": "semantic_validation"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 100.0,
+      "count": 20,
+      "outcome": "succeeded",
+      "stage": "source_preparation"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 100.0,
+      "count": 20,
+      "outcome": "succeeded",
+      "stage": "source_validation"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 10.0,
+      "count": 2,
+      "outcome": "blocked",
+      "stage": "structured_output_repair"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 90.0,
+      "count": 18,
+      "outcome": "succeeded",
+      "stage": "structured_output_repair"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 10.0,
+      "count": 2,
+      "outcome": "blocked",
+      "stage": "taxonomy"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 90.0,
+      "count": 18,
+      "outcome": "succeeded",
+      "stage": "taxonomy"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 10.0,
+      "count": 2,
+      "outcome": "blocked",
+      "stage": "wordpress_lookup"
+    },
+    {
+      "cohort_size": 20,
+      "conversion_percent": 10.0,
+      "count": 2,
+      "outcome": "blocked",
+      "stage": "wordpress_write"
+    }
+  ],
+  "terminal_outcomes": {
+    "permanent_failure": 2,
+    "publish_ready": 18
+  },
+  "validation_run_id": "validation:92cdd2e1e862f9099e85723468418d33cadfb5b501cd7869b8ab7f7bf24b4be7"
+}

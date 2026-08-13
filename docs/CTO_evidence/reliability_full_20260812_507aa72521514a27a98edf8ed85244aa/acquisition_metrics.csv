@@ -1,0 +1,12 @@
+publisher,route_family,route_kind,outcome,route_status,sample_size,attempts,successes,limitation
+unattributed,browser_email_form,email_delivery,email_required,inferred,15,16,0,"route history has no publisher, duration or cost fields"
+unattributed,browser_listing_hub,email_delivery,email_required,inferred,3,3,0,"route history has no publisher, duration or cost fields"
+unattributed,browser_listing_hub,onsite_report,captured,inferred,1,1,0,"route history has no publisher, duration or cost fields"
+unattributed,browser_listing_hub,pdf_download,downloaded,verified,3,4,4,"route history has no publisher, duration or cost fields"
+unattributed,browser_onsite_report,email_delivery,email_required,inferred,1,1,0,"route history has no publisher, duration or cost fields"
+unattributed,browser_onsite_report,onsite_report,captured,verified,7,7,7,"route history has no publisher, duration or cost fields"
+unattributed,browser_pdf_click,pdf_download,downloaded,verified,2,2,2,"route history has no publisher, duration or cost fields"
+unattributed,browser_preflight_js_pdf_probe,pdf_download,downloaded,verified,3,3,3,"route history has no publisher, duration or cost fields"
+unattributed,browser_tracker_redirect,pdf_download,downloaded,verified,1,1,1,"route history has no publisher, duration or cost fields"
+unattributed,direct_pdf_probe,pdf_download,downloaded,verified,9,13,13,"route history has no publisher, duration or cost fields"
+unattributed,report_page_pdf_link_probe,pdf_download,downloaded,verified,8,8,8,"route history has no publisher, duration or cost fields"

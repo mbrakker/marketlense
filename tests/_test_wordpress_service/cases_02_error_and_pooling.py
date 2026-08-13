@@ -100,6 +100,43 @@ def test_upload_media_rate_limit_is_retryable(wordpress_http, assert_app_error) 
         raise AssertionError("expected AppError")
 
 
+def test_upload_media_installation_redirect_blocks_publication(
+    wordpress_http, assert_app_error
+) -> None:
+    wordpress_http.add_json(
+        "POST",
+        "https://site/wp-json/wp/v2/media",
+        status_code=302,
+        text="",
+        headers={"Location": "https://site/wp-admin/install.php"},
+        reason="Found",
+    )
+    request = WordPressMediaUploadRequest(
+        schema_version="1.0",
+        base_url="https://site",
+        auth_header="Bearer token",
+        filename="x.png",
+        mime_type="image/png",
+        data=b"abc",
+    )
+
+    try:
+        svc.upload_media(request, _ctx())
+    except Exception as err:
+        assert_app_error(
+            err,
+            code="wordpress_target_installation_redirect",
+            retryable=False,
+        )
+        assert err.context["status_code"] == 302
+        assert "wp-admin/install.php" in err.context["response_headers"]["Location"]
+    else:
+        raise AssertionError("expected AppError")
+
+    call = wordpress_http.calls_for("POST", "https://site/wp-json/wp/v2/media")[0]
+    assert call.allow_redirects is False
+
+
 def test_update_post_categories_server_error(wordpress_http, assert_app_error) -> None:
     wordpress_http.add_json(
         "POST",

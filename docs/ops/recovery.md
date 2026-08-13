@@ -19,6 +19,19 @@ configured TTL. This prevents a terminated local ingest process from blocking
 a safe retry for the full lock window without stealing a lock held by a running
 process.
 
+## Frozen-cohort configuration provenance recovery
+
+When a frozen cohort rejects replay because its configuration hash cannot be
+recreated, retain the original manifest and record the interruption. Create a
+separate, linked recovery manifest only through the canonical ingest
+orchestrator recovery operation. A producer or policy change requires its own
+explicit operator opt-in; policy transition is reserved for a reviewed
+run-blocking reliability correction and must not alter admission inputs. All
+report IDs, checksums, source identities, publishers, and ordered members must
+be copied unchanged. The operation records the old and new validation
+identities, source manifest, policy and producer transitions, reason,
+timestamp, and a redacted effective-settings snapshot.
+
 ## Failure-specific report recovery
 
 `src/orchestrators/failure_recovery_registry.py` is the finite recovery matrix

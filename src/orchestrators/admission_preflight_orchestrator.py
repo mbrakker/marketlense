@@ -58,6 +58,12 @@ def admission_configuration_hash(settings: Any) -> str:
     return sha256(encoded.encode("utf-8")).hexdigest()
 
 
+def admission_configuration_snapshot(settings: Any) -> dict[str, Any]:
+    """Return redacted effective settings for immutable-cohort audit retention."""
+
+    return _redact_hash_values(asdict(settings))
+
+
 def admission_policy_hash(settings: Any) -> str:
     """Return the subset of rules that can change source admission."""
 

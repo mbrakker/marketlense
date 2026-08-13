@@ -465,6 +465,8 @@ def _read_validated_checkpoint(
         response.checkpoint_path,
         require_artifact_lineage=require_artifact_lineage,
     )
+    if stage_name == STAGE_RENDER_COMPLETE:
+        _outcome_from_render_checkpoint(checkpoint.payload.get("outcome"))
     return checkpoint, response.checkpoint_path
 
 
@@ -870,7 +872,7 @@ def _outcome_from_render_checkpoint(raw_outcome: object) -> IngestOutcome:
             retryable=False,
         )
     try:
-        return IngestOutcome(**raw_outcome)
+        outcome = IngestOutcome(**raw_outcome)
     except TypeError as exc:
         raise AppError(
             code="report_pipeline_checkpoint_invalid",
@@ -878,6 +880,17 @@ def _outcome_from_render_checkpoint(raw_outcome: object) -> IngestOutcome:
             cause=exc,
             retryable=False,
         ) from exc
+    if outcome.publish_readiness_status != "pass":
+        raise AppError(
+            code="report_pipeline_checkpoint_readiness_unverified",
+            message=(
+                "A render checkpoint cannot be reused without an explicit "
+                "passing publish-readiness decision"
+            ),
+            retryable=False,
+            context={"file_id": outcome.file_id},
+        )
+    return outcome
 
 
 def _resume_from_analysis_checkpoint(
@@ -1011,7 +1024,10 @@ def _resume_prompt_family_repair(
             require_artifact_lineage=True,
         )
     except AppError as exc:
-        if exc.code != "report_pipeline_checkpoint_missing":
+        if exc.code not in {
+            "report_pipeline_checkpoint_missing",
+            "report_pipeline_checkpoint_readiness_unverified",
+        }:
             raise
         checkpoint, checkpoint_path = _read_validated_checkpoint(
             runtime,

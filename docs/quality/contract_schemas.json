@@ -1379,6 +1379,9 @@
             }
           ]
         },
+        "publisher_id": {
+          "type": "string"
+        },
         "publisher_insights_url": {
           "anyOf": [
             {
@@ -21118,6 +21121,16 @@
             }
           ]
         },
+        "publish_readiness_status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "report_card_manifest_path": {
           "anyOf": [
             {
@@ -29140,6 +29153,9 @@
           "type": "string"
         },
         "projection_pending_event_threshold": {
+          "type": "integer"
+        },
+        "publish_interval_seconds": {
           "type": "integer"
         },
         "reports_db": {

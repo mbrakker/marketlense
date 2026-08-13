@@ -257,7 +257,7 @@ llm_execution_policies:
     model: "gpt-5-mini"
     temperature: 1.0
     seed_policy: inherit
-    max_output_tokens: 4096
+    max_output_tokens: 8192
     retrieval_mode: inherit
     timeout_seconds: 600
     provider_retry_count: 0
@@ -297,7 +297,7 @@ llm_execution_policies:
     model: "gpt-5-mini"
     temperature: 0.0
     seed_policy: inherit
-    max_output_tokens: 4096
+    max_output_tokens: 8192
     retrieval_mode: file_search
     timeout_seconds: 600
     provider_retry_count: 0
@@ -310,7 +310,7 @@ llm_execution_policies:
     model: "gpt-5-mini"
     temperature: 0.0
     seed_policy: inherit
-    max_output_tokens: 4096
+    max_output_tokens: 8192
     retrieval_mode: file_search
     timeout_seconds: 600
     provider_retry_count: 0
@@ -324,7 +324,7 @@ llm_execution_policies:
     model: "gpt-5-mini"
     temperature: 0.0
     seed_policy: inherit
-    max_output_tokens: 4096
+    max_output_tokens: 8192
     retrieval_mode: inherit
     timeout_seconds: 600
     provider_retry_count: 0
@@ -479,6 +479,7 @@ publish:
     post_type: "ml_report"
     ssl_verify: true
   media_upload_workers: 4
+  publish_interval_seconds: 0
   validation:
     policy: "block"
   run_budget:

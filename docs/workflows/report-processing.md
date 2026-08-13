@@ -63,6 +63,20 @@ state-only skips remain typed failures. A forced card/render repair also bypasse
 the ordinary state “already processed” shortcut, so it can actually reach the
 approved resume stage.
 
+A completed render checkpoint is reusable only with an explicit passing
+`publish_readiness` decision. A legacy, absent, or failed readiness decision
+rejects that checkpoint and makes `latest_safe` fall back to an earlier validated
+checkpoint; HTML existence never supplies readiness by inference.
+
+If checkpoint lineage is subsequently found non-reusable, its retained processed
+state does not suppress the next normal immutable-cohort replay. The ingest
+selector explicitly returns that source to the repair path while preserving the
+idempotent skip for reports whose retained readiness decision still passes.
+When every `latest_safe` checkpoint is non-reusable, the repair pipeline starts
+fresh from the already retained source PDF instead of consuming a rejected
+checkpoint or aborting; the normal source, analysis, validation, and render
+checks then establish replacement lineage.
+
 The same render outcome fails closed when required report-card metadata, such
 as publisher, fails public-metadata governance. Such a package remains a render
 error with the typed reason and cannot be mistaken for a publication candidate.
@@ -94,6 +108,11 @@ the typed cover-title overflow rather than producing an unreadable asset.
 Acquisition persists canonical source identity before its terminal telemetry
 for every retained, hashable successful artifact: a downloaded PDF and a
 verified on-site capture follow the same source-record and observation path.
+A configured publisher carries both its stable `publisher_id` and display name
+on the acquisition request. The stable ID is retained in source identity and
+resource accounting so admission can enforce a per-publisher cohort limit
+without inferring provenance from a Drive filename or folder. An artifact
+without a known stable publisher ID is not eligible for that limited cohort.
 An accepted email request has no artifact to hash, so its telemetry status is
 `provisional` until mailbox delivery retains and verifies the attachment; it
 is never treated as a resolved or cohort-eligible report merely because the
@@ -195,13 +214,27 @@ duplicate signal; it is resolved later when presentation needs it, never
 treated as required source identity.
 
 New cohort manifests use schema `1.1`. Each member records its immutable
-`report_id` (the Drive file ID), `source_identity_id`, and selection reason;
-the manifest records the configuration hash, policy hash, cohort ID, and
-derived validation-run ID. Loading recomputes the cohort and validation
+`report_id` (the Drive file ID), admitted `publisher_id`, `source_identity_id`,
+and selection reason. The manifest records the configuration hash, policy hash,
+cohort ID, derived validation-run ID, and a redacted effective-configuration
+snapshot. Loading recomputes the cohort and validation
 identities from those records, so an edited member list fails closed rather
 than silently changing an existing cohort. Schema `1.0` manifests remain
 readable for replay compatibility; a new membership must be frozen into a new
 schema-`1.1` manifest and cohort identity.
+
+If an interrupted run cannot recreate its configuration identity, do not alter
+the original manifest or admit replacements. The canonical provenance-recovery
+operation may create a distinct linked manifest only when its policy hash still
+matches. A producer revision transition requires explicit operator opt-in and
+is retained as such; it copies every immutable member unchanged, derives a new
+validation-run ID from the current configuration, and retains the source
+manifest, source identities, operator reason, and timestamp. The normal `ingest
+--cohort-manifest <linked-path>` command then resumes that exact cohort.
+
+The publisher accepted by admission is retained unchanged in every frozen-cohort
+stage record and in the immutable member ledger; later processing must not
+replace it with an `unattributed` fallback.
 
 Publish a fixed cohort with the same `--cohort-manifest <path>` passed to
 `publish-wp`. A frozen cohort automatically creates and retains a validation
@@ -310,6 +343,8 @@ The publish-readiness identifier gate targets identifier-shaped internal tokens
 and private locations, not ordinary editorial language such as
 “evidence-backed” or “evidence-linked.” This preserves the public safety check
 without rejecting grounded prose solely for describing its evidence quality.
+Identifier-shaped strings in a public source URL's `href` are likewise not
+rendered identifiers; private Drive and local-location URLs remain blocked.
 
 The summary's public card TLDR sentence contract is also checked inside that
 same structured-output recovery path, rather than only after all artifact calls

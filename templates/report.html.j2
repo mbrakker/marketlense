@@ -74,7 +74,7 @@
           </div>
           <div class="score-dimensions" role="list" aria-label="Score dimensions">
             {% for component in view.quality_score.components %}
-            <span class="score-dimension" role="listitem" data-dimension="{{ component.dimension }}">
+            <span class="score-dimension" role="listitem" data-dimension="{{ component.dimension | replace('_', '-') }}">
               <span>{{ component.label }}</span>
               <b>{{ component.score_label }}</b>
               <i aria-hidden="true" style="--fill:{{ component.fill }}%"></i>

@@ -150,6 +150,7 @@ def _execute_request(
     request_kwargs: dict[str, Any] = {
         "headers": dict(headers or {}),
         "timeout": DEFAULT_TIMEOUT,
+        "allow_redirects": False,
         "verify": _requests_verify(
             ssl_verify=ssl_verify,
             ca_bundle_path=ca_bundle_path,
@@ -187,6 +188,19 @@ def _execute_request(
     try:
         with _suppress_insecure_request_warning(ssl_verify=ssl_verify):
             result = _send(url)
+            if _is_wordpress_installation_redirect(result.response):
+                _raise_wordpress_installation_redirect(
+                    ctx=ctx,
+                    resp=result.response,
+                    fields={
+                        **(request_error_fields or {}),
+                        "url": url,
+                        "method": normalized_method,
+                        "pool_key": result.pool_key,
+                        "used_pooled_session": result.used_pooled_session,
+                        "pool_reused": result.pool_reused,
+                    },
+                )
             fallback_url = _rest_query_fallback_url(url)
             if (
                 fallback_url
@@ -361,6 +375,47 @@ def _raise_http_redirect_error(
         code=code,
         message=f"{message_prefix}: {resp.status_code}",
         retryable=True,
+        context=error_context,
+    )
+
+
+def _is_wordpress_installation_redirect(resp: Any) -> bool:
+    status_code = int(getattr(resp, "status_code", 0) or 0)
+    location = str(
+        getattr(getattr(resp, "headers", {}) or {}, "get", lambda *_: "")(
+            "Location", ""
+        )
+        or ""
+    ).casefold()
+    return 300 <= status_code < 400 and any(
+        marker in location
+        for marker in ("wp-admin/install.php", "wp-admin/setup-config.php")
+    )
+
+
+def _raise_wordpress_installation_redirect(
+    *,
+    ctx: RunContext,
+    resp: Any,
+    fields: Optional[Dict[str, Any]] = None,
+) -> NoReturn:
+    error_context = {
+        **dict(fields or {}),
+        **_http_error_context(resp),
+    }
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="wordpress_target_installation_redirect",
+            module=logger.name,
+            fields=error_context,
+        )
+    )
+    raise AppError(
+        code="wordpress_target_installation_redirect",
+        message="WordPress target redirected to installation or setup",
+        retryable=False,
         context=error_context,
     )
 

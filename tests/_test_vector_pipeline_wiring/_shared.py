@@ -27,6 +27,8 @@ from pypdf import PdfWriter
 
 from src.contracts.drive import DriveFile
 
+from src.contracts.files import ReadTextResponse
+
 from src.contracts.file_cache import (
     FileCacheMd5SidecarResolveResponse,
     FileCacheMd5SidecarWriteResponse,
@@ -166,11 +168,15 @@ def _analysis_artifacts(**overrides) -> dict:
     payload = {
         "schema_version": "1.0",
         "publication_date": "2026-06-09",
+        "categories": ["cat"],
         "toc_topics": ["Topic"],
         "summary": {
             "tldr": "Complete standard TLDR.",
             "card_tldr_compact": "Complete compact TLDR.",
-            "executive_summary": "exec",
+            "executive_summary": (
+                "The report identifies a sustained market shift that warrants "
+                "commercial planning attention."
+            ),
             "claim_evidence_map": [],
         },
         "cover_semantics": {
@@ -195,41 +201,41 @@ def _analysis_artifacts(**overrides) -> dict:
         "insights_final": [
             {
                 "id": "insight-1",
-                "text": "Insight 1.",
+                "text": "Revenue growth is concentrating in the highest-value customer segments.",
                 "evidence_id": "f1",
-                "evidence": "Evidence 1",
+                "evidence": "Revenue growth is concentrating in the highest-value customer segments.",
                 "metric": {},
                 "pages": [1],
             },
             {
                 "id": "insight-2",
-                "text": "Insight 2.",
+                "text": "Operating teams are prioritizing efficiency in established acquisition channels.",
                 "evidence_id": "f2",
-                "evidence": "Evidence 2",
+                "evidence": "Operating teams are prioritizing efficiency in established acquisition channels.",
                 "metric": {},
                 "pages": [2],
             },
             {
                 "id": "insight-3",
-                "text": "Insight 3.",
+                "text": "Decision-makers are reallocating investment toward measurable retention outcomes.",
                 "evidence_id": "f3",
-                "evidence": "Evidence 3",
+                "evidence": "Decision-makers are reallocating investment toward measurable retention outcomes.",
                 "metric": {},
                 "pages": [3],
             },
             {
                 "id": "insight-4",
-                "text": "Insight 4.",
+                "text": "Regional demand patterns require differentiated commercial planning.",
                 "evidence_id": "f4",
-                "evidence": "Evidence 4",
+                "evidence": "Regional demand patterns require differentiated commercial planning.",
                 "metric": {},
                 "pages": [4],
             },
             {
                 "id": "insight-5",
-                "text": "Insight 5.",
+                "text": "Leadership teams should sequence implementation around verified customer signals.",
                 "evidence_id": "f5",
-                "evidence": "Evidence 5",
+                "evidence": "Leadership teams should sequence implementation around verified customer signals.",
                 "metric": {},
                 "pages": [5],
             },
@@ -243,8 +249,14 @@ def _analysis_artifacts(**overrides) -> dict:
                 "evidence_id": "q1",
             }
         ],
-        "expert_comment": "Expert comment",
-        "linkedin_post": "LinkedIn post",
+        "expert_comment": (
+            "Leaders should validate the observed customer signals before "
+            "committing the next investment cycle."
+        ),
+        "linkedin_post": (
+            "The report highlights why commercial teams should align retention "
+            "investment with verified customer demand."
+        ),
         "source_status": {
             "schema_version": "1.0",
             "not_available": False,
@@ -305,6 +317,62 @@ def _report_dependencies(**overrides) -> ReportGenerationDependencies:
             raise AssertionError(f"Unknown report dependency override: {key}")
 
     analysis = replace(base.analysis, **analysis_updates)
+    if "generate_evidence_packs" in analysis_updates:
+        generate_evidence_packs = analysis.generate_evidence_packs
+
+        def _generate_evidence_with_readiness_fixtures(*args, **kwargs):
+            evidence_packs = generate_evidence_packs(*args, **kwargs)
+            if not isinstance(evidence_packs, dict):
+                return evidence_packs
+            return {
+                **evidence_packs,
+                "readiness_fixture_evidence": {
+                    "findings": [
+                        {
+                            "id": evidence_id,
+                            "snippet": evidence,
+                            "page": page,
+                        }
+                        for evidence_id, evidence, page in (
+                            (
+                                "f1",
+                                "Revenue growth is concentrating in the highest-value customer segments.",
+                                1,
+                            ),
+                            (
+                                "f2",
+                                "Operating teams are prioritizing efficiency in established acquisition channels.",
+                                2,
+                            ),
+                            (
+                                "f3",
+                                "Decision-makers are reallocating investment toward measurable retention outcomes.",
+                                3,
+                            ),
+                            (
+                                "f4",
+                                "Regional demand patterns require differentiated commercial planning.",
+                                4,
+                            ),
+                            (
+                                "f5",
+                                "Leadership teams should sequence implementation around verified customer signals.",
+                                5,
+                            ),
+                            (
+                                "q1",
+                                "Author statement on measured market conditions.",
+                                1,
+                            ),
+                        )
+                    ]
+                },
+            }
+
+        analysis = replace(
+            analysis,
+            generate_evidence_packs=_generate_evidence_with_readiness_fixtures,
+        )
     if figure_caption_updates:
         analysis = replace(
             analysis,
@@ -552,6 +620,17 @@ def _base_vector_report_dependencies(
         ),
         "collect_candidates": lambda req, ctx: SimpleNamespace(candidates=[]),
         "render_preview": _render_preview,
+        "read_text": lambda req, ctx: ReadTextResponse(
+            schema_version="1.0",
+            path=req.path,
+            content=(
+                "<!doctype html><html><head><title>Market conditions outlook</title>"
+                "</head><body><h1>Market conditions outlook</h1>"
+                "<p>Revenue growth is concentrating in the highest-value customer segments.</p>"
+                '<section id="source">Source URL: Not available</section>'
+                "</body></html>"
+            ),
+        ),
         "generate_cover_images": _generate_cover_images,
         "write_report_card_manifest": _write_report_card_manifest,
         "extract_taxonomy": lambda req, ctx: TaxonomyExtractResponse(
