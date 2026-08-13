@@ -53,17 +53,17 @@
       "total_tokens": 1589
     },
     "publishing": {
-      "estimated_cost_usd": 0.021659,
+      "estimated_cost_usd": 0.021672,
       "expected_browser_attempts": 0,
       "expected_ocr_calls": 0,
       "expected_output_tokens": 9500,
       "expected_tool_calls": 0,
       "family": "publishing",
-      "input_tokens": 10635,
+      "input_tokens": 10689,
       "namespace_count": 14,
       "runtime_ms": 113.1482,
       "schema_version": "1.0",
-      "total_tokens": 20135
+      "total_tokens": 20189
     },
     "ranking": {
       "estimated_cost_usd": 0.001082,
@@ -419,18 +419,18 @@
       "total_tokens": 1267
     },
     "report_vs/artifacts/regenerate/insights_final": {
-      "estimated_cost_usd": 0.001464,
+      "estimated_cost_usd": 0.001477,
       "expected_browser_attempts": 0,
       "expected_ocr_calls": 0,
       "expected_output_tokens": 650,
       "expected_tool_calls": 0,
       "family": "publishing",
-      "input_tokens": 654,
+      "input_tokens": 708,
       "model": "gpt-5-mini",
       "namespace": "report_vs/artifacts/regenerate/insights_final",
       "runtime_ms": 8.407,
       "schema_version": "1.0",
-      "total_tokens": 1304
+      "total_tokens": 1358
     },
     "report_vs/artifacts/regenerate/linkedin_post": {
       "estimated_cost_usd": 0.001442,
@@ -757,16 +757,16 @@
   },
   "schema_version": "1.0",
   "totals": {
-    "estimated_cost_usd": 0.078362,
+    "estimated_cost_usd": 0.078375,
     "expected_browser_attempts": 7,
     "expected_ocr_calls": 1,
     "expected_output_tokens": 34020,
     "expected_tool_calls": 0,
     "family": "totals",
-    "input_tokens": 42877,
+    "input_tokens": 42931,
     "namespace_count": 46,
     "runtime_ms": 284.7857,
     "schema_version": "1.0",
-    "total_tokens": 76897
+    "total_tokens": 76951
   }
 }
