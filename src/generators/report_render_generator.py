@@ -643,7 +643,7 @@ def render_report_output(
             else None
         )
         if report_card_manifest_path:
-            readiness_path = _persist_publish_readiness(
+            readiness_path, readiness_status = _persist_publish_readiness(
                 runtime=runtime,
                 analysis=analysis,
                 dependencies=dependencies,
@@ -668,7 +668,13 @@ def render_report_output(
                 name=runtime.file_name,
                 md5=runtime.md5,
                 html_path=out_html,
-                status="processed",
+                status="error" if readiness_status != "pass" else "processed",
+                error=(
+                    "publish_readiness_failed"
+                    if readiness_status != "pass"
+                    else None
+                ),
+                publish_readiness_status=readiness_status,
                 vector_store_id=analysis.vector_store_id,
                 vector_store_status=analysis.vector_store_status,
                 indexed_at_utc=analysis.indexed_at_utc,
@@ -944,7 +950,7 @@ def render_report_output(
         )
     )
 
-    readiness_path = _persist_publish_readiness(
+    readiness_path, readiness_status = _persist_publish_readiness(
         runtime=runtime,
         analysis=analysis,
         dependencies=dependencies,
@@ -958,8 +964,16 @@ def render_report_output(
         name=runtime.file_name,
         md5=runtime.md5,
         html_path=out_html,
-        status="error" if report_card_error else "processed",
-        error=report_card_error,
+        status=(
+            "error"
+            if report_card_error or readiness_status != "pass"
+            else "processed"
+        ),
+        error=(
+            report_card_error
+            or ("publish_readiness_failed" if readiness_status != "pass" else None)
+        ),
+        publish_readiness_status=readiness_status,
         vector_store_id=analysis.vector_store_id,
         vector_store_status=analysis.vector_store_status,
         indexed_at_utc=analysis.indexed_at_utc,
@@ -985,7 +999,7 @@ def _persist_publish_readiness(
     dependencies: ReportRenderDependencies,
     final_html_path: str,
     report_card_manifest_path: str | None,
-) -> str:
+) -> tuple[str, str]:
     """Persist the single readiness decision after the final render is complete."""
     final_html = dependencies.read_text(
         ReadTextRequest(schema_version="1.0", path=final_html_path),
@@ -1051,7 +1065,7 @@ def _persist_publish_readiness(
             },
         )
     )
-    return response.output_path
+    return response.output_path, readiness.status
 
 
 def _verified_public_source_url(runtime: ReportRuntimeState) -> str:

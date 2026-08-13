@@ -880,6 +880,7 @@ def test_fixed_cohort_replay_supersedes_a_failure_with_validated_reuse(
                 html_path="out/replayed.html",
                 status="skipped",
                 error="html_exists",
+                publish_readiness_status="pass",
             )
         ],
     )
@@ -902,6 +903,40 @@ def test_fixed_cohort_replay_supersedes_a_failure_with_validated_reuse(
             (str(validation_run_id),),
         ).fetchone()
     assert current == (2, "publish_ready")
+
+
+def test_fixed_cohort_requires_explicit_passing_readiness(
+    ingest_settings,
+    run_context,
+) -> None:
+    file = DriveFile("1.0", "readiness-fail", "Readiness fail.pdf", None, "md5")
+    validation_run_id = ValidationRunId(f"validation:{orch._cohort_id([file])}")
+
+    orch._record_cohort_ingest_manifest(
+        validation_run_id=validation_run_id,
+        settings=ingest_settings,
+        root_ctx=run_context,
+        files=[file],
+        outcomes=[
+            IngestOutcome(
+                schema_version="1.1",
+                file_id=file.file_id,
+                name=file.name or file.file_id,
+                md5=file.md5_checksum,
+                html_path="out/readiness-fail.html",
+                status="processed",
+                publish_readiness_status="fail",
+            )
+        ],
+    )
+
+    with sqlite3.connect(ingest_settings.reports_db) as conn:
+        current = conn.execute(
+            "SELECT terminal_outcome, failure_code FROM validation_run_entity_attempts "
+            "WHERE validation_run_id=? AND is_current=1",
+            (str(validation_run_id),),
+        ).fetchone()
+    assert current == ("permanent_failure", "publish_readiness_fail")
 
 
 def test_fixed_cohort_does_not_treat_state_only_skip_as_publish_ready(

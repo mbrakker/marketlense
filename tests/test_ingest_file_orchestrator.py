@@ -52,6 +52,7 @@ def _base_dependencies(
     state_record_fn=None,
     get_source_quarantine_fn=None,
     upsert_source_quarantine_fn=None,
+    read_text_fn=None,
 ):
     return IngestFileDependencies(
         should_skip=lambda *_args, **_kwargs: False,
@@ -95,10 +96,59 @@ def _base_dependencies(
         run_report_pipeline=run_report_pipeline_fn,
         state_record=state_record_fn or (lambda *_args, **_kwargs: SimpleNamespace()),
         eof_retry_limit=1,
+        read_text=read_text_fn,
         check_pdf_integrity=check_pdf_integrity_fn,
         get_source_quarantine=get_source_quarantine_fn,
         upsert_source_quarantine=upsert_source_quarantine_fn,
     )
+
+
+def test_existing_html_cache_requires_passing_readiness(
+    ingest_settings, run_context
+) -> None:
+    file = _drive_file(md5_checksum="drive-md5")
+    cache_path = f"{ingest_settings.cache_dir}/{file.file_id}.pdf"
+
+    def _file_stat(request, _ctx):
+        return FileStatResponse(
+            schema_version="1.0",
+            path=request.path,
+            exists=request.path == cache_path,
+            size_bytes=10 if request.path == cache_path else None,
+            mtime_utc=1.0 if request.path == cache_path else None,
+            md5="drive-md5" if request.compute_md5 else None,
+        )
+
+    dependencies = _base_dependencies(
+        file_stat_fn=_file_stat,
+        run_report_pipeline_fn=lambda current, _path, _settings, md5, _ctx: _outcome(
+            current, md5
+        ),
+        write_md5_sidecar_fn=lambda request, _ctx: FileCacheMd5SidecarWriteResponse(
+            schema_version="1.0",
+            cache_path=request.cache_path,
+            sidecar_path=f"{request.cache_path}.md5.json",
+            written=True,
+            reason="written",
+        ),
+        read_text_fn=lambda _request, _ctx: SimpleNamespace(
+            content='{"status":"fail"}'
+        ),
+    )
+    dependencies = replace(
+        dependencies,
+        existing_report_html=lambda *_args, **_kwargs: "out/file-1.html",
+    )
+
+    result = run_ingest_file(
+        file=file,
+        index=0,
+        settings=ingest_settings,
+        root_ctx=run_context,
+        dependencies=dependencies,
+    )
+
+    assert (result.outcome.status, result.outcome.error) == ("processed", None)
 
 
 def test_missing_md5_is_computed_before_pipeline(ingest_settings, run_context):

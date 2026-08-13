@@ -6,6 +6,8 @@
 
 `publish_readiness.json` is the one release decision for each public report. It is produced only after rendering and binds the exact final HTML plus the normalized final WordPress body projection. It includes the report ID, hashes for the retained artifacts, HTML and projection hashes, every rule result, configuration and policy hashes, producer revision, expiry, staleness conditions, classified provenance, and a SHA-256 signature over the artifact itself. WordPress preflight consumes and verifies this artifact; it does not run a separate editorial interpretation of the package.
 
+The ingest cohort manifest may record `publish_ready` only when its outcome carries an explicit `pass` from that artifact. Existing HTML without a readable passing artifact, and HTML with a failed artifact, are cache misses that are reprocessed; neither may be inferred to be ready from file existence.
+
 The existing `public_editorial_quality_before.json`, `public_editorial_quality_after.json`, and regeneration-attempt reports remain private repair diagnostics. They use the same deterministic editorial rules to decide whether a field has enough retained evidence for scoped repair, but they are not independently publishable or a second release policy. The final readiness artifact is authoritative.
 
 `PublicEditorialQualityReport` is a versioned private audit artifact. It records the report ID, stable rule ID, severity, affected artifact and field, retained evidence IDs, deterministic explanation, repair eligibility and status, validator version, and schema version. It is never rendered as reader-facing content.

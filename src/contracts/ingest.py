@@ -611,6 +611,15 @@ class IngestOutcome:
         default=None,
         metadata={"doc": "Error code/message when status=error or skipped."},
     )
+    publish_readiness_status: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": (
+                "Authoritative final publish-readiness result: pass|fail, or null "
+                "when no readiness artifact was evaluated."
+            )
+        },
+    )
     vector_store_id: Optional[str] = field(
         default=None, metadata={"doc": "Vector store ID used for this file, if any."}
     )

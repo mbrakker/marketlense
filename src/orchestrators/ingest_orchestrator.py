@@ -561,6 +561,7 @@ def _process_file(
         run_report_pipeline=_run_pipeline,
         state_record=state_record,
         eof_retry_limit=EOF_RETRY_LIMIT,
+        read_text=read_text,
         bypass_existing_report_html=force_report_cards,
         check_pdf_integrity=check_pdf_integrity,
         get_source_quarantine=get_source_quarantine,
@@ -1428,16 +1429,24 @@ def _record_cohort_ingest_manifest(
         publisher_id = _publisher_id(file)
         outcome = outcome_by_id.get(file.file_id)
         terminal = outcome is not None
+        readiness_status = str(
+            outcome.publish_readiness_status if outcome else ""
+        ).strip().casefold()
         reused_validated_html_path = (
             outcome.html_path
             if outcome
             and outcome.status == "skipped"
             and outcome.error == "html_exists"
             and outcome.html_path
+            and readiness_status == "pass"
             else None
         )
         successful = bool(
-            outcome and (outcome.status == "processed" or reused_validated_html_path)
+            outcome
+            and (
+                (outcome.status == "processed" and readiness_status == "pass")
+                or reused_validated_html_path
+            )
         )
         terminal_outcome = (
             "publish_ready"
@@ -1459,7 +1468,14 @@ def _record_cohort_ingest_manifest(
                 attempt_number=attempt_number,
                 parent_attempt_number=parent_attempt_number,
                 publisher_id=publisher_id,
-                failure_code=(outcome.error or "ingest_failed")
+                failure_code=(
+                    outcome.error
+                    or (
+                        "publish_readiness_unverified"
+                        if not readiness_status
+                        else f"publish_readiness_{readiness_status}"
+                    )
+                )
                 if outcome
                 else "ingest_failed",
             )
@@ -1502,7 +1518,18 @@ def _record_cohort_ingest_manifest(
                     completed_at_utc=timestamp,
                     terminal_outcome=terminal_outcome,
                     failure_code=(
-                        (outcome.error or "") if outcome else "cohort_report_missing"
+                        (
+                            outcome.error
+                            or (
+                                "" if successful else (
+                                    "publish_readiness_unverified"
+                                    if not readiness_status
+                                    else f"publish_readiness_{readiness_status}"
+                                )
+                            )
+                        )
+                        if outcome
+                        else "cohort_report_missing"
                     ),
                     retryable=False,
                     repair_disposition="none",
