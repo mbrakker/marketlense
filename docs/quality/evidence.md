@@ -121,6 +121,10 @@ runtime state and exports bounded identifiers and scalar metrics only. It must
 not be used to infer a successful publication when publication-stage records
 are absent.
 
+The retained partial record for the 2026-08-13 frozen 20-report run is
+[reliability-run-2026-08-13.md](reliability-run-2026-08-13.md). It records a
+blocked sandbox publication target explicitly and is not release evidence.
+
 ## A9/A3/A6 representative operational evidence
 
 Before a strict bundle used to close source provenance, remediation, or budget
