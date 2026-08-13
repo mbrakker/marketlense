@@ -55,8 +55,10 @@ def test_public_title_and_meta_description_are_bounded_editorial_prose() -> None
     )
 
 
-def test_public_citation_label_rejects_quote_wrapped_internal_identifier() -> None:
+def test_public_citation_label_rejects_internal_provenance_identifiers() -> None:
     assert _public_citation_label('"finding_4_deal_math_harder_2025"') == ""
+    assert _public_citation_label('finding_4_deal_math_harder_"12_is_the_new_5"') == ""
+    assert _public_citation_label("quote_candidates") == ""
     assert _public_citation_label('"Market report"') == '"Market report"'
 
 
@@ -483,8 +485,9 @@ def test_render_surfaces_report_quality_score_and_verified_source_link(tmp_path)
     assert "Report quality" in html
     assert ">87<" in html
     assert "High source value" in html
-    assert 'data-dimension="market_insight_depth"' in html
-    assert 'data-dimension="source_authority_originality"' in html
+    assert 'data-dimension="market-insight-depth"' in html
+    assert 'data-dimension="source-authority-originality"' in html
+    assert "evidence_specificity" not in html
     assert 'href="https://publisher.example/reports/scored.pdf"' in html
     assert "../cache/scored.pdf" not in html
 
