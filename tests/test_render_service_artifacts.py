@@ -5,6 +5,7 @@ from PIL import Image
 
 from src.contracts.report_assets import RenderRequest
 from src.contracts.run_context import RunContext
+from src.services._render_service.normalization import _public_citation_label
 from src.services._render_service.view import (
     _marketlense_article_url,
     _normalize_public_title,
@@ -52,6 +53,11 @@ def test_public_title_and_meta_description_are_bounded_editorial_prose() -> None
         )
         == "Digest for Retail Trends 2026."
     )
+
+
+def test_public_citation_label_rejects_quote_wrapped_internal_identifier() -> None:
+    assert _public_citation_label('"finding_4_deal_math_harder_2025"') == ""
+    assert _public_citation_label('"Market report"') == '"Market report"'
 
 
 @pytest.mark.parametrize(

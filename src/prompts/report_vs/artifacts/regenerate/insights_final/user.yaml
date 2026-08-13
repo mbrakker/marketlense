@@ -14,10 +14,14 @@ text: |
 
   Task:
   Return a JSON object with `insights_final` as an array of exactly five non-overlapping insights.
-  Each item must keep the candidate shape: id, text, evidence_id, evidence, metric, pages.
+  Each item must keep the candidate shape: id, text, evidence_id, evidence, metric,
+  pages, so_what, now_what.
 
   Requirements:
   - Prefer repaired candidates that directly resolve the listed failures.
   - Keep `evidence_id` to a single existing ID or an empty string.
+  - `so_what` must state a report-specific business implication; `now_what` must
+    state a concrete, report-specific decision or action. Neither field may be
+    empty, generic, or a citation label.
   - Remove unsupported wording rather than hedge it.
   - Do not output unsupported metrics, quotes, or conclusions.
