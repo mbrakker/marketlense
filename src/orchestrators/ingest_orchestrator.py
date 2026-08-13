@@ -76,6 +76,7 @@ from src.orchestrators.admission_preflight_orchestrator import (
     AdmissionPreflightDependencies,
     AdmissionPreflightRequest,
     admission_configuration_hash,
+    admission_configuration_snapshot,
     admission_decision_payload,
     admission_policy_hash,
     pipeline_preflight_decision_hash,
@@ -1063,6 +1064,132 @@ def _load_frozen_cohort(
     return manifest_size, files
 
 
+def recover_frozen_cohort_provenance(
+    *,
+    source_manifest: str,
+    recovery_manifest: str,
+    recovery_reason: str,
+    allow_producer_transition: bool = False,
+    settings: IngestSettings,
+    deps: IngestBatchDependencies,
+    root_ctx: RunContext,
+) -> list[DriveFile]:
+    """Create a linked validation manifest for a config-only recovery.
+
+    The source remains immutable. Recovery requires unchanged policy and
+    preserves every member exactly; producer transition needs explicit opt-in.
+    """
+    if not source_manifest or source_manifest == recovery_manifest:
+        raise AppError(
+            code="ingest_cohort_provenance_recovery_target_invalid",
+            message="Provenance recovery requires a distinct target manifest",
+            retryable=False,
+        )
+    if not recovery_reason.strip():
+        raise AppError(
+            code="ingest_cohort_provenance_recovery_reason_required",
+            message="Provenance recovery requires an operator-recorded reason",
+            retryable=False,
+        )
+    if deps.file_exists(
+        FileExistsRequest(schema_version="1.0", path=recovery_manifest), root_ctx
+    ).exists:
+        raise AppError(
+            code="ingest_cohort_provenance_recovery_target_exists",
+            message="Provenance recovery target manifest already exists",
+            retryable=False,
+        )
+
+    manifest_size, files = _load_frozen_cohort(
+        cohort_manifest=source_manifest,
+        expected_size=None,
+        deps=deps,
+        root_ctx=root_ctx,
+    )
+    source_payload = json.loads(
+        deps.read_text(
+            ReadTextRequest(schema_version="1.0", path=source_manifest), root_ctx
+        ).content
+    )
+    current_policy_hash = admission_policy_hash(settings)
+    current_producer_build_identity = root_ctx.producer_commit_sha or "workspace"
+    source_producer_build_identity = str(
+        source_payload.get("producer_build_identity") or "workspace"
+    )
+    if (
+        str(source_payload.get("policy_hash") or "") != current_policy_hash
+        or (
+            source_producer_build_identity != current_producer_build_identity
+            and not allow_producer_transition
+        )
+    ):
+        raise AppError(
+            code="ingest_cohort_provenance_recovery_incompatible",
+            message=(
+                "Frozen cohort policy or producer identity differs from the "
+                "requested recovery runtime"
+            ),
+            retryable=False,
+    )
+
+    configuration_hash = admission_configuration_hash(settings)
+    payload = dict(source_payload)
+    payload["configuration_hash"] = configuration_hash
+    payload["configuration_snapshot"] = admission_configuration_snapshot(settings)
+    payload["policy_hash"] = current_policy_hash
+    payload["producer_build_identity"] = current_producer_build_identity
+    payload["validation_run_id"] = str(
+        _validation_run_id_for_cohort(
+            cohort_id=_cohort_id(files),
+            configuration_hash=configuration_hash,
+            policy_hash=current_policy_hash,
+            producer_build_identity=current_producer_build_identity,
+        )
+    )
+    payload["provenance_recovery"] = {
+        "source_manifest": source_manifest,
+        "source_validation_run_id": str(
+            source_payload.get("validation_run_id") or ""
+        ),
+        "source_configuration_hash": str(
+            source_payload.get("configuration_hash") or ""
+        ),
+        "source_policy_hash": str(source_payload.get("policy_hash") or ""),
+        "source_producer_build_identity": str(
+            source_producer_build_identity
+        ),
+        "producer_identity_changed": (
+            source_producer_build_identity != current_producer_build_identity
+        ),
+        "reason": recovery_reason.strip(),
+        "recovered_at_utc": datetime.now(timezone.utc).isoformat(),
+    }
+    deps.write_bytes(
+        WriteBytesRequest(
+            schema_version="1.0",
+            path=recovery_manifest,
+            content=json.dumps(payload, sort_keys=True, indent=2).encode("utf-8"),
+        ),
+        root_ctx,
+    )
+    logger.info(
+        log_event(
+            root_ctx,
+            role="orchestrator",
+            event="ingest_cohort_provenance_recovery_created",
+            module=logger.name,
+            fields={
+                "source_manifest": source_manifest,
+                "recovery_manifest": recovery_manifest,
+                "cohort_size": manifest_size,
+                "cohort_id": _cohort_id(files),
+                "validation_run_id": payload["validation_run_id"],
+            },
+        )
+    )
+    return files
+
+
 def _frozen_cohort(
     *,
     cohort_size: int,
@@ -1149,6 +1276,7 @@ def _frozen_cohort(
         "cohort_id": cohort_id,
         "cohort_size": cohort_size,
         "configuration_hash": configuration_hash,
+        "configuration_snapshot": admission_configuration_snapshot(settings),
         "policy_hash": policy_hash,
         "producer_build_identity": producer_build_identity,
         "validation_run_id": str(

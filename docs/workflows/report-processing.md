@@ -202,11 +202,21 @@ treated as required source identity.
 New cohort manifests use schema `1.1`. Each member records its immutable
 `report_id` (the Drive file ID), admitted `publisher_id`, `source_identity_id`,
 and selection reason. The manifest records the configuration hash, policy hash,
-cohort ID, and derived validation-run ID. Loading recomputes the cohort and validation
+cohort ID, derived validation-run ID, and a redacted effective-configuration
+snapshot. Loading recomputes the cohort and validation
 identities from those records, so an edited member list fails closed rather
 than silently changing an existing cohort. Schema `1.0` manifests remain
 readable for replay compatibility; a new membership must be frozen into a new
 schema-`1.1` manifest and cohort identity.
+
+If an interrupted run cannot recreate its configuration identity, do not alter
+the original manifest or admit replacements. The canonical provenance-recovery
+operation may create a distinct linked manifest only when its policy hash still
+matches. A producer revision transition requires explicit operator opt-in and
+is retained as such; it copies every immutable member unchanged, derives a new
+validation-run ID from the current configuration, and retains the source
+manifest, source identities, operator reason, and timestamp. The normal `ingest
+--cohort-manifest <linked-path>` command then resumes that exact cohort.
 
 The publisher accepted by admission is retained unchanged in every frozen-cohort
 stage record and in the immutable member ledger; later processing must not

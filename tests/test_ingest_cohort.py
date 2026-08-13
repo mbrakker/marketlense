@@ -295,6 +295,156 @@ def test_frozen_cohort_rejects_stale_admission_provenance(
         )
 
 
+def test_provenance_recovery_creates_linked_manifest_with_identical_members(
+    ingest_settings, run_context
+) -> None:
+    files = [
+        DriveFile("1.0", "file-a", "A.pdf", "2026-01-01", "md5-a"),
+        DriveFile("1.0", "file-b", "B.pdf", "2026-01-02", "md5-b"),
+    ]
+    stored: dict[str, bytes] = {}
+    deps = replace(
+        orch.IngestBatchDependencies.default(),
+        file_exists=lambda request, _ctx: SimpleNamespace(
+            exists=request.path in stored
+        ),
+        read_text=lambda request, _ctx: SimpleNamespace(
+            content=stored[request.path].decode("utf-8")
+        ),
+        write_bytes=lambda request, _ctx: (
+            stored.__setitem__(request.path, request.content)
+            or SimpleNamespace(bytes_written=len(request.content))
+        ),
+    )
+    orch._frozen_cohort(
+        cohort_size=2,
+        cohort_manifest="cohorts/original.json",
+        selected_files=files,
+        settings=ingest_settings,
+        deps=deps,
+        root_ctx=run_context,
+    )
+    original = json.loads(stored["cohorts/original.json"])
+    recovered = orch.recover_frozen_cohort_provenance(
+        source_manifest="cohorts/original.json",
+        recovery_manifest="cohorts/recovery.json",
+        recovery_reason="operator context lost after interrupted process",
+        settings=replace(
+            ingest_settings,
+            gdrive_folder_id="recovery-folder",
+        ),
+        deps=deps,
+        root_ctx=run_context,
+    )
+    payload = json.loads(stored["cohorts/recovery.json"])
+
+    assert [item.file_id for item in recovered] == ["file-a", "file-b"]
+    assert payload["members"] == original["members"]
+    assert payload["cohort_id"] == original["cohort_id"]
+    assert payload["configuration_hash"] != original["configuration_hash"]
+    assert payload["policy_hash"] == original["policy_hash"]
+    assert payload["producer_build_identity"] == original["producer_build_identity"]
+    assert payload["validation_run_id"] != original["validation_run_id"]
+    assert payload["configuration_snapshot"]["gdrive_folder_id"] == "recovery-folder"
+    assert "openai_api_key" not in payload["configuration_snapshot"]
+    assert payload["provenance_recovery"]["source_manifest"] == "cohorts/original.json"
+    assert payload["provenance_recovery"]["source_validation_run_id"] == original[
+        "validation_run_id"
+    ]
+    assert payload["provenance_recovery"]["source_configuration_hash"] == original[
+        "configuration_hash"
+    ]
+    assert payload["provenance_recovery"]["reason"] == (
+        "operator context lost after interrupted process"
+    )
+
+
+def test_provenance_recovery_rejects_policy_drift(
+    ingest_settings, run_context
+) -> None:
+    file = DriveFile("1.0", "file-a", "A.pdf", "2026-01-01", "md5-a")
+    stored: dict[str, bytes] = {}
+    deps = replace(
+        orch.IngestBatchDependencies.default(),
+        file_exists=lambda request, _ctx: SimpleNamespace(
+            exists=request.path in stored
+        ),
+        read_text=lambda request, _ctx: SimpleNamespace(
+            content=stored[request.path].decode("utf-8")
+        ),
+        write_bytes=lambda request, _ctx: (
+            stored.__setitem__(request.path, request.content)
+            or SimpleNamespace(bytes_written=len(request.content))
+        ),
+    )
+    orch._frozen_cohort(
+        cohort_size=1,
+        cohort_manifest="cohorts/original.json",
+        selected_files=[file],
+        settings=ingest_settings,
+        deps=deps,
+        root_ctx=run_context,
+    )
+
+    with pytest.raises(AppError, match="policy or producer identity differs"):
+        orch.recover_frozen_cohort_provenance(
+            source_manifest="cohorts/original.json",
+            recovery_manifest="cohorts/recovery.json",
+            recovery_reason="operator context lost after interrupted process",
+            settings=replace(
+                ingest_settings,
+                admission_min_text_chars=ingest_settings.admission_min_text_chars + 1,
+            ),
+            deps=deps,
+            root_ctx=run_context,
+        )
+
+
+def test_provenance_recovery_records_explicit_producer_transition(
+    ingest_settings, run_context
+) -> None:
+    file = DriveFile("1.0", "file-a", "A.pdf", "2026-01-01", "md5-a")
+    stored: dict[str, bytes] = {}
+    deps = replace(
+        orch.IngestBatchDependencies.default(),
+        file_exists=lambda request, _ctx: SimpleNamespace(
+            exists=request.path in stored
+        ),
+        read_text=lambda request, _ctx: SimpleNamespace(
+            content=stored[request.path].decode("utf-8")
+        ),
+        write_bytes=lambda request, _ctx: (
+            stored.__setitem__(request.path, request.content)
+            or SimpleNamespace(bytes_written=len(request.content))
+        ),
+    )
+    orch._frozen_cohort(
+        cohort_size=1,
+        cohort_manifest="cohorts/original.json",
+        selected_files=[file],
+        settings=ingest_settings,
+        deps=deps,
+        root_ctx=run_context,
+    )
+    recovery_ctx = replace(run_context, producer_commit_sha="producer-after-fix")
+    orch.recover_frozen_cohort_provenance(
+        source_manifest="cohorts/original.json",
+        recovery_manifest="cohorts/recovery.json",
+        recovery_reason="reviewed run-blocking recovery fix",
+        allow_producer_transition=True,
+        settings=replace(ingest_settings, gdrive_folder_id="recovery-folder"),
+        deps=deps,
+        root_ctx=recovery_ctx,
+    )
+    payload = json.loads(stored["cohorts/recovery.json"])
+
+    assert payload["producer_build_identity"] == "producer-after-fix"
+    assert payload["provenance_recovery"]["source_producer_build_identity"] == (
+        "workspace"
+    )
+    assert payload["provenance_recovery"]["producer_identity_changed"] is True
+
+
 def test_validation_run_identity_changes_with_cohort_provenance() -> None:
     first = orch._validation_run_id_for_cohort(
         cohort_id="cohort",
