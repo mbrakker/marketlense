@@ -172,6 +172,12 @@ def load_publish_settings(
         or _default_config_value("publish", "media_upload_workers", fallback=4)
     )
     media_upload_workers = max(_to_int(media_upload_workers_raw, 4), 1)
+    publish_interval_seconds_raw = (
+        publish.get("publish_interval_seconds")
+        or _env_value("PUBLISH_INTERVAL_SECONDS")
+        or _default_config_value("publish", "publish_interval_seconds", fallback=0)
+    )
+    publish_interval_seconds = max(_to_int(publish_interval_seconds_raw, 0), 0)
     usage_db_path = _resolve_optional_path(
         cost_cfg.get("usage_db_path"), base_path=runtime_base_path
     )
@@ -206,6 +212,7 @@ def load_publish_settings(
         reports_db=reports_db,
         category_mapping_path=category_mapping_path,
         media_upload_workers=media_upload_workers,
+        publish_interval_seconds=publish_interval_seconds,
         validation_policy=validation_policy,
         run_budget_enabled=_to_bool(run_budget_cfg.get("enabled"), True),
         usage_db_path=usage_db_path,
@@ -254,6 +261,7 @@ def load_publish_settings(
                 "post_status": settings.wp.post_status,
                 "post_type": settings.wp.post_type,
                 "media_upload_workers": settings.media_upload_workers,
+                "publish_interval_seconds": settings.publish_interval_seconds,
                 "ssl_verify": settings.wp.ssl_verify,
                 "ca_bundle_path": settings.wp.ca_bundle_path or "",
                 "validation_policy": settings.validation_policy,

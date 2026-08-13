@@ -1025,6 +1025,25 @@ def publish_signal_projection(
     )
 
 
+def _wait_for_publish_interval(
+    *,
+    previous_write_started_at: float | None,
+    minimum_interval_seconds: int,
+    monotonic_fn: Callable[[], float],
+    sleep_fn: Callable[[float], None],
+) -> float:
+    """Wait until the configured interval has elapsed before the next write."""
+    now = monotonic_fn()
+    if previous_write_started_at is not None:
+        remaining_seconds = max(
+            float(minimum_interval_seconds) - (now - previous_write_started_at),
+            0.0,
+        )
+        if remaining_seconds:
+            sleep_fn(remaining_seconds)
+    return monotonic_fn()
+
+
 def run_publish(
     settings: PublishSettings,
     *,
@@ -1037,6 +1056,8 @@ def run_publish(
     cohort_manifest: str | None = None,
     require_full_validation_manifest: bool = False,
     report_readiness_references: Mapping[str, str] | None = None,
+    monotonic_fn: Callable[[], float] = time.monotonic,
+    sleep_fn: Callable[[float], None] = time.sleep,
 ) -> List[PublishOutcome]:
     root_ctx = ctx or new_run_context()
     cohort_member_file_ids: set[str] | None = None
@@ -1101,6 +1122,7 @@ def run_publish(
                 "force_draft": force_draft,
                 "cohort_manifest": cohort_manifest or "",
                 "post_status": settings.wp.post_status,
+                "publish_interval_seconds": settings.publish_interval_seconds,
             },
         )
     )
@@ -1116,6 +1138,7 @@ def run_publish(
     outcomes: List[PublishOutcome] = []
     attempted = 0
     published = 0
+    previous_write_started_at: float | None = None
     base_url = settings.wp.site_url.rstrip("/")
     auth_header = build_auth_header(
         username=settings.wp.username,
@@ -1820,7 +1843,7 @@ def run_publish(
         outcome: Optional[PublishOutcome] = None
 
         def _publish_attempt() -> PublishOutcome:
-            nonlocal outcome
+            nonlocal outcome, previous_write_started_at
             lookup_resp: WordPressPostLookupBatchItem | WordPressPostLookupResponse
             route_settings = _publish_settings_for_post_type(
                 settings,
@@ -1843,6 +1866,12 @@ def run_publish(
                 )
             if lookup_resp.found and lookup_resp.post_id and lookup_resp.link:
                 if force_report_cards:
+                    previous_write_started_at = _wait_for_publish_interval(
+                        previous_write_started_at=previous_write_started_at,
+                        minimum_interval_seconds=settings.publish_interval_seconds,
+                        monotonic_fn=monotonic_fn,
+                        sleep_fn=sleep_fn,
+                    )
                     outcome = publish_html(
                         PublishRequest(
                             schema_version="1.0",
@@ -1938,6 +1967,12 @@ def run_publish(
                     validation_issues=validation_issues,
                 )
 
+            previous_write_started_at = _wait_for_publish_interval(
+                previous_write_started_at=previous_write_started_at,
+                minimum_interval_seconds=settings.publish_interval_seconds,
+                monotonic_fn=monotonic_fn,
+                sleep_fn=sleep_fn,
+            )
             outcome = publish_html(
                 PublishRequest(
                     schema_version="1.0",

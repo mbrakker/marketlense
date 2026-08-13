@@ -479,6 +479,7 @@ publish:
     post_type: "ml_report"
     ssl_verify: true
   media_upload_workers: 4
+  publish_interval_seconds: 0
   validation:
     policy: "block"
   run_budget:

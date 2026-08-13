@@ -58,6 +58,12 @@ class PublishSettings:
             "doc": "Maximum number of parallel WordPress media uploads used during one publish run."
         },
     )
+    publish_interval_seconds: int = field(
+        default=0,
+        metadata={
+            "doc": "Minimum elapsed seconds between starts of WordPress publication writes."
+        },
+    )
     validation_policy: str = field(
         default="block",
         metadata={

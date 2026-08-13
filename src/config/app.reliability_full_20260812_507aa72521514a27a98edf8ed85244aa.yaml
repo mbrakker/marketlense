@@ -54,6 +54,8 @@ cost:
   ledger_path: "./state/reliability_full_20260812_507aa72521514a27a98edf8ed85244aa/llm_cost_ledger.jsonl"
 
 publish:
+  # Required run-control pacing between the starts of sandbox WordPress writes.
+  publish_interval_seconds: 120
   projection_daily_path: "./state/reliability_full_20260812_507aa72521514a27a98edf8ed85244aa/projection_cost_daily.json"
   projection_ledger_path: "./state/reliability_full_20260812_507aa72521514a27a98edf8ed85244aa/projection_cost_ledger.jsonl"
   run_budget:
