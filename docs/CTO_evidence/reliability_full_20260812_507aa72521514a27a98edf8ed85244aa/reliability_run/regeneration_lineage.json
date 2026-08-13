@@ -1,0 +1,125 @@
+{
+  "stage_records": [
+    {
+      "failure_code": "publish_readiness_failed",
+      "outcome": "blocked",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "publish_readiness_failed",
+      "outcome": "blocked",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "succeeded",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "succeeded",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "succeeded",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "succeeded",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "succeeded",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "succeeded",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "succeeded",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "succeeded",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "succeeded",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "succeeded",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "succeeded",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "succeeded",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "succeeded",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "succeeded",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "succeeded",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "succeeded",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "succeeded",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "succeeded",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    }
+  ],
+  "validation_run_id": "validation:92cdd2e1e862f9099e85723468418d33cadfb5b501cd7869b8ab7f7bf24b4be7"
+}

@@ -1,0 +1,106 @@
+{
+  "members": [
+    {
+      "publisher_id": "unattributed",
+      "report_id": "1597Id8743JAsW3SHd_3WWngRk6X726VX",
+      "source_identity_id": "b75240e6062919b5616c28b73224acdb"
+    },
+    {
+      "publisher_id": "unattributed",
+      "report_id": "166LocR4HCDzBwTfl1dOf6YIdxQZd_u4K",
+      "source_identity_id": "4849e3f779935b822d5e1801e3f893cd"
+    },
+    {
+      "publisher_id": "unattributed",
+      "report_id": "1BKhlmuwCgFMbADrdvP8tB-EvGHFgc7uF",
+      "source_identity_id": "8304094fc40d841ec5c167f888f173a5"
+    },
+    {
+      "publisher_id": "unattributed",
+      "report_id": "1IEcPHWWv97RKsUCF1Qzt2BH7T54aDeq1",
+      "source_identity_id": "ec44d7fff4ab79bdfb5874ca0bd27e84"
+    },
+    {
+      "publisher_id": "unattributed",
+      "report_id": "1LylPDHZYO6pHhUHA-jxNBbflfc1Fr7nC",
+      "source_identity_id": "a7511c358c8b912f6228e0350d946913"
+    },
+    {
+      "publisher_id": "unattributed",
+      "report_id": "1NY43tL30T-fd44U6i5-ZznkAx0LQSkDQ",
+      "source_identity_id": "78e1a0d9f699bbfeffa57ac189425006"
+    },
+    {
+      "publisher_id": "unattributed",
+      "report_id": "1PoXml-tpkL2VDMUgxtj0Tx2e46jccDKW",
+      "source_identity_id": "5fc5f43aff0864393ef3502c3bd2ec77"
+    },
+    {
+      "publisher_id": "unattributed",
+      "report_id": "1Qz2Eay-EiRMMcygOTT9cD_C4_PiMPUpp",
+      "source_identity_id": "3851eae3194b7537e376c099d8878f35"
+    },
+    {
+      "publisher_id": "unattributed",
+      "report_id": "1USCHRNH8yLwKgWFGFp_bU7hfZBeVfv3n",
+      "source_identity_id": "d9828dfc3b30401dc3540f2a9807e962"
+    },
+    {
+      "publisher_id": "unattributed",
+      "report_id": "1V8a4cBK4U3VNAAJVVZsoTnxJib9rmpjW",
+      "source_identity_id": "846b4da65d6b7f9cac0d93e4c7c720f1"
+    },
+    {
+      "publisher_id": "unattributed",
+      "report_id": "1bU1ji5HVxHwPxtdT365UVZ5N10zy0dCE",
+      "source_identity_id": "3dddc23aeac8d117883e75b8a0069a1e"
+    },
+    {
+      "publisher_id": "unattributed",
+      "report_id": "1eD6vUZEICQWi6cI8uKNZuL1idkv-kAfk",
+      "source_identity_id": "ebaade2490749e48ab0fcd9f6ad3a420"
+    },
+    {
+      "publisher_id": "unattributed",
+      "report_id": "1f0jh1SIfd39hxQN21wvQT0mH2IgGklbu",
+      "source_identity_id": "293bc81bf585a66dc3b6f8a10bd566f9"
+    },
+    {
+      "publisher_id": "unattributed",
+      "report_id": "1hkdASxtqI_n27kMgLtlHN6uXxB4XxvxZ",
+      "source_identity_id": "1568f77674b99587f8410c35e339be08"
+    },
+    {
+      "publisher_id": "unattributed",
+      "report_id": "1injIblyoZsMhFhcsDxFw8uk0IsWHRQmh",
+      "source_identity_id": "56f43a447b008866bf2ed300d0c993bc"
+    },
+    {
+      "publisher_id": "unattributed",
+      "report_id": "1iwZS85W9sg1rYwLikwgmi0vmtyh6lUnO",
+      "source_identity_id": "c4d234d7440120c86e43e7ad9b52bb69"
+    },
+    {
+      "publisher_id": "unattributed",
+      "report_id": "1ojaFaRfntjV4BUHPlgrVedwQQ5ycyzeh",
+      "source_identity_id": "c84a84de28313b6fba786221d9d7fcb9"
+    },
+    {
+      "publisher_id": "unattributed",
+      "report_id": "1pL6t1hhdun3Iqenliwi-odc2Rr-EHKx4",
+      "source_identity_id": "d10f96b2d26226740cc7e83bd89ed16e"
+    },
+    {
+      "publisher_id": "unattributed",
+      "report_id": "1vTf0IkhAnB2XHQQmR0-HcoQeEEslv7M2",
+      "source_identity_id": "01d3dca3f272300183fd74191d3d8e73"
+    },
+    {
+      "publisher_id": "unattributed",
+      "report_id": "1y5uWIo-HpEOojg4vdc9dW1e28KIN2z85",
+      "source_identity_id": "cf8557f19b87055d324182ea455c18fa"
+    }
+  ],
+  "schema_version": "1.0",
+  "validation_run_id": "validation:92cdd2e1e862f9099e85723468418d33cadfb5b501cd7869b8ab7f7bf24b4be7"
+}

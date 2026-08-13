@@ -1,0 +1,105 @@
+{
+  "architecture_policy_schema_version": "1.0",
+  "external_system_ownership": {
+    "browser_runtime": {
+      "canonical_entrypoint": "src/services/browser_report_download_service.py",
+      "private_roots": [
+        "src/services/_browser_report_download/"
+      ]
+    },
+    "email_imap": {
+      "canonical_entrypoint": "src/services/mailbox_acquisition_service.py",
+      "private_roots": [
+        "src/services/_mailbox_acquisition_service/"
+      ]
+    },
+    "filesystem": {
+      "canonical_entrypoint": "src/services/file_service.py",
+      "private_roots": [
+        "src/services/file_cache_service.py",
+        "src/services/_file_service/"
+      ]
+    },
+    "google_drive": {
+      "canonical_entrypoint": "src/services/drive_service.py",
+      "private_roots": [
+        "src/services/_drive_service/",
+        "src/services/mailbox_acquisition_service.py"
+      ]
+    },
+    "http_network": {
+      "canonical_entrypoint": "src/services/_http_acquisition.py",
+      "private_roots": [
+        "src/services/_browser_report_download/",
+        "src/services/_publisher_inventory_service/",
+        "src/services/_wordpress_service/",
+        "src/services/wordpress_service.py",
+        "src/services/publisher_inventory_service.py",
+        "src/services/browser_report_download_service.py"
+      ]
+    },
+    "llm_providers": {
+      "canonical_entrypoint": "src/services/llm_service.py",
+      "private_roots": [
+        "src/services/_llm_service/"
+      ]
+    },
+    "pdf_ocr_stack": {
+      "canonical_entrypoint": "src/services/pdf_service.py",
+      "private_roots": [
+        "src/services/_pdf/",
+        "src/services/_render_service/",
+        "src/services/_wordpress_service/media.py",
+        "src/services/cover_image_service.py"
+      ]
+    },
+    "sqlite": {
+      "canonical_entrypoint": "src/services/state_service.py",
+      "private_roots": [
+        "src/services/_state_service/",
+        "src/services/_report_store_service/",
+        "src/services/_analytics_store/",
+        "src/services/validation_reliability_service.py",
+        "src/services/_sqlite_common.py",
+        "src/services/_sqlite_migration/",
+        "src/services/sqlite_migration_service.py",
+        "src/services/report_store_service.py",
+        "src/services/analytics_store_service.py",
+        "src/services/run_registry_service.py",
+        "src/services/idempotency_service.py",
+        "src/services/llm_usage_ledger_service.py",
+        "src/services/_llm_usage_ledger/"
+      ]
+    },
+    "vector_store": {
+      "canonical_entrypoint": "src/services/llm_service.py",
+      "private_roots": [
+        "src/services/_llm_service/",
+        "src/services/vector_store_service.py"
+      ]
+    },
+    "wordpress": {
+      "canonical_entrypoint": "src/services/wordpress_service.py",
+      "private_roots": [
+        "src/services/_wordpress_service/"
+      ]
+    }
+  },
+  "repository_commit_sha": "56e09a30f96ef2482b496b217049c59d7d7e0def",
+  "roles": {
+    "cli": "src/_cli",
+    "contracts": "src/contracts",
+    "generators": "src/generators",
+    "orchestrators": "src/orchestrators",
+    "services": "src/services",
+    "ui": "src/ui",
+    "utils": "src/utils"
+  },
+  "schema_version": "1.0",
+  "source_inputs": [
+    {
+      "path": "docs/quality/architecture_policy.yaml",
+      "sha256": "33bc74fd01b0716276f060b66fb96cbcb3b5e789dda370b0da2dedbba82b337f"
+    }
+  ]
+}
