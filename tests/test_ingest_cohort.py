@@ -445,6 +445,67 @@ def test_provenance_recovery_records_explicit_producer_transition(
     assert payload["provenance_recovery"]["producer_identity_changed"] is True
 
 
+def test_provenance_recovery_records_explicit_policy_transition(
+    ingest_settings, run_context
+) -> None:
+    file = DriveFile("1.0", "file-a", "A.pdf", "2026-01-01", "md5-a")
+    stored: dict[str, bytes] = {}
+    deps = replace(
+        orch.IngestBatchDependencies.default(),
+        file_exists=lambda request, _ctx: SimpleNamespace(
+            exists=request.path in stored
+        ),
+        read_text=lambda request, _ctx: SimpleNamespace(
+            content=stored[request.path].decode("utf-8")
+        ),
+        write_bytes=lambda request, _ctx: (
+            stored.__setitem__(request.path, request.content)
+            or SimpleNamespace(bytes_written=len(request.content))
+        ),
+    )
+    orch._frozen_cohort(
+        cohort_size=1,
+        cohort_manifest="cohorts/original.json",
+        selected_files=[file],
+        settings=ingest_settings,
+        deps=deps,
+        root_ctx=run_context,
+    )
+    changed_policies = {
+        "report_vs": {
+            "provider": "openai",
+            "model": "gpt-4.1-mini",
+            "temperature": 0.0,
+            "provider_retry_count": 0,
+            "max_output_tokens": 4096,
+        }
+    }
+    changed_policies["report_vs"] = {
+        **changed_policies["report_vs"],
+        "max_output_tokens": 8192,
+    }
+
+    orch.recover_frozen_cohort_provenance(
+        source_manifest="cohorts/original.json",
+        recovery_manifest="cohorts/recovery.json",
+        recovery_reason="reviewed output-ceiling reliability fix",
+        allow_policy_transition=True,
+        settings=replace(ingest_settings, llm_execution_policies=changed_policies),
+        deps=deps,
+        root_ctx=run_context,
+    )
+    original = json.loads(stored["cohorts/original.json"])
+    payload = json.loads(stored["cohorts/recovery.json"])
+
+    assert payload["members"] == original["members"]
+    assert payload["cohort_id"] == original["cohort_id"]
+    assert payload["policy_hash"] != original["policy_hash"]
+    assert payload["provenance_recovery"]["policy_changed"] is True
+    assert payload["provenance_recovery"]["source_policy_hash"] == original[
+        "policy_hash"
+    ]
+
+
 def test_validation_run_identity_changes_with_cohort_provenance() -> None:
     first = orch._validation_run_id_for_cohort(
         cohort_id="cohort",

@@ -24,12 +24,13 @@ process.
 When a frozen cohort rejects replay because its configuration hash cannot be
 recreated, retain the original manifest and record the interruption. Create a
 separate, linked recovery manifest only through the canonical ingest
-orchestrator recovery operation. It is valid only when the admission-policy
-hash remains identical; a producer change requires explicit operator opt-in.
-All report IDs, checksums, source identities, publishers, and ordered members
-must be copied unchanged. The operation records the old and new validation
-identities, source manifest, producer transition, reason, timestamp, and a
-redacted effective-settings snapshot. A changed policy remains a blocker.
+orchestrator recovery operation. A producer or policy change requires its own
+explicit operator opt-in; policy transition is reserved for a reviewed
+run-blocking reliability correction and must not alter admission inputs. All
+report IDs, checksums, source identities, publishers, and ordered members must
+be copied unchanged. The operation records the old and new validation
+identities, source manifest, policy and producer transitions, reason,
+timestamp, and a redacted effective-settings snapshot.
 
 ## Failure-specific report recovery
 

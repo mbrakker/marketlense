@@ -82,6 +82,16 @@ def normalize_time_period(value: Optional[str]) -> Optional[str]:
     if not normalized:
         return None
 
+    # Model-produced metadata must remain a compact period label.  A long
+    # response can contain valid years followed by prompt or schema debris;
+    # retain only the unambiguous period tokens rather than persisting that
+    # untrusted prose into rendered card fields.
+    if len(normalized) > 120:
+        extracted_years = re.findall(r"\b(?:19|20)\d{2}\b", normalized)
+        if extracted_years:
+            return ", ".join(_dedupe_preserve_order(extracted_years))
+        return None
+
     stripped = _strip_annotations(normalized)
 
     parsed = _parse_period_expression(stripped)

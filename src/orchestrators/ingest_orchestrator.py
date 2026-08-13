@@ -1070,14 +1070,15 @@ def recover_frozen_cohort_provenance(
     recovery_manifest: str,
     recovery_reason: str,
     allow_producer_transition: bool = False,
+    allow_policy_transition: bool = False,
     settings: IngestSettings,
     deps: IngestBatchDependencies,
     root_ctx: RunContext,
 ) -> list[DriveFile]:
-    """Create a linked validation manifest for a config-only recovery.
+    """Create a linked validation manifest for an immutable-cohort recovery.
 
-    The source remains immutable. Recovery requires unchanged policy and
-    preserves every member exactly; producer transition needs explicit opt-in.
+    The source remains immutable and every member is preserved exactly.
+    Producer and policy transitions each require explicit operator opt-in.
     """
     if not source_manifest or source_manifest == recovery_manifest:
         raise AppError(
@@ -1116,12 +1117,13 @@ def recover_frozen_cohort_provenance(
     source_producer_build_identity = str(
         source_payload.get("producer_build_identity") or "workspace"
     )
-    if (
-        str(source_payload.get("policy_hash") or "") != current_policy_hash
-        or (
-            source_producer_build_identity != current_producer_build_identity
-            and not allow_producer_transition
-        )
+    source_policy_hash = str(source_payload.get("policy_hash") or "")
+    policy_changed = source_policy_hash != current_policy_hash
+    producer_identity_changed = (
+        source_producer_build_identity != current_producer_build_identity
+    )
+    if (policy_changed and not allow_policy_transition) or (
+        producer_identity_changed and not allow_producer_transition
     ):
         raise AppError(
             code="ingest_cohort_provenance_recovery_incompatible",
@@ -1154,13 +1156,12 @@ def recover_frozen_cohort_provenance(
         "source_configuration_hash": str(
             source_payload.get("configuration_hash") or ""
         ),
-        "source_policy_hash": str(source_payload.get("policy_hash") or ""),
+        "source_policy_hash": source_policy_hash,
+        "policy_changed": policy_changed,
         "source_producer_build_identity": str(
             source_producer_build_identity
         ),
-        "producer_identity_changed": (
-            source_producer_build_identity != current_producer_build_identity
-        ),
+        "producer_identity_changed": producer_identity_changed,
         "reason": recovery_reason.strip(),
         "recovered_at_utc": datetime.now(timezone.utc).isoformat(),
     }
@@ -1184,6 +1185,8 @@ def recover_frozen_cohort_provenance(
                 "cohort_size": manifest_size,
                 "cohort_id": _cohort_id(files),
                 "validation_run_id": payload["validation_run_id"],
+                "policy_changed": policy_changed,
+                "producer_identity_changed": producer_identity_changed,
             },
         )
     )
