@@ -406,6 +406,23 @@ def test_render_checkpoint_outcome_rejects_invalid_or_incomplete_payload(
     assert exc_info.value.code == "report_pipeline_checkpoint_invalid"
 
 
+def test_render_checkpoint_outcome_requires_passing_readiness() -> None:
+    with pytest.raises(AppError) as exc_info:
+        _outcome_from_render_checkpoint(
+            {
+                "schema_version": "1.1",
+                "file_id": "report-1",
+                "name": "report.pdf",
+                "md5": "md5",
+                "html_path": "out/report.html",
+                "status": "processed",
+                "publish_readiness_status": "fail",
+            }
+        )
+
+    assert exc_info.value.code == "report_pipeline_checkpoint_readiness_unverified"
+
+
 def test_checkpoint_resume_rejects_unknown_stage_without_side_effects(
     tmp_path: Path,
 ) -> None:

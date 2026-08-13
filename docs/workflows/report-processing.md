@@ -63,6 +63,11 @@ state-only skips remain typed failures. A forced card/render repair also bypasse
 the ordinary state “already processed” shortcut, so it can actually reach the
 approved resume stage.
 
+A completed render checkpoint is reusable only with an explicit passing
+`publish_readiness` decision. A legacy, absent, or failed readiness decision
+rejects that checkpoint and makes `latest_safe` fall back to an earlier validated
+checkpoint; HTML existence never supplies readiness by inference.
+
 The same render outcome fails closed when required report-card metadata, such
 as publisher, fails public-metadata governance. Such a package remains a render
 error with the typed reason and cannot be mistaken for a publication candidate.
