@@ -105,6 +105,11 @@ database, or host-routing instability, not an application authentication
 failure. The guard intentionally stopped publication as required by run
 control.
 
+At `2026-08-13T17:14:43Z`, an explicitly authorized retry performed an
+authenticated, read-only target preflight before any publication work. It
+failed with the same non-retryable `wordpress_target_installation_redirect`.
+No report publish was attempted and no WordPress write occurred in that retry.
+
 Earlier transient failures are also retained in `publish_paced_12.stdout.log`:
 `wp_media_client_error` for `1NY…`, and `wp_media_upload_failed` after setup
 redirects for `1Po…` and `1US…`. Each was subsequently published and verified
