@@ -2087,6 +2087,8 @@ def run_publish(
                     fields={"file_id": file_id, "error": exc.message, "code": exc.code},
                 )
             )
+            if exc.code == "wordpress_target_installation_redirect":
+                raise
             outcome = PublishOutcome(
                 schema_version="1.0",
                 html_path=html_path,

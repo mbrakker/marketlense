@@ -155,6 +155,7 @@ class RequestsRouter:
         url: str,
         *,
         headers: dict[str, Any] | None = None,
+        allow_redirects: Any = True,
         timeout: Any = None,
         verify: Any = None,
     ) -> FakeHttpResponse:
@@ -165,7 +166,7 @@ class RequestsRouter:
             params=None,
             data=None,
             files=None,
-            allow_redirects=True,
+            allow_redirects=allow_redirects,
             timeout=timeout,
             verify=verify,
         )
