@@ -1165,7 +1165,7 @@ def recover_frozen_cohort_provenance(
                 "requested recovery runtime"
             ),
             retryable=False,
-    )
+        )
 
     configuration_hash = admission_configuration_hash(settings)
     payload = dict(source_payload)
@@ -1183,17 +1183,13 @@ def recover_frozen_cohort_provenance(
     )
     payload["provenance_recovery"] = {
         "source_manifest": source_manifest,
-        "source_validation_run_id": str(
-            source_payload.get("validation_run_id") or ""
-        ),
+        "source_validation_run_id": str(source_payload.get("validation_run_id") or ""),
         "source_configuration_hash": str(
             source_payload.get("configuration_hash") or ""
         ),
         "source_policy_hash": source_policy_hash,
         "policy_changed": policy_changed,
-        "source_producer_build_identity": str(
-            source_producer_build_identity
-        ),
+        "source_producer_build_identity": str(source_producer_build_identity),
         "producer_identity_changed": producer_identity_changed,
         "reason": recovery_reason.strip(),
         "recovered_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -1461,9 +1457,9 @@ def _record_cohort_ingest_manifest(
         publisher_id = _publisher_id(file)
         outcome = outcome_by_id.get(file.file_id)
         terminal = outcome is not None
-        readiness_status = str(
-            outcome.publish_readiness_status if outcome else ""
-        ).strip().casefold()
+        readiness_status = (
+            str(outcome.publish_readiness_status if outcome else "").strip().casefold()
+        )
         reused_validated_html_path = (
             outcome.html_path
             if outcome
@@ -1553,7 +1549,9 @@ def _record_cohort_ingest_manifest(
                         (
                             outcome.error
                             or (
-                                "" if successful else (
+                                ""
+                                if successful
+                                else (
                                     "publish_readiness_unverified"
                                     if not readiness_status
                                     else f"publish_readiness_{readiness_status}"

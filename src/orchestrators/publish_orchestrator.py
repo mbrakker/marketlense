@@ -482,9 +482,7 @@ def _record_validation_cohort_publish_outcomes(
                         report_id=file_id,
                         source_identity_id=source_identity_id,
                         stage=stage,
-                        attempt_number=max(
-                            1, int(ctx.validation_attempt_number or 1)
-                        ),
+                        attempt_number=max(1, int(ctx.validation_attempt_number or 1)),
                         parent_attempt_number=max(
                             0, int(ctx.validation_parent_attempt_number or 0)
                         ),

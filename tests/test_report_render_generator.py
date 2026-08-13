@@ -371,12 +371,15 @@ def test_resolved_report_title_replaces_source_identifier_with_document_map_titl
         evidence_packs={"doc_map": {"title": "Document Map Report Title"}},
     )
 
-    assert _resolved_report_title(
-        runtime,
-        source,
-        analysis,
-        "source-12345678901234567890",
-    ) == "Document Map Report Title"
+    assert (
+        _resolved_report_title(
+            runtime,
+            source,
+            analysis,
+            "source-12345678901234567890",
+        )
+        == "Document Map Report Title"
+    )
 
 
 def test_render_report_output_sources_metadata_from_db_and_returns_complete_outcome(

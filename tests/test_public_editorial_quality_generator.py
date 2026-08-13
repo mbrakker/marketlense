@@ -156,7 +156,7 @@ def test_public_html_allows_ellipsis_that_closes_a_quoted_prompt() -> None:
     report = evaluate_public_editorial_quality(
         report_id="retained-report",
         artifacts=_retained_artifacts(),
-        html='<p>Use the prompt “We are doing this because we believe…” to surface assumptions.</p>',
+        html="<p>Use the prompt “We are doing this because we believe…” to surface assumptions.</p>",
     )
 
     assert "public_editorial_quality.literal_truncation" not in _rule_ids(report)

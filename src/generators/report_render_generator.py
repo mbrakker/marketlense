@@ -289,7 +289,9 @@ def _resolved_report_title(
     resolved = _resolved_render_title(
         runtime,
         source,
-        candidate if candidate is not None else (analysis.payload.title or runtime.report_title),
+        candidate
+        if candidate is not None
+        else (analysis.payload.title or runtime.report_title),
     )
     if resolved and not _is_runtime_generated_title(runtime, resolved):
         return resolved
@@ -676,9 +678,7 @@ def render_report_output(
                 html_path=out_html,
                 status="error" if readiness_status != "pass" else "processed",
                 error=(
-                    "publish_readiness_failed"
-                    if readiness_status != "pass"
-                    else None
+                    "publish_readiness_failed" if readiness_status != "pass" else None
                 ),
                 publish_readiness_status=readiness_status,
                 vector_store_id=analysis.vector_store_id,
@@ -731,9 +731,7 @@ def render_report_output(
         or _source_derived_publisher(analysis)
     )
     cover_time_period = normalize_time_period(
-        cover_meta.time_period
-        if cover_meta
-        else (analysis.payload.time_period or None)
+        cover_meta.time_period if cover_meta else (analysis.payload.time_period or None)
     )
     cover_region = (
         cover_meta.region if cover_meta else (analysis.payload.region or None)
@@ -974,9 +972,7 @@ def render_report_output(
         md5=runtime.md5,
         html_path=out_html,
         status=(
-            "error"
-            if report_card_error or readiness_status != "pass"
-            else "processed"
+            "error" if report_card_error or readiness_status != "pass" else "processed"
         ),
         error=(
             report_card_error

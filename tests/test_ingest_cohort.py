@@ -348,20 +348,20 @@ def test_provenance_recovery_creates_linked_manifest_with_identical_members(
     assert payload["configuration_snapshot"]["gdrive_folder_id"] == "recovery-folder"
     assert "openai_api_key" not in payload["configuration_snapshot"]
     assert payload["provenance_recovery"]["source_manifest"] == "cohorts/original.json"
-    assert payload["provenance_recovery"]["source_validation_run_id"] == original[
-        "validation_run_id"
-    ]
-    assert payload["provenance_recovery"]["source_configuration_hash"] == original[
-        "configuration_hash"
-    ]
+    assert (
+        payload["provenance_recovery"]["source_validation_run_id"]
+        == original["validation_run_id"]
+    )
+    assert (
+        payload["provenance_recovery"]["source_configuration_hash"]
+        == original["configuration_hash"]
+    )
     assert payload["provenance_recovery"]["reason"] == (
         "operator context lost after interrupted process"
     )
 
 
-def test_provenance_recovery_rejects_policy_drift(
-    ingest_settings, run_context
-) -> None:
+def test_provenance_recovery_rejects_policy_drift(ingest_settings, run_context) -> None:
     file = DriveFile("1.0", "file-a", "A.pdf", "2026-01-01", "md5-a")
     stored: dict[str, bytes] = {}
     deps = replace(
@@ -501,9 +501,9 @@ def test_provenance_recovery_records_explicit_policy_transition(
     assert payload["cohort_id"] == original["cohort_id"]
     assert payload["policy_hash"] != original["policy_hash"]
     assert payload["provenance_recovery"]["policy_changed"] is True
-    assert payload["provenance_recovery"]["source_policy_hash"] == original[
-        "policy_hash"
-    ]
+    assert (
+        payload["provenance_recovery"]["source_policy_hash"] == original["policy_hash"]
+    )
 
 
 def test_validation_run_identity_changes_with_cohort_provenance() -> None:
@@ -671,9 +671,7 @@ def test_frozen_cohort_preserves_admitted_publisher_in_manifest_and_stage_record
     ingest_settings,
     run_context,
 ) -> None:
-    file = DriveFile(
-        "1.0", "publisher-owned", "Publisher-owned.pdf", None, "md5-owned"
-    )
+    file = DriveFile("1.0", "publisher-owned", "Publisher-owned.pdf", None, "md5-owned")
     stored: dict[str, bytes] = {}
 
     deps = _batch_dependencies(
