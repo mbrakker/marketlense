@@ -21,6 +21,13 @@ browser_download:
   identity_config_path: "./browser_download_identity_reliability_full_20260812_507aa72521514a27a98edf8ed85244aa.yaml"
   route_playbook_promotion_mode: "disabled"
   private_api_playbook_promotion_mode: "disabled"
+  # A browser-agent timeout is a retained terminal result in this bounded
+  # reliability run. Repeating the same deterministic route adds no evidence.
+  retry:
+    retries: 0
+    base_delay_seconds: 0.0
+    backoff_step_seconds: 0.0
+    jitter_seconds: 0.0
   run_budget:
     enabled: true
     max_browser_launches: 100

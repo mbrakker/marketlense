@@ -39,4 +39,10 @@ without deleting either the suppression history or resource records. Direct
 routes and the existing CAPTCHA, identity, and hard-blocker policies remain
 independent controls.
 
+An explicitly scoped reliability profile may set browser acquisition retries to
+zero when a timed-out deterministic route is being measured rather than
+recovered. The timeout remains a typed terminal result with its route,
+timestamps, and resource envelope; this run-only policy does not alter the
+normal acquisition default or suppress a future explicit revalidation.
+
 Use `python -m src.cli download-report <url>` for an explicit acquisition request and `python -m src.cli browser-doctor` to diagnose the local browser runtime. Browser, Drive, and mailbox prerequisites are covered in [credentials](../ops/credentials.md); recovery guidance is in [troubleshooting](../ops/troubleshooting.md).
