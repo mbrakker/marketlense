@@ -389,7 +389,8 @@ def test_render_report_output_sources_metadata_from_db_and_returns_complete_outc
     )
 
     assert_no_defaulted_required_fields(outcome)
-    assert outcome.status == "processed"
+    assert outcome.status == "error"
+    assert outcome.error == "publish_readiness_failed"
     assert render_calls == ["DB Title"]
 
 
@@ -913,8 +914,8 @@ def test_render_report_output_does_not_use_file_modified_time_for_card_date(tmp_
 
     assert len(writes) == 1
     assert writes[0].manifest.published_date == ""
-    assert outcome.status == "processed"
-    assert outcome.error is None
+    assert outcome.status == "error"
+    assert outcome.error == "publish_readiness_failed"
 
 
 def test_render_only_regenerates_card_manifest_when_it_is_missing(tmp_path):
@@ -965,6 +966,58 @@ def test_render_only_regenerates_card_manifest_when_it_is_missing(tmp_path):
     assert len(generated_covers) == 1
     assert len(written_manifests) == 1
     assert outcome.report_card_manifest_path.endswith("report-card-manifest.json")
+
+
+def test_render_normalizes_retained_cover_period_before_card_generation(tmp_path):
+    runtime = _runtime(tmp_path, md5="md5")
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    analysis = _analysis(runtime, source, selection)
+    html_path = Path(tmp_path / "out" / "report.html")
+    html_path.parent.mkdir(parents=True, exist_ok=True)
+    generated_covers = []
+
+    def _render_report(req, ctx):
+        del req, ctx
+        html_path.write_text("<html></html>", encoding="utf-8")
+        return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
+
+    def _metadata(req, ctx):
+        metadata = _deps().get_report_metadata(req, ctx)
+        return replace(
+            metadata,
+            time_period=(
+                "2025 (primary coverage) with outlook into 2026 and beyond; "
+                "return a valid JSON object with no text after it. "
+                "The period field must contain only a compact normalized label."
+            ),
+        )
+
+    deps = _deps(
+        render_report=_render_report,
+        get_report_metadata=_metadata,
+        generate_cover_images=lambda req, ctx: (
+            generated_covers.append(req)
+            or [
+                SimpleNamespace(
+                    status="generated",
+                    assets=_cover_assets(runtime),
+                    error=None,
+                )
+            ]
+        ),
+    )
+
+    render_report_output(
+        runtime,
+        source,
+        selection,
+        analysis,
+        deps,
+        preview_resp=render_preview_asset(runtime, source, deps),
+    )
+
+    assert generated_covers[0].reports[0].time_period == "2025, 2026"
 
 
 def test_render_report_output_does_not_write_manifest_after_cover_error(tmp_path):

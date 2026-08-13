@@ -53,6 +53,7 @@ from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 from src.utils.slugify import slugify
+from src.utils.time_period import normalize_time_period
 
 _GENERATED_REPORT_TITLE = re.compile(
     r"^[0-9a-f]{32,64}(?:[-_.](?:pdf|report))?$", re.IGNORECASE
@@ -723,8 +724,10 @@ def render_report_output(
         or analysis.payload.publisher
         or _source_derived_publisher(analysis)
     )
-    cover_time_period = (
-        cover_meta.time_period if cover_meta else (analysis.payload.time_period or None)
+    cover_time_period = normalize_time_period(
+        cover_meta.time_period
+        if cover_meta
+        else (analysis.payload.time_period or None)
     )
     cover_region = (
         cover_meta.region if cover_meta else (analysis.payload.region or None)
