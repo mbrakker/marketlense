@@ -315,14 +315,18 @@ def test_llm_usage_ledger_schedules_median_rebuild_on_twentieth_task_event(
     median_row = None
     while time.monotonic() < deadline:
         if Path(response.median_db_path).exists():
-            with sqlite3.connect(response.median_db_path) as conn:
-                median_row = conn.execute(
-                    """
-                    select sample_count, median_input_tokens, median_output_tokens,
-                           median_total_tokens
-                    from llm_usage_medians
-                    """
-                ).fetchone()
+            try:
+                with sqlite3.connect(response.median_db_path) as conn:
+                    median_row = conn.execute(
+                        """
+                        select sample_count, median_input_tokens, median_output_tokens,
+                               median_total_tokens
+                        from llm_usage_medians
+                        """
+                    ).fetchone()
+            except sqlite3.OperationalError as exc:
+                if "no such table: llm_usage_medians" not in str(exc):
+                    raise
             if median_row == (20, 10.0, 5.0, 15.0):
                 break
         time.sleep(0.01)
