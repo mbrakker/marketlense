@@ -1,0 +1,100 @@
+from __future__ import annotations
+
+import importlib.util
+import sqlite3
+from pathlib import Path
+
+
+def _load_module():
+    path = Path("scripts/quality/acquisition_failure_remediation.py")
+    spec = importlib.util.spec_from_file_location(
+        "acquisition_failure_remediation", path
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_freeze_excludes_later_verified_candidate_and_retains_failed_candidate(
+    tmp_path,
+):
+    module = _load_module()
+    db_path = tmp_path / "reports.sqlite"
+    with sqlite3.connect(db_path) as connection:
+        connection.executescript(
+            """
+            CREATE TABLE publisher_download_route_history (
+                id INTEGER, normalized_url TEXT, route_family TEXT, route_kind TEXT,
+                route_status TEXT, outcome TEXT, attempts INTEGER, blocked_reason TEXT,
+                blocked_reason_detail TEXT, last_final_page_url TEXT,
+                resolved_target_url TEXT, last_downloaded_file_path TEXT,
+                onsite_capture_format TEXT, onsite_completeness_status TEXT,
+                candidate_pdf_url TEXT, candidate_source_page_urls_json TEXT,
+                candidate_discovery_provenances_json TEXT, updated_at TEXT
+            );
+            CREATE TABLE acquisition_attempt_resources (
+                attempt_id TEXT, normalized_url TEXT, publisher_id TEXT,
+                route_family TEXT, terminal_outcome TEXT, terminal_reason TEXT,
+                started_at_utc TEXT, completed_at_utc TEXT, elapsed_ms INTEGER,
+                browser_launches INTEGER, page_navigations INTEGER, browser_steps INTEGER,
+                screenshots INTEGER, browser_model_calls INTEGER, input_tokens INTEGER,
+                output_tokens INTEGER, estimated_cost_usd REAL, mailbox_reads INTEGER,
+                drive_reads INTEGER, drive_writes INTEGER,
+                source_policy_compatibility_hash TEXT, route_policy_version TEXT
+            );
+            CREATE TABLE publishers (id INTEGER, name TEXT);
+            CREATE TABLE report_sources (
+                id INTEGER, normalized_landing_page_url TEXT, report_name TEXT,
+                source_page_url TEXT, publisher_name TEXT, discovered_at_utc TEXT
+            );
+            CREATE TABLE source_identity_resolutions (
+                source_record_id INTEGER, source_identity_id TEXT, resolved_at_utc TEXT
+            );
+            """
+        )
+        connection.execute("INSERT INTO publishers VALUES (1, 'Example Publisher')")
+        connection.execute(
+            "INSERT INTO acquisition_attempt_resources VALUES "
+            "('failed', 'https://example.test/failed', 'publisher:example-publisher', "
+            "'browser_email_form', 'failed', 'blocked_missing_identity_field', "
+            "'2026-08-14T00:00:00Z', '2026-08-14T00:00:01Z', 1000, 1, 1, 2, 0, 1, "
+            "10, 2, 0.01, 0, 0, 0, 'policy-hash', 'policy-v1')"
+        )
+        connection.execute(
+            "INSERT INTO publisher_download_route_history VALUES "
+            "(1, 'https://example.test/verified', 'direct_pdf_probe', 'pdf_download', "
+            "'verified', 'downloaded', 1, '', '', '', '', '', '', '', '', '[]', '[]', "
+            "'2026-08-14T00:00:02Z')"
+        )
+        connection.execute(
+            "INSERT INTO acquisition_attempt_resources VALUES "
+            "('earlier-failure', 'https://example.test/verified', 'publisher:example-publisher', "
+            "'browser_pdf_click', 'failed', 'browser_download_agent_timeout', "
+            "'2026-08-14T00:00:00Z', '2026-08-14T00:00:01Z', 1000, 1, 1, 2, 0, 1, "
+            "10, 2, 0.01, 0, 0, 0, 'policy-hash', 'policy-v1')"
+        )
+    result = module.freeze_failed_acquisition_manifest(
+        reports_db=db_path,
+        output_path=tmp_path / "manifest.json",
+        producer_sha="abc123",
+    )
+    assert result["candidate_count"] == 1
+    candidate = result["candidates"][0]
+    assert candidate["canonical_candidate_url"] == "https://example.test/failed"
+    assert candidate["original_typed_error_code"] == "blocked_missing_identity_field"
+    assert candidate["original_resource_attempts"][0]["duration_seconds"] == 1.0
+    assert result["manifest_sha256"]
+
+
+def test_relative_credential_path_is_owned_by_supplied_dotenv_directory(tmp_path):
+    module = _load_module()
+    dotenv_path = tmp_path / ".env"
+    credential_path = tmp_path / "credentials" / "token.json"
+    credential_path.parent.mkdir()
+    credential_path.write_text("{}", encoding="utf-8")
+    resolved = module._owned_dotenv_credential_paths(
+        dotenv_path,
+        {"GOOGLE_OAUTH_TOKEN_JSON": "credentials/token.json"},
+    )
+    assert resolved == {"GOOGLE_OAUTH_TOKEN_JSON": str(credential_path)}

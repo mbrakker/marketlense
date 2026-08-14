@@ -1338,6 +1338,118 @@ fields:
   value: null
   aliases: []
   option_aliases: []
+- schema_version: '1.0'
+  key: work_email_email
+  label: Work email (email)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: company_size_company_size_company_size_legacy
+  label: Company size (company_size / company_size_legacy)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: any_textarea_fields_shown_e_g_subscribe_comments
+  label: any textarea fields shown (e.g., subscribe_comments)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: country_of_residence_country_selector
+  label: Country of residence (country selector)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: subscribe_submit
+  label: Subscribe (submit)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: i_consent_to_my_email_address_being_used_by_barclays_to_provide_me_with_personalized_advertisements_on_third_party_websites_and_social_media_platforms_marketing_consent_checkbox_visible_but_optional
+  label: I consent to my email address being used by Barclays to provide me with personalized
+    advertisements on third-party websites and social media platforms (marketing consent
+    checkbox) - visible but optional
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: fields_required_validation_text
+  label: '* Fields required (validation text)'
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: work_email_address
+  label: Work Email Address
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: organization_type
+  label: Organization Type
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: annual_revenue_annualrevenuesmb
+  label: Annual Revenue * (annualRevenueSMB)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: annual_corporate_revenue_annual_corporate_revenue_c
+  label: Annual Corporate Revenue * (Annual_Corporate_Revenue__c)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: first_name_input_id_firstname_shadow_index_64
+  label: First Name (input id=firstName, shadow index=64)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: last_name_input_id_lastname_shadow_index_65
+  label: Last Name (input id=lastName, shadow index=65)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: work_email_address_input_id_email_name_email_shadow_index_66
+  label: Work Email Address (input id=email name=email, shadow index=66)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: organization_type_select_visible_placeholder_select_organization_type_shadow_select_control
+  label: "Organization Type (select visible placeholder 'Select organization type\u2026\
+    ', shadow/select control)"
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: agreement_promotional_consent_text_informational
+  label: Agreement / promotional consent text (informational)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: get_the_report_submit
+  label: Get the report (submit)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: by_submitting_this_form_you_agree_to_receive_promotional_messages_from_jungle_scout_about_its_products_and_services_marketing_legal_text_shown
+  label: By submitting this form, you agree to receive promotional messages from Jungle
+    Scout about its products and services. (marketing/legal text shown)
+  value: null
+  aliases: []
+  option_aliases: []
 delivery_emails:
 - reports@marketbearing.eu
 consent_policy:
@@ -1557,3 +1669,75 @@ publisher_overrides:
     value: Austria
     aliases: []
     option_aliases: []
+- schema_version: '1.0'
+  host_pattern: junglescout.com
+  delivery_emails: []
+  field_values:
+  - schema_version: '1.0'
+    key: organization_type
+    label: Organization Type
+    value: '***REDACTED***'
+    aliases:
+    - Organization Type
+    - Organization Type *
+    option_aliases:
+    - Research
+    - Brand
+    - '***REDACTED***'
+  - schema_version: '1.0'
+    key: company_name
+    label: Company Name
+    value: Market Bearing
+    aliases:
+    - Company Name
+    - Company
+    option_aliases: []
+  - schema_version: '1.0'
+    key: work_email
+    label: Business Email Address
+    value: reports@marketbearing.eu
+    aliases:
+    - Business Email Address
+    - Work Email Address
+    - Work Email
+    option_aliases: []
+  - schema_version: '1.0'
+    key: job_title
+    label: Role
+    value: Researcher
+    aliases:
+    - Role
+    - Job Title
+    - Title
+    option_aliases: []
+  - schema_version: '1.0'
+    key: annual_revenue_annualrevenuesmb
+    label: Annual Revenue
+    value: 10000 euro
+    aliases:
+    - Annual Revenue
+    - annualRevenueSMB
+    option_aliases:
+    - 10000 euro
+    - 10,000 euro
+    - "\u20AC10,000"
+  - schema_version: '1.0'
+    key: annual_corporate_revenue_annual_corporate_revenue_c
+    label: Annual Corporate Revenue
+    value: 10000 euro
+    aliases:
+    - Annual Corporate Revenue
+    - Annual_Corporate_Revenue__c
+    option_aliases:
+    - 10000 euro
+    - 10,000 euro
+    - "\u20AC10,000"
+  - schema_version: '1.0'
+    key: state_region
+    label: State
+    value: Other
+    aliases:
+    - State
+    - State or Region
+    option_aliases:
+    - Other
