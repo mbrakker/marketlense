@@ -35,7 +35,7 @@ not a completed 30-candidate recovery run.
 ## Evidence files
 
 - `failed_acquisition_manifest.json`: immutable cohort and original attempts.
-- `diagnostic_before_credential_path_fix/`: preflight failure evidence.
+- `diagnostic_before_path_resolution_fix/`: preflight failure evidence.
 - `diagnostic_after_credential_fix/`: complete 30-candidate diagnostic replay.
 - `replay_research_identity/`, `replay_complete_identity/`, and
   `replay_shadow_dom_fix/`: targeted replays and their terminal outcomes.

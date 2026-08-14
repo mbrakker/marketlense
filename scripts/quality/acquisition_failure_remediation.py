@@ -580,8 +580,7 @@ def replay_failed_acquisition_manifest(
     selected_candidates = [
         candidate
         for candidate in manifest["candidates"]
-        if candidate_ids is None
-        or candidate["failure_candidate_id"] in candidate_ids
+        if candidate_ids is None or candidate["failure_candidate_id"] in candidate_ids
     ]
     for ordinal, candidate in enumerate(selected_candidates, start=1):
         started_at = _now()
