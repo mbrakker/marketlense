@@ -992,7 +992,6 @@ def test_spend_guardrail_reserves_and_releases_concurrent_forecast_capacity(
     after_release = svc.evaluate_daily_spend_guardrail(
         LLMUsageSpendGuardrailRequest(**common, reservation_key="second"), _ctx()
     )
-
     assert first.reservation_created is True
     assert blocked.in_flight_reserved_usd == 0.001
     assert blocked.decision == "pause"
