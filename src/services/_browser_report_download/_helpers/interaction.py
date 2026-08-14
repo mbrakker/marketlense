@@ -236,7 +236,17 @@ def browser_helper_form_autocomplete(
             }}
             return null;
           }};
-          const rootDocuments = sameOriginDocuments();
+          const rootDocuments = (() => {{
+            const roots = sameOriginDocuments();
+            for (let index = 0; index < roots.length; index += 1) {{
+              for (const node of Array.from(roots[index].querySelectorAll('*'))) {{
+                if (node.shadowRoot && !roots.includes(node.shadowRoot)) {{
+                  roots.push(node.shadowRoot);
+                }}
+              }}
+            }}
+            return roots;
+          }})();
           const rootForControl = new WeakMap();
           const controls = rootDocuments.flatMap((root) =>
             Array.from(root.querySelectorAll([
@@ -244,6 +254,8 @@ def browser_helper_form_autocomplete(
             'input[aria-autocomplete]',
             'input.lookup-behavior',
             '.lookupFormFieldBlock input',
+            '[role="combobox"]',
+            '[aria-haspopup="listbox"]',
             '[role="combobox"] input',
             'input[name*="country" i]',
             'input[id*="country" i]',
@@ -261,7 +273,7 @@ def browser_helper_form_autocomplete(
           ).filter((control, index, collection) =>
             collection.indexOf(control) === index && isVisible(control)
           );
-          const visibleOptions = (root = document) => Array.from(root.querySelectorAll([
+          const visibleOptions = () => rootDocuments.flatMap((root) => Array.from(root.querySelectorAll([
             '[role="option"]',
             '[role="listbox"] [role="option"]',
             '.ui-menu-item-wrapper',
@@ -270,7 +282,7 @@ def browser_helper_form_autocomplete(
             'li',
             '[data-value]',
             '[data-testid*="option" i]',
-          ].join(','))).slice(0, 120).filter((node) =>
+          ].join(',')))).slice(0, 120).filter((node) =>
             isVisible(node) && normalize(node.innerText || node.textContent)
           );
           const dispatchKey = (control, type, key) => {{
@@ -410,9 +422,41 @@ def browser_helper_form_autocomplete(
               let selected = false;
               if (control.tagName && control.tagName.toLowerCase() === 'select') {{
                 selected = selectNativeOption(control, field);
+              }} else if (
+                String(control.getAttribute('role') || '').toLowerCase() === 'combobox' ||
+                String(control.getAttribute('aria-haspopup') || '').toLowerCase() === 'listbox'
+              ) {{
+                control.focus();
+                control.click();
+                const options = visibleOptions();
+                const option = options.find((node) =>
+                  !looksLikePlaceholderOption(node.innerText || node.textContent) &&
+                  tokenMatchesAny(node.innerText || node.textContent, field)
+                );
+                if (option) clickOption(option);
+                dispatchKey(control, 'keydown', 'Tab');
+                dispatchKey(control, 'keyup', 'Tab');
+                control.blur();
+                const persisted = keyToken(
+                  control.getAttribute('aria-valuetext') ||
+                  control.getAttribute('value') ||
+                  control.value ||
+                  control.innerText ||
+                  control.textContent ||
+                  ''
+                );
+                selected = Boolean(option) && tokenMatchesAny(persisted, field);
+                if (selected) {{
+                  field.selectionVerification = {{
+                    field_label: field.label || label,
+                    option_text: normalize(option.innerText || option.textContent),
+                    mode: 'configured_custom_select_match',
+                    persisted: true,
+                  }};
+                }}
               }} else {{
                 typeText(control, field.value);
-                const options = visibleOptions(root);
+                const options = visibleOptions();
                 const exactOption = options.find((node) =>
                   tokenMatchesAny(node.innerText || node.textContent, field)
                 );

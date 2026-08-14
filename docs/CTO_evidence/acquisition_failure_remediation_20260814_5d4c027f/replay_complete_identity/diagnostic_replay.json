@@ -1,0 +1,2367 @@
+{
+  "candidate_count": 6,
+  "configuration_hash": "e11527408ddd16e27001389434096e6916a200d350a6177d0408ac420830c242",
+  "manifest_sha256": "1c41324dbb009a223c8add82b7dc949e7fd59895c0137f72a599794a6882425e",
+  "phase": "diagnostic_before_fixes",
+  "producer_git_sha": "5d4c027fb17f9ec650a0b188df24db63ab077371",
+  "records": [
+    {
+      "acquisition_result": {
+        "blocked_reason": "",
+        "blocked_reason_detail": "",
+        "confirmation": {
+          "confirmation_score": 1,
+          "final_page_url": "https://www.junglescout.com/resources/reports/3p-seller-disruption/",
+          "form_disappeared": false,
+          "signal_labels": [
+            "network_submission_request"
+          ],
+          "submit_button_state": "unchanged",
+          "url_changed": false
+        },
+        "downloaded_file_path": "",
+        "downloaded_mime_type": "",
+        "downloaded_size_bytes": 0,
+        "drive_uploads": [],
+        "encountered_form_fields": [
+          "First Name",
+          "Last Name",
+          "Work Email Address",
+          "Organization Type"
+        ],
+        "final_url": "https://www.junglescout.com/resources/reports/3p-seller-disruption/",
+        "onsite_capture_format": "",
+        "onsite_capture_path": "",
+        "onsite_completeness_status": "",
+        "onsite_page_count": 0,
+        "outcome": "email_required",
+        "resolved_target_url": "https://www.junglescout.com/resources/reports/3p-seller-disruption",
+        "route_family": "browser_email_form",
+        "route_kind": "email_delivery",
+        "route_status": "inferred",
+        "route_steps": [
+          {
+            "action": "input",
+            "expected_evidence": [
+              "dom_hash",
+              "screenshot"
+            ],
+            "index": 64,
+            "observed_evidence": [
+              "dom_hash",
+              "screenshot"
+            ],
+            "result": "First name field filled",
+            "target_role": "First name (shadow input)",
+            "target_url": "https://www.junglescout.com/resources/reports/3p-seller-disruption",
+            "verification_status": "verified"
+          },
+          {
+            "action": "input",
+            "expected_evidence": [
+              "dom_hash",
+              "screenshot"
+            ],
+            "index": 65,
+            "observed_evidence": [
+              "dom_hash",
+              "screenshot"
+            ],
+            "result": "Last name field filled",
+            "target_role": "Last name (shadow input)",
+            "target_url": "https://www.junglescout.com/resources/reports/3p-seller-disruption",
+            "verification_status": "verified"
+          },
+          {
+            "action": "input",
+            "expected_evidence": [
+              "dom_hash",
+              "screenshot"
+            ],
+            "index": 66,
+            "observed_evidence": [
+              "dom_hash",
+              "screenshot"
+            ],
+            "result": "Email field filled",
+            "target_role": "Work email (shadow input)",
+            "target_url": "https://www.junglescout.com/resources/reports/3p-seller-disruption",
+            "verification_status": "verified"
+          },
+          {
+            "action": "dom_repair_select",
+            "expected_evidence": [
+              "dom_hash",
+              "screenshot"
+            ],
+            "index": 3,
+            "observed_evidence": [
+              "dom_hash",
+              "screenshot"
+            ],
+            "result": "Selected 'Brand' via DOM repair (first non-placeholder fallback)",
+            "target_role": "Organization Type (visible select, programmatically set)",
+            "target_url": "https://www.junglescout.com/resources/reports/3p-seller-disruption",
+            "verification_status": "verified"
+          },
+          {
+            "action": "click",
+            "expected_evidence": [
+              "confirmation_text",
+              "artifact",
+              "page_info"
+            ],
+            "index": 2351,
+            "observed_evidence": [
+              "page_info"
+            ],
+            "result": "Clicked submit; form remained visible and no confirmation text or download artifact observed",
+            "target_role": "Submit button",
+            "target_url": "https://www.junglescout.com/resources/reports/3p-seller-disruption",
+            "verification_status": "verified"
+          }
+        ],
+        "terminal_evidence": {
+          "artifact_kind": "email_delivery",
+          "artifact_url": "https://www.junglescout.com/resources/reports/3p-seller-disruption",
+          "artifact_validation_detail": "",
+          "artifact_validation_status": "none",
+          "confirmation_signal_count": 1,
+          "dom_snapshot_sha256": "e7c9f2a1aaff548f3658b38217a8aeecc6ff0eb0b0f8680fd9d87d3f364a982e",
+          "evidence_labels": [
+            "network_submission_request",
+            "structured_result",
+            "none",
+            "email_delivery"
+          ],
+          "final_page_title": "junglescout.com/resources/reports/3p-seller-disruption/",
+          "final_page_url": "https://www.junglescout.com/resources/reports/3p-seller-disruption/",
+          "html_snapshot_path": "C:/Programing/Market-lense-acquisition-remediation-20260814/out/acquisition_failure_remediation_20260814_5d4c027f/browser_downloads/www.junglescout.com/d0ca20419ce6/terminal_snapshot.html",
+          "network_events": [
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "other",
+              "url": "https://ekr.zdassets.com/compose/d43f23bb-89e8-416e-a679-8773130c9969"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "other",
+              "url": "https://ws.zoominfo.com/pixel/collect"
+            },
+            {
+              "initiator_type": "img",
+              "signal_kind": "document_request",
+              "url": "https://www.junglescout.com/wp-content/uploads/2025/04/whitepaper-mockup.png"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "submission_request",
+              "url": "https://www.junglescout.com/qthg/d/pagead/form-data/971365288?gtm=45892e68c1v886939216za200zd886939216xec&gcd=13l3l3l2l3l1&dma_cps=a&dma=1&tag_exp=115616985~115938466~115938469~118897920~118897930~119367802~119367810~119527020~120385423&rcb=0&did=dY2E1Nz%2CdYWJhMj&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&npa=1&frm=0&pscdl=noapi&ae=a&auid=248999489.1786717325&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uamb=0&uam=&uap=Windows&uapv=19.0.0&uaw=0&gap.plf=5&gap.fsrc=1&gap.gtb=2&fmt=8"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "submission_request",
+              "url": "https://www.junglescout.com/qthg/d/ccm/form-data/971365288?gtm=45892e68c1phv886939216za200zd886939216xec&gcd=13l3l3l2l3l1&dma_cps=a&dma=1&tag_exp=115616985~115938466~115938469~118897920~118897930~119367802~119367810~119527020~120385423&rcb=0&did=dY2E1Nz%2CdYWJhMj&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&npa=1&frm=0&ae=a&pscdl=noapi&auid=248999489.1786717325&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uamb=0&uam=&uap=Windows&uapv=19.0.0&uaw=0&ec_mode=a&gap.plf=5&gap.fsrc=1&gap.gtb=2&fmt=8&_uip=%3A%3A&emd=tvd.1&eme=tv.1~"
+            },
+            {
+              "initiator_type": "beacon",
+              "signal_kind": "other",
+              "url": "https://analytics.tiktok.com/api/v2/monitor"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/browser/blobs?browser_monitoring_key=NRJS-11cc7dadda82ce36b05&type=BrowserSessionChunk&app_id=1723085105&protocol_version=0&timestamp=1786717325724&attributes=entityGuid%3DMzIwOTg2OXxCUk9XU0VSfEFQUExJQ0FUSU9OfDE3MjMwODYzNDc%26harvestId%3D00a9e7152e03a517_471509e850cd35ae_4%26trace.firstTimestamp%3D1786717325724%26trace.lastTimestamp%3D1786717345031%26trace.nodes%3D182%26trace.originTimestamp%3D1786717324520%26agentVersion%3D1.320.0%26ptid%3D471509e850cd35ae%26session%3D00a9e7152e03a517%26currentUrl%3Dhttps://www.junglescout.com/resources/reports/3p-seller-disruption/"
+            },
+            {
+              "initiator_type": "script",
+              "signal_kind": "document_request",
+              "url": "https://sjrtp8.marketo.com/gw1/trw?cmd=2&cb=AITag.emailCallback&aid=junglescout&v=junglescout-1786717325940-028362ea&e=reports%40marketbearing.eu&trwsa.sid=junglescout-1786717325941-975592b8&trwv.vc=1&ma=id%3A397-PTP-191%26token%3A_mch-junglescout.com-7b2d1ccd8bf9abdd64db1b59d4e85ad1"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "other",
+              "url": "https://api.segment.io/v1/t"
+            },
+            {
+              "initiator_type": "beacon",
+              "signal_kind": "other",
+              "url": "https://analytics.tiktok.com/api/v2/pixel/inter"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "document_request",
+              "url": "https://region1.analytics.google.com/g/collect?v=2&tid=G-9C02FJRLCF&gtm=45g92e68c1v878088732z871490681za200zb886939216zd886939216&_p=1786717324748&gcd=13l3l3l2l3l1&npa=1&dma_cps=a&dma=1&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&ecid=761897019&_eu=EAAAAGQC&_uip=%3A%3A&are=1&cid=1119779948.1786717325&frm=0&ir=1&pscdl=noapi&rcb=14&sr=800x600&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uam=&uamb=0&uap=Windows&uapv=19.0.0&uaw=0&ul=ru-ru&ur=FR-IDF&gaf=2&_s=3&tag_exp=115938466~115938469~118897920~118897930~119367802~119367810~119527019~120385423&sid=1786717325&sct=1&seg=1&dl=https%3A%2F%2Fwww.junglescout.com%2Fresources%2Freports%2F3p-seller-disruption%2F&dt=The%20Battle%20for%20Control%20on%20Amazon%20in%202025%20-%20Jungle%20Scout&en=form_start&gap.gtb=2&tfd=23956"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "other",
+              "url": "https://api.segment.io/v1/m"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/events/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32751&ck=0&s=00a9e7152e03a517&ref=https://www.junglescout.com/resources/reports/3p-seller-disruption/&ptid=471509e850cd35ae&ht=1"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/jserrors/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32753&ck=0&s=00a9e7152e03a517&ref=https://www.junglescout.com/resources/reports/3p-seller-disruption/&ptid=471509e850cd35ae&ht=1"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/events/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32754&ck=0&s=00a9e7152e03a517&ref=https://www.junglescout.com/resources/reports/3p-seller-disruption/&ptid=471509e850cd35ae&ht=1"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/browser/blobs?browser_monitoring_key=NRJS-11cc7dadda82ce36b05&type=BrowserSessionChunk&app_id=1723085105&protocol_version=0&timestamp=1786717343455&attributes=entityGuid%3DMzIwOTg2OXxCUk9XU0VSfEFQUExJQ0FUSU9OfDE3MjMwODYzNDc%26harvestId%3D00a9e7152e03a517_471509e850cd35ae_5%26trace.firstTimestamp%3D1786717343455%26trace.lastTimestamp%3D1786717355808%26trace.nodes%3D54%26trace.originTimestamp%3D1786717324520%26agentVersion%3D1.320.0%26ptid%3D471509e850cd35ae%26session%3D00a9e7152e03a517%26currentUrl%3Dhttps://www.junglescout.com/resources/reports/3p-seller-disruption/"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/ins/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32755&ck=0&s=00a9e7152e03a517&ref=https://www.junglescout.com/resources/reports/3p-seller-disruption/&ptid=471509e850cd35ae&ht=1&at=GUMAFl8eHk4%3D"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/jserrors/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=62765&ck=0&s=00a9e7152e03a517&ref=https://www.junglescout.com/resources/reports/3p-seller-disruption/&ptid=471509e850cd35ae&ht=1"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/events/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=62766&ck=0&s=00a9e7152e03a517&ref=https://www.junglescout.com/resources/reports/3p-seller-disruption/&ptid=471509e850cd35ae&ht=1"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/browser/blobs?browser_monitoring_key=NRJS-11cc7dadda82ce36b05&type=BrowserSessionChunk&app_id=1723085105&protocol_version=0&timestamp=1786717357272&attributes=entityGuid%3DMzIwOTg2OXxCUk9XU0VSfEFQUExJQ0FUSU9OfDE3MjMwODYzNDc%26harvestId%3D00a9e7152e03a517_471509e850cd35ae_6%26trace.firstTimestamp%3D1786717357272%26trace.lastTimestamp%3D1786717373070%26trace.nodes%3D22%26trace.originTimestamp%3D1786717324520%26agentVersion%3D1.320.0%26ptid%3D471509e850cd35ae%26session%3D00a9e7152e03a517%26currentUrl%3Dhttps://www.junglescout.com/resources/reports/3p-seller-disruption/"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/jserrors/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=92779&ck=0&s=00a9e7152e03a517&ref=https://www.junglescout.com/resources/reports/3p-seller-disruption/&ptid=471509e850cd35ae&ht=1"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/events/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=92780&ck=0&s=00a9e7152e03a517&ref=https://www.junglescout.com/resources/reports/3p-seller-disruption/&ptid=471509e850cd35ae&ht=1"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/browser/blobs?browser_monitoring_key=NRJS-11cc7dadda82ce36b05&type=BrowserSessionChunk&app_id=1723085105&protocol_version=0&timestamp=1786717387286&attributes=entityGuid%3DMzIwOTg2OXxCUk9XU0VSfEFQUExJQ0FUSU9OfDE3MjMwODYzNDc%26harvestId%3D00a9e7152e03a517_471509e850cd35ae_7%26trace.firstTimestamp%3D1786717387286%26trace.lastTimestamp%3D1786717406242%26trace.nodes%3D14%26trace.originTimestamp%3D1786717324520%26agentVersion%3D1.320.0%26ptid%3D471509e850cd35ae%26session%3D00a9e7152e03a517%26currentUrl%3Dhttps://www.junglescout.com/resources/reports/3p-seller-disruption/"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "other",
+              "url": "https://api.ipify.org/"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "other",
+              "url": "https://www.google.com/recaptcha/api2/clr?k=6LfrUMcUAAAAALqornyveC4Nj94PklsX8-_5qrOS"
+            }
+          ],
+          "observed_document_urls": [
+            "https://www.junglescout.com/wp-content/uploads/2025/04/whitepaper-mockup.png",
+            "https://bam.nr-data.net/browser/blobs?browser_monitoring_key=NRJS-11cc7dadda82ce36b05&type=BrowserSessionChunk&app_id=1723085105&protocol_version=0&timestamp=1786717325724&attributes=entityGuid%3DMzIwOTg2OXxCUk9XU0VSfEFQUExJQ0FUSU9OfDE3MjMwODYzNDc%26harvestId%3D00a9e7152e03a517_471509e850cd35ae_4%26trace.firstTimestamp%3D1786717325724%26trace.lastTimestamp%3D1786717345031%26trace.nodes%3D182%26trace.originTimestamp%3D1786717324520%26agentVersion%3D1.320.0%26ptid%3D471509e850cd35ae%26session%3D00a9e7152e03a517%26currentUrl%3Dhttps://www.junglescout.com/resources/reports/3p-seller-disruption/",
+            "https://sjrtp8.marketo.com/gw1/trw?cmd=2&cb=AITag.emailCallback&aid=junglescout&v=junglescout-1786717325940-028362ea&e=reports%40marketbearing.eu&trwsa.sid=junglescout-1786717325941-975592b8&trwv.vc=1&ma=id%3A397-PTP-191%26token%3A_mch-junglescout.com-7b2d1ccd8bf9abdd64db1b59d4e85ad1",
+            "https://region1.analytics.google.com/g/collect?v=2&tid=G-9C02FJRLCF&gtm=45g92e68c1v878088732z871490681za200zb886939216zd886939216&_p=1786717324748&gcd=13l3l3l2l3l1&npa=1&dma_cps=a&dma=1&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&ecid=761897019&_eu=EAAAAGQC&_uip=%3A%3A&are=1&cid=1119779948.1786717325&frm=0&ir=1&pscdl=noapi&rcb=14&sr=800x600&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uam=&uamb=0&uap=Windows&uapv=19.0.0&uaw=0&ul=ru-ru&ur=FR-IDF&gaf=2&_s=3&tag_exp=115938466~115938469~118897920~118897930~119367802~119367810~119527019~120385423&sid=1786717325&sct=1&seg=1&dl=https%3A%2F%2Fwww.junglescout.com%2Fresources%2Freports%2F3p-seller-disruption%2F&dt=The%20Battle%20for%20Control%20on%20Amazon%20in%202025%20-%20Jungle%20Scout&en=form_start&gap.gtb=2&tfd=23956",
+            "https://bam.nr-data.net/events/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32751&ck=0&s=00a9e7152e03a517&ref=https://www.junglescout.com/resources/reports/3p-seller-disruption/&ptid=471509e850cd35ae&ht=1",
+            "https://bam.nr-data.net/jserrors/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32753&ck=0&s=00a9e7152e03a517&ref=https://www.junglescout.com/resources/reports/3p-seller-disruption/&ptid=471509e850cd35ae&ht=1",
+            "https://bam.nr-data.net/events/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32754&ck=0&s=00a9e7152e03a517&ref=https://www.junglescout.com/resources/reports/3p-seller-disruption/&ptid=471509e850cd35ae&ht=1",
+            "https://bam.nr-data.net/browser/blobs?browser_monitoring_key=NRJS-11cc7dadda82ce36b05&type=BrowserSessionChunk&app_id=1723085105&protocol_version=0&timestamp=1786717343455&attributes=entityGuid%3DMzIwOTg2OXxCUk9XU0VSfEFQUExJQ0FUSU9OfDE3MjMwODYzNDc%26harvestId%3D00a9e7152e03a517_471509e850cd35ae_5%26trace.firstTimestamp%3D1786717343455%26trace.lastTimestamp%3D1786717355808%26trace.nodes%3D54%26trace.originTimestamp%3D1786717324520%26agentVersion%3D1.320.0%26ptid%3D471509e850cd35ae%26session%3D00a9e7152e03a517%26currentUrl%3Dhttps://www.junglescout.com/resources/reports/3p-seller-disruption/",
+            "https://bam.nr-data.net/ins/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32755&ck=0&s=00a9e7152e03a517&ref=https://www.junglescout.com/resources/reports/3p-seller-disruption/&ptid=471509e850cd35ae&ht=1&at=GUMAFl8eHk4%3D",
+            "https://bam.nr-data.net/jserrors/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=62765&ck=0&s=00a9e7152e03a517&ref=https://www.junglescout.com/resources/reports/3p-seller-disruption/&ptid=471509e850cd35ae&ht=1",
+            "https://bam.nr-data.net/events/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=62766&ck=0&s=00a9e7152e03a517&ref=https://www.junglescout.com/resources/reports/3p-seller-disruption/&ptid=471509e850cd35ae&ht=1",
+            "https://bam.nr-data.net/browser/blobs?browser_monitoring_key=NRJS-11cc7dadda82ce36b05&type=BrowserSessionChunk&app_id=1723085105&protocol_version=0&timestamp=1786717357272&attributes=entityGuid%3DMzIwOTg2OXxCUk9XU0VSfEFQUExJQ0FUSU9OfDE3MjMwODYzNDc%26harvestId%3D00a9e7152e03a517_471509e850cd35ae_6%26trace.firstTimestamp%3D1786717357272%26trace.lastTimestamp%3D1786717373070%26trace.nodes%3D22%26trace.originTimestamp%3D1786717324520%26agentVersion%3D1.320.0%26ptid%3D471509e850cd35ae%26session%3D00a9e7152e03a517%26currentUrl%3Dhttps://www.junglescout.com/resources/reports/3p-seller-disruption/",
+            "https://bam.nr-data.net/jserrors/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=92779&ck=0&s=00a9e7152e03a517&ref=https://www.junglescout.com/resources/reports/3p-seller-disruption/&ptid=471509e850cd35ae&ht=1",
+            "https://bam.nr-data.net/events/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=92780&ck=0&s=00a9e7152e03a517&ref=https://www.junglescout.com/resources/reports/3p-seller-disruption/&ptid=471509e850cd35ae&ht=1",
+            "https://bam.nr-data.net/browser/blobs?browser_monitoring_key=NRJS-11cc7dadda82ce36b05&type=BrowserSessionChunk&app_id=1723085105&protocol_version=0&timestamp=1786717387286&attributes=entityGuid%3DMzIwOTg2OXxCUk9XU0VSfEFQUExJQ0FUSU9OfDE3MjMwODYzNDc%26harvestId%3D00a9e7152e03a517_471509e850cd35ae_7%26trace.firstTimestamp%3D1786717387286%26trace.lastTimestamp%3D1786717406242%26trace.nodes%3D14%26trace.originTimestamp%3D1786717324520%26agentVersion%3D1.320.0%26ptid%3D471509e850cd35ae%26session%3D00a9e7152e03a517%26currentUrl%3Dhttps://www.junglescout.com/resources/reports/3p-seller-disruption/",
+            "https://www.junglescout.com/resources/reports/3p-seller-disruption",
+            "https://www.junglescout.com/resources/reports/3p-seller-disruption/"
+          ],
+          "screenshot_path": "C:/Programing/Market-lense-acquisition-remediation-20260814/out/acquisition_failure_remediation_20260814_5d4c027f/browser_downloads/www.junglescout.com/d0ca20419ce6/terminal_screenshot.png",
+          "traversed_page_urls": [
+            "https://www.junglescout.com/resources/reports/3p-seller-disruption"
+          ],
+          "visited_url_timeline": [
+            "https://www.junglescout.com/resources/reports/3p-seller-disruption"
+          ]
+        },
+        "used_memory_route": true
+      },
+      "artifact_verification": {
+        "acquisition_method": "browser_email_form",
+        "artifact_exists": false,
+        "drive_persisted": false,
+        "retained_artifact_format": "none",
+        "route_verified": false,
+        "signature_valid": null,
+        "size_bytes": 0,
+        "source_kind": "unknown",
+        "verified_usable_artifact": false
+      },
+      "attempt_id": "diagnostic:fac_79d2b1c0c59436f8eacd7de4",
+      "canonical_candidate_url": "https://www.junglescout.com/resources/reports/3p-seller-disruption",
+      "completed_at": "2026-08-14T14:24:20.342017Z",
+      "configuration_hash": "e11527408ddd16e27001389434096e6916a200d350a6177d0408ac420830c242",
+      "duration_seconds": 154.611,
+      "failure_candidate_id": "fac_79d2b1c0c59436f8eacd7de4",
+      "parent_attempt": "",
+      "phase": "diagnostic_before_fixes",
+      "policy_hash": "current_head_default_policy",
+      "producer_git_sha": "5d4c027fb17f9ec650a0b188df24db63ab077371",
+      "publisher_id": "publisher:jungle-scout",
+      "publisher_name": "Jungle Scout",
+      "resource_attempts": [
+        {
+          "attempt_id": "e8b2e2c6d2d8030ab07243d458efe92039b6a787a1b8d34e6f4a83d0cd2b702b",
+          "avoided_operations_json": "[]",
+          "browser_launches": 10,
+          "browser_model_calls": 67,
+          "browser_steps": 4,
+          "cached_input_tokens": 513536,
+          "completed_at_utc": "2026-08-14T10:14:10Z",
+          "created_at": 1786702450,
+          "drive_reads": 0,
+          "drive_writes": 13,
+          "duration_seconds": 76.709,
+          "elapsed_ms": 76709,
+          "estimated_cost_usd": 0.339213,
+          "incomplete_fields_json": "[]",
+          "input_tokens": 1334440,
+          "mailbox_reads": 36,
+          "normalized_url": "https://www.junglescout.com/resources/reports/3p-seller-disruption",
+          "output_tokens": 60573,
+          "page_navigations": 0,
+          "publisher_id": "publisher:jungle-scout",
+          "retry_count": 0,
+          "revalidation_override": 0,
+          "route_family": "browser_email_form",
+          "route_policy_version": "1.0",
+          "schema_version": "1.0",
+          "screenshots": 4,
+          "source_identity_id": "",
+          "source_identity_status": "unresolved",
+          "source_policy_compatibility_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "started_at_utc": "2026-08-14T10:12:54Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred",
+          "updated_at": 1786702450,
+          "verified_artifact_hash": ""
+        },
+        {
+          "attempt_id": "ab9fba1e7cf003381294b7ce1cf9dd32cb6ed1e352776751700da47e6360f60b",
+          "avoided_operations_json": "[]",
+          "browser_launches": 1,
+          "browser_model_calls": 3,
+          "browser_steps": 4,
+          "cached_input_tokens": 0,
+          "completed_at_utc": "2026-08-14T12:28:15Z",
+          "created_at": 1786710495,
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 91.378,
+          "elapsed_ms": 91378,
+          "estimated_cost_usd": 0.022186,
+          "incomplete_fields_json": "[]",
+          "input_tokens": 60258,
+          "mailbox_reads": 1,
+          "normalized_url": "https://www.junglescout.com/resources/reports/3p-seller-disruption",
+          "output_tokens": 3561,
+          "page_navigations": 0,
+          "publisher_id": "publisher:jungle-scout",
+          "retry_count": 0,
+          "revalidation_override": 0,
+          "route_family": "browser_email_form",
+          "route_policy_version": "1.0",
+          "schema_version": "1.0",
+          "screenshots": 4,
+          "source_identity_id": "",
+          "source_identity_status": "unresolved",
+          "source_policy_compatibility_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "started_at_utc": "2026-08-14T12:26:44Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred",
+          "updated_at": 1786710495,
+          "verified_artifact_hash": ""
+        },
+        {
+          "attempt_id": "46595a43151b08c22c2589c11209cf9a54033c80a456f04de29a2b6748be9814",
+          "avoided_operations_json": "[]",
+          "browser_launches": 1,
+          "browser_model_calls": 6,
+          "browser_steps": 5,
+          "cached_input_tokens": 33280,
+          "completed_at_utc": "2026-08-14T14:24:20Z",
+          "created_at": 1786717460,
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 154.6,
+          "elapsed_ms": 154600,
+          "estimated_cost_usd": 0.043365,
+          "incomplete_fields_json": "[]",
+          "input_tokens": 129668,
+          "mailbox_reads": 1,
+          "normalized_url": "https://www.junglescout.com/resources/reports/3p-seller-disruption",
+          "output_tokens": 9218,
+          "page_navigations": 0,
+          "publisher_id": "publisher:jungle-scout",
+          "retry_count": 0,
+          "revalidation_override": 0,
+          "route_family": "browser_email_form",
+          "route_policy_version": "1.0",
+          "schema_version": "1.0",
+          "screenshots": 4,
+          "source_identity_id": "",
+          "source_identity_status": "unresolved",
+          "source_policy_compatibility_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "started_at_utc": "2026-08-14T14:21:45Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred",
+          "updated_at": 1786717460,
+          "verified_artifact_hash": ""
+        }
+      ],
+      "run_id": "d840bb9a-a991-4a43-b664-7a44fd72db84",
+      "source_identity_id": "",
+      "source_record_id": "",
+      "started_at": "2026-08-14T14:21:45.734175Z"
+    },
+    {
+      "acquisition_result": {
+        "blocked_reason": "blocked_unknown_required_enum",
+        "blocked_reason_detail": "The State field did not resolve to a valid lookup selection before submission.",
+        "confirmation": {
+          "confirmation_score": 1,
+          "final_page_url": "https://www.junglescout.com/resources/reports/amazon-data-arts-crafts-sewing-brands/",
+          "form_disappeared": false,
+          "signal_labels": [
+            "network_submission_request"
+          ],
+          "submit_button_state": "unchanged",
+          "url_changed": false
+        },
+        "downloaded_file_path": "",
+        "downloaded_mime_type": "",
+        "downloaded_size_bytes": 0,
+        "drive_uploads": [],
+        "encountered_form_fields": [
+          "First Name",
+          "Last Name",
+          "Business Email Address",
+          "Company Name",
+          "Role",
+          "State"
+        ],
+        "final_url": "https://www.junglescout.com/resources/reports/amazon-data-arts-crafts-sewing-brands/",
+        "onsite_capture_format": "",
+        "onsite_capture_path": "",
+        "onsite_completeness_status": "",
+        "onsite_page_count": 0,
+        "outcome": "email_required",
+        "resolved_target_url": "https://www.junglescout.com/resources/reports/amazon-data-arts-crafts-sewing-brands/",
+        "route_family": "browser_email_form",
+        "route_kind": "email_delivery",
+        "route_status": "inferred",
+        "route_steps": [
+          {
+            "action": "submit",
+            "expected_evidence": [
+              "confirmation_text",
+              "network_event",
+              "screenshot"
+            ],
+            "index": 0,
+            "observed_evidence": [
+              "network_event",
+              "screenshot"
+            ],
+            "result": "Submission was not verified because the required State lookup field did not resolve to a valid option.",
+            "target_role": "button",
+            "target_url": "https://www.junglescout.com/resources/reports/amazon-data-arts-crafts-sewing-brands/",
+            "verification_status": "verified"
+          }
+        ],
+        "terminal_evidence": {
+          "artifact_kind": "email_delivery",
+          "artifact_url": "https://www.junglescout.com/resources/reports/amazon-data-arts-crafts-sewing-brands/",
+          "artifact_validation_detail": "The State field did not resolve to a valid lookup selection before submission.",
+          "artifact_validation_status": "blocked",
+          "confirmation_signal_count": 1,
+          "dom_snapshot_sha256": "6b6b7a6c52e76aebbd6982a16e2a8b7e68ba267779eaaad0c20dddb0b927c5cc",
+          "evidence_labels": [
+            "network_submission_request",
+            "structured_result",
+            "blocked",
+            "email_delivery"
+          ],
+          "final_page_title": "junglescout.com/resources/reports/amazon-data-arts-crafts-sewing-brands/",
+          "final_page_url": "https://www.junglescout.com/resources/reports/amazon-data-arts-crafts-sewing-brands/",
+          "html_snapshot_path": "C:/Programing/Market-lense-acquisition-remediation-20260814/out/acquisition_failure_remediation_20260814_5d4c027f/browser_downloads/www.junglescout.com/c2e3bbb16d34/terminal_snapshot.html",
+          "network_events": [
+            {
+              "initiator_type": "script",
+              "signal_kind": "other",
+              "url": "https://a.opmnstr.com/app/js/10.58a186bd.min.js"
+            },
+            {
+              "initiator_type": "script",
+              "signal_kind": "other",
+              "url": "https://a.opmnstr.com/app/js/27.d7dd0654.min.js"
+            },
+            {
+              "initiator_type": "script",
+              "signal_kind": "other",
+              "url": "https://a.opmnstr.com/app/js/25.80e08951.min.js"
+            },
+            {
+              "initiator_type": "script",
+              "signal_kind": "other",
+              "url": "https://a.opmnstr.com/app/js/15.56022016.min.js"
+            },
+            {
+              "initiator_type": "script",
+              "signal_kind": "other",
+              "url": "https://a.opmnstr.com/app/js/1.d679fc6e.min.js"
+            },
+            {
+              "initiator_type": "script",
+              "signal_kind": "other",
+              "url": "https://a.opmnstr.com/app/js/20.17375336.min.js"
+            },
+            {
+              "initiator_type": "script",
+              "signal_kind": "other",
+              "url": "https://a.opmnstr.com/app/js/6.747542fa.min.js"
+            },
+            {
+              "initiator_type": "script",
+              "signal_kind": "other",
+              "url": "https://static.zdassets.com/ekr/snippet.js?key=d43f23bb-89e8-416e-a679-8773130c9969"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "other",
+              "url": "https://ekr.zdassets.com/compose/d43f23bb-89e8-416e-a679-8773130c9969"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "other",
+              "url": "https://ws.zoominfo.com/pixel/collect"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "submission_request",
+              "url": "https://www.junglescout.com/qthg/d/pagead/form-data/971365288?gtm=45892e68c1v886939216za200zd886939216xec&gcd=13l3l3l2l3l1&dma_cps=a&dma=1&tag_exp=115616985~115938465~115938469~118131809~118395335~118897920~118897930~119367802~119367810~119527020~120385423&rcb=17&did=dY2E1Nz%2CdYWJhMj&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&npa=1&frm=0&pscdl=noapi&ae=a&auid=515051560.1786717489&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uamb=0&uam=&uap=Windows&uapv=19.0.0&uaw=0&gap.plf=5&gap.fsrc=1&gap.gtb=2&fmt=8"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "submission_request",
+              "url": "https://www.junglescout.com/qthg/d/ccm/form-data/971365288?gtm=45892e68c1phv886939216za200zd886939216xec&gcd=13l3l3l2l3l1&dma_cps=a&dma=1&tag_exp=115616985~115938465~115938469~118131809~118395335~118897920~118897930~119367802~119367810~119527020~120385423&rcb=17&did=dY2E1Nz%2CdYWJhMj&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&npa=1&frm=0&ae=a&pscdl=noapi&auid=515051560.1786717489&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uamb=0&uam=&uap=Windows&uapv=19.0.0&uaw=0&ec_mode=a&gap.plf=5&gap.fsrc=1&gap.gtb=2&fmt=8&_uip=%3A%3A&emd=tvd.1&eme=tv.1~"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/browser/blobs?browser_monitoring_key=NRJS-11cc7dadda82ce36b05&type=BrowserSessionChunk&app_id=1723085105&protocol_version=0&timestamp=1786717490144&attributes=entityGuid%3DMzIwOTg2OXxCUk9XU0VSfEFQUExJQ0FUSU9OfDE3MjMwODYzNDc%26harvestId%3Df671100ac90ea6b6_40ad31221ddda687_4%26trace.firstTimestamp%3D1786717490144%26trace.lastTimestamp%3D1786717509636%26trace.nodes%3D184%26trace.originTimestamp%3D1786717488780%26agentVersion%3D1.320.0%26ptid%3D40ad31221ddda687%26session%3Df671100ac90ea6b6%26currentUrl%3Dhttps://www.junglescout.com/resources/reports/amazon-data-arts-crafts-sewing-brands/"
+            },
+            {
+              "initiator_type": "script",
+              "signal_kind": "document_request",
+              "url": "https://sjrtp8.marketo.com/gw1/trw?cmd=2&cb=AITag.emailCallback&aid=junglescout&v=junglescout-1786717490156-d6ae48fc&e=reports%40marketbearing.eu&trwsa.sid=junglescout-1786717490158-1f355f15&trwv.vc=1&ma=id%3A397-PTP-191%26token%3A_mch-junglescout.com-a38cea3a79fad5cb495697e7bd4eac7f"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "other",
+              "url": "https://api.segment.io/v1/t"
+            },
+            {
+              "initiator_type": "beacon",
+              "signal_kind": "other",
+              "url": "https://analytics.tiktok.com/api/v2/pixel/inter"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "document_request",
+              "url": "https://region1.analytics.google.com/g/collect?v=2&tid=G-9C02FJRLCF&gtm=45g92e68c1v878088732z871490681za200zb886939216zd886939216&_p=1786717489210&gcd=13l3l3l2l3l1&npa=1&dma_cps=a&dma=1&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&ecid=1749186289&_eu=EAAAAGQC&_uip=%3A%3A&are=1&cid=510772553.1786717490&frm=0&ir=1&pscdl=noapi&rcb=6&sr=800x600&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uam=&uamb=0&uap=Windows&uapv=19.0.0&uaw=0&ul=ru-ru&ur=FR-IDF&gaf=2&_s=3&tag_exp=115616985~115938465~115938469~118395333~118897920~118897930~119367802~119367810~119527020~120385423&sid=1786717489&sct=1&seg=1&dl=https%3A%2F%2Fwww.junglescout.com%2Fresources%2Freports%2Famazon-data-arts-crafts-sewing-brands%2F&dt=Amazon%20Data%3A%20Arts%2C%20Crafts%20%26%20Sewing%20-%20Jungle%20Scout&en=form_start&gap.plf=5&gap.gtb=2&tfd=24154"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "other",
+              "url": "https://api.segment.io/v1/m"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/events/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32515&ck=0&s=f671100ac90ea6b6&ref=https://www.junglescout.com/resources/reports/amazon-data-arts-crafts-sewing-brands/&ptid=40ad31221ddda687&ht=1"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/jserrors/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32516&ck=0&s=f671100ac90ea6b6&ref=https://www.junglescout.com/resources/reports/amazon-data-arts-crafts-sewing-brands/&ptid=40ad31221ddda687&ht=1"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/events/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32518&ck=0&s=f671100ac90ea6b6&ref=https://www.junglescout.com/resources/reports/amazon-data-arts-crafts-sewing-brands/&ptid=40ad31221ddda687&ht=1"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/browser/blobs?browser_monitoring_key=NRJS-11cc7dadda82ce36b05&type=BrowserSessionChunk&app_id=1723085105&protocol_version=0&timestamp=1786717507937&attributes=entityGuid%3DMzIwOTg2OXxCUk9XU0VSfEFQUExJQ0FUSU9OfDE3MjMwODYzNDc%26harvestId%3Df671100ac90ea6b6_40ad31221ddda687_5%26trace.firstTimestamp%3D1786717507937%26trace.lastTimestamp%3D1786717520020%26trace.nodes%3D33%26trace.originTimestamp%3D1786717488780%26agentVersion%3D1.320.0%26ptid%3D40ad31221ddda687%26session%3Df671100ac90ea6b6%26currentUrl%3Dhttps://www.junglescout.com/resources/reports/amazon-data-arts-crafts-sewing-brands/"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/ins/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32519&ck=0&s=f671100ac90ea6b6&ref=https://www.junglescout.com/resources/reports/amazon-data-arts-crafts-sewing-brands/&ptid=40ad31221ddda687&ht=1&at=GUMAFl8eHk4%3D"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/jserrors/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=62520&ck=0&s=f671100ac90ea6b6&ref=https://www.junglescout.com/resources/reports/amazon-data-arts-crafts-sewing-brands/&ptid=40ad31221ddda687&ht=1"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/events/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=62522&ck=0&s=f671100ac90ea6b6&ref=https://www.junglescout.com/resources/reports/amazon-data-arts-crafts-sewing-brands/&ptid=40ad31221ddda687&ht=1"
+            }
+          ],
+          "observed_document_urls": [
+            "https://bam.nr-data.net/browser/blobs?browser_monitoring_key=NRJS-11cc7dadda82ce36b05&type=BrowserSessionChunk&app_id=1723085105&protocol_version=0&timestamp=1786717490144&attributes=entityGuid%3DMzIwOTg2OXxCUk9XU0VSfEFQUExJQ0FUSU9OfDE3MjMwODYzNDc%26harvestId%3Df671100ac90ea6b6_40ad31221ddda687_4%26trace.firstTimestamp%3D1786717490144%26trace.lastTimestamp%3D1786717509636%26trace.nodes%3D184%26trace.originTimestamp%3D1786717488780%26agentVersion%3D1.320.0%26ptid%3D40ad31221ddda687%26session%3Df671100ac90ea6b6%26currentUrl%3Dhttps://www.junglescout.com/resources/reports/amazon-data-arts-crafts-sewing-brands/",
+            "https://sjrtp8.marketo.com/gw1/trw?cmd=2&cb=AITag.emailCallback&aid=junglescout&v=junglescout-1786717490156-d6ae48fc&e=reports%40marketbearing.eu&trwsa.sid=junglescout-1786717490158-1f355f15&trwv.vc=1&ma=id%3A397-PTP-191%26token%3A_mch-junglescout.com-a38cea3a79fad5cb495697e7bd4eac7f",
+            "https://region1.analytics.google.com/g/collect?v=2&tid=G-9C02FJRLCF&gtm=45g92e68c1v878088732z871490681za200zb886939216zd886939216&_p=1786717489210&gcd=13l3l3l2l3l1&npa=1&dma_cps=a&dma=1&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&ecid=1749186289&_eu=EAAAAGQC&_uip=%3A%3A&are=1&cid=510772553.1786717490&frm=0&ir=1&pscdl=noapi&rcb=6&sr=800x600&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uam=&uamb=0&uap=Windows&uapv=19.0.0&uaw=0&ul=ru-ru&ur=FR-IDF&gaf=2&_s=3&tag_exp=115616985~115938465~115938469~118395333~118897920~118897930~119367802~119367810~119527020~120385423&sid=1786717489&sct=1&seg=1&dl=https%3A%2F%2Fwww.junglescout.com%2Fresources%2Freports%2Famazon-data-arts-crafts-sewing-brands%2F&dt=Amazon%20Data%3A%20Arts%2C%20Crafts%20%26%20Sewing%20-%20Jungle%20Scout&en=form_start&gap.plf=5&gap.gtb=2&tfd=24154",
+            "https://bam.nr-data.net/events/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32515&ck=0&s=f671100ac90ea6b6&ref=https://www.junglescout.com/resources/reports/amazon-data-arts-crafts-sewing-brands/&ptid=40ad31221ddda687&ht=1",
+            "https://bam.nr-data.net/jserrors/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32516&ck=0&s=f671100ac90ea6b6&ref=https://www.junglescout.com/resources/reports/amazon-data-arts-crafts-sewing-brands/&ptid=40ad31221ddda687&ht=1",
+            "https://bam.nr-data.net/events/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32518&ck=0&s=f671100ac90ea6b6&ref=https://www.junglescout.com/resources/reports/amazon-data-arts-crafts-sewing-brands/&ptid=40ad31221ddda687&ht=1",
+            "https://bam.nr-data.net/browser/blobs?browser_monitoring_key=NRJS-11cc7dadda82ce36b05&type=BrowserSessionChunk&app_id=1723085105&protocol_version=0&timestamp=1786717507937&attributes=entityGuid%3DMzIwOTg2OXxCUk9XU0VSfEFQUExJQ0FUSU9OfDE3MjMwODYzNDc%26harvestId%3Df671100ac90ea6b6_40ad31221ddda687_5%26trace.firstTimestamp%3D1786717507937%26trace.lastTimestamp%3D1786717520020%26trace.nodes%3D33%26trace.originTimestamp%3D1786717488780%26agentVersion%3D1.320.0%26ptid%3D40ad31221ddda687%26session%3Df671100ac90ea6b6%26currentUrl%3Dhttps://www.junglescout.com/resources/reports/amazon-data-arts-crafts-sewing-brands/",
+            "https://bam.nr-data.net/ins/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32519&ck=0&s=f671100ac90ea6b6&ref=https://www.junglescout.com/resources/reports/amazon-data-arts-crafts-sewing-brands/&ptid=40ad31221ddda687&ht=1&at=GUMAFl8eHk4%3D",
+            "https://bam.nr-data.net/jserrors/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=62520&ck=0&s=f671100ac90ea6b6&ref=https://www.junglescout.com/resources/reports/amazon-data-arts-crafts-sewing-brands/&ptid=40ad31221ddda687&ht=1",
+            "https://bam.nr-data.net/events/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=62522&ck=0&s=f671100ac90ea6b6&ref=https://www.junglescout.com/resources/reports/amazon-data-arts-crafts-sewing-brands/&ptid=40ad31221ddda687&ht=1",
+            "https://www.junglescout.com/resources/reports/amazon-data-arts-crafts-sewing-brands/"
+          ],
+          "screenshot_path": "C:/Programing/Market-lense-acquisition-remediation-20260814/out/acquisition_failure_remediation_20260814_5d4c027f/browser_downloads/www.junglescout.com/c2e3bbb16d34/terminal_screenshot.png",
+          "traversed_page_urls": [
+            "about:blank",
+            "https://www.junglescout.com/resources/reports/amazon-data-arts-crafts-sewing-brands/"
+          ],
+          "visited_url_timeline": [
+            "https://www.junglescout.com/resources/reports/amazon-data-arts-crafts-sewing-brands/",
+            "about:blank"
+          ]
+        },
+        "used_memory_route": true
+      },
+      "artifact_verification": {
+        "acquisition_method": "browser_email_form",
+        "artifact_exists": false,
+        "drive_persisted": false,
+        "retained_artifact_format": "none",
+        "route_verified": false,
+        "signature_valid": null,
+        "size_bytes": 0,
+        "source_kind": "unknown",
+        "verified_usable_artifact": false
+      },
+      "attempt_id": "diagnostic:fac_74ff8c2c4382773a4f8d5f55",
+      "canonical_candidate_url": "https://www.junglescout.com/resources/reports/amazon-data-arts-crafts-sewing-brands",
+      "completed_at": "2026-08-14T14:27:57.621831Z",
+      "configuration_hash": "e11527408ddd16e27001389434096e6916a200d350a6177d0408ac420830c242",
+      "duration_seconds": 217.28,
+      "failure_candidate_id": "fac_74ff8c2c4382773a4f8d5f55",
+      "parent_attempt": "",
+      "phase": "diagnostic_before_fixes",
+      "policy_hash": "current_head_default_policy",
+      "producer_git_sha": "5d4c027fb17f9ec650a0b188df24db63ab077371",
+      "publisher_id": "publisher:jungle-scout",
+      "publisher_name": "Jungle Scout",
+      "resource_attempts": [
+        {
+          "attempt_id": "8d5e7cbb0366d7b8bcb6c7531a7c6da1a2acad9fa0287a0856a4ec3a83b30efd",
+          "avoided_operations_json": "[]",
+          "browser_launches": 13,
+          "browser_model_calls": 83,
+          "browser_steps": 6,
+          "cached_input_tokens": 647040,
+          "completed_at_utc": "2026-08-14T10:19:47Z",
+          "created_at": 1786702787,
+          "drive_reads": 0,
+          "drive_writes": 13,
+          "duration_seconds": 181.302,
+          "elapsed_ms": 181302,
+          "estimated_cost_usd": 0.431461,
+          "incomplete_fields_json": "[]",
+          "input_tokens": 1662678,
+          "mailbox_reads": 38,
+          "normalized_url": "https://www.junglescout.com/resources/reports/amazon-data-arts-crafts-sewing-brands",
+          "output_tokens": 80687,
+          "page_navigations": 0,
+          "publisher_id": "publisher:jungle-scout",
+          "retry_count": 0,
+          "revalidation_override": 0,
+          "route_family": "browser_email_form",
+          "route_policy_version": "1.0",
+          "schema_version": "1.0",
+          "screenshots": 5,
+          "source_identity_id": "",
+          "source_identity_status": "unresolved",
+          "source_policy_compatibility_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "started_at_utc": "2026-08-14T10:16:46Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred",
+          "updated_at": 1786702787,
+          "verified_artifact_hash": ""
+        },
+        {
+          "attempt_id": "c1a3c1f3bc739d7dfe02e807e1576601514e4ebdf86549d71dd0d226c1895bb0",
+          "avoided_operations_json": "[]",
+          "browser_launches": 2,
+          "browser_model_calls": 7,
+          "browser_steps": 1,
+          "cached_input_tokens": 32384,
+          "completed_at_utc": "2026-08-14T12:31:55Z",
+          "created_at": 1786710715,
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 220.408,
+          "elapsed_ms": 220408,
+          "estimated_cost_usd": 0.048295,
+          "incomplete_fields_json": "[]",
+          "input_tokens": 141583,
+          "mailbox_reads": 2,
+          "normalized_url": "https://www.junglescout.com/resources/reports/amazon-data-arts-crafts-sewing-brands",
+          "output_tokens": 10093,
+          "page_navigations": 0,
+          "publisher_id": "publisher:jungle-scout",
+          "retry_count": 0,
+          "revalidation_override": 0,
+          "route_family": "browser_email_form",
+          "route_policy_version": "1.0",
+          "schema_version": "1.0",
+          "screenshots": 1,
+          "source_identity_id": "",
+          "source_identity_status": "unresolved",
+          "source_policy_compatibility_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "started_at_utc": "2026-08-14T12:28:15Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred",
+          "updated_at": 1786710715,
+          "verified_artifact_hash": ""
+        },
+        {
+          "attempt_id": "30247548d09f42ca4abf66dabd0e4ef9af83eaf66f985f16b6f4f3ac91f389f4",
+          "avoided_operations_json": "[]",
+          "browser_launches": 2,
+          "browser_model_calls": 20,
+          "browser_steps": 1,
+          "cached_input_tokens": 158080,
+          "completed_at_utc": "2026-08-14T14:27:57Z",
+          "created_at": 1786717677,
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 217.269,
+          "elapsed_ms": 217269,
+          "estimated_cost_usd": 0.116141,
+          "incomplete_fields_json": "[]",
+          "input_tokens": 438741,
+          "mailbox_reads": 2,
+          "normalized_url": "https://www.junglescout.com/resources/reports/amazon-data-arts-crafts-sewing-brands",
+          "output_tokens": 21012,
+          "page_navigations": 0,
+          "publisher_id": "publisher:jungle-scout",
+          "retry_count": 0,
+          "revalidation_override": 0,
+          "route_family": "browser_email_form",
+          "route_policy_version": "1.0",
+          "schema_version": "1.0",
+          "screenshots": 1,
+          "source_identity_id": "",
+          "source_identity_status": "unresolved",
+          "source_policy_compatibility_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "started_at_utc": "2026-08-14T14:24:20Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred",
+          "updated_at": 1786717677,
+          "verified_artifact_hash": ""
+        }
+      ],
+      "run_id": "d840bb9a-a991-4a43-b664-7a44fd72db84",
+      "source_identity_id": "",
+      "source_record_id": "",
+      "started_at": "2026-08-14T14:24:20.346529Z"
+    },
+    {
+      "acquisition_result": {
+        "blocked_reason": "blocked_unknown_required_enum",
+        "blocked_reason_detail": "A required Organization Type select remained visually unset (placeholder 'Select organization type\u2026') despite a programmatic attempt to set it to 'Brand'. Submission returned an inline error: 'There was an error submitting your request, please contact support.' The visible required enum appears unresolved.",
+        "confirmation": {
+          "confirmation_score": 0,
+          "final_page_url": "https://www.junglescout.com/resources/reports/amazon-innovation-report/",
+          "form_disappeared": false,
+          "signal_labels": [],
+          "submit_button_state": "spinner observed then unchanged; form still present",
+          "url_changed": false
+        },
+        "downloaded_file_path": "",
+        "downloaded_mime_type": "",
+        "downloaded_size_bytes": 0,
+        "drive_uploads": [],
+        "encountered_form_fields": [
+          "First Name",
+          "Last Name",
+          "Work Email Address",
+          "Organization Type"
+        ],
+        "final_url": "https://www.junglescout.com/resources/reports/amazon-innovation-report/",
+        "onsite_capture_format": "",
+        "onsite_capture_path": "",
+        "onsite_completeness_status": "",
+        "onsite_page_count": 0,
+        "outcome": "email_required",
+        "resolved_target_url": "https://www.junglescout.com/resources/reports/amazon-innovation-report",
+        "route_family": "browser_email_form",
+        "route_kind": "email_delivery",
+        "route_status": "inferred",
+        "route_steps": [
+          {
+            "action": "accept_cookies",
+            "expected_evidence": [
+              "screenshot",
+              "page_info"
+            ],
+            "index": 0,
+            "observed_evidence": [
+              "screenshot",
+              "page_info"
+            ],
+            "result": "Cookie banner accepted",
+            "target_role": "button",
+            "target_url": "https://www.junglescout.com/resources/reports/amazon-innovation-report",
+            "verification_status": "verified"
+          },
+          {
+            "action": "fill_field",
+            "expected_evidence": [
+              "dom_hash",
+              "screenshot"
+            ],
+            "index": 1,
+            "observed_evidence": [
+              "dom_hash",
+              "screenshot"
+            ],
+            "result": "First Name input filled with '***REDACTED***'",
+            "target_role": "input",
+            "target_url": "",
+            "verification_status": "verified"
+          },
+          {
+            "action": "fill_field",
+            "expected_evidence": [
+              "dom_hash",
+              "screenshot"
+            ],
+            "index": 2,
+            "observed_evidence": [
+              "dom_hash",
+              "screenshot"
+            ],
+            "result": "Last Name input filled with '***REDACTED***'",
+            "target_role": "input",
+            "target_url": "",
+            "verification_status": "verified"
+          },
+          {
+            "action": "fill_field",
+            "expected_evidence": [
+              "dom_hash",
+              "screenshot"
+            ],
+            "index": 3,
+            "observed_evidence": [
+              "dom_hash",
+              "screenshot"
+            ],
+            "result": "Email input filled with '***REDACTED***'",
+            "target_role": "input[type=email]",
+            "target_url": "",
+            "verification_status": "verified"
+          },
+          {
+            "action": "programmatic_select_set",
+            "expected_evidence": [
+              "dom_hash",
+              "page_info"
+            ],
+            "index": 4,
+            "observed_evidence": [
+              "dom_hash",
+              "page_info"
+            ],
+            "result": "select_set returned selectedValue 'Brand' and visible options list",
+            "target_role": "select",
+            "target_url": "",
+            "verification_status": "verified"
+          },
+          {
+            "action": "click",
+            "expected_evidence": [
+              "screenshot",
+              "confirmation_text"
+            ],
+            "index": 2328,
+            "observed_evidence": [
+              "screenshot",
+              "confirmation_text"
+            ],
+            "result": "Clicked submit; spinner visible then inline error message displayed",
+            "target_role": "button",
+            "target_url": "",
+            "verification_status": "verified"
+          }
+        ],
+        "terminal_evidence": {
+          "artifact_kind": "email_delivery",
+          "artifact_url": "https://www.junglescout.com/resources/reports/amazon-innovation-report",
+          "artifact_validation_detail": "A required Organization Type select remained visually unset (placeholder 'Select organization type\u2026') despite a programmatic attempt to set it to 'Brand'. Submission returned an inline error: 'There was an error submitting your request, please contact support.' The visible required enum appears unresolved.",
+          "artifact_validation_status": "blocked",
+          "confirmation_signal_count": 0,
+          "dom_snapshot_sha256": "54def7319769360d3ff6a7c21999bf5671123fe2ca595027320fc2f29179adbe",
+          "evidence_labels": [
+            "structured_result",
+            "blocked",
+            "email_delivery"
+          ],
+          "final_page_title": "junglescout.com/resources/reports/amazon-innovation-report/",
+          "final_page_url": "https://www.junglescout.com/resources/reports/amazon-innovation-report/",
+          "html_snapshot_path": "C:/Programing/Market-lense-acquisition-remediation-20260814/out/acquisition_failure_remediation_20260814_5d4c027f/browser_downloads/www.junglescout.com/0165ab34cff0/terminal_snapshot.html",
+          "network_events": [
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "submission_request",
+              "url": "https://www.junglescout.com/qthg/d/ccm/form-data/971365288?gtm=45892e68c1h1phv886939216za200zd886939216xec&gcd=13l3l3l2l3l1&dma_cps=a&dma=1&tag_exp=115938465~115938468~118395335~118897920~118897930~119367802~119367810~119527020~120385422&rcb=10&did=dY2E1Nz%2CdYWJhMj&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&npa=1&frm=0&pscdl=noapi&auid=71580930.1786717700&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uamb=0&uam=&uap=Windows&uapv=19.0.0&uaw=0&ec_mode=a&gap.gtb=2&fmt=8&_uip=%3A%3A&emd=tvd.1&eme=tv.1~"
+            },
+            {
+              "initiator_type": "img",
+              "signal_kind": "document_request",
+              "url": "https://www.junglescout.com/wp-content/uploads/2025/09/js_innovation-report-sneak-peek_img-1.png"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "submission_request",
+              "url": "https://www.junglescout.com/qthg/d/pagead/form-data/971365288?gtm=45892e68c1h1v886939216za200zd886939216xec&gcs=G111&gcd=13n3n3n2n7l1&dma_cps=a&dma=1&tag_exp=115938465~115938468~118395335~118897920~118897930~119367802~119367810~119527020~120385422&rcb=10&did=dY2E1Nz%2CdYWJhMj&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&npa=1&frm=0&pscdl=noapi&ae=a&auid=71580930.1786717700&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uamb=0&uam=&uap=Windows&uapv=19.0.0&uaw=0&gap.fsrc=1&gap.gtb=2&fmt=8"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "document_request",
+              "url": "https://region1.analytics.google.com/g/collect?v=2&tid=G-9C02FJRLCF&gtm=45g92e68c1h1v878088732za200zb886939216zd886939216&_p=1786717699282&gcd=13l3l3l2l3l1&npa=1&dma_cps=a&dma=1&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&ecid=278647115&_eu=EAAAAGQC&_uip=%3A%3A&are=1&cid=1471923195.1786717700&frm=0&ir=1&pscdl=noapi&rcb=12&sr=800x600&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uam=&uamb=0&uap=Windows&uapv=19.0.0&uaw=0&ul=ru-ru&ur=FR-IDF&gaf=2&_s=3&tag_exp=115616986~115938465~115938468~118395334~118897920~118897930~119367802~119367810~119527020~120315470~120385423&sid=1786717699&sct=1&seg=1&dl=https%3A%2F%2Fwww.junglescout.com%2Fresources%2Freports%2Famazon-innovation-report%2F&dt=Amazon%20Innovation%20Report%202025%20%7C%20Data%20driven%20Insights%20on%20Pricing%2C%20Advertising%20%26%20Brand%20Control%20from%20Jungle%20Scout%20-%20Jungle%20Scout&en=trackOptanonEvent&_ee=1&gap.gtb=2&ep.optanonCategory=OneTrust%20Cookie%20Consent&ep.optanonAction=Banner%20Accept%20Cookies&_et=177&tfd=27508"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "document_request",
+              "url": "https://region1.analytics.google.com/g/collect?v=2&tid=G-9C02FJRLCF&gtm=45g92e68c1h1v878088732z871490681za200zb886939216zd886939216&_p=1786717699282&_gaz=1&gcs=G111&gcd=13n3n3n2n7l1&npa=1&dma_cps=a&dma=1&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&ecid=278647115&_eu=EAAAAGQC&_uip=%3A%3A&are=1&cid=1471923195.1786717700&frm=0&ir=1&pscdl=noapi&rcb=12&sr=800x600&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uam=&uamb=0&uap=Windows&uapv=19.0.0&uaw=0&ul=ru-ru&ur=FR-IDF&gaf=2&_s=4&tag_exp=115616986~115938465~115938468~118395334~118897920~118897930~119367802~119367810~119527020~120315470~120385423&sid=1786717699&sct=1&seg=1&dl=https%3A%2F%2Fwww.junglescout.com%2Fresources%2Freports%2Famazon-innovation-report%2F&dt=Amazon%20Innovation%20Report%202025%20%7C%20Data%20driven%20Insights%20on%20Pricing%2C%20Advertising%20%26%20Brand%20Control%20from%20Jungle%20Scout%20-%20Jungle%20Scout&en=form_start&gap.gtb=2&_et=746&tfd=27508"
+            },
+            {
+              "initiator_type": "img",
+              "signal_kind": "other",
+              "url": "https://www.google.fr/ads/ga-audiences?v=1&t=sr&slf_rd=1&_r=4&tid=G-9C02FJRLCF&cid=1471923195.1786717700&gtm=45g92e68c1h1v878088732z871490681za200zb886939216zd886939216&rcb=12&aip=1&dma=1&dma_cps=a&gcs=G111&gcd=13n3n3n2n7l1&npa=1&frm=0&tag_exp=115616986~115938465~115938468~118395334~118897920~118897930~119367802~119367810~119527020~120315470~120385423&z=1268319175"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "submission_request",
+              "url": "https://www.junglescout.com/qthg/d/ccm/form-data/971365288?gtm=45892e68c1h1phv886939216za200zd886939216xec&gcs=G111&gcd=13n3n3n2n7l1&dma_cps=a&dma=1&tag_exp=115938465~115938468~118395335~118897920~118897930~119367802~119367810~119527020~120385422&rcb=10&did=dY2E1Nz%2CdYWJhMj&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&npa=1&frm=0&ae=a&pscdl=noapi&auid=71580930.1786717700&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uamb=0&uam=&uap=Windows&uapv=19.0.0&uaw=0&ec_mode=a&gap.fsrc=1&gap.gtb=2&fmt=8&_uip=%3A%3A&emd=tvd.1&eme=tv.1~"
+            },
+            {
+              "initiator_type": "beacon",
+              "signal_kind": "other",
+              "url": "https://analytics.tiktok.com/api/v2/monitor"
+            },
+            {
+              "initiator_type": "img",
+              "signal_kind": "other",
+              "url": "https://www.junglescout.com/wp-content/uploads/2025/09/target-icon.svg"
+            },
+            {
+              "initiator_type": "img",
+              "signal_kind": "other",
+              "url": "https://www.junglescout.com/wp-content/uploads/2025/09/toggle-sliders-icon.svg"
+            },
+            {
+              "initiator_type": "img",
+              "signal_kind": "other",
+              "url": "https://www.junglescout.com/wp-content/uploads/2025/09/atom-icon.svg"
+            },
+            {
+              "initiator_type": "img",
+              "signal_kind": "other",
+              "url": "https://www.junglescout.com/wp-content/uploads/2025/03/Jungle-Scout-Branding-Icon-White.svg"
+            },
+            {
+              "initiator_type": "img",
+              "signal_kind": "other",
+              "url": "https://www.junglescout.com/wp-content/uploads/2026/02/G2BestSoftware2026-SoftwareProducts.svg"
+            },
+            {
+              "initiator_type": "img",
+              "signal_kind": "other",
+              "url": "https://www.junglescout.com/wp-content/uploads/2025/03/aws-partner.svg"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "other",
+              "url": "https://api.segment.io/v1/m"
+            },
+            {
+              "initiator_type": "beacon",
+              "signal_kind": "other",
+              "url": "https://analytics.tiktok.com/api/v2/pixel/inter"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/events/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32207&ck=0&s=2d6bbcdf9a0f8eea&ref=https://www.junglescout.com/resources/reports/amazon-innovation-report/&ptid=e5b9e5fde681b1f6"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/jserrors/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32208&ck=0&s=2d6bbcdf9a0f8eea&ref=https://www.junglescout.com/resources/reports/amazon-innovation-report/&ptid=e5b9e5fde681b1f6"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/events/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32210&ck=0&s=2d6bbcdf9a0f8eea&ref=https://www.junglescout.com/resources/reports/amazon-innovation-report/&ptid=e5b9e5fde681b1f6"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/ins/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32210&ck=0&s=2d6bbcdf9a0f8eea&ref=https://www.junglescout.com/resources/reports/amazon-innovation-report/&ptid=e5b9e5fde681b1f6&at=GUMAFl8eHk4%3D"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/jserrors/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=62226&ck=0&s=2d6bbcdf9a0f8eea&ref=https://www.junglescout.com/resources/reports/amazon-innovation-report/&ptid=e5b9e5fde681b1f6"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/events/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=62228&ck=0&s=2d6bbcdf9a0f8eea&ref=https://www.junglescout.com/resources/reports/amazon-innovation-report/&ptid=e5b9e5fde681b1f6"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "other",
+              "url": "https://api.segment.io/v1/t"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "other",
+              "url": "https://api.ipify.org/"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "other",
+              "url": "https://www.google.com/recaptcha/api2/clr?k=6LfrUMcUAAAAALqornyveC4Nj94PklsX8-_5qrOS"
+            }
+          ],
+          "observed_document_urls": [
+            "https://www.junglescout.com/wp-content/uploads/2025/09/js_innovation-report-sneak-peek_img-1.png",
+            "https://region1.analytics.google.com/g/collect?v=2&tid=G-9C02FJRLCF&gtm=45g92e68c1h1v878088732za200zb886939216zd886939216&_p=1786717699282&gcd=13l3l3l2l3l1&npa=1&dma_cps=a&dma=1&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&ecid=278647115&_eu=EAAAAGQC&_uip=%3A%3A&are=1&cid=1471923195.1786717700&frm=0&ir=1&pscdl=noapi&rcb=12&sr=800x600&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uam=&uamb=0&uap=Windows&uapv=19.0.0&uaw=0&ul=ru-ru&ur=FR-IDF&gaf=2&_s=3&tag_exp=115616986~115938465~115938468~118395334~118897920~118897930~119367802~119367810~119527020~120315470~120385423&sid=1786717699&sct=1&seg=1&dl=https%3A%2F%2Fwww.junglescout.com%2Fresources%2Freports%2Famazon-innovation-report%2F&dt=Amazon%20Innovation%20Report%202025%20%7C%20Data%20driven%20Insights%20on%20Pricing%2C%20Advertising%20%26%20Brand%20Control%20from%20Jungle%20Scout%20-%20Jungle%20Scout&en=trackOptanonEvent&_ee=1&gap.gtb=2&ep.optanonCategory=OneTrust%20Cookie%20Consent&ep.optanonAction=Banner%20Accept%20Cookies&_et=177&tfd=27508",
+            "https://region1.analytics.google.com/g/collect?v=2&tid=G-9C02FJRLCF&gtm=45g92e68c1h1v878088732z871490681za200zb886939216zd886939216&_p=1786717699282&_gaz=1&gcs=G111&gcd=13n3n3n2n7l1&npa=1&dma_cps=a&dma=1&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&ecid=278647115&_eu=EAAAAGQC&_uip=%3A%3A&are=1&cid=1471923195.1786717700&frm=0&ir=1&pscdl=noapi&rcb=12&sr=800x600&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uam=&uamb=0&uap=Windows&uapv=19.0.0&uaw=0&ul=ru-ru&ur=FR-IDF&gaf=2&_s=4&tag_exp=115616986~115938465~115938468~118395334~118897920~118897930~119367802~119367810~119527020~120315470~120385423&sid=1786717699&sct=1&seg=1&dl=https%3A%2F%2Fwww.junglescout.com%2Fresources%2Freports%2Famazon-innovation-report%2F&dt=Amazon%20Innovation%20Report%202025%20%7C%20Data%20driven%20Insights%20on%20Pricing%2C%20Advertising%20%26%20Brand%20Control%20from%20Jungle%20Scout%20-%20Jungle%20Scout&en=form_start&gap.gtb=2&_et=746&tfd=27508",
+            "https://bam.nr-data.net/events/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32207&ck=0&s=2d6bbcdf9a0f8eea&ref=https://www.junglescout.com/resources/reports/amazon-innovation-report/&ptid=e5b9e5fde681b1f6",
+            "https://bam.nr-data.net/jserrors/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32208&ck=0&s=2d6bbcdf9a0f8eea&ref=https://www.junglescout.com/resources/reports/amazon-innovation-report/&ptid=e5b9e5fde681b1f6",
+            "https://bam.nr-data.net/events/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32210&ck=0&s=2d6bbcdf9a0f8eea&ref=https://www.junglescout.com/resources/reports/amazon-innovation-report/&ptid=e5b9e5fde681b1f6",
+            "https://bam.nr-data.net/ins/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32210&ck=0&s=2d6bbcdf9a0f8eea&ref=https://www.junglescout.com/resources/reports/amazon-innovation-report/&ptid=e5b9e5fde681b1f6&at=GUMAFl8eHk4%3D",
+            "https://bam.nr-data.net/jserrors/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=62226&ck=0&s=2d6bbcdf9a0f8eea&ref=https://www.junglescout.com/resources/reports/amazon-innovation-report/&ptid=e5b9e5fde681b1f6",
+            "https://bam.nr-data.net/events/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=62228&ck=0&s=2d6bbcdf9a0f8eea&ref=https://www.junglescout.com/resources/reports/amazon-innovation-report/&ptid=e5b9e5fde681b1f6",
+            "https://www.junglescout.com/resources/reports/amazon-innovation-report",
+            "https://www.junglescout.com/resources/reports/amazon-innovation-report/"
+          ],
+          "screenshot_path": "C:/Programing/Market-lense-acquisition-remediation-20260814/out/acquisition_failure_remediation_20260814_5d4c027f/browser_downloads/www.junglescout.com/0165ab34cff0/terminal_screenshot.png",
+          "traversed_page_urls": [
+            "https://www.junglescout.com/resources/reports/amazon-innovation-report"
+          ],
+          "visited_url_timeline": [
+            "https://www.junglescout.com/resources/reports/amazon-innovation-report"
+          ]
+        },
+        "used_memory_route": true
+      },
+      "artifact_verification": {
+        "acquisition_method": "browser_email_form",
+        "artifact_exists": false,
+        "drive_persisted": false,
+        "retained_artifact_format": "none",
+        "route_verified": false,
+        "signature_valid": null,
+        "size_bytes": 0,
+        "source_kind": "unknown",
+        "verified_usable_artifact": false
+      },
+      "attempt_id": "diagnostic:fac_80dc158f27be79e08f090b8c",
+      "canonical_candidate_url": "https://www.junglescout.com/resources/reports/amazon-innovation-report",
+      "completed_at": "2026-08-14T14:30:32.914476Z",
+      "configuration_hash": "e11527408ddd16e27001389434096e6916a200d350a6177d0408ac420830c242",
+      "duration_seconds": 155.291,
+      "failure_candidate_id": "fac_80dc158f27be79e08f090b8c",
+      "parent_attempt": "",
+      "phase": "diagnostic_before_fixes",
+      "policy_hash": "current_head_default_policy",
+      "producer_git_sha": "5d4c027fb17f9ec650a0b188df24db63ab077371",
+      "publisher_id": "publisher:jungle-scout",
+      "publisher_name": "Jungle Scout",
+      "resource_attempts": [
+        {
+          "attempt_id": "dc669803877682bfbe9bc66d1e452d1018354b354d7894859fb1336679f6075c",
+          "avoided_operations_json": "[]",
+          "browser_launches": 14,
+          "browser_model_calls": 86,
+          "browser_steps": 6,
+          "cached_input_tokens": 671616,
+          "completed_at_utc": "2026-08-14T10:21:02Z",
+          "created_at": 1786702862,
+          "drive_reads": 0,
+          "drive_writes": 13,
+          "duration_seconds": 74.628,
+          "elapsed_ms": 74628,
+          "estimated_cost_usd": 0.449331,
+          "incomplete_fields_json": "[]",
+          "input_tokens": 1722099,
+          "mailbox_reads": 39,
+          "normalized_url": "https://www.junglescout.com/resources/reports/amazon-innovation-report",
+          "output_tokens": 84959,
+          "page_navigations": 1,
+          "publisher_id": "publisher:jungle-scout",
+          "retry_count": 0,
+          "revalidation_override": 0,
+          "route_family": "browser_email_form",
+          "route_policy_version": "1.0",
+          "schema_version": "1.0",
+          "screenshots": 6,
+          "source_identity_id": "",
+          "source_identity_status": "unresolved",
+          "source_policy_compatibility_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "started_at_utc": "2026-08-14T10:19:47Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred",
+          "updated_at": 1786702862,
+          "verified_artifact_hash": ""
+        },
+        {
+          "attempt_id": "eb7456a55390b64c6f0c055d7c5658b1244b9863b7451325983b36376564a96c",
+          "avoided_operations_json": "[]",
+          "browser_launches": 3,
+          "browser_model_calls": 10,
+          "browser_steps": 6,
+          "cached_input_tokens": 56960,
+          "completed_at_utc": "2026-08-14T12:33:40Z",
+          "created_at": 1786710820,
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 104.331,
+          "elapsed_ms": 104331,
+          "estimated_cost_usd": 0.066253,
+          "incomplete_fields_json": "[]",
+          "input_tokens": 201696,
+          "mailbox_reads": 3,
+          "normalized_url": "https://www.junglescout.com/resources/reports/amazon-innovation-report",
+          "output_tokens": 14323,
+          "page_navigations": 1,
+          "publisher_id": "publisher:jungle-scout",
+          "retry_count": 0,
+          "revalidation_override": 0,
+          "route_family": "browser_email_form",
+          "route_policy_version": "1.0",
+          "schema_version": "1.0",
+          "screenshots": 6,
+          "source_identity_id": "",
+          "source_identity_status": "unresolved",
+          "source_policy_compatibility_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "started_at_utc": "2026-08-14T12:31:55Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred",
+          "updated_at": 1786710820,
+          "verified_artifact_hash": ""
+        },
+        {
+          "attempt_id": "ebb0b55d71cbb331e1c0ce691781fa71fc6e0be0243b07335af45eaa976e614e",
+          "avoided_operations_json": "[]",
+          "browser_launches": 3,
+          "browser_model_calls": 26,
+          "browser_steps": 6,
+          "cached_input_tokens": 209152,
+          "completed_at_utc": "2026-08-14T14:30:32Z",
+          "created_at": 1786717832,
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 155.279,
+          "elapsed_ms": 155279,
+          "estimated_cost_usd": 0.152441,
+          "incomplete_fields_json": "[]",
+          "input_tokens": 565329,
+          "mailbox_reads": 3,
+          "normalized_url": "https://www.junglescout.com/resources/reports/amazon-innovation-report",
+          "output_tokens": 29084,
+          "page_navigations": 0,
+          "publisher_id": "publisher:jungle-scout",
+          "retry_count": 0,
+          "revalidation_override": 0,
+          "route_family": "browser_email_form",
+          "route_policy_version": "1.0",
+          "schema_version": "1.0",
+          "screenshots": 5,
+          "source_identity_id": "",
+          "source_identity_status": "unresolved",
+          "source_policy_compatibility_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "started_at_utc": "2026-08-14T14:27:57Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred",
+          "updated_at": 1786717832,
+          "verified_artifact_hash": ""
+        }
+      ],
+      "run_id": "d840bb9a-a991-4a43-b664-7a44fd72db84",
+      "source_identity_id": "",
+      "source_record_id": "",
+      "started_at": "2026-08-14T14:27:57.626614Z"
+    },
+    {
+      "acquisition_result": {
+        "blocked_reason": "blocked_unknown_required_enum",
+        "blocked_reason_detail": "The State field did not resolve to a valid lookup selection before submission.",
+        "confirmation": {
+          "confirmation_score": 1,
+          "final_page_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-body-skincare/",
+          "form_disappeared": false,
+          "signal_labels": [
+            "network_submission_request"
+          ],
+          "submit_button_state": "unchanged",
+          "url_changed": false
+        },
+        "downloaded_file_path": "",
+        "downloaded_mime_type": "",
+        "downloaded_size_bytes": 0,
+        "drive_uploads": [],
+        "encountered_form_fields": [
+          "First Name",
+          "Last Name",
+          "Business Email Address",
+          "Company Name",
+          "Role",
+          "State"
+        ],
+        "final_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-body-skincare/",
+        "onsite_capture_format": "",
+        "onsite_capture_path": "",
+        "onsite_completeness_status": "",
+        "onsite_page_count": 0,
+        "outcome": "email_required",
+        "resolved_target_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-body-skincare/",
+        "route_family": "browser_email_form",
+        "route_kind": "email_delivery",
+        "route_status": "inferred",
+        "route_steps": [
+          {
+            "action": "submit",
+            "expected_evidence": [
+              "confirmation_text",
+              "network_event",
+              "screenshot"
+            ],
+            "index": 0,
+            "observed_evidence": [
+              "network_event",
+              "screenshot"
+            ],
+            "result": "Submission was not verified because the required State lookup field did not resolve to a valid option.",
+            "target_role": "button",
+            "target_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-body-skincare/",
+            "verification_status": "verified"
+          }
+        ],
+        "terminal_evidence": {
+          "artifact_kind": "email_delivery",
+          "artifact_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-body-skincare/",
+          "artifact_validation_detail": "The State field did not resolve to a valid lookup selection before submission.",
+          "artifact_validation_status": "blocked",
+          "confirmation_signal_count": 1,
+          "dom_snapshot_sha256": "b9ef4b86e34c8c1e43f0cac06ed01bc7e057603fa083f6b4f5c82bc6e0d73310",
+          "evidence_labels": [
+            "network_submission_request",
+            "structured_result",
+            "blocked",
+            "email_delivery"
+          ],
+          "final_page_title": "junglescout.com/resources/reports/amazon-market-trends-body-skincare/",
+          "final_page_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-body-skincare/",
+          "html_snapshot_path": "C:/Programing/Market-lense-acquisition-remediation-20260814/out/acquisition_failure_remediation_20260814_5d4c027f/browser_downloads/www.junglescout.com/be91893b1d82/terminal_snapshot.html",
+          "network_events": [
+            {
+              "initiator_type": "script",
+              "signal_kind": "other",
+              "url": "https://a.opmnstr.com/app/js/27.d7dd0654.min.js"
+            },
+            {
+              "initiator_type": "script",
+              "signal_kind": "other",
+              "url": "https://a.opmnstr.com/app/js/25.80e08951.min.js"
+            },
+            {
+              "initiator_type": "script",
+              "signal_kind": "other",
+              "url": "https://a.opmnstr.com/app/js/15.56022016.min.js"
+            },
+            {
+              "initiator_type": "script",
+              "signal_kind": "other",
+              "url": "https://a.opmnstr.com/app/js/1.d679fc6e.min.js"
+            },
+            {
+              "initiator_type": "script",
+              "signal_kind": "other",
+              "url": "https://a.opmnstr.com/app/js/20.17375336.min.js"
+            },
+            {
+              "initiator_type": "script",
+              "signal_kind": "other",
+              "url": "https://a.opmnstr.com/app/js/6.747542fa.min.js"
+            },
+            {
+              "initiator_type": "script",
+              "signal_kind": "other",
+              "url": "https://static.zdassets.com/ekr/snippet.js?key=d43f23bb-89e8-416e-a679-8773130c9969"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "other",
+              "url": "https://ekr.zdassets.com/compose/d43f23bb-89e8-416e-a679-8773130c9969"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "other",
+              "url": "https://ws.zoominfo.com/pixel/collect"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "submission_request",
+              "url": "https://privacyportal-eu.onetrust.com/request/v1/consentreceipts"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "document_request",
+              "url": "https://www.google.com/ccm/collect?rcb=15&frm=0&apvc=0&auid=1783652861.1786717860&dt=Amazon%20Market%20Data%20for%20Body%20Skincare%20Products%20-%20Jungle%20Scout&tid=AW-971365288&en=trackOptanonEvent&dl=https%3A%2F%2Fwww.junglescout.com%2Fresources%2Freports%2Famazon-market-trends-body-skincare%2F&scrsrc=www.junglescout.com&rnd=1868102210.1786717860&navt=n&npa=1&ep.optanonCategory=OneTrust%20Cookie%20Consent&ep.optanonAction=Banner%20Accept%20Cookies&did=dY2E1Nz%2CdYWJhMj&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&gtm=45892e68c1v886939216za200zd886939216xec&gcd=13l3l3l2l3l1&dma_cps=a&dma=1&tag_exp=115616985~115938465~115938468~118395335~118897920~118897930~119367802~119367810~119527020~120385423&tft=1786717880505&tfd=20792&gap.plf=5&gap.gtb=2&tids=AW-971365288&fmt=8"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "submission_request",
+              "url": "https://www.junglescout.com/qthg/d/ccm/form-data/971365288?gtm=45892e68c1phv886939216za200zd886939216xec&gcd=13l3l3l2l3l1&dma_cps=a&dma=1&tag_exp=115616985~115938465~115938468~118395335~118897920~118897930~119367802~119367810~119527020~120385423&rcb=15&did=dY2E1Nz%2CdYWJhMj&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&npa=1&frm=0&pscdl=noapi&auid=1783652861.1786717860&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uamb=0&uam=&uap=Windows&uapv=19.0.0&uaw=0&ec_mode=a&gap.plf=5&gap.gtb=2&fmt=8&_uip=%3A%3A&emd=tvd.1&eme=tv.1~"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "submission_request",
+              "url": "https://www.junglescout.com/qthg/d/pagead/form-data/971365288?gtm=45892e68c1v886939216za200zd886939216xec&gcs=G111&gcd=13n3n3n2n7l1&dma_cps=a&dma=1&tag_exp=115616985~115938465~115938468~118395335~118897920~118897930~119367802~119367810~119527020~120385423&rcb=15&did=dY2E1Nz%2CdYWJhMj&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&npa=1&frm=0&pscdl=noapi&ae=a&auid=1783652861.1786717860&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uamb=0&uam=&uap=Windows&uapv=19.0.0&uaw=0&gap.plf=5&gap.fsrc=1&gap.gtb=2&fmt=8"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "document_request",
+              "url": "https://region1.analytics.google.com/g/collect?v=2&tid=G-9C02FJRLCF&gtm=45g92e68c1v878088732za200zb886939216zd886939216&_p=1786717859845&gcd=13l3l3l2l3l1&npa=1&dma_cps=a&dma=1&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&ecid=661660806&_eu=EAAAAGQC&_uip=%3A%3A&are=1&cid=699680730.1786717861&frm=0&ir=1&pscdl=noapi&rcb=18&sr=800x600&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uam=&uamb=0&uap=Windows&uapv=19.0.0&uaw=0&ul=ru-ru&ur=FR-IDF&gaf=2&_s=3&tag_exp=115938465~115938469~118897920~118897930~119367802~119367810~119527020~120385422&sid=1786717860&sct=1&seg=1&dl=https%3A%2F%2Fwww.junglescout.com%2Fresources%2Freports%2Famazon-market-trends-body-skincare%2F&dt=Amazon%20Market%20Data%20for%20Body%20Skincare%20Products%20-%20Jungle%20Scout&en=trackOptanonEvent&_ee=1&gap.gtb=2&ep.optanonCategory=OneTrust%20Cookie%20Consent&ep.optanonAction=Banner%20Accept%20Cookies&_et=195&tfd=21516"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "document_request",
+              "url": "https://region1.analytics.google.com/g/collect?v=2&tid=G-9C02FJRLCF&gtm=45g92e68c1v878088732z871490681za200zb886939216zd886939216&_p=1786717859845&_gaz=1&gcs=G111&gcd=13n3n3n2n7l1&npa=1&dma_cps=a&dma=1&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&ecid=661660806&_eu=EAAAAGQC&_uip=%3A%3A&are=1&cid=699680730.1786717861&frm=0&ir=1&pscdl=noapi&rcb=18&sr=800x600&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uam=&uamb=0&uap=Windows&uapv=19.0.0&uaw=0&ul=ru-ru&ur=FR-IDF&gaf=2&_s=4&tag_exp=115938465~115938469~118897920~118897930~119367802~119367810~119527020~120385422&sid=1786717860&sct=1&seg=1&dl=https%3A%2F%2Fwww.junglescout.com%2Fresources%2Freports%2Famazon-market-trends-body-skincare%2F&dt=Amazon%20Market%20Data%20for%20Body%20Skincare%20Products%20-%20Jungle%20Scout&en=form_start&gap.gtb=2&_et=737&tfd=21517"
+            },
+            {
+              "initiator_type": "img",
+              "signal_kind": "other",
+              "url": "https://www.google.fr/ads/ga-audiences?v=1&t=sr&slf_rd=1&_r=4&tid=G-9C02FJRLCF&cid=699680730.1786717861&gtm=45g92e68c1v878088732z871490681za200zb886939216zd886939216&rcb=18&aip=1&dma=1&dma_cps=a&gcs=G111&gcd=13n3n3n2n7l1&npa=1&frm=0&tag_exp=115938465~115938469~118897920~118897930~119367802~119367810~119527020~120385422&z=186996105"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "submission_request",
+              "url": "https://www.junglescout.com/qthg/d/ccm/form-data/971365288?gtm=45892e68c1phv886939216za200zd886939216xec&gcs=G111&gcd=13n3n3n2n7l1&dma_cps=a&dma=1&tag_exp=115616985~115938465~115938468~118395335~118897920~118897930~119367802~119367810~119527020~120385423&rcb=15&did=dY2E1Nz%2CdYWJhMj&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&npa=1&frm=0&ae=a&pscdl=noapi&auid=1783652861.1786717860&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uamb=0&uam=&uap=Windows&uapv=19.0.0&uaw=0&ec_mode=a&gap.plf=5&gap.fsrc=1&gap.gtb=2&fmt=8&_uip=%3A%3A&emd=tvd.1&eme=tv.1~"
+            },
+            {
+              "initiator_type": "beacon",
+              "signal_kind": "other",
+              "url": "https://analytics.tiktok.com/api/v2/pixel/inter"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/browser/blobs?browser_monitoring_key=NRJS-11cc7dadda82ce36b05&type=BrowserSessionChunk&app_id=1723085105&protocol_version=0&timestamp=1786717860548&attributes=entityGuid%3DMzIwOTg2OXxCUk9XU0VSfEFQUExJQ0FUSU9OfDE3MjMwODYzNDc%26harvestId%3D82c006654a9a1421_3284e7d4a0c09373_4%26trace.firstTimestamp%3D1786717860548%26trace.lastTimestamp%3D1786717882109%26trace.nodes%3D177%26trace.originTimestamp%3D1786717859720%26agentVersion%3D1.320.0%26ptid%3D3284e7d4a0c09373%26session%3D82c006654a9a1421%26currentUrl%3Dhttps://www.junglescout.com/resources/reports/amazon-market-trends-body-skincare/"
+            },
+            {
+              "initiator_type": "script",
+              "signal_kind": "document_request",
+              "url": "https://sjrtp8.marketo.com/gw1/trw?cmd=2&cb=AITag.emailCallback&aid=junglescout&v=junglescout-1786717861003-55b97ecd&e=reports%40marketbearing.eu&trwsa.sid=junglescout-1786717861004-c1809458&trwv.vc=1&ma=id%3A397-PTP-191%26token%3A_mch-junglescout.com-4a921a45f3d1cd0ff38f57be07c05753"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "other",
+              "url": "https://api.segment.io/v1/t"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "other",
+              "url": "https://api.segment.io/v1/m"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/events/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32470&ck=0&s=82c006654a9a1421&ref=https://www.junglescout.com/resources/reports/amazon-market-trends-body-skincare/&ptid=3284e7d4a0c09373&ht=1"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/events/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32473&ck=0&s=82c006654a9a1421&ref=https://www.junglescout.com/resources/reports/amazon-market-trends-body-skincare/&ptid=3284e7d4a0c09373&ht=1"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/browser/blobs?browser_monitoring_key=NRJS-11cc7dadda82ce36b05&type=BrowserSessionChunk&app_id=1723085105&protocol_version=0&timestamp=1786717880371&attributes=entityGuid%3DMzIwOTg2OXxCUk9XU0VSfEFQUExJQ0FUSU9OfDE3MjMwODYzNDc%26harvestId%3D82c006654a9a1421_3284e7d4a0c09373_5%26trace.firstTimestamp%3D1786717880371%26trace.lastTimestamp%3D1786717891317%26trace.nodes%3D75%26trace.originTimestamp%3D1786717859720%26agentVersion%3D1.320.0%26ptid%3D3284e7d4a0c09373%26session%3D82c006654a9a1421%26currentUrl%3Dhttps://www.junglescout.com/resources/reports/amazon-market-trends-body-skincare/"
+            }
+          ],
+          "observed_document_urls": [
+            "https://www.google.com/ccm/collect?rcb=15&frm=0&apvc=0&auid=1783652861.1786717860&dt=Amazon%20Market%20Data%20for%20Body%20Skincare%20Products%20-%20Jungle%20Scout&tid=AW-971365288&en=trackOptanonEvent&dl=https%3A%2F%2Fwww.junglescout.com%2Fresources%2Freports%2Famazon-market-trends-body-skincare%2F&scrsrc=www.junglescout.com&rnd=1868102210.1786717860&navt=n&npa=1&ep.optanonCategory=OneTrust%20Cookie%20Consent&ep.optanonAction=Banner%20Accept%20Cookies&did=dY2E1Nz%2CdYWJhMj&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&gtm=45892e68c1v886939216za200zd886939216xec&gcd=13l3l3l2l3l1&dma_cps=a&dma=1&tag_exp=115616985~115938465~115938468~118395335~118897920~118897930~119367802~119367810~119527020~120385423&tft=1786717880505&tfd=20792&gap.plf=5&gap.gtb=2&tids=AW-971365288&fmt=8",
+            "https://region1.analytics.google.com/g/collect?v=2&tid=G-9C02FJRLCF&gtm=45g92e68c1v878088732za200zb886939216zd886939216&_p=1786717859845&gcd=13l3l3l2l3l1&npa=1&dma_cps=a&dma=1&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&ecid=661660806&_eu=EAAAAGQC&_uip=%3A%3A&are=1&cid=699680730.1786717861&frm=0&ir=1&pscdl=noapi&rcb=18&sr=800x600&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uam=&uamb=0&uap=Windows&uapv=19.0.0&uaw=0&ul=ru-ru&ur=FR-IDF&gaf=2&_s=3&tag_exp=115938465~115938469~118897920~118897930~119367802~119367810~119527020~120385422&sid=1786717860&sct=1&seg=1&dl=https%3A%2F%2Fwww.junglescout.com%2Fresources%2Freports%2Famazon-market-trends-body-skincare%2F&dt=Amazon%20Market%20Data%20for%20Body%20Skincare%20Products%20-%20Jungle%20Scout&en=trackOptanonEvent&_ee=1&gap.gtb=2&ep.optanonCategory=OneTrust%20Cookie%20Consent&ep.optanonAction=Banner%20Accept%20Cookies&_et=195&tfd=21516",
+            "https://region1.analytics.google.com/g/collect?v=2&tid=G-9C02FJRLCF&gtm=45g92e68c1v878088732z871490681za200zb886939216zd886939216&_p=1786717859845&_gaz=1&gcs=G111&gcd=13n3n3n2n7l1&npa=1&dma_cps=a&dma=1&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&ecid=661660806&_eu=EAAAAGQC&_uip=%3A%3A&are=1&cid=699680730.1786717861&frm=0&ir=1&pscdl=noapi&rcb=18&sr=800x600&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uam=&uamb=0&uap=Windows&uapv=19.0.0&uaw=0&ul=ru-ru&ur=FR-IDF&gaf=2&_s=4&tag_exp=115938465~115938469~118897920~118897930~119367802~119367810~119527020~120385422&sid=1786717860&sct=1&seg=1&dl=https%3A%2F%2Fwww.junglescout.com%2Fresources%2Freports%2Famazon-market-trends-body-skincare%2F&dt=Amazon%20Market%20Data%20for%20Body%20Skincare%20Products%20-%20Jungle%20Scout&en=form_start&gap.gtb=2&_et=737&tfd=21517",
+            "https://bam.nr-data.net/browser/blobs?browser_monitoring_key=NRJS-11cc7dadda82ce36b05&type=BrowserSessionChunk&app_id=1723085105&protocol_version=0&timestamp=1786717860548&attributes=entityGuid%3DMzIwOTg2OXxCUk9XU0VSfEFQUExJQ0FUSU9OfDE3MjMwODYzNDc%26harvestId%3D82c006654a9a1421_3284e7d4a0c09373_4%26trace.firstTimestamp%3D1786717860548%26trace.lastTimestamp%3D1786717882109%26trace.nodes%3D177%26trace.originTimestamp%3D1786717859720%26agentVersion%3D1.320.0%26ptid%3D3284e7d4a0c09373%26session%3D82c006654a9a1421%26currentUrl%3Dhttps://www.junglescout.com/resources/reports/amazon-market-trends-body-skincare/",
+            "https://sjrtp8.marketo.com/gw1/trw?cmd=2&cb=AITag.emailCallback&aid=junglescout&v=junglescout-1786717861003-55b97ecd&e=reports%40marketbearing.eu&trwsa.sid=junglescout-1786717861004-c1809458&trwv.vc=1&ma=id%3A397-PTP-191%26token%3A_mch-junglescout.com-4a921a45f3d1cd0ff38f57be07c05753",
+            "https://bam.nr-data.net/events/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32470&ck=0&s=82c006654a9a1421&ref=https://www.junglescout.com/resources/reports/amazon-market-trends-body-skincare/&ptid=3284e7d4a0c09373&ht=1",
+            "https://bam.nr-data.net/events/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32473&ck=0&s=82c006654a9a1421&ref=https://www.junglescout.com/resources/reports/amazon-market-trends-body-skincare/&ptid=3284e7d4a0c09373&ht=1",
+            "https://bam.nr-data.net/browser/blobs?browser_monitoring_key=NRJS-11cc7dadda82ce36b05&type=BrowserSessionChunk&app_id=1723085105&protocol_version=0&timestamp=1786717880371&attributes=entityGuid%3DMzIwOTg2OXxCUk9XU0VSfEFQUExJQ0FUSU9OfDE3MjMwODYzNDc%26harvestId%3D82c006654a9a1421_3284e7d4a0c09373_5%26trace.firstTimestamp%3D1786717880371%26trace.lastTimestamp%3D1786717891317%26trace.nodes%3D75%26trace.originTimestamp%3D1786717859720%26agentVersion%3D1.320.0%26ptid%3D3284e7d4a0c09373%26session%3D82c006654a9a1421%26currentUrl%3Dhttps://www.junglescout.com/resources/reports/amazon-market-trends-body-skincare/",
+            "https://www.junglescout.com/resources/reports/amazon-market-trends-body-skincare/"
+          ],
+          "screenshot_path": "C:/Programing/Market-lense-acquisition-remediation-20260814/out/acquisition_failure_remediation_20260814_5d4c027f/browser_downloads/www.junglescout.com/be91893b1d82/terminal_screenshot.png",
+          "traversed_page_urls": [
+            "about:blank",
+            "https://www.junglescout.com/resources/reports/amazon-market-trends-body-skincare/"
+          ],
+          "visited_url_timeline": [
+            "https://www.junglescout.com/resources/reports/amazon-market-trends-body-skincare/",
+            "about:blank"
+          ]
+        },
+        "used_memory_route": true
+      },
+      "artifact_verification": {
+        "acquisition_method": "browser_email_form",
+        "artifact_exists": false,
+        "drive_persisted": false,
+        "retained_artifact_format": "none",
+        "route_verified": false,
+        "signature_valid": null,
+        "size_bytes": 0,
+        "source_kind": "unknown",
+        "verified_usable_artifact": false
+      },
+      "attempt_id": "diagnostic:fac_c21286d0bf9647749fa4dae3",
+      "canonical_candidate_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-body-skincare",
+      "completed_at": "2026-08-14T14:34:10.427612Z",
+      "configuration_hash": "e11527408ddd16e27001389434096e6916a200d350a6177d0408ac420830c242",
+      "duration_seconds": 217.512,
+      "failure_candidate_id": "fac_c21286d0bf9647749fa4dae3",
+      "parent_attempt": "",
+      "phase": "diagnostic_before_fixes",
+      "policy_hash": "current_head_default_policy",
+      "producer_git_sha": "5d4c027fb17f9ec650a0b188df24db63ab077371",
+      "publisher_id": "publisher:jungle-scout",
+      "publisher_name": "Jungle Scout",
+      "resource_attempts": [
+        {
+          "attempt_id": "93fd7aa1460cc831b787593d91a08f3435a36843a27ca625e1b4e7b448dec9f2",
+          "avoided_operations_json": "[]",
+          "browser_launches": 15,
+          "browser_model_calls": 92,
+          "browser_steps": 5,
+          "cached_input_tokens": 721664,
+          "completed_at_utc": "2026-08-14T10:23:15Z",
+          "created_at": 1786702995,
+          "drive_reads": 0,
+          "drive_writes": 13,
+          "duration_seconds": 132.8,
+          "elapsed_ms": 132800,
+          "estimated_cost_usd": 0.484139,
+          "incomplete_fields_json": "[]",
+          "input_tokens": 1845548,
+          "mailbox_reads": 40,
+          "normalized_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-body-skincare",
+          "output_tokens": 92562,
+          "page_navigations": 0,
+          "publisher_id": "publisher:jungle-scout",
+          "retry_count": 0,
+          "revalidation_override": 0,
+          "route_family": "browser_email_form",
+          "route_policy_version": "1.0",
+          "schema_version": "1.0",
+          "screenshots": 4,
+          "source_identity_id": "",
+          "source_identity_status": "unresolved",
+          "source_policy_compatibility_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "started_at_utc": "2026-08-14T10:21:02Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred",
+          "updated_at": 1786702995,
+          "verified_artifact_hash": ""
+        },
+        {
+          "attempt_id": "70d0225f53e6a395afc2ebd6f35074f6de5b39f7a1ff1ae69d4313718fb72020",
+          "avoided_operations_json": "[]",
+          "browser_launches": 4,
+          "browser_model_calls": 13,
+          "browser_steps": 4,
+          "cached_input_tokens": 81536,
+          "completed_at_utc": "2026-08-14T12:35:08Z",
+          "created_at": 1786710908,
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 88.384,
+          "elapsed_ms": 88384,
+          "estimated_cost_usd": 0.083056,
+          "incomplete_fields_json": "[]",
+          "input_tokens": 261802,
+          "mailbox_reads": 4,
+          "normalized_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-body-skincare",
+          "output_tokens": 17976,
+          "page_navigations": 0,
+          "publisher_id": "publisher:jungle-scout",
+          "retry_count": 0,
+          "revalidation_override": 0,
+          "route_family": "browser_email_form",
+          "route_policy_version": "1.0",
+          "schema_version": "1.0",
+          "screenshots": 4,
+          "source_identity_id": "",
+          "source_identity_status": "unresolved",
+          "source_policy_compatibility_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "started_at_utc": "2026-08-14T12:33:40Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred",
+          "updated_at": 1786710908,
+          "verified_artifact_hash": ""
+        },
+        {
+          "attempt_id": "1e690b86106a9102ccbd8385a7b23d327d6f6a63e3684d40ebfa08416a85dca4",
+          "avoided_operations_json": "[]",
+          "browser_launches": 4,
+          "browser_model_calls": 39,
+          "browser_steps": 1,
+          "cached_input_tokens": 325120,
+          "completed_at_utc": "2026-08-14T14:34:10Z",
+          "created_at": 1786718050,
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 217.501,
+          "elapsed_ms": 217501,
+          "estimated_cost_usd": 0.218694,
+          "incomplete_fields_json": "[]",
+          "input_tokens": 850080,
+          "mailbox_reads": 4,
+          "normalized_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-body-skincare",
+          "output_tokens": 39663,
+          "page_navigations": 0,
+          "publisher_id": "publisher:jungle-scout",
+          "retry_count": 0,
+          "revalidation_override": 0,
+          "route_family": "browser_email_form",
+          "route_policy_version": "1.0",
+          "schema_version": "1.0",
+          "screenshots": 1,
+          "source_identity_id": "",
+          "source_identity_status": "unresolved",
+          "source_policy_compatibility_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "started_at_utc": "2026-08-14T14:30:32Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred",
+          "updated_at": 1786718050,
+          "verified_artifact_hash": ""
+        }
+      ],
+      "run_id": "d840bb9a-a991-4a43-b664-7a44fd72db84",
+      "source_identity_id": "",
+      "source_record_id": "",
+      "started_at": "2026-08-14T14:30:32.920401Z"
+    },
+    {
+      "acquisition_result": {
+        "blocked_reason": "blocked_unknown_required_enum",
+        "blocked_reason_detail": "The State field did not resolve to a valid lookup selection before submission.",
+        "confirmation": {
+          "confirmation_score": 1,
+          "final_page_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-car-parts-accessories/",
+          "form_disappeared": false,
+          "signal_labels": [
+            "network_submission_request"
+          ],
+          "submit_button_state": "unchanged",
+          "url_changed": false
+        },
+        "downloaded_file_path": "",
+        "downloaded_mime_type": "",
+        "downloaded_size_bytes": 0,
+        "drive_uploads": [],
+        "encountered_form_fields": [
+          "Business Email Address",
+          "Company Name",
+          "Role",
+          "State"
+        ],
+        "final_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-car-parts-accessories/",
+        "onsite_capture_format": "",
+        "onsite_capture_path": "",
+        "onsite_completeness_status": "",
+        "onsite_page_count": 0,
+        "outcome": "email_required",
+        "resolved_target_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-car-parts-accessories/",
+        "route_family": "browser_email_form",
+        "route_kind": "email_delivery",
+        "route_status": "inferred",
+        "route_steps": [
+          {
+            "action": "submit",
+            "expected_evidence": [
+              "confirmation_text",
+              "network_event",
+              "screenshot"
+            ],
+            "index": 0,
+            "observed_evidence": [
+              "network_event",
+              "screenshot"
+            ],
+            "result": "Submission was not verified because the required State lookup field did not resolve to a valid option.",
+            "target_role": "button",
+            "target_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-car-parts-accessories/",
+            "verification_status": "verified"
+          }
+        ],
+        "terminal_evidence": {
+          "artifact_kind": "email_delivery",
+          "artifact_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-car-parts-accessories/",
+          "artifact_validation_detail": "The State field did not resolve to a valid lookup selection before submission.",
+          "artifact_validation_status": "blocked",
+          "confirmation_signal_count": 1,
+          "dom_snapshot_sha256": "c5491127fd8673580a0fe20b89c071bf871425ae843b6227ec52ee87fcd78338",
+          "evidence_labels": [
+            "network_submission_request",
+            "structured_result",
+            "blocked",
+            "email_delivery"
+          ],
+          "final_page_title": "junglescout.com/resources/reports/amazon-market-trends-car-parts-accessories/",
+          "final_page_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-car-parts-accessories/",
+          "html_snapshot_path": "C:/Programing/Market-lense-acquisition-remediation-20260814/out/acquisition_failure_remediation_20260814_5d4c027f/browser_downloads/www.junglescout.com/f3c51f60cd28/terminal_snapshot.html",
+          "network_events": [
+            {
+              "initiator_type": "script",
+              "signal_kind": "other",
+              "url": "https://a.opmnstr.com/app/js/25.80e08951.min.js"
+            },
+            {
+              "initiator_type": "script",
+              "signal_kind": "other",
+              "url": "https://a.opmnstr.com/app/js/15.56022016.min.js"
+            },
+            {
+              "initiator_type": "script",
+              "signal_kind": "other",
+              "url": "https://a.opmnstr.com/app/js/1.d679fc6e.min.js"
+            },
+            {
+              "initiator_type": "script",
+              "signal_kind": "other",
+              "url": "https://a.opmnstr.com/app/js/20.17375336.min.js"
+            },
+            {
+              "initiator_type": "script",
+              "signal_kind": "other",
+              "url": "https://a.opmnstr.com/app/js/6.747542fa.min.js"
+            },
+            {
+              "initiator_type": "script",
+              "signal_kind": "other",
+              "url": "https://static.zdassets.com/ekr/snippet.js?key=d43f23bb-89e8-416e-a679-8773130c9969"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "other",
+              "url": "https://ekr.zdassets.com/compose/d43f23bb-89e8-416e-a679-8773130c9969"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "other",
+              "url": "https://ws.zoominfo.com/pixel/collect"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "submission_request",
+              "url": "https://privacyportal-eu.onetrust.com/request/v1/consentreceipts"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "document_request",
+              "url": "https://www.google.com/ccm/collect?rcb=13&frm=0&apvc=0&auid=299204478.1786718078&dt=Amazon%20Market%20Data%20for%20Car%20Parts%20%26%20Accessories%20-%20Jungle%20Scout&tid=AW-971365288&en=trackOptanonEvent&dl=https%3A%2F%2Fwww.junglescout.com%2Fresources%2Freports%2Famazon-market-trends-car-parts-accessories%2F&scrsrc=www.junglescout.com&rnd=2010256177.1786718078&navt=n&npa=1&ep.optanonCategory=OneTrust%20Cookie%20Consent&ep.optanonAction=Banner%20Accept%20Cookies&did=dY2E1Nz%2CdYWJhMj&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&gtm=45892e68c1v886939216za202zd886939216xec&gcd=13l3l3l2l3l1&dma_cps=a&dma=1&tag_exp=115616985~115938466~115938468~117776796~118897920~118897930~119367802~119367810~119381664~119527019~120385423&tft=1786718108498&tfd=31277&gap.plf=5&gap.gtb=2&tids=AW-971365288&fmt=8"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "submission_request",
+              "url": "https://www.junglescout.com/qthg/d/ccm/form-data/971365288?gtm=45892e68c1phv886939216za202zd886939216xec&gcd=13l3l3l2l3l1&dma_cps=a&dma=1&tag_exp=115616985~115938466~115938468~117776796~118897920~118897930~119367802~119367810~119381664~119527019~120385423&rcb=13&did=dY2E1Nz%2CdYWJhMj&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&npa=1&frm=0&pscdl=noapi&auid=299204478.1786718078&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uamb=0&uam=&uap=Windows&uapv=19.0.0&uaw=0&ec_mode=a&gap.plf=5&gap.gtb=2&fmt=8&_uip=%3A%3A&emd=tvd.1&eme=tv.1~"
+            },
+            {
+              "initiator_type": "beacon",
+              "signal_kind": "other",
+              "url": "https://analytics.tiktok.com/api/v2/pixel/inter"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "submission_request",
+              "url": "https://www.junglescout.com/qthg/d/pagead/form-data/971365288?gtm=45892e68c1v886939216za202zd886939216xec&gcs=G111&gcd=13n3n3n2n7l1&dma_cps=a&dma=1&tag_exp=115616985~115938466~115938468~117776796~118897920~118897930~119367802~119367810~119381664~119527019~120385423&rcb=13&did=dY2E1Nz%2CdYWJhMj&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&npa=1&frm=0&pscdl=noapi&ae=a&auid=299204478.1786718078&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uamb=0&uam=&uap=Windows&uapv=19.0.0&uaw=0&gap.plf=5&gap.fsrc=1&gap.gtb=2&fmt=8"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "submission_request",
+              "url": "https://www.junglescout.com/qthg/d/ccm/form-data/971365288?gtm=45892e68c1phv886939216za202zd886939216xec&gcs=G111&gcd=13n3n3n2n7l1&dma_cps=a&dma=1&tag_exp=115616985~115938466~115938468~117776796~118897920~118897930~119367802~119367810~119381664~119527019~120385423&rcb=13&did=dY2E1Nz%2CdYWJhMj&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&npa=1&frm=0&ae=a&pscdl=noapi&auid=299204478.1786718078&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uamb=0&uam=&uap=Windows&uapv=19.0.0&uaw=0&ec_mode=a&gap.plf=5&gap.fsrc=1&gap.gtb=2&fmt=8&_uip=%3A%3A&emd=tvd.1&eme=tv.1~"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "document_request",
+              "url": "https://region1.analytics.google.com/g/collect?v=2&tid=G-9C02FJRLCF&gtm=45g92e68c1v878088732za202zb886939216zd886939216&_p=1786718077629&gcd=13l3l3l2l3l1&npa=1&dma_cps=a&dma=1&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&ecid=1196525278&_eu=EAAAAGQC&_uip=%3A%3A&are=1&cid=1010628291.1786718078&frm=0&ir=1&pscdl=noapi&rcb=0&sr=800x600&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uam=&uamb=0&uap=Windows&uapv=19.0.0&uaw=0&ul=ru-ru&ur=FR-IDF&gaf=2&_s=3&tag_exp=115616985~115938466~115938468~118897920~118897930~119367802~119367810~119527019~120385423&sid=1786718078&sct=1&seg=1&dl=https%3A%2F%2Fwww.junglescout.com%2Fresources%2Freports%2Famazon-market-trends-car-parts-accessories%2F&dt=Amazon%20Market%20Data%20for%20Car%20Parts%20%26%20Accessories%20-%20Jungle%20Scout&en=trackOptanonEvent&_ee=1&gap.plf=5&gap.gtb=2&ep.optanonCategory=OneTrust%20Cookie%20Consent&ep.optanonAction=Banner%20Accept%20Cookies&_et=200&tfd=32020"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "document_request",
+              "url": "https://region1.analytics.google.com/g/collect?v=2&tid=G-9C02FJRLCF&gtm=45g92e68c1v878088732z871490681za202zb886939216zd886939216&_p=1786718077629&_gaz=1&gcs=G111&gcd=13n3n3n2n7l1&npa=1&dma_cps=a&dma=1&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&ecid=1196525278&_eu=EAAAAGQC&_uip=%3A%3A&are=1&cid=1010628291.1786718078&frm=0&ir=1&pscdl=noapi&rcb=0&sr=800x600&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uam=&uamb=0&uap=Windows&uapv=19.0.0&uaw=0&ul=ru-ru&ur=FR-IDF&gaf=2&_s=4&tag_exp=115616985~115938466~115938468~118897920~118897930~119367802~119367810~119527019~120385423&sid=1786718078&sct=1&seg=1&dl=https%3A%2F%2Fwww.junglescout.com%2Fresources%2Freports%2Famazon-market-trends-car-parts-accessories%2F&dt=Amazon%20Market%20Data%20for%20Car%20Parts%20%26%20Accessories%20-%20Jungle%20Scout&en=form_start&gap.plf=5&gap.gtb=2&_et=758&tfd=32021"
+            },
+            {
+              "initiator_type": "img",
+              "signal_kind": "other",
+              "url": "https://www.google.fr/ads/ga-audiences?v=1&t=sr&slf_rd=1&_r=4&tid=G-9C02FJRLCF&cid=1010628291.1786718078&gtm=45g92e68c1v878088732z871490681za202zb886939216zd886939216&rcb=0&aip=1&dma=1&dma_cps=a&gcs=G111&gcd=13n3n3n2n7l1&npa=1&frm=0&tag_exp=115616985~115938466~115938468~118897920~118897930~119367802~119367810~119527019~120385423&z=524188591"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/events/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32640&ck=0&s=97ca4d7c24042a76&ref=https://www.junglescout.com/resources/reports/amazon-market-trends-car-parts-accessories/&ptid=d4d1253096dba6ba"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/jserrors/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32641&ck=0&s=97ca4d7c24042a76&ref=https://www.junglescout.com/resources/reports/amazon-market-trends-car-parts-accessories/&ptid=d4d1253096dba6ba"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/events/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32643&ck=0&s=97ca4d7c24042a76&ref=https://www.junglescout.com/resources/reports/amazon-market-trends-car-parts-accessories/&ptid=d4d1253096dba6ba"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/ins/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32644&ck=0&s=97ca4d7c24042a76&ref=https://www.junglescout.com/resources/reports/amazon-market-trends-car-parts-accessories/&ptid=d4d1253096dba6ba&at=GUMAFl8eHk4%3D"
+            },
+            {
+              "initiator_type": "script",
+              "signal_kind": "document_request",
+              "url": "https://sjrtp8.marketo.com/gw1/trw?cmd=2&cb=AITag.emailCallback&aid=junglescout&v=junglescout-1786718078675-a55b7d82&e=reports%40marketbearing.eu&trwsa.sid=junglescout-1786718078676-4477d6e2&trwv.vc=1&ma=id%3A397-PTP-191%26token%3A_mch-junglescout.com-afeb0ce12dbce9e89c9a09054d9f1c52"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "other",
+              "url": "https://api.segment.io/v1/t"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/jserrors/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=62645&ck=0&s=97ca4d7c24042a76&ref=https://www.junglescout.com/resources/reports/amazon-market-trends-car-parts-accessories/&ptid=d4d1253096dba6ba"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/ins/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=62647&ck=0&s=97ca4d7c24042a76&ref=https://www.junglescout.com/resources/reports/amazon-market-trends-car-parts-accessories/&ptid=d4d1253096dba6ba&at=GUMAFl8eHk4%3D"
+            }
+          ],
+          "observed_document_urls": [
+            "https://www.google.com/ccm/collect?rcb=13&frm=0&apvc=0&auid=299204478.1786718078&dt=Amazon%20Market%20Data%20for%20Car%20Parts%20%26%20Accessories%20-%20Jungle%20Scout&tid=AW-971365288&en=trackOptanonEvent&dl=https%3A%2F%2Fwww.junglescout.com%2Fresources%2Freports%2Famazon-market-trends-car-parts-accessories%2F&scrsrc=www.junglescout.com&rnd=2010256177.1786718078&navt=n&npa=1&ep.optanonCategory=OneTrust%20Cookie%20Consent&ep.optanonAction=Banner%20Accept%20Cookies&did=dY2E1Nz%2CdYWJhMj&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&gtm=45892e68c1v886939216za202zd886939216xec&gcd=13l3l3l2l3l1&dma_cps=a&dma=1&tag_exp=115616985~115938466~115938468~117776796~118897920~118897930~119367802~119367810~119381664~119527019~120385423&tft=1786718108498&tfd=31277&gap.plf=5&gap.gtb=2&tids=AW-971365288&fmt=8",
+            "https://region1.analytics.google.com/g/collect?v=2&tid=G-9C02FJRLCF&gtm=45g92e68c1v878088732za202zb886939216zd886939216&_p=1786718077629&gcd=13l3l3l2l3l1&npa=1&dma_cps=a&dma=1&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&ecid=1196525278&_eu=EAAAAGQC&_uip=%3A%3A&are=1&cid=1010628291.1786718078&frm=0&ir=1&pscdl=noapi&rcb=0&sr=800x600&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uam=&uamb=0&uap=Windows&uapv=19.0.0&uaw=0&ul=ru-ru&ur=FR-IDF&gaf=2&_s=3&tag_exp=115616985~115938466~115938468~118897920~118897930~119367802~119367810~119527019~120385423&sid=1786718078&sct=1&seg=1&dl=https%3A%2F%2Fwww.junglescout.com%2Fresources%2Freports%2Famazon-market-trends-car-parts-accessories%2F&dt=Amazon%20Market%20Data%20for%20Car%20Parts%20%26%20Accessories%20-%20Jungle%20Scout&en=trackOptanonEvent&_ee=1&gap.plf=5&gap.gtb=2&ep.optanonCategory=OneTrust%20Cookie%20Consent&ep.optanonAction=Banner%20Accept%20Cookies&_et=200&tfd=32020",
+            "https://region1.analytics.google.com/g/collect?v=2&tid=G-9C02FJRLCF&gtm=45g92e68c1v878088732z871490681za202zb886939216zd886939216&_p=1786718077629&_gaz=1&gcs=G111&gcd=13n3n3n2n7l1&npa=1&dma_cps=a&dma=1&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&ecid=1196525278&_eu=EAAAAGQC&_uip=%3A%3A&are=1&cid=1010628291.1786718078&frm=0&ir=1&pscdl=noapi&rcb=0&sr=800x600&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uam=&uamb=0&uap=Windows&uapv=19.0.0&uaw=0&ul=ru-ru&ur=FR-IDF&gaf=2&_s=4&tag_exp=115616985~115938466~115938468~118897920~118897930~119367802~119367810~119527019~120385423&sid=1786718078&sct=1&seg=1&dl=https%3A%2F%2Fwww.junglescout.com%2Fresources%2Freports%2Famazon-market-trends-car-parts-accessories%2F&dt=Amazon%20Market%20Data%20for%20Car%20Parts%20%26%20Accessories%20-%20Jungle%20Scout&en=form_start&gap.plf=5&gap.gtb=2&_et=758&tfd=32021",
+            "https://bam.nr-data.net/events/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32640&ck=0&s=97ca4d7c24042a76&ref=https://www.junglescout.com/resources/reports/amazon-market-trends-car-parts-accessories/&ptid=d4d1253096dba6ba",
+            "https://bam.nr-data.net/jserrors/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32641&ck=0&s=97ca4d7c24042a76&ref=https://www.junglescout.com/resources/reports/amazon-market-trends-car-parts-accessories/&ptid=d4d1253096dba6ba",
+            "https://bam.nr-data.net/events/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32643&ck=0&s=97ca4d7c24042a76&ref=https://www.junglescout.com/resources/reports/amazon-market-trends-car-parts-accessories/&ptid=d4d1253096dba6ba",
+            "https://bam.nr-data.net/ins/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32644&ck=0&s=97ca4d7c24042a76&ref=https://www.junglescout.com/resources/reports/amazon-market-trends-car-parts-accessories/&ptid=d4d1253096dba6ba&at=GUMAFl8eHk4%3D",
+            "https://sjrtp8.marketo.com/gw1/trw?cmd=2&cb=AITag.emailCallback&aid=junglescout&v=junglescout-1786718078675-a55b7d82&e=reports%40marketbearing.eu&trwsa.sid=junglescout-1786718078676-4477d6e2&trwv.vc=1&ma=id%3A397-PTP-191%26token%3A_mch-junglescout.com-afeb0ce12dbce9e89c9a09054d9f1c52",
+            "https://bam.nr-data.net/jserrors/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=62645&ck=0&s=97ca4d7c24042a76&ref=https://www.junglescout.com/resources/reports/amazon-market-trends-car-parts-accessories/&ptid=d4d1253096dba6ba",
+            "https://bam.nr-data.net/ins/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=62647&ck=0&s=97ca4d7c24042a76&ref=https://www.junglescout.com/resources/reports/amazon-market-trends-car-parts-accessories/&ptid=d4d1253096dba6ba&at=GUMAFl8eHk4%3D",
+            "https://www.junglescout.com/resources/reports/amazon-market-trends-car-parts-accessories/"
+          ],
+          "screenshot_path": "C:/Programing/Market-lense-acquisition-remediation-20260814/out/acquisition_failure_remediation_20260814_5d4c027f/browser_downloads/www.junglescout.com/f3c51f60cd28/terminal_screenshot.png",
+          "traversed_page_urls": [
+            "about:blank",
+            "https://www.junglescout.com/resources/reports/amazon-market-trends-car-parts-accessories/"
+          ],
+          "visited_url_timeline": [
+            "https://www.junglescout.com/resources/reports/amazon-market-trends-car-parts-accessories/",
+            "about:blank"
+          ]
+        },
+        "used_memory_route": true
+      },
+      "artifact_verification": {
+        "acquisition_method": "browser_email_form",
+        "artifact_exists": false,
+        "drive_persisted": false,
+        "retained_artifact_format": "none",
+        "route_verified": false,
+        "signature_valid": null,
+        "size_bytes": 0,
+        "source_kind": "unknown",
+        "verified_usable_artifact": false
+      },
+      "attempt_id": "diagnostic:fac_0a2d080a0bcc92e54f50e171",
+      "canonical_candidate_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-car-parts-accessories",
+      "completed_at": "2026-08-14T14:37:47.354769Z",
+      "configuration_hash": "e11527408ddd16e27001389434096e6916a200d350a6177d0408ac420830c242",
+      "duration_seconds": 216.927,
+      "failure_candidate_id": "fac_0a2d080a0bcc92e54f50e171",
+      "parent_attempt": "",
+      "phase": "diagnostic_before_fixes",
+      "policy_hash": "current_head_default_policy",
+      "producer_git_sha": "5d4c027fb17f9ec650a0b188df24db63ab077371",
+      "publisher_id": "publisher:jungle-scout",
+      "publisher_name": "Jungle Scout",
+      "resource_attempts": [
+        {
+          "attempt_id": "76983dc42eec7ba7b8ab808f756a8cf2070712d4ae2ab042977c399565eb9492",
+          "avoided_operations_json": "[]",
+          "browser_launches": 18,
+          "browser_model_calls": 104,
+          "browser_steps": 6,
+          "cached_input_tokens": 819840,
+          "completed_at_utc": "2026-08-14T10:28:21Z",
+          "created_at": 1786703301,
+          "drive_reads": 0,
+          "drive_writes": 13,
+          "duration_seconds": 108.765,
+          "elapsed_ms": 108765,
+          "estimated_cost_usd": 0.556087,
+          "incomplete_fields_json": "[]",
+          "input_tokens": 2087351,
+          "mailbox_reads": 43,
+          "normalized_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-car-parts-accessories",
+          "output_tokens": 109355,
+          "page_navigations": 0,
+          "publisher_id": "publisher:jungle-scout",
+          "retry_count": 0,
+          "revalidation_override": 0,
+          "route_family": "browser_email_form",
+          "route_policy_version": "1.0",
+          "schema_version": "1.0",
+          "screenshots": 6,
+          "source_identity_id": "",
+          "source_identity_status": "unresolved",
+          "source_policy_compatibility_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "started_at_utc": "2026-08-14T10:26:33Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred",
+          "updated_at": 1786703301,
+          "verified_artifact_hash": ""
+        },
+        {
+          "attempt_id": "4cbb4b03c91ee6ecef77b1a7e3ad060b0f592c45ada95a07914f37ff168d174a",
+          "avoided_operations_json": "[]",
+          "browser_launches": 5,
+          "browser_model_calls": 16,
+          "browser_steps": 5,
+          "cached_input_tokens": 106112,
+          "completed_at_utc": "2026-08-14T12:36:44Z",
+          "created_at": 1786711004,
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 95.938,
+          "elapsed_ms": 95938,
+          "estimated_cost_usd": 0.099852,
+          "incomplete_fields_json": "[]",
+          "input_tokens": 321674,
+          "mailbox_reads": 5,
+          "normalized_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-car-parts-accessories",
+          "output_tokens": 21655,
+          "page_navigations": 0,
+          "publisher_id": "publisher:jungle-scout",
+          "retry_count": 0,
+          "revalidation_override": 0,
+          "route_family": "browser_email_form",
+          "route_policy_version": "1.0",
+          "schema_version": "1.0",
+          "screenshots": 5,
+          "source_identity_id": "",
+          "source_identity_status": "unresolved",
+          "source_policy_compatibility_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "started_at_utc": "2026-08-14T12:35:08Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred",
+          "updated_at": 1786711004,
+          "verified_artifact_hash": ""
+        },
+        {
+          "attempt_id": "04c5a77507b5ca11eeb75afe461111ef3cb73d3dc69235f1291fa7087355127a",
+          "avoided_operations_json": "[]",
+          "browser_launches": 5,
+          "browser_model_calls": 48,
+          "browser_steps": 1,
+          "cached_input_tokens": 392832,
+          "completed_at_utc": "2026-08-14T14:37:47Z",
+          "created_at": 1786718267,
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 216.915,
+          "elapsed_ms": 216915,
+          "estimated_cost_usd": 0.26989,
+          "incomplete_fields_json": "[]",
+          "input_tokens": 1039908,
+          "mailbox_reads": 5,
+          "normalized_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-car-parts-accessories",
+          "output_tokens": 49150,
+          "page_navigations": 0,
+          "publisher_id": "publisher:jungle-scout",
+          "retry_count": 0,
+          "revalidation_override": 0,
+          "route_family": "browser_email_form",
+          "route_policy_version": "1.0",
+          "schema_version": "1.0",
+          "screenshots": 1,
+          "source_identity_id": "",
+          "source_identity_status": "unresolved",
+          "source_policy_compatibility_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "started_at_utc": "2026-08-14T14:34:10Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred",
+          "updated_at": 1786718267,
+          "verified_artifact_hash": ""
+        }
+      ],
+      "run_id": "d840bb9a-a991-4a43-b664-7a44fd72db84",
+      "source_identity_id": "",
+      "source_record_id": "",
+      "started_at": "2026-08-14T14:34:10.432641Z"
+    },
+    {
+      "acquisition_result": {
+        "blocked_reason": "blocked_unknown_required_enum",
+        "blocked_reason_detail": "A visible required 'Organization Type' combobox remained unset and the control is not programmatically accessible from the current page snapshot. Attempts to set the select via evaluate()/DOM dispatch failed and no option list was exposed to choose from; therefore the route is blocked by an unknown required enum.",
+        "confirmation": {
+          "confirmation_score": 0,
+          "final_page_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-cosmetics/",
+          "form_disappeared": false,
+          "signal_labels": [],
+          "submit_button_state": "unchanged",
+          "url_changed": false
+        },
+        "downloaded_file_path": "",
+        "downloaded_mime_type": "",
+        "downloaded_size_bytes": 0,
+        "drive_uploads": [],
+        "encountered_form_fields": [
+          "First Name",
+          "Last Name",
+          "Work Email Address",
+          "Organization Type"
+        ],
+        "final_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-cosmetics/",
+        "onsite_capture_format": "",
+        "onsite_capture_path": "",
+        "onsite_completeness_status": "",
+        "onsite_page_count": 0,
+        "outcome": "email_required",
+        "resolved_target_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-cosmetics",
+        "route_family": "browser_email_form",
+        "route_kind": "email_delivery",
+        "route_status": "inferred",
+        "route_steps": [
+          {
+            "action": "input",
+            "expected_evidence": [
+              "page_info",
+              "screenshot"
+            ],
+            "index": 69,
+            "observed_evidence": [
+              "page_info",
+              "screenshot"
+            ],
+            "result": "Filled with configured value '***REDACTED***'.",
+            "target_role": "input",
+            "target_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-cosmetics",
+            "verification_status": "verified"
+          },
+          {
+            "action": "input",
+            "expected_evidence": [
+              "page_info",
+              "screenshot"
+            ],
+            "index": 70,
+            "observed_evidence": [
+              "page_info",
+              "screenshot"
+            ],
+            "result": "Filled with configured value '***REDACTED***'.",
+            "target_role": "input",
+            "target_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-cosmetics",
+            "verification_status": "verified"
+          },
+          {
+            "action": "input",
+            "expected_evidence": [
+              "page_info",
+              "screenshot"
+            ],
+            "index": 71,
+            "observed_evidence": [
+              "page_info",
+              "screenshot"
+            ],
+            "result": "Filled with configured value '***REDACTED***'.",
+            "target_role": "input[type=email]",
+            "target_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-cosmetics",
+            "verification_status": "verified"
+          },
+          {
+            "action": "click",
+            "expected_evidence": [
+              "screenshot",
+              "confirmation_text"
+            ],
+            "index": 2239,
+            "observed_evidence": [
+              "screenshot",
+              "confirmation_text"
+            ],
+            "result": "Click executed; submission blocked by visible validation indicating required 'Organization Type' is unset. Error box shown: 'There was an error submitting your request, please contact support.'",
+            "target_role": "button",
+            "target_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-cosmetics",
+            "verification_status": "verified"
+          },
+          {
+            "action": "evaluate",
+            "expected_evidence": [
+              "page_info",
+              "screenshot",
+              "dom_hash"
+            ],
+            "index": 4,
+            "observed_evidence": [
+              "page_info",
+              "screenshot",
+              "dom_hash"
+            ],
+            "result": "JS evaluate attempts failed (returned not-found-or-not-set and JS execution errors). The visible Organization Type placeholder remained 'Select organization type\u2026' and no option list was exposed for selection.",
+            "target_role": "dom_script",
+            "target_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-cosmetics",
+            "verification_status": "verified"
+          }
+        ],
+        "terminal_evidence": {
+          "artifact_kind": "email_delivery",
+          "artifact_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-cosmetics",
+          "artifact_validation_detail": "A visible required 'Organization Type' combobox remained unset and the control is not programmatically accessible from the current page snapshot. Attempts to set the select via evaluate()/DOM dispatch failed and no option list was exposed to choose from; therefore the route is blocked by an unknown required enum.",
+          "artifact_validation_status": "blocked",
+          "confirmation_signal_count": 0,
+          "dom_snapshot_sha256": "b66b0078241b1b8d96d27b3654323fda19c50f1fe39e4f49a2e37e10f9c89e23",
+          "evidence_labels": [
+            "structured_result",
+            "blocked",
+            "email_delivery"
+          ],
+          "final_page_title": "junglescout.com/resources/reports/amazon-market-trends-cosmetics/",
+          "final_page_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-cosmetics/",
+          "html_snapshot_path": "C:/Programing/Market-lense-acquisition-remediation-20260814/out/acquisition_failure_remediation_20260814_5d4c027f/browser_downloads/www.junglescout.com/02097af6130b/terminal_snapshot.html",
+          "network_events": [
+            {
+              "initiator_type": "script",
+              "signal_kind": "other",
+              "url": "https://a.opmnstr.com/app/js/10.58a186bd.min.js"
+            },
+            {
+              "initiator_type": "script",
+              "signal_kind": "other",
+              "url": "https://a.opmnstr.com/app/js/27.d7dd0654.min.js"
+            },
+            {
+              "initiator_type": "script",
+              "signal_kind": "other",
+              "url": "https://a.opmnstr.com/app/js/25.80e08951.min.js"
+            },
+            {
+              "initiator_type": "script",
+              "signal_kind": "other",
+              "url": "https://a.opmnstr.com/app/js/15.56022016.min.js"
+            },
+            {
+              "initiator_type": "script",
+              "signal_kind": "other",
+              "url": "https://a.opmnstr.com/app/js/1.d679fc6e.min.js"
+            },
+            {
+              "initiator_type": "script",
+              "signal_kind": "other",
+              "url": "https://a.opmnstr.com/app/js/20.17375336.min.js"
+            },
+            {
+              "initiator_type": "script",
+              "signal_kind": "other",
+              "url": "https://a.opmnstr.com/app/js/6.747542fa.min.js"
+            },
+            {
+              "initiator_type": "script",
+              "signal_kind": "other",
+              "url": "https://static.zdassets.com/ekr/snippet.js?key=d43f23bb-89e8-416e-a679-8773130c9969"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "other",
+              "url": "https://ekr.zdassets.com/compose/d43f23bb-89e8-416e-a679-8773130c9969"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "other",
+              "url": "https://ws.zoominfo.com/pixel/collect"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "submission_request",
+              "url": "https://privacyportal-eu.onetrust.com/request/v1/consentreceipts"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "document_request",
+              "url": "https://www.google.com/ccm/collect?rcb=16&frm=0&apvc=0&auid=611570987.1786718295&dt=Amazon%20Market%20Data%20for%20Cosmetic%20Products%20-%20Jungle%20Scout&tid=AW-971365288&en=trackOptanonEvent&dl=https%3A%2F%2Fwww.junglescout.com%2Fresources%2Freports%2Famazon-market-trends-cosmetics%2F&scrsrc=www.junglescout.com&rnd=1862235188.1786718295&navt=n&npa=1&ep.optanonCategory=OneTrust%20Cookie%20Consent&ep.optanonAction=Banner%20Accept%20Cookies&did=dY2E1Nz%2CdYWJhMj&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&gtm=45892e68c1v886939216za200zd886939216xec&gcd=13l3l3l2l3l1&dma_cps=a&dma=1&tag_exp=115616985~115938465~115938468~118897920~118897930~119367802~119367810~119527019~120125305~120385422&tft=1786718317712&tfd=23822&gap.plf=5&gap.gtb=2&tids=AW-971365288&fmt=8"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "submission_request",
+              "url": "https://www.junglescout.com/qthg/d/ccm/form-data/971365288?gtm=45892e68c1phv886939216za200zd886939216xec&gcd=13l3l3l2l3l1&dma_cps=a&dma=1&tag_exp=115616985~115938465~115938468~118897920~118897930~119367802~119367810~119527019~120125305~120385422&rcb=16&did=dY2E1Nz%2CdYWJhMj&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&npa=1&frm=0&pscdl=noapi&auid=611570987.1786718295&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uamb=0&uam=&uap=Windows&uapv=19.0.0&uaw=0&ec_mode=a&gap.plf=5&gap.gtb=2&fmt=8&_uip=%3A%3A&emd=tvd.1&eme=tv.1~"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "submission_request",
+              "url": "https://www.junglescout.com/qthg/d/pagead/form-data/971365288?gtm=45892e68c1v886939216za200zd886939216xec&gcs=G111&gcd=13n3n3n2n7l1&dma_cps=a&dma=1&tag_exp=115616985~115938465~115938468~118897920~118897930~119367802~119367810~119527019~120125305~120385422&rcb=16&did=dY2E1Nz%2CdYWJhMj&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&npa=1&frm=0&pscdl=noapi&ae=a&auid=611570987.1786718295&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uamb=0&uam=&uap=Windows&uapv=19.0.0&uaw=0&gap.plf=5&gap.fsrc=1&gap.gtb=2&fmt=8"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "submission_request",
+              "url": "https://www.junglescout.com/qthg/d/ccm/form-data/971365288?gtm=45892e68c1phv886939216za200zd886939216xec&gcs=G111&gcd=13n3n3n2n7l1&dma_cps=a&dma=1&tag_exp=115616985~115938465~115938468~118897920~118897930~119367802~119367810~119527019~120125305~120385422&rcb=16&did=dY2E1Nz%2CdYWJhMj&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&npa=1&frm=0&ae=a&pscdl=noapi&auid=611570987.1786718295&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uamb=0&uam=&uap=Windows&uapv=19.0.0&uaw=0&ec_mode=a&gap.plf=5&gap.fsrc=1&gap.gtb=2&fmt=8&_uip=%3A%3A&emd=tvd.1&eme=tv.1~"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "document_request",
+              "url": "https://region1.analytics.google.com/g/collect?v=2&tid=G-9C02FJRLCF&gtm=45g92e68c1v878088732za200zb886939216zd886939216&_p=1786718294152&gcd=13l3l3l2l3l1&npa=1&dma_cps=a&dma=1&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&ecid=1879128897&_eu=EAAAAGQC&_uip=%3A%3A&are=1&cid=1862775947.1786718295&frm=0&ir=1&pscdl=noapi&rcb=10&sr=800x600&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uam=&uamb=0&uap=Windows&uapv=19.0.0&uaw=0&ul=ru-ru&ur=FR-IDF&gaf=2&_s=3&tag_exp=115938465~115938469~118897920~118897930~119367802~119367810~119527019~120385422&sid=1786718295&sct=1&seg=1&dl=https%3A%2F%2Fwww.junglescout.com%2Fresources%2Freports%2Famazon-market-trends-cosmetics%2F&dt=Amazon%20Market%20Data%20for%20Cosmetic%20Products%20-%20Jungle%20Scout&en=trackOptanonEvent&_ee=1&gap.gtb=2&ep.optanonCategory=OneTrust%20Cookie%20Consent&ep.optanonAction=Banner%20Accept%20Cookies&_et=193&tfd=24554"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "document_request",
+              "url": "https://region1.analytics.google.com/g/collect?v=2&tid=G-9C02FJRLCF&gtm=45g92e68c1v878088732z871490681za200zb886939216zd886939216&_p=1786718294152&_gaz=1&gcs=G111&gcd=13n3n3n2n7l1&npa=1&dma_cps=a&dma=1&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&ecid=1879128897&_eu=EAAAAGQC&_uip=%3A%3A&are=1&cid=1862775947.1786718295&frm=0&ir=1&pscdl=noapi&rcb=10&sr=800x600&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uam=&uamb=0&uap=Windows&uapv=19.0.0&uaw=0&ul=ru-ru&ur=FR-IDF&gaf=2&_s=4&tag_exp=115938465~115938469~118897920~118897930~119367802~119367810~119527019~120385422&sid=1786718295&sct=1&seg=1&dl=https%3A%2F%2Fwww.junglescout.com%2Fresources%2Freports%2Famazon-market-trends-cosmetics%2F&dt=Amazon%20Market%20Data%20for%20Cosmetic%20Products%20-%20Jungle%20Scout&en=form_start&gap.gtb=2&_et=743&tfd=24555"
+            },
+            {
+              "initiator_type": "img",
+              "signal_kind": "other",
+              "url": "https://www.google.fr/ads/ga-audiences?v=1&t=sr&slf_rd=1&_r=4&tid=G-9C02FJRLCF&cid=1862775947.1786718295&gtm=45g92e68c1v878088732z871490681za200zb886939216zd886939216&rcb=10&aip=1&dma=1&dma_cps=a&gcs=G111&gcd=13n3n3n2n7l1&npa=1&frm=0&tag_exp=115938465~115938469~118897920~118897930~119367802~119367810~119527019~120385422&z=1387640512"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/browser/blobs?browser_monitoring_key=NRJS-11cc7dadda82ce36b05&type=BrowserSessionChunk&app_id=1723085105&protocol_version=0&timestamp=1786718294959&attributes=entityGuid%3DMzIwOTg2OXxCUk9XU0VSfEFQUExJQ0FUSU9OfDE3MjMwODYzNDc%26harvestId%3Df8fb209b279ce663_61a4365ff5db6b25_4%26trace.firstTimestamp%3D1786718294959%26trace.lastTimestamp%3D1786718319272%26trace.nodes%3D180%26trace.originTimestamp%3D1786718293855%26agentVersion%3D1.320.0%26ptid%3D61a4365ff5db6b25%26session%3Df8fb209b279ce663%26currentUrl%3Dhttps://www.junglescout.com/resources/reports/amazon-market-trends-cosmetics/"
+            },
+            {
+              "initiator_type": "script",
+              "signal_kind": "document_request",
+              "url": "https://sjrtp8.marketo.com/gw1/trw?cmd=2&cb=AITag.emailCallback&aid=junglescout&v=junglescout-1786718295185-941189b4&e=reports%40marketbearing.eu&trwsa.sid=junglescout-1786718295193-a1e9bc17&trwv.vc=1&ma=id%3A397-PTP-191%26token%3A_mch-junglescout.com-02adab38026a714970f9aa9ae2d3ef62"
+            },
+            {
+              "initiator_type": "fetch",
+              "signal_kind": "other",
+              "url": "https://api.segment.io/v1/t"
+            },
+            {
+              "initiator_type": "beacon",
+              "signal_kind": "other",
+              "url": "https://analytics.tiktok.com/api/v2/pixel/inter"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/events/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32446&ck=0&s=f8fb209b279ce663&ref=https://www.junglescout.com/resources/reports/amazon-market-trends-cosmetics/&ptid=61a4365ff5db6b25&ht=1"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/jserrors/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32446&ck=0&s=f8fb209b279ce663&ref=https://www.junglescout.com/resources/reports/amazon-market-trends-cosmetics/&ptid=61a4365ff5db6b25&ht=1"
+            },
+            {
+              "initiator_type": "xmlhttprequest",
+              "signal_kind": "document_request",
+              "url": "https://bam.nr-data.net/events/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32448&ck=0&s=f8fb209b279ce663&ref=https://www.junglescout.com/resources/reports/amazon-market-trends-cosmetics/&ptid=61a4365ff5db6b25&ht=1"
+            }
+          ],
+          "observed_document_urls": [
+            "https://www.google.com/ccm/collect?rcb=16&frm=0&apvc=0&auid=611570987.1786718295&dt=Amazon%20Market%20Data%20for%20Cosmetic%20Products%20-%20Jungle%20Scout&tid=AW-971365288&en=trackOptanonEvent&dl=https%3A%2F%2Fwww.junglescout.com%2Fresources%2Freports%2Famazon-market-trends-cosmetics%2F&scrsrc=www.junglescout.com&rnd=1862235188.1786718295&navt=n&npa=1&ep.optanonCategory=OneTrust%20Cookie%20Consent&ep.optanonAction=Banner%20Accept%20Cookies&did=dY2E1Nz%2CdYWJhMj&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&gtm=45892e68c1v886939216za200zd886939216xec&gcd=13l3l3l2l3l1&dma_cps=a&dma=1&tag_exp=115616985~115938465~115938468~118897920~118897930~119367802~119367810~119527019~120125305~120385422&tft=1786718317712&tfd=23822&gap.plf=5&gap.gtb=2&tids=AW-971365288&fmt=8",
+            "https://region1.analytics.google.com/g/collect?v=2&tid=G-9C02FJRLCF&gtm=45g92e68c1v878088732za200zb886939216zd886939216&_p=1786718294152&gcd=13l3l3l2l3l1&npa=1&dma_cps=a&dma=1&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&ecid=1879128897&_eu=EAAAAGQC&_uip=%3A%3A&are=1&cid=1862775947.1786718295&frm=0&ir=1&pscdl=noapi&rcb=10&sr=800x600&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uam=&uamb=0&uap=Windows&uapv=19.0.0&uaw=0&ul=ru-ru&ur=FR-IDF&gaf=2&_s=3&tag_exp=115938465~115938469~118897920~118897930~119367802~119367810~119527019~120385422&sid=1786718295&sct=1&seg=1&dl=https%3A%2F%2Fwww.junglescout.com%2Fresources%2Freports%2Famazon-market-trends-cosmetics%2F&dt=Amazon%20Market%20Data%20for%20Cosmetic%20Products%20-%20Jungle%20Scout&en=trackOptanonEvent&_ee=1&gap.gtb=2&ep.optanonCategory=OneTrust%20Cookie%20Consent&ep.optanonAction=Banner%20Accept%20Cookies&_et=193&tfd=24554",
+            "https://region1.analytics.google.com/g/collect?v=2&tid=G-9C02FJRLCF&gtm=45g92e68c1v878088732z871490681za200zb886939216zd886939216&_p=1786718294152&_gaz=1&gcs=G111&gcd=13n3n3n2n7l1&npa=1&dma_cps=a&dma=1&gdid=dY2E1Nz.dYWJhMj.dNzQzZD&ecid=1879128897&_eu=EAAAAGQC&_uip=%3A%3A&are=1&cid=1862775947.1786718295&frm=0&ir=1&pscdl=noapi&rcb=10&sr=800x600&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CGoogle%2520Chrome%3B151.0.7922.110%7CChromium%3B151.0.7922.110&uam=&uamb=0&uap=Windows&uapv=19.0.0&uaw=0&ul=ru-ru&ur=FR-IDF&gaf=2&_s=4&tag_exp=115938465~115938469~118897920~118897930~119367802~119367810~119527019~120385422&sid=1786718295&sct=1&seg=1&dl=https%3A%2F%2Fwww.junglescout.com%2Fresources%2Freports%2Famazon-market-trends-cosmetics%2F&dt=Amazon%20Market%20Data%20for%20Cosmetic%20Products%20-%20Jungle%20Scout&en=form_start&gap.gtb=2&_et=743&tfd=24555",
+            "https://bam.nr-data.net/browser/blobs?browser_monitoring_key=NRJS-11cc7dadda82ce36b05&type=BrowserSessionChunk&app_id=1723085105&protocol_version=0&timestamp=1786718294959&attributes=entityGuid%3DMzIwOTg2OXxCUk9XU0VSfEFQUExJQ0FUSU9OfDE3MjMwODYzNDc%26harvestId%3Df8fb209b279ce663_61a4365ff5db6b25_4%26trace.firstTimestamp%3D1786718294959%26trace.lastTimestamp%3D1786718319272%26trace.nodes%3D180%26trace.originTimestamp%3D1786718293855%26agentVersion%3D1.320.0%26ptid%3D61a4365ff5db6b25%26session%3Df8fb209b279ce663%26currentUrl%3Dhttps://www.junglescout.com/resources/reports/amazon-market-trends-cosmetics/",
+            "https://sjrtp8.marketo.com/gw1/trw?cmd=2&cb=AITag.emailCallback&aid=junglescout&v=junglescout-1786718295185-941189b4&e=reports%40marketbearing.eu&trwsa.sid=junglescout-1786718295193-a1e9bc17&trwv.vc=1&ma=id%3A397-PTP-191%26token%3A_mch-junglescout.com-02adab38026a714970f9aa9ae2d3ef62",
+            "https://bam.nr-data.net/events/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32446&ck=0&s=f8fb209b279ce663&ref=https://www.junglescout.com/resources/reports/amazon-market-trends-cosmetics/&ptid=61a4365ff5db6b25&ht=1",
+            "https://bam.nr-data.net/jserrors/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32446&ck=0&s=f8fb209b279ce663&ref=https://www.junglescout.com/resources/reports/amazon-market-trends-cosmetics/&ptid=61a4365ff5db6b25&ht=1",
+            "https://bam.nr-data.net/events/1/NRJS-11cc7dadda82ce36b05?a=1723085105&v=1.320.0&to=NQQDYBcEDUBZUUVdVwxOIFcRDAxdF1tfUF0a&rst=32448&ck=0&s=f8fb209b279ce663&ref=https://www.junglescout.com/resources/reports/amazon-market-trends-cosmetics/&ptid=61a4365ff5db6b25&ht=1",
+            "https://www.junglescout.com/resources/reports/amazon-market-trends-cosmetics",
+            "https://www.junglescout.com/resources/reports/amazon-market-trends-cosmetics/"
+          ],
+          "screenshot_path": "C:/Programing/Market-lense-acquisition-remediation-20260814/out/acquisition_failure_remediation_20260814_5d4c027f/browser_downloads/www.junglescout.com/02097af6130b/terminal_screenshot.png",
+          "traversed_page_urls": [
+            "https://www.junglescout.com/resources/reports/amazon-market-trends-cosmetics"
+          ],
+          "visited_url_timeline": [
+            "https://www.junglescout.com/resources/reports/amazon-market-trends-cosmetics"
+          ]
+        },
+        "used_memory_route": true
+      },
+      "artifact_verification": {
+        "acquisition_method": "browser_email_form",
+        "artifact_exists": false,
+        "drive_persisted": false,
+        "retained_artifact_format": "none",
+        "route_verified": false,
+        "signature_valid": null,
+        "size_bytes": 0,
+        "source_kind": "unknown",
+        "verified_usable_artifact": false
+      },
+      "attempt_id": "diagnostic:fac_05b9e5cae6b0bbaf35801e27",
+      "canonical_candidate_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-cosmetics",
+      "completed_at": "2026-08-14T14:40:49.190864Z",
+      "configuration_hash": "e11527408ddd16e27001389434096e6916a200d350a6177d0408ac420830c242",
+      "duration_seconds": 181.835,
+      "failure_candidate_id": "fac_05b9e5cae6b0bbaf35801e27",
+      "parent_attempt": "",
+      "phase": "diagnostic_before_fixes",
+      "policy_hash": "current_head_default_policy",
+      "producer_git_sha": "5d4c027fb17f9ec650a0b188df24db63ab077371",
+      "publisher_id": "publisher:jungle-scout",
+      "publisher_name": "Jungle Scout",
+      "resource_attempts": [
+        {
+          "attempt_id": "da95c8309a8315c9dcdae13feee749d69c2f6e77b064c201ad0282633545cab1",
+          "avoided_operations_json": "[]",
+          "browser_launches": 19,
+          "browser_model_calls": 107,
+          "browser_steps": 5,
+          "cached_input_tokens": 844416,
+          "completed_at_utc": "2026-08-14T10:29:42Z",
+          "created_at": 1786703382,
+          "drive_reads": 0,
+          "drive_writes": 13,
+          "duration_seconds": 80.717,
+          "elapsed_ms": 80717,
+          "estimated_cost_usd": 0.572261,
+          "incomplete_fields_json": "[]",
+          "input_tokens": 2146478,
+          "mailbox_reads": 44,
+          "normalized_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-cosmetics",
+          "output_tokens": 112816,
+          "page_navigations": 0,
+          "publisher_id": "publisher:jungle-scout",
+          "retry_count": 0,
+          "revalidation_override": 0,
+          "route_family": "browser_email_form",
+          "route_policy_version": "1.0",
+          "schema_version": "1.0",
+          "screenshots": 5,
+          "source_identity_id": "",
+          "source_identity_status": "unresolved",
+          "source_policy_compatibility_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "started_at_utc": "2026-08-14T10:28:21Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred",
+          "updated_at": 1786703382,
+          "verified_artifact_hash": ""
+        },
+        {
+          "attempt_id": "d3a3f17f9963773512aad12debf31e90e5b7d1dae8b2a8f90c146437c566fc80",
+          "avoided_operations_json": "[]",
+          "browser_launches": 6,
+          "browser_model_calls": 19,
+          "browser_steps": 5,
+          "cached_input_tokens": 130688,
+          "completed_at_utc": "2026-08-14T12:38:10Z",
+          "created_at": 1786711090,
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 85.761,
+          "elapsed_ms": 85761,
+          "estimated_cost_usd": 0.116792,
+          "incomplete_fields_json": "[]",
+          "input_tokens": 381575,
+          "mailbox_reads": 6,
+          "normalized_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-cosmetics",
+          "output_tokens": 25402,
+          "page_navigations": 1,
+          "publisher_id": "publisher:jungle-scout",
+          "retry_count": 0,
+          "revalidation_override": 0,
+          "route_family": "browser_email_form",
+          "route_policy_version": "1.0",
+          "schema_version": "1.0",
+          "screenshots": 5,
+          "source_identity_id": "",
+          "source_identity_status": "unresolved",
+          "source_policy_compatibility_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "started_at_utc": "2026-08-14T12:36:44Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred",
+          "updated_at": 1786711090,
+          "verified_artifact_hash": ""
+        },
+        {
+          "attempt_id": "10e629331576375fc71685a54b7701586e5cc4ac2cabf2c71f07fb333a081945",
+          "avoided_operations_json": "[]",
+          "browser_launches": 6,
+          "browser_model_calls": 54,
+          "browser_steps": 5,
+          "cached_input_tokens": 443904,
+          "completed_at_utc": "2026-08-14T14:40:49Z",
+          "created_at": 1786718449,
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 181.822,
+          "elapsed_ms": 181822,
+          "estimated_cost_usd": 0.309907,
+          "incomplete_fields_json": "[]",
+          "input_tokens": 1165382,
+          "mailbox_reads": 6,
+          "normalized_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-cosmetics",
+          "output_tokens": 59220,
+          "page_navigations": 0,
+          "publisher_id": "publisher:jungle-scout",
+          "retry_count": 0,
+          "revalidation_override": 0,
+          "route_family": "browser_email_form",
+          "route_policy_version": "1.0",
+          "schema_version": "1.0",
+          "screenshots": 5,
+          "source_identity_id": "",
+          "source_identity_status": "unresolved",
+          "source_policy_compatibility_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "started_at_utc": "2026-08-14T14:37:47Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred",
+          "updated_at": 1786718449,
+          "verified_artifact_hash": ""
+        }
+      ],
+      "run_id": "d840bb9a-a991-4a43-b664-7a44fd72db84",
+      "source_identity_id": "",
+      "source_record_id": "",
+      "started_at": "2026-08-14T14:37:47.359229Z"
+    }
+  ],
+  "run_id": "d840bb9a-a991-4a43-b664-7a44fd72db84",
+  "schema_version": "1.0"
+}
