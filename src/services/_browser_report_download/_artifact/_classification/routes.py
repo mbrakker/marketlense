@@ -289,6 +289,20 @@ def _resolve_route_steps(
                     raw_step.observed_evidence
                 ),
                 verification_status=str(raw_step.verification_status or "").strip(),
+                locator_role=str(raw_step.locator_role or "").strip(),
+                locator_name=str(raw_step.locator_name or "").strip(),
+                locator_label=str(raw_step.locator_label or "").strip(),
+                locator_field_name=str(raw_step.locator_field_name or "").strip(),
+                locator_data_attribute=str(
+                    raw_step.locator_data_attribute or ""
+                ).strip(),
+                locator_css=str(raw_step.locator_css or "").strip(),
+                locator_text=str(raw_step.locator_text or "").strip(),
+                identity_field_reference=str(
+                    raw_step.identity_field_reference or ""
+                ).strip(),
+                expected_url_contains=str(raw_step.expected_url_contains or "").strip(),
+                expected_text=str(raw_step.expected_text or "").strip(),
             )
         )
     if steps:
@@ -401,6 +415,20 @@ def _normalize_agent_route_steps_for_completeness(
                     raw_step.observed_evidence
                 ),
                 verification_status=str(raw_step.verification_status or "").strip(),
+                locator_role=str(raw_step.locator_role or "").strip(),
+                locator_name=str(raw_step.locator_name or "").strip(),
+                locator_label=str(raw_step.locator_label or "").strip(),
+                locator_field_name=str(raw_step.locator_field_name or "").strip(),
+                locator_data_attribute=str(
+                    raw_step.locator_data_attribute or ""
+                ).strip(),
+                locator_css=str(raw_step.locator_css or "").strip(),
+                locator_text=str(raw_step.locator_text or "").strip(),
+                identity_field_reference=str(
+                    raw_step.identity_field_reference or ""
+                ).strip(),
+                expected_url_contains=str(raw_step.expected_url_contains or "").strip(),
+                expected_text=str(raw_step.expected_text or "").strip(),
             )
         )
     return steps

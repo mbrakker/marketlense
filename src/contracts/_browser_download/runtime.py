@@ -87,6 +87,60 @@ class BrowserDownloadRouteStep:
             "doc": "Post-action verification status for this step: `verified`, `missing`, or `not_applicable`."
         },
     )
+    locator_role: str = field(
+        default="",
+        metadata={
+            "doc": "Observed accessible role for the acted-on control, when available."
+        },
+    )
+    locator_name: str = field(
+        default="",
+        metadata={
+            "doc": "Observed accessible name for a role locator, when available."
+        },
+    )
+    locator_label: str = field(
+        default="",
+        metadata={
+            "doc": "Observed visible or accessible form-field label, when available."
+        },
+    )
+    locator_field_name: str = field(
+        default="",
+        metadata={"doc": "Observed stable HTML form-control name, when available."},
+    )
+    locator_data_attribute: str = field(
+        default="",
+        metadata={"doc": "Observed stable data attribute locator, when available."},
+    )
+    locator_css: str = field(
+        default="",
+        metadata={
+            "doc": "Observed CSS locator retained only when no semantic locator is available."
+        },
+    )
+    locator_text: str = field(
+        default="",
+        metadata={
+            "doc": "Observed visible text locator retained only as a last locator fallback."
+        },
+    )
+    identity_field_reference: str = field(
+        default="",
+        metadata={
+            "doc": "Configured identity-field reference used by a fill/select action; never the identity value."
+        },
+    )
+    expected_url_contains: str = field(
+        default="",
+        metadata={"doc": "Observed URL substring that held after the verified action."},
+    )
+    expected_text: str = field(
+        default="",
+        metadata={
+            "doc": "Observed visible postcondition text that held after the verified action."
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -420,7 +474,9 @@ class BrowserReportDownloadRequest:
     )
     run_budget: RunBudget | None = field(
         default=None,
-        metadata={"doc": "Optional shared pre-side-effect budget for this browser launch."},
+        metadata={
+            "doc": "Optional shared pre-side-effect budget for this browser launch."
+        },
     )
     run_budget_usage: RunBudgetUsage | None = field(
         default=None,

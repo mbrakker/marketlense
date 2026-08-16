@@ -41,6 +41,41 @@ class BrowserUseRouteStep(BaseModel):
     expected_evidence: list[str] = Field(default_factory=list)
     observed_evidence: list[str] = Field(default_factory=list)
     verification_status: str | None = Field(default=None)
+    locator_role: str | None = Field(
+        default=None,
+        description="Observed accessible role for the control, when available.",
+    )
+    locator_name: str | None = Field(
+        default=None, description="Observed accessible name used with the role locator."
+    )
+    locator_label: str | None = Field(
+        default=None, description="Observed visible or accessible form-field label."
+    )
+    locator_field_name: str | None = Field(
+        default=None, description="Observed stable HTML form-control name."
+    )
+    locator_data_attribute: str | None = Field(
+        default=None, description="Observed stable data attribute locator."
+    )
+    locator_css: str | None = Field(
+        default=None,
+        description="Observed CSS locator only when no semantic locator is available.",
+    )
+    locator_text: str | None = Field(
+        default=None,
+        description="Observed visible text locator only as a final fallback.",
+    )
+    identity_field_reference: str | None = Field(
+        default=None,
+        description="Configured identity key used for fill/select, for example `identity.delivery_email`; never return an identity value.",
+    )
+    expected_url_contains: str | None = Field(
+        default=None, description="Observed URL substring after the verified action."
+    )
+    expected_text: str | None = Field(
+        default=None,
+        description="Observed visible postcondition text after the verified action.",
+    )
 
 
 class BrowserUseRequiredSelectEvidence(BaseModel):

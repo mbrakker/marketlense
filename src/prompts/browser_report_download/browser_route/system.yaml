@@ -29,6 +29,17 @@ text: |
   For on-site longreads, return `onsite_capture_path`, `onsite_capture_format`, `onsite_page_count`, and `onsite_completeness_status`.
   Mark `onsite_completeness_status` as `complete` only when pagination or scrolling reached a clearly bounded end-state; otherwise return `partial` or `bounded_incomplete`.
   Return structured `route_steps` when possible so the system can reuse the exact route.
+  For a route step that you have verified, retain executable locator and postcondition data
+  whenever it was directly observed: use `locator_role` plus `locator_name`, then
+  `locator_label`, `locator_field_name`, or `locator_data_attribute`; use `locator_css`
+  only when none of those stable semantic locators was observed, and use `locator_text`
+  only as the final fallback. Record `expected_url_contains` and `expected_text` only
+  when they were observed after that verified action. For fills and selects, return only
+  the configured `identity_field_reference` (for example `identity.delivery_email`),
+  never the identity value, an email address, or another personal value. Do not invent a
+  locator, identity reference, or postcondition. Mark the step `verified` only when its
+  expected evidence was actually observed; failed, blocked, missing, and unverified
+  actions remain route evidence but are not reusable actions.
   For each meaningful route step, declare `expected_evidence` using only these categories: `screenshot`, `page_info`, `network_event`, `artifact`, `dom_hash`, or `confirmation_text`.
   After every meaningful action, verify the changed page state before assuming it worked; use screenshot/page info for navigation and clicks, confirmation text or network evidence for submissions, artifact evidence for downloads, and DOM hash/page info for on-site captures.
   Return confirmation evidence fields when possible, including URL changes, submit-button state, and whether the form disappeared.

@@ -5,7 +5,9 @@ from ._shared import *  # noqa: F401,F403
 
 
 class TestConfigService02TaxonomyTemperatureUsesConfig(_TestConfigServiceBase):
-    def test_inventory_settings_retain_candidate_screening_execution_policy(self) -> None:
+    def test_inventory_settings_retain_candidate_screening_execution_policy(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             cfg_path = self._write_config(tmp_dir, include_analysis=False)
             cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
@@ -21,12 +23,17 @@ class TestConfigService02TaxonomyTemperatureUsesConfig(_TestConfigServiceBase):
 
             with patch.dict(
                 os.environ,
-                {"OPENAI_API_KEY": "openai-key", "OPENROUTER_API_KEY": "openrouter-key"},
+                {
+                    "OPENAI_API_KEY": "openai-key",
+                    "OPENROUTER_API_KEY": "openrouter-key",
+                },
                 clear=True,
             ):
                 settings = load_publisher_inventory_settings(
                     ConfigLoadRequest(schema_version="1.0", path=cfg_path),
-                    RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
                 )
 
         self.assertEqual(
@@ -162,6 +169,31 @@ class TestConfigService02TaxonomyTemperatureUsesConfig(_TestConfigServiceBase):
         self.assertEqual("app-pass", settings.wp.app_password)
         self.assertIsNone(settings.wp.bearer_token)
         self.assertEqual(3, settings.media_upload_workers)
+
+    def test_publish_settings_preserve_zero_wordpress_write_limit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = self._write_config(tmp_dir, include_publish=True)
+            cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
+            cfg_data["publish"]["run_budget"] = {
+                "enabled": True,
+                "max_wordpress_writes": 0,
+                "limit_decision": "stop",
+            }
+            Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
+            env = {
+                "WP_SITE_URL": "https://example.com",
+                "WP_APP_PASSWORD": "app-pass",
+                "WP_BEARER_TOKEN": "",
+            }
+            with patch.dict(os.environ, env, clear=True):
+                settings = load_publish_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
+                )
+
+        self.assertEqual(0, settings.run_budget_max_wordpress_writes)
 
     def test_publish_settings_missing_site_url_raises(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

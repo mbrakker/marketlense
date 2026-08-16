@@ -18,7 +18,10 @@ Required fields:
 - `route_family`: planned browser route family such as `browser_pdf_click`, `browser_email_form`, or `browser_onsite_report`.
 - `route_kind`: expected result kind such as `pdf_download`, `email_delivery`, or `onsite_report`.
 - `summary`: prompt-safe route guidance.
-- `steps`: ordered actions with `action`, `target`, and `verification`.
+- `steps`: ordered actions with `action`, `target`, and `verification`. Promoted
+  verified steps additionally retain observed executable `selector_type`/`selector`, a
+  `value_reference` such as `${identity.delivery_email}` instead of an identity value,
+  and observed `expected_url_contains` or `expected_text` postconditions when present.
 - `traps`: prompt-safe traps to avoid.
 - `evidence_notes`: durable rationale for why this pattern is reusable.
 - `source_evidence`: reviewable evidence labels.
@@ -27,6 +30,17 @@ Required fields:
 
 Stale behavior is controlled by `browser_download.route_playbook_stale_policy`. `fallback` logs stale matches and continues normal scoped discovery. `fail` raises a typed `browser_route_playbook_stale` error so stale guidance cannot silently influence acquisition.
 
-Validated successful route evidence can be promoted through `promote_validated_browser_route_result_to_playbook(...)`, which creates or updates a YAML file with version/history metadata and returns a unified diff for review. Promotion rejects unverified or unsuccessful route results. Report-download orchestration controls this with `browser_download.route_playbook_promotion_mode`: `disabled` logs explicit skip records, `dry_run` logs review diff metadata without writing, and `write` persists the reviewable YAML file after verified/recovered browser-route evidence with structured steps.
+Validated successful route evidence can be promoted through
+`promote_validated_browser_route_result_to_playbook(...)`, which creates or updates a
+YAML file with version/history metadata and returns a unified diff for review. Promotion
+rejects unverified or unsuccessful route results and excludes every route step unless it
+has explicit `verified` status and observed post-action evidence. It retains the original
+step prose and evidence labels for audit, but ranks observed locators as role, label,
+name, data attribute, CSS, then visible text. Fill/select steps are promotable only with a
+safe `identity.<key>` reference; personal values are never written to a playbook.
+Report-download orchestration controls this with
+`browser_download.route_playbook_promotion_mode`: `disabled` logs explicit skip records,
+`dry_run` logs review diff metadata without writing, and `write` persists the reviewable
+YAML file after verified/recovered browser-route evidence with structured steps.
 
 Network-learned private API evidence is stored in separate YAML files under `private_api/`. The report-download orchestrator can promote this evidence automatically when `browser_download.private_api_playbook_promotion_mode` is `dry_run` or `write`: verified downloaded browser runs replay safe same-host GET endpoint candidates without cookies or auth headers, accept only JSON responses that expose the verified PDF URL through a stable pointer, store repeated observations in `publisher_private_api_candidates`, and promote only after the configured success and distinct-source thresholds. Operators can still call `promote_private_api_evidence_to_browser_playbook(...)` or `python -m src.cli promote-private-api-playbook --request-json <path>` for reviewed backfills. At runtime the browser-download service validates the endpoint status, response markers, JSON pointer result, and final PDF artifact before accepting the deterministic route; stale endpoints log a fallback reason and continue to the normal browser route.

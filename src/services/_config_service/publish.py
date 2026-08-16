@@ -223,7 +223,7 @@ def load_publish_settings(
             0,
         ),
         run_budget_max_wordpress_writes=(
-            max(_to_int(run_budget_cfg.get("max_wordpress_writes"), 0), 1)
+            max(_to_int(run_budget_cfg.get("max_wordpress_writes"), 0), 0)
             if not _is_missing(run_budget_cfg.get("max_wordpress_writes"))
             else None
         ),

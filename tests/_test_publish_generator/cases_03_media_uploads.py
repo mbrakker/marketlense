@@ -4,6 +4,62 @@ from ._shared import *  # noqa: F401,F403
 
 # ruff: noqa: F401,F403,F405
 
+from src.contracts.run_budget import RunBudget
+
+
+def test_publish_html_blocks_media_before_any_upload_when_request_budget_is_zero(
+    publish_settings_factory,
+    run_context,
+    wordpress_http,
+) -> None:
+    settings = publish_settings_factory(validation_policy="warn")
+    usage_db_path = str(Path(settings.output_dir) / "usage.sqlite")
+    settings = replace(
+        settings,
+        run_budget_enabled=True,
+        usage_db_path=usage_db_path,
+        run_budget_max_wordpress_writes=0,
+    )
+    html_path = Path(settings.output_dir) / "zero-budget-report.html"
+    assets_dir = Path(settings.output_dir) / "assets"
+    assets_dir.mkdir(parents=True, exist_ok=True)
+    (assets_dir / "cover.png").write_bytes(b"png-bytes")
+    html_path.write_text(
+        "<html><head><title>Report</title></head>"
+        "<body>Drive fileId: file123"
+        '<img src="assets/cover.png" alt="cover"></body></html>',
+        encoding="utf-8",
+    )
+    write_report_card_fixture(settings, html_path)
+    budget = RunBudget(
+        schema_version="1.0",
+        run_id=run_context.run_id,
+        publisher_name="",
+        usage_db_path=usage_db_path,
+        max_wordpress_writes=0,
+        limit_decision="stop",
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        pg.publish_html(
+            PublishRequest(
+                schema_version="1.0",
+                html_path=str(html_path),
+                auth_header="Bearer token",
+                file_id="file123",
+                html_text=None,
+                run_budget=budget,
+            ),
+            settings,
+            run_context,
+        )
+
+    assert exc_info.value.code == "wordpress_media_upload_budget_stop"
+    assert (
+        wordpress_http.calls_for("POST", "https://example.com/wp-json/wp/v2/media")
+        == []
+    )
+
 
 def test_publish_html_rewrites_uploaded_images_to_media_proxy(
     publish_settings_factory,

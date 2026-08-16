@@ -34,6 +34,17 @@ logger = logging.getLogger("market_lense.browser_report_download_service")
 _PLAYBOOK_SCHEMA_VERSION = "1.0"
 _PROMOTION_SUCCESS_OUTCOMES = {"downloaded", "email_requested", "captured"}
 _PROMOTION_VERIFIED_STATUSES = {"verified", "recovered"}
+_EXECUTABLE_PLAYBOOK_ACTIONS = {
+    "open",
+    "navigate",
+    "click",
+    "click_cta",
+    "submit",
+    "fill",
+    "type",
+    "select",
+    "verify",
+}
 
 
 def load_browser_route_playbooks(
@@ -123,12 +134,16 @@ def promote_validated_browser_route_result_to_playbook(
         if _route_step_is_promotable(step)
     ]
     if not route_steps:
+        target_url = result.resolved_target_url or result.final_page_url
         route_steps = [
             BrowserRoutePlaybookStep(
                 schema_version="1.0",
-                action="follow_route",
-                target=result.resolved_target_url or result.final_page_url,
+                action="open",
+                target=target_url,
                 verification=_verification_for_result(result),
+                selector_type="url",
+                selector=target_url,
+                expected_url_contains=urlsplit(target_url).path,
             )
         ]
     return promote_browser_route_playbook(
@@ -414,6 +429,7 @@ def _build_playbook(*, payload: dict[str, Any], path: Path) -> BrowserRoutePlayb
                 selector_type=str(item.get("selector_type") or "").strip(),
                 selector=str(item.get("selector") or "").strip(),
                 value=str(item.get("value") or "").strip(),
+                value_reference=str(item.get("value_reference") or "").strip(),
                 expected_url_contains=str(
                     item.get("expected_url_contains") or ""
                 ).strip(),
@@ -503,6 +519,7 @@ def execute_browser_route_playbook(
             index=index,
             normalized_url=request.normalized_url,
             page_driver=request.page_driver,
+            identity_values=request.identity_values,
         )
         step_results.append(result)
         if result.status == "drifted":
@@ -510,9 +527,11 @@ def execute_browser_route_playbook(
             break
     status = "completed"
     if drift_reasons:
-        status = "drifted" if any(
-            result.status == "drifted" for result in step_results
-        ) else "skipped"
+        status = (
+            "drifted"
+            if any(result.status == "drifted" for result in step_results)
+            else "skipped"
+        )
     logger.info(
         log_event(
             ctx,
@@ -542,12 +561,14 @@ def _execute_playbook_step(
     index: int,
     normalized_url: str,
     page_driver,
+    identity_values: dict[str, str],
 ) -> BrowserRoutePlaybookStepExecution:
     try:
         evidence = _dispatch_playbook_action(
             step=step,
             normalized_url=normalized_url,
             page_driver=page_driver,
+            identity_values=identity_values,
         )
         drift_reason = _verify_playbook_step(step=step, page_driver=page_driver)
     except Exception as exc:
@@ -586,6 +607,7 @@ def _dispatch_playbook_action(
     step: BrowserRoutePlaybookStep,
     normalized_url: str,
     page_driver,
+    identity_values: dict[str, str],
 ) -> str:
     action = step.action.strip().lower()
     selector_type = step.selector_type.strip().lower()
@@ -594,16 +616,63 @@ def _dispatch_playbook_action(
         target_url = selector or step.target or normalized_url
         return str(page_driver.open(target_url))
     if action in {"click", "click_cta", "submit"}:
+        if selector_type == "role":
+            role, name = _split_role_locator(selector)
+            return str(page_driver.click_role(role, name))
+        if selector_type == "label":
+            return str(page_driver.click_label(selector))
+        if selector_type == "name":
+            return str(page_driver.click_name(selector))
+        if selector_type == "data_attribute":
+            return str(page_driver.click_data_attribute(selector))
         if selector_type == "text":
             return str(page_driver.click_text(selector))
         return str(page_driver.click_css(selector))
     if action in {"fill", "type"}:
-        return str(page_driver.fill_css(selector, step.value))
+        value = _resolve_playbook_step_value(step=step, identity_values=identity_values)
+        if selector_type == "label":
+            return str(page_driver.fill_label(selector, value))
+        if selector_type == "name":
+            return str(page_driver.fill_name(selector, value))
+        if selector_type == "data_attribute":
+            return str(page_driver.fill_data_attribute(selector, value))
+        return str(page_driver.fill_css(selector, value))
     if action == "select":
-        return str(page_driver.select_css(selector, step.value))
+        value = _resolve_playbook_step_value(step=step, identity_values=identity_values)
+        if selector_type == "label":
+            return str(page_driver.select_label(selector, value))
+        if selector_type == "name":
+            return str(page_driver.select_name(selector, value))
+        if selector_type == "data_attribute":
+            return str(page_driver.select_data_attribute(selector, value))
+        return str(page_driver.select_css(selector, value))
     if action == "verify":
         return "verified"
     raise ValueError(f"unsupported_action:{step.action}")
+
+
+def _split_role_locator(selector: str) -> tuple[str, str]:
+    role, separator, name = selector.partition(":")
+    if not separator or not role.strip() or not name.strip():
+        raise ValueError("invalid_role_locator")
+    return role.strip(), name.strip()
+
+
+def _resolve_playbook_step_value(
+    *,
+    step: BrowserRoutePlaybookStep,
+    identity_values: dict[str, str],
+) -> str:
+    reference = step.value_reference.strip()
+    if not reference:
+        return step.value
+    if not (reference.startswith("${identity.") and reference.endswith("}")):
+        raise ValueError("invalid_identity_reference")
+    key = reference.removeprefix("${identity.").removesuffix("}")
+    value = str(identity_values.get(key) or "")
+    if not value:
+        raise ValueError("identity_reference_unresolved")
+    return value
 
 
 def _verify_playbook_step(*, step: BrowserRoutePlaybookStep, page_driver) -> str:
@@ -885,9 +954,15 @@ def _validate_private_api_promotion_request(
             retryable=False,
             context={"source_url": request.source_url},
         )
-    labels = {str(label).strip() for label in request.evidence_labels if str(label).strip()}
+    labels = {
+        str(label).strip() for label in request.evidence_labels if str(label).strip()
+    }
     if not labels.intersection(
-        {"network_document_request", "browser_network_private_api", "private_api_pdf_pointer"}
+        {
+            "network_document_request",
+            "browser_network_private_api",
+            "private_api_pdf_pointer",
+        }
     ):
         raise AppError(
             code="browser_route_private_api_promotion_evidence_labels_missing",
@@ -915,19 +990,43 @@ def _adapt_route_step_for_playbook(
     route_kind: str,
     outcome: str,
 ) -> BrowserRoutePlaybookStep:
+    selector_type, selector = _stable_playbook_locator(step)
     target = step.target_text or step.target_role or step.target_url or "page"
     verification = step.result or f"{route_kind}:{outcome}"
+    value_reference = _identity_value_reference(step.identity_field_reference)
     return BrowserRoutePlaybookStep(
         schema_version="1.0",
         action=step.action or "follow_route",
         target=target,
         verification=verification,
+        selector_type=selector_type,
+        selector=selector,
+        value_reference=value_reference,
+        expected_url_contains=step.expected_url_contains,
+        expected_text=step.expected_text,
     )
 
 
 def _route_step_is_promotable(step: BrowserDownloadRouteStep) -> bool:
     """Keep failed model actions in audit evidence, not active route guidance."""
+    action = str(step.action or "").strip().casefold()
     result = str(step.result or "").casefold()
+    if action not in _EXECUTABLE_PLAYBOOK_ACTIONS:
+        return False
+    if str(step.verification_status or "").strip().casefold() != "verified":
+        return False
+    if not step.observed_evidence:
+        return False
+    if action in {
+        "fill",
+        "type",
+        "select",
+    } and not _identity_value_reference(step.identity_field_reference):
+        return False
+    if action not in {"open", "navigate", "verify"} and not all(
+        _stable_playbook_locator(step)
+    ):
+        return False
     return not any(
         marker in result
         for marker in (
@@ -938,6 +1037,48 @@ def _route_step_is_promotable(step: BrowserDownloadRouteStep) -> bool:
             "failed",
         )
     )
+
+
+def _stable_playbook_locator(step: BrowserDownloadRouteStep) -> tuple[str, str]:
+    role = str(step.locator_role or "").strip()
+    name = str(step.locator_name or "").strip()
+    if role and name:
+        return "role", f"{role}:{name}"
+    label = str(step.locator_label or "").strip()
+    if label:
+        return "label", label
+    field_name = str(step.locator_field_name or "").strip()
+    if field_name:
+        return "name", field_name
+    data_attribute = str(step.locator_data_attribute or "").strip()
+    if data_attribute:
+        return "data_attribute", data_attribute
+    css = str(step.locator_css or "").strip()
+    if css:
+        return "css", css
+    text = str(step.locator_text or "").strip()
+    if text:
+        return "text", text
+    action = str(step.action or "").strip().casefold()
+    if action in {"click", "click_cta", "submit"}:
+        target_role = str(step.target_role or "").strip()
+        target_name = str(step.target_text or "").strip()
+        if target_role and target_name:
+            return "role", f"{target_role}:{target_name}"
+    if action in {"open", "navigate"}:
+        target_url = str(step.target_url or "").strip()
+        if target_url:
+            return "url", target_url
+    return "", ""
+
+
+def _identity_value_reference(reference: str) -> str:
+    token = str(reference or "").strip()
+    if not token.startswith("identity.") or len(token) <= len("identity."):
+        return ""
+    if not re.fullmatch(r"identity\.[a-z][a-z0-9_]*", token):
+        return ""
+    return "${" + token + "}"
 
 
 def _verification_for_result(result: BrowserReportDownloadResult) -> str:

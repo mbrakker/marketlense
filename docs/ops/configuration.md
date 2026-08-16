@@ -94,7 +94,7 @@ Profiles cannot disable validation, evidence checks, human publication approval,
 
 Legacy workflow fields such as `browser_download.run_budget.max_drive_writes` apply only to that run. Cross-run enforcement is opt-in through the explicit `cost.budget_authority.day` or `publisher` scope; usage from an earlier run must not block an unrelated run merely because its legacy per-run limit was lower.
 
-Limits are inclusive: a prospective side effect that brings a metric exactly to its configured maximum is admitted and warned; the next prospective side effect is stopped. This keeps a configured one-PDF run capable of processing one PDF while retaining a hard bound.
+Limits are inclusive: a prospective side effect that brings a metric exactly to its configured maximum is admitted and warned; the next prospective side effect is stopped. This keeps a configured one-PDF run capable of processing one PDF while retaining a hard bound. A configured limit of `0` is valid and blocks that side-effect type before its first request; use it for isolated no-write validation profiles such as `publish.run_budget.max_wordpress_writes: 0`.
 
 `cost.pricing_path` points to the versioned operator rate card. Each active
 model entry records its provider, exact model key, effective date, pricing

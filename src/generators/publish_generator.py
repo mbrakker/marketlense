@@ -21,6 +21,7 @@ from src.contracts.publish import (
 )
 from src.contracts.report_cards import ReportCardManifest
 from src.contracts.report_store import ReportMetadataGetRequest
+from src.contracts.run_budget import RunBudget, RunBudgetUsage
 from src.contracts.run_context import RunContext
 from src.contracts.wordpress import (
     WordPressCardUpdateRequest,
@@ -235,6 +236,8 @@ def publish_html(
                 auth_header=auth_header,
                 ssl_verify=settings.wp.ssl_verify,
                 ca_bundle_path=settings.wp.ca_bundle_path,
+                run_budget=request.run_budget,
+                run_budget_usage=request.run_budget_usage,
                 ctx=ctx,
                 sequential=True,
             )
@@ -254,6 +257,8 @@ def publish_html(
                 auth_header=auth_header,
                 ssl_verify=settings.wp.ssl_verify,
                 ca_bundle_path=settings.wp.ca_bundle_path,
+                run_budget=request.run_budget,
+                run_budget_usage=request.run_budget_usage,
                 ctx=ctx,
                 sequential=True,
             )
@@ -267,6 +272,8 @@ def publish_html(
                 auth_header=auth_header,
                 ssl_verify=settings.wp.ssl_verify,
                 ca_bundle_path=settings.wp.ca_bundle_path,
+                run_budget=request.run_budget,
+                run_budget_usage=request.run_budget_usage,
                 ctx=ctx,
                 sequential=True,
             )
@@ -338,6 +345,8 @@ def publish_html(
         ssl_verify=settings.wp.ssl_verify,
         ca_bundle_path=settings.wp.ca_bundle_path,
         media_upload_workers=settings.media_upload_workers,
+        run_budget=request.run_budget,
+        run_budget_usage=request.run_budget_usage,
         ctx=ctx,
     )
     logger.info(
@@ -359,6 +368,8 @@ def publish_html(
             auth_header=auth_header,
             ssl_verify=settings.wp.ssl_verify,
             ca_bundle_path=settings.wp.ca_bundle_path,
+            run_budget=request.run_budget,
+            run_budget_usage=request.run_budget_usage,
             ctx=ctx,
         )
         featured_media_id = card_media_ids["large"]
@@ -371,6 +382,8 @@ def publish_html(
             auth_header=auth_header,
             ssl_verify=settings.wp.ssl_verify,
             ca_bundle_path=settings.wp.ca_bundle_path,
+            run_budget=request.run_budget,
+            run_budget_usage=request.run_budget_usage,
             ctx=ctx,
         )
         featured_media_id = card_media_ids["large"]
@@ -383,6 +396,8 @@ def publish_html(
             auth_header=auth_header,
             ssl_verify=settings.wp.ssl_verify,
             ca_bundle_path=settings.wp.ca_bundle_path,
+            run_budget=request.run_budget,
+            run_budget_usage=request.run_budget_usage,
             ctx=ctx,
         )
         featured_media_id = card_media_ids["large"]
@@ -623,6 +638,8 @@ def _upload_report_card_covers(
     auth_header: str,
     ssl_verify: bool,
     ca_bundle_path: Optional[str],
+    run_budget: RunBudget | None,
+    run_budget_usage: RunBudgetUsage | None,
     ctx: RunContext,
     sequential: bool = False,
 ) -> dict[str, int]:
@@ -674,6 +691,8 @@ def _upload_report_card_covers(
                 auth_header=auth_header,
                 ssl_verify=ssl_verify,
                 ca_bundle_path=ca_bundle_path,
+                run_budget=run_budget,
+                run_budget_usage=run_budget_usage,
                 ctx=ctx,
             ).media_id
     else:
@@ -686,6 +705,8 @@ def _upload_report_card_covers(
                     auth_header=auth_header,
                     ssl_verify=ssl_verify,
                     ca_bundle_path=ca_bundle_path,
+                    run_budget=run_budget,
+                    run_budget_usage=run_budget_usage,
                     ctx=ctx,
                 ): size
                 for size, job in jobs.items()
@@ -717,6 +738,8 @@ def _upload_briefing_card_covers(
     auth_header: str,
     ssl_verify: bool,
     ca_bundle_path: Optional[str],
+    run_budget: RunBudget | None,
+    run_budget_usage: RunBudgetUsage | None,
     ctx: RunContext,
     sequential: bool = False,
 ) -> dict[str, int]:
@@ -730,6 +753,8 @@ def _upload_briefing_card_covers(
         auth_header=auth_header,
         ssl_verify=ssl_verify,
         ca_bundle_path=ca_bundle_path,
+        run_budget=run_budget,
+        run_budget_usage=run_budget_usage,
         ctx=ctx,
         sequential=sequential,
     )
@@ -744,6 +769,8 @@ def _upload_signal_card_covers(
     auth_header: str,
     ssl_verify: bool,
     ca_bundle_path: Optional[str],
+    run_budget: RunBudget | None,
+    run_budget_usage: RunBudgetUsage | None,
     ctx: RunContext,
     sequential: bool = False,
 ) -> dict[str, int]:
@@ -757,6 +784,8 @@ def _upload_signal_card_covers(
         auth_header=auth_header,
         ssl_verify=ssl_verify,
         ca_bundle_path=ca_bundle_path,
+        run_budget=run_budget,
+        run_budget_usage=run_budget_usage,
         ctx=ctx,
         sequential=sequential,
     )
@@ -773,6 +802,8 @@ def _upload_entity_card_covers(
     auth_header: str,
     ssl_verify: bool,
     ca_bundle_path: Optional[str],
+    run_budget: RunBudget | None,
+    run_budget_usage: RunBudgetUsage | None,
     ctx: RunContext,
     sequential: bool = False,
 ) -> dict[str, int]:
@@ -838,6 +869,8 @@ def _upload_entity_card_covers(
                 auth_header=auth_header,
                 ssl_verify=ssl_verify,
                 ca_bundle_path=ca_bundle_path,
+                run_budget=run_budget,
+                run_budget_usage=run_budget_usage,
                 ctx=ctx,
             ).media_id
     else:
@@ -850,6 +883,8 @@ def _upload_entity_card_covers(
                     auth_header=auth_header,
                     ssl_verify=ssl_verify,
                     ca_bundle_path=ca_bundle_path,
+                    run_budget=run_budget,
+                    run_budget_usage=run_budget_usage,
                     ctx=ctx,
                 ): size
                 for size, job in jobs.items()
@@ -1156,6 +1191,8 @@ def _upload_images(
     ssl_verify: bool,
     ca_bundle_path: Optional[str],
     media_upload_workers: int,
+    run_budget: RunBudget | None,
+    run_budget_usage: RunBudgetUsage | None,
     ctx: RunContext,
 ) -> Tuple[Dict[str, str], Optional[int]]:
     sources = list(html_snapshot.image_sources)
@@ -1198,6 +1235,8 @@ def _upload_images(
                 auth_header=auth_header,
                 ssl_verify=ssl_verify,
                 ca_bundle_path=ca_bundle_path,
+                run_budget=run_budget,
+                run_budget_usage=run_budget_usage,
                 ctx=ctx,
             ): job
             for job in jobs
@@ -1267,6 +1306,8 @@ def _upload_single_media(
     auth_header: str,
     ssl_verify: bool,
     ca_bundle_path: Optional[str],
+    run_budget: RunBudget | None,
+    run_budget_usage: RunBudgetUsage | None,
     ctx: RunContext,
 ) -> _MediaUploadResult:
     upload_resp = upload_media(
@@ -1277,6 +1318,8 @@ def _upload_single_media(
             auth_header,
             ssl_verify,
             ca_bundle_path,
+            run_budget,
+            run_budget_usage,
             ctx,
         ),
         ctx,
@@ -1297,6 +1340,8 @@ def _media_upload_request(
     auth_header: str,
     ssl_verify: bool,
     ca_bundle_path: Optional[str],
+    run_budget: RunBudget | None,
+    run_budget_usage: RunBudgetUsage | None,
     ctx: RunContext,
 ) -> WordPressMediaUploadRequest:
     data_resp = read_bytes(ReadBytesRequest(schema_version="1.0", path=local_path), ctx)
@@ -1321,6 +1366,8 @@ def _media_upload_request(
         ssl_verify=ssl_verify,
         ca_bundle_path=ca_bundle_path,
         alt_text=alt_text,
+        run_budget=run_budget,
+        run_budget_usage=run_budget_usage,
     )
 
 

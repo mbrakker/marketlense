@@ -180,7 +180,9 @@ def test_prompt_uses_route_family_namespace_for_email_form(
         delivery_email="reports@example.com",
     )
 
-    assert bundle.namespace == "browser_report_download/browser_route/browser_email_form"
+    assert (
+        bundle.namespace == "browser_report_download/browser_route/browser_email_form"
+    )
     assert "Route-family guidance for `browser_pdf_click`" not in bundle.task_prompt
     assert "Route-family guidance for `browser_email_form`" in bundle.task_prompt
 
@@ -279,6 +281,9 @@ def test_validated_route_promotion_excludes_unverified_route_steps(
                 target_role="button",
                 target_url="https://example.com/research/report",
                 result="Submission was not verified.",
+                expected_evidence=["confirmation_text"],
+                observed_evidence=[],
+                verification_status="missing",
             ),
             BrowserDownloadRouteStep(
                 schema_version="1.0",
@@ -288,6 +293,11 @@ def test_validated_route_promotion_excludes_unverified_route_steps(
                 target_role="button",
                 target_url="https://example.com/research/report",
                 result="Confirmed report email request.",
+                expected_evidence=["confirmation_text"],
+                observed_evidence=["confirmation_text"],
+                verification_status="verified",
+                locator_role="button",
+                locator_name="Access The Resource",
             ),
         ],
     )
@@ -300,9 +310,88 @@ def test_validated_route_promotion_excludes_unverified_route_steps(
     )
     payload = yaml.safe_load(Path(response.path).read_text(encoding="utf-8"))
 
-    assert [step["target"] for step in payload["steps"]] == [
-        "Access The Resource"
-    ]
+    assert [step["target"] for step in payload["steps"]] == ["Access The Resource"]
+
+
+def test_validated_route_promotion_round_trips_semantic_locators_and_identity_references(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    result = replace(
+        _result(route_status="verified"),
+        route_steps=[
+            BrowserDownloadRouteStep(
+                schema_version="1.0",
+                index=0,
+                action="click",
+                target_text="Download report",
+                target_role="button",
+                target_url="https://example.com/research/report",
+                result="Opened the download route.",
+                expected_evidence=["page_info"],
+                observed_evidence=["page_info"],
+                verification_status="verified",
+                locator_role="button",
+                locator_name="Download report",
+                locator_data_attribute="data-testid=download-report",
+                locator_css=".download-report",
+                expected_url_contains="/download",
+            ),
+            BrowserDownloadRouteStep(
+                schema_version="1.0",
+                index=1,
+                action="fill",
+                target_text="Work email",
+                target_role="textbox",
+                target_url="https://example.com/research/report",
+                result="Filled the configured work email field.",
+                expected_evidence=["page_info"],
+                observed_evidence=["page_info"],
+                verification_status="verified",
+                locator_label="Work email",
+                identity_field_reference="identity.delivery_email",
+                expected_text="Request received",
+            ),
+            BrowserDownloadRouteStep(
+                schema_version="1.0",
+                index=2,
+                action="click",
+                target_text="Submit",
+                target_role="button",
+                target_url="https://example.com/research/report",
+                result="Submission was not verified.",
+                expected_evidence=["confirmation_text"],
+                observed_evidence=[],
+                verification_status="missing",
+                locator_role="button",
+                locator_name="Submit",
+            ),
+        ],
+    )
+
+    response = promote_validated_browser_route_result_to_playbook(
+        playbook_dir=str(tmp_path / "playbooks"),
+        result=result,
+        ctx=run_context,
+        observed_at="2026-08-16T12:00:00+00:00",
+    )
+    loaded = load_browser_route_playbooks(
+        playbook_dir=str(tmp_path / "playbooks"), ctx=run_context
+    )[0]
+    payload = yaml.safe_load(Path(response.path).read_text(encoding="utf-8"))
+
+    assert [step["action"] for step in payload["steps"]] == ["click", "fill"]
+    assert payload["steps"][0]["selector_type"] == "role"
+    assert payload["steps"][0]["selector"] == "button:Download report"
+    assert payload["steps"][0]["expected_url_contains"] == "/download"
+    assert payload["steps"][0]["verification"] == "Opened the download route."
+    assert payload["steps"][1]["selector_type"] == "label"
+    assert payload["steps"][1]["selector"] == "Work email"
+    assert payload["steps"][1]["value_reference"] == "${identity.delivery_email}"
+    assert "@" not in payload["steps"][1]["value_reference"]
+    assert payload["steps"][1]["expected_text"] == "Request received"
+    assert loaded.steps[0].selector_type == "role"
+    assert loaded.steps[1].value_reference == "${identity.delivery_email}"
 
 
 def test_validated_route_promotion_dry_run_returns_review_diff_without_write(
@@ -504,6 +593,62 @@ def test_deterministic_route_playbook_executor_runs_selectors_and_reports_drift(
     assert drift_response.drift_reasons == ["expected_text_not_observed"]
 
 
+def test_deterministic_route_playbook_executor_resolves_semantic_locators_and_identity_reference(
+    run_context,
+) -> None:
+    playbook = BrowserRoutePlaybook(
+        schema_version="1.0",
+        playbook_id="local-semantic",
+        version="1.0.0",
+        status="active",
+        updated_at="2026-08-16T00:00:00+00:00",
+        stale_after_days=180,
+        publisher_pattern="example.com",
+        host_patterns=["example.com"],
+        url_path_markers=["report"],
+        route_family="browser_email_form",
+        route_kind="email_delivery",
+        summary="Use the verified form route.",
+        steps=[
+            BrowserRoutePlaybookStep(
+                schema_version="1.0",
+                action="click",
+                target="Request report",
+                verification="opened form",
+                selector_type="role",
+                selector="button:Request report",
+            ),
+            BrowserRoutePlaybookStep(
+                schema_version="1.0",
+                action="fill",
+                target="Work email",
+                verification="field filled",
+                selector_type="label",
+                selector="Work email",
+                value_reference="${identity.delivery_email}",
+            ),
+        ],
+    )
+    driver = _FakePageDriver(texts=set())
+
+    response = execute_browser_route_playbook(
+        BrowserRoutePlaybookExecutionRequest(
+            schema_version="1.0",
+            playbook=playbook,
+            normalized_url="https://example.com/report",
+            page_driver=driver,
+            identity_values={"delivery_email": "configured-email"},
+        ),
+        run_context,
+    )
+
+    assert response.status == "completed"
+    assert driver.calls == [
+        ("click_role", "button", "Request report"),
+        ("fill_label", "Work email", "configured-email"),
+    ]
+
+
 class _FakePageDriver:
     def __init__(self, *, texts):
         self.calls = []
@@ -523,12 +668,52 @@ class _FakePageDriver:
         self.calls.append(("click_text", text))
         return text
 
+    def click_role(self, role, name):
+        self.calls.append(("click_role", role, name))
+        return name
+
+    def click_label(self, label):
+        self.calls.append(("click_label", label))
+        return label
+
+    def click_name(self, name):
+        self.calls.append(("click_name", name))
+        return name
+
+    def click_data_attribute(self, selector):
+        self.calls.append(("click_data_attribute", selector))
+        return selector
+
     def fill_css(self, selector, value):
         self.calls.append(("fill_css", selector, value))
         return selector
 
+    def fill_label(self, label, value):
+        self.calls.append(("fill_label", label, value))
+        return label
+
+    def fill_name(self, name, value):
+        self.calls.append(("fill_name", name, value))
+        return name
+
+    def fill_data_attribute(self, selector, value):
+        self.calls.append(("fill_data_attribute", selector, value))
+        return selector
+
     def select_css(self, selector, value):
         self.calls.append(("select_css", selector, value))
+        return selector
+
+    def select_label(self, label, value):
+        self.calls.append(("select_label", label, value))
+        return label
+
+    def select_name(self, name, value):
+        self.calls.append(("select_name", name, value))
+        return name
+
+    def select_data_attribute(self, selector, value):
+        self.calls.append(("select_data_attribute", selector, value))
         return selector
 
     def current_url(self):
@@ -592,6 +777,11 @@ def _result(*, route_status: str) -> BrowserReportDownloadResult:
                 target_role="button",
                 target_url="https://example.com/report.pdf",
                 result="opened",
+                expected_evidence=["artifact"],
+                observed_evidence=["artifact"],
+                verification_status="verified",
+                locator_role="button",
+                locator_name="Download report",
             )
         ],
         confirmation_evidence=BrowserDownloadConfirmationEvidence(

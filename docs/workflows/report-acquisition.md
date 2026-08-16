@@ -50,4 +50,14 @@ recovered. The timeout remains a typed terminal result with its route,
 timestamps, and resource envelope; this run-only policy does not alter the
 normal acquisition default or suppress a future explicit revalidation.
 
+Successful browser-route promotion preserves its route prose, observed evidence labels,
+and version history for audit while also retaining executable action data where the run
+observed it. A promoted action must itself be explicitly verified with observed
+post-action evidence. The promotion service ranks locators by role/name, label, HTML
+name, data attribute, CSS, then visible text, and retains observed URL/text
+postconditions. Form values are represented only by an `identity.<key>` placeholder in
+the playbook; no email address or other personal identity value is persisted. Failed,
+blocked, missing, and unverified actions remain only in the original route evidence and
+are never written as active playbook steps.
+
 Use `python -m src.cli download-report <url>` for an explicit acquisition request and `python -m src.cli browser-doctor` to diagnose the local browser runtime. Browser, Drive, and mailbox prerequisites are covered in [credentials](../ops/credentials.md); recovery guidance is in [troubleshooting](../ops/troubleshooting.md).

@@ -38,6 +38,12 @@ class BrowserRoutePlaybookStep:
         default="",
         metadata={"doc": "Optional fill/select value for deterministic executor use."},
     )
+    value_reference: str = field(
+        default="",
+        metadata={
+            "doc": "Optional identity placeholder for a fill/select action; never a personal value."
+        },
+    )
     expected_url_contains: str = field(
         default="",
         metadata={"doc": "Optional URL substring expected after the step."},
@@ -274,6 +280,12 @@ class BrowserRoutePlaybookExecutionRequest:
             "doc": "Injected browser page-driver boundary implementing deterministic open/click/fill/verify methods."
         }
     )
+    identity_values: dict[str, str] = field(
+        default_factory=dict,
+        metadata={
+            "doc": "Injected configured identity values resolved only at deterministic execution time."
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -303,7 +315,9 @@ class BrowserRoutePlaybookExecutionResponse:
     )
     drift_reasons: list[str] = field(
         default_factory=list,
-        metadata={"doc": "Reasons a route playbook drifted from deterministic execution."},
+        metadata={
+            "doc": "Reasons a route playbook drifted from deterministic execution."
+        },
     )
 
 

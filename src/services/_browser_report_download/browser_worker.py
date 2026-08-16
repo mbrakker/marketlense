@@ -444,6 +444,22 @@ def _build_request(payload: dict) -> BrowserReportDownloadRequest:
                 if isinstance(item.get("observed_evidence"), list)
                 else [],
                 verification_status=str(item.get("verification_status") or "").strip(),
+                locator_role=str(item.get("locator_role") or "").strip(),
+                locator_name=str(item.get("locator_name") or "").strip(),
+                locator_label=str(item.get("locator_label") or "").strip(),
+                locator_field_name=str(item.get("locator_field_name") or "").strip(),
+                locator_data_attribute=str(
+                    item.get("locator_data_attribute") or ""
+                ).strip(),
+                locator_css=str(item.get("locator_css") or "").strip(),
+                locator_text=str(item.get("locator_text") or "").strip(),
+                identity_field_reference=str(
+                    item.get("identity_field_reference") or ""
+                ).strip(),
+                expected_url_contains=str(
+                    item.get("expected_url_contains") or ""
+                ).strip(),
+                expected_text=str(item.get("expected_text") or "").strip(),
             )
             for item in route_step_hints_payload
             if isinstance(item, dict)

@@ -2079,6 +2079,12 @@
     "src.contracts._browser_download.playbooks.BrowserRoutePlaybookExecutionRequest": {
       "additionalProperties": false,
       "properties": {
+        "identity_values": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
         "normalized_url": {
           "type": "string"
         },
@@ -2354,6 +2360,9 @@
           "type": "string"
         },
         "value": {
+          "type": "string"
+        },
+        "value_reference": {
           "type": "string"
         },
         "verification": {
@@ -2932,8 +2941,38 @@
           },
           "type": "array"
         },
+        "expected_text": {
+          "type": "string"
+        },
+        "expected_url_contains": {
+          "type": "string"
+        },
+        "identity_field_reference": {
+          "type": "string"
+        },
         "index": {
           "type": "integer"
+        },
+        "locator_css": {
+          "type": "string"
+        },
+        "locator_data_attribute": {
+          "type": "string"
+        },
+        "locator_field_name": {
+          "type": "string"
+        },
+        "locator_label": {
+          "type": "string"
+        },
+        "locator_name": {
+          "type": "string"
+        },
+        "locator_role": {
+          "type": "string"
+        },
+        "locator_text": {
+          "type": "string"
         },
         "observed_evidence": {
           "items": {
