@@ -38,7 +38,13 @@ Agent handoff retain cookies, local storage, session ownership, shutdown,
 session-reuse finalization, and browser-launch accounting. Async deterministic
 form handling never closes or replaces that lease: a helper failure resumes
 Browser Use on the same browser, and the outer acquisition runner remains its
-sole lifecycle owner.
+sole lifecycle owner. For browser email forms, a deterministic submit returns
+early only after the canonical terminal-confirmation evidence verifies email
+delivery. A submitted-but-unverified or ambiguous page is handed to Browser
+Use through that same live browser session; only an unknown required identity
+value returns the typed blocker without invoking Browser Use or guessing a
+value. A terminally verified deterministic submit constructs no Browser Use
+agent and therefore cannot be submitted again by that fallback path.
 
 Each governed acquisition attempt now retains a scalar resource envelope in the
 reports store: elapsed time, route family and policy hash, browser launch/step

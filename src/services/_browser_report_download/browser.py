@@ -26,6 +26,7 @@ from src.contracts._browser_download.session_reuse import (
     BrowserDownloadSessionReuseDecision,
 )
 from src.contracts.browser_download import (
+    BrowserDownloadConfirmationEvidence,
     BrowserDownloadDialogEvidence,
     BrowserDownloadNetworkEvent,
     BrowserReportDownloadRequest,
@@ -44,6 +45,11 @@ from src.contracts.run_budget import (
 )
 from src.contracts.run_context import RunContext
 from src.services import llm_service, prompt_service
+from src.services._browser_report_download._artifact.classification import (
+    _build_confirmation_evidence,
+    _confirmation_evidence_verifies_email_delivery,
+    _upgrade_confirmation_evidence_from_terminal_html,
+)
 from src.services._browser_report_download._browser_runtime import (
     _AGENT_COMPLETED_HISTORY_POLL_SECONDS,
     _AGENT_RUN_TIMEOUT_MAX_BUFFER_SECONDS,
@@ -479,6 +485,11 @@ def _pre_llm_standard_form_raw_response(
     final_url: str,
     resolved_fields: list[str],
     blocked_fields: list[str] | None = None,
+    post_submit_message: str = "",
+    confirmation_url_changed: bool = False,
+    submit_button_state: str = "submitted",
+    form_disappeared: bool = False,
+    terminal_verified: bool = False,
 ) -> str:
     blocker_fields = list(blocked_fields or [])
     blocked_reason = "blocked_unknown_required_enum" if blocker_fields else None
@@ -504,10 +515,12 @@ def _pre_llm_standard_form_raw_response(
             "final_page_url": final_url,
             "resolved_target_url": final_url,
             "email_submission_completed": not blocker_fields,
-            "post_submit_message": "",
-            "confirmation_url_changed": False,
-            "submit_button_state": "not_submitted" if blocker_fields else "submitted",
-            "form_disappeared": False,
+            "post_submit_message": post_submit_message,
+            "confirmation_url_changed": confirmation_url_changed,
+            "submit_button_state": (
+                "not_submitted" if blocker_fields else submit_button_state
+            ),
+            "form_disappeared": False if blocker_fields else form_disappeared,
             "encountered_form_fields": [*resolved_fields, *blocker_fields],
             "blocked_reason": blocked_reason,
             "blocked_reason_detail": blocked_detail,
@@ -530,12 +543,49 @@ def _pre_llm_standard_form_raw_response(
                     "expected_evidence": ["confirmation_text", "page_info"],
                     "observed_evidence": ["page_info"],
                     "verification_status": (
-                        "blocked" if blocker_fields else "pending_terminal_verification"
+                        "blocked"
+                        if blocker_fields
+                        else (
+                            "verified"
+                            if terminal_verified
+                            else "pending_terminal_verification"
+                        )
                     ),
                 }
             ],
         },
         ensure_ascii=True,
+    )
+
+
+def _pre_llm_standard_form_confirmation_evidence(
+    *,
+    execution_url: str,
+    final_url: str,
+    snapshot: TerminalSnapshot,
+    resolved_fields: list[str],
+) -> BrowserDownloadConfirmationEvidence:
+    """Build the canonical email-delivery evidence from the live terminal page."""
+
+    evidence = _build_confirmation_evidence(
+        agent_result=BrowserUseAgentResult(
+            route_kind="email_delivery",
+            final_page_url=execution_url,
+            email_submission_completed=True,
+            encountered_form_fields=resolved_fields,
+            post_submit_message=_browser_visible_text_from_html(snapshot.html),
+            confirmation_url_changed=bool(final_url and final_url != execution_url),
+            submit_button_state="submitted",
+            form_disappeared=False,
+        ),
+        final_url=final_url,
+        network_events=[],
+    )
+    return _upgrade_confirmation_evidence_from_terminal_html(
+        confirmation_evidence=evidence,
+        email_submission_completed=True,
+        encountered_form_fields=resolved_fields,
+        html=snapshot.html,
     )
 
 
@@ -917,7 +967,7 @@ def _try_pre_llm_standard_form_submit(
         snapshot = _capture_terminal_snapshot(
             browser, ctx=ctx, normalized_url=normalized_url
         )
-    final_url = helper_result.final_url or snapshot.url or execution_url
+    final_url = snapshot.url or helper_result.final_url or execution_url
     if helper_result.status == "blocked" and helper_result.unresolved_fields:
         logger.info(
             log_event(
@@ -971,11 +1021,35 @@ def _try_pre_llm_standard_form_submit(
             )
         )
         return None
+    confirmation_evidence = _pre_llm_standard_form_confirmation_evidence(
+        execution_url=execution_url,
+        final_url=final_url,
+        snapshot=snapshot,
+        resolved_fields=list(helper_result.resolved_fields),
+    )
+    if not _confirmation_evidence_verifies_email_delivery(confirmation_evidence):
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_pre_llm_autofill_escalated",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "reason": "terminal_verification_unconfirmed",
+                    "confirmation_signal_labels": list(
+                        confirmation_evidence.signal_labels
+                    ),
+                    "browser_session_preserved": True,
+                },
+            )
+        )
+        return None
     logger.info(
         log_event(
             ctx,
             role="service",
-            event="browser_report_download_pre_llm_autofill_submitted",
+            event="browser_report_download_pre_llm_autofill_verified",
             module=logger.name,
             fields={
                 "normalized_url": normalized_url,
@@ -986,6 +1060,7 @@ def _try_pre_llm_standard_form_submit(
                 ),
                 "resolved_fields": list(helper_result.resolved_fields),
                 "avoided_llm_call": True,
+                "confirmation_signal_labels": list(confirmation_evidence.signal_labels),
             },
         )
     )
@@ -994,6 +1069,11 @@ def _try_pre_llm_standard_form_submit(
         raw_model_response=_pre_llm_standard_form_raw_response(
             final_url=final_url,
             resolved_fields=list(helper_result.resolved_fields),
+            post_submit_message=confirmation_evidence.visible_confirmation_text,
+            confirmation_url_changed=confirmation_evidence.url_changed,
+            submit_button_state=confirmation_evidence.submit_button_state,
+            form_disappeared=confirmation_evidence.form_disappeared,
+            terminal_verified=True,
         ),
         final_page_url=final_url,
         final_page_title=snapshot.title,

@@ -123,6 +123,8 @@ def test_pre_llm_form_autofill_submits_without_model_client(
         delivery_email="ops@example.com",
     )
     model_client_requested = {"value": False}
+    browser_use_agent_requested = {"value": False}
+    deterministic_submit_calls = {"value": 0}
 
     class FakePage:
         def __init__(self, browser):
@@ -137,6 +139,7 @@ def test_pre_llm_form_autofill_submits_without_model_client(
 
         def evaluate(self, script):
             if "standardFormSubmit" in str(script):
+                deterministic_submit_calls["value"] += 1
                 return {
                     "attempted_count": 2,
                     "filled_count": 1,
@@ -169,10 +172,15 @@ def test_pre_llm_form_autofill_submits_without_model_client(
             model_client_requested["value"] = True
             raise AssertionError("model client should not be constructed")
 
+    class FailingAgent:
+        def __init__(self, **kwargs):
+            browser_use_agent_requested["value"] = True
+            raise AssertionError("Browser Use agent should not be constructed")
+
     fake_browser_use = SimpleNamespace(
         Browser=FakeBrowser,
         ChatOpenRouter=FailingChatOpenRouter,
-        Agent=object,
+        Agent=FailingAgent,
     )
     external_boundary_mocks_only.setitem(sys.modules, "browser_use", fake_browser_use)
     prompt_bundle = BrowserDownloadPromptBundle(
@@ -197,6 +205,8 @@ def test_pre_llm_form_autofill_submits_without_model_client(
     )
 
     assert model_client_requested["value"] is False
+    assert browser_use_agent_requested["value"] is False
+    assert deterministic_submit_calls["value"] == 1
     assert "deterministic pre-LLM form autofill" in result.raw_model_response
     assert (
         result.final_page_html
@@ -204,7 +214,8 @@ def test_pre_llm_form_autofill_submits_without_model_client(
     )
     raw_result = json.loads(result.raw_model_response)
     assert raw_result["confirmation_url_changed"] is False
-    assert raw_result["form_disappeared"] is False
+    assert raw_result["form_disappeared"] is True
+    assert raw_result["route_steps"][0]["verification_status"] == "verified"
 
 
 def test_deterministic_playbook_completes_without_constructing_browser_use_model(
@@ -505,6 +516,8 @@ def test_pre_llm_form_autofill_returns_unknown_required_value_blocker(
         delivery_email="ops@example.com",
     )
     model_client_requested = {"value": False}
+    browser_use_agent_requested = {"value": False}
+    deterministic_submit_calls = {"value": 0}
 
     class FakePage:
         def __init__(self, browser):
@@ -519,6 +532,7 @@ def test_pre_llm_form_autofill_returns_unknown_required_value_blocker(
 
         def evaluate(self, script):
             if "standardFormSubmit" in str(script):
+                deterministic_submit_calls["value"] += 1
                 return {
                     "attempted_count": 1,
                     "filled_count": 1,
@@ -551,10 +565,15 @@ def test_pre_llm_form_autofill_returns_unknown_required_value_blocker(
             model_client_requested["value"] = True
             raise AssertionError("model client should not be constructed")
 
+    class FailingAgent:
+        def __init__(self, **kwargs):
+            browser_use_agent_requested["value"] = True
+            raise AssertionError("Browser Use agent should not be constructed")
+
     fake_browser_use = SimpleNamespace(
         Browser=FakeBrowser,
         ChatOpenRouter=FailingChatOpenRouter,
-        Agent=object,
+        Agent=FailingAgent,
     )
     external_boundary_mocks_only.setitem(sys.modules, "browser_use", fake_browser_use)
     prompt_bundle = BrowserDownloadPromptBundle(
@@ -579,6 +598,8 @@ def test_pre_llm_form_autofill_returns_unknown_required_value_blocker(
     )
 
     assert model_client_requested["value"] is False
+    assert browser_use_agent_requested["value"] is False
+    assert deterministic_submit_calls["value"] == 1
     raw_result = json.loads(result.raw_model_response)
     assert raw_result["blocked_reason"] == "blocked_unknown_required_enum"
     assert raw_result["encountered_form_fields"] == ["Work email", "Industry"]

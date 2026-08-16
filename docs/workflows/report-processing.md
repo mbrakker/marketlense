@@ -149,8 +149,11 @@ than asserting confirmation fields. The existing terminal-evidence finalizer
 is the sole authority for accepting email delivery, so a visible confirmation,
 form disappearance, URL change, or other established terminal evidence must
 verify the submit before it is considered successful. A verified deterministic
-form therefore incurs zero Browser Use model calls; an unverified submit stays
-an email-required outcome.
+form therefore incurs zero Browser Use model calls and is never submitted
+again by the fallback path. An unverified, ambiguous, or unsuccessful submit
+keeps the existing preflight browser session and continues to Browser Use from
+that exact page state; only an unknown required identity value ends as the
+typed blocker without a Browser Use call.
 
 After repairing a required lookup, the browser helper recognizes the report
 form's visible `Access`, `Unlock`, and `Resource` CTAs as submit actions, in

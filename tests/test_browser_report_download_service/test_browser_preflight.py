@@ -452,7 +452,7 @@ def test_browser_preflight_escalation_reuses_the_open_browser_session(
     assert agent_page_urls == [page_url]
 
 
-def test_async_deterministic_form_failure_preserves_preflight_browser_for_agent(
+def test_async_unverified_deterministic_submit_preserves_preflight_browser_for_agent(
     tmp_path: Path,
     run_context,
     external_boundary_mocks_only,
@@ -472,6 +472,7 @@ def test_async_deterministic_form_failure_preserves_preflight_browser_for_agent(
     agent_cookies: list[str] = []
     agent_page_urls: list[str] = []
     agent_storage_markers: list[str] = []
+    agent_page_html: list[str] = []
 
     class AsyncPage:
         def __init__(self, browser) -> None:
@@ -489,7 +490,22 @@ def test_async_deterministic_form_failure_preserves_preflight_browser_for_agent(
 
         def evaluate(self, script: str) -> object:
             if "standardFormSubmit" in script:
-                raise RuntimeError("deterministic form helper unavailable")
+                self._browser.form_submit_count += 1
+                self._browser.html = (
+                    "<html><body><form>Work email</form>"
+                    "<p>Submitting your request...</p></body></html>"
+                )
+                return {
+                    "attempted_count": 1,
+                    "filled_count": 1,
+                    "selected_count": 0,
+                    "mandatory_agreement_checked_count": 0,
+                    "resolved_control_count": 1,
+                    "submitted": True,
+                    "final_url": self._browser.url,
+                    "resolved_fields": ["Work email"],
+                    "unresolved_fields": [],
+                }
             if "getEntriesByType" in script:
                 return []
             if "const values" in script:
@@ -511,6 +527,7 @@ def test_async_deterministic_form_failure_preserves_preflight_browser_for_agent(
             self.storage_marker = "preflight-storage"
             self.start_calls = 0
             self.kill_calls = 0
+            self.form_submit_count = 0
             browser_instances.append(self)
 
         async def start(self) -> None:
@@ -534,6 +551,7 @@ def test_async_deterministic_form_failure_preserves_preflight_browser_for_agent(
             agent_cookies.append(self.browser.cookie_header)
             agent_page_urls.append(self.browser.url)
             agent_storage_markers.append(self.browser.storage_marker)
+            agent_page_html.append(self.browser.html)
 
     runtime.Browser = AsyncBrowser
     runtime.Agent = SessionObservingAgent
@@ -575,6 +593,11 @@ def test_async_deterministic_form_failure_preserves_preflight_browser_for_agent(
     assert agent_cookies == ["session=retained"]
     assert agent_page_urls == [page_url]
     assert agent_storage_markers == ["preflight-storage"]
+    assert agent_page_html == [
+        "<html><body><form>Work email</form>"
+        "<p>Submitting your request...</p></body></html>"
+    ]
+    assert browser_instances[0].form_submit_count == 1
     assert browser_instances[0].kill_calls == 1
 
 
