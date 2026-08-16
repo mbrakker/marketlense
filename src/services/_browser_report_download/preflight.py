@@ -14,7 +14,7 @@ import logging
 import os
 import re
 import time
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from importlib import import_module
 from pathlib import Path
 from threading import Thread
@@ -35,6 +35,11 @@ from src.services._browser_report_download.http import (
     try_direct_pdf_download,
 )
 from src.services._browser_report_download.helpers import browser_helper_js_async
+from src.services._browser_report_download.browser import (
+    BrowserPreflightSession,
+    close_browser_preflight_session,
+    start_browser_preflight_session,
+)
 from src.services._browser_report_download.logging import (
     browser_preflight_probe_log_fields,
 )
@@ -76,6 +81,14 @@ _TITLE_TOKEN_STOPWORDS = {
 }
 
 
+@dataclass(frozen=True)
+class BrowserPreflightProbeExecution:
+    """Typed probe result plus an unpersisted browser lease for escalation."""
+
+    response: BrowserPreflightProbeResponse
+    browser_session: BrowserPreflightSession | None
+
+
 def try_browser_preflight_probe(
     *,
     request: BrowserReportDownloadRequest,
@@ -84,6 +97,46 @@ def try_browser_preflight_probe(
     execution_url: str,
     download_dir: Path,
 ) -> BrowserPreflightProbeResponse:
+    """Run a bounded preflight and always release its browser before returning."""
+    execution = _run_browser_preflight_probe(
+        request=request,
+        ctx=ctx,
+        normalized_url=normalized_url,
+        execution_url=execution_url,
+        download_dir=download_dir,
+        retain_browser_session=False,
+    )
+    return execution.response
+
+
+def try_browser_preflight_probe_with_session(
+    *,
+    request: BrowserReportDownloadRequest,
+    ctx: RunContext,
+    normalized_url: str,
+    execution_url: str,
+    download_dir: Path,
+) -> BrowserPreflightProbeExecution:
+    """Retain the live browser only when the probe must escalate to Browser Use."""
+    return _run_browser_preflight_probe(
+        request=request,
+        ctx=ctx,
+        normalized_url=normalized_url,
+        execution_url=execution_url,
+        download_dir=download_dir,
+        retain_browser_session=True,
+    )
+
+
+def _run_browser_preflight_probe(
+    *,
+    request: BrowserReportDownloadRequest,
+    ctx: RunContext,
+    normalized_url: str,
+    execution_url: str,
+    download_dir: Path,
+    retain_browser_session: bool,
+) -> BrowserPreflightProbeExecution:
     started = time.monotonic()
     target_url = str(execution_url or request.attempt_url or request.url).strip()
     skip_reason = _preflight_skip_reason(request)
@@ -102,7 +155,10 @@ def try_browser_preflight_probe(
             ),
         )
         _log_probe_complete(ctx=ctx, normalized_url=normalized_url, probe=probe)
-        return BrowserPreflightProbeResponse(schema_version="1.0", probe=probe)
+        return BrowserPreflightProbeExecution(
+            response=BrowserPreflightProbeResponse(schema_version="1.0", probe=probe),
+            browser_session=None,
+        )
     logger.info(
         log_event(
             ctx,
@@ -117,9 +173,22 @@ def try_browser_preflight_probe(
             },
         )
     )
+    browser_session: BrowserPreflightSession | None = None
+    response: BrowserPreflightProbeResponse | None = None
+    terminal_outcome = "failed"
+    terminal_error_code = "browser_preflight_failed"
+    verified_artifact_count = 0
     try:
+        browser_use = import_module("browser_use")
+        browser_session = start_browser_preflight_session(
+            browser_use=browser_use,
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            download_dir=download_dir,
+        )
         runtime_evidence = _run_preflight_session(
-            browser_use=import_module("browser_use"),
+            browser=browser_session.browser,
             request=request,
             target_url=target_url,
             download_dir=download_dir,
@@ -160,7 +229,17 @@ def try_browser_preflight_probe(
         )
         if not selected_pdf_url:
             _log_probe_complete(ctx=ctx, normalized_url=normalized_url, probe=probe)
-            return BrowserPreflightProbeResponse(schema_version="1.0", probe=probe)
+            response = BrowserPreflightProbeResponse(schema_version="1.0", probe=probe)
+            terminal_outcome = "completed"
+            if retain_browser_session:
+                return BrowserPreflightProbeExecution(
+                    response=response,
+                    browser_session=browser_session,
+                )
+            return BrowserPreflightProbeExecution(
+                response=response,
+                browser_session=None,
+            )
         direct_result = try_direct_pdf_download(
             request=request,
             ctx=ctx,
@@ -180,7 +259,17 @@ def try_browser_preflight_probe(
                 false_negative_rate_sample=0.0,
             )
             _log_probe_complete(ctx=ctx, normalized_url=normalized_url, probe=probe)
-            return BrowserPreflightProbeResponse(schema_version="1.0", probe=probe)
+            response = BrowserPreflightProbeResponse(schema_version="1.0", probe=probe)
+            terminal_outcome = "completed"
+            if retain_browser_session:
+                return BrowserPreflightProbeExecution(
+                    response=response,
+                    browser_session=browser_session,
+                )
+            return BrowserPreflightProbeExecution(
+                response=response,
+                browser_session=None,
+            )
         result = _preflight_result(
             direct_result=direct_result,
             page_url=runtime_evidence["final_url"] or target_url,
@@ -188,10 +277,14 @@ def try_browser_preflight_probe(
             probe=probe,
         )
         _log_probe_complete(ctx=ctx, normalized_url=normalized_url, probe=probe)
-        return BrowserPreflightProbeResponse(
-            schema_version="1.0",
-            probe=probe,
-            result=result,
+        response = BrowserPreflightProbeResponse(
+            schema_version="1.0", probe=probe, result=result
+        )
+        terminal_outcome = "completed"
+        verified_artifact_count = 1
+        return BrowserPreflightProbeExecution(
+            response=response,
+            browser_session=None,
         )
     except Exception as exc:
         probe = _probe_result(
@@ -202,7 +295,30 @@ def try_browser_preflight_probe(
             evidence_labels=["preflight_failed"],
         )
         _log_probe_complete(ctx=ctx, normalized_url=normalized_url, probe=probe)
-        return BrowserPreflightProbeResponse(schema_version="1.0", probe=probe)
+        response = BrowserPreflightProbeResponse(schema_version="1.0", probe=probe)
+        return BrowserPreflightProbeExecution(
+            response=response,
+            browser_session=None,
+        )
+    finally:
+        if browser_session is not None and not browser_session.closed:
+            if (
+                retain_browser_session
+                and response is not None
+                and response.result is None
+            ):
+                pass
+            else:
+                close_browser_preflight_session(
+                    session=browser_session,
+                    ctx=ctx,
+                    normalized_url=normalized_url,
+                    outcome=terminal_outcome,
+                    error_code=(
+                        terminal_error_code if terminal_outcome == "failed" else ""
+                    ),
+                    verified_artifact_count=verified_artifact_count,
+                )
 
 
 def observe_browser_preflight_agent_outcome(
@@ -330,7 +446,7 @@ def _route_step_evidence(probe: BrowserPreflightProbeResult) -> list[str]:
 
 def _run_preflight_session(
     *,
-    browser_use: Any,
+    browser: Any,
     request: BrowserReportDownloadRequest,
     target_url: str,
     download_dir: Path,
@@ -339,7 +455,7 @@ def _run_preflight_session(
 ) -> dict[str, Any]:
     coroutine = asyncio.wait_for(
         _run_preflight_session_async(
-            browser_use=browser_use,
+            browser=browser,
             request=request,
             target_url=target_url,
             download_dir=download_dir,
@@ -357,53 +473,44 @@ def _run_preflight_session(
 
 async def _run_preflight_session_async(
     *,
-    browser_use: Any,
+    browser: Any,
     request: BrowserReportDownloadRequest,
     target_url: str,
     download_dir: Path,
     ctx: RunContext,
     normalized_url: str,
 ) -> dict[str, Any]:
-    browser = browser_use.Browser(
-        downloads_path=str(download_dir),
-        headless=not request.settings.headed,
-        auto_download_pdfs=True,
-        keep_alive=False,
+    await _await_if_needed(getattr(browser, "start", lambda: None)())
+    await _navigate_browser(browser=browser, url=target_url)
+    page = await _get_current_page(browser)
+    await asyncio.sleep(_PREFLIGHT_EVENT_DRAIN_SECONDS)
+    final_url = await _read_browser_url(browser=browser, page=page)
+    final_title = await _read_browser_title(browser=browser, page=page)
+    html = await _read_page_html(
+        page,
+        ctx=ctx,
+        normalized_url=normalized_url,
     )
-    try:
-        await _await_if_needed(getattr(browser, "start", lambda: None)())
-        await _navigate_browser(browser=browser, url=target_url)
-        page = await _get_current_page(browser)
-        await asyncio.sleep(_PREFLIGHT_EVENT_DRAIN_SECONDS)
-        final_url = await _read_browser_url(browser=browser, page=page)
-        final_title = await _read_browser_title(browser=browser, page=page)
-        html = await _read_page_html(
-            page,
-            ctx=ctx,
-            normalized_url=normalized_url,
-        )
-        rendered = await _inspect_rendered_page(
-            page=page,
-            ctx=ctx,
-            normalized_url=normalized_url,
-        )
-        event_urls = await _drain_event_urls(
-            page=page,
-            ctx=ctx,
-            normalized_url=normalized_url,
-        )
-        return {
-            "final_url": final_url or str(rendered.get("location_href") or target_url),
-            "final_title": final_title or str(rendered.get("title") or ""),
-            "html": html,
-            "html_size": int(rendered.get("html_size") or len(html or "")),
-            "pdf_candidates": rendered.get("pdf_candidates") or [],
-            "event_urls": event_urls,
-            "cookie_names": rendered.get("cookie_names") or [],
-            "local_storage_keys": rendered.get("local_storage_keys") or [],
-        }
-    finally:
-        await _stop_browser(browser)
+    rendered = await _inspect_rendered_page(
+        page=page,
+        ctx=ctx,
+        normalized_url=normalized_url,
+    )
+    event_urls = await _drain_event_urls(
+        page=page,
+        ctx=ctx,
+        normalized_url=normalized_url,
+    )
+    return {
+        "final_url": final_url or str(rendered.get("location_href") or target_url),
+        "final_title": final_title or str(rendered.get("title") or ""),
+        "html": html,
+        "html_size": int(rendered.get("html_size") or len(html or "")),
+        "pdf_candidates": rendered.get("pdf_candidates") or [],
+        "event_urls": event_urls,
+        "cookie_names": rendered.get("cookie_names") or [],
+        "local_storage_keys": rendered.get("local_storage_keys") or [],
+    }
 
 
 async def _inspect_rendered_page(

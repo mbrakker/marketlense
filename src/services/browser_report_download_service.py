@@ -33,6 +33,8 @@ from src.services._browser_report_download.artifact import (
 )
 from src.services._browser_report_download._artifact.pdf import _build_pdf_result
 from src.services._browser_report_download.browser import (
+    BrowserPreflightSession,
+    close_browser_preflight_session,
     run_browser_report_download_agent,
 )
 from src.services._browser_report_download.dev_diagnostics import (
@@ -70,7 +72,7 @@ from src.services._browser_report_download.publication_metadata import (
 )
 from src.services._browser_report_download.preflight import (
     observe_browser_preflight_agent_outcome,
-    try_browser_preflight_probe,
+    try_browser_preflight_probe_with_session,
 )
 from src.services._browser_report_download.prompt import (
     render_browser_report_download_prompt,
@@ -97,6 +99,25 @@ from src.utils.logging import log_event
 logger = logging.getLogger("market_lense.browser_report_download_service")
 ARTIFACT_ACQUISITION_CACHE_VERSION = "browser_artifact_cache_v1"
 ARTIFACT_ACQUISITION_CACHE_TTL_DAYS = 30
+
+
+def _close_preflight_session(
+    *,
+    session: BrowserPreflightSession | None,
+    ctx: RunContext,
+    normalized_url: str,
+    outcome: str,
+    verified_artifact_count: int = 0,
+) -> None:
+    if session is None:
+        return
+    close_browser_preflight_session(
+        session=session,
+        ctx=ctx,
+        normalized_url=normalized_url,
+        outcome=outcome,
+        verified_artifact_count=verified_artifact_count,
+    )
 
 
 def extract_source_publication_metadata(
@@ -638,6 +659,7 @@ def _attempt_captcha_manual_handoff(
     delivery_email: str | None,
     browser_preflight_response: Any,
     fallback_result: BrowserReportDownloadResult,
+    preflight_session: BrowserPreflightSession | None = None,
 ) -> BrowserReportDownloadResult:
     timeout_seconds = max(
         float(request.settings.captcha_handoff_policy.timeout_seconds), 1.0
@@ -663,14 +685,23 @@ def _attempt_captcha_manual_handoff(
             },
         )
     )
-    prompt_bundle = render_browser_report_download_prompt(
-        request=handoff_request,
-        ctx=ctx,
-        normalized_url=normalized_url,
-        execution_url=execution_url,
-        download_dir=download_dir,
-        delivery_email=delivery_email,
-    )
+    try:
+        prompt_bundle = render_browser_report_download_prompt(
+            request=handoff_request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            execution_url=execution_url,
+            download_dir=download_dir,
+            delivery_email=delivery_email,
+        )
+    except Exception:
+        _close_preflight_session(
+            session=preflight_session,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            outcome="failed",
+        )
+        raise
     try:
         browser_run = run_browser_report_download_agent(
             request=handoff_request,
@@ -679,6 +710,7 @@ def _attempt_captcha_manual_handoff(
             execution_url=execution_url,
             download_dir=download_dir,
             prompt_bundle=prompt_bundle,
+            preflight_session=preflight_session,
         )
         response = finalize_browser_report_download_result(
             request=handoff_request,
@@ -1097,13 +1129,15 @@ def download_report_with_browser_use(
         normalized_url=normalized_url,
     )
     validate_browser_runtime_settings(request)
-    browser_preflight_response = try_browser_preflight_probe(
+    browser_preflight_execution = try_browser_preflight_probe_with_session(
         request=request,
         ctx=ctx,
         normalized_url=normalized_url,
         execution_url=normalized_execution_url,
         download_dir=download_dir,
     )
+    browser_preflight_response = browser_preflight_execution.response
+    preflight_session = browser_preflight_execution.browser_session
     if browser_preflight_response.result is not None:
         return _complete_browser_download_result(
             request=request,
@@ -1159,6 +1193,7 @@ def download_report_with_browser_use(
                 delivery_email=delivery_email_value,
                 browser_preflight_response=browser_preflight_response,
                 fallback_result=remembered_blocker_result,
+                preflight_session=preflight_session,
             )
             return _complete_browser_download_result(
                 request=request,
@@ -1175,34 +1210,67 @@ def download_report_with_browser_use(
                 fields=browser_download_result_log_fields(remembered_blocker_result),
             )
         )
+        _close_preflight_session(
+            session=preflight_session,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            outcome="completed",
+        )
         return remembered_blocker_result
-    request = attach_browser_route_playbooks(
-        request=request,
-        ctx=ctx,
-        normalized_url=normalized_url,
-    )
-    private_api_result = try_private_api_playbook_download(
-        request=request,
-        ctx=ctx,
-        normalized_url=normalized_url,
-        execution_url=normalized_execution_url,
-        download_dir=download_dir,
-    )
+    try:
+        request = attach_browser_route_playbooks(
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
+        private_api_result = try_private_api_playbook_download(
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            execution_url=normalized_execution_url,
+            download_dir=download_dir,
+        )
+    except Exception:
+        _close_preflight_session(
+            session=preflight_session,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            outcome="failed",
+        )
+        raise
     if private_api_result is not None:
+        _close_preflight_session(
+            session=preflight_session,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            outcome="completed",
+            verified_artifact_count=(
+                1 if private_api_result.outcome == "downloaded" else 0
+            ),
+        )
         return _complete_browser_download_result(
             request=request,
             ctx=ctx,
             normalized_url=normalized_url,
             result=private_api_result,
         )
-    prompt_bundle = render_browser_report_download_prompt(
-        request=request,
-        ctx=ctx,
-        normalized_url=normalized_url,
-        execution_url=normalized_execution_url,
-        download_dir=download_dir,
-        delivery_email=delivery_email_value,
-    )
+    try:
+        prompt_bundle = render_browser_report_download_prompt(
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            execution_url=normalized_execution_url,
+            download_dir=download_dir,
+            delivery_email=delivery_email_value,
+        )
+    except Exception:
+        _close_preflight_session(
+            session=preflight_session,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            outcome="failed",
+        )
+        raise
     try:
         browser_run = run_browser_report_download_agent(
             request=request,
@@ -1211,6 +1279,7 @@ def download_report_with_browser_use(
             execution_url=normalized_execution_url,
             download_dir=download_dir,
             prompt_bundle=prompt_bundle,
+            preflight_session=preflight_session,
         )
     except AppError as exc:
         if (

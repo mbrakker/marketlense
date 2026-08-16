@@ -27,6 +27,9 @@ from src.contracts.browser_download import (
     BrowserDownloadNetworkEvent,
     BrowserReportDownloadRequest,
 )
+from src.contracts._browser_download.session_reuse import (
+    BrowserDownloadSessionReuseDecision,
+)
 from src.contracts.openai import OpenAIUsageAccountingRequest
 from src.contracts.run_budget import (
     BudgetDecision,
@@ -245,6 +248,155 @@ from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.browser_report_download_service")
+
+
+@dataclass
+class BrowserPreflightSession:
+    """Process-local browser lifecycle transferred from preflight to the agent."""
+
+    browser_use: Any
+    browser: Any
+    launch_budget: RunBudget
+    launch_decision: BudgetDecision
+    launch_started_at: float
+    session_reuse_decision: BrowserDownloadSessionReuseDecision
+    profile_dir: Path
+    preexisting_temp_dirs: set[str]
+    closed: bool = False
+
+
+def start_browser_preflight_session(
+    *,
+    browser_use: Any,
+    request: BrowserReportDownloadRequest,
+    ctx: RunContext,
+    normalized_url: str,
+    download_dir: Path,
+) -> BrowserPreflightSession:
+    """Create the canonical browser lifecycle before a retained preflight probe."""
+    launch_budget, launch_decision = _reserve_browser_launch(
+        request=request,
+        ctx=ctx,
+        normalized_url=normalized_url,
+    )
+    launch_started_at = time.monotonic()
+    _cleanup_stale_browser_use_temp_dirs(ctx=ctx, normalized_url=normalized_url)
+    preexisting_temp_dirs = {str(path) for path in _list_browser_use_temp_dirs()}
+    session_reuse_decision = resolve_browser_session_reuse(
+        policy=request.settings.session_reuse_policy,
+        default_base_dir=_default_session_reuse_base_dir(request, download_dir),
+        normalized_url=normalized_url,
+        ctx=ctx,
+    )
+    _cleanup_managed_browser_profile_dirs(
+        download_dir=download_dir,
+        ctx=ctx,
+        normalized_url=normalized_url,
+    )
+    profile_dir = (
+        Path(session_reuse_decision.profile_path).resolve()
+        if session_reuse_decision.accepted and session_reuse_decision.profile_path
+        else _new_managed_browser_profile_dir(download_dir)
+    )
+    profile_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        browser = browser_use.Browser(
+            downloads_path=str(download_dir),
+            user_data_dir=str(profile_dir),
+            headless=not request.settings.headed,
+            auto_download_pdfs=True,
+            keep_alive=True,
+        )
+    except Exception:
+        _finalize_browser_launch(
+            budget=launch_budget,
+            decision=launch_decision,
+            ctx=ctx,
+            started=False,
+            outcome="failed",
+            error_code="browser_download_agent_failed",
+            runtime_seconds=max(0, int(time.monotonic() - launch_started_at)),
+        )
+        if session_reuse_decision.accepted:
+            finalize_browser_session_reuse(
+                decision=session_reuse_decision,
+                ctx=ctx,
+                normalized_url=normalized_url,
+            )
+        else:
+            _cleanup_browser_profile_dir(
+                profile_dir,
+                ctx=ctx,
+                normalized_url=normalized_url,
+            )
+        _cleanup_new_browser_use_temp_dirs(
+            ctx=ctx,
+            normalized_url=normalized_url,
+            preexisting_temp_dirs=preexisting_temp_dirs,
+        )
+        raise
+    return BrowserPreflightSession(
+        browser_use=browser_use,
+        browser=browser,
+        launch_budget=launch_budget,
+        launch_decision=launch_decision,
+        launch_started_at=launch_started_at,
+        session_reuse_decision=session_reuse_decision,
+        profile_dir=profile_dir,
+        preexisting_temp_dirs=preexisting_temp_dirs,
+    )
+
+
+def close_browser_preflight_session(
+    *,
+    session: BrowserPreflightSession,
+    ctx: RunContext,
+    normalized_url: str,
+    outcome: str,
+    error_code: str = "",
+    verified_artifact_count: int = 0,
+) -> None:
+    """Release a preflight-owned browser that was not transferred to the agent."""
+    if session.closed:
+        return
+    session.closed = True
+    _prepare_browser_for_shutdown(
+        session.browser,
+        ctx=ctx,
+        normalized_url=normalized_url,
+    )
+    _kill_browser_with_timeout(
+        session.browser,
+        ctx=ctx,
+        normalized_url=normalized_url,
+    )
+    _finalize_browser_launch(
+        budget=session.launch_budget,
+        decision=session.launch_decision,
+        ctx=ctx,
+        started=True,
+        outcome=outcome,
+        error_code=error_code,
+        runtime_seconds=max(0, int(time.monotonic() - session.launch_started_at)),
+    )
+    if session.session_reuse_decision.accepted:
+        finalize_browser_session_reuse(
+            decision=session.session_reuse_decision,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            verified_artifact_count=verified_artifact_count,
+        )
+    else:
+        _cleanup_browser_profile_dir(
+            session.profile_dir,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
+    _cleanup_new_browser_use_temp_dirs(
+        ctx=ctx,
+        normalized_url=normalized_url,
+        preexisting_temp_dirs=session.preexisting_temp_dirs,
+    )
 
 
 def _mark_lookup_submission_assisted_raw_response(raw_model_response: str) -> str:
@@ -522,6 +674,7 @@ def run_browser_report_download_agent(
     execution_url: str,
     download_dir: Path,
     prompt_bundle: BrowserDownloadPromptBundle,
+    preflight_session: BrowserPreflightSession | None = None,
 ) -> BrowserAgentRunResult:
     logger.info(
         log_event(
@@ -543,17 +696,26 @@ def run_browser_report_download_agent(
             },
         )
     )
-    launch_budget, launch_decision = _reserve_browser_launch(
-        request=request,
-        ctx=ctx,
-        normalized_url=normalized_url,
-    )
-    browser_use = _load_browser_use_runtime(normalized_url, ctx)
-    launch_started = False
+    if preflight_session is None:
+        launch_budget, launch_decision = _reserve_browser_launch(
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
+        browser_use = _load_browser_use_runtime(normalized_url, ctx)
+        launch_started = False
+        launch_started_at = time.monotonic()
+    else:
+        browser_use = preflight_session.browser_use
+        launch_budget = preflight_session.launch_budget
+        launch_decision = preflight_session.launch_decision
+        launch_started = True
+        launch_started_at = preflight_session.launch_started_at
     launch_outcome = "completed"
     launch_error_code = ""
-    launch_started_at = time.monotonic()
-    if _should_run_browser_agent_in_subprocess(browser_use, request=request):
+    if preflight_session is None and _should_run_browser_agent_in_subprocess(
+        browser_use, request=request
+    ):
         logger.info(
             log_event(
                 ctx,
@@ -590,27 +752,34 @@ def run_browser_report_download_agent(
                 error_code=launch_error_code,
                 runtime_seconds=max(0, int(time.monotonic() - launch_started_at)),
             )
-    browser: Any | None = None
+    browser: Any | None = (
+        preflight_session.browser if preflight_session is not None else None
+    )
     usage_writer: BrowserUsageWriter | None = None
-    _cleanup_stale_browser_use_temp_dirs(ctx=ctx, normalized_url=normalized_url)
-    preexisting_temp_dirs = {str(path) for path in _list_browser_use_temp_dirs()}
-    session_reuse_decision = resolve_browser_session_reuse(
-        policy=request.settings.session_reuse_policy,
-        default_base_dir=_default_session_reuse_base_dir(request, download_dir),
-        normalized_url=normalized_url,
-        ctx=ctx,
-    )
-    _cleanup_managed_browser_profile_dirs(
-        download_dir=download_dir,
-        ctx=ctx,
-        normalized_url=normalized_url,
-    )
-    profile_dir = (
-        Path(session_reuse_decision.profile_path).resolve()
-        if session_reuse_decision.accepted and session_reuse_decision.profile_path
-        else _new_managed_browser_profile_dir(download_dir)
-    )
-    profile_dir.mkdir(parents=True, exist_ok=True)
+    if preflight_session is None:
+        _cleanup_stale_browser_use_temp_dirs(ctx=ctx, normalized_url=normalized_url)
+        preexisting_temp_dirs = {str(path) for path in _list_browser_use_temp_dirs()}
+        session_reuse_decision = resolve_browser_session_reuse(
+            policy=request.settings.session_reuse_policy,
+            default_base_dir=_default_session_reuse_base_dir(request, download_dir),
+            normalized_url=normalized_url,
+            ctx=ctx,
+        )
+        _cleanup_managed_browser_profile_dirs(
+            download_dir=download_dir,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
+        profile_dir = (
+            Path(session_reuse_decision.profile_path).resolve()
+            if session_reuse_decision.accepted and session_reuse_decision.profile_path
+            else _new_managed_browser_profile_dir(download_dir)
+        )
+        profile_dir.mkdir(parents=True, exist_ok=True)
+    else:
+        preexisting_temp_dirs = preflight_session.preexisting_temp_dirs
+        session_reuse_decision = preflight_session.session_reuse_decision
+        profile_dir = preflight_session.profile_dir
     raw_model_response = ""
     final_page_url = ""
     final_page_title = ""
@@ -626,14 +795,15 @@ def run_browser_report_download_agent(
     dialog_evidence: list[BrowserDownloadDialogEvidence] = []
     browser_spend_reservation_key = ""
     try:
-        launch_started = True
-        browser = browser_use.Browser(
-            downloads_path=str(download_dir),
-            user_data_dir=str(profile_dir),
-            headless=not request.settings.headed,
-            auto_download_pdfs=True,
-            keep_alive=True,
-        )
+        if browser is None:
+            launch_started = True
+            browser = browser_use.Browser(
+                downloads_path=str(download_dir),
+                user_data_dir=str(profile_dir),
+                headless=not request.settings.headed,
+                auto_download_pdfs=True,
+                keep_alive=True,
+            )
         pre_llm_form_result = _try_pre_llm_standard_form_submit(
             request=request,
             browser=browser,
@@ -1041,6 +1211,8 @@ def run_browser_report_download_agent(
             normalized_url=normalized_url,
             preexisting_temp_dirs=preexisting_temp_dirs,
         )
+        if preflight_session is not None:
+            preflight_session.closed = True
     logger.info(
         log_event(
             ctx,

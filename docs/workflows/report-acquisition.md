@@ -20,6 +20,8 @@ the report record.
 
 For an email-gated browser route, terminal stabilization polls only after recorded submission evidence, a transient terminal condition, or an explicit assist trigger. A route with no recorded submission finishes without the email polling schedule, and timeout-recovery attempts are bounded by the request timeout as well as the recovery safety cap. A terminal page with an explicit email-delivery confirmation is accepted as verified evidence even when a timed-out browser response omitted the earlier form-field record.
 
+Eligible browser preflight opens the same managed browser profile used by Browser Use. When preflight confirms a direct PDF it closes that browser without constructing an agent; when it escalates, Browser Use receives the already-open page and retains its cookies, local storage, and session state. The live browser lease is process-local, so this handoff runs in-process rather than through the isolated worker boundary; shutdown, session-reuse finalization, and browser-launch accounting still have one owner.
+
 Each governed acquisition attempt now retains a scalar resource envelope in the
 reports store: elapsed time, route family and policy hash, browser launch/step
 and screenshot counts, browser-model token/cost totals read from the canonical

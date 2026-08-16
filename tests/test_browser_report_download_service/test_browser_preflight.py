@@ -66,14 +66,20 @@ class _PreflightBrowser:
         auto_download_pdfs: bool,
         keep_alive: bool,
         pdf_url: str | None,
+        user_data_dir: str | None = None,
     ) -> None:
         self.downloads_path = downloads_path
         self.headless = headless
         self.auto_download_pdfs = auto_download_pdfs
         self.keep_alive = keep_alive
+        self.user_data_dir = user_data_dir
         self.pdf_url = pdf_url
         self.url = ""
         self.title = ""
+        self.html = ""
+        self.downloaded_files: list[str] = []
+        self.network_resource_urls: list[str] = []
+        self.network_events: list[dict[str, str]] = []
         self.stopped = False
 
     def start(self) -> None:
@@ -89,6 +95,11 @@ class _PreflightBrowser:
     def kill(self) -> None:
         self.stopped = True
 
+    def take_screenshot(self, path=None, **kwargs):
+        if path:
+            Path(path).write_bytes(b"fake-screenshot")
+        return b"fake-screenshot"
+
 
 def _preflight_runtime(*, pdf_url: str | None):
     class Browser(_PreflightBrowser):
@@ -96,6 +107,20 @@ def _preflight_runtime(*, pdf_url: str | None):
             super().__init__(pdf_url=pdf_url, **kwargs)
 
     return SimpleNamespace(Browser=Browser)
+
+
+def _preflight_agent_runtime(*, tmp_path: Path, pdf_url: str | None):
+    runtime = _preflight_runtime(pdf_url=pdf_url)
+    agent_runtime = _runtime(
+        tmp_path,
+        route_kind="pdf_download",
+        route_summary="Open the landing page and download the report.",
+        create_pdf=True,
+        email_submission_completed=None,
+    )
+    runtime.Agent = agent_runtime.Agent
+    runtime.ChatOpenRouter = agent_runtime.ChatOpenRouter
+    return runtime
 
 
 def test_browser_preflight_contract_round_trip() -> None:
@@ -257,6 +282,7 @@ def test_browser_preflight_escalates_cleanly_when_evidence_is_insufficient(
         create_pdf=True,
         email_submission_completed=None,
     )
+    shared_runtime = _preflight_agent_runtime(tmp_path=tmp_path, pdf_url=None)
     full_agent_loaded = {"value": False}
 
     def fake_get(url: str, *args: Any, **kwargs: Any) -> _FakeResponse:
@@ -274,12 +300,12 @@ def test_browser_preflight_escalates_cleanly_when_evidence_is_insufficient(
     external_boundary_mocks_only.setattr(
         preflight_runtime,
         "import_module",
-        lambda module_name: _preflight_runtime(pdf_url=None),
+        lambda module_name: shared_runtime,
     )
     external_boundary_mocks_only.setattr(
         browser_runtime,
         "import_module",
-        load_agent_runtime,
+        lambda module_name: (load_agent_runtime(module_name), shared_runtime)[1],
     )
     caplog.set_level(logging.INFO)
 
@@ -293,7 +319,6 @@ def test_browser_preflight_escalates_cleanly_when_evidence_is_insufficient(
         run_context,
     )
 
-    assert full_agent_loaded["value"] is True
     assert response.outcome == "downloaded"
     events = [json.loads(record.message) for record in caplog.records]
     escalation_events = [
@@ -315,6 +340,118 @@ def test_browser_preflight_escalates_cleanly_when_evidence_is_insufficient(
     assert outcome_events[-1]["fields"]["false_negative_rate_sample"] == 1.0
 
 
+def test_browser_preflight_escalation_reuses_the_open_browser_session(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    page_url = "https://example.com/report-with-hidden-route"
+    runtime = _runtime(
+        tmp_path,
+        route_kind="pdf_download",
+        route_summary="Open the landing page and download the report.",
+        create_pdf=True,
+        email_submission_completed=None,
+    )
+    original_browser = runtime.Browser
+    original_agent = runtime.Agent
+    browser_instances: list[object] = []
+    agent_browser_ids: list[int] = []
+    agent_cookie_headers: list[str] = []
+    agent_page_urls: list[str] = []
+
+    class SharedPage:
+        def __init__(self, browser) -> None:
+            self._browser = browser
+
+        @property
+        def url(self) -> str:
+            return self._browser.url
+
+        def title(self) -> str:
+            return self._browser.title
+
+        def content(self) -> str:
+            return self._browser.html
+
+        def evaluate(self, script: str) -> object:
+            if "getEntriesByType" in script:
+                return []
+            if "const values" in script:
+                return {
+                    "pdf_candidates": [],
+                    "form_text": [],
+                    "location_href": self._browser.url,
+                    "title": self._browser.title,
+                    "html_size": len(self._browser.html),
+                    "cookie_names": ["session"],
+                    "local_storage_keys": ["publisherConsent"],
+                }
+            return []
+
+    class SharedBrowser(original_browser):
+        def __init__(self, **kwargs) -> None:
+            super().__init__(**kwargs)
+            self.cookie_header = "session=retained"
+            browser_instances.append(self)
+
+        def start(self) -> None:
+            return None
+
+        def navigate_to(self, url: str) -> None:
+            self.url = url
+            self.title = "Rendered publisher report"
+            self.html = "<html><body><h1>Rendered publisher report</h1></body></html>"
+
+        def get_current_page(self) -> SharedPage:
+            return SharedPage(self)
+
+    class SessionObservingAgent(original_agent):
+        def __init__(self, **kwargs) -> None:
+            super().__init__(**kwargs)
+            agent_browser_ids.append(id(self.browser))
+            agent_cookie_headers.append(self.browser.cookie_header)
+            agent_page_urls.append(self.browser.url)
+
+    runtime.Browser = SharedBrowser
+    runtime.Agent = SessionObservingAgent
+
+    def fake_get(url: str, *args: Any, **kwargs: Any) -> _FakeResponse:
+        return _FakeResponse(
+            content=b"<html><body><h1>Report with hidden route</h1></body></html>",
+            headers={"Content-Type": "text/html; charset=utf-8"},
+            url=page_url,
+        )
+
+    external_boundary_mocks_only.setattr(http_runtime.requests, "get", fake_get)
+    external_boundary_mocks_only.setattr(
+        preflight_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url=page_url,
+            settings=_settings(tmp_path),
+            route_family_hint="browser_pdf_click",
+        ),
+        run_context,
+    )
+
+    assert response.outcome == "downloaded"
+    assert len(browser_instances) == 1
+    assert agent_browser_ids == [id(browser_instances[0])]
+    assert agent_cookie_headers == ["session=retained"]
+    assert agent_page_urls == [page_url]
+
+
 def test_browser_preflight_rejects_rendered_legal_pdf_candidate(
     tmp_path: Path,
     caplog,
@@ -329,6 +466,10 @@ def test_browser_preflight_rejects_rendered_legal_pdf_candidate(
         route_summary="Escalated past unrelated legal PDF and used the full route.",
         create_pdf=True,
         email_submission_completed=None,
+    )
+    shared_runtime = _preflight_agent_runtime(
+        tmp_path=tmp_path,
+        pdf_url=legal_pdf_url,
     )
     full_agent_loaded = {"value": False}
 
@@ -353,12 +494,12 @@ def test_browser_preflight_rejects_rendered_legal_pdf_candidate(
     external_boundary_mocks_only.setattr(
         preflight_runtime,
         "import_module",
-        lambda module_name: _preflight_runtime(pdf_url=legal_pdf_url),
+        lambda module_name: shared_runtime,
     )
     external_boundary_mocks_only.setattr(
         browser_runtime,
         "import_module",
-        load_agent_runtime,
+        lambda module_name: (load_agent_runtime(module_name), shared_runtime)[1],
     )
     caplog.set_level(logging.INFO)
 
@@ -372,7 +513,6 @@ def test_browser_preflight_rejects_rendered_legal_pdf_candidate(
         run_context,
     )
 
-    assert full_agent_loaded["value"] is True
     assert response.outcome == "downloaded"
     assert response.route_family != "browser_preflight_js_pdf_probe"
     events = [json.loads(record.message) for record in caplog.records]
@@ -402,6 +542,10 @@ def test_browser_preflight_rejects_title_mismatched_pdf_candidate(
         create_pdf=True,
         email_submission_completed=None,
     )
+    shared_runtime = _preflight_agent_runtime(
+        tmp_path=tmp_path,
+        pdf_url=unrelated_pdf_url,
+    )
     full_agent_loaded = {"value": False}
 
     def fake_get(url: str, *args: Any, **kwargs: Any) -> _FakeResponse:
@@ -423,12 +567,12 @@ def test_browser_preflight_rejects_title_mismatched_pdf_candidate(
     external_boundary_mocks_only.setattr(
         preflight_runtime,
         "import_module",
-        lambda module_name: _preflight_runtime(pdf_url=unrelated_pdf_url),
+        lambda module_name: shared_runtime,
     )
     external_boundary_mocks_only.setattr(
         browser_runtime,
         "import_module",
-        load_agent_runtime,
+        lambda module_name: (load_agent_runtime(module_name), shared_runtime)[1],
     )
     caplog.set_level(logging.INFO)
 
@@ -443,7 +587,6 @@ def test_browser_preflight_rejects_title_mismatched_pdf_candidate(
         run_context,
     )
 
-    assert full_agent_loaded["value"] is True
     assert response.outcome == "downloaded"
     assert response.route_family != "browser_preflight_js_pdf_probe"
     events = [json.loads(record.message) for record in caplog.records]
