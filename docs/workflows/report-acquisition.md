@@ -35,7 +35,10 @@ continues to the unchanged Browser Use path. Generic and historical
 prompt-only playbooks are therefore guidance only and always fall back. The
 live browser lease is process-local, so both deterministic execution and the
 Agent handoff retain cookies, local storage, session ownership, shutdown,
-session-reuse finalization, and browser-launch accounting.
+session-reuse finalization, and browser-launch accounting. Async deterministic
+form handling never closes or replaces that lease: a helper failure resumes
+Browser Use on the same browser, and the outer acquisition runner remains its
+sole lifecycle owner.
 
 Each governed acquisition attempt now retains a scalar resource envelope in the
 reports store: elapsed time, route family and policy hash, browser launch/step

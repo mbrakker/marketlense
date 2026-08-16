@@ -835,20 +835,6 @@ async def _run_pre_llm_standard_form_submit(
     return helper_result, TerminalSnapshot(page=page, url=url, title=title, html=html)
 
 
-async def _run_and_close_pre_llm_standard_form_submit(
-    **kwargs: Any,
-) -> tuple[Any, TerminalSnapshot]:
-    browser = kwargs["browser"]
-    try:
-        return await _run_pre_llm_standard_form_submit(**kwargs)
-    finally:
-        kill = getattr(browser, "kill", None)
-        if callable(kill):
-            value = kill()
-            if inspect.isawaitable(value):
-                await value
-
-
 def _try_pre_llm_standard_form_submit(
     *,
     request: BrowserReportDownloadRequest,
@@ -877,7 +863,7 @@ def _try_pre_llm_standard_form_submit(
     if inspect.iscoroutinefunction(getattr(browser, "start", None)):
         try:
             helper_result, snapshot = asyncio.run(
-                _run_and_close_pre_llm_standard_form_submit(
+                _run_pre_llm_standard_form_submit(
                     request=request,
                     browser=browser,
                     ctx=ctx,
@@ -885,9 +871,7 @@ def _try_pre_llm_standard_form_submit(
                     execution_url=execution_url,
                 )
             )
-            browser._market_lense_pre_llm_closed = True
         except Exception as exc:
-            browser._market_lense_pre_llm_closed = True
             logger.info(
                 log_event(
                     ctx,
@@ -1649,17 +1633,7 @@ def run_browser_report_download_agent(
             execution_url=execution_url,
         )
         if pre_llm_form_result is not None:
-            if getattr(browser, "_market_lense_pre_llm_closed", False):
-                browser = None
             return pre_llm_form_result
-        if getattr(browser, "_market_lense_pre_llm_closed", False):
-            browser = browser_use.Browser(
-                downloads_path=str(download_dir),
-                user_data_dir=str(profile_dir),
-                headless=not request.settings.headed,
-                auto_download_pdfs=True,
-                keep_alive=True,
-            )
         browser_spend_reservation_key = _reserve_browser_use_spend(
             request=request,
             ctx=ctx,

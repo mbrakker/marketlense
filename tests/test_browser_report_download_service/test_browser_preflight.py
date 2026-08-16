@@ -452,6 +452,132 @@ def test_browser_preflight_escalation_reuses_the_open_browser_session(
     assert agent_page_urls == [page_url]
 
 
+def test_async_deterministic_form_failure_preserves_preflight_browser_for_agent(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    page_url = "https://example.com/gated-report"
+    runtime = _runtime(
+        tmp_path,
+        route_kind="pdf_download",
+        route_summary="Recover from the form helper and download the report.",
+        create_pdf=True,
+        email_submission_completed=None,
+    )
+    original_browser = runtime.Browser
+    original_agent = runtime.Agent
+    browser_instances: list[object] = []
+    agent_browser_ids: list[int] = []
+    agent_cookies: list[str] = []
+    agent_page_urls: list[str] = []
+    agent_storage_markers: list[str] = []
+
+    class AsyncPage:
+        def __init__(self, browser) -> None:
+            self._browser = browser
+
+        @property
+        def url(self) -> str:
+            return self._browser.url
+
+        def title(self) -> str:
+            return self._browser.title
+
+        def content(self) -> str:
+            return self._browser.html
+
+        def evaluate(self, script: str) -> object:
+            if "standardFormSubmit" in script:
+                raise RuntimeError("deterministic form helper unavailable")
+            if "getEntriesByType" in script:
+                return []
+            if "const values" in script:
+                return {
+                    "pdf_candidates": [],
+                    "form_text": ["Work email"],
+                    "location_href": self._browser.url,
+                    "title": self._browser.title,
+                    "html_size": len(self._browser.html),
+                    "cookie_names": ["session"],
+                    "local_storage_keys": [self._browser.storage_marker],
+                }
+            return []
+
+    class AsyncBrowser(original_browser):
+        def __init__(self, **kwargs) -> None:
+            super().__init__(**kwargs)
+            self.cookie_header = "session=retained"
+            self.storage_marker = "preflight-storage"
+            self.start_calls = 0
+            self.kill_calls = 0
+            browser_instances.append(self)
+
+        async def start(self) -> None:
+            self.start_calls += 1
+
+        async def kill(self) -> None:
+            self.kill_calls += 1
+
+        def navigate_to(self, url: str) -> None:
+            self.url = url
+            self.title = "Gated report"
+            self.html = "<html><body><form>Work email</form></body></html>"
+
+        def get_current_page(self) -> AsyncPage:
+            return AsyncPage(self)
+
+    class SessionObservingAgent(original_agent):
+        def __init__(self, **kwargs) -> None:
+            super().__init__(**kwargs)
+            agent_browser_ids.append(id(self.browser))
+            agent_cookies.append(self.browser.cookie_header)
+            agent_page_urls.append(self.browser.url)
+            agent_storage_markers.append(self.browser.storage_marker)
+
+    runtime.Browser = AsyncBrowser
+    runtime.Agent = SessionObservingAgent
+
+    def fake_get(url: str, *args: Any, **kwargs: Any) -> _FakeResponse:
+        return _FakeResponse(
+            content=b"<html><body><form>Work email</form></body></html>",
+            headers={"Content-Type": "text/html; charset=utf-8"},
+            url=page_url,
+        )
+
+    external_boundary_mocks_only.setattr(http_runtime.requests, "get", fake_get)
+    external_boundary_mocks_only.setattr(
+        preflight_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url=page_url,
+            source_page_url_hint=page_url,
+            delivery_email="ops@example.com",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_email_form",
+        ),
+        run_context,
+    )
+
+    assert response.outcome == "downloaded"
+    assert len(browser_instances) == 1
+    assert agent_browser_ids == [id(browser_instances[0])]
+    assert agent_cookies == ["session=retained"]
+    assert agent_page_urls == [page_url]
+    assert agent_storage_markers == ["preflight-storage"]
+    assert browser_instances[0].kill_calls == 1
+
+
 def test_browser_preflight_rejects_rendered_legal_pdf_candidate(
     tmp_path: Path,
     caplog,
