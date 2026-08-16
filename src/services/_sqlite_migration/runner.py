@@ -475,6 +475,40 @@ def _llm_usage_003_expand_deferred_work_recovery_state(
     )
 
 
+def _llm_usage_004_add_task_attribution_to_actuals(
+    conn: sqlite3.Connection,
+) -> None:
+    """Attribute durable non-provider measurements to the creating task.
+
+    Provider usage has always carried ``RunContext`` task identifiers in
+    ``llm_usage_events``.  Reservations, final actuals, and direct side-effect
+    events need the same scope so acquisition telemetry can be read without
+    subtracting concurrent run totals.
+    """
+    for table_name in (
+        "budget_authority_reservations",
+        "budget_authority_actuals",
+    ):
+        _add_column_if_missing(
+            conn,
+            table_name=table_name,
+            column_name="task_id",
+            column_type="TEXT NOT NULL DEFAULT ''",
+        )
+        _add_column_if_missing(
+            conn,
+            table_name=table_name,
+            column_name="span_id",
+            column_type="TEXT NOT NULL DEFAULT ''",
+        )
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_budget_authority_actuals_run_task
+        ON budget_authority_actuals(run_id, task_id)
+        """
+    )
+
+
 _LLM_USAGE_LEDGER_MIGRATIONS: tuple[_MigrationSpec, ...] = (
     _MigrationSpec(
         migration_id="llm_usage_ledger_001_create_budget_authority_tables",
@@ -490,5 +524,10 @@ _LLM_USAGE_LEDGER_MIGRATIONS: tuple[_MigrationSpec, ...] = (
         migration_id="llm_usage_ledger_003_expand_deferred_work_recovery_state",
         version=3,
         apply_fn=_llm_usage_003_expand_deferred_work_recovery_state,
+    ),
+    _MigrationSpec(
+        migration_id="llm_usage_ledger_004_add_task_attribution_to_actuals",
+        version=4,
+        apply_fn=_llm_usage_004_add_task_attribution_to_actuals,
     ),
 )

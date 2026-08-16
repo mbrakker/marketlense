@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+from concurrent.futures import ThreadPoolExecutor
 
 from src.contracts.browser_download import (
     BrowserDownloadIdentity,
@@ -18,7 +19,13 @@ from src.contracts.report_store import (
     AcquisitionResourceAggregateRequest,
     AcquisitionRouteSuppressionRequest,
 )
-from src.contracts.run_budget import RunBudget, RunBudgetEventAppendRequest
+from src.contracts.run_budget import (
+    BudgetRequest,
+    BudgetSideEffectFinalizeRequest,
+    RunBudget,
+    RunBudgetEventAppendRequest,
+    RunBudgetUsage,
+)
 from src.contracts.run_context import RunContext
 from src.orchestrators._report_download_orchestrator.budget import (
     read_report_download_run_usage,
@@ -27,12 +34,13 @@ from src.orchestrators._report_download_orchestrator.dependencies import (
     ReportDownloadDependencies,
 )
 from src.orchestrators._report_download_orchestrator.resource_telemetry import (
-    capture_acquisition_resource_usage,
     record_acquisition_resource_summary,
 )
 from src.services.llm_usage_ledger_service import (
     append_run_budget_side_effect,
     append_usage,
+    evaluate_budget_request,
+    finalize_budget_side_effect,
     read_usage_run_summary,
 )
 from src.services.report_store_service import (
@@ -79,7 +87,13 @@ def _telemetry_request(tmp_path) -> ReportDownloadOrchestratorRequest:
 
 
 def _append_browser_usage(
-    *, db_path: str, ctx: RunContext, input_tokens: int, output_tokens: int, cost: float
+    *,
+    db_path: str,
+    ctx: RunContext,
+    input_tokens: int,
+    output_tokens: int,
+    cost: float,
+    action: str = "browser_use_llm_call",
 ) -> None:
     append_usage(
         LLMUsageLedgerAppendRequest(
@@ -89,7 +103,7 @@ def _append_browser_usage(
                 schema_version="1.0",
                 timestamp_utc="2026-08-16T10:00:00+00:00",
                 provider="openai",
-                action="browser_use_llm_call",
+                action=action,
                 run_id=ctx.run_id,
                 task_id=ctx.task_id,
                 span_id=ctx.span_id,
@@ -129,12 +143,27 @@ def _append_acquisition_side_effects(
         usage_db_path=db_path,
         day_utc="2026-08-16",
     )
-    append_run_budget_side_effect(
-        RunBudgetEventAppendRequest(
+    decision = evaluate_budget_request(
+        BudgetRequest(
             schema_version="1.0",
             budget=budget,
-            event_key=f"browser-launch:{ctx.task_id}",
-            metric="browser_launches",
+            run_id=ctx.run_id,
+            workflow_id="browser_acquisition",
+            publisher_id="publisher-a",
+            report_id="report",
+            resource_type="browser_launch",
+            operation="browser_launch",
+            idempotency_key=f"browser-launch:{ctx.task_id}",
+            reserve_in_flight=True,
+        ),
+        ctx,
+    )
+    finalize_budget_side_effect(
+        BudgetSideEffectFinalizeRequest(
+            schema_version="1.0",
+            usage_db_path=db_path,
+            reservation_key=decision.reservation_key,
+            actual_usage=RunBudgetUsage(schema_version="1.0", browser_launches=1),
         ),
         ctx,
     )
@@ -318,7 +347,7 @@ def test_changed_policy_and_explicit_revalidation_do_not_suppress(tmp_path) -> N
     assert not after_success.suppressed
 
 
-def test_sequential_acquisitions_record_only_their_own_ledger_usage(tmp_path) -> None:
+def test_sequential_acquisitions_include_only_their_own_ledger_usage(tmp_path) -> None:
     request = _telemetry_request(tmp_path)
     first_ctx = RunContext(
         schema_version="1.0", run_id="shared-run", task_id="first", span_id="one"
@@ -327,13 +356,20 @@ def test_sequential_acquisitions_record_only_their_own_ledger_usage(tmp_path) ->
         schema_version="1.0", run_id="shared-run", task_id="second", span_id="two"
     )
 
-    first_start = capture_acquisition_resource_usage(request=request, ctx=first_ctx)
     _append_browser_usage(
         db_path=request.settings.usage_db_path,
         ctx=first_ctx,
         input_tokens=11,
         output_tokens=7,
         cost=0.0011,
+    )
+    _append_browser_usage(
+        db_path=request.settings.usage_db_path,
+        ctx=first_ctx,
+        input_tokens=3,
+        output_tokens=2,
+        cost=0.0004,
+        action="browser_report_download:form_value_derivation",
     )
     _append_acquisition_side_effects(
         db_path=request.settings.usage_db_path, ctx=first_ctx, retries=1
@@ -346,16 +382,22 @@ def test_sequential_acquisitions_record_only_their_own_ledger_usage(tmp_path) ->
         started_monotonic=0.0,
         route_family="browser_email_form",
         terminal_outcome="success",
-        usage_at_start=first_start,
     )
 
-    second_start = capture_acquisition_resource_usage(request=request, ctx=second_ctx)
     _append_browser_usage(
         db_path=request.settings.usage_db_path,
         ctx=second_ctx,
         input_tokens=13,
         output_tokens=5,
         cost=0.0023,
+    )
+    _append_browser_usage(
+        db_path=request.settings.usage_db_path,
+        ctx=second_ctx,
+        input_tokens=4,
+        output_tokens=6,
+        cost=0.0011,
+        action="browser_report_download:form_value_derivation",
     )
     _append_acquisition_side_effects(
         db_path=request.settings.usage_db_path, ctx=second_ctx, retries=2
@@ -368,7 +410,6 @@ def test_sequential_acquisitions_record_only_their_own_ledger_usage(tmp_path) ->
         started_monotonic=0.0,
         route_family="browser_email_form",
         terminal_outcome="success",
-        usage_at_start=second_start,
     )
 
     with sqlite3.connect(request.reports_db) as conn:
@@ -381,13 +422,12 @@ def test_sequential_acquisitions_record_only_their_own_ledger_usage(tmp_path) ->
             """
         ).fetchall()
 
-    assert rows == [(1, 11, 7, 1, 1, 0.0011), (1, 13, 5, 1, 2, 0.0023)]
+    assert rows == [(2, 14, 9, 1, 1, 0.0015), (2, 17, 11, 1, 2, 0.0034)]
     run_usage = read_usage_run_summary(
         LLMUsageRunSummaryRequest(
             schema_version="1.0",
             db_path=request.settings.usage_db_path,
             run_id="shared-run",
-            action="browser_use_llm_call",
         ),
         first_ctx,
     )
@@ -400,3 +440,103 @@ def test_sequential_acquisitions_record_only_their_own_ledger_usage(tmp_path) ->
     )
     assert sum(row[3] for row in rows) == run_budget_usage.browser_launches
     assert sum(row[4] for row in rows) == run_budget_usage.retries
+
+
+def test_concurrent_acquisitions_sharing_a_run_remain_task_scoped(tmp_path) -> None:
+    request = _telemetry_request(tmp_path)
+    first_ctx = RunContext(
+        schema_version="1.0", run_id="concurrent-run", task_id="first", span_id="one"
+    )
+    second_ctx = RunContext(
+        schema_version="1.0", run_id="concurrent-run", task_id="second", span_id="two"
+    )
+    for ctx, input_tokens, output_tokens, cost, retries in (
+        (first_ctx, 7, 3, 0.0007, 1),
+        (second_ctx, 19, 11, 0.0031, 3),
+    ):
+        _append_browser_usage(
+            db_path=request.settings.usage_db_path,
+            ctx=ctx,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            cost=cost,
+        )
+        _append_acquisition_side_effects(
+            db_path=request.settings.usage_db_path, ctx=ctx, retries=retries
+        )
+
+    def record(ctx: RunContext, started_at_utc: str) -> None:
+        record_acquisition_resource_summary(
+            request=request,
+            ctx=ctx,
+            dependencies=ReportDownloadDependencies.default(),
+            started_at_utc=started_at_utc,
+            started_monotonic=0.0,
+            route_family="browser_email_form",
+            terminal_outcome="success",
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        list(
+            executor.map(
+                lambda values: record(*values),
+                (
+                    (first_ctx, "2026-08-16T11:00:00+00:00"),
+                    (second_ctx, "2026-08-16T11:00:01+00:00"),
+                ),
+            )
+        )
+
+    with sqlite3.connect(request.reports_db) as conn:
+        rows = conn.execute(
+            """
+            select browser_model_calls, input_tokens, output_tokens,
+                   browser_launches, retry_count, estimated_cost_usd
+            from acquisition_attempt_resources
+            order by started_at_utc
+            """
+        ).fetchall()
+
+    assert rows == [(1, 7, 3, 1, 1, 0.0007), (1, 19, 11, 1, 3, 0.0031)]
+    run_usage = read_usage_run_summary(
+        LLMUsageRunSummaryRequest(
+            schema_version="1.0",
+            db_path=request.settings.usage_db_path,
+            run_id="concurrent-run",
+        ),
+        first_ctx,
+    )
+    assert sum(row[0] for row in rows) == run_usage.call_count
+    assert sum(row[1] for row in rows) == run_usage.input_tokens
+    assert sum(row[2] for row in rows) == run_usage.output_tokens
+    assert round(sum(row[5] for row in rows), 6) == run_usage.estimated_cost_usd
+    run_budget_usage = read_report_download_run_usage(
+        request=request, ctx=first_ctx
+    )
+    assert sum(row[3] for row in rows) == run_budget_usage.browser_launches
+    assert sum(row[4] for row in rows) == run_budget_usage.retries
+
+
+def test_browser_route_without_actual_launch_records_zero(tmp_path) -> None:
+    """A route family is not evidence that a managed browser was launched."""
+    request = _telemetry_request(tmp_path)
+    ctx = RunContext(
+        schema_version="1.0", run_id="zero-launch-run", task_id="zero", span_id="one"
+    )
+
+    record_acquisition_resource_summary(
+        request=request,
+        ctx=ctx,
+        dependencies=ReportDownloadDependencies.default(),
+        started_at_utc="2026-08-16T10:00:00+00:00",
+        started_monotonic=0.0,
+        route_family="browser_email_form",
+        terminal_outcome="failed",
+    )
+
+    with sqlite3.connect(request.reports_db) as conn:
+        browser_launches = conn.execute(
+            "select browser_launches from acquisition_attempt_resources"
+        ).fetchone()[0]
+
+    assert browser_launches == 0

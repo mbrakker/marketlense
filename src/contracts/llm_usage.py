@@ -591,13 +591,16 @@ class LLMUsageMedianRebuildResponse:
 
 @dataclass(frozen=True)
 class LLMUsageRunSummaryRequest:
-    """Read-only canonical usage aggregate for one workflow run and action."""
+    """Read-only canonical usage aggregate for one workflow run, task, and action."""
 
     schema_version: str = field(
         metadata={"doc": "Usage-run summary request schema version."}
     )
     db_path: str = field(metadata={"doc": "Canonical SQLite usage ledger path."})
     run_id: str = field(metadata={"doc": "Exact run identifier to aggregate."})
+    task_id: str = field(
+        default="", metadata={"doc": "Optional exact task identifier to aggregate."}
+    )
     action: str = field(default="", metadata={"doc": "Optional exact action filter."})
 
 
@@ -607,6 +610,7 @@ class LLMUsageRunSummaryResponse:
         metadata={"doc": "Usage-run summary response schema version."}
     )
     run_id: str = field(metadata={"doc": "Aggregated run identifier."})
+    task_id: str = field(metadata={"doc": "Applied task filter, if any."})
     action: str = field(metadata={"doc": "Applied action filter, if any."})
     call_count: int = field(metadata={"doc": "Canonical provider-call count."})
     input_tokens: int = field(metadata={"doc": "Canonical summed input tokens."})

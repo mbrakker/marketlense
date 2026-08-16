@@ -543,6 +543,29 @@ class RunBudgetUsageReadResponse:
 
 
 @dataclass(frozen=True)
+class RunBudgetTaskUsageReadRequest:
+    """Read actual canonical usage for one acquisition task within a run."""
+
+    schema_version: str = field(metadata={"doc": "Task-usage request schema version."})
+    budget: RunBudget = field(
+        metadata={"doc": "Canonical ledger path and exact run scope."}
+    )
+    task_id: str = field(metadata={"doc": "Exact acquisition task identifier."})
+
+
+@dataclass(frozen=True)
+class RunBudgetTaskUsageReadResponse:
+    """Canonical actual usage attributed to one task."""
+
+    schema_version: str = field(metadata={"doc": "Task-usage response schema version."})
+    run_id: str = field(metadata={"doc": "Exact run identifier read."})
+    task_id: str = field(metadata={"doc": "Exact task identifier read."})
+    usage: RunBudgetUsage = field(
+        metadata={"doc": "Actual provider and side-effect usage for the task."}
+    )
+
+
+@dataclass(frozen=True)
 class RunBudgetEventAppendRequest:
     """Idempotently persist one completed non-LLM budget side effect."""
 

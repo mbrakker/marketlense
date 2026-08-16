@@ -23029,6 +23029,9 @@
         },
         "schema_version": {
           "type": "string"
+        },
+        "task_id": {
+          "type": "string"
         }
       },
       "required": [
@@ -23064,11 +23067,15 @@
         },
         "schema_version": {
           "type": "string"
+        },
+        "task_id": {
+          "type": "string"
         }
       },
       "required": [
         "schema_version",
         "run_id",
+        "task_id",
         "action",
         "call_count",
         "input_tokens",
@@ -34472,6 +34479,50 @@
       },
       "required": [
         "schema_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts.run_budget.RunBudgetTaskUsageReadRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "budget": {
+          "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "task_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "budget",
+        "task_id"
+      ],
+      "type": "object"
+    },
+    "src.contracts.run_budget.RunBudgetTaskUsageReadResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "run_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "task_id": {
+          "type": "string"
+        },
+        "usage": {
+          "$ref": "#/$defs/src.contracts.run_budget.RunBudgetUsage"
+        }
+      },
+      "required": [
+        "schema_version",
+        "run_id",
+        "task_id",
+        "usage"
       ],
       "type": "object"
     },

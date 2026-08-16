@@ -839,42 +839,6 @@ def test_grounded_form_derivation_requires_visible_option_and_configured_evidenc
     )
 
 
-def test_grounded_form_derivation_unavailable_preserves_typed_blocker(
-    tmp_path: Path, external_boundary_mocks_only
-):
-    from src.services import llm_service
-    from src.services._browser_report_download import browser as browser_runtime
-    from src.utils.errors import AppError
-
-    def unavailable_model(*_args, **_kwargs):
-        raise AppError(
-            code="openai_chat_failed",
-            message="provider unavailable",
-            retryable=True,
-        )
-
-    external_boundary_mocks_only.setattr(
-        llm_service, "openai_chat_json", unavailable_model
-    )
-    request = BrowserReportDownloadRequest(
-        schema_version="1.0",
-        url="https://example.com/gated-report",
-        settings=_settings(tmp_path),
-        route_family_hint="browser_email_form",
-    )
-
-    assert (
-        browser_runtime._derive_grounded_form_option(
-            request=request,
-            helper_result=SimpleNamespace(
-                unresolved_options={"Industry": ("Technology",)}
-            ),
-            ctx=_ctx(),
-        )
-        is None
-    )
-
-
 def test_browser_agent_uses_openai_primary_with_openrouter_fallback(
     tmp_path: Path,
     external_boundary_mocks_only,

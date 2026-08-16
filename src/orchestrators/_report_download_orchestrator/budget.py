@@ -6,12 +6,14 @@ from typing import TYPE_CHECKING
 from src.contracts.run_budget import (
     RunBudget,
     RunBudgetEventAppendRequest,
+    RunBudgetTaskUsageReadRequest,
     RunBudgetUsage,
     RunBudgetUsageReadRequest,
 )
 from src.contracts.run_context import RunContext
 from src.services.llm_usage_ledger_service import (
     append_run_budget_side_effect,
+    read_run_budget_task_usage,
     read_run_budget_usage,
 )
 
@@ -116,6 +118,22 @@ def read_report_download_run_usage(
     return read_run_budget_usage(
         RunBudgetUsageReadRequest(schema_version="1.0", budget=budget), ctx
     ).run_usage
+
+
+def read_report_download_task_usage(
+    *,
+    request: "ReportDownloadOrchestratorRequest",
+    ctx: RunContext,
+) -> RunBudgetUsage:
+    """Read actual acquisition usage from the canonical ledger by task scope."""
+    return read_run_budget_task_usage(
+        RunBudgetTaskUsageReadRequest(
+            schema_version="1.0",
+            budget=build_report_download_telemetry_budget(request, ctx),
+            task_id=ctx.task_id,
+        ),
+        ctx,
+    ).usage
 
 
 def record_report_download_budget_event(

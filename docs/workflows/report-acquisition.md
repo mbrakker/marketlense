@@ -41,11 +41,15 @@ Each governed acquisition attempt now retains a scalar resource envelope in the
 reports store: elapsed time, route family and policy hash, browser launch/step
 and screenshot counts, browser-model token/cost totals read from the canonical
 usage ledger, Drive/mailbox counters, retry count, typed terminal outcome, and
-the verified artifact hash when one exists. Telemetry captures the ledger's
-run totals at acquisition start and persists only the terminal deltas, so
-sequential acquisitions in one run cannot inherit each other's Browser Use
-calls, tokens, launches, retries, or cost. Missing historic or unavailable
-measurements are marked as incomplete rather than read as zero. The report-store
+the verified artifact hash when one exists. Telemetry reads the canonical
+ledger by the exact `(run_id, task_id)` acquisition scope, including Browser Use
+and grounded form-value derivation model calls. The same task identity is
+retained for browser reservations/final actuals and direct side-effect events,
+so sequential and parallel acquisitions in one run cannot inherit each
+other's calls, tokens, launches, retries, or cost. Browser launches are
+recorded only from durable actual usage; an attempt with no real launch records
+zero. Missing historic or unavailable measurements are marked as incomplete
+rather than read as zero. The report-store
 aggregate groups this evidence by publisher and route, exposing sample size,
 success rate, cost per verified acquisition, median/p95 time, browser steps per
 success, terminal failures, and avoided browser/model operations.

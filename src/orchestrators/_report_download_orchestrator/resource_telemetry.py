@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass
 from typing import Iterable
 
 from src.contracts.browser_download import (
@@ -12,16 +11,14 @@ from src.contracts.browser_download import (
 )
 from src.contracts.llm_usage import (
     LLMUsageRunSummaryRequest,
-    LLMUsageRunSummaryResponse,
 )
 from src.contracts.report_store import (
     AcquisitionAttemptResourceRecordRequest,
     AcquisitionAttemptResourceSummary,
 )
-from src.contracts.run_budget import RunBudgetUsage
 from src.contracts.run_context import RunContext
 from src.orchestrators._report_download_orchestrator.budget import (
-    read_report_download_run_usage,
+    read_report_download_task_usage,
 )
 from src.orchestrators._report_download_orchestrator.dependencies import (
     ReportDownloadDependencies,
@@ -29,15 +26,6 @@ from src.orchestrators._report_download_orchestrator.dependencies import (
 from src.services.llm_usage_ledger_service import read_usage_run_summary
 from src.utils.cache_utils import sha256_json
 from src.utils.clock import utc_now_seconds_z
-
-
-@dataclass(frozen=True)
-class AcquisitionResourceUsage:
-    """Canonical ledger totals captured at one acquisition boundary."""
-
-    browser_usage: LLMUsageRunSummaryResponse
-    budget_usage: RunBudgetUsage
-
 
 def route_suppression_policy_hash(request: ReportDownloadOrchestratorRequest) -> str:
     policy = request.settings.route_suppression_policy
@@ -53,32 +41,11 @@ def route_suppression_policy_hash(request: ReportDownloadOrchestratorRequest) ->
     )
 
 
-def capture_acquisition_resource_usage(
-    *,
-    request: ReportDownloadOrchestratorRequest,
-    ctx: RunContext,
-) -> AcquisitionResourceUsage:
-    """Capture canonical totals before an acquisition starts for terminal deltas."""
-    return AcquisitionResourceUsage(
-        browser_usage=read_usage_run_summary(
-            LLMUsageRunSummaryRequest(
-                schema_version="1.0",
-                db_path=request.settings.usage_db_path,
-                run_id=ctx.run_id,
-                action="browser_use_llm_call",
-            ),
-            ctx,
-        ),
-        budget_usage=read_report_download_run_usage(request=request, ctx=ctx),
-    )
-
-
 def record_acquisition_resource_summary(
     *,
     request: ReportDownloadOrchestratorRequest,
     ctx: RunContext,
     dependencies: ReportDownloadDependencies,
-    usage_at_start: AcquisitionResourceUsage,
     started_at_utc: str,
     started_monotonic: float,
     route_family: str,
@@ -91,23 +58,20 @@ def record_acquisition_resource_summary(
     avoided_operations: tuple[str, ...] = (),
 ) -> None:
     """Persist scalar acquisition telemetry using the canonical usage ledger."""
-    usage_at_completion = capture_acquisition_resource_usage(
-        request=request, ctx=ctx
+    usage = read_usage_run_summary(
+        LLMUsageRunSummaryRequest(
+            schema_version="1.0",
+            db_path=request.settings.usage_db_path,
+            run_id=ctx.run_id,
+            task_id=ctx.task_id,
+        ),
+        ctx,
     )
-    usage = _usage_delta(
-        usage_at_completion.browser_usage,
-        usage_at_start.browser_usage,
-    )
-    budget_usage = _budget_usage_delta(
-        usage_at_completion.budget_usage,
-        usage_at_start.budget_usage,
-    )
+    budget_usage = read_report_download_task_usage(request=request, ctx=ctx)
     steps = list(result.route_steps) if result is not None else []
     uploads = list(drive_uploads)
     browser_family = route_family.startswith("browser_")
     browser_launches = max(0, int(budget_usage.browser_launches))
-    if browser_family and browser_launches == 0 and terminal_outcome != "suppressed":
-        browser_launches = 1
     drive_writes = max(
         int(budget_usage.drive_writes),
         sum(1 for upload in uploads if upload.status == "uploaded"),
@@ -181,58 +145,6 @@ def record_acquisition_resource_summary(
         ),
         ctx,
     )
-
-
-def _usage_delta(
-    completion: LLMUsageRunSummaryResponse,
-    start: LLMUsageRunSummaryResponse,
-) -> LLMUsageRunSummaryResponse:
-    return LLMUsageRunSummaryResponse(
-        schema_version="1.0",
-        run_id=completion.run_id,
-        action=completion.action,
-        call_count=max(0, completion.call_count - start.call_count),
-        input_tokens=max(0, completion.input_tokens - start.input_tokens),
-        cached_input_tokens=max(
-            0, completion.cached_input_tokens - start.cached_input_tokens
-        ),
-        output_tokens=max(0, completion.output_tokens - start.output_tokens),
-        estimated_cost_usd=round(
-            max(0.0, completion.estimated_cost_usd - start.estimated_cost_usd), 6
-        ),
-    )
-
-
-def _budget_usage_delta(
-    completion: RunBudgetUsage,
-    start: RunBudgetUsage,
-) -> RunBudgetUsage:
-    fields = (
-        "spend_usd",
-        "tokens",
-        "calls",
-        "steps",
-        "runtime_seconds",
-        "retries",
-        "browser_launches",
-        "drive_writes",
-        "drive_reads",
-        "wordpress_writes",
-        "pdfs",
-        "mailbox_reads",
-    )
-    return RunBudgetUsage(
-        schema_version="1.0",
-        **{
-            field: max(
-                0.0 if field == "spend_usd" else 0,
-                getattr(completion, field) - getattr(start, field),
-            )
-            for field in fields
-        },
-    )
-
-
 def _source_identity_status(
     *,
     result: BrowserReportDownloadResult | None,

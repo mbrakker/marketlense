@@ -68,6 +68,8 @@ from src.contracts.run_budget import (
     RunBudgetEventAppendResponse,
     RunBudgetLimits,
     RunBudgetUsage,
+    RunBudgetTaskUsageReadRequest,
+    RunBudgetTaskUsageReadResponse,
     RunBudgetUsageReadRequest,
     RunBudgetUsageReadResponse,
 )
@@ -416,6 +418,8 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
             schema_version text not null,
             timestamp_utc text not null,
             run_id text not null,
+            task_id text not null default '',
+            span_id text not null default '',
             publisher_name text not null,
             day_utc text not null,
             metric text not null,
@@ -430,6 +434,24 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
         """
         create index if not exists idx_run_budget_side_effect_events_scope
         on run_budget_side_effect_events(run_id, day_utc, publisher_name, metric)
+        """
+    )
+    side_effect_columns = {
+        str(row[1])
+        for row in conn.execute(
+            "pragma table_info(run_budget_side_effect_events)"
+        ).fetchall()
+    }
+    for column_name in ("task_id", "span_id"):
+        if column_name not in side_effect_columns:
+            conn.execute(
+                "alter table run_budget_side_effect_events "
+                f"add column {column_name} text not null default ''"
+            )
+    conn.execute(
+        """
+        create index if not exists idx_run_budget_side_effect_events_run_task
+        on run_budget_side_effect_events(run_id, task_id)
         """
     )
     conn.execute(
@@ -803,6 +825,66 @@ def read_run_budget_usage(
     return response
 
 
+def read_run_budget_task_usage(
+    request: RunBudgetTaskUsageReadRequest, ctx: RunContext
+) -> RunBudgetTaskUsageReadResponse:
+    """Read actual canonical usage for exactly one task without budget merging.
+
+    This read is deliberately observational: budget enforcement continues to use
+    :func:`read_run_budget_usage` and its run/day/publisher scopes unchanged.
+    """
+    if request.schema_version != "1.0" or not str(request.task_id or "").strip():
+        raise AppError(
+            code="run_budget_task_usage_read_request_invalid",
+            message="Task-scoped budget usage requires an exact task identifier",
+            retryable=False,
+        )
+    _validate_run_budget(request.budget)
+    budget = request.budget
+    task_id = str(request.task_id).strip()
+    path = Path(budget.usage_db_path)
+    _apply_budget_authority_migrations(path, ctx)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with _LOCK, sqlite3.connect(path) as conn:
+            _ensure_schema(conn)
+            usage = _read_budget_usage_for_scope(
+                conn,
+                llm_where="run_id = ? and task_id = ?",
+                llm_params=(budget.run_id, task_id),
+                event_where="run_id = ? and task_id = ?",
+                event_params=(budget.run_id, task_id),
+            )
+    except sqlite3.Error as exc:
+        raise AppError(
+            code="run_budget_task_usage_read_failed",
+            message=f"Could not read task-scoped canonical budget usage from {path}",
+            cause=exc,
+            retryable=False,
+            context={"db_path": str(path), "run_id": budget.run_id, "task_id": task_id},
+        ) from exc
+    response = RunBudgetTaskUsageReadResponse(
+        schema_version="1.0",
+        run_id=budget.run_id,
+        task_id=task_id,
+        usage=usage,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="run_budget_task_usage_read_complete",
+            module=logger.name,
+            fields={
+                "run_id": response.run_id,
+                "task_id": response.task_id,
+                **_usage_log_fields("usage", response.usage),
+            },
+        )
+    )
+    return response
+
+
 def read_usage_run_summary(
     request: LLMUsageRunSummaryRequest,
     ctx: RunContext,
@@ -821,8 +903,12 @@ def read_usage_run_summary(
     path = Path(request.db_path)
     _apply_budget_authority_migrations(path, ctx)
     action = str(request.action or "").strip()
+    task_id = str(request.task_id or "").strip()
     where = "run_id = ?"
     params: tuple[object, ...] = (str(request.run_id),)
+    if task_id:
+        where += " and task_id = ?"
+        params = (*params, task_id)
     if action:
         where += " and action = ?"
         params = (*params, action)
@@ -852,6 +938,7 @@ def read_usage_run_summary(
     response = LLMUsageRunSummaryResponse(
         schema_version="1.0",
         run_id=str(request.run_id),
+        task_id=task_id,
         action=action,
         call_count=int(row[0] or 0) if row is not None else 0,
         input_tokens=int(row[1] or 0) if row is not None else 0,
@@ -867,6 +954,7 @@ def read_usage_run_summary(
             module=logger.name,
             fields={
                 "run_id": response.run_id,
+                "task_id": response.task_id,
                 "action": response.action,
                 "call_count": response.call_count,
                 "input_tokens": response.input_tokens,
@@ -1081,7 +1169,7 @@ def _apply_budget_authority_migrations(path: Path, ctx: RunContext) -> None:
                 schema_version="1.0",
                 database_key="llm_usage_ledger",
                 db_path=str(path),
-                target_version=3,
+                target_version=4,
                 ctx=ctx,
             ),
             conn,
@@ -1860,19 +1948,22 @@ def evaluate_budget_request(request: BudgetRequest, ctx: RunContext) -> BudgetDe
                 cursor = conn.execute(
                     """
                     insert into budget_authority_reservations(
-                        reservation_key, schema_version, run_id, workflow_id, publisher_name,
+                        reservation_key, schema_version, run_id, task_id, span_id,
+                        workflow_id, publisher_name,
                         report_id, resource_type, operation, day_utc, estimated_cost_usd,
                         estimated_tokens, estimated_calls, estimated_steps, estimated_writes,
                         estimated_drive_reads, estimated_pdfs, estimated_mailbox_reads,
                         estimated_duration_seconds, status, expires_at_utc,
                         created_at_utc
-                    ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'reserved', ?, ?)
+                    ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'reserved', ?, ?)
                     on conflict(reservation_key) do nothing
                     """,
                     (
                         reservation_key,
                         "1.0",
                         request.run_id,
+                        ctx.task_id,
+                        ctx.span_id,
                         request.workflow_id,
                         request.publisher_id,
                         request.report_id,
@@ -2650,7 +2741,7 @@ def finalize_budget_side_effect(
             row = conn.execute(
                 """
                 select run_id, workflow_id, publisher_name, report_id, resource_type,
-                       operation, day_utc, status
+                       task_id, span_id, operation, day_utc, status
                 from budget_authority_reservations where reservation_key = ?
                 """,
                 (request.reservation_key,),
@@ -2671,24 +2762,27 @@ def finalize_budget_side_effect(
                 """
                 insert into budget_authority_actuals(
                     reservation_key, schema_version, finalized_at_utc, run_id,
-                    workflow_id, publisher_name, report_id, resource_type, operation,
+                    task_id, span_id, workflow_id, publisher_name, report_id,
+                    resource_type, operation,
                     day_utc, outcome, error_code, actual_tokens, actual_calls,
                     actual_steps, actual_duration_seconds, actual_retries,
                     actual_browser_launches, actual_drive_writes, actual_drive_reads,
                     actual_wordpress_writes, actual_pdfs, actual_mailbox_reads
-                ) values (?, '1.0', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) values (?, '1.0', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 on conflict(reservation_key) do nothing
                 """,
                 (
                     request.reservation_key,
                     now_utc,
                     str(row[0]),
+                    str(row[5]),
+                    str(row[6]),
                     str(row[1]),
                     str(row[2]),
                     str(row[3]),
                     str(row[4]),
-                    str(row[5]),
-                    str(row[6]),
+                    str(row[7]),
+                    str(row[8]),
                     request.outcome,
                     request.error_code,
                     int(actual.tokens),
@@ -2981,9 +3075,10 @@ def append_run_budget_side_effect(
             cursor = conn.execute(
                 """
                 insert into run_budget_side_effect_events (
-                    event_key, schema_version, timestamp_utc, run_id, publisher_name,
+                    event_key, schema_version, timestamp_utc, run_id, task_id, span_id,
+                    publisher_name,
                     day_utc, metric, quantity, decision, override_actor, override_reason
-                ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 on conflict(event_key) do nothing
                 """,
                 (
@@ -2991,6 +3086,8 @@ def append_run_budget_side_effect(
                     "1.0",
                     datetime.now(timezone.utc).isoformat(),
                     budget.run_id,
+                    ctx.task_id,
+                    ctx.span_id,
                     budget.publisher_name,
                     day_utc,
                     request.metric,

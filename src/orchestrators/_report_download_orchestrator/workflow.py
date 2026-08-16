@@ -64,7 +64,6 @@ from src.orchestrators._report_download_orchestrator.promotions import (
     evaluate_route_playbook_promotion,
 )
 from src.orchestrators._report_download_orchestrator.resource_telemetry import (
-    capture_acquisition_resource_usage,
     record_acquisition_resource_summary,
     route_suppression_policy_hash,
 )
@@ -98,7 +97,6 @@ def run_report_download(
     deps = dependencies or ReportDownloadDependencies.default()
     run_started_at_utc = utc_now_seconds_z()
     run_started_monotonic = time.monotonic()
-    usage_at_start = capture_acquisition_resource_usage(request=request, ctx=ctx)
     normalized_url = normalize_url(request.url)
     logger.info(
         log_event(
@@ -277,7 +275,6 @@ def run_report_download(
             request=request,
             ctx=ctx,
             dependencies=deps,
-            usage_at_start=usage_at_start,
             started_at_utc=run_started_at_utc,
             started_monotonic=run_started_monotonic,
             route_family=suppressed_step.route_family,
@@ -385,7 +382,6 @@ def run_report_download(
                     request=request,
                     ctx=ctx,
                     dependencies=deps,
-                    usage_at_start=usage_at_start,
                     started_at_utc=run_started_at_utc,
                     started_monotonic=run_started_monotonic,
                     route_family=planned_step.route_family,
@@ -412,7 +408,6 @@ def run_report_download(
                     request=request,
                     ctx=ctx,
                     dependencies=deps,
-                    usage_at_start=usage_at_start,
                     started_at_utc=run_started_at_utc,
                     started_monotonic=run_started_monotonic,
                     route_family=planned_step.route_family,
@@ -439,7 +434,6 @@ def run_report_download(
                 request=request,
                 ctx=ctx,
                 dependencies=deps,
-                usage_at_start=usage_at_start,
                 started_at_utc=run_started_at_utc,
                 started_monotonic=run_started_monotonic,
                 route_family=(
@@ -473,7 +467,6 @@ def run_report_download(
             request=request,
             ctx=ctx,
             dependencies=deps,
-            usage_at_start=usage_at_start,
             started_at_utc=run_started_at_utc,
             started_monotonic=run_started_monotonic,
             route_family=(
@@ -568,7 +561,6 @@ def run_report_download(
         request=request,
         ctx=ctx,
         dependencies=deps,
-        usage_at_start=usage_at_start,
         started_at_utc=run_started_at_utc,
         started_monotonic=run_started_monotonic,
         route_family=result.route_family,
