@@ -7,7 +7,6 @@ import inspect
 import json
 import logging
 import os
-from importlib import import_module
 import shutil
 import subprocess
 import sys
@@ -15,6 +14,7 @@ import tempfile
 import time
 from dataclasses import asdict, dataclass
 from hashlib import sha256
+from importlib import import_module
 from pathlib import Path
 from threading import Thread
 from typing import Any
@@ -22,13 +22,13 @@ from urllib.parse import urlsplit
 
 import psutil
 
+from src.contracts._browser_download.session_reuse import (
+    BrowserDownloadSessionReuseDecision,
+)
 from src.contracts.browser_download import (
     BrowserDownloadDialogEvidence,
     BrowserDownloadNetworkEvent,
     BrowserReportDownloadRequest,
-)
-from src.contracts._browser_download.session_reuse import (
-    BrowserDownloadSessionReuseDecision,
 )
 from src.contracts.openai import OpenAIUsageAccountingRequest
 from src.contracts.run_budget import (
@@ -472,34 +472,59 @@ def _pre_llm_standard_form_raw_response(
     *,
     final_url: str,
     resolved_fields: list[str],
+    blocked_fields: list[str] | None = None,
 ) -> str:
+    blocker_fields = list(blocked_fields or [])
+    blocked_reason = "blocked_unknown_required_enum" if blocker_fields else None
+    blocked_detail = (
+        "Required form values are not configured: " + ", ".join(blocker_fields)
+        if blocker_fields
+        else None
+    )
     return json.dumps(
         {
             "route_kind": "email_delivery",
             "route_family": "browser_email_form",
             "route_summary": (
-                "Filled configured identity fields and submitted the report request "
-                "form before invoking browser-use."
+                "Required browser form values are not configured."
+                if blocker_fields
+                else (
+                    "Filled configured identity fields and submitted "
+                    "the report request form through deterministic "
+                    "pre-LLM form autofill before invoking browser-use."
+                )
             ),
             "final_page_url": final_url,
             "resolved_target_url": final_url,
-            "email_submission_completed": True,
-            "post_submit_message": "Submitted by deterministic pre-LLM form autofill.",
-            "confirmation_url_changed": True,
-            "submit_button_state": "submitted",
-            "form_disappeared": True,
-            "encountered_form_fields": resolved_fields,
+            "email_submission_completed": not blocker_fields,
+            "post_submit_message": "",
+            "confirmation_url_changed": False,
+            "submit_button_state": "not_submitted" if blocker_fields else "submitted",
+            "form_disappeared": False,
+            "encountered_form_fields": [*resolved_fields, *blocker_fields],
+            "blocked_reason": blocked_reason,
+            "blocked_reason_detail": blocked_detail,
             "route_steps": [
                 {
                     "index": 0,
-                    "action": "submit",
-                    "target_text": "Configured identity and consent fields",
+                    "action": "inspect" if blocker_fields else "submit",
+                    "target_text": (
+                        ", ".join(blocker_fields)
+                        if blocker_fields
+                        else "Configured identity and consent fields"
+                    ),
                     "target_role": "browser_helper_standard_form_submit",
                     "target_url": final_url,
-                    "result": "Submitted deterministically before browser-use.",
+                    "result": (
+                        "Did not submit because required values are not configured."
+                        if blocker_fields
+                        else "Submitted deterministically before browser-use."
+                    ),
                     "expected_evidence": ["confirmation_text", "page_info"],
                     "observed_evidence": ["page_info"],
-                    "verification_status": "pending_terminal_verification",
+                    "verification_status": (
+                        "blocked" if blocker_fields else "pending_terminal_verification"
+                    ),
                 }
             ],
         },
@@ -516,7 +541,43 @@ def _open_current_page_for_pre_llm_autofill(
 ) -> Any | None:
     page = _resolve_current_page(browser)
     if page is None:
-        return None
+        start = getattr(browser, "start", None)
+        if callable(start):
+            try:
+                _maybe_await(start())
+            except (
+                Exception
+            ) as exc:  # pragma: no cover - provider-dependent runtime failure
+                logger.info(
+                    "browser_report_download_pre_llm_autofill_navigation_failed",
+                    extra={
+                        "event": (
+                            "browser_report_download_pre_llm_"
+                            "autofill_navigation_failed"
+                        ),
+                        "error": str(exc),
+                    },
+                )
+                return None
+        page = _resolve_current_page(browser)
+
+    if page is None:
+        new_page = getattr(browser, "new_page", None)
+        if not callable(new_page):
+            return None
+        try:
+            return _maybe_await(new_page(execution_url))
+        except Exception as exc:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="browser_report_download_pre_llm_autofill_navigation_failed",
+                    module=logger.name,
+                    fields={"normalized_url": normalized_url, "error": str(exc)},
+                )
+            )
+            return None
     goto = getattr(page, "goto", None)
     if callable(goto):
         try:
@@ -557,6 +618,85 @@ def _open_current_page_for_pre_llm_autofill(
     return page
 
 
+async def _run_pre_llm_standard_form_submit(
+    *,
+    request: BrowserReportDownloadRequest,
+    browser: Any,
+    ctx: RunContext,
+    normalized_url: str,
+    execution_url: str,
+) -> tuple[Any, TerminalSnapshot]:
+    """Run the deterministic form helper on one Browser Use event loop."""
+
+    async def await_value(value: Any) -> Any:
+        return await value if inspect.isawaitable(value) else value
+
+    start = getattr(browser, "start", None)
+    if callable(start):
+        await await_value(start())
+    page = await await_value(browser.get_current_page())
+    if page is None:
+        new_page = getattr(browser, "new_page", None)
+        if not callable(new_page):
+            raise RuntimeError(
+                "browser cannot open a page for deterministic form handling"
+            )
+        try:
+            page = await await_value(new_page())
+        except TypeError:
+            page = await await_value(new_page(execution_url))
+    goto = getattr(page, "goto", None)
+    if callable(goto):
+        await await_value(goto(execution_url))
+    await asyncio.sleep(0.25)
+    helper_result = await asyncio.to_thread(
+        browser_helper_standard_form_submit,
+        page=page,
+        field_values=_browser_standard_form_identity_field_values(request),
+        ctx=ctx,
+        normalized_url=normalized_url,
+        browser=None,
+    )
+    get_url = getattr(page, "get_url", None)
+    get_title = getattr(page, "get_title", None)
+    url = str(
+        await await_value(get_url())
+        if callable(get_url)
+        else getattr(browser, "url", "") or ""
+    )
+    title = str(
+        await await_value(get_title())
+        if callable(get_title)
+        else getattr(browser, "title", "") or ""
+    )
+    evaluate = getattr(page, "evaluate", None)
+    evaluated_html = (
+        await await_value(evaluate("() => document.documentElement.outerHTML"))
+        if callable(evaluate)
+        else None
+    )
+    html = (
+        evaluated_html
+        if isinstance(evaluated_html, str)
+        else str(getattr(browser, "html", "") or "")
+    )
+    return helper_result, TerminalSnapshot(page=page, url=url, title=title, html=html)
+
+
+async def _run_and_close_pre_llm_standard_form_submit(
+    **kwargs: Any,
+) -> tuple[Any, TerminalSnapshot]:
+    browser = kwargs["browser"]
+    try:
+        return await _run_pre_llm_standard_form_submit(**kwargs)
+    finally:
+        kill = getattr(browser, "kill", None)
+        if callable(kill):
+            value = kill()
+            if inspect.isawaitable(value):
+                await value
+
+
 def _try_pre_llm_standard_form_submit(
     *,
     request: BrowserReportDownloadRequest,
@@ -582,30 +722,102 @@ def _try_pre_llm_standard_form_submit(
             )
         )
         return None
-    page = _open_current_page_for_pre_llm_autofill(
-        browser=browser,
-        execution_url=execution_url,
-        ctx=ctx,
-        normalized_url=normalized_url,
-    )
-    if page is None:
+    if inspect.iscoroutinefunction(getattr(browser, "start", None)):
+        try:
+            helper_result, snapshot = asyncio.run(
+                _run_and_close_pre_llm_standard_form_submit(
+                    request=request,
+                    browser=browser,
+                    ctx=ctx,
+                    normalized_url=normalized_url,
+                    execution_url=execution_url,
+                )
+            )
+            browser._market_lense_pre_llm_closed = True
+        except Exception as exc:
+            browser._market_lense_pre_llm_closed = True
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="browser_report_download_pre_llm_autofill_escalated",
+                    module=logger.name,
+                    fields={
+                        "normalized_url": normalized_url,
+                        "reason": "runtime_failed",
+                        "error": str(exc),
+                    },
+                )
+            )
+            return None
+    else:
+        page = _open_current_page_for_pre_llm_autofill(
+            browser=browser,
+            execution_url=execution_url,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
+        if page is None:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="browser_report_download_pre_llm_autofill_escalated",
+                    module=logger.name,
+                    fields={
+                        "normalized_url": normalized_url,
+                        "reason": "page_unavailable",
+                    },
+                )
+            )
+            return None
+        helper_result = browser_helper_standard_form_submit(
+            page=page,
+            field_values=field_values,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            browser=browser,
+        )
+        snapshot = _capture_terminal_snapshot(
+            browser, ctx=ctx, normalized_url=normalized_url
+        )
+    final_url = helper_result.final_url or snapshot.url or execution_url
+    if helper_result.status == "blocked" and helper_result.unresolved_fields:
         logger.info(
             log_event(
                 ctx,
                 role="service",
-                event="browser_report_download_pre_llm_autofill_escalated",
+                event="browser_report_download_pre_llm_autofill_blocked",
                 module=logger.name,
-                fields={"normalized_url": normalized_url, "reason": "page_unavailable"},
+                fields={
+                    "normalized_url": normalized_url,
+                    "unresolved_fields": list(helper_result.unresolved_fields),
+                    "blocker_code": helper_result.blocker_code
+                    or "blocked_unknown_required_enum",
+                    "avoided_llm_call": True,
+                },
             )
         )
-        return None
-    helper_result = browser_helper_standard_form_submit(
-        page=page,
-        field_values=field_values,
-        ctx=ctx,
-        normalized_url=normalized_url,
-        browser=browser,
-    )
+        return BrowserAgentRunResult(
+            schema_version="1.0",
+            raw_model_response=_pre_llm_standard_form_raw_response(
+                final_url=final_url,
+                resolved_fields=list(helper_result.resolved_fields),
+                blocked_fields=list(helper_result.unresolved_fields),
+            ),
+            final_page_url=final_url,
+            final_page_title=snapshot.title,
+            final_page_html=snapshot.html,
+            downloaded_files=[],
+            attachment_paths=[],
+            network_resource_urls=[],
+            network_events=[],
+            html_snapshot_path="",
+            screenshot_path="",
+            print_pdf_capture_path="",
+            print_pdf_capture_provenance="",
+            dialog_evidence=[],
+        )
     if helper_result.status != "ok" or not helper_result.submitted:
         logger.info(
             log_event(
@@ -623,10 +835,6 @@ def _try_pre_llm_standard_form_submit(
             )
         )
         return None
-    snapshot = _capture_terminal_snapshot(
-        browser, ctx=ctx, normalized_url=normalized_url
-    )
-    final_url = helper_result.final_url or snapshot.url or execution_url
     logger.info(
         log_event(
             ctx,
@@ -812,7 +1020,17 @@ def run_browser_report_download_agent(
             execution_url=execution_url,
         )
         if pre_llm_form_result is not None:
+            if getattr(browser, "_market_lense_pre_llm_closed", False):
+                browser = None
             return pre_llm_form_result
+        if getattr(browser, "_market_lense_pre_llm_closed", False):
+            browser = browser_use.Browser(
+                downloads_path=str(download_dir),
+                user_data_dir=str(profile_dir),
+                headless=not request.settings.headed,
+                auto_download_pdfs=True,
+                keep_alive=True,
+            )
         browser_spend_reservation_key = _reserve_browser_use_spend(
             request=request,
             ctx=ctx,

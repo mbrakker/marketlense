@@ -125,15 +125,24 @@ identity profile (including publisher overrides and semantic aliases) finds an
 effective value missing. A model claim alone cannot suppress an otherwise
 configured form flow.
 
-For a required browser-form field with no configured identity value, acquisition
-generates only bounded non-sensitive business-profile text values. For an
-unmatched required dropdown, it may choose the first visible non-placeholder
-option only for company size, revenue band, country/location, industry,
-department, or organization type. The selected option must be retained in
-required-select evidence and is then eligible to become a publisher-specific
-override. Passwords, personal or financial data, job-title/role dropdowns,
-marketing/newsletter choices, and consent remain ineligible for a generated
-or fallback selection and continue to block the form when required.
+For `browser_email_form`, before a Browser Use agent is constructed, the
+browser service attempts standard visible text inputs, native selects, and
+comboboxes using only the resolved configured identity profile (including a
+publisher override). It can check required legal/report-delivery agreements,
+but never optional marketing or newsletter choices. A required field or select
+with no matching configured value returns the typed
+`blocked_unknown_required_enum` result; the workflow never generates text,
+chooses a first visible option, or guesses an identity value. Unsupported DOM
+controls, page drift, and failed deterministic interaction retain the existing
+Browser Use fallback.
+
+A deterministic submit records the actual terminal URL, title, and HTML rather
+than asserting confirmation fields. The existing terminal-evidence finalizer
+is the sole authority for accepting email delivery, so a visible confirmation,
+form disappearance, URL change, or other established terminal evidence must
+verify the submit before it is considered successful. A verified deterministic
+form therefore incurs zero Browser Use model calls; an unverified submit stays
+an email-required outcome.
 
 After repairing a required lookup, the browser helper recognizes the report
 form's visible `Access`, `Unlock`, and `Resource` CTAs as submit actions, in

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -9,6 +10,10 @@ from types import SimpleNamespace
 from src.contracts.browser_download import BrowserReportDownloadRequest
 from src.contracts.run_context import RunContext
 from src.contracts.state import StateArtifactAcquisitionCacheRecordRequest
+from src.services._browser_report_download.artifact import (
+    finalize_browser_report_download_result,
+)
+from src.services._browser_report_download.models import BrowserAgentRunResult
 from src.services._browser_report_download.prompt import BrowserDownloadPromptBundle
 from src.services.browser_report_download_service import (
     _artifact_cache_key,
@@ -182,6 +187,267 @@ def test_pre_llm_form_autofill_submits_without_model_client(
 
     assert model_client_requested["value"] is False
     assert "deterministic pre-LLM form autofill" in result.raw_model_response
+    assert (
+        result.final_page_html
+        == "<html><body>Thanks for requesting the report</body></html>"
+    )
+    raw_result = json.loads(result.raw_model_response)
+    assert raw_result["confirmation_url_changed"] is False
+    assert raw_result["form_disappeared"] is False
+
+
+def test_pre_llm_form_autofill_returns_unknown_required_value_blocker(
+    tmp_path: Path,
+    external_boundary_mocks_only,
+):
+    from src.services._browser_report_download import browser as browser_runtime
+
+    settings = _settings(tmp_path)
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url="https://example.com/gated-report",
+        settings=settings,
+        route_family_hint="browser_email_form",
+        delivery_email="ops@example.com",
+    )
+    model_client_requested = {"value": False}
+
+    class FakePage:
+        def __init__(self, browser):
+            self.browser = browser
+
+        def goto(self, url):
+            self.browser.url = url
+            self.browser.title = "Gated report"
+            self.browser.html = (
+                "<html><body><form>Required industry</form></body></html>"
+            )
+
+        def evaluate(self, script):
+            if "standardFormSubmit" in str(script):
+                return {
+                    "attempted_count": 1,
+                    "filled_count": 1,
+                    "selected_count": 0,
+                    "mandatory_agreement_checked_count": 0,
+                    "resolved_control_count": 1,
+                    "submitted": False,
+                    "final_url": self.browser.url,
+                    "resolved_fields": ["Work email"],
+                    "unresolved_fields": ["Industry"],
+                }
+            return {"status": "ok"}
+
+    class FakeBrowser:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+            self.url = ""
+            self.title = ""
+            self.html = ""
+            self.downloaded_files = []
+
+        def get_current_page(self):
+            return FakePage(self)
+
+        async def kill(self):
+            return None
+
+    class FailingChatOpenRouter:
+        def __init__(self, **kwargs):
+            model_client_requested["value"] = True
+            raise AssertionError("model client should not be constructed")
+
+    fake_browser_use = SimpleNamespace(
+        Browser=FakeBrowser,
+        ChatOpenRouter=FailingChatOpenRouter,
+        Agent=object,
+    )
+    external_boundary_mocks_only.setitem(sys.modules, "browser_use", fake_browser_use)
+    prompt_bundle = BrowserDownloadPromptBundle(
+        schema_version="1.0",
+        namespace="browser_report_download/browser_route/browser_email_form",
+        system_prompt_path="system.yaml",
+        user_prompt_path="user.yaml",
+        system_prompt_sha256="system",
+        user_prompt_sha256="user",
+        rendered_system_prompt="system",
+        rendered_user_prompt="user",
+        task_prompt="task",
+    )
+
+    result = browser_runtime.run_browser_report_download_agent(
+        request=request,
+        ctx=_ctx(),
+        normalized_url="https://example.com/gated-report",
+        execution_url="https://example.com/gated-report",
+        download_dir=tmp_path,
+        prompt_bundle=prompt_bundle,
+    )
+
+    assert model_client_requested["value"] is False
+    raw_result = json.loads(result.raw_model_response)
+    assert raw_result["blocked_reason"] == "blocked_unknown_required_enum"
+    assert raw_result["encountered_form_fields"] == ["Work email", "Industry"]
+
+
+def test_pre_llm_form_autofill_opens_a_page_before_constructing_a_model_client(
+    tmp_path: Path,
+    external_boundary_mocks_only,
+):
+    from src.services._browser_report_download import browser as browser_runtime
+
+    settings = _settings(tmp_path)
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url="https://example.com/gated-report",
+        settings=settings,
+        route_family_hint="browser_email_form",
+        delivery_email="ops@example.com",
+    )
+    model_client_requested = {"value": False}
+
+    class FakePage:
+        def __init__(self, browser):
+            self.browser = browser
+
+        def goto(self, url):
+            self.browser.url = url
+            self.browser.title = "Gated report"
+            self.browser.html = (
+                "<html><body>Thanks for requesting the report</body></html>"
+            )
+
+        def evaluate(self, script):
+            if "standardFormSubmit" in str(script):
+                return {
+                    "attempted_count": 2,
+                    "filled_count": 1,
+                    "selected_count": 0,
+                    "mandatory_agreement_checked_count": 1,
+                    "resolved_control_count": 2,
+                    "submitted": True,
+                    "final_url": self.browser.url,
+                    "resolved_fields": ["Work email", "Privacy agreement"],
+                    "unresolved_fields": [],
+                }
+            return {"status": "ok"}
+
+    class FakeBrowser:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+            self.url = ""
+            self.title = ""
+            self.html = ""
+            self.downloaded_files = []
+            self.new_page_urls = []
+            self.started = False
+
+        def get_current_page(self):
+            return None
+
+        async def start(self):
+            self.started = True
+
+        async def new_page(self, url):
+            if not self.started:
+                raise RuntimeError("browser must start before opening a page")
+            self.new_page_urls.append(url)
+            self.url = url
+            return FakePage(self)
+
+        async def kill(self):
+            return None
+
+    class FailingChatOpenRouter:
+        def __init__(self, **kwargs):
+            model_client_requested["value"] = True
+            raise AssertionError("model client should not be constructed")
+
+    fake_browser_use = SimpleNamespace(
+        Browser=FakeBrowser,
+        ChatOpenRouter=FailingChatOpenRouter,
+        Agent=object,
+    )
+    external_boundary_mocks_only.setitem(sys.modules, "browser_use", fake_browser_use)
+    prompt_bundle = BrowserDownloadPromptBundle(
+        schema_version="1.0",
+        namespace="browser_report_download/browser_route/browser_email_form",
+        system_prompt_path="system.yaml",
+        user_prompt_path="user.yaml",
+        system_prompt_sha256="system",
+        user_prompt_sha256="user",
+        rendered_system_prompt="system",
+        rendered_user_prompt="user",
+        task_prompt="task",
+    )
+
+    result = browser_runtime.run_browser_report_download_agent(
+        request=request,
+        ctx=_ctx(),
+        normalized_url="https://example.com/gated-report",
+        execution_url="https://example.com/gated-report",
+        download_dir=tmp_path,
+        prompt_bundle=prompt_bundle,
+    )
+
+    assert model_client_requested["value"] is False
+    assert result.final_page_url == "https://example.com/gated-report"
+
+
+def test_pre_llm_submit_is_verified_only_from_terminal_confirmation_evidence(
+    tmp_path: Path,
+):
+    settings = _settings(tmp_path)
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url="https://example.com/gated-report",
+        settings=settings,
+        route_family_hint="browser_email_form",
+        delivery_email="ops@example.com",
+    )
+    browser_run = BrowserAgentRunResult(
+        schema_version="1.0",
+        raw_model_response=json.dumps(
+            {
+                "route_kind": "email_delivery",
+                "route_family": "browser_email_form",
+                "route_summary": (
+                    "Filled configured identity fields and submitted "
+                    "the report request form through deterministic "
+                    "pre-LLM form autofill before invoking browser-use."
+                ),
+                "final_page_url": "https://example.com/gated-report",
+                "resolved_target_url": "https://example.com/gated-report",
+                "email_submission_completed": True,
+                "post_submit_message": "",
+                "confirmation_url_changed": False,
+                "submit_button_state": "submitted",
+                "form_disappeared": False,
+                "encountered_form_fields": ["Work email", "Privacy agreement"],
+            }
+        ),
+        final_page_url="https://example.com/gated-report",
+        final_page_title="Gated report",
+        final_page_html="<html><body><form>Work email</form></body></html>",
+        downloaded_files=[],
+        attachment_paths=[],
+        network_resource_urls=[],
+        network_events=[],
+        html_snapshot_path="",
+        screenshot_path="",
+    )
+
+    response = finalize_browser_report_download_result(
+        request=request,
+        ctx=_ctx(),
+        normalized_url="https://example.com/gated-report",
+        delivery_email="ops@example.com",
+        download_dir=tmp_path,
+        browser_run=browser_run,
+    )
+
+    assert response.outcome == "email_required"
+    assert response.terminal_evidence.artifact_validation_status != "verified"
 
 
 def test_browser_agent_uses_openai_primary_with_openrouter_fallback(
