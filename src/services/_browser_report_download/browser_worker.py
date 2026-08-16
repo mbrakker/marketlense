@@ -451,6 +451,20 @@ def _build_request(payload: dict) -> BrowserReportDownloadRequest:
                 ]
                 if isinstance(item.get("observed_evidence"), list)
                 else [],
+                locator_evidence=[
+                    str(value).strip()
+                    for value in item.get("locator_evidence", [])
+                    if str(value or "").strip()
+                ]
+                if isinstance(item.get("locator_evidence"), list)
+                else [],
+                postcondition_evidence=[
+                    str(value).strip()
+                    for value in item.get("postcondition_evidence", [])
+                    if str(value or "").strip()
+                ]
+                if isinstance(item.get("postcondition_evidence"), list)
+                else [],
                 verification_status=str(item.get("verification_status") or "").strip(),
                 locator_role=str(item.get("locator_role") or "").strip(),
                 locator_name=str(item.get("locator_name") or "").strip(),
@@ -586,6 +600,7 @@ def _process_payload(payload_path: Path, response_path: Path) -> int:
             )
             result = None
             try:
+
                 async def execute_and_stop() -> Any:
                     try:
                         return await _run_async_deterministic_browser_route_playbook(
@@ -683,8 +698,7 @@ def _build_deterministic_playbook(payload: dict[str, Any]) -> BrowserRoutePlaybo
         **{
             **payload,
             "steps": [
-                BrowserRoutePlaybookStep(**item)
-                for item in payload.get("steps", [])
+                BrowserRoutePlaybookStep(**item) for item in payload.get("steps", [])
             ],
             "history": [
                 BrowserRoutePlaybookHistoryEntry(**item)

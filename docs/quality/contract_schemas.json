@@ -2229,6 +2229,9 @@
         "playbook_id": {
           "type": "string"
         },
+        "reason": {
+          "type": "string"
+        },
         "review_diff": {
           "type": "string"
         },
@@ -2959,6 +2962,12 @@
         "locator_data_attribute": {
           "type": "string"
         },
+        "locator_evidence": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "locator_field_name": {
           "type": "string"
         },
@@ -2975,6 +2984,12 @@
           "type": "string"
         },
         "observed_evidence": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "postcondition_evidence": {
           "items": {
             "type": "string"
           },

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from ._test_browser_route_playbooks.cases_01_safe_promotion import *  # noqa: F401,F403
+
 import json
 import logging
 from dataclasses import replace
@@ -266,7 +268,7 @@ def test_validated_route_promotion_writes_reviewable_file_and_rejects_unverified
     assert excinfo.value.retryable is False
 
 
-def test_validated_route_promotion_excludes_unverified_route_steps(
+def test_validated_route_promotion_returns_not_promotable_for_partial_route(
     tmp_path: Path,
     run_context,
 ) -> None:
@@ -308,12 +310,13 @@ def test_validated_route_promotion_excludes_unverified_route_steps(
         ctx=run_context,
         observed_at="2026-08-11T18:50:18+00:00",
     )
-    payload = yaml.safe_load(Path(response.path).read_text(encoding="utf-8"))
+    assert response.status == "not_promotable"
+    assert response.reason == "step_0_verification_status_unverified"
+    assert response.path == ""
+    assert not (tmp_path / "playbooks").exists()
 
-    assert [step["target"] for step in payload["steps"]] == ["Access The Resource"]
 
-
-def test_validated_route_promotion_round_trips_semantic_locators_and_identity_references(
+def test_validated_route_promotion_round_trips_complete_semantic_route_and_identity_references(
     tmp_path: Path,
     run_context,
 ) -> None:
@@ -336,6 +339,8 @@ def test_validated_route_promotion_round_trips_semantic_locators_and_identity_re
                 locator_data_attribute="data-testid=download-report",
                 locator_css=".download-report",
                 expected_url_contains="/download",
+                locator_evidence=["locator:role:button:Download report"],
+                postcondition_evidence=["url:/download"],
             ),
             BrowserDownloadRouteStep(
                 schema_version="1.0",
@@ -351,6 +356,8 @@ def test_validated_route_promotion_round_trips_semantic_locators_and_identity_re
                 locator_label="Work email",
                 identity_field_reference="identity.delivery_email",
                 expected_text="Request received",
+                locator_evidence=["locator:label:Work email"],
+                postcondition_evidence=["text:Request received"],
             ),
             BrowserDownloadRouteStep(
                 schema_version="1.0",
@@ -359,12 +366,15 @@ def test_validated_route_promotion_round_trips_semantic_locators_and_identity_re
                 target_text="Submit",
                 target_role="button",
                 target_url="https://example.com/research/report",
-                result="Submission was not verified.",
+                result="Submission confirmed.",
                 expected_evidence=["confirmation_text"],
-                observed_evidence=[],
-                verification_status="missing",
+                observed_evidence=["confirmation_text"],
+                verification_status="verified",
                 locator_role="button",
                 locator_name="Submit",
+                expected_text="Request received",
+                locator_evidence=["locator:role:button:Submit"],
+                postcondition_evidence=["text:Request received"],
             ),
         ],
     )
@@ -380,7 +390,7 @@ def test_validated_route_promotion_round_trips_semantic_locators_and_identity_re
     )[0]
     payload = yaml.safe_load(Path(response.path).read_text(encoding="utf-8"))
 
-    assert [step["action"] for step in payload["steps"]] == ["click", "fill"]
+    assert [step["action"] for step in payload["steps"]] == ["click", "fill", "click"]
     assert payload["steps"][0]["selector_type"] == "role"
     assert payload["steps"][0]["selector"] == "button:Download report"
     assert payload["steps"][0]["expected_url_contains"] == "/download"
@@ -826,6 +836,9 @@ def _result(*, route_status: str) -> BrowserReportDownloadResult:
                 verification_status="verified",
                 locator_role="button",
                 locator_name="Download report",
+                expected_url_contains="/report.pdf",
+                locator_evidence=["locator:role:button:Download report"],
+                postcondition_evidence=["url:/report.pdf"],
             )
         ],
         confirmation_evidence=BrowserDownloadConfirmationEvidence(

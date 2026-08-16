@@ -40,6 +40,14 @@ class BrowserUseRouteStep(BaseModel):
     result: str | None = Field(default=None)
     expected_evidence: list[str] = Field(default_factory=list)
     observed_evidence: list[str] = Field(default_factory=list)
+    locator_evidence: list[str] = Field(
+        default_factory=list,
+        description="Action-bound locator evidence. Use `locator:<selector_type>:<selector>` only when that exact locator was used for this step.",
+    )
+    postcondition_evidence: list[str] = Field(
+        default_factory=list,
+        description="Action-bound postcondition evidence. Use `url:<substring>` and/or `text:<text>` only when observed after this step.",
+    )
     verification_status: str | None = Field(default=None)
     locator_role: str | None = Field(
         default=None,

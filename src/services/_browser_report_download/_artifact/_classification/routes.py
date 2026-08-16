@@ -3,6 +3,7 @@
 from __future__ import annotations
 import re
 from pathlib import Path
+from typing import Sequence
 from src.contracts.browser_download import (
     BrowserDownloadConfirmationEvidence,
     BrowserDownloadRouteStep,
@@ -288,6 +289,10 @@ def _resolve_route_steps(
                 observed_evidence=_normalize_evidence_categories(
                     raw_step.observed_evidence
                 ),
+                locator_evidence=_normalize_action_evidence(raw_step.locator_evidence),
+                postcondition_evidence=_normalize_action_evidence(
+                    raw_step.postcondition_evidence
+                ),
                 verification_status=str(raw_step.verification_status or "").strip(),
                 locator_role=str(raw_step.locator_role or "").strip(),
                 locator_name=str(raw_step.locator_name or "").strip(),
@@ -414,6 +419,10 @@ def _normalize_agent_route_steps_for_completeness(
                 observed_evidence=_normalize_evidence_categories(
                     raw_step.observed_evidence
                 ),
+                locator_evidence=_normalize_action_evidence(raw_step.locator_evidence),
+                postcondition_evidence=_normalize_action_evidence(
+                    raw_step.postcondition_evidence
+                ),
                 verification_status=str(raw_step.verification_status or "").strip(),
                 locator_role=str(raw_step.locator_role or "").strip(),
                 locator_name=str(raw_step.locator_name or "").strip(),
@@ -483,6 +492,18 @@ def _route_step_haystack(step: BrowserDownloadRouteStep) -> str:
             str(step.target_url or "").strip().casefold(),
         ]
     )
+
+
+def _normalize_action_evidence(raw_values: Sequence[str | None]) -> list[str]:
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for raw_value in raw_values:
+        token = str(raw_value or "").strip()
+        if not token or token in seen:
+            continue
+        seen.add(token)
+        normalized.append(token)
+    return normalized
 
 
 __all__ = [

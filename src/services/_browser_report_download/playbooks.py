@@ -124,28 +124,25 @@ def promote_validated_browser_route_result_to_playbook(
     observed_at: str = "",
     write_file: bool = True,
 ) -> BrowserRoutePlaybookPromotionResponse:
+    not_promotable_reason = _route_not_promotable_reason(result)
+    if not_promotable_reason:
+        return BrowserRoutePlaybookPromotionResponse(
+            schema_version="1.0",
+            playbook_id="",
+            version="",
+            path="",
+            status="not_promotable",
+            review_diff="",
+            reason=not_promotable_reason,
+        )
     route_steps = [
         _adapt_route_step_for_playbook(
             step=step,
             route_kind=result.route_kind,
             outcome=result.outcome,
         )
-        for step in result.route_steps[:8]
-        if _route_step_is_promotable(step)
+        for step in result.route_steps
     ]
-    if not route_steps:
-        target_url = result.resolved_target_url or result.final_page_url
-        route_steps = [
-            BrowserRoutePlaybookStep(
-                schema_version="1.0",
-                action="open",
-                target=target_url,
-                verification=_verification_for_result(result),
-                selector_type="url",
-                selector=target_url,
-                expected_url_contains=urlsplit(target_url).path,
-            )
-        ]
     return promote_browser_route_playbook(
         request=BrowserRoutePlaybookPromotionRequest(
             schema_version="1.0",
@@ -939,6 +936,24 @@ def _validate_promotion_request(request: BrowserRoutePlaybookPromotionRequest) -
             retryable=False,
             context={"source_url": request.source_url},
         )
+    for index, step in enumerate(request.route_steps):
+        reason = _deterministic_step_admission_reason(step, index)
+        if reason:
+            raise AppError(
+                code="browser_route_playbook_promotion_steps_invalid",
+                message="Browser route playbook promotion requires complete deterministic steps",
+                retryable=False,
+                context={"source_url": request.source_url, "reason": reason},
+            )
+        if step.action.strip().casefold() in {"fill", "type", "select"} and not (
+            _identity_value_reference_from_playbook_step(step)
+        ):
+            raise AppError(
+                code="browser_route_playbook_promotion_steps_invalid",
+                message="Browser route playbook promotion requires identity references for form values",
+                retryable=False,
+                context={"source_url": request.source_url, "step_index": index},
+            )
 
 
 def _validate_private_api_promotion_request(
@@ -1057,26 +1072,54 @@ def _adapt_route_step_for_playbook(
 
 
 def _route_step_is_promotable(step: BrowserDownloadRouteStep) -> bool:
-    """Keep failed model actions in audit evidence, not active route guidance."""
+    return not _route_step_not_promotable_reason(step)
+
+
+def _route_not_promotable_reason(result: BrowserReportDownloadResult) -> str:
+    if not result.route_steps:
+        return "no_route_steps"
+    for index, step in enumerate(result.route_steps):
+        if reason := _route_step_not_promotable_reason(step):
+            return f"step_{index}_{reason}"
+    if result.outcome == "email_requested" and (
+        str(result.route_steps[-1].action or "").strip().casefold() != "submit"
+    ):
+        return "missing_terminal_submit"
+    return ""
+
+
+def _route_step_not_promotable_reason(step: BrowserDownloadRouteStep) -> str:
+    """Return a stable reason instead of saving incomplete route fragments."""
     action = str(step.action or "").strip().casefold()
     result = str(step.result or "").casefold()
     if action not in _EXECUTABLE_PLAYBOOK_ACTIONS:
-        return False
+        return "unsupported_action"
     if str(step.verification_status or "").strip().casefold() != "verified":
-        return False
+        return "verification_status_unverified"
     if not step.observed_evidence:
-        return False
+        return "observed_evidence_missing"
+    if not set(step.expected_evidence).issubset(set(step.observed_evidence)):
+        return "expected_evidence_missing"
+    selector_type, selector = _stable_playbook_locator(step)
+    if not selector_type or not selector:
+        return "stable_locator_missing"
+    if _canonical_locator_evidence(selector_type, selector) not in {
+        str(item).strip() for item in step.locator_evidence
+    }:
+        return "locator_evidence_not_bound"
+    required_postconditions = _required_postcondition_evidence(step)
+    if not required_postconditions:
+        return "postcondition_missing"
+    action_postconditions = {str(item).strip() for item in step.postcondition_evidence}
+    if not required_postconditions.issubset(action_postconditions):
+        return "postcondition_evidence_not_bound"
     if action in {
         "fill",
         "type",
         "select",
     } and not _identity_value_reference(step.identity_field_reference):
-        return False
-    if action not in {"open", "navigate", "verify"} and not all(
-        _stable_playbook_locator(step)
-    ):
-        return False
-    return not any(
+        return "identity_reference_invalid"
+    if any(
         marker in result
         for marker in (
             "not verified",
@@ -1085,7 +1128,22 @@ def _route_step_is_promotable(step: BrowserDownloadRouteStep) -> bool:
             "could not",
             "failed",
         )
-    )
+    ):
+        return "failed_result"
+    return ""
+
+
+def _canonical_locator_evidence(selector_type: str, selector: str) -> str:
+    return f"locator:{selector_type}:{selector}"
+
+
+def _required_postcondition_evidence(step: BrowserDownloadRouteStep) -> set[str]:
+    required: set[str] = set()
+    if expected_url := str(step.expected_url_contains or "").strip():
+        required.add(f"url:{expected_url}")
+    if expected_text := str(step.expected_text or "").strip():
+        required.add(f"text:{expected_text}")
+    return required
 
 
 def _stable_playbook_locator(step: BrowserDownloadRouteStep) -> tuple[str, str]:
@@ -1109,11 +1167,6 @@ def _stable_playbook_locator(step: BrowserDownloadRouteStep) -> tuple[str, str]:
     if text:
         return "text", text
     action = str(step.action or "").strip().casefold()
-    if action in {"click", "click_cta", "submit"}:
-        target_role = str(step.target_role or "").strip()
-        target_name = str(step.target_text or "").strip()
-        if target_role and target_name:
-            return "role", f"{target_role}:{target_name}"
     if action in {"open", "navigate"}:
         target_url = str(step.target_url or "").strip()
         if target_url:
@@ -1128,6 +1181,16 @@ def _identity_value_reference(reference: str) -> str:
     if not re.fullmatch(r"identity\.[a-z][a-z0-9_]*", token):
         return ""
     return "${" + token + "}"
+
+
+def _identity_value_reference_from_playbook_step(
+    step: BrowserRoutePlaybookStep,
+) -> bool:
+    reference = step.value_reference.strip()
+    return bool(
+        re.fullmatch(r"\$\{identity\.[a-z][a-z0-9_]*\}", reference)
+        and not step.value.strip()
+    )
 
 
 def _verification_for_result(result: BrowserReportDownloadResult) -> str:

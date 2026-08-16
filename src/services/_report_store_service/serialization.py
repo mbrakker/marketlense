@@ -208,6 +208,20 @@ def _parse_route_steps(payload: Optional[str]) -> List[BrowserDownloadRouteStep]
                     ]
                     if isinstance(item.get("observed_evidence"), list)
                     else [],
+                    locator_evidence=[
+                        str(value).strip()
+                        for value in item.get("locator_evidence", [])
+                        if str(value or "").strip()
+                    ]
+                    if isinstance(item.get("locator_evidence"), list)
+                    else [],
+                    postcondition_evidence=[
+                        str(value).strip()
+                        for value in item.get("postcondition_evidence", [])
+                        if str(value or "").strip()
+                    ]
+                    if isinstance(item.get("postcondition_evidence"), list)
+                    else [],
                     verification_status=str(
                         item.get("verification_status") or ""
                     ).strip(),

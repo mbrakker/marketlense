@@ -78,7 +78,19 @@ class BrowserDownloadRouteStep:
     observed_evidence: list[str] = field(
         default_factory=list,
         metadata={
-            "doc": "Post-action evidence categories actually observed from terminal browser evidence for this step."
+            "doc": "Post-action evidence categories actually observed for this specific step."
+        },
+    )
+    locator_evidence: list[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Action-bound locator evidence for this step. A promoted locator requires the canonical `locator:<selector_type>:<selector>` entry."
+        },
+    )
+    postcondition_evidence: list[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Action-bound postcondition evidence for this step. Promoted URL/text postconditions require matching `url:<substring>` or `text:<text>` entries."
         },
     )
     verification_status: str = field(

@@ -92,6 +92,21 @@ def evaluate_route_playbook_promotion(
             )
         )
         return
+    if response.status == "not_promotable":
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="report_download_route_playbook_promotion_evaluated",
+                module=logger.name,
+                fields={
+                    **fields,
+                    "skip_reason": "not_promotable_route",
+                    "not_promotable_reason": response.reason,
+                },
+            )
+        )
+        return
     logger.info(
         log_event(
             ctx,

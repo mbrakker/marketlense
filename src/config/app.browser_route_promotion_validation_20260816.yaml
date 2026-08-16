@@ -1,17 +1,17 @@
 schema_version: "1.0"
 
-# Fresh isolated, bounded validation namespace for browser-route playbook promotion.
+# Fresh isolated, bounded validation namespace for automatic browser-route promotion.
 # Credentials and remote targets remain environment-owned through app.yaml/.env.
 paths:
-  output_dir: "./out/browser_route_promotion_validation_20260816"
-  cache_dir: "./cache/browser_route_promotion_validation_20260816"
-  state_db: "./state/browser_route_promotion_validation_20260816/index.sqlite"
-  reports_db: "./state/browser_route_promotion_validation_20260816/reports.sqlite"
-  signal_store_db: "./state/browser_route_promotion_validation_20260816/signals.sqlite"
-  ingest_lock: "./state/browser_route_promotion_validation_20260816/ingest.lock"
+  output_dir: "./out/browser_route_automatic_execution_validation_20260816"
+  cache_dir: "./cache/browser_route_automatic_execution_validation_20260816"
+  state_db: "./state/browser_route_automatic_execution_validation_20260816/index.sqlite"
+  reports_db: "./state/browser_route_automatic_execution_validation_20260816/reports.sqlite"
+  signal_store_db: "./state/browser_route_automatic_execution_validation_20260816/signals.sqlite"
+  ingest_lock: "./state/browser_route_automatic_execution_validation_20260816/ingest.lock"
 
 browser_download:
-  output_dir: "./out/browser_route_promotion_validation_20260816/browser_downloads"
+  output_dir: "./out/browser_route_automatic_execution_validation_20260816/browser_downloads"
   route_playbook_promotion_mode: "dry_run"
   private_api_playbook_promotion_mode: "disabled"
   run_budget:
@@ -26,7 +26,7 @@ browser_download:
     limit_decision: "stop"
 
 mailbox_acquisition:
-  output_dir: "./out/browser_route_promotion_validation_20260816/mailbox_acquisition"
+  output_dir: "./out/browser_route_automatic_execution_validation_20260816/mailbox_acquisition"
 
 ingest:
   run_budget:
@@ -37,16 +37,16 @@ ingest:
     limit_decision: "stop"
 
 analysis:
-  cost_ledger_path: "./state/browser_route_promotion_validation_20260816/llm_cost_ledger.jsonl"
+  cost_ledger_path: "./state/browser_route_automatic_execution_validation_20260816/llm_cost_ledger.jsonl"
 
 cost:
-  usage_db_path: "./state/browser_route_promotion_validation_20260816/llm_usage.sqlite"
-  daily_path: "./state/browser_route_promotion_validation_20260816/llm_cost_daily.json"
-  ledger_path: "./state/browser_route_promotion_validation_20260816/llm_cost_ledger.jsonl"
+  usage_db_path: "./state/browser_route_automatic_execution_validation_20260816/llm_usage.sqlite"
+  daily_path: "./state/browser_route_automatic_execution_validation_20260816/llm_cost_daily.json"
+  ledger_path: "./state/browser_route_automatic_execution_validation_20260816/llm_cost_ledger.jsonl"
 
 publish:
-  projection_daily_path: "./state/browser_route_promotion_validation_20260816/projection_cost_daily.json"
-  projection_ledger_path: "./state/browser_route_promotion_validation_20260816/projection_cost_ledger.jsonl"
+  projection_daily_path: "./state/browser_route_automatic_execution_validation_20260816/projection_cost_daily.json"
+  projection_ledger_path: "./state/browser_route_automatic_execution_validation_20260816/projection_cost_ledger.jsonl"
   run_budget:
     enabled: true
     max_wordpress_writes: 0

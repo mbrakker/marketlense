@@ -40,6 +40,11 @@ text: |
   locator, identity reference, or postcondition. Mark the step `verified` only when its
   expected evidence was actually observed; failed, blocked, missing, and unverified
   actions remain route evidence but are not reusable actions.
+  Promotable steps must also include action-bound evidence: record the exact locator as
+  `locator:<selector_type>:<selector>` in `locator_evidence`, and record each observed
+  URL/text postcondition as `url:<substring>` or `text:<text>` in
+  `postcondition_evidence`. Do not use final-page or terminal evidence to support an
+  earlier action, locator, or postcondition.
   For each meaningful route step, declare `expected_evidence` using only these categories: `screenshot`, `page_info`, `network_event`, `artifact`, `dom_hash`, or `confirmation_text`.
   After every meaningful action, verify the changed page state before assuming it worked; use screenshot/page info for navigation and clicks, confirmation text or network evidence for submissions, artifact evidence for downloads, and DOM hash/page info for on-site captures.
   Return confirmation evidence fields when possible, including URL changes, submit-button state, and whether the form disappeared.

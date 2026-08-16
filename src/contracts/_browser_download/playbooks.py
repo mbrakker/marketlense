@@ -485,14 +485,26 @@ class BrowserRoutePlaybookPromotionResponse:
     schema_version: str = field(
         metadata={"doc": "Browser route playbook promotion response schema version."}
     )
-    playbook_id: str = field(metadata={"doc": "Created or updated playbook ID."})
-    version: str = field(metadata={"doc": "Version written after the promotion."})
+    playbook_id: str = field(
+        metadata={"doc": "Created or updated playbook ID; empty when not promotable."}
+    )
+    version: str = field(
+        metadata={"doc": "Version written after promotion; empty when not promotable."}
+    )
     path: str = field(
-        metadata={"doc": "Absolute path of the created or updated playbook file."}
+        metadata={
+            "doc": "Absolute path of the created or updated playbook file; empty when not promotable."
+        }
     )
     status: str = field(
         metadata={"doc": "Promotion status, for example `created` or `updated`."}
     )
     review_diff: str = field(
         metadata={"doc": "Unified diff showing the reviewable file change."}
+    )
+    reason: str = field(
+        default="",
+        metadata={
+            "doc": "Stable non-promotion reason when status is `not_promotable`; empty after a created, updated, or dry-run promotion."
+        },
     )

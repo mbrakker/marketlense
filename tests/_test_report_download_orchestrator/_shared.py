@@ -13,6 +13,7 @@ import json
 import logging
 import sqlite3
 import time
+from urllib.parse import urlsplit
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
@@ -144,6 +145,12 @@ def _result(
                 target_role="url",
                 target_url=url,
                 result="downloaded" if path else "completed",
+                expected_evidence=["page_info"],
+                observed_evidence=["page_info"],
+                verification_status="verified",
+                expected_url_contains=urlsplit(url).path or "/",
+                locator_evidence=[f"locator:url:{url}"],
+                postcondition_evidence=[f"url:{urlsplit(url).path or '/'}"],
             )
         ],
         confirmation_evidence=BrowserDownloadConfirmationEvidence(
