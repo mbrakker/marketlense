@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import re
@@ -21,6 +22,10 @@ from src.contracts.browser_download import (
     BrowserDownloadSettings,
     BrowserDownloadWarmWorkerPoolPolicy,
     BrowserReportDownloadRequest,
+    BrowserRoutePlaybook,
+    BrowserRoutePlaybookHistoryEntry,
+    BrowserRoutePlaybookStep,
+    BrowserRoutePrivateApiEvidence,
     BrowserRoutePlaybookSelection,
 )
 from src.contracts.logging import LoggingSetupRequest
@@ -35,7 +40,10 @@ from src.services._browser_report_download._browser_runtime.runtime import (
 )
 from src.services._browser_report_download.browser import (
     BrowserAgentWorkerResponse,
+    _run_async_deterministic_browser_route_playbook,
+    close_browser_preflight_session,
     run_browser_report_download_agent,
+    start_browser_preflight_session,
 )
 from src.services._browser_report_download.prompt import (
     BrowserDownloadPromptBundle,
@@ -559,25 +567,81 @@ def _process_payload(payload_path: Path, response_path: Path) -> int:
         if isinstance(raw_payload.get("request"), dict)
         else {}
     )
+    normalized_url = str(raw_payload.get("normalized_url") or "").strip()
+    execution_url = str(raw_payload.get("execution_url") or "").strip()
+    download_dir = Path(str(raw_payload.get("download_dir") or "")).resolve()
     try:
-        result = run_browser_report_download_agent(
-            request=request,
-            ctx=ctx,
-            normalized_url=str(raw_payload.get("normalized_url") or "").strip(),
-            execution_url=str(raw_payload.get("execution_url") or "").strip(),
-            download_dir=Path(str(raw_payload.get("download_dir") or "")).resolve(),
-            prompt_bundle=_build_prompt_bundle(
-                raw_payload.get("prompt_bundle")
-                if isinstance(raw_payload.get("prompt_bundle"), dict)
+        if raw_payload.get("execution_mode") == "deterministic_playbook":
+            playbook = _build_deterministic_playbook(
+                raw_payload.get("deterministic_playbook")
+                if isinstance(raw_payload.get("deterministic_playbook"), dict)
                 else {}
-            ),
-        )
-        response = BrowserAgentWorkerResponse(
-            schema_version="1.0",
-            status="ok",
-            result=asdict(result),
-            error=None,
-        )
+            )
+            session = start_browser_preflight_session(
+                browser_use=load_browser_use_runtime(normalized_url=normalized_url),
+                request=request,
+                ctx=ctx,
+                normalized_url=normalized_url,
+                download_dir=download_dir,
+            )
+            result = None
+            try:
+                async def execute_and_stop() -> Any:
+                    try:
+                        return await _run_async_deterministic_browser_route_playbook(
+                            request=request,
+                            ctx=ctx,
+                            normalized_url=normalized_url,
+                            execution_url=execution_url,
+                            download_dir=download_dir,
+                            browser=session.browser,
+                            playbook=playbook,
+                        )
+                    finally:
+                        await session.browser.kill()
+
+                result = asyncio.run(execute_and_stop())
+            finally:
+                close_browser_preflight_session(
+                    session=session,
+                    ctx=ctx,
+                    normalized_url=normalized_url,
+                    outcome="completed" if result is not None else "failed",
+                    verified_artifact_count=0,
+                )
+            if result is None:
+                response = BrowserAgentWorkerResponse(
+                    schema_version="1.0",
+                    status="drifted",
+                    result=None,
+                    error=None,
+                )
+            else:
+                response = BrowserAgentWorkerResponse(
+                    schema_version="1.0",
+                    status="ok",
+                    result=asdict(result),
+                    error=None,
+                )
+        else:
+            result = run_browser_report_download_agent(
+                request=request,
+                ctx=ctx,
+                normalized_url=normalized_url,
+                execution_url=execution_url,
+                download_dir=download_dir,
+                prompt_bundle=_build_prompt_bundle(
+                    raw_payload.get("prompt_bundle")
+                    if isinstance(raw_payload.get("prompt_bundle"), dict)
+                    else {}
+                ),
+            )
+            response = BrowserAgentWorkerResponse(
+                schema_version="1.0",
+                status="ok",
+                result=asdict(result),
+                error=None,
+            )
     except AppError as exc:
         response = BrowserAgentWorkerResponse(
             schema_version="1.0",
@@ -612,6 +676,26 @@ def _process_payload(payload_path: Path, response_path: Path) -> int:
         encoding="utf-8",
     )
     return 0
+
+
+def _build_deterministic_playbook(payload: dict[str, Any]) -> BrowserRoutePlaybook:
+    return BrowserRoutePlaybook(
+        **{
+            **payload,
+            "steps": [
+                BrowserRoutePlaybookStep(**item)
+                for item in payload.get("steps", [])
+            ],
+            "history": [
+                BrowserRoutePlaybookHistoryEntry(**item)
+                for item in payload.get("history", [])
+            ],
+            "private_api_evidence": [
+                BrowserRoutePrivateApiEvidence(**item)
+                for item in payload.get("private_api_evidence", [])
+            ],
+        }
+    )
 
 
 def _serve() -> int:

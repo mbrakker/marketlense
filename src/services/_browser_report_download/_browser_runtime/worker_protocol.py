@@ -26,6 +26,7 @@ from src.contracts.browser_download import (
     BrowserDownloadDialogEvidence,
     BrowserDownloadNetworkEvent,
     BrowserReportDownloadRequest,
+    BrowserRoutePlaybook,
 )
 from src.contracts.run_context import RunContext
 from src.services._browser_report_download.cdp import (
@@ -112,6 +113,8 @@ class BrowserAgentWorkerPayload:
     execution_url: str
     download_dir: str
     prompt_bundle: dict[str, Any]
+    execution_mode: str = "agent"
+    deterministic_playbook: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -143,6 +146,7 @@ def _run_browser_report_download_agent_subprocess(
     execution_url: str,
     download_dir: Path,
     prompt_bundle: BrowserDownloadPromptBundle,
+    deterministic_playbook: BrowserRoutePlaybook | None = None,
 ) -> BrowserAgentRunResult:
     warm_pool_policy = request.settings.warm_worker_pool_policy
     if warm_pool_policy.enabled:
@@ -190,6 +194,10 @@ def _run_browser_report_download_agent_subprocess(
         execution_url=execution_url,
         download_dir=str(download_dir),
         prompt_bundle=asdict(prompt_bundle),
+        execution_mode=("deterministic_playbook" if deterministic_playbook else "agent"),
+        deterministic_playbook=(
+            asdict(deterministic_playbook) if deterministic_playbook else None
+        ),
     )
     payload_path = download_dir / "browser_agent_worker_request.json"
     response_path = download_dir / "browser_agent_worker_response.json"
@@ -307,6 +315,8 @@ def _run_browser_report_download_agent_subprocess(
         if isinstance(raw_response.get("error"), dict)
         else None,
     )
+    if response.status == "drifted" and deterministic_playbook is not None:
+        return None  # type: ignore[return-value]
     if response.status == "ok" and response.result is not None:
         return _deserialize_browser_agent_run_result(response.result)
     if response.error is not None:

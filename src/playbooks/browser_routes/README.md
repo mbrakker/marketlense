@@ -2,7 +2,13 @@
 
 Marketlense browser route playbooks are file-based, reviewable acquisition guides for recurring publisher/report patterns. The format follows the browser-harness domain-skill idea of small opt-in playbooks with URL patterns, reusable route steps, traps, and version history, but stores only Marketlense contract fields and has no runtime dependency on browser-harness.
 
-Each playbook is a separate YAML file in this directory. Playbooks are selected before `browser-use` prompt rendering, cited as `playbook_id@version`, and treated as route guidance rather than proof that the current page still behaves the same way.
+Each playbook is a separate YAML file in this directory. Playbooks are selected
+before `browser-use` prompt rendering and cited as `playbook_id@version`. A
+fresh publisher-specific playbook may execute before Browser Use only when
+every step has a supported action, a deterministic selector, and either an
+`expected_url_contains` or `expected_text` postcondition. Generic (`*`) and
+incomplete historic playbooks remain prompt guidance rather than execution
+authority.
 
 Required fields:
 
@@ -27,6 +33,15 @@ Required fields:
 - `source_evidence`: reviewable evidence labels.
 - `private_api_evidence`: optional validated network-learned private API evidence. These entries are used only for deterministic HTTP-first attempts before browser-use and must document endpoint pattern, method, request shape, JSON response pointer, accepted status codes, observed success count, and fallback route family.
 - `history`: version/change metadata.
+
+Production deterministic execution checks the postcondition after every step
+and converts a completed run into the normal browser-result contract before
+the existing artifact/submission finalizer runs. A missing selector or
+postcondition, unsupported action, locator error, postcondition mismatch, or
+failed artifact/submission verification records a bounded drift reason and
+falls back to Browser Use; it never produces a terminal acquisition failure by
+itself. A successfully finalized playbook records
+`avoided_browser_use_model_call: true` and makes zero Browser Use model calls.
 
 Stale behavior is controlled by `browser_download.route_playbook_stale_policy`. `fallback` logs stale matches and continues normal scoped discovery. `fail` raises a typed `browser_route_playbook_stale` error so stale guidance cannot silently influence acquisition.
 

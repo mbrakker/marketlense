@@ -1,6 +1,6 @@
 schema_version: '1.0'
 playbook_id: learned-brandfinance-com-browser-listing-hub
-version: 1.0.1
+version: 1.1.0
 status: active
 updated_at: '2026-08-11T13:14:44Z'
 stale_after_days: 120
@@ -11,37 +11,28 @@ url_path_markers:
 - insights
 - https-brandirectory-com-reports-hotels
 route_family: browser_listing_hub
-route_kind: pdf_download
-summary: 'Dismissed cookie modal, opened ''Minor Hotels: Building a global hospitality
-  portfolio'' article and saved the on-site article page as a local PDF.'
+route_kind: onsite_report
+summary: Open the validated Minor Hotels article and verify its visible interview
+  content before the standard on-site capture finalizer stores the artifact.
 steps:
 - schema_version: '1.0'
-  action: click
-  target: Accept (cookie modal)
-  verification: Cookie modal dismissed; page content visible
-  selector_type: ''
-  selector: ''
+  action: navigate
+  target: Minor Hotels article
+  verification: The validated Brand Finance article URL is open.
+  selector_type: url
+  selector: https://brandfinance.com/insights/https-brandirectory-com-reports-hotels
   value: ''
-  expected_url_contains: ''
+  expected_url_contains: /insights/https-brandirectory-com-reports-hotels
   expected_text: ''
 - schema_version: '1.0'
-  action: click
-  target: 'Minor Hotels: Building a global hospitality portfolio'
-  verification: Article page opened and displayed
-  selector_type: ''
-  selector: ''
+  action: verify
+  target: Interview content
+  verification: The visible article contains the observed interview heading.
+  selector_type: css
+  selector: article
   value: ''
   expected_url_contains: ''
-  expected_text: ''
-- schema_version: '1.0'
-  action: save_as_pdf
-  target: Save page as PDF
-  verification: Saved local PDF artifact of the on-site article
-  selector_type: ''
-  selector: ''
-  value: ''
-  expected_url_contains: ''
-  expected_text: ''
+  expected_text: Interview with Gonzalo Aguilar, CEO, Minor Hotels Europe and Americas
 traps: []
 evidence_notes:
 - Promoted only after verified route evidence with outcome downloaded.
@@ -49,6 +40,7 @@ source_evidence:
 - structured_result
 - verified
 - application/pdf
+- read-only live DOM verification on 2026-08-16
 private_api_evidence: []
 history:
 - schema_version: '1.0'
@@ -59,3 +51,7 @@ history:
   changed_at: '2026-08-11T13:14:44Z'
   source: validated_route_promotion
   summary: Promoted browser_listing_hub/pdf_download after downloaded evidence.
+- schema_version: '1.0'
+  changed_at: '2026-08-16T17:50:57Z'
+  source: live_deterministic_execution_validation
+  summary: Added observed URL and visible-text postconditions for deterministic on-site capture.

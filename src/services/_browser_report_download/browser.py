@@ -29,6 +29,8 @@ from src.contracts.browser_download import (
     BrowserDownloadDialogEvidence,
     BrowserDownloadNetworkEvent,
     BrowserReportDownloadRequest,
+    BrowserRoutePlaybook,
+    BrowserRoutePlaybookExecutionRequest,
 )
 from src.contracts.openai import OpenAIJSONPromptRequest, OpenAIUsageAccountingRequest
 from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
@@ -224,6 +226,9 @@ from src.services._browser_report_download.http import (
 from src.services._browser_report_download.models import (
     BrowserAgentRunResult,
     BrowserUseAgentResult,
+)
+from src.services._browser_report_download.playbooks import (
+    execute_browser_route_playbook,
 )
 from src.services._browser_report_download.prompt import (
     BrowserDownloadPromptBundle,
@@ -1001,6 +1006,483 @@ def _try_pre_llm_standard_form_submit(
         final_page_title=snapshot.title,
         final_page_html=snapshot.html,
         downloaded_files=[],
+        attachment_paths=[],
+        network_resource_urls=[],
+        network_events=[],
+        html_snapshot_path="",
+        screenshot_path="",
+        print_pdf_capture_path="",
+        print_pdf_capture_provenance="",
+        dialog_evidence=[],
+    )
+
+
+class _DeterministicPlaybookPageDriver:
+    """Small synchronous adapter over the current browser-use page."""
+
+    def __init__(self, *, browser: Any, page: Any) -> None:
+        self._browser = browser
+        self._page = page
+
+    def open(self, url: str) -> str:
+        navigate = getattr(self._browser, "navigate_to", None)
+        if not callable(navigate):
+            navigate = getattr(self._page, "goto", None)
+        if not callable(navigate):
+            raise RuntimeError("deterministic_playbook_navigation_unavailable")
+        _maybe_await(navigate(url))
+        return "opened"
+
+    def click_css(self, selector: str) -> str:
+        return self._click_expression(
+            "document.querySelector(" + json.dumps(selector) + ")"
+        )
+
+    def click_text(self, text: str) -> str:
+        return self._click_expression(
+            "Array.from(document.querySelectorAll('a,button,input[type=submit]'))"
+            ".find((node) => (node.innerText || node.value || '').trim() === "
+            + json.dumps(text)
+            + ")"
+        )
+
+    def click_role(self, role: str, name: str) -> str:
+        return self._click_expression(
+            "Array.from(document.querySelectorAll('[role],a,button,input[type=submit]'))"
+            ".find((node) => { const observedRole = node.getAttribute('role') || "
+            "(node.tagName === 'BUTTON' ? 'button' : ''); return observedRole === "
+            + json.dumps(role)
+            + " && (node.getAttribute('aria-label') || node.innerText || node.value "
+            "|| '').trim() === "
+            + json.dumps(name)
+            + "; })"
+        )
+
+    def click_label(self, label: str) -> str:
+        return self._click_expression(self._label_control_expression(label))
+
+    def click_name(self, name: str) -> str:
+        return self._click_expression(
+            "document.querySelector('[name=' + " + json.dumps(name) + " + ']')"
+        )
+
+    def click_data_attribute(self, selector: str) -> str:
+        expression = "document.querySelector(" + json.dumps(
+            _data_attribute_selector(selector)
+        ) + ")"
+        return self._click_expression(
+            expression
+        )
+
+    def fill_css(self, selector: str, value: str) -> str:
+        expression = "document.querySelector(" + json.dumps(selector) + ")"
+        return self._set_value(expression, value)
+
+    def fill_label(self, label: str, value: str) -> str:
+        return self._set_value(self._label_control_expression(label), value)
+
+    def fill_name(self, name: str, value: str) -> str:
+        return self._set_value(
+            "document.querySelector('[name=' + " + json.dumps(name) + " + ']')", value
+        )
+
+    def fill_data_attribute(self, selector: str, value: str) -> str:
+        return self._set_value(
+            "document.querySelector("
+            + json.dumps(_data_attribute_selector(selector))
+            + ")",
+            value,
+        )
+
+    def select_css(self, selector: str, value: str) -> str:
+        return self._select_value(
+            "document.querySelector(" + json.dumps(selector) + ")", value
+        )
+
+    def select_label(self, label: str, value: str) -> str:
+        return self._select_value(self._label_control_expression(label), value)
+
+    def select_name(self, name: str, value: str) -> str:
+        return self._select_value(
+            "document.querySelector('[name=' + " + json.dumps(name) + " + ']')", value
+        )
+
+    def select_data_attribute(self, selector: str, value: str) -> str:
+        return self._select_value(
+            "document.querySelector("
+            + json.dumps(_data_attribute_selector(selector))
+            + ")",
+            value,
+        )
+
+    def current_url(self) -> str:
+        reader = getattr(self._browser, "get_current_page_url", None)
+        if callable(reader):
+            return str(_maybe_await(reader()) or "")
+        return str(getattr(self._page, "url", "") or "")
+
+    def contains_text(self, text: str) -> bool:
+        return bool(
+            self._evaluate(
+                "() => (document.body?.innerText || '').includes("
+                + json.dumps(text)
+                + ")"
+            )
+        )
+
+    def _click_expression(self, element_expression: str) -> str:
+        return self._evaluate_action(
+            "() => { const element = "
+            + element_expression
+            + "; if (!element) throw new Error('deterministic_locator_not_found'); "
+            "element.click(); return 'clicked'; }"
+        )
+
+    def _set_value(self, element_expression: str, value: str) -> str:
+        return self._evaluate_action(
+            "() => { const element = "
+            + element_expression
+            + "; if (!element) throw new Error('deterministic_locator_not_found'); "
+            "element.focus(); element.value = "
+            + json.dumps(value)
+            + "; element.dispatchEvent(new Event('input', {bubbles: true})); "
+            "element.dispatchEvent(new Event('change', {bubbles: true})); "
+            "return 'filled'; }"
+        )
+
+    def _select_value(self, element_expression: str, value: str) -> str:
+        return self._evaluate_action(
+            "() => { const element = "
+            + element_expression
+            + "; if (!element || element.tagName !== 'SELECT') throw new Error("
+            "'deterministic_select_not_found'); const option = "
+            "Array.from(element.options).find((item) => item.value === "
+            + json.dumps(value)
+            + " || (item.textContent || '').trim() === "
+            + json.dumps(value)
+            + "); if (!option) throw new Error("
+            "'deterministic_select_option_not_found'); element.value = option.value; "
+            "element.dispatchEvent(new Event('change', {bubbles: true})); "
+            "return 'selected'; }"
+        )
+
+    def _label_control_expression(self, label: str) -> str:
+        return (
+            "(() => { const label = Array.from(document.querySelectorAll('label'))"
+            ".find((node) => (node.innerText || '').trim() === "
+            + json.dumps(label)
+            + "); if (!label) return null; return label.control || "
+            "document.getElementById(label.htmlFor) || "
+            "label.querySelector('input,select,textarea,button'); })()"
+        )
+
+    def _evaluate_action(self, expression: str) -> str:
+        result = self._evaluate(expression)
+        return str(result or "executed")
+
+    def _evaluate(self, expression: str) -> Any:
+        evaluate = getattr(self._page, "evaluate", None)
+        if not callable(evaluate):
+            raise RuntimeError("deterministic_playbook_evaluate_unavailable")
+        return _maybe_await(evaluate(expression))
+
+
+def _data_attribute_selector(selector: str) -> str:
+    token = str(selector or "").strip()
+    if token.startswith("["):
+        return token
+    attribute, separator, value = token.partition("=")
+    if not separator or not attribute.strip() or not value.strip():
+        raise ValueError("invalid_data_attribute_selector")
+    return f"[{attribute.strip()}={json.dumps(value.strip())}]"
+
+
+def run_deterministic_browser_route_playbook(
+    *,
+    request: BrowserReportDownloadRequest,
+    ctx: RunContext,
+    normalized_url: str,
+    execution_url: str,
+    download_dir: Path,
+    browser: Any | None,
+    playbook: BrowserRoutePlaybook,
+) -> BrowserAgentRunResult | None:
+    """Execute one fully-verifiable publisher playbook without constructing an Agent."""
+
+    if browser is None and _should_run_browser_agent_in_subprocess(
+        object(), request=request
+    ):
+        return _run_browser_report_download_agent_subprocess(
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            execution_url=execution_url,
+            download_dir=download_dir,
+            prompt_bundle=BrowserDownloadPromptBundle(
+                schema_version="1.0",
+                namespace="",
+                system_prompt_path="",
+                user_prompt_path="",
+                system_prompt_sha256="",
+                user_prompt_sha256="",
+                rendered_system_prompt="",
+                rendered_user_prompt="",
+                task_prompt="",
+            ),
+            deterministic_playbook=playbook,
+        )
+    if browser is None:
+        return None
+
+    if type(browser).__module__.startswith("browser_use"):
+        return asyncio.run(
+            _run_async_deterministic_browser_route_playbook(
+                request=request,
+                ctx=ctx,
+                normalized_url=normalized_url,
+                execution_url=execution_url,
+                download_dir=download_dir,
+                browser=browser,
+                playbook=playbook,
+            )
+        )
+
+    start = getattr(browser, "start", None)
+    if callable(start):
+        _maybe_await(start())
+    page = _open_current_page_for_pre_llm_autofill(
+        browser=browser,
+        execution_url=execution_url,
+        ctx=ctx,
+        normalized_url=normalized_url,
+    )
+    if page is None:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_route_playbook_deterministic_escalated",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "playbook_id": playbook.playbook_id,
+                    "reason": "current_page_unavailable",
+                },
+            )
+        )
+        return None
+    identity_values = {
+        str(field.key): str(field.value)
+        for field in resolve_effective_identity_fields(request)
+        if str(field.key or "").strip() and str(field.value or "").strip()
+    }
+    execution = execute_browser_route_playbook(
+        BrowserRoutePlaybookExecutionRequest(
+            schema_version="1.0",
+            playbook=playbook,
+            normalized_url=normalized_url,
+            page_driver=_DeterministicPlaybookPageDriver(browser=browser, page=page),
+            identity_values=identity_values,
+        ),
+        ctx,
+    )
+    if execution.status != "completed":
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_route_playbook_deterministic_escalated",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "playbook_id": playbook.playbook_id,
+                    "reason": execution.status,
+                    "drift_reasons": list(execution.drift_reasons),
+                },
+            )
+        )
+        return None
+    page_info = browser_helper_page_info(
+        browser=browser,
+        page=page,
+        ctx=ctx,
+        normalized_url=normalized_url,
+    )
+    final_url = page_info.url or execution_url
+    final_text = next(
+        (
+            step.expected_text
+            for step in reversed(playbook.steps)
+            if step.expected_text.strip()
+        ),
+        "",
+    )
+    raw_result = {
+        "route_kind": playbook.route_kind,
+        "route_family": playbook.route_family,
+        "route_summary": playbook.summary,
+        "resolved_target_url": final_url,
+        "final_page_url": final_url,
+        "final_page_title": page_info.title,
+        "email_submission_completed": (
+            True
+            if playbook.route_kind == "email_delivery"
+            and any(step.action.strip().lower() == "submit" for step in playbook.steps)
+            else None
+        ),
+        "post_submit_message": final_text or None,
+        "confirmation_url_changed": None,
+        "form_disappeared": None,
+        "terminal_text_excerpt": final_text or None,
+        "traversed_page_urls": [final_url],
+        "route_steps": [
+            {
+                "index": step.index,
+                "action": step.action,
+                "target_text": step.target,
+                "target_url": final_url,
+                "result": "Deterministic playbook action and postcondition verified.",
+                "expected_evidence": [playbook.steps[step.index].verification],
+                "observed_evidence": ["deterministic_postcondition_verified"],
+                "verification_status": "verified",
+                "expected_url_contains": (
+                    playbook.steps[step.index].expected_url_contains or None
+                ),
+                "expected_text": playbook.steps[step.index].expected_text or None,
+            }
+            for step in execution.step_results
+        ],
+    }
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_route_playbook_deterministic_completed",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "playbook_id": playbook.playbook_id,
+                "playbook_version": playbook.version,
+                "route_kind": playbook.route_kind,
+                "step_count": len(execution.step_results),
+                "avoided_browser_use_model_call": True,
+            },
+        )
+    )
+    return BrowserAgentRunResult(
+        schema_version="1.0",
+        raw_model_response=json.dumps(raw_result, ensure_ascii=True),
+        final_page_url=final_url,
+        final_page_title=page_info.title,
+        final_page_html=page_info.html,
+        downloaded_files=[
+            str(path)
+            for path in sorted(download_dir.iterdir())
+            if path.is_file()
+        ],
+        attachment_paths=[],
+        network_resource_urls=[],
+        network_events=[],
+        html_snapshot_path="",
+        screenshot_path="",
+        print_pdf_capture_path="",
+        print_pdf_capture_provenance="",
+        dialog_evidence=[],
+    )
+
+
+async def _run_async_deterministic_browser_route_playbook(
+    *,
+    request: BrowserReportDownloadRequest,
+    ctx: RunContext,
+    normalized_url: str,
+    execution_url: str,
+    download_dir: Path,
+    browser: Any,
+    playbook: BrowserRoutePlaybook,
+) -> BrowserAgentRunResult | None:
+    """Run the supported deterministic subset in Browser Use's single event loop."""
+    executable_actions = {"open", "navigate", "verify"}
+    for step in playbook.steps:
+        if (
+            step.action.strip().lower() not in executable_actions
+            or not step.selector.strip()
+            or not (step.expected_url_contains.strip() or step.expected_text.strip())
+        ):
+            return None
+    if not playbook.steps:
+        return None
+    await browser.start()
+    page = await browser.get_current_page()
+    if page is None:
+        return None
+    verified_steps: list[dict[str, Any]] = []
+    for index, step in enumerate(playbook.steps):
+        action = step.action.strip().lower()
+        if action in {"open", "navigate"}:
+            await browser.navigate_to(step.selector)
+            page = await browser.get_current_page()
+            if page is None:
+                return None
+        current_url = str(await browser.get_current_page_url() or "")
+        observed_text = str(
+            await page.evaluate("() => document.body?.innerText || ''") or ""
+        )
+        if (
+            step.expected_url_contains
+            and step.expected_url_contains not in current_url
+        ) or (step.expected_text and step.expected_text not in observed_text):
+            return None
+        verified_steps.append(
+            {
+                "index": index,
+                "action": step.action,
+                "target_text": step.target,
+                "target_url": current_url,
+                "result": "Deterministic playbook action and postcondition verified.",
+                "expected_evidence": [step.verification],
+                "observed_evidence": ["deterministic_postcondition_verified"],
+                "verification_status": "verified",
+                "expected_url_contains": step.expected_url_contains or None,
+                "expected_text": step.expected_text or None,
+            }
+        )
+    final_url = str(await browser.get_current_page_url() or execution_url)
+    final_title = str(await browser.get_current_page_title() or "")
+    final_html = str(await page.evaluate("() => document.documentElement.outerHTML") or "")
+    raw_result = {
+        "route_kind": playbook.route_kind,
+        "route_family": playbook.route_family,
+        "route_summary": playbook.summary,
+        "resolved_target_url": final_url,
+        "final_page_url": final_url,
+        "final_page_title": final_title,
+        "traversed_page_urls": [final_url],
+        "route_steps": verified_steps,
+    }
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_route_playbook_deterministic_completed",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "playbook_id": playbook.playbook_id,
+                "playbook_version": playbook.version,
+                "route_kind": playbook.route_kind,
+                "step_count": len(verified_steps),
+                "avoided_browser_use_model_call": True,
+            },
+        )
+    )
+    return BrowserAgentRunResult(
+        schema_version="1.0",
+        raw_model_response=json.dumps(raw_result, ensure_ascii=True),
+        final_page_url=final_url,
+        final_page_title=final_title,
+        final_page_html=final_html,
+        downloaded_files=[str(path) for path in sorted(download_dir.iterdir()) if path.is_file()],
         attachment_paths=[],
         network_resource_urls=[],
         network_events=[],

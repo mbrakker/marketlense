@@ -14,16 +14,16 @@ import yaml
 from src.contracts.browser_download import (
     BrowserDownloadRouteStep,
     BrowserReportDownloadResult,
-    BrowserRoutePrivateApiEvidence,
-    BrowserRoutePrivateApiPromotionRequest,
     BrowserRoutePlaybook,
     BrowserRoutePlaybookExecutionRequest,
     BrowserRoutePlaybookExecutionResponse,
-    BrowserRoutePlaybookStepExecution,
     BrowserRoutePlaybookHistoryEntry,
     BrowserRoutePlaybookPromotionRequest,
     BrowserRoutePlaybookPromotionResponse,
     BrowserRoutePlaybookStep,
+    BrowserRoutePlaybookStepExecution,
+    BrowserRoutePrivateApiEvidence,
+    BrowserRoutePrivateApiPromotionRequest,
 )
 from src.contracts.run_context import RunContext
 from src.utils.errors import AppError
@@ -498,22 +498,44 @@ def execute_browser_route_playbook(
             step_results=[],
             drift_reasons=["private_api_playbook_uses_http_executor"],
         )
-    for index, step in enumerate(playbook.steps):
-        if not step.selector and step.action not in {"open", "navigate"}:
-            reason = f"step_{index}_missing_deterministic_selector"
-            drift_reasons.append(reason)
-            step_results.append(
-                BrowserRoutePlaybookStepExecution(
-                    schema_version="1.0",
-                    index=index,
-                    action=step.action,
-                    target=step.target,
-                    status="skipped",
-                    evidence="",
-                    drift_reason=reason,
-                )
+    admission_reasons = _deterministic_playbook_admission_reasons(playbook)
+    if admission_reasons:
+        step_results = [
+            BrowserRoutePlaybookStepExecution(
+                schema_version="1.0",
+                index=index,
+                action=step.action,
+                target=step.target,
+                status="skipped",
+                evidence="",
+                drift_reason=reason,
             )
-            continue
+            for index, step in enumerate(playbook.steps)
+            for reason in [_deterministic_step_admission_reason(step, index)]
+            if reason
+        ]
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_route_playbook_deterministic_execution_complete",
+                module=logger.name,
+                fields={
+                    "playbook_id": playbook.playbook_id,
+                    "status": "skipped",
+                    "step_count": len(step_results),
+                    "drift_reasons": admission_reasons,
+                },
+            )
+        )
+        return BrowserRoutePlaybookExecutionResponse(
+            schema_version="1.0",
+            status="skipped",
+            playbook_id=playbook.playbook_id,
+            step_results=step_results,
+            drift_reasons=admission_reasons,
+        )
+    for index, step in enumerate(playbook.steps):
         result = _execute_playbook_step(
             step=step,
             index=index,
@@ -553,6 +575,33 @@ def execute_browser_route_playbook(
         step_results=step_results,
         drift_reasons=drift_reasons,
     )
+
+
+def _deterministic_playbook_admission_reasons(
+    playbook: BrowserRoutePlaybook,
+) -> list[str]:
+    if not playbook.steps:
+        return ["playbook_has_no_deterministic_steps"]
+    return [
+        reason
+        for index, step in enumerate(playbook.steps)
+        for reason in [_deterministic_step_admission_reason(step, index)]
+        if reason
+    ]
+
+
+def _deterministic_step_admission_reason(
+    step: BrowserRoutePlaybookStep,
+    index: int,
+) -> str:
+    action = step.action.strip().lower()
+    if action not in _EXECUTABLE_PLAYBOOK_ACTIONS:
+        return f"step_{index}_unsupported_deterministic_action"
+    if not step.selector.strip():
+        return f"step_{index}_missing_deterministic_selector"
+    if not (step.expected_url_contains.strip() or step.expected_text.strip()):
+        return f"step_{index}_missing_deterministic_postcondition"
+    return ""
 
 
 def _execute_playbook_step(

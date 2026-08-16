@@ -40,6 +40,9 @@ from src.services._browser_report_download.browser import (
     close_browser_preflight_session,
     start_browser_preflight_session,
 )
+from src.services._browser_report_download._browser_runtime.runtime import (
+    load_browser_use_runtime,
+)
 from src.services._browser_report_download.logging import (
     browser_preflight_probe_log_fields,
 )
@@ -179,7 +182,10 @@ def _run_browser_preflight_probe(
     terminal_error_code = "browser_preflight_failed"
     verified_artifact_count = 0
     try:
-        browser_use = import_module("browser_use")
+        try:
+            browser_use = import_module("browser_use")
+        except ModuleNotFoundError:
+            browser_use = load_browser_use_runtime(normalized_url=normalized_url)
         browser_session = start_browser_preflight_session(
             browser_use=browser_use,
             request=request,

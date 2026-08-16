@@ -7,11 +7,18 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
 
-from src.contracts.browser_download import BrowserReportDownloadRequest
+from src.contracts.browser_download import (
+    BrowserReportDownloadRequest,
+    BrowserRoutePlaybook,
+    BrowserRoutePlaybookStep,
+)
 from src.contracts.run_context import RunContext
 from src.contracts.state import StateArtifactAcquisitionCacheRecordRequest
 from src.services._browser_report_download.artifact import (
     finalize_browser_report_download_result,
+)
+from src.services._browser_report_download.browser import (
+    run_deterministic_browser_route_playbook,
 )
 from src.services._browser_report_download.helpers import (
     browser_helper_standard_form_submit,
@@ -23,6 +30,7 @@ from src.services.browser_report_download_service import (
     _normalized_report_title,
     _publisher_scope,
     download_report_with_browser_use,
+    try_deterministic_browser_route_playbooks,
 )
 from src.services.state_service import record_artifact_acquisition_cache
 from tests.test_browser_report_download_service.builders import _settings
@@ -197,6 +205,289 @@ def test_pre_llm_form_autofill_submits_without_model_client(
     raw_result = json.loads(result.raw_model_response)
     assert raw_result["confirmation_url_changed"] is False
     assert raw_result["form_disappeared"] is False
+
+
+def test_deterministic_playbook_completes_without_constructing_browser_use_model(
+    tmp_path: Path,
+) -> None:
+    settings = _settings(tmp_path)
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url="https://publisher.example/report",
+        settings=settings,
+        route_family_hint="browser_pdf_click",
+    )
+    model_constructed = {"value": False}
+
+    class FakePage:
+        def goto(self, url):
+            self.url = url
+
+        def evaluate(self, expression):
+            if "document.body" in expression:
+                return True
+            return {"status": "ok"}
+
+        url = "https://publisher.example/report"
+        title = "Publisher report"
+        html = "<html><body>PDF ready</body></html>"
+
+    class FakeBrowser:
+        def __init__(self):
+            self.page = FakePage()
+
+        def get_current_page(self):
+            return self.page
+
+        def get_current_page_url(self):
+            return self.page.url
+
+        def get_current_page_title(self):
+            return self.page.title
+
+    playbook = BrowserRoutePlaybook(
+        schema_version="1.0",
+        playbook_id="publisher-example-download",
+        version="1.0.0",
+        status="active",
+        updated_at="2026-08-16T00:00:00+00:00",
+        stale_after_days=180,
+        publisher_pattern="publisher.example",
+        host_patterns=["publisher.example"],
+        url_path_markers=["report"],
+        route_family="browser_pdf_click",
+        route_kind="pdf_download",
+        summary="Use the report download control.",
+        steps=[
+            BrowserRoutePlaybookStep(
+                schema_version="1.0",
+                action="navigate",
+                target="Report page",
+                verification="Report page is open.",
+                selector_type="url",
+                selector="https://publisher.example/report",
+                expected_url_contains="/report",
+            ),
+            BrowserRoutePlaybookStep(
+                schema_version="1.0",
+                action="click",
+                target="Download report",
+                verification="PDF-ready state is visible.",
+                selector_type="css",
+                selector="a.download",
+                expected_text="PDF ready",
+            ),
+        ],
+    )
+
+    result = run_deterministic_browser_route_playbook(
+        request=request,
+        ctx=_ctx(),
+        normalized_url=request.url,
+        execution_url=request.url,
+        download_dir=tmp_path,
+        browser=FakeBrowser(),
+        playbook=playbook,
+    )
+
+    assert result is not None
+    assert model_constructed["value"] is False
+    payload = json.loads(result.raw_model_response)
+    assert payload["route_kind"] == "pdf_download"
+    assert payload["route_steps"][0]["verification_status"] == "verified"
+
+
+def test_production_playbook_success_finalizes_without_browser_use_agent(
+    tmp_path: Path,
+) -> None:
+    settings = _settings(tmp_path)
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url="https://publisher.example/report",
+        settings=settings,
+        route_family_hint="browser_pdf_click",
+    )
+    download_dir = tmp_path / "downloads"
+    download_dir.mkdir()
+    downloaded_pdf = download_dir / "report.pdf"
+    downloaded_pdf.write_bytes(_valid_pdf_bytes())
+
+    class FakePage:
+        url = "https://publisher.example/report"
+        title = "Publisher report"
+        html = "<html><body>PDF ready</body></html>"
+
+        def goto(self, url):
+            self.url = url
+
+        def evaluate(self, expression):
+            if "document.body" in expression:
+                return True
+            return {"status": "ok"}
+
+    class FakeBrowser:
+        def __init__(self):
+            self.page = FakePage()
+
+        def get_current_page(self):
+            return self.page
+
+        def get_current_page_url(self):
+            return self.page.url
+
+        def get_current_page_title(self):
+            return self.page.title
+
+    playbook = BrowserRoutePlaybook(
+        schema_version="1.0",
+        playbook_id="publisher-example-download",
+        version="1.0.0",
+        status="active",
+        updated_at="2026-08-16T00:00:00+00:00",
+        stale_after_days=180,
+        publisher_pattern="publisher.example",
+        host_patterns=["publisher.example"],
+        url_path_markers=["report"],
+        route_family="browser_pdf_click",
+        route_kind="pdf_download",
+        summary="Use the report download control.",
+        steps=[
+            BrowserRoutePlaybookStep(
+                schema_version="1.0",
+                action="navigate",
+                target="Report page",
+                verification="Report page is open.",
+                selector_type="url",
+                selector="https://publisher.example/report",
+                expected_url_contains="/report",
+            ),
+            BrowserRoutePlaybookStep(
+                schema_version="1.0",
+                action="click",
+                target="Download report",
+                verification="PDF-ready state is visible.",
+                selector_type="css",
+                selector="a.download",
+                expected_text="PDF ready",
+            ),
+        ],
+    )
+
+    result = try_deterministic_browser_route_playbooks(
+        request=request,
+        ctx=_ctx(),
+        normalized_url=request.url,
+        execution_url=request.url,
+        download_dir=download_dir,
+        browser=FakeBrowser(),
+        playbooks=[playbook],
+    )
+
+    assert result is not None
+    assert result.outcome == "downloaded"
+    assert result.terminal_evidence.artifact_validation_status == "verified"
+
+
+def test_drifted_publisher_playbook_returns_agent_fallback_signal(
+    tmp_path: Path,
+) -> None:
+    settings = _settings(tmp_path)
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url="https://publisher.example/report",
+        settings=settings,
+        route_family_hint="browser_pdf_click",
+    )
+
+    class FakeBrowser:
+        def get_current_page(self):
+            return object()
+
+    drifted_playbook = BrowserRoutePlaybook(
+        schema_version="1.0",
+        playbook_id="publisher-example-drifted",
+        version="1.0.0",
+        status="active",
+        updated_at="2026-08-16T00:00:00+00:00",
+        stale_after_days=180,
+        publisher_pattern="publisher.example",
+        host_patterns=["publisher.example"],
+        url_path_markers=["report"],
+        route_family="browser_pdf_click",
+        route_kind="pdf_download",
+        summary="Incomplete historical route.",
+        steps=[
+            BrowserRoutePlaybookStep(
+                schema_version="1.0",
+                action="click",
+                target="Download report",
+                verification="PDF-ready state is visible.",
+                selector_type="css",
+                selector="a.download",
+            )
+        ],
+    )
+
+    result = try_deterministic_browser_route_playbooks(
+        request=request,
+        ctx=_ctx(),
+        normalized_url=request.url,
+        execution_url=request.url,
+        download_dir=tmp_path,
+        browser=FakeBrowser(),
+        playbooks=[drifted_playbook],
+    )
+
+    assert result is None
+
+
+def test_generic_playbook_remains_browser_use_fallback(
+    tmp_path: Path,
+) -> None:
+    settings = _settings(tmp_path)
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url="https://publisher.example/report",
+        settings=settings,
+        route_family_hint="browser_pdf_click",
+    )
+    generic_playbook = BrowserRoutePlaybook(
+        schema_version="1.0",
+        playbook_id="generic-download",
+        version="1.0.0",
+        status="active",
+        updated_at="2026-08-16T00:00:00+00:00",
+        stale_after_days=180,
+        publisher_pattern="all publishers",
+        host_patterns=["*"],
+        url_path_markers=["report"],
+        route_family="browser_pdf_click",
+        route_kind="pdf_download",
+        summary="Prompt-only generic route.",
+        steps=[
+            BrowserRoutePlaybookStep(
+                schema_version="1.0",
+                action="click",
+                target="Download report",
+                verification="PDF-ready state is visible.",
+                selector_type="css",
+                selector="a.download",
+                expected_text="PDF ready",
+            )
+        ],
+    )
+
+    result = try_deterministic_browser_route_playbooks(
+        request=request,
+        ctx=_ctx(),
+        normalized_url=request.url,
+        execution_url=request.url,
+        download_dir=tmp_path,
+        browser=object(),
+        playbooks=[generic_playbook],
+    )
+
+    assert result is None
 
 
 def test_pre_llm_form_autofill_returns_unknown_required_value_blocker(
@@ -551,8 +842,8 @@ def test_grounded_form_derivation_requires_visible_option_and_configured_evidenc
 def test_grounded_form_derivation_unavailable_preserves_typed_blocker(
     tmp_path: Path, external_boundary_mocks_only
 ):
-    from src.services._browser_report_download import browser as browser_runtime
     from src.services import llm_service
+    from src.services._browser_report_download import browser as browser_runtime
     from src.utils.errors import AppError
 
     def unavailable_model(*_args, **_kwargs):

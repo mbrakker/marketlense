@@ -16,10 +16,10 @@ from src.contracts.browser_download import (
     BrowserDownloadSettings,
     BrowserReportDownloadRequest,
     BrowserReportDownloadResult,
-    BrowserRoutePrivateApiPromotionRequest,
     BrowserRoutePlaybook,
     BrowserRoutePlaybookExecutionRequest,
     BrowserRoutePlaybookStep,
+    BrowserRoutePrivateApiPromotionRequest,
     DownloadTerminalEvidence,
 )
 from src.services import browser_report_download_service
@@ -617,6 +617,7 @@ def test_deterministic_route_playbook_executor_resolves_semantic_locators_and_id
                 verification="opened form",
                 selector_type="role",
                 selector="button:Request report",
+                expected_text="Form ready",
             ),
             BrowserRoutePlaybookStep(
                 schema_version="1.0",
@@ -626,10 +627,11 @@ def test_deterministic_route_playbook_executor_resolves_semantic_locators_and_id
                 selector_type="label",
                 selector="Work email",
                 value_reference="${identity.delivery_email}",
+                expected_text="Form ready",
             ),
         ],
     )
-    driver = _FakePageDriver(texts=set())
+    driver = _FakePageDriver(texts={"Form ready"})
 
     response = execute_browser_route_playbook(
         BrowserRoutePlaybookExecutionRequest(
@@ -647,6 +649,48 @@ def test_deterministic_route_playbook_executor_resolves_semantic_locators_and_id
         ("click_role", "button", "Request report"),
         ("fill_label", "Work email", "configured-email"),
     ]
+
+
+def test_deterministic_route_playbook_executor_skips_missing_postcondition(
+    run_context,
+) -> None:
+    playbook = BrowserRoutePlaybook(
+        schema_version="1.0",
+        playbook_id="local-incomplete",
+        version="1.0.0",
+        status="active",
+        updated_at="2026-08-16T00:00:00+00:00",
+        stale_after_days=180,
+        publisher_pattern="example.com",
+        host_patterns=["example.com"],
+        url_path_markers=["report"],
+        route_family="browser_pdf_click",
+        route_kind="pdf_download",
+        summary="Click the download control.",
+        steps=[
+            BrowserRoutePlaybookStep(
+                schema_version="1.0",
+                action="click",
+                target="Download report",
+                verification="PDF link visible",
+                selector_type="css",
+                selector="a.download",
+            )
+        ],
+    )
+
+    response = execute_browser_route_playbook(
+        BrowserRoutePlaybookExecutionRequest(
+            schema_version="1.0",
+            playbook=playbook,
+            normalized_url="https://example.com/report",
+            page_driver=_FakePageDriver(texts=set()),
+        ),
+        run_context,
+    )
+
+    assert response.status == "skipped"
+    assert response.drift_reasons == ["step_0_missing_deterministic_postcondition"]
 
 
 class _FakePageDriver:

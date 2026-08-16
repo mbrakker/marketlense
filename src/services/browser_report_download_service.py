@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import logging
 import hashlib
+import logging
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -10,56 +10,72 @@ from urllib.parse import urlsplit
 
 from src.contracts.browser_download import (
     BrowserDeveloperDiagnosticsRequest,
+    BrowserDeveloperDiagnosticsResult,
     BrowserDownloadConfirmationEvidence,
     BrowserDownloadRouteStep,
-    BrowserDeveloperDiagnosticsResult,
-    BrowserRoutePlaybookExecutionRequest,
-    DownloadTerminalEvidence,
     BrowserReportDownloadRequest,
     BrowserReportDownloadResult,
+    BrowserRoutePlaybook,
+    BrowserRoutePlaybookExecutionRequest,
     BrowserRoutePrivateApiPromotionRequest,
+    DownloadTerminalEvidence,
 )
 from src.contracts.report_store import (
     SourcePublicationMetadataExtractionRequest,
     SourcePublicationMetadataExtractionResponse,
 )
+from src.contracts.run_context import RunContext
 from src.contracts.state import (
     StateArtifactAcquisitionCacheGetRequest,
     StateArtifactAcquisitionCacheRecordRequest,
 )
-from src.contracts.run_context import RunContext
+from src.services._browser_report_download import http as http_runtime
+from src.services._browser_report_download._artifact.pdf import _build_pdf_result
 from src.services._browser_report_download.artifact import (
     finalize_browser_report_download_result,
 )
-from src.services._browser_report_download._artifact.pdf import _build_pdf_result
 from src.services._browser_report_download.browser import (
     BrowserPreflightSession,
     close_browser_preflight_session,
     run_browser_report_download_agent,
+    run_deterministic_browser_route_playbook,
 )
+from src.services._browser_report_download.budgets import apply_browser_route_budget
 from src.services._browser_report_download.dev_diagnostics import (
     default_browser_doctor_verification_url as _default_browser_doctor_verification_url,
+)
+from src.services._browser_report_download.dev_diagnostics import (
     run_browser_developer_diagnostics as _run_browser_developer_diagnostics,
 )
-from src.services._browser_report_download import http as http_runtime
-from src.services._browser_report_download.budgets import apply_browser_route_budget
-from src.services._browser_report_download.http import try_direct_pdf_download
-from src.services._browser_report_download.http import try_direct_onsite_capture
-from src.services._browser_report_download.http import try_http_access_challenge_probe
-from src.services._browser_report_download.http import try_report_page_pdf_link_download
-from src.services._browser_report_download.http import try_static_email_gate_probe
+from src.services._browser_report_download.http import (
+    try_direct_onsite_capture,
+    try_direct_pdf_download,
+    try_http_access_challenge_probe,
+    try_report_page_pdf_link_download,
+    try_static_email_gate_probe,
+)
 from src.services._browser_report_download.logging import (
     browser_download_result_log_fields,
     pre_browser_doc_type_prediction_log_fields,
 )
+from src.services._browser_report_download.playbooks import (
+    execute_browser_route_playbook as _execute_browser_route_playbook,
+)
+from src.services._browser_report_download.playbooks import (
+    load_browser_route_playbooks,
+)
+from src.services._browser_report_download.playbooks import (
+    promote_private_api_evidence_to_browser_playbook as _promote_private_api_evidence_to_browser_playbook,
+)
+from src.services._browser_report_download.playbooks import (
+    promote_validated_browser_route_result_to_playbook as _promote_validated_browser_route_result_to_playbook,
+)
 from src.services._browser_report_download.prediction import (
     predict_pre_browser_doc_type,
 )
-from src.services._browser_report_download.playbooks import (
-    execute_browser_route_playbook as _execute_browser_route_playbook,
-    load_browser_route_playbooks,
-    promote_private_api_evidence_to_browser_playbook as _promote_private_api_evidence_to_browser_playbook,
-    promote_validated_browser_route_result_to_playbook as _promote_validated_browser_route_result_to_playbook,
+from src.services._browser_report_download.preflight import (
+    observe_browser_preflight_agent_outcome,
+    try_browser_preflight_probe_with_session,
 )
 from src.services._browser_report_download.private_api import (
     try_private_api_playbook_download,
@@ -67,15 +83,11 @@ from src.services._browser_report_download.private_api import (
 from src.services._browser_report_download.private_api_auto_promotion import (
     detect_private_api_promotion_candidates as _detect_private_api_promotion_candidates,
 )
-from src.services._browser_report_download.publication_metadata import (
-    extract_source_publication_metadata as _extract_source_publication_metadata,
-)
-from src.services._browser_report_download.preflight import (
-    observe_browser_preflight_agent_outcome,
-    try_browser_preflight_probe_with_session,
-)
 from src.services._browser_report_download.prompt import (
     render_browser_report_download_prompt,
+)
+from src.services._browser_report_download.publication_metadata import (
+    extract_source_publication_metadata as _extract_source_publication_metadata,
 )
 from src.services._browser_report_download.request import (
     prepare_download_dir,
@@ -89,11 +101,11 @@ from src.services.state_service import (
     get_artifact_acquisition_cache,
     record_artifact_acquisition_cache,
 )
-from src.utils.errors import AppError
 from src.utils.browser_route_playbooks import (
     select_browser_route_playbooks,
     serialize_playbook_selection_for_log,
 )
+from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.browser_report_download_service")
@@ -804,6 +816,127 @@ def execute_browser_route_playbook(
     return _execute_browser_route_playbook(request, ctx)
 
 
+def try_deterministic_browser_route_playbooks(
+    *,
+    request: BrowserReportDownloadRequest,
+    ctx: RunContext,
+    normalized_url: str,
+    execution_url: str,
+    download_dir: Path,
+    browser: Any | None,
+    playbooks: list[BrowserRoutePlaybook],
+) -> BrowserReportDownloadResult | None:
+    """Attempt eligible publisher playbooks before falling through to Browser Use."""
+
+    for playbook in playbooks:
+        if not _is_publisher_specific_playbook(playbook):
+            continue
+        browser_run = run_deterministic_browser_route_playbook(
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            execution_url=execution_url,
+            download_dir=download_dir,
+            browser=browser,
+            playbook=playbook,
+        )
+        if browser_run is None:
+            continue
+        try:
+            result = finalize_browser_report_download_result(
+                request=request,
+                ctx=ctx,
+                normalized_url=normalized_url,
+                delivery_email=resolve_delivery_email_value(request),
+                download_dir=download_dir,
+                browser_run=browser_run,
+            )
+        except AppError as exc:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="browser_route_playbook_deterministic_escalated",
+                    module=logger.name,
+                    fields={
+                        "normalized_url": normalized_url,
+                        "playbook_id": playbook.playbook_id,
+                        "reason": "artifact_or_submission_unverified",
+                        "error_code": exc.code,
+                    },
+                )
+            )
+            continue
+        if (
+            result.outcome in {"downloaded", "email_requested", "captured"}
+            and result.route_status in {"verified", "recovered"}
+        ):
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="browser_route_playbook_deterministic_accepted",
+                    module=logger.name,
+                    fields={
+                        "normalized_url": normalized_url,
+                        "playbook_id": playbook.playbook_id,
+                        "playbook_version": playbook.version,
+                        "outcome": result.outcome,
+                        "route_status": result.route_status,
+                        "artifact_validation_status": (
+                            result.terminal_evidence.artifact_validation_status
+                        ),
+                        "avoided_browser_use_model_call": True,
+                    },
+                )
+            )
+            return result
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_route_playbook_deterministic_escalated",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "playbook_id": playbook.playbook_id,
+                    "reason": "terminal_result_unverified",
+                    "outcome": result.outcome,
+                    "route_status": result.route_status,
+                },
+            )
+        )
+    return None
+
+
+def _is_publisher_specific_playbook(playbook: BrowserRoutePlaybook) -> bool:
+    return any(
+        str(pattern or "").strip() not in {"", "*"}
+        for pattern in playbook.host_patterns
+    )
+
+
+def _resolve_selected_full_playbooks(
+    *,
+    request: BrowserReportDownloadRequest,
+    ctx: RunContext,
+) -> list[BrowserRoutePlaybook]:
+    if not request.selected_playbooks:
+        return []
+    playbooks_by_id = {
+        playbook.playbook_id: playbook
+        for playbook in load_browser_route_playbooks(
+            playbook_dir=request.settings.route_playbook_dir,
+            ctx=ctx,
+        )
+    }
+    return [
+        playbooks_by_id[selected.playbook_id]
+        for selected in request.selected_playbooks
+        if selected.playbook_id in playbooks_by_id
+    ]
+
+
 def _with_augmented_error_context(
     exc: AppError,
     *,
@@ -1123,6 +1256,11 @@ def download_report_with_browser_use(
                 result=access_challenge_result,
             )
 
+    request = attach_browser_route_playbooks(
+        request=request,
+        ctx=ctx,
+        normalized_url=normalized_url,
+    )
     request = apply_browser_route_budget(
         request=request,
         ctx=ctx,
@@ -1218,11 +1356,6 @@ def download_report_with_browser_use(
         )
         return remembered_blocker_result
     try:
-        request = attach_browser_route_playbooks(
-            request=request,
-            ctx=ctx,
-            normalized_url=normalized_url,
-        )
         private_api_result = try_private_api_playbook_download(
             request=request,
             ctx=ctx,
@@ -1253,6 +1386,57 @@ def download_report_with_browser_use(
             ctx=ctx,
             normalized_url=normalized_url,
             result=private_api_result,
+        )
+    deterministic_result = None
+    deterministic_playbooks = _resolve_selected_full_playbooks(
+        request=request,
+        ctx=ctx,
+    )
+    try:
+        deterministic_result = try_deterministic_browser_route_playbooks(
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            execution_url=normalized_execution_url,
+            download_dir=download_dir,
+            browser=preflight_session.browser if preflight_session is not None else None,
+            playbooks=deterministic_playbooks,
+        )
+    except Exception as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_route_playbook_deterministic_escalated",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "reason": "runtime_error",
+                    "error_type": type(exc).__name__,
+                },
+            )
+        )
+    if deterministic_result is not None:
+        observe_browser_preflight_agent_outcome(
+            probe=browser_preflight_response.probe,
+            result=deterministic_result,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
+        _close_preflight_session(
+            session=preflight_session,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            outcome="completed",
+            verified_artifact_count=(
+                1 if deterministic_result.outcome == "downloaded" else 0
+            ),
+        )
+        return _complete_browser_download_result(
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            result=deterministic_result,
         )
     try:
         prompt_bundle = render_browser_report_download_prompt(
