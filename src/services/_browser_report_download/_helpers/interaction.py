@@ -759,11 +759,16 @@ def browser_helper_standard_form_submit(
           }};
           for (const root of roots) {{
             for (const control of Array.from(root.querySelectorAll(
-              'input:not([type]), input[type="text"], input[type="email"], input[type="tel"], input[type="url"], textarea'
+              'input:not([type]), input[type="text"], input[type="email"], input[type="tel"], input[type="url"], input[role="combobox"], textarea'
             ))) {{
               if (!isVisible(control) || control.disabled || control.readOnly) continue;
               const field = matchField(control, root);
-              if (!field || !field.value) continue;
+              if (!field || !field.value) {{
+                if (requiredLike(control)) {{
+                  unresolvedFields.push(labelsFor(control, root)[0] || 'text field');
+                }}
+                continue;
+              }}
               const current = normalize(control.value || '');
               const invalid = String(control.getAttribute('aria-invalid') || '').toLowerCase() === 'true';
               if (current && !invalid) {{
@@ -825,7 +830,12 @@ def browser_helper_standard_form_submit(
             for (const control of Array.from(root.querySelectorAll('input[type="checkbox"]'))) {{
               if (!isVisible(control) || control.disabled) continue;
               const label = labelsFor(control, root).join(' ');
-              if (!mandatoryAgreement(label)) continue;
+              if (!mandatoryAgreement(label)) {{
+                if (requiredLike(control)) {{
+                  unresolvedFields.push(label || 'checkbox');
+                }}
+                continue;
+              }}
               attemptedCount += 1;
               if (!control.checked) {{
                 control.checked = true;
