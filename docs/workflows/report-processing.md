@@ -136,6 +136,14 @@ chooses a first visible option, or guesses an identity value. Unsupported DOM
 controls, page drift, and failed deterministic interaction retain the existing
 Browser Use fallback.
 
+When a standard required select or combobox is unresolved but the configured
+identity profile may directly support one of its visible options, the service
+makes one constrained model call before Browser Use. The response must cite an
+exact configured key/value and an exact observed option; both are validated
+before the existing deterministic helper fills the control. An unavailable,
+invalid, or ungrounded response preserves the typed blocker rather than
+guessing or escalating the identity decision to Browser Use.
+
 A deterministic submit records the actual terminal URL, title, and HTML rather
 than asserting confirmation fields. The existing terminal-evidence finalizer
 is the sole authority for accepting email delivery, so a visible confirmation,

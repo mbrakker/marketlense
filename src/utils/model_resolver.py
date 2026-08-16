@@ -50,6 +50,7 @@ PRODUCTION_LLM_NAMESPACES: tuple[str, ...] = (
     "browser_report_download/browser_route/browser_onsite_report",
     "browser_report_download/browser_route/browser_pdf_click",
     "browser_report_download/browser_route/browser_tracker_redirect",
+    "browser_report_download/form_value_derivation",
     "claim_embedding/generate",
     "crop_qa_escalation/publication_strict",
     "cross_report_analysis/synthesis",

@@ -564,6 +564,15 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "unresolved_options": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "type": "object"
         }
       },
       "required": [

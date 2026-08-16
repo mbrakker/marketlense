@@ -195,6 +195,19 @@ fixtures:
     user_variables:
       <<: *browser_route_user_variables
       route_family_hint: "browser_onsite_report"
+  - namespace: "browser_report_download/form_value_derivation"
+    family: "browser_download"
+    model: "gpt-5-mini"
+    temperature: 0.0
+    benchmark:
+      expected_output_tokens: 400
+      expected_browser_attempts: 0
+    system_variables: {}
+    user_variables:
+      configured_identity_json: >-
+        [{"key":"company_sector","label":"Company sector","value":"Technology","aliases":["business domain"],"option_aliases":[]}]
+      required_options_json: >-
+        {"Industry":["Technology","Financial services"]}
   - namespace: "pdf_text/ocr_fallback"
     family: "report"
     model: "openai/gpt-5-mini"

@@ -748,6 +748,7 @@ def browser_helper_standard_form_submit(
           const roots = sameOriginDocuments();
           const resolvedFields = [];
           const unresolvedFields = [];
+          const unresolvedOptions = {{}};
           let attemptedCount = 0;
           let filledCount = 0;
           let selectedCount = 0;
@@ -806,7 +807,13 @@ def browser_helper_standard_form_submit(
               ) : null;
               const option = exact;
               if (!option) {{
-                if (requiredLike(control)) unresolvedFields.push(labelsFor(control, root)[0] || 'select');
+                if (requiredLike(control)) {{
+                  const label = labelsFor(control, root)[0] || 'select';
+                  unresolvedFields.push(label);
+                  unresolvedOptions[label] = options.map((candidate) =>
+                    normalize(candidate.textContent || candidate.value || '')
+                  ).filter((candidate) => !placeholderOption(candidate));
+                }}
                 continue;
               }}
               attemptedCount += 1;
@@ -887,6 +894,7 @@ def browser_helper_standard_form_submit(
             final_url: window.location.href || '',
             resolved_fields: resolvedFields,
             unresolved_fields: unresolvedFields,
+            unresolved_options: unresolvedOptions,
           }};
         }})();
         """
@@ -926,6 +934,13 @@ def browser_helper_standard_form_submit(
         for item in payload.get("unresolved_fields", [])
         if (normalized := str(item or "").strip())
     )
+    unresolved_options = {
+        str(label).strip(): tuple(
+            str(option).strip() for option in options if str(option).strip()
+        )
+        for label, options in dict(payload.get("unresolved_options") or {}).items()
+        if str(label).strip() and isinstance(options, list)
+    }
     resolved_fields = tuple(
         normalized
         for item in payload.get("resolved_fields", [])
@@ -954,6 +969,7 @@ def browser_helper_standard_form_submit(
         ),
         submitted=bool(payload.get("submitted")),
         unresolved_fields=unresolved_fields,
+        unresolved_options=unresolved_options,
         resolved_fields=resolved_fields,
         final_url=str(payload.get("final_url") or "").strip(),
         blocker_code=("blocked_unknown_required_enum" if unresolved_fields else None),
@@ -1048,6 +1064,7 @@ def _standard_form_submit_result(
     mandatory_agreement_checked_count: int = 0,
     submitted: bool = False,
     unresolved_fields: tuple[str, ...] = (),
+    unresolved_options: dict[str, tuple[str, ...]] | None = None,
     resolved_fields: tuple[str, ...] = (),
     final_url: str = "",
     blocker_code: str | None = None,
@@ -1062,6 +1079,7 @@ def _standard_form_submit_result(
         mandatory_agreement_checked_count=mandatory_agreement_checked_count,
         submitted=submitted,
         unresolved_fields=unresolved_fields,
+        unresolved_options=dict(unresolved_options or {}),
         resolved_fields=resolved_fields,
         final_url=final_url,
         blocker_code=blocker_code,

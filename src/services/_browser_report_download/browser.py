@@ -30,7 +30,8 @@ from src.contracts.browser_download import (
     BrowserDownloadNetworkEvent,
     BrowserReportDownloadRequest,
 )
-from src.contracts.openai import OpenAIUsageAccountingRequest
+from src.contracts.openai import OpenAIJSONPromptRequest, OpenAIUsageAccountingRequest
+from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
 from src.contracts.run_budget import (
     BudgetDecision,
     BudgetRequest,
@@ -40,7 +41,7 @@ from src.contracts.run_budget import (
     RunBudgetUsage,
 )
 from src.contracts.run_context import RunContext
-from src.services import llm_service
+from src.services import llm_service, prompt_service
 from src.services._browser_report_download._browser_runtime import (
     _AGENT_COMPLETED_HISTORY_POLL_SECONDS,
     _AGENT_RUN_TIMEOUT_MAX_BUFFER_SECONDS,
@@ -481,6 +482,7 @@ def _pre_llm_standard_form_raw_response(
         if blocker_fields
         else None
     )
+
     return json.dumps(
         {
             "route_kind": "email_delivery",
@@ -532,6 +534,124 @@ def _pre_llm_standard_form_raw_response(
     )
 
 
+def _derive_grounded_form_option(
+    *, request: BrowserReportDownloadRequest, helper_result: Any, ctx: RunContext
+) -> dict[str, object] | None:
+    options = dict(getattr(helper_result, "unresolved_options", {}) or {})
+    configured = _browser_standard_form_identity_field_values(request)
+    if not options or not configured or not request.settings.openai_api_key:
+        return None
+
+    try:
+        prompt_set = prompt_service.load_prompt_set(
+            PromptLoadRequest(
+                schema_version="1.0",
+                namespace="browser_report_download/form_value_derivation",
+            ),
+            ctx,
+        )
+        variables = {
+            "configured_identity_json": json.dumps(configured, ensure_ascii=True),
+            "required_options_json": json.dumps(options, ensure_ascii=True),
+        }
+        system_prompt = prompt_service.render_prompt(
+            PromptRenderRequest(
+                schema_version="1.0", template=prompt_set.system, variables=variables
+            ),
+            ctx,
+        ).text
+        user_prompt = prompt_service.render_prompt(
+            PromptRenderRequest(
+                schema_version="1.0", template=prompt_set.user, variables=variables
+            ),
+            ctx,
+        ).text
+        response = llm_service.openai_chat_json(
+            OpenAIJSONPromptRequest(
+                schema_version="1.0",
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                model=request.settings.model,
+                temperature=0.0,
+                max_output_tokens=400,
+                timeout_seconds=request.settings.timeout_seconds,
+                api_key=request.settings.openai_api_key,
+                prompt_namespace="browser_report_download/form_value_derivation",
+                prompt_hash=prompt_set.system.sha256,
+                prompt_content_hash=prompt_set.prompt_content_hash,
+                prompt_dependency_manifest=(
+                    asdict(prompt_set.dependency_manifest)
+                    if prompt_set.dependency_manifest is not None
+                    else {}
+                ),
+                structured_output_schema=_FORM_VALUE_DERIVATION_SCHEMA,
+                structured_output_schema_identity="form_value_derivation_v1",
+            ),
+            ctx,
+        )
+    except AppError as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_form_value_derivation_unavailable",
+                module=logger.name,
+                fields={"error_code": exc.code, "normalized_url": request.url},
+            )
+        )
+        return None
+    selection = getattr(response, "parsed_json", None)
+    if not isinstance(selection, dict):
+        return None
+    return _validated_grounded_form_option(
+        selection=selection, options=options, configured=configured
+    )
+
+
+_FORM_VALUE_DERIVATION_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {
+        "field_label": {"type": "string"},
+        "option_value": {"type": "string"},
+        "evidence_key": {"type": "string"},
+        "evidence_value": {"type": "string"},
+    },
+    "required": ["field_label", "option_value", "evidence_key", "evidence_value"],
+}
+
+
+def _validated_grounded_form_option(
+    *,
+    selection: dict[str, object],
+    options: dict[str, object],
+    configured: list[dict[str, object]],
+) -> dict[str, object] | None:
+    """Permit only a model selection grounded in configured and visible values."""
+    label, option = (
+        str(selection.get("field_label") or "").strip(),
+        str(selection.get("option_value") or "").strip(),
+    )
+    evidence_key = str(selection.get("evidence_key") or "").strip()
+    evidence_value = str(selection.get("evidence_value") or "").strip()
+    visible_options = options.get(label)
+    if not isinstance(visible_options, (list, tuple)) or option not in visible_options:
+        return None
+    if not any(
+        str(item.get("key") or "") == evidence_key
+        and str(item.get("value") or "") == evidence_value
+        for item in configured
+    ):
+        return None
+    return {
+        "key": f"derived_{evidence_key}",
+        "label": label,
+        "value": option,
+        "aliases": [label],
+        "option_aliases": [option],
+    }
+
+
 def _open_current_page_for_pre_llm_autofill(
     *,
     browser: Any,
@@ -552,8 +672,7 @@ def _open_current_page_for_pre_llm_autofill(
                     "browser_report_download_pre_llm_autofill_navigation_failed",
                     extra={
                         "event": (
-                            "browser_report_download_pre_llm_"
-                            "autofill_navigation_failed"
+                            "browser_report_download_pre_llm_autofill_navigation_failed"
                         ),
                         "error": str(exc),
                     },
@@ -657,6 +776,25 @@ async def _run_pre_llm_standard_form_submit(
         normalized_url=normalized_url,
         browser=None,
     )
+    if helper_result.status == "blocked" and helper_result.unresolved_options:
+        derived_field = await asyncio.to_thread(
+            _derive_grounded_form_option,
+            request=request,
+            helper_result=helper_result,
+            ctx=ctx,
+        )
+        if derived_field is not None:
+            helper_result = await asyncio.to_thread(
+                browser_helper_standard_form_submit,
+                page=page,
+                field_values=[
+                    *_browser_standard_form_identity_field_values(request),
+                    derived_field,
+                ],
+                ctx=ctx,
+                normalized_url=normalized_url,
+                browser=None,
+            )
     get_url = getattr(page, "get_url", None)
     get_title = getattr(page, "get_title", None)
     url = str(

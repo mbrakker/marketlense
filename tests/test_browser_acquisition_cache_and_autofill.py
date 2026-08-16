@@ -13,6 +13,9 @@ from src.contracts.state import StateArtifactAcquisitionCacheRecordRequest
 from src.services._browser_report_download.artifact import (
     finalize_browser_report_download_result,
 )
+from src.services._browser_report_download.helpers import (
+    browser_helper_standard_form_submit,
+)
 from src.services._browser_report_download.models import BrowserAgentRunResult
 from src.services._browser_report_download.prompt import BrowserDownloadPromptBundle
 from src.services.browser_report_download_service import (
@@ -448,6 +451,137 @@ def test_pre_llm_submit_is_verified_only_from_terminal_confirmation_evidence(
 
     assert response.outcome == "email_required"
     assert response.terminal_evidence.artifact_validation_status != "verified"
+
+
+def test_standard_form_helper_retains_visible_options_for_required_blocker():
+    class Page:
+        def evaluate(self, _script):
+            return {
+                "attempted_count": 1,
+                "filled_count": 1,
+                "selected_count": 0,
+                "mandatory_agreement_checked_count": 0,
+                "resolved_control_count": 1,
+                "submitted": False,
+                "final_url": "https://example.com/gated-report",
+                "resolved_fields": ["Work email"],
+                "unresolved_fields": ["Industry"],
+                "unresolved_options": {
+                    "Industry": ["Financial services", "Technology"]
+                },
+            }
+
+    result = browser_helper_standard_form_submit(
+        page=Page(),
+        field_values=[
+            {
+                "key": "work_email",
+                "label": "Work email",
+                "value": "ops@example.com",
+                "aliases": ["email"],
+                "option_aliases": [],
+            }
+        ],
+        ctx=_ctx(),
+        normalized_url="https://example.com/gated-report",
+    )
+
+    assert result.unresolved_options == {
+        "Industry": ("Financial services", "Technology")
+    }
+
+
+def test_grounded_form_derivation_requires_visible_option_and_configured_evidence():
+    from src.services._browser_report_download.browser import (
+        _validated_grounded_form_option,
+    )
+
+    options = {"Industry": ("Financial services", "Technology")}
+    configured = [
+        {
+            "key": "company_sector",
+            "label": "Company sector",
+            "value": "Technology",
+            "aliases": ["Industry"],
+            "option_aliases": ["Technology"],
+        }
+    ]
+    valid_selection = {
+        "field_label": "Industry",
+        "option_value": "Technology",
+        "evidence_key": "company_sector",
+        "evidence_value": "Technology",
+    }
+
+    assert _validated_grounded_form_option(
+        selection=valid_selection, options=options, configured=configured
+    ) == {
+        "key": "derived_company_sector",
+        "label": "Industry",
+        "value": "Technology",
+        "aliases": ["Industry"],
+        "option_aliases": ["Technology"],
+    }
+    assert (
+        _validated_grounded_form_option(
+            selection={**valid_selection, "option_value": "Healthcare"},
+            options=options,
+            configured=configured,
+        )
+        is None
+    )
+    assert (
+        _validated_grounded_form_option(
+            selection={**valid_selection, "evidence_value": "Finance"},
+            options=options,
+            configured=configured,
+        )
+        is None
+    )
+    assert (
+        _validated_grounded_form_option(
+            selection=dict.fromkeys(valid_selection, ""),
+            options=options,
+            configured=configured,
+        )
+        is None
+    )
+
+
+def test_grounded_form_derivation_unavailable_preserves_typed_blocker(
+    tmp_path: Path, external_boundary_mocks_only
+):
+    from src.services._browser_report_download import browser as browser_runtime
+    from src.services import llm_service
+    from src.utils.errors import AppError
+
+    def unavailable_model(*_args, **_kwargs):
+        raise AppError(
+            code="openai_chat_failed",
+            message="provider unavailable",
+            retryable=True,
+        )
+
+    external_boundary_mocks_only.setattr(
+        llm_service, "openai_chat_json", unavailable_model
+    )
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url="https://example.com/gated-report",
+        settings=_settings(tmp_path),
+        route_family_hint="browser_email_form",
+    )
+
+    assert (
+        browser_runtime._derive_grounded_form_option(
+            request=request,
+            helper_result=SimpleNamespace(
+                unresolved_options={"Industry": ("Technology",)}
+            ),
+            ctx=_ctx(),
+        )
+        is None
+    )
 
 
 def test_browser_agent_uses_openai_primary_with_openrouter_fallback(

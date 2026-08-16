@@ -1,0 +1,12 @@
+text: |
+  Configured identity evidence (authorized values only):
+  {{ configured_identity_json }}
+
+  Required form fields and their visible, non-placeholder options:
+  {{ required_options_json }}
+
+  Return JSON with exactly these string fields:
+  - field_label: the exact required field label from the visible-options map
+  - option_value: the exact selected option from that field's visible options
+  - evidence_key: the exact configured identity key supporting the choice
+  - evidence_value: that configured identity value exactly

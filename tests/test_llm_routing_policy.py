@@ -208,6 +208,13 @@ def test_registered_report_namespaces_are_preflight_inventory() -> None:
     assert "report_vs/validate/semantic" in namespaces
 
 
+def test_form_value_derivation_is_a_registered_production_namespace() -> None:
+    assert (
+        "browser_report_download/form_value_derivation"
+        in registered_production_llm_namespaces()
+    )
+
+
 def test_registered_production_namespace_uses_approved_longest_prefix() -> None:
     policies = execution_policies_from_config(
         {
@@ -239,8 +246,9 @@ def test_registered_production_namespace_uses_approved_longest_prefix() -> None:
     assert decision.compatibility_mode is False
 
 
-def test_unknown_production_namespace_is_rejected_without_compatibility_policy(
-) -> None:
+def test_unknown_production_namespace_is_rejected_without_compatibility_policy() -> (
+    None
+):
     with pytest.raises(AppError) as err:
         resolve_execution_policy(
             "unregistered/production_call",

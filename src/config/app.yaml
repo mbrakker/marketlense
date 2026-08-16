@@ -181,6 +181,20 @@ llm_execution_policies:
     structured_output_schema_identity: "browser_route.v1"
     fallback_policy: same_provider_only
     pricing_key: "gpt-5-mini"
+  browser_report_download/form_value_derivation:
+    schema_version: "1.0"
+    provider: openai
+    model: "gpt-5-mini"
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 400
+    retrieval_mode: chat_json
+    timeout_seconds: 180
+    provider_retry_count: 0
+    structured_output_mode: json_schema
+    structured_output_schema_identity: "form_value_derivation_v1"
+    fallback_policy: same_provider_only
+    pricing_key: "gpt-5-mini"
   crop_qa_escalation/publication_strict:
     schema_version: "1.0"
     provider: openai

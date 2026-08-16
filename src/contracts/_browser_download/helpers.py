@@ -168,6 +168,12 @@ class BrowserHelperStandardFormSubmitResult:
         default_factory=tuple,
         metadata={"doc": "Labels for required controls that still did not verify."},
     )
+    unresolved_options: dict[str, tuple[str, ...]] = field(
+        default_factory=dict,
+        metadata={
+            "doc": "Visible options for unresolved required controls, keyed by label."
+        },
+    )
     resolved_fields: tuple[str, ...] = field(
         default_factory=tuple,
         metadata={"doc": "Labels for controls that were repaired and verified."},
