@@ -201,7 +201,11 @@ def load_browser_download_settings(
                 for item in route_suppression_cfg.get("terminal_failure_classes", [])
                 if str(item).strip()
             }
-            or {"blocked_captcha", "blocked_email_domain"}
+            or {
+                "blocked_captcha",
+                "blocked_email_domain",
+                "blocked_no_progress",
+            }
         )
     )
     route_suppression_minimum_sample_size = max(

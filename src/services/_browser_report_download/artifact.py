@@ -533,6 +533,7 @@ def finalize_browser_report_download_result(
         evidence_labels=[
             *confirmation_evidence.signal_labels,
             "structured_result",
+            *([blocked_reason] if blocked_reason else []),
             *_dialog_evidence_labels(list(browser_run.dialog_evidence or [])),
             *_onsite_capture_evidence_labels(onsite_capture_format),
         ],
@@ -567,6 +568,7 @@ def finalize_browser_report_download_result(
         evidence_labels=[
             *confirmation_evidence.signal_labels,
             "structured_result",
+            *([blocked_reason] if blocked_reason else []),
             *_dialog_evidence_labels(list(browser_run.dialog_evidence or [])),
             *_onsite_capture_evidence_labels(onsite_capture_format),
         ],
@@ -582,6 +584,7 @@ def finalize_browser_report_download_result(
             request=request,
             agent_result=agent_result,
             route_kind=route_kind,
+            blocked_reason=blocked_reason,
         ),
         route_status=route_status,
         outcome=outcome,

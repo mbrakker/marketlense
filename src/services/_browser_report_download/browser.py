@@ -87,6 +87,10 @@ from src.services._browser_report_download._browser_runtime.runtime import (
     browser_runtime_identity,
     load_browser_use_runtime,
 )
+from src.services._browser_report_download._browser_runtime.no_progress import (
+    BrowserNoProgressDetector,
+    BrowserNoProgressObservation,
+)
 from src.services._browser_report_download._browser_runtime.session_lifecycle import (
     BrowserAgentHistoryResult,
     _cleanup_browser_profile_dir,
@@ -1470,6 +1474,56 @@ async def _run_async_deterministic_browser_route_playbook(
     )
 
 
+def _agent_accepts_parameter(
+    parameters: dict[str, inspect.Parameter], name: str
+) -> bool:
+    return name in parameters
+
+
+def _no_progress_raw_model_response(
+    observation: BrowserNoProgressObservation,
+    *,
+    route_family_hint: str,
+) -> str:
+    return json.dumps(
+        {
+            "route_kind": "email_delivery",
+            "route_family": route_family_hint or "browser_pdf_click",
+            "route_summary": (
+                "Open the report page and stop after repeated equivalent browser "
+                "states without a verified route advance."
+            ),
+            "email_submission_completed": False,
+            "blocked_reason": "blocked_no_progress",
+            "blocked_reason_detail": (
+                "Browser Use observed "
+                f"{observation.consecutive_equivalent_turns} equivalent turns "
+                "without a material route advance."
+            ),
+            "final_page_url": observation.url,
+        },
+        ensure_ascii=True,
+    )
+
+
+def _no_progress_log_fields(
+    observation: BrowserNoProgressObservation,
+    *,
+    normalized_url: str,
+) -> dict[str, Any]:
+    return {
+        "normalized_url": normalized_url,
+        "state_fingerprint": observation.state_fingerprint,
+        "consecutive_equivalent_turns": observation.consecutive_equivalent_turns,
+        "step_number": observation.step_number,
+        "blocker_state": observation.blocker_state,
+        "document_candidate_count": observation.document_candidate_count,
+        "artifact_count": observation.artifact_count,
+        "network_document_count": observation.network_document_count,
+        "confirmation_observed": observation.confirmation_observed,
+    }
+
+
 def run_browser_report_download_agent(
     *,
     request: BrowserReportDownloadRequest,
@@ -1637,6 +1691,19 @@ def run_browser_report_download_agent(
             "use_judge": _BROWSER_AGENT_USE_JUDGE,
         }
         agent_parameters = inspect.signature(browser_use.Agent).parameters
+        no_progress_detector = BrowserNoProgressDetector(browser=browser)
+        if _agent_accepts_parameter(
+            agent_parameters, "register_new_step_callback"
+        ):
+            agent_kwargs["register_new_step_callback"] = (
+                no_progress_detector.observe_callback
+            )
+        if _agent_accepts_parameter(
+            agent_parameters, "register_should_stop_callback"
+        ):
+            agent_kwargs["register_should_stop_callback"] = (
+                no_progress_detector.should_stop_callback
+            )
         if "calculate_cost" in agent_parameters:
             agent_kwargs["calculate_cost"] = True
         if llm_clients.fallback_llm is not None and "fallback_llm" in agent_parameters:
@@ -1656,9 +1723,27 @@ def run_browser_report_download_agent(
             request=request,
             ctx=ctx,
             normalized_url=normalized_url,
+            no_progress_detector=no_progress_detector,
         )
         history = history_result.history
         raw_model_response = str(history.final_result() or "").strip()
+        if history_result.no_progress_observation is not None:
+            raw_model_response = _no_progress_raw_model_response(
+                history_result.no_progress_observation,
+                route_family_hint=str(request.route_family_hint or "").strip(),
+            )
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="browser_report_download_no_progress_stopped",
+                    module=logger.name,
+                    fields=_no_progress_log_fields(
+                        history_result.no_progress_observation,
+                        normalized_url=normalized_url,
+                    ),
+                )
+            )
         history_final_page_url = _read_history_final_page_url(history)
         history_final_page_title = _read_history_final_page_title(history)
         attachment_paths = _read_history_attachment_paths(history)

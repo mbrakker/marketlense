@@ -30,6 +30,9 @@ CAPABILITY_MODULE_FUNCTIONS = {
     "_session_lifecycle/history.py": {
         "_run_agent_history_with_timeout",
     },
+    "no_progress.py": {
+        "_actionable_dom_representation",
+    },
     "_session_lifecycle/shutdown.py": {
         "_prepare_browser_for_shutdown",
         "_kill_browser",

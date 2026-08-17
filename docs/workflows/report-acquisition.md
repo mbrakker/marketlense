@@ -82,6 +82,19 @@ supersedes the old decision without deleting either the suppression history or
 resource records. Direct routes and the existing identity and hard-blocker
 policies remain independent controls.
 
+During a Browser Use acquisition, MarketLense also compares a deterministic
+fingerprint at each Agent turn. It includes the effective URL, actionable
+DOM/form state, typed blocker state, document candidates, document/network
+evidence, and confirmation signals. The Agent stops only after three
+consecutive equivalent fingerprints; one stalled turn never terminates a
+route. A navigation, form-state change, new document candidate, network
+document evidence, confirmation signal, or blocker-state change resets the
+counter. The stop is finalized as the typed `blocked_no_progress` terminal
+result with bounded scalar/hash evidence, so it remains auditable and follows
+the ordinary retained route-learning and three-compatible-attempt suppression
+rules. Raw DOM, form values, screenshots, prompts, and model prose are never
+put in the standard no-progress event or route record.
+
 An explicitly scoped reliability profile may set browser acquisition retries to
 zero when a timed-out deterministic route is being measured rather than
 recovered. The timeout remains a typed terminal result with its route,

@@ -26,6 +26,7 @@ _BLOCKED_REASONS = {
     "blocked_static_archive",
     "blocked_missing_identity_field",
     "blocked_unknown_required_enum",
+    "blocked_no_progress",
 }
 _ROUTE_SUMMARY_ACTION_MARKERS = (
     "open",
@@ -448,9 +449,12 @@ def _resolve_route_family(
     request: BrowserReportDownloadRequest,
     agent_result: BrowserUseAgentResult,
     route_kind: str,
+    blocked_reason: str | None = None,
 ) -> str:
     token = str(agent_result.route_family or "").strip()
     hinted = str(request.route_family_hint or "").strip()
+    if blocked_reason == "blocked_no_progress" and hinted:
+        return hinted
     canonical = _canonical_route_family(
         route_kind=route_kind,
         route_family=token or hinted,

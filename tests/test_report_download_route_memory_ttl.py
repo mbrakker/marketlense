@@ -69,6 +69,12 @@ def test_route_memory_uses_fresh_evidence_within_configured_ttl() -> None:
     assert memory.updated_at == 900
 
 
+def test_route_suppression_default_includes_typed_no_progress_terminal() -> None:
+    policy = BrowserDownloadRouteSuppressionPolicy(schema_version="1.0")
+
+    assert "blocked_no_progress" in policy.terminal_failure_classes
+
+
 def test_route_memory_fails_closed_when_evidence_is_stale_or_unverifiable() -> None:
     assert (
         _remembered_route_memory(

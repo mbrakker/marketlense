@@ -1,10 +1,205 @@
 from __future__ import annotations
 
+import asyncio
+
 from src.services._browser_report_download._artifact.classification import (
     _normalize_explicit_blocked_reason,
 )
 
 from .builders import *  # noqa: F401,F403
+
+
+def test_download_report_with_browser_use_stops_after_three_equivalent_turns(
+    tmp_path: Path,
+    caplog,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    caplog.set_level(logging.INFO, logger=service.logger.name)
+    runtime = _runtime(
+        tmp_path,
+        route_kind="pdf_download",
+        route_summary="Open the report landing page.",
+        create_pdf=False,
+        email_submission_completed=False,
+    )
+    original_runtime = runtime.Agent
+
+    class EquivalentTurnHistory:
+        def final_result(self) -> str:
+            return ""
+
+        def action_results(self) -> list[Any]:
+            return []
+
+    class EquivalentTurnAgent(original_runtime):
+        def __init__(
+            self,
+            *,
+            task: str,
+            llm: Any,
+            browser: Any,
+            output_model_schema: Any,
+            register_new_step_callback: Any,
+            register_should_stop_callback: Any,
+            use_judge: bool = False,
+            calculate_cost: bool = False,
+        ) -> None:
+            super().__init__(
+                task=task,
+                llm=llm,
+                browser=browser,
+                output_model_schema=output_model_schema,
+                use_judge=use_judge,
+                calculate_cost=calculate_cost,
+            )
+            self.register_new_step_callback = register_new_step_callback
+            self.register_should_stop_callback = register_should_stop_callback
+            self.turn_count = 0
+
+        def run_sync(self, max_steps: int):
+            state = SimpleNamespace(
+                url="https://example.com/report",
+                dom_state=SimpleNamespace(
+                    selector_map={"1": object()},
+                    llm_representation=lambda: "<button>Download report</button>",
+                ),
+                pending_network_requests=[],
+                recent_events="",
+            )
+            output = SimpleNamespace(
+                current_state=SimpleNamespace(
+                    memory="", evaluation_previous_goal="", next_goal=""
+                )
+            )
+            for step_number in range(1, max_steps + 1):
+                self.turn_count += 1
+                self.register_new_step_callback(state, output, step_number)
+                if asyncio.run(self.register_should_stop_callback()):
+                    break
+            self.history = EquivalentTurnHistory()
+            return self.history
+
+    runtime.Agent = EquivalentTurnAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_pdf_click",
+        ),
+        run_context,
+    )
+
+    assert response.outcome == "email_required"
+    assert response.route_family == "browser_pdf_click"
+    assert response.blocked_reason == "blocked_no_progress"
+    assert "blocked_no_progress" in response.terminal_evidence.evidence_labels
+    events = _service_events(caplog)
+    no_progress_event = next(
+        event
+        for event in events
+        if event["event"] == "browser_report_download_no_progress_stopped"
+    )
+    assert no_progress_event["fields"]["consecutive_equivalent_turns"] == 3
+
+
+def test_download_report_with_browser_use_keeps_success_after_document_progress(
+    tmp_path: Path,
+    caplog,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    caplog.set_level(logging.INFO, logger=service.logger.name)
+    runtime = _runtime(
+        tmp_path,
+        route_kind="pdf_download",
+        route_summary="Open the landing page and download the report.",
+        create_pdf=True,
+        email_submission_completed=None,
+    )
+    original_runtime = runtime.Agent
+
+    class DocumentProgressAgent(original_runtime):
+        def __init__(
+            self,
+            *,
+            task: str,
+            llm: Any,
+            browser: Any,
+            output_model_schema: Any,
+            register_new_step_callback: Any,
+            register_should_stop_callback: Any,
+            use_judge: bool = False,
+            calculate_cost: bool = False,
+        ) -> None:
+            super().__init__(
+                task=task,
+                llm=llm,
+                browser=browser,
+                output_model_schema=output_model_schema,
+                use_judge=use_judge,
+                calculate_cost=calculate_cost,
+            )
+            self.register_new_step_callback = register_new_step_callback
+            self.register_should_stop_callback = register_should_stop_callback
+
+        def run_sync(self, max_steps: int):
+            output = SimpleNamespace(
+                current_state=SimpleNamespace(
+                    memory="", evaluation_previous_goal="", next_goal=""
+                )
+            )
+            for step_number, dom in enumerate(
+                (
+                    "<button>Download report</button>",
+                    "<button>Download report</button>",
+                    "<a href='/report.pdf'>Download report</a>",
+                ),
+                start=1,
+            ):
+                state = SimpleNamespace(
+                    url="https://example.com/report",
+                    dom_state=SimpleNamespace(
+                        selector_map={"1": object()},
+                        llm_representation=lambda dom=dom: dom,
+                    ),
+                    pending_network_requests=[],
+                    recent_events="",
+                )
+                self.register_new_step_callback(state, output, step_number)
+                assert asyncio.run(self.register_should_stop_callback()) is False
+            return super().run_sync(max_steps)
+
+    runtime.Agent = DocumentProgressAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_pdf_click",
+        ),
+        run_context,
+    )
+
+    assert response.outcome == "downloaded"
+    assert response.blocked_reason is None
+    assert not any(
+        event["event"] == "browser_report_download_no_progress_stopped"
+        for event in _service_events(caplog)
+    )
 
 
 def test_download_report_with_browser_use_maps_company_name_and_professional_email_without_false_blocker(

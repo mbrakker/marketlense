@@ -298,6 +298,50 @@ def test_terminal_suppression_requires_three_compatible_failures_and_expires(
     assert expired.decision_id != active.decision_id
 
 
+def test_no_progress_terminal_records_require_three_compatible_failures(
+    tmp_path,
+) -> None:
+    for index in range(2):
+        _record(
+            tmp_path,
+            _summary(
+                attempt_id=f"no-progress-{index}",
+                outcome="failed",
+                reason="blocked_no_progress",
+            ),
+        )
+
+    below_threshold = evaluate_acquisition_route_suppression(
+        _suppression_request(
+            tmp_path,
+            terminal_failure_classes=("blocked_no_progress",),
+        ),
+        _ctx(),
+    )
+
+    assert not below_threshold.suppressed
+    assert below_threshold.terminal_failure_count == 2
+
+    _record(
+        tmp_path,
+        _summary(
+            attempt_id="no-progress-2",
+            outcome="failed",
+            reason="blocked_no_progress",
+        ),
+    )
+    active = evaluate_acquisition_route_suppression(
+        _suppression_request(
+            tmp_path,
+            terminal_failure_classes=("blocked_no_progress",),
+        ),
+        _ctx(),
+    )
+
+    assert active.suppressed
+    assert active.terminal_failure_count == 3
+
+
 def test_changed_policy_and_explicit_revalidation_do_not_suppress(tmp_path) -> None:
     for index in range(3):
         _record(

@@ -27,6 +27,7 @@ logger = logging.getLogger("market_lense.browser_report_download_service")
 class BrowserAgentHistoryResult:
     history: Any
     salvaged_completed_history: bool
+    no_progress_observation: Any | None = None
 
 
 def _run_agent_history_with_timeout(
@@ -36,6 +37,7 @@ def _run_agent_history_with_timeout(
     request: BrowserReportDownloadRequest,
     ctx: RunContext,
     normalized_url: str,
+    no_progress_detector: Any | None = None,
 ) -> Any:
     payload: dict[str, Any] = {}
     errors: list[BaseException] = []
@@ -206,9 +208,15 @@ def _run_agent_history_with_timeout(
             retryable=True,
             context={"normalized_url": normalized_url},
         )
+    no_progress_observation = (
+        getattr(no_progress_detector, "observation", None)
+        if bool(getattr(no_progress_detector, "should_stop", False))
+        else None
+    )
     return BrowserAgentHistoryResult(
         history=history,
         salvaged_completed_history=False,
+        no_progress_observation=no_progress_observation,
     )
 
 

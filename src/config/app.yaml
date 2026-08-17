@@ -560,6 +560,7 @@ browser_download:
     terminal_failure_classes:
       - "blocked_captcha"
       - "blocked_email_domain"
+      - "blocked_no_progress"
   route_playbook_promotion_mode: "write"
   private_api_playbook_promotion_mode: "write"
   private_api_playbook_min_success_count: 3

@@ -63,6 +63,7 @@ browser_download:
     terminal_failure_classes:
       - "blocked_captcha"
       - "blocked_email_domain"
+      - "blocked_no_progress"
   captcha_handoff:
     enabled: true
     timeout_seconds: 120

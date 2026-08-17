@@ -337,7 +337,11 @@ def _build_route_suppression_policy(
                 for item in payload.get("terminal_failure_classes", [])
                 if str(item).strip()
             }
-            or {"blocked_captcha", "blocked_email_domain"}
+            or {
+                "blocked_captcha",
+                "blocked_email_domain",
+                "blocked_no_progress",
+            }
         )
     )
     return BrowserDownloadRouteSuppressionPolicy(

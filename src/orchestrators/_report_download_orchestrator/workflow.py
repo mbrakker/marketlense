@@ -626,9 +626,15 @@ def run_report_download(
         started_at_utc=run_started_at_utc,
         started_monotonic=run_started_monotonic,
         route_family=result.route_family,
-        terminal_outcome="success",
+        terminal_outcome=(
+            "failed" if result.blocked_reason == "blocked_no_progress" else "success"
+        ),
         terminal_reason=(
-            "verified" if result.route_status == "verified" else result.route_status
+            result.blocked_reason
+            if result.blocked_reason == "blocked_no_progress"
+            else "verified"
+            if result.route_status == "verified"
+            else result.route_status
         ),
         result=result,
         source_identity_id=source_identity_id,

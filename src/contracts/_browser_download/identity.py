@@ -295,7 +295,11 @@ class BrowserDownloadRouteSuppressionPolicy:
         metadata={"doc": "Expiry for an active suppression decision in seconds."},
     )
     terminal_failure_classes: tuple[str, ...] = field(
-        default=("blocked_captcha", "blocked_email_domain"),
+        default=(
+            "blocked_captcha",
+            "blocked_email_domain",
+            "blocked_no_progress",
+        ),
         metadata={"doc": "Typed terminal blocker classes eligible for suppression."},
     )
 

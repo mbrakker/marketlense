@@ -2,6 +2,95 @@ from __future__ import annotations
 
 from .builders import *  # noqa: F401,F403
 from src.services._browser_report_download.browser import BrowserAgentRunResult
+from src.services._browser_report_download._browser_runtime.no_progress import (
+    BrowserNoProgressDetector,
+)
+
+
+def _no_progress_state(
+    *,
+    url: str = "https://example.com/report",
+    dom: str = "<button>Download report</button><form><input name='email'></form>",
+    blocker: str = "",
+    pending_network_urls: list[str] | None = None,
+    recent_events: str = "",
+) -> Any:
+    return SimpleNamespace(
+        url=url,
+        dom_state=SimpleNamespace(
+            selector_map={"1": object()},
+            llm_representation=lambda: dom,
+        ),
+        pending_network_requests=[
+            SimpleNamespace(url=item, method="GET", resource_type="Document")
+            for item in pending_network_urls or []
+        ],
+        recent_events=recent_events,
+        closed_popup_messages=[],
+        browser_errors=[],
+        title="Example report",
+    ), SimpleNamespace(
+        current_state=SimpleNamespace(
+            memory=blocker,
+            evaluation_previous_goal=blocker,
+            next_goal=blocker,
+        )
+    )
+
+
+def test_browser_no_progress_requires_three_equivalent_turns() -> None:
+    detector = BrowserNoProgressDetector()
+    state, output = _no_progress_state()
+
+    first = detector.observe(state=state, model_output=output, step_number=1)
+    second = detector.observe(state=state, model_output=output, step_number=2)
+    third = detector.observe(state=state, model_output=output, step_number=3)
+
+    assert first.should_stop is False
+    assert second.should_stop is False
+    assert third.should_stop is True
+    assert third.consecutive_equivalent_turns == 3
+
+
+def test_browser_no_progress_resets_for_each_material_progress_signal() -> None:
+    detector = BrowserNoProgressDetector()
+    baseline_state, baseline_output = _no_progress_state()
+    detector.observe(state=baseline_state, model_output=baseline_output, step_number=1)
+    detector.observe(state=baseline_state, model_output=baseline_output, step_number=2)
+
+    progressed_states = [
+        _no_progress_state(url="https://example.com/report/thank-you"),
+        _no_progress_state(dom="<form><input value='submitted'></form>"),
+        _no_progress_state(dom="<a href='/report.pdf'>Download PDF</a>"),
+        _no_progress_state(pending_network_urls=["https://example.com/report.pdf"]),
+        _no_progress_state(recent_events="Submission confirmed"),
+        _no_progress_state(blocker="captcha challenge"),
+    ]
+
+    for step_number, (state, output) in enumerate(progressed_states, start=3):
+        observation = detector.observe(
+            state=state,
+            model_output=output,
+            step_number=step_number,
+        )
+
+        assert observation.consecutive_equivalent_turns == 1
+        assert observation.should_stop is False
+
+
+def test_browser_no_progress_resets_when_a_browser_artifact_appears() -> None:
+    browser = SimpleNamespace(downloaded_files=[])
+    detector = BrowserNoProgressDetector(browser=browser)
+    state, output = _no_progress_state()
+    detector.observe(state=state, model_output=output, step_number=1)
+    detector.observe(state=state, model_output=output, step_number=2)
+
+    browser.downloaded_files.append("C:/safe/report.pdf")
+    observation = detector.observe(state=state, model_output=output, step_number=3)
+
+    assert observation.artifact_count == 1
+    assert observation.consecutive_equivalent_turns == 1
+    assert observation.should_stop is False
 
 
 def test_browser_use_route_steps_are_enriched_with_post_action_verification(

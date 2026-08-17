@@ -32,6 +32,7 @@ _BLOCKED_REASONS = {
     "blocked_static_archive",
     "blocked_missing_identity_field",
     "blocked_unknown_required_enum",
+    "blocked_no_progress",
 }
 _ROUTE_SUMMARY_ACTION_MARKERS = (
     "open",
