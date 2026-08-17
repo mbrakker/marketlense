@@ -8,6 +8,9 @@ from typing import Any
 
 import yaml
 
+from src.contracts.browser_download import BrowserReportDownloadRequest
+from src.services._browser_report_download import preflight as preflight_runtime
+
 from .builders import (
     _FakeResponse,
     _runtime,
@@ -16,7 +19,6 @@ from .builders import (
     http_runtime,
     service,
 )
-from src.contracts.browser_download import BrowserReportDownloadRequest
 
 
 def test_private_api_playbook_downloads_pdf_before_full_agent(
@@ -29,6 +31,7 @@ def test_private_api_playbook_downloads_pdf_before_full_agent(
     page_url = "https://example.com/research/report-2026"
     api_url = "https://example.com/api/reports/report-2026"
     pdf_url = "https://example.com/asset/report-2026.pdf"
+    browser_preflight_imports: list[str] = []
 
     def fake_get(url: str, *args: Any, **kwargs: Any) -> _FakeResponse:
         if url == api_url:
@@ -52,6 +55,18 @@ def test_private_api_playbook_downloads_pdf_before_full_agent(
         )
 
     external_boundary_mocks_only.setattr(http_runtime.requests, "get", fake_get)
+    external_boundary_mocks_only.setattr(
+        preflight_runtime,
+        "import_module",
+        lambda module_name: browser_preflight_imports.append(module_name)
+        or _runtime(
+            tmp_path,
+            route_kind="pdf_download",
+            route_summary="Unused preflight runtime.",
+            create_pdf=False,
+            email_submission_completed=None,
+        ),
+    )
     external_boundary_mocks_only.setattr(
         browser_runtime,
         "import_module",
@@ -81,6 +96,7 @@ def test_private_api_playbook_downloads_pdf_before_full_agent(
     assert response.route_steps[0].verification_status == "verified"
     assert Path(response.downloaded_file_path).read_bytes().startswith(b"%PDF-")
     assert "private_api_playbook" in response.terminal_evidence.evidence_labels
+    assert browser_preflight_imports == []
     events = [json.loads(record.message) for record in caplog.records]
     complete_events = [
         event
@@ -110,6 +126,7 @@ def test_stale_private_api_playbook_falls_back_to_normal_browser_route(
         email_submission_completed=None,
     )
     full_agent_loaded = {"value": False}
+    browser_preflight_imports: list[str] = []
 
     def fake_get(url: str, *args: Any, **kwargs: Any) -> _FakeResponse:
         if url == api_url:
@@ -131,6 +148,11 @@ def test_stale_private_api_playbook_falls_back_to_normal_browser_route(
 
     external_boundary_mocks_only.setattr(http_runtime.requests, "get", fake_get)
     external_boundary_mocks_only.setattr(
+        preflight_runtime,
+        "import_module",
+        lambda module_name: browser_preflight_imports.append(module_name) or runtime,
+    )
+    external_boundary_mocks_only.setattr(
         browser_runtime,
         "import_module",
         load_agent_runtime,
@@ -151,6 +173,7 @@ def test_stale_private_api_playbook_falls_back_to_normal_browser_route(
     )
 
     assert full_agent_loaded["value"] is True
+    assert browser_preflight_imports == ["browser_use"]
     assert response.outcome == "downloaded"
     events = [json.loads(record.message) for record in caplog.records]
     fallback_events = [

@@ -118,6 +118,14 @@ An accepted email request has no artifact to hash, so its telemetry status is
 is never treated as a resolved or cohort-eligible report merely because the
 form submission succeeded.
 
+When a selected browser-route playbook contains validated private-API evidence,
+acquisition attempts its deterministic HTTP route before browser preflight,
+browser launch, or Browser Use. Endpoint schema, method, repeated-success
+evidence, accepted status, required response markers, JSON-pointer extraction,
+and final PDF validation remain mandatory. Any stale, rejected, or unavailable
+private-API result records its fallback reason and continues through the normal
+browser acquisition route without changing promotion thresholds.
+
 Browser-form blocker claims are untrusted terminal evidence. The
 `blocked_missing_identity_field` classification is emitted only when
 deterministic matching of the encountered required fields against the resolved

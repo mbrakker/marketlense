@@ -1261,6 +1261,20 @@ def download_report_with_browser_use(
         ctx=ctx,
         normalized_url=normalized_url,
     )
+    private_api_result = try_private_api_playbook_download(
+        request=request,
+        ctx=ctx,
+        normalized_url=normalized_url,
+        execution_url=normalized_execution_url,
+        download_dir=download_dir,
+    )
+    if private_api_result is not None:
+        return _complete_browser_download_result(
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            result=private_api_result,
+        )
     request = apply_browser_route_budget(
         request=request,
         ctx=ctx,
@@ -1355,38 +1369,6 @@ def download_report_with_browser_use(
             outcome="completed",
         )
         return remembered_blocker_result
-    try:
-        private_api_result = try_private_api_playbook_download(
-            request=request,
-            ctx=ctx,
-            normalized_url=normalized_url,
-            execution_url=normalized_execution_url,
-            download_dir=download_dir,
-        )
-    except Exception:
-        _close_preflight_session(
-            session=preflight_session,
-            ctx=ctx,
-            normalized_url=normalized_url,
-            outcome="failed",
-        )
-        raise
-    if private_api_result is not None:
-        _close_preflight_session(
-            session=preflight_session,
-            ctx=ctx,
-            normalized_url=normalized_url,
-            outcome="completed",
-            verified_artifact_count=(
-                1 if private_api_result.outcome == "downloaded" else 0
-            ),
-        )
-        return _complete_browser_download_result(
-            request=request,
-            ctx=ctx,
-            normalized_url=normalized_url,
-            result=private_api_result,
-        )
     deterministic_result = None
     deterministic_playbooks = _resolve_selected_full_playbooks(
         request=request,
