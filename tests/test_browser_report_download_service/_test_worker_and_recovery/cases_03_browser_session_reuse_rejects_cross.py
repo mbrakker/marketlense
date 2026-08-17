@@ -222,6 +222,8 @@ def test_download_report_with_browser_use_maps_browser_start_timeout_to_typed_er
             BrowserReportDownloadRequest(
                 schema_version="1.0",
                 url="https://datareportal.com/reports/digital-2026-mozambique",
+                route_kind_hint="pdf_download",
+                route_family_hint="browser_pdf_click",
                 settings=_settings(tmp_path),
             ),
             run_context,

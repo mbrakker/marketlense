@@ -6,6 +6,7 @@ import logging
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Callable
 from urllib.parse import urlsplit
 
 import requests
@@ -19,6 +20,7 @@ from src.contracts.browser_download import (
 )
 from src.contracts.http_acquisition import (
     HttpAcquisitionRequest,
+    HttpAcquisitionResponse,
     HttpAcquisitionResponsePolicy,
 )
 from src.contracts.run_context import RunContext
@@ -30,6 +32,12 @@ from src.services._browser_report_download._http.html_evidence import (
     _extract_html_title,
     _extract_text_excerpt,
     _html_to_text,
+)
+from src.services._browser_report_download._http.adobe_indesign import (
+    try_embedded_adobe_indesign_capture,
+)
+from src.services._browser_report_download.logging import (
+    browser_download_result_log_fields,
 )
 from src.services._http_acquisition import execute_http_acquisition
 from src.utils.errors import AppError
@@ -70,10 +78,6 @@ _ONSITE_CAPTURE_BLOCKED_MARKERS = (
     "security checkpoint",
     "enable javascript",
 )
-from src.services._browser_report_download.logging import (
-    browser_download_result_log_fields,
-)
-
 _ONSITE_CAPTURE_HUMAN_VERIFICATION_MARKERS = (
     "not a robot",
     "verify you are human",
@@ -96,6 +100,9 @@ def try_direct_onsite_capture(
     normalized_url: str,
     download_dir: Path,
     page_url: str | None = None,
+    http_acquisition_executor: Callable[..., HttpAcquisitionResponse] = (
+        execute_http_acquisition
+    ),
 ) -> BrowserReportDownloadResult | None:
     decision = _direct_onsite_recovery_decision(request)
     logger.info(
@@ -136,7 +143,7 @@ def try_direct_onsite_capture(
         )
     )
     try:
-        response = execute_http_acquisition(
+        response = http_acquisition_executor(
             request=HttpAcquisitionRequest(
                 schema_version="1.0",
                 purpose="browser_report_download_direct_onsite_capture",
@@ -206,6 +213,38 @@ def try_direct_onsite_capture(
     ):
         return None
     html = str(response.text_body or "")
+    adobe_indesign_result = try_embedded_adobe_indesign_capture(
+        request=request,
+        ctx=ctx,
+        normalized_url=normalized_url,
+        download_dir=download_dir,
+        source_page_url=str(response.final_url or target_url).strip() or target_url,
+        source_page_html=html,
+        http_acquisition_executor=http_acquisition_executor,
+    )
+    if adobe_indesign_result is not None:
+        return adobe_indesign_result
+    if decision.reason == "unhinted_report_detail_candidate":
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_direct_onsite_attempt_fallback",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "target_url": target_url,
+                    "recovery_class": decision.recovery_class,
+                    "recovery_decision": "fallback",
+                    "error_code": "browser_download_public_embed_unverified",
+                    "error_message": (
+                        "Unhinted report detail did not expose a complete verified "
+                        "public Adobe InDesign embed."
+                    ),
+                },
+            )
+        )
+        return None
     if not _looks_like_onsite_capture_html(
         html,
         request=request,
@@ -401,6 +440,15 @@ def _direct_onsite_recovery_decision(
             allowed=False,
             recovery_class=_DETAIL_CANDIDATE_RECOVERY_CLASS,
             reason="email_form_without_detail_signal",
+        )
+    if not route_family and not route_kind and _looks_like_report_detail_candidate(
+        request
+    ):
+        return DirectOnsiteRecoveryDecision(
+            schema_version="1.0",
+            allowed=True,
+            recovery_class=_DETAIL_CANDIDATE_RECOVERY_CLASS,
+            reason="unhinted_report_detail_candidate",
         )
     return DirectOnsiteRecoveryDecision(
         schema_version="1.0",

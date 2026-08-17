@@ -128,7 +128,11 @@ class BrowserAgentWorkerResponse:
 def _should_run_browser_agent_in_subprocess(
     browser_use: Any,
     request: BrowserReportDownloadRequest | None = None,
+    *,
+    inside_worker: bool = False,
 ) -> bool:
+    if inside_worker:
+        return False
     if os.environ.get(_BROWSER_AGENT_WORKER_ENV) == "1":
         return False
     if os.environ.get("PYTEST_CURRENT_TEST"):

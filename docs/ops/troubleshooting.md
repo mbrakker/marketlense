@@ -17,3 +17,9 @@
 | Intermittent Windows local-cache write error | Re-run the bounded operation; only native rename sharing/access errors are retried locally, while other write errors remain explicit | [Local development](local-development.md) |
 
 Use `python -m src.cli --help` to confirm available commands. Avoid broad retries and destructive cleanup until the retained evidence identifies the affected workflow and side effect.
+
+For a `browser_email_form` fallback, inspect
+`browser_report_download_pre_llm_autofill_escalated`. A reason of
+`async_browser_session` means deterministic pre-fill was intentionally skipped: it
+must not share a Browser Use session with a helper that cannot be safely cancelled.
+Browser Use receives the untouched session as the fallback.

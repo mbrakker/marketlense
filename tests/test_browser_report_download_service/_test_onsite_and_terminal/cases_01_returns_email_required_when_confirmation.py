@@ -1,7 +1,209 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+import json
+
+from src.contracts.http_acquisition import HttpAcquisitionResponse
+from src.services._browser_report_download._http.adobe_indesign import (
+    _adobe_indesign_pages,
+    _extract_embedded_adobe_indesign_publication,
+    _render_adobe_indesign_capture_html,
+    try_embedded_adobe_indesign_capture,
+)
+from src.services._browser_report_download._http.onsite_capture import (
+    _should_try_direct_onsite_capture,
+    try_direct_onsite_capture,
+)
+
 from ._shared import *  # noqa: F401,F403
+
+
+def test_extract_embedded_adobe_indesign_publication_requires_public_view_url() -> None:
+    publication = _extract_embedded_adobe_indesign_publication(
+        """
+        <iframe
+          src="https://indd.adobe.com/view/9d9a68f6-38a9-4278-b61c-4506b24240b0?allowFullscreen=true"
+        ></iframe>
+        """
+    )
+
+    assert publication == "9d9a68f6-38a9-4278-b61c-4506b24240b0"
+    assert _extract_embedded_adobe_indesign_publication(
+        '<iframe src="https://example.com/view/9d9a68f6-38a9-4278-b61c-4506b24240b0"></iframe>'
+    ) is None
+    assert _extract_embedded_adobe_indesign_publication(
+        '<a href="https://indd.adobe.com/view/9d9a68f6-38a9-4278-b61c-4506b24240b0">Report</a>'
+    ) is None
+    assert _extract_embedded_adobe_indesign_publication(
+        '<script>"https://indd.adobe.com/view/9d9a68f6-38a9-4278-b61c-4506b24240b0"</script>'
+    ) is None
+
+
+def test_adobe_indesign_capture_html_preserves_published_page_text() -> None:
+    pages = _adobe_indesign_pages(
+        json.dumps(
+            {
+                "framesData": [
+                    {
+                        "pageNo": 1,
+                        "frameData": [
+                            {
+                                "textBoundary": [
+                                    [["DIGITAL 2025", [0, 12]]],
+                                    [["GLOBAL OVERVIEW REPORT", [0, 24]]],
+                                ]
+                            }
+                        ],
+                    },
+                    {
+                        "pageNo": 2,
+                        "frameData": [
+                            {
+                                "textBoundary": [
+                                    [["Published report findings", [0, 12]]]
+                                ]
+                            }
+                        ],
+                    },
+                ]
+            }
+        )
+    )
+
+    capture_html = _render_adobe_indesign_capture_html(pages)
+
+    assert pages == [
+        (1, ["DIGITAL 2025 GLOBAL OVERVIEW REPORT"]),
+        (2, ["Published report findings"]),
+    ]
+    assert 'data-page-number="1"' in capture_html
+    assert "Published report findings" in capture_html
+
+
+def test_adobe_indesign_capture_counts_distinct_published_pages() -> None:
+    pages = _adobe_indesign_pages(
+        json.dumps(
+            {
+                "framesData": [
+                    {
+                        "pageNo": 1,
+                        "frameData": [{"textBoundary": [["first frame"]]}],
+                    },
+                    {
+                        "pageNo": 1,
+                        "frameData": [{"textBoundary": [["second frame"]]}],
+                    },
+                ]
+            }
+        )
+    )
+
+    assert pages == [(1, ["first frame second frame"])]
+
+
+def test_embedded_adobe_indesign_capture_requires_complete_public_content(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    publication_id = "9d9a68f6-38a9-4278-b61c-4506b24240b0"
+    content = json.dumps(
+        {
+            "framesData": [
+                {
+                    "pageNo": page_number,
+                    "frameData": [
+                        {"textBoundary": [["Verified report text " * 80]]}
+                    ],
+                }
+                for page_number in (1, 2)
+            ]
+        }
+    )
+
+    def execute(*, request, ctx, requests_module):
+        body = '"VERSION_PREFIX":"cukv"' if request.purpose.endswith("viewer") else content
+        return HttpAcquisitionResponse(
+            schema_version="1.0",
+            purpose=request.purpose,
+            method=request.method,
+            request_url=request.url,
+            final_url=request.url,
+            status_code=200,
+            headers={"content-type": "application/json"},
+            content_type="application/json",
+            text_body=body,
+        )
+
+    result = try_embedded_adobe_indesign_capture(
+        request=BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://publisher.example/report",
+            settings=_settings(tmp_path),
+        ),
+        ctx=run_context,
+        normalized_url="https://publisher.example/report",
+        download_dir=tmp_path,
+        source_page_url="https://publisher.example/report",
+        source_page_html=(
+            f'<iframe src="https://indd.adobe.com/view/{publication_id}"></iframe>'
+        ),
+        http_acquisition_executor=execute,
+    )
+
+    assert result is not None
+    assert result.outcome == "captured"
+    assert result.onsite_page_count == 2
+    assert (tmp_path / "adobe_indesign_capture.html").is_file()
+    assert (tmp_path / "adobe_indesign_content.json").is_file()
+
+
+def test_report_detail_without_route_hint_is_eligible_for_public_embed_capture(
+    tmp_path: Path,
+) -> None:
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url="https://publisher.example/reports/digital-overview-report",
+        settings=_settings(tmp_path),
+    )
+
+    assert _should_try_direct_onsite_capture(request) is True
+
+
+def test_unhinted_report_detail_falls_back_when_public_embed_is_unverified(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url="https://publisher.example/reports/digital-overview-report",
+        settings=_settings(tmp_path),
+    )
+
+    def execute(*, request, ctx, requests_module):
+        return HttpAcquisitionResponse(
+            schema_version="1.0",
+            purpose=request.purpose,
+            method=request.method,
+            request_url=request.url,
+            final_url=request.url,
+            status_code=200,
+            headers={"content-type": "text/html"},
+            content_type="text/html",
+            text_body=(
+                "<html><title>Report</title><article>"
+                f"{'report findings ' * 100}</article></html>"
+            ),
+        )
+
+    result = try_direct_onsite_capture(
+        request=request,
+        ctx=run_context,
+        normalized_url=request.url,
+        download_dir=tmp_path,
+        http_acquisition_executor=execute,
+    )
+
+    assert result is None
 
 def test_download_report_with_browser_use_returns_email_required_when_confirmation_is_missing(
     tmp_path: Path,
@@ -865,6 +1067,12 @@ def test_download_report_with_browser_use_records_terminal_snapshot_and_document
     assert response.terminal_evidence.visited_url_timeline
 
 __all__ = [
+    "test_adobe_indesign_capture_counts_distinct_published_pages",
+    "test_embedded_adobe_indesign_capture_requires_complete_public_content",
+    "test_extract_embedded_adobe_indesign_publication_requires_public_view_url",
+    "test_report_detail_without_route_hint_is_eligible_for_public_embed_capture",
+    "test_unhinted_report_detail_falls_back_when_public_embed_is_unverified",
+    "test_adobe_indesign_capture_html_preserves_published_page_text",
     "test_download_report_with_browser_use_returns_email_required_when_confirmation_is_missing",
     "test_download_report_with_browser_use_short_circuits_remembered_onsite_extract_to_direct_html_capture",
     "test_download_report_with_browser_use_short_circuits_planned_onsite_candidate_to_direct_html_capture",

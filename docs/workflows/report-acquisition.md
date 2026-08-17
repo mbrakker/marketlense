@@ -89,4 +89,12 @@ or other personal identity value is persisted. Failed, blocked, missing, and unv
 actions (including a final submit) cause a typed `not_promotable` result and leave no
 active playbook write.
 
+When a publisher page embeds a public Adobe InDesign Publish Online report, acquisition
+does not treat incidental newsletter forms as a report gate. It verifies the publisher
+page's Adobe viewer URL, reads the viewer-provided version prefix, then captures the
+public `content.json` text asset into an HTML handoff plus a retained raw JSON audit
+artifact. The capture is accepted only when the returned asset has multiple text-bearing
+pages and substantial text; unavailable, malformed, or truncated Adobe content falls
+back to the normal browser path rather than being saved as a partial report.
+
 Use `python -m src.cli download-report <url>` for an explicit acquisition request and `python -m src.cli browser-doctor` to diagnose the local browser runtime. Browser, Drive, and mailbox prerequisites are covered in [credentials](../ops/credentials.md); recovery guidance is in [troubleshooting](../ops/troubleshooting.md).

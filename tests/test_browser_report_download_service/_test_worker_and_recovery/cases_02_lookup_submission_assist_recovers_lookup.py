@@ -1,6 +1,8 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+import asyncio
+
 from src.services._browser_report_download._browser_runtime import timeout_recovery
 from src.services._browser_report_download._helpers.interaction import (
     browser_helper_form_autocomplete,
@@ -1435,6 +1437,69 @@ def test_browser_worker_subprocess_discards_sensitive_request_payload_after_time
     assert not payload_path.exists()
 
 
+def test_pre_llm_autofill_skips_async_browser_to_avoid_concurrent_session_use(
+    tmp_path: Path,
+    run_context,
+    caplog,
+    assert_logs_have_required_fields,
+) -> None:
+    """The LLM fallback must not share a session with a timed-out helper."""
+
+    class AsyncBrowser:
+        start_calls = 0
+
+        async def start(self) -> None:
+            self.start_calls += 1
+            await asyncio.sleep(0)
+
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url="https://example.com/report",
+        route_family_hint="browser_email_form",
+        settings=_settings(tmp_path),
+    )
+    caplog.set_level(logging.INFO, logger=service.logger.name)
+    browser = AsyncBrowser()
+
+    result = browser_runtime._try_pre_llm_standard_form_submit(
+        request=request,
+        browser=browser,
+        ctx=run_context,
+        normalized_url=request.url,
+        execution_url=request.url,
+    )
+
+    assert result is None
+    assert browser.start_calls == 0
+    escalation_events = [
+        record
+        for record in caplog.records
+        if "browser_report_download_pre_llm_autofill_escalated" in record.message
+        and '"reason": "async_browser_session"' in record.message
+    ]
+    assert len(escalation_events) == 1
+    assert_logs_have_required_fields(caplog.records)
+
+
+def test_browser_worker_execution_never_dispatches_a_nested_worker(
+    tmp_path: Path,
+) -> None:
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url="https://example.com/report",
+        settings=_settings(tmp_path),
+    )
+
+    assert (
+        browser_runtime._should_run_browser_agent_in_subprocess(
+            object(),
+            request=request,
+            inside_worker=True,
+        )
+        is False
+    )
+
+
 def test_browser_worker_subprocess_sanitizes_failure_output_excerpt(
     tmp_path: Path,
     run_context,
@@ -1605,6 +1670,8 @@ __all__ = [
     "test_headed_browser_run_stays_in_process",
     "test_browser_worker_subprocess_discards_sensitive_request_payload_after_run",
     "test_browser_worker_subprocess_discards_sensitive_request_payload_after_timeout",
+    "test_browser_worker_execution_never_dispatches_a_nested_worker",
+    "test_pre_llm_autofill_skips_async_browser_to_avoid_concurrent_session_use",
     "test_browser_worker_subprocess_sanitizes_failure_output_excerpt",
     "test_download_report_with_browser_use_cleans_stale_browser_use_temp_dirs_before_launch",
     "test_download_report_with_browser_use_cleans_new_browser_use_temp_dirs_after_run",

@@ -650,6 +650,7 @@ def _process_payload(payload_path: Path, response_path: Path) -> int:
                     if isinstance(raw_payload.get("prompt_bundle"), dict)
                     else {}
                 ),
+                inside_worker=True,
             )
             response = BrowserAgentWorkerResponse(
                 schema_version="1.0",

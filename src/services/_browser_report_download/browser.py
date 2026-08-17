@@ -123,7 +123,6 @@ from src.services._browser_report_download._browser_runtime.session_lifecycle im
 )
 from src.services._browser_report_download._browser_runtime.terminal_assets import (
     _await_browser_task,
-    _await_in_current_or_thread,
     _browser_rendered_pdf_capture_path,
     _browser_text_has_non_report_marker,
     _browser_visible_text_from_html,
@@ -800,91 +799,6 @@ def _open_current_page_for_pre_llm_autofill(
         )
     return page
 
-
-async def _run_pre_llm_standard_form_submit(
-    *,
-    request: BrowserReportDownloadRequest,
-    browser: Any,
-    ctx: RunContext,
-    normalized_url: str,
-    execution_url: str,
-) -> tuple[Any, TerminalSnapshot]:
-    """Run the deterministic form helper on one Browser Use event loop."""
-
-    async def await_value(value: Any) -> Any:
-        return await value if inspect.isawaitable(value) else value
-
-    start = getattr(browser, "start", None)
-    if callable(start):
-        await await_value(start())
-    page = await await_value(browser.get_current_page())
-    if page is None:
-        new_page = getattr(browser, "new_page", None)
-        if not callable(new_page):
-            raise RuntimeError(
-                "browser cannot open a page for deterministic form handling"
-            )
-        try:
-            page = await await_value(new_page())
-        except TypeError:
-            page = await await_value(new_page(execution_url))
-    goto = getattr(page, "goto", None)
-    if callable(goto):
-        await await_value(goto(execution_url))
-    await asyncio.sleep(0.25)
-    helper_result = await asyncio.to_thread(
-        browser_helper_standard_form_submit,
-        page=page,
-        field_values=_browser_standard_form_identity_field_values(request),
-        ctx=ctx,
-        normalized_url=normalized_url,
-        browser=None,
-    )
-    if helper_result.status == "blocked" and helper_result.unresolved_options:
-        derived_field = await asyncio.to_thread(
-            _derive_grounded_form_option,
-            request=request,
-            helper_result=helper_result,
-            ctx=ctx,
-        )
-        if derived_field is not None:
-            helper_result = await asyncio.to_thread(
-                browser_helper_standard_form_submit,
-                page=page,
-                field_values=[
-                    *_browser_standard_form_identity_field_values(request),
-                    derived_field,
-                ],
-                ctx=ctx,
-                normalized_url=normalized_url,
-                browser=None,
-            )
-    get_url = getattr(page, "get_url", None)
-    get_title = getattr(page, "get_title", None)
-    url = str(
-        await await_value(get_url())
-        if callable(get_url)
-        else getattr(browser, "url", "") or ""
-    )
-    title = str(
-        await await_value(get_title())
-        if callable(get_title)
-        else getattr(browser, "title", "") or ""
-    )
-    evaluate = getattr(page, "evaluate", None)
-    evaluated_html = (
-        await await_value(evaluate("() => document.documentElement.outerHTML"))
-        if callable(evaluate)
-        else None
-    )
-    html = (
-        evaluated_html
-        if isinstance(evaluated_html, str)
-        else str(getattr(browser, "html", "") or "")
-    )
-    return helper_result, TerminalSnapshot(page=page, url=url, title=title, html=html)
-
-
 def _try_pre_llm_standard_form_submit(
     *,
     request: BrowserReportDownloadRequest,
@@ -911,31 +825,20 @@ def _try_pre_llm_standard_form_submit(
         )
         return None
     if inspect.iscoroutinefunction(getattr(browser, "start", None)):
-        try:
-            helper_result, snapshot = asyncio.run(
-                _run_pre_llm_standard_form_submit(
-                    request=request,
-                    browser=browser,
-                    ctx=ctx,
-                    normalized_url=normalized_url,
-                    execution_url=execution_url,
-                )
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_pre_llm_autofill_escalated",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "reason": "async_browser_session",
+                    "avoided_concurrent_session_use": True,
+                },
             )
-        except Exception as exc:
-            logger.info(
-                log_event(
-                    ctx,
-                    role="service",
-                    event="browser_report_download_pre_llm_autofill_escalated",
-                    module=logger.name,
-                    fields={
-                        "normalized_url": normalized_url,
-                        "reason": "runtime_failed",
-                        "error": str(exc),
-                    },
-                )
-            )
-            return None
+        )
+        return None
     else:
         page = _open_current_page_for_pre_llm_autofill(
             browser=browser,
@@ -1576,6 +1479,7 @@ def run_browser_report_download_agent(
     download_dir: Path,
     prompt_bundle: BrowserDownloadPromptBundle,
     preflight_session: BrowserPreflightSession | None = None,
+    inside_worker: bool = False,
 ) -> BrowserAgentRunResult:
     logger.info(
         log_event(
@@ -1615,7 +1519,7 @@ def run_browser_report_download_agent(
     launch_outcome = "completed"
     launch_error_code = ""
     if preflight_session is None and _should_run_browser_agent_in_subprocess(
-        browser_use, request=request
+        browser_use, request=request, inside_worker=inside_worker
     ):
         logger.info(
             log_event(
