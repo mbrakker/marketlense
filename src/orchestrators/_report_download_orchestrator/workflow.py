@@ -6,6 +6,8 @@ from dataclasses import replace
 from urllib.parse import urlsplit
 
 from src.contracts.browser_download import (
+    BrowserDownloadCaptchaHandoffPolicy,
+    BrowserDownloadRouteSuppressionPolicy,
     BrowserReportDownloadRequest,
     BrowserReportDownloadResult,
     FailedAcquisitionForensicsPack,
@@ -182,10 +184,11 @@ def run_report_download(
         jitter_seconds=request.settings.retry_jitter_seconds,
     )
 
+    now_seconds = int(time.time())
     route_memory = _remembered_route_memory(
         remembered_route,
         ttl_seconds=request.settings.route_memory_ttl_seconds,
-        now_seconds=int(time.time()),
+        now_seconds=now_seconds,
     )
     if remembered_route is not None and route_memory is None:
         logger.info(
@@ -203,6 +206,55 @@ def run_report_download(
                 },
             )
         )
+    route_suppression_policy = request.settings.route_suppression_policy
+    fresh_hard_blocker_reason = _fresh_remembered_hard_blocker_suppression_reason(
+        remembered_route,
+        ttl_seconds=request.settings.route_memory_ttl_seconds,
+        policy=route_suppression_policy,
+        captcha_handoff_policy=request.settings.captcha_handoff_policy,
+        revalidate_route_policy=request.revalidate_route_policy,
+        now_seconds=now_seconds,
+    )
+    if fresh_hard_blocker_reason is not None:
+        route_family = str(remembered_route.route_family or "browser_unknown")
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="report_download_fresh_hard_blocker_suppressed",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "route_family": route_family,
+                    "reason": fresh_hard_blocker_reason,
+                    "avoided_browser_launches": 1,
+                    "avoided_browser_model_calls": 1,
+                },
+            )
+        )
+        record_acquisition_resource_summary(
+            request=request,
+            ctx=ctx,
+            dependencies=deps,
+            started_at_utc=run_started_at_utc,
+            started_monotonic=run_started_monotonic,
+            route_family=route_family,
+            terminal_outcome="suppressed",
+            terminal_reason=fresh_hard_blocker_reason,
+            avoided_operations=("browser_launch", "browser_model_call"),
+        )
+        raise AppError(
+            code="report_download_route_suppressed",
+            message=(
+                "Browser route was suppressed by fresh exact "
+                "terminal-blocker evidence"
+            ),
+            retryable=False,
+            context={
+                "route_family": route_family,
+                "reason": fresh_hard_blocker_reason,
+            },
+        )
     plan = plan_report_download_routes(
         ReportDownloadRoutePlanRequest(
             schema_version="1.0",
@@ -215,12 +267,22 @@ def run_report_download(
         ),
         ctx,
     )
-    route_suppression_policy = request.settings.route_suppression_policy
+    suppression_failure_classes = tuple(
+        blocker_class
+        for blocker_class in route_suppression_policy.terminal_failure_classes
+        if not (
+            request.settings.captcha_handoff_policy.enabled
+            and str(blocker_class).strip().casefold() == "blocked_captcha"
+        )
+    )
     suppression_hash = route_suppression_policy_hash(request)
     executable_steps: list[ReportDownloadRoutePlanStep] = []
     suppressed_steps: list[tuple[ReportDownloadRoutePlanStep, str]] = []
     for planned_step in plan.steps:
         if not planned_step.route_family.startswith("browser_"):
+            executable_steps.append(planned_step)
+            continue
+        if not suppression_failure_classes:
             executable_steps.append(planned_step)
             continue
         suppression = deps.evaluate_acquisition_route_suppression(
@@ -238,7 +300,7 @@ def run_report_download(
                     route_suppression_policy.terminal_failure_threshold
                 ),
                 terminal_failure_classes=(
-                    route_suppression_policy.terminal_failure_classes
+                    suppression_failure_classes
                 ),
                 ttl_seconds=route_suppression_policy.ttl_seconds,
                 revalidation_override=request.revalidate_route_policy,
@@ -929,6 +991,53 @@ def _should_avoid_mailbox_preflight_for_remembered_blocker(
             or {"blocked_captcha", "blocked_email_domain"} & evidence_labels
         )
     )
+
+
+def _fresh_remembered_hard_blocker_suppression_reason(
+    remembered_route: PublisherDownloadRouteResponse | None,
+    *,
+    ttl_seconds: int,
+    policy: BrowserDownloadRouteSuppressionPolicy,
+    captcha_handoff_policy: BrowserDownloadCaptchaHandoffPolicy,
+    revalidate_route_policy: bool,
+    now_seconds: int,
+) -> str | None:
+    """Return a policy-compatible fresh exact blocker that may skip browser work."""
+    if revalidate_route_policy or not policy.enabled or remembered_route is None:
+        return None
+    if (
+        _remembered_route_memory(
+            remembered_route,
+            ttl_seconds=ttl_seconds,
+            now_seconds=now_seconds,
+        )
+        is None
+    ):
+        return None
+    blocker_reason = str(remembered_route.blocked_reason or "").strip().casefold()
+    evidence_labels = {
+        str(label or "").strip().casefold()
+        for label in remembered_route.terminal_evidence.evidence_labels
+    }
+    if (
+        not remembered_route.exact_route_found
+        or not str(remembered_route.route_family or "").startswith("browser_")
+        or str(remembered_route.route_status or "").strip().casefold() != "verified"
+        or str(remembered_route.terminal_evidence.artifact_validation_status or "")
+        .strip()
+        .casefold()
+        != "blocked"
+        or blocker_reason not in evidence_labels
+        or blocker_reason
+        not in {
+            str(item or "").strip().casefold()
+            for item in policy.terminal_failure_classes
+        }
+    ):
+        return None
+    if blocker_reason == "blocked_captcha" and captcha_handoff_policy.enabled:
+        return None
+    return f"fresh_remembered_{blocker_reason}"
 
 
 def _publisher_scope_url_for_request(

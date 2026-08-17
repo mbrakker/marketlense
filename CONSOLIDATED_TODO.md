@@ -30,7 +30,6 @@ All work is listed below in one register. `Active` items have detailed completio
 | Closed | A3 | Workflow-wide remediation-ledger rollout | The 31-workflow coverage matrix, fail-closed bounded reaper, read-only soak, and strict retained evidence bundle passed. |
 | Closed | A4 | Quarantine irreparably malformed Drive PDFs | Deterministic structural validation, durable quarantine, and retained-file revalidation are active. |
 | Closed | A6 | Budget-manager closeout and operational proof | Live Drive, OpenAI vector-store, and LLM calls recorded actual use; next governed calls were stopped before provider I/O and strict evidence passed. |
-| Closed | A5 | Business-email, CAPTCHA, anti-bot, terminal-evidence, and avoided-browser-spend route policy | TTL-bound route policy now avoids browser/mailbox work for retained hard blockers and allows explicit revalidation. |
 | Closed | A10 | Budget-deferred-work recovery and operator requeue | Autonomous-MVP recovery is enabled only for three proof-bound adapters; unsupported work remains held. |
 | Closed | A11 | Ledger-driven recurring-failure prevention and operator prioritization | Read-only deterministic remediation-opportunity report groups recurring failures and holds every item without a runtime executor. |
 | Closed | A7 | Budget-aware model routing, compaction, and failure-class fallback | YAML routing, anchor-preserving compaction, same-provider fallback, retained-corpus evidence gate, and regression coverage are active. |
@@ -531,7 +530,6 @@ Automation may plan, resume, retry, repair, validate, render, draft, hold, and n
 ## Current-State Evidence
 
 - A1 plan-first authority is now typed and checksum-bound across CLI/UI control payloads. A retained publish plan emitted no external mutation; a live zero-item publish invocation authorized before correctly failing local missing-credential validation; the full suite passed 3,888 tests in 461.92 seconds.
-- A5 acquisition hard-blocker policy now reuses TTL-bound publisher route history, checks configured identity/mailbox facts, and avoids browser/mailbox work for fresh exact CAPTCHA/domain blocks unless `revalidate_route_policy` is explicitly requested. A retained CAPTCHA record confirmed the behavior; focused route/acquisition tests passed 40/40.
 - Canonical LLM accounting uses SQLite with deterministic JSONL/daily projections, reconciliation, replay suppression, task-median forecasting, and configured OpenAI day guardrails.
 - The retained CI accounting corpus now includes valid, invalid, replay-suppressed, and real cached-provider (`provider_hit`) events; cached-token tampering is rejected by reconciliation tests. This closes the former cached-provider corpus task.
 - Claim embeddings, stale/no-embedding fallback, bounded semantic preselection, durable Signal artifacts, artifact lineage storage, and lineage invalidation are present.

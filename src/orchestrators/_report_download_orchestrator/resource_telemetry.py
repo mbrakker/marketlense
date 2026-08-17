@@ -27,8 +27,17 @@ from src.services.llm_usage_ledger_service import read_usage_run_summary
 from src.utils.cache_utils import sha256_json
 from src.utils.clock import utc_now_seconds_z
 
+
 def route_suppression_policy_hash(request: ReportDownloadOrchestratorRequest) -> str:
     policy = request.settings.route_suppression_policy
+    terminal_failure_classes = tuple(
+        blocker_class
+        for blocker_class in policy.terminal_failure_classes
+        if not (
+            request.settings.captcha_handoff_policy.enabled
+            and str(blocker_class).strip().casefold() == "blocked_captcha"
+        )
+    )
     return sha256_json(
         {
             "schema_version": policy.schema_version,
@@ -36,7 +45,7 @@ def route_suppression_policy_hash(request: ReportDownloadOrchestratorRequest) ->
             "minimum_sample_size": policy.minimum_sample_size,
             "terminal_failure_threshold": policy.terminal_failure_threshold,
             "ttl_seconds": policy.ttl_seconds,
-            "terminal_failure_classes": sorted(policy.terminal_failure_classes),
+            "terminal_failure_classes": sorted(terminal_failure_classes),
         }
     )
 

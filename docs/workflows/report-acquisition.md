@@ -63,14 +63,24 @@ aggregate groups this evidence by publisher and route, exposing sample size,
 success rate, cost per verified acquisition, median/p95 time, browser steps per
 success, terminal failures, and avoided browser/model operations.
 
-`browser_download.route_suppression` can skip a browser route before browser or
-model work only after at least three compatible attempts meet its configured
-typed terminal-failure threshold. Its decision is policy-hash-bound and
-TTL-limited; `revalidate_route_policy` bypasses the decision for an explicit
-operator retry. A successful explicit revalidation supersedes the old decision
-without deleting either the suppression history or resource records. Direct
-routes and the existing CAPTCHA, identity, and hard-blocker policies remain
-independent controls.
+Before route planning or browser preflight, acquisition also evaluates one
+fresh exact remembered terminal blocker. It suppresses only a verified browser
+route whose canonical terminal evidence is explicitly `blocked`, repeats the
+same typed blocker label, is within route-memory TTL, and is enabled by the
+current suppression policy. Stale, publisher-scope, inferred, weak, or
+policy-incompatible evidence never suppresses the route. An explicit
+`revalidate_route_policy` always continues to acquisition. A configured
+CAPTCHA manual handoff also continues to acquisition, and removes CAPTCHA from
+the empirical route-suppression cohort so an operator can complete the visible
+challenge.
+
+For all other cases, `browser_download.route_suppression` can skip a browser
+route before browser or model work only after at least three compatible attempts
+meet its configured typed terminal-failure threshold. Its decision is
+policy-hash-bound and TTL-limited; a successful explicit revalidation
+supersedes the old decision without deleting either the suppression history or
+resource records. Direct routes and the existing identity and hard-blocker
+policies remain independent controls.
 
 An explicitly scoped reliability profile may set browser acquisition retries to
 zero when a timed-out deterministic route is being measured rather than

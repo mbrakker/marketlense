@@ -1039,6 +1039,112 @@ def test_run_report_download_preflights_mailbox_before_email_form_submission(
     assert exc_info.value.code == "mailbox_imap_credentials_missing"
 
 
+def test_fresh_hard_blocker_suppresses_before_browser_preflight(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    settings = replace(
+        _settings(tmp_path), usage_db_path=str(tmp_path / "usage.sqlite")
+    )
+    browser_requests = []
+    suppression_requests = []
+    resource_records = []
+    remembered_blocker = PublisherDownloadRouteResponse(
+        schema_version="1.0",
+        normalized_url="https://example.com/report",
+        source_url="https://example.com/report",
+        route_kind="email_delivery",
+        route_summary="The verified form rejected the configured business email.",
+        outcome="email_required",
+        route_family="browser_email_form",
+        route_status="verified",
+        resolved_target_url="https://example.com/report",
+        route_steps=[],
+        confirmation_evidence=BrowserDownloadConfirmationEvidence(
+            schema_version="1.0",
+            url_changed=False,
+            visible_confirmation_text="",
+            submit_button_state="unchanged",
+            form_disappeared=False,
+            final_page_url="https://example.com/report",
+        ),
+        terminal_evidence=DownloadTerminalEvidence(
+            schema_version="1.0",
+            final_page_url="https://example.com/report",
+            final_page_title="Report",
+            terminal_text_excerpt="Business email required.",
+            artifact_url="https://example.com/report",
+            artifact_kind="email_delivery",
+            artifact_validation_status="blocked",
+            artifact_validation_detail="The form rejected the configured email.",
+            confirmation_signal_count=1,
+            traversed_page_urls=["https://example.com/report"],
+            evidence_labels=["blocked", "blocked_email_domain"],
+        ),
+        browser_had_structured_result=True,
+        used_candidate_pdf_url=False,
+        used_candidate_source_page=False,
+        blocked_reason="blocked_email_domain",
+        blocked_reason_detail="Business email required.",
+        updated_at=_fresh_route_memory_updated_at(),
+        attempts=1,
+        verified_successes=0,
+        last_n_outcomes=["email_required"],
+        confidence_score=1.0,
+    )
+    deps = ReportDownloadDependencies(
+        download_report_with_browser_use=lambda req, ctx: browser_requests.append(req),
+        get_publisher_download_route=lambda req, ctx: remembered_blocker,
+        record_publisher_download_route=lambda req, ctx: pytest.fail(
+            "route recording must not run after suppression"
+        ),
+        file_md5=lambda req, ctx: pytest.fail("file hashing must not run"),
+        record_report_source=lambda req, ctx: pytest.fail(
+            "source recording must not run"
+        ),
+        upsert_browser_download_identity_fields=lambda req, ctx: pytest.fail(
+            "identity update must not run"
+        ),
+        record_report_value_score=lambda req, ctx: pytest.fail(
+            "value scoring must not run"
+        ),
+        evaluate_acquisition_route_suppression=lambda req, ctx: (
+            suppression_requests.append(req)
+            or pytest.fail("historical suppression must not run before exact blocker")
+        ),
+        record_acquisition_attempt_resource=lambda req, ctx: resource_records.append(
+            req.summary
+        )
+        or SimpleNamespace(),
+        sleep_fn=lambda seconds: None,
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        run_report_download(
+            ReportDownloadOrchestratorRequest(
+                schema_version="1.0",
+                url="https://example.com/report",
+                settings=settings,
+                state_db=settings.state_db,
+                reports_db=settings.reports_db,
+                publisher_name="Example Publisher",
+            ),
+            ctx=run_context,
+            dependencies=deps,
+        )
+
+    assert exc_info.value.code == "report_download_route_suppressed"
+    assert browser_requests == []
+    assert suppression_requests == []
+    assert len(resource_records) == 1
+    assert resource_records[0].browser_launches == 0
+    assert resource_records[0].browser_model_calls == 0
+    assert resource_records[0].avoided_operations == (
+        "browser_launch",
+        "browser_model_call",
+    )
+
+
 __all__ = [
     "test_run_report_download_is_idempotent_for_route_memory",
     "test_run_report_download_reuses_idempotent_source_record_and_drive_upload",
@@ -1050,4 +1156,5 @@ __all__ = [
     "test_run_report_download_does_not_enqueue_unconfirmed_email_required_outcome",
     "test_run_report_download_uses_mailbox_account_for_unattended_email_submission",
     "test_run_report_download_preflights_mailbox_before_email_form_submission",
+    "test_fresh_hard_blocker_suppresses_before_browser_preflight",
 ]

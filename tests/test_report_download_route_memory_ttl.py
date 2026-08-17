@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 from src.contracts.browser_download import (
+    BrowserDownloadCaptchaHandoffPolicy,
     BrowserDownloadConfirmationEvidence,
+    BrowserDownloadRouteSuppressionPolicy,
     DownloadTerminalEvidence,
 )
 from src.contracts.report_store import PublisherDownloadRouteResponse
 from src.orchestrators._report_download_orchestrator.workflow import (
+    _fresh_remembered_hard_blocker_suppression_reason,
     _remembered_route_memory,
     _should_avoid_mailbox_preflight_for_remembered_blocker,
 )
@@ -91,7 +94,6 @@ def test_fresh_hard_blocker_avoids_mailbox_preflight_unless_revalidation_is_expl
             ),
         }
     )
-
     assert _should_avoid_mailbox_preflight_for_remembered_blocker(
         memory,
         ttl_seconds=120,
@@ -108,6 +110,125 @@ def test_fresh_hard_blocker_avoids_mailbox_preflight_unless_revalidation_is_expl
         _remembered_route_memory(
             _route_memory(updated_at=0),
             ttl_seconds=120,
+            now_seconds=1_000,
+        )
+        is None
+    )
+
+def test_fresh_exact_verified_hard_blocker_requires_current_policy_and_handoff_guard(
+) -> None:
+    memory = _route_memory(updated_at=900)
+    email_blocker = PublisherDownloadRouteResponse(
+        **{
+            **memory.__dict__,
+            "blocked_reason": "blocked_email_domain",
+            "terminal_evidence": DownloadTerminalEvidence(
+                **{
+                    **memory.terminal_evidence.__dict__,
+                    "evidence_labels": ["blocked", "blocked_email_domain"],
+                }
+            ),
+        }
+    )
+    policy = BrowserDownloadRouteSuppressionPolicy(
+        schema_version="1.0",
+        enabled=True,
+        minimum_sample_size=3,
+        terminal_failure_threshold=1.0,
+        ttl_seconds=60,
+        terminal_failure_classes=("blocked_email_domain",),
+    )
+    handoff_disabled = BrowserDownloadCaptchaHandoffPolicy(
+        schema_version="1.0", enabled=False, timeout_seconds=120.0
+    )
+
+    assert _fresh_remembered_hard_blocker_suppression_reason(
+        email_blocker,
+        ttl_seconds=120,
+        policy=policy,
+        captcha_handoff_policy=handoff_disabled,
+        revalidate_route_policy=False,
+        now_seconds=1_000,
+    ) == "fresh_remembered_blocked_email_domain"
+    assert (
+        _fresh_remembered_hard_blocker_suppression_reason(
+            PublisherDownloadRouteResponse(
+                **{**email_blocker.__dict__, "updated_at": 879}
+            ),
+            ttl_seconds=120,
+            policy=policy,
+            captcha_handoff_policy=handoff_disabled,
+            revalidate_route_policy=False,
+            now_seconds=1_000,
+        )
+        is None
+    )
+    assert (
+        _fresh_remembered_hard_blocker_suppression_reason(
+            PublisherDownloadRouteResponse(
+                **{**email_blocker.__dict__, "route_status": "inferred"}
+            ),
+            ttl_seconds=120,
+            policy=policy,
+            captcha_handoff_policy=handoff_disabled,
+            revalidate_route_policy=False,
+            now_seconds=1_000,
+        )
+        is None
+    )
+    assert (
+        _fresh_remembered_hard_blocker_suppression_reason(
+            email_blocker,
+            ttl_seconds=120,
+            policy=BrowserDownloadRouteSuppressionPolicy(
+                **{
+                    **policy.__dict__,
+                    "terminal_failure_classes": ("blocked_captcha",),
+                }
+            ),
+            captcha_handoff_policy=handoff_disabled,
+            revalidate_route_policy=False,
+            now_seconds=1_000,
+        )
+        is None
+    )
+    assert (
+        _fresh_remembered_hard_blocker_suppression_reason(
+            email_blocker,
+            ttl_seconds=120,
+            policy=policy,
+            captcha_handoff_policy=handoff_disabled,
+            revalidate_route_policy=True,
+            now_seconds=1_000,
+        )
+        is None
+    )
+    captcha_blocker = PublisherDownloadRouteResponse(
+        **{
+            **email_blocker.__dict__,
+            "blocked_reason": "blocked_captcha",
+            "terminal_evidence": DownloadTerminalEvidence(
+                **{
+                    **email_blocker.terminal_evidence.__dict__,
+                    "evidence_labels": ["blocked", "blocked_captcha"],
+                }
+            ),
+        }
+    )
+    assert (
+        _fresh_remembered_hard_blocker_suppression_reason(
+            captcha_blocker,
+            ttl_seconds=120,
+            policy=BrowserDownloadRouteSuppressionPolicy(
+                **{
+                    **policy.__dict__,
+                    "terminal_failure_classes": ("blocked_captcha",),
+                }
+            ),
+            captcha_handoff_policy=BrowserDownloadCaptchaHandoffPolicy(
+                schema_version="1.0", enabled=True, timeout_seconds=120.0
+            ),
+            revalidate_route_policy=False,
             now_seconds=1_000,
         )
         is None
