@@ -96,11 +96,14 @@ evidence, and confirmation signals. The Agent stops only after three
 consecutive equivalent fingerprints; one stalled turn never terminates a
 route. A navigation, form-state change, new document candidate, network
 document evidence, confirmation signal, or blocker-state change resets the
-counter. The stop is finalized as the typed `blocked_no_progress` terminal
-result with bounded scalar/hash evidence, so it remains auditable and follows
-the ordinary retained route-learning and three-compatible-attempt suppression
-rules. Raw DOM, form values, screenshots, prompts, and model prose are never
-put in the standard no-progress event or route record.
+counter. If an actionable DOM representation is absent, empty, or cannot be
+read, no-progress detection fails open for the rest of that acquisition: its
+empty fingerprint does not advance the stall counter and cannot yield
+`blocked_no_progress`. The stop is finalized as the typed `blocked_no_progress`
+terminal result with bounded scalar/hash evidence, so it remains auditable and
+follows the ordinary retained route-learning and three-compatible-attempt
+suppression rules. Raw DOM, form values, screenshots, prompts, and model prose
+are never put in the standard no-progress event or route record.
 
 An explicitly scoped reliability profile may set browser acquisition retries to
 zero when a timed-out deterministic route is being measured rather than

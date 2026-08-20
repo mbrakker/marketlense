@@ -31,6 +31,7 @@ class BrowserNoProgressObservation:
     should_stop: bool
     url: str
     actionable_dom_fingerprint: str
+    actionable_dom_available: bool
     blocker_state: str
     document_candidate_count: int
     artifact_count: int
@@ -54,6 +55,7 @@ class BrowserNoProgressDetector:
         self._equivalent_turn_threshold = equivalent_turn_threshold
         self._last_fingerprint = ""
         self._last_observation: BrowserNoProgressObservation | None = None
+        self._instrumentation_available = True
 
     @property
     def observation(self) -> BrowserNoProgressObservation | None:
@@ -70,7 +72,9 @@ class BrowserNoProgressDetector:
         model_output: Any,
         step_number: int,
     ) -> BrowserNoProgressObservation:
-        actionable_dom = _actionable_dom_representation(state)
+        actionable_dom, actionable_dom_available = _actionable_dom_representation(state)
+        if not actionable_dom_available:
+            self._instrumentation_available = False
         url = _normalized_scalar(getattr(state, "url", ""))
         blocker_state = _blocker_state(model_output)
         document_candidates = _document_candidates(actionable_dom)
@@ -81,31 +85,40 @@ class BrowserNoProgressDetector:
             getattr(state, "recent_events", ""),
         )
         actionable_dom_fingerprint = _fingerprint(actionable_dom)
-        state_fingerprint = _fingerprint(
-            "\n".join(
-                (
-                    url,
-                    actionable_dom_fingerprint,
-                    blocker_state,
-                    "|".join(document_candidates),
-                    "|".join(artifact_candidates),
-                    "|".join(network_documents),
-                    "confirmation" if confirmation_observed else "",
+        state_fingerprint = (
+            _fingerprint(
+                "\n".join(
+                    (
+                        url,
+                        actionable_dom_fingerprint,
+                        blocker_state,
+                        "|".join(document_candidates),
+                        "|".join(artifact_candidates),
+                        "|".join(network_documents),
+                        "confirmation" if confirmation_observed else "",
+                    )
                 )
             )
+            if self._instrumentation_available
+            else ""
         )
         consecutive_turns = (
             self._last_observation.consecutive_equivalent_turns + 1
-            if state_fingerprint == self._last_fingerprint
+            if self._instrumentation_available
+            and state_fingerprint == self._last_fingerprint
             and self._last_observation is not None
-            else 1
+            else 1 if self._instrumentation_available else 0
         )
         observation = BrowserNoProgressObservation(
             state_fingerprint=state_fingerprint,
             consecutive_equivalent_turns=consecutive_turns,
-            should_stop=consecutive_turns >= self._equivalent_turn_threshold,
+            should_stop=(
+                self._instrumentation_available
+                and consecutive_turns >= self._equivalent_turn_threshold
+            ),
             url=url,
             actionable_dom_fingerprint=actionable_dom_fingerprint,
+            actionable_dom_available=actionable_dom_available,
             blocker_state=blocker_state,
             document_candidate_count=len(document_candidates),
             artifact_count=len(artifact_candidates),
@@ -128,15 +141,16 @@ class BrowserNoProgressDetector:
         return self.should_stop
 
 
-def _actionable_dom_representation(state: Any) -> str:
-    dom_state = getattr(state, "dom_state", None)
-    render = getattr(dom_state, "llm_representation", None)
-    if not callable(render):
-        return ""
+def _actionable_dom_representation(state: Any) -> tuple[str, bool]:
     try:
-        return _normalized_scalar(render())
+        dom_state = getattr(state, "dom_state", None)
+        render = getattr(dom_state, "llm_representation", None)
+        if not callable(render):
+            return "", False
+        representation = _normalized_scalar(render())
     except Exception:
-        return ""
+        return "", False
+    return representation, bool(representation)
 
 
 def _blocker_state(model_output: Any) -> str:

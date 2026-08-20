@@ -52,6 +52,84 @@ def test_browser_no_progress_requires_three_equivalent_turns() -> None:
     assert third.consecutive_equivalent_turns == 3
 
 
+def test_browser_no_progress_fails_open_when_actionable_dom_is_missing() -> None:
+    detector = BrowserNoProgressDetector()
+    state, output = _no_progress_state()
+    state.dom_state = None
+
+    observations = [
+        detector.observe(state=state, model_output=output, step_number=step_number)
+        for step_number in range(1, 6)
+    ]
+
+    assert all(observation.should_stop is False for observation in observations)
+    assert all(
+        observation.consecutive_equivalent_turns == 0
+        for observation in observations
+    )
+
+
+def test_browser_no_progress_fails_open_when_actionable_dom_is_empty() -> None:
+    detector = BrowserNoProgressDetector()
+    state, output = _no_progress_state(dom="")
+
+    observations = [
+        detector.observe(state=state, model_output=output, step_number=step_number)
+        for step_number in range(1, 6)
+    ]
+
+    assert all(observation.actionable_dom_available is False for observation in observations)
+    assert all(observation.should_stop is False for observation in observations)
+    assert all(
+        observation.consecutive_equivalent_turns == 0
+        for observation in observations
+    )
+
+
+def test_browser_no_progress_fails_open_when_dom_reader_raises() -> None:
+    detector = BrowserNoProgressDetector()
+    state, output = _no_progress_state()
+
+    def raise_dom_reader_error() -> str:
+        raise RuntimeError("Browser DOM instrumentation is unavailable")
+
+    state.dom_state.llm_representation = raise_dom_reader_error
+    observations = [
+        detector.observe(state=state, model_output=output, step_number=step_number)
+        for step_number in range(1, 6)
+    ]
+
+    assert all(observation.should_stop is False for observation in observations)
+    assert all(
+        observation.consecutive_equivalent_turns == 0
+        for observation in observations
+    )
+
+
+def test_browser_no_progress_stays_disabled_after_dom_instrumentation_failure() -> None:
+    detector = BrowserNoProgressDetector()
+    valid_state, output = _no_progress_state()
+    detector.observe(state=valid_state, model_output=output, step_number=1)
+    detector.observe(state=valid_state, model_output=output, step_number=2)
+
+    unavailable_state, unavailable_output = _no_progress_state()
+    unavailable_state.dom_state = None
+    unavailable = detector.observe(
+        state=unavailable_state,
+        model_output=unavailable_output,
+        step_number=3,
+    )
+    later_valid = detector.observe(
+        state=valid_state,
+        model_output=output,
+        step_number=4,
+    )
+
+    assert unavailable.should_stop is False
+    assert later_valid.should_stop is False
+    assert later_valid.consecutive_equivalent_turns == 0
+
+
 def test_browser_no_progress_resets_for_each_material_progress_signal() -> None:
     detector = BrowserNoProgressDetector()
     baseline_state, baseline_output = _no_progress_state()
