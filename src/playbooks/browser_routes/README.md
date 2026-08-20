@@ -48,14 +48,16 @@ Stale behavior is controlled by `browser_download.route_playbook_stale_policy`. 
 Validated successful route evidence can be promoted through
 `promote_validated_browser_route_result_to_playbook(...)`, which creates or updates a
 YAML file with version/history metadata and returns a unified diff for review. Promotion
-is all-or-nothing: every action in the route must be individually verified and have an
-action-bound locator evidence entry plus action-bound URL/text postcondition evidence.
-Terminal or global evidence cannot validate an earlier action. If any step is incomplete,
-including a missing or unverified final submit for an email route, promotion returns the
-typed `not_promotable` status and writes nothing. It retains the original step prose and
-evidence labels for audit, but ranks observed locators as role, label, name, data
-attribute, CSS, then visible text. Fill/select steps are promotable only with a safe
-`${identity.<key>}` reference; personal values are never written to a playbook.
+does not trust model-supplied `locator_evidence` or `postcondition_evidence`. It is
+all-or-nothing and consumes only browser-runtime action records, each of which pairs a
+successfully resolved locator with the immediate browser URL/title state after that one
+action. Terminal or global evidence cannot validate an earlier action. If an execution
+record is missing, incomplete, multi-action, or unverified—including a final email
+submit—promotion returns the typed `not_promotable` status and writes nothing. It retains
+the original step prose and evidence labels for audit, but ranks runtime-observed
+locators as role, label, name, data attribute, CSS, then visible text. Fill/select steps
+are promotable only with a safe `${identity.<key>}` reference; personal values are never
+written to a playbook.
 Report-download orchestration controls this with
 `browser_download.route_playbook_promotion_mode`: `disabled` logs explicit skip records,
 `dry_run` logs review diff metadata without writing, and `write` persists the reviewable

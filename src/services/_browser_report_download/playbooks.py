@@ -142,7 +142,7 @@ def promote_validated_browser_route_result_to_playbook(
             route_kind=result.route_kind,
             outcome=result.outcome,
         )
-        for step in result.route_steps
+        for step in result.execution_route_steps
     ]
     return promote_browser_route_playbook(
         request=BrowserRoutePlaybookPromotionRequest(
@@ -1316,13 +1316,14 @@ def _route_step_is_promotable(step: BrowserDownloadRouteStep) -> bool:
 
 
 def _route_not_promotable_reason(result: BrowserReportDownloadResult) -> str:
-    if not result.route_steps:
-        return "no_route_steps"
-    for index, step in enumerate(result.route_steps):
+    if not result.execution_route_steps:
+        return "browser_execution_evidence_missing"
+    for index, step in enumerate(result.execution_route_steps):
         if reason := _route_step_not_promotable_reason(step):
             return f"step_{index}_{reason}"
     if result.outcome == "email_requested" and (
-        str(result.route_steps[-1].action or "").strip().casefold() != "submit"
+        str(result.execution_route_steps[-1].action or "").strip().casefold()
+        != "submit"
     ):
         return "missing_terminal_submit"
     return ""

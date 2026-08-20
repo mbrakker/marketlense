@@ -635,3 +635,9 @@ class BrowserReportDownloadResult:
             "doc": "On-site capture completeness verdict, for example `complete`, `partial`, or `bounded_incomplete`."
         },
     )
+    execution_route_steps: list[BrowserDownloadRouteStep] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Browser-runtime action trace retained separately from model route prose. Playbook promotion accepts only these action-bound locator and immediate postcondition records."
+        },
+    )

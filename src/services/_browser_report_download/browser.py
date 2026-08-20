@@ -29,6 +29,7 @@ from src.contracts.browser_download import (
     BrowserDownloadConfirmationEvidence,
     BrowserDownloadDialogEvidence,
     BrowserDownloadNetworkEvent,
+    BrowserDownloadRouteStep,
     BrowserReportDownloadRequest,
     BrowserRoutePlaybook,
     BrowserRoutePlaybookExecutionRequest,
@@ -86,6 +87,9 @@ from src.services._browser_report_download._browser_runtime import (
 from src.services._browser_report_download._browser_runtime.runtime import (
     browser_runtime_identity,
     load_browser_use_runtime,
+)
+from src.services._browser_report_download._browser_runtime.action_evidence import (
+    capture_browser_execution_route_steps,
 )
 from src.services._browser_report_download._browser_runtime.no_progress import (
     BrowserNoProgressDetector,
@@ -1848,6 +1852,7 @@ def run_browser_report_download_agent(
     print_pdf_capture_path = ""
     print_pdf_capture_provenance = ""
     dialog_evidence: list[BrowserDownloadDialogEvidence] = []
+    execution_route_steps: list[BrowserDownloadRouteStep] = []
     browser_spend_reservation_key = ""
     try:
         if browser is None:
@@ -1934,14 +1939,49 @@ def run_browser_report_download_agent(
                     role="service",
                     event="browser_report_download_no_progress_stopped",
                     module=logger.name,
-                    fields=_no_progress_log_fields(
-                        history_result.no_progress_observation,
-                        normalized_url=normalized_url,
-                    ),
-                )
+                fields=_no_progress_log_fields(
+                    history_result.no_progress_observation,
+                    normalized_url=normalized_url,
+                ),
+            )
             )
         history_final_page_url = _read_history_final_page_url(history)
         history_final_page_title = _read_history_final_page_title(history)
+        action_evidence_snapshot = _capture_terminal_snapshot(
+            browser,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
+        execution_route_steps = capture_browser_execution_route_steps(
+            history=history,
+            final_page_url=(
+                action_evidence_snapshot.url or history_final_page_url
+            ),
+            final_page_title=(
+                action_evidence_snapshot.title or history_final_page_title
+            ),
+            identity_value_references={
+                str(field.value): f"identity.{field.key}"
+                for field in resolve_effective_identity_fields(request)
+                if str(field.value or "").strip() and str(field.key or "").strip()
+            },
+        )
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_action_evidence_captured",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "action_count": len(execution_route_steps),
+                    "verified_action_count": sum(
+                        step.verification_status == "verified"
+                        for step in execution_route_steps
+                    ),
+                },
+            )
+        )
         attachment_paths = _read_history_attachment_paths(history)
         history_screenshot_path = _copy_history_screenshot(
             history=history,
@@ -2336,6 +2376,7 @@ def run_browser_report_download_agent(
         print_pdf_capture_path=print_pdf_capture_path,
         print_pdf_capture_provenance=print_pdf_capture_provenance,
         dialog_evidence=dialog_evidence,
+        execution_route_steps=execution_route_steps,
     )
 
 

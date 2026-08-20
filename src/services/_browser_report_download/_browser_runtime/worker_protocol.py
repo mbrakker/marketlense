@@ -25,6 +25,7 @@ import psutil
 from src.contracts.browser_download import (
     BrowserDownloadDialogEvidence,
     BrowserDownloadNetworkEvent,
+    BrowserDownloadRouteStep,
     BrowserReportDownloadRequest,
     BrowserRoutePlaybook,
 )
@@ -457,6 +458,9 @@ def _deserialize_browser_agent_run_result(
                     session_id=str(item.get("session_id") or "").strip(),
                 )
             )
+    execution_route_steps = _deserialize_execution_route_steps(
+        payload.get("execution_route_steps")
+    )
     return BrowserAgentRunResult(
         schema_version=str(payload.get("schema_version", "1.0")),
         raw_model_response=str(payload.get("raw_model_response") or ""),
@@ -486,4 +490,57 @@ def _deserialize_browser_agent_run_result(
             payload.get("print_pdf_capture_provenance") or ""
         ),
         dialog_evidence=dialog_evidence,
+        execution_route_steps=execution_route_steps,
     )
+
+
+def _deserialize_execution_route_steps(
+    raw_value: Any,
+) -> list[BrowserDownloadRouteStep]:
+    if not isinstance(raw_value, list):
+        return []
+    steps: list[BrowserDownloadRouteStep] = []
+    for item in raw_value:
+        if not isinstance(item, dict):
+            continue
+        steps.append(
+            BrowserDownloadRouteStep(
+                schema_version=str(item.get("schema_version", "1.0")),
+                index=int(item.get("index", len(steps))),
+                action=str(item.get("action") or "").strip(),
+                target_text=str(item.get("target_text") or "").strip(),
+                target_role=str(item.get("target_role") or "").strip(),
+                target_url=str(item.get("target_url") or "").strip(),
+                result=str(item.get("result") or "").strip(),
+                expected_evidence=_string_list(item.get("expected_evidence")),
+                observed_evidence=_string_list(item.get("observed_evidence")),
+                locator_evidence=_string_list(item.get("locator_evidence")),
+                postcondition_evidence=_string_list(
+                    item.get("postcondition_evidence")
+                ),
+                verification_status=str(item.get("verification_status") or "").strip(),
+                locator_role=str(item.get("locator_role") or "").strip(),
+                locator_name=str(item.get("locator_name") or "").strip(),
+                locator_label=str(item.get("locator_label") or "").strip(),
+                locator_field_name=str(item.get("locator_field_name") or "").strip(),
+                locator_data_attribute=str(
+                    item.get("locator_data_attribute") or ""
+                ).strip(),
+                locator_css=str(item.get("locator_css") or "").strip(),
+                locator_text=str(item.get("locator_text") or "").strip(),
+                identity_field_reference=str(
+                    item.get("identity_field_reference") or ""
+                ).strip(),
+                expected_url_contains=str(
+                    item.get("expected_url_contains") or ""
+                ).strip(),
+                expected_text=str(item.get("expected_text") or "").strip(),
+            )
+        )
+    return steps
+
+
+def _string_list(raw_value: Any) -> list[str]:
+    if not isinstance(raw_value, list):
+        return []
+    return [str(item).strip() for item in raw_value if str(item or "").strip()]

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import replace
+from dataclasses import asdict, replace
 from pathlib import Path
+from types import SimpleNamespace
 
 from src.contracts.browser_download import (
     BrowserDownloadConfirmationEvidence,
@@ -9,9 +10,161 @@ from src.contracts.browser_download import (
     BrowserReportDownloadResult,
     DownloadTerminalEvidence,
 )
+from src.services._browser_report_download._browser_runtime.action_evidence import (
+    capture_browser_execution_route_steps,
+)
 from src.services._browser_report_download.playbooks import (
     promote_validated_browser_route_result_to_playbook,
 )
+
+
+def test_validated_route_promotion_rejects_fabricated_model_action_evidence(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    response = _promote(
+        tmp_path,
+        replace(_result(), execution_route_steps=[]),
+        run_context,
+    )
+
+    assert response.status == "not_promotable"
+    assert response.reason == "browser_execution_evidence_missing"
+    assert response.path == ""
+    assert not (tmp_path / "playbooks").exists()
+
+
+def test_validated_route_promotion_uses_resolved_browser_action_evidence(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    action = SimpleNamespace(
+        model_dump=lambda **_kwargs: {"click": {"index": 7}}
+    )
+    history = SimpleNamespace(
+        history=[
+            SimpleNamespace(
+                model_output=SimpleNamespace(action=[action]),
+                result=[SimpleNamespace(error=None, success=None)],
+                state=SimpleNamespace(
+                    interacted_element=[
+                        SimpleNamespace(
+                            attributes={"role": "button"},
+                            ax_name="Get the verified report",
+                        )
+                    ]
+                ),
+            ),
+            SimpleNamespace(
+                model_output=None,
+                result=[],
+                state=SimpleNamespace(
+                    url="https://example.com/verified-report.pdf",
+                    title="Verified report download",
+                ),
+            ),
+        ]
+    )
+    execution_steps = capture_browser_execution_route_steps(history=history)
+    result = replace(
+        _result(),
+        route_steps=[
+            replace(
+                _result().route_steps[0],
+                locator_name="Fabricated model control",
+                locator_evidence=["locator:role:button:Fabricated model control"],
+                expected_url_contains="/fabricated",
+                postcondition_evidence=["url:/fabricated"],
+            )
+        ],
+        execution_route_steps=execution_steps,
+    )
+
+    response = _promote(tmp_path, result, run_context)
+
+    assert execution_steps[0].locator_evidence == [
+        "locator:role:button:Get the verified report"
+    ]
+    assert execution_steps[0].postcondition_evidence == [
+        "url:https://example.com/verified-report.pdf",
+        "text:Verified report download",
+    ]
+    assert response.status == "created"
+    payload = (tmp_path / "playbooks" / f"{response.playbook_id}.yaml").read_text(
+        encoding="utf-8"
+    )
+    assert "Get the verified report" in payload
+    assert "Fabricated model control" not in payload
+
+
+def test_browser_action_evidence_binds_each_action_to_its_next_browser_state() -> None:
+    first_action = SimpleNamespace(
+        model_dump=lambda **_kwargs: {"click": {"index": 1}}
+    )
+    final_action = SimpleNamespace(
+        model_dump=lambda **_kwargs: {"click": {"index": 2}}
+    )
+    history = SimpleNamespace(
+        history=[
+            _history_entry(
+                action=first_action,
+                role="button",
+                name="Open form",
+                url="https://example.com/report",
+                title="Report",
+            ),
+            _history_entry(
+                action=final_action,
+                role="button",
+                name="Request report",
+                url="https://example.com/request",
+                title="Request form",
+            ),
+        ]
+    )
+
+    steps = capture_browser_execution_route_steps(
+        history=history,
+        final_page_url="https://example.com/confirmed",
+        final_page_title="Request confirmed",
+    )
+
+    assert steps[0].postcondition_evidence == [
+        "url:https://example.com/request",
+        "text:Request form",
+    ]
+    assert steps[1].postcondition_evidence == [
+        "url:https://example.com/confirmed",
+        "text:Request confirmed",
+    ]
+
+
+def test_browser_action_evidence_keeps_identity_values_unpersisted() -> None:
+    action = SimpleNamespace(
+        model_dump=lambda **_kwargs: {"input": {"index": 3, "text": "ops@example.com"}}
+    )
+    history = SimpleNamespace(
+        history=[
+            _history_entry(
+                action=action,
+                role="textbox",
+                name="Work email",
+                url="https://example.com/request",
+                title="Request form",
+            )
+        ]
+    )
+
+    step = capture_browser_execution_route_steps(
+        history=history,
+        final_page_url="https://example.com/request?email=ops@example.com",
+        final_page_title="Request for ops@example.com",
+        identity_value_references={"ops@example.com": "identity.delivery_email"},
+    )[0]
+
+    assert step.identity_field_reference == "identity.delivery_email"
+    assert step.postcondition_evidence == ["url:https://example.com/request"]
+    assert "ops@example.com" not in str(asdict(step))
 
 
 def test_validated_route_promotion_rejects_wrong_locator_evidence(
@@ -20,7 +173,9 @@ def test_validated_route_promotion_rejects_wrong_locator_evidence(
 ) -> None:
     result = replace(
         _result(),
-        route_steps=[replace(_result().route_steps[0], locator_name="Wrong control")],
+        execution_route_steps=[
+            replace(_result().execution_route_steps[0], locator_name="Wrong control")
+        ],
     )
 
     response = _promote(tmp_path, result, run_context)
@@ -37,7 +192,7 @@ def test_validated_route_promotion_rejects_locator_synthesized_from_target_prose
 ) -> None:
     result = replace(
         _result(),
-        route_steps=[
+        execution_route_steps=[
             replace(
                 _result().route_steps[0],
                 locator_role="",
@@ -60,7 +215,9 @@ def test_validated_route_promotion_rejects_terminal_only_postcondition_evidence(
 ) -> None:
     result = replace(
         _result(),
-        route_steps=[replace(_result().route_steps[0], postcondition_evidence=[])],
+        execution_route_steps=[
+            replace(_result().execution_route_steps[0], postcondition_evidence=[])
+        ],
     )
 
     response = _promote(tmp_path, result, run_context)
@@ -76,7 +233,7 @@ def test_validated_route_promotion_rejects_email_route_missing_final_submit(
     run_context,
 ) -> None:
     click_step = replace(
-        _result().route_steps[0],
+        _result().execution_route_steps[0],
         action="click",
         expected_url_contains="/request",
         postcondition_evidence=["url:/request"],
@@ -103,7 +260,7 @@ def test_validated_route_promotion_rejects_email_route_missing_final_submit(
         route_kind="email_delivery",
         route_family="browser_email_form",
         outcome="email_requested",
-        route_steps=[click_step, fill_step],
+        execution_route_steps=[click_step, fill_step],
     )
 
     response = _promote(tmp_path, result, run_context)
@@ -123,7 +280,38 @@ def _promote(tmp_path: Path, result: BrowserReportDownloadResult, run_context):
     )
 
 
+def _history_entry(*, action, role: str, name: str, url: str, title: str):
+    return SimpleNamespace(
+        model_output=SimpleNamespace(action=[action]),
+        result=[SimpleNamespace(error=None, success=None)],
+        state=SimpleNamespace(
+            url=url,
+            title=title,
+            interacted_element=[
+                SimpleNamespace(attributes={"role": role}, ax_name=name)
+            ],
+        ),
+    )
+
+
 def _result() -> BrowserReportDownloadResult:
+    execution_step = BrowserDownloadRouteStep(
+        schema_version="1.0",
+        index=0,
+        action="click",
+        target_text="Download report",
+        target_role="button",
+        target_url="https://example.com/report.pdf",
+        result="Downloaded report.",
+        expected_evidence=["browser_execution"],
+        observed_evidence=["browser_execution"],
+        verification_status="verified",
+        locator_role="button",
+        locator_name="Download report",
+        expected_url_contains="/report.pdf",
+        locator_evidence=["locator:role:button:Download report"],
+        postcondition_evidence=["url:/report.pdf"],
+    )
     return BrowserReportDownloadResult(
         schema_version="1.0",
         source_url="https://example.com/research/report",
@@ -136,25 +324,7 @@ def _result() -> BrowserReportDownloadResult:
         final_page_url="https://example.com/report.pdf",
         resolved_target_url="https://example.com/report.pdf",
         used_route_hint=False,
-        route_steps=[
-            BrowserDownloadRouteStep(
-                schema_version="1.0",
-                index=0,
-                action="click",
-                target_text="Download report",
-                target_role="button",
-                target_url="https://example.com/report.pdf",
-                result="Downloaded report.",
-                expected_evidence=["artifact"],
-                observed_evidence=["artifact"],
-                verification_status="verified",
-                locator_role="button",
-                locator_name="Download report",
-                expected_url_contains="/report.pdf",
-                locator_evidence=["locator:role:button:Download report"],
-                postcondition_evidence=["url:/report.pdf"],
-            )
-        ],
+        route_steps=[execution_step],
         confirmation_evidence=BrowserDownloadConfirmationEvidence(
             schema_version="1.0",
             url_changed=True,
@@ -184,4 +354,5 @@ def _result() -> BrowserReportDownloadResult:
         downloaded_file_name="report.pdf",
         downloaded_mime_type="application/pdf",
         downloaded_size_bytes=1234,
+        execution_route_steps=[execution_step],
     )

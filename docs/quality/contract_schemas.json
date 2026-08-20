@@ -3248,6 +3248,12 @@
           },
           "type": "array"
         },
+        "execution_route_steps": {
+          "items": {
+            "$ref": "#/$defs/src.contracts._browser_download.runtime.BrowserDownloadRouteStep"
+          },
+          "type": "array"
+        },
         "final_page_url": {
           "type": "string"
         },

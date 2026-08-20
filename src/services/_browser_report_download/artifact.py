@@ -610,6 +610,7 @@ def finalize_browser_report_download_result(
         onsite_capture_format=onsite_capture_format,
         onsite_page_count=onsite_page_count,
         onsite_completeness_status=onsite_completeness_status,
+        execution_route_steps=list(browser_run.execution_route_steps or []),
     )
 
 

@@ -274,7 +274,7 @@ def test_validated_route_promotion_returns_not_promotable_for_partial_route(
 ) -> None:
     result = replace(
         _result(route_status="verified"),
-        route_steps=[
+        execution_route_steps=[
             BrowserDownloadRouteStep(
                 schema_version="1.0",
                 index=0,
@@ -322,7 +322,7 @@ def test_validated_route_promotion_round_trips_complete_semantic_route_and_ident
 ) -> None:
     result = replace(
         _result(route_status="verified"),
-        route_steps=[
+        execution_route_steps=[
             BrowserDownloadRouteStep(
                 schema_version="1.0",
                 index=0,
@@ -854,6 +854,23 @@ def _request(
 
 
 def _result(*, route_status: str) -> BrowserReportDownloadResult:
+    execution_step = BrowserDownloadRouteStep(
+        schema_version="1.0",
+        index=0,
+        action="click_cta",
+        target_text="Download report",
+        target_role="button",
+        target_url="https://example.com/report.pdf",
+        result="opened",
+        expected_evidence=["browser_execution"],
+        observed_evidence=["browser_execution"],
+        verification_status="verified",
+        locator_role="button",
+        locator_name="Download report",
+        expected_url_contains="/report.pdf",
+        locator_evidence=["locator:role:button:Download report"],
+        postcondition_evidence=["url:/report.pdf"],
+    )
     return BrowserReportDownloadResult(
         schema_version="1.0",
         source_url="https://example.com/research/report",
@@ -866,25 +883,7 @@ def _result(*, route_status: str) -> BrowserReportDownloadResult:
         final_page_url="https://example.com/research/report",
         resolved_target_url="https://example.com/report.pdf",
         used_route_hint=False,
-        route_steps=[
-            BrowserDownloadRouteStep(
-                schema_version="1.0",
-                index=0,
-                action="click_cta",
-                target_text="Download report",
-                target_role="button",
-                target_url="https://example.com/report.pdf",
-                result="opened",
-                expected_evidence=["artifact"],
-                observed_evidence=["artifact"],
-                verification_status="verified",
-                locator_role="button",
-                locator_name="Download report",
-                expected_url_contains="/report.pdf",
-                locator_evidence=["locator:role:button:Download report"],
-                postcondition_evidence=["url:/report.pdf"],
-            )
-        ],
+        route_steps=[execution_step],
         confirmation_evidence=BrowserDownloadConfirmationEvidence(
             schema_version="1.0",
             url_changed=True,
@@ -914,6 +913,7 @@ def _result(*, route_status: str) -> BrowserReportDownloadResult:
         downloaded_file_name="report.pdf",
         downloaded_mime_type="application/pdf",
         downloaded_size_bytes=1234,
+        execution_route_steps=[execution_step],
     )
 
 

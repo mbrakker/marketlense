@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from src.contracts.browser_download import (
     BrowserDownloadDialogEvidence,
     BrowserDownloadNetworkEvent,
+    BrowserDownloadRouteStep,
 )
 
 
@@ -27,6 +28,9 @@ class BrowserAgentRunResult:
     print_pdf_capture_path: str = ""
     print_pdf_capture_provenance: str = ""
     dialog_evidence: list[BrowserDownloadDialogEvidence] = dataclass_field(
+        default_factory=list
+    )
+    execution_route_steps: list[BrowserDownloadRouteStep] = dataclass_field(
         default_factory=list
     )
 

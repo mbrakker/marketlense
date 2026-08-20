@@ -108,16 +108,18 @@ recovered. The timeout remains a typed terminal result with its route,
 timestamps, and resource envelope; this run-only policy does not alter the
 normal acquisition default or suppress a future explicit revalidation.
 
-Successful browser-route promotion preserves its route prose, observed evidence labels,
-and version history for audit while also retaining executable action data where the run
-observed it. Promotion is all-or-nothing: every action must be explicitly verified with
-its own action-bound locator evidence and URL/text postcondition evidence. Terminal or
-global evidence cannot validate an earlier selector. The promotion service ranks locators
-by role/name, label, HTML name, data attribute, CSS, then visible text. Form values are
-represented only by an `${identity.<key>}` placeholder in the playbook; no email address
-or other personal identity value is persisted. Failed, blocked, missing, and unverified
-actions (including a final submit) cause a typed `not_promotable` result and leave no
-active playbook write.
+Successful browser-route promotion preserves route prose and version history for audit,
+but treats all model-supplied route-step locator and postcondition fields as untrusted.
+The browser runtime separately records each successfully resolved/acted-on locator and
+the immediately following URL/title state. Promotion is all-or-nothing and uses only
+that execution trace: every action must have its own action-bound locator and URL/text
+postcondition evidence. A later terminal state is associated only with the final action;
+it cannot validate an earlier selector. The promotion service ranks runtime-observed
+locators by role/name, label, HTML name, data attribute, CSS, then visible text. Form
+values are represented only by an `${identity.<key>}` placeholder in the playbook; no
+email address or other personal identity value is persisted. Failed, multi-action,
+missing, and unverified records (including a final submit) cause a typed
+`not_promotable` result and leave no active playbook write.
 
 When a publisher page embeds a public Adobe InDesign Publish Online report, acquisition
 does not treat incidental newsletter forms as a report gate. It verifies the publisher
