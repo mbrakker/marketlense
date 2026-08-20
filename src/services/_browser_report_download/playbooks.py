@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import difflib
+import inspect
 import logging
 import re
 from dataclasses import asdict
@@ -598,7 +599,246 @@ def _deterministic_step_admission_reason(
         return f"step_{index}_missing_deterministic_selector"
     if not (step.expected_url_contains.strip() or step.expected_text.strip()):
         return f"step_{index}_missing_deterministic_postcondition"
+    if action in {"fill", "type", "select"} and not (
+        _identity_value_reference_from_playbook_step(step)
+    ):
+        return f"step_{index}_identity_reference_invalid"
     return ""
+
+
+async def execute_browser_route_playbook_async(
+    request: BrowserRoutePlaybookExecutionRequest,
+    ctx: RunContext,
+) -> BrowserRoutePlaybookExecutionResponse:
+    """Execute the existing declarative playbook contract through async page APIs."""
+
+    playbook = request.playbook
+    if playbook.private_api_evidence:
+        return BrowserRoutePlaybookExecutionResponse(
+            schema_version="1.0",
+            status="skipped",
+            playbook_id=playbook.playbook_id,
+            step_results=[],
+            drift_reasons=["private_api_playbook_uses_http_executor"],
+        )
+    admission_reasons = _deterministic_playbook_admission_reasons(playbook)
+    if admission_reasons:
+        skipped_step_results = [
+            BrowserRoutePlaybookStepExecution(
+                schema_version="1.0",
+                index=index,
+                action=step.action,
+                target=step.target,
+                status="skipped",
+                evidence="",
+                drift_reason=reason,
+            )
+            for index, step in enumerate(playbook.steps)
+            for reason in [_deterministic_step_admission_reason(step, index)]
+            if reason
+        ]
+        return _log_async_playbook_execution(
+            playbook=playbook,
+            ctx=ctx,
+            status="skipped",
+            step_results=skipped_step_results,
+            drift_reasons=admission_reasons,
+        )
+    step_results: list[BrowserRoutePlaybookStepExecution] = []
+    drift_reasons: list[str] = []
+    for index, step in enumerate(playbook.steps):
+        result = await _execute_playbook_step_async(
+            step=step,
+            index=index,
+            normalized_url=request.normalized_url,
+            page_driver=request.page_driver,
+            identity_values=request.identity_values,
+        )
+        step_results.append(result)
+        if result.status == "drifted":
+            drift_reasons.append(result.drift_reason)
+            break
+    return _log_async_playbook_execution(
+        playbook=playbook,
+        ctx=ctx,
+        status="drifted" if drift_reasons else "completed",
+        step_results=step_results,
+        drift_reasons=drift_reasons,
+    )
+
+
+def _log_async_playbook_execution(
+    *,
+    playbook: BrowserRoutePlaybook,
+    ctx: RunContext,
+    status: str,
+    step_results: list[BrowserRoutePlaybookStepExecution],
+    drift_reasons: list[str],
+) -> BrowserRoutePlaybookExecutionResponse:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_route_playbook_deterministic_execution_complete",
+            module=logger.name,
+            fields={
+                "playbook_id": playbook.playbook_id,
+                "status": status,
+                "step_count": len(step_results),
+                "drift_reasons": drift_reasons,
+            },
+        )
+    )
+    return BrowserRoutePlaybookExecutionResponse(
+        schema_version="1.0",
+        status=status,
+        playbook_id=playbook.playbook_id,
+        step_results=step_results,
+        drift_reasons=drift_reasons,
+    )
+
+
+async def _execute_playbook_step_async(
+    *,
+    step: BrowserRoutePlaybookStep,
+    index: int,
+    normalized_url: str,
+    page_driver,
+    identity_values: dict[str, str],
+) -> BrowserRoutePlaybookStepExecution:
+    try:
+        evidence = await _dispatch_playbook_action_async(
+            step=step,
+            normalized_url=normalized_url,
+            page_driver=page_driver,
+            identity_values=identity_values,
+        )
+        drift_reason = await _verify_playbook_step_async(
+            step=step,
+            page_driver=page_driver,
+        )
+    except Exception as exc:
+        return BrowserRoutePlaybookStepExecution(
+            schema_version="1.0",
+            index=index,
+            action=step.action,
+            target=step.target,
+            status="drifted",
+            evidence="",
+            drift_reason=f"executor_error:{type(exc).__name__}",
+        )
+    if drift_reason:
+        return BrowserRoutePlaybookStepExecution(
+            schema_version="1.0",
+            index=index,
+            action=step.action,
+            target=step.target,
+            status="drifted",
+            evidence=evidence,
+            drift_reason=drift_reason,
+        )
+    return BrowserRoutePlaybookStepExecution(
+        schema_version="1.0",
+        index=index,
+        action=step.action,
+        target=step.target,
+        status="executed",
+        evidence=evidence,
+        drift_reason="",
+    )
+
+
+async def _dispatch_playbook_action_async(
+    *,
+    step: BrowserRoutePlaybookStep,
+    normalized_url: str,
+    page_driver,
+    identity_values: dict[str, str],
+) -> str:
+    action = step.action.strip().lower()
+    selector_type = step.selector_type.strip().lower()
+    selector = step.selector.strip()
+    if action in {"open", "navigate"}:
+        target_url = selector or step.target or normalized_url
+        return str(await _await_playbook_value(page_driver.open(target_url)))
+    if action in {"click", "click_cta", "submit"}:
+        if selector_type == "role":
+            role, name = _split_role_locator(selector)
+            return str(await _await_playbook_value(page_driver.click_role(role, name)))
+        if selector_type == "label":
+            return str(await _await_playbook_value(page_driver.click_label(selector)))
+        if selector_type == "name":
+            return str(await _await_playbook_value(page_driver.click_name(selector)))
+        if selector_type == "data_attribute":
+            return str(
+                await _await_playbook_value(page_driver.click_data_attribute(selector))
+            )
+        if selector_type == "text":
+            return str(await _await_playbook_value(page_driver.click_text(selector)))
+        return str(await _await_playbook_value(page_driver.click_css(selector)))
+    if action in {"fill", "type"}:
+        value = _resolve_playbook_step_value(step=step, identity_values=identity_values)
+        if selector_type == "label":
+            return str(
+                await _await_playbook_value(page_driver.fill_label(selector, value))
+            )
+        if selector_type == "name":
+            return str(
+                await _await_playbook_value(page_driver.fill_name(selector, value))
+            )
+        if selector_type == "data_attribute":
+            return str(
+                await _await_playbook_value(
+                    page_driver.fill_data_attribute(selector, value)
+                )
+            )
+        return str(
+            await _await_playbook_value(page_driver.fill_css(selector, value))
+        )
+    if action == "select":
+        value = _resolve_playbook_step_value(step=step, identity_values=identity_values)
+        if selector_type == "label":
+            return str(
+                await _await_playbook_value(page_driver.select_label(selector, value))
+            )
+        if selector_type == "name":
+            return str(
+                await _await_playbook_value(page_driver.select_name(selector, value))
+            )
+        if selector_type == "data_attribute":
+            return str(
+                await _await_playbook_value(
+                    page_driver.select_data_attribute(selector, value)
+                )
+            )
+        return str(
+            await _await_playbook_value(page_driver.select_css(selector, value))
+        )
+    if action == "verify":
+        return "verified"
+    raise ValueError(f"unsupported_action:{step.action}")
+
+
+async def _verify_playbook_step_async(
+    *, step: BrowserRoutePlaybookStep, page_driver
+) -> str:
+    expected_url = step.expected_url_contains.strip()
+    if expected_url and expected_url not in str(
+        await _await_playbook_value(page_driver.current_url())
+    ):
+        return "expected_url_not_observed"
+    expected_text = step.expected_text.strip()
+    if expected_text and not bool(
+        await _await_playbook_value(page_driver.contains_text(expected_text))
+    ):
+        return "expected_text_not_observed"
+    return ""
+
+
+async def _await_playbook_value(value: Any) -> Any:
+    if inspect.isawaitable(value):
+        return await value
+    return value
 
 
 def _execute_playbook_step(

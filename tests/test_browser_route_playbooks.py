@@ -703,6 +703,50 @@ def test_deterministic_route_playbook_executor_skips_missing_postcondition(
     assert response.drift_reasons == ["step_0_missing_deterministic_postcondition"]
 
 
+def test_deterministic_route_playbook_executor_rejects_raw_identity_value(
+    run_context,
+) -> None:
+    playbook = BrowserRoutePlaybook(
+        schema_version="1.0",
+        playbook_id="local-raw-identity",
+        version="1.0.0",
+        status="active",
+        updated_at="2026-08-20T00:00:00+00:00",
+        stale_after_days=180,
+        publisher_pattern="example.com",
+        host_patterns=["example.com"],
+        url_path_markers=["report"],
+        route_family="browser_email_form",
+        route_kind="email_delivery",
+        summary="Use the verified form route.",
+        steps=[
+            BrowserRoutePlaybookStep(
+                schema_version="1.0",
+                action="fill",
+                target="Work email",
+                verification="field filled",
+                selector_type="name",
+                selector="email",
+                value="ops@example.com",
+                expected_text="Form ready",
+            )
+        ],
+    )
+
+    response = execute_browser_route_playbook(
+        BrowserRoutePlaybookExecutionRequest(
+            schema_version="1.0",
+            playbook=playbook,
+            normalized_url="https://example.com/report",
+            page_driver=_FakePageDriver(texts={"Form ready"}),
+        ),
+        run_context,
+    )
+
+    assert response.status == "skipped"
+    assert response.drift_reasons == ["step_0_identity_reference_invalid"]
+
+
 class _FakePageDriver:
     def __init__(self, *, texts):
         self.calls = []

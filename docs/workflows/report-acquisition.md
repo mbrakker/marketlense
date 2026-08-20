@@ -28,8 +28,15 @@ each step must have a supported deterministic action and locator plus a
 machine-checkable URL or visible-text postcondition. Its terminal result is
 passed through the same artifact/submission finalizer used by Browser Use, so a
 PDF, email submission, or on-site capture is never accepted on the basis of a
-click alone. A completed, verified playbook accepts the acquisition with zero
-Browser Use model calls. Missing executable evidence, a postcondition mismatch,
+click alone. On a reused async Browser Use session, the same executor supports
+`open`/`navigate`, `click`/`submit`, `fill`/`type`, `select`, and `verify` with
+CSS, role/name, label, field-name, data-attribute, or visible-text locators as
+applicable. Form values are accepted only from `${identity.<key>}` references.
+Every locator/control error and every URL/text postcondition mismatch is route
+drift, so execution falls through to Browser Use without replacing the current
+browser, page, cookies, or storage. A completed, verified playbook accepts the
+acquisition with zero Browser Use model calls. Missing executable evidence, a
+postcondition mismatch,
 an executor error, or failed terminal verification is logged as drift and
 continues to the unchanged Browser Use path. Generic and historical
 prompt-only playbooks are therefore guidance only and always fall back. The

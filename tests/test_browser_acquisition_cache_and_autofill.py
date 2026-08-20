@@ -308,6 +308,331 @@ def test_deterministic_playbook_completes_without_constructing_browser_use_model
     assert payload["route_steps"][0]["verification_status"] == "verified"
 
 
+def test_async_deterministic_playbook_executes_supported_actions_without_agent(
+    tmp_path: Path,
+) -> None:
+    settings = _settings(tmp_path)
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url="https://publisher.example/report",
+        settings=settings,
+        route_family_hint="browser_email_form",
+    )
+
+    class AsyncPage:
+        def __init__(self, browser) -> None:
+            self.browser = browser
+            self.evaluations: list[str] = []
+            self.click_count = 0
+            self.fill_values: list[str] = []
+            self.select_values: list[str] = []
+            self.submitted = False
+
+        async def evaluate(self, expression: str):
+            self.evaluations.append(expression)
+            if "document.body?.innerText" in expression:
+                return "Form ready" in expression
+            if "document.documentElement.outerHTML" in expression:
+                return self.browser.html
+            if "element.tagName !== 'SELECT'" in expression:
+                self.select_values.append("Market Lense")
+                return "selected"
+            if "element.value =" in expression:
+                self.fill_values.append("ops@example.com")
+                return "filled"
+            if "element.click()" in expression:
+                self.click_count += 1
+                self.submitted = "button[type=submit]" in expression
+                return "clicked"
+            raise AssertionError(f"Unexpected deterministic expression: {expression}")
+
+    class AsyncBrowser:
+        def __init__(self) -> None:
+            self.page = AsyncPage(self)
+            self.url = "https://publisher.example/report"
+            self.title = "Publisher form"
+            self.html = "<html><body>Form ready</body></html>"
+            self.start_calls = 0
+            self.navigated_urls: list[str] = []
+            self.agent_calls = 0
+
+        async def start(self) -> None:
+            self.start_calls += 1
+
+        async def get_current_page(self) -> AsyncPage:
+            return self.page
+
+        async def navigate_to(self, url: str) -> None:
+            self.url = url
+            self.navigated_urls.append(url)
+
+        async def get_current_page_url(self) -> str:
+            return self.url
+
+        async def get_current_page_title(self) -> str:
+            return self.title
+
+    AsyncBrowser.__module__ = "browser_use.browser"
+    browser = AsyncBrowser()
+    playbook = BrowserRoutePlaybook(
+        schema_version="1.0",
+        playbook_id="publisher-example-async-form",
+        version="1.0.0",
+        status="active",
+        updated_at="2026-08-20T00:00:00+00:00",
+        stale_after_days=180,
+        publisher_pattern="publisher.example",
+        host_patterns=["publisher.example"],
+        url_path_markers=["report"],
+        route_family="browser_email_form",
+        route_kind="email_delivery",
+        summary="Complete the publisher form.",
+        steps=[
+            BrowserRoutePlaybookStep(
+                schema_version="1.0",
+                action="open",
+                target="Report form",
+                verification="form loaded",
+                selector_type="url",
+                selector="https://publisher.example/report",
+                expected_url_contains="/report",
+                expected_text="Form ready",
+            ),
+            BrowserRoutePlaybookStep(
+                schema_version="1.0",
+                action="navigate",
+                target="Report form",
+                verification="form loaded",
+                selector_type="url",
+                selector="https://publisher.example/report",
+                expected_url_contains="/report",
+                expected_text="Form ready",
+            ),
+            BrowserRoutePlaybookStep(
+                schema_version="1.0",
+                action="click",
+                target="Open form",
+                verification="form remains ready",
+                selector_type="css",
+                selector="a.download",
+                expected_url_contains="/report",
+                expected_text="Form ready",
+            ),
+            BrowserRoutePlaybookStep(
+                schema_version="1.0",
+                action="click",
+                target="Request report",
+                verification="form remains ready",
+                selector_type="role",
+                selector="button:Request report",
+                expected_url_contains="/report",
+                expected_text="Form ready",
+            ),
+            BrowserRoutePlaybookStep(
+                schema_version="1.0",
+                action="click",
+                target="Continue",
+                verification="form remains ready",
+                selector_type="label",
+                selector="Continue",
+                expected_url_contains="/report",
+                expected_text="Form ready",
+            ),
+            BrowserRoutePlaybookStep(
+                schema_version="1.0",
+                action="click",
+                target="Continue",
+                verification="form remains ready",
+                selector_type="name",
+                selector="continue",
+                expected_url_contains="/report",
+                expected_text="Form ready",
+            ),
+            BrowserRoutePlaybookStep(
+                schema_version="1.0",
+                action="click",
+                target="Continue",
+                verification="form remains ready",
+                selector_type="data_attribute",
+                selector="data-testid=continue",
+                expected_url_contains="/report",
+                expected_text="Form ready",
+            ),
+            BrowserRoutePlaybookStep(
+                schema_version="1.0",
+                action="click",
+                target="Download",
+                verification="form remains ready",
+                selector_type="text",
+                selector="Download",
+                expected_url_contains="/report",
+                expected_text="Form ready",
+            ),
+            *[
+                BrowserRoutePlaybookStep(
+                    schema_version="1.0",
+                    action=action,
+                    target="Work email",
+                    verification="email entered",
+                    selector_type=selector_type,
+                    selector=selector,
+                    value_reference="${identity.work_email}",
+                    expected_url_contains="/report",
+                    expected_text="Form ready",
+                )
+                for action, selector_type, selector in (
+                    ("fill", "css", "input.email"),
+                    ("type", "label", "Work email"),
+                    ("fill", "name", "email"),
+                    ("fill", "data_attribute", "data-testid=email"),
+                )
+            ],
+            *[
+                BrowserRoutePlaybookStep(
+                    schema_version="1.0",
+                    action="select",
+                    target="Company",
+                    verification="company selected",
+                    selector_type=selector_type,
+                    selector=selector,
+                    value_reference="${identity.company}",
+                    expected_url_contains="/report",
+                    expected_text="Form ready",
+                )
+                for selector_type, selector in (
+                    ("css", "select.company"),
+                    ("label", "Company"),
+                    ("name", "company"),
+                    ("data_attribute", "data-testid=company"),
+                )
+            ],
+            BrowserRoutePlaybookStep(
+                schema_version="1.0",
+                action="submit",
+                target="Request report",
+                verification="request submitted",
+                selector_type="css",
+                selector="button[type=submit]",
+                expected_url_contains="/report",
+                expected_text="Form ready",
+            ),
+            BrowserRoutePlaybookStep(
+                schema_version="1.0",
+                action="verify",
+                target="Confirmation",
+                verification="form still ready",
+                selector_type="css",
+                selector="body",
+                expected_url_contains="/report",
+                expected_text="Form ready",
+            ),
+        ],
+    )
+
+    result = run_deterministic_browser_route_playbook(
+        request=request,
+        ctx=_ctx(),
+        normalized_url=request.url,
+        execution_url=request.url,
+        download_dir=tmp_path,
+        browser=browser,
+        playbook=playbook,
+    )
+
+    assert result is not None
+    assert browser.agent_calls == 0
+    assert browser.start_calls == 1
+    assert browser.navigated_urls == [request.url, request.url]
+    assert browser.page.click_count == 7
+    assert browser.page.submitted is True
+    assert browser.page.fill_values == ["ops@example.com"] * 4
+    assert browser.page.select_values == ["Market Lense"] * 4
+    assert len(json.loads(result.raw_model_response)["route_steps"]) == len(
+        playbook.steps
+    )
+
+
+def test_async_deterministic_playbook_drift_returns_fallback_signal(
+    tmp_path: Path,
+) -> None:
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url="https://publisher.example/report",
+        settings=_settings(tmp_path),
+        route_family_hint="browser_pdf_click",
+    )
+
+    class AsyncPage:
+        def __init__(self) -> None:
+            self.evaluations = 0
+
+        async def evaluate(self, expression: str):
+            self.evaluations += 1
+            if "element.click()" in expression:
+                return "clicked"
+            if "document.body?.innerText" in expression:
+                return False
+            raise AssertionError(f"Unexpected deterministic expression: {expression}")
+
+    class AsyncBrowser:
+        def __init__(self) -> None:
+            self.page = AsyncPage()
+            self.url = request.url
+            self.start_calls = 0
+
+        async def start(self) -> None:
+            self.start_calls += 1
+
+        async def get_current_page(self) -> AsyncPage:
+            return self.page
+
+        async def get_current_page_url(self) -> str:
+            return self.url
+
+    AsyncBrowser.__module__ = "browser_use.browser"
+    browser = AsyncBrowser()
+    drifted_playbook = BrowserRoutePlaybook(
+        schema_version="1.0",
+        playbook_id="publisher-example-async-drift",
+        version="1.0.0",
+        status="active",
+        updated_at="2026-08-20T00:00:00+00:00",
+        stale_after_days=180,
+        publisher_pattern="publisher.example",
+        host_patterns=["publisher.example"],
+        url_path_markers=["report"],
+        route_family="browser_pdf_click",
+        route_kind="pdf_download",
+        summary="Click the report download.",
+        steps=[
+            BrowserRoutePlaybookStep(
+                schema_version="1.0",
+                action="click",
+                target="Download report",
+                verification="PDF-ready state is visible.",
+                selector_type="css",
+                selector="a.download",
+                expected_url_contains="/report",
+                expected_text="PDF ready",
+            )
+        ],
+    )
+
+    result = run_deterministic_browser_route_playbook(
+        request=request,
+        ctx=_ctx(),
+        normalized_url=request.url,
+        execution_url=request.url,
+        download_dir=tmp_path,
+        browser=browser,
+        playbook=drifted_playbook,
+    )
+
+    assert result is None
+    assert browser.start_calls == 1
+    assert browser.page.evaluations >= 2
+
+
 def test_production_playbook_success_finalizes_without_browser_use_agent(
     tmp_path: Path,
 ) -> None:
