@@ -139,6 +139,84 @@ def test_browser_action_evidence_binds_each_action_to_its_next_browser_state() -
     ]
 
 
+def test_browser_action_evidence_classifies_clicked_submit_button_from_runtime_element(
+) -> None:
+    step = capture_browser_execution_route_steps(
+        history=SimpleNamespace(
+            history=[
+                _history_entry(
+                    action=SimpleNamespace(
+                        model_dump=lambda **_kwargs: {"click": {"index": 1}}
+                    ),
+                    role="button",
+                    name="Request report",
+                    url="https://example.com/requested",
+                    title="Request received",
+                    node_name="BUTTON",
+                    attributes={"role": "button", "type": "submit"},
+                )
+            ]
+        ),
+        final_page_url="https://example.com/requested",
+        final_page_title="Request received",
+    )[0]
+
+    assert step.action == "submit"
+
+
+def test_browser_action_evidence_classifies_clicked_submit_input_from_runtime_element(
+) -> None:
+    step = capture_browser_execution_route_steps(
+        history=SimpleNamespace(
+            history=[
+                _history_entry(
+                    action=SimpleNamespace(
+                        model_dump=lambda **_kwargs: {"click": {"index": 1}}
+                    ),
+                    role="button",
+                    name="Send me the report",
+                    url="https://example.com/requested",
+                    title="Request received",
+                    node_name="input",
+                    attributes={"role": "button", "type": "submit"},
+                )
+            ]
+        ),
+        final_page_url="https://example.com/requested",
+        final_page_title="Request received",
+    )[0]
+
+    assert step.action == "submit"
+
+
+def test_browser_action_evidence_keeps_ordinary_button_click_despite_model_submit_claim(
+) -> None:
+    step = capture_browser_execution_route_steps(
+        history=SimpleNamespace(
+            history=[
+                _history_entry(
+                    action=SimpleNamespace(
+                        model_dump=lambda **_kwargs: {
+                            "click": {"index": 1},
+                            "submit": {"claimed": True},
+                        }
+                    ),
+                    role="button",
+                    name="Show pricing",
+                    url="https://example.com/pricing",
+                    title="Pricing",
+                    node_name="button",
+                    attributes={"role": "button", "type": "button"},
+                )
+            ]
+        ),
+        final_page_url="https://example.com/pricing",
+        final_page_title="Pricing",
+    )[0]
+
+    assert step.action == "click"
+
+
 def test_browser_action_evidence_keeps_identity_values_unpersisted() -> None:
     action = SimpleNamespace(
         model_dump=lambda **_kwargs: {"input": {"index": 3, "text": "ops@example.com"}}
@@ -271,6 +349,80 @@ def test_validated_route_promotion_rejects_email_route_missing_final_submit(
     assert not (tmp_path / "playbooks").exists()
 
 
+def test_validated_email_route_with_runtime_submit_can_be_promoted(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    submit_step = capture_browser_execution_route_steps(
+        history=SimpleNamespace(
+            history=[
+                _history_entry(
+                    action=SimpleNamespace(
+                        model_dump=lambda **_kwargs: {"click": {"index": 1}}
+                    ),
+                    role="button",
+                    name="Request report",
+                    url="https://example.com/requested",
+                    title="Request received",
+                    node_name="button",
+                    attributes={"role": "button", "type": "submit"},
+                )
+            ]
+        ),
+        final_page_url="https://example.com/requested",
+        final_page_title="Request received",
+    )[0]
+    result = replace(
+        _result(),
+        route_kind="email_delivery",
+        route_family="browser_email_form",
+        outcome="email_requested",
+        execution_route_steps=[submit_step],
+    )
+
+    response = _promote(tmp_path, result, run_context)
+
+    assert response.status == "created"
+    assert response.reason == ""
+
+
+def test_validated_email_route_with_runtime_non_submit_click_is_not_promotable(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    click_step = capture_browser_execution_route_steps(
+        history=SimpleNamespace(
+            history=[
+                _history_entry(
+                    action=SimpleNamespace(
+                        model_dump=lambda **_kwargs: {"click": {"index": 1}}
+                    ),
+                    role="button",
+                    name="Show pricing",
+                    url="https://example.com/pricing",
+                    title="Pricing",
+                    node_name="button",
+                    attributes={"role": "button", "type": "button"},
+                )
+            ]
+        ),
+        final_page_url="https://example.com/pricing",
+        final_page_title="Pricing",
+    )[0]
+    result = replace(
+        _result(),
+        route_kind="email_delivery",
+        route_family="browser_email_form",
+        outcome="email_requested",
+        execution_route_steps=[click_step],
+    )
+
+    response = _promote(tmp_path, result, run_context)
+
+    assert response.status == "not_promotable"
+    assert response.reason == "missing_terminal_submit"
+
+
 def _promote(tmp_path: Path, result: BrowserReportDownloadResult, run_context):
     return promote_validated_browser_route_result_to_playbook(
         playbook_dir=str(tmp_path / "playbooks"),
@@ -280,7 +432,16 @@ def _promote(tmp_path: Path, result: BrowserReportDownloadResult, run_context):
     )
 
 
-def _history_entry(*, action, role: str, name: str, url: str, title: str):
+def _history_entry(
+    *,
+    action,
+    role: str,
+    name: str,
+    url: str,
+    title: str,
+    node_name: str = "",
+    attributes: dict[str, str] | None = None,
+):
     return SimpleNamespace(
         model_output=SimpleNamespace(action=[action]),
         result=[SimpleNamespace(error=None, success=None)],
@@ -288,7 +449,11 @@ def _history_entry(*, action, role: str, name: str, url: str, title: str):
             url=url,
             title=title,
             interacted_element=[
-                SimpleNamespace(attributes={"role": role}, ax_name=name)
+                SimpleNamespace(
+                    attributes=attributes or {"role": role},
+                    ax_name=name,
+                    node_name=node_name,
+                )
             ],
         ),
     )

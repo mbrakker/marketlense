@@ -124,6 +124,13 @@ email address or other personal identity value is persisted. Failed, multi-actio
 missing, and unverified records (including a final submit) cause a typed
 `not_promotable` result and leave no active playbook write.
 
+For Browser Use history, a model `click` is recorded as semantic `submit` only when
+the runtime-resolved native DOM element is a form submit control: a `button` with an
+implicit or explicit submit type, or an `input` with `type=submit` or `type=image`.
+The model response, action prose, accessible name, and ARIA role do not promote a
+normal button or link; an email route therefore satisfies terminal-submit validation
+only with that resolved-control evidence.
+
 When a publisher page embeds a public Adobe InDesign Publish Online report, acquisition
 does not treat incidental newsletter forms as a report gate. It verifies the publisher
 page's Adobe viewer URL, reads the viewer-provided version prefix, then captures the

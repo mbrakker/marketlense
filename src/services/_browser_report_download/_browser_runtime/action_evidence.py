@@ -48,6 +48,10 @@ def capture_browser_execution_route_steps(
                 continue
             result = results[action_offset] if action_offset < len(results) else None
             interacted = _interacted_element(entry, action_offset)
+            action_name = _runtime_semantic_action_name(
+                action_name=action_name,
+                interacted_element=interacted,
+            )
             post_state = _post_action_state(
                 entries=entries,
                 position=position,
@@ -131,6 +135,27 @@ def _runtime_action_name(action: Any) -> str:
         if mapped:
             return mapped
     return ""
+
+
+def _runtime_semantic_action_name(*, action_name: str, interacted_element: Any) -> str:
+    """Preserve click semantics unless the resolved DOM control submits forms."""
+    if action_name != "click" or not _is_runtime_submit_control(interacted_element):
+        return action_name
+    return "submit"
+
+
+def _is_runtime_submit_control(element: Any) -> bool:
+    """Identify native form-submit controls from Browser Use's resolved DOM record."""
+    if element is None:
+        return False
+    attributes = getattr(element, "attributes", None)
+    if not isinstance(attributes, dict):
+        return False
+    node_name = str(getattr(element, "node_name", "") or "").strip().casefold()
+    input_type = str(attributes.get("type") or "").strip().casefold()
+    if node_name == "button":
+        return input_type in {"", "submit"}
+    return node_name == "input" and input_type in {"submit", "image"}
 
 
 def _model_dump(value: Any) -> dict[str, Any]:
