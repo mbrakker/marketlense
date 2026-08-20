@@ -1437,20 +1437,52 @@ def test_browser_worker_subprocess_discards_sensitive_request_payload_after_time
     assert not payload_path.exists()
 
 
-def test_pre_llm_autofill_skips_async_browser_to_avoid_concurrent_session_use(
+def test_pre_llm_autofill_runs_on_async_browser_session(
     tmp_path: Path,
     run_context,
     caplog,
     assert_logs_have_required_fields,
 ) -> None:
-    """The LLM fallback must not share a session with a timed-out helper."""
+    """The standard helper runs before Agent on the BrowserSession event loop."""
 
     class AsyncBrowser:
-        start_calls = 0
+        def __init__(self) -> None:
+            self.start_calls = 0
+            self.url = "https://example.com/report"
+            self.title = "Report form"
+            self.html = "<html><body>Thanks for requesting the report</body></html>"
+
+            class Page:
+                async def evaluate(_self, expression: str):
+                    if "standardFormSubmit" in expression:
+                        return {
+                            "attempted_count": 1,
+                            "filled_count": 1,
+                            "selected_count": 0,
+                            "mandatory_agreement_checked_count": 0,
+                            "resolved_control_count": 1,
+                            "submitted": True,
+                            "final_url": self.url,
+                            "resolved_fields": ["Work email"],
+                            "unresolved_fields": [],
+                        }
+                    if "document.documentElement" in expression:
+                        return self.html
+                    return {"status": "ok"}
+
+            self.page = Page()
 
         async def start(self) -> None:
             self.start_calls += 1
-            await asyncio.sleep(0)
+
+        async def get_current_page(self):
+            return self.page
+
+        async def get_current_page_url(self) -> str:
+            return self.url
+
+        async def get_current_page_title(self) -> str:
+            return self.title
 
     request = BrowserReportDownloadRequest(
         schema_version="1.0",
@@ -1469,15 +1501,9 @@ def test_pre_llm_autofill_skips_async_browser_to_avoid_concurrent_session_use(
         execution_url=request.url,
     )
 
-    assert result is None
-    assert browser.start_calls == 0
-    escalation_events = [
-        record
-        for record in caplog.records
-        if "browser_report_download_pre_llm_autofill_escalated" in record.message
-        and '"reason": "async_browser_session"' in record.message
-    ]
-    assert len(escalation_events) == 1
+    assert result is not None
+    assert browser.start_calls == 1
+    assert "deterministic pre-LLM form autofill" in result.raw_model_response
     assert_logs_have_required_fields(caplog.records)
 
 
@@ -1671,7 +1697,7 @@ __all__ = [
     "test_browser_worker_subprocess_discards_sensitive_request_payload_after_run",
     "test_browser_worker_subprocess_discards_sensitive_request_payload_after_timeout",
     "test_browser_worker_execution_never_dispatches_a_nested_worker",
-    "test_pre_llm_autofill_skips_async_browser_to_avoid_concurrent_session_use",
+    "test_pre_llm_autofill_runs_on_async_browser_session",
     "test_browser_worker_subprocess_sanitizes_failure_output_excerpt",
     "test_download_report_with_browser_use_cleans_stale_browser_use_temp_dirs_before_launch",
     "test_download_report_with_browser_use_cleans_new_browser_use_temp_dirs_after_run",

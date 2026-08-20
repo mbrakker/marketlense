@@ -231,6 +231,7 @@ from src.services._browser_report_download.helpers import (
     browser_helper_js,
     browser_helper_page_info,
     browser_helper_standard_form_submit,
+    browser_helper_standard_form_submit_async,
 )
 from src.services._browser_report_download.http import (
     download_pdf_from_url,
@@ -834,6 +835,23 @@ def _try_pre_llm_standard_form_submit(
         )
         return None
     if inspect.iscoroutinefunction(getattr(browser, "start", None)):
+        return asyncio.run(
+            _try_pre_llm_standard_form_submit_async(
+                request=request,
+                browser=browser,
+                ctx=ctx,
+                normalized_url=normalized_url,
+                execution_url=execution_url,
+                field_values=field_values,
+            )
+        )
+    page = _open_current_page_for_pre_llm_autofill(
+        browser=browser,
+        execution_url=execution_url,
+        ctx=ctx,
+        normalized_url=normalized_url,
+    )
+    if page is None:
         logger.info(
             log_event(
                 ctx,
@@ -842,43 +860,137 @@ def _try_pre_llm_standard_form_submit(
                 module=logger.name,
                 fields={
                     "normalized_url": normalized_url,
-                    "reason": "async_browser_session",
-                    "avoided_concurrent_session_use": True,
+                    "reason": "page_unavailable",
                 },
             )
         )
         return None
-    else:
-        page = _open_current_page_for_pre_llm_autofill(
-            browser=browser,
-            execution_url=execution_url,
-            ctx=ctx,
-            normalized_url=normalized_url,
+    helper_result = browser_helper_standard_form_submit(
+        page=page,
+        field_values=field_values,
+        ctx=ctx,
+        normalized_url=normalized_url,
+        browser=browser,
+    )
+    snapshot = _capture_terminal_snapshot(
+        browser, ctx=ctx, normalized_url=normalized_url
+    )
+    return _resolve_pre_llm_standard_form_submit_result(
+        helper_result=helper_result,
+        snapshot=snapshot,
+        execution_url=execution_url,
+        ctx=ctx,
+        normalized_url=normalized_url,
+    )
+
+
+async def _try_pre_llm_standard_form_submit_async(
+    *,
+    request: BrowserReportDownloadRequest,
+    browser: Any,
+    ctx: RunContext,
+    normalized_url: str,
+    execution_url: str,
+    field_values: list[dict[str, object]],
+) -> BrowserAgentRunResult | None:
+    """Use the current BrowserSession page without creating a second session."""
+
+    await browser.start()
+    get_current_page = getattr(browser, "get_current_page", None)
+    page = (
+        await _await_browser_session_value(get_current_page())
+        if callable(get_current_page)
+        else None
+    )
+    get_current_page_url = getattr(browser, "get_current_page_url", None)
+    current_url = str(
+        (
+            await _await_browser_session_value(get_current_page_url())
+            if callable(get_current_page_url)
+            else getattr(browser, "url", "")
         )
-        if page is None:
-            logger.info(
-                log_event(
-                    ctx,
-                    role="service",
-                    event="browser_report_download_pre_llm_autofill_escalated",
-                    module=logger.name,
-                    fields={
-                        "normalized_url": normalized_url,
-                        "reason": "page_unavailable",
-                    },
-                )
+        or ""
+    ).strip()
+    if page is None or current_url in {"", "about:blank"}:
+        navigate_to = getattr(browser, "navigate_to", None)
+        if callable(navigate_to):
+            await _await_browser_session_value(navigate_to(execution_url))
+        else:
+            new_page = getattr(browser, "new_page", None)
+            if not callable(new_page):
+                return None
+            page = await _await_browser_session_value(new_page(execution_url))
+        if page is None and callable(get_current_page):
+            page = await _await_browser_session_value(get_current_page())
+    if page is None:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_pre_llm_autofill_escalated",
+                module=logger.name,
+                fields={"normalized_url": normalized_url, "reason": "page_unavailable"},
             )
-            return None
-        helper_result = browser_helper_standard_form_submit(
-            page=page,
-            field_values=field_values,
-            ctx=ctx,
-            normalized_url=normalized_url,
-            browser=browser,
         )
-        snapshot = _capture_terminal_snapshot(
-            browser, ctx=ctx, normalized_url=normalized_url
-        )
+        return None
+    helper_result = await browser_helper_standard_form_submit_async(
+        page=page,
+        field_values=field_values,
+        ctx=ctx,
+        normalized_url=normalized_url,
+    )
+    evaluated_html = await _await_browser_session_value(
+        page.evaluate("() => document.documentElement?.outerHTML || ''")
+    )
+    terminal_html = (
+        evaluated_html
+        if isinstance(evaluated_html, str)
+        else str(getattr(browser, "html", "") or "")
+    )
+    get_current_page_title = getattr(browser, "get_current_page_title", None)
+    snapshot = TerminalSnapshot(
+        page=page,
+        url=str(
+            (
+                await _await_browser_session_value(get_current_page_url())
+                if callable(get_current_page_url)
+                else getattr(browser, "url", "")
+            )
+            or ""
+        ).strip(),
+        title=str(
+            (
+                await _await_browser_session_value(
+                    get_current_page_title()
+                )
+                if callable(get_current_page_title)
+                else getattr(browser, "title", "")
+            )
+            or ""
+        ).strip(),
+        html=terminal_html,
+    )
+    return _resolve_pre_llm_standard_form_submit_result(
+        helper_result=helper_result,
+        snapshot=snapshot,
+        execution_url=execution_url,
+        ctx=ctx,
+        normalized_url=normalized_url,
+    )
+
+
+async def _await_browser_session_value(value: Any) -> Any:
+    return await value if inspect.isawaitable(value) else value
+
+
+def _resolve_pre_llm_standard_form_submit_result(
+    *,
+    helper_result: Any,
+    snapshot: TerminalSnapshot,
+    execution_url: str,
+    ctx: RunContext,
+    normalized_url: str,
+) -> BrowserAgentRunResult | None:
     final_url = snapshot.url or helper_result.final_url or execution_url
     if helper_result.status == "blocked" and helper_result.unresolved_fields:
         logger.info(

@@ -144,6 +144,10 @@ chooses a first visible option, or guesses an identity value. Unsupported DOM
 controls, page drift, and failed deterministic interaction retain the existing
 Browser Use fallback.
 
+The same deterministic pass runs directly on Browser Use's asynchronous
+`BrowserSession`; it awaits the already-open preflight page rather than opening
+another session or bypassing form handling because startup is asynchronous.
+
 When a standard required select or combobox is unresolved but the configured
 identity profile may directly support one of its visible options, the service
 makes one constrained model call before Browser Use. The response must cite an

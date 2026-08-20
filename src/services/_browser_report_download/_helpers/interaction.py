@@ -7,6 +7,7 @@ inspection.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from pathlib import Path
@@ -25,7 +26,14 @@ from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 from .inspection import browser_helper_js, browser_helper_js_via_cdp
-from .state import _HELPER_SCHEMA_VERSION, _HTML_EXCERPT_CHARS, _excerpt, _maybe_await
+from .state import (
+    _HELPER_AWAIT_TIMEOUT_SECONDS,
+    _HELPER_SCHEMA_VERSION,
+    _HTML_EXCERPT_CHARS,
+    _await_async,
+    _excerpt,
+    _maybe_await,
+)
 
 logger = logging.getLogger("market_lense.browser_report_download_service.helpers")
 
@@ -33,6 +41,7 @@ __all__ = (
     "browser_helper_capture_screenshot",
     "browser_helper_form_autocomplete",
     "browser_helper_standard_form_submit",
+    "browser_helper_standard_form_submit_async",
     "_autocomplete_result",
     "_standard_form_submit_result",
     "_screenshot_result",
@@ -973,6 +982,43 @@ def browser_helper_standard_form_submit(
         resolved_fields=resolved_fields,
         final_url=str(payload.get("final_url") or "").strip(),
         blocker_code=("blocked_unknown_required_enum" if unresolved_fields else None),
+    )
+
+
+async def browser_helper_standard_form_submit_async(
+    *,
+    page: Any,
+    field_values: list[dict[str, object]],
+    ctx: RunContext,
+    normalized_url: str,
+) -> BrowserHelperStandardFormSubmitResult:
+    """Run the established standard-form script on an async page's owning loop."""
+
+    evaluate = getattr(page, "evaluate", None) if page is not None else None
+    if not callable(evaluate):
+        return _standard_form_submit_result(
+            ctx=ctx,
+            normalized_url=normalized_url,
+            status="failed",
+            error="page.evaluate is unavailable",
+        )
+    event_loop = asyncio.get_running_loop()
+
+    class _PageEvaluationBridge:
+        def evaluate(self, expression: str) -> Any:
+            async def evaluate_on_session_loop() -> Any:
+                return await _await_async(evaluate(expression))
+
+            return asyncio.run_coroutine_threadsafe(
+                evaluate_on_session_loop(), event_loop
+            ).result(timeout=_HELPER_AWAIT_TIMEOUT_SECONDS)
+
+    return await asyncio.to_thread(
+        browser_helper_standard_form_submit,
+        page=_PageEvaluationBridge(),
+        field_values=field_values,
+        ctx=ctx,
+        normalized_url=normalized_url,
     )
 
 
