@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from ._test_browser_route_playbooks.cases_01_safe_promotion import *  # noqa: F401,F403
-
+import asyncio
 import json
 import logging
 from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 import yaml
@@ -25,8 +25,12 @@ from src.contracts.browser_download import (
     DownloadTerminalEvidence,
 )
 from src.services import browser_report_download_service
+from src.services._browser_report_download._browser_runtime.action_evidence import (
+    capture_browser_execution_route_steps,
+)
 from src.services._browser_report_download.playbooks import (
     execute_browser_route_playbook,
+    execute_browser_route_playbook_async,
     load_browser_route_playbooks,
     promote_private_api_evidence_to_browser_playbook,
     promote_validated_browser_route_result_to_playbook,
@@ -36,6 +40,8 @@ from src.services._browser_report_download.prompt import (
 )
 from src.utils.browser_route_playbooks import select_browser_route_playbooks
 from src.utils.errors import AppError
+
+from ._test_browser_route_playbooks.cases_01_safe_promotion import *  # noqa: F401,F403
 
 
 def test_repo_browser_route_playbooks_load_and_select(run_context) -> None:
@@ -747,6 +753,186 @@ def test_deterministic_route_playbook_executor_rejects_raw_identity_value(
     assert response.drift_reasons == ["step_0_identity_reference_invalid"]
 
 
+def test_runtime_role_form_evidence_promotes_and_executes_async(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    history = SimpleNamespace(
+        history=[
+            _runtime_history_entry(
+                action={"input": {"index": 1, "text": "ops@example.com"}},
+                role="textbox",
+                name="Work email",
+                url="https://example.com/request",
+                title="Request form",
+                node_name="input",
+                attributes={"role": "textbox", "type": "email"},
+            ),
+            _runtime_history_entry(
+                action={"select_dropdown": {"index": 2, "text": "Retail"}},
+                role="combobox",
+                name="Industry",
+                url="https://example.com/request",
+                title="Choose industry",
+                node_name="select",
+                attributes={"role": "combobox"},
+            ),
+            _runtime_history_entry(
+                action={"click": {"index": 3}},
+                role="button",
+                name="Request report",
+                url="https://example.com/request",
+                title="Request form",
+                node_name="button",
+                attributes={"role": "button", "type": "submit"},
+            ),
+        ]
+    )
+    execution_steps = capture_browser_execution_route_steps(
+        history=history,
+        final_page_url="https://example.com/requested",
+        final_page_title="Request confirmed",
+        identity_value_references={
+            "ops@example.com": "identity.delivery_email",
+            "Retail": "identity.industry",
+        },
+    )
+    result = replace(
+        _result(route_status="verified"),
+        route_kind="email_delivery",
+        route_family="browser_email_form",
+        outcome="email_requested",
+        execution_route_steps=execution_steps,
+    )
+
+    promotion = promote_validated_browser_route_result_to_playbook(
+        playbook_dir=str(tmp_path / "playbooks"),
+        result=result,
+        ctx=run_context,
+        observed_at="2026-08-20T12:00:00+00:00",
+    )
+    playbook = load_browser_route_playbooks(
+        playbook_dir=str(tmp_path / "playbooks"), ctx=run_context
+    )[0]
+    driver = _AsyncRoleFormPageDriver(
+        texts={"Choose industry", "Request form", "Request confirmed"}
+    )
+
+    response = asyncio.run(
+        execute_browser_route_playbook_async(
+            BrowserRoutePlaybookExecutionRequest(
+                schema_version="1.0",
+                playbook=playbook,
+                normalized_url="https://example.com/request",
+                page_driver=driver,
+                identity_values={
+                    "delivery_email": "ops@example.com",
+                    "industry": "Retail",
+                },
+            ),
+            run_context,
+        )
+    )
+
+    assert promotion.status == "created"
+    assert [step.selector for step in playbook.steps] == [
+        "textbox:Work email",
+        "combobox:Industry",
+        "button:Request report",
+    ]
+    assert [step.value_reference for step in playbook.steps[:2]] == [
+        "${identity.delivery_email}",
+        "${identity.industry}",
+    ]
+    assert response.status == "completed"
+    assert driver.calls == [
+        ("fill_role", "textbox", "Work email", "ops@example.com"),
+        ("select_role", "combobox", "Industry", "Retail"),
+        ("click_role", "button", "Request report"),
+    ]
+
+
+def test_deterministic_executor_rejects_role_select_for_non_native_control(
+    run_context,
+) -> None:
+    playbook = BrowserRoutePlaybook(
+        schema_version="1.0",
+        playbook_id="role-select-custom-control",
+        version="1.0.0",
+        status="active",
+        updated_at="2026-08-20T00:00:00+00:00",
+        stale_after_days=180,
+        publisher_pattern="example.com",
+        host_patterns=["example.com"],
+        url_path_markers=["report"],
+        route_family="browser_email_form",
+        route_kind="email_delivery",
+        summary="Select a required identity value.",
+        steps=[
+            BrowserRoutePlaybookStep(
+                schema_version="1.0",
+                action="select",
+                target="Industry",
+                verification="industry selected",
+                selector_type="role",
+                selector="textbox:Industry",
+                value_reference="${identity.industry}",
+                expected_text="Request form",
+            )
+        ],
+    )
+
+    response = asyncio.run(
+        execute_browser_route_playbook_async(
+            BrowserRoutePlaybookExecutionRequest(
+                schema_version="1.0",
+                playbook=playbook,
+                normalized_url="https://example.com/request",
+                page_driver=_AsyncRoleFormPageDriver(texts={"Request form"}),
+                identity_values={"industry": "Retail"},
+            ),
+            run_context,
+        )
+    )
+
+    assert response.status == "skipped"
+    assert response.drift_reasons == [
+        "step_0_unsupported_deterministic_role_action"
+    ]
+
+
+def test_promotion_rejects_role_select_that_executor_cannot_run(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    step = replace(
+        _result(route_status="verified").execution_route_steps[0],
+        action="select",
+        locator_role="textbox",
+        locator_name="Industry",
+        identity_field_reference="identity.industry",
+        expected_url_contains="",
+        expected_text="Request form",
+        locator_evidence=["locator:role:textbox:Industry"],
+        postcondition_evidence=["text:Request form"],
+    )
+    result = replace(
+        _result(route_status="verified"),
+        execution_route_steps=[step],
+    )
+
+    response = promote_validated_browser_route_result_to_playbook(
+        playbook_dir=str(tmp_path / "playbooks"),
+        result=result,
+        ctx=run_context,
+        observed_at="2026-08-20T12:00:00+00:00",
+    )
+
+    assert response.status == "not_promotable"
+    assert response.reason == "step_0_unsupported_deterministic_role_action"
+    assert not (tmp_path / "playbooks").exists()
+
+
 class _FakePageDriver:
     def __init__(self, *, texts):
         self.calls = []
@@ -819,6 +1005,61 @@ class _FakePageDriver:
 
     def contains_text(self, text):
         return text in self._texts
+
+
+class _AsyncRoleFormPageDriver:
+    def __init__(self, *, texts: set[str]) -> None:
+        self.calls: list[tuple[str, ...]] = []
+        self._texts = texts
+        self._url = "https://example.com/request"
+
+    async def fill_role(self, role: str, name: str, value: str) -> str:
+        self.calls.append(("fill_role", role, name, value))
+        return "filled"
+
+    async def select_role(self, role: str, name: str, value: str) -> str:
+        self.calls.append(("select_role", role, name, value))
+        return "selected"
+
+    async def click_role(self, role: str, name: str) -> str:
+        self.calls.append(("click_role", role, name))
+        self._url = "https://example.com/requested"
+        return "clicked"
+
+    async def current_url(self) -> str:
+        return self._url
+
+    async def contains_text(self, text: str) -> bool:
+        return text in self._texts
+
+
+def _runtime_history_entry(
+    *,
+    action: dict[str, object],
+    role: str,
+    name: str,
+    url: str,
+    title: str,
+    node_name: str,
+    attributes: dict[str, str],
+) -> SimpleNamespace:
+    return SimpleNamespace(
+        model_output=SimpleNamespace(
+            action=[SimpleNamespace(model_dump=lambda **_kwargs: action)]
+        ),
+        result=[SimpleNamespace(error=None, success=True)],
+        state=SimpleNamespace(
+            url=url,
+            title=title,
+            interacted_element=[
+                SimpleNamespace(
+                    attributes=attributes,
+                    ax_name=name,
+                    node_name=node_name,
+                )
+            ],
+        ),
+    )
 
 
 def _request(

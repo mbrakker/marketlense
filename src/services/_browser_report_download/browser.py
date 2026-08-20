@@ -1144,16 +1144,7 @@ class _DeterministicPlaybookPageDriver:
         )
 
     def click_role(self, role: str, name: str) -> str:
-        return self._click_expression(
-            "Array.from(document.querySelectorAll('[role],a,button,input[type=submit]'))"
-            ".find((node) => { const observedRole = node.getAttribute('role') || "
-            "(node.tagName === 'BUTTON' ? 'button' : ''); return observedRole === "
-            + json.dumps(role)
-            + " && (node.getAttribute('aria-label') || node.innerText || node.value "
-            "|| '').trim() === "
-            + json.dumps(name)
-            + "; })"
-        )
+        return self._click_expression(_role_locator_expression(role, name))
 
     def click_label(self, label: str) -> str:
         return self._click_expression(self._label_control_expression(label))
@@ -1175,6 +1166,9 @@ class _DeterministicPlaybookPageDriver:
         expression = "document.querySelector(" + json.dumps(selector) + ")"
         return self._set_value(expression, value)
 
+    def fill_role(self, role: str, name: str, value: str) -> str:
+        return self._set_textbox_value(_role_locator_expression(role, name), value)
+
     def fill_label(self, label: str, value: str) -> str:
         return self._set_value(self._label_control_expression(label), value)
 
@@ -1195,6 +1189,9 @@ class _DeterministicPlaybookPageDriver:
         return self._select_value(
             "document.querySelector(" + json.dumps(selector) + ")", value
         )
+
+    def select_role(self, role: str, name: str, value: str) -> str:
+        return self._select_value(_role_locator_expression(role, name), value)
 
     def select_label(self, label: str, value: str) -> str:
         return self._select_value(self._label_control_expression(label), value)
@@ -1240,6 +1237,23 @@ class _DeterministicPlaybookPageDriver:
             "() => { const element = "
             + element_expression
             + "; if (!element) throw new Error('deterministic_locator_not_found'); "
+            "element.focus(); element.value = "
+            + json.dumps(value)
+            + "; element.dispatchEvent(new Event('input', {bubbles: true})); "
+            "element.dispatchEvent(new Event('change', {bubbles: true})); "
+            "return 'filled'; }"
+        )
+
+    def _set_textbox_value(self, element_expression: str, value: str) -> str:
+        return self._evaluate_action(
+            "() => { const element = "
+            + element_expression
+            + "; const tag = element?.tagName; const type = "
+            "(element?.getAttribute('type') || 'text').toLowerCase(); "
+            "if (!element || !['INPUT', 'TEXTAREA'].includes(tag) || "
+            "['button', 'checkbox', 'file', 'hidden', 'image', 'radio', 'reset', "
+            "'submit'].includes(type)) throw new Error("
+            "'deterministic_textbox_not_found'); "
             "element.focus(); element.value = "
             + json.dumps(value)
             + "; element.dispatchEvent(new Event('input', {bubbles: true})); "
@@ -1305,6 +1319,23 @@ class _AsyncDeterministicPlaybookPageDriver:
             "document.querySelector(" + json.dumps(selector) + ")"
         )
 
+    async def _set_textbox_value(self, element_expression: str, value: str) -> str:
+        return await self._evaluate_action(
+            "() => { const element = "
+            + element_expression
+            + "; const tag = element?.tagName; const type = "
+            "(element?.getAttribute('type') || 'text').toLowerCase(); "
+            "if (!element || !['INPUT', 'TEXTAREA'].includes(tag) || "
+            "['button', 'checkbox', 'file', 'hidden', 'image', 'radio', 'reset', "
+            "'submit'].includes(type)) throw new Error("
+            "'deterministic_textbox_not_found'); "
+            "element.focus(); element.value = "
+            + json.dumps(value)
+            + "; element.dispatchEvent(new Event('input', {bubbles: true})); "
+            "element.dispatchEvent(new Event('change', {bubbles: true})); "
+            "return 'filled'; }"
+        )
+
     async def click_text(self, text: str) -> str:
         return await self._click_expression(
             "Array.from(document.querySelectorAll('a,button,input[type=submit]'))"
@@ -1314,16 +1345,7 @@ class _AsyncDeterministicPlaybookPageDriver:
         )
 
     async def click_role(self, role: str, name: str) -> str:
-        return await self._click_expression(
-            "Array.from(document.querySelectorAll('[role],a,button,input[type=submit]'))"
-            ".find((node) => { const observedRole = node.getAttribute('role') || "
-            "(node.tagName === 'BUTTON' ? 'button' : ''); return observedRole === "
-            + json.dumps(role)
-            + " && (node.getAttribute('aria-label') || node.innerText || node.value "
-            "|| '').trim() === "
-            + json.dumps(name)
-            + "; })"
-        )
+        return await self._click_expression(_role_locator_expression(role, name))
 
     async def click_label(self, label: str) -> str:
         return await self._click_expression(self._label_control_expression(label))
@@ -1343,6 +1365,11 @@ class _AsyncDeterministicPlaybookPageDriver:
     async def fill_css(self, selector: str, value: str) -> str:
         return await self._set_value(
             "document.querySelector(" + json.dumps(selector) + ")", value
+        )
+
+    async def fill_role(self, role: str, name: str, value: str) -> str:
+        return await self._set_textbox_value(
+            _role_locator_expression(role, name), value
         )
 
     async def fill_label(self, label: str, value: str) -> str:
@@ -1365,6 +1392,9 @@ class _AsyncDeterministicPlaybookPageDriver:
         return await self._select_value(
             "document.querySelector(" + json.dumps(selector) + ")", value
         )
+
+    async def select_role(self, role: str, name: str, value: str) -> str:
+        return await self._select_value(_role_locator_expression(role, name), value)
 
     async def select_label(self, label: str, value: str) -> str:
         return await self._select_value(self._label_control_expression(label), value)
@@ -1410,6 +1440,23 @@ class _AsyncDeterministicPlaybookPageDriver:
             "() => { const element = "
             + element_expression
             + "; if (!element) throw new Error('deterministic_locator_not_found'); "
+            "element.focus(); element.value = "
+            + json.dumps(value)
+            + "; element.dispatchEvent(new Event('input', {bubbles: true})); "
+            "element.dispatchEvent(new Event('change', {bubbles: true})); "
+            "return 'filled'; }"
+        )
+
+    async def _set_textbox_value(self, element_expression: str, value: str) -> str:
+        return await self._evaluate_action(
+            "() => { const element = "
+            + element_expression
+            + "; const tag = element?.tagName; const type = "
+            "(element?.getAttribute('type') || 'text').toLowerCase(); "
+            "if (!element || !['INPUT', 'TEXTAREA'].includes(tag) || "
+            "['button', 'checkbox', 'file', 'hidden', 'image', 'radio', 'reset', "
+            "'submit'].includes(type)) throw new Error("
+            "'deterministic_textbox_not_found'); "
             "element.focus(); element.value = "
             + json.dumps(value)
             + "; element.dispatchEvent(new Event('input', {bubbles: true})); "
@@ -1467,6 +1514,46 @@ def _data_attribute_selector(selector: str) -> str:
     if not separator or not attribute.strip() or not value.strip():
         raise ValueError("invalid_data_attribute_selector")
     return f"[{attribute.strip()}={json.dumps(value.strip())}]"
+
+
+def _role_locator_expression(role: str, name: str) -> str:
+    """Resolve exactly one native or explicitly-role-bearing accessible element."""
+
+    return (
+        "(() => { const normalise = (value) => "
+        "String(value || '').replace(/\\s+/g, ' ').trim(); "
+        "const labelText = (label) => { const clone = label.cloneNode(true); "
+        "clone.querySelectorAll('input,textarea,select,button')"
+        ".forEach((control) => control.remove()); "
+        "return normalise(clone.textContent); }; "
+        "const accessibleName = (node) => { const labelledBy = "
+        "(node.getAttribute('aria-labelledby') || '').trim().split(/\\s+/)"
+        ".filter(Boolean).map((id) => "
+        "normalise(document.getElementById(id)?.innerText)).filter(Boolean)"
+        ".join(' '); const labels = Array.from(node.labels || []).map(labelText)"
+        ".filter(Boolean).join(' '); return normalise(node.getAttribute('aria-label') "
+        "|| labelledBy || labels || node.innerText || node.value); }; "
+        "const implicitRole = (node) => { const tag = node.tagName; "
+        "if (tag === 'TEXTAREA') return 'textbox'; "
+        "if (tag === 'SELECT') return node.multiple ? 'listbox' : 'combobox'; "
+        "if (tag === 'BUTTON') return 'button'; "
+        "if (tag === 'A' && node.hasAttribute('href')) return 'link'; "
+        "if (tag !== 'INPUT') return ''; "
+        "const type = (node.getAttribute('type') || 'text').toLowerCase(); "
+        "if (type === 'search') return 'searchbox'; "
+        "if (['button', 'image', 'reset', 'submit'].includes(type)) return 'button'; "
+        "return ['checkbox', 'radio', 'file', 'hidden'].includes(type) ? '' : "
+        "'textbox'; "
+        "}; const matches = Array.from(document.querySelectorAll("
+        "'input,textarea,select,button,a,[role]')).filter((node) => "
+        "(node.getAttribute('role') || implicitRole(node)) === "
+        + json.dumps(role)
+        + " && accessibleName(node) === "
+        + json.dumps(" ".join(name.split()))
+        + "); if (matches.length !== 1) throw new Error(matches.length ? "
+        "'deterministic_role_locator_ambiguous' : 'deterministic_locator_not_found'); "
+        "return matches[0]; })()"
+    )
 
 
 def run_deterministic_browser_route_playbook(

@@ -46,6 +46,22 @@ _EXECUTABLE_PLAYBOOK_ACTIONS = {
     "select",
     "verify",
 }
+_DETERMINISTIC_SELECTOR_TYPES_BY_ACTION = {
+    "open": {"url"},
+    "navigate": {"url"},
+    "click": {"css", "data_attribute", "label", "name", "role", "text"},
+    "click_cta": {"css", "data_attribute", "label", "name", "role", "text"},
+    "submit": {"css", "data_attribute", "label", "name", "role", "text"},
+    "fill": {"css", "data_attribute", "label", "name", "role"},
+    "type": {"css", "data_attribute", "label", "name", "role"},
+    "select": {"css", "data_attribute", "label", "name", "role"},
+    "verify": {"css", "data_attribute", "label", "name", "role", "text", "url"},
+}
+_ROLE_ACTION_ROLES = {
+    "fill": {"textbox", "searchbox"},
+    "type": {"textbox", "searchbox"},
+    "select": {"combobox", "listbox"},
+}
 
 
 def load_browser_route_playbooks(
@@ -597,6 +613,17 @@ def _deterministic_step_admission_reason(
         return f"step_{index}_unsupported_deterministic_action"
     if not step.selector.strip():
         return f"step_{index}_missing_deterministic_selector"
+    selector_type = step.selector_type.strip().lower()
+    if selector_type not in _DETERMINISTIC_SELECTOR_TYPES_BY_ACTION[action]:
+        return f"step_{index}_unsupported_deterministic_selector"
+    if selector_type == "role":
+        try:
+            role, _ = _split_role_locator(step.selector)
+        except ValueError:
+            return f"step_{index}_invalid_deterministic_role_locator"
+        supported_roles = _ROLE_ACTION_ROLES.get(action)
+        if supported_roles is not None and role.casefold() not in supported_roles:
+            return f"step_{index}_unsupported_deterministic_role_action"
     if not (step.expected_url_contains.strip() or step.expected_text.strip()):
         return f"step_{index}_missing_deterministic_postcondition"
     if action in {"fill", "type", "select"} and not (
@@ -778,6 +805,11 @@ async def _dispatch_playbook_action_async(
         return str(await _await_playbook_value(page_driver.click_css(selector)))
     if action in {"fill", "type"}:
         value = _resolve_playbook_step_value(step=step, identity_values=identity_values)
+        if selector_type == "role":
+            role, name = _split_role_locator(selector)
+            return str(
+                await _await_playbook_value(page_driver.fill_role(role, name, value))
+            )
         if selector_type == "label":
             return str(
                 await _await_playbook_value(page_driver.fill_label(selector, value))
@@ -797,6 +829,11 @@ async def _dispatch_playbook_action_async(
         )
     if action == "select":
         value = _resolve_playbook_step_value(step=step, identity_values=identity_values)
+        if selector_type == "role":
+            role, name = _split_role_locator(selector)
+            return str(
+                await _await_playbook_value(page_driver.select_role(role, name, value))
+            )
         if selector_type == "label":
             return str(
                 await _await_playbook_value(page_driver.select_label(selector, value))
@@ -916,6 +953,9 @@ def _dispatch_playbook_action(
         return str(page_driver.click_css(selector))
     if action in {"fill", "type"}:
         value = _resolve_playbook_step_value(step=step, identity_values=identity_values)
+        if selector_type == "role":
+            role, name = _split_role_locator(selector)
+            return str(page_driver.fill_role(role, name, value))
         if selector_type == "label":
             return str(page_driver.fill_label(selector, value))
         if selector_type == "name":
@@ -925,6 +965,9 @@ def _dispatch_playbook_action(
         return str(page_driver.fill_css(selector, value))
     if action == "select":
         value = _resolve_playbook_step_value(step=step, identity_values=identity_values)
+        if selector_type == "role":
+            role, name = _split_role_locator(selector)
+            return str(page_driver.select_role(role, name, value))
         if selector_type == "label":
             return str(page_driver.select_label(selector, value))
         if selector_type == "name":
@@ -1321,6 +1364,13 @@ def _route_not_promotable_reason(result: BrowserReportDownloadResult) -> str:
     for index, step in enumerate(result.execution_route_steps):
         if reason := _route_step_not_promotable_reason(step):
             return f"step_{index}_{reason}"
+        promoted_step = _adapt_route_step_for_playbook(
+            step=step,
+            route_kind=result.route_kind,
+            outcome=result.outcome,
+        )
+        if reason := _deterministic_step_admission_reason(promoted_step, index):
+            return reason
     if result.outcome == "email_requested" and (
         str(result.execution_route_steps[-1].action or "").strip().casefold()
         != "submit"
