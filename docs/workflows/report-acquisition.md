@@ -31,7 +31,13 @@ PDF, email submission, or on-site capture is never accepted on the basis of a
 click alone. On a reused async Browser Use session, the same executor supports
 `open`/`navigate`, `click`/`submit`, `fill`/`type`, `select`, and `verify` with
 CSS, role/name, label, field-name, data-attribute, or visible-text locators as
-applicable. Form values are accepted only from `${identity.<key>}` references.
+applicable. Role/name matching is exact and must resolve exactly one current
+element; it never uses a fuzzy match or the first control. For `fill`/`type`, a
+role locator is limited to a native text input or textarea with the observed
+`textbox` or `searchbox` role. For `select`, it is limited to an observed
+`combobox` or `listbox` that still resolves to a native `<select>`. Unsupported
+or drifted custom controls fall through to Browser Use on the same session.
+Form values are accepted only from `${identity.<key>}` references.
 Every locator/control error and every URL/text postcondition mismatch is route
 drift, so execution falls through to Browser Use without replacing the current
 browser, page, cookies, or storage. A completed, verified playbook accepts the
@@ -120,7 +126,10 @@ postcondition evidence. A later terminal state is associated only with the final
 it cannot validate an earlier selector. The promotion service ranks runtime-observed
 locators by role/name, label, HTML name, data attribute, CSS, then visible text. Form
 values are represented only by an `${identity.<key>}` placeholder in the playbook; no
-email address or other personal identity value is persisted. Failed, multi-action,
+email address or other personal identity value is persisted. Before an active playbook
+is written, promotion checks that its action/locator pair is supported by the
+deterministic executor, including the native role constraints for form controls.
+Failed, multi-action,
 missing, and unverified records (including a final submit) cause a typed
 `not_promotable` result and leave no active playbook write.
 

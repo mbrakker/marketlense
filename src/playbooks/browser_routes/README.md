@@ -43,6 +43,14 @@ falls back to Browser Use; it never produces a terminal acquisition failure by
 itself. A successfully finalized playbook records
 `avoided_browser_use_model_call: true` and makes zero Browser Use model calls.
 
+Role/name locators are exact: they must resolve exactly one current accessible
+element, never a fuzzy or first-control match. `fill` and `type` support only
+the native `textbox`/`searchbox` form controls; `select` supports only native
+`<select>` controls observed as `combobox` or `listbox`. Any custom-control,
+missing, or ambiguous match is drift and resumes Browser Use on the current
+session. Promotion rejects action/locator combinations outside this executor
+capability before writing an active playbook.
+
 Stale behavior is controlled by `browser_download.route_playbook_stale_policy`. `fallback` logs stale matches and continues normal scoped discovery. `fail` raises a typed `browser_route_playbook_stale` error so stale guidance cannot silently influence acquisition.
 
 Validated successful route evidence can be promoted through
