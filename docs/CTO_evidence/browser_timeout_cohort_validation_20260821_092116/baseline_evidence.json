@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0",
+  "baseline_run": "browser_acquisition_final_validation_rerun_20260820_e60b1516/current_replay",
+  "selection": "The 15 records whose acquisition_error.error_code is browser_download_agent_timeout.",
+  "manifest": {
+    "path": "../acquisition_failure_remediation_20260814_5d4c027f/failed_acquisition_manifest.json",
+    "sha256": "13602C0BC0038DB4588193760158288314A4BFA943290A8C7C287CACCC914AE9"
+  },
+  "attempts": {
+    "path": "../browser_acquisition_final_validation_rerun_20260820_e60b1516/current_replay/acquisition_attempts.jsonl",
+    "sha256": "C695010527AA4B67DE69D36632772E3104A67107F5C09EDC302714BCC7EC0D7B"
+  },
+  "baseline_metrics": {
+    "attempted_reports": 15,
+    "verified_acquisitions": 0,
+    "browser_use_agent_reports": 0,
+    "browser_use_agent_calls": 0,
+    "input_tokens": 0,
+    "cached_input_tokens": 0,
+    "output_tokens": 0,
+    "browser_launches": 15,
+    "retries": 0,
+    "total_acquisition_cost_usd": 0.0,
+    "duration_seconds": 5168.898
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "schema_version": "1.0",
+  "verdict": "REGRESSION",
+  "comparability": {
+    "comparable": true,
+    "cohort_count": 15,
+    "cohort_definition": "The exact 15 browser_download_agent_timeout records retained from the 2026-08-20 current replay.",
+    "manifest_sha256": "13602C0BC0038DB4588193760158288314A4BFA943290A8C7C287CACCC914AE9",
+    "model": "gpt-5-mini",
+    "retry_count": 0,
+    "browser_email_form_timeout_seconds": 240,
+    "browser_email_form_max_steps": 24,
+    "generic_context_reduction_experiment": false
+  },
+  "baseline": {
+    "attempted_reports": 15,
+    "verified_acquisitions": 0,
+    "acquisition_success_rate_pct": 0.0,
+    "browser_use_agent_reports": 0,
+    "browser_use_agent_calls": 0,
+    "input_tokens": 0,
+    "cached_input_tokens": 0,
+    "output_tokens": 0,
+    "browser_launches": 15,
+    "retries": 0,
+    "total_acquisition_cost_usd": 0.0,
+    "cost_per_verified_acquisition_usd": null,
+    "duration_seconds": 5168.898
+  },
+  "current": {
+    "producer_git_sha": "5ed5ce2df432503aa8a5a992ee5b0c671e9db2ca",
+    "run_id": "3bba1f75-ae41-471c-ac53-b4e26edb1f69",
+    "configuration_hash": "86c603a6a0241506d7b4b7f5bbc0d554c76d202c825c1ab6c67fa7f292037741",
+    "configuration_path": "src/config/app.browser_acquisition_timeout_validation_20260821_092116.yaml",
+    "configuration_file_sha256": "C1D845C1808BE148801DFA12446D9C6BCCCE1F35A2A599772180C15446E3A33A",
+    "attempts_sha256": "B16694BC2A0C6C31FEB0473D803DA04F35CE52E65679C38AE5A42CC4C7D02C47",
+    "attempted_reports": 15,
+    "verified_acquisitions": 0,
+    "acquisition_success_rate_pct": 0.0,
+    "browser_use_agent_reports": 3,
+    "browser_use_agent_calls": 14,
+    "input_tokens": 320956,
+    "cached_input_tokens": 115840,
+    "output_tokens": 14949,
+    "browser_launches": 15,
+    "retries": 0,
+    "total_acquisition_cost_usd": 0.084074,
+    "cost_per_verified_acquisition_usd": null,
+    "duration_seconds": 5293.932
+  },
+  "delta_current_minus_baseline": {
+    "verified_acquisitions": 0,
+    "acquisition_success_rate_percentage_points": 0.0,
+    "browser_use_agent_reports": 3,
+    "browser_use_agent_calls": 14,
+    "input_tokens": 320956,
+    "cached_input_tokens": 115840,
+    "output_tokens": 14949,
+    "browser_launches": 0,
+    "retries": 0,
+    "total_acquisition_cost_usd": 0.084074,
+    "duration_seconds": 125.034
+  },
+  "verified_route_resolution": {
+    "http_direct": 0,
+    "private_api": 0,
+    "browser_preflight": 0,
+    "deterministic_standard_form": 0,
+    "deterministic_learned_playbook": 0,
+    "remembered_blocker": 0,
+    "browser_use_agent": 0
+  }
+}
