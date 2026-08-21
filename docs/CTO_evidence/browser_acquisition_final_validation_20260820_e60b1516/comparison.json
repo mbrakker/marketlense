@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0",
+  "verdict": "NOT VERIFIED",
+  "baseline": {
+    "source": "baseline/acquisition_attempts.jsonl",
+    "attempted_reports": 30,
+    "verified_acquisitions": 5,
+    "acquisition_success_rate_percent": 16.67,
+    "browser_use_agent_reports": 29,
+    "browser_use_agent_calls": 1239,
+    "input_tokens": 24698470,
+    "cached_input_tokens": 9338240,
+    "output_tokens": 1192806,
+    "browser_launches": 212,
+    "retries": 0,
+    "total_acquisition_cost_usd": 6.45915,
+    "cost_per_verified_acquisition_usd": 1.29183,
+    "duration_seconds": 3081.923
+  },
+  "current": {
+    "commit": "e60b15166f6617f95a4cf61281a92afbaa380e82",
+    "cohort_reports": 30,
+    "reports_started": 2,
+    "terminal_report_records": 1,
+    "verified_acquisitions_in_terminal_records": 0,
+    "complete_cohort_metrics_available": false,
+    "interruption_reason": "Second report remained non-terminal past configured 180-second model timeout without a finalized task-scoped resource row."
+  },
+  "comparison": {
+    "comparable": false,
+    "reason": "The current replay did not complete the immutable cohort; unfinalized resources for the interrupted report make zero values non-credible."
+  }
+}

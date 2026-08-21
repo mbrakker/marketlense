@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0",
+  "verdict": "REGRESSION",
+  "comparability": {
+    "comparable": true,
+    "cohort_count": 30,
+    "cohort_manifest": "../../acquisition_failure_remediation_20260814_5d4c027f/failed_acquisition_manifest.json",
+    "cohort_manifest_content_sha256": "1c41324dbb009a223c8add82b7dc949e7fd59895c0137f72a599794a6882425e",
+    "cohort_manifest_file_sha256": "13602C0BC0038DB4588193760158288314A4BFA943290A8C7C287CACCC914AE9"
+  },
+  "baseline": {
+    "producer_git_sha": "5d4c027fb17f9ec650a0b188df24db63ab077371",
+    "attempts_path": "../../acquisition_failure_remediation_20260814_5d4c027f/diagnostic_after_credential_fix/acquisition_attempts.jsonl",
+    "attempts_sha256": "201B5672B705677CFC15A654B6F4634306C3437C441B4A489F06217A0BED27F4",
+    "attempted_reports": 30,
+    "verified_acquisitions": 5,
+    "acquisition_success_rate_pct": 16.67,
+    "browser_use_agent_reports": 29,
+    "browser_use_agent_calls": 1239,
+    "input_tokens": 24698470,
+    "cached_input_tokens": 9338240,
+    "output_tokens": 1192806,
+    "browser_launches": 212,
+    "retries": 0,
+    "total_acquisition_cost_usd": 6.45915,
+    "cost_per_verified_acquisition_usd": 1.29183,
+    "duration_seconds": 3081.923
+  },
+  "current": {
+    "producer_git_sha": "e60b15166f6617f95a4cf61281a92afbaa380e82",
+    "run_id": "fc4a52e2-1565-488b-9c48-f9e008da97c5",
+    "attempts_path": "current_replay/acquisition_attempts.jsonl",
+    "attempts_sha256": "C695010527AA4B67DE69D36632772E3104A67107F5C09EDC302714BCC7EC0D7B",
+    "configuration_path": "../../../src/config/app.browser_acquisition_final_validation_rerun_20260820_e60b1516.yaml",
+    "configuration_sha256": "73296BD81008C4BAC4CB8A827D84CAC8BC92FCAF547A63DCCDEE61795697D219",
+    "model": "gpt-5-mini",
+    "attempted_reports": 30,
+    "verified_acquisitions": 3,
+    "acquisition_success_rate_pct": 10.0,
+    "browser_use_agent_reports": 5,
+    "browser_use_agent_calls": 23,
+    "input_tokens": 455391,
+    "cached_input_tokens": 173440,
+    "output_tokens": 26039,
+    "browser_launches": 21,
+    "retries": 0,
+    "total_acquisition_cost_usd": 0.126904,
+    "cost_per_verified_acquisition_usd": 0.042301,
+    "duration_seconds": 5970.49
+  },
+  "delta_current_minus_baseline": {
+    "verified_acquisitions": -2,
+    "acquisition_success_rate_percentage_points": -6.67,
+    "browser_use_agent_reports": -24,
+    "browser_use_agent_calls": -1216,
+    "input_tokens": -24243079,
+    "cached_input_tokens": -9164800,
+    "output_tokens": -1166767,
+    "browser_launches": -191,
+    "total_acquisition_cost_usd": -6.332246,
+    "duration_seconds": 2888.567
+  }
+}

@@ -208,7 +208,7 @@ def test_download_report_with_browser_use_auto_captures_onsite_html_when_agent_o
     assert Path(str(response.onsite_capture_path)).exists()
     assert response.onsite_capture_format == "html"
 
-def test_download_report_with_browser_use_prints_printable_onsite_report_to_pdf(
+def test_download_report_with_browser_use_renders_complete_onsite_report_to_pdf_without_print_control(
     tmp_path: Path,
     run_context,
     external_boundary_mocks_only,
@@ -274,9 +274,8 @@ def test_download_report_with_browser_use_prints_printable_onsite_report_to_pdf(
             self.browser.title = "Printable research report 2026"
             self.browser.html = (
                 "<html><head><title>Printable research report 2026</title>"
-                "<style>@media print { article { color: black; } }</style></head>"
+                "</head>"
                 "<body><article><h1>Printable research report 2026</h1>"
-                "<button>Print this report</button>"
                 "<h2>Executive summary</h2><p>"
                 + ("Market analysis report detail. " * 120)
                 + "</p><h2>Methodology</h2><p>"
@@ -695,7 +694,7 @@ __all__ = [
     "test_default_onsite_runtime_has_terminal_quorum_without_polling",
     "test_download_report_with_browser_use_infers_bounded_incomplete_for_weak_onsite_capture",
     "test_download_report_with_browser_use_auto_captures_onsite_html_when_agent_omits_capture_path",
-    "test_download_report_with_browser_use_prints_printable_onsite_report_to_pdf",
+    "test_download_report_with_browser_use_renders_complete_onsite_report_to_pdf_without_print_control",
     "test_download_report_with_browser_use_rejects_print_pdf_for_generic_printable_page",
     "test_download_report_with_browser_use_records_terminal_dialog_evidence",
     "test_download_report_with_browser_use_marks_paginated_onsite_capture_partial_without_full_traversal",

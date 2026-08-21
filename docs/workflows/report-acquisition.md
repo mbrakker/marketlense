@@ -6,6 +6,18 @@
 
 Report acquisition evaluates a source URL and classifies a bounded outcome such as a PDF download, an on-site report capture, or delayed email delivery. It uses persisted route information only as an input to planning; failures and route changes remain observable and retry ownership stays with the orchestrator.
 
+When deterministic completeness checks verify an on-site report, acquisition
+renders its captured HTML to PDF. Direct HTTP captures use the deterministic
+local renderer (`rendered_onsite_pdf`); browser-terminal captures use browser
+print-to-PDF (`browser_rendered_pdf`) and do not depend on the publisher
+exposing a Print control or print stylesheet. The terminal HTML snapshot and
+original on-site URL remain retained provenance. Neither representation is ever
+represented as a publisher-supplied PDF. A rendered artifact is usable for
+PDF-based downstream processing only when its PDF signature, verified on-site
+route status, and Drive retention all pass; an unavailable or invalid render
+leaves the on-site capture as a non-PDF result rather than fabricating a
+download.
+
 For every retained PDF outcome, the canonical acquisition-to-ingest handoff
 rechecks the local file and its MD5, records a bounded source-identity
 observation, and upserts the report record before enqueuing `source_ingest`.
@@ -21,8 +33,11 @@ the report record.
 For an email-gated browser route, terminal stabilization polls only after recorded submission evidence, a transient terminal condition, or an explicit assist trigger. A route with no recorded submission finishes without the email polling schedule, and timeout-recovery attempts are bounded by the request timeout as well as the recovery safety cap. A terminal page with an explicit email-delivery confirmation is accepted as verified evidence even when a timed-out browser response omitted the earlier form-field record.
 
 Eligible browser preflight opens the same managed browser profile used by Browser
-Use. When preflight confirms a direct PDF it closes that browser without
-constructing an agent. After an escalation, acquisition first attempts every
+Use. Its async execution is enclosed by a process-local daemon-thread deadline
+in both synchronous CLI and active-event-loop callers, so a Browser Use websocket
+operation that ignores coroutine cancellation becomes a typed preflight failure
+instead of blocking the acquisition stage. When preflight confirms a direct PDF
+it closes that browser without constructing an agent. After an escalation, acquisition first attempts every
 matching fresh, publisher-specific route playbook that is fully executable:
 each step must have a supported deterministic action and locator plus a
 machine-checkable URL or visible-text postcondition. Its terminal result is

@@ -11,11 +11,27 @@ from src.services._browser_report_download._http.adobe_indesign import (
     try_embedded_adobe_indesign_capture,
 )
 from src.services._browser_report_download._http.onsite_capture import (
+    _html_for_pdf_rendering,
     _should_try_direct_onsite_capture,
     try_direct_onsite_capture,
 )
 
 from ._shared import *  # noqa: F401,F403
+
+
+def test_html_for_pdf_rendering_removes_external_assets_but_keeps_report_text() -> None:
+    rendered = _html_for_pdf_rendering(
+        "<html><head><link rel='stylesheet' href='https://cdn.example/style.css'>"
+        "<style>@media print { body { color: black; } }</style></head>"
+        "<body><article><h1>Report title</h1><p>Report findings.</p>"
+        "<img src='https://cdn.example/chart.png'><iframe src='https://example.com/embed'></iframe>"
+        "</article></body></html>"
+    )
+
+    assert "Report findings." in rendered
+    assert "stylesheet" not in rendered
+    assert "chart.png" not in rendered
+    assert "iframe" not in rendered
 
 
 def test_extract_embedded_adobe_indesign_publication_requires_public_view_url() -> None:
@@ -308,7 +324,12 @@ def test_download_report_with_browser_use_short_circuits_remembered_onsite_extra
     assert response.onsite_capture_path is not None
     capture_path = Path(str(response.onsite_capture_path))
     assert capture_path.exists()
-    assert "Long body text." in capture_path.read_text(encoding="utf-8")
+    assert response.onsite_capture_format == "rendered_onsite_pdf"
+    assert capture_path.read_bytes().startswith(b"%PDF-")
+    assert response.terminal_evidence.html_snapshot_path
+    assert "Long body text." in Path(
+        response.terminal_evidence.html_snapshot_path
+    ).read_text(encoding="utf-8")
     service_events = [
         json.loads(record.message)
         for record in caplog.records
@@ -382,7 +403,11 @@ def test_download_report_with_browser_use_short_circuits_planned_onsite_candidat
     assert response.onsite_capture_path is not None
     capture_path = Path(str(response.onsite_capture_path))
     assert capture_path.exists()
-    assert "Operational insight." in capture_path.read_text(encoding="utf-8")
+    assert response.onsite_capture_format == "rendered_onsite_pdf"
+    assert capture_path.read_bytes().startswith(b"%PDF-")
+    assert "Operational insight." in Path(
+        response.terminal_evidence.html_snapshot_path
+    ).read_text(encoding="utf-8")
     service_events = [
         json.loads(record.message)
         for record in caplog.records
@@ -449,8 +474,10 @@ def test_download_report_with_browser_use_short_circuits_planned_extract_step_wi
     assert response.route_family == "browser_onsite_report"
     assert response.outcome == "captured"
     assert response.onsite_capture_path is not None
+    assert response.onsite_capture_format == "rendered_onsite_pdf"
+    assert Path(response.onsite_capture_path).read_bytes().startswith(b"%PDF-")
     assert "Population and connectivity insight." in Path(
-        response.onsite_capture_path
+        response.terminal_evidence.html_snapshot_path
     ).read_text(encoding="utf-8")
 
 def test_download_report_with_browser_use_directly_captures_route_confirmed_non_article_longread(
@@ -511,8 +538,12 @@ def test_download_report_with_browser_use_directly_captures_route_confirmed_non_
     assert response.outcome == "captured"
     assert response.browser_had_structured_result is False
     assert response.onsite_capture_path is not None
+    assert response.onsite_capture_format == "rendered_onsite_pdf"
     assert (
-        Path(response.onsite_capture_path)
+        Path(response.onsite_capture_path).read_bytes().startswith(b"%PDF-")
+    )
+    assert (
+        Path(response.terminal_evidence.html_snapshot_path)
         .read_text(encoding="utf-8")
         .startswith("<html>")
     )
@@ -578,7 +609,11 @@ def test_download_report_with_browser_use_probes_report_detail_candidate_for_dir
     assert response.onsite_capture_path is not None
     capture_path = Path(str(response.onsite_capture_path))
     assert capture_path.exists()
-    assert "Market adoption insight." in capture_path.read_text(encoding="utf-8")
+    assert response.onsite_capture_format == "rendered_onsite_pdf"
+    assert capture_path.read_bytes().startswith(b"%PDF-")
+    assert "Market adoption insight." in Path(
+        response.terminal_evidence.html_snapshot_path
+    ).read_text(encoding="utf-8")
 
 def test_download_report_with_browser_use_recovers_email_form_report_detail_to_direct_onsite_capture(
     tmp_path: Path,
@@ -631,8 +666,10 @@ def test_download_report_with_browser_use_recovers_email_form_report_detail_to_d
     assert response.outcome == "captured"
     assert response.browser_had_structured_result is False
     assert response.onsite_capture_path is not None
+    assert response.onsite_capture_format == "rendered_onsite_pdf"
+    assert Path(response.onsite_capture_path).read_bytes().startswith(b"%PDF-")
     assert "Market security insight." in Path(
-        response.onsite_capture_path
+        response.terminal_evidence.html_snapshot_path
     ).read_text(encoding="utf-8")
 
 def test_download_report_with_browser_use_keeps_email_form_route_when_static_lead_form_exists(
@@ -1067,6 +1104,7 @@ def test_download_report_with_browser_use_records_terminal_snapshot_and_document
     assert response.terminal_evidence.visited_url_timeline
 
 __all__ = [
+    "test_html_for_pdf_rendering_removes_external_assets_but_keeps_report_text",
     "test_adobe_indesign_capture_counts_distinct_published_pages",
     "test_embedded_adobe_indesign_capture_requires_complete_public_content",
     "test_extract_embedded_adobe_indesign_publication_requires_public_view_url",

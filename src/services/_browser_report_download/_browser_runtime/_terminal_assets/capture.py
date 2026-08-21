@@ -283,14 +283,6 @@ def _should_capture_print_pdf_fallback(
     ).casefold()
     if _browser_text_has_non_report_marker(non_report_context):
         return False
-    has_print_signal = bool(
-        re.search(
-            r"(?is)(window\.print|@media\s+print|media=[\"']print[\"']|>\s*print\s*<|print this|print page|save as pdf)",
-            html,
-        )
-    )
-    if not has_print_signal:
-        return False
     return len(visible_text) >= 500
 
 

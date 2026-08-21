@@ -472,12 +472,34 @@ def _artifact_verification(record: dict[str, Any]) -> dict[str, Any]:
         }
     if outcome == "captured":
         exists = captured.is_file()
+        capture_format = str(result.get("onsite_capture_format") or "html")
+        if capture_format in {"browser_rendered_pdf", "rendered_onsite_pdf"}:
+            prefix = captured.read_bytes()[:5] if exists else b""
+            return {
+                "source_kind": capture_format,
+                "acquisition_method": "browser_capture",
+                "retained_artifact_format": "pdf",
+                "artifact_exists": exists,
+                "size_bytes": captured.stat().st_size if exists else 0,
+                "signature_valid": prefix == b"%PDF-",
+                "route_verified": route_status == "verified",
+                "drive_persisted": bool(result.get("drive_uploads")),
+                "publisher_supplied": False,
+                "verified_usable_artifact": bool(
+                    exists
+                    and prefix == b"%PDF-"
+                    and route_status == "verified"
+                    and result.get("drive_uploads")
+                ),
+                "reason": (
+                    "Verified complete on-site report rendered to PDF; "
+                    "not a publisher-supplied PDF."
+                ),
+            }
         return {
             "source_kind": "onsite_report",
             "acquisition_method": "browser_capture",
-            "retained_artifact_format": str(
-                result.get("onsite_capture_format") or "html"
-            ),
+            "retained_artifact_format": capture_format,
             "artifact_exists": exists,
             "size_bytes": captured.stat().st_size if exists else 0,
             "signature_valid": None,

@@ -1450,6 +1450,74 @@ fields:
   value: null
   aliases: []
   option_aliases: []
+- schema_version: '1.0'
+  key: email_email_address_validation_please_enter_a_valid_email_address
+  label: 'Email (Email Address) - validation: ''Please enter a valid email address'''
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: consent_legal_acknowledgement_texts_required_agreement_language
+  label: Consent / legal acknowledgement texts (required agreement language)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: optional_marketing_consent_i_consent_to_my_email_address_being_used_by_barclays_to_provide_me_with_personalized_advertisements_on_third_party_websites_and_social_media_platforms
+  label: 'Optional marketing consent: ''I consent to my email address being used by
+    Barclays to provide me with personalized advertisements on third-party websites
+    and social media platforms.'''
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: subscribe_button
+  label: Subscribe (button)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: fields_required_indicator
+  label: '* Fields required (indicator)'
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: country_of_residence_visible_select_control
+  label: Country of residence (visible select control)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: fields_required_required_fields_marker
+  label: '* Fields required (required-fields marker)'
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: subscribe_submit_control_shadow_index_222
+  label: Subscribe (submit control shadow index 222)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: email_address_input_placeholder_email_address
+  label: 'Email Address (input / placeholder: Email Address)'
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: country_of_residence_select_combobox
+  label: Country of residence (select / combobox)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: fields_required_label
+  label: '* Fields required (label)'
+  value: null
+  aliases: []
+  option_aliases: []
 delivery_emails:
 - reports@marketbearing.eu
 consent_policy:

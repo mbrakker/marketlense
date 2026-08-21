@@ -470,11 +470,11 @@ def _run_preflight_session(
         ),
         timeout=_PREFLIGHT_SESSION_TIMEOUT_SECONDS,
     )
-    try:
-        asyncio.get_running_loop()
-    except RuntimeError:
-        return asyncio.run(coroutine)
-    return _run_coroutine_in_thread(coroutine)
+    return _run_coroutine_in_thread(
+        coroutine,
+        timeout_seconds=_PREFLIGHT_SESSION_TIMEOUT_SECONDS,
+        grace_seconds=2.0,
+    )
 
 
 async def _run_preflight_session_async(
@@ -849,7 +849,13 @@ def _normalize_labels(raw_labels: list[str]) -> list[str]:
     return normalized
 
 
-def _run_coroutine_in_thread(coroutine: Any) -> Any:
+def _run_coroutine_in_thread(
+    coroutine: Any,
+    *,
+    timeout_seconds: float,
+    grace_seconds: float,
+) -> Any:
+    """Bound preflight execution even if a browser coroutine ignores cancellation."""
     payload: dict[str, Any] = {}
     errors: list[BaseException] = []
 
@@ -861,7 +867,7 @@ def _run_coroutine_in_thread(coroutine: Any) -> Any:
 
     thread = Thread(target=runner, daemon=True)
     thread.start()
-    thread.join(_PREFLIGHT_SESSION_TIMEOUT_SECONDS + 2.0)
+    thread.join(max(0.01, timeout_seconds) + max(0.0, grace_seconds))
     if thread.is_alive():
         raise TimeoutError("browser preflight session timed out")
     if errors:

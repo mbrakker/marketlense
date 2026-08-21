@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import logging
+import multiprocessing
 import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 from urllib.parse import urlsplit
 
+import fitz
 import requests
 
 from src.contracts.browser_download import (
@@ -24,6 +26,9 @@ from src.contracts.http_acquisition import (
     HttpAcquisitionResponsePolicy,
 )
 from src.contracts.run_context import RunContext
+from src.services._browser_report_download._http.adobe_indesign import (
+    try_embedded_adobe_indesign_capture,
+)
 from src.services._browser_report_download._http.config import (
     _HTML_FETCH_HEADERS,
     _HTML_FETCH_MAX_BYTES,
@@ -32,9 +37,6 @@ from src.services._browser_report_download._http.html_evidence import (
     _extract_html_title,
     _extract_text_excerpt,
     _html_to_text,
-)
-from src.services._browser_report_download._http.adobe_indesign import (
-    try_embedded_adobe_indesign_capture,
 )
 from src.services._browser_report_download.logging import (
     browser_download_result_log_fields,
@@ -83,6 +85,8 @@ _ONSITE_CAPTURE_HUMAN_VERIFICATION_MARKERS = (
     "verify you are human",
     "verify that you are human",
 )
+_ONSITE_PDF_RENDER_TIMEOUT_SECONDS = 30.0
+_ONSITE_PDF_RENDER_MAX_PAGES = 500
 
 
 @dataclass(frozen=True)
@@ -267,8 +271,14 @@ def try_direct_onsite_capture(
             )
         )
         return None
-    capture_path = download_dir / "onsite_capture.html"
-    capture_path.write_text(html, encoding="utf-8")
+    html_capture_path = download_dir / "onsite_capture.html"
+    html_capture_path.write_text(html, encoding="utf-8")
+    rendered_pdf_path = _render_onsite_html_to_pdf(
+        html=html,
+        output_path=download_dir / "onsite_capture.rendered.pdf",
+    )
+    capture_path = rendered_pdf_path or html_capture_path
+    capture_format = "rendered_onsite_pdf" if rendered_pdf_path else "html"
     final_url = str(response.final_url or target_url).strip() or target_url
     final_title = _extract_html_title(html)
     terminal_excerpt = _extract_text_excerpt(html)
@@ -298,10 +308,14 @@ def try_direct_onsite_capture(
                 schema_version="1.0",
                 index=1,
                 action="extract",
-                target_text="onsite_capture.html",
+                target_text=capture_path.name,
                 target_role="file",
                 target_url=final_url,
-                result="Saved the on-site report HTML locally",
+                result=(
+                    "Rendered the on-site report HTML to a local PDF"
+                    if rendered_pdf_path
+                    else "Saved the on-site report HTML locally"
+                ),
             ),
         ],
         confirmation_evidence=BrowserDownloadConfirmationEvidence(
@@ -320,10 +334,19 @@ def try_direct_onsite_capture(
             artifact_url=final_url,
             artifact_kind="onsite_report",
             artifact_validation_status="verified",
-            artifact_validation_detail="Captured a remembered on-site report directly from HTML.",
+            artifact_validation_detail=(
+                "Captured on-site report HTML and rendered it to a local PDF."
+                if rendered_pdf_path
+                else "Captured a remembered on-site report directly from HTML."
+            ),
             confirmation_signal_count=0,
             traversed_page_urls=[final_url],
-            evidence_labels=["direct_html_capture", "onsite_report"],
+            html_snapshot_path=str(html_capture_path),
+            evidence_labels=[
+                "direct_html_capture",
+                "onsite_report",
+                *(["rendered_onsite_pdf"] if rendered_pdf_path else []),
+            ],
         ),
         browser_had_structured_result=False,
         used_candidate_pdf_url=False,
@@ -336,7 +359,7 @@ def try_direct_onsite_capture(
         downloaded_mime_type=None,
         downloaded_size_bytes=None,
         onsite_capture_path=str(capture_path),
-        onsite_capture_format="html",
+        onsite_capture_format=capture_format,
         onsite_page_count=1,
         onsite_completeness_status="complete",
     )
@@ -354,6 +377,84 @@ def try_direct_onsite_capture(
         )
     )
     return response_result
+
+
+def _render_onsite_html_to_pdf(*, html: str, output_path: Path) -> Path | None:
+    """Create a bounded local PDF from a verified direct on-site HTML capture."""
+    output_path.unlink(missing_ok=True)
+    process = multiprocessing.get_context("spawn").Process(
+        target=_write_onsite_html_pdf,
+        args=(_html_for_pdf_rendering(html), str(output_path)),
+    )
+    try:
+        process.start()
+        process.join(_ONSITE_PDF_RENDER_TIMEOUT_SECONDS)
+        if process.is_alive():
+            process.terminate()
+            process.join()
+            output_path.unlink(missing_ok=True)
+            return None
+        if process.exitcode != 0:
+            output_path.unlink(missing_ok=True)
+            return None
+    except (OSError, RuntimeError, ValueError):
+        if process.is_alive():
+            process.terminate()
+            process.join()
+        output_path.unlink(missing_ok=True)
+        return None
+    if not output_path.is_file() or not output_path.read_bytes().startswith(b"%PDF-"):
+        output_path.unlink(missing_ok=True)
+        return None
+    try:
+        with fitz.open(output_path) as document:
+            if document.page_count < 1:
+                output_path.unlink(missing_ok=True)
+                return None
+    except (fitz.FileDataError, RuntimeError, ValueError):
+        output_path.unlink(missing_ok=True)
+        return None
+    return output_path
+
+
+def _write_onsite_html_pdf(html: str, output_path: str) -> None:
+    path = Path(output_path)
+    try:
+        story = fitz.Story(html=html)
+        writer = fitz.DocumentWriter(str(path))
+        page_rect = fitz.paper_rect("a4")
+        content_rect = page_rect + (36, 36, -36, -36)
+        more = True
+        page_count = 0
+        while more and page_count < _ONSITE_PDF_RENDER_MAX_PAGES:
+            device = writer.begin_page(page_rect)
+            more, _ = story.place(content_rect)
+            story.draw(device)
+            writer.end_page()
+            page_count += 1
+        writer.close()
+        if more:
+            path.unlink(missing_ok=True)
+    except (RuntimeError, ValueError, OSError):
+        path.unlink(missing_ok=True)
+        raise
+
+
+def _html_for_pdf_rendering(html: str) -> str:
+    """Keep report content while excluding unsupported publisher CSS."""
+    without_styles = re.sub(
+        r"(?is)<style\b[^>]*>.*?</style\s*>", "", html
+    )
+    without_stylesheets = re.sub(
+        r"(?is)<link\b[^>]*\brel=[\"']?stylesheet[\"']?[^>]*>",
+        "",
+        without_styles,
+    )
+    return re.sub(
+        r"(?is)<(?:audio|canvas|embed|iframe|img|object|picture|source|svg|video)\b[^>]*>(?:.*?</(?:audio|canvas|embed|iframe|object|picture|svg|video)\s*>)?",
+        "",
+        without_stylesheets,
+    )
 
 
 def _should_try_direct_onsite_capture(

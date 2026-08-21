@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "baseline_directory": "../../acquisition_failure_remediation_20260814_5d4c027f",
+  "manifest": {
+    "path": "../../acquisition_failure_remediation_20260814_5d4c027f/failed_acquisition_manifest.json",
+    "content_sha256": "1c41324dbb009a223c8add82b7dc949e7fd59895c0137f72a599794a6882425e",
+    "file_sha256": "13602C0BC0038DB4588193760158288314A4BFA943290A8C7C287CACCC914AE9"
+  },
+  "attempts": {
+    "path": "../../acquisition_failure_remediation_20260814_5d4c027f/diagnostic_after_credential_fix/acquisition_attempts.jsonl",
+    "file_sha256": "201B5672B705677CFC15A654B6F4634306C3437C441B4A489F06217A0BED27F4"
+  },
+  "diagnostic_replay": {
+    "path": "../../acquisition_failure_remediation_20260814_5d4c027f/diagnostic_after_credential_fix/diagnostic_replay.json"
+  },
+  "retention_note": "These immutable retained documents are the exact baseline inputs used for this comparison; their source paths and checksums are recorded here rather than regenerated."
+}

@@ -98,3 +98,26 @@ def test_relative_credential_path_is_owned_by_supplied_dotenv_directory(tmp_path
         {"GOOGLE_OAUTH_TOKEN_JSON": "credentials/token.json"},
     )
     assert resolved == {"GOOGLE_OAUTH_TOKEN_JSON": str(credential_path)}
+
+
+def test_artifact_verification_accepts_verified_browser_rendered_pdf(tmp_path):
+    module = _load_module()
+    rendered_pdf = tmp_path / "report-browser-rendered.pdf"
+    rendered_pdf.write_bytes(b"%PDF-1.7 browser-rendered report")
+
+    verification = module._artifact_verification(
+        {
+            "acquisition_result": {
+                "outcome": "captured",
+                "route_status": "verified",
+                "route_family": "browser_onsite_report",
+                "onsite_capture_path": str(rendered_pdf),
+                "onsite_capture_format": "rendered_onsite_pdf",
+                "drive_uploads": [{"status": "uploaded"}],
+            }
+        }
+    )
+
+    assert verification["source_kind"] == "rendered_onsite_pdf"
+    assert verification["verified_usable_artifact"] is True
+    assert verification["publisher_supplied"] is False

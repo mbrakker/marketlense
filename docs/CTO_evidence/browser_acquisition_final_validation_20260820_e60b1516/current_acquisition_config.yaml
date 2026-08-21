@@ -1,0 +1,50 @@
+schema_version: "1.0"
+# Fresh, isolated acquisition-only replay of the immutable 30-report failed
+# acquisition cohort retained in docs/CTO_evidence. It deliberately keeps the
+# established identity, model, timeouts, and zero-retry budget while enabling
+# current deterministic route promotion/execution on main.
+paths:
+  output_dir: "./out/browser_acquisition_final_validation_20260820_e60b1516"
+  cache_dir: "./cache/browser_acquisition_final_validation_20260820_e60b1516"
+  state_db: "./state/browser_acquisition_final_validation_20260820_e60b1516/index.sqlite"
+  reports_db: "./state/browser_acquisition_final_validation_20260820_e60b1516/reports.sqlite"
+  signal_store_db: "./state/browser_acquisition_final_validation_20260820_e60b1516/signals.sqlite"
+  ingest_lock: "./state/browser_acquisition_final_validation_20260820_e60b1516/ingest.lock"
+
+browser_download:
+  output_dir: "./out/browser_acquisition_final_validation_20260820_e60b1516/browser_downloads"
+  identity_config_path: "./browser_download_identity.yaml"
+  route_playbook_promotion_mode: "write"
+  private_api_playbook_promotion_mode: "write"
+  retry:
+    retries: 0
+    base_delay_seconds: 0.0
+    backoff_step_seconds: 0.0
+    jitter_seconds: 0.0
+  route_budgets:
+    browser_email_form:
+      timeout_seconds: 240
+      max_steps: 24
+  run_budget:
+    enabled: true
+    max_browser_launches: 90
+    max_pdfs: 40
+    max_drive_writes: 40
+    max_drive_reads: 120
+    max_mailbox_reads: 80
+    max_retries: 0
+    max_runtime_seconds: 43200
+    limit_decision: "stop"
+
+mailbox_acquisition:
+  output_dir: "./out/browser_acquisition_final_validation_20260820_e60b1516/mailbox_acquisition"
+  poll_timeout_seconds: 600
+  poll_interval_seconds: 30
+
+analysis:
+  cost_ledger_path: "./state/browser_acquisition_final_validation_20260820_e60b1516/llm_cost_ledger.jsonl"
+
+cost:
+  usage_db_path: "./state/browser_acquisition_final_validation_20260820_e60b1516/llm_usage.sqlite"
+  daily_path: "./state/browser_acquisition_final_validation_20260820_e60b1516/llm_cost_daily.json"
+  ledger_path: "./state/browser_acquisition_final_validation_20260820_e60b1516/llm_cost_ledger.jsonl"

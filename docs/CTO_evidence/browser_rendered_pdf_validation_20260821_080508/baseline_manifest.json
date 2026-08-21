@@ -1,0 +1,2064 @@
+{
+  "candidate_count": 30,
+  "candidates": [
+    {
+      "candidate_title": "",
+      "canonical_candidate_url": "http://bluecore.com/lp/consumer-electronics-retailers-guide",
+      "discovery_provenance": [],
+      "failure_candidate_id": "fac_eda48226bd40dd9fece75890",
+      "original_acquisition_timestamp": "2026-08-13T10:06:45Z",
+      "original_artifact_status": "unverified",
+      "original_attempt_count": 1,
+      "original_configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+      "original_policy_hash": "1.0",
+      "original_resource_attempts": [
+        {
+          "attempt_id": "f41a8cc830a2ef324ff9a0a4005f4138fe3468a47a602bfd378128dd7eb1f9fe",
+          "browser_launches": 3,
+          "browser_steps": 0,
+          "completed_at": "2026-08-13T10:06:45Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 2,
+          "duration_seconds": 142.064,
+          "estimated_cost_usd": 0.074868,
+          "input_tokens": 278878,
+          "llm_calls": 16,
+          "mailbox_reads": 0,
+          "output_tokens": 15837,
+          "page_navigations": 0,
+          "policy_hash": "1.0",
+          "route_family": "browser_pdf_click",
+          "screenshots": 0,
+          "started_at": "2026-08-13T10:04:23Z",
+          "terminal_outcome": "failed",
+          "terminal_reason": "browser_download_agent_timeout"
+        }
+      ],
+      "original_route_attempts": [],
+      "original_terminal_outcome": "failed",
+      "original_terminal_url": "",
+      "original_typed_error_code": "browser_download_agent_timeout",
+      "publisher_id": "publisher:bluecore",
+      "publisher_name": "BlueCore",
+      "source_identity_id": "",
+      "source_page_urls": [],
+      "source_record_id": ""
+    },
+    {
+      "candidate_title": "",
+      "canonical_candidate_url": "https://brandfinance.com/consulting/brand-research",
+      "discovery_provenance": [
+        "http_parse"
+      ],
+      "failure_candidate_id": "fac_0294383b7bf86f9bcc6fbf06",
+      "original_acquisition_timestamp": "2026-08-13T10:43:40Z",
+      "original_artifact_status": "unverified",
+      "original_attempt_count": 2,
+      "original_configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+      "original_policy_hash": "1.0",
+      "original_resource_attempts": [
+        {
+          "attempt_id": "b0848e71c63c626e92b7f299684aa57c448f543f326aeebc3ba01aab43ab9990",
+          "browser_launches": 1,
+          "browser_steps": 4,
+          "completed_at": "2026-08-12T00:07:15Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 141.9,
+          "estimated_cost_usd": 0.03984,
+          "input_tokens": 173495,
+          "llm_calls": 10,
+          "mailbox_reads": 0,
+          "output_tokens": 7838,
+          "page_navigations": 1,
+          "policy_hash": "1.0",
+          "route_family": "browser_listing_hub",
+          "screenshots": 3,
+          "started_at": "2026-08-12T00:04:53Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred"
+        },
+        {
+          "attempt_id": "e9b3bc98af26a301ea289cc93c7f2448994bb3d797eda222901aa6c5bf02c00a",
+          "browser_launches": 2,
+          "browser_steps": 0,
+          "completed_at": "2026-08-13T10:43:40Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 1,
+          "duration_seconds": 213.2,
+          "estimated_cost_usd": 0.058936,
+          "input_tokens": 277644,
+          "llm_calls": 16,
+          "mailbox_reads": 0,
+          "output_tokens": 9998,
+          "page_navigations": 0,
+          "policy_hash": "1.0",
+          "route_family": "browser_listing_hub",
+          "screenshots": 0,
+          "started_at": "2026-08-13T10:40:06Z",
+          "terminal_outcome": "failed",
+          "terminal_reason": "browser_download_agent_timeout"
+        }
+      ],
+      "original_route_attempts": [
+        {
+          "artifact_status": {
+            "last_downloaded_file_path": "",
+            "onsite_capture_format": "",
+            "onsite_completeness_status": ""
+          },
+          "attempts": 1,
+          "blocked_reason": "blocked_missing_identity_field",
+          "blocked_reason_detail": "Get in Touch",
+          "candidate_pdf_url": "",
+          "discovery_provenances": [
+            "http_parse"
+          ],
+          "outcome": "email_required",
+          "route_family": "browser_listing_hub",
+          "route_history_id": "13",
+          "route_kind": "email_delivery",
+          "route_status": "inferred",
+          "source_page_urls": [
+            "https://brandfinance.com/insights"
+          ],
+          "terminal_url": "https://brandfinance.com/consulting/brand-research",
+          "updated_at": "1786493235"
+        }
+      ],
+      "original_terminal_outcome": "email_required",
+      "original_terminal_url": "https://brandfinance.com/consulting/brand-research",
+      "original_typed_error_code": "blocked_missing_identity_field",
+      "publisher_id": "publisher:brand-finance",
+      "publisher_name": "Brand Finance",
+      "source_identity_id": "",
+      "source_page_urls": [
+        "https://brandfinance.com/insights"
+      ],
+      "source_record_id": ""
+    },
+    {
+      "candidate_title": "",
+      "canonical_candidate_url": "https://brandfinance.com/insights/insurance-2026-ai-risk-and-reporting-redefining-brand-value",
+      "discovery_provenance": [],
+      "failure_candidate_id": "fac_10a7fd2d5e39d5c484777954",
+      "original_acquisition_timestamp": "2026-08-13T10:46:49Z",
+      "original_artifact_status": "unverified",
+      "original_attempt_count": 2,
+      "original_configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+      "original_policy_hash": "1.0",
+      "original_resource_attempts": [
+        {
+          "attempt_id": "d6ba60154d7453a9183b95b064501ef63780d59cf2891645a3ad0efae56dfc83",
+          "browser_launches": 3,
+          "browser_steps": 0,
+          "completed_at": "2026-08-12T00:12:35Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 1,
+          "duration_seconds": 233.247,
+          "estimated_cost_usd": 0.087053,
+          "input_tokens": 381237,
+          "llm_calls": 22,
+          "mailbox_reads": 0,
+          "output_tokens": 16738,
+          "page_navigations": 0,
+          "policy_hash": "1.0",
+          "route_family": "browser_pdf_click",
+          "screenshots": 0,
+          "started_at": "2026-08-12T00:08:41Z",
+          "terminal_outcome": "failed",
+          "terminal_reason": "browser_download_agent_timeout"
+        },
+        {
+          "attempt_id": "882550b7412dedbe51725a149fec27e8a8cb787dd6f212e70a76d9abdf761633",
+          "browser_launches": 4,
+          "browser_steps": 0,
+          "completed_at": "2026-08-13T10:46:49Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 2,
+          "duration_seconds": 113.628,
+          "estimated_cost_usd": 0.077863,
+          "input_tokens": 359276,
+          "llm_calls": 21,
+          "mailbox_reads": 0,
+          "output_tokens": 13909,
+          "page_navigations": 0,
+          "policy_hash": "1.0",
+          "route_family": "browser_pdf_click",
+          "screenshots": 0,
+          "started_at": "2026-08-13T10:44:56Z",
+          "terminal_outcome": "failed",
+          "terminal_reason": "browser_download_agent_timeout"
+        }
+      ],
+      "original_route_attempts": [],
+      "original_terminal_outcome": "failed",
+      "original_terminal_url": "",
+      "original_typed_error_code": "browser_download_agent_timeout",
+      "publisher_id": "publisher:brand-finance",
+      "publisher_name": "Brand Finance",
+      "source_identity_id": "",
+      "source_page_urls": [],
+      "source_record_id": ""
+    },
+    {
+      "candidate_title": "",
+      "canonical_candidate_url": "https://go.criteo.com/commerce-media-trends-report",
+      "discovery_provenance": [],
+      "failure_candidate_id": "fac_fa1889b4c19f0f238659145e",
+      "original_acquisition_timestamp": "2026-08-13T10:58:14Z",
+      "original_artifact_status": "unverified",
+      "original_attempt_count": 1,
+      "original_configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+      "original_policy_hash": "1.0",
+      "original_resource_attempts": [
+        {
+          "attempt_id": "06355a40b27471f47dc9729d7f38a0147380f7d125bd56f2f97e867b40b7430a",
+          "browser_launches": 6,
+          "browser_steps": 0,
+          "completed_at": "2026-08-13T10:58:14Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 4,
+          "duration_seconds": 152.772,
+          "estimated_cost_usd": 0.183565,
+          "input_tokens": 839825,
+          "llm_calls": 47,
+          "mailbox_reads": 0,
+          "output_tokens": 32209,
+          "page_navigations": 0,
+          "policy_hash": "1.0",
+          "route_family": "browser_email_form",
+          "screenshots": 0,
+          "started_at": "2026-08-13T10:55:42Z",
+          "terminal_outcome": "failed",
+          "terminal_reason": "browser_download_agent_timeout"
+        }
+      ],
+      "original_route_attempts": [],
+      "original_terminal_outcome": "failed",
+      "original_terminal_url": "",
+      "original_typed_error_code": "browser_download_agent_timeout",
+      "publisher_id": "publisher:criteo",
+      "publisher_name": "Criteo",
+      "source_identity_id": "",
+      "source_page_urls": [],
+      "source_record_id": ""
+    },
+    {
+      "candidate_title": "",
+      "canonical_candidate_url": "https://go.criteo.com/en/cpg-consumer-insights",
+      "discovery_provenance": [],
+      "failure_candidate_id": "fac_26fd23fd3cf0198081e38c28",
+      "original_acquisition_timestamp": "2026-08-13T11:02:13Z",
+      "original_artifact_status": "unverified",
+      "original_attempt_count": 1,
+      "original_configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+      "original_policy_hash": "1.0",
+      "original_resource_attempts": [
+        {
+          "attempt_id": "710d19c93ad9c059ce662cf93011a0bcd2d3aa8a31a15bbdf353a15206a40965",
+          "browser_launches": 8,
+          "browser_steps": 0,
+          "completed_at": "2026-08-13T11:02:13Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 5,
+          "duration_seconds": 120.944,
+          "estimated_cost_usd": 0.239464,
+          "input_tokens": 1087003,
+          "llm_calls": 61,
+          "mailbox_reads": 0,
+          "output_tokens": 42508,
+          "page_navigations": 0,
+          "policy_hash": "1.0",
+          "route_family": "browser_tracker_redirect",
+          "screenshots": 0,
+          "started_at": "2026-08-13T11:00:12Z",
+          "terminal_outcome": "failed",
+          "terminal_reason": "browser_download_agent_timeout"
+        }
+      ],
+      "original_route_attempts": [],
+      "original_terminal_outcome": "failed",
+      "original_terminal_url": "",
+      "original_typed_error_code": "browser_download_agent_timeout",
+      "publisher_id": "publisher:criteo",
+      "publisher_name": "Criteo",
+      "source_identity_id": "",
+      "source_page_urls": [],
+      "source_record_id": ""
+    },
+    {
+      "candidate_title": "",
+      "canonical_candidate_url": "https://skai.io/de/skai-research-center?wg-choose-original=false",
+      "discovery_provenance": [],
+      "failure_candidate_id": "fac_b4408981245f7cedaad405c2",
+      "original_acquisition_timestamp": "2026-08-13T11:14:05Z",
+      "original_artifact_status": "unverified",
+      "original_attempt_count": 1,
+      "original_configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+      "original_policy_hash": "1.0",
+      "original_resource_attempts": [
+        {
+          "attempt_id": "8ccf43ec5f709f622a10ecd1762981c046b7e9293f336c2f04b8f00fe51ed106",
+          "browser_launches": 2,
+          "browser_steps": 0,
+          "completed_at": "2026-08-13T11:14:05Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 156.046,
+          "estimated_cost_usd": 0.051246,
+          "input_tokens": 208551,
+          "llm_calls": 12,
+          "mailbox_reads": 0,
+          "output_tokens": 10815,
+          "page_navigations": 0,
+          "policy_hash": "1.0",
+          "route_family": "browser_listing_hub",
+          "screenshots": 0,
+          "started_at": "2026-08-13T11:11:28Z",
+          "terminal_outcome": "failed",
+          "terminal_reason": "browser_download_missing_file"
+        }
+      ],
+      "original_route_attempts": [],
+      "original_terminal_outcome": "failed",
+      "original_terminal_url": "",
+      "original_typed_error_code": "browser_download_missing_file",
+      "publisher_id": "publisher:kenshoo-skai",
+      "publisher_name": "Kenshoo Skai",
+      "source_identity_id": "",
+      "source_page_urls": [],
+      "source_record_id": ""
+    },
+    {
+      "candidate_title": "",
+      "canonical_candidate_url": "https://www.adjust.com/resources/ebooks/all",
+      "discovery_provenance": [
+        "http_parse"
+      ],
+      "failure_candidate_id": "fac_0ef70242a602b9ed7641c056",
+      "original_acquisition_timestamp": "1786493291",
+      "original_artifact_status": "unverified",
+      "original_attempt_count": 1,
+      "original_configuration_hash": "",
+      "original_policy_hash": "",
+      "original_resource_attempts": [
+        {
+          "attempt_id": "87dd7ed1a4af0104bbdacc88ce884ebba296058a8ee3b4e7007b316cea541d24",
+          "browser_launches": 1,
+          "browser_steps": 2,
+          "completed_at": "2026-08-12T00:08:11Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 4.006,
+          "estimated_cost_usd": 0.0,
+          "input_tokens": 0,
+          "llm_calls": 0,
+          "mailbox_reads": 0,
+          "output_tokens": 0,
+          "page_navigations": 1,
+          "policy_hash": "1.0",
+          "route_family": "browser_email_form",
+          "screenshots": 0,
+          "started_at": "2026-08-12T00:08:07Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred"
+        },
+        {
+          "attempt_id": "6ab71ed1d1d65d39b706e24203188aa47cacff8db480e3050c6cd23e2c5fa60f",
+          "browser_launches": 1,
+          "browser_steps": 2,
+          "completed_at": "2026-08-13T09:58:44Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 3.303,
+          "estimated_cost_usd": 0.0,
+          "input_tokens": 0,
+          "llm_calls": 0,
+          "mailbox_reads": 0,
+          "output_tokens": 0,
+          "page_navigations": 1,
+          "policy_hash": "1.0",
+          "route_family": "browser_email_form",
+          "screenshots": 0,
+          "started_at": "2026-08-13T09:58:41Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred"
+        }
+      ],
+      "original_route_attempts": [
+        {
+          "artifact_status": {
+            "last_downloaded_file_path": "",
+            "onsite_capture_format": "",
+            "onsite_completeness_status": ""
+          },
+          "attempts": 1,
+          "blocked_reason": "",
+          "blocked_reason_detail": "",
+          "candidate_pdf_url": "",
+          "discovery_provenances": [
+            "http_parse"
+          ],
+          "outcome": "email_required",
+          "route_family": "browser_email_form",
+          "route_history_id": "14",
+          "route_kind": "email_delivery",
+          "route_status": "inferred",
+          "source_page_urls": [
+            "https://www.adjust.com/resources/ebooks"
+          ],
+          "terminal_url": "https://www.adjust.com/resources/ebooks/all",
+          "updated_at": "1786493291"
+        }
+      ],
+      "original_terminal_outcome": "email_required",
+      "original_terminal_url": "https://www.adjust.com/resources/ebooks/all",
+      "original_typed_error_code": "",
+      "publisher_id": "publisher:adjust",
+      "publisher_name": "Adjust",
+      "source_identity_id": "",
+      "source_page_urls": [
+        "https://www.adjust.com/resources/ebooks"
+      ],
+      "source_record_id": ""
+    },
+    {
+      "candidate_title": "Gaming app insights report: 2026 edition",
+      "canonical_candidate_url": "https://www.adjust.com/resources/ebooks/gaming-app-insights",
+      "discovery_provenance": [
+        "http_parse",
+        "retained_source_record"
+      ],
+      "failure_candidate_id": "fac_8dfcbf4e6cab96beeec896dc",
+      "original_acquisition_timestamp": "1786615443",
+      "original_artifact_status": "unverified",
+      "original_attempt_count": 1,
+      "original_configuration_hash": "",
+      "original_policy_hash": "",
+      "original_resource_attempts": [
+        {
+          "attempt_id": "e773afe585933dce1b9957f6727bf38d337d72f0e06464e2dea34fdfd98ba24e",
+          "browser_launches": 2,
+          "browser_steps": 8,
+          "completed_at": "2026-08-13T10:04:05Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 2,
+          "duration_seconds": 171.165,
+          "estimated_cost_usd": 0.06948,
+          "input_tokens": 250630,
+          "llm_calls": 14,
+          "mailbox_reads": 0,
+          "output_tokens": 14773,
+          "page_navigations": 1,
+          "policy_hash": "1.0",
+          "route_family": "browser_listing_hub",
+          "screenshots": 7,
+          "started_at": "2026-08-13T10:01:14Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred"
+        }
+      ],
+      "original_route_attempts": [
+        {
+          "artifact_status": {
+            "last_downloaded_file_path": "",
+            "onsite_capture_format": "html",
+            "onsite_completeness_status": "bounded_incomplete"
+          },
+          "attempts": 1,
+          "blocked_reason": "",
+          "blocked_reason_detail": "",
+          "candidate_pdf_url": "",
+          "discovery_provenances": [
+            "http_parse"
+          ],
+          "outcome": "captured",
+          "route_family": "browser_listing_hub",
+          "route_history_id": "18",
+          "route_kind": "onsite_report",
+          "route_status": "inferred",
+          "source_page_urls": [
+            "https://www.adjust.com/resources/ebooks"
+          ],
+          "terminal_url": "https://www.adjust.com/thank-you/ebooks/?downloadData=resource|https://a.storyblok.com/f/47007/x/20551740ee/gaming-app-insights-report-2026.pdf?downloadData=resource|https://a.storyblok.com/f/47007/x/20551740ee/gaming-app-insights-report-2026.pdf&email=***REDACTED***",
+          "updated_at": "1786615443"
+        }
+      ],
+      "original_terminal_outcome": "captured",
+      "original_terminal_url": "https://www.adjust.com/thank-you/ebooks/?downloadData=resource|https://a.storyblok.com/f/47007/x/20551740ee/gaming-app-insights-report-2026.pdf?downloadData=resource|https://a.storyblok.com/f/47007/x/20551740ee/gaming-app-insights-report-2026.pdf&email=***REDACTED***",
+      "original_typed_error_code": "",
+      "publisher_id": "publisher:adjust",
+      "publisher_name": "Adjust",
+      "source_identity_id": "source:813766c16421b1f979c8826a3c40e4ce",
+      "source_page_urls": [
+        "https://www.adjust.com/resources/ebooks",
+        "https://www.adjust.com/thank-you/ebooks/?downloadData=resource|https://a.storyblok.com/f/47007/x/20551740ee/gaming-app-insights-report-2026.pdf?downloadData=resource|https://a.storyblok.com/f/47007/x/20551740ee/gaming-app-insights-report-2026.pdf&email=***REDACTED***"
+      ],
+      "source_record_id": "14"
+    },
+    {
+      "candidate_title": "",
+      "canonical_candidate_url": "https://www.algolia.com/lp/algolia-forrester-tei-report-2026",
+      "discovery_provenance": [],
+      "failure_candidate_id": "fac_b42ceee7557c1317ef2c2ad6",
+      "original_acquisition_timestamp": "2026-08-11T23:57:07Z",
+      "original_artifact_status": "unverified",
+      "original_attempt_count": 1,
+      "original_configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+      "original_policy_hash": "1.0",
+      "original_resource_attempts": [
+        {
+          "attempt_id": "12dc7a35751f93846110537a2d8310a52841ee7ef0485313ee208d6f32716e87",
+          "browser_launches": 1,
+          "browser_steps": 0,
+          "completed_at": "2026-08-11T23:57:07Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 3.406,
+          "estimated_cost_usd": 0.0,
+          "input_tokens": 0,
+          "llm_calls": 0,
+          "mailbox_reads": 0,
+          "output_tokens": 0,
+          "page_navigations": 0,
+          "policy_hash": "1.0",
+          "route_family": "browser_pdf_click",
+          "screenshots": 0,
+          "started_at": "2026-08-11T23:57:04Z",
+          "terminal_outcome": "failed",
+          "terminal_reason": "budget_request_publisher_mismatch"
+        }
+      ],
+      "original_route_attempts": [],
+      "original_terminal_outcome": "failed",
+      "original_terminal_url": "",
+      "original_typed_error_code": "budget_request_publisher_mismatch",
+      "publisher_id": "publisher:algolia",
+      "publisher_name": "Algolia",
+      "source_identity_id": "",
+      "source_page_urls": [],
+      "source_record_id": ""
+    },
+    {
+      "candidate_title": "",
+      "canonical_candidate_url": "https://www.algolia.com/resources/asset/report-paradigm-b2b-enterprise",
+      "discovery_provenance": [],
+      "failure_candidate_id": "fac_8e7eb10d2c9e0bfa0ab228ff",
+      "original_acquisition_timestamp": "2026-08-11T23:57:11Z",
+      "original_artifact_status": "unverified",
+      "original_attempt_count": 1,
+      "original_configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+      "original_policy_hash": "1.0",
+      "original_resource_attempts": [
+        {
+          "attempt_id": "f7e0dae8b44028ef1d46418b8b6a73b739e1f4e36f4926176528204050c5af71",
+          "browser_launches": 1,
+          "browser_steps": 0,
+          "completed_at": "2026-08-11T23:57:11Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 3.239,
+          "estimated_cost_usd": 0.0,
+          "input_tokens": 0,
+          "llm_calls": 0,
+          "mailbox_reads": 0,
+          "output_tokens": 0,
+          "page_navigations": 0,
+          "policy_hash": "1.0",
+          "route_family": "browser_email_form",
+          "screenshots": 0,
+          "started_at": "2026-08-11T23:57:07Z",
+          "terminal_outcome": "failed",
+          "terminal_reason": "budget_request_publisher_mismatch"
+        }
+      ],
+      "original_route_attempts": [],
+      "original_terminal_outcome": "failed",
+      "original_terminal_url": "",
+      "original_typed_error_code": "budget_request_publisher_mismatch",
+      "publisher_id": "publisher:algolia",
+      "publisher_name": "Algolia",
+      "source_identity_id": "",
+      "source_page_urls": [],
+      "source_record_id": ""
+    },
+    {
+      "candidate_title": "",
+      "canonical_candidate_url": "https://www.bain.com/insights/topics/technology-report",
+      "discovery_provenance": [],
+      "failure_candidate_id": "fac_f2a23a6db782909156ca996f",
+      "original_acquisition_timestamp": "2026-08-11T23:57:26Z",
+      "original_artifact_status": "unverified",
+      "original_attempt_count": 1,
+      "original_configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+      "original_policy_hash": "1.0",
+      "original_resource_attempts": [
+        {
+          "attempt_id": "5a0561b3bed5e1b05e9beb557e5824da731f3eaeb0d3354c2db6f250c5886b54",
+          "browser_launches": 1,
+          "browser_steps": 0,
+          "completed_at": "2026-08-11T23:57:26Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 3.809,
+          "estimated_cost_usd": 0.0,
+          "input_tokens": 0,
+          "llm_calls": 0,
+          "mailbox_reads": 0,
+          "output_tokens": 0,
+          "page_navigations": 0,
+          "policy_hash": "1.0",
+          "route_family": "browser_pdf_click",
+          "screenshots": 0,
+          "started_at": "2026-08-11T23:57:22Z",
+          "terminal_outcome": "failed",
+          "terminal_reason": "budget_request_publisher_mismatch"
+        }
+      ],
+      "original_route_attempts": [],
+      "original_terminal_outcome": "failed",
+      "original_terminal_url": "",
+      "original_typed_error_code": "budget_request_publisher_mismatch",
+      "publisher_id": "publisher:bain-company",
+      "publisher_name": "Bain & Company",
+      "source_identity_id": "",
+      "source_page_urls": [],
+      "source_record_id": ""
+    },
+    {
+      "candidate_title": "",
+      "canonical_candidate_url": "https://www.bcg.com/publications/2026/digital-infrastructure-playbook",
+      "discovery_provenance": [],
+      "failure_candidate_id": "fac_266ccff285b4aadcfd6b5151",
+      "original_acquisition_timestamp": "2026-08-13T10:39:39Z",
+      "original_artifact_status": "unverified",
+      "original_attempt_count": 1,
+      "original_configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+      "original_policy_hash": "1.0",
+      "original_resource_attempts": [
+        {
+          "attempt_id": "fc30afe94e7238b1aeb4fcb31febe78ce73b33ccb03a57d2a08db320226af168",
+          "browser_launches": 1,
+          "browser_steps": 0,
+          "completed_at": "2026-08-13T10:39:39Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 117.692,
+          "estimated_cost_usd": 0.022739,
+          "input_tokens": 103385,
+          "llm_calls": 6,
+          "mailbox_reads": 0,
+          "output_tokens": 4077,
+          "page_navigations": 0,
+          "policy_hash": "1.0",
+          "route_family": "browser_pdf_click",
+          "screenshots": 0,
+          "started_at": "2026-08-13T10:37:41Z",
+          "terminal_outcome": "failed",
+          "terminal_reason": "browser_download_agent_timeout"
+        }
+      ],
+      "original_route_attempts": [],
+      "original_terminal_outcome": "failed",
+      "original_terminal_url": "",
+      "original_typed_error_code": "browser_download_agent_timeout",
+      "publisher_id": "publisher:bcg",
+      "publisher_name": "BCG",
+      "source_identity_id": "",
+      "source_page_urls": [],
+      "source_record_id": ""
+    },
+    {
+      "candidate_title": "",
+      "canonical_candidate_url": "https://www.bluecore.com/bfcm-resources/black-friday-trends-and-benchmarks",
+      "discovery_provenance": [],
+      "failure_candidate_id": "fac_8dc34ec7ffcca9fc7f349331",
+      "original_acquisition_timestamp": "2026-08-13T10:08:56Z",
+      "original_artifact_status": "unverified",
+      "original_attempt_count": 1,
+      "original_configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+      "original_policy_hash": "1.0",
+      "original_resource_attempts": [
+        {
+          "attempt_id": "97433ceb7e4c04aaad5629786333cf7ae90098225ee2795d2bdb26f864bea99d",
+          "browser_launches": 4,
+          "browser_steps": 0,
+          "completed_at": "2026-08-13T10:08:56Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 3,
+          "duration_seconds": 124.865,
+          "estimated_cost_usd": 0.094545,
+          "input_tokens": 364437,
+          "llm_calls": 21,
+          "mailbox_reads": 0,
+          "output_tokens": 19617,
+          "page_navigations": 0,
+          "policy_hash": "1.0",
+          "route_family": "browser_pdf_click",
+          "screenshots": 0,
+          "started_at": "2026-08-13T10:06:51Z",
+          "terminal_outcome": "failed",
+          "terminal_reason": "browser_download_agent_timeout"
+        }
+      ],
+      "original_route_attempts": [],
+      "original_terminal_outcome": "failed",
+      "original_terminal_url": "",
+      "original_typed_error_code": "browser_download_agent_timeout",
+      "publisher_id": "publisher:bluecore",
+      "publisher_name": "BlueCore",
+      "source_identity_id": "",
+      "source_page_urls": [],
+      "source_record_id": ""
+    },
+    {
+      "candidate_title": "",
+      "canonical_candidate_url": "https://www.brightlocal.com/learn/google-business-profile/reporting",
+      "discovery_provenance": [],
+      "failure_candidate_id": "fac_489b10b8fee8b3591af2ce51",
+      "original_acquisition_timestamp": "2026-08-13T10:20:41Z",
+      "original_artifact_status": "unverified",
+      "original_attempt_count": 1,
+      "original_configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+      "original_policy_hash": "1.0",
+      "original_resource_attempts": [
+        {
+          "attempt_id": "102208d5baaba303c37d60fdeb67b42fe96e92d80ff7c956a9089ba60164f55e",
+          "browser_launches": 1,
+          "browser_steps": 0,
+          "completed_at": "2026-08-13T10:20:41Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 116.289,
+          "estimated_cost_usd": 0.021084,
+          "input_tokens": 104499,
+          "llm_calls": 6,
+          "mailbox_reads": 0,
+          "output_tokens": 3686,
+          "page_navigations": 0,
+          "policy_hash": "1.0",
+          "route_family": "browser_pdf_click",
+          "screenshots": 0,
+          "started_at": "2026-08-13T10:18:45Z",
+          "terminal_outcome": "failed",
+          "terminal_reason": "browser_download_agent_timeout"
+        }
+      ],
+      "original_route_attempts": [],
+      "original_terminal_outcome": "failed",
+      "original_terminal_url": "",
+      "original_typed_error_code": "browser_download_agent_timeout",
+      "publisher_id": "publisher:bright-local",
+      "publisher_name": "Bright Local",
+      "source_identity_id": "",
+      "source_page_urls": [],
+      "source_record_id": ""
+    },
+    {
+      "candidate_title": "",
+      "canonical_candidate_url": "https://www.gwi.com/reports/5-reasons-to-buy",
+      "discovery_provenance": [
+        "http_parse"
+      ],
+      "failure_candidate_id": "fac_3e630244e5c22fe8fa787255",
+      "original_acquisition_timestamp": "1786619050",
+      "original_artifact_status": "unverified",
+      "original_attempt_count": 1,
+      "original_configuration_hash": "",
+      "original_policy_hash": "",
+      "original_resource_attempts": [
+        {
+          "attempt_id": "bbab1f9a8e23ddd8f5b9cd1779c4a7ab86afec5bd857c1d45bc0f5432bbc7c78",
+          "browser_launches": 9,
+          "browser_steps": 3,
+          "completed_at": "2026-08-13T11:04:11Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 5,
+          "duration_seconds": 110.979,
+          "estimated_cost_usd": 0.26193,
+          "input_tokens": 1155849,
+          "llm_calls": 65,
+          "mailbox_reads": 0,
+          "output_tokens": 48779,
+          "page_navigations": 0,
+          "policy_hash": "1.0",
+          "route_family": "browser_email_form",
+          "screenshots": 3,
+          "started_at": "2026-08-13T11:02:20Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred"
+        }
+      ],
+      "original_route_attempts": [
+        {
+          "artifact_status": {
+            "last_downloaded_file_path": "",
+            "onsite_capture_format": "",
+            "onsite_completeness_status": ""
+          },
+          "attempts": 1,
+          "blocked_reason": "blocked_missing_identity_field",
+          "blocked_reason_detail": "Everything you need to know about our consumer research platform",
+          "candidate_pdf_url": "",
+          "discovery_provenances": [
+            "http_parse"
+          ],
+          "outcome": "email_required",
+          "route_family": "browser_email_form",
+          "route_history_id": "32",
+          "route_kind": "email_delivery",
+          "route_status": "inferred",
+          "source_page_urls": [
+            "https://www.gwi.com/reports?page_num=2"
+          ],
+          "terminal_url": "https://www.gwi.com/reports/5-reasons-to-buy",
+          "updated_at": "1786619050"
+        }
+      ],
+      "original_terminal_outcome": "email_required",
+      "original_terminal_url": "https://www.gwi.com/reports/5-reasons-to-buy",
+      "original_typed_error_code": "blocked_missing_identity_field",
+      "publisher_id": "publisher:gwi",
+      "publisher_name": "GWI",
+      "source_identity_id": "",
+      "source_page_urls": [
+        "https://www.gwi.com/reports?page_num=2"
+      ],
+      "source_record_id": ""
+    },
+    {
+      "candidate_title": "",
+      "canonical_candidate_url": "https://www.gwi.com/reports/ad-blocking-trends",
+      "discovery_provenance": [
+        "http_parse"
+      ],
+      "failure_candidate_id": "fac_4da62bac17be2e7185090695",
+      "original_acquisition_timestamp": "1786619055",
+      "original_artifact_status": "unverified",
+      "original_attempt_count": 1,
+      "original_configuration_hash": "",
+      "original_policy_hash": "",
+      "original_resource_attempts": [
+        {
+          "attempt_id": "45bb30dd7a67ec7cb9c4cfd2a3cfe1cf2cf0a370d4dff97892a456c92a5fa2c1",
+          "browser_launches": 9,
+          "browser_steps": 2,
+          "completed_at": "2026-08-13T11:04:15Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 5,
+          "duration_seconds": 3.603,
+          "estimated_cost_usd": 0.26193,
+          "input_tokens": 1155849,
+          "llm_calls": 65,
+          "mailbox_reads": 0,
+          "output_tokens": 48779,
+          "page_navigations": 1,
+          "policy_hash": "1.0",
+          "route_family": "browser_email_form",
+          "screenshots": 0,
+          "started_at": "2026-08-13T11:04:11Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred"
+        }
+      ],
+      "original_route_attempts": [
+        {
+          "artifact_status": {
+            "last_downloaded_file_path": "",
+            "onsite_capture_format": "",
+            "onsite_completeness_status": ""
+          },
+          "attempts": 1,
+          "blocked_reason": "",
+          "blocked_reason_detail": "",
+          "candidate_pdf_url": "",
+          "discovery_provenances": [
+            "http_parse"
+          ],
+          "outcome": "email_required",
+          "route_family": "browser_email_form",
+          "route_history_id": "33",
+          "route_kind": "email_delivery",
+          "route_status": "inferred",
+          "source_page_urls": [
+            "https://www.gwi.com/reports?page_num=10"
+          ],
+          "terminal_url": "https://www.gwi.com/reports/ad-blocking-trends",
+          "updated_at": "1786619055"
+        }
+      ],
+      "original_terminal_outcome": "email_required",
+      "original_terminal_url": "https://www.gwi.com/reports/ad-blocking-trends",
+      "original_typed_error_code": "",
+      "publisher_id": "publisher:gwi",
+      "publisher_name": "GWI",
+      "source_identity_id": "",
+      "source_page_urls": [
+        "https://www.gwi.com/reports?page_num=10"
+      ],
+      "source_record_id": ""
+    },
+    {
+      "candidate_title": "",
+      "canonical_candidate_url": "https://www.gwi.com/reports/ad-sales-pitching",
+      "discovery_provenance": [
+        "http_parse"
+      ],
+      "failure_candidate_id": "fac_c0e4c925c1ed4ce6149711b8",
+      "original_acquisition_timestamp": "1786619133",
+      "original_artifact_status": "unverified",
+      "original_attempt_count": 1,
+      "original_configuration_hash": "",
+      "original_policy_hash": "",
+      "original_resource_attempts": [
+        {
+          "attempt_id": "c9bfc6515a2d8ae9f366002e73cd606a5da2a763d5ecec57d2fc971f1e8a7d05",
+          "browser_launches": 10,
+          "browser_steps": 2,
+          "completed_at": "2026-08-13T11:05:34Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 5,
+          "duration_seconds": 78.43,
+          "estimated_cost_usd": 0.279551,
+          "input_tokens": 1223639,
+          "llm_calls": 69,
+          "mailbox_reads": 0,
+          "output_tokens": 52759,
+          "page_navigations": 0,
+          "policy_hash": "1.0",
+          "route_family": "browser_email_form",
+          "screenshots": 2,
+          "started_at": "2026-08-13T11:04:15Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred"
+        }
+      ],
+      "original_route_attempts": [
+        {
+          "artifact_status": {
+            "last_downloaded_file_path": "",
+            "onsite_capture_format": "",
+            "onsite_completeness_status": ""
+          },
+          "attempts": 1,
+          "blocked_reason": "blocked_missing_identity_field",
+          "blocked_reason_detail": "Get the data here",
+          "candidate_pdf_url": "",
+          "discovery_provenances": [
+            "http_parse"
+          ],
+          "outcome": "email_required",
+          "route_family": "browser_email_form",
+          "route_history_id": "34",
+          "route_kind": "email_delivery",
+          "route_status": "inferred",
+          "source_page_urls": [
+            "https://www.gwi.com/reports?page_num=5"
+          ],
+          "terminal_url": "https://www.gwi.com/reports/ad-sales-pitching",
+          "updated_at": "1786619133"
+        }
+      ],
+      "original_terminal_outcome": "email_required",
+      "original_terminal_url": "https://www.gwi.com/reports/ad-sales-pitching",
+      "original_typed_error_code": "blocked_missing_identity_field",
+      "publisher_id": "publisher:gwi",
+      "publisher_name": "GWI",
+      "source_identity_id": "",
+      "source_page_urls": [
+        "https://www.gwi.com/reports?page_num=5"
+      ],
+      "source_record_id": ""
+    },
+    {
+      "candidate_title": "",
+      "canonical_candidate_url": "https://www.gwi.com/reports/ad-targeting-media-planning",
+      "discovery_provenance": [
+        "http_parse"
+      ],
+      "failure_candidate_id": "fac_6f994caaf9a413e4038f18f1",
+      "original_acquisition_timestamp": "1786619241",
+      "original_artifact_status": "unverified",
+      "original_attempt_count": 1,
+      "original_configuration_hash": "",
+      "original_policy_hash": "",
+      "original_resource_attempts": [
+        {
+          "attempt_id": "c9ea19f5fc96783781159afae2c6dd0156789a5946254f173f87e513b2da56a2",
+          "browser_launches": 11,
+          "browser_steps": 2,
+          "completed_at": "2026-08-13T11:07:21Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 5,
+          "duration_seconds": 106.589,
+          "estimated_cost_usd": 0.302878,
+          "input_tokens": 1310692,
+          "llm_calls": 74,
+          "mailbox_reads": 0,
+          "output_tokens": 58178,
+          "page_navigations": 0,
+          "policy_hash": "1.0",
+          "route_family": "browser_email_form",
+          "screenshots": 2,
+          "started_at": "2026-08-13T11:05:34Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred"
+        }
+      ],
+      "original_route_attempts": [
+        {
+          "artifact_status": {
+            "last_downloaded_file_path": "",
+            "onsite_capture_format": "",
+            "onsite_completeness_status": ""
+          },
+          "attempts": 1,
+          "blocked_reason": "blocked_missing_identity_field",
+          "blocked_reason_detail": "Unlock the guide \u2014 First name, Last name, Work email, Company size, Country",
+          "candidate_pdf_url": "",
+          "discovery_provenances": [
+            "http_parse"
+          ],
+          "outcome": "email_required",
+          "route_family": "browser_email_form",
+          "route_history_id": "35",
+          "route_kind": "email_delivery",
+          "route_status": "inferred",
+          "source_page_urls": [
+            "https://www.gwi.com/reports?page_num=2"
+          ],
+          "terminal_url": "https://www.gwi.com/reports/ad-targeting-media-planning/",
+          "updated_at": "1786619241"
+        }
+      ],
+      "original_terminal_outcome": "email_required",
+      "original_terminal_url": "https://www.gwi.com/reports/ad-targeting-media-planning/",
+      "original_typed_error_code": "blocked_missing_identity_field",
+      "publisher_id": "publisher:gwi",
+      "publisher_name": "GWI",
+      "source_identity_id": "",
+      "source_page_urls": [
+        "https://www.gwi.com/reports?page_num=2"
+      ],
+      "source_record_id": ""
+    },
+    {
+      "candidate_title": "",
+      "canonical_candidate_url": "https://www.ib.barclays/research.html",
+      "discovery_provenance": [
+        "http_parse"
+      ],
+      "failure_candidate_id": "fac_9d4d17626b51fdefb56842cb",
+      "original_acquisition_timestamp": "2026-08-13T10:55:05Z",
+      "original_artifact_status": "unverified",
+      "original_attempt_count": 3,
+      "original_configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+      "original_policy_hash": "1.0",
+      "original_resource_attempts": [
+        {
+          "attempt_id": "410be8ff782a248400b203a09c63db5d121c65ef3f06339326d9bfa4c969364e",
+          "browser_launches": 1,
+          "browser_steps": 0,
+          "completed_at": "2026-08-11T23:57:30Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 2.59,
+          "estimated_cost_usd": 0.0,
+          "input_tokens": 0,
+          "llm_calls": 0,
+          "mailbox_reads": 0,
+          "output_tokens": 0,
+          "page_navigations": 0,
+          "policy_hash": "1.0",
+          "route_family": "browser_listing_hub",
+          "screenshots": 0,
+          "started_at": "2026-08-11T23:57:27Z",
+          "terminal_outcome": "failed",
+          "terminal_reason": "budget_request_publisher_mismatch"
+        },
+        {
+          "attempt_id": "eddea66bf67cb40dc353c2ae34958130384cf49ef919773b8db211e0016cb9ba",
+          "browser_launches": 1,
+          "browser_steps": 2,
+          "completed_at": "2026-08-12T00:04:00Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 5,
+          "duration_seconds": 138.806,
+          "estimated_cost_usd": 0.040488,
+          "input_tokens": 159014,
+          "llm_calls": 9,
+          "mailbox_reads": 0,
+          "output_tokens": 7092,
+          "page_navigations": 0,
+          "policy_hash": "1.0",
+          "route_family": "browser_listing_hub",
+          "screenshots": 2,
+          "started_at": "2026-08-12T00:01:41Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred"
+        },
+        {
+          "attempt_id": "fffa25d4352d28e7df412a5d198134c1a19589a522664c44c7c037fceb695e3f",
+          "browser_launches": 5,
+          "browser_steps": 0,
+          "completed_at": "2026-08-13T10:55:05Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 4,
+          "duration_seconds": 219.332,
+          "estimated_cost_usd": 0.142885,
+          "input_tokens": 651866,
+          "llm_calls": 37,
+          "mailbox_reads": 0,
+          "output_tokens": 25758,
+          "page_navigations": 0,
+          "policy_hash": "1.0",
+          "route_family": "browser_listing_hub",
+          "screenshots": 0,
+          "started_at": "2026-08-13T10:51:26Z",
+          "terminal_outcome": "failed",
+          "terminal_reason": "browser_download_agent_timeout"
+        }
+      ],
+      "original_route_attempts": [
+        {
+          "artifact_status": {
+            "last_downloaded_file_path": "",
+            "onsite_capture_format": "",
+            "onsite_completeness_status": ""
+          },
+          "attempts": 1,
+          "blocked_reason": "blocked_missing_identity_field",
+          "blocked_reason_detail": "Please enter your username or work email address and we will send you an email with a link to access Barclays Research, Data & Events.",
+          "candidate_pdf_url": "",
+          "discovery_provenances": [
+            "http_parse"
+          ],
+          "outcome": "email_required",
+          "route_family": "browser_listing_hub",
+          "route_history_id": "10",
+          "route_kind": "email_delivery",
+          "route_status": "inferred",
+          "source_page_urls": [
+            "https://www.ib.barclays/our-insights.html"
+          ],
+          "terminal_url": "https://live.barcap.com/UAB/linkback/registerDevice?action=linkback&target=%2FUAB%2Fanon%2Flinkback%3FcontentPubID%3DFP6a3c2e390c4c1b072f7a757a%26restriction%3DDEBT%26forwardrp%3DY",
+          "updated_at": "1786493040"
+        }
+      ],
+      "original_terminal_outcome": "email_required",
+      "original_terminal_url": "https://live.barcap.com/UAB/linkback/registerDevice?action=linkback&target=%2FUAB%2Fanon%2Flinkback%3FcontentPubID%3DFP6a3c2e390c4c1b072f7a757a%26restriction%3DDEBT%26forwardrp%3DY",
+      "original_typed_error_code": "blocked_missing_identity_field",
+      "publisher_id": "publisher:barclays",
+      "publisher_name": "Barclays",
+      "source_identity_id": "",
+      "source_page_urls": [
+        "https://www.ib.barclays/our-insights.html"
+      ],
+      "source_record_id": ""
+    },
+    {
+      "candidate_title": "",
+      "canonical_candidate_url": "https://www.ib.barclays/research/the-eagle-eye.html",
+      "discovery_provenance": [
+        "http_parse"
+      ],
+      "failure_candidate_id": "fac_82f650b19147f442363508b2",
+      "original_acquisition_timestamp": "2026-08-11T23:57:32Z",
+      "original_artifact_status": "unverified",
+      "original_attempt_count": 4,
+      "original_configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+      "original_policy_hash": "1.0",
+      "original_resource_attempts": [
+        {
+          "attempt_id": "a2972d5552fbf2b23ffd9c45993e963ce3fc03f0b6afa663e7fa741bfbae9fe7",
+          "browser_launches": 1,
+          "browser_steps": 0,
+          "completed_at": "2026-08-11T23:57:32Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 2.525,
+          "estimated_cost_usd": 0.0,
+          "input_tokens": 0,
+          "llm_calls": 0,
+          "mailbox_reads": 0,
+          "output_tokens": 0,
+          "page_navigations": 0,
+          "policy_hash": "1.0",
+          "route_family": "browser_onsite_report",
+          "screenshots": 0,
+          "started_at": "2026-08-11T23:57:30Z",
+          "terminal_outcome": "failed",
+          "terminal_reason": "budget_request_publisher_mismatch"
+        },
+        {
+          "attempt_id": "e11df428c7a5dad520d48464ab7f48c0fd33c4ffb7f299e095a5fb2d03f0bae7",
+          "browser_launches": 2,
+          "browser_steps": 3,
+          "completed_at": "2026-08-12T00:05:46Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 5,
+          "duration_seconds": 105.81,
+          "estimated_cost_usd": 0.062562,
+          "input_tokens": 231792,
+          "llm_calls": 14,
+          "mailbox_reads": 0,
+          "output_tokens": 12790,
+          "page_navigations": 1,
+          "policy_hash": "1.0",
+          "route_family": "browser_onsite_report",
+          "screenshots": 3,
+          "started_at": "2026-08-12T00:04:00Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred"
+        },
+        {
+          "attempt_id": "6087948d9545815d2c987a5b76a88127dd73bacbf82ba430949e118efae5ce23",
+          "browser_launches": 5,
+          "browser_steps": 2,
+          "completed_at": "2026-08-13T10:55:10Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 4,
+          "duration_seconds": 3.693,
+          "estimated_cost_usd": 0.142885,
+          "input_tokens": 651866,
+          "llm_calls": 37,
+          "mailbox_reads": 0,
+          "output_tokens": 25758,
+          "page_navigations": 1,
+          "policy_hash": "1.0",
+          "route_family": "browser_email_form",
+          "screenshots": 0,
+          "started_at": "2026-08-13T10:55:06Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred"
+        }
+      ],
+      "original_route_attempts": [
+        {
+          "artifact_status": {
+            "last_downloaded_file_path": "",
+            "onsite_capture_format": "html",
+            "onsite_completeness_status": "complete"
+          },
+          "attempts": 1,
+          "blocked_reason": "blocked_missing_identity_field",
+          "blocked_reason_detail": "EARLY BIRD. SEIZE THE EDGE. Get the latest market insights from Barclays Research, straight to your inbox.",
+          "candidate_pdf_url": "",
+          "discovery_provenances": [
+            "http_parse"
+          ],
+          "outcome": "email_required",
+          "route_family": "browser_onsite_report",
+          "route_history_id": "12",
+          "route_kind": "email_delivery",
+          "route_status": "inferred",
+          "source_page_urls": [
+            "https://www.ib.barclays/our-insights.html"
+          ],
+          "terminal_url": "https://www.ib.barclays/research/the-eagle-eye.html",
+          "updated_at": "1786493145"
+        },
+        {
+          "artifact_status": {
+            "last_downloaded_file_path": "",
+            "onsite_capture_format": "",
+            "onsite_completeness_status": ""
+          },
+          "attempts": 2,
+          "blocked_reason": "",
+          "blocked_reason_detail": "",
+          "candidate_pdf_url": "",
+          "discovery_provenances": [
+            "http_parse"
+          ],
+          "outcome": "email_required",
+          "route_family": "browser_email_form",
+          "route_history_id": "30",
+          "route_kind": "email_delivery",
+          "route_status": "inferred",
+          "source_page_urls": [
+            "https://www.ib.barclays/our-insights.html"
+          ],
+          "terminal_url": "https://www.ib.barclays/research/the-eagle-eye.html",
+          "updated_at": "1786618510"
+        }
+      ],
+      "original_terminal_outcome": "email_required",
+      "original_terminal_url": "https://www.ib.barclays/research/the-eagle-eye.html",
+      "original_typed_error_code": "budget_request_publisher_mismatch",
+      "publisher_id": "publisher:barclays",
+      "publisher_name": "Barclays",
+      "source_identity_id": "",
+      "source_page_urls": [
+        "https://www.ib.barclays/our-insights.html"
+      ],
+      "source_record_id": ""
+    },
+    {
+      "candidate_title": "",
+      "canonical_candidate_url": "https://www.junglescout.com/resources/reports/3p-seller-disruption",
+      "discovery_provenance": [
+        "http_parse"
+      ],
+      "failure_candidate_id": "fac_79d2b1c0c59436f8eacd7de4",
+      "original_acquisition_timestamp": "1786619322",
+      "original_artifact_status": "unverified",
+      "original_attempt_count": 1,
+      "original_configuration_hash": "",
+      "original_policy_hash": "",
+      "original_resource_attempts": [
+        {
+          "attempt_id": "e860b2930b1609f3c5919d6d3b20a9bc3bb2c1d580a0ae521a41d74880dc39b6",
+          "browser_launches": 1,
+          "browser_steps": 2,
+          "completed_at": "2026-08-13T11:08:42Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 3.692,
+          "estimated_cost_usd": 0.0,
+          "input_tokens": 0,
+          "llm_calls": 0,
+          "mailbox_reads": 0,
+          "output_tokens": 0,
+          "page_navigations": 1,
+          "policy_hash": "1.0",
+          "route_family": "browser_email_form",
+          "screenshots": 0,
+          "started_at": "2026-08-13T11:08:39Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred"
+        }
+      ],
+      "original_route_attempts": [
+        {
+          "artifact_status": {
+            "last_downloaded_file_path": "",
+            "onsite_capture_format": "",
+            "onsite_completeness_status": ""
+          },
+          "attempts": 1,
+          "blocked_reason": "",
+          "blocked_reason_detail": "",
+          "candidate_pdf_url": "",
+          "discovery_provenances": [
+            "http_parse"
+          ],
+          "outcome": "email_required",
+          "route_family": "browser_email_form",
+          "route_history_id": "36",
+          "route_kind": "email_delivery",
+          "route_status": "inferred",
+          "source_page_urls": [
+            "https://www.junglescout.com/resources/reports"
+          ],
+          "terminal_url": "https://www.junglescout.com/resources/reports/3p-seller-disruption/",
+          "updated_at": "1786619322"
+        }
+      ],
+      "original_terminal_outcome": "email_required",
+      "original_terminal_url": "https://www.junglescout.com/resources/reports/3p-seller-disruption/",
+      "original_typed_error_code": "",
+      "publisher_id": "publisher:jungle-scout",
+      "publisher_name": "Jungle Scout",
+      "source_identity_id": "",
+      "source_page_urls": [
+        "https://www.junglescout.com/resources/reports"
+      ],
+      "source_record_id": ""
+    },
+    {
+      "candidate_title": "",
+      "canonical_candidate_url": "https://www.junglescout.com/resources/reports/amazon-beauty-category-insights",
+      "discovery_provenance": [
+        "http_parse"
+      ],
+      "failure_candidate_id": "fac_92baa3a4f4faa888ade7d54f",
+      "original_acquisition_timestamp": "1786619422",
+      "original_artifact_status": "unverified",
+      "original_attempt_count": 1,
+      "original_configuration_hash": "",
+      "original_policy_hash": "",
+      "original_resource_attempts": [
+        {
+          "attempt_id": "4744ace5873afc259e495320c6c412c4cf42897bd8cefa240ab202a23c4e82a3",
+          "browser_launches": 1,
+          "browser_steps": 3,
+          "completed_at": "2026-08-13T11:10:22Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 99.097,
+          "estimated_cost_usd": 0.017923,
+          "input_tokens": 68288,
+          "llm_calls": 4,
+          "mailbox_reads": 0,
+          "output_tokens": 4069,
+          "page_navigations": 1,
+          "policy_hash": "1.0",
+          "route_family": "browser_listing_hub",
+          "screenshots": 3,
+          "started_at": "2026-08-13T11:08:43Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred"
+        }
+      ],
+      "original_route_attempts": [
+        {
+          "artifact_status": {
+            "last_downloaded_file_path": "",
+            "onsite_capture_format": "",
+            "onsite_completeness_status": ""
+          },
+          "attempts": 1,
+          "blocked_reason": "blocked_missing_identity_field",
+          "blocked_reason_detail": "Access the report",
+          "candidate_pdf_url": "",
+          "discovery_provenances": [
+            "http_parse"
+          ],
+          "outcome": "email_required",
+          "route_family": "browser_listing_hub",
+          "route_history_id": "37",
+          "route_kind": "email_delivery",
+          "route_status": "inferred",
+          "source_page_urls": [
+            "https://www.junglescout.com/resources/reports"
+          ],
+          "terminal_url": "https://www.junglescout.com/resources/reports/amazon-beauty-category-insights/",
+          "updated_at": "1786619422"
+        }
+      ],
+      "original_terminal_outcome": "email_required",
+      "original_terminal_url": "https://www.junglescout.com/resources/reports/amazon-beauty-category-insights/",
+      "original_typed_error_code": "blocked_missing_identity_field",
+      "publisher_id": "publisher:jungle-scout",
+      "publisher_name": "Jungle Scout",
+      "source_identity_id": "",
+      "source_page_urls": [
+        "https://www.junglescout.com/resources/reports"
+      ],
+      "source_record_id": ""
+    },
+    {
+      "candidate_title": "The Amazon Benchmark Report: 2025 Performance and 2026 Strategy",
+      "canonical_candidate_url": "https://www.junglescout.com/resources/reports/amazon-benchmark-report-2026",
+      "discovery_provenance": [
+        "http_parse",
+        "retained_source_record"
+      ],
+      "failure_candidate_id": "fac_057817530e711866e5fea457",
+      "original_acquisition_timestamp": "1786619425",
+      "original_artifact_status": "unverified",
+      "original_attempt_count": 1,
+      "original_configuration_hash": "",
+      "original_policy_hash": "",
+      "original_resource_attempts": [
+        {
+          "attempt_id": "e7cafbecdecb6cd5e22572addadfd9a4b42420edb6cbb51527d960e2a38eb17e",
+          "browser_launches": 1,
+          "browser_steps": 2,
+          "completed_at": "2026-08-13T11:10:25Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 2.988,
+          "estimated_cost_usd": 0.017923,
+          "input_tokens": 68288,
+          "llm_calls": 4,
+          "mailbox_reads": 0,
+          "output_tokens": 4069,
+          "page_navigations": 1,
+          "policy_hash": "1.0",
+          "route_family": "browser_email_form",
+          "screenshots": 0,
+          "started_at": "2026-08-13T11:10:22Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred"
+        }
+      ],
+      "original_route_attempts": [
+        {
+          "artifact_status": {
+            "last_downloaded_file_path": "",
+            "onsite_capture_format": "",
+            "onsite_completeness_status": ""
+          },
+          "attempts": 1,
+          "blocked_reason": "",
+          "blocked_reason_detail": "",
+          "candidate_pdf_url": "",
+          "discovery_provenances": [
+            "http_parse"
+          ],
+          "outcome": "email_required",
+          "route_family": "browser_email_form",
+          "route_history_id": "38",
+          "route_kind": "email_delivery",
+          "route_status": "inferred",
+          "source_page_urls": [
+            "https://www.junglescout.com/resources/reports"
+          ],
+          "terminal_url": "https://www.junglescout.com/resources/reports/amazon-benchmark-report-2026/",
+          "updated_at": "1786619425"
+        }
+      ],
+      "original_terminal_outcome": "email_required",
+      "original_terminal_url": "https://www.junglescout.com/resources/reports/amazon-benchmark-report-2026/",
+      "original_typed_error_code": "",
+      "publisher_id": "publisher:jungle-scout",
+      "publisher_name": "Jungle Scout",
+      "source_identity_id": "",
+      "source_page_urls": [
+        "https://www.junglescout.com/resources/reports"
+      ],
+      "source_record_id": "26"
+    },
+    {
+      "candidate_title": "",
+      "canonical_candidate_url": "https://www.junglescout.com/resources/reports/amazon-data-arts-crafts-sewing-brands",
+      "discovery_provenance": [
+        "http_parse"
+      ],
+      "failure_candidate_id": "fac_74ff8c2c4382773a4f8d5f55",
+      "original_acquisition_timestamp": "1786619430",
+      "original_artifact_status": "unverified",
+      "original_attempt_count": 1,
+      "original_configuration_hash": "",
+      "original_policy_hash": "",
+      "original_resource_attempts": [
+        {
+          "attempt_id": "f36a89f657df0799fdbc7129a00a56b8ff46b3001180f26d4567b7fb95d52533",
+          "browser_launches": 1,
+          "browser_steps": 2,
+          "completed_at": "2026-08-13T11:10:30Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 3.775,
+          "estimated_cost_usd": 0.017923,
+          "input_tokens": 68288,
+          "llm_calls": 4,
+          "mailbox_reads": 0,
+          "output_tokens": 4069,
+          "page_navigations": 1,
+          "policy_hash": "1.0",
+          "route_family": "browser_email_form",
+          "screenshots": 0,
+          "started_at": "2026-08-13T11:10:26Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred"
+        }
+      ],
+      "original_route_attempts": [
+        {
+          "artifact_status": {
+            "last_downloaded_file_path": "",
+            "onsite_capture_format": "",
+            "onsite_completeness_status": ""
+          },
+          "attempts": 1,
+          "blocked_reason": "",
+          "blocked_reason_detail": "",
+          "candidate_pdf_url": "",
+          "discovery_provenances": [
+            "http_parse"
+          ],
+          "outcome": "email_required",
+          "route_family": "browser_email_form",
+          "route_history_id": "39",
+          "route_kind": "email_delivery",
+          "route_status": "inferred",
+          "source_page_urls": [
+            "https://www.junglescout.com/resources/reports"
+          ],
+          "terminal_url": "https://www.junglescout.com/resources/reports/amazon-data-arts-crafts-sewing-brands/",
+          "updated_at": "1786619430"
+        }
+      ],
+      "original_terminal_outcome": "email_required",
+      "original_terminal_url": "https://www.junglescout.com/resources/reports/amazon-data-arts-crafts-sewing-brands/",
+      "original_typed_error_code": "",
+      "publisher_id": "publisher:jungle-scout",
+      "publisher_name": "Jungle Scout",
+      "source_identity_id": "",
+      "source_page_urls": [
+        "https://www.junglescout.com/resources/reports"
+      ],
+      "source_record_id": ""
+    },
+    {
+      "candidate_title": "",
+      "canonical_candidate_url": "https://www.junglescout.com/resources/reports/amazon-innovation-report",
+      "discovery_provenance": [
+        "http_parse"
+      ],
+      "failure_candidate_id": "fac_80dc158f27be79e08f090b8c",
+      "original_acquisition_timestamp": "1786619433",
+      "original_artifact_status": "unverified",
+      "original_attempt_count": 1,
+      "original_configuration_hash": "",
+      "original_policy_hash": "",
+      "original_resource_attempts": [
+        {
+          "attempt_id": "bec81c7f9b3e9138751a4f2d8e5137555d4aea1031e2c78bc8a51e690d937ef5",
+          "browser_launches": 1,
+          "browser_steps": 2,
+          "completed_at": "2026-08-13T11:10:33Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 2.753,
+          "estimated_cost_usd": 0.017923,
+          "input_tokens": 68288,
+          "llm_calls": 4,
+          "mailbox_reads": 0,
+          "output_tokens": 4069,
+          "page_navigations": 1,
+          "policy_hash": "1.0",
+          "route_family": "browser_email_form",
+          "screenshots": 0,
+          "started_at": "2026-08-13T11:10:30Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred"
+        }
+      ],
+      "original_route_attempts": [
+        {
+          "artifact_status": {
+            "last_downloaded_file_path": "",
+            "onsite_capture_format": "",
+            "onsite_completeness_status": ""
+          },
+          "attempts": 1,
+          "blocked_reason": "",
+          "blocked_reason_detail": "",
+          "candidate_pdf_url": "",
+          "discovery_provenances": [
+            "http_parse"
+          ],
+          "outcome": "email_required",
+          "route_family": "browser_email_form",
+          "route_history_id": "40",
+          "route_kind": "email_delivery",
+          "route_status": "inferred",
+          "source_page_urls": [
+            "https://www.junglescout.com/resources/reports"
+          ],
+          "terminal_url": "https://www.junglescout.com/resources/reports/amazon-innovation-report/",
+          "updated_at": "1786619433"
+        }
+      ],
+      "original_terminal_outcome": "email_required",
+      "original_terminal_url": "https://www.junglescout.com/resources/reports/amazon-innovation-report/",
+      "original_typed_error_code": "",
+      "publisher_id": "publisher:jungle-scout",
+      "publisher_name": "Jungle Scout",
+      "source_identity_id": "",
+      "source_page_urls": [
+        "https://www.junglescout.com/resources/reports"
+      ],
+      "source_record_id": ""
+    },
+    {
+      "candidate_title": "",
+      "canonical_candidate_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-body-skincare",
+      "discovery_provenance": [
+        "http_parse"
+      ],
+      "failure_candidate_id": "fac_c21286d0bf9647749fa4dae3",
+      "original_acquisition_timestamp": "1786619437",
+      "original_artifact_status": "unverified",
+      "original_attempt_count": 1,
+      "original_configuration_hash": "",
+      "original_policy_hash": "",
+      "original_resource_attempts": [
+        {
+          "attempt_id": "17ec941f66f002eae0bc5c9ff6b9891c96340386a920bbfb09d362dca3ad23f3",
+          "browser_launches": 1,
+          "browser_steps": 2,
+          "completed_at": "2026-08-13T11:10:37Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 3.167,
+          "estimated_cost_usd": 0.017923,
+          "input_tokens": 68288,
+          "llm_calls": 4,
+          "mailbox_reads": 0,
+          "output_tokens": 4069,
+          "page_navigations": 1,
+          "policy_hash": "1.0",
+          "route_family": "browser_email_form",
+          "screenshots": 0,
+          "started_at": "2026-08-13T11:10:34Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred"
+        }
+      ],
+      "original_route_attempts": [
+        {
+          "artifact_status": {
+            "last_downloaded_file_path": "",
+            "onsite_capture_format": "",
+            "onsite_completeness_status": ""
+          },
+          "attempts": 1,
+          "blocked_reason": "",
+          "blocked_reason_detail": "",
+          "candidate_pdf_url": "",
+          "discovery_provenances": [
+            "http_parse"
+          ],
+          "outcome": "email_required",
+          "route_family": "browser_email_form",
+          "route_history_id": "41",
+          "route_kind": "email_delivery",
+          "route_status": "inferred",
+          "source_page_urls": [
+            "https://www.junglescout.com/resources/reports"
+          ],
+          "terminal_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-body-skincare/",
+          "updated_at": "1786619437"
+        }
+      ],
+      "original_terminal_outcome": "email_required",
+      "original_terminal_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-body-skincare/",
+      "original_typed_error_code": "",
+      "publisher_id": "publisher:jungle-scout",
+      "publisher_name": "Jungle Scout",
+      "source_identity_id": "",
+      "source_page_urls": [
+        "https://www.junglescout.com/resources/reports"
+      ],
+      "source_record_id": ""
+    },
+    {
+      "candidate_title": "",
+      "canonical_candidate_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-camping-hiking-products",
+      "discovery_provenance": [
+        "http_parse"
+      ],
+      "failure_candidate_id": "fac_6dae1d79b7340a3e0fd5055b",
+      "original_acquisition_timestamp": "1786619441",
+      "original_artifact_status": "unverified",
+      "original_attempt_count": 1,
+      "original_configuration_hash": "",
+      "original_policy_hash": "",
+      "original_resource_attempts": [
+        {
+          "attempt_id": "274c0dbf4efded3b1aed9ee3e771bf32f3e109d568b8d4f883e6a6fb5ccfefe2",
+          "browser_launches": 1,
+          "browser_steps": 2,
+          "completed_at": "2026-08-13T11:10:41Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 3.601,
+          "estimated_cost_usd": 0.017923,
+          "input_tokens": 68288,
+          "llm_calls": 4,
+          "mailbox_reads": 0,
+          "output_tokens": 4069,
+          "page_navigations": 1,
+          "policy_hash": "1.0",
+          "route_family": "browser_email_form",
+          "screenshots": 0,
+          "started_at": "2026-08-13T11:10:37Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred"
+        }
+      ],
+      "original_route_attempts": [
+        {
+          "artifact_status": {
+            "last_downloaded_file_path": "",
+            "onsite_capture_format": "",
+            "onsite_completeness_status": ""
+          },
+          "attempts": 1,
+          "blocked_reason": "",
+          "blocked_reason_detail": "",
+          "candidate_pdf_url": "",
+          "discovery_provenances": [
+            "http_parse"
+          ],
+          "outcome": "email_required",
+          "route_family": "browser_email_form",
+          "route_history_id": "42",
+          "route_kind": "email_delivery",
+          "route_status": "inferred",
+          "source_page_urls": [
+            "https://www.junglescout.com/resources/reports"
+          ],
+          "terminal_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-camping-hiking-products/",
+          "updated_at": "1786619441"
+        }
+      ],
+      "original_terminal_outcome": "email_required",
+      "original_terminal_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-camping-hiking-products/",
+      "original_typed_error_code": "",
+      "publisher_id": "publisher:jungle-scout",
+      "publisher_name": "Jungle Scout",
+      "source_identity_id": "",
+      "source_page_urls": [
+        "https://www.junglescout.com/resources/reports"
+      ],
+      "source_record_id": ""
+    },
+    {
+      "candidate_title": "",
+      "canonical_candidate_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-car-care-and-cleaning",
+      "discovery_provenance": [
+        "http_parse"
+      ],
+      "failure_candidate_id": "fac_248c234f4d797e8eca595ff3",
+      "original_acquisition_timestamp": "1786619445",
+      "original_artifact_status": "unverified",
+      "original_attempt_count": 1,
+      "original_configuration_hash": "",
+      "original_policy_hash": "",
+      "original_resource_attempts": [
+        {
+          "attempt_id": "9af97ca8d8440b5821eb4a280ea244b4f63b0ed71527fafd0ec5bb914c5edd85",
+          "browser_launches": 1,
+          "browser_steps": 2,
+          "completed_at": "2026-08-13T11:10:45Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 3.451,
+          "estimated_cost_usd": 0.017923,
+          "input_tokens": 68288,
+          "llm_calls": 4,
+          "mailbox_reads": 0,
+          "output_tokens": 4069,
+          "page_navigations": 1,
+          "policy_hash": "1.0",
+          "route_family": "browser_email_form",
+          "screenshots": 0,
+          "started_at": "2026-08-13T11:10:41Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred"
+        }
+      ],
+      "original_route_attempts": [
+        {
+          "artifact_status": {
+            "last_downloaded_file_path": "",
+            "onsite_capture_format": "",
+            "onsite_completeness_status": ""
+          },
+          "attempts": 1,
+          "blocked_reason": "",
+          "blocked_reason_detail": "",
+          "candidate_pdf_url": "",
+          "discovery_provenances": [
+            "http_parse"
+          ],
+          "outcome": "email_required",
+          "route_family": "browser_email_form",
+          "route_history_id": "43",
+          "route_kind": "email_delivery",
+          "route_status": "inferred",
+          "source_page_urls": [
+            "https://www.junglescout.com/resources/reports"
+          ],
+          "terminal_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-car-care-and-cleaning/",
+          "updated_at": "1786619445"
+        }
+      ],
+      "original_terminal_outcome": "email_required",
+      "original_terminal_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-car-care-and-cleaning/",
+      "original_typed_error_code": "",
+      "publisher_id": "publisher:jungle-scout",
+      "publisher_name": "Jungle Scout",
+      "source_identity_id": "",
+      "source_page_urls": [
+        "https://www.junglescout.com/resources/reports"
+      ],
+      "source_record_id": ""
+    },
+    {
+      "candidate_title": "",
+      "canonical_candidate_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-car-parts-accessories",
+      "discovery_provenance": [
+        "http_parse"
+      ],
+      "failure_candidate_id": "fac_0a2d080a0bcc92e54f50e171",
+      "original_acquisition_timestamp": "1786619448",
+      "original_artifact_status": "unverified",
+      "original_attempt_count": 1,
+      "original_configuration_hash": "",
+      "original_policy_hash": "",
+      "original_resource_attempts": [
+        {
+          "attempt_id": "79d3019ad66fb3a8868da900679d24fdabf1eb9e8d994caf0454ac2d555c20bd",
+          "browser_launches": 1,
+          "browser_steps": 2,
+          "completed_at": "2026-08-13T11:10:48Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 3.058,
+          "estimated_cost_usd": 0.017923,
+          "input_tokens": 68288,
+          "llm_calls": 4,
+          "mailbox_reads": 0,
+          "output_tokens": 4069,
+          "page_navigations": 1,
+          "policy_hash": "1.0",
+          "route_family": "browser_email_form",
+          "screenshots": 0,
+          "started_at": "2026-08-13T11:10:45Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred"
+        }
+      ],
+      "original_route_attempts": [
+        {
+          "artifact_status": {
+            "last_downloaded_file_path": "",
+            "onsite_capture_format": "",
+            "onsite_completeness_status": ""
+          },
+          "attempts": 1,
+          "blocked_reason": "",
+          "blocked_reason_detail": "",
+          "candidate_pdf_url": "",
+          "discovery_provenances": [
+            "http_parse"
+          ],
+          "outcome": "email_required",
+          "route_family": "browser_email_form",
+          "route_history_id": "44",
+          "route_kind": "email_delivery",
+          "route_status": "inferred",
+          "source_page_urls": [
+            "https://www.junglescout.com/resources/reports"
+          ],
+          "terminal_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-car-parts-accessories/",
+          "updated_at": "1786619448"
+        }
+      ],
+      "original_terminal_outcome": "email_required",
+      "original_terminal_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-car-parts-accessories/",
+      "original_typed_error_code": "",
+      "publisher_id": "publisher:jungle-scout",
+      "publisher_name": "Jungle Scout",
+      "source_identity_id": "",
+      "source_page_urls": [
+        "https://www.junglescout.com/resources/reports"
+      ],
+      "source_record_id": ""
+    },
+    {
+      "candidate_title": "",
+      "canonical_candidate_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-cosmetics",
+      "discovery_provenance": [
+        "http_parse"
+      ],
+      "failure_candidate_id": "fac_05b9e5cae6b0bbaf35801e27",
+      "original_acquisition_timestamp": "1786619452",
+      "original_artifact_status": "unverified",
+      "original_attempt_count": 1,
+      "original_configuration_hash": "",
+      "original_policy_hash": "",
+      "original_resource_attempts": [
+        {
+          "attempt_id": "656fe4998531de30167d0dca26c345358393636d50e47f8e26199f8c42fd4c82",
+          "browser_launches": 1,
+          "browser_steps": 2,
+          "completed_at": "2026-08-13T11:10:52Z",
+          "configuration_hash": "0943e01dc7b43e400c6f25ad1e964ddb083c9740bf734df868b146c3160b5ade",
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 3.36,
+          "estimated_cost_usd": 0.017923,
+          "input_tokens": 68288,
+          "llm_calls": 4,
+          "mailbox_reads": 0,
+          "output_tokens": 4069,
+          "page_navigations": 1,
+          "policy_hash": "1.0",
+          "route_family": "browser_email_form",
+          "screenshots": 0,
+          "started_at": "2026-08-13T11:10:49Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "inferred"
+        }
+      ],
+      "original_route_attempts": [
+        {
+          "artifact_status": {
+            "last_downloaded_file_path": "",
+            "onsite_capture_format": "",
+            "onsite_completeness_status": ""
+          },
+          "attempts": 1,
+          "blocked_reason": "",
+          "blocked_reason_detail": "",
+          "candidate_pdf_url": "",
+          "discovery_provenances": [
+            "http_parse"
+          ],
+          "outcome": "email_required",
+          "route_family": "browser_email_form",
+          "route_history_id": "45",
+          "route_kind": "email_delivery",
+          "route_status": "inferred",
+          "source_page_urls": [
+            "https://www.junglescout.com/resources/reports"
+          ],
+          "terminal_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-cosmetics/",
+          "updated_at": "1786619452"
+        }
+      ],
+      "original_terminal_outcome": "email_required",
+      "original_terminal_url": "https://www.junglescout.com/resources/reports/amazon-market-trends-cosmetics/",
+      "original_typed_error_code": "",
+      "publisher_id": "publisher:jungle-scout",
+      "publisher_name": "Jungle Scout",
+      "source_identity_id": "",
+      "source_page_urls": [
+        "https://www.junglescout.com/resources/reports"
+      ],
+      "source_record_id": ""
+    }
+  ],
+  "frozen_at_utc": "2026-08-14T09:30:58.853491Z",
+  "manifest_kind": "immutable_failed_acquisition_cohort",
+  "manifest_sha256": "1c41324dbb009a223c8add82b7dc949e7fd59895c0137f72a599794a6882425e",
+  "producer_git_sha": "5d4c027fb17f9ec650a0b188df24db63ab077371",
+  "schema_version": "1.0",
+  "source_reports_db": "C:\\Programing\\Market-lense-reliability-full-20260812\\state\\reliability_full_20260812_507aa72521514a27a98edf8ed85244aa\\reports.sqlite",
+  "source_reports_db_sha256": "8b0f53559840cb0926adf4e6783e3b050cfb343e12c1356b03930b3547371a23"
+}

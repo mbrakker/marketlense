@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
+import threading
+import time
 from dataclasses import asdict
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
+
+import pytest
 
 from .builders import (
     _FakeResponse,
@@ -21,6 +26,34 @@ from src.contracts.browser_download import (
     BrowserReportDownloadRequest,
 )
 from src.services._browser_report_download import preflight as preflight_runtime
+
+
+def test_preflight_thread_envelope_returns_when_async_cancellation_is_ignored() -> None:
+    release = threading.Event()
+
+    async def ignores_cancellation() -> None:
+        while not release.is_set():
+            try:
+                await asyncio.sleep(0.001)
+            except asyncio.CancelledError:
+                continue
+
+    coroutine = ignores_cancellation()
+    started = time.monotonic()
+    try:
+        with pytest.raises(TimeoutError, match="browser preflight session timed out"):
+            try:
+                preflight_runtime._run_coroutine_in_thread(
+                    coroutine,
+                    timeout_seconds=0.01,
+                    grace_seconds=0.01,
+                )
+            except TypeError:
+                coroutine.close()
+                raise
+    finally:
+        release.set()
+    assert time.monotonic() - started < 0.5
 
 
 class _PreflightPage:
