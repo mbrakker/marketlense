@@ -146,7 +146,10 @@ Browser Use fallback.
 
 The same deterministic pass runs directly on Browser Use's asynchronous
 `BrowserSession`; it awaits the already-open preflight page rather than opening
-another session or bypassing form handling because startup is asynchronous.
+another session or bypassing form handling because startup is asynchronous. If
+it must fall back, the Browser Use Agent runs on that same event loop, rather
+than through a second `asyncio.run()` lifecycle that would invalidate the
+retained CDP session.
 
 When a standard required select or combobox is unresolved but the configured
 identity profile may directly support one of its visible options, the service

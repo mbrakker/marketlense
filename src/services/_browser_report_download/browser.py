@@ -84,16 +84,16 @@ from src.services._browser_report_download._browser_runtime import (
     _TIMED_OUT_COMPLETED_HISTORY_GRACE_SECONDS,
     _TIMED_OUT_RECOVERY_OPERATION_TIMEOUT_SECONDS,
 )
-from src.services._browser_report_download._browser_runtime.runtime import (
-    browser_runtime_identity,
-    load_browser_use_runtime,
-)
 from src.services._browser_report_download._browser_runtime.action_evidence import (
     capture_browser_execution_route_steps,
 )
 from src.services._browser_report_download._browser_runtime.no_progress import (
     BrowserNoProgressDetector,
     BrowserNoProgressObservation,
+)
+from src.services._browser_report_download._browser_runtime.runtime import (
+    browser_runtime_identity,
+    load_browser_use_runtime,
 )
 from src.services._browser_report_download._browser_runtime.session_lifecycle import (
     BrowserAgentHistoryResult,
@@ -120,6 +120,7 @@ from src.services._browser_report_download._browser_runtime.session_lifecycle im
     _remove_browser_use_temp_dirs,
     _resolve_agent_run_timeout_seconds,
     _resolve_lookup_blocker_label,
+    _run_agent_history_async_with_timeout,
     _run_agent_history_with_timeout,
     _serialize_history_fragment,
     _signal_agent_stop,
@@ -284,6 +285,21 @@ class BrowserPreflightSession:
     profile_dir: Path
     preexisting_temp_dirs: set[str]
     closed: bool = False
+
+
+@dataclass
+class BrowserAgentRunSetup:
+    agent: Any
+    no_progress_detector: BrowserNoProgressDetector
+    usage_writer: BrowserUsageWriter | None
+    spend_reservation_key: str
+
+
+@dataclass
+class BrowserAsyncFormAgentExecution:
+    pre_llm_result: BrowserAgentRunResult | None
+    setup: BrowserAgentRunSetup | None
+    history_result: BrowserAgentHistoryResult | None
 
 
 def start_browser_preflight_session(
@@ -976,6 +992,141 @@ async def _try_pre_llm_standard_form_submit_async(
         execution_url=execution_url,
         ctx=ctx,
         normalized_url=normalized_url,
+    )
+
+
+def _build_browser_agent_run_setup(
+    *,
+    browser_use: Any,
+    browser: Any,
+    request: BrowserReportDownloadRequest,
+    ctx: RunContext,
+    normalized_url: str,
+    prompt_bundle: BrowserDownloadPromptBundle,
+) -> BrowserAgentRunSetup:
+    spend_reservation_key = _reserve_browser_use_spend(
+        request=request,
+        ctx=ctx,
+        prompt_bundle=prompt_bundle,
+    )
+    llm_clients = llm_service.build_browser_use_llm_clients(
+        settings=request.settings,
+        ctx=ctx,
+        openai_client_factory=getattr(browser_use, "ChatOpenAI", None),
+        openrouter_client_factory=getattr(browser_use, "ChatOpenRouter", None),
+    )
+    agent_kwargs = {
+        "task": prompt_bundle.task_prompt,
+        "llm": llm_clients.primary_llm,
+        "browser": browser,
+        "output_model_schema": BrowserUseAgentResult,
+        "use_judge": _BROWSER_AGENT_USE_JUDGE,
+    }
+    agent_parameters = inspect.signature(browser_use.Agent).parameters
+    no_progress_detector = BrowserNoProgressDetector(browser=browser)
+    if _agent_accepts_parameter(agent_parameters, "register_new_step_callback"):
+        agent_kwargs["register_new_step_callback"] = (
+            no_progress_detector.observe_callback
+        )
+    if _agent_accepts_parameter(agent_parameters, "register_should_stop_callback"):
+        agent_kwargs["register_should_stop_callback"] = (
+            no_progress_detector.should_stop_callback
+        )
+    if "calculate_cost" in agent_parameters:
+        agent_kwargs["calculate_cost"] = True
+    if llm_clients.fallback_llm is not None and "fallback_llm" in agent_parameters:
+        agent_kwargs["fallback_llm"] = llm_clients.fallback_llm
+    agent = browser_use.Agent(**agent_kwargs)
+    return BrowserAgentRunSetup(
+        agent=agent,
+        no_progress_detector=no_progress_detector,
+        usage_writer=_configure_browser_use_usage_recorder(
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            prompt_bundle=prompt_bundle,
+            llm_clients=llm_clients,
+            agent=agent,
+        ),
+        spend_reservation_key=spend_reservation_key,
+    )
+
+
+async def _run_async_form_preflight_then_agent(
+    *,
+    browser_use: Any,
+    browser: Any,
+    request: BrowserReportDownloadRequest,
+    ctx: RunContext,
+    normalized_url: str,
+    execution_url: str,
+    prompt_bundle: BrowserDownloadPromptBundle,
+) -> BrowserAsyncFormAgentExecution:
+    """Keep deterministic form work and Agent fallback on one BrowserSession loop."""
+
+    pre_llm_result = None
+    if str(request.route_family_hint or "").strip() == "browser_email_form":
+        field_values = _browser_standard_form_identity_field_values(request)
+        if field_values:
+            pre_llm_result = await _try_pre_llm_standard_form_submit_async(
+                request=request,
+                browser=browser,
+                ctx=ctx,
+                normalized_url=normalized_url,
+                execution_url=execution_url,
+                field_values=field_values,
+            )
+        else:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="browser_report_download_pre_llm_autofill_skipped",
+                    module=logger.name,
+                    fields={
+                        "normalized_url": normalized_url,
+                        "reason": "no_identity_fields",
+                    },
+                )
+            )
+    if pre_llm_result is not None:
+        return BrowserAsyncFormAgentExecution(
+            pre_llm_result=pre_llm_result,
+            setup=None,
+            history_result=None,
+        )
+    setup = _build_browser_agent_run_setup(
+        browser_use=browser_use,
+        browser=browser,
+        request=request,
+        ctx=ctx,
+        normalized_url=normalized_url,
+        prompt_bundle=prompt_bundle,
+    )
+    run_async = getattr(setup.agent, "run", None)
+    if not inspect.iscoroutinefunction(run_async):
+        history_result = await asyncio.to_thread(
+            _run_agent_history_with_timeout,
+            agent=setup.agent,
+            browser=browser,
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            no_progress_detector=setup.no_progress_detector,
+        )
+    else:
+        history_result = await _run_agent_history_async_with_timeout(
+            agent=setup.agent,
+            browser=browser,
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            no_progress_detector=setup.no_progress_detector,
+        )
+    return BrowserAsyncFormAgentExecution(
+        pre_llm_result=None,
+        setup=setup,
+        history_result=history_result,
     )
 
 
@@ -2063,68 +2214,61 @@ def run_browser_report_download_agent(
                 auto_download_pdfs=True,
                 keep_alive=True,
             )
-        pre_llm_form_result = _try_pre_llm_standard_form_submit(
-            request=request,
-            browser=browser,
-            ctx=ctx,
-            normalized_url=normalized_url,
-            execution_url=execution_url,
-        )
-        if pre_llm_form_result is not None:
-            return pre_llm_form_result
-        browser_spend_reservation_key = _reserve_browser_use_spend(
-            request=request,
-            ctx=ctx,
-            prompt_bundle=prompt_bundle,
-        )
-        llm_clients = llm_service.build_browser_use_llm_clients(
-            settings=request.settings,
-            ctx=ctx,
-            openai_client_factory=getattr(browser_use, "ChatOpenAI", None),
-            openrouter_client_factory=getattr(browser_use, "ChatOpenRouter", None),
-        )
-        agent_kwargs = {
-            "task": prompt_bundle.task_prompt,
-            "llm": llm_clients.primary_llm,
-            "browser": browser,
-            "output_model_schema": BrowserUseAgentResult,
-            "use_judge": _BROWSER_AGENT_USE_JUDGE,
-        }
-        agent_parameters = inspect.signature(browser_use.Agent).parameters
-        no_progress_detector = BrowserNoProgressDetector(browser=browser)
-        if _agent_accepts_parameter(
-            agent_parameters, "register_new_step_callback"
-        ):
-            agent_kwargs["register_new_step_callback"] = (
-                no_progress_detector.observe_callback
+        if inspect.iscoroutinefunction(getattr(browser, "start", None)):
+            async_execution = asyncio.run(
+                _run_async_form_preflight_then_agent(
+                    browser_use=browser_use,
+                    browser=browser,
+                    request=request,
+                    ctx=ctx,
+                    normalized_url=normalized_url,
+                    execution_url=execution_url,
+                    prompt_bundle=prompt_bundle,
+                )
             )
-        if _agent_accepts_parameter(
-            agent_parameters, "register_should_stop_callback"
-        ):
-            agent_kwargs["register_should_stop_callback"] = (
-                no_progress_detector.should_stop_callback
+            if async_execution.pre_llm_result is not None:
+                return async_execution.pre_llm_result
+            if (
+                async_execution.setup is None
+                or async_execution.history_result is None
+            ):
+                raise AppError(
+                    code="browser_download_agent_missing_history",
+                    message="browser-use completed without returning agent history",
+                    retryable=True,
+                    context={"normalized_url": normalized_url},
+                )
+            usage_writer = async_execution.setup.usage_writer
+            browser_spend_reservation_key = async_execution.setup.spend_reservation_key
+            history_result = async_execution.history_result
+        else:
+            pre_llm_form_result = _try_pre_llm_standard_form_submit(
+                request=request,
+                browser=browser,
+                ctx=ctx,
+                normalized_url=normalized_url,
+                execution_url=execution_url,
             )
-        if "calculate_cost" in agent_parameters:
-            agent_kwargs["calculate_cost"] = True
-        if llm_clients.fallback_llm is not None and "fallback_llm" in agent_parameters:
-            agent_kwargs["fallback_llm"] = llm_clients.fallback_llm
-        agent = browser_use.Agent(**agent_kwargs)
-        usage_writer = _configure_browser_use_usage_recorder(
-            request=request,
-            ctx=ctx,
-            normalized_url=normalized_url,
-            prompt_bundle=prompt_bundle,
-            llm_clients=llm_clients,
-            agent=agent,
-        )
-        history_result = _run_agent_history_with_timeout(
-            agent=agent,
-            browser=browser,
-            request=request,
-            ctx=ctx,
-            normalized_url=normalized_url,
-            no_progress_detector=no_progress_detector,
-        )
+            if pre_llm_form_result is not None:
+                return pre_llm_form_result
+            setup = _build_browser_agent_run_setup(
+                browser_use=browser_use,
+                browser=browser,
+                request=request,
+                ctx=ctx,
+                normalized_url=normalized_url,
+                prompt_bundle=prompt_bundle,
+            )
+            usage_writer = setup.usage_writer
+            browser_spend_reservation_key = setup.spend_reservation_key
+            history_result = _run_agent_history_with_timeout(
+                agent=setup.agent,
+                browser=browser,
+                request=request,
+                ctx=ctx,
+                normalized_url=normalized_url,
+                no_progress_detector=setup.no_progress_detector,
+            )
         history = history_result.history
         raw_model_response = str(history.final_result() or "").strip()
         if history_result.no_progress_observation is not None:

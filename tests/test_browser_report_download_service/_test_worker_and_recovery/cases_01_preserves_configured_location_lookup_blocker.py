@@ -1,7 +1,96 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+import asyncio
+
 from ._shared import *  # noqa: F401,F403
+
+
+def test_download_report_with_browser_use_runs_async_form_preflight_and_agent_on_one_event_loop(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    """A retained BrowserSession must not cross separate ``asyncio.run`` calls."""
+
+    runtime = _runtime(
+        tmp_path,
+        route_kind="email_delivery",
+        route_summary="Submitted the report request form.",
+        create_pdf=False,
+        email_submission_completed=True,
+        post_submit_message="Thank you",
+    )
+    original_browser = runtime.Browser
+    original_agent = runtime.Agent
+    observed_loop_ids: list[int] = []
+
+    class AsyncPage:
+        async def evaluate(self, expression: str):
+            if "outerHTML" in expression:
+                return "<html><body><h1>Example report terminal</h1></body></html>"
+            return {
+                "attempted_count": 0,
+                "filled_count": 0,
+                "selected_count": 0,
+                "mandatory_agreement_checked_count": 0,
+                "resolved_control_count": 0,
+                "submitted": False,
+                "final_url": "https://example.com/report",
+                "resolved_fields": [],
+                "unresolved_fields": [],
+                "unresolved_options": {},
+            }
+
+    class AsyncBrowser(original_browser):
+        def __init__(self, *args, **kwargs) -> None:
+            super().__init__(*args, **kwargs)
+            self.page = AsyncPage()
+
+        async def start(self) -> None:
+            observed_loop_ids.append(id(asyncio.get_running_loop()))
+
+        async def get_current_page(self):
+            return self.page
+
+        async def get_current_page_url(self) -> str:
+            return self.url or "https://example.com/report"
+
+        async def get_current_page_title(self) -> str:
+            return self.title
+
+    class AsyncAgent(original_agent):
+        def run_sync(self, max_steps: int):
+            raise AssertionError("async BrowserSession must not use Agent.run_sync")
+
+        async def run(self, max_steps: int):
+            observed_loop_ids.append(id(asyncio.get_running_loop()))
+            self.browser.url = "https://example.com/thank-you"
+            self.browser.title = "Thank you"
+            self.browser.html = "<html><body><h1>Thank you</h1></body></html>"
+            return super().run_sync(max_steps)
+
+    runtime.Browser = AsyncBrowser
+    runtime.Agent = AsyncAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_email_form",
+        ),
+        run_context,
+    )
+
+    assert response.outcome == "email_requested"
+    assert len(observed_loop_ids) == 2
+    assert observed_loop_ids[0] == observed_loop_ids[1]
 
 def test_download_report_with_browser_use_preserves_configured_location_lookup_blocker(
     tmp_path: Path,
@@ -633,6 +722,7 @@ def test_download_report_with_browser_use_maps_partial_lookup_timeout_to_blocker
     )
 
 __all__ = [
+    "test_download_report_with_browser_use_runs_async_form_preflight_and_agent_on_one_event_loop",
     "test_download_report_with_browser_use_preserves_configured_location_lookup_blocker",
     "test_download_report_with_browser_use_salvages_completed_history_when_agent_cleanup_stalls",
     "test_download_report_with_browser_use_recovers_lookup_before_completed_history_shutdown",

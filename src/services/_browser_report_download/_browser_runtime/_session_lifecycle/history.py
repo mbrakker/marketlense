@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
+from contextlib import suppress
 from dataclasses import dataclass
 from threading import Thread
 from typing import Any
@@ -14,12 +16,13 @@ from src.services._browser_report_download._browser_runtime import (
     _AGENT_RUN_TIMEOUT_MIN_BUFFER_SECONDS,
     _AGENT_RUN_TIMEOUT_STEP_BUFFER_SECONDS,
 )
-from src.services._browser_report_download._browser_runtime._session_lifecycle.partial_history import (
+from src.utils.errors import AppError
+from src.utils.logging import log_event
+
+from .partial_history import (
     _read_email_domain_blocker_partial_history,
     _read_terminal_blocker_partial_history,
 )
-from src.utils.errors import AppError
-from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.browser_report_download_service")
 
@@ -28,6 +31,83 @@ class BrowserAgentHistoryResult:
     history: Any
     salvaged_completed_history: bool
     no_progress_observation: Any | None = None
+
+
+async def _run_agent_history_async_with_timeout(
+    *,
+    agent: Any,
+    browser: Any,
+    request: BrowserReportDownloadRequest,
+    ctx: RunContext,
+    normalized_url: str,
+    no_progress_detector: Any | None = None,
+) -> BrowserAgentHistoryResult:
+    """Run a Browser Use Agent on the loop that owns its BrowserSession."""
+
+    task = asyncio.create_task(agent.run(max_steps=request.settings.max_steps))
+    timeout_seconds = _resolve_agent_run_timeout_seconds(request)
+    try:
+        history = await asyncio.wait_for(
+            asyncio.shield(task), timeout=timeout_seconds
+        )
+    except TimeoutError as exc:
+        completed_history = _read_completed_agent_history(agent)
+        if completed_history is not None:
+            return BrowserAgentHistoryResult(
+                history=completed_history,
+                salvaged_completed_history=True,
+            )
+        partial_blocker_history = _read_terminal_blocker_partial_history(
+            agent=agent,
+            request=request,
+            normalized_url=normalized_url,
+        )
+        if partial_blocker_history is not None:
+            return BrowserAgentHistoryResult(
+                history=partial_blocker_history,
+                salvaged_completed_history=True,
+            )
+        _signal_agent_stop(agent)
+        with suppress(TimeoutError):
+            await asyncio.wait_for(
+                asyncio.shield(task), timeout=_AGENT_COMPLETED_HISTORY_POLL_SECONDS
+            )
+        completed_history = _read_completed_agent_history(agent)
+        if completed_history is not None:
+            return BrowserAgentHistoryResult(
+                history=completed_history,
+                salvaged_completed_history=True,
+            )
+        partial_blocker_history = _read_terminal_blocker_partial_history(
+            agent=agent,
+            request=request,
+            normalized_url=normalized_url,
+        )
+        if partial_blocker_history is not None:
+            return BrowserAgentHistoryResult(
+                history=partial_blocker_history,
+                salvaged_completed_history=True,
+            )
+        raise AppError(
+            code="browser_download_agent_timeout",
+            message="browser-use did not return within the configured execution budget",
+            retryable=True,
+            context={
+                "normalized_url": normalized_url,
+                "timeout_seconds": timeout_seconds,
+                "max_steps": request.settings.max_steps,
+            },
+        ) from exc
+    no_progress_observation = (
+        getattr(no_progress_detector, "observation", None)
+        if bool(getattr(no_progress_detector, "should_stop", False))
+        else None
+    )
+    return BrowserAgentHistoryResult(
+        history=history,
+        salvaged_completed_history=False,
+        no_progress_observation=no_progress_observation,
+    )
 
 
 def _run_agent_history_with_timeout(

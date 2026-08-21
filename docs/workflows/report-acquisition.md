@@ -64,9 +64,10 @@ prompt-only playbooks are therefore guidance only and always fall back. The
 live browser lease is process-local, so both deterministic execution and the
 Agent handoff retain cookies, local storage, session ownership, shutdown,
 session-reuse finalization, and browser-launch accounting. Async deterministic
-form handling never closes or replaces that lease: a helper failure resumes
-Browser Use on the same browser, and the outer acquisition runner remains its
-sole lifecycle owner. For browser email forms, a deterministic submit returns
+form handling and an Agent fallback share the same Browser Use event loop; the
+handoff never closes and recreates an `asyncio` loop around a retained browser
+session. A helper failure resumes Browser Use on the same browser, and the outer
+acquisition runner remains its sole lifecycle owner. For browser email forms, a deterministic submit returns
 early only after the canonical terminal-confirmation evidence verifies email
 delivery. A submitted-but-unverified or ambiguous page is handed to Browser
 Use through that same live browser session; only an unknown required identity

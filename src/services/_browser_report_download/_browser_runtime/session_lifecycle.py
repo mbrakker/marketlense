@@ -18,6 +18,7 @@ from src.services._browser_report_download._browser_runtime._session_lifecycle.h
     _prime_agent_timing_fields,
     _read_completed_agent_history,
     _resolve_agent_run_timeout_seconds,
+    _run_agent_history_async_with_timeout,
     _run_agent_history_with_timeout,
     _signal_agent_stop,
 )
