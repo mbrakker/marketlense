@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from contextlib import suppress
 from dataclasses import dataclass
 from hashlib import sha256
 from typing import Any
@@ -138,7 +139,31 @@ class BrowserNoProgressDetector:
         )
 
     async def should_stop_callback(self) -> bool:
-        return self.should_stop
+        should_stop = self.should_stop
+        if should_stop:
+            mark_browser_teardown_intentional(self._browser)
+        return should_stop
+
+
+def mark_browser_teardown_intentional(browser: Any | None) -> None:
+    """Prevent a terminal no-progress stop from scheduling CDP reconnection.
+
+    Browser Use invokes this callback from the session-owning event loop.  Its
+    Agent then exits normally, while ``asyncio.run`` subsequently cancels the
+    session's background CDP tasks.  Marking that teardown before the Agent
+    exits prevents the WebSocket-drop callback from treating the cancellation
+    as a new acquisition opportunity.
+    """
+
+    if browser is None:
+        return
+    with suppress(Exception):
+        browser._intentional_stop = True
+    browser_profile = getattr(browser, "browser_profile", None)
+    if browser_profile is None:
+        return
+    with suppress(Exception):
+        browser_profile.cdp_url = None
 
 
 def _actionable_dom_representation(state: Any) -> tuple[str, bool]:
@@ -232,4 +257,5 @@ def _fingerprint(value: str) -> str:
 __all__ = [
     "BrowserNoProgressDetector",
     "BrowserNoProgressObservation",
+    "mark_browser_teardown_intentional",
 ]

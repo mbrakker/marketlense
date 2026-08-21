@@ -90,6 +90,7 @@ from src.services._browser_report_download._browser_runtime.action_evidence impo
 from src.services._browser_report_download._browser_runtime.no_progress import (
     BrowserNoProgressDetector,
     BrowserNoProgressObservation,
+    mark_browser_teardown_intentional,
 )
 from src.services._browser_report_download._browser_runtime.runtime import (
     browser_runtime_identity,
@@ -1053,6 +1054,35 @@ def _build_browser_agent_run_setup(
 
 
 async def _run_async_form_preflight_then_agent(
+    *,
+    browser_use: Any,
+    browser: Any,
+    request: BrowserReportDownloadRequest,
+    ctx: RunContext,
+    normalized_url: str,
+    execution_url: str,
+    prompt_bundle: BrowserDownloadPromptBundle,
+) -> BrowserAsyncFormAgentExecution:
+    """Run async browser work while suppressing teardown-time CDP reconnects."""
+
+    try:
+        return await _execute_async_form_preflight_then_agent(
+            browser_use=browser_use,
+            browser=browser,
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            execution_url=execution_url,
+            prompt_bundle=prompt_bundle,
+        )
+    finally:
+        # This runs before asyncio.run() cancels BrowserSession background tasks.
+        # Without it, CDP cancellation looks like a dropped connection and the
+        # session starts a reconnect task after the cancellation snapshot.
+        mark_browser_teardown_intentional(browser)
+
+
+async def _execute_async_form_preflight_then_agent(
     *,
     browser_use: Any,
     browser: Any,

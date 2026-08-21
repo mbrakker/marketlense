@@ -1,0 +1,49 @@
+schema_version: "1.0"
+# Acquisition-only replay of the retained 15-report Browser Use timeout cohort.
+# This keeps the prior model and route budget while isolating all runtime state.
+paths:
+  output_dir: "./out/browser_acquisition_timeout_teardown_validation_20260821_113331"
+  cache_dir: "./cache/browser_acquisition_timeout_teardown_validation_20260821_113331"
+  state_db: "./state/browser_acquisition_timeout_teardown_validation_20260821_113331/index.sqlite"
+  reports_db: "./state/browser_acquisition_timeout_teardown_validation_20260821_113331/reports.sqlite"
+  signal_store_db: "./state/browser_acquisition_timeout_teardown_validation_20260821_113331/signals.sqlite"
+  ingest_lock: "./state/browser_acquisition_timeout_teardown_validation_20260821_113331/ingest.lock"
+
+browser_download:
+  output_dir: "./out/browser_acquisition_timeout_teardown_validation_20260821_113331/browser_downloads"
+  identity_config_path: "./browser_download_identity.yaml"
+  # Retain route behavior but prevent live validation from persisting identity-derived playbooks.
+  route_playbook_promotion_mode: "disabled"
+  private_api_playbook_promotion_mode: "disabled"
+  retry:
+    retries: 0
+    base_delay_seconds: 0.0
+    backoff_step_seconds: 0.0
+    jitter_seconds: 0.0
+  route_budgets:
+    browser_email_form:
+      timeout_seconds: 240
+      max_steps: 24
+  run_budget:
+    enabled: true
+    max_browser_launches: 90
+    max_pdfs: 40
+    max_drive_writes: 40
+    max_drive_reads: 120
+    max_mailbox_reads: 80
+    max_retries: 0
+    max_runtime_seconds: 43200
+    limit_decision: "stop"
+
+mailbox_acquisition:
+  output_dir: "./out/browser_acquisition_timeout_teardown_validation_20260821_113331/mailbox_acquisition"
+  poll_timeout_seconds: 600
+  poll_interval_seconds: 30
+
+analysis:
+  cost_ledger_path: "./state/browser_acquisition_timeout_teardown_validation_20260821_113331/llm_cost_ledger.jsonl"
+
+cost:
+  usage_db_path: "./state/browser_acquisition_timeout_teardown_validation_20260821_113331/llm_usage.sqlite"
+  daily_path: "./state/browser_acquisition_timeout_teardown_validation_20260821_113331/llm_cost_daily.json"
+  ledger_path: "./state/browser_acquisition_timeout_teardown_validation_20260821_113331/llm_cost_ledger.jsonl"

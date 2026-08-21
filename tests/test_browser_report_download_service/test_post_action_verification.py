@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 from .builders import *  # noqa: F401,F403
 from src.services._browser_report_download.browser import BrowserAgentRunResult
 from src.services._browser_report_download._browser_runtime.no_progress import (
@@ -169,6 +171,26 @@ def test_browser_no_progress_resets_when_a_browser_artifact_appears() -> None:
     assert observation.artifact_count == 1
     assert observation.consecutive_equivalent_turns == 1
     assert observation.should_stop is False
+
+
+def test_browser_no_progress_stop_marks_browser_teardown_intentional() -> None:
+    browser = SimpleNamespace(
+        _intentional_stop=False,
+        browser_profile=SimpleNamespace(cdp_url="ws://127.0.0.1:9222/devtools/browser/example"),
+    )
+    detector = BrowserNoProgressDetector(browser=browser)
+    state, output = _no_progress_state()
+
+    for step_number in range(1, 4):
+        detector.observe(
+            state=state,
+            model_output=output,
+            step_number=step_number,
+        )
+
+    assert asyncio.run(detector.should_stop_callback()) is True
+    assert browser._intentional_stop is True
+    assert browser.browser_profile.cdp_url is None
 
 
 def test_browser_use_route_steps_are_enriched_with_post_action_verification(

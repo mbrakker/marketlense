@@ -23,3 +23,10 @@ For a `browser_email_form` fallback, inspect
 handling runs on the already-open async Browser Use session before the Agent. An
 unsupported form or unverified submit preserves that same page, cookies, and local
 storage for Browser Use fallback; only the outer browser lifecycle closes it.
+
+If a Browser Use run stops after repeated equivalent states, retain the terminal
+`blocked_no_progress` route result rather than treating it as a browser-worker
+timeout. The async handoff marks BrowserSession teardown as intentional before
+the loop cancels background CDP tasks, so the session must not begin a fresh
+WebSocket reconnect while the acquisition worker is completing. Inspect the
+bounded no-progress event and the retained per-report evidence before retrying.
