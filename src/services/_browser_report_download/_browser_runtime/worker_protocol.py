@@ -217,6 +217,10 @@ def _run_browser_report_download_agent_subprocess(
     env["PYTHONUTF8"] = "1"
     env.setdefault("NO_COLOR", "1")
     env.setdefault("RICH_DISABLE", "1")
+    # The worker owns browser-process teardown after Agent completion. Do not
+    # wait for its independent telemetry EventBus to drain while a stopped
+    # Agent is holding acquisition completion open.
+    env["TIMEOUT_AgentEventBusStop"] = "0"
     timeout_seconds = (
         _resolve_agent_run_timeout_seconds(request)
         + _BROWSER_AGENT_WORKER_TIMEOUT_BUFFER_SECONDS

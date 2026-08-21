@@ -1241,6 +1241,7 @@ def test_browser_worker_subprocess_forces_utf8_and_captures_output(
         assert kwargs["env"]["PYTHONUTF8"] == "1"
         assert kwargs["env"]["NO_COLOR"] == "1"
         assert kwargs["env"]["RICH_DISABLE"] == "1"
+        assert kwargs["env"]["TIMEOUT_AgentEventBusStop"] == "0"
         response_path = Path(args[0][-1])
         response_path.write_text(
             json.dumps(
