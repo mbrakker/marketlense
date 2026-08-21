@@ -2628,6 +2628,18 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 			raise e
 
 		finally:
+			# MarketLense runs acquisition Agents in an isolated worker.  A
+			# programmatic no-progress stop has already produced the terminal
+			# history and the outer worker owns browser-process teardown.  Do not
+			# let optional Agent telemetry/session cleanup hold that typed terminal
+			# result open until the worker deadline.
+			if (
+				os.environ.get('MARKET_LENSE_BROWSER_AGENT_WORKER') == '1'
+				and self.state.stopped
+				and agent_run_error == 'Agent stopped programmatically'
+			):
+				signal_handler.unregister()
+				return self.history
 			if should_delay_close and self._demo_mode_enabled and agent_run_error is None:
 				await asyncio.sleep(30)
 			if agent_run_error:
