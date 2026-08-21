@@ -190,7 +190,7 @@ def test_browser_no_progress_stop_marks_browser_teardown_intentional() -> None:
 
     assert asyncio.run(detector.should_stop_callback()) is True
     assert browser._intentional_stop is True
-    assert browser.browser_profile.cdp_url is None
+    assert browser.browser_profile.cdp_url == "ws://127.0.0.1:9222/devtools/browser/example"
 
 
 def test_browser_use_route_steps_are_enriched_with_post_action_verification(

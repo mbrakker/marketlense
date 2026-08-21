@@ -159,11 +159,6 @@ def mark_browser_teardown_intentional(browser: Any | None) -> None:
         return
     with suppress(Exception):
         browser._intentional_stop = True
-    browser_profile = getattr(browser, "browser_profile", None)
-    if browser_profile is None:
-        return
-    with suppress(Exception):
-        browser_profile.cdp_url = None
 
 
 def _actionable_dom_representation(state: Any) -> tuple[str, bool]:
