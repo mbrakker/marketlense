@@ -1,0 +1,43 @@
+schema_version: "1.0"
+# Acquisition-only replay of the four retained GWI failures. No discovery or downstream stages.
+paths:
+  output_dir: "./out/gwi_acquisition_validation_20260822_212000"
+  cache_dir: "./cache/gwi_acquisition_validation_20260822_212000"
+  state_db: "./state/gwi_acquisition_validation_20260822_212000/index.sqlite"
+  reports_db: "./state/gwi_acquisition_validation_20260822_212000/reports.sqlite"
+  signal_store_db: "./state/gwi_acquisition_validation_20260822_212000/signals.sqlite"
+  ingest_lock: "./state/gwi_acquisition_validation_20260822_212000/ingest.lock"
+browser_download:
+  output_dir: "./out/gwi_acquisition_validation_20260822_212000/browser_downloads"
+  identity_config_path: "./browser_download_identity.yaml"
+  route_playbook_promotion_mode: "disabled"
+  private_api_playbook_promotion_mode: "disabled"
+  retry:
+    retries: 0
+    base_delay_seconds: 0.0
+    backoff_step_seconds: 0.0
+    jitter_seconds: 0.0
+  route_budgets:
+    browser_email_form:
+      timeout_seconds: 240
+      max_steps: 24
+  run_budget:
+    enabled: true
+    max_browser_launches: 4
+    max_pdfs: 4
+    max_drive_writes: 4
+    max_drive_reads: 12
+    max_mailbox_reads: 4
+    max_retries: 0
+    max_runtime_seconds: 43200
+    limit_decision: "stop"
+mailbox_acquisition:
+  output_dir: "./out/gwi_acquisition_validation_20260822_212000/mailbox_acquisition"
+  poll_timeout_seconds: 600
+  poll_interval_seconds: 30
+analysis:
+  cost_ledger_path: "./state/gwi_acquisition_validation_20260822_212000/llm_cost_ledger.jsonl"
+cost:
+  usage_db_path: "./state/gwi_acquisition_validation_20260822_212000/llm_usage.sqlite"
+  daily_path: "./state/gwi_acquisition_validation_20260822_212000/llm_cost_daily.json"
+  ledger_path: "./state/gwi_acquisition_validation_20260822_212000/llm_cost_ledger.jsonl"
