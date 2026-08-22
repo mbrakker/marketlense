@@ -1421,6 +1421,53 @@ def test_standard_form_helper_activates_same_page_report_cta_before_submit():
     assert result.final_url == "https://example.com/gated-report#form"
 
 
+def test_standard_form_helper_traverses_shadow_hosted_cta_and_form_frame():
+    """A shadow-hosted CTA must be activated before the form helper gives up."""
+
+    class ShadowHostedFormPage:
+        def evaluate(self, script):
+            if "standardFormActivate" in script:
+                if "shadowRoot" not in script:
+                    raise AssertionError("shadow-hosted CTA was not searched")
+                return {
+                    "activated": True,
+                    "activation_text": "Download report",
+                    "final_url": "https://example.com/gated-report#form",
+                }
+            if "standardFormSubmit" in script:
+                if "shadowRoot" not in script:
+                    raise AssertionError("shadow-hosted form frame was not searched")
+                return {
+                    "attempted_count": 1,
+                    "filled_count": 1,
+                    "selected_count": 0,
+                    "mandatory_agreement_checked_count": 0,
+                    "resolved_control_count": 1,
+                    "submitted": True,
+                    "final_url": "https://example.com/gated-report#form",
+                    "resolved_fields": ["Work email"],
+                    "unresolved_fields": [],
+                }
+            raise AssertionError("unexpected browser helper expression")
+
+    result = browser_helper_standard_form_submit(
+        page=ShadowHostedFormPage(),
+        field_values=[
+            {
+                "key": "work_email",
+                "label": "Work email",
+                "value": "ops@example.com",
+                "aliases": ["email"],
+            }
+        ],
+        ctx=_ctx(),
+        normalized_url="https://example.com/gated-report",
+    )
+
+    assert result.status == "ok"
+    assert result.submitted is True
+
+
 def test_grounded_form_derivation_requires_visible_option_and_configured_evidence():
     from src.services._browser_report_download.browser import (
         _validated_grounded_form_option,

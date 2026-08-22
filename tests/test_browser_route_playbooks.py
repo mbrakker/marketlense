@@ -68,6 +68,28 @@ def test_repo_browser_route_playbooks_load_and_select(run_context) -> None:
     assert selection.fallback_to_discovery is False
 
 
+def test_adjust_ebook_listing_selects_the_deterministic_report_entry_playbook(
+    run_context,
+) -> None:
+    playbook_dir = (
+        Path(__file__).resolve().parents[1] / "src" / "playbooks" / "browser_routes"
+    )
+    selection = select_browser_route_playbooks(
+        playbooks=load_browser_route_playbooks(
+            playbook_dir=str(playbook_dir),
+            ctx=run_context,
+        ),
+        normalized_url="https://www.adjust.com/resources/ebooks/all",
+        route_family_hint="browser_email_form",
+        now=datetime.fromisoformat("2026-08-22T19:00:00+00:00"),
+    )
+
+    assert selection.selected_playbooks[0].playbook_id == (
+        "learned-www-adjust-com-browser-email-form-listing"
+    )
+    assert selection.selected_playbooks[0].route_kind == "email_delivery"
+
+
 def test_stale_playbook_fallback_and_fail_policies_are_logged(
     tmp_path: Path,
     run_context,

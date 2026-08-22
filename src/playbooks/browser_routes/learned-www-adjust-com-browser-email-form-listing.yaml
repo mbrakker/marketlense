@@ -1,0 +1,37 @@
+schema_version: "1.0"
+playbook_id: "learned-www-adjust-com-browser-email-form-listing"
+version: "1.0.0"
+status: "active"
+updated_at: "2026-08-22T19:00:00+00:00"
+stale_after_days: 120
+publisher_pattern: "www.adjust.com ebook listing to gated report form"
+host_patterns:
+  - "www.adjust.com"
+url_path_markers:
+  - "resources/ebooks/all"
+route_family: "browser_email_form"
+route_kind: "email_delivery"
+summary: "From the retained ebook listing, open the evidenced Japan app trends report; the standard form helper then activates the same-page Download report CTA before the Browser Use fallback handles any cross-origin form controls."
+steps:
+  - schema_version: "1.0"
+    action: "click"
+    target: "Mobile app trends 2026: Japan edition"
+    verification: "The selected report heading is visible."
+    selector_type: "css"
+    selector: "a[href='/resources/ebooks/japan-app-trends/']"
+    expected_text: "Mobile app trends 2026: Japan edition"
+traps:
+  - "Do not select an unrelated ebook from the catalogue."
+  - "Do not treat a submitted form as a verified document acquisition."
+  - "The Pardot controls may be in a cross-origin iframe; allow the bounded Browser Use fallback only after deterministic navigation and CTA activation."
+evidence_notes:
+  - "The frozen failed listing candidate has no title; the retained successful direct artifact for that candidate was Japan app trends 2026."
+  - "Live read-only inspection on 2026-08-22 confirmed the catalogue link, report heading, same-page Download report CTA, and form boundary."
+source_evidence:
+  - "docs/CTO_evidence/acquisition_failure_remediation_20260814_5d4c027f/diagnostic_after_credential_fix/acquisition_attempts.jsonl"
+  - "docs/CTO_evidence/browser_isolated_timeout_15_20260822_144500/baseline_evidence/baseline_manifest.json"
+history:
+  - schema_version: "1.0"
+    changed_at: "2026-08-22T19:00:00+00:00"
+    source: "retained_evidence_and_read_only_browser_inspection"
+    summary: "Added deterministic listing-to-report navigation before standard-form handling and Browser Use fallback."

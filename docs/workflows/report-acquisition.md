@@ -78,17 +78,21 @@ agent and therefore cannot be submitted again by that fallback path.
 Before its usual standard-form fill, the helper may activate one visible,
 enabled same-page report CTA only when no visible actionable form is already
 present. The bounded CTA set is limited to report/download/data/access/unlock
-language and a fragment link or an explicitly bound in-page button; it never
-chooses an item from a listing or follows an external URL. This accommodates a
-landing page that reveals its normal form below the fold while preserving an
-already visible form, including a standard `Dive in` submit control. After a
-successful deterministic submission, an observed embedded `.pdf` URL goes
-through the ordinary direct PDF artifact verifier before the Agent fallback.
-An iframe, viewer, or embed without a recoverable PDF remains unverified and
-continues through the existing fallback/capture rules. Terminal 404/410 pages
-with the configured not-found body evidence stop as typed terminal failures;
-an HTTP access-layer 403 is not treated as a 404 because browser preflight may
-see a different, definitive publisher response.
+language and a fragment link, explicitly bound in-page button, or rendered
+component link; it never chooses an item from a listing or follows an external
+URL. CTA and same-origin frame discovery traverse open shadow roots, so a
+publisher's web-component shell does not bypass deterministic form handling.
+Cross-origin frames remain outside that deterministic boundary and continue to
+the existing bounded Browser Use fallback on the same browser session. This
+accommodates a landing page that reveals its normal form below the fold while
+preserving an already visible form, including a standard `Dive in` submit
+control. After a successful deterministic submission, an observed embedded
+`.pdf` URL goes through the ordinary direct PDF artifact verifier before the
+Agent fallback. An iframe, viewer, or embed without a recoverable PDF remains
+unverified and continues through the existing fallback/capture rules. Terminal
+404/410 pages with the configured not-found body evidence stop as typed
+terminal failures; an HTTP access-layer 403 is not treated as a 404 because
+browser preflight may see a different, definitive publisher response.
 
 The same configured not-found body evidence is checked again after deterministic
 form discovery in the retained Browser Use session. This catches a browser-only

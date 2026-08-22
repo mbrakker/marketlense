@@ -188,20 +188,29 @@ def browser_helper_form_autocomplete(
             .filter((field) => field.value);
           const sameOriginDocuments = () => {{
             const roots = [document];
-            for (const frame of Array.from(document.querySelectorAll('iframe'))) {{
-              try {{
-                const frameDocument = frame.contentDocument;
-                if (
-                  frameDocument &&
-                  frameDocument.documentElement &&
-                  !roots.includes(frameDocument)
-                ) {{
-                  roots.push(frameDocument);
-                }}
-              }} catch (error) {{
-                // Cross-origin frames are intentionally skipped.
+            const seenRoots = new Set();
+            const visit = (root) => {{
+              if (!root || seenRoots.has(root)) return;
+              seenRoots.add(root);
+              for (const node of Array.from(root.querySelectorAll('*'))) {{
+                if (node.shadowRoot) visit(node.shadowRoot);
               }}
-            }}
+              for (const frame of Array.from(root.querySelectorAll('iframe'))) {{
+                try {{
+                  const frameDocument = frame.contentDocument;
+                  if (
+                    frameDocument &&
+                    frameDocument.documentElement &&
+                    !roots.includes(frameDocument)
+                  ) {{
+                    roots.push(frameDocument);
+                  }}
+                }} catch (error) {{
+                  // Cross-origin frames are intentionally skipped.
+                }}
+              }}
+            }};
+            visit(document);
             return roots;
           }};
           const labelsFor = (control, root = control.ownerDocument || document) => {{
@@ -653,8 +662,22 @@ def browser_helper_standard_form_submit(
             node.innerText || node.textContent || node.value ||
             node.getAttribute('aria-label') || ''
           );
-          const hasVisibleActionableForm = Array.from(
-            document.querySelectorAll('form, [role="form"]')
+          const composedRoots = () => {
+            const roots = [];
+            const seen = new Set();
+            const visit = (root) => {
+              if (!root || seen.has(root)) return;
+              seen.add(root);
+              roots.push(root);
+              for (const node of Array.from(root.querySelectorAll('*'))) {
+                if (node.shadowRoot) visit(node.shadowRoot);
+              }
+            };
+            visit(document);
+            return roots;
+          };
+          const hasVisibleActionableForm = composedRoots().flatMap((root) =>
+            Array.from(root.querySelectorAll('form, [role="form"]'))
           ).some((form) => isVisible(form) && Array.from(form.querySelectorAll(
             'button[type="submit"], input[type="submit"], button'
           )).some((node) => isVisible(node) && !node.disabled));
@@ -672,10 +695,11 @@ def browser_helper_standard_form_submit(
             ')\\b',
             'i'
           );
-          const cta = Array.from(document.querySelectorAll(
+          const cta = composedRoots().flatMap((root) => Array.from(root.querySelectorAll(
             'a[href^="#"], button[aria-controls], button[data-target], ' +
-            'button[data-scroll], button[data-scroll-target], button[data-bs-target]'
-          )).find((node) => {
+            'button[data-scroll], button[data-scroll-target], button[data-bs-target], ' +
+            '[component="ALink"] .a-link, .a-link'
+          ))).find((node) => {
             const href = normalize(node.getAttribute('href') || '');
             const isSamePageLink = node.tagName === 'A' &&
               href.startsWith('#') && href.length > 1;
@@ -685,8 +709,10 @@ def browser_helper_standard_form_submit(
                 node.getAttribute('data-target') || node.getAttribute('data-scroll') ||
                 node.getAttribute('data-scroll-target') ||
                 node.getAttribute('data-bs-target'));
+            const isComponentLink = node.matches('.a-link');
             return isVisible(node) && !node.disabled &&
-              (isSamePageLink || isBoundButton) && ctaPattern.test(textFor(node));
+              (isSamePageLink || isBoundButton || isComponentLink) &&
+              ctaPattern.test(textFor(node));
           });
           if (!cta) {
             return {
@@ -763,20 +789,29 @@ def browser_helper_standard_form_submit(
           }};
           const sameOriginDocuments = () => {{
             const roots = [document];
-            for (const frame of Array.from(document.querySelectorAll('iframe'))) {{
-              try {{
-                const frameDocument = frame.contentDocument;
-                if (
-                  frameDocument &&
-                  frameDocument.documentElement &&
-                  !roots.includes(frameDocument)
-                ) {{
-                  roots.push(frameDocument);
-                }}
-              }} catch (error) {{
-                // Cross-origin frames are intentionally skipped.
+            const seenRoots = new Set();
+            const visit = (root) => {{
+              if (!root || seenRoots.has(root)) return;
+              seenRoots.add(root);
+              for (const node of Array.from(root.querySelectorAll('*'))) {{
+                if (node.shadowRoot) visit(node.shadowRoot);
               }}
-            }}
+              for (const frame of Array.from(root.querySelectorAll('iframe'))) {{
+                try {{
+                  const frameDocument = frame.contentDocument;
+                  if (
+                    frameDocument &&
+                    frameDocument.documentElement &&
+                    !roots.includes(frameDocument)
+                  ) {{
+                    roots.push(frameDocument);
+                  }}
+                }} catch (error) {{
+                  // Cross-origin frames are intentionally skipped.
+                }}
+              }}
+            }};
+            visit(document);
             return roots;
           }};
           const fieldEntries = (payload.fields || [])
