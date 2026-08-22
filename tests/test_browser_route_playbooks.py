@@ -936,6 +936,72 @@ def test_runtime_role_form_evidence_promotes_and_executes_async(
     ]
 
 
+def test_async_deterministic_submit_waits_for_the_page_driver_to_settle(
+    run_context,
+) -> None:
+    """A client-side form response must settle before submit verification runs."""
+
+    class SubmitDriver:
+        def __init__(self) -> None:
+            self.calls: list[str] = []
+
+        async def click_css(self, _selector: str) -> str:
+            self.calls.append("click")
+            return "clicked"
+
+        async def wait_for_post_submit(self) -> None:
+            self.calls.append("settle")
+
+        async def current_url(self) -> str:
+            self.calls.append("current_url")
+            return "https://example.com/request"
+
+        async def contains_text(self, _text: str) -> bool:
+            return True
+
+    playbook = BrowserRoutePlaybook(
+        schema_version="1.0",
+        playbook_id="async-submit-settlement",
+        version="1.0.0",
+        status="active",
+        updated_at="2026-08-23T00:00:00+00:00",
+        stale_after_days=120,
+        publisher_pattern="example.com",
+        host_patterns=["example.com"],
+        url_path_markers=["request"],
+        route_family="browser_email_form",
+        route_kind="email_delivery",
+        summary="Submit a client-side report request form.",
+        steps=[
+            BrowserRoutePlaybookStep(
+                schema_version="1.0",
+                action="submit",
+                target="Request report",
+                verification="The request page remains available after submission.",
+                selector_type="css",
+                selector="button[type=submit]",
+                expected_url_contains="/request",
+            )
+        ],
+    )
+    driver = SubmitDriver()
+
+    response = asyncio.run(
+        execute_browser_route_playbook_async(
+            BrowserRoutePlaybookExecutionRequest(
+                schema_version="1.0",
+                playbook=playbook,
+                normalized_url="https://example.com/request",
+                page_driver=driver,
+            ),
+            run_context,
+        )
+    )
+
+    assert response.status == "completed"
+    assert driver.calls == ["click", "settle", "current_url"]
+
+
 def test_deterministic_executor_rejects_role_select_for_non_native_control(
     run_context,
 ) -> None:

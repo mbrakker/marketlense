@@ -740,6 +740,8 @@ async def _execute_playbook_step_async(
             page_driver=page_driver,
             identity_values=identity_values,
         )
+        if step.action.strip().lower() == "submit":
+            await _settle_after_deterministic_submit_async(page_driver)
         drift_reason = await _verify_playbook_step_async(
             step=step,
             page_driver=page_driver,
@@ -773,6 +775,14 @@ async def _execute_playbook_step_async(
         evidence=evidence,
         drift_reason="",
     )
+
+
+async def _settle_after_deterministic_submit_async(page_driver: Any) -> None:
+    """Let a client-side form transition before checking its submit postcondition."""
+
+    settle = getattr(page_driver, "wait_for_post_submit", None)
+    if callable(settle):
+        await _await_playbook_value(settle())
 
 
 async def _dispatch_playbook_action_async(

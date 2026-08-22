@@ -51,6 +51,12 @@ is ignored and the normal deterministic route/fallback behavior remains in
 force. Browser Use evaluates that preflight directly on its owning async event
 loop; it is not passed through the synchronous browser-helper bridge.
 
+After a deterministic native-form `submit`, an async Browser Use driver yields
+for a bounded three-second client-side settlement period before it checks the
+step postcondition and captures the terminal page. This avoids classifying the
+pre-submit DOM as the terminal result; the existing artifact or confirmation
+verifier still decides whether the acquisition succeeded.
+
 An isolated-worker startup or navigation that has rendered the target page but
 does not settle within 15 seconds is treated as an unsettled browser state, not
 a reason to abandon the deterministic route. The worker continues on that

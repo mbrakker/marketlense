@@ -277,6 +277,8 @@ from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.browser_report_download_service")
 
+_ASYNC_DETERMINISTIC_POST_SUBMIT_SETTLE_SECONDS = 3.0
+
 _STANDARD_BROWSER_USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
@@ -1747,6 +1749,11 @@ class _AsyncDeterministicPlaybookPageDriver:
             + json.dumps(_data_attribute_selector(selector))
             + ")"
         )
+
+    async def wait_for_post_submit(self) -> None:
+        """Allow client-side form submission handlers to update the current page."""
+
+        await asyncio.sleep(_ASYNC_DETERMINISTIC_POST_SUBMIT_SETTLE_SECONDS)
 
     async def fill_css(self, selector: str, value: str) -> str:
         return await self._set_value(
