@@ -252,8 +252,11 @@ def _run_browser_report_download_agent_subprocess(
                 check=False,
                 cwd=str(Path.cwd()),
                 env=env,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
+                # Chrome inherits worker handles.  A PIPE makes communicate()
+                # wait for the browser child to close that pipe even after the
+                # disposable worker has written its canonical response file.
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
                 text=True,
                 encoding="utf-8",
                 errors="replace",
@@ -281,7 +284,7 @@ def _run_browser_report_download_agent_subprocess(
             ctx=ctx,
             normalized_url=normalized_url,
         )
-    worker_output_excerpt = _normalize_browser_worker_output_excerpt(completed.stdout)
+    worker_output_excerpt = ""
     completion_fields: dict[str, Any] = {
         "normalized_url": normalized_url,
         "payload_path": str(payload_path),
@@ -289,7 +292,7 @@ def _run_browser_report_download_agent_subprocess(
         "response_path": str(response_path),
         "return_code": completed.returncode,
         "response_exists": response_path.exists(),
-        "worker_output_captured": bool(completed.stdout),
+        "worker_output_captured": False,
     }
     if worker_output_excerpt:
         completion_fields["worker_output_excerpt"] = worker_output_excerpt

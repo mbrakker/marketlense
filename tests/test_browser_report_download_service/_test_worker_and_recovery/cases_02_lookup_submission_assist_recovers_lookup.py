@@ -1205,7 +1205,7 @@ def test_browser_worker_main_redacts_identity_values_from_persisted_response(
     assert "***REDACTED***" in persisted
 
 
-def test_browser_worker_subprocess_forces_utf8_and_captures_output(
+def test_browser_worker_subprocess_forces_utf8_without_capturing_child_output(
     tmp_path: Path,
     run_context,
     external_boundary_mocks_only,
@@ -1231,11 +1231,8 @@ def test_browser_worker_subprocess_forces_utf8_and_captures_output(
     )
 
     def fake_run(*args, **kwargs):
-        assert kwargs["stdout"] == subprocess.PIPE
-        assert kwargs["stderr"] == subprocess.STDOUT
-        assert kwargs["text"] is True
-        assert kwargs["encoding"] == "utf-8"
-        assert kwargs["errors"] == "replace"
+        assert kwargs["stdout"] == subprocess.DEVNULL
+        assert kwargs["stderr"] == subprocess.DEVNULL
         assert kwargs["env"][browser_runtime._BROWSER_AGENT_WORKER_ENV] == "1"
         assert kwargs["env"]["PYTHONIOENCODING"] == "utf-8"
         assert kwargs["env"]["PYTHONUTF8"] == "1"
@@ -1269,7 +1266,7 @@ def test_browser_worker_subprocess_forces_utf8_and_captures_output(
         return subprocess.CompletedProcess(
             args=args[0],
             returncode=0,
-            stdout="INFO browser_use.Agent Step 1: click download\n",
+            stdout=None,
         )
 
     external_boundary_mocks_only.setattr(browser_runtime.subprocess, "run", fake_run)
@@ -1291,12 +1288,8 @@ def test_browser_worker_subprocess_forces_utf8_and_captures_output(
     ]
     assert len(completion_events) == 1
     completion_fields = completion_events[0]["fields"]
-    assert completion_fields["worker_output_captured"] is True
-    worker_output = completion_fields["worker_output_excerpt"]
-    assert worker_output["redaction"] == "***REDACTED***"
-    assert worker_output["character_count"] == len(
-        "INFO browser_use.Agent Step 1: click download"
-    )
+    assert completion_fields["worker_output_captured"] is False
+    assert "worker_output_excerpt" not in completion_fields
     assert_logs_have_required_fields(_service_events(caplog))
 
 
@@ -1527,7 +1520,7 @@ def test_browser_worker_execution_never_dispatches_a_nested_worker(
     )
 
 
-def test_browser_worker_subprocess_sanitizes_failure_output_excerpt(
+def test_browser_worker_subprocess_reports_missing_result_without_child_output(
     tmp_path: Path,
     run_context,
     external_boundary_mocks_only,
@@ -1556,7 +1549,7 @@ def test_browser_worker_subprocess_sanitizes_failure_output_excerpt(
         return subprocess.CompletedProcess(
             args=args[0],
             returncode=1,
-            stdout="browser_use.Agent🤖\r\n\x1b[31mStep 1 failed\x1b[0m\r\n",
+            stdout=None,
         )
 
     external_boundary_mocks_only.setattr(browser_runtime.subprocess, "run", fake_run)
@@ -1575,7 +1568,7 @@ def test_browser_worker_subprocess_sanitizes_failure_output_excerpt(
     assert exc_info.value.context == {
         "normalized_url": "https://example.com/report",
         "return_code": 1,
-        "worker_output_excerpt": "browser_use.Agent\nStep 1 failed",
+        "worker_output_excerpt": "",
     }
     completion_events = [
         event
@@ -1584,9 +1577,8 @@ def test_browser_worker_subprocess_sanitizes_failure_output_excerpt(
     ]
     assert len(completion_events) == 1
     completion_fields = completion_events[0]["fields"]
-    worker_output = completion_fields["worker_output_excerpt"]
-    assert worker_output["redaction"] == "***REDACTED***"
-    assert worker_output["character_count"] == len("browser_use.Agent\nStep 1 failed")
+    assert completion_fields["worker_output_captured"] is False
+    assert "worker_output_excerpt" not in completion_fields
     assert_logs_have_required_fields(_service_events(caplog))
 
 
@@ -1693,13 +1685,13 @@ __all__ = [
     "test_browser_worker_main_preserves_candidate_trace",
     "test_browser_worker_main_preserves_identity_option_aliases",
     "test_browser_worker_main_redacts_identity_values_from_persisted_response",
-    "test_browser_worker_subprocess_forces_utf8_and_captures_output",
+    "test_browser_worker_subprocess_forces_utf8_without_capturing_child_output",
     "test_headed_browser_run_stays_in_process",
     "test_browser_worker_subprocess_discards_sensitive_request_payload_after_run",
     "test_browser_worker_subprocess_discards_sensitive_request_payload_after_timeout",
     "test_browser_worker_execution_never_dispatches_a_nested_worker",
     "test_pre_llm_autofill_runs_on_async_browser_session",
-    "test_browser_worker_subprocess_sanitizes_failure_output_excerpt",
+    "test_browser_worker_subprocess_reports_missing_result_without_child_output",
     "test_download_report_with_browser_use_cleans_stale_browser_use_temp_dirs_before_launch",
     "test_download_report_with_browser_use_cleans_new_browser_use_temp_dirs_after_run",
 ]

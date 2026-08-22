@@ -28,5 +28,10 @@ If a Browser Use run stops after repeated equivalent states, retain the terminal
 `blocked_no_progress` route result rather than treating it as a browser-worker
 timeout. The async handoff marks BrowserSession teardown as intentional before
 the loop cancels background CDP tasks, so the session must not begin a fresh
-WebSocket reconnect while the acquisition worker is completing. Inspect the
-bounded no-progress event and the retained per-report evidence before retrying.
+WebSocket reconnect while the acquisition worker is completing. That terminal
+path must not re-enter browser capture, dialog inspection, artifact prefetch,
+or form assistance after the Agent event loop has ended. Browser workers also
+discard child stdout/stderr instead of capturing a pipe, because a Chrome child
+can inherit a pipe and defer worker completion after the response artifact is
+written. Inspect the bounded no-progress event and the retained per-report
+evidence before retrying.

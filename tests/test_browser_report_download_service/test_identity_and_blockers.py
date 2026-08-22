@@ -24,6 +24,15 @@ def test_download_report_with_browser_use_stops_after_three_equivalent_turns(
         email_submission_completed=False,
     )
     original_runtime = runtime.Agent
+    original_browser = runtime.Browser
+
+    class BrowserWithoutTerminalCapture(original_browser):
+        def get_current_page(self):
+            raise AssertionError(
+                "no-progress completion must not re-enter terminal browser capture"
+            )
+
+    runtime.Browser = BrowserWithoutTerminalCapture
 
     class EquivalentTurnHistory:
         def final_result(self) -> str:

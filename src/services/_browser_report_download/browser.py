@@ -2234,6 +2234,7 @@ def run_browser_report_download_agent(
     dialog_evidence: list[BrowserDownloadDialogEvidence] = []
     execution_route_steps: list[BrowserDownloadRouteStep] = []
     browser_spend_reservation_key = ""
+    no_progress_stopped = False
     try:
         if browser is None:
             launch_started = True
@@ -2300,8 +2301,9 @@ def run_browser_report_download_agent(
                 no_progress_detector=setup.no_progress_detector,
             )
         history = history_result.history
+        no_progress_stopped = history_result.no_progress_observation is not None
         raw_model_response = str(history.final_result() or "").strip()
-        if history_result.no_progress_observation is not None:
+        if no_progress_stopped:
             raw_model_response = _no_progress_raw_model_response(
                 history_result.no_progress_observation,
                 route_family_hint=str(request.route_family_hint or "").strip(),
@@ -2320,11 +2322,19 @@ def run_browser_report_download_agent(
             )
         history_final_page_url = _read_history_final_page_url(history)
         history_final_page_title = _read_history_final_page_title(history)
-        action_evidence_snapshot = _capture_terminal_snapshot(
-            browser,
-            ctx=ctx,
-            normalized_url=normalized_url,
-        )
+        if no_progress_stopped:
+            action_evidence_snapshot = TerminalSnapshot(
+                page=None,
+                url=str(history_result.no_progress_observation.url or ""),
+                title="",
+                html="",
+            )
+        else:
+            action_evidence_snapshot = _capture_terminal_snapshot(
+                browser,
+                ctx=ctx,
+                normalized_url=normalized_url,
+            )
         execution_route_steps = capture_browser_execution_route_steps(
             history=history,
             final_page_url=(
@@ -2363,31 +2373,39 @@ def run_browser_report_download_agent(
         downloaded_files = [
             str(path) for path in getattr(browser, "downloaded_files", [])
         ]
-        materialized_paths = _materialize_external_artifacts(
-            raw_model_response=raw_model_response,
-            attachment_paths=attachment_paths,
-            downloaded_files=downloaded_files,
-            download_dir=download_dir,
-            ctx=ctx,
-            normalized_url=normalized_url,
+        materialized_paths = (
+            []
+            if no_progress_stopped
+            else _materialize_external_artifacts(
+                raw_model_response=raw_model_response,
+                attachment_paths=attachment_paths,
+                downloaded_files=downloaded_files,
+                download_dir=download_dir,
+                ctx=ctx,
+                normalized_url=normalized_url,
+            )
         )
         for materialized_path in materialized_paths:
             if materialized_path not in attachment_paths:
                 attachment_paths.append(materialized_path)
             if materialized_path not in downloaded_files:
                 downloaded_files.append(materialized_path)
-        prefetched_pdf_path = _prefetch_structured_pdf_artifact(
-            request=request,
-            ctx=ctx,
-            normalized_url=normalized_url,
-            download_dir=download_dir,
-            raw_model_response=raw_model_response,
-            history_final_page_url=history_final_page_url,
+        prefetched_pdf_path = (
+            ""
+            if no_progress_stopped
+            else _prefetch_structured_pdf_artifact(
+                request=request,
+                ctx=ctx,
+                normalized_url=normalized_url,
+                download_dir=download_dir,
+                raw_model_response=raw_model_response,
+                history_final_page_url=history_final_page_url,
+            )
         )
         if prefetched_pdf_path and prefetched_pdf_path not in downloaded_files:
             downloaded_files.append(prefetched_pdf_path)
         lookup_submission_assisted = False
-        if _should_attempt_lookup_submission_assist(
+        if not no_progress_stopped and _should_attempt_lookup_submission_assist(
             request=request,
             raw_model_response=raw_model_response,
         ):
@@ -2404,7 +2422,8 @@ def run_browser_report_download_agent(
                 )
         standard_form_submit_assisted = False
         if (
-            not lookup_submission_assisted
+            not no_progress_stopped
+            and not lookup_submission_assisted
             and _should_attempt_standard_form_submit_assist(
                 request=request,
                 raw_model_response=raw_model_response,
@@ -2422,7 +2441,14 @@ def run_browser_report_download_agent(
                 raw_model_response = _mark_standard_form_submit_assisted_raw_response(
                     raw_model_response
                 )
-        if (
+        if no_progress_stopped:
+            final_page_url = (
+                str(history_result.no_progress_observation.url or "")
+                or history_final_page_url
+            )
+            final_page_title = history_final_page_title
+            screenshot_path = history_screenshot_path
+        elif (
             history_result.salvaged_completed_history
             and not lookup_submission_assisted
             and not standard_form_submit_assisted
@@ -2430,15 +2456,16 @@ def run_browser_report_download_agent(
             final_page_url = history_final_page_url
             final_page_title = history_final_page_title
             screenshot_path = history_screenshot_path
-            dialog_evidence.extend(
-                _capture_terminal_dialog_evidence(
-                    browser=browser,
-                    ctx=ctx,
-                    normalized_url=normalized_url,
-                    allow_beforeunload=False,
-                    target_url=final_page_url,
+            if history_result.no_progress_observation is None:
+                dialog_evidence.extend(
+                    _capture_terminal_dialog_evidence(
+                        browser=browser,
+                        ctx=ctx,
+                        normalized_url=normalized_url,
+                        allow_beforeunload=False,
+                        target_url=final_page_url,
+                    )
                 )
-            )
             (
                 network_resource_urls,
                 network_events,
@@ -2673,15 +2700,16 @@ def run_browser_report_download_agent(
             runtime_seconds=max(0, int(time.monotonic() - launch_started_at)),
         )
         if browser is not None:
-            dialog_evidence.extend(
-                _capture_terminal_dialog_evidence(
-                    browser=browser,
-                    ctx=ctx,
-                    normalized_url=normalized_url,
-                    allow_beforeunload=True,
-                    target_url=final_page_url,
+            if not no_progress_stopped:
+                dialog_evidence.extend(
+                    _capture_terminal_dialog_evidence(
+                        browser=browser,
+                        ctx=ctx,
+                        normalized_url=normalized_url,
+                        allow_beforeunload=True,
+                        target_url=final_page_url,
+                    )
                 )
-            )
             _prepare_browser_for_shutdown(
                 browser,
                 ctx=ctx,
