@@ -1234,6 +1234,30 @@ def test_deterministic_worker_navigation_timeout_keeps_loaded_page_available() -
     assert browser.navigation_started is True
 
 
+def test_deterministic_worker_start_timeout_keeps_started_browser_available() -> None:
+    """A launched browser must not be discarded merely because startup did not settle."""
+
+    class Browser:
+        def __init__(self) -> None:
+            self.start_started = False
+
+        async def start(self) -> None:
+            self.start_started = True
+            await asyncio.Event().wait()
+
+    browser = Browser()
+
+    settled = asyncio.run(
+        browser_worker_runtime.start_deterministic_playbook_browser(
+            browser=browser,
+            timeout_seconds=0.01,
+        )
+    )
+
+    assert settled is False
+    assert browser.start_started is True
+
+
 def test_browser_worker_main_redacts_identity_values_from_persisted_response(
     tmp_path: Path,
     run_context,

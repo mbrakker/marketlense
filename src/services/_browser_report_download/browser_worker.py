@@ -57,6 +57,21 @@ _EMAIL_PATTERN = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.I)
 _DETERMINISTIC_NAVIGATION_SETTLE_SECONDS = 15.0
 
 
+async def start_deterministic_playbook_browser(
+    *,
+    browser: Any,
+    timeout_seconds: float = _DETERMINISTIC_NAVIGATION_SETTLE_SECONDS,
+) -> bool:
+    """Start the browser without requiring its background work to settle."""
+    try:
+        await asyncio.wait_for(
+            browser.start(), timeout=max(0.01, timeout_seconds)
+        )
+    except TimeoutError:
+        return False
+    return True
+
+
 async def navigate_deterministic_playbook_page(
     *,
     browser: Any,
@@ -624,7 +639,9 @@ def _process_payload(payload_path: Path, response_path: Path) -> int:
 
                 async def execute_and_stop() -> Any:
                     try:
-                        await session.browser.start()
+                        await start_deterministic_playbook_browser(
+                            browser=session.browser,
+                        )
                         await navigate_deterministic_playbook_page(
                             browser=session.browser,
                             execution_url=execution_url,
