@@ -52,7 +52,6 @@ logger = logging.getLogger("market_lense.browser_report_download_service.preflig
 
 _PREFLIGHT_SCHEMA_VERSION = "1.0"
 _PREFLIGHT_EVENT_DRAIN_SECONDS = 0.35
-_TERMINAL_NOT_FOUND_TITLE_MARKERS = ("404", "not found", "page not found")
 _TERMINAL_NOT_FOUND_BODY_MARKERS = (
     "the requested url was not found on this server",
     "the page you are looking for was not found",
@@ -656,12 +655,7 @@ def _select_pdf_candidates(
 
 
 def _is_terminal_not_found_page(*, title: str, html: str) -> bool:
-    normalized_title = str(title or "").casefold()
     normalized_html = str(html or "").casefold()
-    if not any(
-        marker in normalized_title for marker in _TERMINAL_NOT_FOUND_TITLE_MARKERS
-    ):
-        return False
     return any(marker in normalized_html for marker in _TERMINAL_NOT_FOUND_BODY_MARKERS)
 
 

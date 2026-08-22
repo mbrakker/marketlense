@@ -39,6 +39,6 @@ waiting for optional Agent cleanup. Inspect the bounded no-progress event and
 the retained per-report evidence before retrying.
 
 When bounded browser preflight confirms a terminal not-found page from its
-title and page body, it records `blocked_static_archive` and skips Agent work.
-That outcome is not an acquisition success; it prevents repeated navigation of
-the same obsolete exact URL.
+page body, it records `blocked_static_archive` and skips Agent work. That
+outcome is not an acquisition success; it prevents repeated navigation of the
+same obsolete exact URL.
