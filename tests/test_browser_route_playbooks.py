@@ -88,6 +88,18 @@ def test_adjust_ebook_listing_selects_the_deterministic_report_entry_playbook(
         "learned-www-adjust-com-browser-email-form-listing"
     )
     assert selection.selected_playbooks[0].route_kind == "email_delivery"
+    playbook = next(
+        item
+        for item in load_browser_route_playbooks(
+            playbook_dir=str(playbook_dir),
+            ctx=run_context,
+        )
+        if item.playbook_id == "learned-www-adjust-com-browser-email-form-listing"
+    )
+    assert playbook.steps[0].action == "navigate"
+    assert playbook.steps[0].selector == (
+        "https://www.adjust.com/resources/ebooks/japan-app-trends/"
+    )
 
 
 def test_stale_playbook_fallback_and_fail_policies_are_logged(

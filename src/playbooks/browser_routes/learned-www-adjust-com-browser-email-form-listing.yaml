@@ -1,6 +1,6 @@
 schema_version: "1.0"
 playbook_id: "learned-www-adjust-com-browser-email-form-listing"
-version: "1.0.0"
+version: "1.1.0"
 status: "active"
 updated_at: "2026-08-22T19:00:00+00:00"
 stale_after_days: 120
@@ -11,15 +11,15 @@ url_path_markers:
   - "resources/ebooks/all"
 route_family: "browser_email_form"
 route_kind: "email_delivery"
-summary: "From the retained ebook listing, open the evidenced Japan app trends report; the standard form helper then activates the same-page Download report CTA before the Browser Use fallback handles any cross-origin form controls."
+summary: "From the retained ebook listing, open the evidenced Japan app trends report directly; the standard form helper then activates the same-page Download report CTA before the Browser Use fallback handles any cross-origin form controls."
 steps:
   - schema_version: "1.0"
-    action: "click"
+    action: "navigate"
     target: "Mobile app trends 2026: Japan edition"
     verification: "The selected report heading is visible."
-    selector_type: "css"
-    selector: "a[href='/resources/ebooks/japan-app-trends/']"
-    expected_text: "Mobile app trends 2026: Japan edition"
+    selector_type: "url"
+    selector: "https://www.adjust.com/resources/ebooks/japan-app-trends/"
+    expected_url_contains: "/resources/ebooks/japan-app-trends/"
 traps:
   - "Do not select an unrelated ebook from the catalogue."
   - "Do not treat a submitted form as a verified document acquisition."
@@ -32,6 +32,6 @@ source_evidence:
   - "docs/CTO_evidence/browser_isolated_timeout_15_20260822_144500/baseline_evidence/baseline_manifest.json"
 history:
   - schema_version: "1.0"
-    changed_at: "2026-08-22T19:00:00+00:00"
+    changed_at: "2026-08-22T19:31:00+00:00"
     source: "retained_evidence_and_read_only_browser_inspection"
-    summary: "Added deterministic listing-to-report navigation before standard-form handling and Browser Use fallback."
+    summary: "Replaced the rendered-listing CSS click with direct navigation to the exact retained report URL after the browser runtime rejected the click step."
