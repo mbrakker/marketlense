@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 
 import requests
 
@@ -109,6 +110,14 @@ _STATIC_REPORT_CONTEXT_MARKERS = (
 )
 
 
+@dataclass(frozen=True)
+class HttpAccessChallengeProbeResponse:
+    """Terminal HTTP result or a reason to render the page before Agent fallback."""
+
+    result: BrowserReportDownloadResult | None
+    force_browser_preflight: bool = False
+
+
 def try_http_access_challenge_probe(
     *,
     request: BrowserReportDownloadRequest,
@@ -116,7 +125,7 @@ def try_http_access_challenge_probe(
     normalized_url: str,
     page_url: str | None = None,
     preflight: bool = False,
-) -> BrowserReportDownloadResult | None:
+) -> HttpAccessChallengeProbeResponse:
     target_url = (
         str(page_url or request.attempt_url or request.url).strip() or request.url
     )
@@ -178,7 +187,7 @@ def try_http_access_challenge_probe(
                 },
             )
         )
-        return None
+        return HttpAccessChallengeProbeResponse(result=None)
     text = str(response.text_body or "")
     lowered = text.casefold()
     final_url = str(response.final_url or target_url).strip() or target_url
@@ -200,6 +209,11 @@ def try_http_access_challenge_probe(
         int(response.status_code) in _TERMINAL_NOT_FOUND_STATUS_CODES
         and bool(terminal_not_found_marker)
     )
+    force_browser_preflight = (
+        preflight
+        and not challenge_detected
+        and int(response.status_code) in _ACCESS_CHALLENGE_STATUS_CODES
+    )
     logger.info(
         log_event(
             ctx,
@@ -215,6 +229,7 @@ def try_http_access_challenge_probe(
                 "challenge_detected": challenge_detected,
                 "terminal_not_found_marker": terminal_not_found_marker,
                 "terminal_not_found_detected": terminal_not_found_detected,
+                "force_browser_preflight": force_browser_preflight,
                 "body_truncated": response.body_truncated,
             },
         )
@@ -241,9 +256,12 @@ def try_http_access_challenge_probe(
                 fields=browser_download_result_log_fields(result),
             )
         )
-        return result
+        return HttpAccessChallengeProbeResponse(result=result)
     if not challenge_detected:
-        return None
+        return HttpAccessChallengeProbeResponse(
+            result=None,
+            force_browser_preflight=force_browser_preflight,
+        )
     result = _build_access_challenge_result(
         request=request,
         normalized_url=normalized_url,
@@ -268,7 +286,7 @@ def try_http_access_challenge_probe(
             fields=browser_download_result_log_fields(result),
         )
     )
-    return result
+    return HttpAccessChallengeProbeResponse(result=result)
 
 
 def try_static_email_gate_probe(

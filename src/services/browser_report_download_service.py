@@ -1322,14 +1322,16 @@ def download_report_with_browser_use(
                 result=static_email_gate_result,
             )
 
+    force_browser_preflight = False
     if request.route_family_hint == "browser_email_form":
-        access_challenge_result = try_http_access_challenge_probe(
+        access_challenge_probe = try_http_access_challenge_probe(
             request=request,
             ctx=ctx,
             normalized_url=normalized_url,
             page_url=normalized_execution_url,
             preflight=True,
         )
+        access_challenge_result = access_challenge_probe.result
         if access_challenge_result is not None:
             return _complete_browser_download_result(
                 request=request,
@@ -1337,6 +1339,7 @@ def download_report_with_browser_use(
                 normalized_url=normalized_url,
                 result=access_challenge_result,
             )
+        force_browser_preflight = access_challenge_probe.force_browser_preflight
 
     request = attach_browser_route_playbooks(
         request=request,
@@ -1369,6 +1372,7 @@ def download_report_with_browser_use(
         normalized_url=normalized_url,
         execution_url=normalized_execution_url,
         download_dir=download_dir,
+        force_for_http_access_status=force_browser_preflight,
     )
     browser_preflight_response = browser_preflight_execution.response
     preflight_session = browser_preflight_execution.browser_session
@@ -1553,12 +1557,13 @@ def download_report_with_browser_use(
             exc.code == "browser_download_agent_timeout"
             and request.route_family_hint == "browser_email_form"
         ):
-            access_challenge_result = try_http_access_challenge_probe(
+            access_challenge_probe = try_http_access_challenge_probe(
                 request=request,
                 ctx=ctx,
                 normalized_url=normalized_url,
                 page_url=normalized_execution_url,
             )
+            access_challenge_result = access_challenge_probe.result
             if access_challenge_result is not None:
                 return _complete_browser_download_result(
                     request=request,

@@ -102,6 +102,7 @@ def try_browser_preflight_probe(
     normalized_url: str,
     execution_url: str,
     download_dir: Path,
+    force_for_http_access_status: bool = False,
 ) -> BrowserPreflightProbeResponse:
     """Run a bounded preflight and always release its browser before returning."""
     execution = _run_browser_preflight_probe(
@@ -111,6 +112,7 @@ def try_browser_preflight_probe(
         execution_url=execution_url,
         download_dir=download_dir,
         retain_browser_session=False,
+        force_for_http_access_status=force_for_http_access_status,
     )
     return execution.response
 
@@ -122,6 +124,7 @@ def try_browser_preflight_probe_with_session(
     normalized_url: str,
     execution_url: str,
     download_dir: Path,
+    force_for_http_access_status: bool = False,
 ) -> BrowserPreflightProbeExecution:
     """Retain the live browser only when the probe must escalate to Browser Use."""
     return _run_browser_preflight_probe(
@@ -131,6 +134,7 @@ def try_browser_preflight_probe_with_session(
         execution_url=execution_url,
         download_dir=download_dir,
         retain_browser_session=True,
+        force_for_http_access_status=force_for_http_access_status,
     )
 
 
@@ -142,10 +146,14 @@ def _run_browser_preflight_probe(
     execution_url: str,
     download_dir: Path,
     retain_browser_session: bool,
+    force_for_http_access_status: bool,
 ) -> BrowserPreflightProbeExecution:
     started = time.monotonic()
     target_url = str(execution_url or request.attempt_url or request.url).strip()
-    skip_reason = _preflight_skip_reason(request)
+    skip_reason = _preflight_skip_reason(
+        request,
+        force_for_http_access_status=force_for_http_access_status,
+    )
     if skip_reason:
         probe = _probe_result(
             status="escalated",
@@ -175,6 +183,7 @@ def _run_browser_preflight_probe(
                 "normalized_url": normalized_url,
                 "execution_url": target_url,
                 "route_family_hint": request.route_family_hint or "",
+                "force_for_http_access_status": force_for_http_access_status,
                 "event_drain_seconds": _PREFLIGHT_EVENT_DRAIN_SECONDS,
             },
         )
@@ -791,7 +800,11 @@ def _probe_result(
     )
 
 
-def _preflight_skip_reason(request: BrowserReportDownloadRequest) -> str:
+def _preflight_skip_reason(
+    request: BrowserReportDownloadRequest,
+    *,
+    force_for_http_access_status: bool = False,
+) -> str:
     if (
         os.environ.get("PYTEST_CURRENT_TEST")
         and getattr(import_module, "__module__", "") == "importlib"
@@ -802,15 +815,24 @@ def _preflight_skip_reason(request: BrowserReportDownloadRequest) -> str:
         return "route_family_not_eligible"
     if str(request.attempt_url or request.url).strip().casefold().endswith(".pdf"):
         return "direct_pdf_url"
-    if route_family in {"browser_email_form", "browser_listing_hub"} and not (
-        _has_preflight_positive_evidence(request)
+    if (
+        route_family in {"browser_email_form", "browser_listing_hub"}
+        and not force_for_http_access_status
+        and not _has_preflight_positive_evidence(request)
     ):
         return "preflight_evidence_insufficient_for_route_family"
     return ""
 
 
-def _should_run_browser_preflight(request: BrowserReportDownloadRequest) -> bool:
-    return not _preflight_skip_reason(request)
+def _should_run_browser_preflight(
+    request: BrowserReportDownloadRequest,
+    *,
+    force_for_http_access_status: bool = False,
+) -> bool:
+    return not _preflight_skip_reason(
+        request,
+        force_for_http_access_status=force_for_http_access_status,
+    )
 
 
 def _has_preflight_positive_evidence(request: BrowserReportDownloadRequest) -> bool:
