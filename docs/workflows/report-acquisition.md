@@ -60,13 +60,18 @@ acquisition with zero Browser Use model calls. Missing executable evidence, a
 postcondition mismatch,
 an executor error, or failed terminal verification is logged as drift and
 continues to the unchanged Browser Use path. Generic and historical
-prompt-only playbooks are therefore guidance only and always fall back. The
-live browser lease is process-local, so both deterministic execution and the
-Agent handoff retain cookies, local storage, session ownership, shutdown,
-session-reuse finalization, and browser-launch accounting. Async deterministic
-form handling and an Agent fallback share the same Browser Use event loop; the
-handoff never closes and recreates an `asyncio` loop around a retained browser
-session. A helper failure resumes Browser Use on the same browser, and the outer
+prompt-only playbooks are therefore guidance only and always fall back. When a
+deterministic route runs in a reusable live Browser Use session, its Agent
+fallback retains cookies, local storage, session ownership, shutdown,
+session-reuse finalization, and browser-launch accounting. When process
+isolation requires a deterministic worker to end before escalation, a completed
+but unverified publisher-specific route may hand off only its new, same-origin
+HTTP(S) final page URL to a fresh Agent worker. The prior session is closed
+before that handoff; no browser object, cookies, or cross-event-loop connection
+is reused. This preserves process isolation while preventing the Agent from
+starting again at an already-resolved listing page. Async deterministic form
+handling and an Agent fallback otherwise share the same Browser Use event loop;
+a helper failure resumes Browser Use on the same browser, and the outer
 acquisition runner remains its sole lifecycle owner. For browser email forms, a deterministic submit returns
 early only after the canonical terminal-confirmation evidence verifies email
 delivery. A submitted-but-unverified or ambiguous page is handed to Browser

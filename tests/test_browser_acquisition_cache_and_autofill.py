@@ -27,8 +27,10 @@ from src.services._browser_report_download.models import BrowserAgentRunResult
 from src.services._browser_report_download.prompt import BrowserDownloadPromptBundle
 from src.services.browser_report_download_service import (
     _artifact_cache_key,
+    _deterministic_playbook_handoff_url,
     _normalized_report_title,
     _publisher_scope,
+    _try_deterministic_browser_route_playbooks,
     download_report_with_browser_use,
     try_deterministic_browser_route_playbooks,
 )
@@ -42,6 +44,109 @@ def _ctx() -> RunContext:
 
 def _valid_pdf_bytes() -> bytes:
     return b"%PDF-1.4\n1 0 obj <</Type/Catalog>> endobj\n%%EOF\n"
+
+
+def test_deterministic_playbook_handoff_uses_only_a_new_same_publisher_url() -> None:
+    assert _deterministic_playbook_handoff_url(
+        execution_url="https://www.adjust.com/resources/ebooks/all",
+        final_page_url="https://www.adjust.com/resources/ebooks/japan-app-trends/",
+    ) == "https://www.adjust.com/resources/ebooks/japan-app-trends/"
+    assert (
+        _deterministic_playbook_handoff_url(
+            execution_url="https://www.adjust.com/resources/ebooks/all",
+            final_page_url="https://www.adjust.com/resources/ebooks/all",
+        )
+        == ""
+    )
+
+
+def test_deterministic_playbook_retains_same_publisher_page_for_agent_handoff(
+    tmp_path: Path,
+) -> None:
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url="https://www.adjust.com/resources/ebooks/all",
+        settings=_settings(tmp_path),
+        route_family_hint="browser_email_form",
+    )
+
+    class FakePage:
+        def __init__(self, browser) -> None:
+            self.browser = browser
+            self.url = request.url
+            self.title = "Adjust ebooks"
+            self.html = "<html><body>Report page</body></html>"
+
+        def goto(self, url: str) -> None:
+            self.url = url
+            self.browser.url = url
+
+        def evaluate(self, expression: str):
+            if "document.body" in expression:
+                return True
+            return {"status": "ok"}
+
+    class FakeBrowser:
+        def __init__(self) -> None:
+            self.url = request.url
+            self.page = FakePage(self)
+
+        def get_current_page(self):
+            return self.page
+
+        def get_current_page_url(self) -> str:
+            return self.url
+
+        def get_current_page_title(self) -> str:
+            return self.page.title
+
+    playbook = BrowserRoutePlaybook(
+        schema_version="1.0",
+        playbook_id="adjust-listing-route",
+        version="1.0.0",
+        status="active",
+        updated_at="2026-08-22T00:00:00+00:00",
+        stale_after_days=180,
+        publisher_pattern="adjust.com",
+        host_patterns=["www.adjust.com"],
+        url_path_markers=["resources/ebooks/all"],
+        route_family="browser_email_form",
+        route_kind="email_form",
+        summary="Open the report detail page.",
+        steps=[
+            BrowserRoutePlaybookStep(
+                schema_version="1.0",
+                action="navigate",
+                target="Japan report",
+                verification="The report page is open.",
+                selector_type="url",
+                selector="https://www.adjust.com/resources/ebooks/japan-app-trends/",
+                expected_url_contains="/resources/ebooks/japan-app-trends/",
+            )
+        ],
+    )
+
+    attempt = _try_deterministic_browser_route_playbooks(
+        request=request,
+        ctx=_ctx(),
+        normalized_url=request.url,
+        execution_url=request.url,
+        download_dir=tmp_path,
+        browser=FakeBrowser(),
+        playbooks=[playbook],
+    )
+
+    assert attempt.result is None
+    assert attempt.handoff_execution_url == (
+        "https://www.adjust.com/resources/ebooks/japan-app-trends/"
+    )
+    assert (
+        _deterministic_playbook_handoff_url(
+            execution_url="https://www.adjust.com/resources/ebooks/all",
+            final_page_url="https://untrusted.example/resources/ebooks/japan-app-trends/",
+        )
+        == ""
+    )
 
 
 def test_browser_download_reuses_valid_artifact_acquisition_cache(

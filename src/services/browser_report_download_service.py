@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -917,6 +917,16 @@ def execute_browser_route_playbook(
     return _execute_browser_route_playbook(request, ctx)
 
 
+@dataclass(frozen=True)
+class _DeterministicPlaybookAttempt:
+    """The verified result or safe page handoff from a deterministic route."""
+
+    result: BrowserReportDownloadResult | None = None
+    handoff_execution_url: str = ""
+    handoff_playbook_id: str = ""
+    handoff_playbook_version: str = ""
+
+
 def try_deterministic_browser_route_playbooks(
     *,
     request: BrowserReportDownloadRequest,
@@ -928,6 +938,31 @@ def try_deterministic_browser_route_playbooks(
     playbooks: list[BrowserRoutePlaybook],
 ) -> BrowserReportDownloadResult | None:
     """Attempt eligible publisher playbooks before falling through to Browser Use."""
+
+    return _try_deterministic_browser_route_playbooks(
+        request=request,
+        ctx=ctx,
+        normalized_url=normalized_url,
+        execution_url=execution_url,
+        download_dir=download_dir,
+        browser=browser,
+        playbooks=playbooks,
+    ).result
+
+
+def _try_deterministic_browser_route_playbooks(
+    *,
+    request: BrowserReportDownloadRequest,
+    ctx: RunContext,
+    normalized_url: str,
+    execution_url: str,
+    download_dir: Path,
+    browser: Any | None,
+    playbooks: list[BrowserRoutePlaybook],
+) -> _DeterministicPlaybookAttempt:
+    """Run deterministic routes and retain a safe page target for Agent escalation."""
+
+    handoff = _DeterministicPlaybookAttempt()
 
     for playbook in playbooks:
         if not _is_publisher_specific_playbook(playbook):
@@ -953,6 +988,16 @@ def try_deterministic_browser_route_playbooks(
                 browser_run=browser_run,
             )
         except AppError as exc:
+            handoff_url = _deterministic_playbook_handoff_url(
+                execution_url=execution_url,
+                final_page_url=browser_run.final_page_url,
+            )
+            if handoff_url and not handoff.handoff_execution_url:
+                handoff = _DeterministicPlaybookAttempt(
+                    handoff_execution_url=handoff_url,
+                    handoff_playbook_id=playbook.playbook_id,
+                    handoff_playbook_version=playbook.version,
+                )
             logger.info(
                 log_event(
                     ctx,
@@ -964,6 +1009,7 @@ def try_deterministic_browser_route_playbooks(
                         "playbook_id": playbook.playbook_id,
                         "reason": "artifact_or_submission_unverified",
                         "error_code": exc.code,
+                        "handoff_available": bool(handoff_url),
                     },
                 )
             )
@@ -991,7 +1037,17 @@ def try_deterministic_browser_route_playbooks(
                     },
                 )
             )
-            return result
+            return _DeterministicPlaybookAttempt(result=result)
+        handoff_url = _deterministic_playbook_handoff_url(
+            execution_url=execution_url,
+            final_page_url=browser_run.final_page_url,
+        )
+        if handoff_url and not handoff.handoff_execution_url:
+            handoff = _DeterministicPlaybookAttempt(
+                handoff_execution_url=handoff_url,
+                handoff_playbook_id=playbook.playbook_id,
+                handoff_playbook_version=playbook.version,
+            )
         logger.info(
             log_event(
                 ctx,
@@ -1004,10 +1060,34 @@ def try_deterministic_browser_route_playbooks(
                     "reason": "terminal_result_unverified",
                     "outcome": result.outcome,
                     "route_status": result.route_status,
+                    "handoff_available": bool(handoff_url),
                 },
             )
         )
-    return None
+    return handoff
+
+
+def _deterministic_playbook_handoff_url(
+    *,
+    execution_url: str,
+    final_page_url: str,
+) -> str:
+    """Return a new same-origin HTTP(S) page reached by a deterministic route."""
+
+    source = urlsplit(str(execution_url or "").strip())
+    candidate = urlsplit(str(final_page_url or "").strip())
+    if (
+        source.scheme not in {"http", "https"}
+        or candidate.scheme not in {"http", "https"}
+        or not source.netloc
+        or source.netloc.casefold() != candidate.netloc.casefold()
+        or candidate.username is not None
+        or candidate.password is not None
+    ):
+        return ""
+    if candidate.geturl() == source.geturl():
+        return ""
+    return candidate.geturl()
 
 
 def _is_publisher_specific_playbook(playbook: BrowserRoutePlaybook) -> bool:
@@ -1544,19 +1624,23 @@ def download_report_with_browser_use(
             outcome="completed",
         )
         return remembered_blocker_result
-    deterministic_result = None
+    deterministic_attempt = _DeterministicPlaybookAttempt()
     deterministic_playbooks = _resolve_selected_full_playbooks(
         request=request,
         ctx=ctx,
     )
     try:
-        deterministic_result = try_deterministic_browser_route_playbooks(
+        deterministic_attempt = _try_deterministic_browser_route_playbooks(
             request=request,
             ctx=ctx,
             normalized_url=normalized_url,
             execution_url=normalized_execution_url,
             download_dir=download_dir,
-            browser=preflight_session.browser if preflight_session is not None else None,
+            browser=(
+                preflight_session.browser
+                if preflight_session is not None
+                else None
+            ),
             playbooks=deterministic_playbooks,
         )
     except Exception as exc:
@@ -1573,10 +1657,10 @@ def download_report_with_browser_use(
                 },
             )
         )
-    if deterministic_result is not None:
+    if deterministic_attempt.result is not None:
         observe_browser_preflight_agent_outcome(
             probe=browser_preflight_response.probe,
-            result=deterministic_result,
+            result=deterministic_attempt.result,
             ctx=ctx,
             normalized_url=normalized_url,
         )
@@ -1586,21 +1670,48 @@ def download_report_with_browser_use(
             normalized_url=normalized_url,
             outcome="completed",
             verified_artifact_count=(
-                1 if deterministic_result.outcome == "downloaded" else 0
+                1 if deterministic_attempt.result.outcome == "downloaded" else 0
             ),
         )
         return _complete_browser_download_result(
             request=request,
             ctx=ctx,
             normalized_url=normalized_url,
-            result=deterministic_result,
+            result=deterministic_attempt.result,
+        )
+    agent_execution_url = normalized_execution_url
+    agent_preflight_session = preflight_session
+    if deterministic_attempt.handoff_execution_url:
+        agent_execution_url = deterministic_attempt.handoff_execution_url
+        if preflight_session is not None:
+            _close_preflight_session(
+                session=preflight_session,
+                ctx=ctx,
+                normalized_url=normalized_url,
+                outcome="deterministic_handoff",
+            )
+            preflight_session = None
+        agent_preflight_session = None
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_route_playbook_deterministic_handoff",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "handoff_host": urlsplit(agent_execution_url).netloc,
+                    "playbook_id": deterministic_attempt.handoff_playbook_id,
+                    "playbook_version": deterministic_attempt.handoff_playbook_version,
+                },
+            )
         )
     try:
         prompt_bundle = render_browser_report_download_prompt(
             request=request,
             ctx=ctx,
             normalized_url=normalized_url,
-            execution_url=normalized_execution_url,
+            execution_url=agent_execution_url,
             download_dir=download_dir,
             delivery_email=delivery_email_value,
         )
@@ -1617,10 +1728,10 @@ def download_report_with_browser_use(
             request=request,
             ctx=ctx,
             normalized_url=normalized_url,
-            execution_url=normalized_execution_url,
+            execution_url=agent_execution_url,
             download_dir=download_dir,
             prompt_bundle=prompt_bundle,
-            preflight_session=preflight_session,
+            preflight_session=agent_preflight_session,
         )
     except AppError as exc:
         if (
@@ -1631,7 +1742,7 @@ def download_report_with_browser_use(
                 request=request,
                 ctx=ctx,
                 normalized_url=normalized_url,
-                page_url=normalized_execution_url,
+                page_url=agent_execution_url,
             )
             access_challenge_result = access_challenge_probe.result
             if access_challenge_result is not None:
@@ -1644,7 +1755,7 @@ def download_report_with_browser_use(
         raise _with_augmented_error_context(
             exc,
             normalized_url=normalized_url,
-            execution_url=normalized_execution_url,
+            execution_url=agent_execution_url,
             download_dir=str(download_dir),
             route_family_hint=request.route_family_hint,
             browser_preflight_probe=browser_preflight_response.probe,
