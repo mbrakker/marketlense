@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "scope": "single retained failed Adjust candidate; acquisition only",
+  "source_url": "https://www.adjust.com/resources/ebooks/all",
+  "attempt_url": "https://www.adjust.com/resources/ebooks/all",
+  "source_page_url_hint": "https://www.adjust.com/resources/ebooks",
+  "route_family_hint": "browser_email_form",
+  "candidate_title": "https://www.adjust.com/resources/ebooks/all",
+  "publisher_name": "Adjust",
+  "mailbox_acquisition": "not invoked"
+}
