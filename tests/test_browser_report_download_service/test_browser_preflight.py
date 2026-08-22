@@ -168,6 +168,38 @@ def _terminal_not_found_preflight_runtime():
     return SimpleNamespace(Browser=Browser)
 
 
+def _delayed_terminal_not_found_preflight_runtime():
+    final_url = "https://www4.example.com/commerce-media-trends-report"
+
+    class TerminalNotFoundPage(_PreflightPage):
+        def __init__(self) -> None:
+            super().__init__(pdf_url=None, page_url=final_url)
+
+        def title(self) -> str:
+            return "404 Not Found"
+
+        def content(self) -> str:
+            return (
+                "<html><body><h1>Not Found</h1>"
+                "<p>The requested URL was not found on this server.</p>"
+                "</body></html>"
+            )
+
+    class Browser(_PreflightBrowser):
+        def __init__(self, **kwargs) -> None:
+            super().__init__(pdf_url=None, **kwargs)
+            self.page_reads = 0
+
+        def get_current_page(self) -> _PreflightPage:
+            self.page_reads += 1
+            if self.page_reads == 1:
+                return _PreflightPage(pdf_url=None, page_url=self.url)
+            self.url = final_url
+            return TerminalNotFoundPage()
+
+    return SimpleNamespace(Browser=Browser)
+
+
 def _terminal_access_forbidden_preflight_runtime():
     class TerminalAccessForbiddenPage(_PreflightPage):
         def __init__(self, *, page_url: str) -> None:
@@ -249,6 +281,37 @@ def test_browser_preflight_recognizes_terminal_not_found_page() -> None:
             "on this server.</p></body></html>"
         ),
     )
+
+
+def test_browser_preflight_waits_for_redirected_terminal_not_found_page(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    original_url = "https://go.example.com/commerce-media-trends-report"
+    external_boundary_mocks_only.setattr(
+        preflight_runtime,
+        "import_module",
+        lambda module_name: _delayed_terminal_not_found_preflight_runtime(),
+    )
+
+    response = preflight_runtime.try_browser_preflight_probe(
+        request=BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url=original_url,
+            settings=_settings(tmp_path),
+            route_family_hint="browser_email_form",
+        ),
+        ctx=run_context,
+        normalized_url=original_url,
+        execution_url=original_url,
+        download_dir=tmp_path / "downloads",
+        force_for_http_access_status=True,
+    )
+
+    assert response.probe.status == "terminal_static_archive"
+    assert response.probe.final_url == "https://www4.example.com/commerce-media-trends-report"
+    assert response.probe.avoided_agent_call is True
     assert not preflight_runtime._is_terminal_not_found_page(
         title="Commerce media trends report",
         html=(

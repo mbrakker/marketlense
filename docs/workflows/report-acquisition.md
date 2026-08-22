@@ -94,7 +94,9 @@ The same configured not-found body evidence is checked again after deterministic
 form discovery in the retained Browser Use session. This catches a browser-only
 redirect to a terminal publisher 404 even when no form is present, returns a
 terminal static-archive result, and avoids Agent fallback. It does not convert
-an HTTP 403 into a terminal not-found result.
+an HTTP 403 into a terminal not-found result. Browser preflight also samples
+the retained session for up to two seconds after navigation before escalating,
+so a late browser-only redirect can expose its terminal evidence.
 
 Each governed acquisition attempt now retains a scalar resource envelope in the
 reports store: elapsed time, route family and policy hash, browser launch/step

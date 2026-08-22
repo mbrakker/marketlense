@@ -55,6 +55,7 @@ logger = logging.getLogger("market_lense.browser_report_download_service.preflig
 
 _PREFLIGHT_SCHEMA_VERSION = "1.0"
 _PREFLIGHT_EVENT_DRAIN_SECONDS = 0.35
+_PREFLIGHT_REDIRECT_SETTLE_SECONDS = 2.0
 _PREFLIGHT_SESSION_TIMEOUT_SECONDS = 24.0
 _PREFLIGHT_ROUTE_FAMILIES = {
     "",
@@ -529,15 +530,21 @@ async def _run_preflight_session_async(
 ) -> dict[str, Any]:
     await _await_if_needed(getattr(browser, "start", lambda: None)())
     await _navigate_browser(browser=browser, url=target_url)
-    page = await _get_current_page(browser)
-    await asyncio.sleep(_PREFLIGHT_EVENT_DRAIN_SECONDS)
-    final_url = await _read_browser_url(browser=browser, page=page)
-    final_title = await _read_browser_title(browser=browser, page=page)
-    html = await _read_page_html(
-        page,
-        ctx=ctx,
-        normalized_url=normalized_url,
-    )
+    settle_deadline = time.monotonic() + _PREFLIGHT_REDIRECT_SETTLE_SECONDS
+    while True:
+        page = await _get_current_page(browser)
+        await asyncio.sleep(_PREFLIGHT_EVENT_DRAIN_SECONDS)
+        final_url = await _read_browser_url(browser=browser, page=page)
+        final_title = await _read_browser_title(browser=browser, page=page)
+        html = await _read_page_html(
+            page,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
+        if _is_terminal_not_found_page(title=final_title, html=html):
+            break
+        if time.monotonic() >= settle_deadline:
+            break
     rendered = await _inspect_rendered_page(
         page=page,
         ctx=ctx,
