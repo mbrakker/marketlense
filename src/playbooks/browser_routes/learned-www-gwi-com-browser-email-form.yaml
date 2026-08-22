@@ -2,7 +2,7 @@ schema_version: '1.0'
 playbook_id: learned-www-gwi-com-browser-email-form
 version: 1.1.0
 status: active
-updated_at: '2026-08-22T20:25:00Z'
+updated_at: '2026-08-22T20:33:00Z'
 stale_after_days: 120
 publisher_pattern: www.gwi.com
 host_patterns:
@@ -28,40 +28,40 @@ steps:
   action: fill
   target: First name
   verification: First-name field remains visible after deterministic fill.
-  selector_type: label
-  selector: First name*
+  selector_type: name
+  selector: firstname
   value_reference: ${identity.first_name}
   expected_text: First name
 - schema_version: '1.0'
   action: fill
   target: Last name
   verification: Last-name field remains visible after deterministic fill.
-  selector_type: label
-  selector: Last name*
+  selector_type: name
+  selector: lastname
   value_reference: ${identity.last_name}
   expected_text: Last name
 - schema_version: '1.0'
   action: fill
   target: Work email
   verification: Work-email field remains visible after deterministic fill.
-  selector_type: label
-  selector: Work email*
+  selector_type: name
+  selector: email
   value_reference: ${identity.work_email}
   expected_text: Work email
 - schema_version: '1.0'
   action: select
   target: Company size
   verification: Native Company-size control remains visible after selection.
-  selector_type: label
-  selector: Company size*
+  selector_type: name
+  selector: company_size_legacy
   value_reference: ${identity.company_size}
   expected_text: Company size
 - schema_version: '1.0'
   action: select
   target: Country
   verification: Native Country control remains visible after selection.
-  selector_type: label
-  selector: Country*
+  selector_type: name
+  selector: country_dropdown
   value_reference: ${identity.country}
   expected_text: Country
 - schema_version: '1.0'
@@ -108,3 +108,8 @@ history:
   source: retained_failure_evidence_and_read_only_playwright_inspection
   summary: Replaced narrative steps with executable native-control locators and a shared
     HubSpot submit selector for both observed GWI form variants.
+- schema_version: '1.0'
+  changed_at: '2026-08-22T20:33:00Z'
+  source: stopped_gwi_validation_and_read_only_playwright_inspection
+  summary: Replaced non-semantic caption locators with the observed stable native field
+    names after the isolated worker drifted to the Agent fallback.

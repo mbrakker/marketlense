@@ -128,11 +128,11 @@ def test_gwi_email_form_playbook_is_executable_for_both_observed_submit_labels(
     ]
     assert [step.selector_type for step in playbook.steps] == [
         "role",
-        "label",
-        "label",
-        "label",
-        "label",
-        "label",
+        "name",
+        "name",
+        "name",
+        "name",
+        "name",
         "css",
     ]
     assert [step.value_reference for step in playbook.steps[1:-1]] == [
@@ -141,6 +141,13 @@ def test_gwi_email_form_playbook_is_executable_for_both_observed_submit_labels(
         "${identity.work_email}",
         "${identity.company_size}",
         "${identity.country}",
+    ]
+    assert [step.selector for step in playbook.steps[1:-1]] == [
+        "firstname",
+        "lastname",
+        "email",
+        "company_size_legacy",
+        "country_dropdown",
     ]
     assert playbook.steps[-1].selector == "input.hs-button.primary.large"
     assert playbook.steps[-1].expected_url_contains == "/reports/"
