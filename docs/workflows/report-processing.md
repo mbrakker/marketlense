@@ -136,13 +136,24 @@ configured form flow.
 For `browser_email_form`, before a Browser Use agent is constructed, the
 browser service attempts standard visible text inputs, native selects, and
 comboboxes using only the resolved configured identity profile (including a
-publisher override). It can check required legal/report-delivery agreements,
+publisher override). The deterministic browser payload retains every resolved
+configured identity field, so a late publisher-specific required enum remains
+available to its matching control. It can check required legal/report-delivery agreements,
 but never optional marketing or newsletter choices. A required field or select
 with no matching configured value returns the typed
 `blocked_unknown_required_enum` result; the workflow never generates text,
 chooses a first visible option, or guesses an identity value. Unsupported DOM
 controls, page drift, and failed deterministic interaction retain the existing
 Browser Use fallback.
+
+When a browser route reaches a PDF, a current-session local PDF that passes
+normal artifact validation is retained even when its filename differs from the
+landing-page title, provided its filename ties it to a browser-observed PDF
+URL. If no file was emitted, recovery may fetch a PDF URL only when the browser
+itself observed it as a document request; ordinary unobserved URL
+candidates still require report-identity matching. Both paths retain the
+existing native-PDF validation rather than treating a browser claim as
+successful acquisition.
 
 The same deterministic pass runs directly on Browser Use's asynchronous
 `BrowserSession`; it awaits the already-open preflight page rather than opening

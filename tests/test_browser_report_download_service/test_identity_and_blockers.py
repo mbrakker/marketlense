@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import threading
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 from src.services._browser_report_download._browser_runtime._session_lifecycle.history import (
     _run_agent_history_async_with_timeout,
@@ -8,8 +10,154 @@ from src.services._browser_report_download._browser_runtime._session_lifecycle.h
 from src.services._browser_report_download._artifact.classification import (
     _normalize_explicit_blocked_reason,
 )
+from src.services._browser_report_download._artifact.pdf import _complete_pdf_artifact
+from src.services._browser_report_download._browser_runtime.timeout_recovery import (
+    _browser_standard_form_identity_field_values,
+)
 
 from .builders import *  # noqa: F401,F403
+
+
+def test_standard_form_identity_values_include_late_configured_required_enum(
+    tmp_path: Path,
+) -> None:
+    """A configured required select must not disappear behind the helper cap."""
+    settings = _settings(tmp_path)
+    filler_fields = [
+        BrowserDownloadIdentityField(
+            schema_version="1.0",
+            key=f"field_{index}",
+            label=f"Field {index}",
+            value=f"value-{index}",
+        )
+        for index in range(40)
+    ]
+    organization_type = BrowserDownloadIdentityField(
+        schema_version="1.0",
+        key="organization_type",
+        label="Organization Type",
+        value="Configured organization type",
+        option_aliases=["Configured organization type"],
+    )
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url="https://publisher.example/beauty-report",
+        settings=replace(
+            settings,
+            identity_profile=BrowserDownloadIdentity(
+                schema_version="1.0",
+                fields=[*filler_fields, organization_type],
+            ),
+        ),
+        route_family_hint="browser_email_form",
+    )
+
+    fields = _browser_standard_form_identity_field_values(request)
+
+    assert any(field["key"] == "organization_type" for field in fields)
+
+
+def test_complete_pdf_artifact_keeps_a_valid_browser_download_when_its_name_differs(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    """A browser-produced PDF is verified by bytes, not guessed from its filename."""
+    downloaded_path = tmp_path / "2026-public-ma-trends.pdf"
+    downloaded_path.write_bytes(b"%PDF-1.7\nvalid browser download")
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url="https://publisher.example/research.html",
+        settings=_settings(tmp_path),
+        route_family_hint="browser_listing_hub",
+    )
+
+    completed_path, used_candidate_pdf_url = _complete_pdf_artifact(
+        request=request,
+        ctx=run_context,
+        normalized_url=request.url,
+        download_dir=tmp_path,
+        downloaded_path=downloaded_path,
+        target_urls=[],
+        trusted_target_urls=[
+            "https://publisher.example/files/2026-public-ma-trends.pdf"
+        ],
+    )
+
+    assert completed_path == downloaded_path
+    assert used_candidate_pdf_url is False
+
+
+def test_complete_pdf_artifact_fetches_a_browser_observed_pdf_without_name_overlap(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    """A browser-observed PDF URL is stronger evidence than filename-token overlap."""
+    served_pdf = tmp_path / "global-cpg-pulse.pdf"
+    served_pdf.write_bytes(b"%PDF-1.7\nobserved browser document")
+
+    class QuietPdfHandler(SimpleHTTPRequestHandler):
+        def __init__(self, *args, **kwargs) -> None:
+            super().__init__(*args, directory=str(tmp_path), **kwargs)
+
+        def log_message(self, format_string: str, *args) -> None:
+            return None
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), QuietPdfHandler)
+    thread = threading.Thread(target=server.serve_forever)
+    thread.start()
+    try:
+        observed_pdf_url = (
+            f"http://127.0.0.1:{server.server_port}/global-cpg-pulse.pdf"
+        )
+        request = BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://publisher.example/research.html",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_tracker_redirect",
+        )
+
+        completed_path, used_candidate_pdf_url = _complete_pdf_artifact(
+            request=request,
+            ctx=run_context,
+            normalized_url=request.url,
+            download_dir=tmp_path / "downloads",
+            downloaded_path=None,
+            target_urls=[observed_pdf_url],
+            trusted_target_urls=[observed_pdf_url],
+        )
+    finally:
+        server.shutdown()
+        thread.join()
+        server.server_close()
+
+    assert completed_path is not None
+    assert completed_path.read_bytes().startswith(b"%PDF-")
+    assert used_candidate_pdf_url is False
+
+
+def test_complete_pdf_artifact_rejects_an_unobserved_mismatched_pdf_url(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    """Filename mismatch remains a guard for URLs the browser did not observe."""
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url="https://publisher.example/research.html",
+        settings=_settings(tmp_path),
+        route_family_hint="browser_tracker_redirect",
+    )
+
+    completed_path, used_candidate_pdf_url = _complete_pdf_artifact(
+        request=request,
+        ctx=run_context,
+        normalized_url=request.url,
+        download_dir=tmp_path / "downloads",
+        downloaded_path=None,
+        target_urls=["https://cdn.example/global-cpg-pulse.pdf"],
+    )
+
+    assert completed_path is None
+    assert used_candidate_pdf_url is False
 
 
 def test_async_agent_no_progress_returns_without_waiting_for_agent_cleanup(

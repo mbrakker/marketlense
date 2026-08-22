@@ -6,7 +6,7 @@ import re
 import shutil
 from pathlib import Path
 from typing import Iterable
-from urllib.parse import urljoin, urlsplit
+from urllib.parse import unquote, urljoin, urlsplit
 
 from src.contracts.browser_download import (
     BrowserDownloadConfirmationEvidence,
@@ -38,8 +38,24 @@ def _complete_pdf_artifact(
     download_dir: Path,
     downloaded_path: Path | None,
     target_urls: Iterable[str | None],
+    trusted_target_urls: Iterable[str | None] = (),
 ) -> tuple[Path | None, bool]:
+    trusted_targets = {
+        urljoin(str(request.attempt_url or normalized_url).strip(), str(target_url))
+        for target_url in trusted_target_urls
+        if str(target_url or "").strip()
+    }
     if downloaded_path is not None:
+        if not (
+            _downloaded_pdf_matches_requested_report(
+                request=request, downloaded_path=downloaded_path
+            )
+            or _downloaded_pdf_matches_browser_observed_target(
+                downloaded_path=downloaded_path,
+                trusted_target_urls=trusted_targets,
+            )
+        ):
+            return None, False
         try:
             ensured_path = http_runtime.ensure_downloaded_pdf(
                 downloaded_path=downloaded_path,
@@ -48,11 +64,6 @@ def _complete_pdf_artifact(
                 document_url=str(request.attempt_url or normalized_url).strip(),
                 timeout_seconds=request.settings.timeout_seconds,
             )
-            if not _downloaded_pdf_matches_requested_report(
-                request=request,
-                downloaded_path=ensured_path,
-            ):
-                return None, False
             return ensured_path, False
         except AppError as exc:
             if exc.code != "browser_download_invalid_pdf":
@@ -73,6 +84,13 @@ def _complete_pdf_artifact(
             normalized_url=normalized_url,
             download_dir=download_dir,
             target_url=normalized_target,
+            require_report_match=(
+                urljoin(
+                    str(request.attempt_url or normalized_url).strip(),
+                    normalized_target,
+                )
+                not in trusted_targets
+            ),
         )
         if fetched_path is not None:
             return fetched_path, normalized_target == candidate_pdf_url
@@ -86,11 +104,14 @@ def _try_fetch_pdf_target(
     normalized_url: str,
     download_dir: Path,
     target_url: str,
+    require_report_match: bool = True,
 ) -> Path | None:
     target_url = urljoin(str(request.attempt_url or normalized_url).strip(), target_url)
     if not _looks_like_pdf_url(target_url):
         return None
-    if not _pdf_url_matches_requested_report(request=request, pdf_url=target_url):
+    if require_report_match and not _pdf_url_matches_requested_report(
+        request=request, pdf_url=target_url
+    ):
         return None
     destination_name = Path(urlsplit(target_url).path).name or "download.pdf"
     destination_path = download_dir / destination_name
@@ -161,6 +182,26 @@ def _downloaded_pdf_matches_requested_report(
         request=request,
         pdf_identifier=downloaded_path.name,
     )
+
+
+def _downloaded_pdf_matches_browser_observed_target(
+    *,
+    downloaded_path: Path,
+    trusted_target_urls: Iterable[str],
+) -> bool:
+    """Keep a local PDF only when its filename ties it to a browser PDF URL."""
+    downloaded_names = {
+        downloaded_path.name.casefold(),
+        unquote(downloaded_path.name).casefold(),
+    }
+    for target_url in trusted_target_urls:
+        target_name = Path(urlsplit(target_url).path).name
+        if not target_name:
+            continue
+        target_names = {target_name.casefold(), unquote(target_name).casefold()}
+        if downloaded_names.intersection(target_names):
+            return True
+    return False
 
 
 def _pdf_url_matches_requested_report(

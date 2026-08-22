@@ -182,6 +182,11 @@ def finalize_browser_report_download_result(
             if should_materialize_pdf_targets
             else []
         ),
+        trusted_target_urls=(
+            _browser_observed_pdf_urls(browser_run)
+            if should_materialize_pdf_targets
+            else []
+        ),
     )
     blocked_reason = _resolve_blocked_reason(
         request=request,
@@ -275,6 +280,11 @@ def finalize_browser_report_download_result(
                     resolved_target_url,
                     final_url,
                 ]
+                if should_materialize_pdf_targets
+                else []
+            ),
+            trusted_target_urls=(
+                _browser_observed_pdf_urls(browser_run)
                 if should_materialize_pdf_targets
                 else []
             ),
@@ -645,6 +655,16 @@ def _required_select_evidence(
             )
         )
     return evidence
+
+
+def _browser_observed_pdf_urls(browser_run: BrowserAgentRunResult) -> list[str]:
+    """Return PDF candidates evidenced by the browser rather than the Agent."""
+    candidates = [str(browser_run.final_page_url or "").strip()]
+    for event in browser_run.network_events or []:
+        if str(event.signal_kind or "").strip() != "document_request":
+            continue
+        candidates.append(str(event.url or "").strip())
+    return _normalize_string_list(candidates)
 
 
 def _resolve_terminal_final_url(

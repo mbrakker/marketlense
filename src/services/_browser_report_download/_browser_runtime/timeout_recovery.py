@@ -599,7 +599,7 @@ def _browser_standard_form_identity_field_values(
                 "option_aliases": [],
             }
         )
-    return values[:40]
+    return values
 
 
 def _attempt_lookup_submission_assist(
