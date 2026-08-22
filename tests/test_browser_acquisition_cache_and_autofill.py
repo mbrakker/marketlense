@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import sys
@@ -962,6 +963,8 @@ def test_async_deterministic_playbook_rejects_explicit_cookie_banner_before_form
             self.calls: list[str] = []
 
         async def evaluate(self, expression: str):
+            if asyncio.get_running_loop() is not self.browser.event_loop:
+                raise RuntimeError("page_evaluate_must_run_on_browser_event_loop")
             self.calls.append(expression)
             if "document.documentElement.outerHTML" in expression:
                 return "<html><body>Request confirmed</body></html>"
@@ -981,8 +984,10 @@ def test_async_deterministic_playbook_rejects_explicit_cookie_banner_before_form
             self.page = ConsentGatedPage(self)
             self.url = "https://publisher.example/report"
             self.title = "Publisher form"
+            self.event_loop = None
 
         async def start(self) -> None:
+            self.event_loop = asyncio.get_running_loop()
             return None
 
         async def get_current_page(self) -> ConsentGatedPage:

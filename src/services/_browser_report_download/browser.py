@@ -2291,7 +2291,10 @@ async def _dismiss_explicit_cookie_banner_async(page: Any) -> str:
     if not callable(evaluate):
         return "unavailable"
     try:
-        return str(await _maybe_await(evaluate(_REJECT_ALL_COOKIE_BANNER_EXPRESSION)) or "")
+        value = evaluate(_REJECT_ALL_COOKIE_BANNER_EXPRESSION)
+        if inspect.isawaitable(value):
+            value = await value
+        return str(value or "")
     except Exception:
         return "unavailable"
 

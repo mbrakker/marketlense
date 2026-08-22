@@ -48,7 +48,8 @@ optional consent preflight: it clicks a visible control whose normalized label
 is exactly `Reject all`. It never accepts cookies, fills consent controls, or
 turns the dismissal into acquisition success. A missing or nonstandard banner
 is ignored and the normal deterministic route/fallback behavior remains in
-force.
+force. Browser Use evaluates that preflight directly on its owning async event
+loop; it is not passed through the synchronous browser-helper bridge.
 
 An isolated-worker startup or navigation that has rendered the target page but
 does not settle within 15 seconds is treated as an unsettled browser state, not
