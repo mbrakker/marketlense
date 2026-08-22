@@ -1090,6 +1090,14 @@ def _deterministic_playbook_handoff_url(
     return candidate.geturl()
 
 
+def _deterministic_playbooks_require_isolated_worker(
+    playbooks: list[BrowserRoutePlaybook],
+) -> bool:
+    """Keep publisher playbooks out of a preflight browser's event loop."""
+
+    return any(_is_publisher_specific_playbook(playbook) for playbook in playbooks)
+
+
 def _is_publisher_specific_playbook(playbook: BrowserRoutePlaybook) -> bool:
     return any(
         str(pattern or "").strip() not in {"", "*"}
@@ -1629,6 +1637,33 @@ def download_report_with_browser_use(
         request=request,
         ctx=ctx,
     )
+    if (
+        preflight_session is not None
+        and _deterministic_playbooks_require_isolated_worker(deterministic_playbooks)
+    ):
+        _close_preflight_session(
+            session=preflight_session,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            outcome="deterministic_isolation",
+        )
+        preflight_session = None
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_route_playbook_deterministic_isolated",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "publisher_playbook_count": sum(
+                        1
+                        for playbook in deterministic_playbooks
+                        if _is_publisher_specific_playbook(playbook)
+                    ),
+                },
+            )
+        )
     try:
         deterministic_attempt = _try_deterministic_browser_route_playbooks(
             request=request,

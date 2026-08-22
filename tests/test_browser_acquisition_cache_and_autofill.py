@@ -27,6 +27,7 @@ from src.services._browser_report_download.models import BrowserAgentRunResult
 from src.services._browser_report_download.prompt import BrowserDownloadPromptBundle
 from src.services.browser_report_download_service import (
     _artifact_cache_key,
+    _deterministic_playbooks_require_isolated_worker,
     _deterministic_playbook_handoff_url,
     _normalized_report_title,
     _publisher_scope,
@@ -58,6 +59,42 @@ def test_deterministic_playbook_handoff_uses_only_a_new_same_publisher_url() -> 
         )
         == ""
     )
+
+
+def test_publisher_playbooks_require_an_isolated_worker() -> None:
+    publisher_playbook = BrowserRoutePlaybook(
+        schema_version="1.0",
+        playbook_id="publisher-route",
+        version="1.0.0",
+        status="active",
+        updated_at="2026-08-22T00:00:00+00:00",
+        stale_after_days=180,
+        publisher_pattern="adjust.com",
+        host_patterns=["www.adjust.com"],
+        url_path_markers=["resources/ebooks/all"],
+        route_family="browser_email_form",
+        route_kind="email_form",
+        summary="Publisher route.",
+        steps=[],
+    )
+    generic_playbook = BrowserRoutePlaybook(
+        schema_version="1.0",
+        playbook_id="generic-route",
+        version="1.0.0",
+        status="active",
+        updated_at="2026-08-22T00:00:00+00:00",
+        stale_after_days=180,
+        publisher_pattern="all publishers",
+        host_patterns=["*"],
+        url_path_markers=["resources/ebooks/all"],
+        route_family="browser_email_form",
+        route_kind="email_form",
+        summary="Generic route.",
+        steps=[],
+    )
+
+    assert _deterministic_playbooks_require_isolated_worker([publisher_playbook])
+    assert not _deterministic_playbooks_require_isolated_worker([generic_playbook])
 
 
 def test_deterministic_playbook_retains_same_publisher_page_for_agent_handoff(

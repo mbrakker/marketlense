@@ -67,8 +67,9 @@ session-reuse finalization, and browser-launch accounting. When process
 isolation requires a deterministic worker to end before escalation, a completed
 but unverified publisher-specific route may hand off only its new, same-origin
 HTTP(S) final page URL to a fresh Agent worker. The prior session is closed
-before that handoff; no browser object, cookies, or cross-event-loop connection
-is reused. This preserves process isolation while preventing the Agent from
+before deterministic worker execution when it belongs to a different event
+loop, and remains closed for the handoff; no browser object, cookies, or
+cross-event-loop connection is reused. This preserves process isolation while preventing the Agent from
 starting again at an already-resolved listing page. Async deterministic form
 handling and an Agent fallback otherwise share the same Browser Use event loop;
 a helper failure resumes Browser Use on the same browser, and the outer

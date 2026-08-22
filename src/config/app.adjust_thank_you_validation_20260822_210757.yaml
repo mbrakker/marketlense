@@ -1,0 +1,44 @@
+schema_version: "1.0"
+# Acquisition-only single-candidate validation. Email inbox delivery is deliberately
+# outside this run; the browser terminal confirmation is the validation target.
+paths:
+  output_dir: "./out/adjust_thank_you_validation_20260822_210757"
+  cache_dir: "./cache/adjust_thank_you_validation_20260822_210757"
+  state_db: "./state/adjust_thank_you_validation_20260822_210757/index.sqlite"
+  reports_db: "./state/adjust_thank_you_validation_20260822_210757/reports.sqlite"
+  signal_store_db: "./state/adjust_thank_you_validation_20260822_210757/signals.sqlite"
+  ingest_lock: "./state/adjust_thank_you_validation_20260822_210757/ingest.lock"
+browser_download:
+  output_dir: "./out/adjust_thank_you_validation_20260822_210757/browser_downloads"
+  identity_config_path: "./browser_download_identity.yaml"
+  route_playbook_promotion_mode: "disabled"
+  private_api_playbook_promotion_mode: "disabled"
+  retry:
+    retries: 0
+    base_delay_seconds: 0.0
+    backoff_step_seconds: 0.0
+    jitter_seconds: 0.0
+  route_budgets:
+    browser_email_form:
+      timeout_seconds: 240
+      max_steps: 24
+  run_budget:
+    enabled: true
+    max_browser_launches: 3
+    max_pdfs: 0
+    max_drive_writes: 0
+    max_drive_reads: 0
+    max_mailbox_reads: 0
+    max_retries: 0
+    max_runtime_seconds: 600
+    limit_decision: "stop"
+mailbox_acquisition:
+  output_dir: "./out/adjust_thank_you_validation_20260822_210757/mailbox_acquisition"
+  poll_timeout_seconds: 1
+  poll_interval_seconds: 1
+analysis:
+  cost_ledger_path: "./state/adjust_thank_you_validation_20260822_210757/llm_cost_ledger.jsonl"
+cost:
+  usage_db_path: "./state/adjust_thank_you_validation_20260822_210757/llm_usage.sqlite"
+  daily_path: "./state/adjust_thank_you_validation_20260822_210757/llm_cost_daily.json"
+  ledger_path: "./state/adjust_thank_you_validation_20260822_210757/llm_cost_ledger.jsonl"
