@@ -2021,6 +2021,7 @@ def run_deterministic_browser_route_playbook(
         for field in resolve_effective_identity_fields(request)
         if str(field.key or "").strip() and str(field.value or "").strip()
     }
+    _dismiss_explicit_cookie_banner(page)
     execution = execute_browser_route_playbook(
         BrowserRoutePlaybookExecutionRequest(
             schema_version="1.0",
@@ -2158,6 +2159,7 @@ async def _run_async_deterministic_browser_route_playbook(
         for field in resolve_effective_identity_fields(request)
         if str(field.key or "").strip() and str(field.value or "").strip()
     }
+    await _dismiss_explicit_cookie_banner_async(page)
     execution = await execute_browser_route_playbook_async(
         BrowserRoutePlaybookExecutionRequest(
             schema_version="1.0",
@@ -2252,6 +2254,46 @@ async def _run_async_deterministic_browser_route_playbook(
         print_pdf_capture_provenance="",
         dialog_evidence=[],
     )
+
+
+_REJECT_ALL_COOKIE_BANNER_EXPRESSION = """() => {
+  const normalizedText = (element) => String(
+    element.innerText || element.value || element.getAttribute('aria-label') || ''
+  ).replace(/\\s+/g, ' ').trim().toLowerCase();
+  const isVisible = (element) => {
+    const style = window.getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+    return style.visibility !== 'hidden' && style.display !== 'none' && rect.width > 0 && rect.height > 0;
+  };
+  const reject = Array.from(document.querySelectorAll(
+    'button, input[type=button], input[type=submit], [role=button]'
+  )).find((element) => isVisible(element) && normalizedText(element) === 'reject all');
+  if (!reject) return 'absent';
+  reject.click();
+  return 'rejected';
+}"""
+
+
+def _dismiss_explicit_cookie_banner(page: Any) -> str:
+    """Reject an explicit all-cookies banner without making consent a playbook step."""
+    evaluate = getattr(page, "evaluate", None)
+    if not callable(evaluate):
+        return "unavailable"
+    try:
+        return str(_maybe_await(evaluate(_REJECT_ALL_COOKIE_BANNER_EXPRESSION)) or "")
+    except Exception:
+        return "unavailable"
+
+
+async def _dismiss_explicit_cookie_banner_async(page: Any) -> str:
+    """Async counterpart for Browser Use's event-loop-bound page API."""
+    evaluate = getattr(page, "evaluate", None)
+    if not callable(evaluate):
+        return "unavailable"
+    try:
+        return str(await _maybe_await(evaluate(_REJECT_ALL_COOKIE_BANNER_EXPRESSION)) or "")
+    except Exception:
+        return "unavailable"
 
 
 def _agent_accepts_parameter(

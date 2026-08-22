@@ -43,6 +43,13 @@ falls back to Browser Use; it never produces a terminal acquisition failure by
 itself. A successfully finalized playbook records
 `avoided_browser_use_model_call: true` and makes zero Browser Use model calls.
 
+Before a deterministic playbook begins, the browser runtime makes one bounded,
+optional consent preflight: it clicks a visible control whose normalized label
+is exactly `Reject all`. It never accepts cookies, fills consent controls, or
+turns the dismissal into acquisition success. A missing or nonstandard banner
+is ignored and the normal deterministic route/fallback behavior remains in
+force.
+
 Role/name locators are exact: they must resolve exactly one current accessible
 element, never a fuzzy or first-control match. `fill` and `type` support only
 the native `textbox`/`searchbox` form controls; `select` supports only native

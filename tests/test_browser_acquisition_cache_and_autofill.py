@@ -943,6 +943,102 @@ def test_async_deterministic_playbook_executes_supported_actions_without_agent(
     )
 
 
+def test_async_deterministic_playbook_rejects_explicit_cookie_banner_before_form_steps(
+    tmp_path: Path,
+) -> None:
+    """A consent overlay must not turn a known deterministic route into Agent work."""
+    settings = _settings(tmp_path)
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url="https://publisher.example/report",
+        settings=settings,
+        route_family_hint="browser_email_form",
+    )
+
+    class ConsentGatedPage:
+        def __init__(self, browser) -> None:
+            self.browser = browser
+            self.cookie_banner_rejected = False
+            self.calls: list[str] = []
+
+        async def evaluate(self, expression: str):
+            self.calls.append(expression)
+            if "document.documentElement.outerHTML" in expression:
+                return "<html><body>Request confirmed</body></html>"
+            if "document.body?.innerText" in expression:
+                return "Request confirmed" in expression
+            if "normalizedText" in expression and "reject all" in expression:
+                self.cookie_banner_rejected = True
+                return "rejected"
+            if "element.click()" in expression:
+                if not self.cookie_banner_rejected:
+                    raise RuntimeError("cookie_banner_blocks_interaction")
+                return "clicked"
+            raise AssertionError(f"Unexpected deterministic expression: {expression}")
+
+    class ConsentGatedBrowser:
+        def __init__(self) -> None:
+            self.page = ConsentGatedPage(self)
+            self.url = "https://publisher.example/report"
+            self.title = "Publisher form"
+
+        async def start(self) -> None:
+            return None
+
+        async def get_current_page(self) -> ConsentGatedPage:
+            return self.page
+
+        async def navigate_to(self, url: str) -> None:
+            self.url = url
+
+        async def get_current_page_url(self) -> str:
+            return self.url
+
+        async def get_current_page_title(self) -> str:
+            return self.title
+
+    ConsentGatedBrowser.__module__ = "browser_use.browser"
+    playbook = BrowserRoutePlaybook(
+        schema_version="1.0",
+        playbook_id="publisher-cookie-gated-form",
+        version="1.0.0",
+        status="active",
+        updated_at="2026-08-22T00:00:00+00:00",
+        stale_after_days=180,
+        publisher_pattern="publisher.example",
+        host_patterns=["publisher.example"],
+        url_path_markers=["report"],
+        route_family="browser_email_form",
+        route_kind="email_delivery",
+        summary="Submit the publisher form after rejecting its consent banner.",
+        steps=[
+            BrowserRoutePlaybookStep(
+                schema_version="1.0",
+                action="submit",
+                target="Request report",
+                verification="request submitted",
+                selector_type="css",
+                selector="button[type=submit]",
+                expected_text="Request confirmed",
+            )
+        ],
+    )
+
+    browser = ConsentGatedBrowser()
+    result = run_deterministic_browser_route_playbook(
+        request=request,
+        ctx=_ctx(),
+        normalized_url=request.url,
+        execution_url=request.url,
+        download_dir=tmp_path,
+        browser=browser,
+        playbook=playbook,
+    )
+
+    assert result is not None
+    assert browser.page.cookie_banner_rejected is True
+
+
 def test_async_deterministic_playbook_drift_returns_fallback_signal(
     tmp_path: Path,
 ) -> None:
