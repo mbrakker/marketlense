@@ -92,7 +92,11 @@ Cross-origin frames remain outside that deterministic boundary and continue to
 the existing bounded Browser Use fallback on the same browser session. This
 accommodates a landing page that reveals its normal form below the fold while
 preserving an already visible form, including a standard `Dive in` submit
-control. After a successful deterministic submission, an observed embedded
+control. When a publisher varies the visible copy for one native submit
+control across report pages, its executable playbook uses the stable control
+locator and leaves direct-document or email-confirmation acceptance to the
+normal terminal verifier; button text alone never proves acquisition. After a
+successful deterministic submission, an observed embedded
 `.pdf` URL goes through the ordinary direct PDF artifact verifier before the
 Agent fallback. An iframe, viewer, or embed without a recoverable PDF remains
 unverified and continues through the existing fallback/capture rules. Terminal

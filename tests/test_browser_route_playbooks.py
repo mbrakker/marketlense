@@ -102,6 +102,51 @@ def test_adjust_ebook_listing_selects_the_deterministic_report_entry_playbook(
     )
 
 
+def test_gwi_email_form_playbook_is_executable_for_both_observed_submit_labels(
+    run_context,
+) -> None:
+    playbook_dir = (
+        Path(__file__).resolve().parents[1] / "src" / "playbooks" / "browser_routes"
+    )
+    playbook = next(
+        item
+        for item in load_browser_route_playbooks(
+            playbook_dir=str(playbook_dir),
+            ctx=run_context,
+        )
+        if item.playbook_id == "learned-www-gwi-com-browser-email-form"
+    )
+
+    assert [step.action for step in playbook.steps] == [
+        "click",
+        "fill",
+        "fill",
+        "fill",
+        "select",
+        "select",
+        "submit",
+    ]
+    assert [step.selector_type for step in playbook.steps] == [
+        "role",
+        "label",
+        "label",
+        "label",
+        "label",
+        "label",
+        "css",
+    ]
+    assert [step.value_reference for step in playbook.steps[1:-1]] == [
+        "${identity.first_name}",
+        "${identity.last_name}",
+        "${identity.work_email}",
+        "${identity.company_size}",
+        "${identity.country}",
+    ]
+    assert playbook.steps[-1].selector == "input.hs-button.primary.large"
+    assert playbook.steps[-1].expected_url_contains == "/reports/"
+    assert all(step.expected_text or step.expected_url_contains for step in playbook.steps)
+
+
 def test_stale_playbook_fallback_and_fail_policies_are_logged(
     tmp_path: Path,
     run_context,
