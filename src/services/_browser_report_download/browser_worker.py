@@ -57,19 +57,36 @@ _EMAIL_PATTERN = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.I)
 _DETERMINISTIC_NAVIGATION_SETTLE_SECONDS = 15.0
 
 
+def _consume_background_task_exception(task: asyncio.Future[Any]) -> None:
+    if not task.cancelled():
+        task.exception()
+
+
+async def _await_browser_settle_without_cancelling(
+    operation: Any,
+    *,
+    timeout_seconds: float,
+) -> bool:
+    task = asyncio.ensure_future(operation)
+    done, pending = await asyncio.wait(
+        {task}, timeout=max(0.01, timeout_seconds)
+    )
+    if pending:
+        task.add_done_callback(_consume_background_task_exception)
+        return False
+    task.result()
+    return True
+
+
 async def start_deterministic_playbook_browser(
     *,
     browser: Any,
     timeout_seconds: float = _DETERMINISTIC_NAVIGATION_SETTLE_SECONDS,
 ) -> bool:
     """Start the browser without requiring its background work to settle."""
-    try:
-        await asyncio.wait_for(
-            browser.start(), timeout=max(0.01, timeout_seconds)
-        )
-    except TimeoutError:
-        return False
-    return True
+    return await _await_browser_settle_without_cancelling(
+        browser.start(), timeout_seconds=timeout_seconds
+    )
 
 
 async def navigate_deterministic_playbook_page(
@@ -79,13 +96,9 @@ async def navigate_deterministic_playbook_page(
     timeout_seconds: float = _DETERMINISTIC_NAVIGATION_SETTLE_SECONDS,
 ) -> bool:
     """Begin page navigation without letting an unsettled page suppress its route."""
-    try:
-        await asyncio.wait_for(
-            browser.navigate_to(execution_url), timeout=max(0.01, timeout_seconds)
-        )
-    except TimeoutError:
-        return False
-    return True
+    return await _await_browser_settle_without_cancelling(
+        browser.navigate_to(execution_url), timeout_seconds=timeout_seconds
+    )
 
 
 def _build_identity_field(payload: dict) -> BrowserDownloadIdentityField:

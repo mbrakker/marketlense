@@ -1240,22 +1240,30 @@ def test_deterministic_worker_start_timeout_keeps_started_browser_available() ->
     class Browser:
         def __init__(self) -> None:
             self.start_started = False
+            self.start_cancelled = False
 
         async def start(self) -> None:
             self.start_started = True
-            await asyncio.Event().wait()
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                self.start_cancelled = True
+                raise
 
     browser = Browser()
 
-    settled = asyncio.run(
-        browser_worker_runtime.start_deterministic_playbook_browser(
+    async def exercise() -> tuple[bool, bool]:
+        settled = await browser_worker_runtime.start_deterministic_playbook_browser(
             browser=browser,
             timeout_seconds=0.01,
         )
-    )
+        return settled, browser.start_cancelled
+
+    settled, cancelled_before_loop_teardown = asyncio.run(exercise())
 
     assert settled is False
     assert browser.start_started is True
+    assert cancelled_before_loop_teardown is False
 
 
 def test_browser_worker_main_redacts_identity_values_from_persisted_response(
