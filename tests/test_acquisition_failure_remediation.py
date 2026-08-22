@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import sqlite3
+import sys
 from pathlib import Path
 
 
@@ -121,3 +122,97 @@ def test_artifact_verification_accepts_verified_browser_rendered_pdf(tmp_path):
     assert verification["source_kind"] == "rendered_onsite_pdf"
     assert verification["verified_usable_artifact"] is True
     assert verification["publisher_supplied"] is False
+
+
+def test_artifact_verification_preserves_verified_browser_printed_pdf(tmp_path):
+    module = _load_module()
+    rendered_pdf = tmp_path / "report-browser-printed.pdf"
+    rendered_pdf.write_bytes(b"%PDF-1.7 browser printed report")
+
+    verification = module._artifact_verification(
+        {
+            "acquisition_result": {
+                "outcome": "captured",
+                "route_status": "verified",
+                "route_family": "browser_onsite_report",
+                "onsite_capture_path": str(rendered_pdf),
+                "onsite_capture_format": "browser_rendered_pdf",
+                "drive_uploads": [{"status": "uploaded"}],
+            }
+        }
+    )
+
+    assert verification["source_kind"] == "browser_rendered_pdf"
+    assert verification["verified_usable_artifact"] is True
+    assert verification["publisher_supplied"] is False
+
+
+def test_isolated_attempt_supervisor_returns_typed_timeout(tmp_path):
+    module = _load_module()
+
+    result = module._run_isolated_attempt_process(
+        command=[sys.executable, "-c", "import time; time.sleep(30)"],
+        response_path=tmp_path / "response.json",
+        timeout_seconds=0.1,
+    )
+
+    assert result["status"] == "timeout"
+    assert result["error_code"] == "acquisition_attempt_supervisor_timeout"
+    assert result["response"] is None
+
+
+def test_supervisor_timeout_record_is_terminal_with_incomplete_telemetry():
+    module = _load_module()
+
+    record = module._supervisor_terminal_record(
+        candidate={
+            "failure_candidate_id": "fac_timeout",
+            "canonical_candidate_url": "https://example.test/report",
+            "publisher_id": "publisher:example",
+            "publisher_name": "Example",
+        },
+        producer_sha="abc123",
+        configuration_hash="config-hash",
+        run_id="run-1",
+        started_at="2026-08-22T00:00:00Z",
+        supervisor_result={
+            "status": "timeout",
+            "error_code": "acquisition_attempt_supervisor_timeout",
+            "duration_seconds": 360.0,
+        },
+    )
+
+    assert record["acquisition_error"]["error_code"] == (
+        "acquisition_attempt_supervisor_timeout"
+    )
+    assert record["artifact_verification"]["verified_usable_artifact"] is False
+    assert record["resource_attempts"][0]["telemetry_status"] == "incomplete"
+    assert record["resource_attempts"][0]["browser_launches"] is None
+
+
+def test_isolated_replay_uses_only_matching_child_terminal_record():
+    module = _load_module()
+    candidate = {
+        "failure_candidate_id": "fac_child",
+        "canonical_candidate_url": "https://example.test/report",
+    }
+    child_record = {
+        "failure_candidate_id": "fac_child",
+        "artifact_verification": {"verified_usable_artifact": True},
+    }
+
+    record = module._record_from_isolated_attempt(
+        candidate=candidate,
+        producer_sha="abc123",
+        configuration_hash="config-hash",
+        run_id="run-1",
+        started_at="2026-08-22T00:00:00Z",
+        supervisor_result={
+            "status": "completed",
+            "error_code": "",
+            "duration_seconds": 1.0,
+            "response": {"records": [child_record]},
+        },
+    )
+
+    assert record is child_record

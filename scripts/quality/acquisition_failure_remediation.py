@@ -13,12 +13,16 @@ import hashlib
 import json
 import os
 import sqlite3
+import subprocess
 import sys
 import time
+import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+import psutil
 
 SCHEMA_VERSION = "1.0"
 
@@ -536,7 +540,180 @@ def _resource_rows(reports_db: str | Path, url: str) -> list[dict[str, Any]]:
     return rows
 
 
-def replay_failed_acquisition_manifest(
+def _terminate_attempt_process_tree(process_id: int) -> None:
+    """Terminate only the isolated candidate worker and its descendants."""
+    try:
+        parent = psutil.Process(process_id)
+    except psutil.Error:
+        return
+    processes = [*parent.children(recursive=True), parent]
+    for process in processes:
+        try:
+            process.terminate()
+        except psutil.Error:
+            continue
+    _, alive = psutil.wait_procs(processes, timeout=3)
+    for process in alive:
+        try:
+            process.kill()
+        except psutil.Error:
+            continue
+    psutil.wait_procs(alive, timeout=3)
+
+
+def _run_isolated_attempt_process(
+    *, command: list[str], response_path: Path, timeout_seconds: float
+) -> dict[str, Any]:
+    """Run one replay candidate in a disposable process with a hard deadline."""
+    started_monotonic = time.monotonic()
+    try:
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            text=True,
+        )
+    except OSError as exc:
+        return {
+            "status": "spawn_failed",
+            "error_code": "acquisition_attempt_supervisor_spawn_failed",
+            "response": None,
+            "return_code": None,
+            "duration_seconds": round(time.monotonic() - started_monotonic, 3),
+            "error_type": type(exc).__name__,
+        }
+    try:
+        return_code = process.wait(timeout=timeout_seconds)
+    except subprocess.TimeoutExpired:
+        _terminate_attempt_process_tree(process.pid)
+        return {
+            "status": "timeout",
+            "error_code": "acquisition_attempt_supervisor_timeout",
+            "response": None,
+            "return_code": None,
+            "duration_seconds": round(time.monotonic() - started_monotonic, 3),
+        }
+    if not response_path.exists():
+        return {
+            "status": "missing_response",
+            "error_code": "acquisition_attempt_child_missing_result",
+            "response": None,
+            "return_code": return_code,
+            "duration_seconds": round(time.monotonic() - started_monotonic, 3),
+        }
+    try:
+        response = json.loads(response_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {
+            "status": "invalid_response",
+            "error_code": "acquisition_attempt_child_invalid_result",
+            "response": None,
+            "return_code": return_code,
+            "duration_seconds": round(time.monotonic() - started_monotonic, 3),
+        }
+    return {
+        "status": "completed",
+        "error_code": "",
+        "response": response,
+        "return_code": return_code,
+        "duration_seconds": round(time.monotonic() - started_monotonic, 3),
+    }
+
+
+def _supervisor_terminal_record(
+    *,
+    candidate: dict[str, Any],
+    producer_sha: str,
+    configuration_hash: str,
+    run_id: str,
+    started_at: str,
+    supervisor_result: dict[str, Any],
+) -> dict[str, Any]:
+    """Represent a killed or malformed child without inventing browser usage."""
+    duration_seconds = float(supervisor_result.get("duration_seconds") or 0.0)
+    error_code = str(
+        supervisor_result.get("error_code")
+        or "acquisition_attempt_supervisor_failed"
+    )
+    resource_attempt = {
+        "attempt_id": "supervisor:" + str(candidate.get("failure_candidate_id") or ""),
+        "normalized_url": str(candidate.get("canonical_candidate_url") or ""),
+        "route_family": "supervisor_isolation",
+        "terminal_outcome": "failed",
+        "terminal_reason": error_code,
+        "duration_seconds": round(duration_seconds, 3),
+        "retry_count": 0,
+        "telemetry_status": "incomplete",
+        "browser_launches": None,
+        "browser_model_calls": None,
+        "input_tokens": None,
+        "cached_input_tokens": None,
+        "output_tokens": None,
+        "estimated_cost_usd": None,
+    }
+    record = {
+        "failure_candidate_id": candidate.get("failure_candidate_id") or "",
+        "source_record_id": candidate.get("source_record_id") or "",
+        "source_identity_id": candidate.get("source_identity_id") or "",
+        "publisher_id": candidate.get("publisher_id") or "",
+        "publisher_name": candidate.get("publisher_name") or "",
+        "canonical_candidate_url": candidate.get("canonical_candidate_url") or "",
+        "run_id": run_id,
+        "attempt_id": "diagnostic:" + str(candidate.get("failure_candidate_id") or ""),
+        "parent_attempt": "",
+        "producer_git_sha": producer_sha,
+        "configuration_hash": configuration_hash,
+        "policy_hash": "current_head_default_policy",
+        "phase": "diagnostic_before_fixes",
+        "started_at": started_at,
+        "completed_at": _now(),
+        "duration_seconds": round(duration_seconds, 3),
+        "acquisition_error": {
+            "error_code": error_code,
+            "retryable": True,
+            "severity": "error",
+        },
+        "resource_attempts": [resource_attempt],
+    }
+    record["artifact_verification"] = _artifact_verification(record)
+    return record
+
+
+def _record_from_isolated_attempt(
+    *,
+    candidate: dict[str, Any],
+    producer_sha: str,
+    configuration_hash: str,
+    run_id: str,
+    started_at: str,
+    supervisor_result: dict[str, Any],
+) -> dict[str, Any]:
+    """Accept exactly one matching child record or synthesize a terminal failure."""
+    response = supervisor_result.get("response")
+    records = response.get("records") if isinstance(response, dict) else None
+    if (
+        supervisor_result.get("status") == "completed"
+        and isinstance(records, list)
+        and len(records) == 1
+        and isinstance(records[0], dict)
+        and records[0].get("failure_candidate_id")
+        == candidate.get("failure_candidate_id")
+    ):
+        return records[0]
+    result = dict(supervisor_result)
+    if not str(result.get("error_code") or "").strip():
+        result["error_code"] = "acquisition_attempt_child_invalid_result"
+    return _supervisor_terminal_record(
+        candidate=candidate,
+        producer_sha=producer_sha,
+        configuration_hash=configuration_hash,
+        run_id=run_id,
+        started_at=started_at,
+        supervisor_result=result,
+    )
+
+
+def _replay_failed_acquisition_manifest_direct(
     *,
     manifest_path: Path,
     config_path: Path,
@@ -728,6 +905,144 @@ def replay_failed_acquisition_manifest(
     return output
 
 
+def _isolated_attempt_timeout_seconds(
+    *, config_path: Path, producer_sha: str
+) -> tuple[float, str]:
+    """Use the existing route envelope plus bounded supervisor cleanup grace."""
+    workspace_root = str(Path(__file__).resolve().parents[2])
+    if workspace_root not in sys.path:
+        sys.path.insert(0, workspace_root)
+    from src.contracts.config import ConfigLoadRequest
+    from src.services.config_service import load_browser_download_settings
+    from src.utils.logging import new_run_context
+
+    context = new_run_context(
+        task_id="acquisition_failure_remediation_supervisor",
+        producer_commit_sha=producer_sha,
+    )
+    settings = load_browser_download_settings(
+        ConfigLoadRequest(schema_version="1.0", path=str(config_path.resolve())),
+        context,
+    )
+    route_timeout = max(
+        (float(budget.timeout_seconds) for budget in settings.route_budgets),
+        default=float(settings.timeout_seconds),
+    )
+    configuration_hash = _sha256(
+        {
+            "config_sha256": _file_sha256(config_path),
+            "identity_config_sha256": _file_sha256(
+                Path(settings.identity_config_path)
+            ),
+            "isolation": "per_candidate_process",
+        }
+    )
+    return route_timeout + 120.0, configuration_hash
+
+
+def replay_failed_acquisition_manifest(
+    *,
+    manifest_path: Path,
+    config_path: Path,
+    dotenv_path: Path,
+    output_dir: Path,
+    producer_sha: str,
+    candidate_ids: set[str] | None = None,
+    process_isolated: bool = True,
+) -> dict[str, Any]:
+    """Replay a frozen cohort with one disposable process per candidate."""
+    if not process_isolated:
+        return _replay_failed_acquisition_manifest_direct(
+            manifest_path=manifest_path,
+            config_path=config_path,
+            dotenv_path=dotenv_path,
+            output_dir=output_dir,
+            producer_sha=producer_sha,
+            candidate_ids=candidate_ids,
+        )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    supplied_hash = str(manifest.get("manifest_sha256") or "")
+    calculated_hash = _sha256(
+        {key: value for key, value in manifest.items() if key != "manifest_sha256"}
+    )
+    if not supplied_hash or supplied_hash != calculated_hash:
+        raise RuntimeError(
+            "Failed acquisition manifest hash does not match its frozen contents"
+        )
+    output_dir.mkdir(parents=True, exist_ok=True)
+    _load_external_dotenv_with_owned_paths(dotenv_path)
+    attempt_timeout_seconds, configuration_hash = _isolated_attempt_timeout_seconds(
+        config_path=config_path, producer_sha=producer_sha
+    )
+    selected_candidates = [
+        candidate
+        for candidate in manifest["candidates"]
+        if candidate_ids is None or candidate["failure_candidate_id"] in candidate_ids
+    ]
+    run_id = "supervisor-" + str(uuid.uuid4())
+    records: list[dict[str, Any]] = []
+    jsonl_path = output_dir / "acquisition_attempts.jsonl"
+    worker_root = output_dir / "isolated_attempt_workers"
+    worker_root.mkdir(parents=True, exist_ok=True)
+    for ordinal, candidate in enumerate(selected_candidates, start=1):
+        started_at = _now()
+        worker_output_dir = (
+            worker_root / f"{ordinal:03d}-{candidate['failure_candidate_id']}"
+        )
+        response_path = worker_output_dir / "diagnostic_replay.json"
+        command = [
+            sys.executable,
+            str(Path(__file__).resolve()),
+            "replay",
+            "--manifest",
+            str(manifest_path.resolve()),
+            "--config",
+            str(config_path.resolve()),
+            "--dotenv",
+            str(dotenv_path.resolve()),
+            "--output-dir",
+            str(worker_output_dir.resolve()),
+            "--producer-sha",
+            producer_sha,
+            "--candidate-id",
+            str(candidate["failure_candidate_id"]),
+            "--worker",
+        ]
+        supervisor_result = _run_isolated_attempt_process(
+            command=command,
+            response_path=response_path,
+            timeout_seconds=attempt_timeout_seconds,
+        )
+        record = _record_from_isolated_attempt(
+            candidate=candidate,
+            producer_sha=producer_sha,
+            configuration_hash=configuration_hash,
+            run_id=run_id,
+            started_at=started_at,
+            supervisor_result=supervisor_result,
+        )
+        records.append(record)
+        with jsonl_path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(record, ensure_ascii=True, sort_keys=True) + "\n")
+    output = {
+        "schema_version": SCHEMA_VERSION,
+        "phase": "diagnostic_before_fixes",
+        "run_id": run_id,
+        "producer_git_sha": producer_sha,
+        "manifest_sha256": supplied_hash,
+        "configuration_hash": configuration_hash,
+        "candidate_count": len(records),
+        "records": records,
+        "process_isolated": True,
+        "attempt_timeout_seconds": attempt_timeout_seconds,
+    }
+    (output_dir / "diagnostic_replay.json").write_text(
+        json.dumps(output, ensure_ascii=True, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return output
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -742,6 +1057,7 @@ def main() -> int:
     replay.add_argument("--output-dir", required=True)
     replay.add_argument("--producer-sha", required=True)
     replay.add_argument("--candidate-id", action="append", default=[])
+    replay.add_argument("--worker", action="store_true")
     args = parser.parse_args()
     if args.command == "freeze":
         result = freeze_failed_acquisition_manifest(
@@ -765,6 +1081,7 @@ def main() -> int:
             output_dir=Path(args.output_dir),
             producer_sha=args.producer_sha,
             candidate_ids=set(args.candidate_id) or None,
+            process_isolated=not args.worker,
         )
         print(
             json.dumps(

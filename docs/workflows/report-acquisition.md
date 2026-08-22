@@ -133,6 +133,16 @@ recovered. The timeout remains a typed terminal result with its route,
 timestamps, and resource envelope; this run-only policy does not alter the
 normal acquisition default or suppress a future explicit revalidation.
 
+Retained failed-cohort replays run each candidate in a disposable supervisor
+process. The supervisor uses the configured maximum route timeout plus bounded
+cleanup grace, preserves a valid child terminal record unchanged, and writes a
+typed terminal record when a child times out or fails to return valid output.
+Such supervisor-produced records mark browser, token, launch, and cost fields
+as incomplete rather than reporting unavailable measurements as zero. This
+outer isolation does not alter route selection, Browser Use behavior, or the
+signature, verified-route, and Drive-persistence checks required for either
+`rendered_onsite_pdf` or `browser_rendered_pdf` acquisition.
+
 Successful browser-route promotion preserves route prose and version history for audit,
 but treats all model-supplied route-step locator and postcondition fields as untrusted.
 The browser runtime separately records each successfully resolved/acted-on locator and
