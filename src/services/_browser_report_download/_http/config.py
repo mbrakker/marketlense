@@ -18,3 +18,8 @@ _HTML_FETCH_HEADERS = {
 }
 _HTML_FETCH_MAX_BYTES = 4 * 1024 * 1024
 _PDF_FETCH_MAX_BYTES = 128 * 1024 * 1024
+_TERMINAL_NOT_FOUND_BODY_MARKERS = (
+    "the requested url was not found on this server",
+    "the page you are looking for was not found",
+    "this page does not exist",
+)

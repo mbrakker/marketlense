@@ -38,7 +38,9 @@ as soon as that detector stops it, retaining the partial history rather than
 waiting for optional Agent cleanup. Inspect the bounded no-progress event and
 the retained per-report evidence before retrying.
 
-When bounded browser preflight confirms a terminal not-found page from its
-page body, it records `blocked_static_archive` and skips Agent work. That
+For `browser_email_form`, bounded HTTP preflight follows redirects before a
+browser launch. A final HTTP 404/410 page must also contain a known terminal
+not-found marker before it records `blocked_static_archive` and skips Agent
+work. Browser preflight applies the same marker check to rendered pages. That
 outcome is not an acquisition success; it prevents repeated navigation of the
 same obsolete exact URL.

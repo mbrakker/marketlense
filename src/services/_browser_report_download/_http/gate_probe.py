@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+
 import requests
 
 from src.contracts.browser_download import (
@@ -20,6 +21,7 @@ from src.contracts.run_context import RunContext
 from src.services._browser_report_download._http.config import (
     _HTML_FETCH_HEADERS,
     _HTML_FETCH_MAX_BYTES,
+    _TERMINAL_NOT_FOUND_BODY_MARKERS,
 )
 from src.services._browser_report_download._http.html_evidence import (
     _extract_html_title,
@@ -47,6 +49,7 @@ _ACCESS_CHALLENGE_MARKERS = (
     "enable javascript",
 )
 _ACCESS_CHALLENGE_STATUS_CODES = {401, 403, 429, 503}
+_TERMINAL_NOT_FOUND_STATUS_CODES = {404, 410}
 _ACCESS_CHALLENGE_PROBE_TIMEOUT_SECONDS = 15.0
 _STATIC_EMAIL_GATE_PROBE_TIMEOUT_SECONDS = 8.0
 _STATIC_EMAIL_GATE_ROUTE_FAMILIES = {
@@ -152,6 +155,7 @@ def try_http_access_challenge_probe(
                 ),
                 error_code="browser_download_access_challenge_probe_failed",
                 error_message="Failed to probe the report page for an access challenge",
+                allow_redirects=True,
                 context_fields={
                     "normalized_url": normalized_url,
                     "target_url": target_url,
@@ -177,12 +181,25 @@ def try_http_access_challenge_probe(
         return None
     text = str(response.text_body or "")
     lowered = text.casefold()
+    final_url = str(response.final_url or target_url).strip() or target_url
     matched_marker = next(
         (marker for marker in _ACCESS_CHALLENGE_MARKERS if marker in lowered),
         "",
     )
     blocked_status = int(response.status_code) in _ACCESS_CHALLENGE_STATUS_CODES
     challenge_detected = bool(matched_marker) and blocked_status
+    terminal_not_found_marker = next(
+        (
+            marker
+            for marker in _TERMINAL_NOT_FOUND_BODY_MARKERS
+            if marker in lowered
+        ),
+        "",
+    )
+    terminal_not_found_detected = (
+        int(response.status_code) in _TERMINAL_NOT_FOUND_STATUS_CODES
+        and bool(terminal_not_found_marker)
+    )
     logger.info(
         log_event(
             ctx,
@@ -192,19 +209,45 @@ def try_http_access_challenge_probe(
             fields={
                 "normalized_url": normalized_url,
                 "target_url": target_url,
+                "final_url": final_url,
                 "status_code": int(response.status_code),
                 "matched_marker": matched_marker,
                 "challenge_detected": challenge_detected,
+                "terminal_not_found_marker": terminal_not_found_marker,
+                "terminal_not_found_detected": terminal_not_found_detected,
                 "body_truncated": response.body_truncated,
             },
         )
     )
+    if terminal_not_found_detected:
+        result = _build_terminal_not_found_result(
+            request=request,
+            normalized_url=normalized_url,
+            target_url=final_url,
+            status_code=int(response.status_code),
+            matched_marker=terminal_not_found_marker,
+            route_family=(
+                "http_terminal_static_archive_preflight"
+                if preflight
+                else "http_terminal_static_archive_probe"
+            ),
+        )
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_http_terminal_static_archive_complete",
+                module=logger.name,
+                fields=browser_download_result_log_fields(result),
+            )
+        )
+        return result
     if not challenge_detected:
         return None
     result = _build_access_challenge_result(
         request=request,
         normalized_url=normalized_url,
-        target_url=target_url,
+        target_url=final_url,
         status_code=int(response.status_code),
         matched_marker=matched_marker,
         route_family=(
@@ -627,6 +670,86 @@ def _build_access_challenge_result(
         used_candidate_source_page=False,
         encountered_form_fields=[],
         blocked_reason="blocked_captcha",
+        blocked_reason_detail=detail,
+        downloaded_file_path=None,
+        downloaded_file_name=None,
+        downloaded_mime_type=None,
+        downloaded_size_bytes=None,
+        onsite_capture_path=None,
+        onsite_capture_format=None,
+        onsite_page_count=None,
+        onsite_completeness_status=None,
+    )
+
+
+def _build_terminal_not_found_result(
+    *,
+    request: BrowserReportDownloadRequest,
+    normalized_url: str,
+    target_url: str,
+    status_code: int,
+    matched_marker: str,
+    route_family: str,
+) -> BrowserReportDownloadResult:
+    detail = (
+        "HTTP preflight followed the exact report URL to a terminal not-found "
+        f"page (status {status_code}, marker: {matched_marker})."
+    )
+    return BrowserReportDownloadResult(
+        schema_version="1.0",
+        source_url=request.url,
+        normalized_url=normalized_url,
+        route_kind="email_delivery",
+        route_family=route_family,
+        route_status="observed",
+        outcome="email_required",
+        route_summary=detail,
+        final_page_url=target_url,
+        resolved_target_url=target_url,
+        used_route_hint=False,
+        route_steps=[
+            BrowserDownloadRouteStep(
+                schema_version="1.0",
+                index=0,
+                action="http_preflight",
+                target_text="terminal not-found page",
+                target_role="page",
+                target_url=target_url,
+                result=detail,
+            )
+        ],
+        confirmation_evidence=BrowserDownloadConfirmationEvidence(
+            schema_version="1.0",
+            url_changed=(target_url != request.url),
+            visible_confirmation_text="",
+            submit_button_state="unchanged",
+            form_disappeared=False,
+            final_page_url=target_url,
+            confirmation_score=0,
+            signal_labels=["http_terminal_not_found"],
+        ),
+        terminal_evidence=DownloadTerminalEvidence(
+            schema_version="1.0",
+            final_page_url=target_url,
+            final_page_title="Page not found",
+            terminal_text_excerpt=detail,
+            artifact_url=target_url,
+            artifact_kind="email_delivery",
+            artifact_validation_status="blocked",
+            artifact_validation_detail=detail,
+            confirmation_signal_count=0,
+            traversed_page_urls=[target_url],
+            evidence_labels=[
+                "blocked",
+                "blocked_static_archive",
+                "http_terminal_not_found",
+            ],
+        ),
+        browser_had_structured_result=False,
+        used_candidate_pdf_url=False,
+        used_candidate_source_page=False,
+        encountered_form_fields=[],
+        blocked_reason="blocked_static_archive",
         blocked_reason_detail=detail,
         downloaded_file_path=None,
         downloaded_file_name=None,

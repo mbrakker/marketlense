@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 def test_download_report_with_browser_use_short_circuits_static_email_gate(
     tmp_path: Path,
     caplog,
@@ -487,6 +488,62 @@ def test_download_report_with_browser_use_short_circuits_known_access_challenge(
     assert response.terminal_evidence.artifact_validation_status == "blocked"
     assert_no_defaulted_required_fields(response)
     assert_logs_have_required_fields(_service_events(caplog))
+
+
+def test_download_report_with_browser_use_short_circuits_redirected_terminal_not_found(
+    tmp_path: Path,
+    caplog,
+    run_context,
+    external_boundary_mocks_only,
+    assert_logs_have_required_fields,
+    assert_no_defaulted_required_fields,
+) -> None:
+    original_url = "https://go.example.com/commerce-media-trends-report"
+    final_url = "https://www4.example.com/commerce-media-trends-report"
+
+    def fake_get(*args: Any, **kwargs: Any) -> _FakeResponse:
+        return _FakeResponse(
+            content=(
+                b"<html><head><title>404 Not Found</title></head>"
+                b"<body>The requested URL was not found on this server.</body></html>"
+            ),
+            status_code=404,
+            headers={"Content-Type": "text/html; charset=utf-8"},
+            url=final_url,
+        )
+
+    external_boundary_mocks_only.setattr(http_runtime.requests, "get", fake_get)
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: (_ for _ in ()).throw(
+            AssertionError(
+                "browser runtime should not load for terminal HTTP not-found page"
+            )
+        ),
+    )
+    caplog.set_level(logging.INFO, logger=service.logger.name)
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url=original_url,
+            settings=_settings(tmp_path),
+            route_family_hint="browser_email_form",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "email_delivery"
+    assert response.route_family == "http_terminal_static_archive_preflight"
+    assert response.outcome == "email_required"
+    assert response.final_page_url == final_url
+    assert response.blocked_reason == "blocked_static_archive"
+    assert response.terminal_evidence.artifact_validation_status == "blocked"
+    assert "http_terminal_not_found" in response.terminal_evidence.evidence_labels
+    assert_no_defaulted_required_fields(response)
+    assert_logs_have_required_fields(_service_events(caplog))
+
 
 def test_download_report_with_browser_use_extracts_email_route_embedded_pdf_link(
     tmp_path: Path,
@@ -985,6 +1042,7 @@ __all__ = [
     "test_download_report_with_browser_use_detects_static_provider_email_gate",
     "test_download_report_with_browser_use_classifies_static_email_timeout",
     "test_download_report_with_browser_use_short_circuits_known_access_challenge",
+    "test_download_report_with_browser_use_short_circuits_redirected_terminal_not_found",
     "test_download_report_with_browser_use_extracts_email_route_embedded_pdf_link",
     "test_download_report_with_browser_use_fetches_real_pdf_from_wrapper",
     "test_download_report_with_browser_use_returns_email_required_without_address",

@@ -30,18 +30,21 @@ from src.contracts.browser_download import (
     BrowserReportDownloadResult,
 )
 from src.contracts.run_context import RunContext
-from src.services._browser_report_download.http import (
-    extract_embedded_pdf_urls,
-    try_direct_pdf_download,
+from src.services._browser_report_download._browser_runtime.runtime import (
+    load_browser_use_runtime,
 )
-from src.services._browser_report_download.helpers import browser_helper_js_async
+from src.services._browser_report_download._http.config import (
+    _TERMINAL_NOT_FOUND_BODY_MARKERS,
+)
 from src.services._browser_report_download.browser import (
     BrowserPreflightSession,
     close_browser_preflight_session,
     start_browser_preflight_session,
 )
-from src.services._browser_report_download._browser_runtime.runtime import (
-    load_browser_use_runtime,
+from src.services._browser_report_download.helpers import browser_helper_js_async
+from src.services._browser_report_download.http import (
+    extract_embedded_pdf_urls,
+    try_direct_pdf_download,
 )
 from src.services._browser_report_download.logging import (
     browser_preflight_probe_log_fields,
@@ -52,11 +55,6 @@ logger = logging.getLogger("market_lense.browser_report_download_service.preflig
 
 _PREFLIGHT_SCHEMA_VERSION = "1.0"
 _PREFLIGHT_EVENT_DRAIN_SECONDS = 0.35
-_TERMINAL_NOT_FOUND_BODY_MARKERS = (
-    "the requested url was not found on this server",
-    "the page you are looking for was not found",
-    "this page does not exist",
-)
 _PREFLIGHT_SESSION_TIMEOUT_SECONDS = 24.0
 _PREFLIGHT_ROUTE_FAMILIES = {
     "",
