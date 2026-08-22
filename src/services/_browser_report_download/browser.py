@@ -3132,6 +3132,7 @@ def _reserve_browser_launch(
     request: BrowserReportDownloadRequest,
     ctx: RunContext,
     normalized_url: str,
+    idempotency_suffix: str = "",
 ) -> tuple[RunBudget, BudgetDecision]:
     """Reserve the browser-launch ceiling immediately before browser startup."""
     budget = request.run_budget or RunBudget(
@@ -3161,7 +3162,12 @@ def _reserve_browser_launch(
             operation="browser_launch",
             estimated_duration_seconds=int(request.settings.timeout_seconds),
             forecast_method="explicit",
-            idempotency_key=f"browser-launch:{ctx.run_id}:{ctx.task_id}:{ctx.span_id}",
+            idempotency_key=(
+                f"browser-launch:{ctx.run_id}:{ctx.task_id}:{ctx.span_id}"
+                f":{idempotency_suffix.strip()}"
+                if idempotency_suffix.strip()
+                else f"browser-launch:{ctx.run_id}:{ctx.task_id}:{ctx.span_id}"
+            ),
             reserve_in_flight=True,
         ),
         ctx,

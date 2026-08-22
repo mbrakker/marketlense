@@ -194,11 +194,13 @@ def _run_browser_preflight_probe(
     terminal_outcome = "failed"
     terminal_error_code = "browser_preflight_failed"
     verified_artifact_count = 0
+    phase = "runtime_load"
     try:
         try:
             browser_use = import_module("browser_use")
         except ModuleNotFoundError:
             browser_use = load_browser_use_runtime(normalized_url=normalized_url)
+        phase = "browser_session_create"
         browser_session = start_browser_preflight_session(
             browser_use=browser_use,
             request=request,
@@ -206,6 +208,7 @@ def _run_browser_preflight_probe(
             normalized_url=normalized_url,
             download_dir=download_dir,
         )
+        phase = "browser_start"
         runtime_evidence = _run_preflight_session(
             browser=browser_session.browser,
             request=request,
@@ -214,6 +217,7 @@ def _run_browser_preflight_probe(
             ctx=ctx,
             normalized_url=normalized_url,
         )
+        phase = "rendered_page_read"
         candidate_urls = _select_pdf_candidates(
             request=request,
             base_url=runtime_evidence["final_url"] or target_url,
@@ -339,8 +343,8 @@ def _run_browser_preflight_probe(
             status="failed",
             started_url=target_url,
             duration_seconds=round(time.monotonic() - started, 3),
-            escalation_reason=str(exc),
-            evidence_labels=["preflight_failed"],
+            escalation_reason=f"preflight_failed:{phase}:{type(exc).__name__}",
+            evidence_labels=["preflight_failed", f"preflight_phase_{phase}"],
         )
         _log_probe_complete(ctx=ctx, normalized_url=normalized_url, probe=probe)
         response = BrowserPreflightProbeResponse(schema_version="1.0", probe=probe)

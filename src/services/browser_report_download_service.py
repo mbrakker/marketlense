@@ -77,6 +77,9 @@ from src.services._browser_report_download.preflight import (
     observe_browser_preflight_agent_outcome,
     try_browser_preflight_probe_with_session,
 )
+from src.services._browser_report_download.rendered_terminal_preflight import (
+    try_rendered_terminal_preflight,
+)
 from src.services._browser_report_download.private_api import (
     try_private_api_playbook_download,
 )
@@ -1043,6 +1046,7 @@ def _with_augmented_error_context(
     download_dir: str,
     route_family_hint: str | None,
     browser_run=None,
+    browser_preflight_probe=None,
 ) -> AppError:
     context = dict(exc.context or {})
     context.setdefault("normalized_url", normalized_url)
@@ -1078,6 +1082,11 @@ def _with_augmented_error_context(
             "network_event_count",
             len(browser_run.network_events),
         )
+    if browser_preflight_probe is not None:
+        context.setdefault(
+            "preflight_diagnostics",
+            _preflight_diagnostics(browser_preflight_probe),
+        )
     return AppError(
         code=exc.code,
         message=exc.message,
@@ -1086,6 +1095,30 @@ def _with_augmented_error_context(
         severity=exc.severity,
         context=context,
     )
+
+
+def _preflight_diagnostics(probe: Any) -> dict[str, Any]:
+    """Retain only scalar probe facts safe for task-scoped failure evidence."""
+    evidence_labels = [
+        str(label)
+        for label in list(getattr(probe, "evidence_labels", []) or [])
+        if str(label).startswith("preflight_")
+    ]
+    phase = ""
+    for label in evidence_labels:
+        if label.startswith("preflight_phase_"):
+            phase = label.removeprefix("preflight_phase_")
+            break
+    return {
+        "status": str(getattr(probe, "status", "") or ""),
+        "phase": phase,
+        "duration_seconds": float(
+            getattr(probe, "duration_seconds", 0.0) or 0.0
+        ),
+        "final_url": str(getattr(probe, "final_url", "") or ""),
+        "html_size": int(getattr(probe, "html_size", 0) or 0),
+        "evidence_labels": evidence_labels,
+    }
 
 
 def download_report_with_browser_use(
@@ -1376,6 +1409,27 @@ def download_report_with_browser_use(
             normalized_url=normalized_url,
             result=private_api_result,
         )
+    if force_browser_preflight:
+        rendered_terminal_response = try_rendered_terminal_preflight(
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            execution_url=normalized_execution_url,
+        )
+        if rendered_terminal_response is not None:
+            terminal_result = _preflight_terminal_static_archive_result(
+                request=request,
+                normalized_url=normalized_url,
+                execution_url=normalized_execution_url,
+                probe=rendered_terminal_response.probe,
+            )
+            if terminal_result is not None:
+                return _complete_browser_download_result(
+                    request=request,
+                    ctx=ctx,
+                    normalized_url=normalized_url,
+                    result=terminal_result,
+                )
     request = apply_browser_route_budget(
         request=request,
         ctx=ctx,
@@ -1593,6 +1647,7 @@ def download_report_with_browser_use(
             execution_url=normalized_execution_url,
             download_dir=str(download_dir),
             route_family_hint=request.route_family_hint,
+            browser_preflight_probe=browser_preflight_response.probe,
         ) from exc
     try:
         response = finalize_browser_report_download_result(
@@ -1628,6 +1683,7 @@ def download_report_with_browser_use(
             download_dir=str(download_dir),
             route_family_hint=request.route_family_hint,
             browser_run=browser_run,
+            browser_preflight_probe=browser_preflight_response.probe,
         ) from exc
     return _complete_browser_download_result(
         request=request,

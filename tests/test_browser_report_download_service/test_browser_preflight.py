@@ -18,6 +18,7 @@ from src.contracts.browser_download import (
     BrowserReportDownloadRequest,
 )
 from src.services._browser_report_download import preflight as preflight_runtime
+from src.utils.errors import AppError
 
 from .builders import (
     _FakeResponse,
@@ -55,6 +56,52 @@ def test_preflight_thread_envelope_returns_when_async_cancellation_is_ignored() 
     finally:
         release.set()
     assert time.monotonic() - started < 0.5
+
+
+def test_augmented_error_context_retains_scalar_preflight_diagnostics() -> None:
+    probe = BrowserPreflightProbeResult(
+        schema_version="1.0",
+        status="failed",
+        started_url="https://example.com/report",
+        final_url="https://example.com/report",
+        final_title="",
+        html_size=0,
+        event_drain_seconds=0.35,
+        duration_seconds=24.0,
+        candidate_pdf_urls=[],
+        selected_pdf_url="",
+        observed_event_urls=[],
+        network_event_count=0,
+        evidence_labels=["preflight_failed", "preflight_phase_browser_start"],
+        escalation_reason="browser preflight session timed out",
+        avoided_agent_call=False,
+        false_negative_rate_sample=0.0,
+    )
+
+    error = service._with_augmented_error_context(
+        AppError(
+            code="browser_download_agent_timeout",
+            message="Browser agent timed out",
+            retryable=False,
+        ),
+        normalized_url="https://example.com/report",
+        execution_url="https://example.com/report",
+        download_dir="downloads",
+        route_family_hint="browser_email_form",
+        browser_preflight_probe=probe,
+    )
+
+    assert error.context["preflight_diagnostics"] == {
+        "status": "failed",
+        "phase": "browser_start",
+        "duration_seconds": 24.0,
+        "final_url": "https://example.com/report",
+        "html_size": 0,
+        "evidence_labels": [
+            "preflight_failed",
+            "preflight_phase_browser_start",
+        ],
+    }
 
 
 class _PreflightPage:
@@ -477,6 +524,11 @@ def test_download_report_with_browser_use_uses_forced_preflight_for_http_access_
 
     external_boundary_mocks_only.setattr(http_runtime.requests, "get", fake_get)
     external_boundary_mocks_only.setattr(
+        service,
+        "try_rendered_terminal_preflight",
+        lambda **kwargs: None,
+    )
+    external_boundary_mocks_only.setattr(
         preflight_runtime,
         "import_module",
         lambda module_name: _terminal_not_found_preflight_runtime(),
@@ -525,6 +577,11 @@ def test_download_report_with_browser_use_blocks_terminal_access_forbidden_prefl
         )
 
     external_boundary_mocks_only.setattr(http_runtime.requests, "get", fake_get)
+    external_boundary_mocks_only.setattr(
+        service,
+        "try_rendered_terminal_preflight",
+        lambda **kwargs: None,
+    )
     external_boundary_mocks_only.setattr(
         preflight_runtime,
         "import_module",

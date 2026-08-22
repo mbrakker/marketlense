@@ -35,6 +35,28 @@ def _json(value: Any) -> str:
     return json.dumps(value, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
 
 
+def _safe_acquisition_error_context(raw_context: Any) -> dict[str, Any]:
+    """Retain only bounded scalar browser-preflight facts in replay evidence."""
+    context = raw_context if isinstance(raw_context, dict) else {}
+    raw_probe = context.get("preflight_diagnostics")
+    if not isinstance(raw_probe, dict):
+        return {}
+    return {
+        "preflight_diagnostics": {
+            "status": str(raw_probe.get("status") or ""),
+            "phase": str(raw_probe.get("phase") or ""),
+            "duration_seconds": float(raw_probe.get("duration_seconds") or 0.0),
+            "final_url": str(raw_probe.get("final_url") or ""),
+            "html_size": int(raw_probe.get("html_size") or 0),
+            "evidence_labels": [
+                str(label)
+                for label in list(raw_probe.get("evidence_labels") or [])[:12]
+                if str(label).startswith("preflight_")
+            ],
+        }
+    }
+
+
 def _sha256(value: Any) -> str:
     return hashlib.sha256(_json(value).encode("utf-8")).hexdigest()
 
@@ -878,6 +900,7 @@ def _replay_failed_acquisition_manifest_direct(
                 "error_code": exc.code,
                 "retryable": exc.retryable,
                 "severity": exc.severity,
+                **_safe_acquisition_error_context(exc.context),
             }
         record["completed_at"] = _now()
         record["duration_seconds"] = round(time.monotonic() - started_monotonic, 3)

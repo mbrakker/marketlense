@@ -205,6 +205,36 @@ def test_supervisor_timeout_record_is_terminal_with_incomplete_telemetry():
     assert record["resource_attempts"][0]["browser_launches"] is None
 
 
+def test_failure_record_retains_only_scalar_preflight_diagnostics():
+    module = _load_module()
+
+    diagnostics = module._safe_acquisition_error_context(
+        {
+            "preflight_diagnostics": {
+                "status": "failed",
+                "phase": "browser_start",
+                "duration_seconds": 24.0,
+                "final_url": "https://example.test/report",
+                "html_size": 0,
+                "evidence_labels": ["preflight_failed"],
+                "raw_html": "must not be retained",
+            },
+            "network_events": [{"url": "must not be retained"}],
+        }
+    )
+
+    assert diagnostics == {
+        "preflight_diagnostics": {
+            "status": "failed",
+            "phase": "browser_start",
+            "duration_seconds": 24.0,
+            "final_url": "https://example.test/report",
+            "html_size": 0,
+            "evidence_labels": ["preflight_failed"],
+        }
+    }
+
+
 def test_isolated_replay_uses_only_matching_child_terminal_record():
     module = _load_module()
     candidate = {
