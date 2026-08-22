@@ -2,11 +2,64 @@ from __future__ import annotations
 
 import asyncio
 
+from src.services._browser_report_download._browser_runtime._session_lifecycle.history import (
+    _run_agent_history_async_with_timeout,
+)
 from src.services._browser_report_download._artifact.classification import (
     _normalize_explicit_blocked_reason,
 )
 
 from .builders import *  # noqa: F401,F403
+
+
+def test_async_agent_no_progress_returns_without_waiting_for_agent_cleanup(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    class PartialHistory:
+        def final_result(self) -> str:
+            return ""
+
+        def is_done(self) -> bool:
+            return False
+
+    class Detector:
+        should_stop = False
+        observation = SimpleNamespace(url="https://example.com/not-found")
+
+    detector = Detector()
+
+    class Agent:
+        history = PartialHistory()
+
+        def stop(self) -> None:
+            return None
+
+        async def run(self, *, max_steps: int) -> PartialHistory:
+            detector.should_stop = True
+            await asyncio.Event().wait()
+            return self.history
+
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url="https://example.com/report",
+        settings=_settings(tmp_path),
+    )
+
+    async def execute():
+        return await _run_agent_history_async_with_timeout(
+            agent=Agent(),
+            browser=SimpleNamespace(),
+            request=request,
+            ctx=run_context,
+            normalized_url=request.url,
+            no_progress_detector=detector,
+        )
+
+    result = asyncio.run(asyncio.wait_for(execute(), timeout=0.5))
+
+    assert result.no_progress_observation is detector.observation
+    assert result.salvaged_completed_history is True
 
 
 def test_download_report_with_browser_use_stops_after_three_equivalent_turns(

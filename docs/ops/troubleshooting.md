@@ -33,5 +33,7 @@ path must not re-enter browser capture, dialog inspection, artifact prefetch,
 or form assistance after the Agent event loop has ended. Browser workers also
 discard child stdout/stderr instead of capturing a pipe, because a Chrome child
 can inherit a pipe and defer worker completion after the response artifact is
-written. Inspect the bounded no-progress event and the retained per-report
-evidence before retrying.
+written. The session-owning async wrapper cancels the still-running Agent task
+as soon as that detector stops it, retaining the partial history rather than
+waiting for optional Agent cleanup. Inspect the bounded no-progress event and
+the retained per-report evidence before retrying.

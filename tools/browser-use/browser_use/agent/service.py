@@ -2636,7 +2636,6 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 			if (
 				os.environ.get('MARKET_LENSE_BROWSER_AGENT_WORKER') == '1'
 				and self.state.stopped
-				and agent_run_error == 'Agent stopped programmatically'
 			):
 				signal_handler.unregister()
 				return self.history

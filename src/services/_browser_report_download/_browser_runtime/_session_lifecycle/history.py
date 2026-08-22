@@ -47,9 +47,34 @@ async def _run_agent_history_async_with_timeout(
     task = asyncio.create_task(agent.run(max_steps=request.settings.max_steps))
     timeout_seconds = _resolve_agent_run_timeout_seconds(request)
     try:
-        history = await asyncio.wait_for(
-            asyncio.shield(task), timeout=timeout_seconds
-        )
+        deadline = asyncio.get_running_loop().time() + timeout_seconds
+        while not task.done():
+            remaining_seconds = deadline - asyncio.get_running_loop().time()
+            if remaining_seconds <= 0:
+                raise TimeoutError
+            await asyncio.wait(
+                {task},
+                timeout=min(_AGENT_COMPLETED_HISTORY_POLL_SECONDS, remaining_seconds),
+            )
+            no_progress_observation = (
+                getattr(no_progress_detector, "observation", None)
+                if bool(getattr(no_progress_detector, "should_stop", False))
+                else None
+            )
+            if no_progress_observation is not None:
+                _signal_agent_stop(agent)
+                task.cancel()
+                with suppress(asyncio.CancelledError, TimeoutError):
+                    await asyncio.wait_for(
+                        asyncio.shield(task),
+                        timeout=_AGENT_COMPLETED_HISTORY_POLL_SECONDS,
+                    )
+                return BrowserAgentHistoryResult(
+                    history=getattr(agent, "history", None),
+                    salvaged_completed_history=True,
+                    no_progress_observation=no_progress_observation,
+                )
+        history = task.result()
     except TimeoutError as exc:
         completed_history = _read_completed_agent_history(agent)
         if completed_history is not None:
