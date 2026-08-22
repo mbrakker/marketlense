@@ -1391,7 +1391,7 @@ fields:
 - schema_version: '1.0'
   key: organization_type
   label: Organization Type
-  value: null
+  value: Research
   aliases: []
   option_aliases: []
 - schema_version: '1.0'
