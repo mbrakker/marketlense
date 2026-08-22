@@ -7,6 +7,7 @@ import inspect
 import json
 import logging
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -237,6 +238,7 @@ from src.services._browser_report_download.helpers import (
 )
 from src.services._browser_report_download.http import (
     download_pdf_from_url,
+    extract_embedded_pdf_urls,
     is_pdf_file,
 )
 from src.services._browser_report_download.models import (
@@ -582,6 +584,75 @@ def _pre_llm_standard_form_raw_response(
         },
         ensure_ascii=True,
     )
+
+
+def _pre_llm_embedded_pdf_raw_response(
+    *,
+    final_url: str,
+    resolved_fields: list[str],
+    embedded_pdf_url: str,
+) -> str:
+    """Describe a submitted form's observed PDF for normal artifact verification."""
+
+    return json.dumps(
+        {
+            "route_kind": "pdf_download",
+            "route_family": "browser_email_form",
+            "route_summary": (
+                "Submitted a standard report form and found an embedded PDF on the "
+                "post-submit page before invoking browser-use."
+            ),
+            "final_page_url": final_url,
+            "resolved_target_url": embedded_pdf_url,
+            "email_submission_completed": True,
+            "encountered_form_fields": resolved_fields,
+            "route_steps": [
+                {
+                    "index": 0,
+                    "action": "submit",
+                    "target_text": "Configured identity and consent fields",
+                    "target_role": "browser_helper_standard_form_submit",
+                    "target_url": final_url,
+                    "result": "Submitted deterministically before browser-use.",
+                    "expected_evidence": ["page_info"],
+                    "observed_evidence": ["page_info"],
+                    "verification_status": "pending_terminal_verification",
+                },
+                {
+                    "index": 1,
+                    "action": "open",
+                    "target_text": embedded_pdf_url,
+                    "target_role": "embedded_pdf_url",
+                    "target_url": embedded_pdf_url,
+                    "result": "Observed embedded PDF after form submission.",
+                    "expected_evidence": ["artifact"],
+                    "observed_evidence": ["page_info"],
+                    "verification_status": "pending_artifact_verification",
+                },
+            ],
+        },
+        ensure_ascii=True,
+    )
+
+
+def _post_submit_embedded_pdf_urls(*, html: str, document_url: str) -> list[str]:
+    """Return PDFs exposed by an actual post-submit embed, not incidental links."""
+
+    candidates: list[str] = []
+    seen: set[str] = set()
+    for tag in re.findall(
+        r"<(?:iframe|embed|object)\b[^>]*>", str(html or ""), flags=re.IGNORECASE
+    ):
+        for candidate in extract_embedded_pdf_urls(
+            wrapper_html=tag,
+            document_url=document_url,
+        ):
+            marker = candidate.casefold()
+            if marker in seen:
+                continue
+            seen.add(marker)
+            candidates.append(candidate)
+    return candidates
 
 
 def _pre_llm_standard_form_confirmation_evidence(
@@ -1226,6 +1297,45 @@ def _resolve_pre_llm_standard_form_submit_result(
             )
         )
         return None
+    embedded_pdf_urls = _post_submit_embedded_pdf_urls(
+        html=snapshot.html,
+        document_url=final_url,
+    )
+    if embedded_pdf_urls:
+        embedded_pdf_url = embedded_pdf_urls[0]
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_pre_llm_embedded_pdf_detected",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "embedded_pdf_url": embedded_pdf_url,
+                    "avoided_llm_call": True,
+                },
+            )
+        )
+        return BrowserAgentRunResult(
+            schema_version="1.0",
+            raw_model_response=_pre_llm_embedded_pdf_raw_response(
+                final_url=final_url,
+                resolved_fields=list(helper_result.resolved_fields),
+                embedded_pdf_url=embedded_pdf_url,
+            ),
+            final_page_url=final_url,
+            final_page_title=snapshot.title,
+            final_page_html=snapshot.html,
+            downloaded_files=[],
+            attachment_paths=[],
+            network_resource_urls=[embedded_pdf_url],
+            network_events=[],
+            html_snapshot_path="",
+            screenshot_path="",
+            print_pdf_capture_path="",
+            print_pdf_capture_provenance="",
+            dialog_evidence=[],
+        )
     confirmation_evidence = _pre_llm_standard_form_confirmation_evidence(
         execution_url=execution_url,
         final_url=final_url,

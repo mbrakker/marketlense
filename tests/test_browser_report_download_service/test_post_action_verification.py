@@ -1,6 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+from src.contracts.browser_download import BrowserReportDownloadRequest
+from src.contracts.run_context import RunContext
+from src.services._browser_report_download.artifact import (
+    finalize_browser_report_download_result,
+)
 
 from .builders import *  # noqa: F401,F403
 from src.services._browser_report_download.browser import BrowserAgentRunResult
@@ -52,6 +60,100 @@ def test_browser_no_progress_requires_three_equivalent_turns() -> None:
     assert second.should_stop is False
     assert third.should_stop is True
     assert third.consecutive_equivalent_turns == 3
+
+
+def test_pre_llm_form_submit_returns_embedded_pdf_for_normal_verification(
+    tmp_path: Path,
+) -> None:
+    from src.services._browser_report_download import browser as browser_runtime
+
+    pdf_bytes = b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n"
+
+    class PdfHandler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:  # noqa: N802
+            self.send_response(200)
+            self.send_header("Content-Type", "application/pdf")
+            self.send_header("Content-Length", str(len(pdf_bytes)))
+            self.end_headers()
+            self.wfile.write(pdf_bytes)
+
+        def log_message(self, _format: str, *_args: object) -> None:
+            return
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), PdfHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    pdf_url = f"http://127.0.0.1:{server.server_port}/market-report.pdf"
+
+    helper_result = SimpleNamespace(
+        status="ok",
+        submitted=True,
+        unresolved_fields=(),
+        resolved_fields=("Work email", "Privacy agreement"),
+        filled_count=1,
+        selected_count=0,
+        mandatory_agreement_checked_count=1,
+        blocker_code=None,
+        final_url="https://example.com/report#download",
+    )
+    snapshot = browser_runtime.TerminalSnapshot(
+        page=None,
+        url="https://example.com/report#download",
+        title="Embedded report",
+        html=f"<html><body><iframe src='{pdf_url}'></iframe></body></html>",
+    )
+    ctx = RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
+    try:
+        result = browser_runtime._resolve_pre_llm_standard_form_submit_result(
+            helper_result=helper_result,
+            snapshot=snapshot,
+            execution_url="https://example.com/report",
+            ctx=ctx,
+            normalized_url="https://example.com/report",
+        )
+
+        assert result is not None
+        structured = json.loads(result.raw_model_response)
+        assert structured["route_kind"] == "pdf_download"
+        assert structured["resolved_target_url"] == pdf_url
+        assert (
+            structured["route_steps"][-1]["verification_status"]
+            == "pending_artifact_verification"
+        )
+
+        response = finalize_browser_report_download_result(
+            request=BrowserReportDownloadRequest(
+                schema_version="1.0",
+                url="https://example.com/report",
+                settings=_settings(tmp_path),
+                route_family_hint="browser_email_form",
+                delivery_email="ops@example.com",
+            ),
+            ctx=ctx,
+            normalized_url="https://example.com/report",
+            delivery_email="ops@example.com",
+            download_dir=tmp_path,
+            browser_run=result,
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+    assert response.outcome == "downloaded"
+    assert response.terminal_evidence.artifact_validation_status == "verified"
+
+
+def test_post_submit_embedded_pdf_recovery_ignores_incidental_pdf_links() -> None:
+    from src.services._browser_report_download import browser as browser_runtime
+
+    assert browser_runtime._post_submit_embedded_pdf_urls(
+        html=(
+            "<html><body><a href='https://cdn.example.com/legal/privacy.pdf'>"
+            "Privacy</a></body></html>"
+        ),
+        document_url="https://example.com/report#download",
+    ) == []
 
 
 def test_browser_no_progress_fails_open_when_actionable_dom_is_missing() -> None:

@@ -75,6 +75,21 @@ value returns the typed blocker without invoking Browser Use or guessing a
 value. A terminally verified deterministic submit constructs no Browser Use
 agent and therefore cannot be submitted again by that fallback path.
 
+Before its usual standard-form fill, the helper may activate one visible,
+enabled same-page report CTA only when no visible actionable form is already
+present. The bounded CTA set is limited to report/download/data/access/unlock
+language and a fragment link or an explicitly bound in-page button; it never
+chooses an item from a listing or follows an external URL. This accommodates a
+landing page that reveals its normal form below the fold while preserving an
+already visible form, including a standard `Dive in` submit control. After a
+successful deterministic submission, an observed embedded `.pdf` URL goes
+through the ordinary direct PDF artifact verifier before the Agent fallback.
+An iframe, viewer, or embed without a recoverable PDF remains unverified and
+continues through the existing fallback/capture rules. Terminal 404/410 pages
+with the configured not-found body evidence stop as typed terminal failures;
+an HTTP access-layer 403 is not treated as a 404 because browser preflight may
+see a different, definitive publisher response.
+
 Each governed acquisition attempt now retains a scalar resource envelope in the
 reports store: elapsed time, route family and policy hash, browser launch/step
 and screenshot counts, browser-model token/cost totals read from the canonical

@@ -1373,6 +1373,54 @@ def test_standard_form_helper_retains_visible_options_for_required_blocker():
     }
 
 
+def test_standard_form_helper_activates_same_page_report_cta_before_submit():
+    class Page:
+        def __init__(self) -> None:
+            self.cta_activated = False
+
+        def evaluate(self, script):
+            if "standardFormActivate" in script:
+                self.cta_activated = True
+                return {
+                    "activated": True,
+                    "activation_text": "Download report",
+                    "final_url": "https://example.com/gated-report#form",
+                }
+            if "standardFormSubmit" in script:
+                assert self.cta_activated is True
+                return {
+                    "attempted_count": 2,
+                    "filled_count": 1,
+                    "selected_count": 0,
+                    "mandatory_agreement_checked_count": 1,
+                    "resolved_control_count": 2,
+                    "submitted": True,
+                    "final_url": "https://example.com/gated-report#form",
+                    "resolved_fields": ["Work email", "Privacy agreement"],
+                    "unresolved_fields": [],
+                }
+            raise AssertionError("unexpected browser helper expression")
+
+    result = browser_helper_standard_form_submit(
+        page=Page(),
+        field_values=[
+            {
+                "key": "work_email",
+                "label": "Work email",
+                "value": "ops@example.com",
+                "aliases": ["email"],
+                "option_aliases": [],
+            }
+        ],
+        ctx=_ctx(),
+        normalized_url="https://example.com/gated-report",
+    )
+
+    assert result.status == "ok"
+    assert result.submitted is True
+    assert result.final_url == "https://example.com/gated-report#form"
+
+
 def test_grounded_form_derivation_requires_visible_option_and_configured_evidence():
     from src.services._browser_report_download.browser import (
         _validated_grounded_form_option,

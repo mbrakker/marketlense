@@ -532,6 +532,7 @@ def browser_helper_form_autocomplete(
                 text.includes('send') ||
                 text.includes('access') ||
                 text.includes('unlock') ||
+                text.includes('dive in') ||
                 text.includes('resource')
               );
             }});
@@ -639,6 +640,110 @@ def browser_helper_standard_form_submit(
         )
     )
     script_payload = {"fields": field_values}
+    activation_expression = """
+        return (() => {
+          const standardFormActivate = true;
+          const normalize = (value) =>
+            String(value ?? '').replace(/\\s+/g, ' ').trim();
+          const isVisible = (node) => Boolean(
+            node && !node.hidden && node.getClientRects &&
+            node.getClientRects().length > 0
+          );
+          const textFor = (node) => normalize(
+            node.innerText || node.textContent || node.value ||
+            node.getAttribute('aria-label') || ''
+          );
+          const hasVisibleActionableForm = Array.from(
+            document.querySelectorAll('form, [role="form"]')
+          ).some((form) => isVisible(form) && Array.from(form.querySelectorAll(
+            'button[type="submit"], input[type="submit"], button'
+          )).some((node) => isVisible(node) && !node.disabled));
+          if (hasVisibleActionableForm) {
+            return {
+              activated: false,
+              reason: 'visible_actionable_form',
+              final_url: window.location.href || '',
+            };
+          }
+          const ctaPattern = new RegExp(
+            '\\b(' +
+            'download(?:\\s+(?:the\\s+)?)?(?:report|data|now)?|' +
+            'get\\s+(?:the\\s+)?(?:report|data)|dive\\s+in|access|unlock' +
+            ')\\b',
+            'i'
+          );
+          const cta = Array.from(document.querySelectorAll(
+            'a[href^="#"], button[aria-controls], button[data-target], ' +
+            'button[data-scroll], button[data-scroll-target], button[data-bs-target]'
+          )).find((node) => {
+            const href = normalize(node.getAttribute('href') || '');
+            const isSamePageLink = node.tagName === 'A' &&
+              href.startsWith('#') && href.length > 1;
+            const isBoundButton = node.tagName === 'BUTTON' &&
+              !node.matches('[type="submit"]') &&
+              Boolean(node.getAttribute('aria-controls') ||
+                node.getAttribute('data-target') || node.getAttribute('data-scroll') ||
+                node.getAttribute('data-scroll-target') ||
+                node.getAttribute('data-bs-target'));
+            return isVisible(node) && !node.disabled &&
+              (isSamePageLink || isBoundButton) && ctaPattern.test(textFor(node));
+          });
+          if (!cta) {
+            return {
+              activated: false,
+              reason: 'no_same_page_report_cta',
+              final_url: window.location.href || '',
+            };
+          }
+          const activationText = textFor(cta);
+          cta.click();
+          return {
+            activated: true,
+            activation_text: activationText,
+            final_url: window.location.href || '',
+          };
+        })();
+        """
+    if browser is not None:
+        activation_result = browser_helper_js_via_cdp(
+            browser=browser,
+            expression=activation_expression,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
+    else:
+        activation_result = browser_helper_js(
+            page=page,
+            expression=activation_expression,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
+    if browser is not None and not isinstance(activation_result.result, dict):
+        activation_result = browser_helper_js(
+            page=page,
+            expression=activation_expression,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
+    activation_payload = (
+        activation_result.result
+        if activation_result.status == "ok"
+        and isinstance(activation_result.result, dict)
+        else {}
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_helper_standard_form_activation_complete",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "activated": bool(activation_payload.get("activated")),
+                "reason": str(activation_payload.get("reason") or ""),
+            },
+        )
+    )
     expression = f"""
         return (() => {{
           const standardFormSubmit = true;
