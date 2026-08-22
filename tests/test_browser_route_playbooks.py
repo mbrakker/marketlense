@@ -118,7 +118,6 @@ def test_gwi_email_form_playbook_is_executable_for_both_observed_submit_labels(
     )
 
     assert [step.action for step in playbook.steps] == [
-        "click",
         "fill",
         "fill",
         "fill",
@@ -127,7 +126,6 @@ def test_gwi_email_form_playbook_is_executable_for_both_observed_submit_labels(
         "submit",
     ]
     assert [step.selector_type for step in playbook.steps] == [
-        "role",
         "name",
         "name",
         "name",
@@ -135,14 +133,14 @@ def test_gwi_email_form_playbook_is_executable_for_both_observed_submit_labels(
         "name",
         "css",
     ]
-    assert [step.value_reference for step in playbook.steps[1:-1]] == [
+    assert [step.value_reference for step in playbook.steps[:-1]] == [
         "${identity.first_name}",
         "${identity.last_name}",
         "${identity.work_email}",
         "${identity.company_size}",
         "${identity.country}",
     ]
-    assert [step.selector for step in playbook.steps[1:-1]] == [
+    assert [step.selector for step in playbook.steps[:-1]] == [
         "firstname",
         "lastname",
         "email",

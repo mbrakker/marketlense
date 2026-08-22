@@ -1,6 +1,6 @@
 schema_version: '1.0'
 playbook_id: learned-www-gwi-com-browser-email-form
-version: 1.1.0
+version: 1.2.0
 status: active
 updated_at: '2026-08-22T20:33:00Z'
 stale_after_days: 120
@@ -12,18 +12,11 @@ url_path_markers:
 - new-american-consumer
 route_family: browser_email_form
 route_kind: email_delivery
-summary: Accept the observed cookie banner, fill the native GWI lead form, and submit
-  its shared HubSpot control. The submit label varies by report between 'Dive in' and
+summary: Fill the native GWI lead form and submit its shared HubSpot control. The submit
+  label varies by report between 'Dive in' and
   'Get the data here'; canonical terminal verification determines whether the route
   yielded a direct document or confirmed email delivery.
 steps:
-- schema_version: '1.0'
-  action: click
-  target: Accept all
-  verification: Cookie consent control accepted on a fresh browser session.
-  selector_type: role
-  selector: 'button:Accept all'
-  expected_url_contains: /reports/
 - schema_version: '1.0'
   action: fill
   target: First name
@@ -113,3 +106,9 @@ history:
   source: stopped_gwi_validation_and_read_only_playwright_inspection
   summary: Replaced non-semantic caption locators with the observed stable native field
     names after the isolated worker drifted to the Agent fallback.
+- schema_version: '1.0'
+  changed_at: '2026-08-22T21:00:00Z'
+  source: stopped_isolated_gwi_validation
+  summary: Removed the optional cookie-banner action after the clean worker reached the
+    report URL but drifted before the native form sequence; consent is not required for
+    the lead-form controls and remains outside the acquisition verification boundary.
