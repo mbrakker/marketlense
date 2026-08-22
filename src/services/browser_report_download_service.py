@@ -142,17 +142,33 @@ def _preflight_terminal_static_archive_result(
     if str(getattr(probe, "status", "")).strip() != "terminal_static_archive":
         return None
     final_url = str(getattr(probe, "final_url", "") or execution_url)
-    final_title = str(getattr(probe, "final_title", "") or "Page not found")
+    final_title = str(getattr(probe, "final_title", "") or "Terminal page")
+    evidence_labels = list(getattr(probe, "evidence_labels", []) or [])
+    is_access_forbidden = "preflight_terminal_access_forbidden" in evidence_labels
     detail = (
         "Browser preflight confirmed that the exact report URL resolves to a "
+        "terminal HTTP 403 Forbidden page."
+        if is_access_forbidden
+        else "Browser preflight confirmed that the exact report URL resolves to a "
         "terminal not-found page."
     )
+    route_family = (
+        "browser_preflight_terminal_access_forbidden"
+        if is_access_forbidden
+        else "browser_preflight_terminal_static_archive"
+    )
+    terminal_label = (
+        "preflight_terminal_access_forbidden"
+        if is_access_forbidden
+        else "preflight_terminal_not_found"
+    )
+    target_text = "terminal HTTP 403 Forbidden page" if is_access_forbidden else "terminal not-found page"
     return BrowserReportDownloadResult(
         schema_version="1.0",
         source_url=request.url,
         normalized_url=normalized_url,
         route_kind="email_delivery",
-        route_family="browser_preflight_terminal_static_archive",
+        route_family=route_family,
         route_status="observed",
         outcome="email_required",
         route_summary=detail,
@@ -164,7 +180,7 @@ def _preflight_terminal_static_archive_result(
                 schema_version="1.0",
                 index=0,
                 action="preflight",
-                target_text="terminal not-found page",
+                target_text=target_text,
                 target_role="page",
                 target_url=final_url,
                 result=detail,
@@ -178,7 +194,7 @@ def _preflight_terminal_static_archive_result(
             form_disappeared=False,
             final_page_url=final_url,
             confirmation_score=0,
-            signal_labels=["preflight_terminal_not_found"],
+            signal_labels=[terminal_label],
         ),
         terminal_evidence=DownloadTerminalEvidence(
             schema_version="1.0",
@@ -194,7 +210,7 @@ def _preflight_terminal_static_archive_result(
             evidence_labels=[
                 "blocked",
                 "blocked_static_archive",
-                "preflight_terminal_not_found",
+                terminal_label,
             ],
         ),
         browser_had_structured_result=False,

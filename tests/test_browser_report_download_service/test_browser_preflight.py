@@ -168,6 +168,30 @@ def _terminal_not_found_preflight_runtime():
     return SimpleNamespace(Browser=Browser)
 
 
+def _terminal_access_forbidden_preflight_runtime():
+    class TerminalAccessForbiddenPage(_PreflightPage):
+        def __init__(self, *, page_url: str) -> None:
+            super().__init__(pdf_url=None, page_url=page_url)
+
+        def title(self) -> str:
+            return "403 Forbidden"
+
+        def content(self) -> str:
+            return (
+                "<html><head><title>403 Forbidden</title></head>"
+                "<body><h1>Error 403 Forbidden</h1><p>Forbidden</p></body></html>"
+            )
+
+    class Browser(_PreflightBrowser):
+        def __init__(self, **kwargs) -> None:
+            super().__init__(pdf_url=None, **kwargs)
+
+        def get_current_page(self) -> TerminalAccessForbiddenPage:
+            return TerminalAccessForbiddenPage(page_url=self.url)
+
+    return SimpleNamespace(Browser=Browser)
+
+
 def _preflight_agent_runtime(*, tmp_path: Path, pdf_url: str | None):
     runtime = _preflight_runtime(pdf_url=pdf_url)
     agent_runtime = _runtime(
@@ -231,6 +255,20 @@ def test_browser_preflight_recognizes_terminal_not_found_page() -> None:
             "<html><body><p>404 brands contributed data to this report.</p>"
             "</body></html>"
         ),
+    )
+
+
+def test_browser_preflight_recognizes_terminal_access_forbidden_page() -> None:
+    assert preflight_runtime._is_terminal_access_forbidden_page(
+        title="403 Forbidden",
+        html=(
+            "<html><body><h1>Error 403 Forbidden</h1><p>Forbidden</p>"
+            "</body></html>"
+        ),
+    )
+    assert not preflight_runtime._is_terminal_access_forbidden_page(
+        title="Marketing report",
+        html="<html><body><p>403 brands contributed data.</p></body></html>",
     )
 
 
@@ -345,6 +383,56 @@ def test_download_report_with_browser_use_uses_forced_preflight_for_http_access_
     assert response.route_family == "browser_preflight_terminal_static_archive"
     assert response.outcome == "email_required"
     assert response.blocked_reason == "blocked_static_archive"
+    assert_no_defaulted_required_fields(response)
+
+
+def test_download_report_with_browser_use_blocks_terminal_access_forbidden_preflight(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+    assert_no_defaulted_required_fields,
+) -> None:
+    page_url = "https://go.example.com/commerce-media-trends-report"
+
+    def fake_get(url: str, *args: Any, **kwargs: Any) -> _FakeResponse:
+        return _FakeResponse(
+            content=(
+                b"<html><head><title>403 Forbidden</title></head>"
+                b"<body><h1>Error 403 Forbidden</h1><p>Forbidden</p></body></html>"
+            ),
+            status_code=403,
+            headers={"Content-Type": "text/html; charset=utf-8"},
+            url=page_url,
+        )
+
+    external_boundary_mocks_only.setattr(http_runtime.requests, "get", fake_get)
+    external_boundary_mocks_only.setattr(
+        preflight_runtime,
+        "import_module",
+        lambda module_name: _terminal_access_forbidden_preflight_runtime(),
+    )
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: (_ for _ in ()).throw(
+            AssertionError("full browser-use Agent should not load after 403 preflight")
+        ),
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url=page_url,
+            settings=_settings(tmp_path),
+            route_family_hint="browser_email_form",
+        ),
+        run_context,
+    )
+
+    assert response.route_family == "browser_preflight_terminal_access_forbidden"
+    assert response.outcome == "email_required"
+    assert response.blocked_reason == "blocked_static_archive"
+    assert "preflight_terminal_access_forbidden" in response.terminal_evidence.evidence_labels
     assert_no_defaulted_required_fields(response)
 
 

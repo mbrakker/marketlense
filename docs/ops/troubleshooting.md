@@ -48,5 +48,6 @@ same obsolete exact URL.
 If that bounded HTTP request instead receives an access-status response without
 an explicit challenge marker, the route performs one reusable browser preflight
 before Agent fallback. This is for environments where the HTTP client and the
-browser receive different responses; a rendered terminal page still ends as a
-blocked, unverified acquisition rather than a download.
+browser receive different responses. A rendered terminal 403 page with both
+the title and body status evidence, or a rendered terminal not-found page,
+ends as a blocked, unverified acquisition rather than a download.

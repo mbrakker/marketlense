@@ -225,12 +225,17 @@ def _run_browser_preflight_probe(
             title=runtime_evidence["final_title"],
             html=runtime_evidence["html"],
         )
+        terminal_access_forbidden = _is_terminal_access_forbidden_page(
+            title=runtime_evidence["final_title"],
+            html=runtime_evidence["html"],
+        )
+        terminal_static_archive = terminal_not_found or terminal_access_forbidden
         probe = _probe_result(
             status=(
                 "confirmed_direct_pdf"
                 if selected_pdf_url
                 else "terminal_static_archive"
-                if terminal_not_found
+                if terminal_static_archive
                 else "escalated"
             ),
             started_url=target_url,
@@ -250,15 +255,20 @@ def _run_browser_preflight_probe(
                 selected_pdf_url=selected_pdf_url,
                 ),
                 *(["preflight_terminal_not_found"] if terminal_not_found else []),
+                *(
+                    ["preflight_terminal_access_forbidden"]
+                    if terminal_access_forbidden
+                    else []
+                ),
             ],
             escalation_reason=(
                 ""
                 if selected_pdf_url
                 else "terminal_static_archive"
-                if terminal_not_found
+                if terminal_static_archive
                 else "no_rendered_pdf_candidate"
             ),
-            avoided_agent_call=bool(selected_pdf_url or terminal_not_found),
+            avoided_agent_call=bool(selected_pdf_url or terminal_static_archive),
             reuse_state=_reuse_state_from_runtime(
                 runtime_evidence=runtime_evidence,
                 candidate_pdf_urls=candidate_urls,
@@ -664,6 +674,17 @@ def _select_pdf_candidates(
 def _is_terminal_not_found_page(*, title: str, html: str) -> bool:
     normalized_html = str(html or "").casefold()
     return any(marker in normalized_html for marker in _TERMINAL_NOT_FOUND_BODY_MARKERS)
+
+
+def _is_terminal_access_forbidden_page(*, title: str, html: str) -> bool:
+    normalized_title = str(title or "").casefold()
+    normalized_html = str(html or "").casefold()
+    has_403_title = "403 forbidden" in normalized_title
+    has_403_body = (
+        "error 403 forbidden" in normalized_html
+        or "<h1>403 forbidden" in normalized_html
+    )
+    return has_403_title and has_403_body
 
 
 def _filter_relevant_candidates(
