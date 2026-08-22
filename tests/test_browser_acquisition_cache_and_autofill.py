@@ -933,6 +933,7 @@ def test_async_deterministic_playbook_executes_supported_actions_without_agent(
     assert browser.agent_calls == 0
     assert browser.start_calls == 1
     assert browser.navigated_urls == [request.url, request.url]
+    assert json.loads(result.raw_model_response)["post_submit_message"] == "Form ready"
     assert browser.page.click_count == 7
     assert browser.page.submitted is True
     assert browser.page.fill_values == ["ops@example.com"] * 4

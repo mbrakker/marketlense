@@ -2181,14 +2181,7 @@ async def _run_async_deterministic_browser_route_playbook(
     final_html = str(
         await page.evaluate("() => document.documentElement.outerHTML") or ""
     )
-    final_text = next(
-        (
-            step.expected_text
-            for step in reversed(playbook.steps)
-            if step.expected_text.strip()
-        ),
-        "",
-    )
+    final_text = _browser_visible_text_from_html(final_html)
     raw_result = {
         "route_kind": playbook.route_kind,
         "route_family": playbook.route_family,
