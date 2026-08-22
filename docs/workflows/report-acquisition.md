@@ -37,9 +37,11 @@ Use. Its async execution is enclosed by a process-local daemon-thread deadline
 in both synchronous CLI and active-event-loop callers, so a Browser Use websocket
 operation that ignores coroutine cancellation becomes a typed preflight failure
 instead of blocking the acquisition stage. When preflight confirms a direct PDF
-it closes that browser without constructing an agent. After an escalation, acquisition first attempts every
-matching fresh, publisher-specific route playbook that is fully executable:
-each step must have a supported deterministic action and locator plus a
+it closes that browser without constructing an agent. A matching fresh,
+publisher-specific route playbook that is fully executable runs first in its own
+clean worker, before preflight creates a reusable Agent session. If it drifts or
+does not verify, preflight then starts its normal reusable browser before Agent
+escalation. Each deterministic route step must have a supported action and locator plus a
 machine-checkable URL or visible-text postcondition. Its terminal result is
 passed through the same artifact/submission finalizer used by Browser Use, so a
 PDF, email submission, or on-site capture is never accepted on the basis of a

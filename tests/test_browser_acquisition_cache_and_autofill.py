@@ -31,6 +31,7 @@ from src.services.browser_report_download_service import (
     _deterministic_playbook_handoff_url,
     _normalized_report_title,
     _publisher_scope,
+    _should_defer_browser_preflight_for_deterministic_playbooks,
     _try_deterministic_browser_route_playbooks,
     download_report_with_browser_use,
     try_deterministic_browser_route_playbooks,
@@ -95,6 +96,12 @@ def test_publisher_playbooks_require_an_isolated_worker() -> None:
 
     assert _deterministic_playbooks_require_isolated_worker([publisher_playbook])
     assert not _deterministic_playbooks_require_isolated_worker([generic_playbook])
+    assert _should_defer_browser_preflight_for_deterministic_playbooks(
+        [publisher_playbook]
+    )
+    assert not _should_defer_browser_preflight_for_deterministic_playbooks(
+        [generic_playbook]
+    )
 
 
 def test_deterministic_playbook_retains_same_publisher_page_for_agent_handoff(

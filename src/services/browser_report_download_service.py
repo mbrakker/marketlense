@@ -1098,6 +1098,14 @@ def _deterministic_playbooks_require_isolated_worker(
     return any(_is_publisher_specific_playbook(playbook) for playbook in playbooks)
 
 
+def _should_defer_browser_preflight_for_deterministic_playbooks(
+    playbooks: list[BrowserRoutePlaybook],
+) -> bool:
+    """Give an isolated publisher route a clean browser before preflight reuse."""
+
+    return _deterministic_playbooks_require_isolated_worker(playbooks)
+
+
 def _is_publisher_specific_playbook(playbook: BrowserRoutePlaybook) -> bool:
     return any(
         str(pattern or "").strip() not in {"", "*"}
@@ -1524,11 +1532,68 @@ def download_report_with_browser_use(
         normalized_url=normalized_url,
     )
     validate_browser_runtime_settings(request)
+    deterministic_playbooks = _resolve_selected_full_playbooks(
+        request=request,
+        ctx=ctx,
+    )
+    deterministic_attempt = _DeterministicPlaybookAttempt()
+    deferred_preflight_for_deterministic_playbook = (
+        _should_defer_browser_preflight_for_deterministic_playbooks(
+            deterministic_playbooks
+        )
+    )
+    preflight_execution_url = normalized_execution_url
+    if deferred_preflight_for_deterministic_playbook:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_route_playbook_deterministic_before_preflight",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "publisher_playbook_count": len(deterministic_playbooks),
+                },
+            )
+        )
+        try:
+            deterministic_attempt = _try_deterministic_browser_route_playbooks(
+                request=request,
+                ctx=ctx,
+                normalized_url=normalized_url,
+                execution_url=normalized_execution_url,
+                download_dir=download_dir,
+                browser=None,
+                playbooks=deterministic_playbooks,
+            )
+        except Exception as exc:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="browser_route_playbook_deterministic_escalated",
+                    module=logger.name,
+                    fields={
+                        "normalized_url": normalized_url,
+                        "reason": "runtime_error",
+                        "error_type": type(exc).__name__,
+                    },
+                )
+            )
+        if deterministic_attempt.result is not None:
+            return _complete_browser_download_result(
+                request=request,
+                ctx=ctx,
+                normalized_url=normalized_url,
+                result=deterministic_attempt.result,
+            )
+        if deterministic_attempt.handoff_execution_url:
+            preflight_execution_url = deterministic_attempt.handoff_execution_url
     browser_preflight_execution = try_browser_preflight_probe_with_session(
         request=request,
         ctx=ctx,
         normalized_url=normalized_url,
-        execution_url=normalized_execution_url,
+        execution_url=preflight_execution_url,
         download_dir=download_dir,
         force_for_http_access_status=force_browser_preflight,
     )
@@ -1544,7 +1609,7 @@ def download_report_with_browser_use(
     terminal_preflight_result = _preflight_terminal_static_archive_result(
         request=request,
         normalized_url=normalized_url,
-        execution_url=normalized_execution_url,
+        execution_url=preflight_execution_url,
         probe=browser_preflight_response.probe,
     )
     if terminal_preflight_result is not None:
@@ -1632,13 +1697,38 @@ def download_report_with_browser_use(
             outcome="completed",
         )
         return remembered_blocker_result
-    deterministic_attempt = _DeterministicPlaybookAttempt()
-    deterministic_playbooks = _resolve_selected_full_playbooks(
-        request=request,
-        ctx=ctx,
-    )
+    if not deferred_preflight_for_deterministic_playbook:
+        try:
+            deterministic_attempt = _try_deterministic_browser_route_playbooks(
+                request=request,
+                ctx=ctx,
+                normalized_url=normalized_url,
+                execution_url=normalized_execution_url,
+                download_dir=download_dir,
+                browser=(
+                    preflight_session.browser
+                    if preflight_session is not None
+                    else None
+                ),
+                playbooks=deterministic_playbooks,
+            )
+        except Exception as exc:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="browser_route_playbook_deterministic_escalated",
+                    module=logger.name,
+                    fields={
+                        "normalized_url": normalized_url,
+                        "reason": "runtime_error",
+                        "error_type": type(exc).__name__,
+                    },
+                )
+            )
     if (
         preflight_session is not None
+        and not deferred_preflight_for_deterministic_playbook
         and _deterministic_playbooks_require_isolated_worker(deterministic_playbooks)
     ):
         _close_preflight_session(
@@ -1661,34 +1751,6 @@ def download_report_with_browser_use(
                         for playbook in deterministic_playbooks
                         if _is_publisher_specific_playbook(playbook)
                     ),
-                },
-            )
-        )
-    try:
-        deterministic_attempt = _try_deterministic_browser_route_playbooks(
-            request=request,
-            ctx=ctx,
-            normalized_url=normalized_url,
-            execution_url=normalized_execution_url,
-            download_dir=download_dir,
-            browser=(
-                preflight_session.browser
-                if preflight_session is not None
-                else None
-            ),
-            playbooks=deterministic_playbooks,
-        )
-    except Exception as exc:
-        logger.info(
-            log_event(
-                ctx,
-                role="service",
-                event="browser_route_playbook_deterministic_escalated",
-                module=logger.name,
-                fields={
-                    "normalized_url": normalized_url,
-                    "reason": "runtime_error",
-                    "error_type": type(exc).__name__,
                 },
             )
         )
