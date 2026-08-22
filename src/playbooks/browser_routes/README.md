@@ -50,6 +50,12 @@ turns the dismissal into acquisition success. A missing or nonstandard banner
 is ignored and the normal deterministic route/fallback behavior remains in
 force.
 
+An isolated-worker navigation that has rendered the target page but does not
+settle within 15 seconds is treated as an unsettled navigation, not a reason
+to abandon the deterministic route. The worker continues on that current page
+through the same consent preflight and action-level postconditions; the normal
+route budget and final verification still govern the terminal outcome.
+
 Role/name locators are exact: they must resolve exactly one current accessible
 element, never a fuzzy or first-control match. `fill` and `type` support only
 the native `textbox`/`searchbox` form controls; `select` supports only native

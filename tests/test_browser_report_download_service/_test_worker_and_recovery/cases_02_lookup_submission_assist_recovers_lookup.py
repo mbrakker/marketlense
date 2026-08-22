@@ -1209,6 +1209,31 @@ def test_deterministic_worker_navigates_before_executing_playbook(
     assert response["status"] == "drifted"
 
 
+def test_deterministic_worker_navigation_timeout_keeps_loaded_page_available() -> None:
+    """A page that rendered before navigation settles must still reach the route runner."""
+
+    class Browser:
+        def __init__(self) -> None:
+            self.navigation_started = False
+
+        async def navigate_to(self, url: str) -> None:
+            self.navigation_started = True
+            await asyncio.Event().wait()
+
+    browser = Browser()
+
+    settled = asyncio.run(
+        browser_worker_runtime.navigate_deterministic_playbook_page(
+            browser=browser,
+            execution_url="https://publisher.example/report",
+            timeout_seconds=0.01,
+        )
+    )
+
+    assert settled is False
+    assert browser.navigation_started is True
+
+
 def test_browser_worker_main_redacts_identity_values_from_persisted_response(
     tmp_path: Path,
     run_context,

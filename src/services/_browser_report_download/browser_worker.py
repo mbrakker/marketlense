@@ -54,6 +54,23 @@ from src.utils.errors import AppError
 from src.utils.logging import REDACTED
 
 _EMAIL_PATTERN = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.I)
+_DETERMINISTIC_NAVIGATION_SETTLE_SECONDS = 15.0
+
+
+async def navigate_deterministic_playbook_page(
+    *,
+    browser: Any,
+    execution_url: str,
+    timeout_seconds: float = _DETERMINISTIC_NAVIGATION_SETTLE_SECONDS,
+) -> bool:
+    """Begin page navigation without letting an unsettled page suppress its route."""
+    try:
+        await asyncio.wait_for(
+            browser.navigate_to(execution_url), timeout=max(0.01, timeout_seconds)
+        )
+    except TimeoutError:
+        return False
+    return True
 
 
 def _build_identity_field(payload: dict) -> BrowserDownloadIdentityField:
@@ -608,7 +625,10 @@ def _process_payload(payload_path: Path, response_path: Path) -> int:
                 async def execute_and_stop() -> Any:
                     try:
                         await session.browser.start()
-                        await session.browser.navigate_to(execution_url)
+                        await navigate_deterministic_playbook_page(
+                            browser=session.browser,
+                            execution_url=execution_url,
+                        )
                         return await _run_async_deterministic_browser_route_playbook(
                             request=request,
                             ctx=ctx,
