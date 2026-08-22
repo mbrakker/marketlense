@@ -204,8 +204,10 @@ def _run_browser_report_download_agent_subprocess(
             asdict(deterministic_playbook) if deterministic_playbook else None
         ),
     )
-    payload_path = download_dir / "browser_agent_worker_request.json"
-    response_path = download_dir / "browser_agent_worker_response.json"
+    protocol_dir = download_dir / "_browser_worker_protocol"
+    protocol_dir.mkdir(parents=True, exist_ok=True)
+    payload_path = protocol_dir / "browser_agent_worker_request.json"
+    response_path = protocol_dir / "browser_agent_worker_response.json"
     payload_path.write_text(
         json.dumps(asdict(payload), ensure_ascii=True),
         encoding="utf-8",

@@ -1435,8 +1435,9 @@ def test_browser_worker_subprocess_discards_sensitive_request_payload_after_run(
         task_prompt="task with openrouter-key and Market Lense",
     )
     download_dir = tmp_path / "worker-download"
-    payload_path = download_dir / "browser_agent_worker_request.json"
-    response_path = download_dir / "browser_agent_worker_response.json"
+    protocol_dir = download_dir / "_browser_worker_protocol"
+    payload_path = protocol_dir / "browser_agent_worker_request.json"
+    response_path = protocol_dir / "browser_agent_worker_response.json"
 
     def fake_run(*args, **kwargs):
         assert payload_path.exists()
@@ -1507,7 +1508,9 @@ def test_browser_worker_subprocess_discards_sensitive_request_payload_after_time
         task_prompt="task with openrouter-key and Market Lense",
     )
     download_dir = tmp_path / "worker-download"
-    payload_path = download_dir / "browser_agent_worker_request.json"
+    payload_path = (
+        download_dir / "_browser_worker_protocol" / "browser_agent_worker_request.json"
+    )
 
     def fake_run(*args, **kwargs):
         assert payload_path.exists()

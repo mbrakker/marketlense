@@ -167,6 +167,11 @@ follows the ordinary retained route-learning and three-compatible-attempt
 suppression rules. Raw DOM, form values, screenshots, prompts, and model prose
 are never put in the standard no-progress event or route record.
 
+Browser-worker request and response control files are kept in a dedicated
+protocol subdirectory, outside the report artifact enumeration boundary. The
+request is removed after the worker exits, so it cannot be mistaken for a
+downloaded artifact or retained as normal acquisition evidence.
+
 An explicitly scoped reliability profile may set browser acquisition retries to
 zero when a timed-out deterministic route is being measured rather than
 recovered. The timeout remains a typed terminal result with its route,
