@@ -40,7 +40,7 @@ class BrowserPreflightProbeResult:
     )
     status: str = field(
         metadata={
-            "doc": "Probe status: `confirmed_direct_pdf`, `escalated`, or `failed`."
+            "doc": "Probe status: `confirmed_direct_pdf`, `terminal_static_archive`, `escalated`, or `failed`."
         }
     )
     started_url: str = field(

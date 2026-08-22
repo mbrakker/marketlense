@@ -132,6 +132,88 @@ def _close_preflight_session(
     )
 
 
+def _preflight_terminal_static_archive_result(
+    *,
+    request: BrowserReportDownloadRequest,
+    normalized_url: str,
+    execution_url: str,
+    probe: Any,
+) -> BrowserReportDownloadResult | None:
+    if str(getattr(probe, "status", "")).strip() != "terminal_static_archive":
+        return None
+    final_url = str(getattr(probe, "final_url", "") or execution_url)
+    final_title = str(getattr(probe, "final_title", "") or "Page not found")
+    detail = (
+        "Browser preflight confirmed that the exact report URL resolves to a "
+        "terminal not-found page."
+    )
+    return BrowserReportDownloadResult(
+        schema_version="1.0",
+        source_url=request.url,
+        normalized_url=normalized_url,
+        route_kind="email_delivery",
+        route_family="browser_preflight_terminal_static_archive",
+        route_status="observed",
+        outcome="email_required",
+        route_summary=detail,
+        final_page_url=final_url,
+        resolved_target_url=final_url,
+        used_route_hint=False,
+        route_steps=[
+            BrowserDownloadRouteStep(
+                schema_version="1.0",
+                index=0,
+                action="preflight",
+                target_text="terminal not-found page",
+                target_role="page",
+                target_url=final_url,
+                result=detail,
+            )
+        ],
+        confirmation_evidence=BrowserDownloadConfirmationEvidence(
+            schema_version="1.0",
+            url_changed=final_url != execution_url,
+            visible_confirmation_text="",
+            submit_button_state="unchanged",
+            form_disappeared=False,
+            final_page_url=final_url,
+            confirmation_score=0,
+            signal_labels=["preflight_terminal_not_found"],
+        ),
+        terminal_evidence=DownloadTerminalEvidence(
+            schema_version="1.0",
+            final_page_url=final_url,
+            final_page_title=final_title,
+            terminal_text_excerpt=detail,
+            artifact_url=final_url,
+            artifact_kind="email_delivery",
+            artifact_validation_status="blocked",
+            artifact_validation_detail=detail,
+            confirmation_signal_count=0,
+            traversed_page_urls=[execution_url, final_url],
+            evidence_labels=[
+                "blocked",
+                "blocked_static_archive",
+                "preflight_terminal_not_found",
+            ],
+        ),
+        browser_had_structured_result=False,
+        used_candidate_pdf_url=False,
+        used_candidate_source_page=False,
+        encountered_form_fields=[],
+        blocked_reason="blocked_static_archive",
+        blocked_reason_detail=detail,
+        downloaded_file_path=None,
+        downloaded_file_name=None,
+        downloaded_mime_type=None,
+        downloaded_size_bytes=None,
+        onsite_capture_path=None,
+        onsite_capture_format=None,
+        onsite_page_count=None,
+        onsite_completeness_status=None,
+    )
+
+
 def extract_source_publication_metadata(
     request: SourcePublicationMetadataExtractionRequest,
     ctx: RunContext,
@@ -1296,6 +1378,25 @@ def download_report_with_browser_use(
             ctx=ctx,
             normalized_url=normalized_url,
             result=browser_preflight_response.result,
+        )
+    terminal_preflight_result = _preflight_terminal_static_archive_result(
+        request=request,
+        normalized_url=normalized_url,
+        execution_url=normalized_execution_url,
+        probe=browser_preflight_response.probe,
+    )
+    if terminal_preflight_result is not None:
+        _close_preflight_session(
+            session=preflight_session,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            outcome="completed",
+        )
+        return _complete_browser_download_result(
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            result=terminal_preflight_result,
         )
     logger.info(
         log_event(

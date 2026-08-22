@@ -191,6 +191,23 @@ def test_browser_preflight_contract_round_trip() -> None:
     assert restored_response.probe.avoided_agent_call is True
 
 
+def test_browser_preflight_recognizes_terminal_not_found_page() -> None:
+    assert preflight_runtime._is_terminal_not_found_page(
+        title="404 Not Found",
+        html=(
+            "<html><body><h1>Not Found</h1><p>The requested URL was not found "
+            "on this server.</p></body></html>"
+        ),
+    )
+    assert not preflight_runtime._is_terminal_not_found_page(
+        title="Commerce media trends report",
+        html=(
+            "<html><body><p>404 brands contributed data to this report.</p>"
+            "</body></html>"
+        ),
+    )
+
+
 def test_browser_preflight_skips_email_route_without_positive_evidence(
     tmp_path: Path,
     run_context,

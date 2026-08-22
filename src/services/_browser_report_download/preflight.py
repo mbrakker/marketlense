@@ -52,6 +52,12 @@ logger = logging.getLogger("market_lense.browser_report_download_service.preflig
 
 _PREFLIGHT_SCHEMA_VERSION = "1.0"
 _PREFLIGHT_EVENT_DRAIN_SECONDS = 0.35
+_TERMINAL_NOT_FOUND_TITLE_MARKERS = ("404", "not found", "page not found")
+_TERMINAL_NOT_FOUND_BODY_MARKERS = (
+    "the requested url was not found on this server",
+    "the page you are looking for was not found",
+    "this page does not exist",
+)
 _PREFLIGHT_SESSION_TIMEOUT_SECONDS = 24.0
 _PREFLIGHT_ROUTE_FAMILIES = {
     "",
@@ -209,8 +215,18 @@ def _run_browser_preflight_probe(
             event_urls=runtime_evidence["event_urls"],
         )
         selected_pdf_url = candidate_urls[0] if candidate_urls else ""
+        terminal_not_found = _is_terminal_not_found_page(
+            title=runtime_evidence["final_title"],
+            html=runtime_evidence["html"],
+        )
         probe = _probe_result(
-            status="confirmed_direct_pdf" if selected_pdf_url else "escalated",
+            status=(
+                "confirmed_direct_pdf"
+                if selected_pdf_url
+                else "terminal_static_archive"
+                if terminal_not_found
+                else "escalated"
+            ),
             started_url=target_url,
             final_url=runtime_evidence["final_url"],
             final_title=runtime_evidence["final_title"],
@@ -220,14 +236,23 @@ def _run_browser_preflight_probe(
             selected_pdf_url=selected_pdf_url,
             observed_event_urls=runtime_evidence["event_urls"],
             network_event_count=len(runtime_evidence["event_urls"]),
-            evidence_labels=_evidence_labels(
+            evidence_labels=[
+                *_evidence_labels(
                 page_info_html_size=int(runtime_evidence["html_size"]),
                 rendered=runtime_evidence,
                 event_urls=runtime_evidence["event_urls"],
                 selected_pdf_url=selected_pdf_url,
+                ),
+                *(["preflight_terminal_not_found"] if terminal_not_found else []),
+            ],
+            escalation_reason=(
+                ""
+                if selected_pdf_url
+                else "terminal_static_archive"
+                if terminal_not_found
+                else "no_rendered_pdf_candidate"
             ),
-            escalation_reason="" if selected_pdf_url else "no_rendered_pdf_candidate",
-            avoided_agent_call=bool(selected_pdf_url),
+            avoided_agent_call=bool(selected_pdf_url or terminal_not_found),
             reuse_state=_reuse_state_from_runtime(
                 runtime_evidence=runtime_evidence,
                 candidate_pdf_urls=candidate_urls,
@@ -628,6 +653,16 @@ def _select_pdf_candidates(
             continue
         normalized.append(resolved)
     return _filter_relevant_candidates(request=request, candidates=normalized)
+
+
+def _is_terminal_not_found_page(*, title: str, html: str) -> bool:
+    normalized_title = str(title or "").casefold()
+    normalized_html = str(html or "").casefold()
+    if not any(
+        marker in normalized_title for marker in _TERMINAL_NOT_FOUND_TITLE_MARKERS
+    ):
+        return False
+    return any(marker in normalized_html for marker in _TERMINAL_NOT_FOUND_BODY_MARKERS)
 
 
 def _filter_relevant_candidates(
