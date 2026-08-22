@@ -913,7 +913,10 @@ def _isolated_attempt_timeout_seconds(
     if workspace_root not in sys.path:
         sys.path.insert(0, workspace_root)
     from src.contracts.config import ConfigLoadRequest
-    from src.services.config_service import load_browser_download_settings
+    from src.services.config_service import (
+        load_browser_download_settings,
+        load_mailbox_acquisition_settings,
+    )
     from src.utils.logging import new_run_context
 
     context = new_run_context(
@@ -924,9 +927,17 @@ def _isolated_attempt_timeout_seconds(
         ConfigLoadRequest(schema_version="1.0", path=str(config_path.resolve())),
         context,
     )
+    mailbox_settings = load_mailbox_acquisition_settings(
+        ConfigLoadRequest(schema_version="1.0", path=str(config_path.resolve())),
+        context,
+    )
     route_timeout = max(
         (float(budget.timeout_seconds) for budget in settings.route_budgets),
         default=float(settings.timeout_seconds),
+    )
+    service_timeout = max(
+        route_timeout,
+        float(mailbox_settings.poll_timeout_seconds),
     )
     configuration_hash = _sha256(
         {
@@ -937,7 +948,7 @@ def _isolated_attempt_timeout_seconds(
             "isolation": "per_candidate_process",
         }
     )
-    return route_timeout + 120.0, configuration_hash
+    return service_timeout + 120.0, configuration_hash
 
 
 def replay_failed_acquisition_manifest(

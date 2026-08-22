@@ -161,6 +161,21 @@ def test_isolated_attempt_supervisor_returns_typed_timeout(tmp_path):
     assert result["response"] is None
 
 
+def test_isolated_attempt_timeout_covers_configured_mailbox_poll_limit():
+    module = _load_module()
+
+    timeout_seconds, _ = module._isolated_attempt_timeout_seconds(
+        config_path=Path(
+            "src/config/app.browser_isolated_rendered_9_20260822_123000.yaml"
+        ),
+        producer_sha="abc123",
+    )
+
+    # The 600-second mailbox polling service must never be pre-empted by the
+    # supervisor; the supervisor retains a 120-second process-cleanup grace.
+    assert timeout_seconds == 720.0
+
+
 def test_supervisor_timeout_record_is_terminal_with_incomplete_telemetry():
     module = _load_module()
 

@@ -134,8 +134,9 @@ timestamps, and resource envelope; this run-only policy does not alter the
 normal acquisition default or suppress a future explicit revalidation.
 
 Retained failed-cohort replays run each candidate in a disposable supervisor
-process. The supervisor uses the configured maximum route timeout plus bounded
-cleanup grace, preserves a valid child terminal record unchanged, and writes a
+process. The supervisor uses the widest configured route or mailbox-service
+timeout plus bounded cleanup grace, so it never pre-empts a configured inner
+service timeout, preserves a valid child terminal record unchanged, and writes a
 typed terminal record when a child times out or fails to return valid output.
 Such supervisor-produced records mark browser, token, launch, and cost fields
 as incomplete rather than reporting unavailable measurements as zero. This
