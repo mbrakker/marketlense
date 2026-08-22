@@ -4,6 +4,8 @@ import asyncio
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+import pytest
+
 from src.contracts.browser_download import BrowserReportDownloadRequest
 from src.contracts.run_context import RunContext
 from src.services._browser_report_download.artifact import (
@@ -154,6 +156,62 @@ def test_post_submit_embedded_pdf_recovery_ignores_incidental_pdf_links() -> Non
         ),
         document_url="https://example.com/report#download",
     ) == []
+
+
+def test_pre_llm_form_preflight_stops_on_terminal_not_found_page(
+    tmp_path: Path,
+) -> None:
+    """A rendered 404 must not fall through from form discovery to the Agent."""
+    from src.services._browser_report_download import browser as browser_runtime
+
+    helper_result = SimpleNamespace(
+        status="no_form",
+        submitted=False,
+        unresolved_fields=(),
+        resolved_fields=(),
+        filled_count=0,
+        selected_count=0,
+        mandatory_agreement_checked_count=0,
+        blocker_code=None,
+        final_url="https://www4.example.com/commerce-media-trends-report",
+    )
+    snapshot = browser_runtime.TerminalSnapshot(
+        page=None,
+        url="https://www4.example.com/commerce-media-trends-report",
+        title="404 Not Found",
+        html=(
+            "<html><body><h1>Not Found</h1>"
+            "<p>The requested URL was not found on this server.</p>"
+            "</body></html>"
+        ),
+    )
+    ctx = RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
+
+    result = browser_runtime._resolve_pre_llm_standard_form_submit_result(
+        helper_result=helper_result,
+        snapshot=snapshot,
+        execution_url="https://go.example.com/commerce-media-trends-report",
+        ctx=ctx,
+        normalized_url="https://go.example.com/commerce-media-trends-report",
+    )
+
+    assert result is not None
+    response = finalize_browser_report_download_result(
+        request=BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://go.example.com/commerce-media-trends-report",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_email_form",
+        ),
+        ctx=ctx,
+        normalized_url="https://go.example.com/commerce-media-trends-report",
+        delivery_email=None,
+        download_dir=tmp_path,
+        browser_run=result,
+    )
+
+    assert response.outcome == "email_required"
+    assert response.blocked_reason == "blocked_static_archive"
 
 
 def test_browser_no_progress_fails_open_when_actionable_dom_is_missing() -> None:

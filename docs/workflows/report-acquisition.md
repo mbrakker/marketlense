@@ -90,6 +90,12 @@ with the configured not-found body evidence stop as typed terminal failures;
 an HTTP access-layer 403 is not treated as a 404 because browser preflight may
 see a different, definitive publisher response.
 
+The same configured not-found body evidence is checked again after deterministic
+form discovery in the retained Browser Use session. This catches a browser-only
+redirect to a terminal publisher 404 even when no form is present, returns a
+terminal static-archive result, and avoids Agent fallback. It does not convert
+an HTTP 403 into a terminal not-found result.
+
 Each governed acquisition attempt now retains a scalar resource envelope in the
 reports store: elapsed time, route family and policy hash, browser launch/step
 and screenshot counts, browser-model token/cost totals read from the canonical

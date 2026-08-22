@@ -222,6 +222,9 @@ from src.services._browser_report_download._browser_runtime.worker_protocol impo
     _run_browser_report_download_agent_subprocess,
     _should_run_browser_agent_in_subprocess,
 )
+from src.services._browser_report_download._http.config import (
+    _TERMINAL_NOT_FOUND_BODY_MARKERS,
+)
 from src.services._browser_report_download.cdp import (
     capture_print_pdf_via_cdp,
     collect_terminal_dialog_evidence_via_cdp,
@@ -629,6 +632,46 @@ def _pre_llm_embedded_pdf_raw_response(
                     "observed_evidence": ["page_info"],
                     "verification_status": "pending_artifact_verification",
                 },
+            ],
+        },
+        ensure_ascii=True,
+    )
+
+
+def _is_terminal_not_found_snapshot(snapshot: TerminalSnapshot) -> bool:
+    """Recognize only the configured publisher not-found body evidence."""
+
+    lowered_html = str(snapshot.html or "").casefold()
+    return any(marker in lowered_html for marker in _TERMINAL_NOT_FOUND_BODY_MARKERS)
+
+
+def _pre_llm_terminal_not_found_raw_response(*, final_url: str) -> str:
+    """Describe a browser-observed terminal 404 without invoking the Agent."""
+
+    return json.dumps(
+        {
+            "route_kind": "email_delivery",
+            "route_family": "browser_email_form",
+            "route_summary": "The target report was not found on a terminal publisher page.",
+            "final_page_url": final_url,
+            "resolved_target_url": final_url,
+            "email_submission_completed": False,
+            "blocked_reason": "blocked_static_archive",
+            "blocked_reason_detail": (
+                "The publisher rendered configured terminal not-found evidence."
+            ),
+            "route_steps": [
+                {
+                    "index": 0,
+                    "action": "inspect",
+                    "target_text": "terminal not-found page",
+                    "target_role": "browser_pre_llm_terminal_check",
+                    "target_url": final_url,
+                    "result": "Observed configured terminal not-found page evidence.",
+                    "expected_evidence": ["page_info"],
+                    "observed_evidence": ["page_info"],
+                    "verification_status": "blocked",
+                }
             ],
         },
         ensure_ascii=True,
@@ -1244,6 +1287,38 @@ def _resolve_pre_llm_standard_form_submit_result(
     normalized_url: str,
 ) -> BrowserAgentRunResult | None:
     final_url = snapshot.url or helper_result.final_url or execution_url
+    if _is_terminal_not_found_snapshot(snapshot):
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_pre_llm_terminal_not_found",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "final_url": final_url,
+                    "avoided_llm_call": True,
+                },
+            )
+        )
+        return BrowserAgentRunResult(
+            schema_version="1.0",
+            raw_model_response=_pre_llm_terminal_not_found_raw_response(
+                final_url=final_url,
+            ),
+            final_page_url=final_url,
+            final_page_title=snapshot.title,
+            final_page_html=snapshot.html,
+            downloaded_files=[],
+            attachment_paths=[],
+            network_resource_urls=[],
+            network_events=[],
+            html_snapshot_path="",
+            screenshot_path="",
+            print_pdf_capture_path="",
+            print_pdf_capture_provenance="",
+            dialog_evidence=[],
+        )
     if helper_result.status == "blocked" and helper_result.unresolved_fields:
         logger.info(
             log_event(
