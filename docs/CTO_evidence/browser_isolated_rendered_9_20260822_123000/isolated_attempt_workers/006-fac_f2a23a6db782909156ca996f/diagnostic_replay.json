@@ -1,0 +1,162 @@
+{
+  "candidate_count": 1,
+  "configuration_hash": "97a661c756048d8e53a6b5ba0be2fe42862c37260d69129b1efa2d8407fef9e3",
+  "manifest_sha256": "1c41324dbb009a223c8add82b7dc949e7fd59895c0137f72a599794a6882425e",
+  "phase": "diagnostic_before_fixes",
+  "producer_git_sha": "32bbeb9941943a409e0f2fc1ac2ffc25802837ce",
+  "records": [
+    {
+      "acquisition_result": {
+        "blocked_reason": "",
+        "blocked_reason_detail": "",
+        "confirmation": {
+          "confirmation_score": 0,
+          "final_page_url": "https://www.bain.com/insights/topics/technology-report",
+          "form_disappeared": false,
+          "signal_labels": [],
+          "submit_button_state": "unchanged",
+          "url_changed": false
+        },
+        "downloaded_file_path": "",
+        "downloaded_mime_type": "",
+        "downloaded_size_bytes": 0,
+        "drive_uploads": [
+          {
+            "file_id": "1SyZrzbfsd1IngPKeukDQp5K2uODtEDZi",
+            "folder_id": "1MyxC-9ecc-8Nr3RJXSjHS_pjV1pCeCBu",
+            "md5": "d9ec3f839f72438e9834cbd74ab1eda1",
+            "mime_type": "application/pdf",
+            "size": 4137700,
+            "status": "skipped_duplicate"
+          }
+        ],
+        "encountered_form_fields": [],
+        "final_url": "https://www.bain.com/insights/topics/technology-report",
+        "onsite_capture_format": "rendered_onsite_pdf",
+        "onsite_capture_path": "C:/Programing/Market lense/out/browser_isolated_rendered_9_20260822_123000/browser_downloads/www.bain.com/91db4aafda5c/onsite_capture.rendered.pdf",
+        "onsite_completeness_status": "complete",
+        "onsite_page_count": 1,
+        "outcome": "captured",
+        "resolved_target_url": "https://www.bain.com/insights/topics/technology-report",
+        "route_family": "browser_onsite_report",
+        "route_kind": "onsite_report",
+        "route_status": "verified",
+        "route_steps": [
+          {
+            "action": "open",
+            "expected_evidence": [],
+            "index": 0,
+            "observed_evidence": [],
+            "result": "Fetched the on-site report HTML directly",
+            "target_role": "url",
+            "target_url": "https://www.bain.com/insights/topics/technology-report",
+            "verification_status": ""
+          },
+          {
+            "action": "extract",
+            "expected_evidence": [],
+            "index": 1,
+            "observed_evidence": [],
+            "result": "Rendered the on-site report HTML to a local PDF",
+            "target_role": "file",
+            "target_url": "https://www.bain.com/insights/topics/technology-report",
+            "verification_status": ""
+          }
+        ],
+        "terminal_evidence": {
+          "artifact_kind": "onsite_report",
+          "artifact_url": "https://www.bain.com/insights/topics/technology-report",
+          "artifact_validation_detail": "Captured on-site report HTML and rendered it to a local PDF.",
+          "artifact_validation_status": "verified",
+          "confirmation_signal_count": 0,
+          "dom_snapshot_sha256": "",
+          "evidence_labels": [
+            "direct_html_capture",
+            "onsite_report",
+            "rendered_onsite_pdf"
+          ],
+          "final_page_title": "Technology Report 2025 - Technology Industry Trends | Bain &amp; Company",
+          "final_page_url": "https://www.bain.com/insights/topics/technology-report",
+          "html_snapshot_path": "C:/Programing/Market lense/out/browser_isolated_rendered_9_20260822_123000/browser_downloads/www.bain.com/91db4aafda5c/onsite_capture.html",
+          "network_events": [],
+          "observed_document_urls": [],
+          "screenshot_path": "",
+          "traversed_page_urls": [
+            "https://www.bain.com/insights/topics/technology-report"
+          ],
+          "visited_url_timeline": []
+        },
+        "used_memory_route": false
+      },
+      "artifact_verification": {
+        "acquisition_method": "browser_capture",
+        "artifact_exists": true,
+        "drive_persisted": true,
+        "publisher_supplied": false,
+        "reason": "Verified complete on-site report rendered to PDF; not a publisher-supplied PDF.",
+        "retained_artifact_format": "pdf",
+        "route_verified": true,
+        "signature_valid": true,
+        "size_bytes": 4137700,
+        "source_kind": "rendered_onsite_pdf",
+        "verified_usable_artifact": true
+      },
+      "attempt_id": "diagnostic:fac_f2a23a6db782909156ca996f",
+      "canonical_candidate_url": "https://www.bain.com/insights/topics/technology-report",
+      "completed_at": "2026-08-22T12:20:49.960741Z",
+      "configuration_hash": "97a661c756048d8e53a6b5ba0be2fe42862c37260d69129b1efa2d8407fef9e3",
+      "duration_seconds": 6.816,
+      "failure_candidate_id": "fac_f2a23a6db782909156ca996f",
+      "parent_attempt": "",
+      "phase": "diagnostic_before_fixes",
+      "policy_hash": "current_head_default_policy",
+      "producer_git_sha": "32bbeb9941943a409e0f2fc1ac2ffc25802837ce",
+      "publisher_id": "publisher:bain-company",
+      "publisher_name": "Bain & Company",
+      "resource_attempts": [
+        {
+          "attempt_id": "dcdd9327f265b3f4c5e148dd5ddb0b11a8cb080a4a95623047583571766d9bd4",
+          "avoided_operations_json": "[]",
+          "browser_launches": 0,
+          "browser_model_calls": 0,
+          "browser_steps": 2,
+          "cached_input_tokens": 0,
+          "completed_at_utc": "2026-08-22T12:20:49Z",
+          "created_at": 1787401249,
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 6.796,
+          "elapsed_ms": 6796,
+          "estimated_cost_usd": 0.0,
+          "incomplete_fields_json": "[]",
+          "input_tokens": 0,
+          "mailbox_reads": 0,
+          "normalized_url": "https://www.bain.com/insights/topics/technology-report",
+          "output_tokens": 0,
+          "page_navigations": 1,
+          "publisher_id": "publisher:bain-company",
+          "retry_count": 0,
+          "revalidation_override": 0,
+          "route_family": "browser_onsite_report",
+          "route_policy_version": "1.0",
+          "schema_version": "1.0",
+          "screenshots": 0,
+          "source_identity_id": "source:01b78bfeebeb08cb5341543ee5a73bb1",
+          "source_identity_status": "resolved",
+          "source_policy_compatibility_hash": "937099732c95682e424f5b4fd49701e2c83b7eb126f35c3f268efe11e8329a19",
+          "started_at_utc": "2026-08-22T12:20:43Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "verified",
+          "updated_at": 1787401249,
+          "verified_artifact_hash": "md5:d9ec3f839f72438e9834cbd74ab1eda1"
+        }
+      ],
+      "run_id": "f6370019-e58a-44a0-81f6-d27977d677f4",
+      "source_identity_id": "",
+      "source_record_id": "",
+      "started_at": "2026-08-22T12:20:43.145303Z"
+    }
+  ],
+  "run_id": "f6370019-e58a-44a0-81f6-d27977d677f4",
+  "schema_version": "1.0"
+}

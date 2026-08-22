@@ -1,0 +1,162 @@
+{
+  "candidate_count": 1,
+  "configuration_hash": "97a661c756048d8e53a6b5ba0be2fe42862c37260d69129b1efa2d8407fef9e3",
+  "manifest_sha256": "1c41324dbb009a223c8add82b7dc949e7fd59895c0137f72a599794a6882425e",
+  "phase": "diagnostic_before_fixes",
+  "producer_git_sha": "32bbeb9941943a409e0f2fc1ac2ffc25802837ce",
+  "records": [
+    {
+      "acquisition_result": {
+        "blocked_reason": "",
+        "blocked_reason_detail": "",
+        "confirmation": {
+          "confirmation_score": 0,
+          "final_page_url": "https://brandfinance.com/insights/insurance-2026-ai-risk-and-reporting-redefining-brand-value",
+          "form_disappeared": false,
+          "signal_labels": [],
+          "submit_button_state": "unchanged",
+          "url_changed": false
+        },
+        "downloaded_file_path": "",
+        "downloaded_mime_type": "",
+        "downloaded_size_bytes": 0,
+        "drive_uploads": [
+          {
+            "file_id": "1wXnbSkvsxw-B5FE8iRDO5vc2zIbyi0Cz",
+            "folder_id": "1_MLq_6_AnuAx4HxrBNaA6JW2caHkQ_2l",
+            "md5": "3f85e7150050337d522eefbd71b34cf9",
+            "mime_type": "application/pdf",
+            "size": 541842,
+            "status": "skipped_duplicate"
+          }
+        ],
+        "encountered_form_fields": [],
+        "final_url": "https://brandfinance.com/insights/insurance-2026-ai-risk-and-reporting-redefining-brand-value",
+        "onsite_capture_format": "rendered_onsite_pdf",
+        "onsite_capture_path": "C:/Programing/Market lense/out/browser_isolated_rendered_9_20260822_123000/browser_downloads/brandfinance.com/936ae077e599/onsite_capture.rendered.pdf",
+        "onsite_completeness_status": "complete",
+        "onsite_page_count": 1,
+        "outcome": "captured",
+        "resolved_target_url": "https://brandfinance.com/insights/insurance-2026-ai-risk-and-reporting-redefining-brand-value",
+        "route_family": "browser_onsite_report",
+        "route_kind": "onsite_report",
+        "route_status": "verified",
+        "route_steps": [
+          {
+            "action": "open",
+            "expected_evidence": [],
+            "index": 0,
+            "observed_evidence": [],
+            "result": "Fetched the on-site report HTML directly",
+            "target_role": "url",
+            "target_url": "https://brandfinance.com/insights/insurance-2026-ai-risk-and-reporting-redefining-brand-value",
+            "verification_status": ""
+          },
+          {
+            "action": "extract",
+            "expected_evidence": [],
+            "index": 1,
+            "observed_evidence": [],
+            "result": "Rendered the on-site report HTML to a local PDF",
+            "target_role": "file",
+            "target_url": "https://brandfinance.com/insights/insurance-2026-ai-risk-and-reporting-redefining-brand-value",
+            "verification_status": ""
+          }
+        ],
+        "terminal_evidence": {
+          "artifact_kind": "onsite_report",
+          "artifact_url": "https://brandfinance.com/insights/insurance-2026-ai-risk-and-reporting-redefining-brand-value",
+          "artifact_validation_detail": "Captured on-site report HTML and rendered it to a local PDF.",
+          "artifact_validation_status": "verified",
+          "confirmation_signal_count": 0,
+          "dom_snapshot_sha256": "",
+          "evidence_labels": [
+            "direct_html_capture",
+            "onsite_report",
+            "rendered_onsite_pdf"
+          ],
+          "final_page_title": "Insurance 2026: AI, risk and reporting redefining brand value | Brand Finance",
+          "final_page_url": "https://brandfinance.com/insights/insurance-2026-ai-risk-and-reporting-redefining-brand-value",
+          "html_snapshot_path": "C:/Programing/Market lense/out/browser_isolated_rendered_9_20260822_123000/browser_downloads/brandfinance.com/936ae077e599/onsite_capture.html",
+          "network_events": [],
+          "observed_document_urls": [],
+          "screenshot_path": "",
+          "traversed_page_urls": [
+            "https://brandfinance.com/insights/insurance-2026-ai-risk-and-reporting-redefining-brand-value"
+          ],
+          "visited_url_timeline": []
+        },
+        "used_memory_route": false
+      },
+      "artifact_verification": {
+        "acquisition_method": "browser_capture",
+        "artifact_exists": true,
+        "drive_persisted": true,
+        "publisher_supplied": false,
+        "reason": "Verified complete on-site report rendered to PDF; not a publisher-supplied PDF.",
+        "retained_artifact_format": "pdf",
+        "route_verified": true,
+        "signature_valid": true,
+        "size_bytes": 541842,
+        "source_kind": "rendered_onsite_pdf",
+        "verified_usable_artifact": true
+      },
+      "attempt_id": "diagnostic:fac_10a7fd2d5e39d5c484777954",
+      "canonical_candidate_url": "https://brandfinance.com/insights/insurance-2026-ai-risk-and-reporting-redefining-brand-value",
+      "completed_at": "2026-08-22T12:19:57.266403Z",
+      "configuration_hash": "97a661c756048d8e53a6b5ba0be2fe42862c37260d69129b1efa2d8407fef9e3",
+      "duration_seconds": 5.894,
+      "failure_candidate_id": "fac_10a7fd2d5e39d5c484777954",
+      "parent_attempt": "",
+      "phase": "diagnostic_before_fixes",
+      "policy_hash": "current_head_default_policy",
+      "producer_git_sha": "32bbeb9941943a409e0f2fc1ac2ffc25802837ce",
+      "publisher_id": "publisher:brand-finance",
+      "publisher_name": "Brand Finance",
+      "resource_attempts": [
+        {
+          "attempt_id": "e587dc96003bfd794ba847d983b6a9469ddcdf93ad4b21b1b933cf14fc6d905f",
+          "avoided_operations_json": "[]",
+          "browser_launches": 0,
+          "browser_model_calls": 0,
+          "browser_steps": 2,
+          "cached_input_tokens": 0,
+          "completed_at_utc": "2026-08-22T12:19:57Z",
+          "created_at": 1787401197,
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 5.878,
+          "elapsed_ms": 5878,
+          "estimated_cost_usd": 0.0,
+          "incomplete_fields_json": "[]",
+          "input_tokens": 0,
+          "mailbox_reads": 0,
+          "normalized_url": "https://brandfinance.com/insights/insurance-2026-ai-risk-and-reporting-redefining-brand-value",
+          "output_tokens": 0,
+          "page_navigations": 1,
+          "publisher_id": "publisher:brand-finance",
+          "retry_count": 0,
+          "revalidation_override": 0,
+          "route_family": "browser_onsite_report",
+          "route_policy_version": "1.0",
+          "schema_version": "1.0",
+          "screenshots": 0,
+          "source_identity_id": "source:197d925a6d208a3836e886b6af00ddcb",
+          "source_identity_status": "resolved",
+          "source_policy_compatibility_hash": "937099732c95682e424f5b4fd49701e2c83b7eb126f35c3f268efe11e8329a19",
+          "started_at_utc": "2026-08-22T12:19:51Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "verified",
+          "updated_at": 1787401197,
+          "verified_artifact_hash": "md5:3f85e7150050337d522eefbd71b34cf9"
+        }
+      ],
+      "run_id": "95f3a315-883f-46c9-970d-a6adfd954a3a",
+      "source_identity_id": "",
+      "source_record_id": "",
+      "started_at": "2026-08-22T12:19:51.372687Z"
+    }
+  ],
+  "run_id": "95f3a315-883f-46c9-970d-a6adfd954a3a",
+  "schema_version": "1.0"
+}
