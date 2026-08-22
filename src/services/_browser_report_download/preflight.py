@@ -543,7 +543,7 @@ async def _run_preflight_session_async(
         )
         if _is_terminal_not_found_page(title=final_title, html=html):
             break
-        if time.monotonic() >= settle_deadline:
+        if html.strip() or time.monotonic() >= settle_deadline:
             break
     rendered = await _inspect_rendered_page(
         page=page,

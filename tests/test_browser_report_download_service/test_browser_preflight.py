@@ -101,12 +101,14 @@ class _PreflightBrowser:
         keep_alive: bool,
         pdf_url: str | None,
         user_data_dir: str | None = None,
+        user_agent: str | None = None,
     ) -> None:
         self.downloads_path = downloads_path
         self.headless = headless
         self.auto_download_pdfs = auto_download_pdfs
         self.keep_alive = keep_alive
         self.user_data_dir = user_data_dir
+        self.user_agent = user_agent
         self.pdf_url = pdf_url
         self.url = ""
         self.title = ""
@@ -137,8 +139,11 @@ class _PreflightBrowser:
 
 def _preflight_runtime(*, pdf_url: str | None):
     class Browser(_PreflightBrowser):
-        def __init__(self, **kwargs):
-            super().__init__(pdf_url=pdf_url, **kwargs)
+        instances: list["Browser"] = []
+
+        def __init__(self, *, user_agent: str | None = None, **kwargs):
+            super().__init__(pdf_url=pdf_url, user_agent=user_agent, **kwargs)
+            self.__class__.instances.append(self)
 
     return SimpleNamespace(Browser=Browser)
 
@@ -193,7 +198,26 @@ def _delayed_terminal_not_found_preflight_runtime():
         def get_current_page(self) -> _PreflightPage:
             self.page_reads += 1
             if self.page_reads == 1:
-                return _PreflightPage(pdf_url=None, page_url=self.url)
+                class LoadingPage(_PreflightPage):
+                    def content(self) -> str:
+                        return ""
+
+                    def evaluate(self, script: str) -> object:
+                        if "getEntriesByType" in script:
+                            return []
+                        if "documentElement" in script:
+                            return ""
+                        return {
+                            "pdf_candidates": [],
+                            "form_text": [],
+                            "location_href": self.url,
+                            "title": "",
+                            "html_size": 0,
+                            "cookie_names": [],
+                            "local_storage_keys": [],
+                        }
+
+                return LoadingPage(pdf_url=None, page_url=self.url)
             self.url = final_url
             return TerminalNotFoundPage()
 
@@ -398,6 +422,38 @@ def test_browser_preflight_runs_for_email_route_when_http_access_signal_requires
     assert response.probe.escalation_reason == "no_rendered_pdf_candidate"
     assert response.probe.reuse_state is not None
     assert response.probe.reuse_state.status == "available"
+
+
+def test_browser_preflight_uses_standard_browser_user_agent(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _preflight_runtime(pdf_url=None)
+    external_boundary_mocks_only.setattr(
+        preflight_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    preflight_runtime.try_browser_preflight_probe(
+        request=BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_email_form",
+        ),
+        ctx=run_context,
+        normalized_url="https://example.com/report",
+        execution_url="https://example.com/report",
+        download_dir=tmp_path / "downloads",
+        force_for_http_access_status=True,
+    )
+
+    assert runtime.Browser.instances[0].user_agent == (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+    )
 
 
 def test_download_report_with_browser_use_uses_forced_preflight_for_http_access_status(

@@ -277,6 +277,11 @@ from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.browser_report_download_service")
 
+_STANDARD_BROWSER_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+)
+
 
 @dataclass
 class BrowserPreflightSession:
@@ -342,13 +347,18 @@ def start_browser_preflight_session(
         else _new_managed_browser_profile_dir(download_dir)
     )
     profile_dir.mkdir(parents=True, exist_ok=True)
+    browser_kwargs: dict[str, Any] = {
+        "downloads_path": str(download_dir),
+        "user_data_dir": str(profile_dir),
+        "headless": not request.settings.headed,
+        "auto_download_pdfs": True,
+        "keep_alive": True,
+    }
+    if _browser_constructor_accepts_parameter(browser_use.Browser, "user_agent"):
+        browser_kwargs["user_agent"] = _STANDARD_BROWSER_USER_AGENT
     try:
         browser = browser_use.Browser(
-            downloads_path=str(download_dir),
-            user_data_dir=str(profile_dir),
-            headless=not request.settings.headed,
-            auto_download_pdfs=True,
-            keep_alive=True,
+            **browser_kwargs,
         )
     except Exception:
         _finalize_browser_launch(
@@ -587,6 +597,16 @@ def _pre_llm_standard_form_raw_response(
         },
         ensure_ascii=True,
     )
+
+
+def _browser_constructor_accepts_parameter(browser_factory: Any, name: str) -> bool:
+    """Keep the Browser Use boundary compatible with installed runtime versions."""
+
+    try:
+        parameters = inspect.signature(browser_factory).parameters.values()
+    except (TypeError, ValueError):
+        return False
+    return any(parameter.name == name for parameter in parameters)
 
 
 def _pre_llm_embedded_pdf_raw_response(
