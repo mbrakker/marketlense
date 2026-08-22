@@ -66,7 +66,8 @@ prompt-only playbooks are therefore guidance only and always fall back. When a
 deterministic route runs in a reusable live Browser Use session, its Agent
 fallback retains cookies, local storage, session ownership, shutdown,
 session-reuse finalization, and browser-launch accounting. When process
-isolation requires a deterministic worker to end before escalation, a completed
+isolation requires a deterministic worker to end before escalation, that worker
+starts at the requested execution URL before resolving any playbook locator. A completed
 but unverified publisher-specific route may hand off only its new, same-origin
 HTTP(S) final page URL to a fresh Agent worker. The prior session is closed
 before deterministic worker execution when it belongs to a different event

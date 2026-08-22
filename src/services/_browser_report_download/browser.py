@@ -2145,9 +2145,11 @@ async def _run_async_deterministic_browser_route_playbook(
     download_dir: Path,
     browser: Any,
     playbook: BrowserRoutePlaybook,
+    browser_started: bool = False,
 ) -> BrowserAgentRunResult | None:
     """Run a deterministic playbook without leaving Browser Use's event loop."""
-    await browser.start()
+    if not browser_started:
+        await browser.start()
     page = await browser.get_current_page()
     if page is None:
         return None

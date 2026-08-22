@@ -607,6 +607,8 @@ def _process_payload(payload_path: Path, response_path: Path) -> int:
 
                 async def execute_and_stop() -> Any:
                     try:
+                        await session.browser.start()
+                        await session.browser.navigate_to(execution_url)
                         return await _run_async_deterministic_browser_route_playbook(
                             request=request,
                             ctx=ctx,
@@ -615,6 +617,7 @@ def _process_payload(payload_path: Path, response_path: Path) -> int:
                             download_dir=download_dir,
                             browser=session.browser,
                             playbook=playbook,
+                            browser_started=True,
                         )
                     finally:
                         await session.browser.kill()

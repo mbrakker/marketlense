@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 
+from src.contracts.browser_download import BrowserRoutePlaybook
 from src.services._browser_report_download._browser_runtime import timeout_recovery
 from src.services._browser_report_download._helpers.interaction import (
     browser_helper_form_autocomplete,
@@ -1105,6 +1106,107 @@ def test_browser_worker_main_preserves_identity_option_aliases(
     assert len(observed_requests) == 1
     observed_field = observed_requests[0].settings.identity_profile.fields[0]
     assert observed_field.option_aliases == ["Vienna", "Wien"]
+
+
+def test_deterministic_worker_navigates_before_executing_playbook(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url="https://example.com/report",
+        settings=_settings(tmp_path),
+        route_family_hint="browser_email_form",
+    )
+    playbook = BrowserRoutePlaybook(
+        schema_version="1.0",
+        playbook_id="publisher-route",
+        version="1.0.0",
+        status="active",
+        updated_at="2026-08-22T00:00:00+00:00",
+        stale_after_days=180,
+        publisher_pattern="example.com",
+        host_patterns=["example.com"],
+        url_path_markers=["report"],
+        route_family="browser_email_form",
+        route_kind="email_delivery",
+        summary="Publisher form route.",
+        steps=[],
+    )
+    payload_path = tmp_path / "browser_agent_worker_request.json"
+    response_path = tmp_path / "browser_agent_worker_response.json"
+    execution_url = "https://example.com/report?source=validation"
+    payload_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "request": json.loads(
+                    json.dumps(request, default=lambda value: value.__dict__)
+                ),
+                "ctx": run_context.__dict__,
+                "normalized_url": request.url,
+                "execution_url": execution_url,
+                "download_dir": str(tmp_path / "worker-download"),
+                "prompt_bundle": {},
+                "execution_mode": "deterministic_playbook",
+                "deterministic_playbook": json.loads(
+                    json.dumps(playbook, default=lambda value: value.__dict__)
+                ),
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    class FakeBrowser:
+        def __init__(self) -> None:
+            self.navigated_urls: list[str] = []
+
+        async def start(self) -> None:
+            return None
+
+        async def navigate_to(self, url: str) -> None:
+            self.navigated_urls.append(url)
+
+        async def get_current_page(self):
+            assert self.navigated_urls == [execution_url]
+            return None
+
+        async def kill(self) -> None:
+            return None
+
+    browser = FakeBrowser()
+    session = SimpleNamespace(browser=browser)
+
+    external_boundary_mocks_only.setattr(
+        browser_worker_runtime,
+        "load_browser_use_runtime",
+        lambda **kwargs: object(),
+    )
+    external_boundary_mocks_only.setattr(
+        browser_worker_runtime,
+        "start_browser_preflight_session",
+        lambda **kwargs: session,
+    )
+    external_boundary_mocks_only.setattr(
+        browser_worker_runtime,
+        "close_browser_preflight_session",
+        lambda **kwargs: None,
+    )
+    external_boundary_mocks_only.setattr(
+        browser_worker_runtime,
+        "setup_logging",
+        lambda *args, **kwargs: None,
+    )
+    external_boundary_mocks_only.setattr(
+        browser_worker_runtime.sys,
+        "argv",
+        ["browser_worker.py", str(payload_path), str(response_path)],
+    )
+
+    assert browser_worker_runtime.main() == 0
+    response = json.loads(response_path.read_text(encoding="utf-8"))
+    assert response["status"] == "drifted"
 
 
 def test_browser_worker_main_redacts_identity_values_from_persisted_response(
