@@ -14,6 +14,12 @@
     "path": "../../../out/browser_acquisition_initial30_final_20260823_173237/current_replay/acquisition_attempts.jsonl",
     "sha256": "F471E3519146BC151042770ABEF5AD76BE449E68B37B0A2788BEFA473E7F357D"
   },
+  "sanitized_projection": {
+    "path": "sanitized_projection/acquisition_evidence_projection.json",
+    "sha256": "8757C559483FB12A352A41D79EB6DD70E07902FC4973CC43A6DC9AC8887EFEFF",
+    "source_hash_validated": true,
+    "candidate_sets_match": true
+  },
   "current_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
   "current_replay_configuration_hash": "d854cc01bf4dbdbea7e3e7ca3ccffe85f64457cd8361ae7f8896d56043739726",
   "configuration": {

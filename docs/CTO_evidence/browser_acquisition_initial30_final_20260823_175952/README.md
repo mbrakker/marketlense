@@ -12,7 +12,8 @@ remained in the denominator and only normal
 
 - Frozen 30-report manifest: `../browser_rendered_pdf_validation_20260821_080508/baseline_manifest.json`, SHA-256 `13602C0BC0038DB4588193760158288314A4BFA943290A8C7C287CACCC914AE9`; embedded manifest hash `1c41324dbb009a223c8add82b7dc949e7fd59895c0137f72a599794a6882425e`.
 - Exact baseline records: `../browser_rendered_pdf_validation_20260821_080508/baseline_30_report_replay.json`, SHA-256 `D3B4116B29EA04BF2CED61D9F1F56BB45F30FED505FC108ABE2FBBA9FBD811C3`.
-- Current raw records: `../../../out/browser_acquisition_initial30_final_20260823_173237/current_replay/acquisition_attempts.jsonl`, SHA-256 `F471E3519146BC151042770ABEF5AD76BE449E68B37B0A2788BEFA473E7F357D`.
+- Current raw records (local source used to derive the committed projection): `../../../out/browser_acquisition_initial30_final_20260823_173237/current_replay/acquisition_attempts.jsonl`, SHA-256 `F471E3519146BC151042770ABEF5AD76BE449E68B37B0A2788BEFA473E7F357D`.
+- Committed, sanitized canonical projection: [acquisition_evidence_projection.json](sanitized_projection/acquisition_evidence_projection.json), SHA-256 `8757C559483FB12A352A41D79EB6DD70E07902FC4973CC43A6DC9AC8887EFEFF`. It retains scalar per-candidate resource evidence and reproducible aggregate views without URLs, browser paths, route prose, identity values, or raw model/browser data.
 - Current commit: `b463da172bf11a05d453ac64c0e1616a8f2e52b6`.
 - Current configuration: `../../../src/config/app.browser_acquisition_initial30_final_20260823_173237.yaml`, SHA-256 `03D9976B8254352EAB2DA1A86FEFBDCBEB7D0036F24B8A8B3F15656BA84AB794`.
 - Current replay configuration hash (including the resolved identity profile): `d854cc01bf4dbdbea7e3e7ca3ccffe85f64457cd8361ae7f8896d56043739726`.
@@ -65,6 +66,29 @@ for every record. The two remaining Agent failures were retained as bounded
 
 See [per_report_results.md](per_report_results.md) for the exact cohort and
 current route/result for every report.
+
+## Committed raw-evidence projection
+
+The final 30-cohort evidence now retains the sanitized, canonical projection in
+GitHub rather than requiring the local `out/` JSONL for failure diagnosis:
+
+- [per-candidate attempts](sanitized_projection/sanitized_attempts.json)
+- [failure Pareto](sanitized_projection/failure_pareto.json)
+- [per-route metrics](sanitized_projection/route_metrics.json)
+- [baseline-versus-current metrics](sanitized_projection/before_after.json)
+- [seven remaining failures](sanitized_projection/remaining_failures.json)
+- [cohort and SHA-256 consistency checks](sanitized_projection/consistency.json)
+
+The projection was generated without an acquisition rerun from the two retained
+hashed inputs. Regenerate it with:
+
+```text
+python scripts/quality/acquisition_evidence_projection.py \
+  --current-jsonl out/browser_acquisition_initial30_final_20260823_173237/current_replay/acquisition_attempts.jsonl \
+  --baseline-json docs/CTO_evidence/browser_rendered_pdf_validation_20260821_080508/baseline_30_report_replay.json \
+  --output-dir docs/CTO_evidence/browser_acquisition_initial30_final_20260823_175952/sanitized_projection \
+  --expected-current-sha256 F471E3519146BC151042770ABEF5AD76BE449E68B37B0A2788BEFA473E7F357D
+```
 
 Against the previously retained run of the same report-acquisition scope,
 current main reduced Browser Use incidence by 2 reports, Agent calls by 6,
