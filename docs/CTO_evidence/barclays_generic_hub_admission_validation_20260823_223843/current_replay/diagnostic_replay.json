@@ -1,0 +1,48 @@
+{
+  "attempt_timeout_seconds": 720.0,
+  "candidate_count": 1,
+  "configuration_hash": "f60665c1c814be073dc27d21083471329fb9625c8d3aa3f1e5526f2ca839a054",
+  "manifest_sha256": "1c41324dbb009a223c8add82b7dc949e7fd59895c0137f72a599794a6882425e",
+  "phase": "diagnostic_before_fixes",
+  "process_isolated": true,
+  "producer_git_sha": "8ada9894ba32b54d1e93c468afe54c29aed8a5c9",
+  "records": [
+    {
+      "acquisition_error": {
+        "error_code": "report_download_candidate_rejected_mixed_content_hub",
+        "retryable": false,
+        "severity": "error"
+      },
+      "artifact_verification": {
+        "acquisition_method": "",
+        "artifact_exists": false,
+        "drive_persisted": false,
+        "retained_artifact_format": "none",
+        "route_verified": false,
+        "signature_valid": null,
+        "size_bytes": 0,
+        "source_kind": "unknown",
+        "verified_usable_artifact": false
+      },
+      "attempt_id": "diagnostic:fac_9d4d17626b51fdefb56842cb",
+      "canonical_candidate_url": "https://www.ib.barclays/research.html",
+      "completed_at": "2026-08-23T20:42:24.642442Z",
+      "configuration_hash": "b37e2d95821706887e8c98764e88399aba7f438755074789200c90e80d2f678c",
+      "duration_seconds": 0.001,
+      "failure_candidate_id": "fac_9d4d17626b51fdefb56842cb",
+      "parent_attempt": "",
+      "phase": "diagnostic_before_fixes",
+      "policy_hash": "current_head_default_policy",
+      "producer_git_sha": "8ada9894ba32b54d1e93c468afe54c29aed8a5c9",
+      "publisher_id": "publisher:barclays",
+      "publisher_name": "Barclays",
+      "resource_attempts": [],
+      "run_id": "6978586a-31e2-415f-a236-059d224708c5",
+      "source_identity_id": "",
+      "source_record_id": "",
+      "started_at": "2026-08-23T20:42:24.641292Z"
+    }
+  ],
+  "run_id": "supervisor-451993b3-48fb-46aa-bc32-fe4696dfa95d",
+  "schema_version": "1.0"
+}

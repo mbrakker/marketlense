@@ -25,6 +25,11 @@ insight/article reports without sending them to Browser Use merely because the
 candidate trace is absent. Generic hubs, client portals, and ambiguous listing
 pages remain ineligible: the route must not choose an arbitrary public article
 or substitute a login-gated resource for the intended report.
+The readiness gate normalizes a terminal file extension before classifying a
+collection root, so a title-less URL fallback such as `/research.html` is
+rejected as `candidate_rejected_mixed_content_hub` before route-memory lookup,
+browser preflight, or Browser Use. A concrete report-detail URL remains
+eligible and is never substituted by a different public report.
 A short `enable JavaScript`/noscript message alone is not an access blocker when
 the fetched page also contains substantial report content; concrete access
 denial and security-checkpoint evidence remains terminal.

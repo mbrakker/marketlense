@@ -1,0 +1,44 @@
+schema_version: "1.0"
+# Acquisition-only replay of fac_9d4d17626b51fdefb56842cb.  Isolated paths
+# prevent the rejected candidate from mutating retained baseline state.
+paths:
+  output_dir: "./out/barclays_generic_hub_admission_validation_20260823_223843"
+  cache_dir: "./cache/barclays_generic_hub_admission_validation_20260823_223843"
+  state_db: "./state/barclays_generic_hub_admission_validation_20260823_223843/index.sqlite"
+  reports_db: "./state/barclays_generic_hub_admission_validation_20260823_223843/reports.sqlite"
+  signal_store_db: "./state/barclays_generic_hub_admission_validation_20260823_223843/signals.sqlite"
+  ingest_lock: "./state/barclays_generic_hub_admission_validation_20260823_223843/ingest.lock"
+browser_download:
+  output_dir: "./out/barclays_generic_hub_admission_validation_20260823_223843/browser_downloads"
+  identity_config_path: "../../../src/config/browser_download_identity.yaml"
+  route_playbook_promotion_mode: "disabled"
+  private_api_playbook_promotion_mode: "disabled"
+  retry:
+    retries: 0
+    base_delay_seconds: 0.0
+    backoff_step_seconds: 0.0
+    jitter_seconds: 0.0
+  route_budgets:
+    browser_email_form:
+      timeout_seconds: 240
+      max_steps: 24
+  run_budget:
+    enabled: true
+    max_browser_launches: 12
+    max_pdfs: 12
+    max_drive_writes: 12
+    max_drive_reads: 36
+    max_mailbox_reads: 24
+    max_retries: 0
+    max_runtime_seconds: 10800
+    limit_decision: "stop"
+mailbox_acquisition:
+  output_dir: "./out/barclays_generic_hub_admission_validation_20260823_223843/mailbox_acquisition"
+  poll_timeout_seconds: 600
+  poll_interval_seconds: 30
+analysis:
+  cost_ledger_path: "./state/barclays_generic_hub_admission_validation_20260823_223843/llm_cost_ledger.jsonl"
+cost:
+  usage_db_path: "./state/barclays_generic_hub_admission_validation_20260823_223843/llm_usage.sqlite"
+  daily_path: "./state/barclays_generic_hub_admission_validation_20260823_223843/llm_cost_daily.json"
+  ledger_path: "./state/barclays_generic_hub_admission_validation_20260823_223843/llm_cost_ledger.jsonl"

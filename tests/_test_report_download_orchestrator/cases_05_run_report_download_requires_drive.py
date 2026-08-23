@@ -493,14 +493,16 @@ def test_run_report_download_promotes_verified_browser_route_playbook_idempotent
     pdf_path = Path(settings.output_dir) / "browser-report.pdf"
     pdf_path.parent.mkdir(parents=True, exist_ok=True)
     pdf_path.write_bytes(b"%PDF-1.4\nbrowser route\n%%EOF")
+    base_browser_result = _result(
+        url="https://example.com/reports/annual-market-report",
+        used_route_hint=False,
+        path=str(pdf_path),
+    )
     browser_result = replace(
-        _result(
-            url="https://example.com/reports/annual-market-report",
-            used_route_hint=False,
-            path=str(pdf_path),
-        ),
+        base_browser_result,
         route_family="browser_pdf_click",
         browser_had_structured_result=True,
+        execution_route_steps=base_browser_result.route_steps,
     )
     download_calls: list[str] = []
 

@@ -287,8 +287,9 @@ def _is_mixed_content_hub_candidate(
     if not segments:
         return True
     last_segment = segments[-1]
+    last_stem = _document_path_stem(last_segment)
     last_tokens = [
-        token for token in last_segment.replace("_", "-").split("-") if token
+        token for token in last_stem.replace("_", "-").split("-") if token
     ]
     title_has_detail_signal = any(
         marker in str(title or "") for marker in _REPORT_DETAIL_TITLE_MARKERS
@@ -303,14 +304,17 @@ def _is_mixed_content_hub_candidate(
     source_same_surface = (
         bool(source_page_set) and candidate_surface_key in source_page_set
     )
-    listing_last_segment = last_segment in _MIXED_CONTENT_HUB_SEGMENTS
+    listing_last_segment = last_stem in _MIXED_CONTENT_HUB_SEGMENTS
     listing_query = any(
         key in str(parsed.query or "").casefold()
         for key in ("page=", "offset=", "category=", "tag=", "filter=", "search=")
     )
     short_listing_under_context = (
         len(segments) <= 2
-        and any(segment in _MIXED_CONTENT_HUB_SEGMENTS for segment in segments)
+        and any(
+            _document_path_stem(segment) in _MIXED_CONTENT_HUB_SEGMENTS
+            for segment in segments
+        )
         and len(last_tokens) < 3
     )
     return (
@@ -326,3 +330,7 @@ def _url_surface_key(url: str) -> str:
     host = str(parsed.hostname or "").strip().casefold()
     path = "/".join(segment for segment in str(parsed.path or "").split("/") if segment)
     return f"{host}/{path}".rstrip("/")
+
+
+def _document_path_stem(segment: str) -> str:
+    return re.sub(r"\.(?:html?|aspx?)$", "", str(segment or "").casefold())
