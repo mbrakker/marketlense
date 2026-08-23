@@ -1,0 +1,36 @@
+schema_version: "1.0"
+# Acquisition-only, isolated validation of one retained GWI report. No mailbox poll or downstream stage.
+paths:
+  output_dir: "./out/gwi_form_submission_20260823_000000"
+  cache_dir: "./cache/gwi_form_submission_20260823_000000"
+  state_db: "./state/gwi_form_submission_20260823_000000/index.sqlite"
+  reports_db: "./state/gwi_form_submission_20260823_000000/reports.sqlite"
+  signal_store_db: "./state/gwi_form_submission_20260823_000000/signals.sqlite"
+  ingest_lock: "./state/gwi_form_submission_20260823_000000/ingest.lock"
+browser_download:
+  output_dir: "./out/gwi_form_submission_20260823_000000/browser_downloads"
+  identity_config_path: "./browser_download_identity.yaml"
+  route_playbook_promotion_mode: "disabled"
+  private_api_playbook_promotion_mode: "disabled"
+  retry: {retries: 0, base_delay_seconds: 0.0, backoff_step_seconds: 0.0, jitter_seconds: 0.0}
+  route_budgets:
+    browser_email_form: {timeout_seconds: 240, max_steps: 24}
+  run_budget:
+    enabled: true
+    max_browser_launches: 1
+    max_pdfs: 1
+    max_drive_writes: 0
+    max_drive_reads: 0
+    max_mailbox_reads: 0
+    max_retries: 0
+    max_runtime_seconds: 600
+    limit_decision: "stop"
+mailbox_acquisition:
+  output_dir: "./out/gwi_form_submission_20260823_000000/mailbox_acquisition"
+  poll_timeout_seconds: 600
+  poll_interval_seconds: 30
+analysis: {cost_ledger_path: "./state/gwi_form_submission_20260823_000000/llm_cost_ledger.jsonl"}
+cost:
+  usage_db_path: "./state/gwi_form_submission_20260823_000000/llm_usage.sqlite"
+  daily_path: "./state/gwi_form_submission_20260823_000000/llm_cost_daily.json"
+  ledger_path: "./state/gwi_form_submission_20260823_000000/llm_cost_ledger.jsonl"
