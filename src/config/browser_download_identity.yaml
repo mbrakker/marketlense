@@ -1518,6 +1518,42 @@ fields:
   value: null
   aliases: []
   option_aliases: []
+- schema_version: '1.0'
+  key: country_country_dropdown
+  label: Country (country_dropdown)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: organization_type_organization_type
+  label: Organization Type (organization_type)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: any_questions_or_specific_topics_you_d_like_to_see_subscribe_comments
+  label: Any questions or specific topics you'd like to see? (subscribe_comments)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: organization_type_demo_selected_for
+  label: organization_type / demo_selected_for
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: subscribe_comments_any_questions_or_specific_topics_optional_textarea
+  label: subscribe_comments / Any questions or specific topics (optional textarea)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: privacy_terms_legal_checkbox_mandatory_if_present
+  label: privacy/terms/legal checkbox (mandatory if present)
+  value: null
+  aliases: []
+  option_aliases: []
 delivery_emails:
 - reports@marketbearing.eu
 consent_policy:
@@ -1598,7 +1634,8 @@ publisher_overrides:
     aliases:
     - company size
     - company_size_legacy
-    option_aliases: []
+    option_aliases:
+    - 1-10 employees
   - schema_version: '1.0'
     key: company_size_name_company_size_legacy_required_select
     label: Company size (name=company_size_legacy) - required - select
@@ -1607,6 +1644,14 @@ publisher_overrides:
     - company size
     - company_size_legacy
     option_aliases: []
+  - schema_version: '1.0'
+    key: country
+    label: Country
+    value: Austria
+    aliases:
+    - Country
+    option_aliases:
+    - Austria
 - schema_version: '1.0'
   host_pattern: bigcommerce.com
   delivery_emails: []
