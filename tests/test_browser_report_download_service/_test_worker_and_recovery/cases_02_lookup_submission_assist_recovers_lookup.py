@@ -1235,7 +1235,7 @@ def test_deterministic_worker_navigation_timeout_keeps_loaded_page_available() -
 
 
 def test_deterministic_worker_start_timeout_keeps_started_browser_available() -> None:
-    """A launched browser must not be discarded merely because startup did not settle."""
+    """The deterministic CDP route can attach after Browser Use startup settles."""
 
     class Browser:
         def __init__(self) -> None:

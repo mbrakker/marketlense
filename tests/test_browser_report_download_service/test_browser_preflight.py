@@ -30,6 +30,26 @@ from .builders import (
 )
 
 
+def test_agent_fallback_requires_all_eligible_deterministic_playbooks() -> None:
+    selected = [
+        SimpleNamespace(
+            playbook_id="publisher-route-a", host_patterns=["a.test"]
+        ),
+        SimpleNamespace(
+            playbook_id="publisher-route-b", host_patterns=["b.test"]
+        ),
+    ]
+
+    assert service._deterministic_agent_fallback_is_admitted(
+        selected_playbooks=selected,
+        attempted_playbook_ids=["publisher-route-a"],
+    ) is False
+    assert service._deterministic_agent_fallback_is_admitted(
+        selected_playbooks=selected,
+        attempted_playbook_ids=["publisher-route-a", "publisher-route-b"],
+    ) is True
+
+
 def test_preflight_thread_envelope_returns_when_async_cancellation_is_ignored() -> None:
     release = threading.Event()
 

@@ -59,5 +59,9 @@ from ._cdp.operations import (
     capture_terminal_screenshot_via_cdp,
     collect_terminal_dialog_evidence_via_cdp,
     capture_print_pdf_via_cdp,
+    capture_print_pdf_via_cdp_async,
+    wait_for_browser_download_target_async,
+    open_browser_download_target_async,
+    wait_for_browser_document_text_async,
     _ensure_browser_download_target_hygiene_via_cdp,
 )

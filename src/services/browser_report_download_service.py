@@ -925,6 +925,7 @@ class _DeterministicPlaybookAttempt:
     handoff_execution_url: str = ""
     handoff_playbook_id: str = ""
     handoff_playbook_version: str = ""
+    attempted_playbook_ids: tuple[str, ...] = ()
 
 
 def try_deterministic_browser_route_playbooks(
@@ -963,10 +964,12 @@ def _try_deterministic_browser_route_playbooks(
     """Run deterministic routes and retain a safe page target for Agent escalation."""
 
     handoff = _DeterministicPlaybookAttempt()
+    attempted_playbook_ids: list[str] = []
 
     for playbook in playbooks:
         if not _is_publisher_specific_playbook(playbook):
             continue
+        attempted_playbook_ids.append(playbook.playbook_id)
         browser_run = run_deterministic_browser_route_playbook(
             request=request,
             ctx=ctx,
@@ -997,6 +1000,7 @@ def _try_deterministic_browser_route_playbooks(
                     handoff_execution_url=handoff_url,
                     handoff_playbook_id=playbook.playbook_id,
                     handoff_playbook_version=playbook.version,
+                    attempted_playbook_ids=tuple(attempted_playbook_ids),
                 )
             logger.info(
                 log_event(
@@ -1037,7 +1041,10 @@ def _try_deterministic_browser_route_playbooks(
                     },
                 )
             )
-            return _DeterministicPlaybookAttempt(result=result)
+            return _DeterministicPlaybookAttempt(
+                result=result,
+                attempted_playbook_ids=tuple(attempted_playbook_ids),
+            )
         handoff_url = _deterministic_playbook_handoff_url(
             execution_url=execution_url,
             final_page_url=browser_run.final_page_url,
@@ -1047,6 +1054,7 @@ def _try_deterministic_browser_route_playbooks(
                 handoff_execution_url=handoff_url,
                 handoff_playbook_id=playbook.playbook_id,
                 handoff_playbook_version=playbook.version,
+                attempted_playbook_ids=tuple(attempted_playbook_ids),
             )
         logger.info(
             log_event(
@@ -1064,7 +1072,25 @@ def _try_deterministic_browser_route_playbooks(
                 },
             )
         )
-    return handoff
+    return replace(handoff, attempted_playbook_ids=tuple(attempted_playbook_ids))
+
+
+def _deterministic_agent_fallback_is_admitted(
+    *,
+    selected_playbooks: list[Any],
+    attempted_playbook_ids: list[str] | tuple[str, ...],
+) -> bool:
+    """Admit Browser Use only after every eligible deterministic route ran."""
+
+    required_ids = {
+        str(playbook.playbook_id or "").strip()
+        for playbook in selected_playbooks
+        if _is_publisher_specific_playbook(playbook)
+    }
+    attempted_ids = {
+        str(playbook_id or "").strip() for playbook_id in attempted_playbook_ids
+    }
+    return required_ids.issubset(attempted_ids)
 
 
 def _deterministic_playbook_handoff_url(
@@ -1775,6 +1801,33 @@ def download_report_with_browser_use(
             ctx=ctx,
             normalized_url=normalized_url,
             result=deterministic_attempt.result,
+        )
+    if not _deterministic_agent_fallback_is_admitted(
+        selected_playbooks=deterministic_playbooks,
+        attempted_playbook_ids=deterministic_attempt.attempted_playbook_ids,
+    ):
+        _close_preflight_session(
+            session=preflight_session,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            outcome="deterministic_route_unattempted",
+        )
+        raise AppError(
+            code="browser_download_deterministic_route_unattempted",
+            message=(
+                "Browser Use Agent was blocked because an eligible deterministic "
+                "route did not run"
+            ),
+            retryable=True,
+            context={
+                "normalized_url": normalized_url,
+                "selected_playbook_ids": [
+                    playbook.playbook_id for playbook in deterministic_playbooks
+                ],
+                "attempted_playbook_ids": list(
+                    deterministic_attempt.attempted_playbook_ids
+                ),
+            },
         )
     agent_execution_url = normalized_execution_url
     agent_preflight_session = preflight_session

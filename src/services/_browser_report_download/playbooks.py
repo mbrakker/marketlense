@@ -45,6 +45,7 @@ _EXECUTABLE_PLAYBOOK_ACTIONS = {
     "type",
     "select",
     "verify",
+    "save_as_pdf",
 }
 _DETERMINISTIC_SELECTOR_TYPES_BY_ACTION = {
     "open": {"url"},
@@ -56,6 +57,7 @@ _DETERMINISTIC_SELECTOR_TYPES_BY_ACTION = {
     "type": {"css", "data_attribute", "label", "name", "role"},
     "select": {"css", "data_attribute", "label", "name", "role"},
     "verify": {"css", "data_attribute", "label", "name", "role", "text", "url"},
+    "save_as_pdf": {"url"},
 }
 _ROLE_ACTION_ROLES = {
     "fill": {"textbox", "searchbox"},
@@ -863,6 +865,12 @@ async def _dispatch_playbook_action_async(
         )
     if action == "verify":
         return "verified"
+    if action == "save_as_pdf":
+        return str(
+            await _await_playbook_value(
+                page_driver.save_as_pdf(selector or normalized_url)
+            )
+        )
     raise ValueError(f"unsupported_action:{step.action}")
 
 
@@ -987,6 +995,8 @@ def _dispatch_playbook_action(
         return str(page_driver.select_css(selector, value))
     if action == "verify":
         return "verified"
+    if action == "save_as_pdf":
+        return str(page_driver.save_as_pdf(selector or normalized_url))
     raise ValueError(f"unsupported_action:{step.action}")
 
 

@@ -26,6 +26,7 @@ def _send_browser_download_cdp(
     params: dict[str, Any],
     timeout_seconds: float,
     target_url: str = "",
+    prefer_transient_session: bool = False,
 ) -> tuple[dict[str, Any], str, str]:
     if method in _TARGET_LEVEL_METHODS:
         client = _resolve_root_cdp_client(browser)
@@ -37,10 +38,18 @@ def _send_browser_download_cdp(
             timeout_seconds=timeout_seconds,
         )
         return result, "", ""
-    resolved_session = _resolve_browser_cdp_session(
-        browser,
-        timeout_seconds=timeout_seconds,
-        target_url=target_url,
+    resolved_session = (
+        _attach_transient_cdp_session_for_target_url(
+            browser,
+            target_url=target_url,
+            timeout_seconds=timeout_seconds,
+        )
+        if prefer_transient_session and str(target_url or "").strip()
+        else _resolve_browser_cdp_session(
+            browser,
+            timeout_seconds=timeout_seconds,
+            target_url=target_url,
+        )
     )
     try:
         result = _send_raw_cdp(
@@ -147,6 +156,45 @@ def _resolve_browser_cdp_session_for_target_url(
             pass
         except Exception:
             pass
+    attach_result = _send_raw_cdp(
+        client=client,
+        method="Target.attachToTarget",
+        params={"targetId": target_id, "flatten": True},
+        session_id="",
+        timeout_seconds=timeout_seconds,
+    )
+    session_id = str(attach_result.get("sessionId") or "").strip()
+    if not session_id:
+        raise RuntimeError("CDP target attach returned no session ID")
+    return _ResolvedCdpSession(
+        client=client,
+        target_id=target_id,
+        session_id=session_id,
+        transient=True,
+    )
+
+
+def _attach_transient_cdp_session_for_target_url(
+    browser: Any,
+    *,
+    target_url: str,
+    timeout_seconds: float,
+) -> _ResolvedCdpSession:
+    client = _resolve_root_cdp_client(browser)
+    targets_result = _send_raw_cdp(
+        client=client,
+        method="Target.getTargets",
+        params={},
+        session_id="",
+        timeout_seconds=timeout_seconds,
+    )
+    target_id = _select_real_page_target_id(
+        targets_result,
+        target_url=target_url,
+        require_url_match=True,
+    )
+    if not target_id:
+        raise RuntimeError("no real page target matched the requested CDP target URL")
     attach_result = _send_raw_cdp(
         client=client,
         method="Target.attachToTarget",

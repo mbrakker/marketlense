@@ -22,6 +22,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 import psutil
+import fitz
 
 from src.contracts._browser_download.session_reuse import (
     BrowserDownloadSessionReuseDecision,
@@ -227,9 +228,11 @@ from src.services._browser_report_download._http.config import (
 )
 from src.services._browser_report_download.cdp import (
     capture_print_pdf_via_cdp,
+    capture_print_pdf_via_cdp_async,
     collect_terminal_dialog_evidence_via_cdp,
     collect_terminal_network_entries_via_cdp,
     ensure_browser_download_target_hygiene_via_cdp,
+    wait_for_browser_document_text_async,
 )
 from src.services._browser_report_download.helpers import (
     browser_helper_capture_screenshot,
@@ -1548,12 +1551,43 @@ def _resolve_pre_llm_standard_form_submit_result(
     )
 
 
+def _rendered_pdf_contains_text(path: Path | None, text: str) -> bool:
+    if path is None or not path.is_file() or not str(text or "").strip():
+        return False
+    expected = " ".join(str(text).split())
+    try:
+        with fitz.open(path) as document:
+            return any(
+                expected in " ".join(page.get_text("text").split())
+                for page in document
+            )
+    except Exception:
+        return False
+
+
+def _playbook_renders_current_page_to_pdf(playbook: BrowserRoutePlaybook) -> bool:
+    return any(step.action.strip().lower() == "save_as_pdf" for step in playbook.steps)
+
+
 class _DeterministicPlaybookPageDriver:
     """Small synchronous adapter over the current browser-use page."""
 
-    def __init__(self, *, browser: Any, page: Any) -> None:
+    def __init__(
+        self,
+        *,
+        browser: Any,
+        page: Any,
+        download_dir: Path | None = None,
+        ctx: RunContext | None = None,
+        normalized_url: str = "",
+        rendered_pdf_path: Path | None = None,
+    ) -> None:
         self._browser = browser
         self._page = page
+        self._download_dir = download_dir
+        self._ctx = ctx
+        self._normalized_url = normalized_url
+        self._rendered_pdf_path = rendered_pdf_path
 
     def open(self, url: str) -> str:
         navigate = getattr(self._browser, "navigate_to", None)
@@ -1650,6 +1684,8 @@ class _DeterministicPlaybookPageDriver:
         return str(getattr(self._page, "url", "") or "")
 
     def contains_text(self, text: str) -> bool:
+        if _rendered_pdf_contains_text(self._rendered_pdf_path, text):
+            return True
         return bool(
             self._evaluate(
                 "() => (document.body?.innerText || '').includes("
@@ -1657,6 +1693,22 @@ class _DeterministicPlaybookPageDriver:
                 + ")"
             )
         )
+
+    def save_as_pdf(self, target_url: str) -> str:
+        if self._download_dir is None or self._ctx is None:
+            raise RuntimeError("deterministic_playbook_pdf_capture_unavailable")
+        pdf_path = self._download_dir / "browser-route-playbook-rendered.pdf"
+        if not capture_print_pdf_via_cdp(
+            browser=self._browser,
+            pdf_path=pdf_path,
+            ctx=self._ctx,
+            normalized_url=self._normalized_url,
+            required=True,
+            target_url=target_url or self._normalized_url,
+        ):
+            raise RuntimeError("deterministic_playbook_pdf_capture_failed")
+        self._rendered_pdf_path = pdf_path
+        return str(pdf_path)
 
     def _click_expression(self, element_expression: str) -> str:
         return self._evaluate_action(
@@ -1735,9 +1787,22 @@ class _DeterministicPlaybookPageDriver:
 class _AsyncDeterministicPlaybookPageDriver:
     """Async adapter over the already-open Browser Use page."""
 
-    def __init__(self, *, browser: Any, page: Any) -> None:
+    def __init__(
+        self,
+        *,
+        browser: Any,
+        page: Any,
+        download_dir: Path | None = None,
+        ctx: RunContext | None = None,
+        normalized_url: str = "",
+        rendered_pdf_path: Path | None = None,
+    ) -> None:
         self._browser = browser
         self._page = page
+        self._download_dir = download_dir
+        self._ctx = ctx
+        self._normalized_url = normalized_url
+        self._rendered_pdf_path = rendered_pdf_path
 
     async def open(self, url: str) -> str:
         navigate = getattr(self._browser, "navigate_to", None)
@@ -1858,6 +1923,8 @@ class _AsyncDeterministicPlaybookPageDriver:
         return str(getattr(self._page, "url", "") or "")
 
     async def contains_text(self, text: str) -> bool:
+        if _rendered_pdf_contains_text(self._rendered_pdf_path, text):
+            return True
         return bool(
             await self._evaluate(
                 "() => (document.body?.innerText || '').includes("
@@ -1865,6 +1932,22 @@ class _AsyncDeterministicPlaybookPageDriver:
                 + ")"
             )
         )
+
+    async def save_as_pdf(self, target_url: str) -> str:
+        if self._download_dir is None or self._ctx is None:
+            raise RuntimeError("deterministic_playbook_pdf_capture_unavailable")
+        pdf_path = self._download_dir / "browser-route-playbook-rendered.pdf"
+        if not capture_print_pdf_via_cdp(
+            browser=self._browser,
+            pdf_path=pdf_path,
+            ctx=self._ctx,
+            normalized_url=self._normalized_url,
+            required=True,
+            target_url=target_url or self._normalized_url,
+        ):
+            raise RuntimeError("deterministic_playbook_pdf_capture_failed")
+        self._rendered_pdf_path = pdf_path
+        return str(pdf_path)
 
     async def _click_expression(self, element_expression: str) -> str:
         return await self._evaluate_action(
@@ -2074,13 +2157,20 @@ def run_deterministic_browser_route_playbook(
         for field in resolve_effective_identity_fields(request)
         if str(field.key or "").strip() and str(field.value or "").strip()
     }
-    _dismiss_explicit_cookie_banner(page)
+    if not _playbook_renders_current_page_to_pdf(playbook):
+        _dismiss_explicit_cookie_banner(page)
     execution = execute_browser_route_playbook(
         BrowserRoutePlaybookExecutionRequest(
             schema_version="1.0",
             playbook=playbook,
             normalized_url=normalized_url,
-            page_driver=_DeterministicPlaybookPageDriver(browser=browser, page=page),
+            page_driver=_DeterministicPlaybookPageDriver(
+                browser=browser,
+                page=page,
+                download_dir=download_dir,
+                ctx=ctx,
+                normalized_url=normalized_url,
+            ),
             identity_values=identity_values,
         ),
         ctx,
@@ -2168,24 +2258,33 @@ def run_deterministic_browser_route_playbook(
             },
         )
     )
+    local_files = [
+        str(path) for path in sorted(download_dir.iterdir()) if path.is_file()
+    ]
+    rendered_pdf_path = next(
+        (
+            path
+            for path in local_files
+            if Path(path).name == "browser-route-playbook-rendered.pdf"
+        ),
+        "",
+    )
     return BrowserAgentRunResult(
         schema_version="1.0",
         raw_model_response=json.dumps(raw_result, ensure_ascii=True),
         final_page_url=final_url,
         final_page_title=page_info.title,
         final_page_html=page_info.html,
-        downloaded_files=[
-            str(path)
-            for path in sorted(download_dir.iterdir())
-            if path.is_file()
-        ],
+        downloaded_files=local_files,
         attachment_paths=[],
         network_resource_urls=[],
         network_events=[],
         html_snapshot_path="",
         screenshot_path="",
-        print_pdf_capture_path="",
-        print_pdf_capture_provenance="",
+        print_pdf_capture_path=rendered_pdf_path,
+        print_pdf_capture_provenance=(
+            "browser_route_playbook_print_to_pdf" if rendered_pdf_path else ""
+        ),
         dialog_evidence=[],
     )
 
@@ -2204,6 +2303,15 @@ async def _run_async_deterministic_browser_route_playbook(
     """Run a deterministic playbook without leaving Browser Use's event loop."""
     if not browser_started:
         await browser.start()
+    if _playbook_renders_current_page_to_pdf(playbook):
+        return await _run_cdp_rendered_pdf_playbook(
+            browser=browser,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            execution_url=execution_url,
+            download_dir=download_dir,
+            playbook=playbook,
+        )
     page = await browser.get_current_page()
     if page is None:
         return None
@@ -2212,7 +2320,8 @@ async def _run_async_deterministic_browser_route_playbook(
         for field in resolve_effective_identity_fields(request)
         if str(field.key or "").strip() and str(field.value or "").strip()
     }
-    await _dismiss_explicit_cookie_banner_async(page)
+    if not _playbook_renders_current_page_to_pdf(playbook):
+        await _dismiss_explicit_cookie_banner_async(page)
     execution = await execute_browser_route_playbook_async(
         BrowserRoutePlaybookExecutionRequest(
             schema_version="1.0",
@@ -2221,6 +2330,9 @@ async def _run_async_deterministic_browser_route_playbook(
             page_driver=_AsyncDeterministicPlaybookPageDriver(
                 browser=browser,
                 page=page,
+                download_dir=download_dir,
+                ctx=ctx,
+                normalized_url=normalized_url,
             ),
             identity_values=identity_values,
         ),
@@ -2289,23 +2401,143 @@ async def _run_async_deterministic_browser_route_playbook(
             },
         )
     )
+    local_files = [
+        str(path) for path in sorted(download_dir.iterdir()) if path.is_file()
+    ]
+    rendered_pdf_path = next(
+        (
+            path
+            for path in local_files
+            if Path(path).name == "browser-route-playbook-rendered.pdf"
+        ),
+        "",
+    )
     return BrowserAgentRunResult(
         schema_version="1.0",
         raw_model_response=json.dumps(raw_result, ensure_ascii=True),
         final_page_url=final_url,
         final_page_title=final_title,
         final_page_html=final_html,
-        downloaded_files=[
-            str(path) for path in sorted(download_dir.iterdir()) if path.is_file()
-        ],
+        downloaded_files=local_files,
         attachment_paths=[],
         network_resource_urls=[],
         network_events=[],
         html_snapshot_path="",
         screenshot_path="",
-        print_pdf_capture_path="",
-        print_pdf_capture_provenance="",
+        print_pdf_capture_path=rendered_pdf_path,
+        print_pdf_capture_provenance=(
+            "browser_route_playbook_print_to_pdf" if rendered_pdf_path else ""
+        ),
         dialog_evidence=[],
+    )
+
+
+async def _run_cdp_rendered_pdf_playbook(
+    *,
+    browser: Any,
+    ctx: RunContext,
+    normalized_url: str,
+    execution_url: str,
+    download_dir: Path,
+    playbook: BrowserRoutePlaybook,
+) -> BrowserAgentRunResult | None:
+    """Render an already-open public page without Browser Use page evaluation."""
+
+    step = next(
+        (item for item in playbook.steps if item.action.strip().lower() == "save_as_pdf"),
+        None,
+    )
+    if step is None:
+        return None
+    target_url = str(step.selector or execution_url or normalized_url).strip()
+    if step.expected_url_contains.strip() and (
+        step.expected_url_contains.strip() not in target_url
+    ):
+        return None
+    if not await wait_for_browser_document_text_async(
+        browser=browser,
+        target_url=target_url,
+        expected_text=step.expected_text,
+        timeout_seconds=30.0,
+    ):
+        return None
+    pdf_path = download_dir / "browser-route-playbook-rendered.pdf"
+    if not await capture_print_pdf_via_cdp_async(
+        browser=browser,
+        pdf_path=pdf_path,
+        ctx=ctx,
+        normalized_url=normalized_url,
+        target_url=target_url,
+    ):
+        return None
+    if step.expected_text.strip() and not _rendered_pdf_contains_text(
+        pdf_path, step.expected_text
+    ):
+        pdf_path.unlink(missing_ok=True)
+        return None
+    raw_result = {
+        "route_kind": "onsite_report",
+        "route_family": playbook.route_family,
+        "route_summary": playbook.summary,
+        "resolved_target_url": target_url,
+        "final_page_url": target_url,
+        "final_page_title": step.expected_text or "",
+        "terminal_text_excerpt": step.expected_text or "",
+        "traversed_page_urls": [target_url],
+        "onsite_capture_path": str(pdf_path),
+        "onsite_capture_format": "browser_rendered_pdf",
+        "onsite_completeness_status": "complete",
+        "route_steps": [
+            {
+                "index": 0,
+                "action": step.action,
+                "target_text": step.target,
+                "target_url": target_url,
+                "result": "Rendered local PDF and verified the playbook postcondition.",
+                "expected_evidence": [step.verification],
+                "observed_evidence": [
+                    "browser_rendered_print_to_pdf",
+                    "deterministic_postcondition_verified",
+                ],
+                "verification_status": "verified",
+                "expected_url_contains": step.expected_url_contains or None,
+                "expected_text": step.expected_text or None,
+            }
+        ],
+    }
+    route_step = BrowserDownloadRouteStep(
+        schema_version="1.0",
+        index=0,
+        action=step.action,
+        target_text=step.target,
+        target_role="page",
+        target_url=target_url,
+        result="Rendered local PDF and verified the playbook postcondition.",
+        expected_evidence=[step.verification],
+        observed_evidence=[
+            "browser_rendered_print_to_pdf",
+            "deterministic_postcondition_verified",
+        ],
+        verification_status="verified",
+        expected_url_contains=step.expected_url_contains or None,
+        expected_text=step.expected_text or None,
+    )
+    return BrowserAgentRunResult(
+        schema_version="1.0",
+        raw_model_response=json.dumps(raw_result, ensure_ascii=True),
+        final_page_url=target_url,
+        final_page_title=step.expected_text or "",
+        final_page_html="",
+        downloaded_files=[str(pdf_path)],
+        attachment_paths=[],
+        network_resource_urls=[],
+        network_events=[],
+        html_snapshot_path="",
+        screenshot_path="",
+        print_pdf_capture_path=str(pdf_path),
+        print_pdf_capture_provenance="browser_route_playbook_print_to_pdf",
+        dialog_evidence=[],
+        execution_route_steps=[route_step],
     )
 
 

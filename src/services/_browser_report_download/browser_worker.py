@@ -45,6 +45,9 @@ from src.services._browser_report_download.browser import (
     run_browser_report_download_agent,
     start_browser_preflight_session,
 )
+from src.services._browser_report_download.cdp import (
+    open_browser_download_target_async,
+)
 from src.services._browser_report_download.prompt import (
     BrowserDownloadPromptBundle,
     redact_browser_report_download_prompt_for_log,
@@ -55,6 +58,7 @@ from src.utils.logging import REDACTED
 
 _EMAIL_PATTERN = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.I)
 _DETERMINISTIC_NAVIGATION_SETTLE_SECONDS = 15.0
+_DETERMINISTIC_TARGET_READY_SECONDS = 75.0
 
 
 def _consume_background_task_exception(task: asyncio.Future[Any]) -> None:
@@ -83,7 +87,7 @@ async def start_deterministic_playbook_browser(
     browser: Any,
     timeout_seconds: float = _DETERMINISTIC_NAVIGATION_SETTLE_SECONDS,
 ) -> bool:
-    """Start the browser without requiring its background work to settle."""
+    """Begin browser startup without cancelling its CDP connection task."""
     return await _await_browser_settle_without_cancelling(
         browser.start(), timeout_seconds=timeout_seconds
     )
@@ -655,10 +659,12 @@ def _process_payload(payload_path: Path, response_path: Path) -> int:
                         await start_deterministic_playbook_browser(
                             browser=session.browser,
                         )
-                        await navigate_deterministic_playbook_page(
+                        if not await open_browser_download_target_async(
                             browser=session.browser,
-                            execution_url=execution_url,
-                        )
+                            target_url=execution_url,
+                            timeout_seconds=_DETERMINISTIC_TARGET_READY_SECONDS,
+                        ):
+                            return None
                         return await _run_async_deterministic_browser_route_playbook(
                             request=request,
                             ctx=ctx,

@@ -10,6 +10,7 @@ from types import SimpleNamespace
 
 import pytest
 import yaml
+import fitz
 
 from src.contracts.browser_download import (
     BrowserDownloadConfirmationEvidence,
@@ -34,6 +35,9 @@ from src.services._browser_report_download.playbooks import (
     load_browser_route_playbooks,
     promote_private_api_evidence_to_browser_playbook,
     promote_validated_browser_route_result_to_playbook,
+)
+from src.services._browser_report_download.browser import (
+    _DeterministicPlaybookPageDriver,
 )
 from src.services._browser_report_download.prompt import (
     render_browser_report_download_prompt,
@@ -74,11 +78,12 @@ def test_adjust_ebook_listing_selects_the_deterministic_report_entry_playbook(
     playbook_dir = (
         Path(__file__).resolve().parents[1] / "src" / "playbooks" / "browser_routes"
     )
+    playbooks = load_browser_route_playbooks(
+        playbook_dir=str(playbook_dir),
+        ctx=run_context,
+    )
     selection = select_browser_route_playbooks(
-        playbooks=load_browser_route_playbooks(
-            playbook_dir=str(playbook_dir),
-            ctx=run_context,
-        ),
+        playbooks=playbooks,
         normalized_url="https://www.adjust.com/resources/ebooks/all",
         route_family_hint="browser_email_form",
         now=datetime.fromisoformat("2026-08-22T19:00:00+00:00"),
@@ -150,6 +155,145 @@ def test_gwi_email_form_playbook_is_executable_for_both_observed_submit_labels(
     assert playbook.steps[-1].selector == "input.hs-button.primary.large"
     assert playbook.steps[-1].expected_url_contains == "/reports/"
     assert all(step.expected_text or step.expected_url_contains for step in playbook.steps)
+
+
+def test_bcg_digital_infrastructure_playbook_uses_a_deterministic_rendered_pdf_route(
+    run_context,
+) -> None:
+    """Removing BCG's local-PDF route would return this public report to Agent work."""
+
+    playbook_dir = (
+        Path(__file__).resolve().parents[1] / "src" / "playbooks" / "browser_routes"
+    )
+    playbooks = load_browser_route_playbooks(
+        playbook_dir=str(playbook_dir),
+        ctx=run_context,
+    )
+    selection = select_browser_route_playbooks(
+        playbooks=playbooks,
+        normalized_url=(
+            "https://www.bcg.com/publications/2026/"
+            "digital-infrastructure-playbook"
+        ),
+        route_family_hint="browser_onsite_report",
+        now=datetime.fromisoformat("2026-08-23T20:00:00+00:00"),
+    )
+
+    assert selection.selected_playbooks[0].playbook_id == (
+        "learned-www-bcg-com-browser-onsite-report"
+    )
+    playbook = next(
+        item
+        for item in playbooks
+        if item.playbook_id == "learned-www-bcg-com-browser-onsite-report"
+    )
+    assert [step.action for step in playbook.steps] == ["save_as_pdf"]
+    assert playbook.route_kind == "onsite_report"
+    assert playbook.steps[0].expected_text == (
+        "The Digital Infrastructure Universe Continues to Expand"
+    )
+
+
+def test_deterministic_executor_runs_save_as_pdf_after_its_page_postcondition(
+    run_context,
+) -> None:
+    """Removing PDF-render support would force a proven public route to Agent."""
+
+    class SavePdfDriver:
+        def __init__(self) -> None:
+            self.calls: list[tuple[str, str]] = []
+
+        def save_as_pdf(self, target: str) -> str:
+            self.calls.append(("save_as_pdf", target))
+            return "saved"
+
+        def current_url(self) -> str:
+            return "https://www.bcg.com/publications/2026/digital-infrastructure-playbook"
+
+        def contains_text(self, text: str) -> bool:
+            return text == "Digital Infrastructure Investing Playbook for 2026"
+
+    playbook = BrowserRoutePlaybook(
+        schema_version="1.0",
+        playbook_id="bcg-rendered-pdf",
+        version="1.0.0",
+        status="active",
+        updated_at="2026-08-23T00:00:00+00:00",
+        stale_after_days=120,
+        publisher_pattern="www.bcg.com",
+        host_patterns=["www.bcg.com"],
+        url_path_markers=["digital-infrastructure-playbook"],
+        route_family="browser_onsite_report",
+        route_kind="pdf_download",
+        summary="Render the verified public BCG report page as a local PDF.",
+        steps=[
+            BrowserRoutePlaybookStep(
+                schema_version="1.0",
+                action="save_as_pdf",
+                target="Render the public report page as a local PDF",
+                verification=(
+                    "A local browser-rendered PDF is available for verification."
+                ),
+                selector_type="url",
+                selector=(
+                    "https://www.bcg.com/publications/2026/"
+                    "digital-infrastructure-playbook"
+                ),
+                expected_text="Digital Infrastructure Investing Playbook for 2026",
+            )
+        ],
+    )
+    driver = SavePdfDriver()
+
+    response = execute_browser_route_playbook(
+        BrowserRoutePlaybookExecutionRequest(
+            schema_version="1.0",
+            playbook=playbook,
+            normalized_url=(
+                "https://www.bcg.com/publications/2026/"
+                "digital-infrastructure-playbook"
+            ),
+            page_driver=driver,
+        ),
+        run_context,
+    )
+
+    assert response.status == "completed"
+    assert driver.calls == [
+        (
+            "save_as_pdf",
+            "https://www.bcg.com/publications/2026/digital-infrastructure-playbook",
+        )
+    ]
+
+
+def test_rendered_pdf_playbook_postcondition_uses_the_local_pdf_text(
+    tmp_path: Path,
+) -> None:
+    """A hung page bridge must not prevent checking the PDF just rendered locally."""
+
+    pdf_path = tmp_path / "bcg.pdf"
+    document = fitz.open()
+    page = document.new_page()
+    page.insert_text(
+        (72, 72),
+        "Digital Infrastructure Investing Playbook for 2026",
+    )
+    document.save(pdf_path)
+    document.close()
+
+    class PageThatMustNotBeEvaluated:
+        def evaluate(self, _expression: str):
+            raise AssertionError("page evaluation should not be needed after PDF rendering")
+
+    driver = _DeterministicPlaybookPageDriver(
+        browser=object(),
+        page=PageThatMustNotBeEvaluated(),
+        rendered_pdf_path=pdf_path,
+    )
+
+    assert driver.contains_text("Digital Infrastructure Investing Playbook for 2026")
+    assert driver.contains_text("Digital Infrastructure Investing\nPlaybook for 2026")
 
 
 def test_stale_playbook_fallback_and_fail_policies_are_logged(

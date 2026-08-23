@@ -1,0 +1,35 @@
+schema_version: '1.0'
+playbook_id: learned-www-bcg-com-browser-onsite-report
+version: 1.0.0
+status: active
+updated_at: '2026-08-23T00:00:00Z'
+stale_after_days: 120
+publisher_pattern: www.bcg.com
+host_patterns:
+- www.bcg.com
+url_path_markers:
+- publications/2026/digital-infrastructure-playbook
+route_family: browser_onsite_report
+route_kind: onsite_report
+summary: Render BCG's verified public Digital Infrastructure Investing Playbook for 2026 page as a local PDF.
+steps:
+- schema_version: '1.0'
+  action: save_as_pdf
+  target: Render the public report page as a local PDF
+  verification: A local browser-rendered PDF is available for normal artifact verification.
+  selector_type: url
+  selector: https://www.bcg.com/publications/2026/digital-infrastructure-playbook
+  expected_text: The Digital Infrastructure Universe Continues to Expand
+traps:
+- Do not replace this exact public report with an unrelated BCG publication.
+evidence_notes:
+- Retained replay evidence verified this exact page after browser cookie handling and local page-to-PDF rendering.
+source_evidence:
+- browser_rendered_pdf_validation_20260821_080508
+- verified
+- application/pdf
+history:
+- schema_version: '1.0'
+  changed_at: '2026-08-23T00:00:00Z'
+  source: retained_bcg_replay_regression_fix
+  summary: Added the exact previously verified public-page PDF render route before Browser Use fallback.

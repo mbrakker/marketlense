@@ -42,6 +42,14 @@ failed artifact/submission verification records a bounded drift reason and
 falls back to Browser Use; it never produces a terminal acquisition failure by
 itself. A successfully finalized playbook records
 `avoided_browser_use_model_call: true` and makes zero Browser Use model calls.
+Before any Browser Use Agent call, every eligible publisher-specific playbook
+selected for the request must have been attempted. The Agent is admitted only
+after those attempts have a recorded drift, validation failure, or other known
+failure; an unattempted eligible route raises a typed acquisition error instead
+of spending on the model.
+For public on-site reports, `save_as_pdf` is an executable `url`-selector
+action: it renders the current verified browser page to a local PDF through CDP
+before the normal artifact verifier runs. It does not bypass verification.
 
 Before a deterministic playbook begins, the browser runtime makes one bounded,
 optional consent preflight: it clicks a visible control whose normalized label

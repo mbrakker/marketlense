@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import base64
+import asyncio
+import inspect
 import logging
 from pathlib import Path
 from typing import Any
@@ -30,6 +32,7 @@ from .session import (
     _resolve_browser_cdp_session_for_target_id,
     _detach_transient_cdp_session,
     _resolve_root_cdp_client,
+    _select_real_page_target_id,
     _select_real_page_target_info,
     _read_target_viewport_size,
     _focus_browser_use_target,
@@ -67,6 +70,7 @@ def call_browser_download_cdp(
     normalized_url: str,
     required: bool,
     target_url: str = "",
+    prefer_transient_session: bool = False,
 ) -> BrowserDownloadCdpCallResult:
     normalized_method = str(method or "").strip()
     if normalized_method not in _CDP_ALLOWLIST:
@@ -106,6 +110,7 @@ def call_browser_download_cdp(
             params=safe_params,
             timeout_seconds=_cdp_timeout_seconds(normalized_method),
             target_url=target_url,
+            prefer_transient_session=prefer_transient_session,
         )
     except Exception as exc:
         logger.info(
@@ -455,6 +460,7 @@ def capture_print_pdf_via_cdp(
     normalized_url: str,
     required: bool = False,
     target_url: str = "",
+    prefer_transient_session: bool = False,
 ) -> bool:
     call_result = call_browser_download_cdp(
         browser=browser,
@@ -468,10 +474,316 @@ def capture_print_pdf_via_cdp(
         normalized_url=normalized_url,
         required=required,
         target_url=target_url,
+        prefer_transient_session=prefer_transient_session,
     )
     if call_result.status != "ok":
         return False
-    data = str(call_result.result.get("data") or "").strip()
+    return _write_print_pdf_capture(
+        result=call_result.result,
+        pdf_path=pdf_path,
+        ctx=ctx,
+        normalized_url=normalized_url,
+        required=required,
+    )
+
+
+async def capture_print_pdf_via_cdp_async(
+    *,
+    browser: Any,
+    pdf_path: Path,
+    ctx: RunContext,
+    normalized_url: str,
+    target_url: str,
+) -> bool:
+    """Capture a rendered PDF on Browser Use's already-running event loop."""
+
+    target_id = ""
+    session_id = ""
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_cdp_call_started",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "method": "Page.printToPDF",
+                "allowlist_reason": _CDP_ALLOWLIST["Page.printToPDF"],
+                "required": False,
+                "target_url": target_url,
+            },
+        )
+    )
+    client = _resolve_root_cdp_client(browser)
+    try:
+        targets = await _send_raw_cdp_async(
+            client=client,
+            method="Target.getTargets",
+            params={},
+            session_id="",
+        )
+        target_id = _select_real_page_target_id(
+            targets,
+            target_url=target_url,
+            require_url_match=True,
+        )
+        if not target_id:
+            raise RuntimeError(
+                "no real page target matched the requested CDP target URL"
+            )
+        attached = await _send_raw_cdp_async(
+            client=client,
+            method="Target.attachToTarget",
+            params={"targetId": target_id, "flatten": True},
+            session_id="",
+        )
+        session_id = str(attached.get("sessionId") or "").strip()
+        if not session_id:
+            raise RuntimeError("CDP target attach returned no session ID")
+        result = await _send_raw_cdp_async(
+            client=client,
+            method="Page.printToPDF",
+            params={
+                "printBackground": True,
+                "preferCSSPageSize": True,
+                "displayHeaderFooter": False,
+            },
+            session_id=session_id,
+        )
+    except Exception as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_cdp_call_failed",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "method": "Page.printToPDF",
+                    "target_id": target_id,
+                    "session_id": session_id,
+                    "required": False,
+                    "error": str(exc),
+                    "result_status": "failed",
+                },
+            )
+        )
+        return False
+    finally:
+        if session_id:
+            try:
+                await _send_raw_cdp_async(
+                    client=client,
+                    method="Target.detachFromTarget",
+                    params={"sessionId": session_id},
+                    session_id="",
+                )
+            except Exception:
+                pass
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_cdp_call_completed",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "method": "Page.printToPDF",
+                "target_id": target_id,
+                "session_id": session_id,
+                "required": False,
+                "result_status": "ok",
+                "result_keys": sorted(str(key) for key in result.keys()),
+            },
+        )
+    )
+    return _write_print_pdf_capture(
+        result=result,
+        pdf_path=pdf_path,
+        ctx=ctx,
+        normalized_url=normalized_url,
+        required=False,
+    )
+
+
+async def wait_for_browser_download_target_async(
+    *,
+    browser: Any,
+    target_url: str,
+    timeout_seconds: float,
+) -> bool:
+    """Wait only for a known public page target before a deterministic action."""
+
+    deadline = asyncio.get_running_loop().time() + max(0.01, timeout_seconds)
+    while True:
+        try:
+            client = _resolve_root_cdp_client(browser)
+            targets = await _send_raw_cdp_async(
+                client=client,
+                method="Target.getTargets",
+                params={},
+                session_id="",
+            )
+            if _select_real_page_target_id(
+                targets,
+                target_url=target_url,
+                require_url_match=True,
+            ):
+                return True
+        except Exception:
+            pass
+        if asyncio.get_running_loop().time() >= deadline:
+            return False
+        await asyncio.sleep(0.5)
+
+
+async def open_browser_download_target_async(
+    *,
+    browser: Any,
+    target_url: str,
+    timeout_seconds: float,
+) -> bool:
+    """Open and wait for an exact public target without Browser Use page state."""
+
+    deadline = asyncio.get_running_loop().time() + max(0.01, timeout_seconds)
+    opened = False
+    while True:
+        try:
+            client = _resolve_root_cdp_client(browser)
+            if not opened:
+                await _send_raw_cdp_async(
+                    client=client,
+                    method="Target.createTarget",
+                    params={"url": target_url},
+                    session_id="",
+                )
+                opened = True
+            targets = await _send_raw_cdp_async(
+                client=client,
+                method="Target.getTargets",
+                params={},
+                session_id="",
+            )
+            if _select_real_page_target_id(
+                targets,
+                target_url=target_url,
+                require_url_match=True,
+            ):
+                return True
+        except Exception:
+            pass
+        if asyncio.get_running_loop().time() >= deadline:
+            return False
+        await asyncio.sleep(0.5)
+
+
+async def wait_for_browser_document_text_async(
+    *,
+    browser: Any,
+    target_url: str,
+    expected_text: str,
+    timeout_seconds: float,
+) -> bool:
+    """Wait for the selected public page to expose its playbook postcondition."""
+
+    expected = expected_text.strip().casefold()
+    if not expected:
+        return False
+    deadline = asyncio.get_running_loop().time() + max(0.01, timeout_seconds)
+    client: Any = None
+    session_id = ""
+    try:
+        while True:
+            try:
+                client = _resolve_root_cdp_client(browser)
+                targets = await _send_raw_cdp_async(
+                    client=client,
+                    method="Target.getTargets",
+                    params={},
+                    session_id="",
+                )
+                target_id = _select_real_page_target_id(
+                    targets,
+                    target_url=target_url,
+                    require_url_match=True,
+                )
+                if target_id and not session_id:
+                    attached = await _send_raw_cdp_async(
+                        client=client,
+                        method="Target.attachToTarget",
+                        params={"targetId": target_id, "flatten": True},
+                        session_id="",
+                    )
+                    session_id = str(attached.get("sessionId") or "").strip()
+                if session_id:
+                    response = await _send_raw_cdp_async(
+                        client=client,
+                        method="Runtime.evaluate",
+                        params={
+                            "expression": (
+                                "(() => ({readyState: document.readyState, "
+                                "title: document.title || '', bodyText: "
+                                "(document.body?.innerText || '').slice(0, 12000)}))()"
+                            ),
+                            "returnByValue": True,
+                        },
+                        session_id=session_id,
+                    )
+                    value = response.get("result", {}).get("value", {})
+                    if isinstance(value, dict):
+                        content = " ".join(
+                            str(value.get(field) or "")
+                            for field in ("title", "bodyText")
+                        ).casefold()
+                        ready_state = str(value.get("readyState") or "").casefold()
+                        if (
+                            ready_state in {"interactive", "complete"}
+                            and expected in content
+                        ):
+                            return True
+            except Exception:
+                pass
+            if asyncio.get_running_loop().time() >= deadline:
+                return False
+            await asyncio.sleep(0.5)
+    finally:
+        if session_id and client is not None:
+            try:
+                await _send_raw_cdp_async(
+                    client=client,
+                    method="Target.detachFromTarget",
+                    params={"sessionId": session_id},
+                    session_id="",
+                )
+            except Exception:
+                pass
+
+
+async def _send_raw_cdp_async(
+    *,
+    client: Any,
+    method: str,
+    params: dict[str, Any],
+    session_id: str,
+) -> dict[str, Any]:
+    send_raw = getattr(client, "send_raw", None)
+    if not callable(send_raw):
+        raise RuntimeError(f"CDP client cannot send {method}")
+    result = send_raw(method, params, session_id=session_id or None)
+    if inspect.isawaitable(result):
+        result = await result
+    return result if isinstance(result, dict) else {}
+
+
+def _write_print_pdf_capture(
+    *,
+    result: dict[str, Any],
+    pdf_path: Path,
+    ctx: RunContext,
+    normalized_url: str,
+    required: bool,
+) -> bool:
+    data = str(result.get("data") or "").strip()
     if not data:
         if required:
             raise AppError(

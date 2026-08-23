@@ -17,6 +17,7 @@ _CDP_ALLOWLIST: dict[str, str] = {
     "Target.getTargetInfo": "Inspect focused target identity for diagnostics and logging.",
     "Target.getTargets": "Find a real page target when browser-use session state is unavailable.",
     "Target.attachToTarget": "Create a transient evidence-only CDP session for an allowlisted read.",
+    "Target.createTarget": "Open an exact public report target for a deterministic browser route.",
     "Target.detachFromTarget": "Clean up a transient evidence-only CDP session.",
     "Target.activateTarget": "Focus a verified user-facing target when headed evidence needs it.",
 }

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
 import logging
@@ -11,12 +12,16 @@ import pytest
 from src.services._browser_report_download.cdp import (
     BrowserDownloadCdpCallResult,
     call_browser_download_cdp,
+    capture_print_pdf_via_cdp_async,
     capture_print_pdf_via_cdp,
     capture_terminal_screenshot_via_cdp,
     collect_terminal_dialog_evidence_via_cdp,
     collect_terminal_network_entries_via_cdp,
     ensure_browser_download_target_hygiene_via_cdp,
     get_browser_download_cdp_allowlist,
+    open_browser_download_target_async,
+    wait_for_browser_document_text_async,
+    wait_for_browser_download_target_async,
 )
 from src.utils.errors import AppError
 
@@ -121,6 +126,7 @@ def test_browser_download_cdp_allowlist_documents_supported_escape_hatch() -> No
         "Target.getTargetInfo": "Inspect focused target identity for diagnostics and logging.",
         "Target.getTargets": "Find a real page target when browser-use session state is unavailable.",
         "Target.attachToTarget": "Create a transient evidence-only CDP session for an allowlisted read.",
+        "Target.createTarget": "Open an exact public report target for a deterministic browser route.",
         "Target.detachFromTarget": "Clean up a transient evidence-only CDP session.",
         "Target.activateTarget": "Focus a verified user-facing target when headed evidence needs it.",
     }
@@ -610,6 +616,198 @@ def test_browser_download_cdp_writes_print_pdf_capture(
     assert pdf_path.read_bytes() == pdf_bytes
     assert client.calls[0]["method"] == "Page.printToPDF"
     assert client.calls[0]["params"]["printBackground"] is True
+
+
+def test_browser_download_cdp_print_pdf_bridges_from_browser_event_loop(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    """A deterministic route must not block the CDP receive loop it depends on."""
+
+    async def run_capture() -> tuple[bool, bytes]:
+        pdf_bytes = b"%PDF-1.7 browser-event-loop"
+        client = FakeCdpClient(
+            {
+                "Page.printToPDF": {
+                    "data": base64.b64encode(pdf_bytes).decode("ascii")
+                }
+            }
+        )
+        client._message_handler_task = asyncio.current_task()
+        pdf_path = tmp_path / "event-loop-rendered.pdf"
+        captured = await asyncio.to_thread(
+            capture_print_pdf_via_cdp,
+            browser=FakeBrowser(client),
+            pdf_path=pdf_path,
+            ctx=run_context,
+            normalized_url="https://example.com/report",
+            required=True,
+        )
+        return captured, pdf_path.read_bytes()
+
+    captured, written = asyncio.run(run_capture())
+
+    assert captured is True
+    assert written == b"%PDF-1.7 browser-event-loop"
+
+
+def test_browser_download_cdp_async_print_pdf_uses_the_active_browser_loop(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    pdf_bytes = b"%PDF-1.7 browser-active-loop"
+    client = FakeCdpClient(
+        {
+            "Target.getTargets": {
+                "targetInfos": [
+                    {
+                        "targetId": "report-target",
+                        "type": "page",
+                        "url": "https://example.com/report",
+                    }
+                ]
+            },
+            "Target.attachToTarget": {"sessionId": "report-session"},
+            "Page.printToPDF": {
+                "data": base64.b64encode(pdf_bytes).decode("ascii")
+            },
+            "Target.detachFromTarget": {},
+        }
+    )
+
+    class RootOnlyBrowser:
+        cdp_client = client
+
+    pdf_path = tmp_path / "active-loop-rendered.pdf"
+    captured = asyncio.run(
+        capture_print_pdf_via_cdp_async(
+            browser=RootOnlyBrowser(),
+            pdf_path=pdf_path,
+            ctx=run_context,
+            normalized_url="https://example.com/report",
+            target_url="https://example.com/report",
+        )
+    )
+
+    assert captured is True
+    assert pdf_path.read_bytes() == pdf_bytes
+    assert [call["method"] for call in client.calls] == [
+        "Target.getTargets",
+        "Target.attachToTarget",
+        "Page.printToPDF",
+        "Target.detachFromTarget",
+    ]
+
+
+def test_browser_download_cdp_async_waits_for_the_exact_page_target() -> None:
+    client = FakeCdpClient(
+        {
+            "Target.getTargets": {
+                "targetInfos": [
+                    {
+                        "targetId": "report-target",
+                        "type": "page",
+                        "url": "https://example.com/report",
+                    }
+                ]
+            }
+        }
+    )
+
+    class RootOnlyBrowser:
+        cdp_client = client
+
+    ready = asyncio.run(
+        wait_for_browser_download_target_async(
+            browser=RootOnlyBrowser(),
+            target_url="https://example.com/report",
+            timeout_seconds=0.01,
+        )
+    )
+
+    assert ready is True
+    assert [call["method"] for call in client.calls] == ["Target.getTargets"]
+
+
+def test_browser_download_cdp_async_opens_the_exact_page_target() -> None:
+    client = FakeCdpClient(
+        {
+            "Target.createTarget": {"targetId": "report-target"},
+            "Target.getTargets": {
+                "targetInfos": [
+                    {
+                        "targetId": "report-target",
+                        "type": "page",
+                        "url": "https://example.com/report",
+                    }
+                ]
+            },
+        }
+    )
+
+    class RootOnlyBrowser:
+        cdp_client = client
+
+    opened = asyncio.run(
+        open_browser_download_target_async(
+            browser=RootOnlyBrowser(),
+            target_url="https://example.com/report",
+            timeout_seconds=0.01,
+        )
+    )
+
+    assert opened is True
+    assert [call["method"] for call in client.calls] == [
+        "Target.createTarget",
+        "Target.getTargets",
+    ]
+
+
+def test_browser_download_cdp_async_waits_for_expected_document_text() -> None:
+    client = FakeCdpClient(
+        {
+            "Target.getTargets": {
+                "targetInfos": [
+                    {
+                        "targetId": "report-target",
+                        "type": "page",
+                        "url": "https://example.com/report",
+                    }
+                ]
+            },
+            "Target.attachToTarget": {"sessionId": "report-session"},
+            "Runtime.evaluate": {
+                "result": {
+                    "value": {
+                        "readyState": "complete",
+                        "title": "Example report",
+                        "bodyText": "Expected report heading",
+                    }
+                }
+            },
+            "Target.detachFromTarget": {},
+        }
+    )
+
+    class RootOnlyBrowser:
+        cdp_client = client
+
+    ready = asyncio.run(
+        wait_for_browser_document_text_async(
+            browser=RootOnlyBrowser(),
+            target_url="https://example.com/report",
+            expected_text="Expected report heading",
+            timeout_seconds=0.01,
+        )
+    )
+
+    assert ready is True
+    assert [call["method"] for call in client.calls] == [
+        "Target.getTargets",
+        "Target.attachToTarget",
+        "Runtime.evaluate",
+        "Target.detachFromTarget",
+    ]
 
 
 def test_browser_download_cdp_print_pdf_uses_matching_target_url(
