@@ -677,6 +677,20 @@ def _build_browser_step(
             uses_memory_route=False,
             fallback_on_retryable_error=False,
         )
+    if source_page_url and _is_same_origin_detail_under_source_page(
+        detail_url=normalized_url,
+        source_page_url=source_page_url,
+    ):
+        return ReportDownloadRoutePlanStep(
+            schema_version="1.0",
+            step_name="report_download_browser_candidate",
+            route_family="browser_pdf_click",
+            attempt_url=normalized_url,
+            route_kind_hint=None,
+            source_page_url_hint=source_page_url,
+            uses_memory_route=False,
+            fallback_on_retryable_error=False,
+        )
     if source_page_url and _looks_like_listing_url(normalized_url):
         return ReportDownloadRoutePlanStep(
             schema_version="1.0",
@@ -782,6 +796,27 @@ def _build_browser_step(
         source_page_url_hint=source_page_url,
         uses_memory_route=False,
         fallback_on_retryable_error=False,
+    )
+
+
+def _is_same_origin_detail_under_source_page(
+    *, detail_url: str, source_page_url: str
+) -> bool:
+    """Recognize an exact report detail page beneath a retained listing URL."""
+    detail = urlsplit(str(detail_url or "").strip())
+    source = urlsplit(str(source_page_url or "").strip())
+    if (
+        detail.scheme not in {"http", "https"}
+        or source.scheme not in {"http", "https"}
+        or detail.netloc.casefold() != source.netloc.casefold()
+    ):
+        return False
+    source_path = source.path.rstrip("/")
+    detail_path = detail.path.rstrip("/")
+    return bool(
+        source_path
+        and detail_path != source_path
+        and detail_path.startswith(source_path + "/")
     )
 
 

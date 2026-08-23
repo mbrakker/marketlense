@@ -63,6 +63,37 @@ def test_route_plan_recovery_classes_cover_allowed_blocked_and_deferred(
         "browser_to_http_pdf_probe:blocked:terminal_browser_family:browser_listing_hub"
     ]
 
+    detail_under_listing = plan_report_download_routes(
+        ReportDownloadRoutePlanRequest(
+            schema_version="1.0",
+            normalized_url=(
+                "https://www.junglescout.com/resources/reports/"
+                "amazon-beauty-category-insights"
+            ),
+            candidate_trace=PublisherInventoryCandidateTrace(
+                schema_version="1.0",
+                canonical_url=(
+                    "https://www.junglescout.com/resources/reports/"
+                    "amazon-beauty-category-insights"
+                ),
+                title="Amazon beauty category insights",
+                discovered_on_page_number=1,
+                source_page_urls=["https://www.junglescout.com/resources/reports"],
+                discovery_provenances=["http_parse"],
+                pdf_url=None,
+                published_at_text=None,
+                max_confidence=0.9,
+            ),
+            publisher_recommended_discovery_route_kind="http_parse",
+        ),
+        run_context,
+    )
+    assert detail_under_listing.steps[1].route_family == "browser_pdf_click"
+    assert detail_under_listing.steps[1].attempt_url == (
+        "https://www.junglescout.com/resources/reports/"
+        "amazon-beauty-category-insights"
+    )
+
     deferred = plan_report_download_routes(
         ReportDownloadRoutePlanRequest(
             schema_version="1.0",

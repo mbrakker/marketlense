@@ -1252,7 +1252,10 @@ async def _execute_async_form_preflight_then_agent(
     """Keep deterministic form work and Agent fallback on one BrowserSession loop."""
 
     pre_llm_result = None
-    if str(request.route_family_hint or "").strip() == "browser_email_form":
+    if str(request.route_family_hint or "").strip() in {
+        "browser_email_form",
+        "browser_pdf_click",
+    }:
         field_values = _browser_standard_form_identity_field_values(request)
         if field_values:
             pre_llm_result = await _try_pre_llm_standard_form_submit_async(
