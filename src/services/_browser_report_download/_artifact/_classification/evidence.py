@@ -524,9 +524,19 @@ def _message_indicates_confirmed_email_delivery(message: str | None) -> bool:
     token = str(message or "").strip().casefold()
     if not token:
         return False
-    if "your download awaits" in token:
-        return all(marker in token for marker in ("email", "link", "inbox"))
-    strong_markers = (
+    if any(
+        marker in token
+        for marker in (
+            "fill out the form",
+            "fill out form",
+            "form below",
+            "complete the form",
+            "submit the form",
+            "enter your email",
+        )
+    ):
+        return False
+    explicit_delivery_markers = (
         "sent directly to your inbox",
         "sent to your inbox",
         "sent to your email",
@@ -534,12 +544,36 @@ def _message_indicates_confirmed_email_delivery(message: str | None) -> bool:
         "will be sent to your email",
         "will be sent directly to your inbox",
         "copy of the report will be sent",
-        "check your inbox",
-        "download link",
         "emailed to you",
-        "inbox shortly",
     )
-    return any(marker in token for marker in strong_markers)
+    if any(marker in token for marker in explicit_delivery_markers):
+        return True
+    return all(
+        (
+            any(marker in token for marker in ("email", "inbox", "mailbox")),
+            any(
+                marker in token
+                for marker in ("inbox", "mailbox", "spam folder", "junk folder")
+            ),
+            any(marker in token for marker in ("report", "download", "link")),
+            any(
+                marker in token
+                for marker in (
+                    "on its way",
+                    "is on the way",
+                    "should be",
+                    "will arrive",
+                    "will be delivered",
+                    "has been sent",
+                    "has been delivered",
+                    "is being sent",
+                    "is being delivered",
+                    "arrive shortly",
+                    "seconds away",
+                )
+            ),
+        )
+    )
 
 
 def _message_indicates_unknown_required_enum(message: str) -> bool:

@@ -1589,14 +1589,20 @@ def test_pre_llm_submit_is_verified_only_from_terminal_confirmation_evidence(
     assert response.terminal_evidence.artifact_validation_status != "verified"
 
 
-def test_download_awaits_terminal_message_confirms_email_delivery() -> None:
-    """A publisher thank-you page can confirm delivery without a URL change."""
+def test_semantic_terminal_message_confirms_email_delivery() -> None:
+    """A terminal thank-you page can confirm delivery without a URL change."""
 
     assert _message_indicates_confirmed_email_delivery(
-        "Your download awaits. An email with a link should be in your inbox. "
-        "Or maybe your spam folder. Either way your download is just seconds away."
+        "Good news: the report link is on its way to the inbox for the email "
+        "address you provided."
     )
-    assert not _message_indicates_confirmed_email_delivery("Your download awaits.")
+    assert _message_indicates_confirmed_email_delivery(
+        "An email with a link should be in your inbox. Or maybe your spam folder. "
+        "Either way your download is just seconds away."
+    )
+    assert not _message_indicates_confirmed_email_delivery(
+        "Enter your email to get a link to download the report."
+    )
 
 
 def test_standard_form_helper_retains_visible_options_for_required_blocker():
