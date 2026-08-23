@@ -37,6 +37,7 @@ _ASSET_URL_MARKERS = {
 _MARKETING_URL_MARKERS = {
     "demo",
     "pricing",
+    "consulting",
     "contact-sales",
     "contact_sales",
     "book-a-demo",

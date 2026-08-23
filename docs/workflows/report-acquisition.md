@@ -30,6 +30,10 @@ collection root, so a title-less URL fallback such as `/research.html` is
 rejected as `candidate_rejected_mixed_content_hub` before route-memory lookup,
 browser preflight, or Browser Use. A concrete report-detail URL remains
 eligible and is never substituted by a different public report.
+Service and consulting surfaces are likewise classified as
+`candidate_rejected_marketing_page` before any route-memory, browser, or Agent
+work. Generic words such as `research` in a service URL do not make it a report
+target; a real report-detail URL must carry its own detail evidence.
 A short `enable JavaScript`/noscript message alone is not an access blocker when
 the fetched page also contains substantial report content; concrete access
 denial and security-checkpoint evidence remains terminal.

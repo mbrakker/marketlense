@@ -302,6 +302,87 @@ def test_run_report_download_rejects_frozen_barclays_research_hub_before_acquisi
     ]
 
 
+def test_run_report_download_rejects_frozen_brand_finance_consulting_landing_before_acquisition(
+    tmp_path: Path,
+    caplog,
+    run_context,
+    assert_app_error,
+) -> None:
+    """A service landing page with generic research wording is not a report target."""
+    settings = _settings(tmp_path)
+    acquisition_calls = []
+    deps = ReportDownloadDependencies(
+        download_report_with_browser_use=lambda req, ctx: acquisition_calls.append(req),
+        get_publisher_download_route=lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("service landing page must be rejected before route-memory lookup")
+        ),
+        record_publisher_download_route=lambda req, ctx: None,
+        file_md5=lambda req, ctx: FileHashResponse(
+            schema_version="1.0",
+            path=req.path,
+            md5="unused",
+        ),
+        record_report_source=lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("should not record a rejected candidate")
+        ),
+        upsert_browser_download_identity_fields=lambda req, ctx: type(
+            "IdentityUpdate",
+            (),
+            {
+                "path": settings.identity_config_path,
+                "added_field_keys": [],
+                "total_fields": len(settings.identity_profile.fields),
+            },
+        )(),
+        record_report_value_score=lambda req, ctx: None,
+        sleep_fn=lambda seconds: None,
+    )
+    caplog.set_level(logging.INFO, logger="market_lense.report_download_orchestrator")
+
+    with pytest.raises(AppError) as exc_info:
+        run_report_download(
+            ReportDownloadOrchestratorRequest(
+                schema_version="1.0",
+                url="https://brandfinance.com/consulting/brand-research",
+                settings=settings,
+                state_db=settings.state_db,
+                reports_db=settings.reports_db,
+                publisher_name="Brand Finance",
+                candidate_trace=PublisherInventoryCandidateTrace(
+                    schema_version="1.0",
+                    canonical_url="https://brandfinance.com/consulting/brand-research",
+                    title="",
+                    discovered_on_page_number=1,
+                    source_page_urls=["https://brandfinance.com/insights"],
+                    discovery_provenances=["browser_dom"],
+                    pdf_url=None,
+                    published_at_text=None,
+                    max_confidence=0.95,
+                ),
+                publisher_recommended_discovery_route_kind="browser_render",
+            ),
+            ctx=run_context,
+            dependencies=deps,
+        )
+
+    assert_app_error(
+        exc_info.value,
+        code="report_download_candidate_rejected_marketing_page",
+        retryable=False,
+        severity="error",
+    )
+    assert acquisition_calls == []
+    rejection_events = [
+        event
+        for event in _events(caplog, "market_lense.report_download_orchestrator")
+        if event.get("event") == "report_download_readiness_rejected"
+    ]
+    assert rejection_events[-1]["fields"]["candidate_url"] == (
+        "https://brandfinance.com/consulting/brand-research"
+    )
+    assert "marketing_url_marker" in rejection_events[-1]["fields"]["readiness_signals"]
+
+
 def test_run_report_download_uses_memory_and_records_route(
     tmp_path: Path,
     caplog,
