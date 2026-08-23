@@ -1,0 +1,156 @@
+[
+  {
+    "agent_calls": 0,
+    "browser_launches": 1,
+    "candidate_id": "fac_0294383b7bf86f9bcc6fbf06",
+    "configuration_hash": "8c3b52833e201bff9c90e03d7dcc9128564d4992a1a908f240702d0bd512e88d",
+    "cost_usd": 0.0,
+    "drive_persistence": false,
+    "duration_seconds": 37.747,
+    "mailbox_reads": 0,
+    "publisher_id": "publisher:brand-finance",
+    "retained_format": "none",
+    "route": "browser_listing_hub",
+    "source_kind": "unknown",
+    "terminal_reason": "budget_side_effect_finalize_request_invalid",
+    "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+    "tokens": {
+      "cached_input": 0,
+      "input": 0,
+      "output": 0
+    },
+    "verified_artifact": false
+  },
+  {
+    "agent_calls": 4,
+    "browser_launches": 1,
+    "candidate_id": "fac_266ccff285b4aadcfd6b5151",
+    "configuration_hash": "8c3b52833e201bff9c90e03d7dcc9128564d4992a1a908f240702d0bd512e88d",
+    "cost_usd": 0.039054,
+    "drive_persistence": false,
+    "duration_seconds": 319.7,
+    "mailbox_reads": 0,
+    "publisher_id": "publisher:bcg",
+    "retained_format": "none",
+    "route": "browser_onsite_report",
+    "source_kind": "unknown",
+    "terminal_reason": "browser_download_agent_timeout",
+    "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+    "tokens": {
+      "cached_input": 17664,
+      "input": 85125,
+      "output": 10874
+    },
+    "verified_artifact": false
+  },
+  {
+    "agent_calls": 0,
+    "browser_launches": 1,
+    "candidate_id": "fac_4da62bac17be2e7185090695",
+    "configuration_hash": "20ae02d93d1f0bbcc71eed15394a0a22349341c67e3e8ba5f75f59b4c660df37",
+    "cost_usd": 0.0,
+    "drive_persistence": false,
+    "duration_seconds": 26.218,
+    "mailbox_reads": 0,
+    "publisher_id": "publisher:gwi",
+    "retained_format": "none",
+    "route": "browser_email_form",
+    "source_kind": "unknown",
+    "terminal_reason": "email_required",
+    "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+    "tokens": {
+      "cached_input": 0,
+      "input": 0,
+      "output": 0
+    },
+    "verified_artifact": false
+  },
+  {
+    "agent_calls": 0,
+    "browser_launches": 1,
+    "candidate_id": "fac_6f994caaf9a413e4038f18f1",
+    "configuration_hash": "20ae02d93d1f0bbcc71eed15394a0a22349341c67e3e8ba5f75f59b4c660df37",
+    "cost_usd": 0.0,
+    "drive_persistence": false,
+    "duration_seconds": 23.652,
+    "mailbox_reads": 0,
+    "publisher_id": "publisher:gwi",
+    "retained_format": "none",
+    "route": "browser_email_form",
+    "source_kind": "unknown",
+    "terminal_reason": "email_required",
+    "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+    "tokens": {
+      "cached_input": 0,
+      "input": 0,
+      "output": 0
+    },
+    "verified_artifact": false
+  },
+  {
+    "agent_calls": 8,
+    "browser_launches": 1,
+    "candidate_id": "fac_9d4d17626b51fdefb56842cb",
+    "configuration_hash": "20ae02d93d1f0bbcc71eed15394a0a22349341c67e3e8ba5f75f59b4c660df37",
+    "cost_usd": 0.039031,
+    "drive_persistence": false,
+    "duration_seconds": 228.17,
+    "mailbox_reads": 0,
+    "publisher_id": "publisher:barclays",
+    "retained_format": "none",
+    "route": "browser_listing_hub",
+    "source_kind": "unknown",
+    "terminal_reason": "browser_download_agent_timeout",
+    "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+    "tokens": {
+      "cached_input": 71680,
+      "input": 176160,
+      "output": 5559
+    },
+    "verified_artifact": false
+  },
+  {
+    "agent_calls": 0,
+    "browser_launches": 1,
+    "candidate_id": "fac_c0e4c925c1ed4ce6149711b8",
+    "configuration_hash": "20ae02d93d1f0bbcc71eed15394a0a22349341c67e3e8ba5f75f59b4c660df37",
+    "cost_usd": 0.0,
+    "drive_persistence": false,
+    "duration_seconds": 20.905,
+    "mailbox_reads": 0,
+    "publisher_id": "publisher:gwi",
+    "retained_format": "none",
+    "route": "browser_email_form",
+    "source_kind": "unknown",
+    "terminal_reason": "email_required",
+    "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+    "tokens": {
+      "cached_input": 0,
+      "input": 0,
+      "output": 0
+    },
+    "verified_artifact": false
+  },
+  {
+    "agent_calls": 0,
+    "browser_launches": 1,
+    "candidate_id": "fac_fa1889b4c19f0f238659145e",
+    "configuration_hash": "8c3b52833e201bff9c90e03d7dcc9128564d4992a1a908f240702d0bd512e88d",
+    "cost_usd": 0.0,
+    "drive_persistence": false,
+    "duration_seconds": 16.877,
+    "mailbox_reads": 1,
+    "publisher_id": "publisher:criteo",
+    "retained_format": "none",
+    "route": "browser_preflight_terminal_static_archive",
+    "source_kind": "unknown",
+    "terminal_reason": "email_required",
+    "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+    "tokens": {
+      "cached_input": 0,
+      "input": 0,
+      "output": 0
+    },
+    "verified_artifact": false
+  }
+]

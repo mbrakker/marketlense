@@ -1,0 +1,47 @@
+{
+  "baseline": {
+    "acquisition_success_rate": 0.1,
+    "agent_calls": 23,
+    "agent_reports": 5,
+    "attempted_reports": 30,
+    "browser_launches": 21,
+    "cached_input_tokens": 173440,
+    "drive_persisted": 12,
+    "duration_seconds": 5970.49,
+    "input_tokens": 455391,
+    "mailbox_reads": 16,
+    "output_tokens": 26039,
+    "total_cost_usd": 0.126904,
+    "verified_acquisitions": 3
+  },
+  "change": {
+    "acquisition_success_rate": 0.7,
+    "agent_calls": -15.0,
+    "agent_reports": -3.0,
+    "attempted_reports": 0.0,
+    "browser_launches": -12.0,
+    "cached_input_tokens": -110464.0,
+    "drive_persisted": 12.0,
+    "duration_seconds": -4986.847,
+    "input_tokens": -277765.0,
+    "mailbox_reads": -14.0,
+    "output_tokens": -16309.0,
+    "total_cost_usd": -0.077207,
+    "verified_acquisitions": 21.0
+  },
+  "current": {
+    "acquisition_success_rate": 0.8,
+    "agent_calls": 8,
+    "agent_reports": 2,
+    "attempted_reports": 30,
+    "browser_launches": 9,
+    "cached_input_tokens": 62976,
+    "drive_persisted": 24,
+    "duration_seconds": 983.643,
+    "input_tokens": 177626,
+    "mailbox_reads": 2,
+    "output_tokens": 9730,
+    "total_cost_usd": 0.049697,
+    "verified_acquisitions": 24
+  }
+}

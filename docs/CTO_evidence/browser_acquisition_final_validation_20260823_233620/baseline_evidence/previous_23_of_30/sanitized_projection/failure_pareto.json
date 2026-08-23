@@ -1,0 +1,26 @@
+[
+  {
+    "agent_calls": 0,
+    "browser_launches": 4,
+    "candidate_count": 4,
+    "cost_usd": 0.0,
+    "duration_seconds": 87.652,
+    "terminal_reason": "email_required"
+  },
+  {
+    "agent_calls": 12,
+    "browser_launches": 2,
+    "candidate_count": 2,
+    "cost_usd": 0.078085,
+    "duration_seconds": 547.87,
+    "terminal_reason": "browser_download_agent_timeout"
+  },
+  {
+    "agent_calls": 0,
+    "browser_launches": 1,
+    "candidate_count": 1,
+    "cost_usd": 0.0,
+    "duration_seconds": 37.747,
+    "terminal_reason": "budget_side_effect_finalize_request_invalid"
+  }
+]

@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0",
+  "cohort": "immutable initial 30-report acquisition cohort",
+  "manifest": {
+    "path": "../browser_rendered_pdf_validation_20260821_080508/baseline_manifest.json",
+    "file_sha256": "13602C0BC0038DB4588193760158288314A4BFA943290A8C7C287CACCC914AE9",
+    "embedded_manifest_sha256": "1c41324dbb009a223c8add82b7dc949e7fd59895c0137f72a599794a6882425e"
+  },
+  "baseline_records": {
+    "path": "../browser_rendered_pdf_validation_20260821_080508/baseline_30_report_replay.json",
+    "sha256": "D3B4116B29EA04BF2CED61D9F1F56BB45F30FED505FC108ABE2FBBA9FBD811C3"
+  },
+  "current_records": {
+    "path": "../../../out/browser_acquisition_initial30_final_20260823_173237/current_replay/acquisition_attempts.jsonl",
+    "sha256": "F471E3519146BC151042770ABEF5AD76BE449E68B37B0A2788BEFA473E7F357D"
+  },
+  "sanitized_projection": {
+    "path": "sanitized_projection/acquisition_evidence_projection.json",
+    "sha256": "8757C559483FB12A352A41D79EB6DD70E07902FC4973CC43A6DC9AC8887EFEFF",
+    "source_hash_validated": true,
+    "candidate_sets_match": true
+  },
+  "current_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+  "current_replay_configuration_hash": "d854cc01bf4dbdbea7e3e7ca3ccffe85f64457cd8361ae7f8896d56043739726",
+  "configuration": {
+    "path": "../../../src/config/app.browser_acquisition_initial30_final_20260823_173237.yaml",
+    "sha256": "03D9976B8254352EAB2DA1A86FEFBDCBEB7D0036F24B8A8B3F15656BA84AB794",
+    "model": "gpt-5-mini",
+    "retries": 0,
+    "process_isolated": true,
+    "generic_browser_use_context_reduction": false
+  }
+}

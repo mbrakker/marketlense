@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0",
+  "scope": "acquisition_only",
+  "tested_commit": "69f55aa4ed1afd167e2c8f27e2ee4d7488c65333",
+  "frozen_manifest": {
+    "path": "baseline_evidence/baseline_manifest.json",
+    "sha256": "13602c0bc0038db4588193760158288314a4bfa943290a8c7c287caccc914ae9",
+    "embedded_manifest_sha256": "1c41324dbb009a223c8add82b7dc949e7fd59895c0137f72a599794a6882425e",
+    "candidate_count": 30
+  },
+  "strong_previous_run": {
+    "raw_diagnostic_sha256": "9f196d4fe9480b3f34420d3556b3e16577df120fecf2166afa658af63fc290b2",
+    "retained_projection_path": "baseline_evidence/previous_23_of_30/sanitized_projection/acquisition_evidence_projection.json",
+    "verified_acquisitions": 23
+  },
+  "current_raw_attempts": {
+    "path": "out/browser_acquisition_final_validation_20260823_231323/current_replay/acquisition_attempts.jsonl",
+    "sha256": "eeda4016f19971ac1a823beb14a95fc44361ad5674dc3ed33b0c85ea8e29fd4f",
+    "sanitized_projection_path": "sanitized_projection/acquisition_evidence_projection.json"
+  },
+  "profile": {
+    "configuration_path": "configuration.yaml",
+    "configuration_sha256": "16c1b8544f911881d53a32ff2bc77d5a60e75d97f83d0975f707d24dd356950c",
+    "model": "gpt-5-mini",
+    "temperature": 0.0,
+    "retries": 0,
+    "process_isolated": true,
+    "attempt_timeout_seconds": 720.0,
+    "generic_browser_use_context_reduction": false
+  },
+  "identity_profile": {
+    "initial_sha256": "538a5110b26cd7564db3594d736b80f92726070e53ffa5d46836d12953c7e93e",
+    "final_sha256": "4965598b2cd37ccb1a80008865d63a43dad87cab1f97301b56152bcac519982d",
+    "runtime_upsert_after_candidate_ordinal": 15,
+    "worker_configuration_hashes": [
+      "0ae75486db7d4f47871e2605f7ab6da741897463c146eddc50450e42200ad4cb",
+      "5b51ac2263f45c78dbb0ca8385ca983e44441a68be4b8f4cb397b96eefca8b9f"
+    ]
+  },
+  "current_result": {
+    "verified_acquisitions": 24,
+    "remaining_failures": 6,
+    "candidate_sets_match": true,
+    "raw_hash_validated": true
+  }
+}

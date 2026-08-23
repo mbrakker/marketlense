@@ -1,0 +1,11 @@
+{
+  "baseline_candidate_count": 30,
+  "baseline_json_sha256": "d3b4116b29ea04bf2ced61d9f1f56bb45f30fed505fc108abe2fbba9fbd811c3",
+  "candidate_sets_match": true,
+  "current_candidate_count": 30,
+  "current_failures_match_metrics": true,
+  "current_jsonl_sha256": "f471e3519146bc151042770abef5ad76be449e68b37b0a2788befa473e7f357d",
+  "expected_current_hash_matches": true,
+  "expected_current_jsonl_sha256": "F471E3519146BC151042770ABEF5AD76BE449E68B37B0A2788BEFA473E7F357D",
+  "remaining_failure_count": 7
+}

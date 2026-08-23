@@ -1,0 +1,47 @@
+schema_version: "1.0"
+# Acquisition-only, process-isolated replay of the immutable initial 30-report cohort.
+paths:
+  output_dir: "./out/browser_acquisition_final_validation_20260823_231323"
+  cache_dir: "./cache/browser_acquisition_final_validation_20260823_231323"
+  state_db: "./state/browser_acquisition_final_validation_20260823_231323/index.sqlite"
+  reports_db: "./state/browser_acquisition_final_validation_20260823_231323/reports.sqlite"
+  signal_store_db: "./state/browser_acquisition_final_validation_20260823_231323/signals.sqlite"
+  ingest_lock: "./state/browser_acquisition_final_validation_20260823_231323/ingest.lock"
+
+browser_download:
+  output_dir: "./out/browser_acquisition_final_validation_20260823_231323/browser_downloads"
+  identity_config_path: "./browser_download_identity.yaml"
+  route_playbook_promotion_mode: "write"
+  private_api_playbook_promotion_mode: "write"
+  retry:
+    retries: 0
+    base_delay_seconds: 0.0
+    backoff_step_seconds: 0.0
+    jitter_seconds: 0.0
+  route_budgets:
+    browser_email_form:
+      timeout_seconds: 240
+      max_steps: 24
+  run_budget:
+    enabled: true
+    max_browser_launches: 90
+    max_pdfs: 40
+    max_drive_writes: 40
+    max_drive_reads: 120
+    max_mailbox_reads: 80
+    max_retries: 0
+    max_runtime_seconds: 43200
+    limit_decision: "stop"
+
+mailbox_acquisition:
+  output_dir: "./out/browser_acquisition_final_validation_20260823_231323/mailbox_acquisition"
+  poll_timeout_seconds: 600
+  poll_interval_seconds: 30
+
+analysis:
+  cost_ledger_path: "./state/browser_acquisition_final_validation_20260823_231323/llm_cost_ledger.jsonl"
+
+cost:
+  usage_db_path: "./state/browser_acquisition_final_validation_20260823_231323/llm_usage.sqlite"
+  daily_path: "./state/browser_acquisition_final_validation_20260823_231323/llm_cost_daily.json"
+  ledger_path: "./state/browser_acquisition_final_validation_20260823_231323/llm_cost_ledger.jsonl"
