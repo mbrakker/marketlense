@@ -297,6 +297,7 @@ class BrowserPreflightSession:
     session_reuse_decision: BrowserDownloadSessionReuseDecision
     profile_dir: Path
     preexisting_temp_dirs: set[str]
+    event_loop_runner: asyncio.Runner | None = None
     closed: bool = False
 
 
@@ -399,6 +400,7 @@ def start_browser_preflight_session(
         session_reuse_decision=session_reuse_decision,
         profile_dir=profile_dir,
         preexisting_temp_dirs=preexisting_temp_dirs,
+        event_loop_runner=_new_preflight_event_loop_runner(),
     )
 
 
@@ -415,16 +417,19 @@ def close_browser_preflight_session(
     if session.closed:
         return
     session.closed = True
-    _prepare_browser_for_shutdown(
-        session.browser,
-        ctx=ctx,
-        normalized_url=normalized_url,
-    )
-    _kill_browser_with_timeout(
-        session.browser,
-        ctx=ctx,
-        normalized_url=normalized_url,
-    )
+    try:
+        _prepare_browser_for_shutdown(
+            session.browser,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
+        _kill_browser_with_timeout(
+            session.browser,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
+    finally:
+        _close_preflight_event_loop_runner(session)
     _finalize_browser_launch(
         budget=session.launch_budget,
         decision=session.launch_decision,
@@ -599,6 +604,22 @@ def _pre_llm_standard_form_raw_response(
         },
         ensure_ascii=True,
     )
+
+
+def _new_preflight_event_loop_runner() -> asyncio.Runner | None:
+    """Create a reusable loop only when this synchronous worker owns the thread."""
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.Runner()
+    return None
+
+
+def _close_preflight_event_loop_runner(session: BrowserPreflightSession) -> None:
+    runner = session.event_loop_runner
+    session.event_loop_runner = None
+    if runner is not None:
+        runner.close()
 
 
 def _browser_constructor_accepts_parameter(browser_factory: Any, name: str) -> bool:
@@ -2498,16 +2519,20 @@ def run_browser_report_download_agent(
                 keep_alive=True,
             )
         if inspect.iscoroutinefunction(getattr(browser, "start", None)):
-            async_execution = asyncio.run(
-                _run_async_form_preflight_then_agent(
-                    browser_use=browser_use,
-                    browser=browser,
-                    request=request,
-                    ctx=ctx,
-                    normalized_url=normalized_url,
-                    execution_url=execution_url,
-                    prompt_bundle=prompt_bundle,
-                )
+            async_operation = _run_async_form_preflight_then_agent(
+                browser_use=browser_use,
+                browser=browser,
+                request=request,
+                ctx=ctx,
+                normalized_url=normalized_url,
+                execution_url=execution_url,
+                prompt_bundle=prompt_bundle,
+            )
+            async_execution = (
+                preflight_session.event_loop_runner.run(async_operation)
+                if preflight_session is not None
+                and preflight_session.event_loop_runner is not None
+                else asyncio.run(async_operation)
             )
             if async_execution.pre_llm_result is not None:
                 return async_execution.pre_llm_result
@@ -2992,6 +3017,7 @@ def run_browser_report_download_agent(
         )
         if preflight_session is not None:
             preflight_session.closed = True
+            _close_preflight_event_loop_runner(preflight_session)
     logger.info(
         log_event(
             ctx,

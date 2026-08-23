@@ -216,6 +216,7 @@ def _run_browser_preflight_probe(
             download_dir=download_dir,
             ctx=ctx,
             normalized_url=normalized_url,
+            event_loop_runner=browser_session.event_loop_runner,
         )
         phase = "rendered_page_read"
         candidate_urls = _select_pdf_candidates(
@@ -504,6 +505,7 @@ def _run_preflight_session(
     download_dir: Path,
     ctx: RunContext,
     normalized_url: str,
+    event_loop_runner: asyncio.Runner | None = None,
 ) -> dict[str, Any]:
     coroutine = asyncio.wait_for(
         _run_preflight_session_async(
@@ -520,6 +522,7 @@ def _run_preflight_session(
         coroutine,
         timeout_seconds=_PREFLIGHT_SESSION_TIMEOUT_SECONDS,
         grace_seconds=2.0,
+        event_loop_runner=event_loop_runner,
     )
 
 
@@ -961,6 +964,7 @@ def _run_preflight_coroutine(
     *,
     timeout_seconds: float,
     grace_seconds: float,
+    event_loop_runner: asyncio.Runner | None = None,
 ) -> Any:
     """Keep Browser Use on the worker main thread unless a loop is already active.
 
@@ -969,6 +973,8 @@ def _run_preflight_coroutine(
     moving its lifecycle onto a daemon thread, while active-loop callers still
     use the bounded watchdog bridge below.
     """
+    if event_loop_runner is not None:
+        return event_loop_runner.run(coroutine)
     try:
         asyncio.get_running_loop()
     except RuntimeError:

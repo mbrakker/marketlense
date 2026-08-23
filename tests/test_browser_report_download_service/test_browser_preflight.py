@@ -74,6 +74,27 @@ def test_preflight_runs_on_the_calling_thread_when_no_event_loop_is_active() -> 
     )
 
 
+def test_preflight_runner_preserves_the_browser_event_loop_for_handoff() -> None:
+    async def record_loop_id() -> int:
+        return id(asyncio.get_running_loop())
+
+    with asyncio.Runner() as runner:
+        first_loop_id = preflight_runtime._run_preflight_coroutine(
+            record_loop_id(),
+            timeout_seconds=0.1,
+            grace_seconds=0.1,
+            event_loop_runner=runner,
+        )
+        second_loop_id = preflight_runtime._run_preflight_coroutine(
+            record_loop_id(),
+            timeout_seconds=0.1,
+            grace_seconds=0.1,
+            event_loop_runner=runner,
+        )
+
+    assert first_loop_id == second_loop_id
+
+
 def test_augmented_error_context_retains_scalar_preflight_diagnostics() -> None:
     probe = BrowserPreflightProbeResult(
         schema_version="1.0",

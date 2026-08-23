@@ -34,12 +34,13 @@ For an email-gated browser route, terminal stabilization polls only after record
 
 Eligible browser preflight opens the same managed browser profile used by Browser
 Use. In a process-isolated synchronous acquisition worker, the preflight runs on
-that worker's main event loop so Browser Use retains its required session
-ownership. Active-event-loop callers use a process-local daemon-thread deadline,
-so a Browser Use websocket operation that ignores coroutine cancellation becomes
-a typed preflight failure instead of blocking the acquisition stage. When
-preflight confirms a direct PDF it closes that browser without constructing an
-agent. A matching fresh,
+that worker's persistent main-thread event loop, which remains open for a
+preflight-to-Agent handoff so Browser Use retains its required session ownership.
+Active-event-loop callers use a process-local daemon-thread deadline, so a
+Browser Use websocket operation that ignores coroutine cancellation becomes a
+typed preflight failure instead of blocking the acquisition stage. When preflight
+confirms a direct PDF it closes that browser without constructing an agent. A
+matching fresh,
 publisher-specific route playbook that is fully executable runs first in its own
 clean worker, before preflight creates a reusable Agent session. If it drifts or
 does not verify, preflight then starts its normal reusable browser before Agent
