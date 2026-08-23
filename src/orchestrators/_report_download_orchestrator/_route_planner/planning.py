@@ -1,8 +1,10 @@
 from __future__ import annotations
+
 import logging
 import re
 from dataclasses import replace
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+
 from src.contracts.browser_download import (
     BrowserDownloadRouteStep,
     PublisherDownloadRouteMemory,
@@ -22,13 +24,11 @@ from .policy import (
     _preferred_publisher_policy_signal,
     _should_reuse_memory_route,
 )
-
 from .recovery import (
     _annotate_recovery_steps,
     _browser_to_http_recovery_decision,
     _dedupe_steps,
 )
-
 from .url_rules import (
     _classify_redirect_target,
     _clean_string_list,
