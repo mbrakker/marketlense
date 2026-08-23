@@ -1,0 +1,234 @@
+{
+  "attempt_timeout_seconds": 720.0,
+  "candidate_count": 1,
+  "configuration_hash": "cf7d3acaf4de7977892fd8252046f6b1b1efff6d9a08d01e4365e957c5cd8b17",
+  "manifest_sha256": "1c41324dbb009a223c8add82b7dc949e7fd59895c0137f72a599794a6882425e",
+  "phase": "diagnostic_before_fixes",
+  "process_isolated": true,
+  "producer_git_sha": "b90756835801f7ff441501aab7343301a65ee68a",
+  "records": [
+    {
+      "acquisition_result": {
+        "blocked_reason": "",
+        "blocked_reason_detail": "",
+        "confirmation": {
+          "confirmation_score": 0,
+          "final_page_url": "https://www4.criteo.com/en/cpg-consumer-insights/clkn/https/www2.criteo.com/global_cpg_pulse_2025.pdf",
+          "form_disappeared": false,
+          "signal_labels": [],
+          "submit_button_state": "unchanged",
+          "url_changed": false
+        },
+        "downloaded_file_path": "C:/Programing/Market lense/out/initial_30_targeted_failure_replay_20260823_173000/browser_downloads/go.criteo.com/1c1518bae390/global_cpg_pulse_2025.pdf",
+        "downloaded_mime_type": "application/pdf",
+        "downloaded_size_bytes": 6645905,
+        "drive_uploads": [
+          {
+            "file_id": "1xUBeA7sdv5qas0pdRRe7QUU64hM4YuZR",
+            "folder_id": "1KzgjwH96oNslrbiMDt7gHs7BLjNkQdyL",
+            "md5": "c2d1403a2ad229160b2414b66e7d64c7",
+            "mime_type": "application/pdf",
+            "size": 6645905,
+            "status": "skipped_duplicate"
+          }
+        ],
+        "encountered_form_fields": [],
+        "final_url": "https://www4.criteo.com/en/cpg-consumer-insights/clkn/https/www2.criteo.com/global_cpg_pulse_2025.pdf",
+        "onsite_capture_format": "",
+        "onsite_capture_path": "",
+        "onsite_completeness_status": "",
+        "onsite_page_count": 0,
+        "outcome": "downloaded",
+        "resolved_target_url": "https://www4.criteo.com/en/cpg-consumer-insights/clkn/https/www2.criteo.com/global_cpg_pulse_2025.pdf",
+        "route_family": "browser_preflight_js_pdf_probe",
+        "route_kind": "pdf_download",
+        "route_status": "verified",
+        "route_steps": [
+          {
+            "action": "open",
+            "expected_evidence": [
+              "page_info"
+            ],
+            "index": 0,
+            "observed_evidence": [
+              "page_info"
+            ],
+            "result": "Rendered the report page in browser preflight",
+            "target_role": "url",
+            "target_url": "https://www4.criteo.com/en/cpg-consumer-insights/",
+            "verification_status": "verified"
+          },
+          {
+            "action": "extract",
+            "expected_evidence": [
+              "page_info",
+              "js_rendered_dom",
+              "network_event",
+              "rendered_pdf_candidate"
+            ],
+            "index": 1,
+            "observed_evidence": [
+              "page_info",
+              "js_rendered_dom",
+              "network_event",
+              "rendered_pdf_candidate"
+            ],
+            "result": "Extracted a rendered PDF link before full agent launch",
+            "target_role": "link",
+            "target_url": "https://www4.criteo.com/en/cpg-consumer-insights/clkn/https/www2.criteo.com/global_cpg_pulse_2025.pdf",
+            "verification_status": "verified"
+          },
+          {
+            "action": "open",
+            "expected_evidence": [
+              "artifact"
+            ],
+            "index": 2,
+            "observed_evidence": [
+              "artifact"
+            ],
+            "result": "downloaded",
+            "target_role": "url",
+            "target_url": "https://www4.criteo.com/en/cpg-consumer-insights/clkn/https/www2.criteo.com/global_cpg_pulse_2025.pdf",
+            "verification_status": "verified"
+          }
+        ],
+        "terminal_evidence": {
+          "artifact_kind": "pdf",
+          "artifact_url": "https://www4.criteo.com/en/cpg-consumer-insights/clkn/https/www2.criteo.com/global_cpg_pulse_2025.pdf",
+          "artifact_validation_detail": "Validated local PDF artifact.",
+          "artifact_validation_status": "verified",
+          "confirmation_signal_count": 0,
+          "dom_snapshot_sha256": "",
+          "evidence_labels": [
+            "browser_preflight_js_pdf_probe",
+            "page_info",
+            "js_rendered_dom",
+            "network_event",
+            "rendered_pdf_candidate",
+            "preflight_reuse_state_available",
+            "verified",
+            "application/pdf"
+          ],
+          "final_page_title": "",
+          "final_page_url": "https://www4.criteo.com/en/cpg-consumer-insights/clkn/https/www2.criteo.com/global_cpg_pulse_2025.pdf",
+          "html_snapshot_path": "",
+          "network_events": [],
+          "observed_document_urls": [
+            "https://www4.criteo.com/en/cpg-consumer-insights/clkn/https/www2.criteo.com/global_cpg_pulse_2025.pdf"
+          ],
+          "screenshot_path": "",
+          "traversed_page_urls": [
+            "https://www4.criteo.com/en/cpg-consumer-insights/",
+            "https://www4.criteo.com/en/cpg-consumer-insights/clkn/https/www2.criteo.com/global_cpg_pulse_2025.pdf"
+          ],
+          "visited_url_timeline": []
+        },
+        "used_memory_route": false
+      },
+      "artifact_verification": {
+        "acquisition_method": "browser_preflight_js_pdf_probe",
+        "artifact_exists": true,
+        "drive_persisted": true,
+        "retained_artifact_format": "pdf",
+        "route_verified": true,
+        "signature_valid": true,
+        "size_bytes": 6645905,
+        "source_kind": "native_pdf_report",
+        "verified_usable_artifact": true
+      },
+      "attempt_id": "diagnostic:fac_26fd23fd3cf0198081e38c28",
+      "canonical_candidate_url": "https://go.criteo.com/en/cpg-consumer-insights",
+      "completed_at": "2026-08-23T14:43:17.421556Z",
+      "configuration_hash": "cbe9267e60750450e28cbe7846d8fe5f389317cddab4976cc39cb5e973bb88ee",
+      "duration_seconds": 22.718,
+      "failure_candidate_id": "fac_26fd23fd3cf0198081e38c28",
+      "parent_attempt": "",
+      "phase": "diagnostic_before_fixes",
+      "policy_hash": "current_head_default_policy",
+      "producer_git_sha": "b90756835801f7ff441501aab7343301a65ee68a",
+      "publisher_id": "publisher:criteo",
+      "publisher_name": "Criteo",
+      "resource_attempts": [
+        {
+          "attempt_id": "81ac57f6f061617a49a85cf81fd02f5b58843eb7f1c2aefb546975508a7f8ff2",
+          "avoided_operations_json": "[]",
+          "browser_launches": 1,
+          "browser_model_calls": 5,
+          "browser_steps": 0,
+          "cached_input_tokens": 26496,
+          "completed_at_utc": "2026-08-23T13:46:55Z",
+          "created_at": 1787492815,
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 347.037,
+          "elapsed_ms": 347037,
+          "estimated_cost_usd": 0.029134,
+          "incomplete_fields_json": "[]",
+          "input_tokens": 103811,
+          "mailbox_reads": 0,
+          "normalized_url": "https://go.criteo.com/en/cpg-consumer-insights",
+          "output_tokens": 4572,
+          "page_navigations": 0,
+          "publisher_id": "publisher:criteo",
+          "retry_count": 0,
+          "revalidation_override": 0,
+          "route_family": "browser_tracker_redirect",
+          "route_policy_version": "1.0",
+          "schema_version": "1.0",
+          "screenshots": 0,
+          "source_identity_id": "",
+          "source_identity_status": "unresolved",
+          "source_policy_compatibility_hash": "937099732c95682e424f5b4fd49701e2c83b7eb126f35c3f268efe11e8329a19",
+          "started_at_utc": "2026-08-23T13:41:08Z",
+          "terminal_outcome": "failed",
+          "terminal_reason": "browser_download_agent_timeout",
+          "updated_at": 1787492815,
+          "verified_artifact_hash": ""
+        },
+        {
+          "attempt_id": "03790ff55c2d04929647886aa6ed7fe25e4300532ecded5f1d2eb9d414a8e970",
+          "avoided_operations_json": "[]",
+          "browser_launches": 1,
+          "browser_model_calls": 0,
+          "browser_steps": 3,
+          "cached_input_tokens": 0,
+          "completed_at_utc": "2026-08-23T14:43:17Z",
+          "created_at": 1787496197,
+          "drive_reads": 0,
+          "drive_writes": 0,
+          "duration_seconds": 22.683,
+          "elapsed_ms": 22683,
+          "estimated_cost_usd": 0.0,
+          "incomplete_fields_json": "[]",
+          "input_tokens": 0,
+          "mailbox_reads": 0,
+          "normalized_url": "https://go.criteo.com/en/cpg-consumer-insights",
+          "output_tokens": 0,
+          "page_navigations": 2,
+          "publisher_id": "publisher:criteo",
+          "retry_count": 0,
+          "revalidation_override": 0,
+          "route_family": "browser_preflight_js_pdf_probe",
+          "route_policy_version": "1.0",
+          "schema_version": "1.0",
+          "screenshots": 0,
+          "source_identity_id": "source:8e00c6c71b509838863a10794b6c362f",
+          "source_identity_status": "resolved",
+          "source_policy_compatibility_hash": "937099732c95682e424f5b4fd49701e2c83b7eb126f35c3f268efe11e8329a19",
+          "started_at_utc": "2026-08-23T14:42:54Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "verified",
+          "updated_at": 1787496197,
+          "verified_artifact_hash": "md5:c2d1403a2ad229160b2414b66e7d64c7"
+        }
+      ],
+      "run_id": "97e9e963-16c4-426c-bd16-db14e897473e",
+      "source_identity_id": "",
+      "source_record_id": "",
+      "started_at": "2026-08-23T14:42:54.703941Z"
+    }
+  ],
+  "run_id": "supervisor-94f96e43-2e61-4567-b739-f326e0509f2c",
+  "schema_version": "1.0"
+}
