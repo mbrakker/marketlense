@@ -4,15 +4,18 @@ import asyncio
 import threading
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
-from src.services._browser_report_download._browser_runtime._session_lifecycle.history import (
-    _run_agent_history_async_with_timeout,
-)
 from src.services._browser_report_download._artifact.classification import (
     _normalize_explicit_blocked_reason,
 )
 from src.services._browser_report_download._artifact.pdf import _complete_pdf_artifact
+from src.services._browser_report_download._browser_runtime._session_lifecycle.history import (
+    _run_agent_history_async_with_timeout,
+)
 from src.services._browser_report_download._browser_runtime.timeout_recovery import (
     _browser_standard_form_identity_field_values,
+)
+from src.services._browser_report_download.helpers import (
+    browser_helper_standard_form_submit,
 )
 
 from .builders import *  # noqa: F401,F403
@@ -55,6 +58,57 @@ def test_standard_form_identity_values_include_late_configured_required_enum(
     fields = _browser_standard_form_identity_field_values(request)
 
     assert any(field["key"] == "organization_type" for field in fields)
+
+
+def test_standard_form_submit_selects_hidden_native_select_with_visible_proxy(
+    run_context,
+) -> None:
+    """A custom select remains usable when its native select is visually hidden."""
+
+    class SumoSelectPage:
+        def evaluate(self, script: str) -> object:
+            if "selectProxyIsVisible" not in script:
+                return {
+                    "attempted_count": 1,
+                    "filled_count": 0,
+                    "selected_count": 0,
+                    "mandatory_agreement_checked_count": 0,
+                    "submitted": False,
+                    "unresolved_fields": ["Organization Type"],
+                    "unresolved_options": {"Organization Type": ["Brand"]},
+                    "resolved_fields": [],
+                    "final_url": "https://publisher.example/report",
+                }
+            return {
+                "attempted_count": 1,
+                "filled_count": 0,
+                "selected_count": 1,
+                "mandatory_agreement_checked_count": 0,
+                "submitted": True,
+                "unresolved_fields": [],
+                "unresolved_options": {},
+                "resolved_fields": ["Organization Type"],
+                "final_url": "https://publisher.example/report",
+            }
+
+    result = browser_helper_standard_form_submit(
+        page=SumoSelectPage(),
+        field_values=[
+            {
+                "key": "organization_type",
+                "label": "Organization Type",
+                "value": "Research",
+                "aliases": ["organization type"],
+                "option_aliases": ["Brand"],
+            }
+        ],
+        ctx=run_context,
+        normalized_url="https://publisher.example/report",
+    )
+
+    assert result.status == "ok"
+    assert result.selected_count == 1
+    assert result.submitted is True
 
 
 def test_complete_pdf_artifact_keeps_a_valid_browser_download_when_its_name_differs(
@@ -124,6 +178,53 @@ def test_complete_pdf_artifact_fetches_a_browser_observed_pdf_without_name_overl
             downloaded_path=None,
             target_urls=[observed_pdf_url],
             trusted_target_urls=[observed_pdf_url],
+        )
+    finally:
+        server.shutdown()
+        thread.join()
+        server.server_close()
+
+    assert completed_path is not None
+    assert completed_path.read_bytes().startswith(b"%PDF-")
+    assert used_candidate_pdf_url is False
+
+
+def test_complete_pdf_artifact_fetches_a_browser_observed_pdf_endpoint_without_suffix(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    """Browser evidence permits a verified PDF endpoint whose URL has no .pdf suffix."""
+    served_pdf = tmp_path / "download"
+    served_pdf.write_bytes(b"%PDF-1.7\nobserved browser document")
+
+    class QuietPdfHandler(SimpleHTTPRequestHandler):
+        def __init__(self, *args, **kwargs) -> None:
+            super().__init__(*args, directory=str(tmp_path), **kwargs)
+
+        def log_message(self, format_string: str, *args) -> None:
+            return None
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), QuietPdfHandler)
+    thread = threading.Thread(target=server.serve_forever)
+    thread.start()
+    try:
+        observed_pdf_url = f"http://127.0.0.1:{server.server_port}/download"
+        request = BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://publisher.example/research.html",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_tracker_redirect",
+        )
+
+        completed_path, used_candidate_pdf_url = _complete_pdf_artifact(
+            request=request,
+            ctx=run_context,
+            normalized_url=request.url,
+            download_dir=tmp_path / "downloads",
+            downloaded_path=None,
+            target_urls=[observed_pdf_url],
+            trusted_target_urls=[observed_pdf_url],
+            trusted_extensionless_pdf_urls=[observed_pdf_url],
         )
     finally:
         server.shutdown()

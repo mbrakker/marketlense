@@ -171,6 +171,15 @@ def browser_helper_form_autocomplete(
             node.getClientRects &&
             node.getClientRects().length > 0
           );
+          const selectProxyIsVisible = (control) => {{
+            if (!control || String(control.tagName || '').toLowerCase() !== 'select') {{
+              return false;
+            }}
+            const proxy = control.closest(
+              '[role="combobox"], [role="button"], [aria-haspopup="listbox"]'
+            );
+            return Boolean(proxy && isVisible(proxy));
+          }};
           const fieldEntries = (payload.fields || [])
             .map((field) => ({{
               label: normalize(field.label || field.key || ''),
@@ -940,7 +949,10 @@ def browser_helper_standard_form_submit(
               }}
             }}
             for (const control of Array.from(root.querySelectorAll('select'))) {{
-              if (!isVisible(control) || control.disabled) continue;
+              if (
+                (!isVisible(control) && !selectProxyIsVisible(control)) ||
+                control.disabled
+              ) continue;
               const currentOption = control.selectedOptions && control.selectedOptions[0];
               const currentText = normalize(
                 (currentOption ? currentOption.textContent || '' : '') || control.value || ''

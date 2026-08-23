@@ -39,10 +39,16 @@ def _complete_pdf_artifact(
     downloaded_path: Path | None,
     target_urls: Iterable[str | None],
     trusted_target_urls: Iterable[str | None] = (),
+    trusted_extensionless_pdf_urls: Iterable[str | None] = (),
 ) -> tuple[Path | None, bool]:
     trusted_targets = {
         urljoin(str(request.attempt_url or normalized_url).strip(), str(target_url))
         for target_url in trusted_target_urls
+        if str(target_url or "").strip()
+    }
+    trusted_extensionless_targets = {
+        urljoin(str(request.attempt_url or normalized_url).strip(), str(target_url))
+        for target_url in trusted_extensionless_pdf_urls
         if str(target_url or "").strip()
     }
     if downloaded_path is not None:
@@ -91,6 +97,13 @@ def _complete_pdf_artifact(
                 )
                 not in trusted_targets
             ),
+            allow_extensionless_pdf_url=(
+                urljoin(
+                    str(request.attempt_url or normalized_url).strip(),
+                    normalized_target,
+                )
+                in trusted_extensionless_targets
+            ),
         )
         if fetched_path is not None:
             return fetched_path, normalized_target == candidate_pdf_url
@@ -105,9 +118,10 @@ def _try_fetch_pdf_target(
     download_dir: Path,
     target_url: str,
     require_report_match: bool = True,
+    allow_extensionless_pdf_url: bool = False,
 ) -> Path | None:
     target_url = urljoin(str(request.attempt_url or normalized_url).strip(), target_url)
-    if not _looks_like_pdf_url(target_url):
+    if not allow_extensionless_pdf_url and not _looks_like_pdf_url(target_url):
         return None
     if require_report_match and not _pdf_url_matches_requested_report(
         request=request, pdf_url=target_url

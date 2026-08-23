@@ -84,6 +84,12 @@ value returns the typed blocker without invoking Browser Use or guessing a
 value. A terminally verified deterministic submit constructs no Browser Use
 agent and therefore cannot be submitted again by that fallback path.
 
+For a required native select hidden by a visible custom widget, deterministic
+submission may set the underlying control only when that widget is interactive
+and an explicitly configured option alias matches an enabled option. It still
+never chooses a first available value, so unknown required enums remain typed
+blockers rather than fabricated identity assertions.
+
 Before its usual standard-form fill, the helper may activate one visible,
 enabled same-page report CTA only when no visible actionable form is already
 present. The bounded CTA set is limited to report/download/data/access/unlock
@@ -106,6 +112,12 @@ unverified and continues through the existing fallback/capture rules. Terminal
 404/410 pages with the configured not-found body evidence stop as typed
 terminal failures; an HTTP access-layer 403 is not treated as a 404 because
 browser preflight may see a different, definitive publisher response.
+
+When Browser Use explicitly classifies its final navigation as a PDF download,
+the verified artifact fetch also permits that exact browser-observed final URL
+without a `.pdf` suffix. The downloaded bytes must still pass the normal PDF
+signature and artifact validation; untrusted extensionless URLs are never
+fetched as PDFs.
 
 The same configured not-found body evidence is checked again after deterministic
 form discovery in the retained Browser Use session. This catches a browser-only

@@ -159,6 +159,11 @@ def finalize_browser_report_download_result(
         str(request.route_family_hint or "").strip() == "browser_email_form"
         and str(agent_result.route_kind or "").strip() == "email_delivery"
     )
+    trusted_extensionless_pdf_urls = (
+        [str(browser_run.final_page_url or "").strip()]
+        if str(agent_result.route_kind or "").strip() == "pdf_download"
+        else []
+    )
     downloaded_path, used_candidate_pdf_url = _complete_pdf_artifact(
         request=request,
         ctx=ctx,
@@ -187,6 +192,7 @@ def finalize_browser_report_download_result(
             if should_materialize_pdf_targets
             else []
         ),
+        trusted_extensionless_pdf_urls=trusted_extensionless_pdf_urls,
     )
     blocked_reason = _resolve_blocked_reason(
         request=request,
@@ -288,6 +294,7 @@ def finalize_browser_report_download_result(
                 if should_materialize_pdf_targets
                 else []
             ),
+            trusted_extensionless_pdf_urls=trusted_extensionless_pdf_urls,
         )
         used_candidate_pdf_url = (
             used_candidate_pdf_url or observed_used_candidate_pdf_url
