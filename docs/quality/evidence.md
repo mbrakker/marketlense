@@ -121,6 +121,44 @@ runtime state and exports bounded identifiers and scalar metrics only. It must
 not be used to infer a successful publication when publication-stage records
 are absent.
 
+### Reusable sanitized acquisition-assessment projection
+
+When a completed acquisition assessment has a retained raw current JSONL and a
+comparable retained baseline JSON, use
+`scripts/quality/acquisition_evidence_projection.py` to make the diagnostic
+views reviewable from the committed evidence directory. This is a read-only
+evidence transformation: it **must not** rerun discovery, acquisition, browser
+automation, mailbox polling, or any downstream stage.
+
+The inputs are the exact current JSONL, the exact baseline JSON containing its
+`records` list, and the known SHA-256 of the current JSONL. Retain the output
+under `docs/CTO_evidence/<assessment>/sanitized_projection/`:
+
+```text
+python scripts/quality/acquisition_evidence_projection.py \
+  --current-jsonl <retained-current>/acquisition_attempts.jsonl \
+  --baseline-json <retained-baseline>/baseline_replay.json \
+  --output-dir docs/CTO_evidence/<assessment>/sanitized_projection \
+  --expected-current-sha256 <retained-current-sha256>
+```
+
+The generated canonical projection contains only candidate and publisher IDs,
+tested commit/configuration hashes, route and terminal reason, normal artifact
+verification/source-format fields, scalar duration/browser/Agent/token/cost/
+mailbox/Drive metrics, and aggregate views. It omits URLs, local paths,
+screenshots, form values, raw browser content, and model output. It writes a
+per-candidate projection, failure Pareto, route metrics, baseline-versus-
+current metrics, remaining failures, and a consistency record. The consistency
+record proves the input hashes, candidate counts, exact candidate-set equality,
+and agreement between the remaining-failure list and aggregate metrics.
+
+An input-hash mismatch is a hard error. A candidate-set mismatch remains
+explicit in the output so an assessor can diagnose it, but the baseline and
+current run are not comparable and must not be used to claim an improvement.
+Commit the resulting views, their input references/hashes, and the invocation
+in the assessment README; do not commit the raw JSONL when it contains
+non-sanitized runtime data.
+
 The retained partial record for the 2026-08-13 frozen 20-report run is
 [reliability-run-2026-08-13.md](reliability-run-2026-08-13.md). It records a
 blocked sandbox publication target explicitly and is not release evidence.
