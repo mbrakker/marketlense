@@ -1,30 +1,7 @@
-publisher,route_family,route_kind,outcome,route_status,sample_size,attempts,successes,limitation
-unattributed,browser_email_form,email_delivery,email_requested,verified,17,135,51,"route history has no publisher, duration or cost fields"
-unattributed,browser_email_form,email_delivery,email_required,inferred,103,612,73,"route history has no publisher, duration or cost fields"
-unattributed,browser_email_form,pdf_download,downloaded,verified,1,2,1,"route history has no publisher, duration or cost fields"
-unattributed,browser_listing_hub,email_delivery,email_required,inferred,1,1,0,"route history has no publisher, duration or cost fields"
-unattributed,browser_longread_capture,onsite_report,captured,verified,1,1,1,"route history has no publisher, duration or cost fields"
-unattributed,browser_onsite_report,email_delivery,email_requested,verified,4,21,12,"route history has no publisher, duration or cost fields"
-unattributed,browser_onsite_report,email_delivery,email_required,inferred,6,10,1,"route history has no publisher, duration or cost fields"
-unattributed,browser_onsite_report,onsite_report,captured,verified,19,156,117,"route history has no publisher, duration or cost fields"
-unattributed,browser_onsite_report,pdf_download,downloaded,verified,30,147,62,"route history has no publisher, duration or cost fields"
-unattributed,browser_pdf,email_delivery,email_requested,verified,1,4,4,"route history has no publisher, duration or cost fields"
-unattributed,browser_pdf,pdf_download,downloaded,verified,1,2,2,"route history has no publisher, duration or cost fields"
-unattributed,browser_pdf_click,email_delivery,email_requested,verified,3,21,6,"route history has no publisher, duration or cost fields"
-unattributed,browser_pdf_click,email_delivery,email_required,inferred,7,44,9,"route history has no publisher, duration or cost fields"
-unattributed,browser_pdf_click,pdf_download,downloaded,verified,8,12,12,"route history has no publisher, duration or cost fields"
-unattributed,browser_pdf_download,onsite_report,captured,verified,1,13,10,"route history has no publisher, duration or cost fields"
-unattributed,browser_pdf_download,pdf_download,downloaded,verified,1,1,1,"route history has no publisher, duration or cost fields"
-unattributed,browser_preflight_js_pdf_probe,pdf_download,downloaded,verified,10,29,12,"route history has no publisher, duration or cost fields"
-unattributed,browser_tracker_redirect,email_delivery,email_required,inferred,1,1,0,"route history has no publisher, duration or cost fields"
-unattributed,browser_tracker_redirect,onsite_report,captured,inferred,1,1,0,"route history has no publisher, duration or cost fields"
-unattributed,browser_tracker_redirect,pdf_download,downloaded,verified,4,5,5,"route history has no publisher, duration or cost fields"
-unattributed,direct_pdf_probe,pdf_download,downloaded,verified,47,131,131,"route history has no publisher, duration or cost fields"
-unattributed,http_pdf_probe,pdf_download,downloaded,verified,1,1,1,"route history has no publisher, duration or cost fields"
-unattributed,onsite_capture,pdf_download,downloaded,verified,1,2,1,"route history has no publisher, duration or cost fields"
-unattributed,onsite_report,email_delivery,email_required,inferred,1,1,0,"route history has no publisher, duration or cost fields"
-unattributed,pdf_download,email_delivery,email_requested,verified,1,1,1,"route history has no publisher, duration or cost fields"
-unattributed,pdf_download,email_delivery,email_required,inferred,1,1,0,"route history has no publisher, duration or cost fields"
-unattributed,pdf_download,onsite_report,captured,inferred,1,1,0,"route history has no publisher, duration or cost fields"
-unattributed,pdf_download,pdf_download,downloaded,verified,3,6,5,"route history has no publisher, duration or cost fields"
-unattributed,report_page_pdf_link_probe,pdf_download,downloaded,verified,19,23,21,"route history has no publisher, duration or cost fields"
+publisher,route_family,terminal_outcome,sample_size,attempts,successes,duration_seconds,estimated_cost_usd,browser_launches,browser_steps,page_navigations,screenshots,browser_model_calls,input_tokens,cached_input_tokens,output_tokens,drive_reads,drive_writes,mailbox_reads,retry_count
+Algolia,browser_email_form,success,2,2,0,353.443,0.092337,2,3,0,2,17,359198,121728,14963,0,0,2,0
+Algolia,browser_onsite_report,success,1,1,1,8.115,0.0,1,2,1,0,0,0,0,0,1,1,0,0
+Algolia,http_pdf_probe,failed,1,1,0,5.071,0.0,0,0,0,0,0,0,0,0,0,0,0,0
+Algolia,report_page_pdf_link_probe,success,1,1,1,8.84,0.0,0,3,2,0,0,0,0,0,1,1,1,0
+Commerce tools,browser_email_form,success,1,1,0,120.438,0.030189,1,5,0,5,5,98332,24448,5553,0,0,1,0
+StackAdapt,direct_pdf_probe,failed,1,1,0,3.86,0.0,0,0,0,0,0,0,0,0,0,0,0,0

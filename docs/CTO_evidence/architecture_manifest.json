@@ -59,6 +59,7 @@
         "src/services/_state_service/",
         "src/services/_report_store_service/",
         "src/services/_analytics_store/",
+        "src/services/validation_reliability_service.py",
         "src/services/_sqlite_common.py",
         "src/services/_sqlite_migration/",
         "src/services/sqlite_migration_service.py",
@@ -84,7 +85,7 @@
       ]
     }
   },
-  "repository_commit_sha": "e61ea35dbab49d2a3ed594b993f07def774c486c",
+  "repository_commit_sha": "484f30d61e4be0e87dad5b08417ac6340fbe7476",
   "roles": {
     "cli": "src/_cli",
     "contracts": "src/contracts",
@@ -98,7 +99,7 @@
   "source_inputs": [
     {
       "path": "docs/quality/architecture_policy.yaml",
-      "sha256": "29d15bb288492bad54a299339914da50fa9b90561dd6cdb4ee5b704b49f4723f"
+      "sha256": "33bc74fd01b0716276f060b66fb96cbcb3b5e789dda370b0da2dedbba82b337f"
     }
   ]
 }

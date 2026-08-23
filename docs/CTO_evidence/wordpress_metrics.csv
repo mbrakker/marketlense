@@ -1,2 +1,3 @@
 workflow,step_name,outcome,error_code,record_count,retry_count,min_latency_ms,max_latency_ms
-publishing,wordpress_publish,completed,,7,0,167,4993
+publishing,wordpress_publish,completed,,8,0,167,4993
+publishing,wordpress_publish,succeeded,,1,0,32391,32391

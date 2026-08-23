@@ -2,13 +2,13 @@
   "definition": "Completeness is reported separately for active and all-history records; planner-safe rows require all canonical fields and lineage_status=complete.",
   "families": [
     {
-      "active_completeness_percentage": 7.1429,
-      "active_count": 28,
-      "all_history_completeness_percentage": 20.5128,
-      "artifact_count": 39,
+      "active_completeness_percentage": 27.7778,
+      "active_count": 36,
+      "all_history_completeness_percentage": 34.0426,
+      "artifact_count": 47,
       "artifact_family": "analysis_pdf",
-      "complete_active_count": 2,
-      "complete_history_count": 8,
+      "complete_active_count": 10,
+      "complete_history_count": 16,
       "missing_field_counts": {
         "lineage_status_not_complete": 31,
         "processing_version": 27,
@@ -18,20 +18,184 @@
         "checkpoint-v1": 3,
         "missing": 27,
         "report_generation_checkpoint_v1": 1,
-        "report_generation_checkpoint_v2": 8
+        "report_generation_checkpoint_v2": 16
       },
       "schema_version_distribution": {
-        "1.0": 39
+        "1.0": 47
       },
       "superseded_count": 11
     },
     {
-      "active_completeness_percentage": 4.1667,
-      "active_count": 24,
+      "active_completeness_percentage": 25.8065,
+      "active_count": 31,
+      "all_history_completeness_percentage": 47.0588,
+      "artifact_count": 51,
+      "artifact_family": "analysis_vector_store",
+      "complete_active_count": 8,
+      "complete_history_count": 24,
+      "missing_field_counts": {
+        "lineage_status_not_complete": 27,
+        "processing_version": 25,
+        "source_id": 27
+      },
+      "processing_version_distribution": {
+        "checkpoint-v1": 2,
+        "missing": 25,
+        "report_generation_checkpoint_v2": 24
+      },
+      "schema_version_distribution": {
+        "1.0": 51
+      },
+      "superseded_count": 20
+    },
+    {
+      "active_completeness_percentage": 25.8065,
+      "active_count": 31,
+      "all_history_completeness_percentage": 37.9747,
+      "artifact_count": 79,
+      "artifact_family": "artifacts",
+      "complete_active_count": 8,
+      "complete_history_count": 30,
+      "missing_field_counts": {
+        "lineage_status_not_complete": 49,
+        "processing_version": 45,
+        "source_id": 49
+      },
+      "processing_version_distribution": {
+        "checkpoint-v1": 4,
+        "missing": 45,
+        "report_generation_checkpoint_v2": 30
+      },
+      "schema_version_distribution": {
+        "1.0": 79
+      },
+      "superseded_count": 48
+    },
+    {
+      "active_completeness_percentage": 66.6667,
+      "active_count": 9,
+      "all_history_completeness_percentage": 81.25,
+      "artifact_count": 16,
+      "artifact_family": "artifacts_regen_attempt_1",
+      "complete_active_count": 6,
+      "complete_history_count": 13,
+      "missing_field_counts": {
+        "lineage_status_not_complete": 3,
+        "processing_version": 3,
+        "source_id": 3
+      },
+      "processing_version_distribution": {
+        "missing": 3,
+        "report_generation_checkpoint_v2": 13
+      },
+      "schema_version_distribution": {
+        "1.0": 16
+      },
+      "superseded_count": 7
+    },
+    {
+      "active_completeness_percentage": 66.6667,
+      "active_count": 3,
+      "all_history_completeness_percentage": 75.0,
+      "artifact_count": 4,
+      "artifact_family": "artifacts_regen_attempt_2",
+      "complete_active_count": 2,
+      "complete_history_count": 3,
+      "missing_field_counts": {
+        "lineage_status_not_complete": 1,
+        "processing_version": 1,
+        "source_id": 1
+      },
+      "processing_version_distribution": {
+        "missing": 1,
+        "report_generation_checkpoint_v2": 3
+      },
+      "schema_version_distribution": {
+        "1.0": 4
+      },
+      "superseded_count": 1
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 4,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 5,
+      "artifact_family": "artifacts_regen_candidate_1",
+      "complete_active_count": 4,
+      "complete_history_count": 5,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 5
+      },
+      "schema_version_distribution": {
+        "1.0": 5
+      },
+      "superseded_count": 1
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 1,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 1,
+      "artifact_family": "artifacts_regen_candidate_2",
+      "complete_active_count": 1,
+      "complete_history_count": 1,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 1
+      },
+      "schema_version_distribution": {
+        "1.0": 1
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 8,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 11,
+      "artifact_family": "contents_image",
+      "complete_active_count": 8,
+      "complete_history_count": 11,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 11
+      },
+      "schema_version_distribution": {
+        "1.0": 11
+      },
+      "superseded_count": 3
+    },
+    {
+      "active_completeness_percentage": 25.8065,
+      "active_count": 31,
+      "all_history_completeness_percentage": 46.0,
+      "artifact_count": 50,
+      "artifact_family": "context_category_fit",
+      "complete_active_count": 8,
+      "complete_history_count": 23,
+      "missing_field_counts": {
+        "lineage_status_not_complete": 27,
+        "processing_version": 25,
+        "source_id": 27
+      },
+      "processing_version_distribution": {
+        "checkpoint-v1": 2,
+        "missing": 25,
+        "report_generation_checkpoint_v2": 23
+      },
+      "schema_version_distribution": {
+        "1.0": 50
+      },
+      "superseded_count": 19
+    },
+    {
+      "active_completeness_percentage": 25.8065,
+      "active_count": 31,
       "all_history_completeness_percentage": 37.2093,
       "artifact_count": 43,
-      "artifact_family": "analysis_vector_store",
-      "complete_active_count": 1,
+      "artifact_family": "doc_map",
+      "complete_active_count": 8,
       "complete_history_count": 16,
       "missing_field_counts": {
         "lineage_status_not_complete": 27,
@@ -46,82 +210,532 @@
       "schema_version_distribution": {
         "1.0": 43
       },
-      "superseded_count": 19
+      "superseded_count": 12
     },
     {
-      "active_completeness_percentage": 4.1667,
-      "active_count": 24,
-      "all_history_completeness_percentage": 30.9859,
-      "artifact_count": 71,
-      "artifact_family": "artifacts",
-      "complete_active_count": 1,
-      "complete_history_count": 22,
+      "active_completeness_percentage": 25.8065,
+      "active_count": 31,
+      "all_history_completeness_percentage": 37.2093,
+      "artifact_count": 43,
+      "artifact_family": "findings",
+      "complete_active_count": 8,
+      "complete_history_count": 16,
       "missing_field_counts": {
-        "lineage_status_not_complete": 49,
-        "processing_version": 45,
-        "source_id": 49
+        "lineage_status_not_complete": 27,
+        "processing_version": 25,
+        "source_id": 27
       },
       "processing_version_distribution": {
-        "checkpoint-v1": 4,
-        "missing": 45,
-        "report_generation_checkpoint_v2": 22
+        "checkpoint-v1": 2,
+        "missing": 25,
+        "report_generation_checkpoint_v2": 16
       },
       "schema_version_distribution": {
-        "1.0": 71
+        "1.0": 43
       },
-      "superseded_count": 47
+      "superseded_count": 12
     },
     {
-      "active_completeness_percentage": 25.0,
-      "active_count": 4,
-      "all_history_completeness_percentage": 70.0,
-      "artifact_count": 10,
-      "artifact_family": "artifacts_regen_attempt_1",
-      "complete_active_count": 1,
-      "complete_history_count": 7,
+      "active_completeness_percentage": 25.8065,
+      "active_count": 31,
+      "all_history_completeness_percentage": 37.2093,
+      "artifact_count": 43,
+      "artifact_family": "limitations",
+      "complete_active_count": 8,
+      "complete_history_count": 16,
       "missing_field_counts": {
-        "lineage_status_not_complete": 3,
-        "processing_version": 3,
-        "source_id": 3
+        "lineage_status_not_complete": 27,
+        "processing_version": 25,
+        "source_id": 27
       },
       "processing_version_distribution": {
-        "missing": 3,
-        "report_generation_checkpoint_v2": 7
+        "checkpoint-v1": 2,
+        "missing": 25,
+        "report_generation_checkpoint_v2": 16
       },
       "schema_version_distribution": {
-        "1.0": 10
+        "1.0": 43
+      },
+      "superseded_count": 12
+    },
+    {
+      "active_completeness_percentage": 25.8065,
+      "active_count": 31,
+      "all_history_completeness_percentage": 37.2093,
+      "artifact_count": 43,
+      "artifact_family": "methods",
+      "complete_active_count": 8,
+      "complete_history_count": 16,
+      "missing_field_counts": {
+        "lineage_status_not_complete": 27,
+        "processing_version": 25,
+        "source_id": 27
+      },
+      "processing_version_distribution": {
+        "checkpoint-v1": 2,
+        "missing": 25,
+        "report_generation_checkpoint_v2": 16
+      },
+      "schema_version_distribution": {
+        "1.0": 43
+      },
+      "superseded_count": 12
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 8,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 14,
+      "artifact_family": "preview_image",
+      "complete_active_count": 8,
+      "complete_history_count": 14,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 14
+      },
+      "schema_version_distribution": {
+        "1.0": 14
       },
       "superseded_count": 6
     },
     {
-      "active_completeness_percentage": 0.0,
-      "active_count": 1,
-      "all_history_completeness_percentage": 50.0,
-      "artifact_count": 2,
-      "artifact_family": "artifacts_regen_attempt_2",
-      "complete_active_count": 0,
-      "complete_history_count": 1,
-      "missing_field_counts": {
-        "lineage_status_not_complete": 1,
-        "processing_version": 1,
-        "source_id": 1
-      },
+      "active_completeness_percentage": 100.0,
+      "active_count": 7,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 13,
+      "artifact_family": "prompt_family:report_vs/artifacts/cover_semantics",
+      "complete_active_count": 7,
+      "complete_history_count": 13,
+      "missing_field_counts": {},
       "processing_version_distribution": {
-        "missing": 1,
-        "report_generation_checkpoint_v2": 1
+        "report_generation_checkpoint_v2": 13
       },
       "schema_version_distribution": {
-        "1.0": 2
+        "1.0": 13
       },
-      "superseded_count": 1
+      "superseded_count": 6
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 7,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 13,
+      "artifact_family": "prompt_family:report_vs/artifacts/expert_comment",
+      "complete_active_count": 7,
+      "complete_history_count": 13,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 13
+      },
+      "schema_version_distribution": {
+        "1.0": 13
+      },
+      "superseded_count": 6
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 7,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 13,
+      "artifact_family": "prompt_family:report_vs/artifacts/insights_candidates",
+      "complete_active_count": 7,
+      "complete_history_count": 13,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 13
+      },
+      "schema_version_distribution": {
+        "1.0": 13
+      },
+      "superseded_count": 6
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 7,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 13,
+      "artifact_family": "prompt_family:report_vs/artifacts/insights_final",
+      "complete_active_count": 7,
+      "complete_history_count": 13,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 13
+      },
+      "schema_version_distribution": {
+        "1.0": 13
+      },
+      "superseded_count": 6
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 7,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 13,
+      "artifact_family": "prompt_family:report_vs/artifacts/linkedin_post",
+      "complete_active_count": 7,
+      "complete_history_count": 13,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 13
+      },
+      "schema_version_distribution": {
+        "1.0": 13
+      },
+      "superseded_count": 6
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 7,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 13,
+      "artifact_family": "prompt_family:report_vs/artifacts/quotes",
+      "complete_active_count": 7,
+      "complete_history_count": 13,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 13
+      },
+      "schema_version_distribution": {
+        "1.0": 13
+      },
+      "superseded_count": 6
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 7,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 13,
+      "artifact_family": "prompt_family:report_vs/artifacts/summary",
+      "complete_active_count": 7,
+      "complete_history_count": 13,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 13
+      },
+      "schema_version_distribution": {
+        "1.0": 13
+      },
+      "superseded_count": 6
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 7,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 13,
+      "artifact_family": "prompt_family:report_vs/context_category_fit",
+      "complete_active_count": 7,
+      "complete_history_count": 13,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 13
+      },
+      "schema_version_distribution": {
+        "1.0": 13
+      },
+      "superseded_count": 6
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 7,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 12,
+      "artifact_family": "prompt_family:report_vs/doc_map",
+      "complete_active_count": 7,
+      "complete_history_count": 12,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 12
+      },
+      "schema_version_distribution": {
+        "1.0": 12
+      },
+      "superseded_count": 5
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 7,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 13,
+      "artifact_family": "prompt_family:report_vs/evidence_packs/context_category_fit",
+      "complete_active_count": 7,
+      "complete_history_count": 13,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 13
+      },
+      "schema_version_distribution": {
+        "1.0": 13
+      },
+      "superseded_count": 6
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 7,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 12,
+      "artifact_family": "prompt_family:report_vs/evidence_packs/findings",
+      "complete_active_count": 7,
+      "complete_history_count": 12,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 12
+      },
+      "schema_version_distribution": {
+        "1.0": 12
+      },
+      "superseded_count": 5
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 7,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 12,
+      "artifact_family": "prompt_family:report_vs/evidence_packs/limitations",
+      "complete_active_count": 7,
+      "complete_history_count": 12,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 12
+      },
+      "schema_version_distribution": {
+        "1.0": 12
+      },
+      "superseded_count": 5
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 7,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 12,
+      "artifact_family": "prompt_family:report_vs/evidence_packs/methods",
+      "complete_active_count": 7,
+      "complete_history_count": 12,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 12
+      },
+      "schema_version_distribution": {
+        "1.0": 12
+      },
+      "superseded_count": 5
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 7,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 12,
+      "artifact_family": "prompt_family:report_vs/evidence_packs/quote_candidates",
+      "complete_active_count": 7,
+      "complete_history_count": 12,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 12
+      },
+      "schema_version_distribution": {
+        "1.0": 12
+      },
+      "superseded_count": 5
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 7,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 12,
+      "artifact_family": "prompt_family:report_vs/evidence_packs/report_context",
+      "complete_active_count": 7,
+      "complete_history_count": 12,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 12
+      },
+      "schema_version_distribution": {
+        "1.0": 12
+      },
+      "superseded_count": 5
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 7,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 12,
+      "artifact_family": "prompt_family:report_vs/evidence_packs/scope",
+      "complete_active_count": 7,
+      "complete_history_count": 12,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 12
+      },
+      "schema_version_distribution": {
+        "1.0": 12
+      },
+      "superseded_count": 5
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 7,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 13,
+      "artifact_family": "prompt_family:report_vs/taxonomy",
+      "complete_active_count": 7,
+      "complete_history_count": 13,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 13
+      },
+      "schema_version_distribution": {
+        "1.0": 13
+      },
+      "superseded_count": 6
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 7,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 13,
+      "artifact_family": "prompt_family:report_vs/validate/grounding",
+      "complete_active_count": 7,
+      "complete_history_count": 13,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 13
+      },
+      "schema_version_distribution": {
+        "1.0": 13
+      },
+      "superseded_count": 6
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 7,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 13,
+      "artifact_family": "prompt_family:report_vs/validate/semantic",
+      "complete_active_count": 7,
+      "complete_history_count": 13,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 13
+      },
+      "schema_version_distribution": {
+        "1.0": 13
+      },
+      "superseded_count": 6
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 8,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "public_editorial_quality_after",
+      "complete_active_count": 8,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 7
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 8,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 15,
+      "artifact_family": "public_editorial_quality_before",
+      "complete_active_count": 8,
+      "complete_history_count": 15,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 15
+      },
+      "schema_version_distribution": {
+        "1.0": 15
+      },
+      "superseded_count": 7
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 6,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 12,
+      "artifact_family": "public_editorial_quality_regen_attempt_1",
+      "complete_active_count": 6,
+      "complete_history_count": 12,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 12
+      },
+      "schema_version_distribution": {
+        "1.0": 12
+      },
+      "superseded_count": 6
     },
     {
       "active_completeness_percentage": 100.0,
       "active_count": 2,
       "all_history_completeness_percentage": 100.0,
-      "artifact_count": 5,
-      "artifact_family": "contents_image",
+      "artifact_count": 2,
+      "artifact_family": "public_editorial_quality_regen_attempt_2",
       "complete_active_count": 2,
+      "complete_history_count": 2,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 2
+      },
+      "schema_version_distribution": {
+        "1.0": 2
+      },
+      "superseded_count": 0
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 6,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 9,
+      "artifact_family": "publish_readiness",
+      "complete_active_count": 6,
+      "complete_history_count": 9,
+      "missing_field_counts": {},
+      "processing_version_distribution": {
+        "report_generation_checkpoint_v2": 9
+      },
+      "schema_version_distribution": {
+        "1.0": 9
+      },
+      "superseded_count": 3
+    },
+    {
+      "active_completeness_percentage": 25.8065,
+      "active_count": 31,
+      "all_history_completeness_percentage": 37.2093,
+      "artifact_count": 43,
+      "artifact_family": "quote_candidates",
+      "complete_active_count": 8,
+      "complete_history_count": 16,
+      "missing_field_counts": {
+        "lineage_status_not_complete": 27,
+        "processing_version": 25,
+        "source_id": 27
+      },
+      "processing_version_distribution": {
+        "checkpoint-v1": 2,
+        "missing": 25,
+        "report_generation_checkpoint_v2": 16
+      },
+      "schema_version_distribution": {
+        "1.0": 43
+      },
+      "superseded_count": 12
+    },
+    {
+      "active_completeness_percentage": 100.0,
+      "active_count": 4,
+      "all_history_completeness_percentage": 100.0,
+      "artifact_count": 5,
+      "artifact_family": "regeneration_candidate_audit_1",
+      "complete_active_count": 4,
       "complete_history_count": 5,
       "missing_field_counts": {},
       "processing_version_distribution": {
@@ -130,222 +744,33 @@
       "schema_version_distribution": {
         "1.0": 5
       },
-      "superseded_count": 3
-    },
-    {
-      "active_completeness_percentage": 4.1667,
-      "active_count": 24,
-      "all_history_completeness_percentage": 35.7143,
-      "artifact_count": 42,
-      "artifact_family": "context_category_fit",
-      "complete_active_count": 1,
-      "complete_history_count": 15,
-      "missing_field_counts": {
-        "lineage_status_not_complete": 27,
-        "processing_version": 25,
-        "source_id": 27
-      },
-      "processing_version_distribution": {
-        "checkpoint-v1": 2,
-        "missing": 25,
-        "report_generation_checkpoint_v2": 15
-      },
-      "schema_version_distribution": {
-        "1.0": 42
-      },
-      "superseded_count": 18
-    },
-    {
-      "active_completeness_percentage": 4.1667,
-      "active_count": 24,
-      "all_history_completeness_percentage": 25.0,
-      "artifact_count": 36,
-      "artifact_family": "doc_map",
-      "complete_active_count": 1,
-      "complete_history_count": 9,
-      "missing_field_counts": {
-        "lineage_status_not_complete": 27,
-        "processing_version": 25,
-        "source_id": 27
-      },
-      "processing_version_distribution": {
-        "checkpoint-v1": 2,
-        "missing": 25,
-        "report_generation_checkpoint_v2": 9
-      },
-      "schema_version_distribution": {
-        "1.0": 36
-      },
-      "superseded_count": 12
-    },
-    {
-      "active_completeness_percentage": 4.1667,
-      "active_count": 24,
-      "all_history_completeness_percentage": 25.0,
-      "artifact_count": 36,
-      "artifact_family": "findings",
-      "complete_active_count": 1,
-      "complete_history_count": 9,
-      "missing_field_counts": {
-        "lineage_status_not_complete": 27,
-        "processing_version": 25,
-        "source_id": 27
-      },
-      "processing_version_distribution": {
-        "checkpoint-v1": 2,
-        "missing": 25,
-        "report_generation_checkpoint_v2": 9
-      },
-      "schema_version_distribution": {
-        "1.0": 36
-      },
-      "superseded_count": 12
-    },
-    {
-      "active_completeness_percentage": 4.1667,
-      "active_count": 24,
-      "all_history_completeness_percentage": 25.0,
-      "artifact_count": 36,
-      "artifact_family": "limitations",
-      "complete_active_count": 1,
-      "complete_history_count": 9,
-      "missing_field_counts": {
-        "lineage_status_not_complete": 27,
-        "processing_version": 25,
-        "source_id": 27
-      },
-      "processing_version_distribution": {
-        "checkpoint-v1": 2,
-        "missing": 25,
-        "report_generation_checkpoint_v2": 9
-      },
-      "schema_version_distribution": {
-        "1.0": 36
-      },
-      "superseded_count": 12
-    },
-    {
-      "active_completeness_percentage": 4.1667,
-      "active_count": 24,
-      "all_history_completeness_percentage": 25.0,
-      "artifact_count": 36,
-      "artifact_family": "methods",
-      "complete_active_count": 1,
-      "complete_history_count": 9,
-      "missing_field_counts": {
-        "lineage_status_not_complete": 27,
-        "processing_version": 25,
-        "source_id": 27
-      },
-      "processing_version_distribution": {
-        "checkpoint-v1": 2,
-        "missing": 25,
-        "report_generation_checkpoint_v2": 9
-      },
-      "schema_version_distribution": {
-        "1.0": 36
-      },
-      "superseded_count": 12
+      "superseded_count": 1
     },
     {
       "active_completeness_percentage": 100.0,
       "active_count": 1,
       "all_history_completeness_percentage": 100.0,
-      "artifact_count": 7,
-      "artifact_family": "preview_image",
+      "artifact_count": 1,
+      "artifact_family": "regeneration_candidate_audit_2",
       "complete_active_count": 1,
-      "complete_history_count": 7,
+      "complete_history_count": 1,
       "missing_field_counts": {},
       "processing_version_distribution": {
-        "report_generation_checkpoint_v2": 7
+        "report_generation_checkpoint_v2": 1
       },
       "schema_version_distribution": {
-        "1.0": 7
+        "1.0": 1
       },
-      "superseded_count": 6
+      "superseded_count": 0
     },
     {
-      "active_completeness_percentage": 100.0,
-      "active_count": 1,
-      "all_history_completeness_percentage": 100.0,
-      "artifact_count": 7,
-      "artifact_family": "public_editorial_quality_after",
-      "complete_active_count": 1,
-      "complete_history_count": 7,
-      "missing_field_counts": {},
-      "processing_version_distribution": {
-        "report_generation_checkpoint_v2": 7
-      },
-      "schema_version_distribution": {
-        "1.0": 7
-      },
-      "superseded_count": 6
-    },
-    {
-      "active_completeness_percentage": 100.0,
-      "active_count": 1,
-      "all_history_completeness_percentage": 100.0,
-      "artifact_count": 7,
-      "artifact_family": "public_editorial_quality_before",
-      "complete_active_count": 1,
-      "complete_history_count": 7,
-      "missing_field_counts": {},
-      "processing_version_distribution": {
-        "report_generation_checkpoint_v2": 7
-      },
-      "schema_version_distribution": {
-        "1.0": 7
-      },
-      "superseded_count": 6
-    },
-    {
-      "active_completeness_percentage": 100.0,
-      "active_count": 1,
-      "all_history_completeness_percentage": 100.0,
-      "artifact_count": 6,
-      "artifact_family": "public_editorial_quality_regen_attempt_1",
-      "complete_active_count": 1,
-      "complete_history_count": 6,
-      "missing_field_counts": {},
-      "processing_version_distribution": {
-        "report_generation_checkpoint_v2": 6
-      },
-      "schema_version_distribution": {
-        "1.0": 6
-      },
-      "superseded_count": 5
-    },
-    {
-      "active_completeness_percentage": 4.1667,
-      "active_count": 24,
-      "all_history_completeness_percentage": 25.0,
-      "artifact_count": 36,
-      "artifact_family": "quote_candidates",
-      "complete_active_count": 1,
-      "complete_history_count": 9,
-      "missing_field_counts": {
-        "lineage_status_not_complete": 27,
-        "processing_version": 25,
-        "source_id": 27
-      },
-      "processing_version_distribution": {
-        "checkpoint-v1": 2,
-        "missing": 25,
-        "report_generation_checkpoint_v2": 9
-      },
-      "schema_version_distribution": {
-        "1.0": 36
-      },
-      "superseded_count": 12
-    },
-    {
-      "active_completeness_percentage": 4.1667,
-      "active_count": 24,
-      "all_history_completeness_percentage": 38.6364,
-      "artifact_count": 44,
+      "active_completeness_percentage": 25.8065,
+      "active_count": 31,
+      "all_history_completeness_percentage": 63.5135,
+      "artifact_count": 74,
       "artifact_family": "rendered_html",
-      "complete_active_count": 1,
-      "complete_history_count": 17,
+      "complete_active_count": 8,
+      "complete_history_count": 47,
       "missing_field_counts": {
         "lineage_status_not_complete": 27,
         "processing_version": 24,
@@ -355,21 +780,21 @@
         "checkpoint-v1": 2,
         "missing": 24,
         "report_generation_checkpoint_v1": 1,
-        "report_generation_checkpoint_v2": 17
+        "report_generation_checkpoint_v2": 47
       },
       "schema_version_distribution": {
-        "1.0": 44
+        "1.0": 74
       },
-      "superseded_count": 20
+      "superseded_count": 43
     },
     {
-      "active_completeness_percentage": 4.1667,
-      "active_count": 24,
-      "all_history_completeness_percentage": 25.0,
-      "artifact_count": 36,
+      "active_completeness_percentage": 25.8065,
+      "active_count": 31,
+      "all_history_completeness_percentage": 37.2093,
+      "artifact_count": 43,
       "artifact_family": "report_context",
-      "complete_active_count": 1,
-      "complete_history_count": 9,
+      "complete_active_count": 8,
+      "complete_history_count": 16,
       "missing_field_counts": {
         "lineage_status_not_complete": 27,
         "processing_version": 25,
@@ -378,21 +803,21 @@
       "processing_version_distribution": {
         "checkpoint-v1": 2,
         "missing": 25,
-        "report_generation_checkpoint_v2": 9
+        "report_generation_checkpoint_v2": 16
       },
       "schema_version_distribution": {
-        "1.0": 36
+        "1.0": 43
       },
       "superseded_count": 12
     },
     {
-      "active_completeness_percentage": 4.1667,
-      "active_count": 24,
-      "all_history_completeness_percentage": 25.0,
-      "artifact_count": 36,
+      "active_completeness_percentage": 25.8065,
+      "active_count": 31,
+      "all_history_completeness_percentage": 37.2093,
+      "artifact_count": 43,
       "artifact_family": "scope",
-      "complete_active_count": 1,
-      "complete_history_count": 9,
+      "complete_active_count": 8,
+      "complete_history_count": 16,
       "missing_field_counts": {
         "lineage_status_not_complete": 27,
         "processing_version": 25,
@@ -401,21 +826,21 @@
       "processing_version_distribution": {
         "checkpoint-v1": 2,
         "missing": 25,
-        "report_generation_checkpoint_v2": 9
+        "report_generation_checkpoint_v2": 16
       },
       "schema_version_distribution": {
-        "1.0": 36
+        "1.0": 43
       },
       "superseded_count": 12
     },
     {
-      "active_completeness_percentage": 0.0,
-      "active_count": 25,
-      "all_history_completeness_percentage": 27.027,
-      "artifact_count": 37,
+      "active_completeness_percentage": 21.875,
+      "active_count": 32,
+      "all_history_completeness_percentage": 42.5532,
+      "artifact_count": 47,
       "artifact_family": "signals",
-      "complete_active_count": 0,
-      "complete_history_count": 10,
+      "complete_active_count": 7,
+      "complete_history_count": 20,
       "missing_field_counts": {
         "lineage_status_not_complete": 27,
         "processing_version": 23,
@@ -425,21 +850,21 @@
         "checkpoint-v1": 2,
         "missing": 23,
         "report_generation_checkpoint_v1": 2,
-        "report_generation_checkpoint_v2": 10
+        "report_generation_checkpoint_v2": 20
       },
       "schema_version_distribution": {
-        "1.0": 37
+        "1.0": 47
       },
-      "superseded_count": 12
+      "superseded_count": 15
     },
     {
-      "active_completeness_percentage": 7.1429,
-      "active_count": 28,
-      "all_history_completeness_percentage": 16.2162,
-      "artifact_count": 37,
+      "active_completeness_percentage": 27.7778,
+      "active_count": 36,
+      "all_history_completeness_percentage": 31.1111,
+      "artifact_count": 45,
       "artifact_family": "source_pdf",
-      "complete_active_count": 2,
-      "complete_history_count": 6,
+      "complete_active_count": 10,
+      "complete_history_count": 14,
       "missing_field_counts": {
         "lineage_status_not_complete": 31,
         "processing_version": 26,
@@ -449,21 +874,21 @@
         "checkpoint-v1": 3,
         "missing": 26,
         "report_generation_checkpoint_v1": 2,
-        "report_generation_checkpoint_v2": 6
+        "report_generation_checkpoint_v2": 14
       },
       "schema_version_distribution": {
-        "1.0": 37
+        "1.0": 45
       },
       "superseded_count": 9
     },
     {
-      "active_completeness_percentage": 4.1667,
-      "active_count": 24,
-      "all_history_completeness_percentage": 48.0769,
-      "artifact_count": 52,
+      "active_completeness_percentage": 25.8065,
+      "active_count": 31,
+      "all_history_completeness_percentage": 55.0,
+      "artifact_count": 60,
       "artifact_family": "validation",
-      "complete_active_count": 1,
-      "complete_history_count": 25,
+      "complete_active_count": 8,
+      "complete_history_count": 33,
       "missing_field_counts": {
         "lineage_status_not_complete": 27,
         "processing_version": 25,
@@ -473,21 +898,21 @@
       "processing_version_distribution": {
         "checkpoint-v1": 2,
         "missing": 25,
-        "report_generation_checkpoint_v2": 25
+        "report_generation_checkpoint_v2": 33
       },
       "schema_version_distribution": {
-        "1.0": 52
+        "1.0": 60
       },
-      "superseded_count": 28
+      "superseded_count": 29
     },
     {
-      "active_completeness_percentage": 25.0,
-      "active_count": 4,
-      "all_history_completeness_percentage": 70.0,
-      "artifact_count": 10,
+      "active_completeness_percentage": 66.6667,
+      "active_count": 9,
+      "all_history_completeness_percentage": 81.25,
+      "artifact_count": 16,
       "artifact_family": "validation_regen_attempt_1",
-      "complete_active_count": 1,
-      "complete_history_count": 7,
+      "complete_active_count": 6,
+      "complete_history_count": 13,
       "missing_field_counts": {
         "lineage_status_not_complete": 3,
         "processing_version": 3,
@@ -495,21 +920,21 @@
       },
       "processing_version_distribution": {
         "missing": 3,
-        "report_generation_checkpoint_v2": 7
+        "report_generation_checkpoint_v2": 13
       },
       "schema_version_distribution": {
-        "1.0": 10
+        "1.0": 16
       },
-      "superseded_count": 6
+      "superseded_count": 7
     },
     {
-      "active_completeness_percentage": 0.0,
-      "active_count": 1,
-      "all_history_completeness_percentage": 50.0,
-      "artifact_count": 2,
+      "active_completeness_percentage": 66.6667,
+      "active_count": 3,
+      "all_history_completeness_percentage": 75.0,
+      "artifact_count": 4,
       "artifact_family": "validation_regen_attempt_2",
-      "complete_active_count": 0,
-      "complete_history_count": 1,
+      "complete_active_count": 2,
+      "complete_history_count": 3,
       "missing_field_counts": {
         "lineage_status_not_complete": 1,
         "processing_version": 1,
@@ -517,10 +942,10 @@
       },
       "processing_version_distribution": {
         "missing": 1,
-        "report_generation_checkpoint_v2": 1
+        "report_generation_checkpoint_v2": 3
       },
       "schema_version_distribution": {
-        "1.0": 2
+        "1.0": 4
       },
       "superseded_count": 1
     }

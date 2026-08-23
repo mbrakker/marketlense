@@ -16,6 +16,12 @@
     },
     {
       "kind": "blocking",
+      "rule_id": "public_editorial_quality.figure_linkage_missing",
+      "severity": "error",
+      "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
+    },
+    {
+      "kind": "blocking",
       "rule_id": "public_editorial_quality.generic_figure_label",
       "severity": "error",
       "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
@@ -28,6 +34,12 @@
     },
     {
       "kind": "blocking",
+      "rule_id": "public_editorial_quality.literal_truncation",
+      "severity": "error",
+      "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
+    },
+    {
+      "kind": "blocking",
       "rule_id": "public_editorial_quality.malformed_extraction_fragment",
       "severity": "error",
       "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
@@ -35,6 +47,12 @@
     {
       "kind": "blocking",
       "rule_id": "public_editorial_quality.material_claim_evidence_missing",
+      "severity": "error",
+      "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
+    },
+    {
+      "kind": "blocking",
+      "rule_id": "public_editorial_quality.mechanical_editorial_scaffold",
       "severity": "error",
       "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
     },
@@ -59,6 +77,18 @@
     {
       "kind": "blocking",
       "rule_id": "public_editorial_quality.placeholder",
+      "severity": "error",
+      "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
+    },
+    {
+      "kind": "blocking",
+      "rule_id": "public_editorial_quality.private_operational_reference",
+      "severity": "error",
+      "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
+    },
+    {
+      "kind": "blocking",
+      "rule_id": "public_editorial_quality.public_source_provenance_missing",
       "severity": "error",
       "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
     },

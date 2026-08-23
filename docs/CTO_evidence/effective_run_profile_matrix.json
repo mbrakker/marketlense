@@ -1,7 +1,5 @@
 {
-  "applied_overlays": [
-    "src/config/app.local.yaml"
-  ],
+  "applied_overlays": [],
   "configuration_path": "src/config/app.yaml",
   "profiles": [
     {
