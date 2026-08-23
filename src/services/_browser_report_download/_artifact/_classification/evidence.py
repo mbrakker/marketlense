@@ -524,6 +524,8 @@ def _message_indicates_confirmed_email_delivery(message: str | None) -> bool:
     token = str(message or "").strip().casefold()
     if not token:
         return False
+    if "your download awaits" in token:
+        return all(marker in token for marker in ("email", "link", "inbox"))
     strong_markers = (
         "sent directly to your inbox",
         "sent to your inbox",

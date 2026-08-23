@@ -25,6 +25,9 @@ from src.services._browser_report_download.helpers import (
     browser_helper_standard_form_submit,
 )
 from src.services._browser_report_download.models import BrowserAgentRunResult
+from src.services._browser_report_download._artifact.classification import (
+    _message_indicates_confirmed_email_delivery,
+)
 from src.services._browser_report_download.prompt import BrowserDownloadPromptBundle
 from src.services.browser_report_download_service import (
     _artifact_cache_key,
@@ -1584,6 +1587,16 @@ def test_pre_llm_submit_is_verified_only_from_terminal_confirmation_evidence(
 
     assert response.outcome == "email_required"
     assert response.terminal_evidence.artifact_validation_status != "verified"
+
+
+def test_download_awaits_terminal_message_confirms_email_delivery() -> None:
+    """A publisher thank-you page can confirm delivery without a URL change."""
+
+    assert _message_indicates_confirmed_email_delivery(
+        "Your download awaits. An email with a link should be in your inbox. "
+        "Or maybe your spam folder. Either way your download is just seconds away."
+    )
+    assert not _message_indicates_confirmed_email_delivery("Your download awaits.")
 
 
 def test_standard_form_helper_retains_visible_options_for_required_blocker():

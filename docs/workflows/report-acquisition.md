@@ -30,7 +30,7 @@ while different content remains distinct even when its title is the same. A
 reused retained Drive ID with changed bytes fails closed instead of rebinding
 the report record.
 
-For an email-gated browser route, terminal stabilization polls only after recorded submission evidence, a transient terminal condition, or an explicit assist trigger. A route with no recorded submission finishes without the email polling schedule, and timeout-recovery attempts are bounded by the request timeout as well as the recovery safety cap. A terminal page with an explicit email-delivery confirmation is accepted as verified evidence even when a timed-out browser response omitted the earlier form-field record.
+For an email-gated browser route, terminal stabilization polls only after recorded submission evidence, a transient terminal condition, or an explicit assist trigger. A route with no recorded submission finishes without the email polling schedule, and timeout-recovery attempts are bounded by the request timeout as well as the recovery safety cap. A terminal page with an explicit email-delivery confirmation is accepted as verified evidence even when a timed-out browser response omitted the earlier form-field record. This includes publisher-neutral confirmation headings such as `Your download awaits` when paired with the terminal inbox-link message; a submit click alone remains insufficient.
 
 Eligible browser preflight opens the same managed browser profile used by Browser
 Use. Its async execution is enclosed by a process-local daemon-thread deadline
