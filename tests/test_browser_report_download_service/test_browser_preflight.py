@@ -18,7 +18,6 @@ from src.contracts.browser_download import (
     BrowserReportDownloadRequest,
 )
 from src.services._browser_report_download import preflight as preflight_runtime
-from src.services._browser_report_download import browser as browser_runtime
 from src.utils.errors import AppError
 
 from .builders import (
