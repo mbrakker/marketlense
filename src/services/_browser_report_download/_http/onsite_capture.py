@@ -78,12 +78,13 @@ _ONSITE_CAPTURE_HTML_MARKERS = (
     "survey",
     "investigation",
 )
-_ONSITE_CAPTURE_BLOCKED_MARKERS = (
+_ONSITE_CAPTURE_HARD_BLOCKED_MARKERS = (
     "cloudflare",
     "access denied",
     "security checkpoint",
-    "enable javascript",
 )
+_ONSITE_CAPTURE_JAVASCRIPT_BLOCK_MARKER = "enable javascript"
+_ONSITE_CAPTURE_JAVASCRIPT_BLOCK_MAX_TEXT_CHARS = 2500
 _ONSITE_CAPTURE_HUMAN_VERIFICATION_MARKERS = (
     "not a robot",
     "verify you are human",
@@ -558,6 +559,13 @@ def _direct_onsite_recovery_decision(
                 recovery_class=_DIRECT_ONSITE_RECOVERY_CLASS,
                 reason="onsite_report_candidate_trace",
             )
+        if _looks_like_report_detail_candidate(request):
+            return DirectOnsiteRecoveryDecision(
+                schema_version="1.0",
+                allowed=True,
+                recovery_class=_DIRECT_ONSITE_RECOVERY_CLASS,
+                reason="onsite_report_detail_url",
+            )
         actions = {
             str(step.action or "").strip().lower() for step in request.route_step_hints
         }
@@ -749,7 +757,14 @@ def _looks_like_onsite_capture_html(
     lowered = token.casefold()
     plain_text = _html_to_text(token)
     plain_lowered = plain_text.casefold()
-    if any(marker in plain_lowered for marker in _ONSITE_CAPTURE_BLOCKED_MARKERS):
+    if any(
+        marker in plain_lowered for marker in _ONSITE_CAPTURE_HARD_BLOCKED_MARKERS
+    ):
+        return False
+    if (
+        _ONSITE_CAPTURE_JAVASCRIPT_BLOCK_MARKER in plain_lowered
+        and len(plain_text) < _ONSITE_CAPTURE_JAVASCRIPT_BLOCK_MAX_TEXT_CHARS
+    ):
         return False
     if "captcha" in plain_lowered and any(
         marker in plain_lowered for marker in _ONSITE_CAPTURE_HUMAN_VERIFICATION_MARKERS

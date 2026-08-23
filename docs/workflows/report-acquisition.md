@@ -18,6 +18,17 @@ route status, and Drive retention all pass; an unavailable or invalid render
 leaves the on-site capture as a non-PDF result rather than fabricating a
 download.
 
+A specific public on-site report-detail URL is eligible for that deterministic
+HTML-to-PDF capture even when discovery metadata is unavailable, provided its
+path has detail signals and is not a generic listing hub. This covers public
+insight/article reports without sending them to Browser Use merely because the
+candidate trace is absent. Generic hubs, client portals, and ambiguous listing
+pages remain ineligible: the route must not choose an arbitrary public article
+or substitute a login-gated resource for the intended report.
+A short `enable JavaScript`/noscript message alone is not an access blocker when
+the fetched page also contains substantial report content; concrete access
+denial and security-checkpoint evidence remains terminal.
+
 For every retained PDF outcome, the canonical acquisition-to-ingest handoff
 rechecks the local file and its MD5, records a bounded source-identity
 observation, and upserts the report record before enqueuing `source_ingest`.
