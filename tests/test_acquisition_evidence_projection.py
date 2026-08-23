@@ -15,6 +15,10 @@ def _record(
     terminal_reason: str,
     agent_calls: int,
     blocked_reason: str = "",
+    submit_button_state: str = "",
+    confirmation_score: int = 0,
+    confirmation_labels: list[str] | None = None,
+    route_step_result: str = "",
 ) -> dict[str, object]:
     return {
         "failure_candidate_id": candidate_id,
@@ -28,6 +32,14 @@ def _record(
             "route_kind": "pdf_download",
             "outcome": "downloaded" if verified else "email_required",
             "blocked_reason": blocked_reason,
+            "confirmation": {
+                "submit_button_state": submit_button_state,
+                "confirmation_score": confirmation_score,
+                "signal_labels": confirmation_labels or [],
+            },
+            "route_steps": (
+                [{"result": route_step_result}] if route_step_result else []
+            ),
         },
         "artifact_verification": {
             "verified_usable_artifact": verified,
@@ -79,6 +91,18 @@ def test_projection_builder_writes_sanitized_consistent_evidence_views(
             terminal_reason="observed",
             agent_calls=0,
             blocked_reason="blocked_static_archive",
+            submit_button_state="unchanged",
+        ),
+        _record(
+            candidate_id="fac_missing_identity",
+            verified=False,
+            route="browser_email_form",
+            terminal_reason="inferred",
+            agent_calls=0,
+            submit_button_state="not_submitted",
+            route_step_result=(
+                "Did not submit because required values are not configured."
+            ),
         ),
     ]
     baseline_records = [
@@ -103,6 +127,18 @@ def test_projection_builder_writes_sanitized_consistent_evidence_views(
             terminal_reason="observed",
             agent_calls=0,
             blocked_reason="blocked_static_archive",
+            submit_button_state="unchanged",
+        ),
+        _record(
+            candidate_id="fac_missing_identity",
+            verified=False,
+            route="browser_email_form",
+            terminal_reason="inferred",
+            agent_calls=0,
+            submit_button_state="not_submitted",
+            route_step_result=(
+                "Did not submit because required values are not configured."
+            ),
         ),
     ]
     current_path.write_text(
@@ -140,6 +176,7 @@ def test_projection_builder_writes_sanitized_consistent_evidence_views(
     )
     assert [item["candidate_id"] for item in projection["attempts"]] == [
         "fac_failure",
+        "fac_missing_identity",
         "fac_static_archive",
         "fac_success",
     ]
@@ -164,6 +201,14 @@ def test_projection_builder_writes_sanitized_consistent_evidence_views(
             "cost_usd": 0.0125,
             "duration_seconds": 12.5,
             "terminal_reason": "blocked_static_archive",
+        },
+        {
+            "agent_calls": 0,
+            "browser_launches": 1,
+            "candidate_count": 1,
+            "cost_usd": 0.0125,
+            "duration_seconds": 12.5,
+            "terminal_reason": "email_required",
         }
     ]
     assert projection["before_after"]["current"]["verified_acquisitions"] == 1
@@ -176,6 +221,19 @@ def test_projection_builder_writes_sanitized_consistent_evidence_views(
     )
     assert static_archive["failure_class"] == "external_source_unavailable"
     assert static_archive["terminal_reason"] == "blocked_static_archive"
+    assert static_archive["blocked_reason"] == "blocked_static_archive"
+    assert static_archive["blocker_state"] == "static_archive"
+    assert static_archive["submission_state"] == "not_attempted"
+    assert static_archive["confirmation_state"] == "blocked"
+    missing_identity = next(
+        item
+        for item in projection["attempts"]
+        if item["candidate_id"] == "fac_missing_identity"
+    )
+    assert missing_identity["blocked_reason"] == ""
+    assert missing_identity["blocker_state"] == "missing_identity"
+    assert missing_identity["submission_state"] == "not_submitted"
+    assert missing_identity["confirmation_state"] == "not_submitted"
     assert projection["consistency"]["candidate_sets_match"] is True
     assert projection["consistency"]["expected_current_hash_matches"] is True
     assert "private.example" not in json.dumps(projection)

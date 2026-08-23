@@ -1,9 +1,12 @@
 [
   {
     "agent_calls": 5,
+    "blocked_reason": "",
+    "blocker_state": "",
     "browser_launches": 1,
     "candidate_id": "fac_0294383b7bf86f9bcc6fbf06",
     "configuration_hash": "0ae75486db7d4f47871e2605f7ab6da741897463c146eddc50450e42200ad4cb",
+    "confirmation_state": "unknown",
     "cost_usd": 0.028811,
     "drive_persistence": false,
     "duration_seconds": 354.455,
@@ -13,6 +16,7 @@
     "retained_format": "none",
     "route": "browser_listing_hub",
     "source_kind": "unknown",
+    "submission_state": "unknown",
     "terminal_reason": "browser_download_agent_timeout",
     "tested_commit": "69f55aa4ed1afd167e2c8f27e2ee4d7488c65333",
     "tokens": {
@@ -24,9 +28,12 @@
   },
   {
     "agent_calls": 0,
+    "blocked_reason": "",
+    "blocker_state": "missing_identity",
     "browser_launches": 1,
     "candidate_id": "fac_4da62bac17be2e7185090695",
     "configuration_hash": "5b51ac2263f45c78dbb0ca8385ca983e44441a68be4b8f4cb397b96eefca8b9f",
+    "confirmation_state": "not_submitted",
     "cost_usd": 0.0,
     "drive_persistence": false,
     "duration_seconds": 23.051,
@@ -36,6 +43,7 @@
     "retained_format": "none",
     "route": "browser_email_form",
     "source_kind": "unknown",
+    "submission_state": "not_submitted",
     "terminal_reason": "email_required",
     "tested_commit": "69f55aa4ed1afd167e2c8f27e2ee4d7488c65333",
     "tokens": {
@@ -47,9 +55,12 @@
   },
   {
     "agent_calls": 0,
+    "blocked_reason": "",
+    "blocker_state": "missing_identity",
     "browser_launches": 1,
     "candidate_id": "fac_6f994caaf9a413e4038f18f1",
     "configuration_hash": "5b51ac2263f45c78dbb0ca8385ca983e44441a68be4b8f4cb397b96eefca8b9f",
+    "confirmation_state": "not_submitted",
     "cost_usd": 0.0,
     "drive_persistence": false,
     "duration_seconds": 27.239,
@@ -59,6 +70,7 @@
     "retained_format": "none",
     "route": "browser_email_form",
     "source_kind": "unknown",
+    "submission_state": "not_submitted",
     "terminal_reason": "email_required",
     "tested_commit": "69f55aa4ed1afd167e2c8f27e2ee4d7488c65333",
     "tokens": {
@@ -70,9 +82,12 @@
   },
   {
     "agent_calls": 0,
+    "blocked_reason": "",
+    "blocker_state": "",
     "browser_launches": 0,
     "candidate_id": "fac_9d4d17626b51fdefb56842cb",
     "configuration_hash": "5b51ac2263f45c78dbb0ca8385ca983e44441a68be4b8f4cb397b96eefca8b9f",
+    "confirmation_state": "unknown",
     "cost_usd": 0.0,
     "drive_persistence": false,
     "duration_seconds": 0.002,
@@ -82,6 +97,7 @@
     "retained_format": "none",
     "route": "unresolved",
     "source_kind": "unknown",
+    "submission_state": "unknown",
     "terminal_reason": "report_download_candidate_rejected_mixed_content_hub",
     "tested_commit": "69f55aa4ed1afd167e2c8f27e2ee4d7488c65333",
     "tokens": {
@@ -93,9 +109,12 @@
   },
   {
     "agent_calls": 0,
+    "blocked_reason": "",
+    "blocker_state": "missing_identity",
     "browser_launches": 1,
     "candidate_id": "fac_c0e4c925c1ed4ce6149711b8",
     "configuration_hash": "5b51ac2263f45c78dbb0ca8385ca983e44441a68be4b8f4cb397b96eefca8b9f",
+    "confirmation_state": "not_submitted",
     "cost_usd": 0.0,
     "drive_persistence": false,
     "duration_seconds": 26.956,
@@ -105,6 +124,7 @@
     "retained_format": "none",
     "route": "browser_email_form",
     "source_kind": "unknown",
+    "submission_state": "not_submitted",
     "terminal_reason": "email_required",
     "tested_commit": "69f55aa4ed1afd167e2c8f27e2ee4d7488c65333",
     "tokens": {
@@ -116,9 +136,12 @@
   },
   {
     "agent_calls": 0,
+    "blocked_reason": "blocked_static_archive",
+    "blocker_state": "static_archive",
     "browser_launches": 1,
     "candidate_id": "fac_fa1889b4c19f0f238659145e",
     "configuration_hash": "0ae75486db7d4f47871e2605f7ab6da741897463c146eddc50450e42200ad4cb",
+    "confirmation_state": "blocked",
     "cost_usd": 0.0,
     "drive_persistence": false,
     "duration_seconds": 18.772,
@@ -128,6 +151,7 @@
     "retained_format": "none",
     "route": "browser_preflight_terminal_static_archive",
     "source_kind": "unknown",
+    "submission_state": "not_attempted",
     "terminal_reason": "blocked_static_archive",
     "tested_commit": "69f55aa4ed1afd167e2c8f27e2ee4d7488c65333",
     "tokens": {

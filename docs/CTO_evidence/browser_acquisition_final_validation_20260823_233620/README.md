@@ -101,6 +101,10 @@ blocker resolution.
   `external_source_unavailable` with terminal reason `blocked_static_archive`,
   rather than the generic `email_required` outcome used internally by the
   historical browser-result contract.
+- The sanitized projection also retains safe blocker, submission, and
+  confirmation-state enums. Criteo is `not_attempted` / `blocked`; the three
+  GWI form failures are `missing_identity` / `not_submitted`, without exposing
+  URLs, form fields, identity values, or route prose.
 
 Focused current-main deterministic checks passed for the architecture paths not
 resolved by this live cohort: task resource telemetry and remembered-blocker

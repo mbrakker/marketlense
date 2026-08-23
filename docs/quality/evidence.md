@@ -145,9 +145,10 @@ python scripts/quality/acquisition_evidence_projection.py \
 ```
 
 The generated canonical projection contains only candidate and publisher IDs,
-tested commit/configuration hashes, route, terminal reason, and derived failure
-class, normal artifact
-verification/source-format fields, scalar duration/browser/Agent/token/cost/
+tested commit/configuration hashes, route, terminal reason, derived failure
+class, and the safe `blocked_reason`, `blocker_state`, `submission_state`, and
+`confirmation_state` enums, normal artifact verification/source-format fields,
+scalar duration/browser/Agent/token/cost/
 mailbox/Drive metrics, and aggregate views. It omits URLs, local paths,
 screenshots, form values, raw browser content, and model output. It writes a
 per-candidate projection, failure Pareto, route metrics, baseline-versus-
@@ -160,6 +161,13 @@ uses that blocker as its terminal reason rather than falling back to a generic
 outcome. In particular, `blocked_static_archive` carries the derived
 `external_source_unavailable` failure class; it is not reported as
 `email_required`.
+Only a typed `blocked_*` machine label is retained as `blocked_reason`.
+`blocker_state` maps approved labels to safe categories such as
+`missing_identity`, `unknown_required_enum`, `form_validation`, `captcha`,
+`email_domain_rejected`, and `static_archive`; it never retains field names,
+identity values, or route prose. Submission and confirmation states are
+similarly limited to safe lifecycle enums, including `not_submitted`,
+`submitted`, `submission_unconfirmed`, `delivery_confirmed`, and `blocked`.
 
 An input-hash mismatch is a hard error. A candidate-set mismatch remains
 explicit in the output so an assessor can diagnose it, but the baseline and

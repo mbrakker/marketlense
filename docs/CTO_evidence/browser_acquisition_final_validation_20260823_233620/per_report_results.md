@@ -42,9 +42,11 @@ Failures retained in the denominator:
 
 - Brand Finance `fac_029…`: `browser_download_agent_timeout` after five Agent calls.
 - Criteo `fac_fa188…`: `external_source_unavailable` /
-  `blocked_static_archive` after terminal static-archive preflight; no Agent
-  call was made and the frozen candidate remains a failure in the denominator.
+  `blocked_static_archive`, `not_attempted`, and `blocked` after terminal
+  static-archive preflight; no Agent call was made and the frozen candidate
+  remains a failure in the denominator.
 - GWI `fac_4da…`, `fac_c0e…`, and `fac_6f9…`: `email_required` after deterministic
-  email-form handling, with no Agent calls.
+  email-form handling, with `missing_identity`, `not_submitted`, and no Agent
+  calls.
 - Barclays `fac_9d4…`: `report_download_candidate_rejected_mixed_content_hub`, with
   zero external work; it was not substituted with an arbitrary report.

@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
@@ -24,6 +25,20 @@ _NON_ACTIONABLE_RESOURCE_REASONS = {
     "verified",
 }
 _EXTERNAL_SOURCE_UNAVAILABLE_BLOCKERS = {"blocked_static_archive"}
+_BLOCKER_STATE_BY_REASON = {
+    "blocked_captcha": "captcha",
+    "blocked_email_domain": "email_domain_rejected",
+    "blocked_form_validation": "form_validation",
+    "blocked_missing_identity_field": "missing_identity",
+    "blocked_static_archive": "static_archive",
+    "blocked_unknown_required_enum": "unknown_required_enum",
+}
+_CONFIRMED_DELIVERY_SIGNALS = {
+    "delivery_text",
+    "network_confirmation_request",
+    "success_text",
+    "success_url",
+}
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -97,13 +112,18 @@ def _route(record: dict[str, Any]) -> str:
     return "unresolved"
 
 
+def _blocked_reason(record: dict[str, Any]) -> str:
+    value = str(
+        _mapping(record.get("acquisition_result")).get("blocked_reason") or ""
+    ).strip().casefold()
+    return value if re.fullmatch(r"blocked_[a-z0-9_]+", value) else ""
+
+
 def _terminal_reason(record: dict[str, Any]) -> str:
     error_code = str(_mapping(record.get("acquisition_error")).get("error_code") or "")
     if error_code:
         return error_code
-    blocked_reason = str(
-        _mapping(record.get("acquisition_result")).get("blocked_reason") or ""
-    ).strip()
+    blocked_reason = _blocked_reason(record)
     if blocked_reason:
         return blocked_reason
     resources = record.get("resource_attempts")
@@ -126,6 +146,59 @@ def _failure_class(record: dict[str, Any]) -> str:
     return ""
 
 
+def _submission_state(record: dict[str, Any]) -> str:
+    result = _mapping(record.get("acquisition_result"))
+    confirmation = _mapping(result.get("confirmation"))
+    button_state = str(confirmation.get("submit_button_state") or "").strip().casefold()
+    signal_labels = {
+        str(value or "").strip().casefold()
+        for value in confirmation.get("signal_labels", [])
+        if str(value or "").strip()
+    }
+    if button_state == "not_submitted":
+        return "not_submitted"
+    if button_state in {"submitted", "disabled", "replaced"} or (
+        "network_submission_request" in signal_labels
+    ):
+        return "submitted"
+    if _blocked_reason(record) or button_state == "unchanged":
+        return "not_attempted"
+    return "unknown"
+
+
+def _blocker_state(record: dict[str, Any]) -> str:
+    reason = _blocked_reason(record)
+    if reason in _BLOCKER_STATE_BY_REASON:
+        return _BLOCKER_STATE_BY_REASON[reason]
+    for step in _mapping(record.get("acquisition_result")).get("route_steps", []):
+        if not isinstance(step, dict):
+            continue
+        result = str(step.get("result") or "").strip().casefold()
+        if "required values are not configured" in result:
+            return "missing_identity"
+    return ""
+
+
+def _confirmation_state(record: dict[str, Any]) -> str:
+    if _blocked_reason(record):
+        return "blocked"
+    result = _mapping(record.get("acquisition_result"))
+    confirmation = _mapping(result.get("confirmation"))
+    signal_labels = {
+        str(value or "").strip().casefold()
+        for value in confirmation.get("signal_labels", [])
+        if str(value or "").strip()
+    }
+    if signal_labels & _CONFIRMED_DELIVERY_SIGNALS:
+        return "delivery_confirmed"
+    submission_state = _submission_state(record)
+    if submission_state == "submitted":
+        return "submission_unconfirmed"
+    if submission_state == "not_submitted":
+        return "not_submitted"
+    return "unknown"
+
+
 def sanitize_record(record: dict[str, Any]) -> dict[str, Any]:
     """Return the public scalar projection for one retained attempt."""
     verification = _mapping(record.get("artifact_verification"))
@@ -138,6 +211,10 @@ def sanitize_record(record: dict[str, Any]) -> dict[str, Any]:
         "route": _route(record),
         "terminal_reason": _terminal_reason(record),
         "failure_class": _failure_class(record),
+        "blocked_reason": _blocked_reason(record),
+        "blocker_state": _blocker_state(record),
+        "submission_state": _submission_state(record),
+        "confirmation_state": _confirmation_state(record),
         "verified_artifact": bool(verification.get("verified_usable_artifact")),
         "source_kind": str(verification.get("source_kind") or "unknown"),
         "retained_format": str(verification.get("retained_artifact_format") or "none"),
