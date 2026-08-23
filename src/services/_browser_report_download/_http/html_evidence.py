@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from html.parser import HTMLParser
 from urllib.parse import parse_qs, unquote, urljoin, urlsplit
 
 _PDF_URL_PATTERN = re.compile(
@@ -26,6 +27,21 @@ _PDF_QUERY_KEYS = (
     "redirect_uri",
     "u",
 )
+
+
+class _FormRedirectParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.redirects: list[str] = []
+
+    def handle_starttag(
+        self, tag: str, attrs: list[tuple[str, str | None]]
+    ) -> None:
+        if tag.casefold() != "form":
+            return
+        for name, value in attrs:
+            if name.casefold() == "data-redirect" and value:
+                self.redirects.append(value)
 
 
 def _response_header_value(headers: object, key: str) -> str:
@@ -66,6 +82,24 @@ def _extract_embedded_pdf_url(*, wrapper_html: str, document_url: str) -> str | 
         document_url=document_url,
     ):
         return candidate
+    return None
+
+
+def extract_public_form_redirect_url(
+    *, wrapper_html: str, document_url: str
+) -> str | None:
+    """Return a public HTTP target declared by a report form, when present."""
+    parser = _FormRedirectParser()
+    try:
+        parser.feed(str(wrapper_html or ""))
+        parser.close()
+    except (TypeError, ValueError):
+        return None
+    for redirect in parser.redirects:
+        candidate = urljoin(document_url, str(redirect).strip())
+        parsed = urlsplit(candidate)
+        if parsed.scheme in {"http", "https"} and parsed.netloc:
+            return candidate
     return None
 
 

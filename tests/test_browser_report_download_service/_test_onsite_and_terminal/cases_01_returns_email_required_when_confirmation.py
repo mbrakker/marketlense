@@ -2,6 +2,10 @@
 from __future__ import annotations
 
 import json
+from io import BytesIO
+
+import fitz
+from PIL import Image
 
 from src.contracts.http_acquisition import HttpAcquisitionResponse
 from src.services._browser_report_download._http.adobe_indesign import (
@@ -10,6 +14,9 @@ from src.services._browser_report_download._http.adobe_indesign import (
     _render_adobe_indesign_capture_html,
     try_embedded_adobe_indesign_capture,
 )
+from src.services._browser_report_download._http.issuu import (
+    try_embedded_issuu_capture,
+)
 from src.services._browser_report_download._http.onsite_capture import (
     _html_for_pdf_rendering,
     _should_try_direct_onsite_capture,
@@ -17,6 +24,155 @@ from src.services._browser_report_download._http.onsite_capture import (
 )
 
 from ._shared import *  # noqa: F401,F403
+
+
+def test_embedded_issuu_capture_builds_complete_rendered_pdf(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    revision_id = "260511211811"
+    publication_id = "4ffef46b07ef26cee53bfbec364bcae3"
+
+    def jpeg_bytes(color: tuple[int, int, int]) -> bytes:
+        image = Image.new("RGB", (48, 64), color)
+        stream = BytesIO()
+        image.save(stream, format="JPEG")
+        return stream.getvalue()
+
+    def execute(*, request, ctx, requests_module):
+        if request.purpose.endswith("document"):
+            body = json.dumps(
+                {
+                    "revisionId": revision_id,
+                    "publicationId": publication_id,
+                    "pageCount": 2,
+                }
+            )
+            return HttpAcquisitionResponse(
+                schema_version="1.0",
+                purpose=request.purpose,
+                method=request.method,
+                request_url=request.url,
+                final_url=request.url,
+                status_code=200,
+                headers={"content-type": "text/html"},
+                content_type="text/html",
+                text_body=body,
+            )
+        page_number = 1 if request.url.endswith("page_1.jpg") else 2
+        return HttpAcquisitionResponse(
+            schema_version="1.0",
+            purpose=request.purpose,
+            method=request.method,
+            request_url=request.url,
+            final_url=request.url,
+            status_code=200,
+            headers={"content-type": "image/jpeg"},
+            content_type="image/jpeg",
+            body_bytes=jpeg_bytes((page_number * 40, 20, 30)),
+        )
+
+    result = try_embedded_issuu_capture(
+        request=BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://publisher.example/reports/report",
+            settings=_settings(tmp_path),
+        ),
+        ctx=run_context,
+        normalized_url="https://publisher.example/reports/report",
+        download_dir=tmp_path,
+        source_page_url="https://publisher.example/reports/report-pdf/",
+        source_page_html=(
+            '<iframe src="https://e.issuu.com/embed.html?'
+            'd=report-2026&amp;u=publisher"></iframe>'
+        ),
+        http_acquisition_executor=execute,
+    )
+
+    assert result is not None
+    assert result.outcome == "captured"
+    assert result.onsite_capture_format == "rendered_onsite_pdf"
+    assert result.onsite_page_count == 2
+    with fitz.open(result.onsite_capture_path) as document:
+        assert document.page_count == 2
+
+
+def test_direct_onsite_capture_follows_public_form_redirect_to_issuu(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    source_url = "https://publisher.example/reports/benchmark-report-2026"
+    redirect_url = "https://publisher.example/reports/benchmark-report-2026-pdf/"
+    revision_id = "260511211811"
+    publication_id = "4ffef46b07ef26cee53bfbec364bcae3"
+
+    def jpeg_bytes() -> bytes:
+        image = Image.new("RGB", (48, 64), (40, 20, 30))
+        stream = BytesIO()
+        image.save(stream, format="JPEG")
+        return stream.getvalue()
+
+    def response(*, request, body: str = "", image: bytes | None = None):
+        return HttpAcquisitionResponse(
+            schema_version="1.0",
+            purpose=request.purpose,
+            method=request.method,
+            request_url=request.url,
+            final_url=request.url,
+            status_code=200,
+            headers={"content-type": "image/jpeg" if image else "text/html"},
+            content_type="image/jpeg" if image else "text/html",
+            text_body=body or None,
+            body_bytes=image,
+        )
+
+    def execute(*, request, ctx, requests_module):
+        if request.url == source_url:
+            return response(
+                request=request,
+                body=(
+                    "<html><title>Benchmark Report</title><form "
+                    'data-redirect="/reports/benchmark-report-2026-pdf/">'
+                    "<input name='email'></form></html>"
+                ),
+            )
+        if request.url == redirect_url:
+            return response(
+                request=request,
+                body=(
+                    '<iframe src="https://e.issuu.com/embed.html?'
+                    'd=benchmark-report-2026&amp;u=publisher"></iframe>'
+                ),
+            )
+        if request.purpose.endswith("document"):
+            return response(
+                request=request,
+                body=json.dumps(
+                    {
+                        "revisionId": revision_id,
+                        "publicationId": publication_id,
+                        "pageCount": 2,
+                    }
+                ),
+            )
+        return response(request=request, image=jpeg_bytes())
+
+    result = try_direct_onsite_capture(
+        request=BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url=source_url,
+            route_family_hint="browser_email_form",
+            settings=_settings(tmp_path),
+        ),
+        ctx=run_context,
+        normalized_url=source_url,
+        download_dir=tmp_path,
+        http_acquisition_executor=execute,
+    )
+
+    assert result is not None
+    assert result.outcome == "captured"
+    assert result.onsite_page_count == 2
 
 
 def test_html_for_pdf_rendering_removes_external_assets_but_keeps_report_text() -> None:

@@ -37,6 +37,10 @@ from src.services._browser_report_download._http.html_evidence import (
     _extract_html_title,
     _extract_text_excerpt,
     _html_to_text,
+    extract_public_form_redirect_url,
+)
+from src.services._browser_report_download._http.issuu import (
+    try_embedded_issuu_capture,
 )
 from src.services._browser_report_download.logging import (
     browser_download_result_log_fields,
@@ -228,6 +232,64 @@ def try_direct_onsite_capture(
     )
     if adobe_indesign_result is not None:
         return adobe_indesign_result
+    form_redirect_url = extract_public_form_redirect_url(
+        wrapper_html=html,
+        document_url=str(response.final_url or target_url).strip() or target_url,
+    )
+    if form_redirect_url:
+        try:
+            redirect_response = http_acquisition_executor(
+                request=HttpAcquisitionRequest(
+                    schema_version="1.0",
+                    purpose="browser_report_download_public_form_redirect",
+                    method="GET",
+                    url=form_redirect_url,
+                    headers=_HTML_FETCH_HEADERS,
+                    timeout_seconds=request.settings.timeout_seconds,
+                    response_policy=HttpAcquisitionResponsePolicy(
+                        schema_version="1.0",
+                        require_success_status=False,
+                        capture_text=True,
+                        capture_content_type_markers=("html", "xml"),
+                        max_body_bytes=_HTML_FETCH_MAX_BYTES,
+                        truncate_body=True,
+                    ),
+                    error_code="browser_download_public_form_redirect_fetch_failed",
+                    error_message=(
+                        "Failed to fetch the report page exposed by a public form redirect"
+                    ),
+                    allow_redirects=True,
+                    context_fields={
+                        "normalized_url": normalized_url,
+                        "source_page_url": str(response.final_url or target_url),
+                        "form_redirect_url": form_redirect_url,
+                    },
+                ),
+                ctx=ctx,
+                requests_module=requests,
+            )
+        except AppError:
+            redirect_response = None
+        if (
+            redirect_response is not None
+            and redirect_response.status_code < 400
+            and not redirect_response.body_truncated
+            and "html" in str(redirect_response.content_type or "").casefold()
+        ):
+            issuu_result = try_embedded_issuu_capture(
+                request=request,
+                ctx=ctx,
+                normalized_url=normalized_url,
+                download_dir=download_dir,
+                source_page_url=(
+                    str(redirect_response.final_url or form_redirect_url).strip()
+                    or form_redirect_url
+                ),
+                source_page_html=str(redirect_response.text_body or ""),
+                http_acquisition_executor=http_acquisition_executor,
+            )
+            if issuu_result is not None:
+                return issuu_result
     if decision.reason == "unhinted_report_detail_candidate":
         logger.info(
             log_event(
