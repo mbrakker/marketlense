@@ -232,6 +232,17 @@ def try_direct_onsite_capture(
     )
     if adobe_indesign_result is not None:
         return adobe_indesign_result
+    issuu_result = try_embedded_issuu_capture(
+        request=request,
+        ctx=ctx,
+        normalized_url=normalized_url,
+        download_dir=download_dir,
+        source_page_url=str(response.final_url or target_url).strip() or target_url,
+        source_page_html=html,
+        http_acquisition_executor=http_acquisition_executor,
+    )
+    if issuu_result is not None:
+        return issuu_result
     form_redirect_url = extract_public_form_redirect_url(
         wrapper_html=html,
         document_url=str(response.final_url or target_url).strip() or target_url,

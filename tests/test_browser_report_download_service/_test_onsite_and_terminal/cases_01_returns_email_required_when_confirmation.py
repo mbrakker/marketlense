@@ -175,6 +175,75 @@ def test_direct_onsite_capture_follows_public_form_redirect_to_issuu(
     assert result.onsite_page_count == 2
 
 
+def test_direct_onsite_capture_captures_issuu_embedded_on_source_page(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    source_url = "https://publisher.example/reports/public-embedded-report"
+    revision_id = "260511211811"
+    publication_id = "4ffef46b07ef26cee53bfbec364bcae3"
+
+    def jpeg_bytes() -> bytes:
+        image = Image.new("RGB", (48, 64), (40, 20, 30))
+        stream = BytesIO()
+        image.save(stream, format="JPEG")
+        return stream.getvalue()
+
+    def response(*, request, body: str = "", image: bytes | None = None):
+        return HttpAcquisitionResponse(
+            schema_version="1.0",
+            purpose=request.purpose,
+            method=request.method,
+            request_url=request.url,
+            final_url=request.url,
+            status_code=200,
+            headers={"content-type": "image/jpeg" if image else "text/html"},
+            content_type="image/jpeg" if image else "text/html",
+            text_body=body or None,
+            body_bytes=image,
+        )
+
+    def execute(*, request, ctx, requests_module):
+        if request.url == source_url:
+            return response(
+                request=request,
+                body=(
+                    '<iframe src="https://e.issuu.com/embed.html?'
+                    'd=public-embedded-report&amp;u=publisher"></iframe>'
+                ),
+            )
+        if request.purpose.endswith("document"):
+            return response(
+                request=request,
+                body=json.dumps(
+                    {
+                        "revisionId": revision_id,
+                        "publicationId": publication_id,
+                        "pageCount": 2,
+                    }
+                ),
+            )
+        return response(request=request, image=jpeg_bytes())
+
+    result = try_direct_onsite_capture(
+        request=BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url=source_url,
+            route_family_hint="browser_email_form",
+            settings=_settings(tmp_path),
+        ),
+        ctx=run_context,
+        normalized_url=source_url,
+        download_dir=tmp_path,
+        http_acquisition_executor=execute,
+    )
+
+    assert result is not None
+    assert result.outcome == "captured"
+    assert result.onsite_capture_format == "rendered_onsite_pdf"
+    assert result.onsite_page_count == 2
+
+
 def test_html_for_pdf_rendering_removes_external_assets_but_keeps_report_text() -> None:
     rendered = _html_for_pdf_rendering(
         "<html><head><link rel='stylesheet' href='https://cdn.example/style.css'>"

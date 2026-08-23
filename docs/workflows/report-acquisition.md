@@ -220,12 +220,13 @@ artifact. The capture is accepted only when the returned asset has multiple text
 pages and substantial text; unavailable, malformed, or truncated Adobe content falls
 back to the normal browser path rather than being saved as a partial report.
 
-When an eligible report-detail page declares a public form `data-redirect`, acquisition
-may fetch that exposed target before browser escalation. A public Issuu iframe on that
-target is captured as `rendered_onsite_pdf` only after its document metadata is valid
-and every declared rendered page image is retrieved and assembled into a page-count
-verified local PDF. This preserves the reader representation rather than claiming a
-publisher-supplied original PDF; missing, oversized, malformed, or incomplete pages
-fail closed and continue through normal recovery.
+Acquisition checks every eligible fetched report page for a public Issuu iframe before
+browser escalation. When a report-detail page also declares a public form
+`data-redirect`, it checks that exposed target as an additional deterministic page. A
+public Issuu reader is captured as `rendered_onsite_pdf` only after its document
+metadata is valid and every declared rendered page image is retrieved and assembled
+into a page-count-verified local PDF. This preserves the reader representation rather
+than claiming a publisher-supplied original PDF; missing, oversized, malformed, or
+incomplete pages fail closed and continue through normal recovery.
 
 Use `python -m src.cli download-report <url>` for an explicit acquisition request and `python -m src.cli browser-doctor` to diagnose the local browser runtime. Browser, Drive, and mailbox prerequisites are covered in [credentials](../ops/credentials.md); recovery guidance is in [troubleshooting](../ops/troubleshooting.md).
