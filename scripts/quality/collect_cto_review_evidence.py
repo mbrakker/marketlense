@@ -235,6 +235,7 @@ DATABASES = (
         "reports.sqlite",
         (
             "publisher_download_route_history",
+            "acquisition_attempt_resources",
             "artifact_lineage_records",
             "artifact_lineage_states",
         ),
@@ -703,24 +704,46 @@ def _metric_rows(
     ui = snapshots.get("ui_runs")
     acquisition = _query(
         reports,
-        "publisher_download_route_history",
+        "acquisition_attempt_resources",
         """
-        SELECT 'unattributed' publisher,route_family,route_kind,outcome,route_status,
-        COUNT(*) sample_size,SUM(attempts) attempts,SUM(verified_successes) successes,
-        'route history has no publisher, duration or cost fields' limitation
-        FROM publisher_download_route_history GROUP BY route_family,route_kind,outcome,route_status
-        ORDER BY route_family,route_kind,outcome""",
+        SELECT publisher_id AS publisher, route_family, terminal_outcome,
+        COUNT(*) AS sample_size, COUNT(*) AS attempts,
+        SUM(CASE WHEN terminal_outcome = 'success' THEN 1 ELSE 0 END) AS successes,
+        ROUND(SUM(elapsed_ms) / 1000.0, 3) AS duration_seconds,
+        ROUND(SUM(estimated_cost_usd), 6) AS estimated_cost_usd,
+        SUM(browser_launches) AS browser_launches,
+        SUM(browser_steps) AS browser_steps,
+        SUM(page_navigations) AS page_navigations,
+        SUM(screenshots) AS screenshots,
+        SUM(browser_model_calls) AS browser_model_calls,
+        SUM(input_tokens) AS input_tokens,
+        SUM(cached_input_tokens) AS cached_input_tokens,
+        SUM(output_tokens) AS output_tokens,
+        SUM(drive_reads) AS drive_reads,
+        SUM(drive_writes) AS drive_writes,
+        SUM(mailbox_reads) AS mailbox_reads,
+        SUM(retry_count) AS retry_count
+        FROM acquisition_attempt_resources
+        GROUP BY publisher_id, route_family, terminal_outcome
+        ORDER BY publisher_id, route_family, terminal_outcome
+        """,
     )
     browser = _query(
         reports,
-        "publisher_download_route_history",
+        "acquisition_attempt_resources",
         """
-        SELECT route_family,COUNT(*) acquisition_records,SUM(attempts) attempts,
-        SUM(json_array_length(route_steps_json)) browser_steps,
-        SUM(CASE WHEN browser_had_structured_result THEN 1 ELSE 0 END) structured_browser_records,
-        SUM(CASE WHEN onsite_capture_path<>'' AND onsite_capture_path IS NOT NULL THEN 1 ELSE 0 END) onsite_capture_records,
-        'launch/navigation/screenshot/network/duration fields not retained' limitation
-        FROM publisher_download_route_history GROUP BY route_family ORDER BY route_family""",
+        SELECT publisher_id AS publisher, route_family,
+        COUNT(*) AS acquisition_records,
+        SUM(browser_launches) AS browser_launches,
+        SUM(browser_steps) AS browser_steps,
+        SUM(page_navigations) AS page_navigations,
+        SUM(screenshots) AS screenshots,
+        SUM(browser_model_calls) AS browser_model_calls,
+        ROUND(SUM(elapsed_ms) / 1000.0, 3) AS duration_seconds
+        FROM acquisition_attempt_resources
+        GROUP BY publisher_id, route_family
+        ORDER BY publisher_id, route_family
+        """,
     )
     llm_events = _query(
         usage,

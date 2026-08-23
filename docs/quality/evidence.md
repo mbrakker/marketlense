@@ -56,6 +56,8 @@ pass.
 
 Every database is snapshotted with SQLite's backup API before querying; live WAL files are never copied. The collector snapshots the retained crop and report-analysis JSON evidence inputs under `--artifact-dir` before either metrics or canaries are read. It does not treat unrelated benchmark or runtime sidecars as CTO-review inputs. The collector copies only canonical `market_lense_YYYY-MM-DD.log` files from `--log-dir` into the same workspace and scans only those immutable copies, line by line. Snapshot provenance records normalized source-relative and temporary-relative paths, sizes, hashes, source modification time, parsed event timestamp bounds, line/event counts, and accessibility. Noncanonical files are ignored. In strict mode a discovered standard log that cannot be copied is a failure.
 
+Acquisition and browser CSV metrics are derived from the task-scoped `reports.acquisition_attempt_resources` records, not from legacy `publisher_download_route_history`. They retain publisher, route family, terminal outcome, elapsed time, cost, Browser Use model calls and tokens, browser launches and activity, retries, and mailbox/Drive activity. Legacy route history remains historical routing evidence only and is not a fallback input for current acquisition metrics.
+
 The log-content assessment takes deterministic representative samples from two categories:
 
 - source-report text from retained page/source-style fields, source-backed evidence-pack excerpts, and document-map section summaries;

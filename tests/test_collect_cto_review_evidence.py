@@ -20,7 +20,6 @@ from scripts.quality._cto_review_evidence.log_content_leakage import (
 )
 from scripts.quality.collect_cto_review_evidence import (
     ROOT,
-    ArtifactIntegrityError,
     DuplicateEvidenceRunIdError,
     EvidenceCoverageError,
     EvidencePaths,
@@ -91,6 +90,66 @@ def _seed_state(
             )
     db.close()
     return state, usage_path
+
+
+def _seed_acquisition_resource(
+    state: Path,
+    *,
+    publisher: str,
+    route: str,
+    outcome: str,
+    elapsed_ms: int = 0,
+    browser_launches: int = 0,
+    browser_steps: int = 0,
+    page_navigations: int = 0,
+    screenshots: int = 0,
+    browser_model_calls: int = 0,
+    input_tokens: int = 0,
+    cached_input_tokens: int = 0,
+    output_tokens: int = 0,
+    drive_reads: int = 0,
+    drive_writes: int = 0,
+    mailbox_reads: int = 0,
+    retry_count: int = 0,
+    cost: float = 0.0,
+) -> None:
+    with sqlite3.connect(state / "reports.sqlite") as db:
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS acquisition_attempt_resources (
+              publisher_id, route_family, terminal_outcome, elapsed_ms,
+              browser_launches, browser_steps, page_navigations, screenshots,
+              browser_model_calls, input_tokens, cached_input_tokens,
+              output_tokens, drive_reads, drive_writes, mailbox_reads,
+              retry_count, estimated_cost_usd
+            )
+            """
+        )
+        db.execute(
+            """
+            INSERT INTO acquisition_attempt_resources VALUES
+            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                publisher,
+                route,
+                outcome,
+                elapsed_ms,
+                browser_launches,
+                browser_steps,
+                page_navigations,
+                screenshots,
+                browser_model_calls,
+                input_tokens,
+                cached_input_tokens,
+                output_tokens,
+                drive_reads,
+                drive_writes,
+                mailbox_reads,
+                retry_count,
+                cost,
+            ),
+        )
 
 
 def _paths(
@@ -236,6 +295,12 @@ def test_collect_reads_local_state_and_writes_aggregate_csvs(tmp_path: Path) -> 
             "INSERT INTO artifact_lineage_records VALUES ('a','source_pdf','r','selection')"
         )
         db.execute("INSERT INTO artifact_lineage_states VALUES ('a','active')")
+    _seed_acquisition_resource(
+        state,
+        publisher="publisher",
+        route="direct",
+        outcome="success",
+    )
     with sqlite3.connect(state / "llm_usage.sqlite") as db:
         db.execute(
             "CREATE TABLE llm_usage_events (timestamp_utc,provider,model,action,semantic_task,prompt_namespace,provider_call_status,input_tokens,cached_input_tokens,output_tokens,total_tokens,estimated_cost_usd)"
@@ -248,17 +313,87 @@ def test_collect_reads_local_state_and_writes_aggregate_csvs(tmp_path: Path) -> 
     with (output / "acquisition_metrics.csv").open(
         newline="", encoding="utf-8"
     ) as handle:
-        assert next(csv.DictReader(handle))["attempts"] == "2"
+        assert next(csv.DictReader(handle))["attempts"] == "1"
     with (output / "ocr_vision_metrics.csv").open(
         newline="", encoding="utf-8"
     ) as handle:
         assert next(csv.DictReader(handle))["request_count"] == "1"
 
 
+def test_collect_uses_task_scoped_acquisition_resources_for_cto_metrics(
+    tmp_path: Path,
+) -> None:
+    state, _ = _seed_state(tmp_path)
+    _seed_acquisition_resource(
+        state,
+        publisher="bcg",
+        route="browser_pdf_click",
+        outcome="success",
+        elapsed_ms=1250,
+        browser_launches=1,
+        browser_steps=6,
+        page_navigations=2,
+        screenshots=1,
+        browser_model_calls=3,
+        input_tokens=110,
+        cached_input_tokens=25,
+        output_tokens=11,
+        drive_writes=1,
+        retry_count=2,
+        cost=0.031,
+    )
+    _seed_acquisition_resource(
+        state,
+        publisher="barclays",
+        route="http_direct",
+        outcome="failed",
+        elapsed_ms=250,
+    )
+
+    output = tmp_path / "evidence"
+    collect(EvidencePaths(state, tmp_path / "artifacts", output))
+
+    with (output / "acquisition_metrics.csv").open(
+        newline="", encoding="utf-8"
+    ) as handle:
+        rows = list(csv.DictReader(handle))
+    by_publisher = {row["publisher"]: row for row in rows}
+
+    assert set(by_publisher) == {"barclays", "bcg"}
+    assert by_publisher["bcg"] == {
+        "publisher": "bcg",
+        "route_family": "browser_pdf_click",
+        "terminal_outcome": "success",
+        "sample_size": "1",
+        "attempts": "1",
+        "successes": "1",
+        "duration_seconds": "1.25",
+        "estimated_cost_usd": "0.031",
+        "browser_launches": "1",
+        "browser_steps": "6",
+        "page_navigations": "2",
+        "screenshots": "1",
+        "browser_model_calls": "3",
+        "input_tokens": "110",
+        "cached_input_tokens": "25",
+        "output_tokens": "11",
+        "drive_reads": "0",
+        "drive_writes": "1",
+        "mailbox_reads": "0",
+        "retry_count": "2",
+    }
+
+
 def test_collect_writes_named_cto_evidence_artifacts_from_snapshots(
     tmp_path: Path,
 ) -> None:
     state, _ = _seed_state(tmp_path)
+    _seed_acquisition_resource(
+        state,
+        publisher="publisher",
+        route="direct",
+        outcome="success",
+    )
     with sqlite3.connect(state / "reports.sqlite") as db:
         for column in (
             "source_id",

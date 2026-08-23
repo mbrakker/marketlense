@@ -681,10 +681,9 @@ def _runtime_telemetry(
     reports = snapshots.get("reports")
     usage = snapshots.get("llm_usage")
     state = snapshots.get("index")
-    routes = _rows(reports, "publisher_download_route_history")
+    acquisition_resources = _rows(reports, "acquisition_attempt_resources")
     llm_events = _rows(usage, "llm_usage_events")
     plans = _rows(reports, "artifact_execution_plan_runs")
-    actuals = _rows(usage, "budget_authority_actuals")
     remediation = _rows(state, "remediation_records")
     transitions = _rows(state, "remediation_transitions")
     deferred = _rows(usage, "budget_authority_deferred_work")
@@ -692,58 +691,52 @@ def _runtime_telemetry(
     queue_transitions = _rows(reports, "claim_embedding_queue_transitions")
     observations = _rows(state, "workflow_control_observations")
 
-    acquisition: dict[tuple[str, str, str], dict[str, int]] = defaultdict(
+    acquisition: dict[tuple[str, str], dict[str, int]] = defaultdict(
         lambda: {"route_records": 0, "attempt_count": 0, "success_count": 0}
     )
-    browser_evidence: Counter[str] = Counter()
-    browser_steps = 0
-    for route in routes:
+    for resource in acquisition_resources:
         key = (
-            _report_host(route),
-            str(route.get("route_family") or "unknown"),
-            str(route.get("route_kind") or "unknown"),
+            str(resource.get("publisher_id") or "unattributed"),
+            str(resource.get("route_family") or "unknown"),
         )
         entry = acquisition[key]
         entry["route_records"] += 1
-        entry["attempt_count"] += int(route.get("attempts") or 0)
-        entry["success_count"] += int(route.get("verified_successes") or 0)
-        steps = _json_list(route.get("route_steps_json"))
-        browser_steps += len(steps)
-        browser_evidence.update(_nested_evidence_counts(steps))
-        browser_evidence.update(
-            _nested_evidence_counts(_json_mapping(route.get("terminal_evidence_json")))
+        entry["attempt_count"] += 1
+        entry["success_count"] += int(
+            str(resource.get("terminal_outcome") or "").casefold() == "success"
         )
     acquisition_rows = [
         {
             "publisher": publisher,
             "route_family": family,
-            "route_kind": kind,
             **values,
             "successful_acquisition_rate": _ratio(
                 values["success_count"], values["attempt_count"]
             ),
         }
-        for (publisher, family, kind), values in sorted(acquisition.items())
+        for (publisher, family), values in sorted(acquisition.items())
     ]
 
-    browser_actuals = [
-        row
-        for row in actuals
-        if str(row.get("resource_type") or "").casefold() == "browser"
-    ]
     browser_values = {
         "acquired_report_count": sum(
             values["success_count"] for values in acquisition.values()
         ),
         "browser_sessions": sum(
-            int(row.get("actual_browser_launches") or 0) for row in browser_actuals
+            int(row.get("browser_launches") or 0)
+            for row in acquisition_resources
         ),
-        "browser_steps": browser_steps
-        + sum(int(row.get("actual_steps") or 0) for row in browser_actuals),
-        "page_loads": browser_evidence.get("page_loads", 0),
-        "screenshots": browser_evidence.get("screenshots", 0),
+        "browser_steps": sum(
+            int(row.get("browser_steps") or 0) for row in acquisition_resources
+        ),
+        "page_loads": sum(
+            int(row.get("page_navigations") or 0) for row in acquisition_resources
+        ),
+        "screenshots": sum(
+            int(row.get("screenshots") or 0) for row in acquisition_resources
+        ),
         "duration_seconds": sum(
-            int(row.get("actual_duration_seconds") or 0) for row in browser_actuals
+            int(row.get("elapsed_ms") or 0) / 1000
+            for row in acquisition_resources
         ),
     }
 
@@ -865,14 +858,13 @@ def _runtime_telemetry(
         "schema_version": SCHEMA_VERSION,
         "acquisition_by_publisher_and_route": _metric(
             "available" if acquisition_rows else "empty",
-            "reports.publisher_download_route_history",
+            "reports.acquisition_attempt_resources",
             {"rows": acquisition_rows},
         ),
         "browser_per_acquired_report": _metric(
-            "partial" if routes else "empty",
-            "reports.publisher_download_route_history; llm_usage.budget_authority_actuals",
+            "available" if acquisition_resources else "empty",
+            "reports.acquisition_attempt_resources",
             browser_values,
-            "Session, page-load, screenshot, and duration fields are not retained for every route record; values are aggregate evidence counts, not a per-report trace.",
         ),
         "cost_per_acquired_and_published_report": _metric(
             "partial" if plans or publication_rows else "unavailable",
