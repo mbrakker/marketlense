@@ -1,0 +1,40 @@
+{
+  "agent": {
+    "execution": "not_executed",
+    "name": "Codex",
+    "version": "unavailable"
+  },
+  "agent_measurements": {
+    "correct_completion": "unavailable",
+    "elapsed_seconds": "unavailable",
+    "estimated_cost_usd": "unavailable",
+    "human_intervention_count": "unavailable",
+    "irrelevant_files_modified": "unavailable",
+    "relevant_files_discovered": "unavailable",
+    "rework_count": "unavailable",
+    "tests_checks_executed": "unavailable",
+    "token_usage": "unavailable",
+    "tool_file_read_count": "unavailable"
+  },
+  "baseline_kind": "corpus_integrity",
+  "corpus_path": "benchmarks/agent-engineering/cases.json",
+  "corpus_sha256": "7ab3d9b261e9acdb12622057c32346f46fae9e7aadfa0cb6f5226a05a3785ef1",
+  "interpretation": "This records the current Codex benchmark corpus baseline only. It does not claim an agent-performance score because no task-solving run was executed.",
+  "repository_commit": "93b2d951364212fb5f6bbe2974af14ec6c88d9b8",
+  "schema_version": "1.0",
+  "validation": {
+    "case_count": 16,
+    "category_counts": {
+      "architecture_investigation": 2,
+      "browser_acquisition": 3,
+      "bug_fix": 2,
+      "feature_implementation": 2,
+      "llm_prompt_pipeline": 2,
+      "pdf_visual_extraction": 2,
+      "performance_cost": 1,
+      "service_boundary_refactor": 2
+    },
+    "failures": [],
+    "passed": true
+  }
+}

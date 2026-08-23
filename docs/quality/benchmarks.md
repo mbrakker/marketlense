@@ -8,6 +8,29 @@ MarketLense uses retained fixture corpora and generated outputs to detect regres
 
 Benchmark commands and current enforcement are maintained by the CI workflow and the non-regression policy. Do not paste benchmark result tables into the root README or release summaries. Record approved exceptions in the policy-controlled allowlist or release-evidence mechanism.
 
+## Agent-engineering corpus
+
+The versioned [agent-engineering corpus](../../benchmarks/agent-engineering/README.md)
+evaluates repository-local coding agents against historical MarketLense work
+without exposing the evaluator's solution metadata in the task prompt. It is a
+small corpus-specific validator and scorer, not a general agent platform. The
+case data retains the historical fixing commit, current relevant components,
+named regression checks, observable result, and failure conditions.
+
+Validate the corpus and capture the revision-bound Codex corpus-integrity
+baseline from the repository root:
+
+```powershell
+python scripts/quality/agent_engineering_benchmark.py baseline --corpus benchmarks/agent-engineering/cases.json --output benchmarks/agent-engineering/baselines/codex-current.json
+```
+
+This command is local and read-only except for its explicit output path. It
+does not invoke an agent, provider, browser, email, or publication flow. Its
+result therefore records task-performance measurements as `unavailable`; use
+the documented scorer with a separately captured agent-run record for a real
+correctness, discovery, scope, verification, time, token/cost, and
+intervention measurement.
+
 ## Performance telemetry
 
 The canonical state database retains bounded stage spans and scalar resource
