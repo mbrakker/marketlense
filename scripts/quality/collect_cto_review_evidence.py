@@ -708,7 +708,9 @@ def _metric_rows(
         """
         SELECT publisher_id AS publisher, route_family, terminal_outcome,
         COUNT(*) AS sample_size, COUNT(*) AS attempts,
-        SUM(CASE WHEN terminal_outcome = 'success' THEN 1 ELSE 0 END) AS successes,
+        SUM(CASE WHEN terminal_outcome = 'success'
+                  AND COALESCE(verified_artifact_hash, '') <> ''
+                 THEN 1 ELSE 0 END) AS successes,
         ROUND(SUM(elapsed_ms) / 1000.0, 3) AS duration_seconds,
         ROUND(SUM(estimated_cost_usd), 6) AS estimated_cost_usd,
         SUM(browser_launches) AS browser_launches,

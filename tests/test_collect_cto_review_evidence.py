@@ -112,6 +112,7 @@ def _seed_acquisition_resource(
     mailbox_reads: int = 0,
     retry_count: int = 0,
     cost: float = 0.0,
+    verified_artifact_hash: str | None = None,
 ) -> None:
     with sqlite3.connect(state / "reports.sqlite") as db:
         db.execute(
@@ -121,14 +122,14 @@ def _seed_acquisition_resource(
               browser_launches, browser_steps, page_navigations, screenshots,
               browser_model_calls, input_tokens, cached_input_tokens,
               output_tokens, drive_reads, drive_writes, mailbox_reads,
-              retry_count, estimated_cost_usd
+              retry_count, estimated_cost_usd, verified_artifact_hash
             )
             """
         )
         db.execute(
             """
             INSERT INTO acquisition_attempt_resources VALUES
-            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 publisher,
@@ -148,6 +149,11 @@ def _seed_acquisition_resource(
                 mailbox_reads,
                 retry_count,
                 cost,
+                (
+                    "md5:verified"
+                    if verified_artifact_hash is None and outcome == "success"
+                    else str(verified_artifact_hash or "")
+                ),
             ),
         )
 
@@ -382,6 +388,42 @@ def test_collect_uses_task_scoped_acquisition_resources_for_cto_metrics(
         "mailbox_reads": "0",
         "retry_count": "2",
     }
+
+
+def test_collect_does_not_count_execution_success_without_verified_artifact(
+    tmp_path: Path,
+) -> None:
+    state, _ = _seed_state(tmp_path)
+    _seed_acquisition_resource(
+        state,
+        publisher="publisher",
+        route="browser_email_form",
+        outcome="success",
+        verified_artifact_hash="",
+    )
+    _seed_acquisition_resource(
+        state,
+        publisher="publisher",
+        route="browser_email_form",
+        outcome="success",
+        verified_artifact_hash="md5:verified",
+    )
+
+    output = tmp_path / "evidence"
+    collect(EvidencePaths(state, tmp_path / "artifacts", output))
+
+    with (output / "acquisition_metrics.csv").open(
+        newline="", encoding="utf-8"
+    ) as handle:
+        row = next(csv.DictReader(handle))
+    assert row["attempts"] == "2"
+    assert row["successes"] == "1"
+    telemetry = json.loads(
+        (output / "runtime_telemetry.json").read_text(encoding="utf-8")
+    )
+    assert telemetry["browser_per_acquired_report"]["values"][
+        "acquired_report_count"
+    ] == 1
 
 
 def test_collect_writes_named_cto_evidence_artifacts_from_snapshots(

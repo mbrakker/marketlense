@@ -180,7 +180,11 @@ def _append_acquisition_side_effects(
 
 
 def _summary(
-    *, attempt_id: str, outcome: str, reason: str = ""
+    *,
+    attempt_id: str,
+    outcome: str,
+    reason: str = "",
+    verified_artifact_hash: str | None = None,
 ) -> AcquisitionAttemptResourceSummary:
     return AcquisitionAttemptResourceSummary(
         schema_version="1.0",
@@ -203,7 +207,11 @@ def _summary(
         cached_input_tokens=0,
         output_tokens=0 if outcome == "success" else 40,
         terminal_reason=reason,
-        verified_artifact_hash="md5:abc" if outcome == "success" else "",
+        verified_artifact_hash=(
+            "md5:abc"
+            if verified_artifact_hash is None and outcome == "success"
+            else str(verified_artifact_hash or "")
+        ),
         estimated_cost_usd=0.0 if outcome == "success" else 0.012,
         incomplete_fields=("mailbox_reads",) if outcome == "success" else (),
     )
@@ -257,6 +265,31 @@ def test_aggregate_keeps_incomplete_records_distinct_from_zero_usage(tmp_path) -
     assert row.estimated_cost_usd == 0.0
     assert row.incomplete_record_count == 1
     assert row.cost_per_verified_acquisition_usd == 0.0
+
+
+def test_aggregate_excludes_execution_success_without_verified_artifact(
+    tmp_path,
+) -> None:
+    _record(
+        tmp_path,
+        _summary(
+            attempt_id="email-requested",
+            outcome="success",
+            verified_artifact_hash="",
+        ),
+    )
+    _record(tmp_path, _summary(attempt_id="verified", outcome="success"))
+
+    aggregate = list_acquisition_resource_aggregates(
+        AcquisitionResourceAggregateRequest(
+            schema_version="1.0", db_path=str(tmp_path / "reports.sqlite")
+        ),
+        _ctx(),
+    ).aggregates[0]
+
+    assert aggregate.sample_size == 2
+    assert aggregate.verified_acquisition_count == 1
+    assert aggregate.success_rate == 0.5
 
 
 def test_terminal_suppression_requires_three_compatible_failures_and_expires(

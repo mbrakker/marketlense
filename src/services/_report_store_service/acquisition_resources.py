@@ -373,7 +373,7 @@ def list_acquisition_resource_aggregates(
                 f"""
                 SELECT publisher_id, route_family, elapsed_ms, browser_steps,
                        terminal_outcome, estimated_cost_usd, avoided_operations_json,
-                       incomplete_fields_json
+                       incomplete_fields_json, verified_artifact_hash
                 FROM acquisition_attempt_resources
                 {clause}
                 ORDER BY publisher_id, route_family, completed_at_utc, attempt_id
@@ -394,7 +394,11 @@ def list_acquisition_resource_aggregates(
     aggregates: list[AcquisitionResourceAggregate] = []
     for (publisher_id, route_family), group in sorted(groups.items()):
         sample_size = len(group)
-        successes = sum(1 for row in group if str(row[4]) == "success")
+        successes = sum(
+            1
+            for row in group
+            if str(row[4]) == "success" and str(row[8] or "").strip()
+        )
         failures = sum(1 for row in group if str(row[4]) == "failed")
         elapsed = sorted(max(0, int(row[2] or 0)) for row in group)
         steps = sum(max(0, int(row[3] or 0)) for row in group)

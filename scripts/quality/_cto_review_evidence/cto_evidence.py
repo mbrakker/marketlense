@@ -703,7 +703,10 @@ def _runtime_telemetry(
         entry["route_records"] += 1
         entry["attempt_count"] += 1
         entry["success_count"] += int(
-            str(resource.get("terminal_outcome") or "").casefold() == "success"
+            bool(
+                str(resource.get("terminal_outcome") or "").casefold() == "success"
+                and str(resource.get("verified_artifact_hash") or "").strip()
+            )
         )
     acquisition_rows = [
         {
