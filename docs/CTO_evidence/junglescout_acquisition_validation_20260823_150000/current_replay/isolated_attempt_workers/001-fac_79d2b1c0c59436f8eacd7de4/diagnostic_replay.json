@@ -1,0 +1,163 @@
+{
+  "candidate_count": 1,
+  "configuration_hash": "ef0be6aad594d3f13e8bc8492ad54bcb8c1091f472f693c9a84dda252be71664",
+  "manifest_sha256": "1c41324dbb009a223c8add82b7dc949e7fd59895c0137f72a599794a6882425e",
+  "phase": "diagnostic_before_fixes",
+  "producer_git_sha": "00706cd76bb6298d02b8123e56cd062c11145496",
+  "records": [
+    {
+      "acquisition_result": {
+        "blocked_reason": "",
+        "blocked_reason_detail": "",
+        "confirmation": {
+          "confirmation_score": 0,
+          "final_page_url": "https://issuu.com/junglescoutcobalt/docs/jungle-scout-battle-of-the-brands-2025",
+          "form_disappeared": false,
+          "signal_labels": [],
+          "submit_button_state": "unchanged",
+          "url_changed": true
+        },
+        "downloaded_file_path": "",
+        "downloaded_mime_type": "",
+        "downloaded_size_bytes": 0,
+        "drive_uploads": [
+          {
+            "file_id": "1h4nFrMCgSMgVjxXpmGP5SN8d3p61eSZ7",
+            "folder_id": "15PanXu-JLAS0OQfjVNAuncIZhQh7zgUj",
+            "md5": "d2460314faebf42b99dd36029dc59b31",
+            "mime_type": "application/pdf",
+            "size": 27339516,
+            "status": "uploaded"
+          }
+        ],
+        "encountered_form_fields": [],
+        "final_url": "https://issuu.com/junglescoutcobalt/docs/jungle-scout-battle-of-the-brands-2025",
+        "onsite_capture_format": "rendered_onsite_pdf",
+        "onsite_capture_path": "C:/Programing/Market lense/out/junglescout_acquisition_validation_20260823_150000/browser_downloads/www.junglescout.com/d0ca20419ce6/issuu_rendered_report.pdf",
+        "onsite_completeness_status": "complete",
+        "onsite_page_count": 44,
+        "outcome": "captured",
+        "resolved_target_url": "https://issuu.com/junglescoutcobalt/docs/jungle-scout-battle-of-the-brands-2025",
+        "route_family": "browser_onsite_report",
+        "route_kind": "onsite_report",
+        "route_status": "verified",
+        "route_steps": [
+          {
+            "action": "open",
+            "expected_evidence": [],
+            "index": 0,
+            "observed_evidence": [],
+            "result": "Fetched the publisher report page",
+            "target_role": "url",
+            "target_url": "https://www.junglescout.com/resources/reports/3p-seller-disruption-pdf/",
+            "verification_status": ""
+          },
+          {
+            "action": "extract",
+            "expected_evidence": [],
+            "index": 1,
+            "observed_evidence": [],
+            "result": "Captured 44 public Issuu rendered pages",
+            "target_role": "iframe",
+            "target_url": "https://issuu.com/junglescoutcobalt/docs/jungle-scout-battle-of-the-brands-2025",
+            "verification_status": ""
+          }
+        ],
+        "terminal_evidence": {
+          "artifact_kind": "onsite_report",
+          "artifact_url": "https://issuu.com/junglescoutcobalt/docs/jungle-scout-battle-of-the-brands-2025",
+          "artifact_validation_detail": "Captured all 44 public Issuu rendered pages as a PDF.",
+          "artifact_validation_status": "verified",
+          "confirmation_signal_count": 1,
+          "dom_snapshot_sha256": "",
+          "evidence_labels": [
+            "publisher_embedded_issuu",
+            "public_rendered_pages",
+            "complete_rendered_pdf_capture"
+          ],
+          "final_page_title": "Issuu report",
+          "final_page_url": "https://issuu.com/junglescoutcobalt/docs/jungle-scout-battle-of-the-brands-2025",
+          "html_snapshot_path": "",
+          "network_events": [],
+          "observed_document_urls": [],
+          "screenshot_path": "",
+          "traversed_page_urls": [
+            "https://www.junglescout.com/resources/reports/3p-seller-disruption-pdf/",
+            "https://issuu.com/junglescoutcobalt/docs/jungle-scout-battle-of-the-brands-2025"
+          ],
+          "visited_url_timeline": []
+        },
+        "used_memory_route": false
+      },
+      "artifact_verification": {
+        "acquisition_method": "browser_capture",
+        "artifact_exists": true,
+        "drive_persisted": true,
+        "publisher_supplied": false,
+        "reason": "Verified complete on-site report rendered to PDF; not a publisher-supplied PDF.",
+        "retained_artifact_format": "pdf",
+        "route_verified": true,
+        "signature_valid": true,
+        "size_bytes": 27339516,
+        "source_kind": "rendered_onsite_pdf",
+        "verified_usable_artifact": true
+      },
+      "attempt_id": "diagnostic:fac_79d2b1c0c59436f8eacd7de4",
+      "canonical_candidate_url": "https://www.junglescout.com/resources/reports/3p-seller-disruption",
+      "completed_at": "2026-08-23T12:56:39.090049Z",
+      "configuration_hash": "ef0be6aad594d3f13e8bc8492ad54bcb8c1091f472f693c9a84dda252be71664",
+      "duration_seconds": 27.382,
+      "failure_candidate_id": "fac_79d2b1c0c59436f8eacd7de4",
+      "parent_attempt": "",
+      "phase": "diagnostic_before_fixes",
+      "policy_hash": "current_head_default_policy",
+      "producer_git_sha": "00706cd76bb6298d02b8123e56cd062c11145496",
+      "publisher_id": "publisher:jungle-scout",
+      "publisher_name": "Jungle Scout",
+      "resource_attempts": [
+        {
+          "attempt_id": "d1f0e2c3dac22fcc6a2c9c6683587ad423296b5a6beb5d897546c96fd675e1c8",
+          "avoided_operations_json": "[]",
+          "browser_launches": 0,
+          "browser_model_calls": 0,
+          "browser_steps": 2,
+          "cached_input_tokens": 0,
+          "completed_at_utc": "2026-08-23T12:56:39Z",
+          "created_at": 1787489799,
+          "drive_reads": 0,
+          "drive_writes": 1,
+          "duration_seconds": 27.361,
+          "elapsed_ms": 27361,
+          "estimated_cost_usd": 0.0,
+          "incomplete_fields_json": "[]",
+          "input_tokens": 0,
+          "mailbox_reads": 1,
+          "normalized_url": "https://www.junglescout.com/resources/reports/3p-seller-disruption",
+          "output_tokens": 0,
+          "page_navigations": 1,
+          "publisher_id": "publisher:jungle-scout",
+          "retry_count": 0,
+          "revalidation_override": 0,
+          "route_family": "browser_onsite_report",
+          "route_policy_version": "1.0",
+          "schema_version": "1.0",
+          "screenshots": 0,
+          "source_identity_id": "source:88aff668acdc8701ff2eefd51e7a392e",
+          "source_identity_status": "resolved",
+          "source_policy_compatibility_hash": "937099732c95682e424f5b4fd49701e2c83b7eb126f35c3f268efe11e8329a19",
+          "started_at_utc": "2026-08-23T12:56:11Z",
+          "terminal_outcome": "success",
+          "terminal_reason": "verified",
+          "updated_at": 1787489799,
+          "verified_artifact_hash": "md5:d2460314faebf42b99dd36029dc59b31"
+        }
+      ],
+      "run_id": "8e593e25-5029-43c2-aa06-1ee1bc62a092",
+      "source_identity_id": "",
+      "source_record_id": "",
+      "started_at": "2026-08-23T12:56:11.707125Z"
+    }
+  ],
+  "run_id": "8e593e25-5029-43c2-aa06-1ee1bc62a092",
+  "schema_version": "1.0"
+}
