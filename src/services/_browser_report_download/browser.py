@@ -283,6 +283,7 @@ _STANDARD_BROWSER_USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
 )
+_PREFLIGHT_RUNNER_SHUTDOWN_SECONDS = 2.0
 
 
 @dataclass
@@ -619,6 +620,21 @@ def _close_preflight_event_loop_runner(session: BrowserPreflightSession) -> None
     runner = session.event_loop_runner
     session.event_loop_runner = None
     if runner is not None:
+        loop = runner.get_loop()
+        pending = [task for task in asyncio.all_tasks(loop) if not task.done()]
+        for task in pending:
+            task.cancel()
+        if pending:
+
+            async def wait_for_pending_tasks() -> None:
+                await asyncio.wait(
+                    pending,
+                    timeout=_PREFLIGHT_RUNNER_SHUTDOWN_SECONDS,
+                )
+
+            runner.run(wait_for_pending_tasks())
+        if any(not task.done() for task in pending):
+            return
         runner.close()
 
 

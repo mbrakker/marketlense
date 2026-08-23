@@ -18,6 +18,7 @@ from src.contracts.browser_download import (
     BrowserReportDownloadRequest,
 )
 from src.services._browser_report_download import preflight as preflight_runtime
+from src.services._browser_report_download import browser as browser_runtime
 from src.utils.errors import AppError
 
 from .builders import (
@@ -93,6 +94,36 @@ def test_preflight_runner_preserves_the_browser_event_loop_for_handoff() -> None
         )
 
     assert first_loop_id == second_loop_id
+
+
+def test_preflight_runner_shutdown_does_not_block_on_a_stubborn_agent_task() -> None:
+    release = asyncio.Event()
+
+    async def ignores_cancellation() -> None:
+        while not release.is_set():
+            try:
+                await asyncio.sleep(0.001)
+            except asyncio.CancelledError:
+                continue
+
+    async def start_task() -> asyncio.Task[None]:
+        return asyncio.create_task(ignores_cancellation())
+
+    runner = asyncio.Runner()
+    session = SimpleNamespace(event_loop_runner=runner)
+    task = runner.run(start_task())
+    started = time.monotonic()
+    browser_runtime._close_preflight_event_loop_runner(session)
+
+    assert time.monotonic() - started < 3.0
+    assert session.event_loop_runner is None
+
+    async def release_task() -> None:
+        release.set()
+        await asyncio.wait_for(task, timeout=0.5)
+
+    runner.run(release_task())
+    runner.close()
 
 
 def test_augmented_error_context_retains_scalar_preflight_diagnostics() -> None:
