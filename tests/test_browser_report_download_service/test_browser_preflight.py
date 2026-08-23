@@ -58,6 +58,22 @@ def test_preflight_thread_envelope_returns_when_async_cancellation_is_ignored() 
     assert time.monotonic() - started < 0.5
 
 
+def test_preflight_runs_on_the_calling_thread_when_no_event_loop_is_active() -> None:
+    caller_thread = threading.get_ident()
+
+    async def record_thread() -> int:
+        return threading.get_ident()
+
+    assert (
+        preflight_runtime._run_preflight_coroutine(
+            record_thread(),
+            timeout_seconds=0.1,
+            grace_seconds=0.1,
+        )
+        == caller_thread
+    )
+
+
 def test_augmented_error_context_retains_scalar_preflight_diagnostics() -> None:
     probe = BrowserPreflightProbeResult(
         schema_version="1.0",

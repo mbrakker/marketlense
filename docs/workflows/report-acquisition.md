@@ -33,11 +33,13 @@ the report record.
 For an email-gated browser route, terminal stabilization polls only after recorded submission evidence, a transient terminal condition, or an explicit assist trigger. A route with no recorded submission finishes without the email polling schedule, and timeout-recovery attempts are bounded by the request timeout as well as the recovery safety cap. A terminal page with an explicit email-delivery confirmation is accepted as verified evidence even when a timed-out browser response omitted the earlier form-field record. The confirmation is publisher-agnostic: it must either state that the report was sent or emailed, or combine an email channel and destination, a report/link/download artifact, and an explicit delivery-state cue. Form-instruction text and a submit click alone remain insufficient.
 
 Eligible browser preflight opens the same managed browser profile used by Browser
-Use. Its async execution is enclosed by a process-local daemon-thread deadline
-in both synchronous CLI and active-event-loop callers, so a Browser Use websocket
-operation that ignores coroutine cancellation becomes a typed preflight failure
-instead of blocking the acquisition stage. When preflight confirms a direct PDF
-it closes that browser without constructing an agent. A matching fresh,
+Use. In a process-isolated synchronous acquisition worker, the preflight runs on
+that worker's main event loop so Browser Use retains its required session
+ownership. Active-event-loop callers use a process-local daemon-thread deadline,
+so a Browser Use websocket operation that ignores coroutine cancellation becomes
+a typed preflight failure instead of blocking the acquisition stage. When
+preflight confirms a direct PDF it closes that browser without constructing an
+agent. A matching fresh,
 publisher-specific route playbook that is fully executable runs first in its own
 clean worker, before preflight creates a reusable Agent session. If it drifts or
 does not verify, preflight then starts its normal reusable browser before Agent

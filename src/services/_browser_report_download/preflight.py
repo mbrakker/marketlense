@@ -516,7 +516,7 @@ def _run_preflight_session(
         ),
         timeout=_PREFLIGHT_SESSION_TIMEOUT_SECONDS,
     )
-    return _run_coroutine_in_thread(
+    return _run_preflight_coroutine(
         coroutine,
         timeout_seconds=_PREFLIGHT_SESSION_TIMEOUT_SECONDS,
         grace_seconds=2.0,
@@ -954,6 +954,30 @@ def _run_coroutine_in_thread(
     if errors:
         raise errors[0]
     return payload.get("result")
+
+
+def _run_preflight_coroutine(
+    coroutine: Any,
+    *,
+    timeout_seconds: float,
+    grace_seconds: float,
+) -> Any:
+    """Keep Browser Use on the worker main thread unless a loop is already active.
+
+    The acquisition supervisor already process-isolates synchronous report
+    attempts.  Running BrowserSession on that worker's main event loop avoids
+    moving its lifecycle onto a daemon thread, while active-loop callers still
+    use the bounded watchdog bridge below.
+    """
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coroutine)
+    return _run_coroutine_in_thread(
+        coroutine,
+        timeout_seconds=timeout_seconds,
+        grace_seconds=grace_seconds,
+    )
 
 
 async def _await_if_needed(value: Any) -> Any:
