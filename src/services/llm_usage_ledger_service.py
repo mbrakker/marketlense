@@ -2710,18 +2710,31 @@ def finalize_budget_side_effect(
         "pdfs",
         "mailbox_reads",
     )
+    invalid_measurements = [
+        field for field in fields if float(getattr(actual, field)) < 0
+    ]
     if (
         request.schema_version != "1.0"
         or not str(request.usage_db_path or "").strip()
         or not str(request.reservation_key or "").strip()
         or actual.schema_version != "1.0"
         or request.outcome not in valid_outcomes
-        or any(float(getattr(actual, field)) < 0 for field in fields)
+        or invalid_measurements
     ):
         raise AppError(
             code="budget_side_effect_finalize_request_invalid",
             message="Budget side-effect finalization requires non-negative measured usage",
             retryable=False,
+            context={
+                "invalid_measurements": invalid_measurements,
+                "request_schema_valid": request.schema_version == "1.0",
+                "usage_db_path_present": bool(str(request.usage_db_path or "").strip()),
+                "reservation_key_present": bool(
+                    str(request.reservation_key or "").strip()
+                ),
+                "usage_schema_valid": actual.schema_version == "1.0",
+                "outcome_valid": request.outcome in valid_outcomes,
+            },
         )
     if float(actual.spend_usd) != 0.0:
         raise AppError(

@@ -284,6 +284,10 @@ _STANDARD_BROWSER_USER_AGENT = (
     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
 )
 _PREFLIGHT_RUNNER_SHUTDOWN_SECONDS = 2.0
+_PREFLIGHT_LIFECYCLE_OUTCOME_TO_BUDGET_OUTCOME = {
+    "deterministic_handoff": "completed",
+    "deterministic_isolation": "completed",
+}
 
 
 @dataclass
@@ -436,7 +440,9 @@ def close_browser_preflight_session(
         decision=session.launch_decision,
         ctx=ctx,
         started=True,
-        outcome=outcome,
+        outcome=_PREFLIGHT_LIFECYCLE_OUTCOME_TO_BUDGET_OUTCOME.get(
+            outcome, outcome
+        ),
         error_code=error_code,
         runtime_seconds=max(0, int(time.monotonic() - session.launch_started_at)),
     )

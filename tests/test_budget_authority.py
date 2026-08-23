@@ -374,6 +374,34 @@ def _finalize_drive_read(budget: RunBudget, key: str, *, actual_reads: int) -> N
     )
 
 
+def test_side_effect_finalization_identifies_negative_measured_metric(tmp_path) -> None:
+    budget = _budget(tmp_path)
+    reserved = evaluate_budget_request(
+        _request(
+            budget,
+            resource_type="pdf_process",
+            operation="acquire_report_pdf",
+            estimated_pdfs=1,
+            idempotency_key="pdf:invalid-actual",
+        ),
+        _ctx(),
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        finalize_budget_side_effect(
+            BudgetSideEffectFinalizeRequest(
+                schema_version="1.0",
+                usage_db_path=budget.usage_db_path,
+                reservation_key=reserved.reservation_key,
+                actual_usage=RunBudgetUsage(schema_version="1.0", pdfs=-1),
+            ),
+            _ctx(),
+        )
+
+    assert exc_info.value.code == "budget_side_effect_finalize_request_invalid"
+    assert exc_info.value.context["invalid_measurements"] == ["pdfs"]
+
+
 def test_side_effect_actual_reconciliation_releases_unused_capacity_and_is_idempotent(
     tmp_path,
 ) -> None:

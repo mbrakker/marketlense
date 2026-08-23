@@ -98,11 +98,11 @@ resources:
     forecast_source: explicit configured timeout and one launch
     preflight_gate: evaluate_budget_request immediately before browser startup
     reservation_used: stable browser launch key
-    actual_usage_source: actual launch-start flag and measured runtime
-    reconciliation_path: finalize_budget_side_effect
+    actual_usage_source: actual launch-start flag and measured runtime; deterministic preflight handoff or isolation is a completed browser lifecycle outcome
+    reconciliation_path: finalize_budget_side_effect with completed, failed, or cancelled budget outcome
     idempotency_source: reservation key
     blocking_outcomes: defer, pause, stop
-    test_reference: tests/test_run_budget_side_effects.py
+    test_reference: tests/test_browser_route_budgets.py
     status: covered
   - resource_type: pdf_process
     operation: process_pdf
