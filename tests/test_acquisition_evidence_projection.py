@@ -14,6 +14,7 @@ def _record(
     route: str,
     terminal_reason: str,
     agent_calls: int,
+    blocked_reason: str = "",
 ) -> dict[str, object]:
     return {
         "failure_candidate_id": candidate_id,
@@ -26,6 +27,7 @@ def _record(
             "route_family": route,
             "route_kind": "pdf_download",
             "outcome": "downloaded" if verified else "email_required",
+            "blocked_reason": blocked_reason,
         },
         "artifact_verification": {
             "verified_usable_artifact": verified,
@@ -70,6 +72,14 @@ def test_projection_builder_writes_sanitized_consistent_evidence_views(
             terminal_reason="blocked_no_progress",
             agent_calls=2,
         ),
+        _record(
+            candidate_id="fac_static_archive",
+            verified=False,
+            route="browser_preflight_terminal_static_archive",
+            terminal_reason="observed",
+            agent_calls=0,
+            blocked_reason="blocked_static_archive",
+        ),
     ]
     baseline_records = [
         _record(
@@ -85,6 +95,14 @@ def test_projection_builder_writes_sanitized_consistent_evidence_views(
             route="browser_listing_hub",
             terminal_reason="blocked_no_progress",
             agent_calls=4,
+        ),
+        _record(
+            candidate_id="fac_static_archive",
+            verified=False,
+            route="browser_preflight_terminal_static_archive",
+            terminal_reason="observed",
+            agent_calls=0,
+            blocked_reason="blocked_static_archive",
         ),
     ]
     current_path.write_text(
@@ -122,6 +140,7 @@ def test_projection_builder_writes_sanitized_consistent_evidence_views(
     )
     assert [item["candidate_id"] for item in projection["attempts"]] == [
         "fac_failure",
+        "fac_static_archive",
         "fac_success",
     ]
     assert projection["attempts"][0]["tokens"] == {
@@ -137,11 +156,26 @@ def test_projection_builder_writes_sanitized_consistent_evidence_views(
             "cost_usd": 0.0125,
             "duration_seconds": 12.5,
             "terminal_reason": "blocked_no_progress",
+        },
+        {
+            "agent_calls": 0,
+            "browser_launches": 1,
+            "candidate_count": 1,
+            "cost_usd": 0.0125,
+            "duration_seconds": 12.5,
+            "terminal_reason": "blocked_static_archive",
         }
     ]
     assert projection["before_after"]["current"]["verified_acquisitions"] == 1
     assert projection["before_after"]["baseline"]["agent_calls"] == 7
     assert projection["remaining_failures"][0]["candidate_id"] == "fac_failure"
+    static_archive = next(
+        item
+        for item in projection["attempts"]
+        if item["candidate_id"] == "fac_static_archive"
+    )
+    assert static_archive["failure_class"] == "external_source_unavailable"
+    assert static_archive["terminal_reason"] == "blocked_static_archive"
     assert projection["consistency"]["candidate_sets_match"] is True
     assert projection["consistency"]["expected_current_hash_matches"] is True
     assert "private.example" not in json.dumps(projection)

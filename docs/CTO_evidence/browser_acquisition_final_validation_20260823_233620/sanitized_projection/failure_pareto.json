@@ -1,11 +1,19 @@
 [
   {
     "agent_calls": 0,
-    "browser_launches": 4,
-    "candidate_count": 4,
+    "browser_launches": 3,
+    "candidate_count": 3,
     "cost_usd": 0.0,
-    "duration_seconds": 96.018,
+    "duration_seconds": 77.246,
     "terminal_reason": "email_required"
+  },
+  {
+    "agent_calls": 0,
+    "browser_launches": 1,
+    "candidate_count": 1,
+    "cost_usd": 0.0,
+    "duration_seconds": 18.772,
+    "terminal_reason": "blocked_static_archive"
   },
   {
     "agent_calls": 5,

@@ -41,7 +41,9 @@ duration are task-scoped values from the final acquisition records.
 Failures retained in the denominator:
 
 - Brand Finance `fac_029…`: `browser_download_agent_timeout` after five Agent calls.
-- Criteo `fac_fa188…`: `email_required` after terminal static-archive preflight.
+- Criteo `fac_fa188…`: `external_source_unavailable` /
+  `blocked_static_archive` after terminal static-archive preflight; no Agent
+  call was made and the frozen candidate remains a failure in the denominator.
 - GWI `fac_4da…`, `fac_c0e…`, and `fac_6f9…`: `email_required` after deterministic
   email-form handling, with no Agent calls.
 - Barclays `fac_9d4…`: `report_download_candidate_rejected_mixed_content_hub`, with

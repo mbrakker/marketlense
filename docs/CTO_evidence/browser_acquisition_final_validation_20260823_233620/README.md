@@ -97,6 +97,10 @@ blocker resolution.
 - Agent fallback was bounded to two reports and eight calls. The unresolved Brand
   Finance landing-page target terminated as a normal bounded Agent timeout; no
   generic context-reduction experiment was introduced.
+- Criteo's static-archive preflight is classified in the sanitized projection as
+  `external_source_unavailable` with terminal reason `blocked_static_archive`,
+  rather than the generic `email_required` outcome used internally by the
+  historical browser-result contract.
 
 Focused current-main deterministic checks passed for the architecture paths not
 resolved by this live cohort: task resource telemetry and remembered-blocker

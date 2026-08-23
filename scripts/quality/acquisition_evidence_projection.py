@@ -23,6 +23,7 @@ _NON_ACTIONABLE_RESOURCE_REASONS = {
     "success",
     "verified",
 }
+_EXTERNAL_SOURCE_UNAVAILABLE_BLOCKERS = {"blocked_static_archive"}
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -100,6 +101,11 @@ def _terminal_reason(record: dict[str, Any]) -> str:
     error_code = str(_mapping(record.get("acquisition_error")).get("error_code") or "")
     if error_code:
         return error_code
+    blocked_reason = str(
+        _mapping(record.get("acquisition_result")).get("blocked_reason") or ""
+    ).strip()
+    if blocked_reason:
+        return blocked_reason
     resources = record.get("resource_attempts")
     if isinstance(resources, list):
         for resource in resources:
@@ -114,6 +120,12 @@ def _terminal_reason(record: dict[str, Any]) -> str:
     return "unknown"
 
 
+def _failure_class(record: dict[str, Any]) -> str:
+    if _terminal_reason(record) in _EXTERNAL_SOURCE_UNAVAILABLE_BLOCKERS:
+        return "external_source_unavailable"
+    return ""
+
+
 def sanitize_record(record: dict[str, Any]) -> dict[str, Any]:
     """Return the public scalar projection for one retained attempt."""
     verification = _mapping(record.get("artifact_verification"))
@@ -125,6 +137,7 @@ def sanitize_record(record: dict[str, Any]) -> dict[str, Any]:
         "configuration_hash": str(record.get("configuration_hash") or ""),
         "route": _route(record),
         "terminal_reason": _terminal_reason(record),
+        "failure_class": _failure_class(record),
         "verified_artifact": bool(verification.get("verified_usable_artifact")),
         "source_kind": str(verification.get("source_kind") or "unknown"),
         "retained_format": str(verification.get("retained_artifact_format") or "none"),

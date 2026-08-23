@@ -145,7 +145,8 @@ python scripts/quality/acquisition_evidence_projection.py \
 ```
 
 The generated canonical projection contains only candidate and publisher IDs,
-tested commit/configuration hashes, route and terminal reason, normal artifact
+tested commit/configuration hashes, route, terminal reason, and derived failure
+class, normal artifact
 verification/source-format fields, scalar duration/browser/Agent/token/cost/
 mailbox/Drive metrics, and aggregate views. It omits URLs, local paths,
 screenshots, form values, raw browser content, and model output. It writes a
@@ -153,6 +154,12 @@ per-candidate projection, failure Pareto, route metrics, baseline-versus-
 current metrics, remaining failures, and a consistency record. The consistency
 record proves the input hashes, candidate counts, exact candidate-set equality,
 and agreement between the remaining-failure list and aggregate metrics.
+
+When the canonical acquisition result carries a typed blocker, the projection
+uses that blocker as its terminal reason rather than falling back to a generic
+outcome. In particular, `blocked_static_archive` carries the derived
+`external_source_unavailable` failure class; it is not reported as
+`email_required`.
 
 An input-hash mismatch is a hard error. A candidate-set mismatch remains
 explicit in the output so an assessor can diagnose it, but the baseline and
