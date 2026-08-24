@@ -33,10 +33,11 @@ infer findings from an incomplete snapshot.
 ## Reviewer dispatch
 
 Launch exactly these three independent reviewers concurrently when the current
-Codex surface supports parallel agents. Otherwise run them sequentially while
-keeping the same inputs and isolation. Do not add reviewer roles unless a
-recorded benchmark result shows they improve useful findings without increasing
-false positives.
+Codex surface supports parallel agents. Use the `marketlense-delegation`
+Explorer controls for their read-only scope and native-limit handling; otherwise
+run them sequentially while keeping the same inputs and isolation. Do not add
+reviewer roles unless a recorded benchmark result shows they improve useful
+findings without increasing false positives.
 
 Every reviewer receives this non-negotiable instruction:
 
