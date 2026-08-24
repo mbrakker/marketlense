@@ -1,0 +1,82 @@
+{
+  "schema_version": "1.0",
+  "report_kind": "actual_pre_phase1_codex_baseline",
+  "run_date": "2026-08-24",
+  "benchmark_cutoff_commit": "fd59abac1bd35fda5ee652adad80e21c7de52823",
+  "repository_head_at_capture": "5e66a036811d69b02e637bdba5ad1309c4a661dd",
+  "corpus": {
+    "path": "benchmarks/agent-engineering/cases.json",
+    "schema_version": "1.0",
+    "sha256": "7ab3d9b261e9acdb12622057c32346f46fae9e7aadfa0cb6f5226a05a3785ef1",
+    "frozen_case_count": 16,
+    "executed_case_count": 10
+  },
+  "agent": {
+    "name": "Codex",
+    "version_or_model": "unavailable",
+    "run_topology": "three native isolated child agents, each assigned sequential historical worktrees"
+  },
+  "results": {
+    "successful_cases": 9,
+    "total_cases": 10,
+    "correctness_score": 0.9,
+    "mean_weighted_score": 82.3,
+    "required_commands_executed_rate": 1.0,
+    "all_required_checks_passed_case_rate": 0.7,
+    "irrelevant_files_modified": 22,
+    "human_intervention_count": 0,
+    "rework_count": 0,
+    "median_elapsed_seconds": 216,
+    "elapsed_measurements": 9,
+    "median_tool_call_count": "unavailable",
+    "median_file_read_count": "unavailable",
+    "input_tokens": "unavailable",
+    "output_tokens": "unavailable",
+    "cached_tokens": "unavailable",
+    "estimated_cost_usd": "unavailable"
+  },
+  "by_category": {
+    "architecture_investigation": {"executed": 2, "correct": 2, "required_check_passed_cases": 1},
+    "browser_acquisition": {"executed": 2, "correct": 2, "required_check_passed_cases": 2, "median_elapsed_seconds": 296},
+    "bug_fix": {"executed": 1, "correct": 1, "required_check_passed_cases": 1, "median_elapsed_seconds": 216},
+    "feature_implementation": {"executed": 1, "correct": 1, "required_check_passed_cases": 1, "median_elapsed_seconds": 156},
+    "llm_prompt_pipeline": {"executed": 1, "correct": 1, "required_check_passed_cases": 0, "median_elapsed_seconds": 181},
+    "pdf_visual_extraction": {"executed": 1, "correct": 1, "required_check_passed_cases": 1, "median_elapsed_seconds": 117},
+    "performance_cost": {"executed": 1, "correct": 0, "required_check_passed_cases": 0, "median_elapsed_seconds": 235},
+    "service_boundary_refactor": {"executed": 1, "correct": 1, "required_check_passed_cases": 1, "median_elapsed_seconds": 217}
+  },
+  "difficult_or_incomplete_cases": [
+    {
+      "case_id": "ML-PERF-001",
+      "outcome": "incorrect_or_unverified",
+      "reason": "The worker implemented an alternative cache path outside the evaluator-owned relevant components; the required test file did not exist at the starting revision."
+    },
+    {
+      "case_id": "ML-LLM-001",
+      "outcome": "correct_with_incomplete_evaluator_check",
+      "reason": "The worker's focused provider-free validation tests passed, but the required dedicated regression file was created by the historical fix and was not injected into the worker checkout."
+    },
+    {
+      "case_id": "ML-ARCH-001",
+      "outcome": "correct_with_failed_aggregate_verification",
+      "reason": "The evaluator wiring test passed, while the full local quality gate stopped at formatting for two worker-modified files."
+    }
+  ],
+  "common_baseline_inefficiencies": [
+    "Relevant-file discovery recall was 43.33%; agents frequently found a correct adjacent implementation path but not the retained evaluator components.",
+    "Workers modified 22 files outside evaluator allowlists, chiefly adjacent documentation and alternative focused tests.",
+    "Historical test availability was inconsistent: two required regression files were introduced by their fixing commits and could not be run without evaluator injection.",
+    "The native child-agent surface did not expose reliable tool-call, file-read, token, cached-token, model-version, or cost telemetry."
+  ],
+  "exact_process": [
+    "Validate the frozen corpus: python scripts/quality/agent_engineering_benchmark.py validate --corpus benchmarks/agent-engineering/cases.json",
+    "For each selected case, create a disposable detached worktree: git worktree add --detach <case-worktree> <fix_commit>^",
+    "Give the worker only cases.json task_prompt; retain fixing diff, relevant files, required checks, and failure conditions with the evaluator.",
+    "After worker completion, run the evaluator-owned required command in that case worktree and record its result.",
+    "Score the captured run: python scripts/quality/agent_engineering_benchmark.py score --corpus benchmarks/agent-engineering/cases.json --run-record benchmarks/agent-engineering/baselines/codex-pre-phase1-run.json --output benchmarks/agent-engineering/baselines/codex-pre-phase1-score.json"
+  ],
+  "reproducibility": {
+    "future_phase1_comparison": "Use the same cases.json hash, task_prompt values, fixing commits, and parent starting revisions. Do not include post-fd59abac tooling in the baseline arm.",
+    "test_injection_limitation": "This inaugural run did not inject evaluator-owned test files that were absent at a parent revision. Future benchmark versions may add a separately versioned injector, but must preserve the agent-visible prompt and record the changed evaluation procedure."
+  }
+}

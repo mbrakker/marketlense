@@ -31,6 +31,13 @@ the documented scorer with a separately captured agent-run record for a real
 correctness, discovery, scope, verification, time, token/cost, and
 intervention measurement.
 
+The retained `codex-pre-phase1-{run,score,report}.json` artifacts are that
+separate genuine baseline run. They evaluate ten isolated historical worktrees
+at the pre-Phase-1 cutoff `fd59abac1bd35fda5ee652adad80e21c7de52823`; they are
+not corpus validation. The report records 9/10 evaluator-correct outcomes and
+the unavailable native telemetry without replacing it with zero. Future
+comparison arms use the same corpus hash, prompts, and parent revisions.
+
 The related CodeGraph Phase-0 retrieval experiment is recorded in the
 [agent-engineering benchmark](../../benchmarks/agent-engineering/README.md).
 It was rejected because it missed the required time and structural-verification

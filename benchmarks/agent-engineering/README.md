@@ -96,6 +96,37 @@ The baseline binds the corpus hash and repository commit and validates all 16
 cases. It explicitly records every agent-performance metric as unavailable: it
 is an integrity baseline, not an invented Codex performance result.
 
+## Actual pre-Phase-1 Codex run
+
+The first genuine baseline is retained separately from corpus integrity:
+
+- `baselines/codex-pre-phase1-run.json` — the ten worker records;
+- `baselines/codex-pre-phase1-score.json` — deterministic scorer output;
+- `baselines/codex-pre-phase1-report.json` — evaluator decisions, check results,
+  aggregates, limitations, and exact process.
+
+It freezes the Phase-0 cutoff at `fd59abac1bd35fda5ee652adad80e21c7de52823`.
+Workers used only the task prompt in disposable detached worktrees at the
+historical fixing-commit parent. They did not receive relevant files, fixing
+diffs, required checks, or Phase-1 tooling. The retained run executed ten cases
+across every corpus category: it recorded 9/10 evaluator-correct completions,
+an 82.3 mean weighted score, 43.33% relevant-file recall, 22 irrelevant
+modifications, and a 216-second median over the nine observable elapsed times.
+Tool/file-read counts, model identity, token counts, and cost were not exposed
+by the native child-agent surface and remain `unavailable`.
+
+Two evaluator-owned regression files did not exist in their historical parent
+revisions, so their checks are recorded as unavailable/failed rather than
+fabricated. The report explains this limitation. Future Phase-1 comparison runs
+MUST retain the same corpus hash, prompts, fixing commits, and parent revisions;
+any different injection procedure requires a new benchmark version.
+
+Re-score the captured actual run with:
+
+```powershell
+python scripts/quality/agent_engineering_benchmark.py score --corpus benchmarks/agent-engineering/cases.json --run-record benchmarks/agent-engineering/baselines/codex-pre-phase1-run.json --output benchmarks/agent-engineering/baselines/codex-pre-phase1-score.json
+```
+
 ## CodeGraph Phase-0 comparison (rejected)
 
 `codegraph-phase0.json` is a narrow, two-question retrieval comparison using
