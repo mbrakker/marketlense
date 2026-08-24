@@ -14,6 +14,18 @@ The local gate sequence mirrors GitHub's pre-test checks, including dependency c
 
 The GitHub job summary runs only when its release-review and queue-evidence inputs exist. The evidence bundle upload still runs after an earlier gate fails, retaining available diagnostics without adding a missing-artifact summary failure.
 
+## GitHub merge enforcement
+
+The `ci` workflow runs for both `push` and `pull_request`; its single required
+job is named `tests`, so its GitHub status check is suitable for default-branch
+protection. GitHub repository settings are the merge authority and cannot be
+enforced by this checkout. Protect `main` with a branch-protection rule or
+ruleset that requires the `tests` status check, requires the branch to be
+current with its base before merging, and disallows bypassing these checks.
+Require pull requests as part of the same rule when direct pushes must be
+prevented. Enable required code-owner review separately if the repository
+intends the existing `CODEOWNERS` file to be a merge requirement.
+
 Repository hygiene exceptions are temporary migration tools, not permanent
 storage policy. Generated screenshots belong in ignored runtime output or, when
 they are intentional test inputs, under `tests/fixtures`; expired screenshot

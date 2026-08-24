@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "report_kind": "phase1_checkpoint_improvement_rejection",
+  "date": "2026-08-25",
+  "protocol": "benchmarks/agent-engineering/pre-phase1-protocol.json",
+  "decision": "REJECT",
+  "baseline": {
+    "evaluator_correct_completion": "9/10",
+    "required_verification_success": "85%",
+    "verified_scope_violations": 0,
+    "human_intervention_count": 0,
+    "rework_count": 0,
+    "median_elapsed_seconds": 216,
+    "token_usage": "unavailable",
+    "estimated_cost_usd": "unavailable"
+  },
+  "root_causes": {
+    "ML-PERF-001": "The recorded worker proved unchanged-path reuse but did not prove retained-artifact identity after bytes changed at the same path; evaluator verification observed reuse instead of reacquisition.",
+    "ML-ARCH-001": "The recorded worker added the required local structural checks but did not format its two changed Python files, so its mandatory aggregate quality check stopped at formatting."
+  },
+  "candidate_run": {
+    "status": "invalid_and_incomplete",
+    "completed_cases_before_stop": ["ML-ARCH-001", "ML-ARCH-002", "ML-BUG-001", "ML-BROWSER-002", "ML-FEAT-002", "ML-PDF-001", "ML-LLM-001"],
+    "discarded_case": "An evaluator payload was injected into an active ML-LLM-001 worktree. The worker was interrupted, the worktree was discarded, and a fresh worker/worktree was used for the later LLM attempt.",
+    "blocking_result": "The fresh ML-LLM-001 worker failed its required post-stop behavioral verification, so the intervention could not establish a valid 10-case improvement over baseline.",
+    "holdouts_used": false,
+    "scope_violations_verified": 0,
+    "elapsed_time": "unavailable: the native delegation surface did not retain per-case timing",
+    "token_usage": "unavailable",
+    "estimated_cost_usd": "unavailable",
+    "human_intervention_count": 1,
+    "rework_count": 1
+  },
+  "retained_changes": [
+    "Formatting-only repair for the two files that caused the current GitHub CI format failure.",
+    "Current-reference documentation of the required GitHub branch-protection/ruleset configuration."
+  ],
+  "reverted_experiment": [
+    "Focused completion-gate formatting selection.",
+    "Artifact-reuse-specific speedup Skill instruction and its test."
+  ]
+}

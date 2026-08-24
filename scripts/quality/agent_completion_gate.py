@@ -231,8 +231,7 @@ def _redact_sensitive_output(value: str) -> str:
     )
     for name, secret in os.environ.items():
         is_sensitive_name = any(
-            marker in name.upper()
-            for marker in ("KEY", "TOKEN", "SECRET", "PASSWORD")
+            marker in name.upper() for marker in ("KEY", "TOKEN", "SECRET", "PASSWORD")
         )
         if secret and is_sensitive_name:
             redacted = redacted.replace(secret, "[REDACTED]")

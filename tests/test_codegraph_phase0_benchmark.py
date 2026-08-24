@@ -21,14 +21,16 @@ def test_native_discovery_files_comes_only_from_actual_command_output() -> None:
     )
 
 
-def test_codegraph_discovery_files_keeps_non_reference_paths_from_actual_output(
-) -> None:
+def test_codegraph_discovery_files_keeps_non_reference_paths_from_actual_output() -> (
+    None
+):
     output = "- `src/services/file_service.py` calls `src/contracts/files.py`\n"
 
     assert discovery_files_from_text(output) == (
         "src/services/file_service.py",
         "src/contracts/files.py",
     )
+
 
 def test_mcp_text_joins_text_blocks_and_rejects_malformed_results() -> None:
     assert (
