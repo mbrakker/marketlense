@@ -97,7 +97,7 @@ def validate_review_corpus(
         if not isinstance(evidence_paths, list) or not evidence_paths:
             failures.append(f"{case_id}_accepted_finding_evidence_missing")
             continue
-        source_paths = set(source_case["ground_truth"]["relevant_files"])
+        source_paths = set(source_case["ground_truth"]["historical_reference_files"])
         for path in evidence_paths:
             if not isinstance(path, str) or path not in source_paths:
                 failures.append(f"{case_id}_evidence_not_in_source_ground_truth:{path}")

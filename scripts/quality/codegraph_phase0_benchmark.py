@@ -10,6 +10,7 @@ import argparse
 import json
 import os
 import queue
+import re
 import subprocess
 import threading
 import time
@@ -104,6 +105,29 @@ def _run(command: list[str], *, root: Path) -> tuple[str, int]:
 def _token_proxy(value: str) -> int:
     """Use the documented, deterministic four-bytes-per-token proxy."""
     return (len(value.encode("utf-8")) + 3) // 4
+
+
+def native_discovery_files(discovery_output: str) -> tuple[str, ...]:
+    """Return only repository-relative file paths emitted by native discovery.
+
+    Phase-0 intentionally measures discovery output, not evaluator knowledge.
+    The relevant-file list is used only afterwards to calculate diagnostic recall.
+    """
+    files: list[str] = []
+    for raw_line in discovery_output.splitlines():
+        candidate = raw_line.strip().replace("\\", "/")
+        if candidate.startswith(("src/", "tests/", "scripts/", "docs/", ".codex/")):
+            files.append(candidate)
+    return tuple(dict.fromkeys(files))
+
+
+def discovery_files_from_text(output: str) -> tuple[str, ...]:
+    """Extract repository-relative paths from MCP text without evaluator data."""
+    matches = re.findall(
+        r"(?<![\w./])((?:src|tests|scripts|docs|\.codex)/[A-Za-z0-9_./-]+)",
+        output.replace("\\", "/"),
+    )
+    return tuple(dict.fromkeys(match.rstrip(".,:;`)") for match in matches))
 
 
 def _mcp_text(message: dict[str, Any]) -> str:
@@ -224,29 +248,42 @@ class _McpSession:
 
 
 def _native_row(case: dict[str, Any], *, root: Path) -> dict[str, Any]:
-    discovery_output, discovery_elapsed = _run(
+    started = time.perf_counter_ns()
+    discovery_output, _ = _run(
         [str(value) for value in case["native_discovery_command"]], root=root
     )
+    files_discovered = native_discovery_files(discovery_output)
+    readable_files = [
+        relative_path
+        for relative_path in files_discovered
+        if (root / relative_path).is_file()
+    ]
     relevant_files = [str(value) for value in case["relevant_files"]]
     source_output = "\n".join(
         (root / relative_path).read_text(encoding="utf-8")
-        for relative_path in relevant_files
+        for relative_path in readable_files
     )
     markers = [str(value) for value in case["required_markers"]]
+    relevant_discovered = [
+        relative_path
+        for relative_path in relevant_files
+        if relative_path in files_discovered
+    ]
     return {
         "case_id": case["id"],
-        "relevant_file_recall": 1.0,
+        "relevant_file_recall": len(relevant_discovered) / len(relevant_files),
         "structural_conclusion": (
             "correct"
-            if all(marker in source_output for marker in markers)
+            if len(relevant_discovered) == len(relevant_files)
+            and all(marker in source_output for marker in markers)
             else "incorrect"
         ),
-        "retrieval_calls": 1 + len(relevant_files),
-        "source_read_calls": len(relevant_files),
+        "retrieval_calls": 1 + len(readable_files),
+        "source_read_calls": len(readable_files),
         "response_bytes": len((discovery_output + source_output).encode("utf-8")),
         "token_proxy": _token_proxy(discovery_output + source_output),
-        "elapsed_ms": discovery_elapsed,
-        "files_discovered": relevant_files,
+        "elapsed_ms": round((time.perf_counter_ns() - started) / 1_000_000),
+        "files_discovered": files_discovered,
     }
 
 
@@ -257,13 +294,14 @@ def _codegraph_row(case: dict[str, Any], *, session: _McpSession) -> dict[str, A
     )
     normalized_output = output.replace("\\", "/")
     relevant_files = [str(value) for value in case["relevant_files"]]
-    files_discovered = [
+    files_discovered = discovery_files_from_text(output)
+    relevant_discovered = [
         relative_path
         for relative_path in relevant_files
-        if relative_path in normalized_output
+        if relative_path in files_discovered
     ]
     markers = [str(value) for value in case["required_markers"]]
-    recall = len(files_discovered) / len(relevant_files)
+    recall = len(relevant_discovered) / len(relevant_files)
     return {
         "case_id": case["id"],
         "relevant_file_recall": recall,
@@ -310,8 +348,10 @@ def run_phase0(
         "repository_commit": spec["repository_commit"],
         "codegraph_release": spec["codegraph_release"],
         "measurement_note": (
-            "Token values are a deterministic response-byte proxy (ceil(bytes / 4)); "
-            "provider token usage and cost are not available in this tool-only run."
+            "This is a retrieval-only diagnostic, not an adoption decision. "
+            "Token values "
+            "are a deterministic response-byte proxy (ceil(bytes / 4)); provider token "
+            "usage and cost are not available in this tool-only run."
         ),
         "thresholds": spec["thresholds"],
         "codegraph_server_startup_ms_excluded_from_query_timing": server_startup_ms,

@@ -43,3 +43,14 @@ requirements, and the aggregate-gate decision. Only a command-produced
 assign PASS. The command is development tooling only and adds no runtime
 dependency. It is a MarketLense-native lifecycle completion check, not a
 Claude Code hook or dependency.
+
+The gate hashes the content of the tracked diff and untracked files before and
+after checks, so a checker mutating an already-modified path makes PASS
+impossible. It stores bounded actionable stdout/stderr only for failed checks
+in the JSON report. Explicit `MARKETLENSE_RETAIN_FAILURE_OUTPUT=1` opt-in
+retains redacted local failure output under the ignored
+`.codex_tmp/agent_completion_gate/` evidence directory. Ordinary role-boundary
+changes select focused lint, type, architecture, and credible affected tests;
+the aggregate quality gate is reserved for public-contract, persisted-schema,
+release-control, and named consequential-workflow changes, and is not preceded
+by a duplicate default pytest run.

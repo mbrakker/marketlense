@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0",
+  "run_kind": "genuine_read_only_historical_review",
+  "reviewer_outputs": {
+    "FER-COR-001": "No high-confidence finding.",
+    "FER-COR-002": "No high-confidence finding.",
+    "FER-ARC-001": "Direct filesystem I/O in the Streamlit asset viewer bypasses the canonical service boundary.",
+    "FER-ARC-002": "No high-confidence finding.",
+    "FER-REG-001": "Prompt rendering logs identity and delivery-email fields in a normal structured event.",
+    "FER-REG-002": "No high-confidence finding."
+  },
+  "findings": [
+    {
+      "case_id": "FER-ARC-001",
+      "finding_id": "direct-filesystem-io-outside-service",
+      "confidence": 97,
+      "introduced_status": "introduced",
+      "evidence_paths": [
+        "src/ui/app_pages/core_operations.py"
+      ],
+      "reviewer": "architecture_simplicity",
+      "source_snapshot": "13b669d528b75fa7a6941ba416743ad182fc0977"
+    },
+    {
+      "case_id": "FER-REG-001",
+      "finding_id": "prompt-validation-logs-sensitive-data",
+      "confidence": 96,
+      "introduced_status": "introduced",
+      "evidence_paths": [
+        "src/services/_browser_report_download/prompt.py"
+      ],
+      "reviewer": "regression_testing",
+      "source_snapshot": "da8d63d0cf1759e832e588a0fc297e93b9c9e8eb"
+    }
+  ]
+}

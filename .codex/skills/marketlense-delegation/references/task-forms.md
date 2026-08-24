@@ -14,7 +14,7 @@ Allowed subsystems/paths: [repository-relative paths or named subsystems]
 Prohibited: edit/create/delete/format files; test runs with writes; stage,
 commit, push; external writes; spawning another child; scope expansion.
 Tools: [read-only repository tools; `codegraph_explore` only if configured]
-Native limits: [only actual current-surface fields; otherwise `not exposed`]
+Native limits: [use only limits exposed by the current surface; otherwise omit]
 Expected output:
 - relevant files and why;
 - call/data flows and public contracts;
@@ -45,7 +45,7 @@ Prohibited: paths outside scope; new dependency/runtime/service; external write;
 child delegation; commit/push unless explicitly authorized.
 Required inspection: [contracts, tests, policy, related current behavior]
 Required verification: [exact focused commands and expected observable evidence]
-Native limits: [only actual current-surface fields; otherwise `not exposed`]
+Native limits: [use only limits exposed by the current surface; otherwise omit]
 Expected output:
 - changed files and a one-line reason for each;
 - acceptance-criterion result;

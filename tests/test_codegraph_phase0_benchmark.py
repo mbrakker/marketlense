@@ -1,7 +1,34 @@
 from __future__ import annotations
 
-from scripts.quality.codegraph_phase0_benchmark import _mcp_text, evaluate_phase0
+from scripts.quality.codegraph_phase0_benchmark import (
+    _mcp_text,
+    discovery_files_from_text,
+    evaluate_phase0,
+    native_discovery_files,
+)
 
+
+def test_native_discovery_files_comes_only_from_actual_command_output() -> None:
+    output = (
+        "src/services/file_service.py\n"
+        "notes about an API contract\n"
+        "tests/test_file_service.py\n"
+    )
+
+    assert native_discovery_files(output) == (
+        "src/services/file_service.py",
+        "tests/test_file_service.py",
+    )
+
+
+def test_codegraph_discovery_files_keeps_non_reference_paths_from_actual_output(
+) -> None:
+    output = "- `src/services/file_service.py` calls `src/contracts/files.py`\n"
+
+    assert discovery_files_from_text(output) == (
+        "src/services/file_service.py",
+        "src/contracts/files.py",
+    )
 
 def test_mcp_text_joins_text_blocks_and_rejects_malformed_results() -> None:
     assert (

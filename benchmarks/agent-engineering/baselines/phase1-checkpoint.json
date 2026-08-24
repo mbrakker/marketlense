@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "baseline": {
+    "protocol": "pre-phase1-protocol.json",
+    "run": "codex-pre-phase1-run.json",
+    "score": "codex-pre-phase1-score.json",
+    "evaluator_correct_completion": "9/10"
+  },
+  "candidate_controls": {
+    "codegraph": "rejected: evaluator-prompt isolation violation and worse observed structural-investigation telemetry",
+    "final_engineering_review": "not promoted: 0/6 useful historical findings and 2/2 high-confidence false positives",
+    "completion_gate": "retained as deterministic development verification; it is not an agent-performance intervention"
+  },
+  "comparison": {
+    "status": "not_run",
+    "reason": "No candidate workflow demonstrated a safe net benefit to form a Frankenstein implementation arm. Re-running historical implementation workers only to report an unchanged or unsafe control bundle would violate the frozen comparison purpose."
+  },
+  "decision": "Do not adopt a Phase-1 agent-control workflow or begin Phase 2 from this checkpoint."
+}

@@ -31,10 +31,9 @@ current source and tests.
 ## Limits and isolation
 
 Use a native execution, time, turn, token, or reasoning limit only when the
-current Codex delegation surface exposes that setting. On this surface,
-`reasoning_effort` is available for a spawned child, while time/turn/token
-caps are not; omit unsupported fields and use the declared stop conditions or
-native interruption rather than inventing counters or a queue.
+current Codex delegation surface exposes that setting. Omit unsupported fields
+and use declared stop conditions or native interruption rather than inventing
+counters, a queue, or another limit mechanism.
 
 Explorers are strictly read-only: no file edits, formatters, test runs that
 write state, staging, commits, or external writes. For concurrent Implementers,

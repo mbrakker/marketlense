@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0",
+  "kind": "temporary_codegraph_structural_ab_rejection",
+  "repository_revision": "a5a42e7a4086bb1f6e0705fac1f7b010ae2a12ad",
+  "codegraph_release": "1.5.0",
+  "scope": "Read-only structural investigation before implementation; not an implementation-completion comparison.",
+  "native_arm": {
+    "worker_surface": "native Codex read-only explorers in an isolated worktree",
+    "cases": [
+      {"id": "ML-ARCH-001", "commands": 3, "file_reads": 3, "elapsed_seconds": 3.7, "structural_conclusion": "correct"},
+      {"id": "ML-ARCH-002", "commands": 3, "file_reads": 4, "elapsed_seconds": 4.8, "structural_conclusion": "correct"},
+      {"id": "ML-BUG-001", "commands": 3, "file_reads": 3, "elapsed_seconds": 3.9, "structural_conclusion": "correct"},
+      {"id": "ML-FEAT-002", "commands": 3, "file_reads": 5, "elapsed_seconds": 5.9, "structural_conclusion": "correct"},
+      {"id": "ML-BROWSER-002", "commands": 5, "file_reads": 6, "elapsed_seconds": 5.4, "structural_conclusion": "correct"},
+      {"id": "ML-BROWSER-003", "commands": 2, "file_reads": 4, "elapsed_seconds": 2.5, "structural_conclusion": "correct"},
+      {"id": "ML-PDF-001", "commands": 3, "file_reads": 7, "elapsed_seconds": 11.0, "structural_conclusion": "correct"},
+      {"id": "ML-LLM-001", "commands": 2, "file_reads": 6, "elapsed_seconds": 3.4, "structural_conclusion": "correct"}
+    ],
+    "tokens_and_cost": "unavailable"
+  },
+  "codegraph_arm": {
+    "worker_surface": "temporary external MCP; CodeGraph-only exploration",
+    "cases_attempted": 8,
+    "observed_mcp_lifecycle_events": 16,
+    "native_repository_calls": 0,
+    "elapsed_seconds": 255.995,
+    "model_facing_tool_result_bytes": 219803,
+    "tokens_and_cost": "provider cost unavailable; input/output token telemetry was observed but is not comparable to native explorer telemetry",
+    "correct_completion": "invalid",
+    "invalidating_evidence": "ML-LLM-001 CodeGraph output surfaced benchmarks/agent-engineering/evaluator-payloads/test_llm_prompt_behavior.py, an evaluator-only payload that workers must not be exposed to."
+  },
+  "decision": {
+    "result": "rejected_and_removed",
+    "reason": "The CodeGraph arm violated evaluator prompt isolation and had higher observed elapsed time and model-facing tool-result volume. Its correctness cannot be credited after the isolation failure."
+  }
+}

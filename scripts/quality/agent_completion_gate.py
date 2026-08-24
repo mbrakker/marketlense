@@ -7,8 +7,10 @@ work based on an LLM response and it does not recreate the CI quality sequence.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
+import re
 import subprocess
 import time
 from dataclasses import dataclass
@@ -16,7 +18,7 @@ from pathlib import Path
 from typing import Callable
 
 ROOT = Path(__file__).resolve().parents[2]
-HIGH_RISK_PATHS = (
+RELEASE_ESCALATION_PATHS = (
     ".github/",
     "AGENTS.md",
     "Wordpress/",
@@ -24,10 +26,23 @@ HIGH_RISK_PATHS = (
     "requirements",
     "scripts/ci/",
     "src/config/",
-    "src/orchestrators/",
-    "src/prompts/",
-    "src/services/",
     "docs/quality/architecture_policy.yaml",
+)
+PERSISTED_SCHEMA_PATHS = (
+    "src/services/_sqlite_migration/",
+    "src/services/sqlite_migration_service.py",
+    "src/services/_state_service/",
+    "src/services/_report_store_service/",
+    "src/services/_analytics_store/",
+    "src/services/idempotency_service.py",
+)
+CONSEQUENTIAL_WORKFLOW_MARKERS = (
+    "migration",
+    "schema",
+    "idempotency",
+    "workflow_control",
+    "retry_",
+    "publish_",
 )
 ROLE_ROOTS = (
     "src/contracts/",
@@ -57,6 +72,9 @@ class CheckExecution:
     check: Check
     returncode: int
     elapsed_ms: int
+    stdout: str = ""
+    stderr: str = ""
+    raw_evidence_path: str = ""
 
 
 def _check_payload(check: Check) -> dict[str, object]:
@@ -100,6 +118,16 @@ def build_completion_report(
         }
         for execution in executions
     ]
+    diagnostics = [
+        {
+            "name": execution.check.name,
+            "stdout": _bounded_output(execution.stdout),
+            "stderr": _bounded_output(execution.stderr),
+            "raw_evidence_path": execution.raw_evidence_path or "unavailable",
+        }
+        for execution in executions
+        if execution.returncode != 0
+    ]
     tests_run = [item for item in executions_payload if "pytest" in item["command"]]
     return {
         "schema_version": "1.0",
@@ -117,6 +145,7 @@ def build_completion_report(
         },
         "selected_checks": [_check_payload(check) for check in selected_checks],
         "tests_run": tests_run,
+        "check_diagnostics": diagnostics,
         "failures": failures,
         "unverified_requirements": unverified,
         "full_gate_required": classification.full_gate_required,
@@ -151,8 +180,63 @@ def discover_changed_files(*, root: Path, base: str) -> tuple[str, ...]:
     )
 
 
-def _working_tree_signature(*, root: Path) -> str:
-    return _git_output(("git", "status", "--porcelain=v1"), root=root)
+def snapshot_working_tree(*, root: Path, diff_bytes: bytes | None = None) -> str:
+    """Hash tracked diff content plus every untracked file, not just path status."""
+    digest = hashlib.sha256()
+    if diff_bytes is None:
+        diff_bytes = (
+            _git_output(("git", "diff", "--binary", "HEAD", "--"), root=root)
+            + _git_output(("git", "diff", "--cached", "--binary", "--"), root=root)
+        ).encode("utf-8")
+        digest.update(diff_bytes)
+        for relative_path in _git_output(
+            ("git", "ls-files", "--others", "--exclude-standard"), root=root
+        ).splitlines():
+            path = root / relative_path
+            if path.is_file():
+                digest.update(relative_path.encode("utf-8"))
+                digest.update(path.read_bytes())
+        return digest.hexdigest()
+    digest.update(diff_bytes)
+    return digest.hexdigest()
+
+
+def _bounded_output(value: str, *, limit: int = 4_000) -> str:
+    value = value.strip()
+    return value if len(value) <= limit else value[:limit] + "\n... [truncated]"
+
+
+def _write_failure_evidence(*, check: Check, stdout: str, stderr: str) -> str:
+    """Retain explicitly requested, redacted local diagnostics after a failure."""
+    if os.environ.get("MARKETLENSE_RETAIN_FAILURE_OUTPUT") != "1":
+        return ""
+    evidence_dir = ROOT / ".codex_tmp" / "agent_completion_gate"
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    path = evidence_dir / f"{time.time_ns()}-{check.name}.log"
+    path.write_text(
+        "$ "
+        f"{' '.join(check.command)}\n\nSTDOUT\n{_redact_sensitive_output(stdout)}"
+        f"\n\nSTDERR\n{_redact_sensitive_output(stderr)}",
+        encoding="utf-8",
+    )
+    return path.relative_to(ROOT).as_posix()
+
+
+def _redact_sensitive_output(value: str) -> str:
+    """Remove credential-shaped values before optional local evidence retention."""
+    redacted = re.sub(
+        r"(?i)(api[_-]?key|token|secret|password)\s*([=:])\s*[^\s'\"]+",
+        r"\1\2[REDACTED]",
+        value,
+    )
+    for name, secret in os.environ.items():
+        is_sensitive_name = any(
+            marker in name.upper()
+            for marker in ("KEY", "TOKEN", "SECRET", "PASSWORD")
+        )
+        if secret and is_sensitive_name:
+            redacted = redacted.replace(secret, "[REDACTED]")
+    return redacted
 
 
 def _execute_check(check: Check) -> CheckExecution:
@@ -163,13 +247,24 @@ def _execute_check(check: Check) -> CheckExecution:
         check.command,
         cwd=ROOT,
         env=environment,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
         check=False,
     )
     elapsed_ms = round((time.monotonic() - started) * 1000)
+    raw_evidence_path = ""
+    if completed.returncode != 0:
+        raw_evidence_path = _write_failure_evidence(
+            check=check, stdout=completed.stdout, stderr=completed.stderr
+        )
     return CheckExecution(
-        check=check, returncode=completed.returncode, elapsed_ms=elapsed_ms
+        check=check,
+        returncode=completed.returncode,
+        elapsed_ms=elapsed_ms,
+        stdout=_bounded_output(completed.stdout),
+        stderr=_bounded_output(completed.stderr),
+        raw_evidence_path=raw_evidence_path,
     )
 
 
@@ -189,12 +284,12 @@ def run_selected_checks(
 
 
 def run_completion_gate(*, root: Path, base: str) -> dict[str, object]:
-    before = _working_tree_signature(root=root)
+    before = snapshot_working_tree(root=root)
     changed_files = discover_changed_files(root=root, base=base)
     classification = classify_changes(changed_files)
     checks = select_checks(classification, changed_files)
     executions = run_selected_checks(checks)
-    after = _working_tree_signature(root=root)
+    after = snapshot_working_tree(root=root)
     return build_completion_report(
         changed_files=changed_files,
         classification=classification,
@@ -235,8 +330,21 @@ def classify_changes(changed_files: tuple[str, ...]) -> ChangeClassification:
             subsystems.add("quality_gate")
         if path == "AGENTS.md" or path.startswith("docs/quality/architecture_policy"):
             subsystems.add("agent_policy")
-        if any(path == marker or path.startswith(marker) for marker in HIGH_RISK_PATHS):
-            reasons.append(f"high_risk_path:{path}")
+        if path.startswith("src/contracts/"):
+            subsystems.add("public_contract")
+            reasons.append(f"public_contract_change:{path}")
+        if path.startswith(PERSISTED_SCHEMA_PATHS):
+            subsystems.add("persisted_schema")
+            reasons.append(f"persisted_schema_change:{path}")
+        if any(
+            path == marker or path.startswith(marker)
+            for marker in RELEASE_ESCALATION_PATHS
+        ):
+            reasons.append(f"release_control_change:{path}")
+        if path.startswith("src/orchestrators/") and any(
+            marker in Path(path).stem for marker in CONSEQUENTIAL_WORKFLOW_MARKERS
+        ):
+            reasons.append(f"consequential_workflow_change:{path}")
 
     return ChangeClassification(
         subsystems=tuple(sorted(subsystems)),
@@ -255,9 +363,12 @@ def _targeted_test_paths(changed_files: tuple[str, ...]) -> tuple[str, ...]:
     for path in changed_files:
         if not path.startswith("src/") or not path.endswith(".py"):
             continue
-        candidate = f"tests/test_{Path(path).stem}.py"
-        if (ROOT / candidate).is_file():
-            candidates.add(candidate)
+        module = path.removesuffix(".py").replace("/", ".")
+        stem = Path(path).stem
+        for test_path in (ROOT / "tests").rglob("test*.py"):
+            text = test_path.read_text(encoding="utf-8", errors="ignore")
+            if module in text or f"{stem} import" in text:
+                candidates.add(test_path.relative_to(ROOT).as_posix())
     return tuple(sorted(candidates))
 
 
@@ -265,6 +376,12 @@ def select_checks(
     classification: ChangeClassification, changed_files: tuple[str, ...]
 ) -> tuple[Check, ...]:
     """Select existing checks at the lowest credible scope for the diff."""
+    if classification.full_gate_required:
+        return (
+            Check(
+                "canonical_quality_gate", ("python", "scripts/ci/run_quality_gate.py")
+            ),
+        )
     selected: list[Check] = []
     changed_python = any(path.endswith(".py") for path in changed_files)
     changed_docs = any(
@@ -343,12 +460,8 @@ def select_checks(
             Check("focused_pytest", ("python", "-m", "pytest", "-q", *test_paths))
         )
     elif changed_python:
-        selected.append(Check("default_pytest", ("python", "-m", "pytest", "-q")))
-    if classification.full_gate_required:
         selected.append(
-            Check(
-                "canonical_quality_gate", ("python", "scripts/ci/run_quality_gate.py")
-            )
+            Check("broader_pytest", ("python", "-m", "pytest", "-q", "tests"))
         )
     return tuple(selected)
 

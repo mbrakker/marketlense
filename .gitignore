@@ -63,6 +63,7 @@ cache/
 debug/
 state/
 .codex_tmp/
+.codegraph/
 .playwright-cli/
 playwright-cli/
 tools/*

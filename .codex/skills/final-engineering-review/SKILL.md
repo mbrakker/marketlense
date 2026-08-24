@@ -20,12 +20,14 @@ changes unless the user specifically requests review.
 The parent agent establishes one immutable review snapshot before dispatching:
 
 1. Determine the comparison base and collect `git diff --check`, changed-file
-   names, and the complete diff.
+   names, acceptance criteria, and a bounded change summary.
 2. Read the directly relevant contracts, tests, and policy documents. For
    architecture review, include `AGENTS.md` and
    `docs/quality/architecture_policy.yaml`.
-3. Provide every reviewer the same base revision, changed-file list, diff, and
-   acceptance criteria. Do not ask reviewers to repair anything.
+3. Provide every reviewer the same base revision, changed-file list, acceptance
+   criteria, and bounded summary. Reviewers read relevant changed hunks and
+   current source on demand from that immutable snapshot; do not preload a full
+   large diff or ask reviewers to repair anything.
 
 If the base or diff is unavailable, report the review as unverified. Do not
 infer findings from an incomplete snapshot.

@@ -55,8 +55,15 @@ thresholds are frozen.
 
 The related CodeGraph Phase-0 retrieval experiment is recorded in the
 [agent-engineering benchmark](../../benchmarks/agent-engineering/README.md).
-It was rejected because it missed the required time and structural-verification
-gates. There is no active CodeGraph MCP configuration or repository state.
+Its native arm now measures only files emitted by the actual native search and
+includes source reads in elapsed time. A subsequent real eight-case temporary
+MCP comparison is retained as
+[`codegraph-ab-rejection.json`](../../benchmarks/agent-engineering/baselines/codegraph-ab-rejection.json).
+It is rejected, not adopted: the CodeGraph-only arm exposed an evaluator-only
+payload path, making correctness invalid, and had worse observed elapsed/tool
+result volume. The package, MCP configuration, and temporary worktrees were
+removed; any local index remains ignored and unused. No CodeGraph runtime
+dependency exists.
 
 The same corpus directory contains the historical
 `final-engineering-review.json` evaluator for the project-local
@@ -65,6 +72,18 @@ read-only review responsibility. Its scorer reports useful bugs found and the
 high-confidence false-positive rate from an externally captured review record;
 it does not run an LLM, alter a worktree, or substitute for the deterministic
 completion gate.
+
+The current genuine historical review record is
+[`final-engineering-review-run.json`](../../benchmarks/agent-engineering/baselines/final-engineering-review-run.json):
+it found 0/6 accepted issues and produced two high-confidence false positives
+(100%). It therefore does not authorize automatic completion-lifecycle use;
+the deterministic completion gate remains the retained final decision point.
+
+The [Phase-1 checkpoint](../../benchmarks/agent-engineering/baselines/phase1-checkpoint.json)
+records that no Frankenstein comparison arm was promoted: both optional
+controls failed their own safety/usefulness evidence. The frozen pre-Phase-1
+baseline remains the only implementation-performance baseline; Phase 2 is not
+authorized by this checkpoint.
 
 ```powershell
 python scripts/quality/final_engineering_review_benchmark.py validate --corpus benchmarks/agent-engineering/final-engineering-review.json

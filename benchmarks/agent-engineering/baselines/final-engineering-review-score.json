@@ -1,0 +1,23 @@
+{
+  "aggregate": {
+    "expected_useful_findings": 6,
+    "false_positive_rate": 1.0,
+    "false_positives": 2,
+    "high_confidence_findings": 2,
+    "suppressed_low_confidence_or_pre_existing": 0,
+    "useful_bug_find_rate": 0.0,
+    "useful_bugs_found": 0
+  },
+  "false_positives": [
+    {
+      "case_id": "FER-ARC-001",
+      "finding_id": "direct-filesystem-io-outside-service"
+    },
+    {
+      "case_id": "FER-REG-001",
+      "finding_id": "prompt-validation-logs-sensitive-data"
+    }
+  ],
+  "schema_version": "1.0",
+  "useful_findings": []
+}
