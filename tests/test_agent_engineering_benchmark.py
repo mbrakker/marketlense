@@ -10,6 +10,7 @@ from scripts.quality.agent_engineering_benchmark import (
     prepare_evaluator_worktree,
     score_run,
     validate_corpus,
+    validate_evaluator_injections,
     validate_protocol,
 )
 
@@ -203,6 +204,7 @@ def test_prepare_evaluator_worktree_injects_only_manifest_declared_files(
             "path": "tests/evaluator.py",
             "kind": "regression_test",
             "sha256": hashlib.sha256(b"assert True\n").hexdigest(),
+            "payload_source": f"{fix_commit}:tests/evaluator.py",
         }
     ]
     assert (worktree / "tests" / "evaluator.py").read_text(encoding="utf-8") == "assert True\n"
@@ -256,6 +258,64 @@ def test_prepare_evaluator_worktree_refuses_a_non_parent_revision(tmp_path: Path
     _git(repository, "worktree", "remove", "--force", str(worktree))
 
 
+def test_prepare_evaluator_worktree_uses_a_pinned_evaluator_owned_payload(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    _git(repository, "init")
+    _git(repository, "config", "user.email", "benchmark@example.test")
+    _git(repository, "config", "user.name", "Benchmark")
+    (repository / "tracked.txt").write_text("parent\n", encoding="utf-8")
+    _git(repository, "add", "tracked.txt")
+    _git(repository, "commit", "-m", "parent")
+    parent = _git(repository, "rev-parse", "HEAD").strip()
+    (repository / "fix.txt").write_text("fix\n", encoding="utf-8")
+    _git(repository, "add", "fix.txt")
+    _git(repository, "commit", "-m", "fix")
+    fix_commit = _git(repository, "rev-parse", "HEAD").strip()
+    payload_path = repository / "evaluator-payloads" / "behavior.py"
+    payload_path.parent.mkdir()
+    payload_path.write_bytes(b"assert True\n")
+    worktree = tmp_path / "candidate"
+    _git(repository, "worktree", "add", "--detach", str(worktree), parent)
+    manifest = {
+        "schema_version": "1.0",
+        "injection_version": "test-v2",
+        "cases": {
+            "ML-TEST-001": {
+                "starting_revision": parent,
+                "source_revision": fix_commit,
+                "files": [
+                    {
+                        "path": "tests/test_behavior.py",
+                        "evaluator_payload_path": "evaluator-payloads/behavior.py",
+                        "sha256": hashlib.sha256(b"assert True\n").hexdigest(),
+                        "kind": "behavioral_regression_test",
+                    }
+                ],
+            }
+        },
+    }
+
+    result = prepare_evaluator_worktree(
+        case_id="ML-TEST-001",
+        worktree=worktree,
+        manifest=manifest,
+        root=repository,
+    )
+
+    assert result["files"][0]["kind"] == "behavioral_regression_test"
+    assert (worktree / "tests" / "test_behavior.py").read_text(encoding="utf-8") == "assert True\n"
+    _git(repository, "worktree", "remove", "--force", str(worktree))
+
+
+def test_evaluator_payload_manifest_is_pinned_and_post_worker_safe() -> None:
+    report = validate_evaluator_injections(INJECTIONS, root=ROOT)
+
+    assert report == {"passed": True, "case_count": 2, "failures": []}
+
+
 def test_pre_phase1_protocol_freezes_ten_comparison_cases_and_six_holdouts() -> None:
     report = validate_protocol(
         corpus_path=CORPUS,
@@ -268,6 +328,16 @@ def test_pre_phase1_protocol_freezes_ten_comparison_cases_and_six_holdouts() -> 
     assert report["comparison_case_count"] == 10
     assert report["holdout_case_count"] == 6
     assert report["failures"] == []
+    protocol = json.loads(PROTOCOL.read_text(encoding="utf-8"))
+    assert protocol["elapsed_comparison_case_ids"] == [
+        "ML-ARCH-001",
+        "ML-BUG-001",
+        "ML-FEAT-002",
+        "ML-BROWSER-002",
+        "ML-BROWSER-003",
+        "ML-PDF-001",
+        "ML-SVC-001",
+    ]
 
 
 def _git(repository: Path, *args: str) -> str:

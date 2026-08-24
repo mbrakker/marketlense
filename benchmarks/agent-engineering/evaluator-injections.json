@@ -1,21 +1,17 @@
 {
   "schema_version": "1.0",
-  "injection_version": "pre-phase1-evaluator-injection-v1",
-  "purpose": "Evaluator-only regression payloads copied after a worker stops and before evaluator verification. These paths and contents are never included in the worker prompt.",
+  "injection_version": "pre-phase1-evaluator-injection-v2-black-box",
+  "purpose": "Evaluator-only behavioral payloads copied after a worker stops and before evaluator verification. These paths and contents are never included in the worker prompt, and they do not import historical solution-only APIs.",
   "cases": {
     "ML-LLM-001": {
       "starting_revision": "da8d63d0cf1759e832e588a0fc297e93b9c9e8eb",
       "source_revision": "11ac481a662db4fb706197134fc6a00a000331a8",
       "files": [
         {
-          "path": "src/prompts/_dry_run_fixtures.yaml",
-          "kind": "fixture",
-          "sha256": "528a8b34da08f0e99f8f883083df0ee38818484ba361ed8bf44cd5a7055a9c5f"
-        },
-        {
-          "path": "tests/test_prompt_dry_run_validation.py",
-          "kind": "regression_test",
-          "sha256": "6e780fe0fba7794caf8298139b49f36c1bcba1210bf30db9f7b7c5d39a62eb8b"
+          "path": "benchmarks/agent-engineering/evaluator-payloads/test_llm_prompt_behavior.py",
+          "evaluator_payload_path": "benchmarks/agent-engineering/evaluator-payloads/test_llm_prompt_behavior.py",
+          "kind": "black_box_behavioral_regression_test",
+          "sha256": "eebfe0c9683d2c83325e6b2ee5be4871f9f8621e917166fd039723a7d45c6800"
         }
       ]
     },
@@ -24,9 +20,10 @@
       "source_revision": "8b1b685b2f40795ca51d9904b8027e33ba85cc9e",
       "files": [
         {
-          "path": "tests/test_browser_acquisition_cache_and_autofill.py",
-          "kind": "regression_test",
-          "sha256": "d27b5a49abf9b9f287211901efd3e2712f1fe64fba11e2355ec1c1abcee1d628"
+          "path": "benchmarks/agent-engineering/evaluator-payloads/test_perf_reuse_behavior.py",
+          "evaluator_payload_path": "benchmarks/agent-engineering/evaluator-payloads/test_perf_reuse_behavior.py",
+          "kind": "black_box_behavioral_regression_test",
+          "sha256": "d38b303cc61521195e57671fdcbaf8b22127512455cd7ba4df3edea1847981b5"
         }
       ]
     }

@@ -354,7 +354,7 @@
           ]
         }
       },
-      "verification": {"required_checks": ["python -m pytest -q tests/test_prompt_dry_run_validation.py"]},
+      "verification": {"required_checks": ["python -m pytest -q benchmarks/agent-engineering/evaluator-payloads/test_llm_prompt_behavior.py"]},
       "important_failure_conditions": [
         "The validation performs a provider call or requires credentials.",
         "Prompt prose is moved into Python instead of remaining in prompt resources.",
@@ -410,7 +410,7 @@
           ]
         }
       },
-      "verification": {"required_checks": ["python -m pytest -q tests/test_browser_acquisition_cache_and_autofill.py tests/test_ingest_parallel.py"]},
+      "verification": {"required_checks": ["python -m pytest -q benchmarks/agent-engineering/evaluator-payloads/test_perf_reuse_behavior.py"]},
       "important_failure_conditions": [
         "Stale or provenance-mismatched content is reused.",
         "A cache hit is recorded as a fresh external acquisition.",

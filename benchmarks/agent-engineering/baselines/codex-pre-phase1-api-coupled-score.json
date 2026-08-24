@@ -1,7 +1,7 @@
 {
   "aggregate": {
     "architecture_policy_compliance": 1.0,
-    "candidate_files_modified_count": 40,
+    "candidate_files_modified_count": 37,
     "correct_completion": 0.9,
     "elapsed_seconds": "unavailable",
     "elapsed_seconds_status": "unavailable",
@@ -10,9 +10,9 @@
     "historical_reference_file_recall": 0.4333,
     "human_intervention_count": 0.0,
     "human_intervention_count_status": "measured",
-    "mean_score": 90.75,
+    "mean_score": 89.25,
     "required_checks_executed": 1.0,
-    "required_verification_success": 0.85,
+    "required_verification_success": 0.75,
     "rework_count": 0.0,
     "rework_count_status": "measured",
     "token_usage": "unavailable",
@@ -172,12 +172,12 @@
     {
       "architecture_policy_compliant": true,
       "candidate_files_modified": [
-        ".github/workflows/ci.yml",
-        ".gitignore",
         "docs/docpacks/prompt-authoring.md",
-        "scripts/ci/validate_prompt_resources.py",
-        "tests/fixtures/prompt_rendering.yaml",
-        "tests/test_prompt_resource_validation.py"
+        "scripts/quality/validate_prompt_resources.py",
+        "src/contracts/prompts.py",
+        "src/prompts/validation.yaml",
+        "src/services/prompt_service.py",
+        "tests/test_prompt_service.py"
       ],
       "case_id": "ML-LLM-001",
       "correct_completion": true,
@@ -186,9 +186,9 @@
       "historical_reference_file_recall": 0.6666666666666666,
       "human_intervention_count": 0,
       "required_checks_executed": 1.0,
-      "required_verification_success": 1.0,
+      "required_verification_success": 0.0,
       "rework_count": 0,
-      "score": 100.0,
+      "score": 85.0,
       "token_usage": "unavailable",
       "tool_file_read_count": "unavailable",
       "verified_scope_violations": []
@@ -197,11 +197,8 @@
       "architecture_policy_compliant": true,
       "candidate_files_modified": [
         "docs/quality/report-download-success-playbook-2026-04-07.md",
-        "src/orchestrators/_report_download_orchestrator/artifact_reuse.py",
         "src/orchestrators/_report_download_orchestrator/workflow.py",
-        "tests/_test_report_download_orchestrator/cases_05_run_report_download_requires_drive.py",
-        "tests/_test_report_download_orchestrator/cases_06_verified_artifact_reuse.py",
-        "tests/test_report_download_orchestrator.py"
+        "tests/_test_report_download_orchestrator/cases_03_run_report_download_is_idempotent.py"
       ],
       "case_id": "ML-PERF-001",
       "correct_completion": false,

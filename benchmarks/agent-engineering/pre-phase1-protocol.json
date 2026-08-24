@@ -5,7 +5,7 @@
   "corpus": {
     "path": "benchmarks/agent-engineering/cases.json",
     "schema_version": "2.0",
-    "sha256": "183b0f6a43e274e8861caf6f615a0960ac899fccdeb4e5c2aa392d53c7a525cc"
+    "sha256": "faf49589607041db809fd638cad364b05d4572c08dee934502027fe292ee5fd4"
   },
   "comparison_cases": [
     {
@@ -77,11 +77,21 @@
     "ML-LLM-002",
     "ML-SVC-002"
   ],
+  "elapsed_comparison_case_ids": [
+    "ML-ARCH-001",
+    "ML-BUG-001",
+    "ML-FEAT-002",
+    "ML-BROWSER-002",
+    "ML-BROWSER-003",
+    "ML-PDF-001",
+    "ML-SVC-001"
+  ],
+  "elapsed_comparison_rule": "Compare elapsed time only for these seven case IDs. Each has an independently retained numeric baseline elapsed measurement; cases without one are excluded rather than imputed or compared against a different task mix.",
   "historical_starting_revision_rule": "Create a disposable detached worktree at each comparison case's retained starting_revision. It must equal the first parent of that case's retained fix_commit before the worker begins.",
   "evaluator_injection": {
     "manifest_path": "benchmarks/agent-engineering/evaluator-injections.json",
-    "manifest_sha256": "1a1c43e644f44605147f08bbbadb2f0f532378984cbf5b9888cc2962ce5faa6e",
-    "version": "pre-phase1-evaluator-injection-v1",
+    "manifest_sha256": "b8c8c56771bee8936833b099fd104992ae52084f54de0e093a0ede390ce71d70",
+    "version": "pre-phase1-evaluator-injection-v2-black-box",
     "timing": "After the worker stops and before evaluator verification; injected paths and contents remain hidden from the worker."
   },
   "worker_topology": {

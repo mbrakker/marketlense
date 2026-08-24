@@ -199,6 +199,77 @@ def validate_corpus(corpus_path: Path, *, root: Path = ROOT) -> dict[str, Any]:
     }
 
 
+def validate_evaluator_injections(
+    injections_path: Path, *, root: Path = ROOT
+) -> dict[str, Any]:
+    """Validate pinned, post-worker evaluator payloads without executing them."""
+    failures: list[str] = []
+    try:
+        manifest = _load_json(injections_path)
+    except (OSError, ValueError, json.JSONDecodeError) as error:
+        return {"passed": False, "case_count": 0, "failures": [str(error)]}
+    if manifest.get("schema_version") != "1.0":
+        failures.append("unsupported_evaluator_injection_schema_version")
+    cases = manifest.get("cases")
+    if not isinstance(cases, dict) or not cases:
+        return {
+            "passed": False,
+            "case_count": 0,
+            "failures": [*failures, "evaluator_injection_cases_missing"],
+        }
+    for case_id, case in cases.items():
+        if not isinstance(case_id, str) or not isinstance(case, dict):
+            failures.append("invalid_evaluator_injection_case")
+            continue
+        starting_revision = str(case.get("starting_revision") or "")
+        source_revision = str(case.get("source_revision") or "")
+        if not _commit_exists(starting_revision, root=root) or not _commit_exists(
+            source_revision, root=root
+        ):
+            failures.append(f"evaluator_injection_revision_missing:{case_id}")
+        elif _git_output(["rev-parse", f"{source_revision}^"], root=root) != starting_revision:
+            failures.append(f"evaluator_injection_source_parent_mismatch:{case_id}")
+        files = case.get("files")
+        if not isinstance(files, list) or not files:
+            failures.append(f"evaluator_injection_files_missing:{case_id}")
+            continue
+        for item in files:
+            if not isinstance(item, dict):
+                failures.append(f"invalid_evaluator_injection_file:{case_id}")
+                continue
+            relative_path = item.get("path")
+            payload_path = item.get("evaluator_payload_path")
+            expected_sha256 = item.get("sha256")
+            if not all(isinstance(value, str) and value for value in (relative_path, payload_path, expected_sha256)):
+                failures.append(f"invalid_evaluator_payload_metadata:{case_id}")
+                continue
+            relative = Path(relative_path)
+            payload = Path(payload_path)
+            if (
+                relative.is_absolute()
+                or payload.is_absolute()
+                or ".." in relative.parts
+                or ".." in payload.parts
+            ):
+                failures.append(f"unsafe_evaluator_payload_path:{case_id}")
+                continue
+            if item.get("historical_source_path") is not None:
+                failures.append(f"ambiguous_evaluator_injection_source:{case_id}")
+            if subprocess.run(
+                ["git", "cat-file", "-e", f"{starting_revision}:{relative_path}"],
+                cwd=root,
+                capture_output=True,
+                check=False,
+            ).returncode == 0:
+                failures.append(f"evaluator_injection_parent_already_contains:{relative_path}")
+            source_file = root / payload
+            if not source_file.is_file():
+                failures.append(f"evaluator_injection_payload_missing:{payload_path}")
+            elif hashlib.sha256(source_file.read_bytes()).hexdigest() != expected_sha256:
+                failures.append(f"evaluator_injection_hash_mismatch:{relative_path}")
+    return {"passed": not failures, "case_count": len(cases), "failures": failures}
+
+
 def validate_protocol(
     *,
     corpus_path: Path,
@@ -234,6 +305,9 @@ def validate_protocol(
         "injection_version"
     ):
         failures.append("protocol_injection_version_mismatch")
+    injection_validation = validate_evaluator_injections(injections_path, root=root)
+    if not injection_validation["passed"]:
+        failures.extend(injection_validation["failures"])
 
     corpus_cases = {case.get("id"): case for case in corpus.get("cases", [])}
     comparison_cases = protocol.get("comparison_cases")
@@ -275,6 +349,39 @@ def validate_protocol(
         failures.append("protocol_comparison_and_holdout_overlap")
     if set(comparison_ids) | set(holdout_ids) != set(corpus_cases):
         failures.append("protocol_cases_must_partition_corpus")
+    elapsed_case_ids = protocol.get("elapsed_comparison_case_ids")
+    if not isinstance(elapsed_case_ids, list) or not elapsed_case_ids:
+        failures.append("protocol_elapsed_comparison_cases_missing")
+    elif len(elapsed_case_ids) != len(set(elapsed_case_ids)):
+        failures.append("protocol_elapsed_comparison_cases_not_unique")
+    elif not set(elapsed_case_ids) <= set(comparison_ids):
+        failures.append("protocol_elapsed_comparison_cases_not_comparison_cases")
+    else:
+        try:
+            run_record = _load_json(
+                root
+                / "benchmarks/agent-engineering/baselines/codex-pre-phase1-run.json"
+            )
+        except (OSError, ValueError, json.JSONDecodeError) as error:
+            failures.append(f"protocol_elapsed_baseline_unavailable:{error}")
+        else:
+            records = {
+                record.get("case_id"): record
+                for record in run_record.get("cases", [])
+                if isinstance(record, dict)
+            }
+            for case_id in elapsed_case_ids:
+                value = records.get(case_id, {}).get("elapsed_seconds")
+                independently_measured = records.get(case_id, {}).get(
+                    "elapsed_measurement_valid"
+                )
+                if (
+                    not isinstance(value, (int, float))
+                    or isinstance(value, bool)
+                    or value < 0
+                    or independently_measured is not True
+                ):
+                    failures.append(f"protocol_elapsed_baseline_invalid:{case_id}")
     return {
         "passed": not failures,
         "comparison_case_count": len(comparison_ids),
@@ -521,9 +628,31 @@ def prepare_evaluator_worktree(
         ).returncode == 0
         if parent_contains_file:
             raise ValueError(f"evaluator_injection_parent_already_contains:{relative_path}")
-        payload = _git_show_bytes(
-            revision=source_revision, relative_path=relative_path, root=root
-        )
+        evaluator_payload_path = item.get("evaluator_payload_path")
+        historical_source_path = item.get("historical_source_path")
+        if evaluator_payload_path is not None and historical_source_path is not None:
+            raise ValueError(f"ambiguous_evaluator_injection_source:{relative_path}")
+        if evaluator_payload_path is None:
+            source_path = historical_source_path or relative_path
+            if not isinstance(source_path, str):
+                raise ValueError(f"invalid_evaluator_injection_source:{relative_path}")
+            payload = _git_show_bytes(
+                revision=source_revision, relative_path=source_path, root=root
+            )
+            payload_source = f"{source_revision}:{source_path}"
+        else:
+            if not isinstance(evaluator_payload_path, str):
+                raise ValueError(f"invalid_evaluator_injection_source:{relative_path}")
+            evaluator_payload = Path(evaluator_payload_path)
+            if evaluator_payload.is_absolute() or ".." in evaluator_payload.parts:
+                raise ValueError(f"unsafe_evaluator_payload_path:{evaluator_payload_path}")
+            source_file = root / evaluator_payload
+            if not source_file.is_file():
+                raise ValueError(
+                    f"evaluator_injection_payload_missing:{evaluator_payload_path}"
+                )
+            payload = source_file.read_bytes()
+            payload_source = evaluator_payload_path
         actual_sha256 = hashlib.sha256(payload).hexdigest()
         if actual_sha256 != expected_sha256:
             raise ValueError(f"evaluator_injection_hash_mismatch:{relative_path}")
@@ -534,6 +663,7 @@ def prepare_evaluator_worktree(
                 "path": relative_path,
                 "kind": str(item.get("kind") or "evaluator_payload"),
                 "sha256": actual_sha256,
+                "payload_source": payload_source,
             }
         )
     return {
@@ -601,6 +731,7 @@ def main() -> int:
         "command",
         choices=(
             "validate",
+            "validate-injections",
             "validate-protocol",
             "baseline",
             "score",
@@ -620,6 +751,11 @@ def main() -> int:
 
     if args.command == "validate":
         payload = validate_corpus(corpus_path, root=ROOT)
+        exit_code = 0 if payload["passed"] else 1
+    elif args.command == "validate-injections":
+        payload = validate_evaluator_injections(
+            (ROOT / args.injections).resolve(), root=ROOT
+        )
         exit_code = 0 if payload["passed"] else 1
     elif args.command == "validate-protocol":
         payload = validate_protocol(

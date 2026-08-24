@@ -39,9 +39,10 @@ run against those ten historical worktrees at cutoff
 `fd59abac1bd35fda5ee652adad80e21c7de52823`; they are not corpus validation.
 The preserved `codex-pre-phase1-initial-run.json` retains the original capture.
 
-The corrected result is 9/10 evaluator-correct, 75% required-verification
+The corrected result is 9/10 evaluator-correct, 85% required-verification
 success, zero verified scope violations, zero human intervention/rework, and a
-216-second median across seven observed elapsed values. Historical-reference
+216-second median across the seven immutable elapsed-comparison cases.
+Historical-reference
 file recall (43.33%) is diagnostic only; actual candidate files and concrete
 evaluator-recorded scope violations are reported separately. Unavailable
 native tool, file-read, token, and cost telemetry remains `unavailable`.

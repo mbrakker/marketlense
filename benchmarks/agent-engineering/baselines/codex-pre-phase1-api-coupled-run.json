@@ -2,7 +2,7 @@
   "schema_version": "2.0",
   "baseline_kind": "actual_agent_performance",
   "benchmark_cutoff_commit": "fd59abac1bd35fda5ee652adad80e21c7de52823",
-  "corpus_sha256": "faf49589607041db809fd638cad364b05d4572c08dee934502027fe292ee5fd4",
+  "corpus_sha256": "183b0f6a43e274e8861caf6f615a0960ac899fccdeb4e5c2aa392d53c7a525cc",
   "run_date": "2026-08-24",
   "agent": {
     "name": "Codex",
@@ -298,53 +298,40 @@
       "case_id": "ML-LLM-001",
       "starting_revision": "da8d63d0cf1759e832e588a0fc297e93b9c9e8eb",
       "correct_completion": true,
-      "correctness_basis": "Fresh isolated rerun produced provider-free validation of all registered prompt resources plus explicit missing-data and malformed-template failures. The evaluator-owned black-box payload passed all three observable checks without requiring historical helpers, classes, modules, or contracts.",
+      "correctness_basis": "Fresh isolated rerun produced provider-free validation of all discovered namespaces, explicit fixture/template failures, and focused passing tests. The injected historical test failed at collection because it requires historical public symbols not required by the task prompt; this is retained as a required-verification failure, not treated as an unrelated alternative implementation.",
       "files_discovered": [
         "src/contracts/prompts.py",
         "src/services/prompt_service.py",
-        "src/prompts",
-        "tests/test_prompt_service.py"
+        "src/prompts"
       ],
       "files_modified": [
-        ".github/workflows/ci.yml",
-        ".gitignore",
         "docs/docpacks/prompt-authoring.md",
-        "scripts/ci/validate_prompt_resources.py",
-        "tests/fixtures/prompt_rendering.yaml",
-        "tests/test_prompt_resource_validation.py"
+        "scripts/quality/validate_prompt_resources.py",
+        "src/contracts/prompts.py",
+        "src/prompts/validation.yaml",
+        "src/services/prompt_service.py",
+        "tests/test_prompt_service.py"
       ],
       "checks_executed": [
-        "python -m pytest tests/test_prompt_resource_validation.py tests/test_prompt_service.py -q",
-        "python scripts/ci/validate_prompt_resources.py",
-        "python scripts/ci/check_formatting.py",
-        "python scripts/ci/check_forbidden_patching.py",
-        "python -m pytest -q benchmarks/agent-engineering/evaluator-payloads/test_llm_prompt_behavior.py"
+        "python -m pytest -q tests/test_prompt_service.py",
+        "python scripts/quality/validate_prompt_resources.py",
+        "python -m pytest -q tests/test_prompt_dry_run_validation.py"
       ],
       "check_results": [
         {
-          "command": "python -m pytest tests/test_prompt_resource_validation.py tests/test_prompt_service.py -q",
+          "command": "python -m pytest -q tests/test_prompt_service.py",
           "returncode": 0,
-          "summary": "11 passed"
+          "summary": "9 passed"
         },
         {
-          "command": "python scripts/ci/validate_prompt_resources.py",
+          "command": "python scripts/quality/validate_prompt_resources.py",
           "returncode": 0,
           "summary": "Validated 33 prompt namespaces without provider calls"
         },
         {
-          "command": "python scripts/ci/check_formatting.py",
-          "returncode": 0,
-          "summary": "passed"
-        },
-        {
-          "command": "python scripts/ci/check_forbidden_patching.py",
-          "returncode": 0,
-          "summary": "passed"
-        },
-        {
-          "command": "python -m pytest -q benchmarks/agent-engineering/evaluator-payloads/test_llm_prompt_behavior.py",
-          "returncode": 0,
-          "summary": "3 passed: credential-free success plus explicit missing-data and malformed-template failures"
+          "command": "python -m pytest -q tests/test_prompt_dry_run_validation.py",
+          "returncode": 1,
+          "summary": "Injected evaluator regression test failed at collection: historical PromptDryRunRequest API not provided by the candidate"
         }
       ],
       "tool_call_count": "unavailable",
@@ -361,14 +348,18 @@
       "architecture_policy_compliant": true,
       "verified_scope_violations": [],
       "evaluator_injection": {
-        "version": "pre-phase1-evaluator-injection-v2-black-box",
+        "version": "pre-phase1-evaluator-injection-v1",
         "source_revision": "11ac481a662db4fb706197134fc6a00a000331a8",
         "files": [
           {
-            "path": "benchmarks/agent-engineering/evaluator-payloads/test_llm_prompt_behavior.py",
-            "payload_source": "benchmarks/agent-engineering/evaluator-payloads/test_llm_prompt_behavior.py",
-            "kind": "black_box_behavioral_regression_test",
-            "sha256": "eebfe0c9683d2c83325e6b2ee5be4871f9f8621e917166fd039723a7d45c6800"
+            "path": "src/prompts/_dry_run_fixtures.yaml",
+            "kind": "fixture",
+            "sha256": "528a8b34da08f0e99f8f883083df0ee38818484ba361ed8bf44cd5a7055a9c5f"
+          },
+          {
+            "path": "tests/test_prompt_dry_run_validation.py",
+            "kind": "regression_test",
+            "sha256": "6e780fe0fba7794caf8298139b49f36c1bcba1210bf30db9f7b7c5d39a62eb8b"
           }
         ],
         "result": "injected_after_worker_before_evaluator_check"
@@ -379,47 +370,30 @@
       "case_id": "ML-PERF-001",
       "starting_revision": "330dbb00c6858a5471a5a339e321e5bc132f3ceb",
       "correct_completion": false,
-      "correctness_basis": "Fresh isolated rerun passed its focused reuse regression, but the evaluator-owned black-box test changed a retained artifact at the same path and observed reuse without reacquisition. The candidate is incorrect for the identity/provenance requirement independently of historical file similarity or internal cache API shape.",
+      "correctness_basis": "Fresh isolated rerun passed a focused reuse regression, but evaluator review found that its file-stat-only reuse path does not re-establish artifact content identity after a retained path can change. The injected historical test also failed at collection because its state-cache contract is absent. The candidate is therefore incorrect for the identity/provenance requirement independently of historical file similarity.",
       "files_discovered": [
         "src/orchestrators/_report_download_orchestrator/workflow.py",
-        "src/orchestrators/_report_download_orchestrator/persistence.py",
-        "src/contracts/_report_store/download_routes.py",
-        "tests/test_report_download_orchestrator.py"
+        "tests/_test_report_download_orchestrator/cases_03_run_report_download_is_idempotent.py"
       ],
       "files_modified": [
         "docs/quality/report-download-success-playbook-2026-04-07.md",
-        "src/orchestrators/_report_download_orchestrator/artifact_reuse.py",
         "src/orchestrators/_report_download_orchestrator/workflow.py",
-        "tests/_test_report_download_orchestrator/cases_05_run_report_download_requires_drive.py",
-        "tests/_test_report_download_orchestrator/cases_06_verified_artifact_reuse.py",
-        "tests/test_report_download_orchestrator.py"
+        "tests/_test_report_download_orchestrator/cases_03_run_report_download_is_idempotent.py"
       ],
       "checks_executed": [
-        "python -m pytest tests/test_report_download_orchestrator.py -q -k 'reuses_compatible_verified_artifact or treats_missing_verified_artifact_as_cache_miss'",
-        "python -m pytest tests/test_report_download_orchestrator.py -q",
-        "python -m ruff check src/orchestrators/_report_download_orchestrator/artifact_reuse.py src/orchestrators/_report_download_orchestrator/workflow.py tests/_test_report_download_orchestrator/cases_06_verified_artifact_reuse.py",
-        "python -m pytest -q benchmarks/agent-engineering/evaluator-payloads/test_perf_reuse_behavior.py"
+        "python -m pytest -q tests/test_report_download_orchestrator.py",
+        "python -m pytest -q tests/test_browser_acquisition_cache_and_autofill.py tests/test_ingest_parallel.py"
       ],
       "check_results": [
         {
-          "command": "python -m pytest tests/test_report_download_orchestrator.py -q -k 'reuses_compatible_verified_artifact or treats_missing_verified_artifact_as_cache_miss'",
+          "command": "python -m pytest -q tests/test_report_download_orchestrator.py",
           "returncode": 0,
-          "summary": "2 passed"
+          "summary": "41 passed"
         },
         {
-          "command": "python -m pytest tests/test_report_download_orchestrator.py -q",
-          "returncode": 0,
-          "summary": "42 passed"
-        },
-        {
-          "command": "python -m ruff check src/orchestrators/_report_download_orchestrator/artifact_reuse.py src/orchestrators/_report_download_orchestrator/workflow.py tests/_test_report_download_orchestrator/cases_06_verified_artifact_reuse.py",
-          "returncode": 0,
-          "summary": "All checks passed"
-        },
-        {
-          "command": "python -m pytest -q benchmarks/agent-engineering/evaluator-payloads/test_perf_reuse_behavior.py",
+          "command": "python -m pytest -q tests/test_browser_acquisition_cache_and_autofill.py tests/test_ingest_parallel.py",
           "returncode": 1,
-          "summary": "1 failed, 2 passed: a changed retained artifact path was reused rather than reacquired"
+          "summary": "Injected evaluator regression test failed at collection: historical StateArtifactAcquisitionCacheRecordRequest API not provided by the candidate"
         }
       ],
       "tool_call_count": "unavailable",
@@ -436,14 +410,13 @@
       "architecture_policy_compliant": true,
       "verified_scope_violations": [],
       "evaluator_injection": {
-        "version": "pre-phase1-evaluator-injection-v2-black-box",
+        "version": "pre-phase1-evaluator-injection-v1",
         "source_revision": "8b1b685b2f40795ca51d9904b8027e33ba85cc9e",
         "files": [
           {
-            "path": "benchmarks/agent-engineering/evaluator-payloads/test_perf_reuse_behavior.py",
-            "payload_source": "benchmarks/agent-engineering/evaluator-payloads/test_perf_reuse_behavior.py",
-            "kind": "black_box_behavioral_regression_test",
-            "sha256": "d38b303cc61521195e57671fdcbaf8b22127512455cd7ba4df3edea1847981b5"
+            "path": "tests/test_browser_acquisition_cache_and_autofill.py",
+            "kind": "regression_test",
+            "sha256": "d27b5a49abf9b9f287211901efd3e2712f1fe64fba11e2355ec1c1abcee1d628"
           }
         ],
         "result": "injected_after_worker_before_evaluator_check"
@@ -511,7 +484,7 @@
       "ML-LLM-001",
       "ML-PERF-001"
     ],
-    "rerun_topology": "two fresh native isolated child agents for the two affected cases; this corrective subset is not a Phase-1 comparison arm and does not alter the frozen three-worker Phase-1 topology",
+    "rerun_topology": "two fresh native isolated child agents; this repair is not a Phase-1 comparison arm",
     "agent_prompt_visibility": "task prompts only",
     "human_intervention_count": 0,
     "rework_count": 0

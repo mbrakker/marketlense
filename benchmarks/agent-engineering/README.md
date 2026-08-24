@@ -90,6 +90,7 @@ check paths:
 
 ```powershell
 python scripts/quality/agent_engineering_benchmark.py validate --corpus benchmarks/agent-engineering/cases.json
+python scripts/quality/agent_engineering_benchmark.py validate-injections --injections benchmarks/agent-engineering/evaluator-injections.json
 python scripts/quality/agent_engineering_benchmark.py validate-protocol --corpus benchmarks/agent-engineering/cases.json --injections benchmarks/agent-engineering/evaluator-injections.json
 ```
 
@@ -110,6 +111,8 @@ The first genuine baseline is retained separately from corpus integrity:
 - `baselines/codex-pre-phase1-run.json` — the ten worker records;
 - `baselines/codex-pre-phase1-initial-run.json` — the preserved unrepaired
   genuine capture;
+- `baselines/codex-pre-phase1-api-coupled-run.json` — the preserved genuine
+  repair capture before its implementation-coupled evaluator probes were retired;
 - `baselines/codex-pre-phase1-score.json` — deterministic scorer output;
 - `baselines/codex-pre-phase1-report.json` — evaluator decisions, check results,
   aggregates, limitations, and exact process.
@@ -126,20 +129,21 @@ historical fixing-commit parent. They did not receive historical reference
 files, fixing diffs, required checks, evaluator-injection paths or contents, or
 Phase-1 tooling. The frozen result remains 9/10 evaluator-correct after the
 two affected cases were rerun with deterministic evaluator-only injection. Its
-primary metrics are 75% required-verification success, zero verified scope
+primary metrics are 85% required-verification success, zero verified scope
 violations, zero human interventions/rework, and a 216-second median across
-the seven independently measured elapsed times. The 89.25 weighted score uses
+the seven immutable elapsed-comparison cases. The 90.75 weighted score uses
 no historical-implementation-similarity points; 43.33% historical-reference
 file recall is diagnostic only. Tool/file-read counts, model identity, token
 counts, and cost remain `unavailable`.
 
-The injection manifest copies only SHA-256-pinned missing test/fixture payloads
-from the retained fixing revision after a worker stops. Both injected tests
-were API-coupled to their historical implementations and failed collection for
-the fresh alternatives; those failures are retained in required-verification
-metrics. The LLM candidate still met the task's observable provider-free
-validation; the performance candidate independently failed its identity check.
-Future Phase-1 comparisons MUST use the exact protocol unchanged.
+The injection manifest copies only SHA-256-pinned evaluator-owned behavioral
+payloads after a worker stops. The LLM payload verifies credential-free
+registered-resource validation plus explicit malformed/missing data failures;
+it passed. The reuse payload verifies only observable identity, provenance,
+compatibility, idempotency, and cache-miss behavior; it found that the PERF
+candidate reused changed content at a retained path. Neither payload requires
+a historical solution API. Future Phase-1 comparisons MUST use the exact
+protocol unchanged.
 
 Re-score the captured actual run with:
 
