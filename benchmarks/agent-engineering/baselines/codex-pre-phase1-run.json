@@ -1,8 +1,8 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "2.0",
   "baseline_kind": "actual_agent_performance",
   "benchmark_cutoff_commit": "fd59abac1bd35fda5ee652adad80e21c7de52823",
-  "corpus_sha256": "7ab3d9b261e9acdb12622057c32346f46fae9e7aadfa0cb6f5226a05a3785ef1",
+  "corpus_sha256": "183b0f6a43e274e8861caf6f615a0960ac899fccdeb4e5c2aa392d53c7a525cc",
   "run_date": "2026-08-24",
   "agent": {
     "name": "Codex",
@@ -22,12 +22,28 @@
       "starting_revision": "0277dee8814589851dcd2d4beb346278e6db614d",
       "correct_completion": true,
       "correctness_basis": "The worker added the three missing structural checks in the CI order; the evaluator-owned wiring test passed. The aggregate gate then failed only its formatting stage.",
-      "files_discovered": ["scripts/ci/run_quality_gate.py"],
-      "files_modified": ["scripts/ci/run_quality_gate.py", "tests/test_quality_command_scripts.py"],
-      "checks_executed": ["python -m pytest -q tests/test_ci_quality_gate_wiring.py", "python scripts/ci/run_quality_gate.py"],
+      "files_discovered": [
+        "scripts/ci/run_quality_gate.py"
+      ],
+      "files_modified": [
+        "scripts/ci/run_quality_gate.py",
+        "tests/test_quality_command_scripts.py"
+      ],
+      "checks_executed": [
+        "python -m pytest -q tests/test_ci_quality_gate_wiring.py",
+        "python scripts/ci/run_quality_gate.py"
+      ],
       "check_results": [
-        {"command": "python -m pytest -q tests/test_ci_quality_gate_wiring.py", "returncode": 0, "summary": "2 passed"},
-        {"command": "python scripts/ci/run_quality_gate.py", "returncode": 1, "summary": "format gate reported two worker-modified files would be reformatted"}
+        {
+          "command": "python -m pytest -q tests/test_ci_quality_gate_wiring.py",
+          "returncode": 0,
+          "summary": "2 passed"
+        },
+        {
+          "command": "python scripts/ci/run_quality_gate.py",
+          "returncode": 1,
+          "summary": "format gate reported two worker-modified files would be reformatted"
+        }
       ],
       "tool_call_count": "unavailable",
       "file_read_count": "unavailable",
@@ -39,17 +55,33 @@
       "token_usage": "unavailable",
       "estimated_cost_usd": "unavailable",
       "human_intervention_count": 0,
-      "rework_count": 0
+      "rework_count": 0,
+      "architecture_policy_compliant": true,
+      "verified_scope_violations": []
     },
     {
       "case_id": "ML-ARCH-002",
       "starting_revision": "13b669d528b75fa7a6941ba416743ad182fc0977",
       "correct_completion": true,
       "correctness_basis": "The worker separated a presentation-only path name from a direct filesystem existence probe and routed the probe through the typed file service contract; the evaluator-owned I/O-boundary test passed.",
-      "files_discovered": ["src/services/file_service.py", "src/contracts/files.py"],
-      "files_modified": ["docs/architecture/role-boundaries.md", "src/ui/app_pages/core_operations.py"],
-      "checks_executed": ["python -m pytest -q tests/test_io_boundaries.py"],
-      "check_results": [{"command": "python -m pytest -q tests/test_io_boundaries.py", "returncode": 0, "summary": "1 passed"}],
+      "files_discovered": [
+        "src/services/file_service.py",
+        "src/contracts/files.py"
+      ],
+      "files_modified": [
+        "docs/architecture/role-boundaries.md",
+        "src/ui/app_pages/core_operations.py"
+      ],
+      "checks_executed": [
+        "python -m pytest -q tests/test_io_boundaries.py"
+      ],
+      "check_results": [
+        {
+          "command": "python -m pytest -q tests/test_io_boundaries.py",
+          "returncode": 0,
+          "summary": "1 passed"
+        }
+      ],
       "tool_call_count": "unavailable",
       "file_read_count": "unavailable",
       "tool_file_read_count": "unavailable",
@@ -60,17 +92,34 @@
       "token_usage": "unavailable",
       "estimated_cost_usd": "unavailable",
       "human_intervention_count": 0,
-      "rework_count": 0
+      "rework_count": 0,
+      "architecture_policy_compliant": true,
+      "verified_scope_violations": []
     },
     {
       "case_id": "ML-BUG-001",
       "starting_revision": "8ada9894ba32b54d1e93c468afe54c29aed8a5c9",
       "correct_completion": true,
       "correctness_basis": "The worker added a deterministic mixed-hub admission guard before browser acquisition while preserving explicit PDF/report-detail routing; the evaluator-owned route-class test passed.",
-      "files_discovered": ["src/orchestrators/_report_download_orchestrator/candidate_readiness.py", "docs/workflows/report-acquisition.md"],
-      "files_modified": ["docs/workflows/report-acquisition.md", "src/orchestrators/_report_download_orchestrator/candidate_readiness.py", "tests/_test_report_download_orchestrator/cases_05_run_report_download_requires_drive.py"],
-      "checks_executed": ["python -m pytest -q tests/_test_report_download_orchestrator/cases_01_route_plan_recovery_classes_cover.py"],
-      "check_results": [{"command": "python -m pytest -q tests/_test_report_download_orchestrator/cases_01_route_plan_recovery_classes_cover.py", "returncode": 0, "summary": "7 passed"}],
+      "files_discovered": [
+        "src/orchestrators/_report_download_orchestrator/candidate_readiness.py",
+        "docs/workflows/report-acquisition.md"
+      ],
+      "files_modified": [
+        "docs/workflows/report-acquisition.md",
+        "src/orchestrators/_report_download_orchestrator/candidate_readiness.py",
+        "tests/_test_report_download_orchestrator/cases_05_run_report_download_requires_drive.py"
+      ],
+      "checks_executed": [
+        "python -m pytest -q tests/_test_report_download_orchestrator/cases_01_route_plan_recovery_classes_cover.py"
+      ],
+      "check_results": [
+        {
+          "command": "python -m pytest -q tests/_test_report_download_orchestrator/cases_01_route_plan_recovery_classes_cover.py",
+          "returncode": 0,
+          "summary": "7 passed"
+        }
+      ],
       "tool_call_count": "unavailable",
       "file_read_count": "unavailable",
       "tool_file_read_count": "unavailable",
@@ -81,17 +130,34 @@
       "token_usage": "unavailable",
       "estimated_cost_usd": "unavailable",
       "human_intervention_count": 0,
-      "rework_count": 0
+      "rework_count": 0,
+      "architecture_policy_compliant": true,
+      "verified_scope_violations": []
     },
     {
       "case_id": "ML-FEAT-002",
       "starting_revision": "2a24b91a77ae2288238fa5c1b7efb9a2a4bdda8f",
       "correct_completion": true,
       "correctness_basis": "The worker added bounded sanitized blocker states and deterministic triage without retaining raw page-like content; the evaluator-owned projection test passed.",
-      "files_discovered": ["scripts/quality/acquisition_evidence_projection.py", "tests/test_acquisition_evidence_projection.py"],
-      "files_modified": ["docs/workflows/report-acquisition.md", "scripts/quality/acquisition_evidence_projection.py", "tests/test_acquisition_evidence_projection.py"],
-      "checks_executed": ["python -m pytest -q tests/test_acquisition_evidence_projection.py"],
-      "check_results": [{"command": "python -m pytest -q tests/test_acquisition_evidence_projection.py", "returncode": 0, "summary": "2 passed"}],
+      "files_discovered": [
+        "scripts/quality/acquisition_evidence_projection.py",
+        "tests/test_acquisition_evidence_projection.py"
+      ],
+      "files_modified": [
+        "docs/workflows/report-acquisition.md",
+        "scripts/quality/acquisition_evidence_projection.py",
+        "tests/test_acquisition_evidence_projection.py"
+      ],
+      "checks_executed": [
+        "python -m pytest -q tests/test_acquisition_evidence_projection.py"
+      ],
+      "check_results": [
+        {
+          "command": "python -m pytest -q tests/test_acquisition_evidence_projection.py",
+          "returncode": 0,
+          "summary": "2 passed"
+        }
+      ],
       "tool_call_count": "unavailable",
       "file_read_count": "unavailable",
       "tool_file_read_count": "unavailable",
@@ -102,17 +168,34 @@
       "token_usage": "unavailable",
       "estimated_cost_usd": "unavailable",
       "human_intervention_count": 0,
-      "rework_count": 0
+      "rework_count": 0,
+      "architecture_policy_compliant": true,
+      "verified_scope_violations": []
     },
     {
       "case_id": "ML-BROWSER-002",
       "starting_revision": "7bb019aa17a2a705b0bf41b9406844e2ec0f0643",
       "correct_completion": true,
       "correctness_basis": "The worker refreshed the current page after playbook completion and used current URL/title instead of stale browser metadata; both evaluator-owned browser test modules passed.",
-      "files_discovered": ["src/services/_browser_report_download/browser.py"],
-      "files_modified": ["docs/workflows/report-acquisition.md", "src/services/_browser_report_download/_helpers/state.py", "src/services/_browser_report_download/browser.py", "tests/test_browser_acquisition_cache_and_autofill.py"],
-      "checks_executed": ["python -m pytest -q tests/test_browser_route_playbooks.py tests/test_browser_report_download_cdp.py"],
-      "check_results": [{"command": "python -m pytest -q tests/test_browser_route_playbooks.py tests/test_browser_report_download_cdp.py", "returncode": 0, "summary": "50 passed"}],
+      "files_discovered": [
+        "src/services/_browser_report_download/browser.py"
+      ],
+      "files_modified": [
+        "docs/workflows/report-acquisition.md",
+        "src/services/_browser_report_download/_helpers/state.py",
+        "src/services/_browser_report_download/browser.py",
+        "tests/test_browser_acquisition_cache_and_autofill.py"
+      ],
+      "checks_executed": [
+        "python -m pytest -q tests/test_browser_route_playbooks.py tests/test_browser_report_download_cdp.py"
+      ],
+      "check_results": [
+        {
+          "command": "python -m pytest -q tests/test_browser_route_playbooks.py tests/test_browser_report_download_cdp.py",
+          "returncode": 0,
+          "summary": "50 passed"
+        }
+      ],
       "tool_call_count": "unavailable",
       "file_read_count": "unavailable",
       "tool_file_read_count": "unavailable",
@@ -123,17 +206,35 @@
       "token_usage": "unavailable",
       "estimated_cost_usd": "unavailable",
       "human_intervention_count": 0,
-      "rework_count": 0
+      "rework_count": 0,
+      "architecture_policy_compliant": true,
+      "verified_scope_violations": []
     },
     {
       "case_id": "ML-BROWSER-003",
       "starting_revision": "31a4819ff6f8366c9de59bf8deafa79d4074c418",
       "correct_completion": true,
       "correctness_basis": "The worker stopped and joined/cancelled no-progress agents, retained diagnostic history, and made the terminal result explicitly blocked; the evaluator-owned route-playbook suite passed.",
-      "files_discovered": ["src/services/_browser_report_download/_browser_runtime/_session_lifecycle/history.py", "src/services/_browser_report_download/browser.py"],
-      "files_modified": ["docs/workflows/report-acquisition.md", "src/services/_browser_report_download/_browser_runtime/_session_lifecycle/history.py", "src/services/_browser_report_download/browser.py", "tests/test_browser_report_download_service/test_post_action_verification.py"],
-      "checks_executed": ["python -m pytest -q tests/test_browser_route_playbooks.py"],
-      "check_results": [{"command": "python -m pytest -q tests/test_browser_route_playbooks.py", "returncode": 0, "summary": "31 passed"}],
+      "files_discovered": [
+        "src/services/_browser_report_download/_browser_runtime/_session_lifecycle/history.py",
+        "src/services/_browser_report_download/browser.py"
+      ],
+      "files_modified": [
+        "docs/workflows/report-acquisition.md",
+        "src/services/_browser_report_download/_browser_runtime/_session_lifecycle/history.py",
+        "src/services/_browser_report_download/browser.py",
+        "tests/test_browser_report_download_service/test_post_action_verification.py"
+      ],
+      "checks_executed": [
+        "python -m pytest -q tests/test_browser_route_playbooks.py"
+      ],
+      "check_results": [
+        {
+          "command": "python -m pytest -q tests/test_browser_route_playbooks.py",
+          "returncode": 0,
+          "summary": "31 passed"
+        }
+      ],
       "tool_call_count": "unavailable",
       "file_read_count": "unavailable",
       "tool_file_read_count": "unavailable",
@@ -144,17 +245,34 @@
       "token_usage": "unavailable",
       "estimated_cost_usd": "unavailable",
       "human_intervention_count": 0,
-      "rework_count": 0
+      "rework_count": 0,
+      "architecture_policy_compliant": true,
+      "verified_scope_violations": []
     },
     {
       "case_id": "ML-PDF-001",
       "starting_revision": "aee4d40fae8ca3d4470e64dc2674f0753ec7043b",
       "correct_completion": true,
       "correctness_basis": "The worker applied existing publication-strict crop QA only to final selection while retaining legacy candidate crops/names; the evaluator-owned crop-refinement benchmark gate passed.",
-      "files_discovered": ["src/services/_pdf/_crop/regions.py", "src/generators/_report_selection_generator/figure_selection.py"],
-      "files_modified": ["docs/quality/non-regression-policy.md", "src/generators/_report_selection_generator/figure_selection.py", "tests/_test_candidate_refine_selection/cases_03_select_report_figures_skips_legacy.py"],
-      "checks_executed": ["python -m pytest -q tests/test_pdf_crop_refine_benchmark_gate.py"],
-      "check_results": [{"command": "python -m pytest -q tests/test_pdf_crop_refine_benchmark_gate.py", "returncode": 0, "summary": "4 passed"}],
+      "files_discovered": [
+        "src/services/_pdf/_crop/regions.py",
+        "src/generators/_report_selection_generator/figure_selection.py"
+      ],
+      "files_modified": [
+        "docs/quality/non-regression-policy.md",
+        "src/generators/_report_selection_generator/figure_selection.py",
+        "tests/_test_candidate_refine_selection/cases_03_select_report_figures_skips_legacy.py"
+      ],
+      "checks_executed": [
+        "python -m pytest -q tests/test_pdf_crop_refine_benchmark_gate.py"
+      ],
+      "check_results": [
+        {
+          "command": "python -m pytest -q tests/test_pdf_crop_refine_benchmark_gate.py",
+          "returncode": 0,
+          "summary": "4 passed"
+        }
+      ],
       "tool_call_count": "unavailable",
       "file_read_count": "unavailable",
       "tool_file_read_count": "unavailable",
@@ -165,59 +283,166 @@
       "token_usage": "unavailable",
       "estimated_cost_usd": "unavailable",
       "human_intervention_count": 0,
-      "rework_count": 0
+      "rework_count": 0,
+      "architecture_policy_compliant": true,
+      "verified_scope_violations": []
     },
     {
       "case_id": "ML-LLM-001",
       "starting_revision": "da8d63d0cf1759e832e588a0fc297e93b9c9e8eb",
       "correct_completion": true,
-      "correctness_basis": "The worker added provider-free registry validation for prompt namespace, fixtures, variables, and malformed templates. It changed two retained solution components and its local prompt suite passed; the evaluator's later dedicated test file did not exist in the starting revision.",
-      "files_discovered": ["src/contracts/prompts.py", "src/services/prompt_service.py", "tests/test_prompt_service.py"],
-      "files_modified": ["docs/quality/initiative_ledger.yaml", "src/contracts/prompts.py", "src/services/prompt_service.py", "tests/test_prompt_service.py"],
-      "checks_executed": ["python -m pytest -q tests/test_prompt_dry_run_validation.py"],
-      "check_results": [{"command": "python -m pytest -q tests/test_prompt_dry_run_validation.py", "returncode": 1, "summary": "required evaluator test file absent from historical starting revision"}],
+      "correctness_basis": "Fresh isolated rerun produced provider-free validation of all discovered namespaces, explicit fixture/template failures, and focused passing tests. The injected historical test failed at collection because it requires historical public symbols not required by the task prompt; this is retained as a required-verification failure, not treated as an unrelated alternative implementation.",
+      "files_discovered": [
+        "src/contracts/prompts.py",
+        "src/services/prompt_service.py",
+        "src/prompts"
+      ],
+      "files_modified": [
+        "docs/docpacks/prompt-authoring.md",
+        "scripts/quality/validate_prompt_resources.py",
+        "src/contracts/prompts.py",
+        "src/prompts/validation.yaml",
+        "src/services/prompt_service.py",
+        "tests/test_prompt_service.py"
+      ],
+      "checks_executed": [
+        "python -m pytest -q tests/test_prompt_service.py",
+        "python scripts/quality/validate_prompt_resources.py",
+        "python -m pytest -q tests/test_prompt_dry_run_validation.py"
+      ],
+      "check_results": [
+        {
+          "command": "python -m pytest -q tests/test_prompt_service.py",
+          "returncode": 0,
+          "summary": "9 passed"
+        },
+        {
+          "command": "python scripts/quality/validate_prompt_resources.py",
+          "returncode": 0,
+          "summary": "Validated 33 prompt namespaces without provider calls"
+        },
+        {
+          "command": "python -m pytest -q tests/test_prompt_dry_run_validation.py",
+          "returncode": 1,
+          "summary": "Injected evaluator regression test failed at collection: historical PromptDryRunRequest API not provided by the candidate"
+        }
+      ],
       "tool_call_count": "unavailable",
       "file_read_count": "unavailable",
       "tool_file_read_count": "unavailable",
-      "elapsed_seconds": 181,
+      "elapsed_seconds": "unavailable",
       "input_tokens": "unavailable",
       "output_tokens": "unavailable",
       "cached_tokens": "unavailable",
       "token_usage": "unavailable",
       "estimated_cost_usd": "unavailable",
       "human_intervention_count": 0,
-      "rework_count": 0
+      "rework_count": 0,
+      "architecture_policy_compliant": true,
+      "verified_scope_violations": [],
+      "evaluator_injection": {
+        "version": "pre-phase1-evaluator-injection-v1",
+        "source_revision": "11ac481a662db4fb706197134fc6a00a000331a8",
+        "files": [
+          {
+            "path": "src/prompts/_dry_run_fixtures.yaml",
+            "kind": "fixture",
+            "sha256": "528a8b34da08f0e99f8f883083df0ee38818484ba361ed8bf44cd5a7055a9c5f"
+          },
+          {
+            "path": "tests/test_prompt_dry_run_validation.py",
+            "kind": "regression_test",
+            "sha256": "6e780fe0fba7794caf8298139b49f36c1bcba1210bf30db9f7b7c5d39a62eb8b"
+          }
+        ],
+        "result": "injected_after_worker_before_evaluator_check"
+      }
     },
     {
       "case_id": "ML-PERF-001",
       "starting_revision": "330dbb00c6858a5471a5a339e321e5bc132f3ceb",
       "correct_completion": false,
-      "correctness_basis": "The worker implemented a plausible PDF-transfer reuse path and local test, but changed no evaluator-owned ground-truth component and the required historical test file was absent. The observable completion remains unverified.",
-      "files_discovered": [],
-      "files_modified": ["docs/architecture/browser-report-http-decomposition-review.md", "src/services/_browser_report_download/_http/pdf_transfer.py"],
-      "checks_executed": ["python -m pytest -q tests/test_browser_acquisition_cache_and_autofill.py tests/test_ingest_parallel.py"],
-      "check_results": [{"command": "python -m pytest -q tests/test_browser_acquisition_cache_and_autofill.py tests/test_ingest_parallel.py", "returncode": 1, "summary": "required evaluator test file absent from historical starting revision"}],
+      "correctness_basis": "Fresh isolated rerun passed a focused reuse regression, but evaluator review found that its file-stat-only reuse path does not re-establish artifact content identity after a retained path can change. The injected historical test also failed at collection because its state-cache contract is absent. The candidate is therefore incorrect for the identity/provenance requirement independently of historical file similarity.",
+      "files_discovered": [
+        "src/orchestrators/_report_download_orchestrator/workflow.py",
+        "tests/_test_report_download_orchestrator/cases_03_run_report_download_is_idempotent.py"
+      ],
+      "files_modified": [
+        "docs/quality/report-download-success-playbook-2026-04-07.md",
+        "src/orchestrators/_report_download_orchestrator/workflow.py",
+        "tests/_test_report_download_orchestrator/cases_03_run_report_download_is_idempotent.py"
+      ],
+      "checks_executed": [
+        "python -m pytest -q tests/test_report_download_orchestrator.py",
+        "python -m pytest -q tests/test_browser_acquisition_cache_and_autofill.py tests/test_ingest_parallel.py"
+      ],
+      "check_results": [
+        {
+          "command": "python -m pytest -q tests/test_report_download_orchestrator.py",
+          "returncode": 0,
+          "summary": "41 passed"
+        },
+        {
+          "command": "python -m pytest -q tests/test_browser_acquisition_cache_and_autofill.py tests/test_ingest_parallel.py",
+          "returncode": 1,
+          "summary": "Injected evaluator regression test failed at collection: historical StateArtifactAcquisitionCacheRecordRequest API not provided by the candidate"
+        }
+      ],
       "tool_call_count": "unavailable",
       "file_read_count": "unavailable",
       "tool_file_read_count": "unavailable",
-      "elapsed_seconds": 235,
+      "elapsed_seconds": "unavailable",
       "input_tokens": "unavailable",
       "output_tokens": "unavailable",
       "cached_tokens": "unavailable",
       "token_usage": "unavailable",
       "estimated_cost_usd": "unavailable",
       "human_intervention_count": 0,
-      "rework_count": 0
+      "rework_count": 0,
+      "architecture_policy_compliant": true,
+      "verified_scope_violations": [],
+      "evaluator_injection": {
+        "version": "pre-phase1-evaluator-injection-v1",
+        "source_revision": "8b1b685b2f40795ca51d9904b8027e33ba85cc9e",
+        "files": [
+          {
+            "path": "tests/test_browser_acquisition_cache_and_autofill.py",
+            "kind": "regression_test",
+            "sha256": "d27b5a49abf9b9f287211901efd3e2712f1fe64fba11e2355ec1c1abcee1d628"
+          }
+        ],
+        "result": "injected_after_worker_before_evaluator_check"
+      }
     },
     {
       "case_id": "ML-SVC-001",
       "starting_revision": "877213add2524f64a661728508fcb8be42ac979a",
       "correct_completion": true,
       "correctness_basis": "The worker removed service retry ownership, retained provider translation, and exposed the outer retry policy; the evaluator-owned service and pipeline tests passed.",
-      "files_discovered": ["src/services/_llm_service/policy.py", "src/orchestrators/report_pipeline_orchestrator.py", "tests/test_llm_service.py"],
-      "files_modified": ["docs/superpowers/specs/2026-06-14-unified-llm-service-boundary-design.md", "src/contracts/llm.py", "src/orchestrators/report_pipeline_orchestrator.py", "src/services/_llm_service/client.py", "src/services/_llm_service/policy.py", "tests/test_llm_service.py", "tests/test_report_pipeline_orchestrator.py"],
-      "checks_executed": ["python -m pytest -q tests/test_llm_service.py tests/test_report_pipeline_orchestrator.py"],
-      "check_results": [{"command": "python -m pytest -q tests/test_llm_service.py tests/test_report_pipeline_orchestrator.py", "returncode": 0, "summary": "18 passed"}],
+      "files_discovered": [
+        "src/services/_llm_service/policy.py",
+        "src/orchestrators/report_pipeline_orchestrator.py",
+        "tests/test_llm_service.py"
+      ],
+      "files_modified": [
+        "docs/superpowers/specs/2026-06-14-unified-llm-service-boundary-design.md",
+        "src/contracts/llm.py",
+        "src/orchestrators/report_pipeline_orchestrator.py",
+        "src/services/_llm_service/client.py",
+        "src/services/_llm_service/policy.py",
+        "tests/test_llm_service.py",
+        "tests/test_report_pipeline_orchestrator.py"
+      ],
+      "checks_executed": [
+        "python -m pytest -q tests/test_llm_service.py tests/test_report_pipeline_orchestrator.py"
+      ],
+      "check_results": [
+        {
+          "command": "python -m pytest -q tests/test_llm_service.py tests/test_report_pipeline_orchestrator.py",
+          "returncode": 0,
+          "summary": "18 passed"
+        }
+      ],
       "tool_call_count": "unavailable",
       "file_read_count": "unavailable",
       "tool_file_read_count": "unavailable",
@@ -228,7 +453,30 @@
       "token_usage": "unavailable",
       "estimated_cost_usd": "unavailable",
       "human_intervention_count": 0,
-      "rework_count": 0
+      "rework_count": 0,
+      "architecture_policy_compliant": true,
+      "verified_scope_violations": []
     }
-  ]
+  ],
+  "protocol": {
+    "protocol_id": "marketlense-pre-phase1-comparison-v1",
+    "protocol_path": "benchmarks/agent-engineering/pre-phase1-protocol.json",
+    "evaluator_injection_version": "pre-phase1-evaluator-injection-v1"
+  },
+  "preserved_initial_capture": {
+    "path": "benchmarks/agent-engineering/baselines/codex-pre-phase1-initial-run.json",
+    "sha256": "6fb3e4f4e88b4c1f1f050ff8215ee192c16f237d77c0b3cd292f2e9afbacfc64",
+    "description": "The genuine 2026-08-24 initial capture before evaluator-test repair."
+  },
+  "evaluator_test_repair": {
+    "repair_date": "2026-08-24",
+    "rerun_case_ids": [
+      "ML-LLM-001",
+      "ML-PERF-001"
+    ],
+    "rerun_topology": "two fresh native isolated child agents; this repair is not a Phase-1 comparison arm",
+    "agent_prompt_visibility": "task prompts only",
+    "human_intervention_count": 0,
+    "rework_count": 0
+  }
 }

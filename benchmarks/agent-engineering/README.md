@@ -50,15 +50,18 @@ literal string `"unavailable"`; never substitute zero.
 
 ```json
 {
-  "schema_version": "1.0",
+  "schema_version": "2.0",
   "agent": {"name": "Codex", "version": "<runner-reported-version>"},
   "cases": [
     {
       "case_id": "ML-ARCH-001",
       "correct_completion": true,
+      "architecture_policy_compliant": true,
       "files_discovered": ["<repository-relative-path>"],
       "files_modified": ["<repository-relative-path>"],
+      "verified_scope_violations": [],
       "checks_executed": ["<exact-required-command>"],
+      "check_results": [{"command": "<exact-required-command>", "returncode": 0}],
       "tool_file_read_count": 18,
       "elapsed_seconds": 214,
       "token_usage": "unavailable",
@@ -70,12 +73,15 @@ literal string `"unavailable"`; never substitute zero.
 }
 ```
 
-`correct_completion` is an evaluator decision supported by the declared
-verification checks. The scorer computes relevant-file recall, counts
-irrelevant modified files, and matches executed checks by their exact declared
-command. It aggregates duration, tool/file reads, tokens, cost, interventions,
-and rework only when every scored record provides that measurement; otherwise
-the aggregate records `unavailable`.
+`correct_completion` is an evaluator decision supported by observable results,
+architecture/policy review, and declared verification checks. Historical
+reference files are retained only for the diagnostic
+`historical_reference_file_recall`; they are not an allowlist. The scorer
+records the actual `candidate_files_modified` and deducts scope points only for
+concrete evaluator-recorded `verified_scope_violations`. Required verification
+success, interventions, rework, and elapsed time are primary metrics; tool/file
+reads, tokens, cost, and historical-reference recall are secondary or
+diagnostic. An unobserved measurement remains `unavailable`.
 
 ## Commands
 
@@ -84,6 +90,7 @@ check paths:
 
 ```powershell
 python scripts/quality/agent_engineering_benchmark.py validate --corpus benchmarks/agent-engineering/cases.json
+python scripts/quality/agent_engineering_benchmark.py validate-protocol --corpus benchmarks/agent-engineering/cases.json --injections benchmarks/agent-engineering/evaluator-injections.json
 ```
 
 Capture the reproducible current Codex corpus-integrity baseline:
@@ -101,25 +108,38 @@ is an integrity baseline, not an invented Codex performance result.
 The first genuine baseline is retained separately from corpus integrity:
 
 - `baselines/codex-pre-phase1-run.json` — the ten worker records;
+- `baselines/codex-pre-phase1-initial-run.json` — the preserved unrepaired
+  genuine capture;
 - `baselines/codex-pre-phase1-score.json` — deterministic scorer output;
 - `baselines/codex-pre-phase1-report.json` — evaluator decisions, check results,
   aggregates, limitations, and exact process.
 
+`pre-phase1-protocol.json` freezes exactly the ten comparison cases, task
+prompts, starting revisions, worker topology, restrictions, measurements, and
+evaluator-injection version. The remaining six corpus cases are holdouts: they
+MUST NOT be used for Phase-1 design or tuning and run only after Phase-1
+implementation and adoption thresholds are frozen.
+
 It freezes the Phase-0 cutoff at `fd59abac1bd35fda5ee652adad80e21c7de52823`.
 Workers used only the task prompt in disposable detached worktrees at the
-historical fixing-commit parent. They did not receive relevant files, fixing
-diffs, required checks, or Phase-1 tooling. The retained run executed ten cases
-across every corpus category: it recorded 9/10 evaluator-correct completions,
-an 82.3 mean weighted score, 43.33% relevant-file recall, 22 irrelevant
-modifications, and a 216-second median over the nine observable elapsed times.
-Tool/file-read counts, model identity, token counts, and cost were not exposed
-by the native child-agent surface and remain `unavailable`.
+historical fixing-commit parent. They did not receive historical reference
+files, fixing diffs, required checks, evaluator-injection paths or contents, or
+Phase-1 tooling. The frozen result remains 9/10 evaluator-correct after the
+two affected cases were rerun with deterministic evaluator-only injection. Its
+primary metrics are 75% required-verification success, zero verified scope
+violations, zero human interventions/rework, and a 216-second median across
+the seven independently measured elapsed times. The 89.25 weighted score uses
+no historical-implementation-similarity points; 43.33% historical-reference
+file recall is diagnostic only. Tool/file-read counts, model identity, token
+counts, and cost remain `unavailable`.
 
-Two evaluator-owned regression files did not exist in their historical parent
-revisions, so their checks are recorded as unavailable/failed rather than
-fabricated. The report explains this limitation. Future Phase-1 comparison runs
-MUST retain the same corpus hash, prompts, fixing commits, and parent revisions;
-any different injection procedure requires a new benchmark version.
+The injection manifest copies only SHA-256-pinned missing test/fixture payloads
+from the retained fixing revision after a worker stops. Both injected tests
+were API-coupled to their historical implementations and failed collection for
+the fresh alternatives; those failures are retained in required-verification
+metrics. The LLM candidate still met the task's observable provider-free
+validation; the performance candidate independently failed its identity check.
+Future Phase-1 comparisons MUST use the exact protocol unchanged.
 
 Re-score the captured actual run with:
 

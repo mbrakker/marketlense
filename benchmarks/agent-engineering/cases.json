@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "2.0",
   "benchmark_id": "marketlense-agent-engineering",
   "purpose": "Evaluate repository-local coding agents on representative MarketLense engineering work using historically traceable ground truth.",
   "scoring_contract": {
@@ -17,7 +17,8 @@
       "rework_count"
     ],
     "unavailable_measurement_value": "unavailable",
-    "scope_penalty": "Subtract one scope point for each modified file outside allowed_modified_files, never below zero."
+    "historical_reference_files_are_diagnostic_only": true,
+    "verified_scope_violation_rule": "Subtract one scope point only for each concrete evaluator-recorded verified_scope_violation, never below zero."
   },
   "cases": [
     {
@@ -27,12 +28,7 @@
       "task_prompt": "Determine whether developers can run the same mandatory structural quality checks locally that run before the test suite in continuous integration. Report any gap, its practical consequence, and the smallest safe remediation. Do not make unrelated changes.",
       "expected_observable_result": "The investigation identifies each missing pre-test structural check, confirms their required order, and proposes a local gate sequence that mirrors continuous integration.",
       "ground_truth": {
-        "relevant_files": [
-          "scripts/ci/run_quality_gate.py",
-          "tests/test_ci_quality_gate_wiring.py",
-          "docs/quality/release-gates.md"
-        ],
-        "allowed_modified_files": [
+        "historical_reference_files": [
           "scripts/ci/run_quality_gate.py",
           "tests/test_ci_quality_gate_wiring.py",
           "docs/quality/release-gates.md"
@@ -56,7 +52,7 @@
         "The order differs so a later check can mask an earlier structural failure.",
         "The solution only updates documentation without executable parity coverage."
       ],
-      "scoring": {"weights": {"correct_completion": 70, "relevant_files_discovered": 15, "scope_control": 5, "tests_checks_executed": 10}}
+      "scoring": {"weights": {"correct_completion": 70, "architecture_policy_compliance": 5, "verified_scope_control": 10, "required_verification_success": 15}}
     },
     {
       "id": "ML-ARCH-002",
@@ -65,12 +61,7 @@
       "task_prompt": "Assess whether an interactive operator surface performs local filesystem work through the approved boundary. Provide a narrowly scoped finding that distinguishes a policy violation from a permitted presentation-layer concern, and identify the public contract that should own the operation.",
       "expected_observable_result": "The result traces the I/O path to the canonical service boundary and identifies both the caller and contract consequences without proposing a broad UI rewrite.",
       "ground_truth": {
-        "relevant_files": [
-          "docs/quality/service_boundary_map.json",
-          "src/services/file_service.py",
-          "tests/test_io_boundaries.py"
-        ],
-        "allowed_modified_files": [
+        "historical_reference_files": [
           "docs/quality/service_boundary_map.json",
           "src/services/file_service.py",
           "tests/test_io_boundaries.py"
@@ -89,7 +80,7 @@
         "The proposed change puts domain logic in the UI.",
         "The evidence does not distinguish filesystem I/O from pure formatting."
       ],
-      "scoring": {"weights": {"correct_completion": 70, "relevant_files_discovered": 15, "scope_control": 5, "tests_checks_executed": 10}}
+      "scoring": {"weights": {"correct_completion": 70, "architecture_policy_compliance": 5, "verified_scope_control": 10, "required_verification_success": 15}}
     },
     {
       "id": "ML-BUG-001",
@@ -98,12 +89,7 @@
       "task_prompt": "A discovery candidate that is merely a broad resource hub is being admitted to expensive browser acquisition. Correct the admission decision so only report-specific candidates progress, while preserving valid direct-report routes and the retained validation cohort.",
       "expected_observable_result": "Generic hubs are rejected before browser work begins; report-specific candidates continue to the existing routing path; the regression fixture documents the classification.",
       "ground_truth": {
-        "relevant_files": [
-          "src/orchestrators/_report_download_orchestrator/candidate_readiness.py",
-          "tests/_test_report_download_orchestrator/cases_01_route_plan_recovery_classes_cover.py",
-          "docs/workflows/report-acquisition.md"
-        ],
-        "allowed_modified_files": [
+        "historical_reference_files": [
           "src/orchestrators/_report_download_orchestrator/candidate_readiness.py",
           "tests/_test_report_download_orchestrator/cases_01_route_plan_recovery_classes_cover.py",
           "docs/workflows/report-acquisition.md"
@@ -122,7 +108,7 @@
         "The rule rejects legitimate report detail pages.",
         "The fix classifies only a single publisher string instead of the observed candidate characteristics."
       ],
-      "scoring": {"weights": {"correct_completion": 70, "relevant_files_discovered": 15, "scope_control": 5, "tests_checks_executed": 10}}
+      "scoring": {"weights": {"correct_completion": 70, "architecture_policy_compliance": 5, "verified_scope_control": 10, "required_verification_success": 15}}
     },
     {
       "id": "ML-BUG-002",
@@ -131,12 +117,7 @@
       "task_prompt": "A publisher's service landing page is being treated as a downloadable research report. Tighten readiness classification so the page does not trigger acquisition, while retaining the existing handling for real report detail pages and archived evidence.",
       "expected_observable_result": "The landing page is rejected with an explainable readiness outcome before resource-intensive acquisition, and the regression case separates it from eligible report content.",
       "ground_truth": {
-        "relevant_files": [
-          "src/orchestrators/_report_download_orchestrator/candidate_readiness.py",
-          "tests/_test_report_download_orchestrator/cases_01_route_plan_recovery_classes_cover.py",
-          "docs/workflows/report-acquisition.md"
-        ],
-        "allowed_modified_files": [
+        "historical_reference_files": [
           "src/orchestrators/_report_download_orchestrator/candidate_readiness.py",
           "tests/_test_report_download_orchestrator/cases_01_route_plan_recovery_classes_cover.py",
           "docs/workflows/report-acquisition.md"
@@ -155,7 +136,7 @@
         "A rejection path removes evidence needed for auditability.",
         "The fix hard-codes a publisher-specific URL rather than a stable readiness signal."
       ],
-      "scoring": {"weights": {"correct_completion": 70, "relevant_files_discovered": 15, "scope_control": 5, "tests_checks_executed": 10}}
+      "scoring": {"weights": {"correct_completion": 70, "architecture_policy_compliance": 5, "verified_scope_control": 10, "required_verification_success": 15}}
     },
     {
       "id": "ML-FEAT-001",
@@ -164,17 +145,10 @@
       "task_prompt": "Add a safety condition to learned browser-route promotion: observed navigation alone must not be enough to promote a route that needs a meaningful interaction. Retain compact, sanitized evidence of the interaction and reject incomplete promotion attempts.",
       "expected_observable_result": "A promotion record includes validated action evidence where required; observation-only routes are not promoted; the route contract and regression coverage retain the distinction.",
       "ground_truth": {
-        "relevant_files": [
+        "historical_reference_files": [
           "src/services/_browser_report_download/_browser_runtime/action_evidence.py",
           "src/services/_browser_report_download/playbooks.py",
           "tests/_test_browser_route_playbooks/cases_01_safe_promotion.py"
-        ],
-        "allowed_modified_files": [
-          "src/contracts/_browser_download/runtime.py",
-          "src/services/_browser_report_download/_browser_runtime/action_evidence.py",
-          "src/services/_browser_report_download/playbooks.py",
-          "tests/_test_browser_route_playbooks/cases_01_safe_promotion.py",
-          "docs/workflows/report-acquisition.md"
         ],
         "traceability": {
           "fix_commit": "a0e2818fa75167a12efdb57d7bebe798337ad0f2",
@@ -190,7 +164,7 @@
         "Raw user-entered data is retained in ordinary logs or playbooks.",
         "The condition prevents safe navigation-only routes from promotion."
       ],
-      "scoring": {"weights": {"correct_completion": 70, "relevant_files_discovered": 15, "scope_control": 5, "tests_checks_executed": 10}}
+      "scoring": {"weights": {"correct_completion": 70, "architecture_policy_compliance": 5, "verified_scope_control": 10, "required_verification_success": 15}}
     },
     {
       "id": "ML-FEAT-002",
@@ -199,12 +173,7 @@
       "task_prompt": "Extend the reusable acquisition evidence projection so unresolved work is visible as bounded, sanitized blocker states. Preserve successful and failed outcomes, avoid secret or page-content retention, and make the result useful for deterministic follow-up triage.",
       "expected_observable_result": "The projection exposes normalized blocker-state summaries and remaining-failure counts without raw credentials, source text, or browser payloads.",
       "ground_truth": {
-        "relevant_files": [
-          "scripts/quality/acquisition_evidence_projection.py",
-          "tests/test_acquisition_evidence_projection.py",
-          "docs/quality/evidence.md"
-        ],
-        "allowed_modified_files": [
+        "historical_reference_files": [
           "scripts/quality/acquisition_evidence_projection.py",
           "tests/test_acquisition_evidence_projection.py",
           "docs/quality/evidence.md"
@@ -223,7 +192,7 @@
         "The projection retains raw browser text, contact data, or credentials.",
         "A previously recognized terminal failure disappears from the summary."
       ],
-      "scoring": {"weights": {"correct_completion": 70, "relevant_files_discovered": 15, "scope_control": 5, "tests_checks_executed": 10}}
+      "scoring": {"weights": {"correct_completion": 70, "architecture_policy_compliance": 5, "verified_scope_control": 10, "required_verification_success": 15}}
     },
     {
       "id": "ML-BROWSER-001",
@@ -232,16 +201,10 @@
       "task_prompt": "A publisher exposes a complete report as an onsite rendered experience rather than a direct document. Make the acquisition path retain a verifiable local document only when the rendered report is complete, without treating a landing page as a report or bypassing terminal-evidence safeguards.",
       "expected_observable_result": "A complete onsite report is captured as a local PDF with verification metadata; incomplete or terminal pages do not become usable artifacts.",
       "ground_truth": {
-        "relevant_files": [
+        "historical_reference_files": [
           "src/services/_browser_report_download/_http/onsite_capture.py",
           "src/services/_browser_report_download/preflight.py",
           "tests/test_browser_report_download_cdp.py"
-        ],
-        "allowed_modified_files": [
-          "src/services/_browser_report_download/_http/onsite_capture.py",
-          "src/services/_browser_report_download/preflight.py",
-          "tests/test_browser_report_download_cdp.py",
-          "docs/workflows/report-acquisition.md"
         ],
         "traceability": {
           "fix_commit": "6a1f611db0a300e85d502a2e368e5258dd851cb3",
@@ -257,7 +220,7 @@
         "A captured artifact lacks a usable verification record.",
         "The change performs an uncontrolled external write."
       ],
-      "scoring": {"weights": {"correct_completion": 70, "relevant_files_discovered": 15, "scope_control": 5, "tests_checks_executed": 10}}
+      "scoring": {"weights": {"correct_completion": 70, "architecture_policy_compliance": 5, "verified_scope_control": 10, "required_verification_success": 15}}
     },
     {
       "id": "ML-BROWSER-002",
@@ -266,17 +229,10 @@
       "task_prompt": "Stabilize an acquisition route for a public rendered report whose browser interaction sometimes loses the target document. Preserve the existing route policy, ensure the resolved artifact is verified, and add a deterministic replay-oriented regression case.",
       "expected_observable_result": "The route reliably resolves the intended public report with bounded browser steps and verification signals, while failed or incomplete routes remain explicit failures.",
       "ground_truth": {
-        "relevant_files": [
+        "historical_reference_files": [
           "src/services/_browser_report_download/_cdp/operations.py",
           "src/services/_browser_report_download/browser.py",
           "tests/test_browser_route_playbooks.py"
-        ],
-        "allowed_modified_files": [
-          "src/services/_browser_report_download/_cdp/operations.py",
-          "src/services/_browser_report_download/browser.py",
-          "src/services/browser_report_download_service.py",
-          "tests/test_browser_route_playbooks.py",
-          "src/playbooks/browser_routes/learned-www-bcg-com-browser-onsite-report.yaml"
         ],
         "traceability": {
           "fix_commit": "8ada9894ba32b54d1e93c468afe54c29aed8a5c9",
@@ -292,7 +248,7 @@
         "The browser continues after an explicit terminal page.",
         "The regression depends on a live publisher response rather than the retained replay seam."
       ],
-      "scoring": {"weights": {"correct_completion": 70, "relevant_files_discovered": 15, "scope_control": 5, "tests_checks_executed": 10}}
+      "scoring": {"weights": {"correct_completion": 70, "architecture_policy_compliance": 5, "verified_scope_control": 10, "required_verification_success": 15}}
     },
     {
       "id": "ML-BROWSER-003",
@@ -301,12 +257,7 @@
       "task_prompt": "A browser acquisition attempt can keep polling after progress has stopped. Ensure no-progress recovery stops predictably, preserves the diagnostic history needed for review, and cleans up the worker without converting the timeout into a success.",
       "expected_observable_result": "A bounded no-progress condition has a terminal classified outcome, retained bounded history, and completed cleanup; normal completed routes do not pay stabilization polls.",
       "ground_truth": {
-        "relevant_files": [
-          "src/services/_browser_report_download/browser.py",
-          "src/services/_browser_report_download/browser_worker.py",
-          "tests/test_browser_route_playbooks.py"
-        ],
-        "allowed_modified_files": [
+        "historical_reference_files": [
           "src/services/_browser_report_download/browser.py",
           "src/services/_browser_report_download/browser_worker.py",
           "tests/test_browser_route_playbooks.py"
@@ -325,7 +276,7 @@
         "Cleanup discards the only bounded diagnostic history.",
         "A completed normal route incurs polling added solely for the timeout path."
       ],
-      "scoring": {"weights": {"correct_completion": 70, "relevant_files_discovered": 15, "scope_control": 5, "tests_checks_executed": 10}}
+      "scoring": {"weights": {"correct_completion": 70, "architecture_policy_compliance": 5, "verified_scope_control": 10, "required_verification_success": 15}}
     },
     {
       "id": "ML-PDF-001",
@@ -334,16 +285,10 @@
       "task_prompt": "Improve final visual-asset crop quality for extracted report figures. The change must avoid adding surrounding page noise or clipping the chart, preserve deterministic naming and cache behavior, and keep the existing benchmark corpus comparable.",
       "expected_observable_result": "Figure crops use refined boundaries that improve visual framing while preserving compatibility with downstream figure selection, stored assets, and the committed quality gate.",
       "ground_truth": {
-        "relevant_files": [
+        "historical_reference_files": [
           "src/services/_pdf/_crop/boundary_detectors.py",
           "src/services/_pdf/_crop/regions.py",
           "tests/_test_pdf_crop_service/cases_01_strict_crop_filenames_do_not.py"
-        ],
-        "allowed_modified_files": [
-          "src/services/_pdf/_crop/boundary_detectors.py",
-          "src/services/_pdf/_crop/regions.py",
-          "tests/_test_pdf_crop_service/cases_01_strict_crop_filenames_do_not.py",
-          "docs/quality/pdf_crop_refine_benchmark_baseline.json"
         ],
         "traceability": {
           "fix_commit": "7a9dc232209724cc81bb9967421967d395abe640",
@@ -359,7 +304,7 @@
         "The asset cache or deterministic filename contract changes unexpectedly.",
         "A visual-only change lacks benchmark evidence."
       ],
-      "scoring": {"weights": {"correct_completion": 70, "relevant_files_discovered": 15, "scope_control": 5, "tests_checks_executed": 10}}
+      "scoring": {"weights": {"correct_completion": 70, "architecture_policy_compliance": 5, "verified_scope_control": 10, "required_verification_success": 15}}
     },
     {
       "id": "ML-PDF-002",
@@ -368,16 +313,10 @@
       "task_prompt": "Split an oversized table-detection implementation into cohesive semantic owners without changing its public behavior. Preserve import compatibility, deterministic decisions, and all existing extraction outcomes; add a guard that catches broken links after future moves.",
       "expected_observable_result": "The public table-heuristic surface remains compatible, responsibilities move into focused private modules, and a structural check proves the split symbols remain reachable.",
       "ground_truth": {
-        "relevant_files": [
+        "historical_reference_files": [
           "src/services/_pdf/table_heuristics.py",
           "src/services/_pdf/_table_heuristics/policy.py",
           "tests/test_pdf_table_heuristics_decomposition.py"
-        ],
-        "allowed_modified_files": [
-          "src/services/_pdf/table_heuristics.py",
-          "src/services/_pdf/_table_heuristics/policy.py",
-          "tests/test_pdf_table_heuristics_decomposition.py",
-          "scripts/ci/check_split_symbol_links.py"
         ],
         "traceability": {
           "fix_commit": "255ab4ff0311e13cc3c266a71f3f0342213cfb11",
@@ -393,7 +332,7 @@
         "The decomposition merely creates forwarding modules without ownership separation.",
         "Symbol links are not checked after the refactor."
       ],
-      "scoring": {"weights": {"correct_completion": 70, "relevant_files_discovered": 15, "scope_control": 5, "tests_checks_executed": 10}}
+      "scoring": {"weights": {"correct_completion": 70, "architecture_policy_compliance": 5, "verified_scope_control": 10, "required_verification_success": 15}}
     },
     {
       "id": "ML-LLM-001",
@@ -402,15 +341,9 @@
       "task_prompt": "Introduce a deterministic validation path for all registered prompt resources so template rendering, namespace contracts, and declared fixtures are checked without making provider calls. Fail clearly for missing data or malformed templates.",
       "expected_observable_result": "The repository can validate prompt namespaces from committed fixtures without an LLM call, producing actionable failures for incomplete contracts and preserving prompt-resource ownership.",
       "ground_truth": {
-        "relevant_files": [
+        "historical_reference_files": [
           "src/services/prompt_service.py",
           "src/contracts/prompts.py",
-          "tests/test_prompt_dry_run_validation.py"
-        ],
-        "allowed_modified_files": [
-          "src/services/prompt_service.py",
-          "src/contracts/prompts.py",
-          "src/prompts/_dry_run_fixtures.yaml",
           "tests/test_prompt_dry_run_validation.py"
         ],
         "traceability": {
@@ -427,7 +360,7 @@
         "Prompt prose is moved into Python instead of remaining in prompt resources.",
         "A missing fixture is silently replaced with an empty value."
       ],
-      "scoring": {"weights": {"correct_completion": 70, "relevant_files_discovered": 15, "scope_control": 5, "tests_checks_executed": 10}}
+      "scoring": {"weights": {"correct_completion": 70, "architecture_policy_compliance": 5, "verified_scope_control": 10, "required_verification_success": 15}}
     },
     {
       "id": "ML-LLM-002",
@@ -436,12 +369,7 @@
       "task_prompt": "Make the model-selection policy for a sensitive analysis path explicit and testable through approved configuration. Preserve code-owned validation and safety invariants, and do not add a second provider boundary or embed a model choice in a prompt.",
       "expected_observable_result": "Configuration expresses the selected model for the intended routing key; the policy test verifies resolution; provider calls continue through the canonical service.",
       "ground_truth": {
-        "relevant_files": [
-          "src/config/app.yaml",
-          "src/services/_llm_service/policy.py",
-          "tests/test_llm_routing_policy.py"
-        ],
-        "allowed_modified_files": [
+        "historical_reference_files": [
           "src/config/app.yaml",
           "src/services/_llm_service/policy.py",
           "tests/test_llm_routing_policy.py"
@@ -460,7 +388,7 @@
         "A route falls back silently to a different model.",
         "The change weakens output validation or provider-boundary rules."
       ],
-      "scoring": {"weights": {"correct_completion": 70, "relevant_files_discovered": 15, "scope_control": 5, "tests_checks_executed": 10}}
+      "scoring": {"weights": {"correct_completion": 70, "architecture_policy_compliance": 5, "verified_scope_control": 10, "required_verification_success": 15}}
     },
     {
       "id": "ML-PERF-001",
@@ -469,17 +397,10 @@
       "task_prompt": "Reduce repeated acquisition work by reusing a previously verified artifact only when identity, provenance, and compatibility are still valid. Preserve idempotency, distinguish a cache miss from a failed acquisition, and demonstrate that quality and estimated cost do not regress.",
       "expected_observable_result": "Compatible verified artifacts are reused through the state boundary; stale or mismatched artifacts are rejected; controlled tests show reduced repeated work without changed outcomes.",
       "ground_truth": {
-        "relevant_files": [
+        "historical_reference_files": [
           "src/services/_state_service/artifact_cache.py",
           "src/orchestrators/ingest_orchestrator.py",
           "tests/test_browser_acquisition_cache_and_autofill.py"
-        ],
-        "allowed_modified_files": [
-          "src/services/_state_service/artifact_cache.py",
-          "src/orchestrators/ingest_orchestrator.py",
-          "src/services/browser_report_download_service.py",
-          "tests/test_browser_acquisition_cache_and_autofill.py",
-          "tests/test_ingest_parallel.py"
         ],
         "traceability": {
           "fix_commit": "8b1b685b2f40795ca51d9904b8027e33ba85cc9e",
@@ -495,7 +416,7 @@
         "A cache hit is recorded as a fresh external acquisition.",
         "Optimization changes the artifact outcome or increases estimated provider cost."
       ],
-      "scoring": {"weights": {"correct_completion": 70, "relevant_files_discovered": 15, "scope_control": 5, "tests_checks_executed": 10}}
+      "scoring": {"weights": {"correct_completion": 70, "architecture_policy_compliance": 5, "verified_scope_control": 10, "required_verification_success": 15}}
     },
     {
       "id": "ML-SVC-001",
@@ -504,17 +425,10 @@
       "task_prompt": "Eliminate overlapping retry behavior between a provider service and its workflow owner. Keep provider translation and bounded single attempts at the service boundary; make retry counts, backoff decisions, and terminal behavior visible at the orchestration layer.",
       "expected_observable_result": "The service does not hide workflow retries, the orchestrator owns the configured retry decision, and tests show the expected attempt count and propagated terminal error.",
       "ground_truth": {
-        "relevant_files": [
+        "historical_reference_files": [
           "src/services/_llm_service/policy.py",
           "src/orchestrators/retry_orchestrator.py",
           "tests/test_llm_service.py"
-        ],
-        "allowed_modified_files": [
-          "src/services/_llm_service/policy.py",
-          "src/services/_llm_service/openai_shared.py",
-          "src/orchestrators/retry_orchestrator.py",
-          "tests/test_llm_service.py",
-          "tests/test_report_pipeline_orchestrator.py"
         ],
         "traceability": {
           "fix_commit": "0f0a5b843a8bf85c2dab59b24bf9a0be1cdb39e0",
@@ -530,7 +444,7 @@
         "A service suppresses a retryable error and returns partial success.",
         "Retry policy becomes implicit or unbounded."
       ],
-      "scoring": {"weights": {"correct_completion": 70, "relevant_files_discovered": 15, "scope_control": 5, "tests_checks_executed": 10}}
+      "scoring": {"weights": {"correct_completion": 70, "architecture_policy_compliance": 5, "verified_scope_control": 10, "required_verification_success": 15}}
     },
     {
       "id": "ML-SVC-002",
@@ -539,17 +453,10 @@
       "task_prompt": "Move direct filesystem work out of operator-facing callers and through the approved service contract. Preserve visible behavior and error semantics, avoid a broad UI rewrite, and prove the architectural boundary with focused tests.",
       "expected_observable_result": "Operator entrypoints request filesystem behavior through the canonical service contract; direct local I/O is removed from the affected callers; focused boundary tests cover the public behavior.",
       "ground_truth": {
-        "relevant_files": [
+        "historical_reference_files": [
           "src/services/file_service.py",
           "src/contracts/files.py",
           "tests/test_file_service.py"
-        ],
-        "allowed_modified_files": [
-          "src/services/file_service.py",
-          "src/contracts/files.py",
-          "tests/test_file_service.py",
-          "tests/test_io_boundaries.py",
-          "src/_cli/ui_runs.py"
         ],
         "traceability": {
           "fix_commit": "7274f607e0185658c68c41ef2f86b8061ebdb0b7",
@@ -565,7 +472,7 @@
         "The service boundary becomes a pass-through that leaves policy in callers.",
         "Error context or user-visible behavior changes without an explicit contract transition."
       ],
-      "scoring": {"weights": {"correct_completion": 70, "relevant_files_discovered": 15, "scope_control": 5, "tests_checks_executed": 10}}
+      "scoring": {"weights": {"correct_completion": 70, "architecture_policy_compliance": 5, "verified_scope_control": 10, "required_verification_success": 15}}
     }
   ]
 }

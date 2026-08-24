@@ -1,197 +1,245 @@
 {
   "aggregate": {
+    "architecture_policy_compliance": 1.0,
+    "candidate_files_modified_count": 37,
     "correct_completion": 0.9,
     "elapsed_seconds": "unavailable",
     "elapsed_seconds_status": "unavailable",
     "estimated_cost_usd": "unavailable",
     "estimated_cost_usd_status": "unavailable",
+    "historical_reference_file_recall": 0.4333,
     "human_intervention_count": 0.0,
     "human_intervention_count_status": "measured",
-    "irrelevant_files_modified": 22,
-    "mean_score": 82.3,
-    "relevant_files_discovered": 0.4333,
+    "mean_score": 89.25,
     "required_checks_executed": 1.0,
+    "required_verification_success": 0.75,
     "rework_count": 0.0,
     "rework_count_status": "measured",
     "token_usage": "unavailable",
     "token_usage_status": "unavailable",
     "tool_file_read_count": "unavailable",
-    "tool_file_read_count_status": "unavailable"
+    "tool_file_read_count_status": "unavailable",
+    "verified_scope_violation_count": 0
   },
   "cases": [
     {
+      "architecture_policy_compliant": true,
+      "candidate_files_modified": [
+        "scripts/ci/run_quality_gate.py",
+        "tests/test_quality_command_scripts.py"
+      ],
       "case_id": "ML-ARCH-001",
       "correct_completion": true,
       "elapsed_seconds": 105,
       "estimated_cost_usd": "unavailable",
+      "historical_reference_file_recall": 0.3333333333333333,
       "human_intervention_count": 0,
-      "irrelevant_files_modified": [
-        "tests/test_quality_command_scripts.py"
-      ],
-      "relevant_files_discovered": 0.3333333333333333,
       "required_checks_executed": 1.0,
+      "required_verification_success": 0.5,
       "rework_count": 0,
-      "score": 89.0,
+      "score": 92.5,
       "token_usage": "unavailable",
-      "tool_file_read_count": "unavailable"
+      "tool_file_read_count": "unavailable",
+      "verified_scope_violations": []
     },
     {
+      "architecture_policy_compliant": true,
+      "candidate_files_modified": [
+        "docs/architecture/role-boundaries.md",
+        "src/ui/app_pages/core_operations.py"
+      ],
       "case_id": "ML-ARCH-002",
       "correct_completion": true,
       "elapsed_seconds": "unavailable",
       "estimated_cost_usd": "unavailable",
+      "historical_reference_file_recall": 0.3333333333333333,
       "human_intervention_count": 0,
-      "irrelevant_files_modified": [
-        "docs/architecture/role-boundaries.md",
-        "src/ui/app_pages/core_operations.py"
-      ],
-      "relevant_files_discovered": 0.3333333333333333,
       "required_checks_executed": 1.0,
+      "required_verification_success": 1.0,
       "rework_count": 0,
-      "score": 88.0,
+      "score": 100.0,
       "token_usage": "unavailable",
-      "tool_file_read_count": "unavailable"
+      "tool_file_read_count": "unavailable",
+      "verified_scope_violations": []
     },
     {
+      "architecture_policy_compliant": true,
+      "candidate_files_modified": [
+        "docs/workflows/report-acquisition.md",
+        "src/orchestrators/_report_download_orchestrator/candidate_readiness.py",
+        "tests/_test_report_download_orchestrator/cases_05_run_report_download_requires_drive.py"
+      ],
       "case_id": "ML-BUG-001",
       "correct_completion": true,
       "elapsed_seconds": 216,
       "estimated_cost_usd": "unavailable",
+      "historical_reference_file_recall": 0.6666666666666666,
       "human_intervention_count": 0,
-      "irrelevant_files_modified": [
-        "tests/_test_report_download_orchestrator/cases_05_run_report_download_requires_drive.py"
-      ],
-      "relevant_files_discovered": 0.6666666666666666,
       "required_checks_executed": 1.0,
+      "required_verification_success": 1.0,
       "rework_count": 0,
-      "score": 94.0,
+      "score": 100.0,
       "token_usage": "unavailable",
-      "tool_file_read_count": "unavailable"
+      "tool_file_read_count": "unavailable",
+      "verified_scope_violations": []
     },
     {
+      "architecture_policy_compliant": true,
+      "candidate_files_modified": [
+        "docs/workflows/report-acquisition.md",
+        "scripts/quality/acquisition_evidence_projection.py",
+        "tests/test_acquisition_evidence_projection.py"
+      ],
       "case_id": "ML-FEAT-002",
       "correct_completion": true,
       "elapsed_seconds": 156,
       "estimated_cost_usd": "unavailable",
+      "historical_reference_file_recall": 0.6666666666666666,
       "human_intervention_count": 0,
-      "irrelevant_files_modified": [
-        "docs/workflows/report-acquisition.md"
-      ],
-      "relevant_files_discovered": 0.6666666666666666,
       "required_checks_executed": 1.0,
+      "required_verification_success": 1.0,
       "rework_count": 0,
-      "score": 94.0,
+      "score": 100.0,
       "token_usage": "unavailable",
-      "tool_file_read_count": "unavailable"
+      "tool_file_read_count": "unavailable",
+      "verified_scope_violations": []
     },
     {
+      "architecture_policy_compliant": true,
+      "candidate_files_modified": [
+        "docs/workflows/report-acquisition.md",
+        "src/services/_browser_report_download/_helpers/state.py",
+        "src/services/_browser_report_download/browser.py",
+        "tests/test_browser_acquisition_cache_and_autofill.py"
+      ],
       "case_id": "ML-BROWSER-002",
       "correct_completion": true,
       "elapsed_seconds": 306,
       "estimated_cost_usd": "unavailable",
+      "historical_reference_file_recall": 0.3333333333333333,
       "human_intervention_count": 0,
-      "irrelevant_files_modified": [
-        "docs/workflows/report-acquisition.md",
-        "src/services/_browser_report_download/_helpers/state.py",
-        "tests/test_browser_acquisition_cache_and_autofill.py"
-      ],
-      "relevant_files_discovered": 0.3333333333333333,
       "required_checks_executed": 1.0,
+      "required_verification_success": 1.0,
       "rework_count": 0,
-      "score": 87.0,
+      "score": 100.0,
       "token_usage": "unavailable",
-      "tool_file_read_count": "unavailable"
+      "tool_file_read_count": "unavailable",
+      "verified_scope_violations": []
     },
     {
+      "architecture_policy_compliant": true,
+      "candidate_files_modified": [
+        "docs/workflows/report-acquisition.md",
+        "src/services/_browser_report_download/_browser_runtime/_session_lifecycle/history.py",
+        "src/services/_browser_report_download/browser.py",
+        "tests/test_browser_report_download_service/test_post_action_verification.py"
+      ],
       "case_id": "ML-BROWSER-003",
       "correct_completion": true,
       "elapsed_seconds": 286,
       "estimated_cost_usd": "unavailable",
+      "historical_reference_file_recall": 0.3333333333333333,
       "human_intervention_count": 0,
-      "irrelevant_files_modified": [
-        "docs/workflows/report-acquisition.md",
-        "src/services/_browser_report_download/_browser_runtime/_session_lifecycle/history.py",
-        "tests/test_browser_report_download_service/test_post_action_verification.py"
-      ],
-      "relevant_files_discovered": 0.3333333333333333,
       "required_checks_executed": 1.0,
+      "required_verification_success": 1.0,
       "rework_count": 0,
-      "score": 87.0,
+      "score": 100.0,
       "token_usage": "unavailable",
-      "tool_file_read_count": "unavailable"
+      "tool_file_read_count": "unavailable",
+      "verified_scope_violations": []
     },
     {
-      "case_id": "ML-PDF-001",
-      "correct_completion": true,
-      "elapsed_seconds": 117,
-      "estimated_cost_usd": "unavailable",
-      "human_intervention_count": 0,
-      "irrelevant_files_modified": [
+      "architecture_policy_compliant": true,
+      "candidate_files_modified": [
         "docs/quality/non-regression-policy.md",
         "src/generators/_report_selection_generator/figure_selection.py",
         "tests/_test_candidate_refine_selection/cases_03_select_report_figures_skips_legacy.py"
       ],
-      "relevant_files_discovered": 0.3333333333333333,
+      "case_id": "ML-PDF-001",
+      "correct_completion": true,
+      "elapsed_seconds": 117,
+      "estimated_cost_usd": "unavailable",
+      "historical_reference_file_recall": 0.3333333333333333,
+      "human_intervention_count": 0,
       "required_checks_executed": 1.0,
+      "required_verification_success": 1.0,
       "rework_count": 0,
-      "score": 87.0,
+      "score": 100.0,
       "token_usage": "unavailable",
-      "tool_file_read_count": "unavailable"
+      "tool_file_read_count": "unavailable",
+      "verified_scope_violations": []
     },
     {
-      "case_id": "ML-LLM-001",
-      "correct_completion": true,
-      "elapsed_seconds": 181,
-      "estimated_cost_usd": "unavailable",
-      "human_intervention_count": 0,
-      "irrelevant_files_modified": [
-        "docs/quality/initiative_ledger.yaml",
+      "architecture_policy_compliant": true,
+      "candidate_files_modified": [
+        "docs/docpacks/prompt-authoring.md",
+        "scripts/quality/validate_prompt_resources.py",
+        "src/contracts/prompts.py",
+        "src/prompts/validation.yaml",
+        "src/services/prompt_service.py",
         "tests/test_prompt_service.py"
       ],
-      "relevant_files_discovered": 0.6666666666666666,
+      "case_id": "ML-LLM-001",
+      "correct_completion": true,
+      "elapsed_seconds": "unavailable",
+      "estimated_cost_usd": "unavailable",
+      "historical_reference_file_recall": 0.6666666666666666,
+      "human_intervention_count": 0,
       "required_checks_executed": 1.0,
+      "required_verification_success": 0.0,
       "rework_count": 0,
-      "score": 93.0,
+      "score": 85.0,
       "token_usage": "unavailable",
-      "tool_file_read_count": "unavailable"
+      "tool_file_read_count": "unavailable",
+      "verified_scope_violations": []
     },
     {
+      "architecture_policy_compliant": true,
+      "candidate_files_modified": [
+        "docs/quality/report-download-success-playbook-2026-04-07.md",
+        "src/orchestrators/_report_download_orchestrator/workflow.py",
+        "tests/_test_report_download_orchestrator/cases_03_run_report_download_is_idempotent.py"
+      ],
       "case_id": "ML-PERF-001",
       "correct_completion": false,
-      "elapsed_seconds": 235,
+      "elapsed_seconds": "unavailable",
       "estimated_cost_usd": "unavailable",
+      "historical_reference_file_recall": 0.0,
       "human_intervention_count": 0,
-      "irrelevant_files_modified": [
-        "docs/architecture/browser-report-http-decomposition-review.md",
-        "src/services/_browser_report_download/_http/pdf_transfer.py"
-      ],
-      "relevant_files_discovered": 0.0,
       "required_checks_executed": 1.0,
+      "required_verification_success": 0.0,
       "rework_count": 0,
-      "score": 13.0,
+      "score": 15.0,
       "token_usage": "unavailable",
-      "tool_file_read_count": "unavailable"
+      "tool_file_read_count": "unavailable",
+      "verified_scope_violations": []
     },
     {
+      "architecture_policy_compliant": true,
+      "candidate_files_modified": [
+        "docs/superpowers/specs/2026-06-14-unified-llm-service-boundary-design.md",
+        "src/contracts/llm.py",
+        "src/orchestrators/report_pipeline_orchestrator.py",
+        "src/services/_llm_service/client.py",
+        "src/services/_llm_service/policy.py",
+        "tests/test_llm_service.py",
+        "tests/test_report_pipeline_orchestrator.py"
+      ],
       "case_id": "ML-SVC-001",
       "correct_completion": true,
       "elapsed_seconds": 217,
       "estimated_cost_usd": "unavailable",
+      "historical_reference_file_recall": 0.6666666666666666,
       "human_intervention_count": 0,
-      "irrelevant_files_modified": [
-        "docs/superpowers/specs/2026-06-14-unified-llm-service-boundary-design.md",
-        "src/contracts/llm.py",
-        "src/orchestrators/report_pipeline_orchestrator.py",
-        "src/services/_llm_service/client.py"
-      ],
-      "relevant_files_discovered": 0.6666666666666666,
       "required_checks_executed": 1.0,
+      "required_verification_success": 1.0,
       "rework_count": 0,
-      "score": 91.0,
+      "score": 100.0,
       "token_usage": "unavailable",
-      "tool_file_read_count": "unavailable"
+      "tool_file_read_count": "unavailable",
+      "verified_scope_violations": []
     }
   ],
   "evaluated_case_count": 10,
-  "schema_version": "1.0"
+  "schema_version": "2.0"
 }

@@ -1,0 +1,122 @@
+{
+  "schema_version": "1.0",
+  "protocol_id": "marketlense-pre-phase1-comparison-v1",
+  "status": "frozen",
+  "corpus": {
+    "path": "benchmarks/agent-engineering/cases.json",
+    "schema_version": "2.0",
+    "sha256": "183b0f6a43e274e8861caf6f615a0960ac899fccdeb4e5c2aa392d53c7a525cc"
+  },
+  "comparison_cases": [
+    {
+      "id": "ML-ARCH-001",
+      "fix_commit": "ca8f7d2cca574215c3810cdc979ce26967bbfb69",
+      "starting_revision": "0277dee8814589851dcd2d4beb346278e6db614d",
+      "task_prompt": "Determine whether developers can run the same mandatory structural quality checks locally that run before the test suite in continuous integration. Report any gap, its practical consequence, and the smallest safe remediation. Do not make unrelated changes."
+    },
+    {
+      "id": "ML-ARCH-002",
+      "fix_commit": "7274f607e0185658c68c41ef2f86b8061ebdb0b7",
+      "starting_revision": "13b669d528b75fa7a6941ba416743ad182fc0977",
+      "task_prompt": "Assess whether an interactive operator surface performs local filesystem work through the approved boundary. Provide a narrowly scoped finding that distinguishes a policy violation from a permitted presentation-layer concern, and identify the public contract that should own the operation."
+    },
+    {
+      "id": "ML-BUG-001",
+      "fix_commit": "d8388eefbc3737055ff2ecea24bd2aa5c083bc11",
+      "starting_revision": "8ada9894ba32b54d1e93c468afe54c29aed8a5c9",
+      "task_prompt": "A discovery candidate that is merely a broad resource hub is being admitted to expensive browser acquisition. Correct the admission decision so only report-specific candidates progress, while preserving valid direct-report routes and the retained validation cohort."
+    },
+    {
+      "id": "ML-FEAT-002",
+      "fix_commit": "18dcba5ae2d98434e50417787a2d4d4f3ca823e6",
+      "starting_revision": "2a24b91a77ae2288238fa5c1b7efb9a2a4bdda8f",
+      "task_prompt": "Extend the reusable acquisition evidence projection so unresolved work is visible as bounded, sanitized blocker states. Preserve successful and failed outcomes, avoid secret or page-content retention, and make the result useful for deterministic follow-up triage."
+    },
+    {
+      "id": "ML-BROWSER-002",
+      "fix_commit": "8ada9894ba32b54d1e93c468afe54c29aed8a5c9",
+      "starting_revision": "7bb019aa17a2a705b0bf41b9406844e2ec0f0643",
+      "task_prompt": "Stabilize an acquisition route for a public rendered report whose browser interaction sometimes loses the target document. Preserve the existing route policy, ensure the resolved artifact is verified, and add a deterministic replay-oriented regression case."
+    },
+    {
+      "id": "ML-BROWSER-003",
+      "fix_commit": "c376742527e98dc596f13fe8056cc30b077abc0f",
+      "starting_revision": "31a4819ff6f8366c9de59bf8deafa79d4074c418",
+      "task_prompt": "A browser acquisition attempt can keep polling after progress has stopped. Ensure no-progress recovery stops predictably, preserves the diagnostic history needed for review, and cleans up the worker without converting the timeout into a success."
+    },
+    {
+      "id": "ML-PDF-001",
+      "fix_commit": "7a9dc232209724cc81bb9967421967d395abe640",
+      "starting_revision": "aee4d40fae8ca3d4470e64dc2674f0753ec7043b",
+      "task_prompt": "Improve final visual-asset crop quality for extracted report figures. The change must avoid adding surrounding page noise or clipping the chart, preserve deterministic naming and cache behavior, and keep the existing benchmark corpus comparable."
+    },
+    {
+      "id": "ML-LLM-001",
+      "fix_commit": "11ac481a662db4fb706197134fc6a00a000331a8",
+      "starting_revision": "da8d63d0cf1759e832e588a0fc297e93b9c9e8eb",
+      "task_prompt": "Introduce a deterministic validation path for all registered prompt resources so template rendering, namespace contracts, and declared fixtures are checked without making provider calls. Fail clearly for missing data or malformed templates."
+    },
+    {
+      "id": "ML-PERF-001",
+      "fix_commit": "8b1b685b2f40795ca51d9904b8027e33ba85cc9e",
+      "starting_revision": "330dbb00c6858a5471a5a339e321e5bc132f3ceb",
+      "task_prompt": "Reduce repeated acquisition work by reusing a previously verified artifact only when identity, provenance, and compatibility are still valid. Preserve idempotency, distinguish a cache miss from a failed acquisition, and demonstrate that quality and estimated cost do not regress."
+    },
+    {
+      "id": "ML-SVC-001",
+      "fix_commit": "0f0a5b843a8bf85c2dab59b24bf9a0be1cdb39e0",
+      "starting_revision": "877213add2524f64a661728508fcb8be42ac979a",
+      "task_prompt": "Eliminate overlapping retry behavior between a provider service and its workflow owner. Keep provider translation and bounded single attempts at the service boundary; make retry counts, backoff decisions, and terminal behavior visible at the orchestration layer."
+    }
+  ],
+  "holdout_case_ids": [
+    "ML-BUG-002",
+    "ML-FEAT-001",
+    "ML-BROWSER-001",
+    "ML-PDF-002",
+    "ML-LLM-002",
+    "ML-SVC-002"
+  ],
+  "historical_starting_revision_rule": "Create a disposable detached worktree at each comparison case's retained starting_revision. It must equal the first parent of that case's retained fix_commit before the worker begins.",
+  "evaluator_injection": {
+    "manifest_path": "benchmarks/agent-engineering/evaluator-injections.json",
+    "manifest_sha256": "1a1c43e644f44605147f08bbbadb2f0f532378984cbf5b9888cc2962ce5faa6e",
+    "version": "pre-phase1-evaluator-injection-v1",
+    "timing": "After the worker stops and before evaluator verification; injected paths and contents remain hidden from the worker."
+  },
+  "worker_topology": {
+    "kind": "three_native_isolated_child_agents",
+    "workers": 3,
+    "assignment": "Each worker receives only task prompts for sequential, disjoint detached worktrees. The parent alone owns evaluator truth, injection, score, integration, and completion."
+  },
+  "restrictions": {
+    "network": "No network, live API, browser profile, external publication, or remote write.",
+    "credentials": "No production credentials, secrets, or credential-gated validation.",
+    "repository_writes": "Workers may modify only their disposable worktree; no commits, pushes, or writes outside it.",
+    "prompt_isolation": "Workers do not receive historical reference files, historical diffs, required evaluator checks, evaluator injection paths or contents, or failure-condition lists."
+  },
+  "measurement_schema": {
+    "primary": [
+      "correct_completion",
+      "required_verification_success",
+      "verified_scope_violations",
+      "human_intervention_count",
+      "rework_count",
+      "elapsed_seconds"
+    ],
+    "secondary_when_observable": [
+      "tool_call_count",
+      "file_read_count",
+      "tool_file_read_count",
+      "input_tokens",
+      "output_tokens",
+      "cached_tokens",
+      "estimated_cost_usd"
+    ],
+    "diagnostic_only": [
+      "historical_reference_file_recall"
+    ],
+    "unavailable_value": "unavailable"
+  },
+  "comparison_rule": "Phase-1 comparison must use this exact protocol without changing topology, historical state, prompts, evaluator injection, or scoring procedure. The holdout cases remain unused until Phase-1 implementation and adoption thresholds are frozen."
+}

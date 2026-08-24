@@ -1,82 +1,77 @@
 {
-  "schema_version": "1.0",
-  "report_kind": "actual_pre_phase1_codex_baseline",
+  "schema_version": "2.0",
+  "report_kind": "frozen_actual_pre_phase1_codex_baseline",
   "run_date": "2026-08-24",
   "benchmark_cutoff_commit": "fd59abac1bd35fda5ee652adad80e21c7de52823",
-  "repository_head_at_capture": "5e66a036811d69b02e637bdba5ad1309c4a661dd",
+  "protocol": {
+    "id": "marketlense-pre-phase1-comparison-v1",
+    "path": "benchmarks/agent-engineering/pre-phase1-protocol.json",
+    "status": "frozen",
+    "comparison_cases": 10,
+    "holdout_cases": 6,
+    "evaluator_injection_version": "pre-phase1-evaluator-injection-v1"
+  },
   "corpus": {
     "path": "benchmarks/agent-engineering/cases.json",
-    "schema_version": "1.0",
-    "sha256": "7ab3d9b261e9acdb12622057c32346f46fae9e7aadfa0cb6f5226a05a3785ef1",
+    "schema_version": "2.0",
+    "sha256": "183b0f6a43e274e8861caf6f615a0960ac899fccdeb4e5c2aa392d53c7a525cc",
     "frozen_case_count": 16,
     "executed_case_count": 10
+  },
+  "preserved_initial_capture": {
+    "path": "benchmarks/agent-engineering/baselines/codex-pre-phase1-initial-run.json",
+    "sha256": "6fb3e4f4e88b4c1f1f050ff8215ee192c16f237d77c0b3cd292f2e9afbacfc64",
+    "description": "The original genuine ten-case capture before evaluator-test repair; it remains evidence and was not replaced with synthetic results."
   },
   "agent": {
     "name": "Codex",
     "version_or_model": "unavailable",
-    "run_topology": "three native isolated child agents, each assigned sequential historical worktrees"
+    "initial_topology": "three native isolated child agents, each assigned sequential historical worktrees",
+    "repair_topology": "two fresh native isolated child agents for only ML-LLM-001 and ML-PERF-001"
   },
   "results": {
-    "successful_cases": 9,
+    "evaluator_correct_cases": 9,
     "total_cases": 10,
-    "correctness_score": 0.9,
-    "mean_weighted_score": 82.3,
-    "required_commands_executed_rate": 1.0,
+    "correct_completion": 0.9,
+    "required_verification_success": 0.75,
     "all_required_checks_passed_case_rate": 0.7,
-    "irrelevant_files_modified": 22,
+    "verified_scope_violation_count": 0,
+    "candidate_files_modified_count": 37,
+    "historical_reference_file_recall": 0.4333,
+    "historical_reference_file_recall_role": "diagnostic_only",
+    "mean_weighted_score": 89.25,
     "human_intervention_count": 0,
     "rework_count": 0,
     "median_elapsed_seconds": 216,
-    "elapsed_measurements": 9,
-    "median_tool_call_count": "unavailable",
-    "median_file_read_count": "unavailable",
-    "input_tokens": "unavailable",
-    "output_tokens": "unavailable",
-    "cached_tokens": "unavailable",
+    "elapsed_measurements": 7,
+    "elapsed_status": "partial; two repaired reruns did not expose independently measured elapsed time",
+    "tool_call_count": "unavailable",
+    "file_read_count": "unavailable",
+    "token_usage": "unavailable",
     "estimated_cost_usd": "unavailable"
   },
-  "by_category": {
-    "architecture_investigation": {"executed": 2, "correct": 2, "required_check_passed_cases": 1},
-    "browser_acquisition": {"executed": 2, "correct": 2, "required_check_passed_cases": 2, "median_elapsed_seconds": 296},
-    "bug_fix": {"executed": 1, "correct": 1, "required_check_passed_cases": 1, "median_elapsed_seconds": 216},
-    "feature_implementation": {"executed": 1, "correct": 1, "required_check_passed_cases": 1, "median_elapsed_seconds": 156},
-    "llm_prompt_pipeline": {"executed": 1, "correct": 1, "required_check_passed_cases": 0, "median_elapsed_seconds": 181},
-    "pdf_visual_extraction": {"executed": 1, "correct": 1, "required_check_passed_cases": 1, "median_elapsed_seconds": 117},
-    "performance_cost": {"executed": 1, "correct": 0, "required_check_passed_cases": 0, "median_elapsed_seconds": 235},
-    "service_boundary_refactor": {"executed": 1, "correct": 1, "required_check_passed_cases": 1, "median_elapsed_seconds": 217}
+  "evaluator_test_repair": {
+    "affected_case_ids": ["ML-LLM-001", "ML-PERF-001"],
+    "mechanism": "Each fresh worker completed in a detached worktree at the retained parent revision. The evaluator then injected only manifest-declared missing test or fixture files from the retained fixing revision, verified SHA-256 values, and ran the case's required check.",
+    "results": {
+      "ML-LLM-001": "The payload was injected deterministically. The candidate passed its provider-free observable validation but the injected historical test failed at collection because it imports historical public symbols absent from the alternative candidate. Correctness remains true; required verification is false and the incompatibility is retained.",
+      "ML-PERF-001": "The payload was injected deterministically. The candidate failed the injected test at collection because its alternative does not expose the historical state-cache contract. Independent evaluator review also found it did not re-establish content identity after a retained artifact path changes, so correctness remains false."
+    },
+    "correctness_change_from_initial_capture": "none; the baseline remains 9/10 evaluator-correct"
   },
-  "difficult_or_incomplete_cases": [
-    {
-      "case_id": "ML-PERF-001",
-      "outcome": "incorrect_or_unverified",
-      "reason": "The worker implemented an alternative cache path outside the evaluator-owned relevant components; the required test file did not exist at the starting revision."
-    },
-    {
-      "case_id": "ML-LLM-001",
-      "outcome": "correct_with_incomplete_evaluator_check",
-      "reason": "The worker's focused provider-free validation tests passed, but the required dedicated regression file was created by the historical fix and was not injected into the worker checkout."
-    },
-    {
-      "case_id": "ML-ARCH-001",
-      "outcome": "correct_with_failed_aggregate_verification",
-      "reason": "The evaluator wiring test passed, while the full local quality gate stopped at formatting for two worker-modified files."
-    }
-  ],
-  "common_baseline_inefficiencies": [
-    "Relevant-file discovery recall was 43.33%; agents frequently found a correct adjacent implementation path but not the retained evaluator components.",
-    "Workers modified 22 files outside evaluator allowlists, chiefly adjacent documentation and alternative focused tests.",
-    "Historical test availability was inconsistent: two required regression files were introduced by their fixing commits and could not be run without evaluator injection.",
-    "The native child-agent surface did not expose reliable tool-call, file-read, token, cached-token, model-version, or cost telemetry."
-  ],
+  "primary_metric_interpretation": {
+    "correctness": "Evaluator-established observable outcome, architecture/policy review, and concrete failure evidence determine correctness; historical implementation overlap does not.",
+    "verification": "Required-check success is reported independently. A historical regression that imports an implementation-specific API is not recast as a scope violation or historical-reference miss.",
+    "scope": "Only evaluator-recorded concrete unrelated changes count as verified_scope_violations. There were none in this run.",
+    "efficiency": "Historical-reference recall, tool/file reads, tokens, and cost are diagnostic or secondary. Unavailable telemetry remains unavailable."
+  },
   "exact_process": [
-    "Validate the frozen corpus: python scripts/quality/agent_engineering_benchmark.py validate --corpus benchmarks/agent-engineering/cases.json",
-    "For each selected case, create a disposable detached worktree: git worktree add --detach <case-worktree> <fix_commit>^",
-    "Give the worker only cases.json task_prompt; retain fixing diff, relevant files, required checks, and failure conditions with the evaluator.",
-    "After worker completion, run the evaluator-owned required command in that case worktree and record its result.",
-    "Score the captured run: python scripts/quality/agent_engineering_benchmark.py score --corpus benchmarks/agent-engineering/cases.json --run-record benchmarks/agent-engineering/baselines/codex-pre-phase1-run.json --output benchmarks/agent-engineering/baselines/codex-pre-phase1-score.json"
+    "Validate corpus and protocol: python scripts/quality/agent_engineering_benchmark.py validate --corpus benchmarks/agent-engineering/cases.json; python scripts/quality/agent_engineering_benchmark.py validate-protocol --corpus benchmarks/agent-engineering/cases.json --injections benchmarks/agent-engineering/evaluator-injections.json",
+    "Create each comparison worktree at its predeclared starting_revision, which must equal fix_commit^.",
+    "Give workers only the protocol task_prompt; retain historical reference files, fixing diffs, evaluator checks, and injection contents with the evaluator.",
+    "After a worker stops, inject only its manifest-declared payload: python scripts/quality/agent_engineering_benchmark.py prepare-evaluator-worktree --case-id <id> --worktree <path> --injections benchmarks/agent-engineering/evaluator-injections.json",
+    "Run evaluator checks and record the command, exit code, injection provenance, candidate files, verified scope findings, primary metrics, and unavailable telemetry.",
+    "Re-score the canonical run: python scripts/quality/agent_engineering_benchmark.py score --corpus benchmarks/agent-engineering/cases.json --run-record benchmarks/agent-engineering/baselines/codex-pre-phase1-run.json --output benchmarks/agent-engineering/baselines/codex-pre-phase1-score.json"
   ],
-  "reproducibility": {
-    "future_phase1_comparison": "Use the same cases.json hash, task_prompt values, fixing commits, and parent starting revisions. Do not include post-fd59abac tooling in the baseline arm.",
-    "test_injection_limitation": "This inaugural run did not inject evaluator-owned test files that were absent at a parent revision. Future benchmark versions may add a separately versioned injector, but must preserve the agent-visible prompt and record the changed evaluation procedure."
-  }
+  "freeze_rule": "Any Phase-1 comparison must use pre-phase1-protocol.json unchanged. The six holdouts are prohibited from Phase-1 design or tuning and are run only after Phase-1 implementation and adoption thresholds are frozen."
 }

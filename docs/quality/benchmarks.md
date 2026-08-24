@@ -12,10 +12,11 @@ Benchmark commands and current enforcement are maintained by the CI workflow and
 
 The versioned [agent-engineering corpus](../../benchmarks/agent-engineering/README.md)
 evaluates repository-local coding agents against historical MarketLense work
-without exposing the evaluator's solution metadata in the task prompt. It is a
-small corpus-specific validator and scorer, not a general agent platform. The
-case data retains the historical fixing commit, current relevant components,
-named regression checks, observable result, and failure conditions.
+without exposing evaluator solution metadata in the task prompt. It is a small
+corpus-specific validator and scorer, not a general agent platform. Case data
+retains historical reference files for diagnostic recall only, named regression
+checks, observable result, failure conditions, and traceability; it does not
+use a historical implementation as a modified-file allowlist.
 
 Validate the corpus and capture the revision-bound Codex corpus-integrity
 baseline from the repository root:
@@ -31,12 +32,25 @@ the documented scorer with a separately captured agent-run record for a real
 correctness, discovery, scope, verification, time, token/cost, and
 intervention measurement.
 
-The retained `codex-pre-phase1-{run,score,report}.json` artifacts are that
-separate genuine baseline run. They evaluate ten isolated historical worktrees
-at the pre-Phase-1 cutoff `fd59abac1bd35fda5ee652adad80e21c7de52823`; they are
-not corpus validation. The report records 9/10 evaluator-correct outcomes and
-the unavailable native telemetry without replacing it with zero. Future
-comparison arms use the same corpus hash, prompts, and parent revisions.
+The frozen [`pre-phase1 protocol`](../../benchmarks/agent-engineering/pre-phase1-protocol.json)
+declares exactly ten comparison cases and six unseen holdouts. The canonical
+`codex-pre-phase1-{run,score,report}.json` artifacts are the genuine baseline
+run against those ten historical worktrees at cutoff
+`fd59abac1bd35fda5ee652adad80e21c7de52823`; they are not corpus validation.
+The preserved `codex-pre-phase1-initial-run.json` retains the original capture.
+
+The corrected result is 9/10 evaluator-correct, 75% required-verification
+success, zero verified scope violations, zero human intervention/rework, and a
+216-second median across seven observed elapsed values. Historical-reference
+file recall (43.33%) is diagnostic only; actual candidate files and concrete
+evaluator-recorded scope violations are reported separately. Unavailable
+native tool, file-read, token, and cost telemetry remains `unavailable`.
+
+Phase-1 comparison MUST use the protocol unchanged: prompt text, historical
+parent revision, three-worker topology, evaluator-injection manifest, scoring,
+and restrictions are fixed. The six holdouts MUST NOT be used for Phase-1
+design or tuning; run them only after Phase-1 implementation and adoption
+thresholds are frozen.
 
 The related CodeGraph Phase-0 retrieval experiment is recorded in the
 [agent-engineering benchmark](../../benchmarks/agent-engineering/README.md).
