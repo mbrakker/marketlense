@@ -314,6 +314,20 @@ Completion claims MUST be evidence-based. Before reporting done:
 
 Do not claim a rule is enforced, a test passed, or behavior was verified without direct evidence.
 
+### 10.1 Deterministic completion gate
+
+Before declaring significant work complete, run:
+
+```powershell
+python scripts/quality/agent_completion_gate.py
+```
+
+Only its structured `result: "PASS"` authorizes a completion claim. An LLM's
+judgment, a planned command, or an earlier command result is not a substitute.
+The gate derives required checks from the current Git diff, runs existing
+focused checks, escalates high-risk changes to the canonical aggregate gate,
+and fails if the working tree changes during verification.
+
 ## 11. Detailed policy references
 
 - Machine-readable architecture and enforcement: `docs/quality/architecture_policy.yaml`

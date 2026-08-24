@@ -25,3 +25,21 @@ The contract-schema gate ignores files whose basenames are not valid Python modu
 Tests assert observable behavior: completed contracts, persisted or emitted side effects, structured log fields, typed errors, retry decisions, and idempotency where applicable. Prefer pure tests, local fixtures, protocol fakes, local servers, and controlled integrations. Mock only approved public external boundaries, time, randomness, or OS/process seams. Pytest monkeypatching, private-helper patching, and replacement of generator/orchestrator internals are forbidden.
 
 Detailed integrity rules are maintained here. The architecture policy, coverage/mutation requirements, and static forbidden-patching checks are described in [architecture policy](architecture-policy.md) and [release gates](release-gates.md).
+
+## Deterministic agent completion gate
+
+The canonical pre-completion command is:
+
+```powershell
+python scripts/quality/agent_completion_gate.py
+```
+
+It reads the current `git diff` and untracked paths, deterministically maps the
+change to repository subsystems and risk, runs existing focused checks, and
+escalates high-risk work to `scripts/ci/run_quality_gate.py`. Its JSON report
+contains changed files, selected checks, tests run, failures, unverified
+requirements, and the aggregate-gate decision. Only a command-produced
+`result: "PASS"` authorizes an agent completion claim; model judgment cannot
+assign PASS. The command is development tooling only and adds no runtime
+dependency. It is a MarketLense-native lifecycle completion check, not a
+Claude Code hook or dependency.
