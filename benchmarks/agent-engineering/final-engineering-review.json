@@ -1,0 +1,89 @@
+{
+  "schema_version": "1.0",
+  "confidence_threshold": 85,
+  "purpose": "Evaluator-owned historical corpus for the final-engineering-review Skill. It measures useful evidence-backed findings and high-confidence false positives; do not expose it to a review agent.",
+  "cases": [
+    {
+      "id": "FER-COR-001",
+      "reviewer": "correctness",
+      "source_case_id": "ML-BROWSER-003",
+      "fix_commit": "c376742527e98dc596f13fe8056cc30b077abc0f",
+      "introduced_issue": "A bounded acquisition workflow permits repeated no-progress polling until its outer budget is consumed.",
+      "accepted_finding": {
+        "id": "bounded-no-progress-polling",
+        "evidence_paths": [
+          "src/services/_browser_report_download/browser.py"
+        ]
+      }
+    },
+    {
+      "id": "FER-COR-002",
+      "reviewer": "correctness",
+      "source_case_id": "ML-FEAT-002",
+      "fix_commit": "18dcba5ae2d98434e50417787a2d4d4f3ca823e6",
+      "introduced_issue": "A pending acquisition blocker is represented as a successful completed outcome.",
+      "accepted_finding": {
+        "id": "pending-blocker-must-not-succeed",
+        "evidence_paths": [
+          "scripts/quality/acquisition_evidence_projection.py"
+        ]
+      }
+    },
+    {
+      "id": "FER-ARC-001",
+      "reviewer": "architecture_simplicity",
+      "source_case_id": "ML-SVC-002",
+      "fix_commit": "7274f607e0185658c68c41ef2f86b8061ebdb0b7",
+      "introduced_issue": "An operator-facing caller retains direct filesystem I/O instead of using the canonical boundary.",
+      "accepted_finding": {
+        "id": "direct-filesystem-io-outside-service",
+        "evidence_paths": [
+          "src/services/file_service.py",
+          "src/contracts/files.py"
+        ]
+      }
+    },
+    {
+      "id": "FER-ARC-002",
+      "reviewer": "architecture_simplicity",
+      "source_case_id": "ML-PDF-002",
+      "fix_commit": "255ab4ff0311e13cc3c266a71f3f0342213cfb11",
+      "introduced_issue": "A movement-only decomposition changes a public import or a deterministic table decision.",
+      "accepted_finding": {
+        "id": "movement-refactor-changes-public-behavior",
+        "evidence_paths": [
+          "src/services/_pdf/table_heuristics.py",
+          "src/services/_pdf/_table_heuristics/policy.py"
+        ]
+      }
+    },
+    {
+      "id": "FER-REG-001",
+      "reviewer": "regression_testing",
+      "source_case_id": "ML-LLM-001",
+      "fix_commit": "11ac481a662db4fb706197134fc6a00a000331a8",
+      "introduced_issue": "Prompt validation unexpectedly requires provider credentials or makes a provider call.",
+      "accepted_finding": {
+        "id": "prompt-validation-must-remain-local",
+        "evidence_paths": [
+          "src/services/prompt_service.py",
+          "src/contracts/prompts.py"
+        ]
+      }
+    },
+    {
+      "id": "FER-REG-002",
+      "reviewer": "regression_testing",
+      "source_case_id": "ML-SVC-001",
+      "fix_commit": "0f0a5b843a8bf85c2dab59b24bf9a0be1cdb39e0",
+      "introduced_issue": "Retryable provider failures are retried by both a service and its orchestrator.",
+      "accepted_finding": {
+        "id": "retry-ownership-must-be-single-layer",
+        "evidence_paths": [
+          "src/services/_llm_service/policy.py",
+          "src/orchestrators/retry_orchestrator.py"
+        ]
+      }
+    }
+  ]
+}

@@ -128,3 +128,38 @@ Score a real externally captured run:
 ```powershell
 python scripts/quality/agent_engineering_benchmark.py score --corpus benchmarks/agent-engineering/cases.json --run-record <agent-run.json> --output <scored-run.json>
 ```
+
+## Final Engineering Review historical benchmark
+
+`final-engineering-review.json` is evaluator-owned data for the repository-local
+`.codex/skills/final-engineering-review` Skill. It selects six retained fixes,
+two each for correctness, architecture/simplicity, and regression/testing
+review. The corpus contains the expected finding identifier and evidence path;
+do not expose either to a reviewer assigned the corresponding historical
+worktree.
+
+Prepare each historical worktree in the same way as the main corpus, using the
+review case's `fix_commit` as the fixing revision and evaluating its parent.
+Capture only high-confidence reviewer findings after the parent has checked the
+evidence. The resulting record contains `case_id`, `finding_id`, `confidence`,
+`introduced_status`, and `evidence_paths`. The scorer counts a useful finding
+only once when it matches all evaluator-owned truth. Every other
+high-confidence finding marked `introduced` is a false positive. Low-confidence,
+pre-existing, and uncertain findings are suppressed rather than treated as
+useful defects.
+
+Validate the review corpus:
+
+```powershell
+python scripts/quality/final_engineering_review_benchmark.py validate --corpus benchmarks/agent-engineering/final-engineering-review.json
+```
+
+Score a controlled review run:
+
+```powershell
+python scripts/quality/final_engineering_review_benchmark.py score --corpus benchmarks/agent-engineering/final-engineering-review.json --run-record <review-run.json>
+```
+
+The output includes `useful_bugs_found`, `useful_bug_find_rate`,
+`false_positives`, and `false_positive_rate`. It does not invoke Codex or
+simulate a review; an operator or agent runner supplies the record.

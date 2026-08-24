@@ -36,6 +36,19 @@ The related CodeGraph Phase-0 retrieval experiment is recorded in the
 It was rejected because it missed the required time and structural-verification
 gates. There is no active CodeGraph MCP configuration or repository state.
 
+The same corpus directory contains the historical
+`final-engineering-review.json` evaluator for the project-local
+`final-engineering-review` Codex Skill. It has six retained cases, two per
+read-only review responsibility. Its scorer reports useful bugs found and the
+high-confidence false-positive rate from an externally captured review record;
+it does not run an LLM, alter a worktree, or substitute for the deterministic
+completion gate.
+
+```powershell
+python scripts/quality/final_engineering_review_benchmark.py validate --corpus benchmarks/agent-engineering/final-engineering-review.json
+python scripts/quality/final_engineering_review_benchmark.py score --corpus benchmarks/agent-engineering/final-engineering-review.json --run-record <review-run.json>
+```
+
 ## Performance telemetry
 
 The canonical state database retains bounded stage spans and scalar resource
