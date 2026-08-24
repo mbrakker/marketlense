@@ -1,0 +1,93 @@
+{
+  "aggregate": {
+    "codegraph_elapsed_ms": 993.0,
+    "codegraph_retrieval_calls": 2.0,
+    "codegraph_token_proxy": 10760.0,
+    "elapsed_time_reduction_percent": -411.86,
+    "native_elapsed_ms": 194.0,
+    "native_retrieval_calls": 8.0,
+    "native_token_proxy": 24621.0,
+    "retrieval_calls_reduction_percent": 75.0,
+    "token_proxy_reduction_percent": 56.3
+  },
+  "benchmark_kind": "codegraph_phase0_retrieval_comparison",
+  "codegraph_release": "v1.5.0",
+  "codegraph_rows": [
+    {
+      "case_id": "CG-PHASE0-001",
+      "elapsed_ms": 579,
+      "files_discovered": [
+        "scripts/ci/run_quality_gate.py",
+        "tests/test_ci_quality_gate_wiring.py",
+        "tests/test_quality_command_scripts.py"
+      ],
+      "relevant_file_recall": 1.0,
+      "response_bytes": 25478,
+      "retrieval_calls": 1,
+      "source_read_calls": 0,
+      "structural_conclusion": "correct",
+      "token_proxy": 6370
+    },
+    {
+      "case_id": "CG-PHASE0-002",
+      "elapsed_ms": 414,
+      "files_discovered": [
+        "src/services/file_service.py",
+        "src/contracts/files.py",
+        "tests/test_file_service.py"
+      ],
+      "relevant_file_recall": 1.0,
+      "response_bytes": 17557,
+      "retrieval_calls": 1,
+      "source_read_calls": 0,
+      "structural_conclusion": "not_verified",
+      "token_proxy": 4390
+    }
+  ],
+  "codegraph_server_startup_ms_excluded_from_query_timing": 455,
+  "failures": [
+    "wrong_structural_conclusion:CG-PHASE0-002",
+    "elapsed_time_target_not_met"
+  ],
+  "measurement_note": "Token values are a deterministic response-byte proxy (ceil(bytes / 4)); provider token usage and cost are not available in this tool-only run.",
+  "native_rows": [
+    {
+      "case_id": "CG-PHASE0-001",
+      "elapsed_ms": 88,
+      "files_discovered": [
+        "scripts/ci/run_quality_gate.py",
+        "tests/test_ci_quality_gate_wiring.py",
+        "tests/test_quality_command_scripts.py"
+      ],
+      "relevant_file_recall": 1.0,
+      "response_bytes": 12429,
+      "retrieval_calls": 4,
+      "source_read_calls": 3,
+      "structural_conclusion": "incorrect",
+      "token_proxy": 3108
+    },
+    {
+      "case_id": "CG-PHASE0-002",
+      "elapsed_ms": 106,
+      "files_discovered": [
+        "src/services/file_service.py",
+        "src/contracts/files.py",
+        "tests/test_file_service.py"
+      ],
+      "relevant_file_recall": 1.0,
+      "response_bytes": 86049,
+      "retrieval_calls": 4,
+      "source_read_calls": 3,
+      "structural_conclusion": "correct",
+      "token_proxy": 21513
+    }
+  ],
+  "passed": false,
+  "repository_commit": "b871d9e9bfb9050fefd233f9914673c52b2b5721",
+  "schema_version": "1.0",
+  "thresholds": {
+    "elapsed_time_reduction_percent": 30,
+    "retrieval_calls_reduction_percent": 50,
+    "token_proxy_reduction_percent": 25
+  }
+}

@@ -96,6 +96,33 @@ The baseline binds the corpus hash and repository commit and validates all 16
 cases. It explicitly records every agent-performance metric as unavailable: it
 is an integrity baseline, not an invented Codex performance result.
 
+## CodeGraph Phase-0 comparison (rejected)
+
+`codegraph-phase0.json` is a narrow, two-question retrieval comparison using
+only CodeGraph's high-level `codegraph_explore` MCP tool. It is not a new
+benchmark framework and does not evaluate model reasoning, production code, or
+provider-billed tokens. Its token metric is the deterministic response-byte
+proxy `ceil(bytes / 4)`.
+
+The recorded v1.5.0 run at `b871d9e9` is
+[`codegraph-phase0.json`](baselines/codegraph-phase0.json). It achieved full
+relevant-file recall, a 75% retrieval-call reduction, and a 56.3% response
+token-proxy reduction. It failed the required time gate (993 ms versus 194 ms
+for native retrieval) and did not verify one required structural marker.
+MarketLense therefore does not retain a CodeGraph MCP configuration, local
+index, repository configuration, or runtime dependency.
+
+For a future, temporary re-evaluation with a separately installed CodeGraph
+binary on `PATH`, run this exact command from the repository root:
+
+```powershell
+python scripts/quality/codegraph_phase0_benchmark.py --codegraph codegraph --output benchmarks/agent-engineering/baselines/codegraph-phase0.json
+```
+
+The command exits non-zero unless all discovery, token-proxy, and time gates
+pass. Remove the temporary external install and run `codegraph uninit --force`
+afterward; do not commit its `.codegraph/` state.
+
 Score a real externally captured run:
 
 ```powershell

@@ -1,0 +1,60 @@
+{
+  "schema_version": "1.0",
+  "repository_commit": "b871d9e9bfb9050fefd233f9914673c52b2b5721",
+  "codegraph_release": "v1.5.0",
+  "purpose": "Compare native repository retrieval with the smallest CodeGraph MCP-equivalent exploration surface on source-backed structural questions.",
+  "thresholds": {
+    "retrieval_calls_reduction_percent": 50,
+    "token_proxy_reduction_percent": 25,
+    "elapsed_time_reduction_percent": 30
+  },
+  "cases": [
+    {
+      "id": "CG-PHASE0-001",
+      "question": "Which local quality-gate implementation invokes the GitHub structural checks, and what test establishes their order?",
+      "relevant_files": [
+        "scripts/ci/run_quality_gate.py",
+        "tests/test_ci_quality_gate_wiring.py",
+        "tests/test_quality_command_scripts.py"
+      ],
+      "required_markers": [
+        "quality_gate_commands",
+        "test_local_quality_gate_includes_github_structural_checks_in_ci_order",
+        "test_quality_command_scripts"
+      ],
+      "native_discovery_command": [
+        "rg",
+        "-l",
+        "quality_gate_commands|test_local_quality_gate_includes_github_structural_checks_in_ci_order",
+        "scripts/ci",
+        "tests"
+      ],
+      "codegraph_query": "quality_gate_commands test_local_quality_gate_includes_github_structural_checks_in_ci_order test_quality_command_scripts",
+      "codegraph_max_files": 3
+    },
+    {
+      "id": "CG-PHASE0-002",
+      "question": "Where does the canonical file-reading service accept its request contract, and which test exercises the public read operation?",
+      "relevant_files": [
+        "src/services/file_service.py",
+        "src/contracts/files.py",
+        "tests/test_file_service.py"
+      ],
+      "required_markers": [
+        "def read_text(",
+        "class ReadTextRequest",
+        "test_read_text_wraps_os_error_as_typed_app_error"
+      ],
+      "native_discovery_command": [
+        "rg",
+        "-l",
+        "ReadTextRequest|def read_text\\(",
+        "src/services",
+        "src/contracts",
+        "tests"
+      ],
+      "codegraph_query": "ReadTextRequest read_text test_read_text_wraps_os_error_as_typed_app_error file_service",
+      "codegraph_max_files": 3
+    }
+  ]
+}

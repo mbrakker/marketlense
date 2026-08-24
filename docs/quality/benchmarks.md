@@ -31,6 +31,11 @@ the documented scorer with a separately captured agent-run record for a real
 correctness, discovery, scope, verification, time, token/cost, and
 intervention measurement.
 
+The related CodeGraph Phase-0 retrieval experiment is recorded in the
+[agent-engineering benchmark](../../benchmarks/agent-engineering/README.md).
+It was rejected because it missed the required time and structural-verification
+gates. There is no active CodeGraph MCP configuration or repository state.
+
 ## Performance telemetry
 
 The canonical state database retains bounded stage spans and scalar resource
