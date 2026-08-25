@@ -1,0 +1,73 @@
+{
+  "schema_version": "1.0",
+  "recorded_at": "2026-08-25T05:02:00+00:00",
+  "decision": "REJECT",
+  "scope": "Phase-1 evidence-backed improvement cycle after the prior rejected run",
+  "baseline": {
+    "correct_completion": "9/10",
+    "required_verification_success": "85%",
+    "verified_scope_violations": 0,
+    "human_intervention_count": 0,
+    "rework_count": 0,
+    "median_elapsed_seconds": 216,
+    "native_telemetry": "unavailable"
+  },
+  "root_cause_to_proposed_fix": {
+    "benchmark_isolation": "Evaluator preparation had no worker-lifecycle proof; proposed a lifecycle record that rejects injection unless the worker is stopped.",
+    "ML-PERF-001": "Artifact cache reuse did not bind returned state-record provenance and compatibility to the current request before reuse; proposed explicit identity, provenance, compatibility, retained-byte, and PDF-validation checks.",
+    "ML-ARCH-001": "Focused Python completion checks omitted the existing formatter; proposed selecting formatting before lint and downstream verification."
+  },
+  "candidate_precomparison_validation": {
+    "targeted_tests": {
+      "command": "python -m pytest -q tests/test_browser_acquisition_cache_and_autofill.py tests/test_agent_engineering_benchmark.py tests/test_agent_completion_gate.py tests/test_state_service.py",
+      "result": "PASS",
+      "summary": "70 passed in 16.19s"
+    },
+    "formatting": {
+      "command": "python scripts/ci/check_formatting.py",
+      "result": "PASS"
+    },
+    "ruff": {
+      "command": "python scripts/ci/check_ruff_lint.py",
+      "result": "PASS"
+    },
+    "frozen_protocol": {
+      "command": "python scripts/quality/agent_engineering_benchmark.py validate-protocol --corpus benchmarks/agent-engineering/cases.json --injections benchmarks/agent-engineering/evaluator-injections.json",
+      "result": "PASS",
+      "comparison_case_count": 10,
+      "holdout_case_count": 6
+    },
+    "completion_gate": {
+      "command": "python scripts/quality/agent_completion_gate.py",
+      "result": "FAIL",
+      "failed_check": "service_boundary_map",
+      "unrelated_failures": [
+        "src/services/_browser_report_download/_http/issuu.py:13 imports fitz; pdf_ocr_stack must use its canonical boundary",
+        "src/services/_browser_report_download/_http/onsite_capture.py:13 imports fitz; pdf_ocr_stack must use its canonical boundary",
+        "src/services/_browser_report_download/browser.py:25 imports fitz; pdf_ocr_stack must use its canonical boundary"
+      ],
+      "baseline_reproduction": {
+        "revision": "41dff7b8",
+        "command": "python scripts/ci/check_service_boundary_map.py",
+        "result": "FAIL with the identical three violations"
+      }
+    }
+  },
+  "comparison": {
+    "executed": false,
+    "reason": "The required deterministic completion gate did not pass. Running the frozen comparison would violate the required validation sequence.",
+    "candidate_correct_completion": "unavailable",
+    "candidate_required_verification_success": "unavailable",
+    "candidate_verified_scope_violations": "unavailable",
+    "candidate_elapsed_seconds": "unavailable",
+    "candidate_tool_call_count": "unavailable",
+    "candidate_file_read_count": "unavailable",
+    "candidate_input_tokens": "unavailable",
+    "candidate_output_tokens": "unavailable",
+    "candidate_estimated_cost_usd": "unavailable",
+    "candidate_human_intervention_count": "unavailable",
+    "candidate_rework_count": "unavailable"
+  },
+  "holdout_access": "No holdout case was read or executed during this run.",
+  "reversion": "All experimental implementation, test, workflow, and documentation changes were reverted; this evidence record is retained."
+}
