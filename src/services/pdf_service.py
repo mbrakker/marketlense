@@ -14,9 +14,12 @@ from src.services._pdf.text import (
     check_pdf_integrity,
     extract_pdf_info,
     extract_pdf_text,
+    pdf_contains_text,
+    render_html_pdf,
+    render_image_pdf,
     render_text_pdf,
-    split_pdf_for_ocr,
     sample_pdf_text,
+    split_pdf_for_ocr,
 )
 
 __all__ = [
@@ -30,6 +33,9 @@ __all__ = [
     "extract_best_figure",
     "extract_pdf_info",
     "extract_pdf_text",
+    "pdf_contains_text",
+    "render_html_pdf",
+    "render_image_pdf",
     "render_page_for_crop_refine",
     "render_preview",
     "render_text_pdf",

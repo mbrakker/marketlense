@@ -64,6 +64,55 @@ class PdfTextRenderResponse:
 
 
 @dataclass(frozen=True)
+class PdfImageRenderRequest:
+    schema_version: str = field(
+        metadata={"doc": "Image-to-PDF render request schema version."}
+    )
+    output_path: str = field(
+        metadata={"doc": "Filesystem path where the rendered PDF should be written."}
+    )
+    image_bytes: List[bytes] = field(
+        metadata={"doc": "Ordered encoded image pages to preserve in the rendered PDF."}
+    )
+
+
+@dataclass(frozen=True)
+class PdfImageRenderResponse:
+    schema_version: str = field(
+        metadata={"doc": "Image-to-PDF render response schema version."}
+    )
+    output_path: str = field(metadata={"doc": "Filesystem path of the rendered PDF."})
+    rendered_page_count: int = field(
+        metadata={"doc": "Number of image pages written and verified in the PDF."}
+    )
+
+
+@dataclass(frozen=True)
+class PdfHtmlRenderRequest:
+    schema_version: str = field(
+        metadata={"doc": "HTML-to-PDF render request schema version."}
+    )
+    output_path: str = field(
+        metadata={"doc": "Filesystem path where the rendered PDF should be written."}
+    )
+    html: str = field(metadata={"doc": "Sanitized HTML content to render locally."})
+    max_pages: int = field(
+        metadata={"doc": "Hard maximum number of rendered pages before failure."}
+    )
+
+
+@dataclass(frozen=True)
+class PdfHtmlRenderResponse:
+    schema_version: str = field(
+        metadata={"doc": "HTML-to-PDF render response schema version."}
+    )
+    output_path: str = field(metadata={"doc": "Filesystem path of the rendered PDF."})
+    rendered_page_count: int = field(
+        metadata={"doc": "Number of HTML pages written and verified in the PDF."}
+    )
+
+
+@dataclass(frozen=True)
 class PdfOcrChunk:
     chunk_index: int = field(
         metadata={"doc": "One-based index of the OCR chunk within the source PDF."}

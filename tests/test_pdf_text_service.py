@@ -13,11 +13,17 @@ except ModuleNotFoundError:  # pragma: no cover - depends on PyMuPDF packaging a
 
 from src.contracts.pdf_context import PdfContextBuildRequest
 from src.contracts.pdf_ocr import (
+    PdfHtmlRenderRequest,
+    PdfImageRenderRequest,
     PdfOcrPageText,
     PdfOcrSplitRequest,
     PdfTextRenderRequest,
 )
-from src.contracts.pdf_text import PdfTextExtractRequest, PdfTextSampleRequest
+from src.contracts.pdf_text import (
+    PdfTextContainsRequest,
+    PdfTextExtractRequest,
+    PdfTextSampleRequest,
+)
 from src.contracts.pdf_utils import (
     PdfEofCheckRequest,
     PdfInfoRequest,
@@ -30,6 +36,9 @@ from src.services.pdf_service import (
     check_pdf_integrity,
     extract_pdf_info,
     extract_pdf_text,
+    pdf_contains_text,
+    render_html_pdf,
+    render_image_pdf,
     render_text_pdf,
     sample_pdf_text,
     split_pdf_for_ocr,
@@ -249,6 +258,76 @@ def test_pdf_text_render_roundtrip_produces_extractable_pdf(
     assert_logs_have_required_fields(events)
     event_names = {str(event["event"]) for event in events}
     assert {"pdf_text_render_start", "pdf_text_render_complete"}.issubset(event_names)
+
+
+def test_pdf_image_render_preserves_one_page_per_image(tmp_path) -> None:
+    first = fitz.Pixmap(fitz.csRGB, 24, 32, b"\xff\x00\x00" * (24 * 32), False)
+    second = fitz.Pixmap(fitz.csRGB, 24, 32, b"\x00\x00\xff" * (24 * 32), False)
+    output_path = tmp_path / "rendered-images.pdf"
+
+    response = render_image_pdf(
+        PdfImageRenderRequest(
+            schema_version="1.0",
+            output_path=output_path.as_posix(),
+            image_bytes=[first.tobytes("jpeg"), second.tobytes("jpeg")],
+        ),
+        _ctx(),
+    )
+
+    assert response.rendered_page_count == 2
+    assert output_path.read_bytes().startswith(b"%PDF-")
+    assert (
+        extract_pdf_info(
+            PdfInfoRequest(schema_version="1.0", path=output_path.as_posix()), _ctx()
+        ).page_count
+        == 2
+    )
+
+
+def test_pdf_html_render_produces_searchable_bounded_document(tmp_path) -> None:
+    output_path = tmp_path / "rendered-html.pdf"
+
+    response = render_html_pdf(
+        PdfHtmlRenderRequest(
+            schema_version="1.0",
+            output_path=output_path.as_posix(),
+            html=(
+                "<html><body><h1>Market report</h1>"
+                "<p>Verified findings.</p></body></html>"
+            ),
+            max_pages=2,
+        ),
+        _ctx(),
+    )
+
+    assert response.rendered_page_count == 1
+    assert (
+        pdf_contains_text(
+            PdfTextContainsRequest(
+                schema_version="1.0",
+                path=output_path.as_posix(),
+                text="Market report",
+            ),
+            _ctx(),
+        ).contains_text
+        is True
+    )
+
+
+def test_pdf_text_contains_normalizes_whitespace(tmp_path) -> None:
+    pdf_path = tmp_path / "text.pdf"
+    _build_text_pdf(pdf_path)
+
+    response = pdf_contains_text(
+        PdfTextContainsRequest(
+            schema_version="1.0",
+            path=pdf_path.as_posix(),
+            text="Market Lense\n synthetic PDF text",
+        ),
+        _ctx(),
+    )
+
+    assert response.contains_text is True
 
 
 def test_pdf_ocr_split_creates_page_aligned_chunks(

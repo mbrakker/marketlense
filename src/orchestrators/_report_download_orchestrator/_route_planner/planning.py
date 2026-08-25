@@ -506,9 +506,7 @@ def _pdf_route_steps_only(
         if step.route_family in {"direct_pdf_probe", "http_pdf_probe"}
     ]
     blocked_browser_families = [
-        step.route_family
-        for step in steps
-        if step.route_family.startswith("browser_")
+        step.route_family for step in steps if step.route_family.startswith("browser_")
     ]
     blocked_recovery_classes.extend(
         f"{route_family}:blocked:direct_pdf_request"
@@ -677,6 +675,29 @@ def _build_browser_step(
             uses_memory_route=False,
             fallback_on_retryable_error=False,
         )
+    if _looks_like_email_form_url(
+        normalized_url,
+        candidate_title=candidate_title,
+        source_page_urls=source_page_urls,
+    ) and not (
+        (
+            remembered_route_kind == "email_delivery"
+            or remembered_route_family == "browser_email_form"
+        )
+        and (
+            reusable_memory_route or _has_actionable_email_memory_hint(remembered_route)
+        )
+    ):
+        return ReportDownloadRoutePlanStep(
+            schema_version="1.0",
+            step_name="report_download_browser_email_form",
+            route_family="browser_email_form",
+            attempt_url=normalized_url,
+            route_kind_hint="email_delivery",
+            source_page_url_hint=source_page_url,
+            uses_memory_route=False,
+            fallback_on_retryable_error=False,
+        )
     if source_page_url and _is_same_origin_detail_under_source_page(
         detail_url=normalized_url,
         source_page_url=source_page_url,
@@ -715,21 +736,6 @@ def _build_browser_step(
             attempt_url=normalized_url,
             route_hint=remembered_route_hint or None,
             route_step_hints=remembered_route_step_hints,
-            route_kind_hint="email_delivery",
-            source_page_url_hint=source_page_url,
-            uses_memory_route=False,
-            fallback_on_retryable_error=False,
-        )
-    if _looks_like_email_form_url(
-        normalized_url,
-        candidate_title=candidate_title,
-        source_page_urls=source_page_urls,
-    ):
-        return ReportDownloadRoutePlanStep(
-            schema_version="1.0",
-            step_name="report_download_browser_email_form",
-            route_family="browser_email_form",
-            attempt_url=normalized_url,
             route_kind_hint="email_delivery",
             source_page_url_hint=source_page_url,
             uses_memory_route=False,
@@ -825,7 +831,9 @@ def _memory_route_step_hints(
     remembered_route: PublisherDownloadRouteMemory,
     route_family: str,
 ) -> list[BrowserDownloadRouteStep]:
-    if _is_email_memory_route(remembered_route=remembered_route, route_family=route_family):
+    if _is_email_memory_route(
+        remembered_route=remembered_route, route_family=route_family
+    ):
         return [
             step
             for step in remembered_route.route_steps

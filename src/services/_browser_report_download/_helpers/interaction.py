@@ -1154,12 +1154,13 @@ async def browser_helper_standard_form_submit_async(
             status="failed",
             error="page.evaluate is unavailable",
         )
+    evaluate_page = evaluate
     event_loop = asyncio.get_running_loop()
 
     class _PageEvaluationBridge:
         def evaluate(self, expression: str) -> Any:
             async def evaluate_on_session_loop() -> Any:
-                return await _await_async(evaluate(expression))
+                return await _await_async(evaluate_page(expression))
 
             return asyncio.run_coroutine_threadsafe(
                 evaluate_on_session_loop(), event_loop

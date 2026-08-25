@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Callable
 from urllib.parse import parse_qs, urlsplit
 
-import fitz
 import requests
 
 from src.contracts.browser_download import (
@@ -25,12 +24,14 @@ from src.contracts.http_acquisition import (
     HttpAcquisitionResponse,
     HttpAcquisitionResponsePolicy,
 )
+from src.contracts.pdf_ocr import PdfImageRenderRequest
 from src.contracts.run_context import RunContext
 from src.services._browser_report_download._http.config import _HTML_FETCH_HEADERS
 from src.services._browser_report_download.logging import (
     browser_download_result_log_fields,
 )
 from src.services._http_acquisition import execute_http_acquisition
+from src.services.pdf_service import render_image_pdf
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -55,7 +56,9 @@ class _IssuuEmbed:
 
     @property
     def document_url(self) -> str:
-        return f"https://{_ISSUU_DOCUMENT_HOST}/{self.publisher}/docs/{self.document_slug}"
+        return (
+            f"https://{_ISSUU_DOCUMENT_HOST}/{self.publisher}/docs/{self.document_slug}"
+        )
 
 
 class _IssuuIframeParser(HTMLParser):
@@ -63,9 +66,7 @@ class _IssuuIframeParser(HTMLParser):
         super().__init__(convert_charrefs=True)
         self.sources: list[str] = []
 
-    def handle_starttag(
-        self, tag: str, attrs: list[tuple[str, str | None]]
-    ) -> None:
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         if tag.casefold() != "iframe":
             return
         for name, value in attrs:
@@ -185,7 +186,11 @@ def try_embedded_issuu_capture(
     except AppError:
         return None
     capture_path = download_dir / "issuu_rendered_report.pdf"
-    if not _write_rendered_pdf(capture_path=capture_path, page_images=page_images):
+    if not _write_rendered_pdf(
+        capture_path=capture_path,
+        page_images=page_images,
+        ctx=ctx,
+    ):
         capture_path.unlink(missing_ok=True)
         return None
     final_page_url = (
@@ -296,16 +301,15 @@ def _extract_embedded_issuu(html_source: str) -> _IssuuEmbed | None:
         query = parse_qs(parsed.query)
         document_slug = str((query.get("d") or [""])[0]).strip()
         publisher = str((query.get("u") or [""])[0]).strip()
-        if (
-            _ISSUU_IDENTIFIER_PATTERN.fullmatch(document_slug)
-            and _ISSUU_IDENTIFIER_PATTERN.fullmatch(publisher)
-        ):
+        if _ISSUU_IDENTIFIER_PATTERN.fullmatch(
+            document_slug
+        ) and _ISSUU_IDENTIFIER_PATTERN.fullmatch(publisher):
             return _IssuuEmbed(document_slug=document_slug, publisher=publisher)
     return None
 
 
 def _extract_issuu_metadata(html_source: str) -> tuple[str, str, int] | None:
-    token = str(html_source or "").replace(r'\"', '"')
+    token = str(html_source or "").replace(r"\"", '"')
     revision_match = _ISSUU_REVISION_PATTERN.search(token)
     publication_match = _ISSUU_PUBLICATION_PATTERN.search(token)
     page_count_match = _ISSUU_PAGE_COUNT_PATTERN.search(token)
@@ -321,22 +325,20 @@ def _extract_issuu_metadata(html_source: str) -> tuple[str, str, int] | None:
     )
 
 
-def _write_rendered_pdf(*, capture_path: Path, page_images: list[bytes]) -> bool:
-    document = fitz.open()
+def _write_rendered_pdf(
+    *, capture_path: Path, page_images: list[bytes], ctx: RunContext
+) -> bool:
     try:
-        for image in page_images:
-            pixmap = fitz.Pixmap(image)
-            page = document.new_page(width=pixmap.width, height=pixmap.height)
-            page.insert_image(page.rect, stream=image)
-        document.save(capture_path, garbage=4, deflate=True)
-    except (RuntimeError, ValueError, fitz.FileDataError):
-        return False
-    finally:
-        document.close()
-    try:
-        with fitz.open(capture_path) as rendered:
-            return rendered.page_count == len(page_images) and rendered.page_count > 0
-    except (RuntimeError, ValueError, fitz.FileDataError):
+        response = render_image_pdf(
+            PdfImageRenderRequest(
+                schema_version="1.0",
+                output_path=capture_path.as_posix(),
+                image_bytes=page_images,
+            ),
+            ctx,
+        )
+        return response.rendered_page_count == len(page_images) and bool(page_images)
+    except AppError:
         return False
 
 

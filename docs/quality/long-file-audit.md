@@ -180,7 +180,7 @@ Primary evidence:
 
 Direction:
 
-- Retain `src/services/pdf_service.py` as the canonical PDF boundary.
+- Retain `src/services/pdf_service.py` as the canonical PDF boundary; browser report-download rendering, page inspection, and text verification enter through that facade rather than PDF libraries directly.
 - Prioritize measured algorithm changes already recorded in `CONSOLIDATED_TODO.md`: indexed table deduplication and precomputed per-page visual candidate relationships.
 - Retain the `_table_heuristics/*` capability split; `regions.py` and `screening.py` are compatibility surfaces, and further extraction requires a semantic boundary rather than line-count slicing.
 - Retain the `_visual_heuristics/{panel_text,panel_geometry,panel_detection}.py` semantic split behind `visual_heuristics.py`; `panel_detection.py` is now a compatibility surface over `_panel_detection/*`, and optimization of precomputed visual relationships remains separate from the decomposition evidence.

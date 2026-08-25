@@ -26760,6 +26760,94 @@
       ],
       "type": "object"
     },
+    "src.contracts.pdf_ocr.PdfHtmlRenderRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "html": {
+          "type": "string"
+        },
+        "max_pages": {
+          "type": "integer"
+        },
+        "output_path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "output_path",
+        "html",
+        "max_pages"
+      ],
+      "type": "object"
+    },
+    "src.contracts.pdf_ocr.PdfHtmlRenderResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "output_path": {
+          "type": "string"
+        },
+        "rendered_page_count": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "output_path",
+        "rendered_page_count"
+      ],
+      "type": "object"
+    },
+    "src.contracts.pdf_ocr.PdfImageRenderRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "image_bytes": {
+          "items": {
+            "contentEncoding": "base64",
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "output_path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "output_path",
+        "image_bytes"
+      ],
+      "type": "object"
+    },
+    "src.contracts.pdf_ocr.PdfImageRenderResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "output_path": {
+          "type": "string"
+        },
+        "rendered_page_count": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "output_path",
+        "rendered_page_count"
+      ],
+      "type": "object"
+    },
     "src.contracts.pdf_ocr.PdfOcrAggregateResponse": {
       "additionalProperties": false,
       "properties": {
@@ -26962,6 +27050,42 @@
         "schema_version",
         "output_path",
         "rendered_page_count"
+      ],
+      "type": "object"
+    },
+    "src.contracts.pdf_text.PdfTextContainsRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "path",
+        "text"
+      ],
+      "type": "object"
+    },
+    "src.contracts.pdf_text.PdfTextContainsResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "contains_text": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "contains_text"
       ],
       "type": "object"
     },

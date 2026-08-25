@@ -32,3 +32,11 @@ AST movement audit against `HEAD`:
 - facade-owned definition count after split: 0
 
 The single changed moved symbol is a stale artifact-generator expectation corrected from `summary_claim_span_missing` to the currently enforced `summary_missing_claim_evidence` taxonomy for claims with no evidence id.
+
+## 2026-08-25 Baseline Repair
+
+The ownership-gate baseline repair decomposed these eight test areas behind their existing or retained pytest facades: report-download idempotency, browser acquisition cache and autofill, onsite terminal capture, prompt and probe, browser worker recovery, browser preflight, browser route playbooks, and CTO review evidence.
+
+- The original pytest paths remain the collection entrypoints; focused private case modules own contiguous behavior groups and adjacent shared modules own only pre-existing imports and helpers.
+- AST comparison against `HEAD` found 185 moved test functions, 185 unchanged bodies, and no missing, duplicate, or rewritten test functions.
+- Collection counts before and after were identical for all eight facades. The two resolved ownership allowlist entries for idempotency and worker recovery were removed.

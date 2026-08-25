@@ -34,6 +34,27 @@ class PdfTextExtractResponse:
 
 
 @dataclass(frozen=True)
+class PdfTextContainsRequest:
+    schema_version: str = field(
+        metadata={"doc": "PDF text containment request schema version."}
+    )
+    path: str = field(metadata={"doc": "Filesystem path to the PDF."})
+    text: str = field(
+        metadata={"doc": "Whitespace-normalized text expected in one rendered page."}
+    )
+
+
+@dataclass(frozen=True)
+class PdfTextContainsResponse:
+    schema_version: str = field(
+        metadata={"doc": "PDF text containment response schema version."}
+    )
+    contains_text: bool = field(
+        metadata={"doc": "Whether any readable PDF page contains the requested text."}
+    )
+
+
+@dataclass(frozen=True)
 class PdfTextSample:
     page_index: int = field(metadata={"doc": "Zero-based page index sampled."})
     page_number: int = field(metadata={"doc": "One-based page number sampled."})

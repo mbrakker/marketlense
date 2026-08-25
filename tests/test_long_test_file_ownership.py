@@ -4,18 +4,6 @@ from pathlib import Path
 
 MAX_TEST_FILE_LINES = 1000
 LONG_TEST_FILE_ALLOWLIST = {
-    "tests/_test_report_download_orchestrator/cases_03_run_report_download_is_idempotent.py": {
-        "owner": "quality/repository-hygiene",
-        "reason": "Pre-existing report-download idempotency case split remains pending.",
-        "expires_on": "2026-08-31",
-        "max_lines": 1090,
-    },
-    "tests/test_browser_report_download_service/_test_worker_and_recovery/cases_02_lookup_submission_assist_recovers_lookup.py": {
-        "owner": "quality/repository-hygiene",
-        "reason": "Pre-existing browser recovery case split remains pending.",
-        "expires_on": "2026-08-31",
-        "max_lines": 1630,
-    },
     "tests/test_report_download_route_planner.py": {
         "owner": "quality/repository-hygiene",
         "reason": "Pre-existing route-planner case split remains pending.",

@@ -216,6 +216,7 @@ def run_report_download(
         now_seconds=now_seconds,
     )
     if fresh_hard_blocker_reason is not None:
+        assert remembered_route is not None
         route_family = str(remembered_route.route_family or "browser_unknown")
         logger.info(
             log_event(
@@ -246,8 +247,7 @@ def run_report_download(
         raise AppError(
             code="report_download_route_suppressed",
             message=(
-                "Browser route was suppressed by fresh exact "
-                "terminal-blocker evidence"
+                "Browser route was suppressed by fresh exact terminal-blocker evidence"
             ),
             retryable=False,
             context={
@@ -299,9 +299,7 @@ def run_report_download(
                 terminal_failure_threshold=(
                     route_suppression_policy.terminal_failure_threshold
                 ),
-                terminal_failure_classes=(
-                    suppression_failure_classes
-                ),
+                terminal_failure_classes=(suppression_failure_classes),
                 ttl_seconds=route_suppression_policy.ttl_seconds,
                 revalidation_override=request.revalidate_route_policy,
             ),

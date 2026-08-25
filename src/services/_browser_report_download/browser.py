@@ -18,11 +18,10 @@ from hashlib import sha256
 from importlib import import_module
 from pathlib import Path
 from threading import Thread
-from typing import Any
+from typing import Any, Mapping
 from urllib.parse import urlsplit
 
 import psutil
-import fitz
 
 from src.contracts._browser_download.session_reuse import (
     BrowserDownloadSessionReuseDecision,
@@ -37,6 +36,7 @@ from src.contracts.browser_download import (
     BrowserRoutePlaybookExecutionRequest,
 )
 from src.contracts.openai import OpenAIJSONPromptRequest, OpenAIUsageAccountingRequest
+from src.contracts.pdf_text import PdfTextContainsRequest
 from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
 from src.contracts.run_budget import (
     BudgetDecision,
@@ -47,7 +47,7 @@ from src.contracts.run_budget import (
     RunBudgetUsage,
 )
 from src.contracts.run_context import RunContext
-from src.services import llm_service, prompt_service
+from src.services import llm_service, pdf_service, prompt_service
 from src.services._browser_report_download._artifact.classification import (
     _build_confirmation_evidence,
     _confirmation_evidence_verifies_email_delivery,
@@ -443,9 +443,7 @@ def close_browser_preflight_session(
         decision=session.launch_decision,
         ctx=ctx,
         started=True,
-        outcome=_PREFLIGHT_LIFECYCLE_OUTCOME_TO_BUDGET_OUTCOME.get(
-            outcome, outcome
-        ),
+        outcome=_PREFLIGHT_LIFECYCLE_OUTCOME_TO_BUDGET_OUTCOME.get(outcome, outcome),
         error_code=error_code,
         runtime_seconds=max(0, int(time.monotonic() - session.launch_started_at)),
     )
@@ -1008,6 +1006,7 @@ def _open_current_page_for_pre_llm_autofill(
         )
     return page
 
+
 def _try_pre_llm_standard_form_submit(
     *,
     request: BrowserReportDownloadRequest,
@@ -1159,9 +1158,7 @@ async def _try_pre_llm_standard_form_submit_async(
         ).strip(),
         title=str(
             (
-                await _await_browser_session_value(
-                    get_current_page_title()
-                )
+                await _await_browser_session_value(get_current_page_title())
                 if callable(get_current_page_title)
                 else getattr(browser, "title", "")
             )
@@ -1551,16 +1548,18 @@ def _resolve_pre_llm_standard_form_submit_result(
     )
 
 
-def _rendered_pdf_contains_text(path: Path | None, text: str) -> bool:
+def _rendered_pdf_contains_text(
+    path: Path | None, text: str, ctx: RunContext | None = None
+) -> bool:
     if path is None or not path.is_file() or not str(text or "").strip():
         return False
-    expected = " ".join(str(text).split())
     try:
-        with fitz.open(path) as document:
-            return any(
-                expected in " ".join(page.get_text("text").split())
-                for page in document
-            )
+        return pdf_service.pdf_contains_text(
+            PdfTextContainsRequest(
+                schema_version="1.0", path=path.as_posix(), text=str(text)
+            ),
+            ctx,
+        ).contains_text
     except Exception:
         return False
 
@@ -1623,12 +1622,12 @@ class _DeterministicPlaybookPageDriver:
         )
 
     def click_data_attribute(self, selector: str) -> str:
-        expression = "document.querySelector(" + json.dumps(
-            _data_attribute_selector(selector)
-        ) + ")"
-        return self._click_expression(
-            expression
+        expression = (
+            "document.querySelector("
+            + json.dumps(_data_attribute_selector(selector))
+            + ")"
         )
+        return self._click_expression(expression)
 
     def fill_css(self, selector: str, value: str) -> str:
         expression = "document.querySelector(" + json.dumps(selector) + ")"
@@ -1684,7 +1683,7 @@ class _DeterministicPlaybookPageDriver:
         return str(getattr(self._page, "url", "") or "")
 
     def contains_text(self, text: str) -> bool:
-        if _rendered_pdf_contains_text(self._rendered_pdf_path, text):
+        if _rendered_pdf_contains_text(self._rendered_pdf_path, text, self._ctx):
             return True
         return bool(
             self._evaluate(
@@ -1923,7 +1922,7 @@ class _AsyncDeterministicPlaybookPageDriver:
         return str(getattr(self._page, "url", "") or "")
 
     async def contains_text(self, text: str) -> bool:
-        if _rendered_pdf_contains_text(self._rendered_pdf_path, text):
+        if _rendered_pdf_contains_text(self._rendered_pdf_path, text, self._ctx):
             return True
         return bool(
             await self._evaluate(
@@ -1962,23 +1961,6 @@ class _AsyncDeterministicPlaybookPageDriver:
             "() => { const element = "
             + element_expression
             + "; if (!element) throw new Error('deterministic_locator_not_found'); "
-            "element.focus(); element.value = "
-            + json.dumps(value)
-            + "; element.dispatchEvent(new Event('input', {bubbles: true})); "
-            "element.dispatchEvent(new Event('change', {bubbles: true})); "
-            "return 'filled'; }"
-        )
-
-    async def _set_textbox_value(self, element_expression: str, value: str) -> str:
-        return await self._evaluate_action(
-            "() => { const element = "
-            + element_expression
-            + "; const tag = element?.tagName; const type = "
-            "(element?.getAttribute('type') || 'text').toLowerCase(); "
-            "if (!element || !['INPUT', 'TEXTAREA'].includes(tag) || "
-            "['button', 'checkbox', 'file', 'hidden', 'image', 'radio', 'reset', "
-            "'submit'].includes(type)) throw new Error("
-            "'deterministic_textbox_not_found'); "
             "element.focus(); element.value = "
             + json.dumps(value)
             + "; element.dispatchEvent(new Event('input', {bubbles: true})); "
@@ -2444,7 +2426,11 @@ async def _run_cdp_rendered_pdf_playbook(
     """Render an already-open public page without Browser Use page evaluation."""
 
     step = next(
-        (item for item in playbook.steps if item.action.strip().lower() == "save_as_pdf"),
+        (
+            item
+            for item in playbook.steps
+            if item.action.strip().lower() == "save_as_pdf"
+        ),
         None,
     )
     if step is None:
@@ -2471,7 +2457,7 @@ async def _run_cdp_rendered_pdf_playbook(
     ):
         return None
     if step.expected_text.strip() and not _rendered_pdf_contains_text(
-        pdf_path, step.expected_text
+        pdf_path, step.expected_text, ctx
     ):
         pdf_path.unlink(missing_ok=True)
         return None
@@ -2519,8 +2505,8 @@ async def _run_cdp_rendered_pdf_playbook(
             "deterministic_postcondition_verified",
         ],
         verification_status="verified",
-        expected_url_contains=step.expected_url_contains or None,
-        expected_text=step.expected_text or None,
+        expected_url_contains=step.expected_url_contains or "",
+        expected_text=step.expected_text or "",
     )
     return BrowserAgentRunResult(
         schema_version="1.0",
@@ -2585,7 +2571,7 @@ async def _dismiss_explicit_cookie_banner_async(page: Any) -> str:
 
 
 def _agent_accepts_parameter(
-    parameters: dict[str, inspect.Parameter], name: str
+    parameters: Mapping[str, inspect.Parameter], name: str
 ) -> bool:
     return name in parameters
 
@@ -2793,10 +2779,7 @@ def run_browser_report_download_agent(
             )
             if async_execution.pre_llm_result is not None:
                 return async_execution.pre_llm_result
-            if (
-                async_execution.setup is None
-                or async_execution.history_result is None
-            ):
+            if async_execution.setup is None or async_execution.history_result is None:
                 raise AppError(
                     code="browser_download_agent_missing_history",
                     message="browser-use completed without returning agent history",
@@ -2835,11 +2818,12 @@ def run_browser_report_download_agent(
                 no_progress_detector=setup.no_progress_detector,
             )
         history = history_result.history
-        no_progress_stopped = history_result.no_progress_observation is not None
+        no_progress_observation = history_result.no_progress_observation
+        no_progress_stopped = no_progress_observation is not None
         raw_model_response = str(history.final_result() or "").strip()
-        if no_progress_stopped:
+        if no_progress_observation is not None:
             raw_model_response = _no_progress_raw_model_response(
-                history_result.no_progress_observation,
+                no_progress_observation,
                 route_family_hint=str(request.route_family_hint or "").strip(),
             )
             logger.info(
@@ -2848,18 +2832,18 @@ def run_browser_report_download_agent(
                     role="service",
                     event="browser_report_download_no_progress_stopped",
                     module=logger.name,
-                fields=_no_progress_log_fields(
-                    history_result.no_progress_observation,
-                    normalized_url=normalized_url,
-                ),
-            )
+                    fields=_no_progress_log_fields(
+                        no_progress_observation,
+                        normalized_url=normalized_url,
+                    ),
+                )
             )
         history_final_page_url = _read_history_final_page_url(history)
         history_final_page_title = _read_history_final_page_title(history)
-        if no_progress_stopped:
+        if no_progress_observation is not None:
             action_evidence_snapshot = TerminalSnapshot(
                 page=None,
-                url=str(history_result.no_progress_observation.url or ""),
+                url=str(no_progress_observation.url or ""),
                 title="",
                 html="",
             )
@@ -2871,9 +2855,7 @@ def run_browser_report_download_agent(
             )
         execution_route_steps = capture_browser_execution_route_steps(
             history=history,
-            final_page_url=(
-                action_evidence_snapshot.url or history_final_page_url
-            ),
+            final_page_url=(action_evidence_snapshot.url or history_final_page_url),
             final_page_title=(
                 action_evidence_snapshot.title or history_final_page_title
             ),
@@ -2975,10 +2957,9 @@ def run_browser_report_download_agent(
                 raw_model_response = _mark_standard_form_submit_assisted_raw_response(
                     raw_model_response
                 )
-        if no_progress_stopped:
+        if no_progress_observation is not None:
             final_page_url = (
-                str(history_result.no_progress_observation.url or "")
-                or history_final_page_url
+                str(no_progress_observation.url or "") or history_final_page_url
             )
             final_page_title = history_final_page_title
             screenshot_path = history_screenshot_path
@@ -2990,7 +2971,7 @@ def run_browser_report_download_agent(
             final_page_url = history_final_page_url
             final_page_title = history_final_page_title
             screenshot_path = history_screenshot_path
-            if history_result.no_progress_observation is None:
+            if no_progress_observation is None:
                 dialog_evidence.extend(
                     _capture_terminal_dialog_evidence(
                         browser=browser,

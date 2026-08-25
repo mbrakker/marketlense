@@ -14,6 +14,10 @@ from src.contracts.pdf_context import (
     PdfContextBuildResponse,
 )
 from src.contracts.pdf_ocr import (
+    PdfHtmlRenderRequest,
+    PdfHtmlRenderResponse,
+    PdfImageRenderRequest,
+    PdfImageRenderResponse,
     PdfOcrChunk,
     PdfOcrSplitRequest,
     PdfOcrSplitResponse,
@@ -21,6 +25,8 @@ from src.contracts.pdf_ocr import (
     PdfTextRenderResponse,
 )
 from src.contracts.pdf_text import (
+    PdfTextContainsRequest,
+    PdfTextContainsResponse,
     PdfTextExtractRequest,
     PdfTextExtractResponse,
     PdfTextSample,
@@ -566,6 +572,181 @@ def render_text_pdf(
     return response
 
 
+def render_image_pdf(
+    request: PdfImageRenderRequest,
+    ctx: RunContext,
+) -> PdfImageRenderResponse:
+    """Render ordered encoded images into a locally verified PDF."""
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="pdf_image_render_start",
+            module=logger.name,
+            fields={
+                "output_path": request.output_path,
+                "image_count": len(request.image_bytes),
+            },
+        )
+    )
+    output_path = Path(request.output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    document = fitz.open()
+    try:
+        for image in request.image_bytes:
+            pixmap = fitz.Pixmap(image)
+            page = document.new_page(width=pixmap.width, height=pixmap.height)
+            page.insert_image(page.rect, stream=image)
+        document.save(output_path.as_posix(), garbage=4, deflate=True)
+        rendered_page_count = _rendered_pdf_page_count(output_path)
+        if rendered_page_count != len(request.image_bytes) or rendered_page_count < 1:
+            raise ValueError("rendered image PDF page count did not match input")
+    except (fitz.FileDataError, OSError, RuntimeError, TypeError, ValueError) as exc:
+        raise AppError(
+            code="pdf_image_render_failed",
+            message=f"Failed to render image PDF: {request.output_path}",
+            cause=exc,
+            retryable=False,
+        ) from exc
+    finally:
+        document.close()
+    response = PdfImageRenderResponse(
+        schema_version="1.0",
+        output_path=str(output_path),
+        rendered_page_count=rendered_page_count,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="pdf_image_render_complete",
+            module=logger.name,
+            fields={
+                "output_path": response.output_path,
+                "rendered_page_count": response.rendered_page_count,
+            },
+        )
+    )
+    return response
+
+
+def render_html_pdf(
+    request: PdfHtmlRenderRequest,
+    ctx: RunContext,
+) -> PdfHtmlRenderResponse:
+    """Render sanitized local HTML into a bounded, verified PDF."""
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="pdf_html_render_start",
+            module=logger.name,
+            fields={
+                "output_path": request.output_path,
+                "html_char_count": len(request.html),
+                "max_pages": request.max_pages,
+            },
+        )
+    )
+    output_path = Path(request.output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        story = fitz.Story(html=request.html)
+        writer = fitz.DocumentWriter(output_path.as_posix())
+        page_rect = fitz.paper_rect("a4")
+        content_rect = page_rect + (36, 36, -36, -36)
+        more = True
+        page_count = 0
+        while more and page_count < request.max_pages:
+            device = writer.begin_page(page_rect)
+            more, _ = story.place(content_rect)
+            story.draw(device)
+            writer.end_page()
+            page_count += 1
+        writer.close()
+        if more:
+            raise ValueError("rendered HTML exceeded the configured page limit")
+        rendered_page_count = _rendered_pdf_page_count(output_path)
+        if rendered_page_count != page_count or rendered_page_count < 1:
+            raise ValueError("rendered HTML PDF page count was invalid")
+    except (fitz.FileDataError, OSError, RuntimeError, TypeError, ValueError) as exc:
+        raise AppError(
+            code="pdf_html_render_failed",
+            message=f"Failed to render HTML PDF: {request.output_path}",
+            cause=exc,
+            retryable=False,
+        ) from exc
+    response = PdfHtmlRenderResponse(
+        schema_version="1.0",
+        output_path=str(output_path),
+        rendered_page_count=rendered_page_count,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="pdf_html_render_complete",
+            module=logger.name,
+            fields={
+                "output_path": response.output_path,
+                "rendered_page_count": response.rendered_page_count,
+            },
+        )
+    )
+    return response
+
+
+def pdf_contains_text(
+    request: PdfTextContainsRequest,
+    ctx: RunContext | None = None,
+) -> PdfTextContainsResponse:
+    """Return whether a readable rendered page contains normalized text."""
+    expected = " ".join(request.text.split())
+    if ctx is not None:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="pdf_text_contains_start",
+                module=logger.name,
+                fields={
+                    "path": request.path,
+                    "expected_char_count": len(expected),
+                },
+            )
+        )
+    try:
+        with fitz.open(request.path) as document:
+            contains_text = bool(expected) and any(
+                expected in " ".join(page.get_text("text").split()) for page in document
+            )
+    except Exception:
+        contains_text = False
+    response = PdfTextContainsResponse(
+        schema_version="1.0", contains_text=contains_text
+    )
+    if ctx is not None:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="pdf_text_contains_complete",
+                module=logger.name,
+                fields={
+                    "path": request.path,
+                    "expected_char_count": len(expected),
+                    "contains_text": response.contains_text,
+                },
+            )
+        )
+    return response
+
+
+def _rendered_pdf_page_count(path: Path) -> int:
+    with fitz.open(path) as document:
+        return document.page_count
+
+
 def split_pdf_for_ocr(
     request: PdfOcrSplitRequest,
     ctx: RunContext,
@@ -804,9 +985,7 @@ def _score_native_text_confidence(
     alpha_numeric_ratio = alpha_numeric_chars / float(non_space_chars)
     words = _WORD_PATTERN.findall(stripped)
     long_word_count = sum(1 for word in words if len(word) >= 4)
-    long_word_ratio = (
-        long_word_count / float(word_count) if word_count > 0 else 0.0
-    )
+    long_word_ratio = long_word_count / float(word_count) if word_count > 0 else 0.0
     char_signal = min(char_count / 80.0, 1.0)
     word_signal = min(word_count / 12.0, 1.0)
     alpha_signal = min(alpha_numeric_ratio / 0.55, 1.0)

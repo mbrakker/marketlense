@@ -443,7 +443,11 @@ def _looks_like_probable_gated_report_detail_url(
         for segment in re.split(r"[^a-z0-9]+", source_path_text)
         if segment
     )
-    if "resources" in segments and "reports" in segments:
+    if (
+        "resources" in segments
+        and "reports" in segments
+        and (title_has_asset_marker or slug_has_asset_marker)
+    ):
         return True
     if (
         source_is_report_listing

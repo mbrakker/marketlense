@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Callable
 from urllib.parse import urlsplit
 
-import fitz
 import requests
 
 from src.contracts.browser_download import (
@@ -25,6 +24,7 @@ from src.contracts.http_acquisition import (
     HttpAcquisitionResponse,
     HttpAcquisitionResponsePolicy,
 )
+from src.contracts.pdf_ocr import PdfHtmlRenderRequest
 from src.contracts.run_context import RunContext
 from src.services._browser_report_download._http.adobe_indesign import (
     try_embedded_adobe_indesign_capture,
@@ -46,6 +46,7 @@ from src.services._browser_report_download.logging import (
     browser_download_result_log_fields,
 )
 from src.services._http_acquisition import execute_http_acquisition
+from src.services.pdf_service import render_html_pdf
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -350,6 +351,7 @@ def try_direct_onsite_capture(
     rendered_pdf_path = _render_onsite_html_to_pdf(
         html=html,
         output_path=download_dir / "onsite_capture.rendered.pdf",
+        ctx=ctx,
     )
     capture_path = rendered_pdf_path or html_capture_path
     capture_format = "rendered_onsite_pdf" if rendered_pdf_path else "html"
@@ -453,12 +455,14 @@ def try_direct_onsite_capture(
     return response_result
 
 
-def _render_onsite_html_to_pdf(*, html: str, output_path: Path) -> Path | None:
+def _render_onsite_html_to_pdf(
+    *, html: str, output_path: Path, ctx: RunContext
+) -> Path | None:
     """Create a bounded local PDF from a verified direct on-site HTML capture."""
     output_path.unlink(missing_ok=True)
     process = multiprocessing.get_context("spawn").Process(
         target=_write_onsite_html_pdf,
-        args=(_html_for_pdf_rendering(html), str(output_path)),
+        args=(_html_for_pdf_rendering(html), str(output_path), ctx),
     )
     try:
         process.start()
@@ -480,45 +484,32 @@ def _render_onsite_html_to_pdf(*, html: str, output_path: Path) -> Path | None:
     if not output_path.is_file() or not output_path.read_bytes().startswith(b"%PDF-"):
         output_path.unlink(missing_ok=True)
         return None
-    try:
-        with fitz.open(output_path) as document:
-            if document.page_count < 1:
-                output_path.unlink(missing_ok=True)
-                return None
-    except (fitz.FileDataError, RuntimeError, ValueError):
-        output_path.unlink(missing_ok=True)
-        return None
     return output_path
 
 
-def _write_onsite_html_pdf(html: str, output_path: str) -> None:
+def _write_onsite_html_pdf(html: str, output_path: str, ctx: RunContext) -> None:
     path = Path(output_path)
     try:
-        story = fitz.Story(html=html)
-        writer = fitz.DocumentWriter(str(path))
-        page_rect = fitz.paper_rect("a4")
-        content_rect = page_rect + (36, 36, -36, -36)
-        more = True
-        page_count = 0
-        while more and page_count < _ONSITE_PDF_RENDER_MAX_PAGES:
-            device = writer.begin_page(page_rect)
-            more, _ = story.place(content_rect)
-            story.draw(device)
-            writer.end_page()
-            page_count += 1
-        writer.close()
-        if more:
+        response = render_html_pdf(
+            PdfHtmlRenderRequest(
+                schema_version="1.0",
+                output_path=path.as_posix(),
+                html=html,
+                max_pages=_ONSITE_PDF_RENDER_MAX_PAGES,
+            ),
+            ctx,
+        )
+        if response.rendered_page_count < 1:
             path.unlink(missing_ok=True)
-    except (RuntimeError, ValueError, OSError):
+            raise RuntimeError("onsite HTML PDF rendering produced no pages")
+    except (AppError, RuntimeError, ValueError, OSError):
         path.unlink(missing_ok=True)
         raise
 
 
 def _html_for_pdf_rendering(html: str) -> str:
     """Keep report content while excluding unsupported publisher CSS."""
-    without_styles = re.sub(
-        r"(?is)<style\b[^>]*>.*?</style\s*>", "", html
-    )
+    without_styles = re.sub(r"(?is)<style\b[^>]*>.*?</style\s*>", "", html)
     without_stylesheets = re.sub(
         r"(?is)<link\b[^>]*\brel=[\"']?stylesheet[\"']?[^>]*>",
         "",
@@ -623,8 +614,10 @@ def _direct_onsite_recovery_decision(
             recovery_class=_DETAIL_CANDIDATE_RECOVERY_CLASS,
             reason="email_form_without_detail_signal",
         )
-    if not route_family and not route_kind and _looks_like_report_detail_candidate(
-        request
+    if (
+        not route_family
+        and not route_kind
+        and _looks_like_report_detail_candidate(request)
     ):
         return DirectOnsiteRecoveryDecision(
             schema_version="1.0",
@@ -757,9 +750,7 @@ def _looks_like_onsite_capture_html(
     lowered = token.casefold()
     plain_text = _html_to_text(token)
     plain_lowered = plain_text.casefold()
-    if any(
-        marker in plain_lowered for marker in _ONSITE_CAPTURE_HARD_BLOCKED_MARKERS
-    ):
+    if any(marker in plain_lowered for marker in _ONSITE_CAPTURE_HARD_BLOCKED_MARKERS):
         return False
     if (
         _ONSITE_CAPTURE_JAVASCRIPT_BLOCK_MARKER in plain_lowered
