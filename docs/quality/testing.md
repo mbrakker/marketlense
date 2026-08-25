@@ -25,32 +25,3 @@ The contract-schema gate ignores files whose basenames are not valid Python modu
 Tests assert observable behavior: completed contracts, persisted or emitted side effects, structured log fields, typed errors, retry decisions, and idempotency where applicable. Prefer pure tests, local fixtures, protocol fakes, local servers, and controlled integrations. Mock only approved public external boundaries, time, randomness, or OS/process seams. Pytest monkeypatching, private-helper patching, and replacement of generator/orchestrator internals are forbidden.
 
 Detailed integrity rules are maintained here. The architecture policy, coverage/mutation requirements, and static forbidden-patching checks are described in [architecture policy](architecture-policy.md) and [release gates](release-gates.md).
-
-## Deterministic agent completion gate
-
-The canonical pre-completion command is:
-
-```powershell
-python scripts/quality/agent_completion_gate.py
-```
-
-It reads the current `git diff` and untracked paths, deterministically maps the
-change to repository subsystems and risk, runs existing focused checks, and
-escalates high-risk work to `scripts/ci/run_quality_gate.py`. Its JSON report
-contains changed files, selected checks, tests run, failures, unverified
-requirements, and the aggregate-gate decision. Only a command-produced
-`result: "PASS"` authorizes an agent completion claim; model judgment cannot
-assign PASS. The command is development tooling only and adds no runtime
-dependency. It is a MarketLense-native lifecycle completion check, not a
-Claude Code hook or dependency.
-
-The gate hashes the content of the tracked diff and untracked files before and
-after checks, so a checker mutating an already-modified path makes PASS
-impossible. It stores bounded actionable stdout/stderr only for failed checks
-in the JSON report. Explicit `MARKETLENSE_RETAIN_FAILURE_OUTPUT=1` opt-in
-retains redacted local failure output under the ignored
-`.codex_tmp/agent_completion_gate/` evidence directory. Ordinary role-boundary
-changes select focused lint, type, architecture, and credible affected tests;
-the aggregate quality gate is reserved for public-contract, persisted-schema,
-release-control, and named consequential-workflow changes, and is not preceded
-by a duplicate default pytest run.

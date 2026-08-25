@@ -31,5 +31,5 @@ python scripts/ci/check_public_report_quality.py
 
 Record the evaluated fixture/artifact identity, passed and failed rule IDs,
 grounding outcome, and any approved waiver. Completion requires reader-facing
-output evidence and no unverified public-quality regression; follow with the
-completion gate.
+output evidence and no unverified public-quality regression; run the ordinary
+aggregate quality gate when the change is high risk.

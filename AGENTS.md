@@ -82,7 +82,6 @@ Skills are workflows, not mandatory ceremony. Select the narrowest skill or comb
 - Do not invoke multiple overlapping skills that perform substantially the same workflow.
 - Generic engineering skills may complement, but MUST NOT override, repository architecture, testing, safety, or completion policy.
 - When a subsystem-specific regression skill applies, use it before claiming the affected behavior is verified.
-- For significant implementation work, use `marketlense-quality-gate` as the final repository-specific verification workflow when available.
 - Do not invoke a skill merely because it is installed.
 
 Expected MarketLense routing when available:
@@ -313,20 +312,6 @@ Completion claims MUST be evidence-based. Before reporting done:
 7. state residual risks, human-review rules, and any unverified external behavior.
 
 Do not claim a rule is enforced, a test passed, or behavior was verified without direct evidence.
-
-### 10.1 Deterministic completion gate
-
-Before declaring significant work complete, run:
-
-```powershell
-python scripts/quality/agent_completion_gate.py
-```
-
-Only its structured `result: "PASS"` authorizes a completion claim. An LLM's
-judgment, a planned command, or an earlier command result is not a substitute.
-The gate derives required checks from the current Git diff, runs existing
-focused checks, escalates high-risk changes to the canonical aggregate gate,
-and fails if the working tree changes during verification.
 
 ## 11. Detailed policy references
 

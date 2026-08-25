@@ -37,4 +37,5 @@ python scripts/ci/check_pdf_crop_refine_benchmark.py
 
 Record fixture/golden identity, candidate or crop comparison, degraded-page
 behavior, and every selected command. Completion requires preserved provenance
-and deterministic focused evidence; use the completion gate afterward.
+and deterministic focused evidence; use the ordinary aggregate quality gate
+when the change is high risk.

@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "recorded_at": "2026-08-25",
+  "decision": "REJECT_AND_REMOVE",
+  "scope": "final Phase-1 candidate comparison against the frozen ten-case protocol",
+  "baseline": {
+    "evaluator_correct_completion": "9/10",
+    "required_verification_success": "85%",
+    "verified_scope_violations": 0,
+    "human_intervention_count": 0,
+    "rework_count": 0,
+    "median_elapsed_seconds": 216
+  },
+  "candidate": {
+    "evaluator_correct_completion": "8/10",
+    "required_verification_success": "75%",
+    "holdouts_used": false
+  },
+  "outcome": "The candidate did not improve on the frozen baseline. All Phase-1 controls, scripts, Skills, tests, and operating-policy wiring were removed; frozen benchmark evidence and holdouts remain archived."
+}

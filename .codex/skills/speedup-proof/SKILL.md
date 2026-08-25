@@ -42,4 +42,5 @@ passes and the measurement exceeds normal noise; otherwise report
 `INCONCLUSIVE` or `REGRESSION` and revert it. Before keeping a result, check
 that the apparent win did not weaken validation, shrink the workload, alter
 fixtures, hide failures, skip side effects, or substitute an incomparable
-quality/cost metric. Finish with the completion gate.
+quality/cost metric. Finish with the ordinary aggregate quality gate when the
+change is high risk.

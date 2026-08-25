@@ -32,8 +32,3 @@ they are intentional test inputs, under `tests/fixtures`; expired screenshot
 exceptions are removed together with the tracked runtime artifacts.
 
 Run the focused checks appropriate to the changed area before the aggregate suite. This document explains gate categories; it does not record pass/fail results. See [benchmarks](benchmarks.md) and [evidence](evidence.md).
-
-The deterministic [agent completion gate](testing.md#deterministic-agent-completion-gate)
-selects these existing focused checks from the working-tree diff. It invokes
-this aggregate runner only when its explicit high-risk rules require it; it
-does not duplicate or replace the CI sequence.

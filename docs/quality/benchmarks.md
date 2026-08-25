@@ -8,87 +8,20 @@ MarketLense uses retained fixture corpora and generated outputs to detect regres
 
 Benchmark commands and current enforcement are maintained by the CI workflow and the non-regression policy. Do not paste benchmark result tables into the root README or release summaries. Record approved exceptions in the policy-controlled allowlist or release-evidence mechanism.
 
-## Agent-engineering corpus
+## Archived Phase-1 evidence
 
-The versioned [agent-engineering corpus](../../benchmarks/agent-engineering/README.md)
-evaluates repository-local coding agents against historical MarketLense work
-without exposing evaluator solution metadata in the task prompt. It is a small
-corpus-specific validator and scorer, not a general agent platform. Case data
-retains historical reference files for diagnostic recall only, named regression
-checks, observable result, failure conditions, and traceability; it does not
-use a historical implementation as a modified-file allowlist.
+The [agent-engineering directory](../../benchmarks/agent-engineering/README.md)
+is retained as frozen historical evidence only. It has no active script, Skill,
+CI gate, or operating workflow. Its ten-case pre-Phase-1 baseline recorded 9/10
+evaluator-correct cases and 85% required-verification success. The exact six
+holdouts, evaluator payloads, and historical records remain untouched.
 
-Validate the corpus and capture the revision-bound Codex corpus-integrity
-baseline from the repository root:
-
-```powershell
-python scripts/quality/agent_engineering_benchmark.py baseline --corpus benchmarks/agent-engineering/cases.json --output benchmarks/agent-engineering/baselines/codex-current.json
-```
-
-This command is local and read-only except for its explicit output path. It
-does not invoke an agent, provider, browser, email, or publication flow. Its
-result therefore records task-performance measurements as `unavailable`; use
-the documented scorer with a separately captured agent-run record for a real
-correctness, discovery, scope, verification, time, token/cost, and
-intervention measurement.
-
-The frozen [`pre-phase1 protocol`](../../benchmarks/agent-engineering/pre-phase1-protocol.json)
-declares exactly ten comparison cases and six unseen holdouts. The canonical
-`codex-pre-phase1-{run,score,report}.json` artifacts are the genuine baseline
-run against those ten historical worktrees at cutoff
-`fd59abac1bd35fda5ee652adad80e21c7de52823`; they are not corpus validation.
-The preserved `codex-pre-phase1-initial-run.json` retains the original capture.
-
-The corrected result is 9/10 evaluator-correct, 85% required-verification
-success, zero verified scope violations, zero human intervention/rework, and a
-216-second median across the seven immutable elapsed-comparison cases.
-Historical-reference
-file recall (43.33%) is diagnostic only; actual candidate files and concrete
-evaluator-recorded scope violations are reported separately. Unavailable
-native tool, file-read, token, and cost telemetry remains `unavailable`.
-
-Phase-1 comparison MUST use the protocol unchanged: prompt text, historical
-parent revision, three-worker topology, evaluator-injection manifest, scoring,
-and restrictions are fixed. The six holdouts MUST NOT be used for Phase-1
-design or tuning; run them only after Phase-1 implementation and adoption
-thresholds are frozen.
-
-The related CodeGraph Phase-0 retrieval experiment is recorded in the
-[agent-engineering benchmark](../../benchmarks/agent-engineering/README.md).
-Its native arm now measures only files emitted by the actual native search and
-includes source reads in elapsed time. A subsequent real eight-case temporary
-MCP comparison is retained as
-[`codegraph-ab-rejection.json`](../../benchmarks/agent-engineering/baselines/codegraph-ab-rejection.json).
-It is rejected, not adopted: the CodeGraph-only arm exposed an evaluator-only
-payload path, making correctness invalid, and had worse observed elapsed/tool
-result volume. The package, MCP configuration, and temporary worktrees were
-removed; any local index remains ignored and unused. No CodeGraph runtime
-dependency exists.
-
-The same corpus directory contains the historical
-`final-engineering-review.json` evaluator for the project-local
-`final-engineering-review` Codex Skill. It has six retained cases, two per
-read-only review responsibility. Its scorer reports useful bugs found and the
-high-confidence false-positive rate from an externally captured review record;
-it does not run an LLM, alter a worktree, or substitute for the deterministic
-completion gate.
-
-The current genuine historical review record is
-[`final-engineering-review-run.json`](../../benchmarks/agent-engineering/baselines/final-engineering-review-run.json):
-it found 0/6 accepted issues and produced two high-confidence false positives
-(100%). It therefore does not authorize automatic completion-lifecycle use;
-the deterministic completion gate remains the retained final decision point.
-
-The [Phase-1 checkpoint](../../benchmarks/agent-engineering/baselines/phase1-checkpoint.json)
-records that no Frankenstein comparison arm was promoted: both optional
-controls failed their own safety/usefulness evidence. The frozen pre-Phase-1
-baseline remains the only implementation-performance baseline; Phase 2 is not
-authorized by this checkpoint.
-
-```powershell
-python scripts/quality/final_engineering_review_benchmark.py validate --corpus benchmarks/agent-engineering/final-engineering-review.json
-python scripts/quality/final_engineering_review_benchmark.py score --corpus benchmarks/agent-engineering/final-engineering-review.json --run-record <review-run.json>
-```
+The final Phase-1 candidate completed the same ten frozen cases at 8/10
+evaluator-correct and 75% required-verification success. It did not improve on
+the baseline, so all Phase-1 controls were rejected and removed. See the
+[`phase1-final-rejection.json`](../../benchmarks/agent-engineering/baselines/phase1-final-rejection.json)
+record. CodeGraph and final-engineering-review artifacts remain rejection
+evidence only; neither has an active integration or workflow.
 
 ## Performance telemetry
 

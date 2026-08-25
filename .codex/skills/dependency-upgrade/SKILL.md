@@ -32,5 +32,5 @@ Then run the narrowest boundary test for each changed direct dependency; use a
 controlled integration check only when local fakes cannot establish
 compatibility. Record old/new versions, direct consumers, runtime versus
 development scope, resolved metadata, exact checks, and rollback path.
-Completion requires no unexpected production import or lock drift and a passing
-completion gate; high-risk upgrades escalate through the aggregate quality gate.
+Completion requires no unexpected production import or lock drift; high-risk
+upgrades escalate through the ordinary aggregate quality gate.
