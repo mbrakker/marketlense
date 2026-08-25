@@ -112,7 +112,7 @@ def load_publisher_inventory_settings(
             "publisher_discovery",
             "model",
             fallback=_default_config_value(
-                "browser_download", "model", fallback="openai/gpt-5-mini"
+                "browser_download", "model", fallback="openai/gpt-5.6-luna"
             ),
         )
     ).strip()
@@ -437,7 +437,7 @@ def load_publisher_inventory_settings(
                 "publisher_discovery",
                 "candidate_screening",
                 "model",
-                fallback="gpt-5-nano",
+                fallback="gpt-5.6-luna",
             )
         ).strip(),
         candidate_screening_temperature=_to_float(

@@ -414,7 +414,7 @@ def load_browser_download_settings(
     model = _normalize_openai_browser_model(
         browser_download.get("model")
         or _env_value("BROWSER_DOWNLOAD_MODEL")
-        or _default_config_value("browser_download", "model", fallback="gpt-5-mini")
+        or _default_config_value("browser_download", "model", fallback="gpt-5.6-luna")
     )
     if not model:
         resolver.missing.append("browser_download.model|env:BROWSER_DOWNLOAD_MODEL")
@@ -424,7 +424,7 @@ def load_browser_download_settings(
         or browser_download.get("model")
         or _env_value("BROWSER_DOWNLOAD_MODEL")
         or _default_config_value(
-            "browser_download", "openrouter_model", fallback="openai/gpt-5-mini"
+            "browser_download", "openrouter_model", fallback="openai/gpt-5.6-luna"
         )
     )
 

@@ -13,6 +13,12 @@ Configuration resolves in this order:
 3. `app.local.yaml` next to the selected `app.yaml`, when present.
 4. Environment variables where the configuration loader supports an override.
 
+An empty overlay value does not suppress a supported environment fallback. For a
+no-WordPress-write validation preflight, explicitly set `WP_SITE_URL`,
+`WP_ADMIN_URL`, and `WP_USERNAME` to empty values in the invoking process; the
+publish command then fails locally during configuration validation before it
+can contact a WordPress target.
+
 `MARKET_LENSE_PRODUCER_COMMIT` is an optional, non-secret 40-character commit SHA. The canonical configuration service reads it when CLI or UI code creates a runtime context, so retained manifest and log provenance identify the producing build without giving utilities environment access.
 
 Loading general application settings is credential-free: an absent Drive folder ID or OpenAI credential is represented as an empty setting so dry runs, planning, and operator inspection work in a clean checkout. The workflow preflight and provider boundaries then fail closed immediately before the affected external operation, with the typed missing-credential code and corrective action. Browser-acquisition settings keep their existing stricter provider-key check because they configure the model-backed browser runtime itself. Live ingestion, browser acquisition, and model calls therefore still require their real `.env` values; no credential default is introduced.
@@ -27,9 +33,12 @@ ship its matching rate card together.
 
 The important operator sections are `paths`, `ingest`, `publish`, `browser_download`, `mailbox_acquisition`, `publisher_discovery`, and `workflow_control`. The committed base leaves both recovery reapers and the supervisor disabled. The reviewed `MARKET_LENSE_CONFIG_PROFILE=autonomous_mvp` overlay enables the lease-protected supervisor plus remediation and deferred-work reapers with a two-record limit each; normal queue-worker batches remain disabled so the existing durable workers retain execution ownership. `workflow_control.remediation_reaper.execution_enabled` and `workflow_control.deferred_work_reaper.execution_enabled` remain independent rollback gates, while their record limits, lease duration, and retry delay bound each invocation. `openai_models`, `llm_routing`, `llm_execution_policies`, and `cost` govern model routing and accounting. `llm_execution_policies` is the versioned namespace policy for provider/model, sampling, output limits, timeout, structured-output mode, compaction, pricing key, and same-provider fallback. Settings startup resolves the complete finite production namespace inventory before any provider client can be used; an unknown or uncovered reachable namespace rejects configuration. The workflow preflight then retains the exact resolved namespace/provider/model/full-policy matrix and policy hashes with the run-owned artifacts. Provider-owned retries remain forbidden and workflow retry policy remains orchestrator-owned. The compatibility adapter preserves historical non-report namespaces until they are explicitly migrated. An external host owns recurrence for `workflow_control.supervisor`; the command itself is one-shot.
 
-The `publisher_inventory/meaningful_candidate_screen` namespace is deliberately
-routed and priced as `gpt-5-nano`, matching the bounded candidate-screening
-configuration. Publisher-inventory settings retain the same resolved
+Every configured generative route, including
+`publisher_inventory/meaningful_candidate_screen`, is deliberately routed and
+priced as `gpt-5.6-luna`. The browser/OpenRouter fallback uses the exact
+`openai/gpt-5.6-luna` identifier and its separately retained provider rate
+card. `text-embedding-3-small` remains the dedicated embedding route; it is
+not a generative LLM fallback. Publisher-inventory settings retain the same resolved
 `llm_execution_policies` map as application settings, so discovery and
 candidate screening use the registered namespace policy rather than an
 empty local policy set. Namespace policy and workflow-specific settings must agree;
@@ -107,9 +116,10 @@ artifact-family context when the caller has it. Historical events remain in an
 
 The bundled rate card includes the current OpenAI standard-processing GPT-5.6
 family: `gpt-5.6` (the Sol alias), `gpt-5.6-sol`, `gpt-5.6-terra`, and
-`gpt-5.6-luna`. Terra and Luna use the lower rates effective July 30, 2026;
-each record is versioned separately so historical usage retains the rate in
-effect when it was recorded.
+`gpt-5.6-luna`, plus the separately priced `openai/gpt-5.6-luna` OpenRouter
+fallback. Terra and Luna use the lower rates effective July 30, 2026; each
+record is versioned separately so historical usage retains the rate in effect
+when it was recorded.
 
 `enabled_effect_kinds` is an independent additive feature gate for each effect category. Removing a kind rolls back its pre-effect enforcement while retaining all earlier reservations, decisions, and actual-use records. Reservations expire after `reservation_ttl_seconds` (one hour maximum); completed effects finalize observed non-monetary use and release unused capacity. Provider monetary actuals remain in the existing LLM usage events and only reconcile their reservation.
 

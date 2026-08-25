@@ -146,8 +146,8 @@ def test_browser_agent_uses_openai_primary_with_openrouter_fallback(
 
     assert captured_agent["llm"].provider == "openai"
     assert captured_agent["fallback_llm"].provider == "openrouter"
-    assert captured_agent["llm"].kwargs["model"] == "gpt-5-mini"
-    assert captured_agent["fallback_llm"].kwargs["model"] == "openai/gpt-5-mini"
+    assert captured_agent["llm"].kwargs["model"] == "gpt-5.6-luna"
+    assert captured_agent["fallback_llm"].kwargs["model"] == "openai/gpt-5.6-luna"
     assert captured_agent["calculate_cost"] is True
     assert result.final_page_url == "https://example.com/final"
 

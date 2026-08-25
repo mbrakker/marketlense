@@ -378,7 +378,7 @@ class BrowserDownloadSettings:
         metadata={"doc": "OpenAI API key used by the browser-use primary LLM."},
     )
     openrouter_model: str = field(
-        default="openai/gpt-5-mini",
+        default="openai/gpt-5.6-luna",
         metadata={"doc": "OpenRouter model slug used by the browser-use fallback LLM."},
     )
     max_tokens: int = field(

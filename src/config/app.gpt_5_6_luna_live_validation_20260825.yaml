@@ -1,0 +1,63 @@
+schema_version: "1.0"
+
+# Isolated, bounded validation profile for the GPT-5.6 Luna routing migration.
+# It reuses retained local report artifacts and caps Drive and WordPress writes
+# at zero.  Set WP_SITE_URL, WP_ADMIN_URL, and WP_USERNAME to empty values for
+# the publish preflight so dotenv fallbacks cannot select a live WordPress target.
+paths:
+  output_dir: "./out/gpt_5_6_luna_live_validation_20260825"
+  cache_dir: "./cache/gpt_5_6_luna_live_validation_20260825"
+  state_db: "./state/gpt_5_6_luna_live_validation_20260825/index.sqlite"
+  reports_db: "./state/gpt_5_6_luna_live_validation_20260825/reports.sqlite"
+  signal_store_db: "./state/gpt_5_6_luna_live_validation_20260825/signals.sqlite"
+  ingest_lock: "./state/gpt_5_6_luna_live_validation_20260825/ingest.lock"
+
+ingest:
+  run_budget:
+    max_spend_usd: 1.0
+    max_pdfs: 1
+    max_retries: 2
+    max_runtime_seconds: 3600
+    limit_decision: "stop"
+  pdf_text:
+    ocr_fallback:
+      enabled: true
+      policy: "native_first_selective"
+
+browser_download:
+  output_dir: "./out/gpt_5_6_luna_live_validation_20260825/browser_downloads"
+  drive_upload:
+    enabled: false
+    required: false
+  run_budget:
+    max_browser_launches: 1
+    max_pdfs: 1
+    max_drive_writes: 0
+    max_drive_reads: 0
+    max_mailbox_reads: 0
+    max_retries: 1
+    max_runtime_seconds: 900
+    limit_decision: "stop"
+
+publisher_discovery:
+  output_dir: "./out/gpt_5_6_luna_live_validation_20260825/publisher_inventory_discovery"
+
+analysis:
+  cost_ledger_path: "./state/gpt_5_6_luna_live_validation_20260825/llm_cost_ledger.jsonl"
+
+cost:
+  usage_db_path: "./state/gpt_5_6_luna_live_validation_20260825/llm_usage.sqlite"
+  daily_path: "./state/gpt_5_6_luna_live_validation_20260825/llm_cost_daily.json"
+  ledger_path: "./state/gpt_5_6_luna_live_validation_20260825/llm_cost_ledger.jsonl"
+
+publish:
+  wp:
+    site_url: ""
+    username: ""
+  run_budget:
+    enabled: true
+    max_wordpress_writes: 0
+    projection_pending_event_threshold: 50
+    limit_decision: "stop"
+  projection_daily_path: "./state/gpt_5_6_luna_live_validation_20260825/projection_cost_daily.json"
+  projection_ledger_path: "./state/gpt_5_6_luna_live_validation_20260825/projection_cost_ledger.jsonl"

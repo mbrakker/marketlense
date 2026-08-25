@@ -197,7 +197,7 @@ def _resolve_cross_report_analysis_settings(
             config_key="model",
             default=str(
                 _default_config_value(
-                    "cross_report_analysis", "model", fallback="gpt-5-mini"
+                    "cross_report_analysis", "model", fallback="gpt-5.6-luna"
                 )
             ),
         ),

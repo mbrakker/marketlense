@@ -72,7 +72,7 @@ def _settings(
     return BrowserDownloadSettings(
         schema_version="1.0",
         openrouter_api_key="openrouter-key",
-        model="openai/gpt-5-mini",
+        model="openai/gpt-5.6-luna",
         temperature=0.0,
         timeout_seconds=30.0,
         max_steps=5,

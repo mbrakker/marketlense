@@ -515,7 +515,7 @@ def _finalize_openrouter_usage_accounting(
 def _openrouter_model(value: object) -> str:
     model = str(value or "").strip()
     if not model:
-        return "openai/gpt-5-mini"
+        return "openai/gpt-5.6-luna"
     if "/" in model:
         return model
     return f"openai/{model}"

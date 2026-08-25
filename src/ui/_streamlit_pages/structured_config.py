@@ -110,7 +110,7 @@ def render_structured_config_form(
         with core_col2:
             ingest_openai_model = st.text_input(
                 "Ingest OpenAI Model",
-                value=_as_str(ingest.get("openai_model"), "gpt-5-mini"),
+                value=_as_str(ingest.get("openai_model"), "gpt-5.6-luna"),
             )
         with core_col3:
             rank_model = st.text_input(

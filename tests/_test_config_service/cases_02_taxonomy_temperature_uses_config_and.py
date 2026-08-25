@@ -592,7 +592,7 @@ class TestConfigService02TaxonomyTemperatureUsesConfig(_TestConfigServiceBase):
         self.assertTrue(settings.enable_preflight_classifier_and_direct_detail)
         self.assertEqual(2, settings.retry_retries)
         self.assertTrue(settings.candidate_screening_enabled)
-        self.assertEqual("gpt-5-nano", settings.candidate_screening_model)
+        self.assertEqual("gpt-5.6-luna", settings.candidate_screening_model)
         self.assertEqual(1.0, settings.candidate_screening_temperature)
         self.assertEqual(10, settings.candidate_screening_batch_size)
         self.assertEqual(

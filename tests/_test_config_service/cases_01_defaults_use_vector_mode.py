@@ -319,7 +319,7 @@ class TestConfigService01DefaultsUseVectorMode(_TestConfigServiceBase):
                 "cross_report_analysis/synthesis",
                 default_settings.cross_report_analysis_prompt_namespace,
             )
-            self.assertEqual("gpt-5-mini", default_settings.cross_report_analysis_model)
+            self.assertEqual("gpt-5.6-luna", default_settings.cross_report_analysis_model)
             self.assertEqual(1.0, default_settings.cross_report_analysis_temperature)
             self.assertEqual(
                 600.0, default_settings.cross_report_analysis_timeout_seconds

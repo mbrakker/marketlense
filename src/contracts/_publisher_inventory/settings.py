@@ -161,7 +161,7 @@ class PublisherInventorySettings:
         },
     )
     candidate_screening_model: str = field(
-        default="gpt-5-nano",
+        default="gpt-5.6-luna",
         metadata={
             "doc": "Base OpenAI model used for candidate screening before report_sources persistence."
         },

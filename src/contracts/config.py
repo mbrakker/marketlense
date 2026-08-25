@@ -226,7 +226,7 @@ class AppSettings:
         metadata={"doc": "OCR fallback policy: native_first_selective or always."},
     )
     pdf_text_ocr_model: str = field(
-        default="gpt-5-mini",
+        default="gpt-5.6-luna",
         metadata={"doc": "OpenAI model ID used for OCR fallback."},
     )
     pdf_text_ocr_timeout_seconds: float = field(
@@ -656,7 +656,7 @@ class AppSettings:
         metadata={"doc": "Prompt namespace used for cross-report synthesis."},
     )
     cross_report_analysis_model: str = field(
-        default="gpt-5-mini",
+        default="gpt-5.6-luna",
         metadata={"doc": "Model identifier used for cross-report synthesis."},
     )
     cross_report_analysis_temperature: float = field(

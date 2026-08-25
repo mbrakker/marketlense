@@ -21,7 +21,7 @@ from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 _T = TypeVar("_T")
-_BROWSER_USE_OPENAI_MODEL_DEFAULT = "gpt-5-mini"
+_BROWSER_USE_OPENAI_MODEL_DEFAULT = "gpt-5.6-luna"
 
 
 def _default_provider_operations() -> LLMProviderOperations:

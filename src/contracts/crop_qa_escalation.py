@@ -43,7 +43,7 @@ class CropQaEscalationPolicy:
         metadata={"doc": "Maximum repair recommendations allowed for this batch."},
     )
     model: str = field(
-        default="gpt-5-mini",
+        default="gpt-5.6-luna",
         metadata={"doc": "Model used for image-backed crop QA escalation."},
     )
     temperature: float = field(
