@@ -44,7 +44,7 @@ All work is listed below in one register. `Active` items have detailed completio
 | Active | P3 | Resolve hosted-site trust blockers | Safe-error boundary completed; hosted trust outcome remains. |
 | Active | P10 | Operate correlated public-render failure telemetry | Hosted release-observability outcome. |
 | Active | P12 | Release-locked sandbox publish canary | Repeatedly prove manifest-backed report recovery and final sandbox publication on a small, spend-governed real-report cohort. |
-| Active | P14 | Restrict cohort-manifest publication to its admitted artifacts | Make the manifest an authoritative publish candidate boundary, not only a final audit boundary. |
+| Active | P14 | Retain isolated live proof of strict cohort-manifest publication binding | The one-to-one binding and deterministic candidate-set record are implemented; only the bounded isolated live proof remains. |
 | Active | P15 | Operate canonical publish-readiness telemetry and refresh planning | Turn hash-bound readiness failures and staleness into measurable, safe rerender work. |
 | Closed | P13 | Make WordPress file-ID lookup independently authoritative | Authenticated immutable file-ID lookup now matches remote posts from isolated state, fails closed on ambiguity, and preserves no-write reuse. |
 | Active | P4 | Close public briefing, correction, and submission intake | Implemented; close after hosted smoke proves the live intake routes. |
@@ -276,18 +276,27 @@ The original ten-item screenshot baseline is complete in the committed implement
 - Every member must pass semantic validation, public editorial quality, complete manifest/asset checks, canonical publish readback, and a repeat idempotency lookup; any failure stops the cohort and preserves the failed evidence.
 - Retained evidence compares the cohort's actual calls/tokens/spend, elapsed time, package completeness, created-versus-reused posts, and typed failures with the approved forecast; focused tests cover target isolation and no-write behavior when approval is absent.
 
-#### P14. Restrict cohort-manifest publication to its admitted artifacts
+#### P14. Retain isolated live proof of strict cohort-manifest publication binding
 
-- **Title:** Restrict cohort-manifest publication to its admitted artifacts
+- **Title:** Retain isolated live proof of strict cohort-manifest publication binding
 - **Impact 5 / effort: 1**
-- **Context:** `publish-wp --cohort-manifest` now resolves the admitted members' retained HTML references instead of scanning `output_dir`, and applies a cohort-membership filter before publication. The remaining gap is a stricter one-to-one compatibility check: a changed mapping must fail rather than being silently excluded, and the resolved candidate set still needs a retained hash and isolated live proof.
+- **Context:** `publish-wp --cohort-manifest` now binds every admitted member to exactly one existing, identity-compatible, publish-ready Report artifact before any WordPress call. Missing, duplicate, changed, stale, incompatible, ambiguous, and unready bindings fail closed; no non-manifest artifact can enter publication. The resolved ordered set is retained as `publication_candidate_set.json` with `candidate_set_hash`, manifest/cohort identity, and configuration/policy/artifact provenance. Only the bounded isolated live proof remains.
 - **Benefit:** The immutable cohort becomes the authoritative candidate set, preventing unrelated drafts from being preflighted or published and making bounded canaries safer to run in shared artifact namespaces.
 - **Risks to avoid:** Preserve the existing no-manifest bulk-publish behavior, canonical artifact/path validation, approval gates, idempotency lookup, and fail-closed handling for missing or ambiguous cohort artifacts.
-- **Success criteria:**
+- **Implemented evidence:** Focused cohort/publication fixtures cover successful one-member binding, missing member, duplicate mapping, changed mapping, stale/incompatible mapping, unready member, unrelated artifact isolation, deterministic hash reuse, and zero WordPress calls on binding failure. The no-manifest publication path remains covered by the publish-orchestrator regression suite.
 
-- With `--cohort-manifest`, resolve each admitted member to exactly one compatible current HTML artifact and fail before any WordPress call on a missing, stale, ambiguous, mismatched, or unexpectedly excluded member.
-- Focused tests prove a shared output directory cannot preflight or write a non-cohort artifact, and that a changed report-store/HTML mapping fails closed while valid cohort reuse, authenticated readback, and repeat-publication semantics remain unchanged.
-- A bounded isolated live cohort retains a candidate-set hash and shows only admitted report IDs in publication-preflight and WordPress manifest records.
+**Retained P14 fixture measurement** — baseline is the behavior immediately before `98f41eba`; current is `98f41eba`/current `HEAD`. The controlled fixtures use one valid admitted member, one changed/ambiguous member mapping, and one unrelated artifact in the same output namespace.
+
+| Measure | Baseline | Current | Result |
+| --- | --- | --- | --- |
+| Valid manifest members resolved | 1/1 | 1/1 | No valid-publication coverage loss. |
+| Silent exclusions | 1 possible changed member excluded by membership filter | 0 | Eliminated. |
+| Ambiguous mappings accepted | 1 possible manifest/report-store disagreement accepted | 0 | Eliminated by binding failure. |
+| Unrelated candidates admitted | 0/1 | 0/1 | Remains excluded. |
+| WordPress calls before binding failure | Not bounded by a cohort-wide binding barrier | 0 | Binding fails before any WordPress call. |
+| Valid publication coverage | 1/1 | 1/1 | Unchanged. |
+
+- **Remaining success criterion:** A bounded isolated live cohort retains `publication_candidate_set.json` and `candidate_set_hash`, shows only admitted report IDs through preflight and WordPress records, and confirms the same zero-write failure boundary against the configured sandbox.
 
 #### P15. Operate canonical publish-readiness telemetry and refresh planning
 
