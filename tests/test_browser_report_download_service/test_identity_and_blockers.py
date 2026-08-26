@@ -1,3 +1,4 @@
+# ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
 import asyncio
@@ -160,9 +161,7 @@ def test_complete_pdf_artifact_fetches_a_browser_observed_pdf_without_name_overl
     thread = threading.Thread(target=server.serve_forever)
     thread.start()
     try:
-        observed_pdf_url = (
-            f"http://127.0.0.1:{server.server_port}/global-cpg-pulse.pdf"
-        )
+        observed_pdf_url = f"http://127.0.0.1:{server.server_port}/global-cpg-pulse.pdf"
         request = BrowserReportDownloadRequest(
             schema_version="1.0",
             url="https://publisher.example/research.html",
@@ -748,17 +747,17 @@ def test_prompt_identity_entries_apply_delivery_email_to_email_aliases(
             ),
             headed=False,
         ),
-        delivery_email="reports@marketbearing.eu",
+        delivery_email="reports@example.test",
     )
 
     entries = prompt_runtime._build_identity_entries(
         request=request,
-        delivery_email="reports@marketbearing.eu",
+        delivery_email="reports@example.test",
     )
 
     by_label = {entry["label"]: entry for entry in entries}
-    assert by_label["Work email"]["value"] == "reports@marketbearing.eu"
-    assert by_label["Business Email Address"]["value"] == "reports@marketbearing.eu"
+    assert by_label["Work email"]["value"] == "reports@example.test"
+    assert by_label["Business Email Address"]["value"] == "reports@example.test"
     assert "stale@example.com" not in json.dumps(entries)
 
 
@@ -806,7 +805,7 @@ def test_resolve_effective_identity_fields_applies_publisher_override_values(
                                 schema_version="1.0",
                                 key="company",
                                 label="Company",
-                                value="Market Bearing",
+                                value="Example Organization",
                                 aliases=[
                                     "company",
                                     "organization",
@@ -837,7 +836,7 @@ def test_resolve_effective_identity_fields_applies_publisher_override_values(
 
     assert by_key["online_annual_revenue"].value == "Less than $250k"
     assert by_key["country"].value == "Austria"
-    assert by_key["company"].value == "Market Bearing"
+    assert by_key["company"].value == "Example Organization"
 
 
 def test_download_report_with_browser_use_salvages_partial_business_email_blocker(

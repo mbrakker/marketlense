@@ -314,7 +314,7 @@ def test_standard_form_submit_helper_submits_when_controls_already_resolved(
             {
                 "key": "work_email",
                 "label": "Email",
-                "value": "reports@marketbearing.eu",
+                "value": "reports@example.test",
                 "aliases": ["email", "business email"],
             },
             {

@@ -122,6 +122,16 @@ and an explicitly configured option alias matches an enabled option. It still
 never chooses a first available value, so unknown required enums remain typed
 blockers rather than fabricated identity assertions.
 
+The committed browser identity profile is a value-free mapping template, not
+an acquisition identity. A production form route receives values only from the
+authorized runtime profile selected by `BROWSER_DOWNLOAD_IDENTITY_CONFIG_PATH`.
+Its field coverage, aliases, publisher overrides, and consent rules remain the
+same; a missing required value returns `blocked_missing_identity_field` before
+submission and is never guessed. Prompt logs, execution evidence, and retained
+acquisition projections redact configured values and retain only identity-key
+references or typed blocker categories. The operator procedure is in
+[Credentials](../ops/credentials.md#browser-form-identity).
+
 Before its usual standard-form fill, the helper may activate one visible,
 enabled same-page report CTA only when no visible actionable form is already
 present. The bounded CTA set is limited to report/download/data/access/unlock

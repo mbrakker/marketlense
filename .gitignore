@@ -106,5 +106,6 @@ logs/*.json
 # Local artifacts
 sa.json
 src/config/app.local.yaml
+src/config/browser_download_identity.local.yaml
 src.zip
 .worktrees/

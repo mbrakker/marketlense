@@ -23,6 +23,15 @@ can contact a WordPress target.
 
 Loading application and browser-acquisition settings is credential-free: an absent Drive folder ID or LLM credential is represented as an empty setting so dry runs, planning, operator inspection, and deterministic acquisition-remediation timeout calculation work in a clean checkout. The workflow preflight and provider boundaries then fail closed immediately before the affected external operation, with the typed missing-credential code and corrective action. Browser acquisition validates `OPENAI_API_KEY` or `OPENROUTER_API_KEY` at its runtime boundary before Browser Use starts. Live ingestion, browser acquisition, and model calls therefore still require their real `.env` values; no credential default is introduced.
 
+`browser_download.identity_config_path` resolves from
+`BROWSER_DOWNLOAD_IDENTITY_CONFIG_PATH` when set, otherwise from the committed
+value-free mapping template at `src/config/browser_download_identity.yaml`.
+The environment variable must name an authorized untracked or secret-managed
+profile when a form needs identity values. The loader keeps its existing field
+and publisher-override schema; it does not merge or synthesize identity values.
+See [Credentials](credentials.md#browser-form-identity) for the safe local
+profile procedure and typed missing-value behavior.
+
 All runtime data paths in `paths`, acquisition, analysis, cost, publication,
 mailbox, and browser sections are resolved once to absolute paths. A profile
 inside the repository is relative to the repository workspace even when it is

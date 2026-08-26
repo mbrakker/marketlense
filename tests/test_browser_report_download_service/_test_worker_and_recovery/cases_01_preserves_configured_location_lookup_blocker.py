@@ -92,6 +92,7 @@ def test_download_report_with_browser_use_runs_async_form_preflight_and_agent_on
     assert len(observed_loop_ids) == 2
     assert observed_loop_ids[0] == observed_loop_ids[1]
 
+
 def test_download_report_with_browser_use_preserves_configured_location_lookup_blocker(
     tmp_path: Path,
     run_context,
@@ -190,6 +191,7 @@ def test_download_report_with_browser_use_preserves_configured_location_lookup_b
     assert "Location field could not be successfully selected" in str(
         response.blocked_reason_detail
     )
+
 
 def test_download_report_with_browser_use_salvages_completed_history_when_agent_cleanup_stalls(
     tmp_path: Path,
@@ -318,6 +320,7 @@ def test_download_report_with_browser_use_salvages_completed_history_when_agent_
         == "browser_report_download_timeout_salvaged_completed_history"
         for event in events
     )
+
 
 def test_download_report_with_browser_use_recovers_lookup_before_completed_history_shutdown(
     tmp_path: Path,
@@ -478,6 +481,7 @@ def test_download_report_with_browser_use_recovers_lookup_before_completed_histo
     assert response.route_status == "verified"
     assert response.final_page_url == "https://example.com/report#success"
 
+
 def test_download_report_with_browser_use_bounds_lookup_assist_after_completed_history_timeout(
     tmp_path: Path,
     caplog,
@@ -485,7 +489,23 @@ def test_download_report_with_browser_use_bounds_lookup_assist_after_completed_h
     external_boundary_mocks_only,
 ) -> None:
     caplog.set_level(logging.INFO, logger=service.logger.name)
-    settings = replace(_settings(tmp_path), timeout_seconds=0.05, max_steps=1)
+    settings = replace(
+        _settings(tmp_path),
+        timeout_seconds=0.05,
+        max_steps=1,
+        identity_profile=BrowserDownloadIdentity(
+            schema_version="1.0",
+            fields=[
+                BrowserDownloadIdentityField(
+                    schema_version="1.0",
+                    key="country",
+                    label="Country",
+                    value="Example Country",
+                    aliases=["location"],
+                )
+            ],
+        ),
+    )
     runtime = _runtime(
         tmp_path,
         route_kind="email_delivery",
@@ -614,6 +634,7 @@ def test_download_report_with_browser_use_bounds_lookup_assist_after_completed_h
     assert len(timeout_events) == 1
     assert timeout_events[0]["fields"]["timeout_seconds"] == 0.05
 
+
 def test_download_report_with_browser_use_maps_partial_lookup_timeout_to_blocker(
     tmp_path: Path,
     caplog,
@@ -720,6 +741,7 @@ def test_download_report_with_browser_use_maps_partial_lookup_timeout_to_blocker
         == "browser_report_download_timeout_salvaged_partial_history_blocker"
         for event in _service_events(caplog)
     )
+
 
 __all__ = [
     "test_download_report_with_browser_use_runs_async_form_preflight_and_agent_on_one_event_loop",

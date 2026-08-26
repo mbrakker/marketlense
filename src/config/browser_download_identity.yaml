@@ -1,9 +1,14 @@
+# Sensitive browser identities are intentionally not committed.
+# This is a value-free field-mapping template: copy it to an untracked file,
+# populate only authorized runtime values there, and set
+# BROWSER_DOWNLOAD_IDENTITY_CONFIG_PATH to that file. Null values must remain
+# explicit blockers; they are never substituted or invented during acquisition.
 schema_version: '1.0'
 fields:
 - schema_version: '1.0'
   key: full_name
   label: Full name
-  value: Dustin Von Richman
+  value: null
   aliases:
   - name
   - full name
@@ -11,7 +16,7 @@ fields:
 - schema_version: '1.0'
   key: first_name
   label: First name
-  value: Dustin
+  value: null
   aliases:
   - first name
   - given name
@@ -19,7 +24,7 @@ fields:
 - schema_version: '1.0'
   key: last_name
   label: Last name
-  value: Von Richman
+  value: null
   aliases:
   - last name
   - surname
@@ -28,7 +33,7 @@ fields:
 - schema_version: '1.0'
   key: work_email
   label: Work email
-  value: reports@marketbearing.eu
+  value: null
   aliases:
   - email
   - email address
@@ -38,7 +43,7 @@ fields:
 - schema_version: '1.0'
   key: company
   label: Company
-  value: Secret
+  value: null
   aliases:
   - company
   - organization
@@ -48,7 +53,7 @@ fields:
 - schema_version: '1.0'
   key: job_title
   label: Job title
-  value: Researcher
+  value: null
   aliases:
   - title
   - role
@@ -58,7 +63,7 @@ fields:
 - schema_version: '1.0'
   key: phone
   label: Phone
-  value: 0378378394
+  value: null
   aliases:
   - phone
   - phone number
@@ -68,7 +73,7 @@ fields:
 - schema_version: '1.0'
   key: country
   label: Country
-  value: Austria
+  value: null
   aliases:
   - country
   - country/region
@@ -79,7 +84,7 @@ fields:
 - schema_version: '1.0'
   key: city
   label: City
-  value: Vienna
+  value: null
   aliases:
   - city
   - town
@@ -87,7 +92,7 @@ fields:
 - schema_version: '1.0'
   key: state_region
   label: State or region
-  value: California
+  value: null
   aliases:
   - state
   - region
@@ -103,7 +108,7 @@ fields:
 - schema_version: '1.0'
   key: website_url
   label: Website URL
-  value: https://secret.example
+  value: null
   aliases:
   - website
   - site
@@ -122,19 +127,19 @@ fields:
 - schema_version: '1.0'
   key: business_organization
   label: Business / Organization
-  value: Secret
+  value: null
   aliases: []
   option_aliases: []
 - schema_version: '1.0'
   key: workplace
   label: Workplace
-  value: Secret
+  value: null
   aliases: []
   option_aliases: []
 - schema_version: '1.0'
   key: company_name
   label: Company name
-  value: Secret
+  value: null
   aliases: []
   option_aliases: []
 - schema_version: '1.0'
@@ -158,13 +163,13 @@ fields:
 - schema_version: '1.0'
   key: professional_email
   label: Professional Email
-  value: reports@marketbearing.eu
+  value: null
   aliases: []
   option_aliases: []
 - schema_version: '1.0'
   key: business_phone
   label: Business Phone
-  value: 0378378394
+  value: null
   aliases: []
   option_aliases: []
 - schema_version: '1.0'
@@ -200,7 +205,7 @@ fields:
 - schema_version: '1.0'
   key: industry
   label: Industry
-  value: Research
+  value: null
   aliases: []
   option_aliases:
   - Research
@@ -241,7 +246,7 @@ fields:
 - schema_version: '1.0'
   key: online_annual_revenue
   label: Online Annual Revenue
-  value: 1000 euro
+  value: null
   aliases:
   - projected annual revenue
   - projected annual online revenue
@@ -269,7 +274,7 @@ fields:
 - schema_version: '1.0'
   key: business_type
   label: Business Type
-  value: Research
+  value: null
   aliases: []
   option_aliases:
   - B2B
@@ -277,7 +282,7 @@ fields:
 - schema_version: '1.0'
   key: number_of_employees
   label: Number of Employees
-  value: 5 people
+  value: null
   aliases: []
   option_aliases:
   - 1-10
@@ -303,7 +308,7 @@ fields:
 - schema_version: '1.0'
   key: company_size
   label: Company size
-  value: 5 people
+  value: null
   aliases: []
   option_aliases:
   - 1-10
@@ -323,7 +328,7 @@ fields:
 - schema_version: '1.0'
   key: department
   label: Department
-  value: Research
+  value: null
   aliases: []
   option_aliases:
   - Research
@@ -331,7 +336,7 @@ fields:
 - schema_version: '1.0'
   key: location
   label: Location
-  value: Austria
+  value: null
   aliases: []
   option_aliases:
   - Austria
@@ -345,7 +350,7 @@ fields:
 - schema_version: '1.0'
   key: marketing_country
   label: Marketing Country
-  value: Austria
+  value: null
   aliases: []
   option_aliases:
   - Austria
@@ -389,7 +394,7 @@ fields:
 - schema_version: '1.0'
   key: country_select
   label: Country (select)
-  value: Austria
+  value: null
   aliases: []
   option_aliases:
   - Austria
@@ -459,7 +464,7 @@ fields:
 - schema_version: '1.0'
   key: company_size_name_company_size_legacy
   label: Company size (name=company_size_legacy)
-  value: 5 people
+  value: null
   aliases: []
   option_aliases:
   - 1-10
@@ -467,7 +472,7 @@ fields:
 - schema_version: '1.0'
   key: country_name_country_dropdown
   label: Country (name=country_dropdown)
-  value: Austria
+  value: null
   aliases: []
   option_aliases:
   - Austria
@@ -593,7 +598,7 @@ fields:
 - schema_version: '1.0'
   key: company_size_name_company_size_legacy_required_select
   label: Company size (name=company_size_legacy) - required - select
-  value: 5 people
+  value: null
   aliases: []
   option_aliases:
   - 1-10
@@ -601,7 +606,7 @@ fields:
 - schema_version: '1.0'
   key: country_name_country_dropdown_required_select
   label: Country (name=country_dropdown) - required - select
-  value: Austria
+  value: null
   aliases: []
   option_aliases:
   - Austria
@@ -621,7 +626,7 @@ fields:
 - schema_version: '1.0'
   key: what_is_your_priority_area_of_interest
   label: What is your priority area of interest?
-  value: Research
+  value: null
   aliases: []
   option_aliases:
   - Research
@@ -688,7 +693,7 @@ fields:
 - schema_version: '1.0'
   key: projected_annual_revenue_select
   label: Projected Annual Revenue (select)
-  value: 1000 euro
+  value: null
   aliases: []
   option_aliases:
   - Less than $250k
@@ -702,7 +707,7 @@ fields:
 - schema_version: '1.0'
   key: online_annual_revenue_projected_annual_revenue
   label: Online Annual Revenue / Projected Annual Revenue
-  value: 1000 euro
+  value: null
   aliases: []
   option_aliases:
   - Less than $250k
@@ -734,7 +739,7 @@ fields:
 - schema_version: '1.0'
   key: company_size_full_part_time_employees_only_select_id_account_size_c
   label: Company Size (Full & Part Time Employees Only) (select id=Account_Size__c)
-  value: 5 people
+  value: null
   aliases: []
   option_aliases:
   - 1-10
@@ -742,7 +747,7 @@ fields:
 - schema_version: '1.0'
   key: country_label_country_select_id_country
   label: 'Country (label: Country; select id=Country)'
-  value: Austria
+  value: null
   aliases: []
   option_aliases:
   - Austria
@@ -750,7 +755,7 @@ fields:
 - schema_version: '1.0'
   key: role_dept_label_role_dept_select_id_role_c
   label: 'Role / Dept (label: Role / Dept; select id=Role__c)'
-  value: Research
+  value: null
   aliases: []
   option_aliases:
   - Research
@@ -806,7 +811,7 @@ fields:
 - schema_version: '1.0'
   key: company_size_searchable_select_name_companysize_required
   label: Company size (searchable/select name=companysize) - required
-  value: 5 people
+  value: null
   aliases: []
   option_aliases:
   - 1-10
@@ -856,7 +861,7 @@ fields:
 - schema_version: '1.0'
   key: region_label_select_name_primary_operating_region_c_shadow_dom
   label: "Region (label) \u2014 select name=primary_operating_region__c (shadow DOM)"
-  value: Austria
+  value: null
   aliases: []
   option_aliases:
   - Austria
@@ -865,7 +870,7 @@ fields:
   key: country_of_residence_label_select_name_country_of_residence_c_shadow_dom
   label: "Country of Residence (label) \u2014 select name=country_of_residence__c\
     \ (shadow DOM)"
-  value: Austria
+  value: null
   aliases: []
   option_aliases:
   - Austria
@@ -873,7 +878,7 @@ fields:
 - schema_version: '1.0'
   key: state_of_company_headquarters
   label: State of Company Headquarters
-  value: California
+  value: null
   aliases: []
   option_aliases:
   - California
@@ -923,7 +928,7 @@ fields:
 - schema_version: '1.0'
   key: country_select_id_country_index_2856
   label: Country (select id=country, index=2856)
-  value: Austria
+  value: null
   aliases: []
   option_aliases:
   - Austria
@@ -973,7 +978,7 @@ fields:
 - schema_version: '1.0'
   key: country_select_index_42
   label: Country (select, index 42)
-  value: Austria
+  value: null
   aliases: []
   option_aliases:
   - Austria
@@ -1391,7 +1396,7 @@ fields:
 - schema_version: '1.0'
   key: organization_type
   label: Organization Type
-  value: Research
+  value: null
   aliases: []
   option_aliases: []
 - schema_version: '1.0'
@@ -1554,8 +1559,7 @@ fields:
   value: null
   aliases: []
   option_aliases: []
-delivery_emails:
-- reports@marketbearing.eu
+delivery_emails: []
 consent_policy:
   schema_version: '1.0'
   default_checkbox_policy: mandatory_privacy_terms_only
@@ -1569,7 +1573,7 @@ publisher_overrides:
   - schema_version: '1.0'
     key: industry
     label: Industry
-    value: Cosmetics & Personal Care
+    value: null
     aliases:
     - select your industry
     - industry
@@ -1577,7 +1581,7 @@ publisher_overrides:
   - schema_version: '1.0'
     key: state_region
     label: State or Region
-    value: California
+    value: null
     aliases:
     - state
     - state or region
@@ -1593,7 +1597,7 @@ publisher_overrides:
   - schema_version: '1.0'
     key: organization_type
     label: Organization Type
-    value: Venture Capital
+    value: null
     aliases:
     - organization type
     - organization_type
@@ -1605,7 +1609,7 @@ publisher_overrides:
   - schema_version: '1.0'
     key: state_region
     label: State
-    value: California
+    value: null
     aliases:
     - state
     - province
@@ -1616,7 +1620,7 @@ publisher_overrides:
   - schema_version: '1.0'
     key: country
     label: Country
-    value: Austria
+    value: null
     aliases:
     - country
     - country/region
@@ -1630,7 +1634,7 @@ publisher_overrides:
   - schema_version: '1.0'
     key: company_size
     label: Company size
-    value: 1-10 employees
+    value: null
     aliases:
     - company size
     - company_size_legacy
@@ -1639,7 +1643,7 @@ publisher_overrides:
   - schema_version: '1.0'
     key: company_size_name_company_size_legacy_required_select
     label: Company size (name=company_size_legacy) - required - select
-    value: 1-10 employees
+    value: null
     aliases:
     - company size
     - company_size_legacy
@@ -1647,7 +1651,7 @@ publisher_overrides:
   - schema_version: '1.0'
     key: country
     label: Country
-    value: Austria
+    value: null
     aliases:
     - Country
     option_aliases:
@@ -1659,7 +1663,7 @@ publisher_overrides:
   - schema_version: '1.0'
     key: company
     label: Company
-    value: Market Bearing
+    value: null
     aliases:
     - company
     - organization
@@ -1669,7 +1673,7 @@ publisher_overrides:
   - schema_version: '1.0'
     key: online_annual_revenue
     label: Online Annual Revenue
-    value: Less than $250k
+    value: null
     aliases:
     - projected annual revenue
     - projected annual online revenue
@@ -1681,14 +1685,14 @@ publisher_overrides:
   - schema_version: '1.0'
     key: industry
     label: Industry
-    value: 'Technology: Advertising / Marketing'
+    value: null
     aliases:
     - industry
     option_aliases: []
   - schema_version: '1.0'
     key: department
     label: Department
-    value: Marketing
+    value: null
     aliases:
     - department
     - job function
@@ -1696,7 +1700,7 @@ publisher_overrides:
   - schema_version: '1.0'
     key: level
     label: Level
-    value: Manager
+    value: null
     aliases:
     - level
     - seniority
@@ -1704,7 +1708,7 @@ publisher_overrides:
   - schema_version: '1.0'
     key: number_of_employees
     label: Number of Employees
-    value: 1-10
+    value: null
     aliases:
     - number of employees
     - employees
@@ -1712,7 +1716,7 @@ publisher_overrides:
   - schema_version: '1.0'
     key: preferred_language
     label: Preferred Language
-    value: English
+    value: null
     aliases:
     - preferred language
     - language
@@ -1720,7 +1724,7 @@ publisher_overrides:
   - schema_version: '1.0'
     key: state_region
     label: State or Province
-    value: Vienna
+    value: null
     aliases:
     - state
     - state or province
@@ -1731,7 +1735,7 @@ publisher_overrides:
   - schema_version: '1.0'
     key: zip_code
     label: Zip Code
-    value: '1010'
+    value: null
     aliases:
     - zip code
     - postal code
@@ -1739,7 +1743,7 @@ publisher_overrides:
   - schema_version: '1.0'
     key: website_url
     label: Website
-    value: https://marketbearing.eu
+    value: null
     aliases:
     - website
     - website url
@@ -1748,7 +1752,7 @@ publisher_overrides:
     key: i_have_read_understand_and_agree_to_comscore_s_privacy_policy_terms_of_use_product_terms_comscore_markets_terms_agreement_checkbox
     label: I have read, understand and agree to Comscore's Privacy Policy / Terms
       of Use / Product Terms / Comscore Markets Terms (agreement checkbox)
-    value: 'true'
+    value: null
     aliases:
     - privacy agreement
     - terms agreement
@@ -1761,25 +1765,25 @@ publisher_overrides:
   - schema_version: '1.0'
     key: role
     label: Role
-    value: Mid-senior
+    value: null
     aliases: []
     option_aliases: []
   - schema_version: '1.0'
     key: department
     label: Department
-    value: Brand Management
+    value: null
     aliases: []
     option_aliases: []
   - schema_version: '1.0'
     key: industry
     label: Industry
-    value: Advertising and Marketing
+    value: null
     aliases: []
     option_aliases: []
   - schema_version: '1.0'
     key: location
     label: Location
-    value: Austria
+    value: null
     aliases: []
     option_aliases: []
 - schema_version: '1.0'
@@ -1789,7 +1793,7 @@ publisher_overrides:
   - schema_version: '1.0'
     key: organization_type
     label: Organization Type
-    value: '***REDACTED***'
+    value: null
     aliases:
     - Organization Type
     - Organization Type *
@@ -1800,7 +1804,7 @@ publisher_overrides:
   - schema_version: '1.0'
     key: company_name
     label: Company Name
-    value: Market Bearing
+    value: null
     aliases:
     - Company Name
     - Company
@@ -1808,7 +1812,7 @@ publisher_overrides:
   - schema_version: '1.0'
     key: work_email
     label: Business Email Address
-    value: reports@marketbearing.eu
+    value: null
     aliases:
     - Business Email Address
     - Work Email Address
@@ -1817,7 +1821,7 @@ publisher_overrides:
   - schema_version: '1.0'
     key: job_title
     label: Role
-    value: Researcher
+    value: null
     aliases:
     - Role
     - Job Title
@@ -1826,7 +1830,7 @@ publisher_overrides:
   - schema_version: '1.0'
     key: annual_revenue_annualrevenuesmb
     label: Annual Revenue
-    value: 10000 euro
+    value: null
     aliases:
     - Annual Revenue
     - annualRevenueSMB
@@ -1837,7 +1841,7 @@ publisher_overrides:
   - schema_version: '1.0'
     key: annual_corporate_revenue_annual_corporate_revenue_c
     label: Annual Corporate Revenue
-    value: 10000 euro
+    value: null
     aliases:
     - Annual Corporate Revenue
     - Annual_Corporate_Revenue__c
@@ -1848,7 +1852,7 @@ publisher_overrides:
   - schema_version: '1.0'
     key: state_region
     label: State
-    value: Other
+    value: null
     aliases:
     - State
     - State or Region

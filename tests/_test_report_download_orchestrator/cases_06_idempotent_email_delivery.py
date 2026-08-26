@@ -319,7 +319,7 @@ def test_run_report_download_uses_mailbox_account_for_unattended_email_submissio
         gmail_user_id="me",
         imap_host="imap.example.com",
         imap_port=993,
-        imap_user="reports@marketbearing.eu",
+        imap_user="reports@example.test",
         imap_password="secret",
         imap_mailbox="INBOX",
     )
@@ -395,9 +395,9 @@ def test_run_report_download_uses_mailbox_account_for_unattended_email_submissio
 
     assert response.outcome == "email_requested"
     assert len(browser_requests) == 1
-    assert browser_requests[0].delivery_email == "reports@marketbearing.eu"
+    assert browser_requests[0].delivery_email == "reports@example.test"
     assert len(due.requests) == 1
-    assert due.requests[0].delivery_email == "reports@marketbearing.eu"
+    assert due.requests[0].delivery_email == "reports@example.test"
 
 
 def test_run_report_download_preflights_mailbox_before_email_form_submission(

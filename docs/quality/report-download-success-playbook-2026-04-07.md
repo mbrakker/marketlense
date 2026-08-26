@@ -60,7 +60,10 @@ The implementation plan in this playbook is now fully executed for the scoped re
 - browser email routes are now canonicalized to `browser_email_form` even when older memory rows were recorded as generic `browser_pdf_click`, and planner fallback now uses form-specific browser guidance when remembered evidence says the URL is email-gated
 - terminal HTML fallback can now upgrade confirmation evidence when a submit was observed and the fetched terminal page no longer contains the original form
 - typed `network_events` now persist inside `DownloadTerminalEvidence`, and confirmation scoring can promote email-delivery outcomes from network confirmation/submission signals when the browser runtime exposes them
-- the shared browser identity profile now includes verified website/company-name/professional-email/business-phone values so gated publishers have deeper reusable form coverage without per-run invention
+- superseded on 2026-08-26: the shared browser identity mapping retains the
+  verified field coverage, while authorized website/company/email/phone values
+  now live only in the untracked runtime profile documented in
+  [`docs/ops/credentials.md`](../ops/credentials.md#browser-form-identity)
 - paginated on-site completeness is stricter in code: incomplete multi-page traversal now stays inferred/partial until traversal evidence or an explicit end-state shows the report is complete
 - route-memory confidence fields:
   - `attempts`

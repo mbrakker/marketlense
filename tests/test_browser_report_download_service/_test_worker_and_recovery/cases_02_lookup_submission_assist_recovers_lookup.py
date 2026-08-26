@@ -191,7 +191,7 @@ def test_lookup_submission_assist_sends_only_lookup_identity_fields(
                     schema_version="1.0",
                     key="full_name",
                     label="Full name",
-                    value="Dustin Von Richman",
+                    value="Example Person",
                     aliases=["name"],
                 ),
                 BrowserDownloadIdentityField(
@@ -296,6 +296,38 @@ def test_lookup_submission_assist_targets_blocked_lookup_label(
     assert [item["key"] for item in broad_values] == ["country", "state_region"]
 
 
+def test_lookup_submission_assist_never_invents_a_missing_identity_value(
+    tmp_path: Path,
+) -> None:
+    settings = replace(
+        _settings(tmp_path),
+        identity_profile=BrowserDownloadIdentity(
+            schema_version="1.0",
+            fields=[
+                BrowserDownloadIdentityField(
+                    schema_version="1.0",
+                    key="country",
+                    label="Country",
+                    value=None,
+                    aliases=["location"],
+                )
+            ],
+        ),
+    )
+
+    values = timeout_recovery._browser_form_identity_field_values(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=settings,
+            route_family_hint="browser_email_form",
+        ),
+        lookup_labels=("Country",),
+    )
+
+    assert values == []
+
+
 def test_lookup_submission_assist_submits_access_resource_cta(
     run_context,
 ) -> None:
@@ -338,7 +370,7 @@ def test_download_report_with_browser_use_standard_form_assist_checks_mandatory_
     external_boundary_mocks_only,
 ) -> None:
     settings = replace(
-        _settings(tmp_path, work_email="reports@marketbearing.eu"),
+        _settings(tmp_path, work_email="reports@example.test"),
         identity_profile=BrowserDownloadIdentity(
             schema_version="1.0",
             fields=[
@@ -346,21 +378,21 @@ def test_download_report_with_browser_use_standard_form_assist_checks_mandatory_
                     schema_version="1.0",
                     key="first_name",
                     label="First name",
-                    value="Dustin",
+                    value="Example",
                     aliases=["first name", "firstname"],
                 ),
                 BrowserDownloadIdentityField(
                     schema_version="1.0",
                     key="last_name",
                     label="Last name",
-                    value="Von Richman",
+                    value="Person",
                     aliases=["last name", "lastname"],
                 ),
                 BrowserDownloadIdentityField(
                     schema_version="1.0",
                     key="work_email",
                     label="Work email",
-                    value="reports@marketbearing.eu",
+                    value="reports@example.test",
                     aliases=["email", "business email", "work email"],
                 ),
                 BrowserDownloadIdentityField(
@@ -416,7 +448,7 @@ def test_download_report_with_browser_use_standard_form_assist_checks_mandatory_
                 def evaluate(self, script):
                     script_text = str(script or "")
                     if "standardFormSubmit" in script_text:
-                        assert "reports@marketbearing.eu" in script_text
+                        assert "reports@example.test" in script_text
                         assert "mandatoryAgreementCheckedCount" in script_text
                         browser.url = "https://example.com/report#requested"
                         browser.title = "Thank you"
@@ -527,7 +559,7 @@ def test_download_report_with_browser_use_standard_form_assist_checks_mandatory_
             schema_version="1.0",
             url="https://example.com/report",
             settings=settings,
-            delivery_email="reports@marketbearing.eu",
+            delivery_email="reports@example.test",
             route_family_hint="browser_email_form",
         ),
         run_context,
@@ -549,7 +581,7 @@ def test_download_report_with_browser_use_standard_form_assist_runs_after_lookup
     external_boundary_mocks_only,
 ) -> None:
     settings = replace(
-        _settings(tmp_path, work_email="reports@marketbearing.eu"),
+        _settings(tmp_path, work_email="reports@example.test"),
         identity_profile=BrowserDownloadIdentity(
             schema_version="1.0",
             fields=[
@@ -557,21 +589,21 @@ def test_download_report_with_browser_use_standard_form_assist_runs_after_lookup
                     schema_version="1.0",
                     key="first_name",
                     label="First name",
-                    value="Dustin",
+                    value="Example",
                     aliases=["first name"],
                 ),
                 BrowserDownloadIdentityField(
                     schema_version="1.0",
                     key="last_name",
                     label="Last name",
-                    value="Von Richman",
+                    value="Person",
                     aliases=["last name"],
                 ),
                 BrowserDownloadIdentityField(
                     schema_version="1.0",
                     key="work_email",
                     label="Work email",
-                    value="reports@marketbearing.eu",
+                    value="reports@example.test",
                     aliases=["email", "business email"],
                 ),
                 BrowserDownloadIdentityField(
@@ -748,7 +780,7 @@ def test_download_report_with_browser_use_standard_form_assist_runs_after_lookup
             schema_version="1.0",
             url="https://example.com/report",
             settings=settings,
-            delivery_email="reports@marketbearing.eu",
+            delivery_email="reports@example.test",
             route_family_hint="browser_email_form",
         ),
         run_context,
@@ -767,7 +799,7 @@ def test_download_report_with_browser_use_timeout_standard_form_assist_submits_o
     external_boundary_mocks_only,
 ) -> None:
     settings = replace(
-        _settings(tmp_path, work_email="reports@marketbearing.eu"),
+        _settings(tmp_path, work_email="reports@example.test"),
         # Keep the main agent below its two-second simulated stall while
         # leaving enough bounded time for the terminal confirmation recovery.
         timeout_seconds=0.5,
@@ -779,7 +811,7 @@ def test_download_report_with_browser_use_timeout_standard_form_assist_submits_o
                     schema_version="1.0",
                     key="work_email",
                     label="Work email",
-                    value="reports@marketbearing.eu",
+                    value="reports@example.test",
                     aliases=["email", "business email", "work email"],
                 ),
                 BrowserDownloadIdentityField(
@@ -808,7 +840,7 @@ def test_download_report_with_browser_use_timeout_standard_form_assist_submits_o
             browser.url = "https://example.com/report#download"
             browser.title = "Example gated report"
             browser.html = (
-                "<html><body><form><input name='email' value='reports@marketbearing.eu'>"
+                "<html><body><form><input name='email' value='reports@example.test'>"
                 "<select name='country'><option>Austria</option></select>"
                 "<input type='checkbox' name='privacy'>"
                 "<button type='submit'>Submit</button></form></body></html>"
@@ -872,7 +904,7 @@ def test_download_report_with_browser_use_timeout_standard_form_assist_submits_o
             schema_version="1.0",
             url="https://example.com/report",
             settings=settings,
-            delivery_email="reports@marketbearing.eu",
+            delivery_email="reports@example.test",
             route_family_hint="browser_email_form",
         ),
         run_context,
@@ -888,6 +920,7 @@ def test_download_report_with_browser_use_timeout_standard_form_assist_submits_o
 
 
 __all__ = [
+    "test_lookup_submission_assist_never_invents_a_missing_identity_value",
     "test_download_report_with_browser_use_lookup_submission_assist_recovers_lookup_blocked_submit",
     "test_download_report_with_browser_use_standard_form_assist_checks_mandatory_opt_in",
     "test_download_report_with_browser_use_standard_form_assist_runs_after_lookup_only_progress",

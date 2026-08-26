@@ -11,9 +11,9 @@ url_path_markers:
 - experience-analytics-guide
 route_family: browser_tracker_redirect
 route_kind: pdf_download
-summary: Open go.contentsquare landing, accept cookies, fill lead form (First Name,
-  Last Name, Work Email, Company, Country=Austria), submit form which redirected to
-  an embedded PDF viewer; click the viewer Download button to save the PDF locally.
+summary: Open go.contentsquare landing, accept cookies, fill the lead form from the
+  authorized runtime identity profile, submit it, then use the embedded PDF viewer
+  Download button to save the PDF locally.
 steps:
 - schema_version: '1.0'
   action: navigate
@@ -26,24 +26,24 @@ steps:
   verification: Cookie banner dismissed allowing form interaction.
 - schema_version: '1.0'
   action: input
-  target: Dustin
-  verification: First name field filled with configured value.
+  target: Configured first-name field
+  verification: First name field filled from the authorized runtime identity profile.
 - schema_version: '1.0'
   action: input
-  target: Von Richman
-  verification: Last name field filled with configured value.
+  target: Configured last-name field
+  verification: Last name field filled from the authorized runtime identity profile.
 - schema_version: '1.0'
   action: input
-  target: dustin.von.richman@proton.me
-  verification: Work email field filled with configured value.
+  target: Configured work-email field
+  verification: Work email field filled from the authorized runtime identity profile.
 - schema_version: '1.0'
   action: input
-  target: Secret
-  verification: Company field filled with configured value.
+  target: Configured organization field
+  verification: Company field filled from the authorized runtime identity profile.
 - schema_version: '1.0'
   action: select_dropdown
-  target: Austria
-  verification: Country set to Austria via the select control.
+  target: Configured country field
+  verification: Country selected from the authorized runtime identity profile.
 - schema_version: '1.0'
   action: click
   target: Submit

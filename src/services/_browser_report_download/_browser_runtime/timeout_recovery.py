@@ -1,24 +1,11 @@
 from __future__ import annotations
 
-import asyncio
-import inspect
 import logging
-import os
 import re
-import shutil
-import subprocess
-import sys
-import tempfile
-import time
-from dataclasses import asdict, dataclass
-from hashlib import sha256
-from importlib import import_module
 from pathlib import Path
 from threading import Thread
 from typing import Any
-from urllib.parse import urlsplit
 
-import psutil
 
 from src.contracts.browser_download import (
     BrowserDownloadDialogEvidence,
@@ -26,74 +13,22 @@ from src.contracts.browser_download import (
     BrowserReportDownloadRequest,
 )
 from src.contracts.run_context import RunContext
-from src.services._browser_report_download.cdp import (
-    capture_print_pdf_via_cdp,
-    collect_terminal_dialog_evidence_via_cdp,
-    collect_terminal_network_entries_via_cdp,
-    ensure_browser_download_target_hygiene_via_cdp,
-)
 from src.services._browser_report_download.helpers import (
-    browser_helper_capture_screenshot,
     browser_helper_form_autocomplete,
     browser_helper_standard_form_submit,
-    browser_helper_js,
-    browser_helper_page_info,
-)
-from src.services._browser_report_download.http import (
-    download_pdf_from_url,
-    is_pdf_file,
 )
 from src.services._browser_report_download.models import (
     BrowserAgentRunResult,
-    BrowserUseAgentResult,
-)
-from src.services._browser_report_download.prompt import (
-    BrowserDownloadPromptBundle,
-    redact_browser_report_download_prompt_for_log,
 )
 from src.services._browser_report_download.request import (
     resolve_delivery_email_value,
     resolve_effective_identity_fields,
 )
-from src.services._browser_report_download.session_reuse import (
-    finalize_browser_session_reuse,
-    resolve_browser_session_reuse,
-)
 from src.utils.coercion import normalize_optional_bool_signal
-from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.services._browser_report_download._browser_runtime import (
-    _TERMINAL_TRANSIENT_MARKERS,
-    _TERMINAL_SUCCESS_URL_MARKERS,
-    _TERMINAL_SUCCESS_TEXT_MARKERS,
-    _TERMINAL_REPORT_TEXT_MARKERS,
-    _TERMINAL_TEXT_EXCERPT_MAX_CHARS,
-    _TERMINAL_STABILIZATION_DEFAULT_POLL_SCHEDULE_SECONDS,
-    _TERMINAL_STABILIZATION_EMAIL_POLL_SCHEDULE_SECONDS,
-    _AGENT_RUN_TIMEOUT_MIN_BUFFER_SECONDS,
-    _AGENT_RUN_TIMEOUT_STEP_BUFFER_SECONDS,
-    _AGENT_RUN_TIMEOUT_MAX_BUFFER_SECONDS,
-    _BROWSER_KILL_TIMEOUT_SECONDS,
-    _BROWSER_RESET_TIMEOUT_SECONDS,
-    _BROWSER_CLEANUP_GRACE_SECONDS,
-    _BROWSER_PROFILE_DIR_PREFIX,
-    _BROWSER_USE_TEMP_DIR_PATTERNS,
-    _STALE_BROWSER_USE_TEMP_DIR_MIN_AGE_SECONDS,
-    _TEMP_CLEANUP_LOG_SAMPLE_LIMIT,
-    _TIMED_OUT_COMPLETED_HISTORY_GRACE_SECONDS,
     _TIMED_OUT_RECOVERY_OPERATION_TIMEOUT_SECONDS,
-    _AGENT_COMPLETED_HISTORY_POLL_SECONDS,
-    _BROWSER_AGENT_WORKER_ENV,
-    _BROWSER_AGENT_WORKER_TIMEOUT_BUFFER_SECONDS,
-    _BROWSER_AGENT_WORKER_OUTPUT_MAX_CHARS,
-    _ANSI_ESCAPE_PATTERN,
-    _BROWSER_AGENT_USE_JUDGE,
-    _LOOKUP_FIELD_MARKERS,
-    _LOOKUP_FAILURE_MARKERS,
-    _LOOKUP_SUBMIT_MARKERS,
-    _EMAIL_DOMAIN_BLOCK_MARKERS,
     _EMAIL_DOMAIN_FAILURE_MARKERS,
-    _PARTIAL_HISTORY_TEXT_MAX_CHARS,
 )
 from src.services._browser_report_download._browser_runtime.terminal_assets import (
     _capture_terminal_assets,
@@ -444,7 +379,7 @@ def _should_attempt_timeout_standard_form_submit_assist(
     )
     has_submit_control = any(
         marker in html
-        for marker in ("type=\"submit\"", "type='submit'", ">submit<", "submit")
+        for marker in ('type="submit"', "type='submit'", ">submit<", "submit")
     )
     return has_form_control and has_submit_control
 
@@ -765,10 +700,7 @@ def _browser_form_identity_field_values(
                 *(str(alias or "") for alias in field.aliases),
             ]
         ).casefold()
-        if not any(
-            marker in searchable_tokens
-            for marker in lookup_markers
-        ):
+        if not any(marker in searchable_tokens for marker in lookup_markers):
             continue
         if (
             lookup_label_markers
@@ -783,16 +715,6 @@ def _browser_form_identity_field_values(
                 "value": token,
                 "aliases": list(field.aliases),
                 "option_aliases": list(field.option_aliases),
-            }
-        )
-    if not values and lookup_labels:
-        values.append(
-            {
-                "key": "country",
-                "label": "Country",
-                "value": "Austria",
-                "aliases": ["country", "location", "region"],
-                "option_aliases": ["Austria"],
             }
         )
     return values[:12]
