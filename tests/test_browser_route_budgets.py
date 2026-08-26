@@ -21,10 +21,14 @@ from src.services._browser_report_download.browser import (
     close_browser_preflight_session,
 )
 from src.services._browser_report_download.budgets import apply_browser_route_budget
+from src.services._browser_report_download.request import (
+    validate_browser_runtime_settings,
+)
 from src.services.llm_usage_ledger_service import (
     evaluate_budget_request,
     read_run_budget_usage,
 )
+from src.utils.errors import AppError
 from tests.test_browser_report_download_service.builders import _settings
 
 
@@ -133,6 +137,23 @@ def test_apply_browser_route_budget_preserves_unconfigured_route(tmp_path, caplo
         and event.get("effective_max_steps") == 10
         for event in _service_events(caplog)
     )
+
+
+def test_browser_runtime_validation_requires_llm_credentials(tmp_path):
+    request = _request(tmp_path, route_family="browser_email_form")
+    credential_free_request = replace(
+        request,
+        settings=replace(
+            request.settings,
+            openai_api_key="",
+            openrouter_api_key="",
+        ),
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        validate_browser_runtime_settings(credential_free_request)
+
+    assert exc_info.value.code == "browser_download_api_key_missing"
 
 
 @pytest.mark.parametrize(

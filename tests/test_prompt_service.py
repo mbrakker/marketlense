@@ -257,6 +257,43 @@ def test_load_prompt_set_reuses_validated_cache(
     )
 
 
+def test_load_prompt_set_uses_cached_content_when_reload_not_requested(
+    tmp_path: Path,
+    external_boundary_mocks_only,
+    caplog,
+) -> None:
+    prompts_root = tmp_path / "prompts"
+    _write_prompt_namespace(prompts_root, "alpha", "system-a", "user-a")
+    external_boundary_mocks_only.setattr(prompt_service, "PROMPTS_ROOT", prompts_root)
+    caplog.set_level(logging.INFO, logger="market_lense.prompt_service")
+
+    first = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="alpha",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+    (prompts_root / "alpha" / "user.yaml").write_text("text: user-b", encoding="utf-8")
+
+    cached = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="alpha",
+            reload_if_changed=False,
+        ),
+        _ctx(),
+    )
+
+    assert cached is first
+    assert any(
+        "prompt_load_cache_hit" in record.message
+        and '"validated": false' in record.message
+        for record in caplog.records
+    )
+
+
 def test_load_prompt_set_rejects_namespace_traversal(
     tmp_path: Path,
     external_boundary_mocks_only,
@@ -356,12 +393,19 @@ def test_partial_change_invalidates_only_dependent_namespace_without_restart(
 
     dependent_after = load_prompt_set(
         PromptLoadRequest(
-            schema_version="1.0", namespace="report_vs/artifacts/expert_comment"
+            schema_version="1.0",
+            namespace="report_vs/artifacts/expert_comment",
+            reload_if_changed=True,
         ),
         _ctx(),
     )
     unrelated_after = load_prompt_set(
-        PromptLoadRequest(schema_version="1.0", namespace="report_vs/doc_map"), _ctx()
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/doc_map",
+            reload_if_changed=True,
+        ),
+        _ctx(),
     )
 
     assert dependent_after.prompt_content_hash != dependent_before.prompt_content_hash
@@ -392,19 +436,24 @@ def test_schema_dependency_change_invalidates_content_identity_without_restart(
     schema_path = schemas_root / "artifacts.schema.json"
     original_stat = schema_path.stat()
     original = schema_path.read_text(encoding="utf-8")
-    schema_path.write_text(
-        original.replace('"array"', '"Array"', 1), encoding="utf-8"
-    )
+    schema_path.write_text(original.replace('"array"', '"Array"', 1), encoding="utf-8")
     os.utime(schema_path, ns=(original_stat.st_atime_ns, original_stat.st_mtime_ns))
 
     after = load_prompt_set(
-        PromptLoadRequest(schema_version="1.0", namespace="report_vs/artifacts/summary"),
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/summary",
+            reload_if_changed=True,
+        ),
         _ctx(),
     )
 
     assert after.prompt_content_hash != before.prompt_content_hash
     assert after.dependency_manifest is not None
-    assert after.dependency_manifest.schema_snippets[0].path == "schemas/artifacts.schema.json"
+    assert (
+        after.dependency_manifest.schema_snippets[0].path
+        == "schemas/artifacts.schema.json"
+    )
 
 
 def test_prompt_content_identity_is_path_independent_and_execution_identity_is_sensitive(

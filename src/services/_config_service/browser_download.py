@@ -404,8 +404,6 @@ def load_browser_download_settings(
 
     openai_api_key = _env_value("OPENAI_API_KEY")
     openrouter_api_key = _env_value("OPENROUTER_API_KEY")
-    if _is_missing(openai_api_key) and _is_missing(openrouter_api_key):
-        resolver.missing.append("env:OPENAI_API_KEY or env:OPENROUTER_API_KEY")
 
     http_referer: str | None = _env_value("OPENROUTER_HTTP_REFERER")
     if _is_missing(http_referer):

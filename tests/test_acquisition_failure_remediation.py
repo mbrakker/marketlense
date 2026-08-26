@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import sqlite3
+import subprocess
 import sys
 from pathlib import Path
 
@@ -161,19 +163,42 @@ def test_isolated_attempt_supervisor_returns_typed_timeout(tmp_path):
     assert result["response"] is None
 
 
-def test_isolated_attempt_timeout_covers_configured_mailbox_poll_limit():
-    module = _load_module()
-
-    timeout_seconds, _ = module._isolated_attempt_timeout_seconds(
-        config_path=Path(
-            "src/config/app.browser_isolated_rendered_9_20260822_123000.yaml"
-        ),
-        producer_sha="abc123",
+def test_isolated_attempt_timeout_covers_configured_mailbox_poll_limit_without_llm_credentials(
+    tmp_path,
+):
+    script_path = Path("scripts/quality/acquisition_failure_remediation.py").resolve()
+    config_path = Path(
+        "src/config/app.browser_isolated_rendered_9_20260822_123000.yaml"
+    ).resolve()
+    environment = {
+        key: value
+        for key, value in os.environ.items()
+        if key not in {"OPENAI_API_KEY", "OPENROUTER_API_KEY"}
+    }
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import importlib.util; "
+                "from pathlib import Path; "
+                f"spec = importlib.util.spec_from_file_location('remediation', Path(r'{script_path}')); "
+                "module = importlib.util.module_from_spec(spec); "
+                "spec.loader.exec_module(module); "
+                f"timeout_seconds, _ = module._isolated_attempt_timeout_seconds(config_path=Path(r'{config_path}'), producer_sha='abc123'); "
+                "assert timeout_seconds == 720.0"
+            ),
+        ],
+        cwd=tmp_path,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
     )
 
     # The 600-second mailbox polling service must never be pre-empted by the
     # supervisor; the supervisor retains a 120-second process-cleanup grace.
-    assert timeout_seconds == 720.0
+    assert result.returncode == 0, result.stderr
 
 
 def test_supervisor_timeout_record_is_terminal_with_incomplete_telemetry():

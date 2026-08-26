@@ -512,22 +512,22 @@ class TestConfigService02TaxonomyTemperatureUsesConfig(_TestConfigServiceBase):
             settings.identity_profile.consent_policy.allow_optional_newsletter
         )
 
-    def test_browser_download_settings_require_openrouter_key(self) -> None:
+    def test_browser_download_settings_allow_missing_provider_keys(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             cfg_path = self._write_config(tmp_dir, include_publish=False)
             with patch("src.services.config_service.load_dotenv", return_value=False):
                 with patch.dict(os.environ, {}, clear=True):
-                    with self.assertRaises(RuntimeError) as ctx:
-                        load_browser_download_settings(
-                            ConfigLoadRequest(schema_version="1.0", path=cfg_path),
-                            RunContext(
-                                schema_version="1.0",
-                                run_id="r",
-                                task_id="t",
-                                span_id="s",
-                            ),
-                        )
-        self.assertIn("OPENROUTER_API_KEY", str(ctx.exception))
+                    settings = load_browser_download_settings(
+                        ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                        RunContext(
+                            schema_version="1.0",
+                            run_id="r",
+                            task_id="t",
+                            span_id="s",
+                        ),
+                    )
+        self.assertEqual("", settings.openai_api_key)
+        self.assertEqual("", settings.openrouter_api_key)
 
     def test_publisher_inventory_settings_load_and_fallback_to_browser_download(
         self,

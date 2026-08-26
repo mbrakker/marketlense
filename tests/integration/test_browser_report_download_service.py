@@ -90,10 +90,6 @@ def test_browser_report_download_service_local_guarded(
     openrouter_api_key = os.getenv("OPENROUTER_API_KEY", "").strip()
     if not openai_api_key and not openrouter_api_key:
         pytest.skip("OPENAI_API_KEY or OPENROUTER_API_KEY is required.")
-    try:
-        __import__("browser_use")
-    except Exception:
-        pytest.skip("browser_use is not installed in this environment.")
 
     fixture_root = tmp_path / "site"
     fixture_root.mkdir(parents=True, exist_ok=True)

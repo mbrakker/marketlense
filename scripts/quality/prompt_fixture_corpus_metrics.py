@@ -144,7 +144,10 @@ def collect_prompt_fixture_corpus_metrics(
             PromptDryRunRequest(
                 schema_version="1.0",
                 namespaces=list(requested_namespaces),
-                reload_if_changed=reload_if_changed,
+                # The warm-up has already performed on-disk validation.  The
+                # measured passes benchmark rendering from that verified cache,
+                # not host-dependent dependency hashing.
+                reload_if_changed=False,
                 force_reload=force_reload,
             ),
             _ctx(f"prompt_fixture_corpus_metrics_{index + 1}"),

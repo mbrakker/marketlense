@@ -124,8 +124,9 @@ def load_prompt_set(request: PromptLoadRequest, ctx: RunContext) -> PromptSet:
     prompt_set: PromptSet | None = None
     source = "reloaded"
     if cache_entry and not request.force_reload:
-        valid, invalidation_reason = _is_prompt_cache_valid(cache_entry)
-        if valid:
+        if not request.reload_if_changed:
+            prompt_set = cache_entry.prompt_set
+            source = "cache_unvalidated"
             logger.info(
                 log_event(
                     ctx,
@@ -134,28 +135,46 @@ def load_prompt_set(request: PromptLoadRequest, ctx: RunContext) -> PromptSet:
                     module=logger.name,
                     fields={
                         "namespace": namespace,
-                        "validated": True,
+                        "validated": False,
                         "system_path": cache_entry.prompt_set.system.path,
                         "user_path": cache_entry.prompt_set.user.path,
                         "prompt_content_hash": cache_entry.prompt_set.prompt_content_hash,
                     },
                 )
             )
-            prompt_set = cache_entry.prompt_set
-            source = "cache_validated"
         else:
-            logger.info(
-                log_event(
-                    ctx,
-                    role="service",
-                    event="prompt_cache_invalidated",
-                    module=logger.name,
-                    fields={
-                        "namespace": namespace,
-                        "reason": invalidation_reason,
-                    },
+            valid, invalidation_reason = _is_prompt_cache_valid(cache_entry)
+            if valid:
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="service",
+                        event="prompt_load_cache_hit",
+                        module=logger.name,
+                        fields={
+                            "namespace": namespace,
+                            "validated": True,
+                            "system_path": cache_entry.prompt_set.system.path,
+                            "user_path": cache_entry.prompt_set.user.path,
+                            "prompt_content_hash": cache_entry.prompt_set.prompt_content_hash,
+                        },
+                    )
                 )
-            )
+                prompt_set = cache_entry.prompt_set
+                source = "cache_validated"
+            else:
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="service",
+                        event="prompt_cache_invalidated",
+                        module=logger.name,
+                        fields={
+                            "namespace": namespace,
+                            "reason": invalidation_reason,
+                        },
+                    )
+                )
     if prompt_set is None:
         system_template = _load_prompt(system_path)
         user_template = _load_prompt(user_path)
