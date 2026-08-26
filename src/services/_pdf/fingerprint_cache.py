@@ -180,7 +180,10 @@ def write_artifact_sidecar(
     # A PID-only temporary name collides within a worker process, allowing one
     # writer to move the other's file before it reaches ``os.replace``.
     file_descriptor, temp_name = tempfile.mkstemp(
-        prefix=f"{sidecar_path.name}.tmp-write-",
+        # Keep the temporary filename short: on Windows the final sidecar can
+        # fit while repeating its full name in the temporary prefix exceeds
+        # the legacy path limit under parallel test/work directories.
+        prefix=".tmp-write-",
         dir=sidecar_path.parent,
         text=True,
     )
