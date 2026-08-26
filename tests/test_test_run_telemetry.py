@@ -32,10 +32,34 @@ def test_collector_retains_total_pytest_wall_time() -> None:
     assert payload["total_run_duration_ms"] == 321
 
 
+def test_collector_retains_release_evidence_provenance() -> None:
+    collector = PytestTelemetryCollector()
+
+    payload = collector.payload(
+        repository_commit_sha="a" * 40,
+        evidence_run_id="release-123",
+    )
+
+    assert payload["repository_commit_sha"] == "a" * 40
+    assert payload["evidence_run_id"] == "release-123"
+
+
 def test_runner_accepts_pytest_options_after_separator() -> None:
-    output, pytest_args = parse_runner_args(
-        ["--output-json", "out/tests.json", "--", "--cov=src", "-q"]
+    output, commit_sha, run_id, pytest_args = parse_runner_args(
+        [
+            "--output-json",
+            "out/tests.json",
+            "--repository-commit-sha",
+            "a" * 40,
+            "--evidence-run-id",
+            "release-123",
+            "--",
+            "--cov=src",
+            "-q",
+        ]
     )
 
     assert output == "out/tests.json"
+    assert commit_sha == "a" * 40
+    assert run_id == "release-123"
     assert pytest_args == ["--cov=src", "-q"]

@@ -10,6 +10,8 @@ def test_benchmark_combines_pytest_and_passed_quality_stages() -> None:
     result = build_benchmark(
         test_telemetry={
             "schema_version": "1.0",
+            "repository_commit_sha": "a" * 40,
+            "evidence_run_id": "release-123",
             "test_count": 2,
             "total_run_duration_ms": 100,
             "tests": [
@@ -33,6 +35,9 @@ def test_benchmark_combines_pytest_and_passed_quality_stages() -> None:
     assert result["measurement_profile_hash"] == "ci:pytest-and-quality-gates:v1"
     assert result["total_run_duration_ms"] == 125
     assert result["quality_passed"] is True
+    assert result["passed"] is True
+    assert result["repository_commit_sha"] == "a" * 40
+    assert result["evidence_run_id"] == "release-123"
     assert result["estimated_cost_usd"] == "0"
     assert result["test_summary"] == {"failed": 0, "passed": 2, "total": 2}
     assert result["quality_stage_summaries"] == [

@@ -4,6 +4,7 @@ This directory contains concise historical summaries for review periods or relea
 
 Git history is the canonical source for commit-level chronology. Generated release evidence remains in the release artifact mechanism and is described by [quality evidence](../quality/evidence.md), rather than copied into historical summaries.
 
+- [2026-08-26 superseded pre-review evidence](2026-08-26-current-head-release-evidence.md)
 - [2026-08-25 GPT-5.6 Luna migration and live validation](2026-08-25-gpt-5-6-luna-migration.md)
 - [2026-07-19 live end-to-end validation](2026-07-19-live-end-to-end-validation.md)
 - [2026-07-20 P0/P1 remediation and sandbox validation](2026-07-20-p0-p1-remediation-sandbox-validation.md)

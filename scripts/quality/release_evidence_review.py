@@ -90,12 +90,21 @@ class _Waiver:
 def build_release_evidence_review(
     *,
     manifest_paths: Sequence[Path],
+    test_telemetry_path: Path | None = None,
+    ci_performance_benchmark_path: Path | None = None,
+    executive_summary_path: Path | None = None,
     waiver_path: Path | None = None,
     generated_at: str | None = None,
     today: str | date | None = None,
 ) -> ReleaseEvidenceReviewSummary:
     current_date = _coerce_date(today)
     manifests = tuple(_read_manifest(path) for path in manifest_paths)
+    machine_evidence_issues = _machine_evidence_issues(
+        manifests=manifests,
+        test_telemetry_path=test_telemetry_path,
+        ci_performance_benchmark_path=ci_performance_benchmark_path,
+        executive_summary_path=executive_summary_path,
+    )
     waivers, waiver_errors = _read_waivers(waiver_path, current_date)
     issue_keys = {
         (issue["artifact_name"], issue["reason"])
@@ -131,6 +140,9 @@ def build_release_evidence_review(
             issues_by_artifact.setdefault(
                 (manifest_display_path, review_issue.artifact_name), []
             ).append(review_issue)
+
+    for issue in machine_evidence_issues:
+        review_issues.append(issue)
 
     review_artifacts: list[ReleaseEvidenceReviewArtifact] = []
     for manifest, manifest_display_path in manifests:
@@ -184,7 +196,7 @@ def build_release_evidence_review(
     unwaived_issue_count = sum(1 for issue in review_issues if not issue.waived)
     waived_issue_count = len(review_issues) - unwaived_issue_count
     manifest_passed = all(bool(manifest.get("passed")) for manifest, _ in manifests)
-    passed = unwaived_issue_count == 0 and not waiver_errors
+    passed = manifest_passed and unwaived_issue_count == 0 and not waiver_errors
 
     return ReleaseEvidenceReviewSummary(
         schema_version="1.0",
@@ -333,6 +345,205 @@ def _read_manifest(path: Path) -> tuple[dict[str, Any], str]:
     if not isinstance(payload.get("issues"), list):
         raise ValueError(f"Manifest issues must be a list: {_rel(resolved_path)}")
     return payload, _rel(resolved_path)
+
+
+def _machine_evidence_issues(
+    *,
+    manifests: Sequence[tuple[dict[str, Any], str]],
+    test_telemetry_path: Path | None,
+    ci_performance_benchmark_path: Path | None,
+    executive_summary_path: Path | None,
+) -> tuple[ReleaseEvidenceReviewIssue, ...]:
+    required_inputs = (
+        ("test_telemetry", test_telemetry_path),
+        ("ci_performance_benchmark", ci_performance_benchmark_path),
+        ("release_evidence_executive_summary", executive_summary_path),
+    )
+    missing = tuple(name for name, path in required_inputs if path is None)
+    if missing:
+        return tuple(
+            _machine_issue(
+                artifact_name=name,
+                artifact_path="",
+                reason="mandatory_machine_evidence_missing",
+                detail=f"Required machine evidence input was not supplied: {name}",
+            )
+            for name in missing
+        )
+
+    telemetry, telemetry_path = _read_machine_evidence(
+        test_telemetry_path, "test telemetry"
+    )
+    benchmark, benchmark_path = _read_machine_evidence(
+        ci_performance_benchmark_path, "CI performance benchmark"
+    )
+    summary, summary_path = _read_machine_evidence(
+        executive_summary_path, "release evidence executive summary"
+    )
+    issues: list[ReleaseEvidenceReviewIssue] = []
+    for name, payload, path in (
+        ("test_telemetry", telemetry, telemetry_path),
+        ("ci_performance_benchmark", benchmark, benchmark_path),
+        ("release_evidence_executive_summary", summary, summary_path),
+    ):
+        if payload.get("schema_version") != "1.0":
+            issues.append(
+                _machine_issue(
+                    artifact_name=name,
+                    artifact_path=path,
+                    reason="machine_evidence_schema_version_mismatch",
+                    detail="Expected machine evidence schema_version 1.0",
+                )
+            )
+
+    pytest_exit_code = telemetry.get("pytest_exit_code")
+    tests = telemetry.get("tests")
+    if pytest_exit_code != 0:
+        issues.append(
+            _machine_issue(
+                artifact_name="test_telemetry",
+                artifact_path=telemetry_path,
+                reason="pytest_exit_code_nonzero",
+                detail=f"pytest_exit_code is {pytest_exit_code!r}, expected 0",
+            )
+        )
+    if not isinstance(tests, list):
+        issues.append(
+            _machine_issue(
+                artifact_name="test_telemetry",
+                artifact_path=telemetry_path,
+                reason="test_telemetry_invalid_tests",
+                detail="test telemetry tests must be a list",
+            )
+        )
+        failed_test_count = None
+    else:
+        failed_test_count = sum(
+            1
+            for test in tests
+            if isinstance(test, dict) and test.get("outcome") == "failed"
+        )
+        if failed_test_count:
+            issues.append(
+                _machine_issue(
+                    artifact_name="test_telemetry",
+                    artifact_path=telemetry_path,
+                    reason="pytest_failed_tests",
+                    detail=f"test telemetry records {failed_test_count} failed test(s)",
+                )
+            )
+
+    if benchmark.get("passed") is not True:
+        issues.append(
+            _machine_issue(
+                artifact_name="ci_performance_benchmark",
+                artifact_path=benchmark_path,
+                reason="ci_performance_benchmark_failed",
+                detail="ci_performance_benchmark.json passed must be true",
+            )
+        )
+    if benchmark.get("quality_passed") is not True:
+        issues.append(
+            _machine_issue(
+                artifact_name="ci_performance_benchmark",
+                artifact_path=benchmark_path,
+                reason="ci_performance_quality_failed",
+                detail="ci_performance_benchmark.json quality_passed must be true",
+            )
+        )
+
+    expected_commit_shas = {
+        str(manifest.get("commit_sha") or "") for manifest, _ in manifests
+    }
+    evidence_commit_shas = {
+        str(payload.get("repository_commit_sha") or "")
+        for payload in (telemetry, benchmark, summary)
+    }
+    if (
+        len(expected_commit_shas) != 1
+        or "" in expected_commit_shas
+        or evidence_commit_shas != expected_commit_shas
+    ):
+        issues.append(
+            _machine_issue(
+                artifact_name="release_evidence_provenance",
+                artifact_path="",
+                reason="evidence_commit_sha_mismatch",
+                detail="Manifest and mandatory machine evidence do not share one commit SHA",
+            )
+        )
+
+    expected_run_ids = {
+        str(manifest.get("release_id") or "") for manifest, _ in manifests
+    }
+    evidence_run_ids = {
+        str(payload.get("evidence_run_id") or "")
+        for payload in (telemetry, benchmark, summary)
+    }
+    if (
+        len(expected_run_ids) != 1
+        or "" in expected_run_ids
+        or evidence_run_ids != expected_run_ids
+    ):
+        issues.append(
+            _machine_issue(
+                artifact_name="release_evidence_provenance",
+                artifact_path="",
+                reason="evidence_run_id_mismatch",
+                detail="Manifest and mandatory machine evidence do not share one run ID",
+            )
+        )
+
+    expected_summary_claims = {
+        "pytest_exit_code": pytest_exit_code,
+        "failed_test_count": failed_test_count,
+        "performance_passed": benchmark.get("passed"),
+        "performance_quality_passed": benchmark.get("quality_passed"),
+    }
+    expected_summary_passed = (
+        pytest_exit_code == 0
+        and failed_test_count == 0
+        and benchmark.get("passed") is True
+        and benchmark.get("quality_passed") is True
+    )
+    if (
+        summary.get("claims") != expected_summary_claims
+        or summary.get("passed") is not expected_summary_passed
+        or summary.get("release_id") not in expected_run_ids
+    ):
+        issues.append(
+            _machine_issue(
+                artifact_name="release_evidence_executive_summary",
+                artifact_path=summary_path,
+                reason="executive_summary_contradicts_machine_evidence",
+                detail="Executive summary claims do not match the machine evidence",
+            )
+        )
+    return tuple(issues)
+
+
+def _read_machine_evidence(path: Path, name: str) -> tuple[dict[str, Any], str]:
+    resolved_path = path if path.is_absolute() else (ROOT / path).resolve()
+    payload = json.loads(resolved_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"Expected {name} to be a JSON object: {_rel(resolved_path)}")
+    return payload, _rel(resolved_path)
+
+
+def _machine_issue(
+    *, artifact_name: str, artifact_path: str, reason: str, detail: str
+) -> ReleaseEvidenceReviewIssue:
+    return ReleaseEvidenceReviewIssue(
+        manifest_path="machine evidence",
+        artifact_name=artifact_name,
+        artifact_path=artifact_path,
+        reason=reason,
+        detail=detail,
+        waived=False,
+        waiver_owner="",
+        waiver_expires_on="",
+        waiver_justification="",
+    )
 
 
 def _read_waivers(
@@ -515,12 +726,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         description="Review release evidence manifests and enforce waiver governance."
     )
     parser.add_argument("--manifest-json", action="append", required=True)
+    parser.add_argument("--test-telemetry-json", required=True)
+    parser.add_argument("--ci-performance-benchmark-json", required=True)
+    parser.add_argument("--executive-summary-json", required=True)
     parser.add_argument("--waivers-yaml", default="")
     parser.add_argument("--output-json", default="out/release_evidence_review.json")
     parser.add_argument("--output-md", default="out/release_evidence_review.md")
     args = parser.parse_args(argv)
     review = build_release_evidence_review(
         manifest_paths=tuple(Path(path) for path in args.manifest_json),
+        test_telemetry_path=Path(args.test_telemetry_json),
+        ci_performance_benchmark_path=Path(args.ci_performance_benchmark_json),
+        executive_summary_path=Path(args.executive_summary_json),
         waiver_path=Path(args.waivers_yaml) if args.waivers_yaml else None,
         generated_at=_now(),
     )

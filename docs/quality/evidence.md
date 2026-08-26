@@ -6,7 +6,24 @@
 
 Release evidence is generated from executed quality-gate artifacts; it is not hand-maintained in the README. The evidence tooling creates a manifest with artifact identity, schema expectations, freshness, and commit context, then produces a review against the waiver policy.
 
-Use the repository scripts `scripts/quality/release_evidence_manifest.py` and `scripts/quality/release_evidence_review.py` with the arguments required by CI or the release procedure. Retain generated manifests and reviews in the configured output/artifact mechanism. The waiver policy is [`release_evidence_waivers.yaml`](release_evidence_waivers.yaml).
+`test_telemetry_ci.json` and `ci_performance_benchmark.json` are mandatory
+release-review inputs, not merely archived diagnostics. The telemetry records
+the exact repository SHA and release run ID supplied to the pytest producer;
+the benchmark carries that provenance forward and exposes both `passed` and
+the legacy-compatible `quality_passed` result. The machine-derived
+`release_evidence_executive_summary_ci.json` repeats only scalar status claims
+from those two artifacts. The review fails when pytest exited nonzero, any test
+failed, either benchmark status is false, the summary contradicts the machine
+evidence, or the manifest and required inputs do not share exactly one commit
+SHA and run ID. Waivers cannot turn a failed manifest or failed machine input
+into a passing release review.
+
+Use the repository scripts `scripts/quality/release_evidence_manifest.py`,
+`scripts/quality/build_release_evidence_summary.py`, and
+`scripts/quality/release_evidence_review.py` with the arguments required by CI
+or the release procedure. Retain generated manifests and reviews in the
+configured output/artifact mechanism. The waiver policy is
+[`release_evidence_waivers.yaml`](release_evidence_waivers.yaml).
 
 CI also runs `scripts/quality/generate_workflow_queue_evidence.py` against a temporary SQLite database. It requires an expected full commit SHA, checks that HEAD is unchanged before and after generation, and records only queue record IDs and scalar counts. The fixed scenario proves submission, lease/start, completion, one downstream outbox event and materialisation, expired-lease recovery, a bounded retry, a budget deferral, and a dry-run publication-approval handoff. The artifact is required in the release manifest and is included in `release-evidence-bundle`.
 

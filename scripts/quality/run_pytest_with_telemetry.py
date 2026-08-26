@@ -40,6 +40,8 @@ class PytestTelemetryCollector:
         *,
         total_run_duration_ms: int | None = None,
         pytest_exit_code: int | None = None,
+        repository_commit_sha: str | None = None,
+        evidence_run_id: str | None = None,
     ) -> dict[str, object]:
         records = sorted(self._records, key=lambda item: str(item["nodeid"]))
         payload: dict[str, object] = {
@@ -51,24 +53,37 @@ class PytestTelemetryCollector:
             payload["total_run_duration_ms"] = max(0, int(total_run_duration_ms))
         if pytest_exit_code is not None:
             payload["pytest_exit_code"] = int(pytest_exit_code)
+        if repository_commit_sha is not None:
+            payload["repository_commit_sha"] = str(repository_commit_sha)
+        if evidence_run_id is not None:
+            payload["evidence_run_id"] = str(evidence_run_id)
         return payload
 
 
-def parse_runner_args(argv: list[str] | None = None) -> tuple[str, list[str]]:
+def parse_runner_args(argv: list[str] | None = None) -> tuple[str, str, str, list[str]]:
     parser = argparse.ArgumentParser(
         description="Run pytest and retain scalar per-test timings."
     )
     parser.add_argument("--output-json", required=True)
+    parser.add_argument("--repository-commit-sha", required=True)
+    parser.add_argument("--evidence-run-id", required=True)
     parser.add_argument("pytest_args", nargs=argparse.REMAINDER)
     args = parser.parse_args(argv)
     pytest_args = list(args.pytest_args)
     if pytest_args[:1] == ["--"]:
         pytest_args = pytest_args[1:]
-    return str(args.output_json), pytest_args
+    return (
+        str(args.output_json),
+        str(args.repository_commit_sha),
+        str(args.evidence_run_id),
+        pytest_args,
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
-    output_json, pytest_args = parse_runner_args(argv)
+    output_json, repository_commit_sha, evidence_run_id, pytest_args = (
+        parse_runner_args(argv)
+    )
     collector = PytestTelemetryCollector()
     started_ns = time.monotonic_ns()
     exit_code = pytest.main(pytest_args, plugins=[collector])
@@ -82,6 +97,8 @@ def main(argv: list[str] | None = None) -> int:
             collector.payload(
                 total_run_duration_ms=total_run_duration_ms,
                 pytest_exit_code=exit_code,
+                repository_commit_sha=repository_commit_sha,
+                evidence_run_id=evidence_run_id,
             ),
             ensure_ascii=True,
             indent=2,

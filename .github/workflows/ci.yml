@@ -82,7 +82,7 @@ jobs:
       - name: Mark release evidence freshness start
         run: echo "RELEASE_EVIDENCE_STARTED_AT=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
       - name: Run default pytest suite with coverage and timing telemetry
-        run: python scripts/quality/run_pytest_with_telemetry.py --output-json out/test_telemetry_ci.json -- -n 8 --dist=worksteal --cov=src --cov-report=xml --cov-report=term-missing
+        run: python scripts/quality/run_pytest_with_telemetry.py --output-json out/test_telemetry_ci.json --repository-commit-sha "${GITHUB_SHA}" --evidence-run-id "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" -- -n 8 --dist=worksteal --cov=src --cov-report=xml --cov-report=term-missing
       - name: Coverage gate
         run: python scripts/quality/run_command_with_telemetry.py --output-json out/quality_command_telemetry_ci.json --stage coverage -- python scripts/ci/check_coverage.py --coverage-xml coverage.xml
       - name: Mutation gate
@@ -150,6 +150,10 @@ jobs:
             --expected-schema coverage="${COVERAGE_SCHEMA}" \
             --artifact mutation=mutation_results.json \
             --expected-schema mutation=1.0 \
+            --artifact test_telemetry=out/test_telemetry_ci.json \
+            --expected-schema test_telemetry=1.0 \
+            --artifact ci_performance_benchmark=out/ci_performance_benchmark.json \
+            --expected-schema ci_performance_benchmark=1.0 \
             --artifact pdf_candidate=out/pdf_candidate_benchmark_ci.json \
             --expected-schema pdf_candidate=1.0 \
             --artifact pdf_crop_refine=out/pdf_crop_refine_benchmark_ci.json \
@@ -166,6 +170,8 @@ jobs:
             --expected-schema workflow_queue_evidence=1.0 \
             --artifact-command coverage="python scripts/ci/check_coverage.py --coverage-xml coverage.xml" \
             --artifact-command mutation="python scripts/ci/run_mutation_gate.py --json-out mutation_results.json" \
+            --artifact-command test_telemetry="python scripts/quality/run_pytest_with_telemetry.py --output-json out/test_telemetry_ci.json --repository-commit-sha ${GITHUB_SHA} --evidence-run-id ${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT} -- -n 8 --dist=worksteal --cov=src --cov-report=xml --cov-report=term-missing" \
+            --artifact-command ci_performance_benchmark="python scripts/quality/build_ci_performance_benchmark.py --test-telemetry out/test_telemetry_ci.json --command-telemetry out/quality_command_telemetry_ci.json --output-json out/ci_performance_benchmark.json" \
             --artifact-command pdf_candidate="python scripts/ci/check_pdf_candidate_benchmark.py --baseline docs/quality/pdf_candidate_extraction_benchmark_baseline.json --output-json out/pdf_candidate_benchmark_ci.json" \
             --artifact-command pdf_crop_refine="python scripts/ci/check_pdf_crop_refine_benchmark.py --baseline docs/quality/pdf_crop_refine_benchmark_baseline.json --output-json out/pdf_crop_refine_benchmark_ci.json" \
             --artifact-command pdf_trends="python scripts/ci/check_pdf_benchmark_trends.py --candidate-json out/pdf_candidate_benchmark_ci.json --crop-refine-json out/pdf_crop_refine_benchmark_ci.json --history-json out/pdf_benchmark_trend_history_ci.json --output-json out/pdf_benchmark_trends_ci.json --update-history --allow-missing-inputs" \
@@ -177,10 +183,15 @@ jobs:
             --require-head-commit \
             --allow-issues \
             --output-json out/release_evidence_manifest_ci.json
+      - name: Build release evidence executive summary
+        run: python scripts/quality/build_release_evidence_summary.py --release-id "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" --repository-commit-sha "${GITHUB_SHA}" --test-telemetry out/test_telemetry_ci.json --ci-performance-benchmark out/ci_performance_benchmark.json --output-json out/release_evidence_executive_summary_ci.json
       - name: Build release evidence review
         run: |
           python scripts/quality/release_evidence_review.py \
             --manifest-json out/release_evidence_manifest_ci.json \
+            --test-telemetry-json out/test_telemetry_ci.json \
+            --ci-performance-benchmark-json out/ci_performance_benchmark.json \
+            --executive-summary-json out/release_evidence_executive_summary_ci.json \
             --waivers-yaml docs/quality/release_evidence_waivers.yaml \
             --output-json out/release_evidence_review_ci.json \
             --output-md out/release_evidence_review_ci.md
@@ -198,6 +209,7 @@ jobs:
             out/release_evidence_manifest_ci.json
             out/release_evidence_review_ci.json
             out/release_evidence_review_ci.md
+            out/release_evidence_executive_summary_ci.json
             out/workflow_queue_evidence_ci.json
             docs/quality/release_evidence_waivers.yaml
             out/wordpress_entity_rest_verification_staging.json

@@ -40,10 +40,13 @@ def build_benchmark(
     )
     return {
         "schema_version": "1.0",
+        "repository_commit_sha": str(test_telemetry.get("repository_commit_sha") or ""),
+        "evidence_run_id": str(test_telemetry.get("evidence_run_id") or ""),
         "measurement_profile_hash": MEASUREMENT_PROFILE_HASH,
         "total_run_duration_ms": total_test_duration
         + sum(stage["wall_time_ms"] for stage in quality_stages),
         "quality_passed": quality_passed,
+        "passed": quality_passed,
         "estimated_cost_usd": "0",
         "test_summary": test_summary,
         "quality_stage_summaries": quality_stages,

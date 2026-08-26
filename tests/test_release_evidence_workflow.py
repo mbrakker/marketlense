@@ -17,6 +17,7 @@ def test_ci_workflow_archives_fresh_release_evidence_bundle() -> None:
         "Generate deterministic workflow queue evidence"
     )
     manifest_index = workflow.index("Build release evidence manifest")
+    executive_summary_index = workflow.index("Build release evidence executive summary")
     review_index = workflow.index("Build release evidence review")
     summary_index = workflow.index("Write release evidence job summary")
     upload_index = workflow.index("actions/upload-artifact@v4")
@@ -28,6 +29,7 @@ def test_ci_workflow_archives_fresh_release_evidence_bundle() -> None:
         < health_index
         < accounting_index
         < manifest_index
+        < executive_summary_index
         < review_index
         < summary_index
         < upload_index
@@ -44,6 +46,19 @@ def test_ci_workflow_archives_fresh_release_evidence_bundle() -> None:
     assert "out/llm_accounting_reconciliation_ci.json" in workflow
     assert "out/workflow_queue_evidence_ci.json" in workflow
     assert '--expected-commit-sha "${GITHUB_SHA}"' in workflow
+    assert '--repository-commit-sha "${GITHUB_SHA}"' in workflow
+    assert '--evidence-run-id "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"' in workflow
+    assert "out/test_telemetry_ci.json" in workflow
+    assert "out/ci_performance_benchmark.json" in workflow
+    assert "out/release_evidence_executive_summary_ci.json" in workflow
+    assert "--test-telemetry-json out/test_telemetry_ci.json" in workflow
+    assert (
+        "--ci-performance-benchmark-json out/ci_performance_benchmark.json" in workflow
+    )
+    assert (
+        "--executive-summary-json out/release_evidence_executive_summary_ci.json"
+        in workflow
+    )
     assert "release_evidence_job_summary.py" in workflow
     summary_step = workflow[summary_index:upload_index]
     assert "hashFiles('out/release_evidence_review_ci.json')" in summary_step

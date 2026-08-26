@@ -12,6 +12,14 @@ python scripts/ci/run_quality_gate.py --list
 
 The local gate sequence mirrors GitHub's pre-test checks, including dependency consistency, formatting and linting, typing, architecture and I/O policy, service-boundary mapping, refactor evidence, bounded structured logging, repository hygiene, runbook and backlog ownership, contract snapshots, and WordPress checks. It then runs the default tests, coverage, mutation testing, and retained quality regressions. Benchmarks and evidence artifacts are separate gates where configured. The release bundle also includes exact-HEAD deterministic queue evidence; it is a temporary-SQLite semantic check, not live production throughput evidence.
 
+The release-review gate requires the pytest telemetry, CI performance benchmark,
+and machine-derived executive summary alongside the manifest. A green manifest
+alone is insufficient: release review rejects nonzero pytest exit codes,
+recorded failed tests, `ci_performance_benchmark.json.passed: false`, a false
+`quality_passed`, contradictory summary claims, or mismatched commit/run
+provenance. A waiver may record an exception but cannot make failed machine
+evidence or a failed manifest release-green.
+
 The GitHub job summary runs only when its release-review and queue-evidence inputs exist. The evidence bundle upload still runs after an earlier gate fails, retaining available diagnostics without adding a missing-artifact summary failure.
 
 ## GitHub merge enforcement
