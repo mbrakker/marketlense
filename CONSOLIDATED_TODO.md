@@ -276,6 +276,17 @@ The original ten-item screenshot baseline is complete in the committed implement
 - Every member must pass semantic validation, public editorial quality, complete manifest/asset checks, canonical publish readback, and a repeat idempotency lookup; any failure stops the cohort and preserves the failed evidence.
 - Retained evidence compares the cohort's actual calls/tokens/spend, elapsed time, package completeness, created-versus-reused posts, and typed failures with the approved forecast; focused tests cover target isolation and no-write behavior when approval is absent.
 
+**2026-08-26 current-release attempt (not a successful canary):** Exact producer `29a7424902d7e84d8c282ab8a3bcb55c8cb73d59` used an isolated, budgeted sandbox profile. After the initial pre-freeze source-identity rejections, canonical acquisition found compatible real reports and froze the immutable three-member manifest `out/p12_p14_canary_20260826/output/cohorts/bd73897b-b09f-4ef1-832e-ede96fb6ea22.json` (cohort `d4aeeb4fa0d28fc803d3d8427050c3752de71d88d656a7f26fa97b7231234814`; validation run `validation:8439f6863b21fbdf990aa91a49a8437abacaf58c88590c9067621e76955454b6`; configuration hash `3cbd9303b17de4d7762c89c208204c604b0ecfd9eee93ee01317396d8c123e4d`; policy hash `77302ec0862da786102ee09959e210ef62e9bf9ae8b2df1e5972b9cbaf9e2df7`). All three admitted members ran without replacement. One reached `publish_ready`; two retained the typed terminal `publish_readiness_failed` evidence. The normal run recorded 63 model calls, 587,087 input tokens, 64,531 output tokens, and $0.194855 estimated cost from 21:16:47 to 21:20:33 UTC, against the admission estimate of three calls, 26,960 tokens, and $0.029968. The cohort consequently stopped before publication; replay was not run and P12 remains Active.
+
+| Retained canary measure | Result |
+| --- | --- |
+| Frozen / admitted / publish-ready | 3 / 3 / 1 |
+| Bound / published / authenticated readbacks | 0 / 0 / 0 |
+| Non-manifest candidates admitted or published | 0 / 0 |
+| WordPress writes / browser launches / retries | 0 / 0 / 0 |
+| Replacement reports / operator interventions after freeze | 0 / 0 |
+| Candidate-set artifact and hash | Not created: binding correctly failed closed |
+
 #### P14. Retain isolated live proof of strict cohort-manifest publication binding
 
 - **Title:** Retain isolated live proof of strict cohort-manifest publication binding
@@ -284,6 +295,8 @@ The original ten-item screenshot baseline is complete in the committed implement
 - **Benefit:** The immutable cohort becomes the authoritative candidate set, preventing unrelated drafts from being preflighted or published and making bounded canaries safer to run in shared artifact namespaces.
 - **Risks to avoid:** Preserve the existing no-manifest bulk-publish behavior, canonical artifact/path validation, approval gates, idempotency lookup, and fail-closed handling for missing or ambiguous cohort artifacts.
 - **Implemented evidence:** Focused cohort/publication fixtures cover successful one-member binding, missing member, duplicate mapping, changed mapping, stale/incompatible mapping, unready member, unrelated artifact isolation, deterministic hash reuse, and zero WordPress calls on binding failure. The no-manifest publication path remains covered by the publish-orchestrator regression suite.
+
+**2026-08-26 live-proof status:** The isolated immutable cohort above exercised P14. Its `publish-wp --cohort-manifest` resolution returned the typed `validation_cohort_publication_mapping_incompatible` error before any WordPress operation. The isolated publication state contains 0 published records and the budget ledger records 0 WordPress writes; no non-manifest candidate was admitted. Because two members were not publish-ready and the retained mapping was incompatible, resolution produced no `publication_candidate_set.json` or `candidate_set_hash`, no preflight, and no WordPress post. This is valid fail-closed evidence, not the required positive live proof. P14 remains Active pending a fully publish-ready immutable cohort that retains and replays the candidate set.
 
 **Retained P14 fixture measurement** — baseline is the behavior immediately before `98f41eba`; current is `98f41eba`/current `HEAD`. The controlled fixtures use one valid admitted member, one changed/ambiguous member mapping, and one unrelated artifact in the same output namespace.
 
