@@ -38,6 +38,7 @@ def _health_request(
     embedding_version: str,
     provider: str,
     model: str,
+    dimensions: int,
     report_ids: list[str],
     publishers: list[str],
     max_estimated_tokens: int = 0,
@@ -50,6 +51,7 @@ def _health_request(
         embedding_version=embedding_version,
         provider=provider,
         model=model,
+        dimensions=dimensions,
         report_ids=report_ids,
         publishers=publishers,
         max_estimated_tokens=max_estimated_tokens,
@@ -121,9 +123,10 @@ def _ctx(task_id: str):
 @cli_app.command("embedding-queue-health")
 def embedding_queue_health(
     reports_db: str = typer.Option("state/reports.sqlite"),
-    embedding_version: str = typer.Option("claim-embedding.v1"),
+    embedding_version: str = typer.Option("claim-embedding.openai-large-1024.v1"),
     provider: str = typer.Option("openai"),
-    model: str = typer.Option("text-embedding-3-small"),
+    model: str = typer.Option("text-embedding-3-large"),
+    dimensions: int = typer.Option(1024, min=1024, max=1024),
     report_id: list[str] | None = typer.Option(None),
     publisher: list[str] | None = typer.Option(None),
     output: str = typer.Option("out/claim-embedding-queue-health.json"),
@@ -136,6 +139,7 @@ def embedding_queue_health(
             embedding_version=embedding_version,
             provider=provider,
             model=model,
+            dimensions=dimensions,
             report_ids=report_id or [],
             publishers=publisher or [],
         ),
@@ -160,9 +164,10 @@ def embedding_queue_health(
 @cli_app.command("embedding-queue-reconcile")
 def embedding_queue_reconcile(
     reports_db: str = typer.Option("state/reports.sqlite"),
-    embedding_version: str = typer.Option("claim-embedding.v1"),
+    embedding_version: str = typer.Option("claim-embedding.openai-large-1024.v1"),
     provider: str = typer.Option("openai"),
-    model: str = typer.Option("text-embedding-3-small"),
+    model: str = typer.Option("text-embedding-3-large"),
+    dimensions: int = typer.Option(1024, min=1024, max=1024),
     report_id: list[str] | None = typer.Option(None),
     publisher: list[str] | None = typer.Option(None),
     dry_run: bool = typer.Option(True, "--dry-run/--apply"),
@@ -175,6 +180,7 @@ def embedding_queue_reconcile(
         embedding_version=embedding_version,
         provider=provider,
         model=model,
+        dimensions=dimensions,
         report_ids=report_id or [],
         publishers=publisher or [],
     )
@@ -203,9 +209,11 @@ def embedding_queue_reconcile(
 @cli_app.command("embedding-queue-run")
 def embedding_queue_run(
     reports_db: str = typer.Option("state/reports.sqlite"),
-    embedding_version: str = typer.Option("claim-embedding.v1"),
+    embedding_version: str = typer.Option("claim-embedding.openai-large-1024.v1"),
     provider: str = typer.Option("openai"),
-    model: str = typer.Option("text-embedding-3-small"),
+    model: str = typer.Option("text-embedding-3-large"),
+    dimensions: int = typer.Option(1024, min=1024, max=1024),
+    batch_size: int = typer.Option(25, min=1, max=2048),
     max_rows: int = typer.Option(25, min=1),
     max_reports: int = typer.Option(5, min=1),
     max_estimated_tokens: int = typer.Option(8_000, min=1),
@@ -241,6 +249,8 @@ def embedding_queue_run(
             provider=provider,
             model=model,
             embedding_version=embedding_version,
+            dimensions=dimensions,
+            batch_size=batch_size,
             limit=max_rows,
             timeout_seconds=None,
             ctx=ctx,
@@ -268,6 +278,7 @@ def embedding_queue_run(
             "provider calls avoided": response.provider_calls_avoided,
             "actual input tokens": response.actual_input_tokens,
             "actual estimated cost usd": response.actual_cost_usd,
+            "provider calls": response.provider_call_count,
             "artifact": output,
         },
     )
@@ -276,9 +287,10 @@ def embedding_queue_run(
 @cli_app.command("embedding-queue-failures")
 def embedding_queue_failures(
     reports_db: str = typer.Option("state/reports.sqlite"),
-    embedding_version: str = typer.Option("claim-embedding.v1"),
+    embedding_version: str = typer.Option("claim-embedding.openai-large-1024.v1"),
     provider: str = typer.Option("openai"),
-    model: str = typer.Option("text-embedding-3-small"),
+    model: str = typer.Option("text-embedding-3-large"),
+    dimensions: int = typer.Option(1024, min=1024, max=1024),
     report_id: list[str] | None = typer.Option(None),
     output: str = typer.Option("out/claim-embedding-queue-failures.json"),
 ) -> None:
@@ -290,6 +302,7 @@ def embedding_queue_failures(
             embedding_version=embedding_version,
             provider=provider,
             model=model,
+            dimensions=dimensions,
             report_ids=report_id or [],
             publishers=[],
         ),

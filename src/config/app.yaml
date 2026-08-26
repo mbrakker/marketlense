@@ -447,9 +447,9 @@ llm_execution_policies:
     fallback_policy: same_provider_only
     pricing_key: "gpt-5.6-luna"
   claim_embedding/generate:
-    schema_version: "1.0"
+    schema_version: "2.0"
     provider: openai
-    model: "text-embedding-3-small"
+    model: "text-embedding-3-large"
     temperature: 0.0
     seed_policy: disabled
     max_output_tokens: 1
@@ -457,10 +457,12 @@ llm_execution_policies:
     timeout_seconds: 120
     provider_retry_count: 0
     structured_output_mode: embedding
-    structured_output_schema_identity: "claim_embedding.vector.v1"
-    output_validator_identity: "claim_embedding.vector_dimensions.validator.v1"
+    structured_output_schema_identity: "claim_embedding.vector.1024.v1"
+    output_validator_identity: "claim_embedding.vector_dimensions.1024.validator.v1"
+    dimensions: 1024
+    batch_size: 25
     fallback_policy: disabled
-    pricing_key: "text-embedding-3-small"
+    pricing_key: "text-embedding-3-large"
 
 rank:
   model: "gpt-5.6-luna"

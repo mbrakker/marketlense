@@ -212,6 +212,14 @@ def _classification(
             estimated_cost,
             metadata,
         )
+    if status == "embedded":
+        return (
+            "ready_to_embed",
+            "configured_embedding_identity_requires_embedding",
+            estimated_tokens,
+            estimated_cost,
+            metadata,
+        )
     if request.max_estimated_tokens and estimated_tokens > request.max_estimated_tokens:
         return (
             "blocked_by_budget",
@@ -256,6 +264,7 @@ def _rows(
         request.embedding_version,
         request.provider,
         request.model,
+        request.dimensions,
     ]
     if request.report_ids:
         clauses.append(
@@ -292,6 +301,7 @@ def _rows(
               AND e.embedding_version=?
               AND e.provider=?
               AND e.model=?
+              AND e.dimensions=?
               AND e.status='embedded'
           ) AS matching_embedding_count
         FROM vector_projection_queue q
@@ -612,6 +622,7 @@ def acquire_claim_embedding_execution_lease(
     embedding_version: str,
     provider: str,
     model: str,
+    dimensions: int = 1024,
     lease_id: str,
     lease_expires_at_utc: str,
     ctx: RunContext,
@@ -627,6 +638,7 @@ def acquire_claim_embedding_execution_lease(
                 embedding_version=embedding_version,
                 provider=provider,
                 model=model,
+                dimensions=dimensions,
                 entity_types=["claim"],
             )
             current = next(
@@ -654,6 +666,7 @@ def acquire_claim_embedding_execution_lease(
                     WHERE e.entity_uid=vector_projection_queue.entity_uid
                       AND e.content_hash=vector_projection_queue.content_hash
                       AND e.embedding_version=? AND e.provider=? AND e.model=?
+                      AND e.dimensions=?
                       AND e.status='embedded'
                   )
                 """,
@@ -666,6 +679,7 @@ def acquire_claim_embedding_execution_lease(
                     embedding_version,
                     provider,
                     model,
+                    dimensions,
                 ),
             )
             return cursor.rowcount == 1

@@ -30,6 +30,8 @@ from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.analytics_store_service")
 
+CLAIM_EMBEDDING_DIMENSIONS = 1024
+
 
 def _embedding_uid(
     *,
@@ -38,6 +40,7 @@ def _embedding_uid(
     embedding_version: str,
     provider: str,
     model: str,
+    dimensions: int,
 ) -> EntityUid:
     payload = _json(
         {
@@ -46,6 +49,7 @@ def _embedding_uid(
             "embedding_version": embedding_version,
             "provider": provider,
             "model": model,
+            "dimensions": dimensions,
         }
     )
     digest = hashlib.sha256(payload.encode("utf-8")).hexdigest()
@@ -59,6 +63,7 @@ def claim_embedding_uid(
     embedding_version: str,
     provider: str,
     model: str,
+    dimensions: int = CLAIM_EMBEDDING_DIMENSIONS,
 ) -> EntityUid:
     return _embedding_uid(
         entity_uid=entity_uid,
@@ -66,6 +71,7 @@ def claim_embedding_uid(
         embedding_version=embedding_version,
         provider=provider,
         model=model,
+        dimensions=dimensions,
     )
 
 
@@ -194,6 +200,7 @@ def read_pending_claim_embedding_rows(
                         AND e.embedding_version = ?
                         AND e.provider = ?
                         AND e.model = ?
+                        AND e.dimensions = ?
                         AND e.status = 'embedded'
                     )
                   )
@@ -205,6 +212,7 @@ def read_pending_claim_embedding_rows(
                     request.embedding_version,
                     request.provider,
                     request.model,
+                    request.dimensions,
                     limit,
                 ),
             ).fetchall()
@@ -250,6 +258,17 @@ def _validate_embedding_record(record: ClaimEmbeddingRecord) -> None:
                 retryable=False,
                 severity="error",
                 context={"embedding_uid": str(record.embedding_uid)},
+            )
+        if int(record.dimensions) != CLAIM_EMBEDDING_DIMENSIONS:
+            raise AppError(
+                code="claim_embedding_dimensions_mismatch",
+                message="Claim embedding vectors must use 1024 dimensions",
+                retryable=False,
+                severity="error",
+                context={
+                    "embedding_uid": str(record.embedding_uid),
+                    "dimensions": record.dimensions,
+                },
             )
         return
     if record.status == "failed":
@@ -540,7 +559,8 @@ def read_claim_embeddings(
         str(topic).strip().casefold() for topic in request.topics if str(topic).strip()
     }
     clauses = ["status IN (" + ",".join("?" for _ in statuses) + ")"]
-    params: list[Any] = list(statuses)
+    clauses.append("(status <> 'embedded' OR dimensions=?)")
+    params: list[Any] = [*statuses, CLAIM_EMBEDDING_DIMENSIONS]
     if request.claim_uids:
         clauses.append(
             "claim_uid IN (" + ",".join("?" for _ in request.claim_uids) + ")"

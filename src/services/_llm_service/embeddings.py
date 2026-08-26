@@ -84,6 +84,13 @@ def openai_create_embeddings(
             retryable=False,
             severity="error",
         )
+    if int(request.dimensions) <= 0:
+        raise AppError(
+            code="openai_embedding_dimensions_invalid",
+            message="Embedding dimensions must be a positive integer",
+            retryable=False,
+            severity="error",
+        )
     logger.info(
         log_event(
             ctx,
@@ -93,6 +100,7 @@ def openai_create_embeddings(
             fields={
                 "model": request.model,
                 "input_count": len(inputs),
+                "dimensions": request.dimensions,
                 "timeout_seconds": request.timeout_seconds,
             },
         )
@@ -104,7 +112,11 @@ def openai_create_embeddings(
             timeout_seconds=request.timeout_seconds,
             operation="embedding_create",
         )
-        resp = client.embeddings.create(model=request.model, input=inputs)
+        resp = client.embeddings.create(
+            model=request.model,
+            input=inputs,
+            dimensions=request.dimensions,
+        )
     except AppError:
         raise
     except OPENAI_REQUEST_EXCEPTIONS as exc:
@@ -122,6 +134,14 @@ def openai_create_embeddings(
         ) from exc
 
     vectors = _embedding_vectors_from_response(resp)
+    if any(len(vector) != request.dimensions for vector in vectors):
+        raise AppError(
+            code="openai_embedding_dimensions_mismatch",
+            message="OpenAI embedding vectors did not match requested dimensions",
+            retryable=True,
+            severity="error",
+            context={"expected": request.dimensions, "actual": len(vectors[0])},
+        )
     input_tokens, total_tokens = _embedding_usage(resp)
     request_id = _value_from_response(resp, "id")
     model = str(_value_from_response(resp, "model") or request.model)

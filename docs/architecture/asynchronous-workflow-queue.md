@@ -253,6 +253,14 @@ action rather than being silently retried by a parallel scheduler.
 existing oldest-first fairness, execution-lease, unchanged-content, retry and
 cost-accounting rules. The workflow job only carries the claim/embedding row
 reference; it never copies claim text or vector data into `workflow_jobs`.
+Production claim embeddings use OpenAI `text-embedding-3-large` at exactly
+1,024 dimensions. Their durable identity includes content hash, embedding
+version, provider, model, and dimensions; queue health and lease admission
+require that same identity, so a retained small-model or wrong-sized vector is
+not reused. The worker leases every claim separately, then may submit up to 25
+leased claim texts in one provider request and still persists each result,
+queue transition, retry state, idempotency identity, and cost outcome
+independently.
 `signal_candidate` delegates to the existing source-linked deterministic
 candidate extractor, retains candidates in the analytics store, and emits one
 deduplicated `signal_generation` job per approved candidate group. Both workers

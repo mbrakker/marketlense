@@ -49,8 +49,8 @@ def _workflow_request(db_path: str, ctx: RunContext) -> ClaimEmbeddingWorkflowRe
         db_path=db_path,
         api_key="key",
         provider="openai",
-        model="text-embedding-3-small",
-        embedding_version="claim-embedding.v1",
+        model="text-embedding-3-large",
+        embedding_version="claim-embedding.openai-large-1024.v1",
         limit=25,
         timeout_seconds=9.0,
         ctx=ctx,
@@ -87,9 +87,9 @@ def test_claim_embedding_workflow_persists_vectors_and_skips_unchanged_reruns(
         calls.append(list(request.inputs))
         return OpenAIEmbeddingResponse(
             schema_version="1.0",
-            embeddings=[[0.11, 0.22, 0.33] for _ in request.inputs],
+            embeddings=[[0.11] * request.dimensions for _ in request.inputs],
             model=request.model,
-            dimensions=3,
+            dimensions=request.dimensions,
             request_id="emb_claims_1",
             input_tokens=17,
             total_tokens=17,
@@ -135,14 +135,14 @@ def test_claim_embedding_workflow_persists_vectors_and_skips_unchanged_reruns(
     assert record.claim_uid == batch.claims[0].claim_uid
     assert record.entity_uid == batch.claims[0].claim_uid
     assert record.report_id == "drive-file-1"
-    assert record.embedding_version == "claim-embedding.v1"
+    assert record.embedding_version == "claim-embedding.openai-large-1024.v1"
     assert record.content_hash == next(
         row.content_hash for row in batch.vector_queue if row.entity_type == "claim"
     )
     assert record.provider == "openai"
-    assert record.model == "text-embedding-3-small"
-    assert record.dimensions == 3
-    assert record.vector == [0.11, 0.22, 0.33]
+    assert record.model == "text-embedding-3-large"
+    assert record.dimensions == 1024
+    assert record.vector == [0.11] * 1024
     assert record.status == "embedded"
     assert record.generated_at_utc == "2026-04-22T13:00:00Z"
     assert record.external_vector_id.startswith("local:claim_embeddings:")
@@ -181,7 +181,7 @@ def test_claim_embedding_workflow_persists_vectors_and_skips_unchanged_reruns(
     )
     assert dict(queue) == {
         "embedding_status": "embedded",
-        "embedding_version": "claim-embedding.v1",
+        "embedding_version": "claim-embedding.openai-large-1024.v1",
     }
     assert_logs_have_required_fields(_events(caplog))
 
@@ -216,9 +216,9 @@ def test_claim_embedding_pending_read_limit_zero_returns_empty_contract(
         ClaimEmbeddingPendingReadRequest(
             schema_version="1.0",
             db_path=ingest_settings.reports_db,
-            embedding_version="claim-embedding.v1",
+            embedding_version="claim-embedding.openai-large-1024.v1",
             provider="openai",
-            model="text-embedding-3-small",
+            model="text-embedding-3-large",
             limit=0,
         ),
         run_context,
@@ -300,17 +300,15 @@ def test_claim_embedding_workflow_reembeds_when_content_hash_or_version_changes(
         ),
         run_context,
     )
-    vectors = iter([[0.1, 0.2], [0.7, 0.8], [0.9, 1.0]])
     calls: list[str] = []
 
     def _embed(request, _ctx):
         calls.append(request.model + ":" + request.inputs[0])
-        vector = next(vectors)
         return OpenAIEmbeddingResponse(
             schema_version="1.0",
-            embeddings=[vector],
+            embeddings=[[float(len(calls))] * request.dimensions],
             model=request.model,
-            dimensions=2,
+            dimensions=request.dimensions,
             request_id=f"emb_{len(calls)}",
             input_tokens=5,
             total_tokens=5,
@@ -326,7 +324,7 @@ def test_claim_embedding_workflow_reembeds_when_content_hash_or_version_changes(
     )
     version_two = replace(
         _workflow_request(ingest_settings.reports_db, run_context),
-        embedding_version="claim-embedding.v2",
+        embedding_version="claim-embedding.openai-large-1024.v2",
     )
     run_claim_embedding_workflow(version_two, dependencies=deps)
 
@@ -361,8 +359,8 @@ def test_claim_embedding_workflow_reembeds_when_content_hash_or_version_changes(
         run_context,
     ).embeddings
     assert [record.embedding_version for record in embedded] == [
-        "claim-embedding.v2",
-        "claim-embedding.v1",
+        "claim-embedding.openai-large-1024.v2",
+        "claim-embedding.openai-large-1024.v1",
     ]
     queue = _fetch_one(
         ingest_settings.reports_db,
@@ -377,3 +375,41 @@ def test_claim_embedding_workflow_reembeds_when_content_hash_or_version_changes(
         "embedding_status": "pending",
         "queue_reason_code": "",
     }
+
+
+def test_claim_embedding_workflow_reembeds_when_stored_model_identity_differs(
+    ingest_settings, run_context
+) -> None:
+    batch = _batch(ingest_settings, run_context)
+    upsert_projection(
+        AnalyticsProjectionUpsertRequest(
+            schema_version=PROJECTION_SCHEMA_VERSION,
+            db_path=ingest_settings.reports_db,
+            batch=batch,
+        ),
+        run_context,
+    )
+    calls: list[list[str]] = []
+
+    def _embed(request, _ctx):
+        calls.append(list(request.inputs))
+        return OpenAIEmbeddingResponse(
+            schema_version="1.0",
+            embeddings=[[0.2] * request.dimensions for _ in request.inputs],
+            model=request.model,
+            dimensions=request.dimensions,
+            request_id=f"model-migration-{len(calls)}",
+            input_tokens=4,
+            total_tokens=4,
+        )
+
+    request = _workflow_request(ingest_settings.reports_db, run_context)
+    deps = ClaimEmbeddingDependencies(create_embeddings=_embed)
+    first = run_claim_embedding_workflow(request, dependencies=deps)
+    with sqlite3.connect(ingest_settings.reports_db) as connection:
+        connection.execute("UPDATE claim_embeddings SET model='text-embedding-3-small'")
+    second = run_claim_embedding_workflow(request, dependencies=deps)
+
+    assert first.embedded_count == 1
+    assert second.embedded_count == 1
+    assert len(calls) == 2

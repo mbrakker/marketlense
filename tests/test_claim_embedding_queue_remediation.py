@@ -39,8 +39,8 @@ def _workflow_request(db_path: str, ctx, **changes) -> ClaimEmbeddingWorkflowReq
         db_path=db_path,
         api_key="key",
         provider="openai",
-        model="text-embedding-3-small",
-        embedding_version="claim-embedding.v1",
+        model="text-embedding-3-large",
+        embedding_version="claim-embedding.openai-large-1024.v1",
         limit=10,
         timeout_seconds=2.0,
         ctx=ctx,
@@ -52,9 +52,9 @@ def _health_request(db_path: str, **changes) -> ClaimEmbeddingQueueHealthRequest
     request = ClaimEmbeddingQueueHealthRequest(
         schema_version="1.0",
         db_path=db_path,
-        embedding_version="claim-embedding.v1",
+        embedding_version="claim-embedding.openai-large-1024.v1",
         provider="openai",
-        model="text-embedding-3-small",
+        model="text-embedding-3-large",
         entity_types=["claim"],
     )
     return replace(request, **changes)
@@ -284,9 +284,9 @@ def test_budget_denial_and_dry_run_make_no_provider_calls_or_writes(
         calls.extend(request.inputs)
         return OpenAIEmbeddingResponse(
             schema_version="1.0",
-            embeddings=[[0.1, 0.2]],
+            embeddings=[[0.1] * request.dimensions for _ in request.inputs],
             model=request.model,
-            dimensions=2,
+            dimensions=request.dimensions,
             request_id="concurrent-test",
             input_tokens=2,
             total_tokens=2,
@@ -320,9 +320,9 @@ def test_embedding_cost_is_accounted_when_the_rate_card_has_the_model(
     def _embed(request, _ctx):
         return OpenAIEmbeddingResponse(
             schema_version="1.0",
-            embeddings=[[0.1, 0.2]],
+            embeddings=[[0.1] * request.dimensions],
             model=request.model,
-            dimensions=2,
+            dimensions=request.dimensions,
             request_id="priced-embedding-test",
             input_tokens=100,
             total_tokens=100,
@@ -333,7 +333,7 @@ def test_embedding_cost_is_accounted_when_the_rate_card_has_the_model(
             ingest_settings.reports_db,
             run_context,
             model_pricing={
-                "text-embedding-3-small": {
+                "text-embedding-3-large": {
                     "input_tokens_per_1k_usd": 0.00002,
                     "output_tokens_per_1k_usd": 0.0,
                     "tool_call_usd": 0.0,
@@ -391,9 +391,9 @@ def test_runtime_limit_stops_before_provider_call(ingest_settings, run_context) 
         calls.extend(request.inputs)
         return OpenAIEmbeddingResponse(
             schema_version="1.0",
-            embeddings=[[0.1, 0.2]],
+            embeddings=[[0.1] * request.dimensions],
             model=request.model,
-            dimensions=2,
+            dimensions=request.dimensions,
             request_id="concurrent-test",
             input_tokens=2,
             total_tokens=2,
@@ -439,9 +439,9 @@ def test_batch_report_and_publisher_fairness_limits_are_respected(
         calls.extend(request.inputs)
         return OpenAIEmbeddingResponse(
             schema_version="1.0",
-            embeddings=[[0.1, 0.2]],
+            embeddings=[[0.1] * request.dimensions for _ in request.inputs],
             model=request.model,
-            dimensions=2,
+            dimensions=request.dimensions,
             request_id="fairness-test",
             input_tokens=2,
             total_tokens=2,
@@ -516,7 +516,7 @@ def test_provider_count_mismatch_is_retained_as_a_retryable_queue_failure(
             schema_version="1.0",
             embeddings=[],
             model=request.model,
-            dimensions=2,
+            dimensions=request.dimensions,
             request_id="wrong-count-test",
             input_tokens=0,
             total_tokens=0,
@@ -552,7 +552,7 @@ def test_provider_count_mismatch_is_retained_as_a_retryable_queue_failure(
             {
                 "max_estimated_cost_usd": 0.000000001,
                 "model_pricing": {
-                    "text-embedding-3-small": {
+                    "text-embedding-3-large": {
                         "input_tokens_per_1k_usd": 1.0,
                         "output_tokens_per_1k_usd": 0.0,
                         "tool_call_usd": 0.0,
@@ -586,9 +586,9 @@ def test_queue_admission_limits_avoid_provider_calls_before_embedding(
         calls.extend(request.inputs)
         return OpenAIEmbeddingResponse(
             schema_version="1.0",
-            embeddings=[[0.1, 0.2]],
+            embeddings=[[0.1] * request.dimensions],
             model=request.model,
-            dimensions=2,
+            dimensions=request.dimensions,
             request_id="admission-limit-test",
             input_tokens=2,
             total_tokens=2,
@@ -648,9 +648,9 @@ def test_concurrent_runs_have_one_successful_embedding_and_one_provider_call(
         time.sleep(0.05)
         return OpenAIEmbeddingResponse(
             schema_version="1.0",
-            embeddings=[[0.1, 0.2]],
+            embeddings=[[0.1] * request.dimensions],
             model=request.model,
-            dimensions=2,
+            dimensions=request.dimensions,
             request_id="concurrent-test",
             input_tokens=2,
             total_tokens=2,
@@ -677,6 +677,85 @@ def test_concurrent_runs_have_one_successful_embedding_and_one_provider_call(
 
     assert len(calls) == 1
     assert successful == 1
+
+
+def test_claim_embedding_workflow_batches_individually_leased_claims(
+    ingest_settings, run_context
+) -> None:
+    _seed_projection(ingest_settings, run_context)
+    _add_current_claim(
+        ingest_settings.reports_db,
+        entity_uid="drive-file-1:claim:second",
+        report_id="drive-file-1",
+        claim="A second representative claim",
+        evidence="The report contains a second evidence statement.",
+        publisher="Existing Publisher",
+        created_at_utc="2026-04-02T00:00:00Z",
+    )
+    calls: list[list[str]] = []
+
+    def _embed(request, _ctx):
+        calls.append(list(request.inputs))
+        return OpenAIEmbeddingResponse(
+            schema_version="1.0",
+            embeddings=[[0.1] * request.dimensions for _ in request.inputs],
+            model=request.model,
+            dimensions=request.dimensions,
+            request_id="batch-test",
+            input_tokens=8,
+            total_tokens=8,
+        )
+
+    response = run_claim_embedding_workflow(
+        _workflow_request(
+            ingest_settings.reports_db,
+            run_context,
+            model="text-embedding-3-large",
+            embedding_version="claim-embedding.openai-large-1024.v1",
+            dimensions=1024,
+            batch_size=2,
+        ),
+        dependencies=ClaimEmbeddingDependencies(create_embeddings=_embed),
+    )
+
+    assert response.embedded_count == 2
+    assert response.provider_call_count == 1
+    assert len(calls) == 1
+    assert len(calls[0]) == 2
+
+
+def test_claim_embedding_workflow_rejects_wrong_sized_provider_vectors(
+    ingest_settings, run_context
+) -> None:
+    _seed_projection(ingest_settings, run_context)
+
+    def _embed(request, _ctx):
+        return OpenAIEmbeddingResponse(
+            schema_version="1.0",
+            embeddings=[[0.1] * (request.dimensions - 1)],
+            model=request.model,
+            dimensions=request.dimensions - 1,
+            request_id="wrong-dimensions-test",
+            input_tokens=4,
+            total_tokens=4,
+        )
+
+    response = run_claim_embedding_workflow(
+        _workflow_request(
+            ingest_settings.reports_db,
+            run_context,
+            model="text-embedding-3-large",
+            embedding_version="claim-embedding.openai-large-1024.v1",
+            dimensions=1024,
+        ),
+        dependencies=ClaimEmbeddingDependencies(create_embeddings=_embed),
+    )
+
+    assert response.embedded_count == 0
+    assert response.failed_count == 1
+    assert _queue_state(ingest_settings.reports_db)["queue_reason_code"] == (
+        "claim_embedding_dimensions_mismatch"
+    )
 
 
 def test_active_lease_is_observable_and_excluded_from_new_admission(
@@ -712,9 +791,9 @@ def test_queue_transitions_reconcile_with_detailed_audit_rows(
     def _embed(request, _ctx):
         return OpenAIEmbeddingResponse(
             schema_version="1.0",
-            embeddings=[[0.1, 0.2]],
+            embeddings=[[0.1] * request.dimensions],
             model=request.model,
-            dimensions=2,
+            dimensions=request.dimensions,
             request_id="transition-test",
             input_tokens=4,
             total_tokens=4,

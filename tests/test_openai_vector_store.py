@@ -45,9 +45,7 @@ def _events(caplog) -> list[dict[str, object]]:
 
 
 @pytest.fixture(autouse=True)
-def _isolate_relative_usage_artifacts(
-    tmp_path, external_boundary_mocks_only
-) -> None:
+def _isolate_relative_usage_artifacts(tmp_path, external_boundary_mocks_only) -> None:
     """Keep default accounting artifacts isolated to the current test."""
     external_boundary_mocks_only.chdir(tmp_path)
 
@@ -607,10 +605,10 @@ def test_openai_embedding_service_returns_vectors_and_metadata(
         "embeddings.create",
         SimpleNamespace(
             data=[
-                SimpleNamespace(embedding=[0.1, 0.2, 0.3]),
-                SimpleNamespace(embedding=[0.4, 0.5, 0.6]),
+                SimpleNamespace(embedding=[0.1] * 1024),
+                SimpleNamespace(embedding=[0.2] * 1024),
             ],
-            model="text-embedding-3-small",
+            model="text-embedding-3-large",
             usage=SimpleNamespace(prompt_tokens=9, total_tokens=9),
             id="emb_1",
         ),
@@ -621,21 +619,26 @@ def test_openai_embedding_service_returns_vectors_and_metadata(
         OpenAIEmbeddingRequest(
             schema_version="1.0",
             api_key="key",
-            model="text-embedding-3-small",
+            model="text-embedding-3-large",
             inputs=["first claim", "second claim"],
+            dimensions=1024,
             timeout_seconds=8.0,
         ),
         _ctx(),
     )
 
-    assert resp.embeddings == [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]
-    assert resp.dimensions == 3
-    assert resp.model == "text-embedding-3-small"
+    assert resp.embeddings == [[0.1] * 1024, [0.2] * 1024]
+    assert resp.dimensions == 1024
+    assert resp.model == "text-embedding-3-large"
     assert resp.request_id == "emb_1"
     assert resp.input_tokens == 9
     assert_no_defaulted_required_fields(resp)
     assert fake_openai.calls["embeddings.create"] == [
-        {"model": "text-embedding-3-small", "input": ["first claim", "second claim"]}
+        {
+            "model": "text-embedding-3-large",
+            "input": ["first claim", "second claim"],
+            "dimensions": 1024,
+        }
     ]
     assert fake_openai.client_kwargs == [
         {"api_key": "key", "max_retries": 0, "timeout": 8.0}

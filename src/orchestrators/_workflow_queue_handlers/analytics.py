@@ -164,7 +164,7 @@ def _claim_embedding_handler(
 
     assert isinstance(payload, ClaimEmbeddingPayload)
     model = payload.model_version or str(
-        payload.attributes.get("model", "text-embedding-3-small")
+        payload.attributes.get("model", "text-embedding-3-large")
     )
     dry_run = _boolean_attribute(payload, "dry_run", False)
     limit = _positive_int_attribute(payload, "limit", 1)
@@ -182,6 +182,8 @@ def _claim_embedding_handler(
     publisher_fairness_limit = _positive_int_attribute(
         payload, "publisher_fairness_limit", 3
     )
+    dimensions = _positive_int_attribute(payload, "dimensions", 1024)
+    batch_size = _positive_int_attribute(payload, "batch_size", 25)
     config_path = str(payload.attributes.get("config_path", ""))
     app = load_settings(ConfigLoadRequest(schema_version="1.0", path=config_path), ctx)
     if not dry_run and not app.openai_api_key:
@@ -198,7 +200,9 @@ def _claim_embedding_handler(
             provider=str(payload.attributes.get("provider", "openai")),
             model=model,
             embedding_version=str(
-                payload.attributes.get("embedding_version", "claim-embedding.v1")
+                payload.attributes.get(
+                    "embedding_version", "claim-embedding.openai-large-1024.v1"
+                )
             ),
             limit=limit,
             timeout_seconds=None,
@@ -212,6 +216,8 @@ def _claim_embedding_handler(
             max_runtime_seconds=max_runtime_seconds,
             max_retries=max_retries,
             max_concurrent_provider_calls=1,
+            dimensions=dimensions,
+            batch_size=batch_size,
             publisher_fairness_limit=publisher_fairness_limit,
             report_ids=[job.report_id] if job.report_id else [],
             publishers=[job.publisher_id] if job.publisher_id else [],
@@ -243,7 +249,7 @@ def _claim_embedding_handler(
         provider_usage={
             "input_tokens": response.actual_input_tokens,
             "estimated_cost_usd": response.actual_cost_usd,
-            "provider_calls": response.embedded_count,
+            "provider_calls": response.provider_call_count,
         },
         external_effects=["embedding"] if response.embedded_count else [],
     )
@@ -298,10 +304,15 @@ def _analytics_projection_handler(
             queue_name="claim_embedding",
             job_type="claim_embedding.v1",
             payload=ClaimEmbeddingPayload(
-                model_version="text-embedding-3-small",
+                model_version="text-embedding-3-large",
                 input_reference=f"analytics:report:{report_id}",
                 input_content_hash=source.content_hash,
                 processing_version=payload.processing_version,
+                attributes={
+                    "embedding_version": "claim-embedding.openai-large-1024.v1",
+                    "dimensions": 1024,
+                    "batch_size": 25,
+                },
             ),
             idempotency_key=_digest("claim-embedding", report_id, source.content_hash),
             deduplication_scope="report-projected-claims",

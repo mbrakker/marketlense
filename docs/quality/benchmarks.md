@@ -47,6 +47,38 @@ suite and every measured gate passed. Its estimated provider cost is zero
 because CI makes no live provider call; that is not evidence of live-pipeline
 cost.
 
+## Claim embedding A/B benchmark
+
+`scripts/quality/claim_embedding_ab_benchmark.py` performs a bounded live
+comparison on retained `report_claims` only. It compares the former
+one-input-per-request `text-embedding-3-small` lane at 1,536 dimensions with
+the active `text-embedding-3-large` lane at 1,024 dimensions and a configurable
+bounded batch size (25 by default). The same deterministic corpus and evenly
+spaced held-out claim queries are used by both lanes. The JSON artifact retains
+only scalar provider-call count, input tokens, claims/sec, p50/p95 provider
+latency, total processing time, cosine retrieval MRR/recall@5, estimated cost,
+and raw float32 vector-storage bytes; it never retains texts or vectors.
+
+Run it only with `.env` credentials and an explicit output path:
+
+```powershell
+python scripts/quality/claim_embedding_ab_benchmark.py --reports-db state/reports.sqlite --output-json out/claim-embedding-ab-benchmark.json
+```
+
+The benchmark is evidence, not a quality gate: retain the migration only when
+the comparable live result improves retrieval quality or throughput without a
+reliability regression. Report a negative or inconclusive outcome directly.
+
+The 2026-08-26 retained-claim evaluation selected 1,024 dimensions. Across
+100 claims and 20 evidence-to-claim queries, `text-embedding-3-large` at
+1,536, 1,024, 768, and 512 dimensions all had Recall@1, Recall@5, and MRR of
+1.00. The 1,024-dimensional vectors retained the near-full target-separation
+margin (0.2614 versus 0.2689 at 1,536) while using 33.3% less raw float32
+storage; 768 and 512 reduced that margin further. This is not evidence of a
+quality improvement over 1,536, but it supports the 1,024-dimensional
+production choice. Use a retained human-labelled paraphrase corpus before
+making a stronger semantic-quality claim.
+
 The shared browser-download test runtime represents a completed onsite report
 with both report text and a navigation network event. This lets ordinary tests
 meet the production terminal-evidence quorum immediately. Tests that need to

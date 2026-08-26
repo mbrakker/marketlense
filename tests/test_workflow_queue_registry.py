@@ -676,7 +676,7 @@ def test_signal_publish_adapter_retains_card_evidence_and_fallback_publishers(
         ClaimEmbeddingPayload(
             claim_id="claim-queue-test",
             embedding_row_id="embedding-queue-test",
-            model_version="text-embedding-3-small",
+            model_version="text-embedding-3-large",
             input_reference="analytics:claim:claim-queue-test",
             input_content_hash="claim-content-hash",
             attributes={"config_path": str(config_path), "dry_run": True},

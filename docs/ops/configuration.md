@@ -21,6 +21,19 @@ can contact a WordPress target.
 
 `MARKET_LENSE_PRODUCER_COMMIT` is an optional, non-secret 40-character commit SHA. The canonical configuration service reads it when CLI or UI code creates a runtime context, so retained manifest and log provenance identify the producing build without giving utilities environment access.
 
+## Claim embedding policy
+
+`llm_execution_policies.claim_embedding/generate` is the canonical policy for
+claim vectors: `text-embedding-3-large`, `dimensions: 1024`, and a bounded
+`batch_size: 25`. The policy identity is
+`claim_embedding.vector.1024.v1`; the operational queue default is
+`claim-embedding.openai-large-1024.v1`. Do not lower dimensions or point the
+claim queue at `text-embedding-3-small`: the workflow rejects either setting.
+Existing vectors with another model, version, or dimensionality remain
+historical records and are automatically queued for re-embedding rather than
+being reused. The retained small-model rate card exists only to support bounded
+historical A/B comparisons; it is not an active claim-embedding route.
+
 Loading application and browser-acquisition settings is credential-free: an absent Drive folder ID or LLM credential is represented as an empty setting so dry runs, planning, operator inspection, and deterministic acquisition-remediation timeout calculation work in a clean checkout. The workflow preflight and provider boundaries then fail closed immediately before the affected external operation, with the typed missing-credential code and corrective action. Browser acquisition validates `OPENAI_API_KEY` or `OPENROUTER_API_KEY` at its runtime boundary before Browser Use starts. Live ingestion, browser acquisition, and model calls therefore still require their real `.env` values; no credential default is introduced.
 
 `browser_download.identity_config_path` resolves from
@@ -46,8 +59,8 @@ Every configured generative route, including
 `publisher_inventory/meaningful_candidate_screen`, is deliberately routed and
 priced as `gpt-5.6-luna`. The browser/OpenRouter fallback uses the exact
 `openai/gpt-5.6-luna` identifier and its separately retained provider rate
-card. `text-embedding-3-small` remains the dedicated embedding route; it is
-not a generative LLM fallback. Publisher-inventory settings retain the same resolved
+card. `text-embedding-3-large` at 1,024 dimensions is the dedicated claim
+embedding route; it is not a generative LLM fallback. Publisher-inventory settings retain the same resolved
 `llm_execution_policies` map as application settings, so discovery and
 candidate screening use the registered namespace policy rather than an
 empty local policy set. Namespace policy and workflow-specific settings must agree;

@@ -136,7 +136,7 @@ def test_worker_claims_runs_and_completes_a_verified_reference_job(tmp_path) -> 
             ClaimEmbeddingPayload(
                 claim_id="claim-1",
                 embedding_row_id="embedding-1",
-                model_version="text-embedding-3-small",
+                model_version="text-embedding-3-large",
                 input_reference="analytics:claim:claim-1",
                 input_content_hash="claim-hash",
                 attributes={"dry_run": True, "limit": "not-an-int"},

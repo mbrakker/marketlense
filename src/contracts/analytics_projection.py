@@ -362,6 +362,10 @@ class ClaimEmbeddingPendingReadRequest:
     provider: str = field(metadata={"doc": "Embedding provider namespace."})
     model: str = field(metadata={"doc": "Embedding model ID."})
     limit: int = field(metadata={"doc": "Maximum number of claim rows to read."})
+    dimensions: int = field(
+        default=1024,
+        metadata={"doc": "Exact required dimensions for accepted embedding records."},
+    )
 
 
 @dataclass(frozen=True)
@@ -502,6 +506,14 @@ class ClaimEmbeddingWorkflowRequest:
         default=1,
         metadata={"doc": "Provider-call concurrency cap; this workflow is sequential."},
     )
+    dimensions: int = field(
+        default=1024,
+        metadata={"doc": "Exact OpenAI embedding dimensions required for claims."},
+    )
+    batch_size: int = field(
+        default=25,
+        metadata={"doc": "Maximum individually leased claims per provider request."},
+    )
     publisher_fairness_limit: int = field(
         default=0,
         metadata={
@@ -555,6 +567,10 @@ class ClaimEmbeddingWorkflowResponse(SemanticIdContract):
         default=0.0,
         metadata={"doc": "Estimated actual cost from provider-reported usage."},
     )
+    provider_call_count: int = field(
+        default=0,
+        metadata={"doc": "Number of actual provider embedding requests issued."},
+    )
     queue_age_before_seconds: int = field(
         default=0,
         metadata={"doc": "Oldest eligible queue age before this bounded batch."},
@@ -588,6 +604,10 @@ class ClaimEmbeddingQueueHealthRequest:
     embedding_version: str = field(metadata={"doc": "Required embedding version."})
     provider: str = field(metadata={"doc": "Required embedding provider."})
     model: str = field(metadata={"doc": "Required embedding model."})
+    dimensions: int = field(
+        default=1024,
+        metadata={"doc": "Required embedding vector dimensionality."},
+    )
     report_ids: List[str] = field(
         default_factory=list, metadata={"doc": "Optional report filter."}
     )

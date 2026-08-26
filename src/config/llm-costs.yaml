@@ -88,6 +88,15 @@ pricing:
     cached_input_tokens_per_1k_usd: 0.00002
     output_tokens_per_1k_usd: 0.0012
     tool_call_usd: 0.0
+  text-embedding-3-large:
+    provider: "openai"
+    pricing_version: "openai-2026-08-26.v1"
+    effective_date: "2026-08-26"
+    source_note: "OpenAI text-embedding-3-large model page; USD per 1K input tokens."
+    input_tokens_per_1k_usd: 0.00013
+    cached_input_tokens_per_1k_usd: 0.00013
+    output_tokens_per_1k_usd: 0.0
+    tool_call_usd: 0.0
   o3:
     provider: "openai"
     pricing_version: "openai-2026-07-18.v1"

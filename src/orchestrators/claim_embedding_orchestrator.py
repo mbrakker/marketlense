@@ -197,6 +197,7 @@ def _queue_health_request(
         max_estimated_tokens=request.max_estimated_tokens,
         max_estimated_cost_usd=request.max_estimated_cost_usd,
         model_pricing=request.model_pricing,
+        dimensions=request.dimensions,
     )
 
 
@@ -278,6 +279,20 @@ def _run_claim_embedding_workflow(
     dependencies: ClaimEmbeddingDependencies | None = None,
 ) -> ClaimEmbeddingWorkflowResponse:
     deps = dependencies or ClaimEmbeddingDependencies()
+    if request.provider != "openai" or request.model != "text-embedding-3-large":
+        raise AppError(
+            code="claim_embedding_model_invalid",
+            message="Claim embeddings require OpenAI text-embedding-3-large",
+            retryable=False,
+            severity="error",
+        )
+    if request.dimensions != 1024:
+        raise AppError(
+            code="claim_embedding_dimensions_invalid",
+            message="Claim embeddings require exactly 1024 dimensions",
+            retryable=False,
+            severity="error",
+        )
     root_ctx = child_context(
         request.ctx, task_id=f"{request.ctx.task_id}:claim_embeddings"
     )
@@ -348,68 +363,79 @@ def _run_claim_embedding_workflow(
     failed_count = 0
     actual_input_tokens = 0
     actual_cost = 0.0
+    provider_call_count = 0
     provider_latencies_ms: list[float] = []
     skipped_count = avoided
-    for item in selected:
-        if (
-            request.max_runtime_seconds > 0
-            and time.monotonic() - started >= request.max_runtime_seconds
-        ):
-            skipped_count += 1
-            avoided += 1
-            avoided_cost += item.estimated_cost_usd
+    batch_size = max(1, request.batch_size)
+    for offset in range(0, len(selected), batch_size):
+        admitted: list[
+            tuple[ClaimEmbeddingQueueHealthItem, ClaimEmbeddingQueueItem, str, str]
+        ] = []
+        for item in selected[offset : offset + batch_size]:
+            if (
+                request.max_runtime_seconds > 0
+                and time.monotonic() - started >= request.max_runtime_seconds
+            ):
+                skipped_count += 1
+                avoided += 1
+                avoided_cost += item.estimated_cost_usd
+                continue
+            lease_id = uuid.uuid4().hex
+            generated_at_utc = _timestamp(deps)
+            acquired = deps.acquire_execution_lease(
+                db_path=request.db_path,
+                item=item,
+                embedding_version=request.embedding_version,
+                provider=request.provider,
+                model=request.model,
+                dimensions=request.dimensions,
+                lease_id=lease_id,
+                lease_expires_at_utc=_retry_timestamp(generated_at_utc, 7),
+                ctx=root_ctx,
+            )
+            if not acquired:
+                skipped_count += 1
+                avoided += 1
+                avoided_cost += item.estimated_cost_usd
+                continue
+            row = ClaimEmbeddingQueueItem(
+                schema_version=PROJECTION_SCHEMA_VERSION,
+                claim_uid=item.entity_uid,
+                entity_uid=item.entity_uid,
+                report_id=item.report_id,
+                text_payload=item.text_payload,
+                content_hash=item.content_hash,
+                metadata=item.metadata,
+                content_class=cast(ContentClass, item.content_class),
+            )
+            processed.append(row.entity_uid)
+            admitted.append((item, row, generated_at_utc, lease_id))
+        if not admitted:
             continue
-        lease_id = uuid.uuid4().hex
-        generated_at_utc = _timestamp(deps)
-        lease_expires = _retry_timestamp(generated_at_utc, 7)
-        acquired = deps.acquire_execution_lease(
-            db_path=request.db_path,
-            item=item,
-            embedding_version=request.embedding_version,
-            provider=request.provider,
-            model=request.model,
-            lease_id=lease_id,
-            lease_expires_at_utc=lease_expires,
-            ctx=root_ctx,
-        )
-        if not acquired:
-            skipped_count += 1
-            avoided += 1
-            avoided_cost += item.estimated_cost_usd
-            continue
-        row = ClaimEmbeddingQueueItem(
-            schema_version=PROJECTION_SCHEMA_VERSION,
-            claim_uid=item.entity_uid,
-            entity_uid=item.entity_uid,
-            report_id=item.report_id,
-            text_payload=item.text_payload,
-            content_hash=item.content_hash,
-            metadata=item.metadata,
-            content_class=cast(ContentClass, item.content_class),
-        )
-        processed.append(row.entity_uid)
+        provider_started = time.monotonic()
         try:
-            provider_started = time.monotonic()
+            first_row = admitted[0][1]
             provider_response = deps.create_embeddings(
                 OpenAIEmbeddingRequest(
                     schema_version="1.0",
                     api_key=request.api_key,
                     model=request.model,
-                    inputs=[row.text_payload],
+                    inputs=[row.text_payload for _, row, _, _ in admitted],
+                    dimensions=request.dimensions,
                     timeout_seconds=request.timeout_seconds,
                     cost_ledger_path=request.cost_ledger_path,
                     cost_daily_path=request.cost_daily_path,
                     model_pricing=request.model_pricing,
-                    publisher_name=str(row.metadata.get("publisher") or ""),
-                    report_id=str(row.report_id),
+                    publisher_name=str(first_row.metadata.get("publisher") or ""),
+                    report_id=str(first_row.report_id),
                     prompt_namespace="claim_embedding/generate",
-                    prompt_hash=row.content_hash,
+                    prompt_hash=first_row.content_hash,
                     execution_identity=(
                         f"claim_embedding.v1:{request.provider}:{request.model}:"
-                        f"{request.embedding_version}"
+                        f"{request.embedding_version}:d{request.dimensions}"
                     ),
                     execution_policy_hash=(
-                        f"claim_embedding.v1:{request.provider}:{request.model}"
+                        f"claim_embedding.v1:{request.provider}:{request.model}:d{request.dimensions}"
                     ),
                     workflow="claim_embedding",
                     stage="provider_embedding",
@@ -417,123 +443,150 @@ def _run_claim_embedding_workflow(
                 ),
                 root_ctx,
             )
+            provider_call_count += 1
             provider_latencies_ms.append((time.monotonic() - provider_started) * 1000)
-            if len(provider_response.embeddings) != 1:
+            if provider_response.model != request.model:
                 raise AppError(
-                    code="claim_embedding_provider_count_mismatch",
-                    message=(
-                        "Embedding response count did not match one admitted claim row"
-                    ),
+                    code="claim_embedding_model_mismatch",
+                    message="Embedding response model did not match the configured model",
                     retryable=True,
                     severity="error",
-                    context={"actual": len(provider_response.embeddings)},
+                )
+            if provider_response.dimensions != request.dimensions or any(
+                len(vector) != request.dimensions
+                for vector in provider_response.embeddings
+            ):
+                raise AppError(
+                    code="claim_embedding_dimensions_mismatch",
+                    message="Embedding response did not match the required dimensions",
+                    retryable=True,
+                    severity="error",
+                )
+            if len(provider_response.embeddings) != len(admitted):
+                raise AppError(
+                    code="claim_embedding_provider_count_mismatch",
+                    message="Embedding response count did not match admitted claim rows",
+                    retryable=True,
+                    severity="error",
+                    context={
+                        "expected": len(admitted),
+                        "actual": len(provider_response.embeddings),
+                    },
                 )
         except AppError as exc:
             provider_latencies_ms.append((time.monotonic() - provider_started) * 1000)
-            next_attempt = item.attempt_count + 1
-            retryable = exc.retryable and next_attempt < max(1, request.max_retries)
-            reason = exc.code if retryable else f"{exc.code}_retry_exhausted"
+            for item, row, generated_at_utc, lease_id in admitted:
+                next_attempt = item.attempt_count + 1
+                retryable = exc.retryable and next_attempt < max(1, request.max_retries)
+                reason = exc.code if retryable else f"{exc.code}_retry_exhausted"
+                _persist(
+                    deps,
+                    request,
+                    _failure_record(
+                        row=row,
+                        error=AppError(
+                            code=reason,
+                            message=exc.message,
+                            cause=exc,
+                            retryable=retryable,
+                            severity=exc.severity,
+                        ),
+                        request=request,
+                        generated_at_utc=generated_at_utc,
+                        embedding_uid=_embedding_uid(deps, row, request),
+                    ),
+                    root_ctx,
+                    run_id=run_id,
+                    reason_code=reason,
+                    next_eligible_at_utc=_retry_timestamp(
+                        generated_at_utc, next_attempt
+                    )
+                    if retryable
+                    else "",
+                    execution_lease_id=lease_id,
+                )
+                if not retryable:
+                    record_workflow_failure(
+                        state_db=request.state_db,
+                        workflow="claim_embedding",
+                        stage="provider_embedding",
+                        operation="create_embeddings",
+                        error=AppError(
+                            code="claim_embedding_retry_budget_exhausted",
+                            message="Claim embedding retry budget was exhausted",
+                            cause=exc,
+                            retryable=False,
+                            severity=exc.severity,
+                        ),
+                        ctx=root_ctx,
+                        input_checksum=row.content_hash,
+                        report_id=str(row.report_id),
+                        source_id=str(row.claim_uid),
+                        publisher_id=str(row.metadata.get("publisher") or ""),
+                        reusable_artifacts=[
+                            RemediationArtifactReference(
+                                schema_version="1.0",
+                                name="claim_embedding_store",
+                                reference=request.db_path,
+                            )
+                        ],
+                        committed_side_effects=[
+                            f"analytics_store:claim_embedding_failure:{_embedding_uid(deps, row, request)}"
+                        ],
+                        idempotency_keys=[
+                            RemediationIdempotencyKey(
+                                schema_version="1.0",
+                                scope="claim_embedding.persist",
+                                key=str(_embedding_uid(deps, row, request)),
+                                input_checksum=row.content_hash,
+                            )
+                        ],
+                        budget=RemediationBudgetSummary(
+                            schema_version="1.0",
+                            consumed={"attempts": next_attempt},
+                            remaining={
+                                "max_estimated_tokens": request.max_estimated_tokens,
+                                "max_estimated_cost_usd": request.max_estimated_cost_usd,
+                            },
+                        ),
+                    )
+                failed_count += 1
+            continue
+        actual_input_tokens += int(
+            provider_response.input_tokens
+            or sum(item.estimated_tokens for item, _, _, _ in admitted)
+        )
+        actual_cost += estimate_cost_usd(
+            request.model,
+            int(
+                provider_response.input_tokens
+                or sum(item.estimated_tokens for item, _, _, _ in admitted)
+            ),
+            0,
+            0,
+            request.model_pricing,
+        )
+        for (_, row, generated_at_utc, lease_id), vector in zip(
+            admitted, provider_response.embeddings, strict=True
+        ):
             _persist(
                 deps,
                 request,
-                _failure_record(
+                _success_record(
                     row=row,
-                    error=AppError(
-                        code=reason,
-                        message=exc.message,
-                        cause=exc,
-                        retryable=retryable,
-                        severity=exc.severity,
-                    ),
+                    vector=vector,
+                    dimensions=provider_response.dimensions,
+                    response=provider_response,
                     request=request,
                     generated_at_utc=generated_at_utc,
                     embedding_uid=_embedding_uid(deps, row, request),
                 ),
                 root_ctx,
                 run_id=run_id,
-                reason_code=reason,
-                next_eligible_at_utc=(
-                    _retry_timestamp(generated_at_utc, next_attempt)
-                    if retryable
-                    else ""
-                ),
+                reason_code="embedding_completed",
                 execution_lease_id=lease_id,
             )
-            if not retryable:
-                record_workflow_failure(
-                    state_db=request.state_db,
-                    workflow="claim_embedding",
-                    stage="provider_embedding",
-                    operation="create_embeddings",
-                    error=AppError(
-                        code="claim_embedding_retry_budget_exhausted",
-                        message="Claim embedding retry budget was exhausted",
-                        cause=exc,
-                        retryable=False,
-                        severity=exc.severity,
-                    ),
-                    ctx=root_ctx,
-                    input_checksum=row.content_hash,
-                    report_id=str(row.report_id),
-                    source_id=str(row.claim_uid),
-                    publisher_id=str(row.metadata.get("publisher") or ""),
-                    reusable_artifacts=[
-                        RemediationArtifactReference(
-                            schema_version="1.0",
-                            name="claim_embedding_store",
-                            reference=request.db_path,
-                        )
-                    ],
-                    committed_side_effects=[
-                        f"analytics_store:claim_embedding_failure:{_embedding_uid(deps, row, request)}"
-                    ],
-                    idempotency_keys=[
-                        RemediationIdempotencyKey(
-                            schema_version="1.0",
-                            scope="claim_embedding.persist",
-                            key=str(_embedding_uid(deps, row, request)),
-                            input_checksum=row.content_hash,
-                        )
-                    ],
-                    budget=RemediationBudgetSummary(
-                        schema_version="1.0",
-                        consumed={"attempts": next_attempt},
-                        remaining={
-                            "max_estimated_tokens": request.max_estimated_tokens,
-                            "max_estimated_cost_usd": request.max_estimated_cost_usd,
-                        },
-                    ),
-                )
-            failed_count += 1
-            continue
-        actual_input_tokens += int(
-            provider_response.input_tokens or item.estimated_tokens
-        )
-        actual_cost += estimate_cost_usd(
-            request.model,
-            int(provider_response.input_tokens or item.estimated_tokens),
-            0,
-            0,
-            request.model_pricing,
-        )
-        _persist(
-            deps,
-            request,
-            _success_record(
-                row=row,
-                vector=provider_response.embeddings[0],
-                dimensions=provider_response.dimensions,
-                response=provider_response,
-                request=request,
-                generated_at_utc=generated_at_utc,
-                embedding_uid=_embedding_uid(deps, row, request),
-            ),
-            root_ctx,
-            run_id=run_id,
-            reason_code="embedding_completed",
-            execution_lease_id=lease_id,
-        )
-        embedded_count += 1
+            embedded_count += 1
     after_health = deps.read_queue_health(_queue_health_request(request), root_ctx)
     average_latency = (
         sum(provider_latencies_ms) / len(provider_latencies_ms)
@@ -555,6 +608,7 @@ def _run_claim_embedding_workflow(
         estimated_cost_avoided_usd=avoided_cost,
         actual_input_tokens=actual_input_tokens,
         actual_cost_usd=actual_cost,
+        provider_call_count=provider_call_count,
         queue_age_before_seconds=queue_age_before_seconds,
         queue_age_after_seconds=after_health.oldest_pending_age_seconds,
         backlog_burndown_count=max(0, pending_before - after_health.total_pending),
@@ -574,6 +628,7 @@ def _run_claim_embedding_workflow(
                 "provider_calls_avoided": response.provider_calls_avoided,
                 "actual_input_tokens": response.actual_input_tokens,
                 "actual_cost_usd": response.actual_cost_usd,
+                "provider_call_count": response.provider_call_count,
             },
         )
     )

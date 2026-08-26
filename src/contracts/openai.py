@@ -17,6 +17,9 @@ class OpenAIEmbeddingRequest:
     api_key: str = field(metadata={"doc": "OpenAI API key (secret, loaded from env)."})
     model: str = field(metadata={"doc": "OpenAI embedding model ID."})
     inputs: List[str] = field(metadata={"doc": "Ordered texts to embed."})
+    dimensions: int = field(
+        metadata={"doc": "Exact embedding dimensions requested from OpenAI."}
+    )
     timeout_seconds: Optional[float] = field(
         default=None, metadata={"doc": "Request timeout in seconds, if set."}
     )
