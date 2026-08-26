@@ -276,8 +276,7 @@ def _validation_result(
         issue
         for issue in validation_report.issues
         if str(issue.severity).casefold() == "error"
-        or str(issue.rule_id).casefold()
-        in {"semantic", "grounding", "deferred_grounding_required"}
+        or str(issue.rule_id).casefold() == "deferred_grounding_required"
     ]
     if validation_report.status != "pass" or failed:
         return _fail(

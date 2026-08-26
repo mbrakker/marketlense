@@ -259,15 +259,18 @@ optional in the metadata-only listing mode and is used only as an additional
 duplicate signal; it is resolved later when presentation needs it, never
 treated as required source identity.
 
-New cohort manifests use schema `1.1`. Each member records its immutable
-`report_id` (the Drive file ID), admitted `publisher_id`, `source_identity_id`,
-and selection reason. The manifest records the configuration hash, policy hash,
-cohort ID, derived validation-run ID, and a redacted effective-configuration
-snapshot. Loading recomputes the cohort and validation
-identities from those records, so an edited member list fails closed rather
-than silently changing an existing cohort. Schema `1.0` manifests remain
-readable for replay compatibility; a new membership must be frozen into a new
-schema-`1.1` manifest and cohort identity.
+New cohort manifests use schema `1.2`. Each member records its immutable
+`report_id` (the Drive file ID), admitted `publisher_id`, canonical
+`source_identity_id`, exact source-PDF MD5, and selection reason. The manifest
+records the configuration hash, policy hash, cohort ID, derived validation-run
+ID, and a redacted effective-configuration snapshot. Loading recomputes the
+cohort and validation identities from those records, so an edited member list
+fails closed rather than silently changing an existing cohort. Schema `1.0`
+and `1.1` manifests remain readable for replay compatibility; schema `1.1`
+retains a checksum in its historical `source_identity_id` field, so publication
+uses that checksum for artifact compatibility while still rejecting stale source
+metadata. A new membership must be frozen into a new schema-`1.2` manifest and
+cohort identity.
 
 If an interrupted run cannot recreate its configuration identity, do not alter
 the original manifest or admit replacements. The canonical provenance-recovery

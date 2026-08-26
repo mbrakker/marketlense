@@ -164,9 +164,9 @@ logger = logging.getLogger("market_lense.ingest_orchestrator")
 EOF_RETRY_LIMIT = 1
 STATE_PREFILTER_BATCH_SIZE = 200
 DOC_MAP_EMPTY_ERROR_PREFIX = "doc_map_empty:"
-COHORT_MANIFEST_SCHEMA_VERSION = "1.1"
+COHORT_MANIFEST_SCHEMA_VERSION = "1.2"
 _SUPPORTED_COHORT_MANIFEST_SCHEMA_VERSIONS = frozenset(
-    {"1.0", COHORT_MANIFEST_SCHEMA_VERSION}
+    {"1.0", "1.1", COHORT_MANIFEST_SCHEMA_VERSION}
 )
 
 
@@ -1033,13 +1033,16 @@ def _load_frozen_cohort(
         computed_cohort_id = _cohort_id(files)
         if str(payload.get("cohort_id") or "") != computed_cohort_id:
             raise ValueError("manifest cohort identity does not match its members")
-        if manifest_schema_version == COHORT_MANIFEST_SCHEMA_VERSION:
+        if manifest_schema_version in {"1.1", COHORT_MANIFEST_SCHEMA_VERSION}:
             for member, file in zip(members, files, strict=True):
                 if not isinstance(member, dict):
                     raise ValueError("manifest member must be an object")
                 if str(member.get("report_id") or "") != file.file_id:
                     raise ValueError("manifest member report identity is invalid")
-                if str(member.get("source_identity_id") or "") != (
+                source_identity_id = str(member.get("source_identity_id") or "")
+                if not source_identity_id:
+                    raise ValueError("manifest member source identity is invalid")
+                if manifest_schema_version == "1.1" and source_identity_id != (
                     file.md5_checksum or file.file_id
                 ):
                     raise ValueError("manifest member source identity is invalid")
@@ -1079,7 +1082,7 @@ def _load_frozen_cohort(
             ),
             retryable=False,
         )
-    if manifest_schema_version == COHORT_MANIFEST_SCHEMA_VERSION:
+    if manifest_schema_version in {"1.1", COHORT_MANIFEST_SCHEMA_VERSION}:
         expected_validation_run_id = _validation_run_id_for_cohort(
             cohort_id=computed_cohort_id,
             configuration_hash=observed_provenance["configuration_hash"],
@@ -1290,7 +1293,11 @@ def _frozen_cohort(
         {
             **asdict(file),
             "report_id": file.file_id,
-            "source_identity_id": file.md5_checksum or file.file_id,
+            "source_identity_id": str(
+                decisions_by_file_id.get(file.file_id, {}).get("source_identity_id")
+                or file.md5_checksum
+                or file.file_id
+            ),
             "publisher_id": str(
                 decisions_by_file_id.get(file.file_id, {}).get("publisher_id")
                 or "unattributed"

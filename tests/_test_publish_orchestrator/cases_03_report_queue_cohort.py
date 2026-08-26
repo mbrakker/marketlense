@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+from src.contracts.report_store import ReportMetadataGetResponse
 from src.utils.errors import AppError
 
 from ._shared import *  # noqa: F401,F403
@@ -496,6 +497,60 @@ def test_publish_cohort_manifest_binding_hash_is_deterministic_for_unchanged_art
         json.loads(Path(binding_path).read_text(encoding="utf-8"))["candidate_set_hash"]
         == first_hash
     )
+
+
+def test_publish_cohort_legacy_checksum_identity_accepts_compatible_canonical_source(
+    publish_settings_factory, run_context, tmp_path
+) -> None:
+    """Schema-1.1 manifests retain a content checksum, not a canonical source ID."""
+    settings = publish_settings_factory(validation_policy="warn")
+    target_path = _write_html(
+        settings.output_dir, "target.html", "Drive fileId: target-file"
+    )
+    _record_processed(settings.state_db, "target-file", run_context)
+    cohort_manifest = tmp_path / "cohort.json"
+    cohort_manifest.write_text(
+        json.dumps({"members": [{"file_id": "target-file"}]}), encoding="utf-8"
+    )
+    members = {
+        "target-file": {
+            "file_id": "target-file",
+            "report_id": "target-file",
+            "source_identity_id": "target-md5",
+            "md5_checksum": "target-md5",
+            "html_path": str(target_path),
+        }
+    }
+    metadata = ReportMetadataGetResponse(
+        schema_version="1.1",
+        file_id="target-file",
+        title="Report",
+        created_at=0,
+        updated_at=0,
+        html_path=str(target_path),
+        md5="target-md5",
+        source_identity_id="source:canonical-target",
+        source_identity_status="resolved",
+    )
+
+    candidates, _, _ = orch._bind_cohort_publish_candidates(
+        settings=settings,
+        cohort_manifest=str(cohort_manifest),
+        cohort_id="cohort-legacy-content-identity",
+        configuration_hash="configuration-hash",
+        policy_hash="policy-hash",
+        members=members,
+        html_file_id_map={},
+        metadata_by_file_id={"target-file": metadata},
+        report_readiness_references=None,
+        ctx=replace(
+            run_context,
+            configuration_hash="configuration-hash",
+            policy_hash="policy-hash",
+        ),
+    )
+
+    assert [candidate.file_id for candidate in candidates] == ["target-file"]
 
 
 def test_publish_cohort_manifest_rejects_not_ready_member_before_wordpress_write(

@@ -6,6 +6,14 @@
 
 Generated report artifacts are checked for contract completeness, schema validity, and configured semantic and grounding requirements. Validation results are persisted with the report artifacts.
 
+`publish_readiness.json` consumes the final validation disposition rather than
+reclassifying informational diagnostics. An informational non-fatal
+interpretation therefore remains publish-compatible when the final validation
+report passes; errors and the explicit `deferred_grounding_required` condition
+remain blocking. Material unsupported claims, numbers, contradictions, missing
+evidence, and other error-severity grounding findings are unchanged and still
+fail the report before publication.
+
 When a repair is supported, the workflow maps validation issues to the narrowest appropriate artifact family and revalidates the result. Retry and backoff are controlled by orchestration; generators surface typed errors rather than retrying provider calls themselves. Publication policy determines whether unresolved validation issues block WordPress side effects.
 
 Taxonomy extraction has one orchestration-owned, prompt-specific recovery for

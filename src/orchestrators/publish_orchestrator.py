@@ -549,6 +549,9 @@ def _bind_cohort_publish_candidates(
             member.get("source_identity_id") or member.get("md5_checksum") or file_id
         ).strip()
         expected_md5 = str(member.get("md5_checksum") or "").strip()
+        legacy_content_identity = bool(
+            expected_md5 and expected_source_identity == expected_md5
+        )
         if metadata is not None and (
             (
                 expected_md5
@@ -556,6 +559,8 @@ def _bind_cohort_publish_candidates(
                 and str(getattr(metadata, "md5", "")).strip() != expected_md5
             )
             or (
+                not legacy_content_identity
+                and
                 str(getattr(metadata, "source_identity_id", "") or "").strip()
                 and str(getattr(metadata, "source_identity_id", "")).strip()
                 != expected_source_identity

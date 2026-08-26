@@ -186,6 +186,18 @@ def test_frozen_cohort_persists_and_replays_the_same_drive_members(
         settings=ingest_settings,
         deps=deps,
         root_ctx=run_context,
+        admission_decisions=[
+            {
+                "file_id": "file-a",
+                "source_identity_id": "source:canonical-a",
+                "publisher_id": "publisher:a",
+            },
+            {
+                "file_id": "file-b",
+                "source_identity_id": "source:canonical-b",
+                "publisher_id": "publisher:b",
+            },
+        ],
     )
     replayed = orch._frozen_cohort(
         cohort_size=2,
@@ -204,7 +216,7 @@ def test_frozen_cohort_persists_and_replays_the_same_drive_members(
         == "deterministic_admission_preflight"
     )
     payload = json.loads(stored["cohorts/release.json"])
-    assert payload["schema_version"] == "1.1"
+    assert payload["schema_version"] == "1.2"
     assert payload["members"] == [
         {
             "schema_version": "1.0",
@@ -214,8 +226,8 @@ def test_frozen_cohort_persists_and_replays_the_same_drive_members(
             "md5_checksum": "md5-a",
             "mime_type": None,
             "report_id": "file-a",
-            "source_identity_id": "md5-a",
-            "publisher_id": "unattributed",
+            "source_identity_id": "source:canonical-a",
+            "publisher_id": "publisher:a",
             "selection_reason": "deterministic_admission_preflight",
         },
         {
@@ -226,8 +238,8 @@ def test_frozen_cohort_persists_and_replays_the_same_drive_members(
             "md5_checksum": "md5-b",
             "mime_type": None,
             "report_id": "file-b",
-            "source_identity_id": "md5-b",
-            "publisher_id": "unattributed",
+            "source_identity_id": "source:canonical-b",
+            "publisher_id": "publisher:b",
             "selection_reason": "deterministic_admission_preflight",
         },
     ]

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from src.contracts.validation import ValidationReport
+from src.contracts.validation import ValidationIssue, ValidationReport
 from src.generators.publish_readiness_generator import (
     evaluate_publish_readiness,
     parse_publish_readiness_payload,
@@ -91,6 +91,35 @@ def test_publish_readiness_binds_rendered_html_and_publication_projection() -> N
         "publish_readiness.final_html_changed",
         "publish_readiness.publication_projection_changed",
     ]
+
+
+def test_publish_readiness_allows_non_fatal_grounding_interpretation() -> None:
+    """Informational grounding feedback must agree with a passing validation report."""
+    artifacts, evidence_packs, html, provenance = _ready_inputs()
+    artifact = evaluate_publish_readiness(
+        report_id="report-1",
+        artifacts=artifacts,
+        evidence_packs=evidence_packs,
+        validation_report=ValidationReport(
+            schema_version="1.1",
+            status="pass",
+            issues=[
+                ValidationIssue(
+                    schema_version="1.0",
+                    rule_id="grounding",
+                    message="Interpretation is not directly established.",
+                    severity="info",
+                    affected_section="summary",
+                )
+            ],
+        ),
+        final_html=html,
+        final_html_path="",
+        category_ids=["markets"],
+        provenance=provenance,
+    )
+
+    assert artifact.status == "pass"
 
 
 def test_publish_readiness_rejects_public_identifier_and_private_source_leaks() -> None:
