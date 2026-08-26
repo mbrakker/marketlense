@@ -1,0 +1,125 @@
+{
+  "min_score_default": 60.0,
+  "schema_version": "1.0",
+  "targets": [
+    {
+      "killed": 1,
+      "min_score": 60.0,
+      "module": "src/orchestrators/publish_queue_orchestrator.py",
+      "score": 100.0,
+      "total": 1
+    },
+    {
+      "killed": 3,
+      "min_score": 75.0,
+      "module": "src/generators/taxonomy_generator.py",
+      "score": 75.0,
+      "total": 4
+    },
+    {
+      "killed": 3,
+      "min_score": 60.0,
+      "module": "src/generators/evidence_pack_generator.py",
+      "score": 100.0,
+      "total": 3
+    },
+    {
+      "killed": 3,
+      "min_score": 60.0,
+      "module": "src/generators/artifact_generator.py",
+      "score": 100.0,
+      "total": 3
+    },
+    {
+      "killed": 3,
+      "min_score": 60.0,
+      "module": "src/generators/validation_generator.py",
+      "score": 100.0,
+      "total": 3
+    },
+    {
+      "killed": 6,
+      "min_score": 80.0,
+      "module": "src/generators/report_card_projection.py",
+      "score": 100.0,
+      "total": 6
+    },
+    {
+      "killed": 4,
+      "min_score": 75.0,
+      "module": "src/generators/cover_image_generator.py",
+      "score": 100.0,
+      "total": 4
+    },
+    {
+      "killed": 4,
+      "min_score": 75.0,
+      "module": "src/generators/report_render_generator.py",
+      "score": 100.0,
+      "total": 4
+    },
+    {
+      "killed": 4,
+      "min_score": 85.0,
+      "module": "src/generators/publish_generator.py",
+      "score": 100.0,
+      "total": 4
+    },
+    {
+      "killed": 3,
+      "min_score": 60.0,
+      "module": "src/services/llm_service.py",
+      "score": 100.0,
+      "total": 3
+    },
+    {
+      "killed": 3,
+      "min_score": 60.0,
+      "module": "src/services/drive_service.py",
+      "score": 100.0,
+      "total": 3
+    },
+    {
+      "killed": 3,
+      "min_score": 60.0,
+      "module": "src/services/wordpress_service.py",
+      "score": 100.0,
+      "total": 3
+    },
+    {
+      "killed": 3,
+      "min_score": 60.0,
+      "module": "src/orchestrators/report_pipeline_orchestrator.py",
+      "score": 100.0,
+      "total": 3
+    },
+    {
+      "killed": 6,
+      "min_score": 80.0,
+      "module": "src/orchestrators/retry_orchestrator.py",
+      "score": 100.0,
+      "total": 6
+    },
+    {
+      "killed": 6,
+      "min_score": 90.0,
+      "module": "src/orchestrators/pipeline_preflight_orchestrator.py",
+      "score": 100.0,
+      "total": 6
+    },
+    {
+      "killed": 6,
+      "min_score": 90.0,
+      "module": "src/orchestrators/retry_telemetry_orchestrator.py",
+      "score": 100.0,
+      "total": 6
+    },
+    {
+      "killed": 6,
+      "min_score": 90.0,
+      "module": "src/orchestrators/workflow_control_orchestrator.py",
+      "score": 100.0,
+      "total": 6
+    }
+  ]
+}
