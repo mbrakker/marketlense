@@ -11894,6 +11894,9 @@
         "db_path": {
           "type": "string"
         },
+        "dimensions": {
+          "type": "integer"
+        },
         "embedding_version": {
           "type": "string"
         },
@@ -12123,6 +12126,9 @@
       "properties": {
         "db_path": {
           "type": "string"
+        },
+        "dimensions": {
+          "type": "integer"
         },
         "embedding_version": {
           "type": "string"
@@ -12553,6 +12559,9 @@
         "api_key": {
           "type": "string"
         },
+        "batch_size": {
+          "type": "integer"
+        },
         "cost_daily_path": {
           "type": "string"
         },
@@ -12564,6 +12573,9 @@
         },
         "db_path": {
           "type": "string"
+        },
+        "dimensions": {
+          "type": "integer"
         },
         "dry_run": {
           "type": "boolean"
@@ -12679,6 +12691,9 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "provider_call_count": {
+          "type": "integer"
         },
         "provider_calls_avoided": {
           "type": "integer"
@@ -24815,6 +24830,9 @@
         "cost_ledger_path": {
           "type": "string"
         },
+        "dimensions": {
+          "type": "integer"
+        },
         "execution_identity": {
           "type": "string"
         },
@@ -24881,7 +24899,8 @@
         "schema_version",
         "api_key",
         "model",
-        "inputs"
+        "inputs",
+        "dimensions"
       ],
       "type": "object"
     },
