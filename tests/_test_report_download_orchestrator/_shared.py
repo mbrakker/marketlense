@@ -94,6 +94,7 @@ def _settings(tmp_path: Path) -> BrowserDownloadSettings:
         output_dir=str(tmp_path / "downloads"),
         state_db=str(tmp_path / "state.sqlite"),
         reports_db=str(tmp_path / "reports.sqlite"),
+        usage_db_path=str(tmp_path / "llm_usage.sqlite"),
         identity_config_path=str(tmp_path / "browser_download_identity.yaml"),
         identity_profile=BrowserDownloadIdentity(
             schema_version="1.0",
