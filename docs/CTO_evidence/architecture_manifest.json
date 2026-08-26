@@ -85,7 +85,7 @@
       ]
     }
   },
-  "repository_commit_sha": "484f30d61e4be0e87dad5b08417ac6340fbe7476",
+  "repository_commit_sha": "1a22157c7d39208fa00a1a3d71b612089f8143f9",
   "roles": {
     "cli": "src/_cli",
     "contracts": "src/contracts",
@@ -99,7 +99,7 @@
   "source_inputs": [
     {
       "path": "docs/quality/architecture_policy.yaml",
-      "sha256": "33bc74fd01b0716276f060b66fb96cbcb3b5e789dda370b0da2dedbba82b337f"
+      "sha256": "67b94f1038a495161e3bc46b07b8024181938e39fcdc2856e52b41b18c4acd39"
     }
   ]
 }

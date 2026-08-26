@@ -1,7 +1,2 @@
 publisher,route_family,acquisition_records,browser_launches,browser_steps,page_navigations,screenshots,browser_model_calls,duration_seconds
-Algolia,browser_email_form,2,2,3,0,2,17,353.443
-Algolia,browser_onsite_report,1,1,2,1,0,0,8.115
-Algolia,http_pdf_probe,1,0,0,0,0,0,5.071
-Algolia,report_page_pdf_link_probe,1,0,3,2,0,0,8.84
-Commerce tools,browser_email_form,1,1,5,0,5,5,120.438
-StackAdapt,direct_pdf_probe,1,0,0,0,0,0,3.86
+Adjust,direct_pdf_probe,1,0,1,1,0,0,3.096

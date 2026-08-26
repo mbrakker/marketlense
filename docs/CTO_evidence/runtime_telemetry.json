@@ -6,52 +6,12 @@
     "values": {
       "rows": [
         {
-          "attempt_count": 2,
-          "publisher": "Algolia",
-          "route_family": "browser_email_form",
-          "route_records": 2,
-          "success_count": 0,
-          "successful_acquisition_rate": 0.0
-        },
-        {
           "attempt_count": 1,
-          "publisher": "Algolia",
-          "route_family": "browser_onsite_report",
-          "route_records": 1,
-          "success_count": 1,
-          "successful_acquisition_rate": 1.0
-        },
-        {
-          "attempt_count": 1,
-          "publisher": "Algolia",
-          "route_family": "http_pdf_probe",
-          "route_records": 1,
-          "success_count": 0,
-          "successful_acquisition_rate": 0.0
-        },
-        {
-          "attempt_count": 1,
-          "publisher": "Algolia",
-          "route_family": "report_page_pdf_link_probe",
-          "route_records": 1,
-          "success_count": 1,
-          "successful_acquisition_rate": 1.0
-        },
-        {
-          "attempt_count": 1,
-          "publisher": "Commerce tools",
-          "route_family": "browser_email_form",
-          "route_records": 1,
-          "success_count": 0,
-          "successful_acquisition_rate": 0.0
-        },
-        {
-          "attempt_count": 1,
-          "publisher": "StackAdapt",
+          "publisher": "Adjust",
           "route_family": "direct_pdf_probe",
           "route_records": 1,
-          "success_count": 0,
-          "successful_acquisition_rate": 0.0
+          "success_count": 1,
+          "successful_acquisition_rate": 1.0
         }
       ]
     }
@@ -61,12 +21,12 @@
     "source": "reports.acquisition_attempt_resources",
     "status": "available",
     "values": {
-      "acquired_report_count": 2,
-      "browser_sessions": 4,
-      "browser_steps": 13,
-      "duration_seconds": 499.767,
-      "page_loads": 3,
-      "screenshots": 7
+      "acquired_report_count": 1,
+      "browser_sessions": 0,
+      "browser_steps": 1,
+      "duration_seconds": 3.096,
+      "page_loads": 1,
+      "screenshots": 0
     }
   },
   "cache_and_reuse_by_artifact_family": {
@@ -76,8 +36,8 @@
     "source": "reports.artifact_execution_plan_runs; reports.artifact_lineage_records",
     "status": "partial",
     "values": {
-      "plan_count": 40,
-      "planned_reusable_artifact_count": 8
+      "plan_count": 2,
+      "planned_reusable_artifact_count": 1
     }
   },
   "cost_by_llm_scope_and_artifact_family": {
@@ -91,647 +51,178 @@
       "llm_scopes": [
         {
           "action": "artifacts:cover_semantics",
-          "call_count": 26,
-          "estimated_cost_usd": 0.098587,
+          "call_count": 1,
+          "estimated_cost_usd": 0.00298,
           "prompt_namespace": "report_vs/artifacts/cover_semantics",
           "semantic_task": "artifacts:cover_semantics"
         },
         {
           "action": "artifacts:expert_comment",
-          "call_count": 26,
-          "estimated_cost_usd": 0.120347,
+          "call_count": 1,
+          "estimated_cost_usd": 0.001639,
           "prompt_namespace": "report_vs/artifacts/expert_comment",
           "semantic_task": "artifacts:expert_comment"
         },
         {
           "action": "artifacts:insights_candidates",
-          "call_count": 28,
-          "estimated_cost_usd": 0.298342,
+          "call_count": 1,
+          "estimated_cost_usd": 0.005678,
           "prompt_namespace": "report_vs/artifacts/insights_candidates",
           "semantic_task": "artifacts:insights_candidates"
         },
         {
           "action": "artifacts:insights_final",
-          "call_count": 26,
-          "estimated_cost_usd": 0.261114,
+          "call_count": 1,
+          "estimated_cost_usd": 0.004913,
           "prompt_namespace": "report_vs/artifacts/insights_final",
           "semantic_task": "artifacts:insights_final"
         },
         {
           "action": "artifacts:linkedin_post",
-          "call_count": 26,
-          "estimated_cost_usd": 0.103339,
+          "call_count": 1,
+          "estimated_cost_usd": 0.001558,
           "prompt_namespace": "report_vs/artifacts/linkedin_post",
           "semantic_task": "artifacts:linkedin_post"
         },
         {
           "action": "artifacts:quotes",
-          "call_count": 28,
-          "estimated_cost_usd": 0.17416,
+          "call_count": 1,
+          "estimated_cost_usd": 0.003407,
           "prompt_namespace": "report_vs/artifacts/quotes",
           "semantic_task": "artifacts:quotes"
         },
         {
           "action": "artifacts:regenerate:expert_comment",
-          "call_count": 3,
-          "estimated_cost_usd": 0.01193,
+          "call_count": 1,
+          "estimated_cost_usd": 0.001934,
           "prompt_namespace": "report_vs/artifacts/regenerate/expert_comment",
           "semantic_task": "artifacts:regenerate:expert_comment"
         },
         {
           "action": "artifacts:regenerate:insights_candidates",
-          "call_count": 6,
-          "estimated_cost_usd": 0.054645,
+          "call_count": 1,
+          "estimated_cost_usd": 0.007016,
           "prompt_namespace": "report_vs/artifacts/regenerate/insights_candidates",
           "semantic_task": "artifacts:regenerate:insights_candidates"
         },
         {
-          "action": "artifacts:regenerate:insights_candidates",
-          "call_count": 2,
-          "estimated_cost_usd": 0.018127,
-          "prompt_namespace": "report_vs/artifacts/regenerate/insights_candidates",
-          "semantic_task": "regen:1:insights_bundle:candidates"
-        },
-        {
-          "action": "artifacts:regenerate:insights_candidates",
-          "call_count": 1,
-          "estimated_cost_usd": 0.009712,
-          "prompt_namespace": "report_vs/artifacts/regenerate/insights_candidates",
-          "semantic_task": "regen:2:insights_bundle:candidates"
-        },
-        {
           "action": "artifacts:regenerate:insights_final",
-          "call_count": 4,
-          "estimated_cost_usd": 0.035756,
+          "call_count": 1,
+          "estimated_cost_usd": 0.007621,
           "prompt_namespace": "report_vs/artifacts/regenerate/insights_final",
           "semantic_task": "artifacts:regenerate:insights_final"
         },
         {
-          "action": "artifacts:regenerate:insights_final",
-          "call_count": 2,
-          "estimated_cost_usd": 0.018968,
-          "prompt_namespace": "report_vs/artifacts/regenerate/insights_final",
-          "semantic_task": "regen:1:insights_bundle:final"
-        },
-        {
-          "action": "artifacts:regenerate:insights_final",
-          "call_count": 1,
-          "estimated_cost_usd": 0.01143,
-          "prompt_namespace": "report_vs/artifacts/regenerate/insights_final",
-          "semantic_task": "regen:2:insights_bundle:final"
-        },
-        {
-          "action": "artifacts:regenerate:linkedin_post",
-          "call_count": 2,
-          "estimated_cost_usd": 0.008901,
-          "prompt_namespace": "report_vs/artifacts/regenerate/linkedin_post",
-          "semantic_task": "regen:1:linkedin_post"
-        },
-        {
-          "action": "artifacts:regenerate:quotes",
-          "call_count": 1,
-          "estimated_cost_usd": 0.007115,
-          "prompt_namespace": "report_vs/artifacts/regenerate/quotes",
-          "semantic_task": "artifacts:regenerate:quotes"
-        },
-        {
           "action": "artifacts:regenerate:summary",
-          "call_count": 4,
-          "estimated_cost_usd": 0.034598,
+          "call_count": 2,
+          "estimated_cost_usd": 0.010649,
           "prompt_namespace": "report_vs/artifacts/regenerate/summary",
           "semantic_task": "artifacts:regenerate:summary"
         },
         {
-          "action": "artifacts:regenerate:summary",
-          "call_count": 1,
-          "estimated_cost_usd": 0.010111,
-          "prompt_namespace": "report_vs/artifacts/regenerate/summary",
-          "semantic_task": "regen:2:summary"
-        },
-        {
           "action": "artifacts:summary",
-          "call_count": 30,
-          "estimated_cost_usd": 0.237645,
+          "call_count": 1,
+          "estimated_cost_usd": 0.003708,
           "prompt_namespace": "report_vs/artifacts/summary",
           "semantic_task": "artifacts:summary"
         },
         {
-          "action": "browser_report_download:form_value_derivation",
-          "call_count": 3,
-          "estimated_cost_usd": 0.0,
-          "prompt_namespace": "browser_report_download/form_value_derivation",
-          "semantic_task": "browser_report_download:form_value_derivation"
-        },
-        {
-          "action": "browser_use_llm_call",
-          "call_count": 3,
-          "estimated_cost_usd": 2.5e-05,
-          "prompt_namespace": "browser_download/agent",
-          "semantic_task": "browser_use_llm_call"
-        },
-        {
-          "action": "browser_use_llm_call",
-          "call_count": 39,
-          "estimated_cost_usd": 0.21105,
-          "prompt_namespace": "browser_report_download/browser_route/browser_email_form",
-          "semantic_task": "browser_use_llm_call"
-        },
-        {
-          "action": "browser_use_llm_call",
-          "call_count": 34,
-          "estimated_cost_usd": 0.151741,
-          "prompt_namespace": "browser_report_download/browser_route/browser_listing_hub",
-          "semantic_task": "browser_use_llm_call"
-        },
-        {
-          "action": "browser_use_llm_call",
-          "call_count": 81,
-          "estimated_cost_usd": 0.182468,
-          "prompt_namespace": "browser_report_download/browser_route/browser_pdf_click",
-          "semantic_task": "browser_use_llm_call"
-        },
-        {
-          "action": "claim_embedding:generate",
+          "action": "context_category_fit",
           "call_count": 1,
-          "estimated_cost_usd": 1e-06,
-          "prompt_namespace": "claim_embedding/generate",
-          "semantic_task": "claim_embedding:generate"
-        },
-        {
-          "action": "context_category_fit",
-          "call_count": 14,
-          "estimated_cost_usd": 0.080409,
-          "prompt_namespace": "report_vs/context_category_fit",
-          "semantic_task": "categories"
-        },
-        {
-          "action": "context_category_fit",
-          "call_count": 64,
-          "estimated_cost_usd": 0.511733,
+          "estimated_cost_usd": 0.004215,
           "prompt_namespace": "report_vs/context_category_fit",
           "semantic_task": "context_category_fit"
         },
         {
           "action": "context_category_fit_repair",
           "call_count": 1,
-          "estimated_cost_usd": 0.002505,
-          "prompt_namespace": "report_vs/context_category_fit_repair",
-          "semantic_task": "categories"
-        },
-        {
-          "action": "context_category_fit_repair",
-          "call_count": 21,
-          "estimated_cost_usd": 0.123229,
+          "estimated_cost_usd": 0.001313,
           "prompt_namespace": "report_vs/context_category_fit_repair",
           "semantic_task": "context_category_fit_repair"
         },
         {
-          "action": "direct:openai_chat_json",
-          "call_count": 224,
-          "estimated_cost_usd": 0.101279,
-          "prompt_namespace": "direct/openai_chat_json",
-          "semantic_task": "direct:openai_chat_json"
-        },
-        {
           "action": "doc_map",
-          "call_count": 11,
-          "estimated_cost_usd": 0.105355,
+          "call_count": 1,
+          "estimated_cost_usd": 0.00623,
           "prompt_namespace": "report_vs/doc_map",
           "semantic_task": "doc_map"
         },
         {
-          "action": "doc_map",
-          "call_count": 5,
-          "estimated_cost_usd": 0.071633,
-          "prompt_namespace": "report_vs/doc_map",
-          "semantic_task": "evidence:doc_map"
-        },
-        {
           "action": "evidence_packs:findings",
-          "call_count": 5,
-          "estimated_cost_usd": 0.040968,
-          "prompt_namespace": "report_vs/evidence_packs/findings",
-          "semantic_task": "evidence:findings"
-        },
-        {
-          "action": "evidence_packs:findings",
-          "call_count": 8,
-          "estimated_cost_usd": 0.042911,
+          "call_count": 1,
+          "estimated_cost_usd": 0.003439,
           "prompt_namespace": "report_vs/evidence_packs/findings",
           "semantic_task": "evidence_packs:findings"
         },
         {
           "action": "evidence_packs:limitations",
-          "call_count": 5,
-          "estimated_cost_usd": 0.031088,
-          "prompt_namespace": "report_vs/evidence_packs/limitations",
-          "semantic_task": "evidence:limitations"
-        },
-        {
-          "action": "evidence_packs:limitations",
-          "call_count": 9,
-          "estimated_cost_usd": 0.026598,
+          "call_count": 1,
+          "estimated_cost_usd": 0.002273,
           "prompt_namespace": "report_vs/evidence_packs/limitations",
           "semantic_task": "evidence_packs:limitations"
         },
         {
           "action": "evidence_packs:methods",
-          "call_count": 5,
-          "estimated_cost_usd": 0.036444,
-          "prompt_namespace": "report_vs/evidence_packs/methods",
-          "semantic_task": "evidence:methods"
-        },
-        {
-          "action": "evidence_packs:methods",
-          "call_count": 8,
-          "estimated_cost_usd": 0.04546,
+          "call_count": 1,
+          "estimated_cost_usd": 0.002545,
           "prompt_namespace": "report_vs/evidence_packs/methods",
           "semantic_task": "evidence_packs:methods"
         },
         {
           "action": "evidence_packs:quote_candidates",
-          "call_count": 5,
-          "estimated_cost_usd": 0.042049,
-          "prompt_namespace": "report_vs/evidence_packs/quote_candidates",
-          "semantic_task": "evidence:quote_candidates"
-        },
-        {
-          "action": "evidence_packs:quote_candidates",
-          "call_count": 8,
-          "estimated_cost_usd": 0.051637,
+          "call_count": 1,
+          "estimated_cost_usd": 0.00272,
           "prompt_namespace": "report_vs/evidence_packs/quote_candidates",
           "semantic_task": "evidence_packs:quote_candidates"
         },
         {
           "action": "evidence_packs:scope",
-          "call_count": 5,
-          "estimated_cost_usd": 0.027987,
-          "prompt_namespace": "report_vs/evidence_packs/scope",
-          "semantic_task": "evidence:scope"
-        },
-        {
-          "action": "evidence_packs:scope",
-          "call_count": 8,
-          "estimated_cost_usd": 0.0363,
+          "call_count": 1,
+          "estimated_cost_usd": 0.002281,
           "prompt_namespace": "report_vs/evidence_packs/scope",
           "semantic_task": "evidence_packs:scope"
         },
         {
-          "action": "live:accounting_existing_artifact_embedding",
-          "call_count": 1,
-          "estimated_cost_usd": 0.0,
-          "prompt_namespace": "live/accounting_existing_artifact_embedding",
-          "semantic_task": "live:accounting_existing_artifact_embedding"
-        },
-        {
-          "action": "live:accounting_segment_projection",
-          "call_count": 1,
-          "estimated_cost_usd": 0.00029,
-          "prompt_namespace": "live/accounting_segment_projection",
-          "semantic_task": "live:accounting_segment_projection"
-        },
-        {
-          "action": "live:accounting_verification",
-          "call_count": 1,
-          "estimated_cost_usd": 0.000162,
-          "prompt_namespace": "live/accounting_verification",
-          "semantic_task": "live:accounting_verification"
-        },
-        {
-          "action": "openai_analyze",
-          "call_count": 132,
-          "estimated_cost_usd": 0.0,
-          "prompt_namespace": "",
-          "semantic_task": "openai_analyze"
-        },
-        {
-          "action": "openai_analyze",
-          "call_count": 1,
-          "estimated_cost_usd": 0.0,
-          "prompt_namespace": "generic/openai_analyze",
-          "semantic_task": "openai_analyze"
-        },
-        {
-          "action": "openai_chat_json",
-          "call_count": 7,
-          "estimated_cost_usd": 0.030703,
-          "prompt_namespace": "",
-          "semantic_task": "artifacts:cover_semantics"
-        },
-        {
-          "action": "openai_chat_json",
-          "call_count": 7,
-          "estimated_cost_usd": 0.034276,
-          "prompt_namespace": "",
-          "semantic_task": "artifacts:expert_comment"
-        },
-        {
-          "action": "openai_chat_json",
-          "call_count": 7,
-          "estimated_cost_usd": 0.075827,
-          "prompt_namespace": "",
-          "semantic_task": "artifacts:insights_candidates"
-        },
-        {
-          "action": "openai_chat_json",
-          "call_count": 7,
-          "estimated_cost_usd": 0.070855,
-          "prompt_namespace": "",
-          "semantic_task": "artifacts:insights_final"
-        },
-        {
-          "action": "openai_chat_json",
-          "call_count": 7,
-          "estimated_cost_usd": 0.032076,
-          "prompt_namespace": "",
-          "semantic_task": "artifacts:linkedin_post"
-        },
-        {
-          "action": "openai_chat_json",
-          "call_count": 7,
-          "estimated_cost_usd": 0.038828,
-          "prompt_namespace": "",
-          "semantic_task": "artifacts:quotes"
-        },
-        {
-          "action": "openai_chat_json",
-          "call_count": 7,
-          "estimated_cost_usd": 0.054695,
-          "prompt_namespace": "",
-          "semantic_task": "artifacts:summary"
-        },
-        {
-          "action": "openai_chat_json",
-          "call_count": 7,
-          "estimated_cost_usd": 0.036374,
-          "prompt_namespace": "",
-          "semantic_task": "categories"
-        },
-        {
-          "action": "openai_chat_json",
-          "call_count": 342,
-          "estimated_cost_usd": 0.34662,
-          "prompt_namespace": "",
-          "semantic_task": "openai_chat_json"
-        },
-        {
-          "action": "openai_chat_json",
-          "call_count": 2,
-          "estimated_cost_usd": 0.0,
-          "prompt_namespace": "generic/openai_chat_json",
-          "semantic_task": "openai_chat_json"
-        },
-        {
-          "action": "openai_chat_json",
-          "call_count": 1,
-          "estimated_cost_usd": 0.002577,
-          "prompt_namespace": "report_vs/context_category_fit",
-          "semantic_task": "openai_chat_json"
-        },
-        {
-          "action": "openai_chat_json",
-          "call_count": 3,
-          "estimated_cost_usd": 0.018383,
-          "prompt_namespace": "",
-          "semantic_task": "validation:grounding"
-        },
-        {
-          "action": "openai_chat_json",
-          "call_count": 3,
-          "estimated_cost_usd": 0.011675,
-          "prompt_namespace": "",
-          "semantic_task": "validation:semantic"
-        },
-        {
-          "action": "openai_chat_json_with_images",
-          "call_count": 139,
-          "estimated_cost_usd": 0.044651,
-          "prompt_namespace": "",
-          "semantic_task": "openai_chat_json_with_images"
-        },
-        {
-          "action": "openai_chat_json_with_images",
-          "call_count": 1131,
-          "estimated_cost_usd": 3.288224,
-          "prompt_namespace": "direct/openai_chat_json_with_images",
-          "semantic_task": "openai_chat_json_with_images"
-        },
-        {
-          "action": "openai_embeddings",
-          "call_count": 15,
-          "estimated_cost_usd": 7e-06,
-          "prompt_namespace": "",
-          "semantic_task": "openai_embeddings"
-        },
-        {
-          "action": "openai_ocr_pdf",
-          "call_count": 284,
-          "estimated_cost_usd": 0.0,
-          "prompt_namespace": "",
-          "semantic_task": "openai_ocr_pdf"
-        },
-        {
-          "action": "openai_ocr_pdf",
-          "call_count": 240,
-          "estimated_cost_usd": 0.0,
-          "prompt_namespace": "direct/openai_ocr_pdf",
-          "semantic_task": "openai_ocr_pdf"
-        },
-        {
-          "action": "openai_ocr_pdf",
-          "call_count": 3,
-          "estimated_cost_usd": 0.0,
-          "prompt_namespace": "generic/openai_ocr_pdf",
-          "semantic_task": "openai_ocr_pdf"
-        },
-        {
-          "action": "openai_response_vector_store",
-          "call_count": 4,
-          "estimated_cost_usd": 0.058046,
-          "prompt_namespace": "",
-          "semantic_task": "evidence:doc_map"
-        },
-        {
-          "action": "openai_response_vector_store",
-          "call_count": 4,
-          "estimated_cost_usd": 0.037043,
-          "prompt_namespace": "",
-          "semantic_task": "evidence:findings"
-        },
-        {
-          "action": "openai_response_vector_store",
-          "call_count": 4,
-          "estimated_cost_usd": 0.030382,
-          "prompt_namespace": "",
-          "semantic_task": "evidence:limitations"
-        },
-        {
-          "action": "openai_response_vector_store",
-          "call_count": 4,
-          "estimated_cost_usd": 0.034891,
-          "prompt_namespace": "",
-          "semantic_task": "evidence:methods"
-        },
-        {
-          "action": "openai_response_vector_store",
-          "call_count": 4,
-          "estimated_cost_usd": 0.034777,
-          "prompt_namespace": "",
-          "semantic_task": "evidence:quote_candidates"
-        },
-        {
-          "action": "openai_response_vector_store",
-          "call_count": 4,
-          "estimated_cost_usd": 0.025964,
-          "prompt_namespace": "",
-          "semantic_task": "evidence:scope"
-        },
-        {
-          "action": "openai_response_vector_store",
-          "call_count": 175,
-          "estimated_cost_usd": 0.01065,
-          "prompt_namespace": "",
-          "semantic_task": "openai_response_vector_store"
-        },
-        {
-          "action": "openai_response_vector_store",
-          "call_count": 4,
-          "estimated_cost_usd": 0.040056,
-          "prompt_namespace": "",
-          "semantic_task": "taxonomy"
-        },
-        {
           "action": "rank_candidates",
-          "call_count": 35,
-          "estimated_cost_usd": 0.11051,
+          "call_count": 10,
+          "estimated_cost_usd": 0.006553,
           "prompt_namespace": "rank_candidates",
           "semantic_task": "rank_candidates"
         },
         {
           "action": "structured_output:regenerate",
-          "call_count": 8,
-          "estimated_cost_usd": 0.048206,
+          "call_count": 1,
+          "estimated_cost_usd": 0.003709,
           "prompt_namespace": "report_vs/structured_output/regenerate",
           "semantic_task": "structured_output:regenerate"
         },
         {
           "action": "structured_output:repair",
-          "call_count": 2,
-          "estimated_cost_usd": 0.010159,
-          "prompt_namespace": "report_vs/structured_output/repair",
-          "semantic_task": "artifacts:insights_candidates"
-        },
-        {
-          "action": "structured_output:repair",
           "call_count": 1,
-          "estimated_cost_usd": 0.004531,
-          "prompt_namespace": "report_vs/structured_output/repair",
-          "semantic_task": "artifacts:insights_final"
-        },
-        {
-          "action": "structured_output:repair",
-          "call_count": 1,
-          "estimated_cost_usd": 0.00342,
-          "prompt_namespace": "report_vs/structured_output/repair",
-          "semantic_task": "evidence:doc_map"
-        },
-        {
-          "action": "structured_output:repair",
-          "call_count": 1,
-          "estimated_cost_usd": 0.002808,
-          "prompt_namespace": "report_vs/structured_output/repair",
-          "semantic_task": "regen:1:validation:grounding"
-        },
-        {
-          "action": "structured_output:repair",
-          "call_count": 58,
-          "estimated_cost_usd": 0.274959,
+          "estimated_cost_usd": 0.002602,
           "prompt_namespace": "report_vs/structured_output/repair",
           "semantic_task": "structured_output:repair"
         },
         {
-          "action": "structured_output:repair",
-          "call_count": 1,
-          "estimated_cost_usd": 0.004038,
-          "prompt_namespace": "report_vs/structured_output/repair",
-          "semantic_task": "taxonomy"
-        },
-        {
-          "action": "structured_output:repair",
-          "call_count": 1,
-          "estimated_cost_usd": 0.002945,
-          "prompt_namespace": "report_vs/structured_output/repair",
-          "semantic_task": "validation:grounding"
-        },
-        {
           "action": "taxonomy",
-          "call_count": 15,
-          "estimated_cost_usd": 0.135699,
+          "call_count": 1,
+          "estimated_cost_usd": 0.012423,
           "prompt_namespace": "report_vs/taxonomy",
           "semantic_task": "taxonomy"
         },
         {
-          "action": "test:openai_smoke",
-          "call_count": 1,
-          "estimated_cost_usd": 0.0,
-          "prompt_namespace": "test/openai_smoke",
-          "semantic_task": "test:openai_smoke"
-        },
-        {
           "action": "validate:grounding",
           "call_count": 4,
-          "estimated_cost_usd": 0.024921,
-          "prompt_namespace": "report_vs/validate/grounding",
-          "semantic_task": "regen:1:validation:grounding"
-        },
-        {
-          "action": "validate:grounding",
-          "call_count": 2,
-          "estimated_cost_usd": 0.010562,
-          "prompt_namespace": "report_vs/validate/grounding",
-          "semantic_task": "regen:2:validation:grounding"
-        },
-        {
-          "action": "validate:grounding",
-          "call_count": 19,
-          "estimated_cost_usd": 0.097797,
+          "estimated_cost_usd": 0.011014,
           "prompt_namespace": "report_vs/validate/grounding",
           "semantic_task": "validate:grounding"
         },
         {
-          "action": "validate:grounding",
-          "call_count": 12,
-          "estimated_cost_usd": 0.072726,
-          "prompt_namespace": "report_vs/validate/grounding",
-          "semantic_task": "validation:grounding"
-        },
-        {
           "action": "validate:semantic",
           "call_count": 4,
-          "estimated_cost_usd": 0.01595,
-          "prompt_namespace": "report_vs/validate/semantic",
-          "semantic_task": "regen:1:validation:semantic"
-        },
-        {
-          "action": "validate:semantic",
-          "call_count": 2,
-          "estimated_cost_usd": 0.008567,
-          "prompt_namespace": "report_vs/validate/semantic",
-          "semantic_task": "regen:2:validation:semantic"
-        },
-        {
-          "action": "validate:semantic",
-          "call_count": 19,
-          "estimated_cost_usd": 0.06409,
+          "estimated_cost_usd": 0.006292,
           "prompt_namespace": "report_vs/validate/semantic",
           "semantic_task": "validate:semantic"
-        },
-        {
-          "action": "validate:semantic",
-          "call_count": 12,
-          "estimated_cost_usd": 0.048022,
-          "prompt_namespace": "report_vs/validate/semantic",
-          "semantic_task": "validation:semantic"
         }
       ]
     }
@@ -744,8 +235,8 @@
     "status": "partial",
     "values": {
       "execution_plan_cost_usd": 0.0,
-      "published_workflow_observation_count": 9,
-      "successful_publication_observation_count": 8
+      "published_workflow_observation_count": 1,
+      "successful_publication_observation_count": 1
     }
   },
   "crop_qa": {
@@ -755,11 +246,11 @@
     "source": "retained crop_refine.json; llm_usage.llm_usage_events",
     "status": "partial",
     "values": {
-      "acceptance_rate": 0.831663,
-      "accepted_candidate_count": 415,
-      "crop_candidate_count": 499,
+      "acceptance_rate": 1.0,
+      "accepted_candidate_count": 4,
+      "crop_candidate_count": 4,
       "crop_qa_call_count": 0,
-      "crop_refinement_file_count": 114
+      "crop_refinement_file_count": 1
     }
   },
   "deferred_work_age_and_completion": {
@@ -779,14 +270,13 @@
     "source": "reports.vector_projection_queue; reports.claim_embedding_queue_transitions",
     "status": "partial",
     "values": {
-      "mean_open_queue_age_seconds": 6354618.909,
+      "mean_open_queue_age_seconds": 56458.31,
       "queue_status_counts": {
-        "embedded": 8,
-        "pending": 2642
+        "embedded": 3,
+        "pending": 37
       },
       "transition_reason_counts": {
-        "durable_embedding_already_satisfied": 4,
-        "embedding_completed": 8
+        "embedding_completed": 3
       }
     }
   },
@@ -805,80 +295,25 @@
     "values": {
       "rows": [
         {
-          "actual_call_count": 6,
-          "divergent_plan_count": 0,
-          "enforcement_deferred_or_blocked_count": 0,
-          "execution_intent": "crop_repair",
-          "execution_mode": "enforce",
-          "matching_plan_count": 2,
-          "plan_count": 2,
-          "planned_call_count": 6,
-          "unreconciled_plan_count": 0
-        },
-        {
           "actual_call_count": 0,
           "divergent_plan_count": 0,
           "enforcement_deferred_or_blocked_count": 0,
           "execution_intent": "publication_repair",
-          "execution_mode": "enforce",
+          "execution_mode": "shadow",
           "matching_plan_count": 1,
           "plan_count": 1,
-          "planned_call_count": 9,
+          "planned_call_count": 1,
           "unreconciled_plan_count": 0
         },
         {
-          "actual_call_count": 0,
-          "divergent_plan_count": 1,
-          "enforcement_deferred_or_blocked_count": 0,
-          "execution_intent": "publication_repair",
-          "execution_mode": "shadow",
-          "matching_plan_count": 2,
-          "plan_count": 3,
-          "planned_call_count": 3,
-          "unreconciled_plan_count": 0
-        },
-        {
-          "actual_call_count": 37,
-          "divergent_plan_count": 4,
-          "enforcement_deferred_or_blocked_count": 0,
-          "execution_intent": "render_repair",
-          "execution_mode": "enforce",
-          "matching_plan_count": 5,
-          "plan_count": 9,
-          "planned_call_count": 21,
-          "unreconciled_plan_count": 0
-        },
-        {
-          "actual_call_count": 6,
+          "actual_call_count": 8,
           "divergent_plan_count": 0,
           "enforcement_deferred_or_blocked_count": 0,
           "execution_intent": "report_generation",
-          "execution_mode": "enforce",
-          "matching_plan_count": 2,
-          "plan_count": 2,
-          "planned_call_count": 6,
-          "unreconciled_plan_count": 0
-        },
-        {
-          "actual_call_count": 113,
-          "divergent_plan_count": 5,
-          "enforcement_deferred_or_blocked_count": 0,
-          "execution_intent": "report_generation",
           "execution_mode": "shadow",
-          "matching_plan_count": 15,
-          "plan_count": 20,
-          "planned_call_count": 138,
-          "unreconciled_plan_count": 0
-        },
-        {
-          "actual_call_count": 10,
-          "divergent_plan_count": 0,
-          "enforcement_deferred_or_blocked_count": 0,
-          "execution_intent": "targeted_repair",
-          "execution_mode": "enforce",
-          "matching_plan_count": 3,
-          "plan_count": 3,
-          "planned_call_count": 14,
+          "matching_plan_count": 1,
+          "plan_count": 1,
+          "planned_call_count": 8,
           "unreconciled_plan_count": 0
         }
       ]
@@ -889,9 +324,9 @@
     "source": "llm_usage.llm_usage_events",
     "status": "available",
     "values": {
-      "ocr_call_count": 527,
-      "ocr_incidence_among_llm_calls": 0.14887,
-      "ocr_success_rate": 1.0
+      "ocr_call_count": 0,
+      "ocr_incidence_among_llm_calls": 0.0,
+      "ocr_success_rate": null
     }
   },
   "public_page_performance_and_errors": {
@@ -907,12 +342,10 @@
     "source": "index.remediation_records; index.remediation_transitions",
     "status": "available",
     "values": {
-      "human_intervention_rate": 0.875,
-      "recurrence_rate": 0.125,
+      "human_intervention_rate": 1.0,
+      "recurrence_rate": 0.0,
       "status_counts": {
-        "operator_action_required": 42,
-        "pending": 2,
-        "terminal": 4
+        "operator_action_required": 3
       },
       "success_rate": 0.0
     }
@@ -925,12 +358,11 @@
     "source": "index.workflow_control_observations",
     "status": "partial",
     "values": {
-      "failure_rate": 0.111111,
-      "mean_latency_ms": 5041.889,
-      "observation_count": 9,
+      "failure_rate": 0.0,
+      "mean_latency_ms": 24143.0,
+      "observation_count": 1,
       "outcome_counts": {
-        "completed": 8,
-        "succeeded": 1
+        "completed": 1
       }
     }
   }

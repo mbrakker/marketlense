@@ -2,21 +2,19 @@
   "associated_pull_requests": [],
   "check_runs": {
     "conclusion_counts": {
-      "pending": 2,
-      "success": 2
+      "success": 4
     },
     "failed_count": 0,
-    "pending_count": 2,
+    "pending_count": 0,
     "status_counts": {
-      "completed": 2,
-      "in_progress": 2
+      "completed": 4
     },
     "total": 4
   },
-  "main_commit_sha": "484f30d61e4be0e87dad5b08417ac6340fbe7476",
+  "main_commit_sha": "1a22157c7d39208fa00a1a3d71b612089f8143f9",
   "repository": "mbrakker/marketlense",
   "revision_match": true,
   "schema_version": "1.0",
   "status": "available",
-  "tested_commit_sha": "484f30d61e4be0e87dad5b08417ac6340fbe7476"
+  "tested_commit_sha": "1a22157c7d39208fa00a1a3d71b612089f8143f9"
 }

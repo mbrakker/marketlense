@@ -32,6 +32,7 @@ from src.contracts.files import (
     PipelineCheckpointWriteRequest,
     PipelineStageCheckpoint,
     ReadTextRequest,
+    WriteBytesRequest,
 )
 from src.contracts.idempotency import (
     OrchestratorIdempotencyGetRequest,
@@ -76,8 +77,8 @@ from src.contracts.validation_reliability import (
     ValidationReliabilityWriteRequest,
 )
 from src.contracts.validation_run_manifest import (
-    ValidationRunManifestAuditRequest,
     ValidationRunManifestAttemptResolveRequest,
+    ValidationRunManifestAuditRequest,
     ValidationRunManifestRecordRequest,
     ValidationRunManifestStageRecord,
 )
@@ -88,12 +89,12 @@ from src.contracts.wordpress import (
     WordPressPostLookupResponse,
     WordPressPostReadRequest,
     WordPressPostReadResponse,
-    WordPressTransactionOutcome,
     WordPressTagEnsureRequest,
     WordPressTagEnsureResponse,
     WordPressTaxonomyEnsureRequest,
     WordPressTaxonomyEnsureResponse,
     WordPressTaxonomyTerm,
+    WordPressTransactionOutcome,
 )
 from src.contracts.wordpress_entities import (
     WORDPRESS_ENTITY_SCHEMA_VERSION,
@@ -173,6 +174,7 @@ from src.services.file_service import (
     file_exists,
     list_html,
     read_text,
+    write_bytes,
     write_pipeline_checkpoint,
 )
 from src.services.report_store_service import (
@@ -431,6 +433,248 @@ def _load_validation_cohort_for_publish(
         policy_hash,
         by_file_id,
     )
+
+
+def _bind_cohort_publish_candidates(
+    *,
+    settings: PublishSettings,
+    cohort_manifest: str,
+    cohort_id: str,
+    configuration_hash: str,
+    policy_hash: str,
+    members: Mapping[str, Mapping[str, object]],
+    html_file_id_map: Mapping[str, str],
+    metadata_by_file_id: Mapping[str, ReportMetadataGetResponse],
+    report_readiness_references: Mapping[str, str] | None,
+    ctx: RunContext,
+) -> tuple[list[_PublishCandidate], str, str]:
+    """Bind every admitted Report to one ready, identity-compatible artifact.
+
+    This is deliberately a local pre-write barrier: candidate selection is
+    complete before WordPress schema, taxonomy, lookup, media, or post calls.
+    """
+
+    manifest_hash = hashlib.sha256(
+        read_text(
+            ReadTextRequest(schema_version="1.0", path=cohort_manifest), ctx
+        ).content.encode("utf-8")
+    ).hexdigest()
+    candidates: list[_PublishCandidate] = []
+    binding_members: list[dict[str, str]] = []
+
+    for file_id, member in members.items():
+        report_id = str(member.get("report_id") or file_id).strip()
+        if report_id != file_id:
+            raise AppError(
+                code="validation_cohort_publication_identity_mismatch",
+                message=(
+                    "Cohort member report identity does not match its "
+                    "publication identity"
+                ),
+                retryable=False,
+                context={"file_id": file_id, "report_id": report_id},
+            )
+        metadata = metadata_by_file_id.get(file_id)
+        artifact_paths = {
+            canonicalize_html_path(str(path))
+            for path in (
+                member.get("html_path"),
+                getattr(metadata, "html_path", "") if metadata else "",
+            )
+            if str(path or "").strip()
+        }
+        if not artifact_paths:
+            raise AppError(
+                code="validation_cohort_publication_artifact_missing",
+                message=(
+                    "Each admitted cohort member requires exactly one retained "
+                    "publication artifact"
+                ),
+                retryable=False,
+                context={"file_id": file_id},
+            )
+        if len(artifact_paths) != 1:
+            raise AppError(
+                code="validation_cohort_publication_artifact_ambiguous",
+                message="A cohort member resolves to multiple publication artifacts",
+                retryable=False,
+                context={"file_id": file_id, "artifact_count": len(artifact_paths)},
+            )
+        html_path = next(iter(artifact_paths))
+        if not file_exists(
+            FileExistsRequest(schema_version="1.0", path=html_path), ctx
+        ).exists:
+            raise AppError(
+                code="validation_cohort_publication_artifact_missing",
+                message="An admitted cohort member's publication artifact is missing",
+                retryable=False,
+                context={"file_id": file_id, "html_path": html_path},
+            )
+        candidate = _resolve_publish_candidates(
+            html_paths=[html_path],
+            html_file_id_map=dict(html_file_id_map),
+            ctx=ctx,
+        )[0]
+        snapshot = candidate.html_snapshot
+        source_artifact_id = str(
+            snapshot.entity_metadata.source_artifact_id
+            if snapshot and snapshot.entity_metadata
+            else ""
+        ).strip()
+        identity_values = {
+            value
+            for value in (
+                str(candidate.file_id or "").strip(),
+                str(snapshot.file_id or "").strip() if snapshot else "",
+                source_artifact_id,
+            )
+            if value
+        }
+        if (
+            candidate.entity_error is not None
+            or candidate.entity_route is None
+            or candidate.entity_route.entity_type != "report"
+            or identity_values != {file_id}
+        ):
+            raise AppError(
+                code="validation_cohort_publication_identity_mismatch",
+                message=(
+                    "Cohort publication artifact does not match its admitted "
+                    "Report identity"
+                ),
+                retryable=False,
+                context={"file_id": file_id, "html_path": html_path},
+            )
+        expected_source_identity = str(
+            member.get("source_identity_id") or member.get("md5_checksum") or file_id
+        ).strip()
+        expected_md5 = str(member.get("md5_checksum") or "").strip()
+        if metadata is not None and (
+            (
+                expected_md5
+                and str(getattr(metadata, "md5", "") or "").strip()
+                and str(getattr(metadata, "md5", "")).strip() != expected_md5
+            )
+            or (
+                str(getattr(metadata, "source_identity_id", "") or "").strip()
+                and str(getattr(metadata, "source_identity_id", "")).strip()
+                != expected_source_identity
+            )
+            or str(getattr(metadata, "source_identity_status", "") or "").strip()
+            in {"stale", "incompatible", "invalid", "superseded"}
+        ):
+            raise AppError(
+                code="validation_cohort_publication_mapping_incompatible",
+                message=(
+                    "Cohort publication artifact has stale or incompatible "
+                    "source mapping"
+                ),
+                retryable=False,
+                context={"file_id": file_id, "html_path": html_path},
+            )
+        state_row = state_get(
+            StateGetRequest(
+                schema_version="1.0", state_db=settings.state_db, file_id=file_id
+            ),
+            child_context(ctx, task_id=html_path),
+        )
+        readiness = _load_publish_readiness(
+            file_id=file_id,
+            html_path=html_path,
+            settings=settings,
+            ctx=child_context(ctx, task_id=html_path),
+            readiness_reference=str(
+                (report_readiness_references or {}).get(
+                    html_path,
+                    (report_readiness_references or {}).get(
+                        canonicalize_html_path(html_path), ""
+                    ),
+                )
+            ),
+        )
+        verification = verify_publish_readiness(
+            artifact=readiness,
+            report_id=file_id,
+            final_html=snapshot.html_text if snapshot else "",
+            configuration_hash=ctx.configuration_hash,
+            policy_hash=ctx.policy_hash,
+            producer_revision=ctx.producer_commit_sha,
+        )
+        if state_row is None or verification.status != "pass":
+            raise AppError(
+                code="validation_cohort_publication_not_ready",
+                message=(
+                    "Every admitted cohort member must be publish-ready before "
+                    "publication begins"
+                ),
+                retryable=False,
+                context={"file_id": file_id, "validation_status": verification.status},
+            )
+        candidates.append(candidate)
+        binding_members.append(
+            {
+                "file_id": file_id,
+                "source_identity_id": expected_source_identity,
+                "html_path": html_path,
+                "html_sha256": hashlib.sha256(
+                    snapshot.html_text.encode("utf-8") if snapshot else b""
+                ).hexdigest(),
+                "publish_readiness_hash": str(
+                    getattr(readiness, "artifact_hash", "") or ""
+                ),
+            }
+        )
+
+    binding_input = {
+        "schema_version": "1.0",
+        "cohort_id": cohort_id,
+        "manifest_sha256": manifest_hash,
+        "configuration_hash": configuration_hash,
+        "policy_hash": policy_hash,
+        "candidates": binding_members,
+    }
+    candidate_set_hash = sha256_json(binding_input)
+    persisted_payload = {**binding_input, "candidate_set_hash": candidate_set_hash}
+    binding_path = (
+        Path(settings.output_dir)
+        / "cohorts"
+        / cohort_id
+        / "publication_candidate_set.json"
+    )
+    write_bytes(
+        WriteBytesRequest(
+            schema_version="1.0",
+            path=str(binding_path),
+            content=(
+                json.dumps(
+                    persisted_payload,
+                    ensure_ascii=True,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                )
+                + "\n"
+            ).encode("utf-8"),
+        ),
+        ctx,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="publish_cohort_binding_resolved",
+            module=logger.name,
+            fields={
+                "cohort_member_count": len(members),
+                "resolved_candidate_count": len(candidates),
+                "candidate_set_hash": candidate_set_hash,
+                "binding_path": str(binding_path),
+                "silent_exclusion_count": 0,
+                "unrelated_candidate_count": 0,
+                "ambiguous_mapping_count": 0,
+            },
+        )
+    )
+    return candidates, candidate_set_hash, str(binding_path)
 
 
 def _record_validation_cohort_publish_outcomes(
@@ -1173,28 +1417,21 @@ def run_publish(
         metadata_by_file_id = {}
 
     if cohort_member_file_ids is not None:
-        missing_members = sorted(
-            file_id
-            for file_id in cohort_member_file_ids
-            if not str(
-                cohort_members[file_id].get("html_path")
-                or getattr(metadata_by_file_id.get(file_id), "html_path", "")
-            ).strip()
+        candidates, _candidate_set_hash, _binding_path = (
+            _bind_cohort_publish_candidates(
+                settings=settings,
+                cohort_manifest=str(cohort_manifest),
+                cohort_id=cohort_id,
+                configuration_hash=configuration_hash,
+                policy_hash=policy_hash,
+                members=cohort_members,
+                html_file_id_map=html_file_id_map,
+                metadata_by_file_id=metadata_by_file_id,
+                report_readiness_references=report_readiness_references,
+                ctx=root_ctx,
+            )
         )
-        if missing_members:
-            raise AppError(
-                code="validation_cohort_report_reference_missing",
-                message="Cohort publication requires each admitted Report's retained HTML reference",
-                retryable=False,
-                context={"missing_member_count": len(missing_members)},
-            )
-        discovered_html_paths = [
-            str(
-                cohort_members[file_id].get("html_path")
-                or metadata_by_file_id[file_id].html_path
-            )
-            for file_id in sorted(cohort_member_file_ids)
-        ]
+        discovered_html_paths = [candidate.html_path for candidate in candidates]
         logger.info(
             log_event(
                 root_ctx,
@@ -1243,21 +1480,14 @@ def run_publish(
         max_n = limit if limit is not None else len(discovered_html_paths)
         selected_html_paths = discovered_html_paths[:max_n]
 
-    candidates = _resolve_publish_candidates(
-        html_paths=selected_html_paths,
-        html_file_id_map=html_file_id_map,
-        ctx=root_ctx,
-        skip_unowned_nonpublish_html=auto_discovery,
-    )
+    if cohort_member_file_ids is None:
+        candidates = _resolve_publish_candidates(
+            html_paths=selected_html_paths,
+            html_file_id_map=html_file_id_map,
+            ctx=root_ctx,
+            skip_unowned_nonpublish_html=auto_discovery,
+        )
     if cohort_member_file_ids is not None:
-        # The input list was resolved from admitted members above.  Keep this
-        # assertion-like filter as a fail-closed boundary should report-store
-        # metadata change between resolution and candidate construction.
-        candidates = [
-            candidate
-            for candidate in candidates
-            if str(candidate.file_id or "") in cohort_member_file_ids
-        ]
         logger.info(
             log_event(
                 root_ctx,

@@ -318,10 +318,16 @@ publication must retain a successful `repeat_publication` stage with reused
 idempotency and no write. An ambiguous WordPress lookup blocks before any
 WordPress create or update operation.
 
-Passing `--cohort-manifest` also scopes publish candidate selection to that
-immutable member set before WordPress lookup, taxonomy resolution, or writes;
-it is not merely an outcome-recording argument. This keeps a validation run
-from touching unrelated report artifacts. Authenticated WordPress lookup covers
+Passing `--cohort-manifest` makes that immutable member set the authoritative,
+one-to-one publish set before any WordPress operation; it is not merely an
+outcome-recording argument. Each admitted member must bind to exactly one
+existing, identity-compatible, publish-ready Report artifact, and every binding
+must succeed before any WordPress write. A missing, duplicate, changed, stale,
+incompatible, ambiguous, or unready member aborts the full cohort without
+silently excluding it or admitting unrelated artifacts. The ordered binding and
+its deterministic candidate-set hash are retained with the manifest/cohort and
+configuration/policy identities; see [publishing](publishing.md) for the
+artifact location and validation details. Authenticated WordPress lookup covers
 every visible status, including drafts, so a repeat can verify and reuse a
 sandbox-draft post without creating a duplicate. A cohort's initial creation
 also reads its exact returned post ID before its outcome is recorded.

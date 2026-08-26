@@ -27,6 +27,21 @@ then calls the existing report publisher with exactly that one candidate and
 readiness reference. It never scans `output_dir`. A cohort manifest resolves
 only admitted Report members before candidate construction.
 
+`publish-wp --cohort-manifest <path>` is an all-or-nothing publication binding,
+not a best-effort filter. Before the first WordPress schema, taxonomy, lookup,
+media, or post operation, every admitted member must resolve to exactly one
+existing Report HTML artifact. Its manifest and report-store mappings must agree;
+the Report and embedded source identities must match the member; source mapping
+must be current and compatible; persisted state and `publish_readiness` must
+pass. Missing, duplicate, changed, stale, incompatible, unready, or ambiguous
+members abort the whole attempt—none are silently excluded and no unrelated
+artifact can enter the candidate set. The ordered resolved set is persisted at
+`<output_dir>/cohorts/<cohort_id>/publication_candidate_set.json` with the
+manifest SHA-256, cohort ID, configuration and policy hashes, per-artifact HTML
+and readiness hashes, and a deterministic `candidate_set_hash`. Re-resolving
+unchanged inputs produces the same ordered membership and hash; changed mapping
+or membership changes that hash or fails binding.
+
 All workers recheck approval, checksum, taxonomy/media/idempotency and readback
 before writing. A verified Briefing or Signal post schedules the separate
 `wordpress_projection` queue, which rebuilds the public intelligence projection
