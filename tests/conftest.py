@@ -178,7 +178,9 @@ def publish_settings_factory(app_paths: dict[str, str]):
             output_dir=app_paths["output_dir"],
             state_db=app_paths["state_db"],
             reports_db=app_paths["reports_db"],
-            usage_db_path=str(Path(app_paths["output_dir"]).parent / "llm_usage.sqlite"),
+            usage_db_path=str(
+                Path(app_paths["output_dir"]).parent / "llm_usage.sqlite"
+            ),
             projection_ledger_path=str(
                 Path(app_paths["output_dir"]).parent / "llm_usage_projection.jsonl"
             ),
