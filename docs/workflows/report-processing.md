@@ -352,6 +352,27 @@ may abstain only for a downstream family contract that represents abstention;
 required non-abstainable families finish as a typed permanent failure when the
 bounded sequence is exhausted.
 
+Before the artifact generator enters this structured-output path, it checks
+each independently retained artifact prompt family against its exact retained
+provenance. The seven current routes are summary, candidate insights, quotes,
+final insights, cover semantics, expert comment, and LinkedIn post. Reuse
+requires a verified report/source identity, prompt and execution identities,
+provider/model and model-policy namespace, schema/validator, semantic input,
+configuration-policy, and output hashes, plus a passed validation state. A
+missing or unverifiable record is a normal, explicit regeneration reason. The
+generator retains bounded family telemetry with requested/reused/regenerated
+families, reasons, avoided/actual model calls, token/cost usage, and available
+provider-call duration. Reused outputs still pass deterministic assembly and
+the normal report grounding, semantic, editorial, render, and publish-readiness
+gates.
+
+Vector-backed artifact reuse additionally requires a content identity composed
+from the source, vector-store, provider-file, and indexing identities; absent
+vector provenance disables reuse. A family that needed structured-output repair
+or regeneration is retained without primary-family reuse proof, so a later run
+regenerates it through the primary route before it can converge to reusable
+state.
+
 Each non-prunable, reference-bearing artifact response (candidate insights,
 final insights, and quotes) is also checked against the canonical document map
 and evidence packs before it leaves that bounded structured-output recovery

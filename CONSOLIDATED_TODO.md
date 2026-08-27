@@ -58,7 +58,7 @@ All work is listed below in one register. `Active` items have detailed completio
 | Active | E14 | Calibrate category-fit coverage from retained outcomes | Turn category-fit decisions into grounded mapping and recovery improvements. |
 | Active | E13 | Measure candidate-regeneration promotion effectiveness | Turn retained candidate lineage and promotion outcomes into bounded repair-quality improvements. |
 | Active | E8 | Use canonical source identity to suppress duplicate research work | Canonical source identity reuse outcome. |
-| Active | E9 | Materialize prompt-family outputs and route only their required model calls | Prompt-family repair and model-call reduction outcome. |
+| Closed | E9 | Materialize prompt-family outputs and route only their required model calls | Seven report-artifact prompt families now reuse independently verified retained outputs; fixture replay records 7→0 calls and a one-family repair records 1 call. |
 | Closed | E3 | Lineage-driven minimum regeneration | Remains closed; E7 owns expansion beyond the proven rendered-HTML family. |
 | Active | E12 | Persist pre-category editorial context checkpoints | Extend typed recovery from source/vector reuse to genuinely single-family taxonomy and category-fit retries. |
 | Closed | E4 | Executable retained PDF benchmark corpus in CI | Retained corpus is hash-pinned and CI-gated; local release-equivalent run passed. |
@@ -476,14 +476,9 @@ ingest, explicit-resume, publish-readiness, and publication regressions passed.
 
 - **Title:** Materialize prompt-family outputs and route only their required model calls
 - **Impact 5 / effort: 3**
-- **Context:** Prompt-family outputs are now typed, hash-pinned materializations; the planner names required and reused families, and enforced repair reconciles its actual family calls against the plan. The prior 17-call composite repair is now the baseline to beat, not the current architecture. What remains is representative retained and bounded live evidence of the claimed saving.
-- **Benefit:** Prompt, validator, and advisory changes can regenerate the one affected family plus deterministic downstream assembly, reducing LLM time and spend while retaining E7's plan/actual enforcement.
-- **Risks to avoid:** Preserve immutable evidence, validation, claims, and rendered-HTML dependency edges; do not duplicate model routing, bypass the LLM ledger, or treat an incomplete family as reusable.
-- **Success criteria:**
-
-- Preserve typed, hash-pinned per-family materializations and their direct dependencies under the current report-analysis boundary; planner and executor must continue to reconcile required, reused, and actual family calls.
-- Retained-corpus and bounded live comparisons demonstrate a material call/time/cost reduction against the 17-call composite baseline, while preserving semantic validation and zero unplanned side effects.
-- Record scope, policy/prompt identities, actual ledger usage, and the reason for any no-improvement result so an operator can distinguish an unsupported repair family from a failed saving claim.
+- **Closed 2026-08-27:** Artifact-generation now resolves each of the seven model routes against a hash-verified, independently retained family before provider invocation. Provenance includes report/source identity, prompt content/dependency identity, model provider/name/policy namespace, execution/routing/configuration identities, schema/validator, exact semantic input, output hash, and passed validation state. Missing or unverifiable provenance is an explicit regeneration reason.
+- **Measured fixture evidence:** the controlled retained replay records 7 fresh model calls, 700 input tokens, 140 output tokens, and $0.00294 estimated cost; its compatible replay records 0 calls, 0 tokens, and $0.00000. A single summary-family invalidation calls summary only and reuses the other six families.
+- **Validation preserved:** reused raw family outputs continue through deterministic normalisation, grounding, semantic, editorial, rendering, and publish-readiness gates; the existing minimum-execution/recovery planner remains the only repair flow.
 
 ### 4. Release Integrity and Architectural Enforcement
 

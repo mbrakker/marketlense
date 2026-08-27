@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 from typing import Any
 
 from src.contracts.config import AppSettings
@@ -73,6 +74,7 @@ def invoke_structured_output_model(
     output_schema: dict[str, Any],
     output_schema_identity: str,
     repair_attempt: int,
+    response_observer=None,
 ) -> Any:
     common = {
         "schema_version": "1.0",
@@ -112,8 +114,19 @@ def invoke_structured_output_model(
             max_input_tokens=prompt_bundle.routing_decision.max_input_tokens or None,
         ),
     }
+    started = time.perf_counter()
     if vector_store_id:
-        return openai_client.openai_respond_with_vector_store(
+        response = openai_client.openai_respond_with_vector_store(
             OpenAIResponseRequest(vector_store_id=vector_store_id, **common), ctx
         )
-    return openai_client.openai_chat_json(OpenAIJSONPromptRequest(**common), ctx)
+    else:
+        response = openai_client.openai_chat_json(
+            OpenAIJSONPromptRequest(**common), ctx
+        )
+    if response_observer is not None:
+        response_observer(
+            response,
+            (time.perf_counter() - started) * 1000,
+            "primary" if repair_attempt == 0 else "recovery",
+        )
+    return response

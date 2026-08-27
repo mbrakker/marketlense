@@ -17,6 +17,8 @@ from src.contracts.prompt_family_materialization import (
     PromptFamilyMaterialization,
     PromptFamilyMaterializationRequest,
     PromptFamilyMaterializationResponse,
+    PromptFamilyReuseRequest,
+    PromptFamilyReuseResponse,
 )
 from src.contracts.report_analysis import (
     AnalysisPackPathRequest,
@@ -183,6 +185,7 @@ def materialize_prompt_family(
             dependency_artifact_ids=dependencies,
             content_hash=output_hash,
             prompt_hash=prompt_hash,
+            model_provider=request.model_provider,
             model_name=request.model_name,
             validation_status=request.validation_status,
             metadata={
@@ -198,11 +201,27 @@ def materialize_prompt_family(
                     request.execution_identity_manifest or {}
                 ),
                 "identity_status": (
-                    "current" if prompt_content_hash and execution_identity else "legacy"
+                    "current"
+                    if (
+                        prompt_content_hash
+                        and execution_identity
+                        and request.model_provider
+                        and request.model_name
+                        and request.model_policy_namespace
+                        and request.routing_policy_version
+                        and request.validator_version
+                        and request.relevant_input_hash
+                        and request.configuration_policy_hash
+                    )
+                    else "legacy"
                 ),
+                "model_provider": request.model_provider,
+                "model_policy_namespace": request.model_policy_namespace,
                 "prompt_policy_version": request.prompt_policy_version,
                 "routing_policy_version": request.routing_policy_version,
                 "validator_version": request.validator_version,
+                "relevant_input_hash": request.relevant_input_hash,
+                "configuration_policy_hash": request.configuration_policy_hash,
                 "evidence_set_hash": request.evidence_set_hash,
                 "dependency_hashes": dependency_hashes,
                 "superseded_materialization_reference": superseded_reference,
@@ -216,7 +235,12 @@ def materialize_prompt_family(
                 },
                 "execution_identities": {family_id: execution_identity},
                 "model_policy_versions": {family_id: request.routing_policy_version},
+                "model_policy_namespaces": {family_id: request.model_policy_namespace},
                 "validator_versions": {family_id: request.validator_version},
+                "configuration_policy_hashes": {
+                    family_id: request.configuration_policy_hash
+                },
+                "relevant_input_hashes": {family_id: request.relevant_input_hash},
             },
             lineage_status="complete",
         ),
@@ -235,7 +259,11 @@ def materialize_prompt_family(
         execution_identity_manifest=dict(request.execution_identity_manifest or {}),
         prompt_policy_version=request.prompt_policy_version,
         model_name=request.model_name,
+        model_provider=request.model_provider,
+        model_policy_namespace=request.model_policy_namespace,
         routing_policy_version=request.routing_policy_version,
+        relevant_input_hash=request.relevant_input_hash,
+        configuration_policy_hash=request.configuration_policy_hash,
         validator_version=request.validator_version,
         direct_dependency_artifact_ids=dependencies,
         direct_dependency_hashes=dependency_hashes,
@@ -290,4 +318,150 @@ def materialize_prompt_family(
     )
 
 
-__all__ = ["materialize_prompt_family"]
+def read_reusable_prompt_family(
+    request: PromptFamilyReuseRequest, ctx: RunContext
+) -> PromptFamilyReuseResponse:
+    """Return one retained family only when every compatibility proof matches.
+
+    This is deliberately a read-only, family-specific boundary.  A composite
+    artifacts pack cannot satisfy it, and a failed proof is a normal cache
+    miss rather than an exception so the existing generator recovery path can
+    perform the required model call.
+    """
+    required = {
+        "db_path": request.db_path,
+        "output_dir": request.output_dir,
+        "report_id": request.report_id,
+        "source_id": request.source_id,
+        "family_id": request.family_id,
+        "family_schema_version": request.family_schema_version,
+        "processing_version": request.processing_version,
+        "prompt_content_hash": request.prompt_content_hash,
+        "execution_identity": request.execution_identity,
+        "model_provider": request.model_provider,
+        "model_name": request.model_name,
+        "model_policy_namespace": request.model_policy_namespace,
+        "routing_policy_version": request.routing_policy_version,
+        "validator_version": request.validator_version,
+        "relevant_input_hash": request.relevant_input_hash,
+        "configuration_policy_hash": request.configuration_policy_hash,
+    }
+    if any(not str(value or "").strip() for value in required.values()):
+        return PromptFamilyReuseResponse(
+            schema_version=PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+            reusable=False,
+            reason="request_provenance_missing",
+        )
+    output_reference = report_analysis_store_service.pack_path(
+        AnalysisPackPathRequest(
+            schema_version="1.0",
+            output_dir=request.output_dir,
+            report_id=ReportId(request.report_id),
+            pack_name=_pack_name(request.family_id),
+            report_slug=request.report_slug or request.report_id,
+        ),
+        ctx,
+    ).output_path
+    record = get_artifact_lineage_for_storage(
+        ArtifactLineageStorageLookupRequest(
+            schema_version=ARTIFACT_LINEAGE_SCHEMA_VERSION,
+            db_path=request.db_path,
+            report_id=request.report_id,
+            artifact_kind=f"prompt_family:{request.family_id}",
+            storage_ref=output_reference,
+        ),
+        ctx,
+    ).record
+    if record is None:
+        return _reuse_miss("materialization_missing")
+    if record.state != "active" or record.lineage_status != "complete":
+        return _reuse_miss("lineage_unverified")
+    if record.report_id != request.report_id or record.source_id != request.source_id:
+        return _reuse_miss("source_identity_changed")
+    if (
+        record.schema_version_used != request.family_schema_version
+        or record.processing_version != request.processing_version
+    ):
+        return _reuse_miss("schema_or_processing_changed")
+    if record.validation_status != request.expected_validation_status:
+        return _reuse_miss("validation_not_passed")
+    metadata = record.metadata if isinstance(record.metadata, dict) else {}
+    expected_metadata = {
+        "identity_status": "current",
+        "prompt_content_hash": request.prompt_content_hash,
+        "execution_identity": request.execution_identity,
+        "model_provider": request.model_provider,
+        "model_policy_namespace": request.model_policy_namespace,
+        "routing_policy_version": request.routing_policy_version,
+        "validator_version": request.validator_version,
+        "relevant_input_hash": request.relevant_input_hash,
+        "configuration_policy_hash": request.configuration_policy_hash,
+    }
+    for key, value in expected_metadata.items():
+        if str(metadata.get(key) or "") != value:
+            return _reuse_miss(
+                "missing_provenance"
+                if key not in metadata
+                else _reuse_reason_for_metadata_key(key)
+            )
+    if (
+        record.model_provider != request.model_provider
+        or record.model_name != request.model_name
+    ):
+        return _reuse_miss("model_policy_changed")
+    path = Path(record.storage_ref)
+    if not path.is_file():
+        return _reuse_miss("output_missing")
+    try:
+        raw = path.read_bytes()
+        payload = json.loads(raw.decode("utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return _reuse_miss("output_invalid")
+    observed_hash = hashlib.sha256(raw).hexdigest()
+    if observed_hash != record.content_hash:
+        return _reuse_miss("output_hash_mismatch")
+    if not isinstance(payload, dict) or (
+        str(payload.get("schema_version") or "")
+        != PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION
+    ):
+        return _reuse_miss("output_invalid")
+    if (
+        str(payload.get("family_id") or "") != request.family_id
+        or str(payload.get("family_schema_version") or "")
+        != request.family_schema_version
+        or str(payload.get("processing_version") or "") != request.processing_version
+        or "output" not in payload
+    ):
+        return _reuse_miss("output_invalid")
+    return PromptFamilyReuseResponse(
+        schema_version=PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+        reusable=True,
+        reason="reused",
+        output_payload=payload["output"],
+        artifact_id=record.artifact_id,
+        output_hash=record.content_hash,
+    )
+
+
+def _reuse_miss(reason: str) -> PromptFamilyReuseResponse:
+    return PromptFamilyReuseResponse(
+        schema_version=PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+        reusable=False,
+        reason=reason,
+    )
+
+
+def _reuse_reason_for_metadata_key(key: str) -> str:
+    return {
+        "prompt_content_hash": "prompt_version_changed",
+        "execution_identity": "model_policy_changed",
+        "model_provider": "model_policy_changed",
+        "model_policy_namespace": "model_policy_changed",
+        "routing_policy_version": "model_policy_changed",
+        "validator_version": "schema_or_validation_changed",
+        "relevant_input_hash": "input_hash_changed",
+        "configuration_policy_hash": "configuration_policy_changed",
+    }.get(key, "missing_provenance")
+
+
+__all__ = ["materialize_prompt_family", "read_reusable_prompt_family"]

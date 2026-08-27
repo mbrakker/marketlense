@@ -67,8 +67,24 @@ class PromptFamilyMaterializationRequest:
     model_name: str = field(
         default="", metadata={"doc": "Resolved provider model when model-backed."}
     )
+    model_provider: str = field(
+        default="",
+        metadata={"doc": "Resolved model provider when model-backed."},
+    )
+    model_policy_namespace: str = field(
+        default="",
+        metadata={"doc": "Namespace owning the resolved model-policy decision."},
+    )
     routing_policy_version: str = field(
         default="", metadata={"doc": "Model-routing compatibility fingerprint."}
+    )
+    relevant_input_hash: str = field(
+        default="",
+        metadata={"doc": "SHA-256 of this family's exact semantic model inputs."},
+    )
+    configuration_policy_hash: str = field(
+        default="",
+        metadata={"doc": "SHA-256 of configuration and policy inputs for this family."},
     )
     validator_version: str = field(
         default="",
@@ -125,7 +141,17 @@ class PromptFamilyMaterialization:
     )
     prompt_policy_version: str = field(metadata={"doc": "Prompt-policy fingerprint."})
     model_name: str = field(metadata={"doc": "Resolved model when applicable."})
+    model_provider: str = field(metadata={"doc": "Resolved model provider."})
+    model_policy_namespace: str = field(
+        metadata={"doc": "Namespace owning the resolved model-policy decision."}
+    )
     routing_policy_version: str = field(metadata={"doc": "Routing-policy fingerprint."})
+    relevant_input_hash: str = field(
+        metadata={"doc": "SHA-256 of this family's exact semantic model inputs."}
+    )
+    configuration_policy_hash: str = field(
+        metadata={"doc": "SHA-256 of configuration and policy inputs."}
+    )
     validator_version: str = field(
         metadata={"doc": "Validator compatibility fingerprint when applicable."}
     )
@@ -158,4 +184,75 @@ class PromptFamilyMaterializationResponse:
     )
     created: bool = field(
         metadata={"doc": "Whether the lineage record was newly created."}
+    )
+
+
+@dataclass(frozen=True)
+class PromptFamilyReuseRequest:
+    """Exact compatibility proof required before one family can be reused."""
+
+    schema_version: str = field(
+        metadata={"doc": "Prompt-family reuse request version."}
+    )
+    db_path: str = field(metadata={"doc": "Canonical reports SQLite path."})
+    output_dir: str = field(metadata={"doc": "Controlled report output root."})
+    report_id: str = field(metadata={"doc": "Owning report identifier."})
+    report_slug: str = field(metadata={"doc": "Safe report output-path slug."})
+    source_id: str = field(metadata={"doc": "Immutable source content identifier."})
+    family_id: str = field(metadata={"doc": "Stable prompt family ID."})
+    family_schema_version: str = field(
+        metadata={"doc": "Required output schema version."}
+    )
+    processing_version: str = field(
+        metadata={"doc": "Required producer compatibility key."}
+    )
+    prompt_content_hash: str = field(
+        metadata={"doc": "Required prompt dependency hash."}
+    )
+    execution_identity: str = field(
+        metadata={"doc": "Required resolved provider/model execution identity."}
+    )
+    model_provider: str = field(metadata={"doc": "Required resolved model provider."})
+    model_name: str = field(metadata={"doc": "Required resolved model."})
+    model_policy_namespace: str = field(
+        metadata={"doc": "Required model-policy namespace."}
+    )
+    routing_policy_version: str = field(
+        metadata={"doc": "Required model-routing compatibility fingerprint."}
+    )
+    validator_version: str = field(
+        metadata={"doc": "Required structured-output validator fingerprint."}
+    )
+    relevant_input_hash: str = field(
+        metadata={"doc": "Required SHA-256 of this family's semantic inputs."}
+    )
+    configuration_policy_hash: str = field(
+        metadata={"doc": "Required configuration/policy SHA-256."}
+    )
+    expected_validation_status: str = field(
+        default="pass", metadata={"doc": "Required retained family validation status."}
+    )
+
+
+@dataclass(frozen=True)
+class PromptFamilyReuseResponse:
+    """Bounded decision and approved output for one prompt-family reuse attempt."""
+
+    schema_version: str = field(
+        metadata={"doc": "Prompt-family reuse response version."}
+    )
+    reusable: bool = field(
+        metadata={"doc": "Whether the retained output is safe to use."}
+    )
+    reason: str = field(
+        metadata={"doc": "Stable reuse or regeneration decision reason."}
+    )
+    output_payload: Any | None = field(
+        default=None, metadata={"doc": "Verified retained family output when reusable."}
+    )
+    artifact_id: str = field(
+        default="", metadata={"doc": "Verified retained lineage artifact identity."}
+    )
+    output_hash: str = field(
+        default="", metadata={"doc": "Verified retained output SHA-256."}
     )

@@ -292,9 +292,7 @@ def _regeneration_attempts_from_list(
                 candidate_artifacts_path=str(
                     raw_attempt.get("candidate_artifacts_path") or ""
                 ),
-                candidate_audit_path=str(
-                    raw_attempt.get("candidate_audit_path") or ""
-                ),
+                candidate_audit_path=str(raw_attempt.get("candidate_audit_path") or ""),
                 validation_path=str(raw_attempt.get("validation_path") or ""),
                 validation_snapshot_path=str(
                     raw_attempt.get("validation_snapshot_path") or ""
@@ -672,6 +670,14 @@ def _record_prompt_family_materializations(
     cache = artifacts.get("_cache")
     cached_prompts = cache.get("prompts") if isinstance(cache, dict) else {}
     prompts = cached_prompts if isinstance(cached_prompts, dict) else {}
+    cached_family_reuse = cache.get("family_reuse") if isinstance(cache, dict) else {}
+    family_reuse = cached_family_reuse if isinstance(cached_family_reuse, dict) else {}
+    cached_family_outputs = (
+        cache.get("family_outputs") if isinstance(cache, dict) else {}
+    )
+    family_outputs = (
+        cached_family_outputs if isinstance(cached_family_outputs, dict) else {}
+    )
     execution_compatibility = dict(runtime.execution_compatibility or {})
     raw_prompt_versions = execution_compatibility.get("prompt_versions")
     raw_model_versions = execution_compatibility.get("model_policy_versions")
@@ -730,6 +736,9 @@ def _record_prompt_family_materializations(
     ) -> None:
         prompt = prompts.get(family_id)
         prompt_data = prompt if isinstance(prompt, dict) else {}
+        cached_identity = family_reuse.get(family_id)
+        identity = cached_identity if isinstance(cached_identity, dict) else {}
+        recovery_attempted = bool(identity.get("recovery_attempted"))
         system_hash = str(prompt_data.get("prompt_system_sha256") or "")
         user_hash = str(prompt_data.get("prompt_user_sha256") or "")
         prompt_content_hash = str(prompt_data.get("prompt_content_hash") or "")
@@ -763,6 +772,22 @@ def _record_prompt_family_materializations(
             or prompt_content_hash
             or sha256_json({"system": system_hash, "user": user_hash})
         )
+        prompt_content_hash = str(
+            identity.get("prompt_content_hash") or prompt_content_hash
+        )
+        prompt_dependency_manifest = dict(
+            identity.get("prompt_dependency_manifest")
+            or prompt_dependency_manifest
+            or {}
+        )
+        execution_identity = str(
+            identity.get("execution_identity") or execution_identity
+        )
+        execution_identity_manifest = dict(
+            identity.get("execution_identity_manifest")
+            or execution_identity_manifest
+            or {}
+        )
         dependency_ids, dependency_hashes = dependencies(*dependency_names)
         result = materialize_prompt_family(
             PromptFamilyMaterializationRequest(
@@ -783,12 +808,35 @@ def _record_prompt_family_materializations(
                 execution_identity=execution_identity,
                 execution_identity_manifest=execution_identity_manifest,
                 prompt_policy_version=policy_version,
-                model_name=str(prompt_data.get("model") or ""),
+                model_name=str(
+                    identity.get("model_name") or prompt_data.get("model") or ""
+                ),
+                model_provider=str(identity.get("model_provider") or ""),
+                model_policy_namespace=str(
+                    identity.get("model_policy_namespace") or ""
+                ),
                 routing_policy_version=str(
-                    model_versions.get(family_id) or model_versions.get("*") or ""
+                    identity.get("routing_policy_version")
+                    or model_versions.get(family_id)
+                    or model_versions.get("*")
+                    or ""
+                ),
+                # A recovery prompt has different instructions and may use a
+                # different model route.  Its output must not inherit the
+                # primary family identity; leave the proof incomplete so a
+                # later run fails closed and regenerates through the primary
+                # path before it can become reusable.
+                relevant_input_hash=(
+                    ""
+                    if recovery_attempted
+                    else str(identity.get("relevant_input_hash") or "")
+                ),
+                configuration_policy_hash=str(
+                    identity.get("configuration_policy_hash") or ""
                 ),
                 validator_version=str(
-                    validator_versions.get(family_id)
+                    identity.get("validator_version")
+                    or validator_versions.get(family_id)
                     or validator_versions.get("*")
                     or ""
                 ),
@@ -841,27 +889,36 @@ def _record_prompt_family_materializations(
     )
     persist(
         "report_vs/artifacts/summary",
-        artifacts.get("summary", {}),
+        family_outputs.get("report_vs/artifacts/summary", artifacts.get("summary", {})),
         ("report_vs/doc_map", *evidence_family_ids),
     )
     persist(
         "report_vs/artifacts/insights_candidates",
-        artifacts.get("insights_candidates", []),
+        family_outputs.get(
+            "report_vs/artifacts/insights_candidates",
+            artifacts.get("insights_candidates", []),
+        ),
         ("report_vs/doc_map", *evidence_family_ids),
     )
     persist(
         "report_vs/artifacts/quotes",
-        artifacts.get("quotes_final", []),
+        family_outputs.get(
+            "report_vs/artifacts/quotes", artifacts.get("quotes_final", [])
+        ),
         ("report_vs/doc_map", *evidence_family_ids),
     )
     persist(
         "report_vs/artifacts/insights_final",
-        artifacts.get("insights_final", []),
+        family_outputs.get(
+            "report_vs/artifacts/insights_final", artifacts.get("insights_final", [])
+        ),
         ("report_vs/artifacts/insights_candidates", *evidence_family_ids),
     )
     persist(
         "report_vs/artifacts/cover_semantics",
-        artifacts.get("cover_semantics", {}),
+        family_outputs.get(
+            "report_vs/artifacts/cover_semantics", artifacts.get("cover_semantics", {})
+        ),
         ("report_vs/artifacts/summary", "report_vs/artifacts/insights_final"),
     )
     persist(
@@ -888,7 +945,10 @@ def _record_prompt_family_materializations(
     )
     persist(
         "report_vs/artifacts/expert_comment",
-        {"expert_comment": artifacts.get("expert_comment", "")},
+        family_outputs.get(
+            "report_vs/artifacts/expert_comment",
+            {"expert_comment": artifacts.get("expert_comment", "")},
+        ),
         (
             "report_vs/artifacts/summary",
             "report_vs/artifacts/insights_final",
@@ -899,7 +959,10 @@ def _record_prompt_family_materializations(
     )
     persist(
         "report_vs/artifacts/linkedin_post",
-        {"linkedin_post": artifacts.get("linkedin_post", "")},
+        family_outputs.get(
+            "report_vs/artifacts/linkedin_post",
+            {"linkedin_post": artifacts.get("linkedin_post", "")},
+        ),
         (
             "report_vs/artifacts/summary",
             "report_vs/artifacts/insights_final",

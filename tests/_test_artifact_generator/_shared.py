@@ -123,10 +123,20 @@ class CapturingPromptClient(FakePromptClient):
 
 
 class FakeOpenAI:
-    def __init__(self, responses, *, sleep_seconds=0.0, prerequisites=None):
+    def __init__(
+        self,
+        responses,
+        *,
+        sleep_seconds=0.0,
+        prerequisites=None,
+        input_tokens=0,
+        output_tokens=0,
+    ):
         self.responses = responses if isinstance(responses, dict) else list(responses)
         self.sleep_seconds = float(sleep_seconds)
         self.prerequisites = prerequisites or {}
+        self.input_tokens = int(input_tokens)
+        self.output_tokens = int(output_tokens)
         self.requests = []
         self._events = {}
         self._lock = threading.Lock()
@@ -191,8 +201,8 @@ class FakeOpenAI:
             schema_version="1.0",
             text="{}",
             parsed_json=payload,
-            input_tokens=0,
-            output_tokens=0,
+            input_tokens=self.input_tokens,
+            output_tokens=self.output_tokens,
             tool_calls=0,
             model=req.model,
         )
@@ -205,8 +215,8 @@ class FakeOpenAI:
             schema_version="1.0",
             text="{}",
             parsed_json=payload,
-            input_tokens=0,
-            output_tokens=0,
+            input_tokens=self.input_tokens,
+            output_tokens=self.output_tokens,
             tool_calls=0,
             model=req.model,
         )

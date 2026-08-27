@@ -2,10 +2,15 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable, Sequence
+from dataclasses import asdict
 from typing import Any, Dict, List, Optional
 
 from src.contracts.artifact_generation import ArtifactRenderTask
 from src.contracts.config import AppSettings
+from src.contracts.prompt_family_materialization import (
+    PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+    PromptFamilyReuseRequest,
+)
 from src.contracts.run_context import RunContext
 from src.generators._artifact_generator.family_policy import (
     apply_artifact_family_policy,
@@ -40,9 +45,14 @@ from src.generators.artifact_normalization import (
     pad_artifact_insights,
     strip_artifact_inline_reference_ids,
 )
+from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.services import prompt_service, report_analysis_store_service
+from src.services.prompt_family_materialization_service import (
+    read_reusable_prompt_family,
+)
 from src.services.schema_validator_service import validate_evidence_references
 from src.utils.cache_utils import sha256_json
+from src.utils.costing import estimate_cost_usd, estimate_text_tokens
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.model_client_contract import require_injected_model_client
@@ -54,6 +64,16 @@ ArtifactStepExecutor = Callable[
     [Sequence[ArtifactRenderTask], ArtifactTaskRenderer, RunContext, str],
     Dict[str, Dict[str, Any]],
 ]
+
+_ARTIFACT_FAMILY_ROOTS = {
+    "report_vs/artifacts/summary": "summary",
+    "report_vs/artifacts/insights_candidates": "insights_candidates",
+    "report_vs/artifacts/quotes": "quotes_final",
+    "report_vs/artifacts/insights_final": "insights_final",
+    "report_vs/artifacts/cover_semantics": "cover_semantics",
+    "report_vs/artifacts/expert_comment": "expert_comment",
+    "report_vs/artifacts/linkedin_post": "linkedin_post",
+}
 
 
 def _execute_artifact_tasks_serial(
@@ -86,6 +106,7 @@ def generate_artifacts(
     report_name: Optional[str] = None,
     md5: Optional[str] = None,
     vector_store_id: Optional[str] = None,
+    vector_store_content_hash: Optional[str] = None,
     source_status: Optional[Dict[str, Any]] = None,
     categories: Optional[List[str]] = None,
     category_ids: Optional[List[str]] = None,
@@ -96,6 +117,7 @@ def generate_artifacts(
     prompt_client=prompt_service,
     analysis_store=report_analysis_store_service,
     artifact_step_executor: Optional[ArtifactStepExecutor] = None,
+    prompt_family_reuse_reader=read_reusable_prompt_family,
 ) -> Dict[str, Any]:
     ctx = ctx or new_run_context(task_id=f"artifacts:{report_id}")
     openai_client = require_injected_model_client(
@@ -134,6 +156,22 @@ def generate_artifacts(
     )
     step_executor = artifact_step_executor or _execute_artifact_tasks_serial
 
+    family_reuse: dict[str, dict[str, object]] = {}
+    family_outputs: dict[str, object] = {}
+    family_reuse_telemetry: dict[str, object] = {
+        "requested_families": [],
+        "reused_families": [],
+        "regenerated_families": [],
+        "regeneration_reasons": {},
+        "model_calls_avoided": 0,
+        "actual_model_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "estimated_cost_usd": 0.0,
+        "execution_time_ms": 0,
+        "family_usage": {},
+    }
+
     def render_task(task: ArtifactRenderTask) -> Dict[str, Any]:
         payload_validator = None
         if task.step_name in {"insights_candidates", "quotes"}:
@@ -150,11 +188,210 @@ def generate_artifacts(
                     ctx=task.ctx,
                 )
 
-        return render_artifact_json_model(
+        return resolve_or_render_family(
             namespace=task.namespace,
             variables=task.variables,
-            settings=settings,
             ctx=task.ctx,
+            payload_validator=payload_validator,
+        )
+
+    def resolve_or_render_family(
+        *,
+        namespace: str,
+        variables: Dict[str, Any],
+        ctx: RunContext,
+        payload_validator=None,
+        repair_namespace: str = "",
+    ) -> Dict[str, Any]:
+        """Resolve one exact retained family before entering model recovery."""
+        root_key = _ARTIFACT_FAMILY_ROOTS[namespace]
+        prepared = prepare_prompt_bundle(
+            namespace=namespace,
+            settings=settings,
+            ctx=ctx,
+            prompt_client=prompt_client,
+            system_variables=variables,
+            user_variables=variables,
+            retrieval_mode=(
+                "vector_store"
+                if artifact_use_vector_store and vector_store_id
+                else "chat_json"
+            ),
+            temperature=settings.temperature,
+            seed=settings.openai_seed,
+            timeout_seconds=settings.openai_timeout_seconds,
+            output_contract_schema_version="artifact_json:1.0",
+            validator_version="artifacts_schema:3.0",
+        )
+        vector_provenance_verified = not artifact_use_vector_store or bool(
+            str(vector_store_content_hash or "").strip()
+        )
+        relevant_input_hash = (
+            sha256_json(
+                {
+                    "family_id": namespace,
+                    "variables": variables,
+                    "vector_store_id": (
+                        vector_store_id if artifact_use_vector_store else ""
+                    ),
+                    "vector_store_content_hash": (
+                        vector_store_content_hash if artifact_use_vector_store else ""
+                    ),
+                }
+            )
+            if vector_provenance_verified
+            else ""
+        )
+        configuration_policy_hash = sha256_json(
+            {
+                "execution_policy_hash": prepared.execution_policy.policy_hash,
+                "execution_policy": asdict(prepared.execution_policy.policy),
+                "routing_policy": asdict(prepared.routing_decision),
+            }
+        )
+        model_provider = str(prepared.execution_policy.policy.provider or "")
+        model_policy_namespace = namespace.split("/", 1)[0]
+        identity = {
+            "family_schema_version": "1.0",
+            "processing_version": "report_generation_checkpoint_v2",
+            "prompt_content_hash": prepared.prompt_content_hash,
+            "prompt_dependency_manifest": asdict(prepared.dependency_manifest),
+            "execution_identity": prepared.execution_identity.execution_identity,
+            "execution_identity_manifest": asdict(prepared.execution_identity),
+            "model_provider": model_provider,
+            "model_name": prepared.resolved_model,
+            "model_policy_namespace": model_policy_namespace,
+            "routing_policy_version": prepared.execution_policy.policy_hash,
+            "validator_version": "artifacts_schema:3.0",
+            "relevant_input_hash": relevant_input_hash,
+            "configuration_policy_hash": configuration_policy_hash,
+        }
+        family_reuse[namespace] = identity
+        requested = family_reuse_telemetry["requested_families"]
+        assert isinstance(requested, list)
+        requested.append(namespace)
+        if md5 and vector_provenance_verified:
+            reuse = prompt_family_reuse_reader(
+                PromptFamilyReuseRequest(
+                    schema_version=PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+                    db_path=settings.reports_db,
+                    output_dir=settings.output_dir,
+                    report_id=report_id,
+                    report_slug=report_name or report_id,
+                    source_id=md5,
+                    family_id=namespace,
+                    family_schema_version="1.0",
+                    processing_version="report_generation_checkpoint_v2",
+                    prompt_content_hash=prepared.prompt_content_hash,
+                    execution_identity=prepared.execution_identity.execution_identity,
+                    model_provider=model_provider,
+                    model_name=prepared.resolved_model,
+                    model_policy_namespace=model_policy_namespace,
+                    routing_policy_version=prepared.execution_policy.policy_hash,
+                    validator_version="artifacts_schema:3.0",
+                    relevant_input_hash=relevant_input_hash,
+                    configuration_policy_hash=configuration_policy_hash,
+                ),
+                ctx,
+            )
+        else:
+            reuse = None
+        if reuse is not None and reuse.reusable:
+            reused = family_reuse_telemetry["reused_families"]
+            assert isinstance(reused, list)
+            reused.append(namespace)
+            family_reuse_telemetry["model_calls_avoided"] = (
+                int(family_reuse_telemetry["model_calls_avoided"]) + 1
+            )
+            family_reuse[namespace]["decision"] = "reused"
+            family_reuse[namespace]["artifact_id"] = reuse.artifact_id
+            family_reuse[namespace]["output_hash"] = reuse.output_hash
+            family_outputs[namespace] = reuse.output_payload
+            logger.info(
+                log_event(
+                    ctx,
+                    role="generator",
+                    event="artifact_prompt_family_reused",
+                    module=logger.name,
+                    fields={"family_id": namespace, "artifact_id": reuse.artifact_id},
+                )
+            )
+            return {root_key: reuse.output_payload}
+        reason = (
+            reuse.reason
+            if reuse is not None
+            else (
+                "vector_store_provenance_missing"
+                if not vector_provenance_verified
+                else "source_identity_missing"
+            )
+        )
+        regenerated = family_reuse_telemetry["regenerated_families"]
+        reasons = family_reuse_telemetry["regeneration_reasons"]
+        assert isinstance(regenerated, list) and isinstance(reasons, dict)
+        regenerated.append(namespace)
+        reasons[namespace] = reason
+        input_tokens = estimate_text_tokens(
+            f"{prepared.system_prompt}\n{prepared.user_prompt}"
+        )
+        family_reuse[namespace]["decision"] = "regenerated"
+        family_reuse[namespace]["regeneration_reason"] = reason
+
+        def observe_response(response, elapsed_ms: float, mode: str) -> None:
+            if mode != "primary":
+                family_reuse[namespace]["recovery_attempted"] = True
+            actual_input = int(getattr(response, "input_tokens", 0) or 0)
+            actual_output = int(getattr(response, "output_tokens", 0) or 0)
+            tool_calls = int(getattr(response, "tool_calls", 0) or 0)
+            cost = estimate_cost_usd(
+                str(getattr(response, "model", "") or prepared.resolved_model),
+                actual_input,
+                actual_output,
+                tool_calls,
+                settings.model_pricing,
+            )
+            usage = family_reuse_telemetry["family_usage"]
+            assert isinstance(usage, dict)
+            family_usage = usage.setdefault(
+                namespace,
+                {
+                    "input_tokens": 0,
+                    "output_tokens": 0,
+                    "estimated_cost_usd": 0.0,
+                    "actual_model_calls": 0,
+                    "execution_time_ms": 0,
+                    "expected_input_tokens": input_tokens,
+                },
+            )
+            assert isinstance(family_usage, dict)
+            family_usage["input_tokens"] += actual_input
+            family_usage["output_tokens"] += actual_output
+            family_usage["estimated_cost_usd"] = round(
+                float(family_usage["estimated_cost_usd"]) + cost, 8
+            )
+            family_usage["actual_model_calls"] += 1
+            family_usage["execution_time_ms"] += max(0, round(elapsed_ms))
+            family_reuse_telemetry["actual_model_calls"] = (
+                int(family_reuse_telemetry["actual_model_calls"]) + 1
+            )
+            family_reuse_telemetry["input_tokens"] = (
+                int(family_reuse_telemetry["input_tokens"]) + actual_input
+            )
+            family_reuse_telemetry["output_tokens"] = (
+                int(family_reuse_telemetry["output_tokens"]) + actual_output
+            )
+            family_reuse_telemetry["estimated_cost_usd"] = round(
+                float(family_reuse_telemetry["estimated_cost_usd"]) + cost, 8
+            )
+            family_reuse_telemetry["execution_time_ms"] = int(
+                family_reuse_telemetry["execution_time_ms"]
+            ) + max(0, round(elapsed_ms))
+
+        rendered = render_artifact_json_model(
+            namespace=namespace,
+            variables=variables,
+            settings=settings,
+            ctx=ctx,
             openai_client=openai_client,
             prompt_client=prompt_client,
             allow_vector_store=artifact_use_vector_store,
@@ -164,7 +401,12 @@ def generate_artifacts(
             source_url=source_url,
             report_id=report_id,
             payload_validator=payload_validator,
+            repair_namespace=repair_namespace,
+            prepared_prompt_bundle=prepared,
+            response_observer=observe_response,
         )
+        family_outputs[namespace] = rendered.get(root_key)
+        return rendered
 
     logger.info(
         log_event(
@@ -324,9 +566,7 @@ def generate_artifacts(
         for candidate in insights_candidates
         if _s(candidate.get("text")).strip()
     ]
-    initial_candidate_count = len(
-        insights_candidates
-    )
+    initial_candidate_count = len(insights_candidates)
     if initial_candidate_count < 5:
         fallback_candidates = fallback_artifact_insights_from_findings(
             safe_evidence.get("findings")
@@ -376,19 +616,10 @@ def generate_artifacts(
         **base_vars,
         "insights_candidates_json": _dump_json(insights_candidates),
     }
-    insights_final_result = render_artifact_json_model(
+    insights_final_result = resolve_or_render_family(
         namespace="report_vs/artifacts/insights_final",
         variables=insights_final_vars,
-        settings=settings,
         ctx=insights_final_ctx,
-        openai_client=openai_client,
-        prompt_client=prompt_client,
-        allow_vector_store=artifact_use_vector_store,
-        vector_store_id=vector_store_id,
-        publisher_name=publisher_name,
-        report_name=report_name or "",
-        source_url=source_url,
-        report_id=report_id,
         payload_validator=lambda payload: validate_required_evidence_references(
             payload, insights_final_ctx
         ),
@@ -414,19 +645,10 @@ def generate_artifacts(
         ).strip(),
     }
     cover_semantics_ctx = child_context(ctx, task_id=f"{ctx.task_id}:cover_semantics")
-    cover_semantics_result = render_artifact_json_model(
+    cover_semantics_result = resolve_or_render_family(
         namespace="report_vs/artifacts/cover_semantics",
         variables=cover_semantics_variables,
-        settings=settings,
         ctx=cover_semantics_ctx,
-        openai_client=openai_client,
-        prompt_client=prompt_client,
-        allow_vector_store=artifact_use_vector_store,
-        vector_store_id=vector_store_id,
-        publisher_name=publisher_name,
-        report_name=report_name or "",
-        source_url=source_url,
-        report_id=report_id,
         payload_validator=lambda payload: _validate_cover_semantics(
             payload.get("cover_semantics"), ctx=cover_semantics_ctx
         ),
@@ -554,7 +776,25 @@ def generate_artifacts(
         family_status=family_status,
         category_ids=category_ids,
         ctx=ctx,
-        cache_meta={**cache_meta, "key": cache_key} if cache_meta else None,
+        cache_meta={
+            **(cache_meta or {}),
+            "key": cache_key,
+            "family_reuse": family_reuse,
+            "family_outputs": family_outputs,
+            "family_reuse_telemetry": {
+                **family_reuse_telemetry,
+                "requested_families": sorted(
+                    family_reuse_telemetry["requested_families"]
+                ),
+                "reused_families": sorted(family_reuse_telemetry["reused_families"]),
+                "regenerated_families": sorted(
+                    family_reuse_telemetry["regenerated_families"]
+                ),
+                "regeneration_reasons": dict(
+                    sorted(family_reuse_telemetry["regeneration_reasons"].items())
+                ),
+            },
+        },
     )
     store_artifacts_payload(
         analysis_store=analysis_store,
@@ -577,6 +817,19 @@ def generate_artifacts(
                 "toc_entries": len(toc_bundle["toc_entries"]),
                 "insight_candidates": len(insights_candidates),
                 "insights_final": len(insights_final),
+                "prompt_family_reuse": {
+                    "requested": len(family_reuse_telemetry["requested_families"]),
+                    "reused": len(family_reuse_telemetry["reused_families"]),
+                    "regenerated": len(family_reuse_telemetry["regenerated_families"]),
+                    "model_calls_avoided": family_reuse_telemetry[
+                        "model_calls_avoided"
+                    ],
+                    "actual_model_calls": family_reuse_telemetry["actual_model_calls"],
+                    "input_tokens": family_reuse_telemetry["input_tokens"],
+                    "output_tokens": family_reuse_telemetry["output_tokens"],
+                    "estimated_cost_usd": family_reuse_telemetry["estimated_cost_usd"],
+                    "execution_time_ms": family_reuse_telemetry["execution_time_ms"],
+                },
             },
         )
     )

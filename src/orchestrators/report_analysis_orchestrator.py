@@ -6,12 +6,12 @@ from copy import deepcopy
 from dataclasses import asdict, replace
 from typing import Any, List, Optional
 
+from src.contracts.categories import CategoryAssignment
+from src.contracts.context_category_fit import ContextCategoryFitResponse
 from src.contracts.regeneration import (
     RegenerationAttemptResult,
     RegenerationLoopState,
 )
-from src.contracts.categories import CategoryAssignment
-from src.contracts.context_category_fit import ContextCategoryFitResponse
 from src.contracts.report_analysis import (
     AnalysisStorePackRequest,
 )
@@ -88,6 +88,7 @@ from src.orchestrators._report_analysis_orchestrator.vector_store import (
     _await_vector_store_indexing,
     _is_vector_store_ready,
 )
+from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 from src.utils.run_budget import report_runtime_run_budget
@@ -801,6 +802,18 @@ def run_report_analysis(
             evidence_packs=packs,
             settings=runtime.settings,
             vector_store_id=vector_state.vector_store_id,
+            vector_store_content_hash=(
+                sha256_json(
+                    {
+                        "source_id": runtime.md5 or runtime.file.file_id,
+                        "vector_store_id": vector_state.vector_store_id,
+                        "openai_file_id": vector_state.openai_file_id,
+                        "indexed_at_utc": vector_state.indexed_at_utc,
+                    }
+                )
+                if vector_state.vector_store_id and vector_state.openai_file_id
+                else None
+            ),
             source_status=source.text_status,
             categories=category_assignment.category_labels,
             category_ids=category_assignment.categories,

@@ -80,6 +80,32 @@ deterministic rendering. The rendered-html lineage record explicitly depends
 on the accepted prompt-family records. Any missing lineage, unsupported family,
 validation failure, or planned/actual family mismatch fails closed.
 
+Artifact generation also performs this same fail-closed family check before
+each of its seven model routes: `summary`, `insights_candidates`, `quotes`,
+`insights_final`, `cover_semantics`, `expert_comment`, and `linkedin_post`.
+Each check requires the report/source identity, prompt dependency hash,
+resolved provider/model and model-policy namespace, execution identity,
+schema/validator, exact semantic input hash, and configuration-policy hash.
+The checkpoint retains the validated family output at the schema-recovery
+boundary, before composite artifact assembly; replay therefore sees the exact
+approved family input/output contract and still traverses the existing
+grounding, semantic, editorial, rendering, and publish-readiness gates.
+Missing provenance, a bad output hash, an invalidated record, or any mismatch
+is a bounded regeneration reason, never a reuse fallback.
+
+For vector-backed artifact routes, the semantic-input identity also includes a
+content identity made from the source, vector-store ID, provider file ID, and
+indexing timestamp. If that proof is absent, reuse is disabled for that family.
+Likewise, a result reached through structured-output repair/regeneration is
+retained without primary-family input proof, so it cannot be reused until a
+fresh primary-family result is materialized.
+
+The retained composite artifact cache includes bounded per-run family telemetry:
+requested/reused/regenerated families, stable regeneration reasons, avoided and
+actual calls, provider input/output tokens, estimated cost, and provider-call
+duration. This is an observation attached to the existing artifact output and
+model-usage ledger, not a second workflow or recovery ledger.
+
 The compatibility matrix in `tests/test_minimal_execution_planner.py` covers
 each of these cases, deterministic plan hashing, targeted prompt-family
 repair, render-only regeneration, crop repair, and publication-only retry.

@@ -8,7 +8,10 @@ from src.contracts.config import AppSettings
 from src.contracts.ingest import IngestSettings
 from src.contracts.run_context import RunContext
 from src.contracts.structured_output import StructuredOutputExecutionRequest
-from src.generators.prompt_preparation import prepare_prompt_bundle
+from src.generators.prompt_preparation import (
+    PreparedPromptBundle,
+    prepare_prompt_bundle,
+)
 from src.generators.structured_output_execution import (
     invoke_structured_output_model,
     recovery_prompt_bundle,
@@ -69,9 +72,11 @@ def render_artifact_json_model(
     repair_namespace: str = "",
     repair_attempt: int = 0,
     report_id: str = "",
+    prepared_prompt_bundle: PreparedPromptBundle | None = None,
+    response_observer: Callable[[Any, float, str], None] | None = None,
 ) -> Dict[str, Any]:
     """Render one artifact through the shared bounded JSON recovery service."""
-    prompt_bundle = prepare_prompt_bundle(
+    prompt_bundle = prepared_prompt_bundle or prepare_prompt_bundle(
         namespace=namespace,
         settings=settings,
         ctx=ctx,
@@ -214,6 +219,7 @@ def render_artifact_json_model(
                 if mode == "primary" and repair_attempt
                 else {"primary": 0, "model_repair": 1, "regeneration": 2}[mode]
             ),
+            response_observer=response_observer,
         )
         logger.info(
             log_event(
@@ -259,7 +265,9 @@ def render_artifact_json_model(
             payload, root_key
         ),
         validate_payload=validate_payload,
-        is_substantive=lambda payload: _artifact_response_substantive(payload, root_key),
+        is_substantive=lambda payload: _artifact_response_substantive(
+            payload, root_key
+        ),
         model_pricing=settings.model_pricing,
         is_formal_abstention=lambda payload: (
             root_key in _ARTIFACT_ABSTAINABLE_ROOTS
@@ -328,13 +336,22 @@ def _normalize_artifact_response(payload: object, root_key: str) -> Dict[str, An
         value, list
     ):
         normalized[root_key] = [
-            {**item, "id": str(item.get("id") or ""), "text": str(item.get("text") or ""), "evidence_id": str(item.get("evidence_id") or "")}
+            {
+                **item,
+                "id": str(item.get("id") or ""),
+                "text": str(item.get("text") or ""),
+                "evidence_id": str(item.get("evidence_id") or ""),
+            }
             for item in value
             if isinstance(item, dict)
         ]
     elif root_key == "quotes_final" and isinstance(value, list):
         normalized[root_key] = [
-            {**item, "text": str(item.get("text") or ""), "evidence_id": str(item.get("evidence_id") or "")}
+            {
+                **item,
+                "text": str(item.get("text") or ""),
+                "evidence_id": str(item.get("evidence_id") or ""),
+            }
             for item in value
             if isinstance(item, dict)
         ]
