@@ -14,6 +14,12 @@ remain blocking. Material unsupported claims, numbers, contradictions, missing
 evidence, and other error-severity grounding findings are unchanged and still
 fail the report before publication.
 
+Cached rendered HTML is reusable only when its retained readiness artifact
+still verifies the exact HTML, report ID, configuration hash, policy hash, and
+producer revision. A stale, altered, expired, failed, or unreadable decision is
+a cache miss: the normal minimum-regeneration planner rebuilds the required
+final package rather than recording `publish_ready` from file existence alone.
+
 When a repair is supported, the workflow maps validation issues to the narrowest appropriate artifact family and revalidates the result. Retry and backoff are controlled by orchestration; generators surface typed errors rather than retrying provider calls themselves. Publication policy determines whether unresolved validation issues block WordPress side effects.
 
 Taxonomy extraction has one orchestration-owned, prompt-specific recovery for

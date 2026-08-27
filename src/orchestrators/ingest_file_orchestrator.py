@@ -26,6 +26,10 @@ from src.contracts.state import (
     SourceQuarantineUpsertRequest,
     StateRecordRequest,
 )
+from src.generators.publish_readiness_generator import (
+    parse_publish_readiness_payload,
+    verify_publish_readiness,
+)
 from src.orchestrators._report_analysis_orchestrator.manifest import (
     record_validation_manifest_stage,
 )
@@ -217,10 +221,11 @@ def _skip_result(
 def _existing_publish_readiness_status(
     html_path: str,
     *,
+    report_id: str,
     dependencies: IngestFileDependencies,
     file_ctx: RunContext,
 ) -> str | None:
-    """Return a persisted readiness result only when its artifact is readable."""
+    """Return pass only for a readable readiness decision valid for this run."""
     if dependencies.read_text is None:
         return None
     readiness_path = (
@@ -238,7 +243,24 @@ def _existing_publish_readiness_status(
     if not isinstance(payload, dict):
         return None
     status = str(payload.get("status") or "").strip().casefold()
-    return status if status in {"pass", "fail"} else None
+    if status != "pass":
+        return "fail" if status == "fail" else None
+    try:
+        artifact = parse_publish_readiness_payload(payload)
+        final_html = dependencies.read_text(
+            ReadTextRequest(schema_version="1.0", path=html_path), file_ctx
+        ).content
+        verification = verify_publish_readiness(
+            artifact=artifact,
+            report_id=report_id,
+            final_html=final_html,
+            configuration_hash=file_ctx.configuration_hash,
+            policy_hash=file_ctx.policy_hash,
+            producer_revision=file_ctx.producer_commit_sha,
+        )
+    except (AppError, OSError, TypeError, ValueError):
+        return None
+    return "pass" if verification.status == "pass" else None
 
 
 def _maybe_skip_existing_report_html(
@@ -278,6 +300,7 @@ def _maybe_skip_existing_report_html(
         return None
     readiness_status = _existing_publish_readiness_status(
         existing_html,
+        report_id=runtime.file.file_id,
         dependencies=dependencies,
         file_ctx=file_ctx,
     )

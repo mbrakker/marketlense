@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 from dataclasses import replace
+from datetime import UTC, datetime
 from types import SimpleNamespace
 
 from src.contracts.drive import DriveDownloadToPathResponse, DriveFile
@@ -13,6 +15,11 @@ from src.contracts.ingest import IngestOutcome
 from src.contracts.pdf_utils import PdfEofCheckResponse, PdfIntegrityCheckResponse
 from src.contracts.remediation import RemediationListRequest
 from src.contracts.run_budget import RunBudget
+from src.contracts.validation import ValidationReport
+from src.generators.publish_readiness_generator import (
+    evaluate_publish_readiness,
+    publish_readiness_payload,
+)
 from src.orchestrators.ingest_file_orchestrator import (
     IngestFileDependencies,
     run_ingest_file,
@@ -145,6 +152,115 @@ def test_existing_html_cache_requires_passing_readiness(
         index=0,
         settings=ingest_settings,
         root_ctx=run_context,
+        dependencies=dependencies,
+    )
+
+    assert (result.outcome.status, result.outcome.error) == ("processed", None)
+
+
+def test_existing_html_cache_rejects_readiness_from_another_producer_revision(
+    ingest_settings, run_context
+) -> None:
+    """A ready cached HTML package cannot cross a producer-revision boundary."""
+    file = _drive_file(md5_checksum="drive-md5")
+    cache_path = f"{ingest_settings.cache_dir}/{file.file_id}.pdf"
+    html = (
+        "<!doctype html><html><head><title>Report 2026 | MarketLense</title>"
+        '<link rel="canonical" href="https://marketlense.example/reports/report">'
+        "</head><body><h1>Report 2026</h1>"
+        "<p>Revenue grew in the measured market.</p>"
+        '<section id="source"><a href="https://publisher.example/report">'
+        "Open original source</a></section></body></html>"
+    )
+    readiness = evaluate_publish_readiness(
+        report_id=file.file_id,
+        artifacts={
+            "categories": ["markets"],
+            "summary": {
+                "claim_evidence_map": [
+                    {
+                        "claim": "Revenue grew in the measured market.",
+                        "evidence_id": "F1",
+                        "evidence": "Revenue grew in the measured market.",
+                    }
+                ]
+            },
+            "insights_final": [],
+            "quotes_final": [],
+            "chart_insight_cards": [],
+        },
+        evidence_packs={
+            "findings": {
+                "findings": [
+                    {
+                        "id": "F1",
+                        "snippet": "Revenue grew in the measured market.",
+                        "page": 1,
+                    }
+                ]
+            }
+        },
+        validation_report=ValidationReport(schema_version="1.1", status="pass"),
+        final_html=html,
+        final_html_path="out/file-1.html",
+        category_ids=["markets"],
+        configuration_hash="configuration-hash",
+        policy_hash="policy-hash",
+        producer_revision="previous-producer",
+        provenance={
+            "publisher_landing_page_url": "https://publisher.example/report",
+            "original_report_url": "",
+            "marketlense_article_url": "https://marketlense.example/reports/report",
+        },
+        created_at=datetime.now(UTC),
+    )
+    assert readiness.status == "pass"
+
+    def _file_stat(request, _ctx):
+        return FileStatResponse(
+            schema_version="1.0",
+            path=request.path,
+            exists=request.path == cache_path,
+            size_bytes=10 if request.path == cache_path else None,
+            mtime_utc=1.0 if request.path == cache_path else None,
+            md5="drive-md5" if request.compute_md5 else None,
+        )
+
+    dependencies = _base_dependencies(
+        file_stat_fn=_file_stat,
+        run_report_pipeline_fn=lambda current, _path, _settings, md5, _ctx: _outcome(
+            current, md5
+        ),
+        write_md5_sidecar_fn=lambda request, _ctx: FileCacheMd5SidecarWriteResponse(
+            schema_version="1.0",
+            cache_path=request.cache_path,
+            sidecar_path=f"{request.cache_path}.md5.json",
+            written=True,
+            reason="written",
+        ),
+        read_text_fn=lambda request, _ctx: SimpleNamespace(
+            content=(
+                html
+                if str(request.path).endswith(".html")
+                else json.dumps(publish_readiness_payload(readiness))
+            )
+        ),
+    )
+    dependencies = replace(
+        dependencies,
+        existing_report_html=lambda *_args, **_kwargs: "out/file-1.html",
+    )
+
+    result = run_ingest_file(
+        file=file,
+        index=0,
+        settings=ingest_settings,
+        root_ctx=replace(
+            run_context,
+            configuration_hash="configuration-hash",
+            policy_hash="policy-hash",
+            producer_commit_sha="current-producer",
+        ),
         dependencies=dependencies,
     )
 
