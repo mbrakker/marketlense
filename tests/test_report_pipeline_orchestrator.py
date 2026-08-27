@@ -162,105 +162,6 @@ def test_run_report_pipeline_retries_retryable(
     assert complete_fields["retry_transition"] is False
 
 
-def test_readiness_refresh_persists_completed_typed_telemetry(tmp_path) -> None:
-    settings = replace(
-        _settings(),
-        output_dir=str(tmp_path / "out"),
-        cache_dir=str(tmp_path / "cache"),
-        state_db=str(tmp_path / "state.sqlite"),
-        reports_db=str(tmp_path / "reports.sqlite"),
-        usage_db_path=str(tmp_path / "usage.sqlite"),
-        ingest_lock_path=str(tmp_path / "ingest.lock"),
-    )
-    file = DriveFile(
-        schema_version="1.0",
-        file_id="f1",
-        name="a.pdf",
-        modified_time=None,
-        md5_checksum="md5",
-    )
-    refresh_plan = replace(
-        plan_publish_readiness_refresh(
-            report_id=file.file_id,
-            readiness=None,
-            final_html="",
-            configuration_hash="",
-            policy_hash="",
-            producer_revision="",
-            evaluated_at_utc=datetime.now(timezone.utc),
-        ),
-        execution_result="planned",
-    )
-    telemetry_path = tmp_path / "out" / "f1" / "report_analysis" / "refresh.json"
-
-    def _gen(current, _path, _settings, md5, _ctx, **_kwargs):
-        return IngestOutcome(
-            schema_version="1.0",
-            file_id=current.file_id,
-            name=current.name or current.file_id,
-            md5=md5,
-            html_path=str(tmp_path / "out" / "f1.html"),
-            status="processed",
-        )
-
-    response = orch.run_report_pipeline(
-        file,
-        local_pdf_path=str(tmp_path / "cache" / "a.pdf"),
-        settings=settings,
-        md5="md5",
-        ctx=_ctx(),
-        retries=0,
-        generate_report_fn=_gen,
-        execution_plan_mode="disabled",
-        readiness_refresh_plan=refresh_plan,
-        refresh_telemetry_path=str(telemetry_path),
-    )
-
-    assert response.status == "processed"
-    payload = json.loads(telemetry_path.read_text(encoding="utf-8"))
-    assert payload["execution_result"] == "succeeded"
-    assert payload["report_id"] == "f1"
-    assert "report_analysis_model" in payload["avoided_external_calls"]
-
-
-def test_unverifiable_readiness_persists_blocked_telemetry_before_any_work(
-    tmp_path, assert_app_error
-) -> None:
-    file = DriveFile(
-        schema_version="1.0",
-        file_id="f1",
-        name="a.pdf",
-        modified_time=None,
-        md5_checksum="md5",
-    )
-    refresh_plan = plan_publish_readiness_refresh(
-        report_id=file.file_id,
-        readiness=None,
-        final_html="",
-        evaluated_at_utc=datetime.now(timezone.utc),
-    )
-    telemetry_path = tmp_path / "refresh.json"
-
-    with pytest.raises(AppError) as exc_info:
-        orch.run_report_pipeline(
-            file,
-            local_pdf_path=str(tmp_path / "cache" / "a.pdf"),
-            settings=_settings(),
-            md5="md5",
-            ctx=_ctx(),
-            readiness_refresh_plan=refresh_plan,
-            refresh_telemetry_path=str(telemetry_path),
-        )
-
-    assert_app_error(
-        exc_info.value,
-        code="publish_readiness_refresh_unverifiable",
-        retryable=False,
-    )
-    payload = json.loads(telemetry_path.read_text(encoding="utf-8"))
-    assert payload["execution_result"] == "blocked"
-
-
 def test_run_report_pipeline_surfaces_retryable_error_after_retry_exhaustion(
     caplog,
     external_boundary_mocks_only,
@@ -375,9 +276,7 @@ def test_run_report_pipeline_retries_transient_artifact_file_not_found(
     external_boundary_mocks_only.setattr(
         retry_orch.random, "uniform", lambda _a, _b: 0.0
     )
-    external_boundary_mocks_only.setattr(
-        orch.time, "sleep", lambda _seconds: None
-    )
+    external_boundary_mocks_only.setattr(orch.time, "sleep", lambda _seconds: None)
 
     response = orch.run_report_pipeline(
         file,

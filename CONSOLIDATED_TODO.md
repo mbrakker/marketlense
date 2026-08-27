@@ -334,7 +334,7 @@ The original ten-item screenshot baseline is complete in the committed implement
 
 **2026-08-27 exact-HEAD replay refresh:** The same immutable cohort under producer `6999c85f69fdf9ac23780b1abff0b06adf1c4979` resolved a new current candidate set of 3/3 and retained `candidate_set_hash` `dd7fa1a64250296fb31307134a82c0abc26903212dfa4d1edf32c14e5117b3df`. The replay admitted 0 non-manifest candidates, verified all 3 existing WordPress records through authenticated readback, and made 0 WordPress writes. Scalar-only evidence is retained in [p12_p14_exact_head_canary_20260827.json](docs/CTO_evidence/p12_p14_exact_head_canary_20260827.json).
 
-#### P15. Operate canonical publish-readiness telemetry and refresh planning
+### Closed P15. Operate canonical publish-readiness telemetry and refresh planning
 
 **Closed 2026-08-27:** The canonical signed readiness artifact now deterministically
 classifies retained packages as ready, expiring, stale, failed, incompatible, or

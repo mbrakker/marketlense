@@ -336,9 +336,7 @@ def _refresh_plan(
         ["source_prepared", "selection_complete", "analysis_complete"]
         if selected_resume_stage == "analysis_complete"
         else (
-            ["source_prepared", "selection_complete"]
-            if selected_resume_stage
-            else []
+            ["source_prepared", "selection_complete"] if selected_resume_stage else []
         )
     )
     plan = PublishReadinessRefreshPlan(

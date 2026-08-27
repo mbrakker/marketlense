@@ -99,8 +99,7 @@ class PublishReadinessRefreshPlan:
     previous_readiness_state: str = field(
         metadata={
             "doc": (
-                "ready, expiring, stale, failed, incompatible, or "
-                "missing_unverifiable."
+                "ready, expiring, stale, failed, incompatible, or missing_unverifiable."
             )
         }
     )

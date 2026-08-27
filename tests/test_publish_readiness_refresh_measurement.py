@@ -153,10 +153,14 @@ def test_stale_readiness_fixture_eliminates_full_pipeline_work_and_converges() -
     assert refresh.previous_readiness_state == "stale"
     assert minimum.required_stages == ["render_complete"]
     assert minimum.required_external_calls == ["html_render"]
-    assert set(minimum.required_external_calls) & {
-        "report_analysis_model",
-        "validator_model",
-    } == set()
+    assert (
+        set(minimum.required_external_calls)
+        & {
+            "report_analysis_model",
+            "validator_model",
+        }
+        == set()
+    )
     assert _FULL_PIPELINE_CALLS - set(minimum.required_external_calls) == {
         "crop_qa",
         "crop_render",
