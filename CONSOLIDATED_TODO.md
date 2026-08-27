@@ -43,8 +43,8 @@ All work is listed below in one register. `Active` items have detailed completio
 | Active | P2 | Harden bounded public-observability events | Narrow log-event size-bound hardening for public-facing boundaries. |
 | Active | P3 | Resolve hosted-site trust blockers | Safe-error boundary completed; hosted trust outcome remains. |
 | Active | P10 | Operate correlated public-render failure telemetry | Hosted release-observability outcome. |
-| Active | P12 | Release-locked sandbox publish canary | Repeatedly prove manifest-backed report recovery and final sandbox publication on a small, spend-governed real-report cohort. |
-| Active | P14 | Retain isolated live proof of strict cohort-manifest publication binding | The one-to-one binding and deterministic candidate-set record are implemented; only the bounded isolated live proof remains. |
+| Closed | P12 | Release-locked sandbox publish canary | Exact-HEAD isolated three-report cohort published with authenticated readback and an identical zero-write replay on 2026-08-27. |
+| Closed | P14 | Retain isolated live proof of strict cohort-manifest publication binding | The same isolated cohort bound 3/3 admitted members only, retained a deterministic candidate set, and replayed it with no WordPress writes. |
 | Active | P15 | Operate canonical publish-readiness telemetry and refresh planning | Turn hash-bound readiness failures and staleness into measurable, safe rerender work. |
 | Closed | P13 | Make WordPress file-ID lookup independently authoritative | Authenticated immutable file-ID lookup now matches remote posts from isolated state, fails closed on ambiguity, and preserves no-write reuse. |
 | Active | P4 | Close public briefing, correction, and submission intake | Implemented; close after hosted smoke proves the live intake routes. |
@@ -265,6 +265,8 @@ The original ten-item screenshot baseline is complete in the committed implement
 
 #### P12. Release-locked sandbox publish canary
 
+**Status: Closed (2026-08-27).**
+
 - **Title:** Release-locked sandbox publish canary
 - **Impact 5 / effort: 2**
 - **Context:** The 2026-07-20 bounded sandbox run processed five reports, created or matched posts, and repeated with zero new writes. It predates the release-locked cohort-manifest workflow, so it is useful transaction evidence but not the recurring, immutable-cohort release proof this item requires.
@@ -276,7 +278,7 @@ The original ten-item screenshot baseline is complete in the committed implement
 - Every member must pass semantic validation, public editorial quality, complete manifest/asset checks, canonical publish readback, and a repeat idempotency lookup; any failure stops the cohort and preserves the failed evidence.
 - Retained evidence compares the cohort's actual calls/tokens/spend, elapsed time, package completeness, created-versus-reused posts, and typed failures with the approved forecast; focused tests cover target isolation and no-write behavior when approval is absent.
 
-**2026-08-26 current-release attempt (not a successful canary):** Exact producer `29a7424902d7e84d8c282ab8a3bcb55c8cb73d59` used an isolated, budgeted sandbox profile. After the initial pre-freeze source-identity rejections, canonical acquisition found compatible real reports and froze the immutable three-member manifest `out/p12_p14_canary_20260826/output/cohorts/bd73897b-b09f-4ef1-832e-ede96fb6ea22.json` (cohort `d4aeeb4fa0d28fc803d3d8427050c3752de71d88d656a7f26fa97b7231234814`; validation run `validation:8439f6863b21fbdf990aa91a49a8437abacaf58c88590c9067621e76955454b6`; configuration hash `3cbd9303b17de4d7762c89c208204c604b0ecfd9eee93ee01317396d8c123e4d`; policy hash `77302ec0862da786102ee09959e210ef62e9bf9ae8b2df1e5972b9cbaf9e2df7`). All three admitted members ran without replacement. One reached `publish_ready`; two retained the typed terminal `publish_readiness_failed` evidence. The normal run recorded 63 model calls, 587,087 input tokens, 64,531 output tokens, and $0.194855 estimated cost from 21:16:47 to 21:20:33 UTC, against the admission estimate of three calls, 26,960 tokens, and $0.029968. The cohort consequently stopped before publication; replay was not run and P12 remains Active.
+**2026-08-26 current-release attempt (not a successful canary):** Exact producer `29a7424902d7e84d8c282ab8a3bcb55c8cb73d59` used an isolated, budgeted sandbox profile. After the initial pre-freeze source-identity rejections, canonical acquisition found compatible real reports and froze the immutable three-member manifest `out/p12_p14_canary_20260826/output/cohorts/bd73897b-b09f-4ef1-832e-ede96fb6ea22.json` (cohort `d4aeeb4fa0d28fc803d3d8427050c3752de71d88d656a7f26fa97b7231234814`; validation run `validation:8439f6863b21fbdf990aa91a49a8437abacaf58c88590c9067621e76955454b6`; configuration hash `3cbd9303b17de4d7762c89c208204c604b0ecfd9eee93ee01317396d8c123e4d`; policy hash `77302ec0862da786102ee09959e210ef62e9bf9ae8b2df1e5972b9cbaf9e2df7`). All three admitted members ran without replacement. One reached `publish_ready`; two retained the typed terminal `publish_readiness_failed` evidence. The normal run recorded 63 model calls, 587,087 input tokens, 64,531 output tokens, and $0.194855 estimated cost from 21:16:47 to 21:20:33 UTC, against the admission estimate of three calls, 26,960 tokens, and $0.029968. The cohort consequently stopped before publication; replay was not run at that point.
 
 | Retained canary measure | Result |
 | --- | --- |
@@ -287,16 +289,31 @@ The original ten-item screenshot baseline is complete in the committed implement
 | Replacement reports / operator interventions after freeze | 0 / 0 |
 | Candidate-set artifact and hash | Not created: binding correctly failed closed |
 
+**2026-08-27 successful current-HEAD proof:** Exact producer `1d0a5bec844c95feb8adbc2f8668ac00b29f8ea6` retained the original immutable three-member cohort above and used only canonical linked provenance recovery after the typed failures; no member was replaced and no report artifact was manually edited. The final linked manifest is `out/p12_p14_canary_20260826/output/cohorts/bd73897b-b09f-4ef1-832e-ede96fb6ea22-recovered-1d0a5bec-budget64.json`, with the retained cohort/configuration/policy identities and producer revision. All three members reached current `publish_ready`, strict binding, draft publication, and authenticated `published_verified` readback. The successful first publication run created 3 posts and 6 media mutations (9 WordPress writes); the identical replay made 0 posts, updates, media, taxonomy, or other WordPress writes while all three authenticated lookups/readbacks succeeded. The completed normal processing across the retained cohort recorded 63 model calls, 587,087 input tokens, 64,531 output tokens, and $0.194855 estimated cost, versus the approved admission forecast of 3 calls, 26,960 tokens, and $0.029968 (within the isolated $6 spend cap); the final publish took about 101 seconds and replay about 10 seconds. Browser launches and retries were 0. Three controlled post-freeze interventions occurred (readiness-severity/source-identity correction, stale-readiness deterministic refresh, and isolated sandbox write-cap calibration); none weakened a gate, changed membership, or regenerated report analysis. The earlier 3-write sandbox cap stopped publication with typed evidence before post creation; the final temporary profile retained a 64-write hard ceiling for the normal taxonomy/media/post lifecycle.
+
+| Retained successful-canary measure | Result |
+| --- | --- |
+| Frozen / admitted / publish-ready / candidates bound | 3 / 3 / 3 / 3 |
+| Published / authenticated readbacks / current terminal state | 3 / 3 / `published_verified` (3/3) |
+| Non-manifest candidates considered or published | 0 / 0 |
+| First successful publication writes | 3 posts, 0 updates, 6 media, 0 new taxonomy; total 9 |
+| Identical replay writes | 0 posts, 0 updates, 0 media, 0 taxonomy; total 0 |
+| Reused posts/artifacts / browser launches / retries | 3 / cached source-analysis packages / 0 / 0 |
+| LLM calls / input tokens / output tokens / estimated cost | 63 / 587,087 / 64,531 / $0.194855 |
+| Candidate-set artifact / deterministic hash | `out/p12_p14_canary_20260826/output/cohorts/d4aeeb4fa0d28fc803d3d8427050c3752de71d88d656a7f26fa97b7231234814/publication_candidate_set.json` / `fac0fc50a1f15205eb960a0d4b7915a39fce4bd035ea8dfec0e7c05aa0e3a99a` on first success and replay |
+
 #### P14. Retain isolated live proof of strict cohort-manifest publication binding
+
+**Status: Closed (2026-08-27).**
 
 - **Title:** Retain isolated live proof of strict cohort-manifest publication binding
 - **Impact 5 / effort: 1**
-- **Context:** `publish-wp --cohort-manifest` now binds every admitted member to exactly one existing, identity-compatible, publish-ready Report artifact before any WordPress call. Missing, duplicate, changed, stale, incompatible, ambiguous, and unready bindings fail closed; no non-manifest artifact can enter publication. The resolved ordered set is retained as `publication_candidate_set.json` with `candidate_set_hash`, manifest/cohort identity, and configuration/policy/artifact provenance. Only the bounded isolated live proof remains.
+- **Context:** `publish-wp --cohort-manifest` binds every admitted member to exactly one existing, identity-compatible, publish-ready Report artifact before any WordPress call. Missing, duplicate, changed, stale, incompatible, ambiguous, and unready bindings fail closed; no non-manifest artifact can enter publication. The resolved ordered set is retained as `publication_candidate_set.json` with `candidate_set_hash`, manifest/cohort identity, and configuration/policy/artifact provenance. The bounded isolated live proof below closes this item.
 - **Benefit:** The immutable cohort becomes the authoritative candidate set, preventing unrelated drafts from being preflighted or published and making bounded canaries safer to run in shared artifact namespaces.
 - **Risks to avoid:** Preserve the existing no-manifest bulk-publish behavior, canonical artifact/path validation, approval gates, idempotency lookup, and fail-closed handling for missing or ambiguous cohort artifacts.
 - **Implemented evidence:** Focused cohort/publication fixtures cover successful one-member binding, missing member, duplicate mapping, changed mapping, stale/incompatible mapping, unready member, unrelated artifact isolation, deterministic hash reuse, and zero WordPress calls on binding failure. The no-manifest publication path remains covered by the publish-orchestrator regression suite.
 
-**2026-08-26 live-proof status:** The isolated immutable cohort above exercised P14. Its `publish-wp --cohort-manifest` resolution returned the typed `validation_cohort_publication_mapping_incompatible` error before any WordPress operation. The isolated publication state contains 0 published records and the budget ledger records 0 WordPress writes; no non-manifest candidate was admitted. Because two members were not publish-ready and the retained mapping was incompatible, resolution produced no `publication_candidate_set.json` or `candidate_set_hash`, no preflight, and no WordPress post. This is valid fail-closed evidence, not the required positive live proof. P14 remains Active pending a fully publish-ready immutable cohort that retains and replays the candidate set.
+**2026-08-26 live-proof status:** The isolated immutable cohort above exercised P14. Its `publish-wp --cohort-manifest` resolution returned the typed `validation_cohort_publication_mapping_incompatible` error before any WordPress operation. The isolated publication state contains 0 published records and the budget ledger records 0 WordPress writes; no non-manifest candidate was admitted. Because two members were not publish-ready and the retained mapping was incompatible, resolution produced no `publication_candidate_set.json` or `candidate_set_hash`, no preflight, and no WordPress post. This is retained fail-closed evidence that preceded the positive proof below.
 
 **Retained P14 fixture measurement** — baseline is the behavior immediately before `98f41eba`; current is `98f41eba`/current `HEAD`. The controlled fixtures use one valid admitted member, one changed/ambiguous member mapping, and one unrelated artifact in the same output namespace.
 
@@ -309,7 +326,9 @@ The original ten-item screenshot baseline is complete in the committed implement
 | WordPress calls before binding failure | Not bounded by a cohort-wide binding barrier | 0 | Binding fails before any WordPress call. |
 | Valid publication coverage | 1/1 | 1/1 | Unchanged. |
 
-- **Remaining success criterion:** A bounded isolated live cohort retains `publication_candidate_set.json` and `candidate_set_hash`, shows only admitted report IDs through preflight and WordPress records, and confirms the same zero-write failure boundary against the configured sandbox.
+- **Closed proof criterion:** A bounded isolated live cohort retains `publication_candidate_set.json` and `candidate_set_hash`, shows only admitted report IDs through preflight and WordPress records, and confirms the same zero-write replay boundary against the configured sandbox.
+
+**2026-08-27 positive live proof:** The closed P12 cohort above resolved all 3 admitted members to exactly 3 identity-compatible, current-ready candidates before any WordPress operation. Its first successful strict bind retained `candidate_set_hash` `fac0fc50a1f15205eb960a0d4b7915a39fce4bd035ea8dfec0e7c05aa0e3a99a`; the identical replay retained the same hash and candidate count. Binding telemetry recorded 0 silent exclusions, 0 ambiguous mappings, and 0 unrelated candidates. The three candidates alone reached WordPress preflight/publication and all authenticated readbacks passed. The replay's canonical actuals record 0 WordPress writes, including media and taxonomy, while retaining the readback proof. This satisfies the isolated positive live-proof criterion without changing the no-manifest publication path.
 
 #### P15. Operate canonical publish-readiness telemetry and refresh planning
 
