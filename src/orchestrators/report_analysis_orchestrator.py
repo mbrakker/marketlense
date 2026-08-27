@@ -228,6 +228,7 @@ def _resolve_taxonomy_with_repair(
     runtime: ReportRuntimeState,
     mode_ctx: Any,
     vector_store_id: str | None,
+    vector_store_content_hash: str | None,
     dependencies: ReportAnalysisDependencies,
     *,
     openai_client=None,
@@ -240,6 +241,7 @@ def _resolve_taxonomy_with_repair(
                 runtime,
                 mode_ctx,
                 vector_store_id,
+                vector_store_content_hash,
                 dependencies,
                 openai_client=openai_client,
             ),
@@ -273,6 +275,7 @@ def _resolve_taxonomy_with_repair(
                 runtime,
                 mode_ctx,
                 vector_store_id,
+                vector_store_content_hash,
                 dependencies,
                 openai_client=openai_client,
                 repair_attempt=1,
@@ -359,6 +362,19 @@ def run_report_analysis(
     artifact_kwargs: dict[str, Any] = {}
     if evidence_pack_openai_client is not None:
         evidence_kwargs["openai_client"] = evidence_pack_openai_client
+    vector_store_content_hash = (
+        sha256_json(
+            {
+                "source_id": runtime.md5 or runtime.file.file_id,
+                "vector_store_id": vector_state.vector_store_id,
+                "openai_file_id": vector_state.openai_file_id,
+                "indexed_at_utc": vector_state.indexed_at_utc,
+            }
+        )
+        if vector_state.vector_store_id and vector_state.openai_file_id
+        else None
+    )
+    evidence_kwargs["vector_store_content_hash"] = vector_store_content_hash
     if artifact_openai_client is not None:
         artifact_kwargs["openai_client"] = artifact_openai_client
 
@@ -384,6 +400,7 @@ def run_report_analysis(
                 runtime,
                 mode_ctx,
                 vector_state.vector_store_id,
+                vector_store_content_hash,
                 dependencies,
                 openai_client=taxonomy_openai_client,
             )
@@ -422,6 +439,7 @@ def run_report_analysis(
             runtime,
             mode_ctx,
             vector_state.vector_store_id,
+            vector_store_content_hash,
             dependencies,
             openai_client=taxonomy_openai_client,
         )
@@ -802,18 +820,7 @@ def run_report_analysis(
             evidence_packs=packs,
             settings=runtime.settings,
             vector_store_id=vector_state.vector_store_id,
-            vector_store_content_hash=(
-                sha256_json(
-                    {
-                        "source_id": runtime.md5 or runtime.file.file_id,
-                        "vector_store_id": vector_state.vector_store_id,
-                        "openai_file_id": vector_state.openai_file_id,
-                        "indexed_at_utc": vector_state.indexed_at_utc,
-                    }
-                )
-                if vector_state.vector_store_id and vector_state.openai_file_id
-                else None
-            ),
+            vector_store_content_hash=vector_store_content_hash,
             source_status=source.text_status,
             categories=category_assignment.category_labels,
             category_ids=category_assignment.categories,
@@ -928,6 +935,8 @@ def run_report_analysis(
             artifacts=artifacts_payload or {},
             evidence_packs=packs,
             vector_store_id=vector_state.vector_store_id,
+            vector_store_content_hash=vector_store_content_hash or "",
+            source_id=runtime.md5 or "",
             publisher_name=runtime.publisher_name,
             report_name=runtime.source_report_name or runtime.report_title,
             source_url=runtime.source_url,

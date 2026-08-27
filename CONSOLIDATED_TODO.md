@@ -1,6 +1,6 @@
 # Consolidated TODO
 
-Last audited: 2026-08-11
+Last audited: 2026-08-27
 
 This is the repository's single, source-neutral work register. Every task is evaluated by its current codebase evidence and project decision—not by where it was first proposed. Equivalent tasks are merged under one owner; deferred, closed, and excluded work stays visible in the same register.
 
@@ -58,7 +58,7 @@ All work is listed below in one register. `Active` items have detailed completio
 | Active | E14 | Calibrate category-fit coverage from retained outcomes | Turn category-fit decisions into grounded mapping and recovery improvements. |
 | Active | E13 | Measure candidate-regeneration promotion effectiveness | Turn retained candidate lineage and promotion outcomes into bounded repair-quality improvements. |
 | Active | E8 | Use canonical source identity to suppress duplicate research work | Canonical source identity reuse outcome. |
-| Closed | E9 | Materialize prompt-family outputs and route only their required model calls | Seven report-artifact prompt families now reuse independently verified retained outputs; fixture replay records 7→0 calls and a one-family repair records 1 call. |
+| Closed | E9 | Materialize prompt-family outputs and route only their required model calls | All primary report model families now perform fail-closed pre-call provenance reuse; retained-corpus measurement shows material avoided calls with unchanged gates. |
 | Closed | E3 | Lineage-driven minimum regeneration | Remains closed; E7 owns expansion beyond the proven rendered-HTML family. |
 | Active | E12 | Persist pre-category editorial context checkpoints | Extend typed recovery from source/vector reuse to genuinely single-family taxonomy and category-fit retries. |
 | Closed | E4 | Executable retained PDF benchmark corpus in CI | Retained corpus is hash-pinned and CI-gated; local release-equivalent run passed. |
@@ -93,6 +93,8 @@ All work is listed below in one register. `Active` items have detailed completio
 | Excluded | X3 | Invented acquisition-form identity facts or public pipeline diagnostics | Only verified identity facts may be mapped; diagnostics remain operator-only. |
 
 ## Recently Closed
+
+- **E9 — Materialize prompt-family outputs and route only their required model calls (2026-08-27):** Independently retained, hash-verified primary outputs now cover document map, every enabled evidence pack, taxonomy, context-category fit, figure captions, seven editorial artifact families, and semantic/grounding validators. Exact report/source, prompt/dependency, provider/model-policy, schema/validator, semantic-input, configuration, output, and validation provenance is required before a family can bypass its provider route; missing or invalid proof remains a bounded existing-recovery regeneration reason. A representative retained-source live full report pass made 17 calls (131,302 input / 14,837 output tokens; $0.044064); its replay reused nine valid families and made only eight required repair/validation calls (69,998 / 8,142; $0.023770), reducing calls 52.9% and cost 46.1% without weakening gates. Focused compatibility, single-family, direct non-artifact pre-call, recovery, rendering, and publish-readiness tests passed; the retained evidence record is [`docs/quality/e9-prompt-family-reuse-evidence-2026-08-27.md`](docs/quality/e9-prompt-family-reuse-evidence-2026-08-27.md).
 
 - **A10 — Budget-deferred-work recovery and operator requeue (2026-08-10):** The reviewed `autonomous_mvp` configuration overlay enables the one-shot supervisor plus bounded deferred-work and remediation reapers at two records per pass, without enabling queue-worker batches or a second scheduler. The only legacy deferred-work adapters are `report_generation`, `report_download`, and `publisher_inventory`; unknown workflows remain remediation-held. Report recovery now forbids `latest_safe` fresh fallback, so invalid checkpoint proof cannot restart PDF/OCR/extraction/model work. Structured recovery events retain adapter, due time, plan hash, reused-artifact summary, attempt, terminal result, and bounded reason. Focused recovery/configuration tests passed (61). A retained real render recovery resolved from `analysis_complete` with one attempt and zero new provider calls/cost, avoiding source preparation, selection, analysis, PDF/OCR/crop, vector, analysis-model, and validator-model work. Real report-download and publisher-inventory recovery handoffs each converged on one durable pending canonical queue job across repeated submissions. Existing E11 owns recovery-effectiveness measurement, so no duplicate follow-up task was added.
 
@@ -471,14 +473,6 @@ ingest, explicit-resume, publish-readiness, and publication regressions passed.
 - Selection and cross-report retrieval can filter by canonical source ID, publisher, and verified publication date without exposing private provenance.
 - Equivalent identities reuse validated retained artifacts and record avoided parsing/embedding/model calls; conflicting or unknown identity remains non-reusable.
 - Retained-corpus and bounded live evidence measure duplicate-work suppression, false-merge prevention, and zero unintended public writes.
-
-#### E9. Materialize prompt-family outputs and route only their required model calls
-
-- **Title:** Materialize prompt-family outputs and route only their required model calls
-- **Impact 5 / effort: 3**
-- **Closed 2026-08-27:** Artifact-generation now resolves each of the seven model routes against a hash-verified, independently retained family before provider invocation. Provenance includes report/source identity, prompt content/dependency identity, model provider/name/policy namespace, execution/routing/configuration identities, schema/validator, exact semantic input, output hash, and passed validation state. Missing or unverifiable provenance is an explicit regeneration reason.
-- **Measured fixture evidence:** the controlled retained replay records 7 fresh model calls, 700 input tokens, 140 output tokens, and $0.00294 estimated cost; its compatible replay records 0 calls, 0 tokens, and $0.00000. A single summary-family invalidation calls summary only and reuses the other six families.
-- **Validation preserved:** reused raw family outputs continue through deterministic normalisation, grounding, semantic, editorial, rendering, and publish-readiness gates; the existing minimum-execution/recovery planner remains the only repair flow.
 
 ### 4. Release Integrity and Architectural Enforcement
 

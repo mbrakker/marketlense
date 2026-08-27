@@ -850,38 +850,12 @@ def _record_prompt_family_materializations(
         materialized[family_id] = result.materialization.artifact_id
         materialized_hashes[family_id] = result.materialization.output_hash
 
-    persist(
-        "report_vs/doc_map",
-        evidence_packs.get("doc_map", {}),
-        ("analysis_pdf",),
-    )
-    for pack_name in sorted(evidence_packs):
-        if pack_name == "doc_map":
-            continue
-        family_id = f"report_vs/evidence_packs/{pack_name}"
-        persist(
-            family_id,
-            evidence_packs[pack_name],
-            ("analysis_pdf", "report_vs/doc_map"),
-        )
-    persist(
-        "report_vs/taxonomy",
-        {
-            "taxonomy": analysis.get("payload", {}).get("taxonomy", []),
-            "region": analysis.get("payload", {}).get("region", ""),
-            "time_period": analysis.get("payload", {}).get("time_period", ""),
-            "categories": list(analysis.get("category_labels") or []),
-        },
-        ("analysis_pdf", "report_vs/doc_map"),
-    )
-    persist(
-        "report_vs/context_category_fit",
-        evidence_packs.get("context_category_fit", {}),
-        (
-            "report_vs/doc_map",
-            "report_vs/evidence_packs/report_context",
-        ),
-    )
+    # Model-backed non-artifact families (document map, evidence packs,
+    # taxonomy, and contextual category fit) retain their raw, schema-checked
+    # responses immediately at their own generator boundary.  Rewriting them
+    # here from a composite checkpoint would replace their exact input and
+    # execution proof with checkpoint provenance, making a later pre-call
+    # decision unsafe.  The checkpoint remains a resume artifact only.
     evidence_family_ids = tuple(
         f"report_vs/evidence_packs/{name}"
         for name in sorted(evidence_packs)
@@ -920,28 +894,6 @@ def _record_prompt_family_materializations(
             "report_vs/artifacts/cover_semantics", artifacts.get("cover_semantics", {})
         ),
         ("report_vs/artifacts/summary", "report_vs/artifacts/insights_final"),
-    )
-    persist(
-        "report_vs/validate/grounding",
-        validation_report or {},
-        (
-            "report_vs/artifacts/summary",
-            "report_vs/artifacts/insights_final",
-            "report_vs/artifacts/quotes",
-            *evidence_family_ids,
-        ),
-        family_validation=validation_status,
-    )
-    persist(
-        "report_vs/validate/semantic",
-        validation_report or {},
-        (
-            "report_vs/artifacts/summary",
-            "report_vs/artifacts/insights_final",
-            "report_vs/artifacts/quotes",
-            "report_vs/artifacts/cover_semantics",
-        ),
-        family_validation=validation_status,
     )
     persist(
         "report_vs/artifacts/expert_comment",

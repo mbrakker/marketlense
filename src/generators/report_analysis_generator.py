@@ -264,6 +264,7 @@ def _resolve_taxonomy(
     runtime: ReportRuntimeState,
     mode_ctx,
     vector_store_id: Optional[str],
+    vector_store_content_hash: Optional[str],
     dependencies: ReportAnalysisDependencies,
     *,
     openai_client=None,
@@ -285,6 +286,7 @@ def _resolve_taxonomy(
             vector_store_id=vector_store_id or "",
             settings=runtime.settings,
             md5=runtime.md5,
+            vector_store_content_hash=vector_store_content_hash,
             report_slug=runtime.report_name,
             publisher_name=runtime.publisher_name,
             source_url=runtime.source_url,
@@ -365,6 +367,7 @@ def _resolve_categories_from_report_context(
             publisher_name=runtime.publisher_name,
             report_name=runtime.source_report_name or runtime.report_title,
             source_url=runtime.source_url,
+            source_id=str(runtime.md5 or ""),
             prompt_namespace=(
                 "report_vs/context_category_fit_repair"
                 if repair_attempt

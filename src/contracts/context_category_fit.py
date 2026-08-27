@@ -190,6 +190,12 @@ class ContextCategoryFitRequest:
             "doc": "Source/report URL context recorded with downstream LLM usage."
         },
     )
+    source_id: str = field(
+        default="",
+        metadata={
+            "doc": "Immutable source identity required for retained model reuse."
+        },
+    )
     repair_error: str = field(
         default="",
         metadata={

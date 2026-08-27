@@ -1143,6 +1143,7 @@ def _resume_prompt_family_repair(
             artifacts=candidate_artifacts,
             evidence_packs=analysis.evidence_packs,
             vector_store_id=analysis.vector_store_id,
+            source_id=runtime.md5 or "",
             deterministic_grounding_passed=candidate_result.passed,
             publisher_name=runtime.publisher_name,
             report_name=runtime.source_report_name or runtime.report_title,

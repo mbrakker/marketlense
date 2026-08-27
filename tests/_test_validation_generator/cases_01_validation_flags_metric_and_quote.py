@@ -898,6 +898,47 @@ def test_validation_cache_isolated_by_grounding_retrieval_mode(tmp_path):
     assert vector_grounding_calls
     assert vector_grounding_calls[0][0] == "vector"
 
+
+def test_validation_reuses_retained_primary_model_rules_before_provider_call(tmp_path):
+    settings = _settings(tmp_path, validation_grounding_use_vector_store=False)
+    request = ValidationRequest(
+        schema_version="1.0",
+        report_id="r-validation-reuse",
+        report=_report(),
+        artifacts={"insights_final": [], "quotes_final": []},
+        evidence_packs={},
+        source_id="md5:validation-reuse",
+    )
+    first_client = FakeOpenAI(
+        semantic_payload={"metrics": [], "quotes": []},
+        grounding_payload={"unsupported": []},
+    )
+    first = validate_report(
+        request,
+        settings,
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=first_client,
+        report_name="validation-reuse",
+    )
+    replay_client = FakeOpenAI(
+        semantic_payload={"metrics": [], "quotes": []},
+        grounding_payload={"unsupported": []},
+    )
+    replay = validate_report(
+        request,
+        settings,
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=replay_client,
+        report_name="validation-reuse",
+    )
+
+    assert first.status == replay.status
+    assert first.issues == replay.issues
+    assert first_client.requests
+    assert replay_client.requests == []
+
 __all__ = [
     "test_validation_flags_metric_and_quote_mismatches",
     "test_number_validation_ignores_soft_planning_timeframes",
@@ -915,4 +956,5 @@ __all__ = [
     "test_validation_grounding_uses_chat_path_when_flag_disabled",
     "test_validation_grounding_uses_vector_path_when_flag_enabled",
     "test_validation_cache_isolated_by_grounding_retrieval_mode",
+    "test_validation_reuses_retained_primary_model_rules_before_provider_call",
 ]

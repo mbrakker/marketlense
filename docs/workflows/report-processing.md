@@ -373,6 +373,23 @@ or regeneration is retained without primary-family reuse proof, so a later run
 regenerates it through the primary route before it can converge to reusable
 state.
 
+The same pre-call retained-family check is applied at the owning generator for
+the document map, every enabled evidence pack, taxonomy, context-category fit,
+each figure caption, semantic validation, and grounding validation. A reused
+payload is still normalized and schema-validated before it reaches the normal
+grounding, semantic, editorial, rendering, and publish-readiness gates. The
+former composite evidence/taxonomy/validation cache files are not compatible
+proof for these independent families; absent source or vector-content identity,
+or any mismatch in prompt, schema, model policy, configuration, input, output,
+or validation provenance, falls through to the existing bounded recovery and
+minimum-regeneration flow.
+
+The retained-corpus E9 measurement is recorded in
+[the bounded evidence note](../quality/e9-prompt-family-reuse-evidence-2026-08-27.md).
+It distinguishes valid-family reuse from required quality repair; a retained
+output that does not pass the unchanged gates is not presented as a compatible
+zero-call replay.
+
 Each non-prunable, reference-bearing artifact response (candidate insights,
 final insights, and quotes) is also checked against the canonical document map
 and evidence packs before it leaves that bounded structured-output recovery

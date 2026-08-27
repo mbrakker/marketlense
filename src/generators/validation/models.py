@@ -53,6 +53,8 @@ class ValidationRuntime:
     prompt_client: Any
     openai_client: Any
     prepared: ValidationPreparedInputs
+    source_id: str = ""
+    vector_store_content_hash: str = ""
     semantic_outcome: SemanticCheckOutcome = field(
         default_factory=lambda: SemanticCheckOutcome(
             metric_support={}, quote_support={}, issues=[]

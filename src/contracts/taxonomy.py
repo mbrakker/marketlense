@@ -33,6 +33,12 @@ class TaxonomyExtractRequest(SemanticIdContract):
         default=None,
         metadata={"doc": "Report source MD5 used for taxonomy cache keys."},
     )
+    vector_store_content_hash: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Verified vector-store content identity required for retained model reuse."
+        },
+    )
     report_slug: Optional[str] = field(
         default=None,
         metadata={"doc": "Report slug used to resolve taxonomy cache path."},

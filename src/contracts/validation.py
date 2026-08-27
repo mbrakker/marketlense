@@ -111,6 +111,18 @@ class ValidationRequest(SemanticIdContract):
             "doc": "Vector store ID for retrieval-grounded checks, if available."
         },
     )
+    vector_store_content_hash: str = field(
+        default="",
+        metadata={
+            "doc": "Verified vector-store content identity required for grounding-family reuse."
+        },
+    )
+    source_id: str = field(
+        default="",
+        metadata={
+            "doc": "Immutable source identity required for independently retained validator outputs."
+        },
+    )
     validation_mode: str = field(
         default="full",
         metadata={
@@ -136,5 +148,7 @@ class ValidationRequest(SemanticIdContract):
     )
     source_url: str = field(
         default="",
-        metadata={"doc": "Source/report URL context recorded with downstream LLM usage."},
+        metadata={
+            "doc": "Source/report URL context recorded with downstream LLM usage."
+        },
     )

@@ -2,9 +2,15 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import asdict
 from typing import Any, Dict, List, Sequence
 
 from src.contracts.config import AppSettings
+from src.contracts.prompt_family_materialization import (
+    PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+    PromptFamilyMaterializationRequest,
+    PromptFamilyReuseRequest,
+)
 from src.contracts.run_context import RunContext
 from src.contracts.schema_validation import SchemaValidateRequest
 from src.contracts.structured_output import StructuredOutputExecutionRequest
@@ -14,11 +20,16 @@ from src.generators.structured_output_execution import (
     invoke_structured_output_model,
     recovery_prompt_bundle,
 )
+from src.services.prompt_family_materialization_service import (
+    materialize_prompt_family,
+    read_reusable_prompt_family,
+)
 from src.services.schema_validator_service import (
     provider_output_schema,
     validate_schema,
 )
 from src.services.structured_output_service import execute_structured_output
+from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 
@@ -42,6 +53,7 @@ def run_semantic_rule(runtime: ValidationRuntime) -> List[ValidationIssue]:
         report_name=runtime.request.report_name,
         source_url=runtime.request.source_url,
         report_id=str(runtime.request.report_id),
+        source_id=runtime.source_id,
     )
     runtime.semantic_outcome = outcome
     return outcome.issues
@@ -59,6 +71,9 @@ def run_semantic_validation(
     report_name: str = "",
     source_url: str = "",
     report_id: str = "",
+    source_id: str = "",
+    prompt_family_reuse_reader=read_reusable_prompt_family,
+    prompt_family_materializer=materialize_prompt_family,
 ) -> SemanticCheckOutcome:
     if not evidence_texts or (not insights and not quotes):
         return SemanticCheckOutcome(metric_support={}, quote_support={}, issues=[])
@@ -162,10 +177,72 @@ def run_semantic_validation(
             },
         )
     )
+    relevant_input_hash = sha256_json(
+        {
+            "metrics": payload["metrics"],
+            "quotes": payload["quotes"],
+            "evidence": list(evidence_texts),
+        }
+    )
+    configuration_policy_hash = sha256_json(
+        {
+            "execution_policy_hash": prompt_bundle.execution_policy.policy_hash,
+            "execution_policy": asdict(prompt_bundle.execution_policy.policy),
+            "routing_policy": asdict(prompt_bundle.routing_decision),
+        }
+    )
     try:
         output_schema = provider_output_schema("semantic_validation_output")
+        reused_payload = None
+        if source_id:
+            reuse = prompt_family_reuse_reader(
+                PromptFamilyReuseRequest(
+                    schema_version=PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+                    db_path=settings.reports_db,
+                    output_dir=settings.output_dir,
+                    report_id=resolved_report_id,
+                    report_slug=report_name or resolved_report_id,
+                    source_id=source_id,
+                    family_id=prompt_namespace,
+                    family_schema_version="1.0",
+                    processing_version="validation_rule_v2",
+                    prompt_content_hash=prompt_bundle.prompt_content_hash,
+                    execution_identity=prompt_bundle.execution_identity.execution_identity,
+                    model_provider=str(prompt_bundle.execution_policy.policy.provider),
+                    model_name=prompt_bundle.resolved_model,
+                    model_policy_namespace="report_vs",
+                    routing_policy_version=prompt_bundle.execution_policy.policy_hash,
+                    validator_version="semantic_validation_output:1.0",
+                    relevant_input_hash=relevant_input_hash,
+                    configuration_policy_hash=configuration_policy_hash,
+                ),
+                semantic_ctx,
+            )
+            if reuse.reusable:
+                validate_schema(
+                    SchemaValidateRequest(
+                        schema_version="1.0",
+                        payload=reuse.output_payload,
+                        schema_name="semantic_validation_output",
+                    ),
+                    semantic_ctx,
+                )
+                reused_payload = dict(reuse.output_payload)
+                logger.info(
+                    log_event(
+                        semantic_ctx,
+                        role="generator",
+                        event="semantic_prompt_family_reused",
+                        module=LOGGER_NAME,
+                        fields={"family_id": prompt_namespace, "reason": reuse.reason},
+                    )
+                )
+        recovery_attempted = False
 
         def call_model(mode: str, original_response: str, schema_errors: str):
+            nonlocal recovery_attempted
+            if mode != "primary":
+                recovery_attempted = True
             bundle = prompt_bundle
             if mode != "primary":
                 bundle = recovery_prompt_bundle(
@@ -194,37 +271,79 @@ def run_semantic_validation(
                 source_url=source_url,
                 output_schema=output_schema,
                 output_schema_identity="semantic_validation_output_v1",
-                repair_attempt={"primary": 0, "model_repair": 1, "regeneration": 2}[mode],
+                repair_attempt={"primary": 0, "model_repair": 1, "regeneration": 2}[
+                    mode
+                ],
             )
 
-        recovery = execute_structured_output(
-            StructuredOutputExecutionRequest(
-                schema_version="1.0",
-                report_id=resolved_report_id,
-                artifact_family="validation_semantic",
-                schema_name="semantic_validation_output",
-                model=prompt_bundle.resolved_model,
-                terminal_failure_code="validation_semantic_invalid_json",
-            ),
-            semantic_ctx,
-            call_model=call_model,
-            normalize_payload=lambda payload: dict(payload)
-            if isinstance(payload, dict)
-            else payload,
-            validate_payload=lambda payload: validate_schema(
-                SchemaValidateRequest(
+        if reused_payload is None:
+            recovery = execute_structured_output(
+                StructuredOutputExecutionRequest(
                     schema_version="1.0",
-                    payload=payload,
+                    report_id=resolved_report_id,
+                    artifact_family="validation_semantic",
                     schema_name="semantic_validation_output",
+                    model=prompt_bundle.resolved_model,
+                    terminal_failure_code="validation_semantic_invalid_json",
                 ),
                 semantic_ctx,
-            ),
-            is_substantive=lambda payload: isinstance(payload, dict)
-            and "metrics" in payload
-            and "quotes" in payload,
-            model_pricing=settings.model_pricing,
-        )
-        parsed = recovery.payload
+                call_model=call_model,
+                normalize_payload=lambda payload: (
+                    dict(payload) if isinstance(payload, dict) else payload
+                ),
+                validate_payload=lambda payload: validate_schema(
+                    SchemaValidateRequest(
+                        schema_version="1.0",
+                        payload=payload,
+                        schema_name="semantic_validation_output",
+                    ),
+                    semantic_ctx,
+                ),
+                is_substantive=lambda payload: (
+                    isinstance(payload, dict)
+                    and "metrics" in payload
+                    and "quotes" in payload
+                ),
+                model_pricing=settings.model_pricing,
+            )
+            parsed = recovery.payload
+        else:
+            parsed = reused_payload
+        if reused_payload is None and source_id and not recovery_attempted:
+            prompt_family_materializer(
+                PromptFamilyMaterializationRequest(
+                    schema_version=PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+                    db_path=settings.reports_db,
+                    output_dir=settings.output_dir,
+                    report_id=resolved_report_id,
+                    report_slug=report_name or resolved_report_id,
+                    source_id=source_id,
+                    family_id=prompt_namespace,
+                    family_schema_version="1.0",
+                    processing_version="validation_rule_v2",
+                    output_payload=parsed,
+                    system_prompt_hash=prompt_bundle.prompt_set.system.sha256,
+                    user_prompt_hash=prompt_bundle.prompt_set.user.sha256,
+                    prompt_content_hash=prompt_bundle.prompt_content_hash,
+                    prompt_dependency_manifest=asdict(
+                        prompt_bundle.dependency_manifest
+                    ),
+                    execution_identity=prompt_bundle.execution_identity.execution_identity,
+                    execution_identity_manifest=asdict(
+                        prompt_bundle.execution_identity
+                    ),
+                    prompt_policy_version=prompt_bundle.prompt_content_hash,
+                    model_name=prompt_bundle.resolved_model,
+                    model_provider=str(prompt_bundle.execution_policy.policy.provider),
+                    model_policy_namespace="report_vs",
+                    routing_policy_version=prompt_bundle.execution_policy.policy_hash,
+                    relevant_input_hash=relevant_input_hash,
+                    configuration_policy_hash=configuration_policy_hash,
+                    validator_version="semantic_validation_output:1.0",
+                    validation_status="pass",
+                ),
+                semantic_ctx,
+            )
         logger.info(
             log_event(
                 semantic_ctx,

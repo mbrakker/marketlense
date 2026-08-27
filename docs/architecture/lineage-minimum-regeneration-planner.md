@@ -48,11 +48,13 @@ same backfill is idempotent.
 
 ## Prompt-family materialisations
 
-At the `analysis_complete` checkpoint, the report-generation orchestrator
-persists separate, content-addressed family records through the report-store
-lineage boundary. These cover the document map, each evidence pack, taxonomy
-and category fit, each artifact prompt family, and grounding/semantic
-validation. A record retains only bounded provenance in the lineage database:
+Each model-owning generator persists its primary, schema-checked response as a
+separate, content-addressed family record through the report-store lineage
+boundary; `analysis_complete` retains the artifact-family checkpoint links
+without rewriting a non-artifact model record. These cover the document map,
+each enabled evidence pack, taxonomy, category fit, figure captions, each
+artifact prompt family, and grounding/semantic validation. A record retains
+only bounded provenance in the lineage database:
 family/schema/processing versions, prompt-content hashes, content-addressed
 dependency manifests, execution identities, routing information, direct
 dependency IDs and hashes, evidence-set hash, output hash, validation state,
@@ -92,6 +94,17 @@ approved family input/output contract and still traverses the existing
 grounding, semantic, editorial, rendering, and publish-readiness gates.
 Missing provenance, a bad output hash, an invalidated record, or any mismatch
 is a bounded regeneration reason, never a reuse fallback.
+
+The non-artifact primary routes perform the same check before their provider
+call: `report_vs/doc_map`, enabled `report_vs/evidence_packs/*`,
+`report_vs/taxonomy`, `report_vs/context_category_fit`,
+`report_vs/figure_caption/*`, `report_vs/validate/semantic`, and
+`report_vs/validate/grounding`. Reused evidence, taxonomy, category, caption,
+and validator payloads are normalized and schema-checked by their original
+generator before the existing semantic, editorial, rendering, and readiness
+gates consume them. The old composite evidence, taxonomy, and validation caches
+are therefore not reuse authority; missing vector-content proof, source proof,
+or any retained-output proof triggers the existing regeneration path.
 
 For vector-backed artifact routes, the semantic-input identity also includes a
 content identity made from the source, vector-store ID, provider file ID, and

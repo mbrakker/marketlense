@@ -3,9 +3,15 @@ from __future__ import annotations
 import json
 import logging
 import re
+from dataclasses import asdict
 from typing import Any, Dict, List, Optional, Tuple
 
 from src.contracts.categories import CategoryMappingLoadRequest, TaxonomyInferenceRule
+from src.contracts.prompt_family_materialization import (
+    PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+    PromptFamilyMaterializationRequest,
+    PromptFamilyReuseRequest,
+)
 from src.contracts.report_analysis import (
     AnalysisPackPathRequest,
     AnalysisStorePackRequest,
@@ -42,6 +48,10 @@ from src.services import (
 from src.services.category_mapping_service import (
     load_mappings as load_category_mappings,
 )
+from src.services.prompt_family_materialization_service import (
+    materialize_prompt_family,
+    read_reusable_prompt_family,
+)
 from src.services.schema_validator_service import (
     provider_output_schema,
     validate_schema,
@@ -65,6 +75,8 @@ def extract_taxonomy(
     prompt_client=prompt_service,
     analysis_store=report_analysis_store_service,
     file_client=file_service,
+    prompt_family_reuse_reader=read_reusable_prompt_family,
+    prompt_family_materializer=materialize_prompt_family,
 ) -> TaxonomyExtractResponse:
     openai_client = require_injected_model_client(openai_client, scope="taxonomy")
     taxonomy_temperature = _resolve_taxonomy_temperature(request)
@@ -168,8 +180,66 @@ def extract_taxonomy(
             },
         )
     )
+    vector_provenance_verified = bool(
+        str(request.vector_store_content_hash or "").strip()
+    )
+    relevant_input_hash = (
+        sha256_json(
+            {
+                "report_title": request.report_title,
+                "allowed_tags": allowed_tags,
+                "vector_store_id": request.vector_store_id,
+                "vector_store_content_hash": request.vector_store_content_hash,
+            }
+        )
+        if vector_provenance_verified
+        else ""
+    )
+    configuration_policy_hash = sha256_json(
+        {
+            "execution_policy_hash": prompt_bundle.execution_policy.policy_hash,
+            "execution_policy": asdict(prompt_bundle.execution_policy.policy),
+            "routing_policy": asdict(prompt_bundle.routing_decision),
+        }
+    )
+    reused_payload = None
+    if request.md5 and vector_provenance_verified and not request.repair_attempt:
+        reuse = prompt_family_reuse_reader(
+            PromptFamilyReuseRequest(
+                schema_version=PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+                db_path=request.settings.reports_db,
+                output_dir=request.settings.output_dir,
+                report_id=str(request.report_id),
+                report_slug=request.report_slug or str(request.report_id),
+                source_id=request.md5,
+                family_id=request.prompt_namespace,
+                family_schema_version="1.0",
+                processing_version="report_generation_checkpoint_v2",
+                prompt_content_hash=prompt_bundle.prompt_content_hash,
+                execution_identity=prompt_bundle.execution_identity.execution_identity,
+                model_provider=str(prompt_bundle.execution_policy.policy.provider),
+                model_name=prompt_bundle.resolved_model,
+                model_policy_namespace="report_vs",
+                routing_policy_version=prompt_bundle.execution_policy.policy_hash,
+                validator_version="taxonomy:1.0",
+                relevant_input_hash=relevant_input_hash,
+                configuration_policy_hash=configuration_policy_hash,
+            ),
+            ctx,
+        )
+        if reuse.reusable:
+            validate_schema(
+                SchemaValidateRequest(
+                    schema_version="1.0",
+                    payload=reuse.output_payload,
+                    schema_name="taxonomy",
+                ),
+                ctx,
+            )
+            reused_payload = dict(reuse.output_payload)
     cache_key = ""
-    cache_eligible, cache_skip_reason = _taxonomy_cache_eligibility(request)
+    # Legacy taxonomy caches do not prove lineage/output/vector compatibility.
+    cache_eligible, cache_skip_reason = False, "lineage_provenance_required"
     if cache_eligible:
         cache_meta = _taxonomy_cache_meta(
             request=request,
@@ -231,8 +301,12 @@ def extract_taxonomy(
 
     not_found_reason = ""
     output_schema = provider_output_schema("taxonomy")
+    recovery_attempted = False
 
     def call_model(mode: str, original_response: str, schema_errors: str):
+        nonlocal recovery_attempted
+        if mode != "primary":
+            recovery_attempted = True
         bundle = prompt_bundle
         if mode != "primary":
             bundle = recovery_prompt_bundle(
@@ -268,42 +342,49 @@ def extract_taxonomy(
             repair_attempt={"primary": 0, "model_repair": 1, "regeneration": 2}[mode],
         )
 
-    result = execute_structured_output(
-        StructuredOutputExecutionRequest(
-            schema_version="1.0",
-            report_id=str(request.report_id),
-            artifact_family="taxonomy",
-            schema_name="taxonomy",
-            model=prompt_bundle.resolved_model,
-            terminal_failure_code="taxonomy_invalid_json",
-        ),
-        ctx,
-        call_model=call_model,
-        normalize_payload=lambda payload: dict(payload) if isinstance(payload, dict) else payload,
-        validate_payload=lambda payload: validate_schema(
-            SchemaValidateRequest(
-                schema_version="1.0", payload=payload, schema_name="taxonomy"
+    if reused_payload is None:
+        result = execute_structured_output(
+            StructuredOutputExecutionRequest(
+                schema_version="1.0",
+                report_id=str(request.report_id),
+                artifact_family="taxonomy",
+                schema_name="taxonomy",
+                model=prompt_bundle.resolved_model,
+                terminal_failure_code="taxonomy_invalid_json",
             ),
             ctx,
-        ),
-        is_substantive=lambda payload: bool(
-            isinstance(payload, dict)
-            and (
-                _normalize_tags(payload.get("taxonomy"))
-                or _normalize_tags(payload.get("primary_tags"))
-                or _normalize_tags(payload.get("secondary_tags"))
-            )
-        ),
-        model_pricing=request.settings.model_pricing,
-    )
-    payload = result.payload
+            call_model=call_model,
+            normalize_payload=lambda payload: (
+                dict(payload) if isinstance(payload, dict) else payload
+            ),
+            validate_payload=lambda payload: validate_schema(
+                SchemaValidateRequest(
+                    schema_version="1.0", payload=payload, schema_name="taxonomy"
+                ),
+                ctx,
+            ),
+            is_substantive=lambda payload: bool(
+                isinstance(payload, dict)
+                and (
+                    _normalize_tags(payload.get("taxonomy"))
+                    or _normalize_tags(payload.get("primary_tags"))
+                    or _normalize_tags(payload.get("secondary_tags"))
+                )
+            ),
+            model_pricing=request.settings.model_pricing,
+        )
+        payload = result.payload
+        disposition = result.disposition
+    else:
+        payload = reused_payload
+        disposition = "reused"
     logger.info(
         log_event(
             ctx,
             role="generator",
             event="taxonomy_schema_valid",
             module=logger.name,
-            fields={"reason": not_found_reason, "disposition": result.disposition},
+            fields={"reason": not_found_reason, "disposition": disposition},
         )
     )
 
@@ -345,6 +426,42 @@ def extract_taxonomy(
         time_period=time_period,
         not_found_reason=not_found_reason or None,
     )
+    if (
+        reused_payload is None
+        and request.md5
+        and vector_provenance_verified
+        and not request.repair_attempt
+    ):
+        prompt_family_materializer(
+            PromptFamilyMaterializationRequest(
+                schema_version=PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+                db_path=request.settings.reports_db,
+                output_dir=request.settings.output_dir,
+                report_id=str(request.report_id),
+                report_slug=request.report_slug or str(request.report_id),
+                source_id=request.md5,
+                family_id=request.prompt_namespace,
+                family_schema_version="1.0",
+                processing_version="report_generation_checkpoint_v2",
+                output_payload=payload,
+                system_prompt_hash=prompt_bundle.prompt_set.system.sha256,
+                user_prompt_hash=prompt_bundle.prompt_set.user.sha256,
+                prompt_content_hash=prompt_bundle.prompt_content_hash,
+                prompt_dependency_manifest=asdict(prompt_bundle.dependency_manifest),
+                execution_identity=prompt_bundle.execution_identity.execution_identity,
+                execution_identity_manifest=asdict(prompt_bundle.execution_identity),
+                prompt_policy_version=prompt_bundle.prompt_content_hash,
+                model_name=prompt_bundle.resolved_model,
+                model_provider=str(prompt_bundle.execution_policy.policy.provider),
+                model_policy_namespace="report_vs",
+                routing_policy_version=prompt_bundle.execution_policy.policy_hash,
+                relevant_input_hash=("" if recovery_attempted else relevant_input_hash),
+                configuration_policy_hash=configuration_policy_hash,
+                validator_version="taxonomy:1.0",
+                validation_status="pass",
+            ),
+            ctx,
+        )
     if cache_eligible:
         _store_taxonomy_cache(
             request=request,

@@ -237,6 +237,7 @@ def _request(settings: AppSettings) -> TaxonomyExtractRequest:
         vector_store_id="vs_1",
         settings=settings,
         md5="md5-report-1",
+        vector_store_content_hash="verified-vector-content",
         report_slug="report-1-slug",
     )
 
@@ -268,7 +269,7 @@ def test_taxonomy_invalid_json_is_a_typed_failure_not_empty_success(tmp_path):
     assert exc_info.value.context["response_chars"] > 0
 
 
-def test_taxonomy_cache_miss_calls_openai_and_writes_cache(tmp_path):
+def test_taxonomy_materializes_primary_output_with_provenance(tmp_path):
     mapping_path = tmp_path / "category-mappings.yaml"
     _write_mapping(mapping_path)
     settings = _settings(tmp_path, mapping_path)
@@ -314,14 +315,17 @@ def test_taxonomy_cache_miss_calls_openai_and_writes_cache(tmp_path):
     assert response.tag_evidence[1].tier == "secondary"
     assert fake_openai.last_request is not None
     assert fake_openai.last_request.temperature == 0.2
-    cache_payload = json.loads(_cache_path(settings).read_text(encoding="utf-8"))
-    assert cache_payload.get("_cache", {}).get("key")
-    assert cache_payload["primary_tags"] == ["digital_payments"]
-    assert cache_payload["secondary_tags"] == ["wallets"]
-    assert cache_payload["tag_evidence"][1]["section_label"] == "Future Outlook"
+    retained = next((Path(settings.output_dir)).rglob("prompt_family_*.json"))
+    retained_payload = json.loads(retained.read_text(encoding="utf-8"))
+    assert retained_payload["family_id"] == "report_vs/taxonomy"
+    assert retained_payload["output"]["primary_tags"] == ["digital_payments"]
+    assert (
+        retained_payload["output"]["tag_evidence"][1]["section_label"]
+        == "Future Outlook"
+    )
 
 
-def test_taxonomy_cache_hit_bypasses_openai(tmp_path):
+def test_taxonomy_materialized_family_bypasses_openai(tmp_path):
     mapping_path = tmp_path / "category-mappings.yaml"
     _write_mapping(mapping_path)
     settings = _settings(tmp_path, mapping_path)

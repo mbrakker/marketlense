@@ -9,12 +9,22 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from src.contracts.openai import OpenAIJSONImagePromptRequest
+from src.contracts.prompt_family_materialization import (
+    PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+    PromptFamilyMaterializationRequest,
+    PromptFamilyReuseRequest,
+)
 from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
 from src.contracts.report_analysis import AnalysisStorePackRequest
 from src.contracts.report_generation import ReportRuntimeState
 from src.contracts.report_models import ReportFigureAsset, ReportPayload
 from src.contracts.semantic_ids import ReportId
 from src.generators.report_generation_dependencies import FigureCaptionDependencies
+from src.services.prompt_family_materialization_service import (
+    materialize_prompt_family,
+    read_reusable_prompt_family,
+)
+from src.utils.cache_utils import sha256_json
 from src.utils.logging import child_context, log_event
 from src.utils.model_client_contract import require_injected_model_client
 from src.utils.model_resolver import resolve_model
@@ -299,6 +309,8 @@ def generate_figure_captions(
     artifacts_payload: dict[str, Any],
     dependencies: FigureCaptionDependencies,
     llm_client=None,
+    prompt_family_reuse_reader=read_reusable_prompt_family,
+    prompt_family_materializer=materialize_prompt_family,
 ) -> FigureCaptionGenerationResult:
     assets = list(payload._figure_assets or [])
     if not runtime.settings.figure_caption_enabled or not assets:
@@ -331,6 +343,34 @@ def generate_figure_captions(
         prompt_namespace,
         getattr(runtime.settings, "openai_models", {}),
         runtime.settings.openai_model,
+    )
+    prompt_content_hash = str(getattr(prompt_set, "prompt_content_hash", "") or "")
+    if not prompt_content_hash:
+        prompt_content_hash = sha256_json(
+            {"system": prompt_set.system.sha256, "user": prompt_set.user.sha256}
+        )
+    routing_policy_version = sha256_json(
+        {
+            "namespace": prompt_namespace,
+            "models": getattr(runtime.settings, "openai_models", {}),
+            "fallback_model": runtime.settings.openai_model,
+        }
+    )
+    configuration_policy_hash = sha256_json(
+        {
+            "temperature": runtime.settings.figure_caption_temperature,
+            "max_chars": runtime.settings.figure_caption_max_chars,
+            "seed": runtime.settings.openai_seed,
+        }
+    )
+    execution_identity = sha256_json(
+        {
+            "namespace": prompt_namespace,
+            "provider": "openai",
+            "model": resolved_model,
+            "routing_policy_version": routing_policy_version,
+            "configuration_policy_hash": configuration_policy_hash,
+        }
     )
     logger.info(
         log_event(
@@ -372,7 +412,6 @@ def generate_figure_captions(
         legacy_primary_caption = "Representative figure from the source report."
     results: list[dict[str, Any]] = []
     updated_assets: list[ReportFigureAsset] = []
-    llm_client = require_injected_model_client(llm_client, scope="figure_caption")
     for index, asset in enumerate(assets, start=1):
         asset_ctx = child_context(caption_ctx, task_id=f"{caption_ctx.task_id}:{index}")
         context_bundle = _build_context_bundle(
@@ -418,53 +457,138 @@ def generate_figure_captions(
         completion_tokens = None
         total_tokens = None
         error_message = ""
-        try:
-            response = llm_client.openai_chat_json_with_images(
-                OpenAIJSONImagePromptRequest(
-                    schema_version="1.0",
-                    system_prompt=system_render.text,
-                    user_prompt=user_render.text,
-                    model=resolved_model,
-                    temperature=runtime.settings.figure_caption_temperature,
-                    api_key=runtime.settings.openai_api_key,
-                    image_paths=[str(image_path)],
-                    seed=runtime.settings.openai_seed,
-                    timeout_seconds=runtime.settings.figure_caption_timeout_seconds,
-                    cost_ledger_path=runtime.settings.cost_ledger_path,
-                    cost_daily_path=runtime.settings.cost_daily_path,
-                    usage_db_path=str(
-                        getattr(
-                            runtime.settings,
-                            "usage_db_path",
-                            "./state/llm_usage.sqlite",
-                        )
-                    ),
-                    model_pricing=runtime.settings.model_pricing,
-                    publisher_name=runtime.publisher_name,
-                    report_name=runtime.source_report_name or runtime.report_title,
-                    source_url=runtime.source_url,
-                    prompt_namespace=prompt_namespace,
-                    prompt_hash=prompt_set.user.sha256,
+        asset_identity = sha256_json(
+            {
+                "candidate_id": asset.candidate_id,
+                "image_path": asset.image_path,
+                "page": asset.page,
+                "kind": asset.kind,
+                "detected_caption": asset.detected_caption,
+                "preview_text": asset.preview_text,
+            }
+        )
+        family_id = f"report_vs/figure_caption/{asset_identity[:16]}"
+        relevant_input_hash = sha256_json(
+            {
+                "source_id": runtime.md5 or runtime.file.file_id,
+                "asset_identity": asset_identity,
+                "context_bundle": context_bundle,
+            }
+        )
+        reused_payload = None
+        if runtime.md5:
+            reuse = prompt_family_reuse_reader(
+                PromptFamilyReuseRequest(
+                    schema_version=PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+                    db_path=runtime.settings.reports_db,
+                    output_dir=runtime.settings.output_dir,
+                    report_id=runtime.file.file_id,
+                    report_slug=runtime.report_name,
+                    source_id=runtime.md5,
+                    family_id=family_id,
+                    family_schema_version="1.0",
+                    processing_version="figure_caption_generator_v2",
+                    prompt_content_hash=prompt_content_hash,
+                    execution_identity=execution_identity,
+                    model_provider="openai",
+                    model_name=resolved_model,
+                    model_policy_namespace=prompt_namespace,
+                    routing_policy_version=routing_policy_version,
+                    validator_version="figure_caption:1.0",
+                    relevant_input_hash=relevant_input_hash,
+                    configuration_policy_hash=configuration_policy_hash,
                 ),
                 asset_ctx,
             )
-            raw_content = _normalize_text(response.text)
-            parsed = (
-                response.parsed_json if isinstance(response.parsed_json, dict) else {}
+            candidate = reuse.output_payload if reuse.reusable else None
+            candidate_caption = (
+                _normalize_text(candidate.get("caption"))
+                if isinstance(candidate, dict)
+                else ""
             )
-            generated_caption = _normalize_text(parsed.get("caption"))
-            request_id = response.request_id
-            prompt_tokens = response.input_tokens
-            completion_tokens = response.output_tokens
-            total_tokens = response.total_tokens
-            if not generated_caption:
-                error_message = "empty_caption"
-            elif len(generated_caption) > int(
+            if candidate_caption and len(candidate_caption) <= int(
                 runtime.settings.figure_caption_max_chars
             ):
-                error_message = "caption_too_long"
-        except Exception as exc:  # fail-open by design
-            error_message = str(exc)
+                reused_payload = {"caption": candidate_caption}
+                generated_caption = candidate_caption
+                raw_content = json.dumps(reused_payload, ensure_ascii=False)
+                logger.info(
+                    log_event(
+                        asset_ctx,
+                        role="generator",
+                        event="prompt_family_reused",
+                        module=logger.name,
+                        fields={
+                            "family_id": family_id,
+                            "reason": reuse.reason,
+                            "model_calls_avoided": 1,
+                        },
+                    )
+                )
+            else:
+                logger.info(
+                    log_event(
+                        asset_ctx,
+                        role="generator",
+                        event="prompt_family_regeneration_required",
+                        module=logger.name,
+                        fields={"family_id": family_id, "reason": reuse.reason},
+                    )
+                )
+        if reused_payload is None:
+            try:
+                active_client = require_injected_model_client(
+                    llm_client, scope="figure_caption"
+                )
+                response = active_client.openai_chat_json_with_images(
+                    OpenAIJSONImagePromptRequest(
+                        schema_version="1.0",
+                        system_prompt=system_render.text,
+                        user_prompt=user_render.text,
+                        model=resolved_model,
+                        temperature=runtime.settings.figure_caption_temperature,
+                        api_key=runtime.settings.openai_api_key,
+                        image_paths=[str(image_path)],
+                        seed=runtime.settings.openai_seed,
+                        timeout_seconds=runtime.settings.figure_caption_timeout_seconds,
+                        cost_ledger_path=runtime.settings.cost_ledger_path,
+                        cost_daily_path=runtime.settings.cost_daily_path,
+                        usage_db_path=str(
+                            getattr(
+                                runtime.settings,
+                                "usage_db_path",
+                                "./state/llm_usage.sqlite",
+                            )
+                        ),
+                        model_pricing=runtime.settings.model_pricing,
+                        publisher_name=runtime.publisher_name,
+                        report_name=runtime.source_report_name
+                        or runtime.report_title,
+                        source_url=runtime.source_url,
+                        prompt_namespace=prompt_namespace,
+                        prompt_hash=prompt_set.user.sha256,
+                    ),
+                    asset_ctx,
+                )
+                raw_content = _normalize_text(response.text)
+                parsed = (
+                    response.parsed_json
+                    if isinstance(response.parsed_json, dict)
+                    else {}
+                )
+                generated_caption = _normalize_text(parsed.get("caption"))
+                request_id = response.request_id
+                prompt_tokens = response.input_tokens
+                completion_tokens = response.output_tokens
+                total_tokens = response.total_tokens
+                if not generated_caption:
+                    error_message = "empty_caption"
+                elif len(generated_caption) > int(
+                    runtime.settings.figure_caption_max_chars
+                ):
+                    error_message = "caption_too_long"
+            except Exception as exc:  # fail-open by design
+                error_message = str(exc)
 
         if error_message:
             display_caption, caption_source = _fallback_display_caption(
@@ -523,6 +647,40 @@ def generate_figure_captions(
                 )
             )
         updated_assets.append(updated_asset)
+        if not error_message and reused_payload is None and runtime.md5:
+            prompt_family_materializer(
+                PromptFamilyMaterializationRequest(
+                    schema_version=PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+                    db_path=runtime.settings.reports_db,
+                    output_dir=runtime.settings.output_dir,
+                    report_id=runtime.file.file_id,
+                    report_slug=runtime.report_name,
+                    source_id=runtime.md5,
+                    family_id=family_id,
+                    family_schema_version="1.0",
+                    processing_version="figure_caption_generator_v2",
+                    output_payload={"caption": generated_caption},
+                    system_prompt_hash=prompt_set.system.sha256,
+                    user_prompt_hash=prompt_set.user.sha256,
+                    prompt_content_hash=prompt_content_hash,
+                    prompt_policy_version=prompt_content_hash,
+                    execution_identity=execution_identity,
+                    execution_identity_manifest={
+                        "provider": "openai",
+                        "model": resolved_model,
+                    },
+                    model_name=resolved_model,
+                    model_provider="openai",
+                    model_policy_namespace=prompt_namespace,
+                    routing_policy_version=routing_policy_version,
+                    relevant_input_hash=relevant_input_hash,
+                    configuration_policy_hash=configuration_policy_hash,
+                    validator_version="figure_caption:1.0",
+                    evidence_set_hash=sha256_json(context_bundle),
+                    validation_status="pass",
+                ),
+                asset_ctx,
+            )
         results.append(
             {
                 "schema_version": "1.0",

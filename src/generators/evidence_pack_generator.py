@@ -2,11 +2,17 @@ from __future__ import annotations
 
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import asdict
 from hashlib import sha256
 from typing import Dict, Optional, Tuple
 
 from src.contracts.analysis_family import AnalysisFamilyStatus
 from src.contracts.config import AppSettings
+from src.contracts.prompt_family_materialization import (
+    PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+    PromptFamilyMaterializationRequest,
+    PromptFamilyReuseRequest,
+)
 from src.contracts.report_analysis import (
     AnalysisPackPathRequest,
     AnalysisStorePackRequest,
@@ -46,6 +52,10 @@ from src.generators.structured_output_execution import (
     recovery_prompt_bundle,
 )
 from src.services import file_service, prompt_service, report_analysis_store_service
+from src.services.prompt_family_materialization_service import (
+    materialize_prompt_family,
+    read_reusable_prompt_family,
+)
 from src.services.schema_validator_service import (
     provider_output_schema,
     validate_schema,
@@ -239,12 +249,15 @@ def generate_evidence_packs(
     settings: AppSettings,
     ctx: Optional[RunContext] = None,
     md5: Optional[str] = None,
+    vector_store_content_hash: Optional[str] = None,
     publisher_name: str = "",
     source_url: str = "",
     *,
     openai_client=None,
     prompt_client=prompt_service,
     analysis_store=report_analysis_store_service,
+    prompt_family_reuse_reader=read_reusable_prompt_family,
+    prompt_family_materializer=materialize_prompt_family,
 ) -> Dict[str, dict]:
     ctx = ctx or new_run_context(task_id=f"evidence_pack:{report_id}")
     openai_client = require_injected_model_client(
@@ -288,11 +301,14 @@ def generate_evidence_packs(
         settings=settings,
         ctx=step_ctx,
         md5=md5,
+        vector_store_content_hash=vector_store_content_hash,
         publisher_name=publisher_name,
         source_url=source_url,
         openai_client=openai_client,
         prompt_client=prompt_client,
         analysis_store=analysis_store,
+        prompt_family_reuse_reader=prompt_family_reuse_reader,
+        prompt_family_materializer=prompt_family_materializer,
         strategy=doc_strategy,
     )
     completeness = _summarize_doc_map_completeness(results[step_name])
@@ -369,11 +385,14 @@ def generate_evidence_packs(
                     settings=settings,
                     ctx=step_ctx,
                     md5=md5,
+                    vector_store_content_hash=vector_store_content_hash,
                     publisher_name=publisher_name,
                     source_url=source_url,
                     openai_client=openai_client,
                     prompt_client=prompt_client,
                     analysis_store=analysis_store,
+                    prompt_family_reuse_reader=prompt_family_reuse_reader,
+                    prompt_family_materializer=prompt_family_materializer,
                     strategy=strategy,
                 )
                 futures[future] = step_name
@@ -422,11 +441,14 @@ def generate_evidence_packs(
                 settings=settings,
                 ctx=step_ctx,
                 md5=md5,
+                vector_store_content_hash=vector_store_content_hash,
                 publisher_name=publisher_name,
                 source_url=source_url,
                 openai_client=openai_client,
                 prompt_client=prompt_client,
                 analysis_store=analysis_store,
+                prompt_family_reuse_reader=prompt_family_reuse_reader,
+                prompt_family_materializer=prompt_family_materializer,
                 strategy=strategy,
             )
     for strategy in parallel_strategies:
@@ -451,11 +473,14 @@ def _generate_pack(
     settings: AppSettings,
     ctx: RunContext,
     md5: Optional[str],
+    vector_store_content_hash: Optional[str],
     publisher_name: str,
     source_url: str,
     openai_client,
     prompt_client,
     analysis_store,
+    prompt_family_reuse_reader,
+    prompt_family_materializer,
     strategy: EvidencePackStrategy,
 ) -> dict:
     pack_name = strategy.pack_name
@@ -502,103 +527,92 @@ def _generate_pack(
             },
         )
     )
-    cache_meta = None
-    cache_key = ""
-    if md5:
-        cache_meta = {
-            "schema_version": "1.0",
-            "adapter_version": "2",
-            "md5": md5,
-            "pack_name": pack_name,
-            "schema_name": schema_name,
-            "prompt_system_sha256": prompt_bundle.prompt_set.system.sha256,
-            "prompt_user_sha256": prompt_bundle.prompt_set.user.sha256,
-            "model": prompt_bundle.resolved_model,
-            "temperature": settings.temperature,
-            "seed": settings.openai_seed,
+    vector_provenance_verified = bool(str(vector_store_content_hash or "").strip())
+    relevant_input_hash = (
+        sha256_json(
+            {
+                "report_id": report_id,
+                "report_name": report_name,
+                "pack_name": pack_name,
+                "schema_name": schema_name,
+                "vector_store_id": vector_store_id,
+                "vector_store_content_hash": vector_store_content_hash,
+            }
+        )
+        if vector_provenance_verified
+        else ""
+    )
+    configuration_policy_hash = sha256_json(
+        {
+            "execution_policy_hash": prompt_bundle.execution_policy.policy_hash,
+            "execution_policy": asdict(prompt_bundle.execution_policy.policy),
+            "routing_policy": asdict(prompt_bundle.routing_decision),
         }
-        cache_key = sha256_json(cache_meta)
-        if settings.vector_store_keep:
-            cached = _load_cached_pack(
+    )
+
+    def normalize_and_validate_reused(payload: object) -> dict:
+        normalized = strategy.normalize_payload(payload, report_id, report_name).payload
+        validate_schema(
+            SchemaValidateRequest(
+                schema_version="1.0", payload=normalized, schema_name=schema_name
+            ),
+            ctx,
+        )
+        return _attach_pack_family_status(pack_name, normalized)
+
+    if md5 and vector_provenance_verified:
+        reuse = prompt_family_reuse_reader(
+            PromptFamilyReuseRequest(
+                schema_version=PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+                db_path=settings.reports_db,
+                output_dir=settings.output_dir,
+                report_id=report_id,
+                report_slug=report_name,
+                source_id=md5,
+                family_id=prompt_namespace,
+                family_schema_version="1.0",
+                processing_version="report_generation_checkpoint_v2",
+                prompt_content_hash=prompt_bundle.prompt_content_hash,
+                execution_identity=prompt_bundle.execution_identity.execution_identity,
+                model_provider=str(prompt_bundle.execution_policy.policy.provider),
+                model_name=prompt_bundle.resolved_model,
+                model_policy_namespace="report_vs",
+                routing_policy_version=prompt_bundle.execution_policy.policy_hash,
+                validator_version=f"{schema_name}:1.0",
+                relevant_input_hash=relevant_input_hash,
+                configuration_policy_hash=configuration_policy_hash,
+            ),
+            ctx,
+        )
+        if reuse.reusable:
+            reused_payload = normalize_and_validate_reused(reuse.output_payload)
+            _store_pack(
+                analysis_store=analysis_store,
                 output_dir=settings.output_dir,
                 report_id=report_id,
                 pack_name=pack_name,
-                report_name=report_name,
-                cache_key=cache_key,
+                payload=reused_payload,
                 ctx=ctx,
-                analysis_store=analysis_store,
+                report_name=report_name,
             )
-            if cached is not None:
-                normalized_cached = strategy.normalize_payload(
-                    cached, report_id, report_name
+            logger.info(
+                log_event(
+                    ctx,
+                    role="generator",
+                    event="evidence_pack_prompt_family_reused",
+                    module=logger.name,
+                    fields={
+                        "family_id": prompt_namespace,
+                        "artifact_id": reuse.artifact_id,
+                    },
                 )
-                cached = normalized_cached.payload
-                if normalized_cached.changed:
-                    _store_pack(
-                        analysis_store=analysis_store,
-                        output_dir=settings.output_dir,
-                        report_id=report_id,
-                        pack_name=pack_name,
-                        payload=cached,
-                        ctx=ctx,
-                        report_name=report_name,
-                    )
-                    if pack_name == "doc_map":
-                        logger.info(
-                            log_event(
-                                ctx,
-                                role="generator",
-                                event="doc_map_cache_normalized",
-                                module=logger.name,
-                                fields={
-                                    "report_id": report_id,
-                                    "wrapper_key": normalized_cached.metadata[
-                                        "wrapper_key"
-                                    ],
-                                    "sections_with_ids": normalized_cached.metadata[
-                                        "sections_with_ids"
-                                    ],
-                                    "added_section_ids": normalized_cached.metadata[
-                                        "added_section_ids"
-                                    ],
-                                    "dropped_sections": normalized_cached.metadata[
-                                        "dropped_sections"
-                                    ],
-                                    "doc_id_filled": normalized_cached.metadata[
-                                        "doc_id_filled"
-                                    ],
-                                },
-                            )
-                        )
-                if pack_name == "doc_map":
-                    summary = _summarize_doc_map(cached)
-                    if not summary["has_content"]:
-                        logger.info(
-                            log_event(
-                                ctx,
-                                role="generator",
-                                event="evidence_pack_cache_rejected",
-                                module=logger.name,
-                                fields={
-                                    "report_id": report_id,
-                                    "pack": pack_name,
-                                    "reason": summary["not_found_reason"]
-                                    or "doc_map_no_content",
-                                },
-                            )
-                        )
-                        cached = None
-                logger.info(
-                    log_event(
-                        ctx,
-                        role="generator",
-                        event="evidence_pack_cache_hit",
-                        module=logger.name,
-                        fields={"report_id": report_id, "pack": pack_name},
-                    )
-                )
-                if cached is not None:
-                    return _attach_pack_family_status(pack_name, cached)
+            )
+            return reused_payload
+    cache_meta = None
+    cache_key = ""
+    # The former pack-level cache lacks lineage, output-hash, and vector-content
+    # proof. It is deliberately not consulted after E9; the independently
+    # materialized family above is the sole pre-call reuse authority.
     logger.info(
         log_event(
             ctx,
@@ -615,7 +629,12 @@ def _generate_pack(
     not_found_reason = ""
     output_schema = provider_output_schema(schema_name)
 
+    recovery_attempted = False
+
     def call_model(mode: str, original_response: str, schema_errors: str):
+        nonlocal recovery_attempted
+        if mode != "primary":
+            recovery_attempted = True
         bundle = prompt_bundle
         if mode != "primary":
             bundle = recovery_prompt_bundle(
@@ -731,6 +750,37 @@ def _generate_pack(
         ctx=ctx,
         report_name=report_name,
     )
+    if md5 and vector_provenance_verified:
+        prompt_family_materializer(
+            PromptFamilyMaterializationRequest(
+                schema_version=PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+                db_path=settings.reports_db,
+                output_dir=settings.output_dir,
+                report_id=report_id,
+                report_slug=report_name,
+                source_id=md5,
+                family_id=prompt_namespace,
+                family_schema_version="1.0",
+                processing_version="report_generation_checkpoint_v2",
+                output_payload=result_payload,
+                system_prompt_hash=prompt_bundle.prompt_set.system.sha256,
+                user_prompt_hash=prompt_bundle.prompt_set.user.sha256,
+                prompt_content_hash=prompt_bundle.prompt_content_hash,
+                prompt_dependency_manifest=asdict(prompt_bundle.dependency_manifest),
+                execution_identity=prompt_bundle.execution_identity.execution_identity,
+                execution_identity_manifest=asdict(prompt_bundle.execution_identity),
+                prompt_policy_version=prompt_bundle.prompt_content_hash,
+                model_name=prompt_bundle.resolved_model,
+                model_provider=str(prompt_bundle.execution_policy.policy.provider),
+                model_policy_namespace="report_vs",
+                routing_policy_version=prompt_bundle.execution_policy.policy_hash,
+                relevant_input_hash=("" if recovery_attempted else relevant_input_hash),
+                configuration_policy_hash=configuration_policy_hash,
+                validator_version=f"{schema_name}:1.0",
+                validation_status="pass",
+            ),
+            ctx,
+        )
     logger.info(
         log_event(
             ctx,

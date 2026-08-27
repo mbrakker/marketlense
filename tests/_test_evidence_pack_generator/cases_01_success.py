@@ -4,6 +4,48 @@ from __future__ import annotations
 from ._shared import *  # noqa: F401,F403
 
 
+def test_evidence_pack_family_reuses_retained_output_before_model_call(tmp_path):
+    from src.contracts.prompt_family_materialization import PromptFamilyReuseResponse
+
+    retained = substantive_doc_map()
+
+    class FailIfCalled:
+        calls = 0
+
+        def openai_respond_with_vector_store(self, req, ctx):
+            self.calls += 1
+            raise AssertionError("compatible retained output must bypass the model")
+
+    def reuse_reader(request, _ctx):
+        assert request.family_id == "report_vs/doc_map"
+        return PromptFamilyReuseResponse(
+            schema_version="1.0",
+            reusable=True,
+            reason="reused",
+            output_payload=retained,
+            artifact_id="retained-doc-map",
+            output_hash="retained-hash",
+        )
+
+    client = FailIfCalled()
+    packs = generate_evidence_packs(
+        report_id="r1",
+        report_name="report",
+        vector_store_id="vs_1",
+        vector_store_content_hash="verified-vector-content",
+        settings=_settings(tmp_path, evidence_pack_registry=["doc_map"]),
+        ctx=_ctx(),
+        md5="retained-source-md5",
+        openai_client=client,
+        prompt_client=FakePromptClient(),
+        analysis_store=FakeAnalysisStore(),
+        prompt_family_reuse_reader=reuse_reader,
+    )
+
+    assert client.calls == 0
+    assert packs["doc_map"]["doc_id"] == retained["doc_id"]
+
+
 def test_generate_evidence_packs_success(tmp_path):
     parsed = substantive_doc_map()
     fake_openai = FakeOpenAIClient(parsed)
@@ -746,6 +788,7 @@ def test_generate_evidence_packs_uses_registry_subset(tmp_path):
 
 
 __all__ = [
+    "test_evidence_pack_family_reuses_retained_output_before_model_call",
     "test_generate_evidence_packs_success",
     "test_generate_evidence_packs_creates_context_when_missing",
     "test_generate_evidence_packs_marks_optional_empty_pack_as_abstained",

@@ -11,11 +11,8 @@ from src.utils.logging import log_event, new_run_context
 from src.utils.model_client_contract import require_injected_model_client
 
 from .validation.cache import (
-    load_cached_validation,
     store_pack,
     validate_validation_schema,
-    validation_cache_key,
-    validation_cache_meta,
 )
 from .validation.models import ValidationRuntime
 from .validation.preparation import prepare_validation_inputs
@@ -24,10 +21,8 @@ from .validation.shared import (
     LOGGER_NAME,
     aggregate_severity,
     downgrade_issues_for_data_gap,
-    grounding_retrieval_mode,
     has_data_gap,
     logger,
-    resolve_grounding_vector_store_mode,
     validation_parallel_workers,
 )
 
@@ -72,51 +67,12 @@ def validate_report(
         )
     )
 
-    grounding_use_vector_store = resolve_grounding_vector_store_mode(
-        request=request, settings=settings
-    )
-    retrieval_mode = grounding_retrieval_mode(grounding_use_vector_store)
+    # A composite validation cache cannot prove the independent primary-model
+    # provenance required by E9.  Semantic and grounding now decide reuse at
+    # their owning rule boundaries, then still traverse the normal aggregate
+    # validation gate below.
     cache_key = ""
     cache_meta = None
-    if md5:
-        cache_meta = validation_cache_meta(
-            request=request,
-            settings=settings,
-            prompt_client=prompt_client,
-            ctx=ctx,
-            md5=md5,
-            grounding_retrieval_mode=retrieval_mode,
-        )
-        cache_key = validation_cache_key(cache_meta)
-        cached = load_cached_validation(
-            output_dir=settings.output_dir,
-            report_id=request.report_id,
-            pack_name=pack_name,
-            report_name=report_name,
-            cache_key=cache_key,
-            ctx=ctx,
-            analysis_store=analysis_store,
-        )
-        if cached is not None:
-            logger.info(
-                log_event(
-                    ctx,
-                    role="generator",
-                    event="validation_cache_hit",
-                    module=LOGGER_NAME,
-                    fields={"report_id": request.report_id, "pack_name": pack_name},
-                )
-            )
-            return cached
-        logger.info(
-            log_event(
-                ctx,
-                role="generator",
-                event="validation_cache_miss",
-                module=LOGGER_NAME,
-                fields={"report_id": request.report_id, "pack_name": pack_name},
-            )
-        )
 
     prepared = prepare_validation_inputs(request, settings, ctx, md5=md5)
     logger.info(
@@ -141,6 +97,8 @@ def validate_report(
         prompt_client=prompt_client,
         openai_client=openai_client,
         prepared=prepared,
+        source_id=str(request.source_id or md5 or ""),
+        vector_store_content_hash=str(request.vector_store_content_hash or ""),
     )
     issues = run_validation_rule_registry(
         runtime,

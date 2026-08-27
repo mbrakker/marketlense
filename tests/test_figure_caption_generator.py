@@ -9,6 +9,10 @@ from typing import Any
 
 from src.contracts.drive import DriveFile
 from src.contracts.openai import OpenAIResponseResult
+from src.contracts.prompt_family_materialization import (
+    PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+    PromptFamilyReuseResponse,
+)
 from src.contracts.prompts import PromptRenderResponse, PromptSet, PromptTemplate
 from src.contracts.report_analysis import AnalysisStorePackResponse
 from src.contracts.report_generation import ReportRuntimeState
@@ -404,6 +408,60 @@ def test_generate_figure_captions_fail_open_uses_fallback_sources(
     assert result.pack_payload["results"][0]["error"] == "caption_too_long"
     assert result.pack_payload["results"][1]["error"] == "provider_failure"
     assert result.pack_payload["results"][2]["error"] == "empty_caption"
+
+
+def test_generate_figure_captions_reuses_retained_family_before_model_call(
+    tmp_path, ingest_settings
+) -> None:
+    runtime = _runtime(ingest_settings, tmp_path)
+    asset = ReportFigureAsset(
+        image_path="report/slices/primary.png",
+        page=1,
+        candidate_id="chart-1",
+        kind="chart",
+        is_primary=True,
+        detected_caption="Retail media growth by channel",
+        preview_text="Retail media spend rose sharply.",
+    )
+    calls = []
+    dependencies = replace(
+        FigureCaptionDependencies.default(),
+        load_prompt_set=lambda request, _ctx: _prompt_set(),
+        render_prompt=_render_prompt,
+        analysis_store_pack=lambda request, _ctx: AnalysisStorePackResponse(
+            schema_version="1.0",
+            output_path=str(tmp_path / "figure_captions.json"),
+        ),
+    )
+
+    def _reader(_request, _ctx):
+        return PromptFamilyReuseResponse(
+            schema_version=PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+            reusable=True,
+            reason="reused",
+            output_payload={"caption": "Retained evidence-backed caption."},
+        )
+
+    result = generate_figure_captions(
+        runtime=runtime,
+        selection=SimpleNamespace(),
+        payload=_payload(assets=[asset]),
+        doc_map={"sections": []},
+        findings_pack={"findings": []},
+        artifacts_payload={"summary": {}},
+        dependencies=dependencies,
+        llm_client=SimpleNamespace(
+            openai_chat_json_with_images=lambda *_args: calls.append("called")
+        ),
+        prompt_family_reuse_reader=_reader,
+    )
+
+    assert calls == []
+    assert result.payload._figure_assets[0].caption_source == "generated"
+    assert result.payload._figure_assets[0].display_caption == (
+        "Retained evidence-backed caption."
+    )
+    assert result.pack_payload["results"][0]["request_id"] is None
 
 
 def test_generate_figure_captions_skips_when_disabled(
