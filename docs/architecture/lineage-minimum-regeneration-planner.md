@@ -154,6 +154,37 @@ invalidations, bounded attempts, terminal fallback, and deliberately
 conservative avoided-work estimates. Unknown token or cost baselines are
 stored as unpriced rather than presented as savings.
 
+## Publish-readiness refresh integration
+
+The retained signed `publish_readiness.json` is classified before cached Report
+HTML can be skipped. The classifier is deterministic for the same readiness
+payload, current identities, HTML, and evaluation time; it labels a package
+`ready`, `expiring`, `stale`, `failed`, `incompatible`, or
+`missing_unverifiable`. A non-ready classification supplies only typed
+`forced_invalidations` and an existing execution intent to this planner. It
+does not observe lineage itself, create a scheduler, construct a model client,
+or publish.
+
+`expiring`, expiry, final-HTML/projection drift, and render-only failures
+invalidate `rendered_html` and use `render_repair`; a complete graph therefore
+requires only `render_complete` and resumes at `analysis_complete`. Failed
+semantic/grounding rules invalidate validation and use `targeted_repair`, so
+the existing planner can select `analysis_complete` plus `render_complete`
+from `selection_complete`. Identity and artifact incompatibilities are never
+trusted on the classifier's word alone: their graph compatibility and direct
+dependencies decide whether that same narrow resume is safe or whether it
+must move earlier. Missing, malformed, unsigned, or incomplete proof is
+blocked before an enforce-mode checkpoint entrypoint is selected.
+
+The report pipeline persists
+`publish_readiness_refresh_plan.json` atomically before and after execution.
+It records proposed/current state and reason, invalidated family/check,
+canonical plan hash, actual reuse/regeneration, avoided external categories,
+configuration/policy/producer identities, and `planned`, `succeeded`,
+`failed`, or `blocked` result. Existing `artifact_execution_plan_runs`
+continues to be the planned-versus-actual execution audit; this artifact is
+the retained readiness-specific explanation rather than duplicate scheduling.
+
 ## Cross-report read boundary
 
 Future cross-report code calls

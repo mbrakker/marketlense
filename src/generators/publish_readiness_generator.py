@@ -17,6 +17,7 @@ from src.contracts.publish_readiness import (
     PUBLISH_READINESS_SCHEMA_VERSION,
     PUBLISH_READINESS_VALIDATOR_VERSION,
     PublishReadinessArtifact,
+    PublishReadinessRefreshPlan,
     PublishReadinessRuleResult,
 )
 from src.contracts.validation import ValidationReport
@@ -56,6 +57,22 @@ _NON_PUBLIC_CARD_STATUSES = {
     "weak_evidence",
 }
 _MAX_READINESS_AGE = timedelta(hours=24)
+_READINESS_REFRESH_AVOIDED_CALLS = [
+    "crop_qa",
+    "crop_render",
+    "ocr",
+    "pdf_parse",
+    "report_analysis_model",
+    "validator_model",
+    "vector_store",
+]
+_ANALYSIS_RULES = {
+    "publish_readiness.category_consistency",
+    "publish_readiness.editorial_quality",
+    "publish_readiness.material_claim_evidence",
+    "publish_readiness.regeneration",
+    "publish_readiness.semantic_grounding",
+}
 
 
 @dataclass(frozen=True)
@@ -64,6 +81,305 @@ class PublishReadinessVerification:
 
     status: str
     issues: list[str]
+
+
+def plan_publish_readiness_refresh(
+    *,
+    report_id: str,
+    readiness: PublishReadinessArtifact | None,
+    final_html: str,
+    configuration_hash: str = "",
+    policy_hash: str = "",
+    producer_revision: str = "",
+    current_artifact_hashes: dict[str, str] | None = None,
+    evaluated_at_utc: datetime,
+    expiry_warning_window: timedelta = timedelta(hours=1),
+) -> PublishReadinessRefreshPlan:
+    """Classify one retained readiness decision without re-evaluating content.
+
+    This pure boundary only proposes a checkpoint and invalidation.  The
+    canonical lineage planner must still prove that proposal before execution.
+    """
+    evaluated_at = _as_utc(evaluated_at_utc)
+    if readiness is None:
+        return _refresh_plan(
+            report_id=report_id,
+            state="missing_unverifiable",
+            reason="publish_readiness.missing",
+            invalidated="publish_readiness.missing",
+            selected_resume_stage=None,
+            regenerated_stages=[],
+            forced_invalidations={},
+            configuration_hash=configuration_hash,
+            policy_hash=policy_hash,
+            producer_revision=producer_revision,
+            readiness_artifact_hash="",
+            execution_result="blocked",
+        )
+
+    verification = verify_publish_readiness(
+        artifact=readiness,
+        report_id=report_id,
+        final_html=final_html,
+        configuration_hash=configuration_hash,
+        policy_hash=policy_hash,
+        producer_revision=producer_revision,
+        now=evaluated_at,
+    )
+    issues = list(verification.issues)
+    if current_artifact_hashes is not None and any(
+        str(current_artifact_hashes.get(name) or "") != expected
+        for name, expected in readiness.artifact_hashes.items()
+    ):
+        issues.append("publish_readiness.artifact_hash_changed")
+    issues = sorted(set(issues))
+    if verification.status == "pass" and not issues:
+        expires_at = _parse_utc(readiness.expires_at_utc)
+        if (
+            expires_at is not None
+            and expires_at - evaluated_at <= expiry_warning_window
+        ):
+            return _render_refresh_plan(
+                report_id=report_id,
+                state="expiring",
+                reason="publish_readiness.expiring",
+                invalidated="publish_readiness.expiring",
+                configuration_hash=configuration_hash,
+                policy_hash=policy_hash,
+                producer_revision=producer_revision,
+                readiness_artifact_hash=readiness.artifact_hash,
+            )
+        return _refresh_plan(
+            report_id=report_id,
+            state="ready",
+            reason="publish_readiness.current",
+            invalidated="",
+            selected_resume_stage=None,
+            regenerated_stages=[],
+            forced_invalidations={},
+            configuration_hash=configuration_hash,
+            policy_hash=policy_hash,
+            producer_revision=producer_revision,
+            readiness_artifact_hash=readiness.artifact_hash,
+            execution_result="not_required",
+        )
+
+    if "publish_readiness.not_ready" in issues:
+        failed_rules = sorted(
+            item.rule_id for item in readiness.rule_results if item.status == "fail"
+        )
+        if any(rule in _ANALYSIS_RULES for rule in failed_rules):
+            reason = failed_rules[0] if failed_rules else "publish_readiness.not_ready"
+            return _refresh_plan(
+                report_id=report_id,
+                state="failed",
+                reason=reason,
+                invalidated=reason,
+                selected_resume_stage="selection_complete",
+                regenerated_stages=["analysis_complete", "render_complete"],
+                forced_invalidations={"validation": reason},
+                execution_intent="targeted_repair",
+                configuration_hash=configuration_hash,
+                policy_hash=policy_hash,
+                producer_revision=producer_revision,
+                readiness_artifact_hash=readiness.artifact_hash,
+            )
+        reason = failed_rules[0] if failed_rules else "publish_readiness.not_ready"
+        return _render_refresh_plan(
+            report_id=report_id,
+            state="failed",
+            reason=reason,
+            invalidated=reason,
+            configuration_hash=configuration_hash,
+            policy_hash=policy_hash,
+            producer_revision=producer_revision,
+            readiness_artifact_hash=readiness.artifact_hash,
+        )
+
+    if any(
+        issue
+        in {
+            "publish_readiness.schema_unsupported",
+            "publish_readiness.validator_unsupported",
+            "publish_readiness.report_id_mismatch",
+            "publish_readiness.configuration_changed",
+            "publish_readiness.policy_changed",
+            "publish_readiness.producer_revision_changed",
+            "publish_readiness.artifact_hash_changed",
+        }
+        for issue in issues
+    ):
+        reason = issues[0]
+        return _render_refresh_plan(
+            report_id=report_id,
+            state="incompatible",
+            reason=reason,
+            invalidated=reason,
+            configuration_hash=configuration_hash,
+            policy_hash=policy_hash,
+            producer_revision=producer_revision,
+            readiness_artifact_hash=readiness.artifact_hash,
+        )
+
+    if any(
+        issue
+        in {
+            "publish_readiness.expired",
+            "publish_readiness.final_html_changed",
+            "publish_readiness.publication_projection_changed",
+        }
+        for issue in issues
+    ):
+        reason = issues[0]
+        return _render_refresh_plan(
+            report_id=report_id,
+            state="stale",
+            reason=reason,
+            invalidated=reason,
+            configuration_hash=configuration_hash,
+            policy_hash=policy_hash,
+            producer_revision=producer_revision,
+            readiness_artifact_hash=readiness.artifact_hash,
+        )
+
+    reason = issues[0] if issues else "publish_readiness.unverifiable"
+    return _refresh_plan(
+        report_id=report_id,
+        state="missing_unverifiable",
+        reason=reason,
+        invalidated=reason,
+        selected_resume_stage=None,
+        regenerated_stages=[],
+        forced_invalidations={},
+        configuration_hash=configuration_hash,
+        policy_hash=policy_hash,
+        producer_revision=producer_revision,
+        readiness_artifact_hash=readiness.artifact_hash,
+        execution_result="blocked",
+    )
+
+
+def publish_readiness_refresh_plan_payload(
+    plan: PublishReadinessRefreshPlan,
+) -> dict[str, Any]:
+    """Serialize typed refresh telemetry for an atomic retained artifact."""
+    return asdict(plan)
+
+
+def complete_publish_readiness_refresh_plan(
+    plan: PublishReadinessRefreshPlan,
+    *,
+    execution_result: str,
+    execution_plan_hash: str,
+    reused_stages: list[str],
+    reused_artifacts: list[str],
+    regenerated_stages: list[str],
+    avoided_external_calls: list[str],
+) -> PublishReadinessRefreshPlan:
+    """Return the final immutable telemetry record for an executed refresh."""
+    completed = replace(
+        plan,
+        execution_result=execution_result,
+        execution_plan_hash=execution_plan_hash,
+        reused_stages=sorted(set(reused_stages)),
+        reused_artifacts=sorted(set(reused_artifacts)),
+        regenerated_stages=list(regenerated_stages),
+        avoided_external_calls=sorted(set(avoided_external_calls)),
+        refresh_plan_hash="",
+    )
+    return replace(completed, refresh_plan_hash=_refresh_plan_hash(completed))
+
+
+def _render_refresh_plan(
+    *,
+    report_id: str,
+    state: str,
+    reason: str,
+    invalidated: str,
+    configuration_hash: str,
+    policy_hash: str,
+    producer_revision: str,
+    readiness_artifact_hash: str,
+) -> PublishReadinessRefreshPlan:
+    return _refresh_plan(
+        report_id=report_id,
+        state=state,
+        reason=reason,
+        invalidated=invalidated,
+        selected_resume_stage="analysis_complete",
+        regenerated_stages=["render_complete"],
+        forced_invalidations={"rendered_html": reason},
+        configuration_hash=configuration_hash,
+        policy_hash=policy_hash,
+        producer_revision=producer_revision,
+        readiness_artifact_hash=readiness_artifact_hash,
+    )
+
+
+def _refresh_plan(
+    *,
+    report_id: str,
+    state: str,
+    reason: str,
+    invalidated: str,
+    selected_resume_stage: str | None,
+    regenerated_stages: list[str],
+    forced_invalidations: dict[str, str],
+    execution_intent: str = "render_repair",
+    configuration_hash: str,
+    policy_hash: str,
+    producer_revision: str,
+    readiness_artifact_hash: str,
+    execution_result: str = "planned",
+) -> PublishReadinessRefreshPlan:
+    reused_stages = (
+        ["source_prepared", "selection_complete", "analysis_complete"]
+        if selected_resume_stage == "analysis_complete"
+        else (
+            ["source_prepared", "selection_complete"]
+            if selected_resume_stage
+            else []
+        )
+    )
+    plan = PublishReadinessRefreshPlan(
+        report_id=str(report_id),
+        previous_readiness_state=state,
+        reason=reason,
+        invalidated_artifact_or_check=invalidated,
+        selected_resume_stage=selected_resume_stage,
+        execution_intent=execution_intent,
+        reused_stages=reused_stages,
+        reused_artifacts=["source_pdf", "crop", "analysis", "validation"]
+        if selected_resume_stage == "analysis_complete"
+        else (["source_pdf", "crop"] if selected_resume_stage else []),
+        regenerated_stages=regenerated_stages,
+        forced_invalidations=dict(sorted(forced_invalidations.items())),
+        configuration_hash=_hash_or_sentinel(configuration_hash, "configuration"),
+        policy_hash=_hash_or_sentinel(policy_hash, "policy"),
+        producer_revision=str(producer_revision or "workspace"),
+        readiness_artifact_hash=readiness_artifact_hash,
+        avoided_external_calls=(
+            list(_READINESS_REFRESH_AVOIDED_CALLS)
+            if selected_resume_stage == "analysis_complete"
+            else []
+        ),
+        avoided_provider_calls=None,
+        execution_result=execution_result,
+    )
+    return replace(plan, refresh_plan_hash=_refresh_plan_hash(plan))
+
+
+def _refresh_plan_hash(plan: PublishReadinessRefreshPlan) -> str:
+    payload = asdict(replace(plan, refresh_plan_hash=""))
+    return hashlib.sha256(
+        json.dumps(
+            payload, ensure_ascii=True, sort_keys=True, separators=(",", ":")
+        ).encode("utf-8")
+    ).hexdigest()
+
+
+def _as_utc(value: datetime) -> datetime:
+    return value if value.tzinfo else value.replace(tzinfo=UTC)
 
 
 def evaluate_publish_readiness(
@@ -868,9 +1184,12 @@ def _fail(rule_id: str, surfaces: list[str], detail: str) -> PublishReadinessRul
 
 __all__ = [
     "PublishReadinessVerification",
+    "complete_publish_readiness_refresh_plan",
     "evaluate_publish_readiness",
     "parse_publish_readiness_payload",
+    "plan_publish_readiness_refresh",
     "publish_readiness_payload",
+    "publish_readiness_refresh_plan_payload",
     "verify_publish_readiness",
     "verify_publication_projection",
 ]

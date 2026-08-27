@@ -14,7 +14,11 @@ from src.contracts.deferred_work import (
     DeferredWorkResumePlan,
 )
 from src.contracts.drive import DriveFile
-from src.contracts.files import FileStatRequest, PipelineCheckpointReadRequest
+from src.contracts.files import (
+    FileStatRequest,
+    JsonObjectCacheWriteRequest,
+    PipelineCheckpointReadRequest,
+)
 from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.lock import LockAcquireRequest, LockReleaseRequest
 from src.contracts.minimal_execution_plan import (
@@ -27,6 +31,7 @@ from src.contracts.minimal_execution_plan import (
     RetainedArtifactGraph,
 )
 from src.contracts.pipeline_preflight import PipelinePreflightReport
+from src.contracts.publish_readiness import PublishReadinessRefreshPlan
 from src.contracts.regeneration import (
     LineageRegenerationPlan,
     LineageRegenerationQualityReport,
@@ -46,6 +51,10 @@ from src.contracts.run_budget import (
 from src.contracts.run_context import RunContext
 from src.contracts.semantic_ids import RunId
 from src.contracts.workflow_control import WorkflowControlSettings
+from src.generators.publish_readiness_generator import (
+    complete_publish_readiness_refresh_plan,
+    publish_readiness_refresh_plan_payload,
+)
 from src.orchestrators.admission_preflight_orchestrator import (
     AdmissionPreflightRequest,
     admission_configuration_hash,
@@ -103,6 +112,17 @@ _ENFORCED_RESUME_STAGES = {
         "render_complete",
     ): None,
 }
+_REFRESH_CALL_CATEGORIES = {
+    "crop_qa",
+    "crop_render",
+    "html_render",
+    "ocr",
+    "pdf_parse",
+    "report_analysis_model",
+    "validator_model",
+    "vector_store",
+    "wordpress_write",
+}
 
 
 def _enforced_resume_stage(plan: MinimalExecutionPlan) -> str | None:
@@ -129,6 +149,45 @@ def _enforced_resume_stage(plan: MinimalExecutionPlan) -> str | None:
             context={"plan_hash": plan.plan_hash, "required_stages": list(stages)},
         )
     return _ENFORCED_RESUME_STAGES[stages]
+
+
+def _persist_readiness_refresh_plan(
+    *,
+    path: str,
+    refresh_plan: PublishReadinessRefreshPlan | None,
+    minimal_plan: MinimalExecutionPlan | None,
+    execution_result: str,
+    ctx: RunContext,
+) -> None:
+    """Persist typed planning telemetry beside the canonical readiness artifact."""
+    if refresh_plan is None or not path:
+        return
+    required_calls = (
+        set(minimal_plan.required_external_calls) if minimal_plan is not None else set()
+    )
+    recorded = complete_publish_readiness_refresh_plan(
+        refresh_plan,
+        execution_result=execution_result,
+        execution_plan_hash=minimal_plan.plan_hash if minimal_plan is not None else "",
+        reused_stages=(
+            list(minimal_plan.skipped_stages) if minimal_plan is not None else []
+        ),
+        reused_artifacts=(
+            list(minimal_plan.reusable_artifacts) if minimal_plan is not None else []
+        ),
+        regenerated_stages=(
+            list(minimal_plan.required_stages) if minimal_plan is not None else []
+        ),
+        avoided_external_calls=sorted(_REFRESH_CALL_CATEGORIES - required_calls),
+    )
+    file_service.write_json_object_cache(
+        JsonObjectCacheWriteRequest(
+            schema_version="1.0",
+            path=path,
+            payload=publish_readiness_refresh_plan_payload(recorded),
+        ),
+        ctx,
+    )
 
 
 def _report_failure_recovery_evidence(
@@ -559,7 +618,28 @@ def run_report_pipeline(
     stop_after_stage: str | None = None,
     projection_only: bool = False,
     budget_override: BudgetOverrideContext | None = None,
+    readiness_refresh_plan: PublishReadinessRefreshPlan | None = None,
+    refresh_telemetry_path: str = "",
 ) -> IngestOutcome:
+    if (
+        readiness_refresh_plan is not None
+        and readiness_refresh_plan.execution_result == "blocked"
+    ):
+        _persist_readiness_refresh_plan(
+            path=refresh_telemetry_path,
+            refresh_plan=readiness_refresh_plan,
+            minimal_plan=None,
+            execution_result="blocked",
+            ctx=ctx,
+        )
+        raise AppError(
+            code="publish_readiness_refresh_unverifiable",
+            message=(
+                "Automatic readiness refresh requires a verifiable retained decision"
+            ),
+            retryable=False,
+            context={"file_id": file.file_id, "reason": readiness_refresh_plan.reason},
+        )
     if not str(ctx.admission_decision_hash or "").strip():
         logger.info(
             log_event(
@@ -732,6 +812,13 @@ def run_report_pipeline(
                 ),
                 ctx,
             )
+            _persist_readiness_refresh_plan(
+                path=refresh_telemetry_path,
+                refresh_plan=readiness_refresh_plan,
+                minimal_plan=minimal_plan,
+                execution_result="blocked",
+                ctx=ctx,
+            )
             raise
         if resume_from_stage is not None and resume_from_stage != enforced_resume_stage:
             raise AppError(
@@ -752,6 +839,13 @@ def run_report_pipeline(
             if normalized_plan_mode == "enforce" and minimal_plan is not None
             else ("latest_safe" if auto_resume_from_latest_safe else None)
         )
+    )
+    _persist_readiness_refresh_plan(
+        path=refresh_telemetry_path,
+        refresh_plan=readiness_refresh_plan,
+        minimal_plan=minimal_plan,
+        execution_result="planned",
+        ctx=ctx,
     )
     client_bundle: ReportGenerationClientBundle | None = None
     client_free_enforced_plan = (
@@ -1010,7 +1104,10 @@ def run_report_pipeline(
             # missing source still fails closed after the configured attempts.
             raise AppError(
                 code="report_pipeline_artifact_missing",
-                message="A report-processing artifact was unavailable during materialization",
+                message=(
+                    "A report-processing artifact was unavailable during "
+                    "materialization"
+                ),
                 cause=exc,
                 retryable=True,
                 context={
@@ -1170,6 +1267,13 @@ def run_report_pipeline(
             sleep_fn=time.sleep,
         )
     except AppError as exc:
+        _persist_readiness_refresh_plan(
+            path=refresh_telemetry_path,
+            refresh_plan=readiness_refresh_plan,
+            minimal_plan=minimal_plan,
+            execution_result="failed",
+            ctx=ctx,
+        )
         if pdf_decision is not None and pdf_decision.reservation_key:
             finalize_budget_side_effect(
                 BudgetSideEffectFinalizeRequest(
@@ -1265,5 +1369,12 @@ def run_report_pipeline(
                 retryable=False,
                 context={"plan_hash": minimal_plan.plan_hash},
             )
+    _persist_readiness_refresh_plan(
+        path=refresh_telemetry_path,
+        refresh_plan=readiness_refresh_plan,
+        minimal_plan=minimal_plan,
+        execution_result="succeeded" if outcome.status != "error" else "failed",
+        ctx=ctx,
+    )
     _release_execution_lease(lease_path, lease_owner_id, ctx)
     return outcome

@@ -16,12 +16,27 @@ fail the report before publication.
 
 Cached rendered HTML is reusable only when its retained readiness artifact
 still verifies the exact HTML, report ID, configuration hash, policy hash, and
-producer revision. A stale, altered, expired, failed, or unreadable decision is
-a cache miss: the normal minimum-regeneration planner rebuilds the required
-final package rather than recording `publish_ready` from file existence alone.
-When that decision alone is invalidated, the planner resumes from the validated
-analysis checkpoint, re-renders and re-signs the package, and does not
-reacquire the source or rerun model analysis.
+producer revision. The cache boundary classifies the canonical
+`publish_readiness.json` as `ready`, `expiring`, `stale`, `failed`,
+`incompatible`, or `missing_unverifiable`; it does not rerun editorial checks
+to infer a status. A ready package is skipped. Every other decision creates
+`<report_analysis>/publish_readiness_refresh_plan.json`, which retains the
+readiness reason/check, proposed checkpoint, reused and regenerated work,
+configuration/policy/producer identities, actual execution result, and
+known-or-unpriced avoided-work fields.
+
+The refresh plan is a proposal to the existing minimum-regeneration planner,
+not a second recovery engine. Expiry, final-HTML/projection drift, and
+render-only readiness failures force `rendered_html`; when its retained
+analysis lineage is complete, enforce mode resumes at `analysis_complete`,
+renders and re-signs the package, and makes no acquisition, PDF/OCR,
+selection, extraction, analysis, model, or browser call. Failed
+semantic/grounding readiness instead requests the existing targeted-repair
+path from `selection_complete`. Configuration, policy, producer, or artifact
+compatibility changes are still checked by the canonical lineage graph and can
+therefore move the resume point earlier. Missing, malformed, unsigned, or
+unprovable readiness/lineage is recorded as `blocked` before preflight or
+provider construction; it never permits a guessed checkpoint or unsafe reuse.
 
 When a repair is supported, the workflow maps validation issues to the narrowest appropriate artifact family and revalidates the result. Retry and backoff are controlled by orchestration; generators surface typed errors rather than retrying provider calls themselves. Publication policy determines whether unresolved validation issues block WordPress side effects.
 

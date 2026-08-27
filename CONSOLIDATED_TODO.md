@@ -45,7 +45,7 @@ All work is listed below in one register. `Active` items have detailed completio
 | Active | P10 | Operate correlated public-render failure telemetry | Hosted release-observability outcome. |
 | Closed | P12 | Release-locked sandbox publish canary | Exact-HEAD isolated three-report cohort published with authenticated readback and an identical zero-write replay on 2026-08-27. |
 | Closed | P14 | Retain isolated live proof of strict cohort-manifest publication binding | The same isolated cohort bound 3/3 admitted members only, retained a deterministic candidate set, and replayed it with no WordPress writes. |
-| Active | P15 | Operate canonical publish-readiness telemetry and refresh planning | Turn hash-bound readiness failures and staleness into measurable, safe rerender work. |
+| Closed | P15 | Operate canonical publish-readiness telemetry and refresh planning | Typed deterministic refresh plans now route only proven minimum recovery work. |
 | Closed | P13 | Make WordPress file-ID lookup independently authoritative | Authenticated immutable file-ID lookup now matches remote posts from isolated state, fails closed on ambiguity, and preserves no-write reuse. |
 | Active | P4 | Close public briefing, correction, and submission intake | Implemented; close after hosted smoke proves the live intake routes. |
 | Active | P5 | Finish responsive search and navigation | Responsive public-workflow outcome. |
@@ -336,16 +336,27 @@ The original ten-item screenshot baseline is complete in the committed implement
 
 #### P15. Operate canonical publish-readiness telemetry and refresh planning
 
-- **Title:** Operate canonical publish-readiness telemetry and refresh planning
-- **Impact 5 / effort: 2**
-- **Context:** Each report now has a hash-bound final-readiness decision, but operators cannot yet aggregate current, stale, failed, and expiring decisions into an evidence-backed refresh plan. Re-rendering or re-analysis solely to discover that status would add unnecessary provider spend.
-- **Benefit:** Operators can prioritize only the reports whose rendered package has genuinely become stale or failed a specific final-publication rule, preserving validated analysis and avoiding speculative full-pipeline rework.
-- **Risks to avoid:** Keep the view read-only; do not auto-regenerate, bypass expiry, publish, or use the status as a substitute for human approval. A refresh recommendation must preserve source, configuration, policy, and artifact provenance.
-- **Success criteria:**
+**Closed 2026-08-27:** The canonical signed readiness artifact now deterministically
+classifies retained packages as ready, expiring, stale, failed, incompatible, or
+missing/unverifiable and persists a typed
+publish_readiness_refresh_plan.json with reason, invalidation, current
+configuration/policy/producer identities, canonical plan hash, actual
+reuse/regeneration, avoided work, and terminal result. It supplies
+forced-invalidations only to the established enforce-mode minimum-regeneration
+planner; it does not add a scheduler or a publication path. Valid stale,
+expiry, projection, and render-only readiness failures use analysis_complete
+to rerender with zero acquisition, PDF/OCR, extraction, analysis, model, or
+browser stages. Semantic/grounding failure moves to selection_complete; invalid
+upstream lineage moves to source_prepared; missing or unverifiable proof is
+persisted as blocked before preflight/provider construction.
 
-- A deterministic read-only cohort report aggregates readiness status, failed rule IDs, staleness cause, expiry, and artifact/configuration/policy/revision mismatches without loading private prose into standard logs.
-- It proposes the narrowest safe recovery boundary (render-only, artifact regeneration, or full re-ingest) from existing provenance and never creates a WordPress write or provider call while planning.
-- Focused tests and one bounded retained-artifact run prove that a current ready package is excluded, a changed final HTML is identified as render-only, and a changed evidence/configuration/policy input is escalated appropriately.
+The retained-fixture measurement compares eight full-pipeline external-work
+categories with one render-only category: provider/model calls are 0 after
+refresh, seven external-work categories are avoided, full-pipeline regeneration
+drops from one to zero, and a successful new readiness decision converges to no
+further work. Tokens, cost, and elapsed time remain explicitly unpriced in
+these deterministic fixtures. Focused readiness, lineage, enforcement,
+ingest, explicit-resume, publish-readiness, and publication regressions passed.
 
 #### P7. Improve hosted public-site performance without contract loss
 

@@ -7,6 +7,7 @@ from typing import Dict, List
 
 PUBLISH_READINESS_SCHEMA_VERSION = "1.0"
 PUBLISH_READINESS_VALIDATOR_VERSION = "publish-readiness:v1"
+PUBLISH_READINESS_REFRESH_PLAN_SCHEMA_VERSION = "1.0"
 
 
 @dataclass(frozen=True)
@@ -87,4 +88,94 @@ class PublishReadinessArtifact:
     schema_version: str = field(
         default=PUBLISH_READINESS_SCHEMA_VERSION,
         metadata={"doc": "Publish-readiness artifact schema version."},
+    )
+
+
+@dataclass(frozen=True)
+class PublishReadinessRefreshPlan:
+    """Typed deterministic recovery decision derived from publish readiness."""
+
+    report_id: str = field(metadata={"doc": "Canonical report identifier."})
+    previous_readiness_state: str = field(
+        metadata={
+            "doc": (
+                "ready, expiring, stale, failed, incompatible, or "
+                "missing_unverifiable."
+            )
+        }
+    )
+    reason: str = field(metadata={"doc": "Stable reason for the refresh decision."})
+    invalidated_artifact_or_check: str = field(
+        metadata={"doc": "Bounded readiness check or artifact invalidated."}
+    )
+    selected_resume_stage: str | None = field(
+        metadata={"doc": "Earliest checkpoint proposed before lineage proof."}
+    )
+    execution_intent: str = field(
+        default="",
+        metadata={"doc": "Existing canonical minimum-execution intent to enforce."},
+    )
+    reused_stages: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Workflow stages retained by this readiness decision."},
+    )
+    reused_artifacts: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Artifact families retained before graph-level proof."},
+    )
+    regenerated_stages: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Stages requested before graph-level proof."},
+    )
+    forced_invalidations: dict[str, str] = field(
+        default_factory=dict,
+        metadata={
+            "doc": "Typed family invalidations consumed by the canonical planner."
+        },
+    )
+    configuration_hash: str = field(
+        default="", metadata={"doc": "Current resolved configuration identity."}
+    )
+    policy_hash: str = field(
+        default="", metadata={"doc": "Current resolved policy identity."}
+    )
+    producer_revision: str = field(
+        default="", metadata={"doc": "Current producer revision identity."}
+    )
+    readiness_artifact_hash: str = field(
+        default="", metadata={"doc": "Retained readiness artifact signature."}
+    )
+    avoided_external_calls: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "External call categories avoided by the proposed plan."},
+    )
+    avoided_provider_calls: int | None = field(
+        default=None,
+        metadata={"doc": "Known avoided provider calls, or null when unpriced."},
+    )
+    avoided_tokens: int | None = field(
+        default=None,
+        metadata={"doc": "Known avoided provider tokens, or null when unknown."},
+    )
+    avoided_cost_usd: float | None = field(
+        default=None,
+        metadata={"doc": "Known avoided estimated cost, or null when unpriced."},
+    )
+    avoided_duration_ms: int | None = field(
+        default=None,
+        metadata={"doc": "Known avoided duration, or null when unmeasured."},
+    )
+    execution_result: str = field(
+        default="planned",
+        metadata={"doc": "planned, not_required, blocked, succeeded, or failed."},
+    )
+    execution_plan_hash: str = field(
+        default="", metadata={"doc": "Canonical minimum-execution plan identity."}
+    )
+    refresh_plan_hash: str = field(
+        default="", metadata={"doc": "Deterministic signature of this refresh plan."}
+    )
+    schema_version: str = field(
+        default=PUBLISH_READINESS_REFRESH_PLAN_SCHEMA_VERSION,
+        metadata={"doc": "Refresh-plan schema version."},
     )

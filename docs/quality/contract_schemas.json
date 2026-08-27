@@ -29534,6 +29534,138 @@
       ],
       "type": "object"
     },
+    "src.contracts.publish_readiness.PublishReadinessRefreshPlan": {
+      "additionalProperties": false,
+      "properties": {
+        "avoided_cost_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "avoided_duration_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "avoided_external_calls": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "avoided_provider_calls": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "avoided_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "configuration_hash": {
+          "type": "string"
+        },
+        "execution_intent": {
+          "type": "string"
+        },
+        "execution_plan_hash": {
+          "type": "string"
+        },
+        "execution_result": {
+          "type": "string"
+        },
+        "forced_invalidations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "invalidated_artifact_or_check": {
+          "type": "string"
+        },
+        "policy_hash": {
+          "type": "string"
+        },
+        "previous_readiness_state": {
+          "type": "string"
+        },
+        "producer_revision": {
+          "type": "string"
+        },
+        "readiness_artifact_hash": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "refresh_plan_hash": {
+          "type": "string"
+        },
+        "regenerated_stages": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "reused_artifacts": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "reused_stages": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "selected_resume_stage": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "report_id",
+        "previous_readiness_state",
+        "reason",
+        "invalidated_artifact_or_check",
+        "selected_resume_stage"
+      ],
+      "type": "object"
+    },
     "src.contracts.publish_readiness.PublishReadinessRuleResult": {
       "additionalProperties": false,
       "properties": {

@@ -4,8 +4,9 @@ import inspect
 import json
 import logging
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable, Optional, Protocol, cast
+from typing import Any, Callable, Optional
 
 from src.contracts.drive import DriveDownloadToPathRequest, DriveFile
 from src.contracts.file_cache import (
@@ -17,6 +18,7 @@ from src.contracts.file_cache import (
 from src.contracts.files import DeleteFileRequest, FileStatRequest, ReadTextRequest
 from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.pdf_utils import PdfEofCheckRequest, PdfIntegrityCheckRequest
+from src.contracts.publish_readiness import PublishReadinessRefreshPlan
 from src.contracts.remediation import RemediationArtifactReference
 from src.contracts.run_budget import RunBudget
 from src.contracts.run_context import RunContext
@@ -28,7 +30,7 @@ from src.contracts.state import (
 )
 from src.generators.publish_readiness_generator import (
     parse_publish_readiness_payload,
-    verify_publish_readiness,
+    plan_publish_readiness_refresh,
 )
 from src.orchestrators._report_analysis_orchestrator.manifest import (
     record_validation_manifest_stage,
@@ -49,46 +51,6 @@ def _accepts_keyword(callable_obj: Callable[..., Any], keyword: str) -> bool:
     )
 
 
-class _LatestSafeReportPipeline(Protocol):
-    def __call__(
-        self,
-        file: DriveFile,
-        cache_path: str,
-        settings: IngestSettings,
-        md5: str | None,
-        ctx: RunContext,
-        *,
-        auto_resume_from_latest_safe: bool,
-        resume_from_stage: str | None,
-    ) -> IngestOutcome: ...
-
-
-class _ResumeStageReportPipeline(Protocol):
-    def __call__(
-        self,
-        file: DriveFile,
-        cache_path: str,
-        settings: IngestSettings,
-        md5: str | None,
-        ctx: RunContext,
-        *,
-        resume_from_stage: str | None,
-    ) -> IngestOutcome: ...
-
-
-class _AutoResumeReportPipeline(Protocol):
-    def __call__(
-        self,
-        file: DriveFile,
-        cache_path: str,
-        settings: IngestSettings,
-        md5: str | None,
-        ctx: RunContext,
-        *,
-        auto_resume_from_latest_safe: bool,
-    ) -> IngestOutcome: ...
-
-
 def _run_report_pipeline_latest_safe(
     dependencies: IngestFileDependencies,
     file: DriveFile,
@@ -97,6 +59,8 @@ def _run_report_pipeline_latest_safe(
     md5: str | None,
     ctx: RunContext,
     resume_from_stage: str | None = None,
+    readiness_refresh_plan: PublishReadinessRefreshPlan | None = None,
+    refresh_telemetry_path: str = "",
 ) -> IngestOutcome:
     accepts_resume_stage = _accepts_keyword(
         dependencies.run_report_pipeline,
@@ -106,47 +70,30 @@ def _run_report_pipeline_latest_safe(
         dependencies.run_report_pipeline,
         "auto_resume_from_latest_safe",
     )
-    if accepts_resume_stage and accepts_auto_resume:
-        latest_safe_pipeline = cast(
-            _LatestSafeReportPipeline,
-            dependencies.run_report_pipeline,
-        )
-        return latest_safe_pipeline(
-            file,
-            cache_path,
-            settings,
-            md5,
-            ctx,
-            auto_resume_from_latest_safe=not bool(resume_from_stage),
-            resume_from_stage=resume_from_stage,
-        )
-    if accepts_resume_stage:
-        resume_stage_pipeline = cast(
-            _ResumeStageReportPipeline,
-            dependencies.run_report_pipeline,
-        )
-        return resume_stage_pipeline(
-            file,
-            cache_path,
-            settings,
-            md5,
-            ctx,
-            resume_from_stage=resume_from_stage,
-        )
+    arguments: dict[str, object] = {}
     if accepts_auto_resume:
-        auto_resume_pipeline = cast(
-            _AutoResumeReportPipeline,
-            dependencies.run_report_pipeline,
-        )
-        return auto_resume_pipeline(
-            file,
-            cache_path,
-            settings,
-            md5,
-            ctx,
-            auto_resume_from_latest_safe=not bool(resume_from_stage),
-        )
-    return dependencies.run_report_pipeline(file, cache_path, settings, md5, ctx)
+        arguments["auto_resume_from_latest_safe"] = not bool(resume_from_stage)
+    if accepts_resume_stage:
+        arguments["resume_from_stage"] = resume_from_stage
+    if readiness_refresh_plan is not None:
+        refresh_arguments = {
+            "execution_plan_mode": "enforce",
+            "recovery_execution_intent": readiness_refresh_plan.execution_intent,
+            "recovery_invalidations": readiness_refresh_plan.forced_invalidations,
+            "readiness_refresh_plan": readiness_refresh_plan,
+            "refresh_telemetry_path": refresh_telemetry_path,
+        }
+        for name, value in refresh_arguments.items():
+            if _accepts_keyword(dependencies.run_report_pipeline, name):
+                arguments[name] = value
+    return dependencies.run_report_pipeline(
+        file,
+        cache_path,
+        settings,
+        md5,
+        ctx,
+        **arguments,
+    )
 
 
 @dataclass(frozen=True)
@@ -208,6 +155,8 @@ class _IngestFileRuntime:
     state_checked_md5: str | None
     report_checked_md5: str | None
     readiness_refresh_required: bool = False
+    readiness_refresh_plan: PublishReadinessRefreshPlan | None = None
+    readiness_refresh_telemetry_path: str = ""
 
 
 def _record_ingest_file_failure(
@@ -279,19 +228,29 @@ def _skip_result(
     )
 
 
-def _existing_publish_readiness_status(
+def _existing_publish_readiness_refresh_plan(
     html_path: str,
     *,
     report_id: str,
     dependencies: IngestFileDependencies,
     file_ctx: RunContext,
-) -> str | None:
-    """Return pass only for a readable readiness decision valid for this run."""
+) -> PublishReadinessRefreshPlan:
+    """Read and classify the canonical retained decision without re-evaluation."""
     if dependencies.read_text is None:
-        return None
+        return plan_publish_readiness_refresh(
+            report_id=report_id,
+            readiness=None,
+            final_html="",
+            configuration_hash=file_ctx.configuration_hash,
+            policy_hash=file_ctx.policy_hash,
+            producer_revision=file_ctx.producer_commit_sha,
+            evaluated_at_utc=datetime.now(UTC),
+        )
     readiness_path = (
         Path(html_path).with_suffix("") / "report_analysis" / "publish_readiness.json"
     )
+    payload: object = None
+    final_html = ""
     try:
         payload = json.loads(
             dependencies.read_text(
@@ -300,28 +259,38 @@ def _existing_publish_readiness_status(
             ).content
         )
     except (AppError, OSError, TypeError, ValueError):
-        return None
-    if not isinstance(payload, dict):
-        return None
-    status = str(payload.get("status") or "").strip().casefold()
-    if status != "pass":
-        return "fail" if status == "fail" else None
+        payload = None
     try:
-        artifact = parse_publish_readiness_payload(payload)
         final_html = dependencies.read_text(
             ReadTextRequest(schema_version="1.0", path=html_path), file_ctx
         ).content
-        verification = verify_publish_readiness(
-            artifact=artifact,
+    except (AppError, OSError, TypeError, ValueError):
+        final_html = ""
+    try:
+        artifact = (
+            parse_publish_readiness_payload(payload)
+            if isinstance(payload, dict)
+            else None
+        )
+        return plan_publish_readiness_refresh(
             report_id=report_id,
+            readiness=artifact,
             final_html=final_html,
             configuration_hash=file_ctx.configuration_hash,
             policy_hash=file_ctx.policy_hash,
             producer_revision=file_ctx.producer_commit_sha,
+            evaluated_at_utc=datetime.now(UTC),
         )
     except (AppError, OSError, TypeError, ValueError):
-        return None
-    return "pass" if verification.status == "pass" else None
+        return plan_publish_readiness_refresh(
+            report_id=report_id,
+            readiness=None,
+            final_html=final_html,
+            configuration_hash=file_ctx.configuration_hash,
+            policy_hash=file_ctx.policy_hash,
+            producer_revision=file_ctx.producer_commit_sha,
+            evaluated_at_utc=datetime.now(UTC),
+        )
 
 
 def _maybe_skip_existing_report_html(
@@ -359,14 +328,20 @@ def _maybe_skip_existing_report_html(
     runtime.report_checked_md5 = runtime.md5
     if not existing_html:
         return None
-    readiness_status = _existing_publish_readiness_status(
+    readiness_plan = _existing_publish_readiness_refresh_plan(
         existing_html,
         report_id=runtime.file.file_id,
         dependencies=dependencies,
         file_ctx=file_ctx,
     )
-    if readiness_status != "pass":
+    if readiness_plan.previous_readiness_state != "ready":
         runtime.readiness_refresh_required = True
+        runtime.readiness_refresh_plan = readiness_plan
+        runtime.readiness_refresh_telemetry_path = str(
+            Path(existing_html).with_suffix("")
+            / "report_analysis"
+            / "publish_readiness_refresh_plan.json"
+        )
         logging.getLogger(logger_name).info(
             log_event(
                 file_ctx,
@@ -377,7 +352,8 @@ def _maybe_skip_existing_report_html(
                     "file_id": runtime.file.file_id,
                     "md5": runtime.md5,
                     "html_path": existing_html,
-                    "readiness_status": readiness_status or "unverified",
+                    "readiness_status": readiness_plan.previous_readiness_state,
+                    "refresh_reason": readiness_plan.reason,
                 },
             )
         )
@@ -402,7 +378,7 @@ def _maybe_skip_existing_report_html(
         md5=runtime.md5,
         html_path=existing_html,
         error="html_exists",
-        publish_readiness_status=readiness_status,
+        publish_readiness_status="pass",
     )
 
 
@@ -1122,6 +1098,8 @@ def run_ingest_file(
                 resume_from_stage=(
                     "analysis_complete" if runtime.readiness_refresh_required else None
                 ),
+                readiness_refresh_plan=runtime.readiness_refresh_plan,
+                refresh_telemetry_path=runtime.readiness_refresh_telemetry_path,
             ),
             0,
         )
