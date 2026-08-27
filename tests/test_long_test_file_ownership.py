@@ -36,9 +36,12 @@ LONG_TEST_FILE_ALLOWLIST = {
     },
     "tests/_test_ingest_cohort/cases_01_cohort_admission_and_replay.py": {
         "owner": "quality/repository-hygiene",
-        "reason": "Frozen-cohort admission and replay cases require a follow-up split.",
+        "reason": (
+            "Frozen-cohort admission, canonical source identity, and replay "
+            "cases require a follow-up split."
+        ),
         "expires_on": "2026-08-31",
-        "max_lines": 1163,
+        "max_lines": 1175,
     },
     "tests/_test_report_render_generator/cases_01_render_output_and_cards.py": {
         "owner": "quality/repository-hygiene",
