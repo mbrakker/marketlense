@@ -1120,9 +1120,7 @@ def run_ingest_file(
                 runtime.md5,
                 file_ctx,
                 resume_from_stage=(
-                    "analysis_complete"
-                    if runtime.readiness_refresh_required
-                    else None
+                    "analysis_complete" if runtime.readiness_refresh_required else None
                 ),
             ),
             0,
