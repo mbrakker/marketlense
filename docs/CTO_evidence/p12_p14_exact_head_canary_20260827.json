@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0",
+  "runtime_source_sha": "6999c85f69fdf9ac23780b1abff0b06adf1c4979",
+  "cohort_id": "d4aeeb4fa0d28fc803d3d8427050c3752de71d88d656a7f26fa97b7231234814",
+  "cohort_manifest_sha256": "97cbe61f236e6438e1d440679d4f3be5c50c1eba620db0cf794eed1479e1c2f4",
+  "configuration_hash": "3cbd9303b17de4d7762c89c208204c604b0ecfd9eee93ee01317396d8c123e4d",
+  "policy_hash": "77302ec0862da786102ee09959e210ef62e9bf9ae8b2df1e5972b9cbaf9e2df7",
+  "candidate_set_hash": "dd7fa1a64250296fb31307134a82c0abc26903212dfa4d1edf32c14e5117b3df",
+  "candidate_set_artifact_sha256": "52ad24bd29a838aa9826af0d5efd2eda938bc129bc353633801ffa08f0f5521f",
+  "counts": {
+    "frozen_manifest_members": 3,
+    "linked_provenance_members": 3,
+    "publish_ready_members": 3,
+    "bound_candidates": 3,
+    "non_manifest_candidates": 0,
+    "authenticated_readbacks": 3,
+    "wordpress_post_creates": 0,
+    "wordpress_post_updates": 0,
+    "wordpress_media_writes": 0,
+    "wordpress_taxonomy_writes": 0,
+    "wordpress_writes_total": 0,
+    "replacement_members": 0
+  },
+  "results": {
+    "full_exact_head_ci": "passed",
+    "linked_provenance_refresh": "passed",
+    "readiness_refresh": "passed",
+    "strict_cohort_binding": "passed",
+    "wordpress_replay": "passed",
+    "authenticated_readback": "passed",
+    "p12": "closed",
+    "p14": "closed"
+  }
+}

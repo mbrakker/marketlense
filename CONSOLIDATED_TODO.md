@@ -302,6 +302,8 @@ The original ten-item screenshot baseline is complete in the committed implement
 | LLM calls / input tokens / output tokens / estimated cost | 63 / 587,087 / 64,531 / $0.194855 |
 | Candidate-set artifact / deterministic hash | `out/p12_p14_canary_20260826/output/cohorts/d4aeeb4fa0d28fc803d3d8427050c3752de71d88d656a7f26fa97b7231234814/publication_candidate_set.json` / `fac0fc50a1f15205eb960a0d4b7915a39fce4bd035ea8dfec0e7c05aa0e3a99a` on first success and replay |
 
+**2026-08-27 exact-HEAD replay refresh:** Runtime producer `6999c85f69fdf9ac23780b1abff0b06adf1c4979` completed the minimum canonical linked-provenance and readiness refresh for the same three-member frozen cohort. The canonical strict cohort replay bound 3/3 members and performed 3/3 authenticated readbacks with 0 posts, updates, media, taxonomy, or other WordPress writes. The hash/count/result-only retained record is [p12_p14_exact_head_canary_20260827.json](docs/CTO_evidence/p12_p14_exact_head_canary_20260827.json).
+
 ### Closed P14. Retain isolated live proof of strict cohort-manifest publication binding
 
 **Status: Closed (2026-08-27).**
@@ -329,6 +331,8 @@ The original ten-item screenshot baseline is complete in the committed implement
 - **Closed proof criterion:** A bounded isolated live cohort retains `publication_candidate_set.json` and `candidate_set_hash`, shows only admitted report IDs through preflight and WordPress records, and confirms the same zero-write replay boundary against the configured sandbox.
 
 **2026-08-27 positive live proof:** The closed P12 cohort above resolved all 3 admitted members to exactly 3 identity-compatible, current-ready candidates before any WordPress operation. Its first successful strict bind retained `candidate_set_hash` `fac0fc50a1f15205eb960a0d4b7915a39fce4bd035ea8dfec0e7c05aa0e3a99a`; the identical replay retained the same hash and candidate count. Binding telemetry recorded 0 silent exclusions, 0 ambiguous mappings, and 0 unrelated candidates. The three candidates alone reached WordPress preflight/publication and all authenticated readbacks passed. The replay's canonical actuals record 0 WordPress writes, including media and taxonomy, while retaining the readback proof. This satisfies the isolated positive live-proof criterion without changing the no-manifest publication path.
+
+**2026-08-27 exact-HEAD replay refresh:** The same immutable cohort under producer `6999c85f69fdf9ac23780b1abff0b06adf1c4979` resolved a new current candidate set of 3/3 and retained `candidate_set_hash` `dd7fa1a64250296fb31307134a82c0abc26903212dfa4d1edf32c14e5117b3df`. The replay admitted 0 non-manifest candidates, verified all 3 existing WordPress records through authenticated readback, and made 0 WordPress writes. Scalar-only evidence is retained in [p12_p14_exact_head_canary_20260827.json](docs/CTO_evidence/p12_p14_exact_head_canary_20260827.json).
 
 #### P15. Operate canonical publish-readiness telemetry and refresh planning
 
