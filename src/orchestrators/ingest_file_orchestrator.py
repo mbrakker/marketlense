@@ -59,6 +59,7 @@ class _LatestSafeReportPipeline(Protocol):
         ctx: RunContext,
         *,
         auto_resume_from_latest_safe: bool,
+        resume_from_stage: str | None,
     ) -> IngestOutcome: ...
 
 
@@ -69,23 +70,22 @@ def _run_report_pipeline_latest_safe(
     settings: IngestSettings,
     md5: str | None,
     ctx: RunContext,
+    resume_from_stage: str | None = None,
 ) -> IngestOutcome:
+    kwargs: dict[str, object] = {}
+    if _accepts_keyword(dependencies.run_report_pipeline, "resume_from_stage"):
+        kwargs["resume_from_stage"] = resume_from_stage
     if _accepts_keyword(
         dependencies.run_report_pipeline,
         "auto_resume_from_latest_safe",
     ):
+        kwargs["auto_resume_from_latest_safe"] = not bool(resume_from_stage)
+    if kwargs:
         latest_safe_pipeline = cast(
             _LatestSafeReportPipeline,
             dependencies.run_report_pipeline,
         )
-        return latest_safe_pipeline(
-            file,
-            cache_path,
-            settings,
-            md5,
-            ctx,
-            auto_resume_from_latest_safe=True,
-        )
+        return latest_safe_pipeline(file, cache_path, settings, md5, ctx, **kwargs)
     return dependencies.run_report_pipeline(file, cache_path, settings, md5, ctx)
 
 
@@ -147,6 +147,7 @@ class _IngestFileRuntime:
     drive_md5: str | None
     state_checked_md5: str | None
     report_checked_md5: str | None
+    readiness_refresh_required: bool = False
 
 
 def _record_ingest_file_failure(
@@ -305,6 +306,7 @@ def _maybe_skip_existing_report_html(
         file_ctx=file_ctx,
     )
     if readiness_status != "pass":
+        runtime.readiness_refresh_required = True
         logging.getLogger(logger_name).info(
             log_event(
                 file_ctx,
@@ -1057,6 +1059,11 @@ def run_ingest_file(
                 settings,
                 runtime.md5,
                 file_ctx,
+                resume_from_stage=(
+                    "analysis_complete"
+                    if runtime.readiness_refresh_required
+                    else None
+                ),
             ),
             0,
         )

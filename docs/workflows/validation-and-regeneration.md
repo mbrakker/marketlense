@@ -19,6 +19,9 @@ still verifies the exact HTML, report ID, configuration hash, policy hash, and
 producer revision. A stale, altered, expired, failed, or unreadable decision is
 a cache miss: the normal minimum-regeneration planner rebuilds the required
 final package rather than recording `publish_ready` from file existence alone.
+When that decision alone is invalidated, the planner resumes from the validated
+analysis checkpoint, re-renders and re-signs the package, and does not
+reacquire the source or rerun model analysis.
 
 When a repair is supported, the workflow maps validation issues to the narrowest appropriate artifact family and revalidates the result. Retry and backoff are controlled by orchestration; generators surface typed errors rather than retrying provider calls themselves. Publication policy determines whether unresolved validation issues block WordPress side effects.
 

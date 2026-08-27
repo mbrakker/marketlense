@@ -226,11 +226,25 @@ def test_existing_html_cache_rejects_readiness_from_another_producer_revision(
             md5="drive-md5" if request.compute_md5 else None,
         )
 
+    resumed_from = {"stage": None, "auto": None}
+
+    def _run_report_pipeline(
+        current,
+        _path,
+        _settings,
+        md5,
+        _ctx,
+        *,
+        auto_resume_from_latest_safe=False,
+        resume_from_stage=None,
+    ):
+        resumed_from["stage"] = resume_from_stage
+        resumed_from["auto"] = auto_resume_from_latest_safe
+        return _outcome(current, md5)
+
     dependencies = _base_dependencies(
         file_stat_fn=_file_stat,
-        run_report_pipeline_fn=lambda current, _path, _settings, md5, _ctx: _outcome(
-            current, md5
-        ),
+        run_report_pipeline_fn=_run_report_pipeline,
         write_md5_sidecar_fn=lambda request, _ctx: FileCacheMd5SidecarWriteResponse(
             schema_version="1.0",
             cache_path=request.cache_path,
@@ -265,6 +279,7 @@ def test_existing_html_cache_rejects_readiness_from_another_producer_revision(
     )
 
     assert (result.outcome.status, result.outcome.error) == ("processed", None)
+    assert resumed_from == {"stage": "analysis_complete", "auto": False}
 
 
 def test_missing_md5_is_computed_before_pipeline(ingest_settings, run_context):

@@ -560,13 +560,17 @@ def _process_file(
                 current_ctx,
             )
         )
-        resume_from_stage, auto_resume = _report_pipeline_resume_options(
-            force_report_cards=force_report_cards,
-            has_existing_report_html=has_existing_report_html,
-            auto_resume_from_latest_safe=bool(
-                kwargs.get("auto_resume_from_latest_safe", False)
-            ),
-        )
+        requested_resume_stage = str(kwargs.get("resume_from_stage") or "").strip()
+        if requested_resume_stage:
+            resume_from_stage, auto_resume = requested_resume_stage, False
+        else:
+            resume_from_stage, auto_resume = _report_pipeline_resume_options(
+                force_report_cards=force_report_cards,
+                has_existing_report_html=has_existing_report_html,
+                auto_resume_from_latest_safe=bool(
+                    kwargs.get("auto_resume_from_latest_safe", False)
+                ),
+            )
         return run_report_pipeline_orchestrator(
             current_file,
             local_pdf_path,
