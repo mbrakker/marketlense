@@ -449,7 +449,10 @@ def _targets() -> Iterable[MutationTarget]:
             / "src"
             / "orchestrators"
             / "report_pipeline_orchestrator.py",
-            test_paths=("tests/test_report_pipeline_orchestrator.py",),
+            test_paths=(
+                "tests/test_report_pipeline_orchestrator.py",
+                "tests/test_publish_readiness_refresh.py",
+            ),
             max_mutants=3,
             min_score=60.0,
         ),

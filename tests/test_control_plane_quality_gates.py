@@ -29,3 +29,16 @@ def test_control_plane_modules_are_targeted_by_mutation_gate() -> None:
     assert any(
         path.endswith("workflow_control_orchestrator.py") for path in module_paths
     )
+
+
+def test_report_pipeline_mutation_target_covers_p15_refresh_tests() -> None:
+    target = next(
+        target
+        for target in run_mutation_gate._targets()
+        if target.module_path.as_posix().endswith("report_pipeline_orchestrator.py")
+    )
+
+    assert target.test_paths == (
+        "tests/test_report_pipeline_orchestrator.py",
+        "tests/test_publish_readiness_refresh.py",
+    )

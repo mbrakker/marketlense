@@ -344,6 +344,63 @@ def test_readiness_refresh_persists_completed_typed_telemetry(tmp_path) -> None:
     assert "report_analysis_model" in payload["avoided_external_calls"]
 
 
+def test_readiness_refresh_without_telemetry_path_skips_artifact_write(
+    tmp_path,
+) -> None:
+    settings = replace(
+        _pipeline_settings(),
+        output_dir=str(tmp_path / "out"),
+        cache_dir=str(tmp_path / "cache"),
+        state_db=str(tmp_path / "state.sqlite"),
+        reports_db=str(tmp_path / "reports.sqlite"),
+        usage_db_path=str(tmp_path / "usage.sqlite"),
+        ingest_lock_path=str(tmp_path / "ingest.lock"),
+    )
+    file = DriveFile(
+        schema_version="1.0",
+        file_id="f1",
+        name="a.pdf",
+        modified_time=None,
+        md5_checksum="md5",
+    )
+    refresh_plan = replace(
+        plan_publish_readiness_refresh(
+            report_id=file.file_id,
+            readiness=None,
+            final_html="",
+            configuration_hash="",
+            policy_hash="",
+            producer_revision="",
+            evaluated_at_utc=_CREATED_AT,
+        ),
+        execution_result="planned",
+    )
+
+    def _generate(current, _path, _settings, md5, _ctx, **_kwargs):
+        return IngestOutcome(
+            schema_version="1.0",
+            file_id=current.file_id,
+            name=current.name or current.file_id,
+            md5=md5,
+            html_path=str(tmp_path / "out" / "f1.html"),
+            status="processed",
+        )
+
+    response = orch.run_report_pipeline(
+        file,
+        local_pdf_path=str(tmp_path / "cache" / "a.pdf"),
+        settings=settings,
+        md5="md5",
+        ctx=_pipeline_context(),
+        retries=0,
+        generate_report_fn=_generate,
+        execution_plan_mode="disabled",
+        readiness_refresh_plan=refresh_plan,
+    )
+
+    assert response.status == "processed"
+
+
 def test_unverifiable_readiness_persists_blocked_telemetry_before_any_work(
     tmp_path, assert_app_error
 ) -> None:
