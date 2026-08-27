@@ -263,7 +263,7 @@ The original ten-item screenshot baseline is complete in the committed implement
 - Audit identifiers remain available without being reader-facing labels; regression checks fail known leakage patterns in rendered output.
 - Three independent blind evaluators assess 30 paired public reports with median readability, decision usefulness, evidence clarity, and appropriate certainty at least 4/5, and an explicit record of any outlier/appeal decision.
 
-#### P12. Release-locked sandbox publish canary
+### Closed P12. Release-locked sandbox publish canary
 
 **Status: Closed (2026-08-27).**
 
@@ -302,7 +302,7 @@ The original ten-item screenshot baseline is complete in the committed implement
 | LLM calls / input tokens / output tokens / estimated cost | 63 / 587,087 / 64,531 / $0.194855 |
 | Candidate-set artifact / deterministic hash | `out/p12_p14_canary_20260826/output/cohorts/d4aeeb4fa0d28fc803d3d8427050c3752de71d88d656a7f26fa97b7231234814/publication_candidate_set.json` / `fac0fc50a1f15205eb960a0d4b7915a39fce4bd035ea8dfec0e7c05aa0e3a99a` on first success and replay |
 
-#### P14. Retain isolated live proof of strict cohort-manifest publication binding
+### Closed P14. Retain isolated live proof of strict cohort-manifest publication binding
 
 **Status: Closed (2026-08-27).**
 
