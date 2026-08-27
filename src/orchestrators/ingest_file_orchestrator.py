@@ -63,6 +63,32 @@ class _LatestSafeReportPipeline(Protocol):
     ) -> IngestOutcome: ...
 
 
+class _ResumeStageReportPipeline(Protocol):
+    def __call__(
+        self,
+        file: DriveFile,
+        cache_path: str,
+        settings: IngestSettings,
+        md5: str | None,
+        ctx: RunContext,
+        *,
+        resume_from_stage: str | None,
+    ) -> IngestOutcome: ...
+
+
+class _AutoResumeReportPipeline(Protocol):
+    def __call__(
+        self,
+        file: DriveFile,
+        cache_path: str,
+        settings: IngestSettings,
+        md5: str | None,
+        ctx: RunContext,
+        *,
+        auto_resume_from_latest_safe: bool,
+    ) -> IngestOutcome: ...
+
+
 def _run_report_pipeline_latest_safe(
     dependencies: IngestFileDependencies,
     file: DriveFile,
@@ -72,20 +98,54 @@ def _run_report_pipeline_latest_safe(
     ctx: RunContext,
     resume_from_stage: str | None = None,
 ) -> IngestOutcome:
-    kwargs: dict[str, object] = {}
-    if _accepts_keyword(dependencies.run_report_pipeline, "resume_from_stage"):
-        kwargs["resume_from_stage"] = resume_from_stage
-    if _accepts_keyword(
+    accepts_resume_stage = _accepts_keyword(
+        dependencies.run_report_pipeline,
+        "resume_from_stage",
+    )
+    accepts_auto_resume = _accepts_keyword(
         dependencies.run_report_pipeline,
         "auto_resume_from_latest_safe",
-    ):
-        kwargs["auto_resume_from_latest_safe"] = not bool(resume_from_stage)
-    if kwargs:
+    )
+    if accepts_resume_stage and accepts_auto_resume:
         latest_safe_pipeline = cast(
             _LatestSafeReportPipeline,
             dependencies.run_report_pipeline,
         )
-        return latest_safe_pipeline(file, cache_path, settings, md5, ctx, **kwargs)
+        return latest_safe_pipeline(
+            file,
+            cache_path,
+            settings,
+            md5,
+            ctx,
+            auto_resume_from_latest_safe=not bool(resume_from_stage),
+            resume_from_stage=resume_from_stage,
+        )
+    if accepts_resume_stage:
+        resume_stage_pipeline = cast(
+            _ResumeStageReportPipeline,
+            dependencies.run_report_pipeline,
+        )
+        return resume_stage_pipeline(
+            file,
+            cache_path,
+            settings,
+            md5,
+            ctx,
+            resume_from_stage=resume_from_stage,
+        )
+    if accepts_auto_resume:
+        auto_resume_pipeline = cast(
+            _AutoResumeReportPipeline,
+            dependencies.run_report_pipeline,
+        )
+        return auto_resume_pipeline(
+            file,
+            cache_path,
+            settings,
+            md5,
+            ctx,
+            auto_resume_from_latest_safe=not bool(resume_from_stage),
+        )
     return dependencies.run_report_pipeline(file, cache_path, settings, md5, ctx)
 
 

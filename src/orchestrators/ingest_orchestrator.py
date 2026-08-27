@@ -561,6 +561,8 @@ def _process_file(
             )
         )
         requested_resume_stage = str(kwargs.get("resume_from_stage") or "").strip()
+        resume_from_stage: str | None
+        auto_resume: bool
         if requested_resume_stage:
             resume_from_stage, auto_resume = requested_resume_stage, False
         else:
