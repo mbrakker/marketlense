@@ -79,3 +79,23 @@ events exists yet, so no production first-pass, repair-cost, or terminal-failure
 improvement is claimed. E11 remains active until a compatible post-change
 cohort demonstrates a material observed improvement with unchanged
 schema/grounding/editorial gates.
+
+## Subsequent bounded validation (2026-08-29)
+
+Three credentialed OpenAI integration-smoke invocations passed against the
+current service boundary. Each invocation was independently bounded and made
+no publication, Drive write, or WordPress call. The focused deterministic and
+scorecard regressions also passed (39 tests).
+
+An attempted three-PDF retained-cohort replay was correctly rejected before
+provider work because the retained manifest's configuration/policy provenance
+does not match the current admission configuration. A new empty isolated state
+also correctly rejected its Drive candidates as missing canonical
+source-identity evidence. These are fail-closed admission safeguards, not
+structured-output recovery observations. No provenance check was bypassed, and
+no recovery-effectiveness improvement is claimed from these runs.
+
+E11 therefore remains active. A future closure cohort must be freshly admitted
+under the current configuration with canonical source identities, then pass the
+existing schema, grounding, and editorial gates before its terminal outcome
+events can be compared with this baseline.
