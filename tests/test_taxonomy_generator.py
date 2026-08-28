@@ -1,4 +1,5 @@
 import json
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -379,6 +380,58 @@ def test_taxonomy_materialized_family_bypasses_openai(tmp_path):
     assert second_response.tag_evidence == first_response.tag_evidence
     assert second_response.region == first_response.region
     assert second_response.time_period == first_response.time_period
+
+
+def test_taxonomy_repair_attempt_bypasses_retained_family_reuse(tmp_path):
+    mapping_path = tmp_path / "category-mappings.yaml"
+    _write_mapping(mapping_path)
+    settings = _settings(tmp_path, mapping_path)
+    request = _request(settings)
+    payload = {
+        "schema_version": "1.0",
+        "taxonomy": ["digital_payments"],
+        "primary_tags": ["digital_payments"],
+        "secondary_tags": [],
+        "tag_evidence": [
+            {
+                "tag": "digital_payments",
+                "tier": "primary",
+                "section_label": "Executive Summary",
+                "evidence": "Digital payments are core.",
+            }
+        ],
+        "region": "US",
+        "time_period": "2026",
+        "not_found_reason": "",
+    }
+    first_openai = FakeOpenAI(payload)
+    extract_taxonomy(
+        request,
+        _ctx(),
+        openai_client=first_openai,
+        prompt_client=FakePromptClient(),
+    )
+
+    repair_openai = FakeOpenAI(payload)
+    extract_taxonomy(
+        replace(request, repair_attempt=True),
+        _ctx(),
+        openai_client=repair_openai,
+        prompt_client=FakePromptClient(),
+    )
+
+    assert first_openai.calls == 1
+    assert repair_openai.calls == 1
+
+
+@pytest.mark.parametrize(
+    ("keyword", "haystack"),
+    [("", "purchase journeys"), ("purchase", "")],
+)
+def test_taxonomy_keyword_matching_rejects_an_empty_operand(keyword, haystack):
+    from src.generators.taxonomy_generator import _keyword_matches_evidence
+
+    assert _keyword_matches_evidence(keyword, haystack) is False
 
 
 def test_taxonomy_corrupt_cache_falls_back_to_openai(tmp_path):
