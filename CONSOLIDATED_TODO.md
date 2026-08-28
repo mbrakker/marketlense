@@ -461,19 +461,6 @@ ingest, explicit-resume, publish-readiness, and publication regressions passed.
 - Make taxonomy and category recovery plans name their exact model family and required deterministic downstream work; fail closed when any retained context is stale or incomplete.
 - A retained-report live recovery and focused tests prove category-only recovery makes no source, vector, taxonomy, or evidence provider call and records measured avoided tokens/cost.
 
-#### E8. Use canonical source identity to suppress duplicate research work
-
-- **Title:** Use canonical source identity to suppress duplicate research work
-- **Impact 5 / effort: 2**
-- **Context:** Schema v19 now produces stable canonical source IDs and metadata hashes for the same report observed through different routes, but selection, analytics, and cross-report retrieval do not yet consume that identity as a deduplication and filter key.
-- **Benefit:** Equivalent publisher URLs and repeated downloads can reuse validated evidence and avoid duplicate parsing, embedding, and model work while making source/publisher/date filters precise.
-- **Risks to avoid:** Never merge merely similar titles; require a canonical identity backed by content hash or publisher-verifiable evidence, retain all observations, and leave conflicts visible for operator review.
-- **Success criteria:**
-
-- Selection and cross-report retrieval can filter by canonical source ID, publisher, and verified publication date without exposing private provenance.
-- Equivalent identities reuse validated retained artifacts and record avoided parsing/embedding/model calls; conflicting or unknown identity remains non-reusable.
-- Retained-corpus and bounded live evidence measure duplicate-work suppression, false-merge prevention, and zero unintended public writes.
-
 ### 4. Release Integrity and Architectural Enforcement
 
 #### R1. Publish release-evidence reviews where reviewers work
