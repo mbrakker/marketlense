@@ -350,6 +350,8 @@ def extract_taxonomy(
                 artifact_family="taxonomy",
                 schema_name="taxonomy",
                 model=prompt_bundle.resolved_model,
+                workflow="report_analysis",
+                prompt_family=prompt_bundle.routing_decision.namespace,
                 terminal_failure_code="taxonomy_invalid_json",
             ),
             ctx,

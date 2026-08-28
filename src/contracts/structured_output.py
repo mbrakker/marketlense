@@ -26,6 +26,16 @@ class StructuredOutputExecutionRequest:
         default="",
         metadata={"doc": "Resolved provider model for attempt audit records."},
     )
+    workflow: str = field(
+        default="report_analysis",
+        metadata={"doc": "Workflow owning the structured-output execution."},
+    )
+    prompt_family: str = field(
+        default="",
+        metadata={
+            "doc": "Stable family identity for recovery-effectiveness attribution."
+        },
+    )
     allow_abstention: bool = field(
         default=False,
         metadata={"doc": "Whether a formal downstream abstention is permitted."},

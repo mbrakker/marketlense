@@ -422,6 +422,17 @@ ingest, explicit-resume, publish-readiness, and publication regressions passed.
 - Configurable alert thresholds create actionable operator findings, not automatic behavior changes.
 - A retained and live cohort demonstrate a material first-pass-validity or recovery-cost improvement driven by a measured finding.
 
+- **E11 implementation evidence (2026-08-28):** The canonical recovery service
+  now emits one typed, bounded output-level outcome alongside attempt telemetry,
+  and the read-only scorecard groups rate/cost results by compatible current
+  attribution while exposing legacy gaps as `partial`. The retained 2026-08-25
+  to 2026-08-28 baseline found 5,038 observations, 91.624% first-pass validity,
+  7.285% terminal failure, 42,092/5,437 repair tokens, and $0.031435 estimated
+  repair cost. A quote-aware literal-newline repair is deterministic and
+  validator-preserving, but only fixture evidence exists after the change.
+  E11 remains active pending a representative post-change cohort; see
+  [`docs/quality/e11-structured-output-recovery-evidence-2026-08-28.md`](docs/quality/e11-structured-output-recovery-evidence-2026-08-28.md).
+
 #### E14. Calibrate category-fit coverage from retained outcomes
 
 - **Title:** Calibrate category-fit coverage from retained outcomes

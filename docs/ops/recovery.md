@@ -11,6 +11,35 @@
 5. Use the smallest safe restart or explicit workflow command after correcting the cause. The base configuration keeps recovery gated; the reviewed `autonomous_mvp` overlay enables only the documented finite allowlist and does not authorize unbounded retries or unknown-error recovery.
 6. Resolve or supersede the durable remediation record when the operator action is complete; do not delete historical retry logs.
 
+## Structured-output recovery effectiveness
+
+The canonical structured-output service emits one bounded
+`structured_output_recovery_outcome` event for every successful or terminal
+execution, in addition to its existing attempt events. The outcome retains
+only scalar attribution: workflow, artifact family (the prompt/model family),
+schema, provider/model, failure reason, strategy, retry count, repair token
+and cost totals, observed elapsed repair time, and explicit first-pass,
+deterministic-repair, model-repair, exhaustion, and terminal-failure flags.
+It never retains a prompt, source evidence, or model response.
+
+Build a read-only scorecard from explicit log shards:
+
+```powershell
+python scripts/quality/structured_output_recovery_effectiveness.py `
+  --log logs/market_lense_YYYY-MM-DD.log `
+  --output out/structured-output-recovery-effectiveness.json
+```
+
+The report groups output-level outcomes by workflow, prompt/model family,
+schema, provider/model, failure reason, repair strategy, and retry attempt.
+It reports first-pass and repair success, terminal-failure rate, repair
+attempts, token/cost overhead, and elapsed repair time. Old attempt-only logs
+remain readable, but their unavailable schema/provider/workflow/timing fields
+are labelled `unavailable` or `partial`; they must not be treated as zeros.
+Use the scorecard to propose a narrowly proven deterministic transport repair
+or owning prompt/schema change. It does not authorize schema relaxation,
+semantic/grounding bypass, retry changes, or automatic routing changes.
+
 The [top failure runbooks](top_failure_runbooks.md) contain typed failure-specific checks and bounded remediation commands. `docs/ops/failure_remediation.yaml` is the machine-validated runbook registry.
 
 Local workflow locks are reclaimed when their owner PID is no longer alive;

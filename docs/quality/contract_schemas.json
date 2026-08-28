@@ -38516,6 +38516,9 @@
         "model": {
           "type": "string"
         },
+        "prompt_family": {
+          "type": "string"
+        },
         "provider": {
           "type": "string"
         },
@@ -38532,6 +38535,9 @@
           "type": "string"
         },
         "terminal_failure_code": {
+          "type": "string"
+        },
+        "workflow": {
           "type": "string"
         }
       },

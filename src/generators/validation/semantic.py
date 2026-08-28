@@ -284,6 +284,8 @@ def run_semantic_validation(
                     artifact_family="validation_semantic",
                     schema_name="semantic_validation_output",
                     model=prompt_bundle.resolved_model,
+                    workflow="report_analysis",
+                    prompt_family=prompt_bundle.routing_decision.namespace,
                     terminal_failure_code="validation_semantic_invalid_json",
                 ),
                 semantic_ctx,

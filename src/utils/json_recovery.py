@@ -113,11 +113,35 @@ def repair_json_once(text: str) -> tuple[str, str]:
     extracted = extract_json_value(candidate)
     if extracted:
         candidate = extracted
+    repaired = _escape_literal_newlines_in_strings(candidate)
     repaired = (
-        candidate.replace("\u201c", '"')
+        repaired.replace("\u201c", '"')
         .replace("\u201d", '"')
         .replace("\u2018", "'")
         .replace("\u2019", "'")
     )
     repaired = re.sub(r",\s*([}\]])", r"\1", repaired)
     return repaired, "deterministic_json_repair"
+
+
+def _escape_literal_newlines_in_strings(text: str) -> str:
+    """Escape literal newlines only while inside an already-quoted JSON string."""
+
+    result: list[str] = []
+    in_string = False
+    escaped = False
+    for char in text:
+        if in_string and not escaped and char == "\n":
+            result.append("\\n")
+            continue
+        result.append(char)
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+        elif char == '"':
+            in_string = True
+    return "".join(result)

@@ -8,6 +8,7 @@ the normal bounded logger, never report text or rendered prompts.
 from __future__ import annotations
 
 import logging
+import time
 from collections.abc import Callable
 from typing import Any
 
@@ -62,6 +63,8 @@ def execute_structured_output(
         schema_errors="",
         attempt=0,
         model_pricing=model_pricing,
+        repair_responses=(),
+        recovery_started_at=None,
     )
     initial = _evaluate_response(
         response=primary,
@@ -82,8 +85,18 @@ def execute_structured_output(
             disposition=disposition,
             model_pricing=model_pricing,
         )
-        return _result(initial.payload, disposition, 1, response=primary)
+        result = _result(initial.payload, disposition, 1, response=primary)
+        _record_outcome(
+            request,
+            ctx,
+            result=result,
+            repair_responses=(),
+            elapsed_repair_ms=0.0,
+            model_pricing=model_pricing,
+        )
+        return result
 
+    recovery_started = time.perf_counter()
     _record_attempt(
         request,
         ctx,
@@ -111,13 +124,22 @@ def execute_structured_output(
             disposition="deterministic_repair",
             model_pricing=model_pricing,
         )
-        return _result(
+        result = _result(
             deterministic.payload,
             "deterministic_repair",
             1,
             initial.error_class,
             primary,
         )
+        _record_outcome(
+            request,
+            ctx,
+            result=result,
+            repair_responses=(),
+            elapsed_repair_ms=(time.perf_counter() - recovery_started) * 1000,
+            model_pricing=model_pricing,
+        )
+        return result
     _record_attempt(
         request,
         ctx,
@@ -139,6 +161,8 @@ def execute_structured_output(
         schema_errors=exact_errors,
         attempt=1,
         model_pricing=model_pricing,
+        repair_responses=(),
+        recovery_started_at=recovery_started,
     )
     repaired_evaluation = _evaluate_response(
         response=repaired,
@@ -159,13 +183,22 @@ def execute_structured_output(
             disposition=disposition,
             model_pricing=model_pricing,
         )
-        return _result(
+        result = _result(
             repaired_evaluation.payload,
             disposition,
             2,
             initial.error_class,
             repaired,
         )
+        _record_outcome(
+            request,
+            ctx,
+            result=result,
+            repair_responses=(repaired,),
+            elapsed_repair_ms=(time.perf_counter() - recovery_started) * 1000,
+            model_pricing=model_pricing,
+        )
+        return result
     _record_attempt(
         request,
         ctx,
@@ -185,6 +218,8 @@ def execute_structured_output(
         schema_errors=repaired_evaluation.error_detail,
         attempt=2,
         model_pricing=model_pricing,
+        repair_responses=(repaired,),
+        recovery_started_at=recovery_started,
     )
     regenerated_evaluation = _evaluate_response(
         response=regenerated,
@@ -205,13 +240,22 @@ def execute_structured_output(
             disposition=disposition,
             model_pricing=model_pricing,
         )
-        return _result(
+        result = _result(
             regenerated_evaluation.payload,
             disposition,
             3,
             repaired_evaluation.error_class,
             regenerated,
         )
+        _record_outcome(
+            request,
+            ctx,
+            result=result,
+            repair_responses=(repaired, regenerated),
+            elapsed_repair_ms=(time.perf_counter() - recovery_started) * 1000,
+            model_pricing=model_pricing,
+        )
+        return result
     final_error = regenerated_evaluation.error_class or repaired_evaluation.error_class
     _record_attempt(
         request,
@@ -220,6 +264,21 @@ def execute_structured_output(
         attempt=2,
         error_class=final_error,
         disposition="recovery_exhausted",
+        model_pricing=model_pricing,
+    )
+    _record_outcome(
+        request,
+        ctx,
+        result=_result(
+            None,
+            "recovery_exhausted",
+            3,
+            final_error,
+            regenerated,
+        ),
+        repair_responses=(repaired, regenerated),
+        elapsed_repair_ms=(time.perf_counter() - recovery_started) * 1000,
+        terminal="failure",
         model_pricing=model_pricing,
     )
     raise StructuredOutputFailure(
@@ -351,19 +410,37 @@ def _call_model(
     schema_errors: str,
     attempt: int,
     model_pricing: dict[str, dict],
+    repair_responses: tuple[OpenAIResponseResult, ...] = (),
+    recovery_started_at: float | None,
 ) -> OpenAIResponseResult:
     try:
         return call_model(mode, original_response, schema_errors)
     except AppError as exc:
+        failed_response = OpenAIResponseResult(
+            schema_version="1.0", text="", model=request.model
+        )
         _record_attempt(
             request,
             ctx,
-            response=OpenAIResponseResult(
-                schema_version="1.0", text="", model=request.model
-            ),
+            response=failed_response,
             attempt=attempt,
             error_class=exc.code,
             disposition="provider_error",
+            model_pricing=model_pricing,
+        )
+        _record_outcome(
+            request,
+            ctx,
+            result=_result(
+                None, "provider_error", attempt + 1, exc.code, failed_response
+            ),
+            repair_responses=repair_responses,
+            elapsed_repair_ms=(
+                (time.perf_counter() - recovery_started_at) * 1000
+                if recovery_started_at is not None
+                else 0.0
+            ),
+            terminal="failure",
             model_pricing=model_pricing,
         )
         raise
@@ -409,6 +486,103 @@ def _record_attempt(
                 "final_disposition": disposition,
                 "request_id": str(response.request_id or ""),
             },
+        )
+    )
+
+
+def _record_outcome(
+    request: StructuredOutputExecutionRequest,
+    ctx: RunContext,
+    *,
+    result: StructuredOutputExecutionResult,
+    repair_responses: tuple[OpenAIResponseResult, ...],
+    elapsed_repair_ms: float,
+    model_pricing: dict[str, dict],
+    terminal: str = "success",
+) -> None:
+    """Retain one bounded, output-level outcome beside attempt-level telemetry."""
+
+    repair_input_tokens = sum(
+        int(response.input_tokens or 0) for response in repair_responses
+    )
+    repair_output_tokens = sum(
+        int(response.output_tokens or 0) for response in repair_responses
+    )
+    repair_cost_usd = sum(
+        estimate_cost_usd(
+            str(response.model or ""),
+            int(response.input_tokens or 0),
+            int(response.output_tokens or 0),
+            int(response.tool_calls or 0),
+            model_pricing,
+        )
+        for response in repair_responses
+    )
+    repair_strategy = {
+        "generated": "first_pass",
+        "abstained": "first_pass",
+        "deterministic_repair": "deterministic_repair",
+        "model_repair": "model_repair",
+        "regeneration": "regeneration",
+        "recovery_exhausted": "retry_exhaustion",
+    }.get(result.disposition, result.disposition)
+    first_pass_valid = repair_strategy == "first_pass"
+    deterministic_repair_attempted = repair_strategy != "first_pass" and (
+        repair_strategy != "provider_error" or result.attempts > 1
+    )
+    deterministic_repair_succeeded = repair_strategy == "deterministic_repair"
+    model_repair_attempted = result.attempts > 1
+    model_repair_succeeded = repair_strategy == "model_repair"
+    retry_exhausted = repair_strategy == "retry_exhaustion"
+    model = str(result.model or request.model)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="structured_output_recovery_outcome",
+            module=logger.name,
+            fields={
+                "outcome_schema_version": "1.0",
+                "outcome_id": _outcome_id(request, ctx),
+                "workflow": request.workflow,
+                "artifact_family": request.artifact_family,
+                "prompt_namespace": request.prompt_family or request.artifact_family,
+                "schema_name": request.schema_name,
+                "schema_root_key": request.schema_root_key,
+                "provider": request.provider,
+                "model": model,
+                "provider_model": f"{request.provider}:{model}",
+                "failure_reason": result.error_class,
+                "repair_strategy": repair_strategy,
+                "first_pass_valid": first_pass_valid,
+                "deterministic_repair_attempted": deterministic_repair_attempted,
+                "deterministic_repair_succeeded": deterministic_repair_succeeded,
+                "model_repair_attempted": model_repair_attempted,
+                "model_repair_succeeded": model_repair_succeeded,
+                "retry_exhausted": retry_exhausted,
+                "terminal_failure": terminal == "failure",
+                "retry_attempt": max(0, result.attempts - 1),
+                "provider_attempts": result.attempts,
+                "repair_model_calls": len(repair_responses),
+                "repair_input_tokens": repair_input_tokens,
+                "repair_output_tokens": repair_output_tokens,
+                "repair_cost_usd": repair_cost_usd,
+                "elapsed_repair_ms": round(max(0.0, elapsed_repair_ms), 3),
+                "terminal": terminal,
+            },
+        )
+    )
+
+
+def _outcome_id(request: StructuredOutputExecutionRequest, ctx: RunContext) -> str:
+    return ":".join(
+        (
+            str(ctx.run_id),
+            str(ctx.task_id),
+            str(ctx.span_id),
+            request.report_id,
+            request.artifact_family,
+            request.schema_name,
         )
     )
 

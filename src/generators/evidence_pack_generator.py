@@ -710,6 +710,8 @@ def _generate_pack(
             artifact_family=pack_name,
             schema_name=schema_name,
             model=prompt_bundle.resolved_model,
+            workflow="report_analysis",
+            prompt_family=prompt_bundle.routing_decision.namespace,
             allow_abstention=pack_name in _OPTIONAL_EVIDENCE_PACKS,
             terminal_failure_code=(
                 "doc_map_invalid_json"

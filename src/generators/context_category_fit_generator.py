@@ -302,6 +302,8 @@ def fit_report_categories_from_context(
                 artifact_family="category_fit",
                 schema_name="context_category_fit",
                 model=prompt_bundle.resolved_model,
+                workflow="report_analysis",
+                prompt_family=prompt_bundle.routing_decision.namespace,
                 terminal_failure_code="context_category_fit_invalid_json",
             ),
             ctx,

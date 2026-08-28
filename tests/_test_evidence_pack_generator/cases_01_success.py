@@ -66,6 +66,31 @@ def test_generate_evidence_packs_success(tmp_path):
     assert packs["doc_map"]["family_status"]["policy_action"] == "keep"
 
 
+def test_evidence_pack_outcome_records_caller_prompt_family(tmp_path, caplog):
+    """The generator, not a service default, supplies output prompt identity."""
+
+    caplog.set_level(logging.INFO, logger="market_lense.structured_output_service")
+    generate_evidence_packs(
+        report_id="r1",
+        report_name="report",
+        vector_store_id="vs_1",
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=FakeOpenAIClient(substantive_doc_map()),
+        prompt_client=FakePromptClient(),
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    outcome = next(
+        json.loads(record.message)["fields"]
+        for record in caplog.records
+        if '"event": "structured_output_recovery_outcome"' in record.message
+    )
+    assert outcome["workflow"] == "report_analysis"
+    assert outcome["artifact_family"] == "doc_map"
+    assert outcome["prompt_namespace"] == "report_vs/doc_map"
+
+
 def test_generate_evidence_packs_creates_context_when_missing(tmp_path):
     parsed = substantive_doc_map()
     fake_openai = FakeOpenAIClient(parsed)
@@ -790,6 +815,7 @@ def test_generate_evidence_packs_uses_registry_subset(tmp_path):
 __all__ = [
     "test_evidence_pack_family_reuses_retained_output_before_model_call",
     "test_generate_evidence_packs_success",
+    "test_evidence_pack_outcome_records_caller_prompt_family",
     "test_generate_evidence_packs_creates_context_when_missing",
     "test_generate_evidence_packs_marks_optional_empty_pack_as_abstained",
     "test_generate_evidence_packs_logs_prompt_observability_and_response_metadata",

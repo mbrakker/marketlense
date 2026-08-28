@@ -283,6 +283,8 @@ def run_grounding_check(
                     artifact_family="validation_grounding",
                     schema_name="grounding_validation_output",
                     model=prompt_bundle.resolved_model,
+                    workflow="report_analysis",
+                    prompt_family=prompt_bundle.routing_decision.namespace,
                     terminal_failure_code="validation_grounding_invalid_json",
                 ),
                 prompt_ctx,

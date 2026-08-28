@@ -256,6 +256,8 @@ def render_artifact_json_model(
             schema_name="artifacts",
             schema_root_key=root_key,
             model=prompt_bundle.resolved_model,
+            workflow="report_analysis",
+            prompt_family=prompt_bundle.routing_decision.namespace,
             allow_abstention=root_key in _ARTIFACT_ABSTAINABLE_ROOTS,
             terminal_failure_code="artifact_structured_output_invalid",
         ),
