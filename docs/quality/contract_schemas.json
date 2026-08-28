@@ -15653,6 +15653,9 @@
             }
           ]
         },
+        "source_id": {
+          "type": "string"
+        },
         "source_url": {
           "type": "string"
         }
@@ -27917,6 +27920,9 @@
         "artifact_id": {
           "type": "string"
         },
+        "configuration_policy_hash": {
+          "type": "string"
+        },
         "created_at_utc": {
           "type": "string"
         },
@@ -27951,6 +27957,12 @@
         "model_name": {
           "type": "string"
         },
+        "model_policy_namespace": {
+          "type": "string"
+        },
+        "model_provider": {
+          "type": "string"
+        },
         "output_hash": {
           "type": "string"
         },
@@ -27968,6 +27980,9 @@
           "type": "object"
         },
         "prompt_policy_version": {
+          "type": "string"
+        },
+        "relevant_input_hash": {
           "type": "string"
         },
         "routing_policy_version": {
@@ -28005,7 +28020,11 @@
         "execution_identity_manifest",
         "prompt_policy_version",
         "model_name",
+        "model_provider",
+        "model_policy_namespace",
         "routing_policy_version",
+        "relevant_input_hash",
+        "configuration_policy_hash",
         "validator_version",
         "direct_dependency_artifact_ids",
         "direct_dependency_hashes",
@@ -28022,6 +28041,9 @@
     "src.contracts.prompt_family_materialization.PromptFamilyMaterializationRequest": {
       "additionalProperties": false,
       "properties": {
+        "configuration_policy_hash": {
+          "type": "string"
+        },
         "db_path": {
           "type": "string"
         },
@@ -28056,6 +28078,12 @@
         "model_name": {
           "type": "string"
         },
+        "model_policy_namespace": {
+          "type": "string"
+        },
+        "model_provider": {
+          "type": "string"
+        },
         "output_dir": {
           "type": "string"
         },
@@ -28071,6 +28099,9 @@
           "type": "object"
         },
         "prompt_policy_version": {
+          "type": "string"
+        },
+        "relevant_input_hash": {
           "type": "string"
         },
         "report_id": {
@@ -28132,6 +28163,123 @@
         "schema_version",
         "materialization",
         "created"
+      ],
+      "type": "object"
+    },
+    "src.contracts.prompt_family_materialization.PromptFamilyReuseRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "configuration_policy_hash": {
+          "type": "string"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "execution_identity": {
+          "type": "string"
+        },
+        "expected_validation_status": {
+          "type": "string"
+        },
+        "family_id": {
+          "type": "string"
+        },
+        "family_schema_version": {
+          "type": "string"
+        },
+        "model_name": {
+          "type": "string"
+        },
+        "model_policy_namespace": {
+          "type": "string"
+        },
+        "model_provider": {
+          "type": "string"
+        },
+        "output_dir": {
+          "type": "string"
+        },
+        "processing_version": {
+          "type": "string"
+        },
+        "prompt_content_hash": {
+          "type": "string"
+        },
+        "relevant_input_hash": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "report_slug": {
+          "type": "string"
+        },
+        "routing_policy_version": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "validator_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "output_dir",
+        "report_id",
+        "report_slug",
+        "source_id",
+        "family_id",
+        "family_schema_version",
+        "processing_version",
+        "prompt_content_hash",
+        "execution_identity",
+        "model_provider",
+        "model_name",
+        "model_policy_namespace",
+        "routing_policy_version",
+        "validator_version",
+        "relevant_input_hash",
+        "configuration_policy_hash"
+      ],
+      "type": "object"
+    },
+    "src.contracts.prompt_family_materialization.PromptFamilyReuseResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_id": {
+          "type": "string"
+        },
+        "output_hash": {
+          "type": "string"
+        },
+        "output_payload": {
+          "anyOf": [
+            {},
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reason": {
+          "type": "string"
+        },
+        "reusable": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "reusable",
+        "reason"
       ],
       "type": "object"
     },
@@ -38280,6 +38428,16 @@
         "stage": {
           "type": "string"
         },
+        "vector_store_content_hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "vector_store_id": {
           "type": "string"
         },
@@ -41089,10 +41247,16 @@
         "schema_version": {
           "type": "string"
         },
+        "source_id": {
+          "type": "string"
+        },
         "source_url": {
           "type": "string"
         },
         "validation_mode": {
+          "type": "string"
+        },
+        "vector_store_content_hash": {
           "type": "string"
         },
         "vector_store_id": {
