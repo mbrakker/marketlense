@@ -231,12 +231,12 @@ def test_source_reuse_persists_bounded_decision_telemetry(tmp_path) -> None:
                     "analysis_complete",
                     "render_complete",
                 ),
-                acquisition_actions_avoided=1,
-                browser_launches_avoided=1,
-                pdf_parse_avoided=1,
-                ocr_avoided=1,
-                extraction_avoided=1,
-                vector_work_avoided=1,
+                acquisition_actions_avoided=0,
+                browser_launches_avoided=0,
+                pdf_parse_avoided=0,
+                ocr_avoided=0,
+                extraction_avoided=0,
+                vector_work_avoided=0,
             ),
         ),
         ctx,
@@ -249,8 +249,13 @@ def test_source_reuse_persists_bounded_decision_telemetry(tmp_path) -> None:
                    canonical_source_identity, matched_report_id, decision,
                    decision_reason, highest_reused_checkpoint,
                    reused_stages_json, regenerated_stages_json,
+                   acquisition_actions_avoided, browser_launches_avoided,
+                   pdf_parse_avoided, ocr_avoided, extraction_avoided,
+                   vector_work_avoided,
                    model_calls_avoided_status, tokens_avoided_status,
-                   estimated_cost_avoided_status
+                   estimated_cost_avoided_status, model_calls_avoided,
+                   input_tokens_avoided, output_tokens_avoided,
+                   estimated_cost_avoided_usd
             FROM report_source_reuse_telemetry
             """
         ).fetchone()
@@ -262,11 +267,21 @@ def test_source_reuse_persists_bounded_decision_telemetry(tmp_path) -> None:
         "reuse",
         "canonical_identity_and_content_hash_match",
         "render_complete",
-        "[\"acquisition\",\"source_prepared\",\"selection_complete\",\"analysis_complete\",\"render_complete\"]",
+        '["acquisition","source_prepared","selection_complete","analysis_complete","render_complete"]',
         "[]",
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
         "unavailable",
         "unavailable",
         "unavailable",
+        0,
+        0,
+        0,
+        0.0,
     )
     assert len(row[1]) == 64
 
@@ -331,7 +346,9 @@ def test_source_reuse_fails_closed_for_changed_or_unproven_source(tmp_path) -> N
     assert unknown.reason == "canonical_source_identity_missing"
 
 
-def test_direct_pipeline_route_runs_canonical_owner_checkpoint(tmp_path, ingest_settings) -> None:
+def test_direct_pipeline_route_runs_canonical_owner_checkpoint(
+    tmp_path, ingest_settings
+) -> None:
     """Removing the owner substitution would invoke report work under the duplicate ID."""
     ctx = replace(
         new_run_context(task_id="canonical_source_pipeline_reuse"),
@@ -379,7 +396,9 @@ def test_direct_pipeline_route_runs_canonical_owner_checkpoint(tmp_path, ingest_
     )
     calls: list[tuple[str, str]] = []
 
-    def _generate(file, _path, _settings, checksum, _ctx, *, resume_from_stage=None, **_kwargs):
+    def _generate(
+        file, _path, _settings, checksum, _ctx, *, resume_from_stage=None, **_kwargs
+    ):
         calls.append((file.file_id, resume_from_stage or ""))
         return IngestOutcome(
             schema_version="1.0",

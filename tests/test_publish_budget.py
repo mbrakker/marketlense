@@ -96,7 +96,9 @@ def test_publish_budget_blocks_release_when_configured_projection_evidence_is_mi
     assert exc_info.value.retryable is False
 
 
-def test_explicit_no_write_publish_with_no_candidates_does_not_require_auth(tmp_path) -> None:
+def test_explicit_no_write_publish_with_no_candidates_does_not_require_auth(
+    tmp_path,
+) -> None:
     settings = PublishSettings(
         schema_version="1.0",
         output_dir=str(tmp_path / "out"),

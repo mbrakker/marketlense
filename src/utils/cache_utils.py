@@ -4,9 +4,9 @@ import hashlib
 import json
 
 
-def stable_json_dumps(payload: dict) -> str:
+def stable_json_dumps(payload: object) -> str:
     return json.dumps(payload, sort_keys=True, ensure_ascii=True, separators=(",", ":"))
 
 
-def sha256_json(payload: dict) -> str:
+def sha256_json(payload: object) -> str:
     return hashlib.sha256(stable_json_dumps(payload).encode("utf-8")).hexdigest()

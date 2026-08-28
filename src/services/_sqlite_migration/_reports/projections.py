@@ -380,7 +380,9 @@ def _reports_db_028_add_source_reuse_attribution_statuses(
         )
 
 
-def _reports_db_023_create_corpus_rehabilitation_campaigns(conn: sqlite3.Connection) -> None:
+def _reports_db_023_create_corpus_rehabilitation_campaigns(
+    conn: sqlite3.Connection,
+) -> None:
     """Persist bounded approved rehabilitation campaigns and their reconciliation."""
     from .schema import (
         _CORPUS_REHABILITATION_CAMPAIGNS_TABLE_SQL,

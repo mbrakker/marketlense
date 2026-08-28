@@ -207,7 +207,9 @@ def test_stale_canonical_package_resumes_owner_without_duplicate_acquisition(
             reason="written",
         ),
         download_pdf_to_path_fn=_download,
-        read_text_fn=lambda _request, _ctx: SimpleNamespace(content='{"status":"fail"}'),
+        read_text_fn=lambda _request, _ctx: SimpleNamespace(
+            content='{"status":"fail"}'
+        ),
     )
     dependencies = replace(
         dependencies,
@@ -239,15 +241,33 @@ def test_stale_canonical_package_resumes_owner_without_duplicate_acquisition(
         telemetry = conn.execute(
             """
             SELECT highest_reused_checkpoint, reused_stages_json,
-                   regenerated_stages_json, acquisition_actions_avoided
+                   regenerated_stages_json, acquisition_actions_avoided,
+                   browser_launches_avoided, pdf_parse_avoided, ocr_avoided,
+                   extraction_avoided, vector_work_avoided,
+                   model_calls_avoided_status, model_calls_avoided,
+                   tokens_avoided_status, input_tokens_avoided,
+                   output_tokens_avoided, estimated_cost_avoided_status,
+                   estimated_cost_avoided_usd
             FROM report_source_reuse_telemetry
             """
         ).fetchone()
     assert telemetry == (
         "analysis_complete",
-        "[\"acquisition\",\"source_prepared\",\"selection_complete\",\"analysis_complete\"]",
-        "[\"render_complete\"]",
+        '["acquisition","source_prepared","selection_complete","analysis_complete"]',
+        '["render_complete"]',
         1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        "unavailable",
+        0,
+        "unavailable",
+        0,
+        0,
+        "unavailable",
+        0.0,
     )
 
 

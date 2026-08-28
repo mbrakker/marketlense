@@ -560,8 +560,7 @@ def _bind_cohort_publish_candidates(
             )
             or (
                 not legacy_content_identity
-                and
-                str(getattr(metadata, "source_identity_id", "") or "").strip()
+                and str(getattr(metadata, "source_identity_id", "") or "").strip()
                 and str(getattr(metadata, "source_identity_id", "")).strip()
                 != expected_source_identity
             )
@@ -1513,10 +1512,7 @@ def run_publish(
         ]
     if auto_discovery and limit is not None:
         candidates = candidates[:limit]
-    if (
-        settings.run_budget_enabled
-        and settings.run_budget_max_wordpress_writes == 0
-    ):
+    if settings.run_budget_enabled and settings.run_budget_max_wordpress_writes == 0:
         outcomes.extend(
             PublishOutcome(
                 schema_version="1.0",

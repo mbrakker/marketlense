@@ -195,7 +195,9 @@ class TestConfigService02TaxonomyTemperatureUsesConfig(_TestConfigServiceBase):
 
         self.assertEqual(0, settings.run_budget_max_wordpress_writes)
 
-    def test_publish_settings_allow_credential_free_explicit_no_write_profile(self) -> None:
+    def test_publish_settings_allow_credential_free_explicit_no_write_profile(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             cfg_path = self._write_config(tmp_dir, include_publish=True)
             cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
@@ -219,7 +221,9 @@ class TestConfigService02TaxonomyTemperatureUsesConfig(_TestConfigServiceBase):
             ):
                 settings = load_publish_settings(
                     ConfigLoadRequest(schema_version="1.0", path=cfg_path),
-                    RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
                 )
 
         self.assertEqual(0, settings.run_budget_max_wordpress_writes)

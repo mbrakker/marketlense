@@ -610,7 +610,7 @@ def _process_file(
         current_settings: IngestSettings,
         current_md5: str | None,
         current_ctx: RunContext,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> IngestOutcome:
         has_existing_report_html = bool(
             current_md5

@@ -108,12 +108,17 @@ the existing reports store; it is an audit record, not a second cache. It keeps
 the incoming opaque file ID, a SHA-256 of the route-local reference, canonical
 identity/content hash, matched package, actual reused checkpoint/stages,
 regenerated stages, decision/reason, and scalar avoided acquisition, browser,
-PDF, OCR, extraction, and vector work. Model-call, token, and cost fields are
-explicitly `unavailable` unless their owning usage telemetry can attribute a
-value. Replaying the same route/reference and decision upserts one stable
-record. A stale retained package updates that record from its candidate
-render-complete checkpoint to the actual analysis-complete reuse plus the
-render-only regeneration.
+PDF, OCR, extraction, and vector work. A scalar is positive only when the
+route deterministically bypasses that specific operation: the pre-acquisition
+Drive route records one avoided download, but records zero browser, PDF, OCR,
+extraction, and vector work because those operations are not proven on that
+route. A generic route that resolves after acquisition records zero avoided
+acquisition work. Model-call, token, and cost fields are explicitly
+`unavailable` unless their owning usage telemetry can attribute a value.
+Replaying the same route/reference and decision upserts one stable record. A
+stale retained package updates that record from its candidate render-complete
+checkpoint to the actual analysis-complete reuse plus the render-only
+regeneration.
 
 ## Operator validation and rollback
 

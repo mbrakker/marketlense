@@ -111,9 +111,8 @@ def _safe_identity_url(value: object) -> str:
 def _safe_report_metadata_identity_text(value: object) -> str:
     text = " ".join(str(value or "").split())
     folded = text.casefold()
-    if (
-        folded in _REPORT_METADATA_IDENTITY_PLACEHOLDERS
-        or any(marker in folded for marker in _REPORT_METADATA_IDENTITY_LEAKAGE_MARKERS)
+    if folded in _REPORT_METADATA_IDENTITY_PLACEHOLDERS or any(
+        marker in folded for marker in _REPORT_METADATA_IDENTITY_LEAKAGE_MARKERS
     ):
         return ""
     return text
@@ -191,9 +190,7 @@ def _report_metadata_identity_resolution(
         content_hash=content_hash,
         resolution_method="exact_md5_report_metadata",
         identity_confidence="medium",
-        identity_issues=(
-            () if source_url else ("canonical_landing_page_url_missing",)
-        ),
+        identity_issues=(() if source_url else ("canonical_landing_page_url_missing",)),
         identity_status="resolved",
     )
     return (
@@ -394,7 +391,9 @@ def _identity_issues_from_json(raw: object) -> tuple[str, ...]:
     return tuple(sorted({str(item).strip() for item in values if str(item).strip()}))
 
 
-def _identity_observation_from_row(row: tuple[object, ...]) -> SourceIdentityObservation:
+def _identity_observation_from_row(
+    row: tuple[object, ...],
+) -> SourceIdentityObservation:
     return SourceIdentityObservation(
         schema_version=str(row[2] or "1.0"),
         source_record_id=coerce_int(row[1], min_value=0),
@@ -473,7 +472,9 @@ def _identity_resolution_from_row(row: tuple[object, ...]) -> SourceIdentityReso
     return (
         resolution
         if resolution.source_metadata_hash
-        else replace(resolution, source_metadata_hash=_identity_resolution_hash(resolution))
+        else replace(
+            resolution, source_metadata_hash=_identity_resolution_hash(resolution)
+        )
     )
 
 
@@ -501,7 +502,7 @@ def _first_identity_value(
 
 
 def _identity_conflict_issues(
-    observations: tuple[SourceIdentityObservation, ...]
+    observations: tuple[SourceIdentityObservation, ...],
 ) -> tuple[str, ...]:
     issues = {
         issue
@@ -545,7 +546,9 @@ def _resolve_identity_observations(
             identity_status="unknown",
             identity_issues=("identity_observation_missing",),
         )
-        return replace(resolution, source_metadata_hash=_identity_resolution_hash(resolution))
+        return replace(
+            resolution, source_metadata_hash=_identity_resolution_hash(resolution)
+        )
     chosen = min(observations, key=_observation_sort_key)
     issues = _identity_conflict_issues(observations)
     content_hash = _first_identity_value(observations, "content_hash")
@@ -609,7 +612,9 @@ def _resolve_identity_observations(
         identity_status=identity_status,
         observation_count=len(observations),
     )
-    return replace(resolution, source_metadata_hash=_identity_resolution_hash(resolution))
+    return replace(
+        resolution, source_metadata_hash=_identity_resolution_hash(resolution)
+    )
 
 
 def _legacy_identity_resolution(
@@ -648,7 +653,9 @@ def _legacy_identity_resolution(
         identity_issues=("identity_observation_missing", "legacy_source_unverified"),
         identity_status="legacy_unverified",
     )
-    return replace(resolution, source_metadata_hash=_identity_resolution_hash(resolution))
+    return replace(
+        resolution, source_metadata_hash=_identity_resolution_hash(resolution)
+    )
 
 
 def _identity_observations_for_source(
@@ -677,32 +684,66 @@ def _store_identity_resolution(
     conn: sqlite3.Connection, resolution: SourceIdentityResolution
 ) -> None:
     columns = (
-        "source_record_id", "schema_version", "source_identity_id", "canonical_title",
-        "title_evidence_locator", "publisher_id", "publisher_name",
-        "canonical_landing_page_url", "acquired_artifact_url", "source_page_url",
-        "publication_date", "publication_date_status",
-        "publication_date_evidence_locator", "discovered_at_utc", "retrieved_at_utc",
-        "acquisition_route", "content_hash", "resolution_method",
-        "identity_confidence", "identity_issues_json", "supersedes_source_identity_id",
-        "identity_status", "source_metadata_hash", "observation_count", "resolved_at_utc",
+        "source_record_id",
+        "schema_version",
+        "source_identity_id",
+        "canonical_title",
+        "title_evidence_locator",
+        "publisher_id",
+        "publisher_name",
+        "canonical_landing_page_url",
+        "acquired_artifact_url",
+        "source_page_url",
+        "publication_date",
+        "publication_date_status",
+        "publication_date_evidence_locator",
+        "discovered_at_utc",
+        "retrieved_at_utc",
+        "acquisition_route",
+        "content_hash",
+        "resolution_method",
+        "identity_confidence",
+        "identity_issues_json",
+        "supersedes_source_identity_id",
+        "identity_status",
+        "source_metadata_hash",
+        "observation_count",
+        "resolved_at_utc",
     )
     values = (
-        resolution.source_record_id, resolution.schema_version, resolution.source_identity_id,
-        resolution.canonical_title, resolution.title_evidence_locator, resolution.publisher_id,
-        resolution.publisher_name, resolution.canonical_landing_page_url,
-        resolution.acquired_artifact_url, resolution.source_page_url,
-        resolution.publication_date, resolution.publication_date_status,
-        resolution.publication_date_evidence_locator, resolution.discovered_at_utc,
-        resolution.retrieved_at_utc, resolution.acquisition_route, resolution.content_hash,
-        resolution.resolution_method, resolution.identity_confidence,
-        json.dumps(list(resolution.identity_issues), ensure_ascii=True, separators=(",", ":")),
-        resolution.supersedes_source_identity_id, resolution.identity_status,
-        resolution.source_metadata_hash, resolution.observation_count,
+        resolution.source_record_id,
+        resolution.schema_version,
+        resolution.source_identity_id,
+        resolution.canonical_title,
+        resolution.title_evidence_locator,
+        resolution.publisher_id,
+        resolution.publisher_name,
+        resolution.canonical_landing_page_url,
+        resolution.acquired_artifact_url,
+        resolution.source_page_url,
+        resolution.publication_date,
+        resolution.publication_date_status,
+        resolution.publication_date_evidence_locator,
+        resolution.discovered_at_utc,
+        resolution.retrieved_at_utc,
+        resolution.acquisition_route,
+        resolution.content_hash,
+        resolution.resolution_method,
+        resolution.identity_confidence,
+        json.dumps(
+            list(resolution.identity_issues), ensure_ascii=True, separators=(",", ":")
+        ),
+        resolution.supersedes_source_identity_id,
+        resolution.identity_status,
+        resolution.source_metadata_hash,
+        resolution.observation_count,
         "strftime('%Y-%m-%dT%H:%M:%fZ','now')",
     )
     placeholders = ", ".join("?" for _ in columns[:-1]) + ", " + values[-1]
     update_columns = [column for column in columns[1:] if column != "resolved_at_utc"]
-    update_clause = ", ".join(f"{column}=excluded.{column}" for column in update_columns)
+    update_clause = ", ".join(
+        f"{column}=excluded.{column}" for column in update_columns
+    )
     conn.execute(
         f"INSERT INTO source_identity_resolutions({', '.join(columns)}) "
         f"VALUES({placeholders}) ON CONFLICT(source_record_id) DO UPDATE SET {update_clause}, "
@@ -772,17 +813,30 @@ def record_source_identity_observation(
                      strftime('%Y-%m-%dT%H:%M:%fZ','now'))
             """,
             (
-                observation_id, observation.source_record_id, observation.schema_version,
-                observation.canonical_title, observation.title_evidence_locator,
-                observation.publisher_id, observation.publisher_name,
-                observation.canonical_landing_page_url, observation.acquired_artifact_url,
-                observation.source_page_url, observation.publication_date,
+                observation_id,
+                observation.source_record_id,
+                observation.schema_version,
+                observation.canonical_title,
+                observation.title_evidence_locator,
+                observation.publisher_id,
+                observation.publisher_name,
+                observation.canonical_landing_page_url,
+                observation.acquired_artifact_url,
+                observation.source_page_url,
+                observation.publication_date,
                 observation.publication_date_status,
-                observation.publication_date_evidence_locator, observation.discovered_at_utc,
-                observation.retrieved_at_utc, observation.acquisition_route,
-                observation.content_hash, observation.resolution_method,
+                observation.publication_date_evidence_locator,
+                observation.discovered_at_utc,
+                observation.retrieved_at_utc,
+                observation.acquisition_route,
+                observation.content_hash,
+                observation.resolution_method,
                 observation.identity_confidence,
-                json.dumps(list(observation.identity_issues), ensure_ascii=True, separators=(",", ":")),
+                json.dumps(
+                    list(observation.identity_issues),
+                    ensure_ascii=True,
+                    separators=(",", ":"),
+                ),
                 observation.supersedes_source_identity_id,
             ),
         )
@@ -1434,8 +1488,7 @@ def _row_to_metadata_response(row: tuple, ctx: RunContext) -> ReportMetadataGetR
         source_identity_id=str(row[19] or "").strip(),
         source_metadata_hash=str(row[20] or "").strip(),
         source_identity_status=str(row[21] or "unknown").strip() or "unknown",
-        source_publication_date_status=str(row[22] or "unknown").strip()
-        or "unknown",
+        source_publication_date_status=str(row[22] or "unknown").strip() or "unknown",
     )
 
 
@@ -1981,7 +2034,9 @@ def resolve_report_source_reuse(
         reason = "canonical_source_identity_missing"
     elif identity_status != "resolved":
         reason = "canonical_source_identity_unproven"
-    elif not md5 or len(md5) != 32 or any(char not in "0123456789abcdef" for char in md5):
+    elif (
+        not md5 or len(md5) != 32 or any(char not in "0123456789abcdef" for char in md5)
+    ):
         reason = "source_content_hash_unverifiable"
     else:
         with _metadata_conn(request.db_path, ctx) as conn:
@@ -2050,7 +2105,9 @@ def resolve_report_source_reuse(
         canonical_source_identity=identity,
         source_content_hash=content_hash,
     )
-    record_report_source_reuse_telemetry(_source_reuse_telemetry_request(request, response), ctx)
+    record_report_source_reuse_telemetry(
+        _source_reuse_telemetry_request(request, response), ctx
+    )
     logger.info(
         log_event(
             ctx,

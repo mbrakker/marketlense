@@ -115,7 +115,8 @@ class IngestFileDependencies:
         FileCacheMd5SidecarWriteResponse,
     ]
     existing_report_html: Callable[
-        [DriveFile, str, IngestSettings, RunContext], Optional[str | RetainedReportPackage]
+        [DriveFile, str, IngestSettings, RunContext],
+        Optional[str | RetainedReportPackage],
     ]
     run_step_with_retry: Callable[[str, RunContext, Callable[[], Any], int], Any]
     file_stat: Callable[[FileStatRequest, RunContext], Any]
@@ -332,6 +333,7 @@ def _maybe_skip_existing_report_html(
         file_ctx,
     )
     runtime.report_checked_md5 = runtime.md5
+    existing_html: str | None
     if isinstance(existing, RetainedReportPackage):
         runtime.retained_package = existing
         existing_html = existing.html_path
@@ -424,11 +426,11 @@ def _maybe_skip_existing_report_html(
                         "render_complete",
                     ),
                     acquisition_actions_avoided=1,
-                    browser_launches_avoided=1,
-                    pdf_parse_avoided=1,
-                    ocr_avoided=1,
-                    extraction_avoided=1,
-                    vector_work_avoided=1,
+                    browser_launches_avoided=0,
+                    pdf_parse_avoided=0,
+                    ocr_avoided=0,
+                    extraction_avoided=0,
+                    vector_work_avoided=0,
                 ),
             ),
             file_ctx,
@@ -1078,11 +1080,11 @@ def run_ingest_file(
                         ),
                         regenerated_stages=("render_complete",),
                         acquisition_actions_avoided=1,
-                        browser_launches_avoided=1,
-                        pdf_parse_avoided=1,
-                        ocr_avoided=1,
-                        extraction_avoided=1,
-                        vector_work_avoided=1,
+                        browser_launches_avoided=0,
+                        pdf_parse_avoided=0,
+                        ocr_avoided=0,
+                        extraction_avoided=0,
+                        vector_work_avoided=0,
                     ),
                 ),
                 file_ctx,
@@ -1111,9 +1113,12 @@ def run_ingest_file(
                         "model_calls_avoided_status": "unavailable",
                         "tokens_avoided_status": "unavailable",
                         "estimated_cost_avoided_status": "unavailable",
-                        "acquisition_avoided": True,
-                        "browser_avoided": True,
-                        "pdf_ocr_avoided": True,
+                        "acquisition_actions_avoided": 1,
+                        "browser_launches_avoided": 0,
+                        "pdf_parse_avoided": 0,
+                        "ocr_avoided": 0,
+                        "extraction_avoided": 0,
+                        "vector_work_avoided": 0,
                     },
                 )
             )
