@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable, Sequence
 from dataclasses import asdict
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TypedDict
 
 from src.contracts.artifact_generation import ArtifactRenderTask
 from src.contracts.config import AppSettings
@@ -64,6 +64,34 @@ ArtifactStepExecutor = Callable[
     [Sequence[ArtifactRenderTask], ArtifactTaskRenderer, RunContext, str],
     Dict[str, Dict[str, Any]],
 ]
+
+
+class PromptFamilyUsageTelemetry(TypedDict):
+    """Bounded model-usage accounting for one artifact prompt family."""
+
+    input_tokens: int
+    output_tokens: int
+    estimated_cost_usd: float
+    actual_model_calls: int
+    execution_time_ms: int
+    expected_input_tokens: int
+
+
+class PromptFamilyReuseTelemetry(TypedDict):
+    """Bounded reuse decision and usage telemetry persisted with artifacts."""
+
+    requested_families: list[str]
+    reused_families: list[str]
+    regenerated_families: list[str]
+    regeneration_reasons: dict[str, str]
+    model_calls_avoided: int
+    actual_model_calls: int
+    input_tokens: int
+    output_tokens: int
+    estimated_cost_usd: float
+    execution_time_ms: int
+    family_usage: dict[str, PromptFamilyUsageTelemetry]
+
 
 _ARTIFACT_FAMILY_ROOTS = {
     "report_vs/artifacts/summary": "summary",
@@ -158,7 +186,7 @@ def generate_artifacts(
 
     family_reuse: dict[str, dict[str, object]] = {}
     family_outputs: dict[str, object] = {}
-    family_reuse_telemetry: dict[str, object] = {
+    family_reuse_telemetry: PromptFamilyReuseTelemetry = {
         "requested_families": [],
         "reused_families": [],
         "regenerated_families": [],
@@ -251,7 +279,7 @@ def generate_artifacts(
         )
         model_provider = str(prepared.execution_policy.policy.provider or "")
         model_policy_namespace = namespace.split("/", 1)[0]
-        identity = {
+        identity: dict[str, object] = {
             "family_schema_version": "1.0",
             "processing_version": "report_generation_checkpoint_v2",
             "prompt_content_hash": prepared.prompt_content_hash,
