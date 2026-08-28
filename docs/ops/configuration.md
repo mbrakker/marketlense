@@ -15,9 +15,13 @@ Configuration resolves in this order:
 
 An empty overlay value does not suppress a supported environment fallback. For a
 no-WordPress-write validation preflight, explicitly set `WP_SITE_URL`,
-`WP_ADMIN_URL`, and `WP_USERNAME` to empty values in the invoking process; the
-publish command then fails locally during configuration validation before it
-can contact a WordPress target.
+`WP_ADMIN_URL`, and `WP_USERNAME` to empty values in the invoking process and
+set `publish.run_budget.enabled: true` with an explicit
+`max_wordpress_writes: 0`. That exact no-write configuration permits empty
+WordPress credentials, records each candidate as
+`wordpress_write_budget_zero`, and stops before target preflight,
+authentication, or a WordPress request. Other profiles still require a valid
+target and authentication at configuration load.
 
 `MARKET_LENSE_PRODUCER_COMMIT` is an optional, non-secret 40-character commit SHA. The canonical configuration service reads it when CLI or UI code creates a runtime context, so retained manifest and log provenance identify the producing build without giving utilities environment access.
 

@@ -27,7 +27,7 @@ from src.contracts.files import (
     ReadTextRequest,
     WriteBytesRequest,
 )
-from src.contracts.ingest import IngestOutcome, IngestSettings
+from src.contracts.ingest import IngestOutcome, IngestSettings, RetainedReportPackage
 from src.contracts.llm_usage import LLMUsageProjectionStatusRequest
 from src.contracts.pdf_text import PdfTextExtractRequest
 from src.contracts.pdf_utils import (
@@ -38,6 +38,7 @@ from src.contracts.report_cards import ReportCardManifest
 from src.contracts.report_store import (
     ReportMetadataGetRequest,
     ReportSourceIdentityGetRequest,
+    ReportSourceReuseResolveRequest,
     SourceIdentityObservationRecordRequest,
 )
 from src.contracts.run_budget import RunBudget
@@ -134,6 +135,7 @@ from src.services.report_store_service import (
     get_report_source_identity,
     record_source_identity_observation,
     record_validation_run_manifest_stage,
+    resolve_report_source_reuse,
     resolve_validation_run_manifest_attempt,
 )
 from src.services.report_store_service import (
@@ -451,7 +453,7 @@ def _existing_report_html(
     md5: str,
     settings: IngestSettings,
     ctx: RunContext,
-) -> Optional[str]:
+) -> Optional[str | RetainedReportPackage]:
     if not md5:
         return None
     try:
@@ -474,9 +476,52 @@ def _existing_report_html(
             )
         )
         return None
-    if not metadata or not metadata.md5 or metadata.md5 != md5:
-        return None
-    html_path = (metadata.html_path or "").strip()
+    html_path = (
+        (metadata.html_path or "")
+        if metadata and metadata.md5 and metadata.md5 == md5
+        else ""
+    ).strip()
+    matched_report_id = file.file_id
+    reuse_reason = "same_file_md5_match"
+    if not html_path:
+        try:
+            identity = get_report_source_identity(
+                ReportSourceIdentityGetRequest(
+                    schema_version="1.0",
+                    db_path=settings.reports_db,
+                    report_title=file.name or file.file_id,
+                    md5=md5,
+                ),
+                ctx,
+            ).resolution
+            reuse = resolve_report_source_reuse(
+                ReportSourceReuseResolveRequest(
+                    schema_version="1.0",
+                    db_path=settings.reports_db,
+                    incoming_file_id=file.file_id,
+                    incoming_source_reference=f"drive:{file.file_id}",
+                    canonical_source_identity=identity.source_identity_id,
+                    canonical_source_identity_status=identity.identity_status,
+                    source_content_hash=identity.content_hash,
+                ),
+                ctx,
+            )
+        except AppError as exc:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="orchestrator",
+                    event="report_source_reuse_lookup_failed",
+                    module=logger.name,
+                    fields={"file_id": file.file_id, "error_code": exc.code},
+                )
+            )
+            return None
+        if reuse.decision != "reuse":
+            return None
+        html_path = reuse.html_path
+        matched_report_id = reuse.report_id
+        reuse_reason = reuse.reason
     if not html_path:
         return None
     html_stat = file_stat(FileStatRequest(schema_version="1.0", path=html_path), ctx)
@@ -497,9 +542,25 @@ def _existing_report_html(
             role="orchestrator",
             event="report_html_cache_hit",
             module=logger.name,
-            fields={"file_id": file.file_id, "md5": md5, "html_path": html_path},
+            fields={
+                "file_id": file.file_id,
+                "md5": md5,
+                "html_path": html_path,
+                "matched_report_id": matched_report_id,
+                "source_reuse_reason": reuse_reason,
+            },
         )
     )
+    if matched_report_id != file.file_id:
+        return RetainedReportPackage(
+            schema_version="1.0",
+            report_id=matched_report_id,
+            html_path=html_path,
+            canonical_source_identity=identity.source_identity_id,
+            source_content_hash=identity.content_hash,
+            source_metadata_hash=reuse.source_metadata_hash,
+            reason=reuse_reason,
+        )
     return html_path
 
 
@@ -573,6 +634,17 @@ def _process_file(
                     kwargs.get("auto_resume_from_latest_safe", False)
                 ),
             )
+        pipeline_kwargs = {
+            name: kwargs[name]
+            for name in (
+                "execution_plan_mode",
+                "recovery_execution_intent",
+                "recovery_invalidations",
+                "readiness_refresh_plan",
+                "refresh_telemetry_path",
+            )
+            if name in kwargs
+        }
         return run_report_pipeline_orchestrator(
             current_file,
             local_pdf_path,
@@ -582,6 +654,7 @@ def _process_file(
             retries=2,
             resume_from_stage=resume_from_stage,
             auto_resume_from_latest_safe=auto_resume,
+            **pipeline_kwargs,
         )
 
     dependencies = IngestFileDependencies(

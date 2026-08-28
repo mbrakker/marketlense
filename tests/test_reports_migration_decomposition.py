@@ -35,6 +35,7 @@ SCHEMA = {
     "_SOURCE_PUBLICATION_METADATA_TABLE_SQL",
     "_CORPUS_REHABILITATION_CAMPAIGNS_TABLE_SQL",
     "_CORPUS_REHABILITATION_CAMPAIGN_ITEMS_TABLE_SQL",
+    "_REPORT_SOURCE_REUSE_TELEMETRY_TABLE_SQL",
 }
 
 CORE = {
@@ -67,6 +68,8 @@ PROJECTIONS = {
     "_reports_db_020_expand_execution_plan_audit",
     "_reports_db_022_add_execution_plan_prompt_family_reconciliation",
     "_reports_db_023_create_corpus_rehabilitation_campaigns",
+    "_reports_db_027_create_source_reuse_telemetry",
+    "_reports_db_028_add_source_reuse_attribution_statuses",
 }
 
 

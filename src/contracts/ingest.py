@@ -7,6 +7,33 @@ from src.contracts.docpacks import DocPackPathMap
 
 
 @dataclass(frozen=True)
+class RetainedReportPackage:
+    """A canonical completed package reused by a different source reference."""
+
+    schema_version: str = field(
+        metadata={"doc": "Canonical source-reuse package schema version."}
+    )
+    report_id: str = field(
+        metadata={"doc": "Canonical report identifier that owns retained checkpoints."}
+    )
+    html_path: str = field(
+        metadata={"doc": "Rendered package path selected by exact source identity."}
+    )
+    canonical_source_identity: str = field(
+        metadata={"doc": "Exact resolved canonical source identity used for the match."}
+    )
+    source_content_hash: str = field(
+        metadata={"doc": "Exact source-content hash used for the match."}
+    )
+    source_metadata_hash: str = field(
+        default="", metadata={"doc": "Retained source metadata compatibility hash."}
+    )
+    reason: str = field(
+        default="", metadata={"doc": "Bounded deterministic reuse decision reason."}
+    )
+
+
+@dataclass(frozen=True)
 class IngestSettings:
     schema_version: str = field(metadata={"doc": "Settings schema version."})
     google_sa_path: str = field(

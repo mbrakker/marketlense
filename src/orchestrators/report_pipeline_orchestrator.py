@@ -41,6 +41,10 @@ from src.contracts.remediation import (
     RemediationCheckpointReference,
 )
 from src.contracts.report_generation import ReportGenerationClientBundle
+from src.contracts.report_store import (
+    ReportSourceIdentityGetRequest,
+    ReportSourceReuseResolveRequest,
+)
 from src.contracts.run_budget import (
     BudgetOverrideContext,
     BudgetRequest,
@@ -82,8 +86,10 @@ from src.services.llm_usage_ledger_service import (
 from src.services.report_store_service import (
     build_current_report_execution_compatibility,
     build_minimal_execution_plan,
+    get_report_source_identity,
     record_minimal_execution_plan,
     record_minimal_execution_plan_result,
+    resolve_report_source_reuse,
 )
 from src.utils.cache_utils import sha256_json
 from src.utils.coercion import coerce_int
@@ -620,6 +626,7 @@ def run_report_pipeline(
     budget_override: BudgetOverrideContext | None = None,
     readiness_refresh_plan: PublishReadinessRefreshPlan | None = None,
     refresh_telemetry_path: str = "",
+    _canonical_source_reuse_owner_id: str = "",
 ) -> IngestOutcome:
     if (
         readiness_refresh_plan is not None
@@ -660,6 +667,96 @@ def run_report_pipeline(
             severity="error",
             context={"file_id": file.file_id},
         )
+    if not _canonical_source_reuse_owner_id and md5:
+        try:
+            identity = get_report_source_identity(
+                ReportSourceIdentityGetRequest(
+                    schema_version="1.0",
+                    db_path=settings.reports_db,
+                    report_title=file.name or file.file_id,
+                    md5=md5,
+                ),
+                ctx,
+            ).resolution
+            reuse = resolve_report_source_reuse(
+                ReportSourceReuseResolveRequest(
+                    schema_version="1.0",
+                    db_path=settings.reports_db,
+                    incoming_file_id=file.file_id,
+                    incoming_source_reference=f"report_pipeline:{file.file_id}",
+                    canonical_source_identity=identity.source_identity_id,
+                    canonical_source_identity_status=identity.identity_status,
+                    source_content_hash=identity.content_hash,
+                ),
+                ctx,
+            )
+        except AppError as exc:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="orchestrator",
+                    event="canonical_source_reuse_lookup_failed",
+                    module=logger.name,
+                    fields={"file_id": file.file_id, "error_code": exc.code},
+                )
+            )
+        else:
+            if reuse.decision == "reuse" and reuse.report_id != file.file_id:
+                reused_outcome = run_report_pipeline(
+                    replace(file, file_id=reuse.report_id),
+                    local_pdf_path,
+                    settings,
+                    md5,
+                    ctx,
+                    retries=retries,
+                    generate_report_fn=generate_report_fn,
+                    openai_client_override=openai_client_override,
+                    resume_from_stage="latest_safe",
+                    preflight_fn=preflight_fn,
+                    workflow_control_settings=workflow_control_settings,
+                    auto_resume_from_latest_safe=auto_resume_from_latest_safe,
+                    lineage_change_kind=lineage_change_kind,
+                    lineage_available=lineage_available,
+                    execution_plan_mode=execution_plan_mode,
+                    recovery_invalidations=recovery_invalidations,
+                    recovery_execution_intent=recovery_execution_intent,
+                    requested_output_families=requested_output_families,
+                    stop_after_stage=stop_after_stage,
+                    projection_only=projection_only,
+                    budget_override=budget_override,
+                    readiness_refresh_plan=readiness_refresh_plan,
+                    refresh_telemetry_path=refresh_telemetry_path,
+                    _canonical_source_reuse_owner_id=reuse.report_id,
+                )
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="orchestrator",
+                        event="canonical_source_package_reused",
+                        module=logger.name,
+                        fields={
+                            "incoming_file_id": file.file_id,
+                            "canonical_source_identity": reuse.canonical_source_identity,
+                            "matched_report_id": reuse.report_id,
+                            "highest_reused_checkpoint": reuse.highest_reusable_checkpoint,
+                            "reused_stages": ["source_prepared", "selection_complete"],
+                            "regenerated_stages": [],
+                            "decision_reason": reuse.reason,
+                            "model_calls_avoided": 0,
+                            "tokens_avoided": 0,
+                            "estimated_cost_avoided_usd": 0.0,
+                            "acquisition_avoided": False,
+                            "browser_avoided": False,
+                            "pdf_ocr_avoided": False,
+                        },
+                    )
+                )
+                return replace(
+                    reused_outcome,
+                    file_id=file.file_id,
+                    name=file.name or file.file_id,
+                    md5=md5,
+                )
     report_fn = generate_report_fn or generate_report_orchestrator
     preflight_report = (
         preflight_fn(settings, ctx)

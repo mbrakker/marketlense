@@ -1387,22 +1387,6 @@ def run_publish(
     published = 0
     previous_write_started_at: float | None = None
     base_url = settings.wp.site_url.rstrip("/")
-    auth_header = build_auth_header(
-        username=settings.wp.username,
-        app_password=settings.wp.app_password,
-        bearer_token=settings.wp.bearer_token,
-    )
-    logger.info(
-        log_event(
-            root_ctx,
-            role="orchestrator",
-            event="publish_auth_source",
-            module=logger.name,
-            fields={
-                "source": "bearer_token" if settings.wp.bearer_token else "app_password"
-            },
-        )
-    )
     html_file_id_map: dict[str, str] = {}
     metadata_by_file_id: dict[str, ReportMetadataGetResponse] = {}
     mapping_ctx = child_context(root_ctx, task_id="publish_preflight_metadata")
@@ -1529,6 +1513,34 @@ def run_publish(
         ]
     if auto_discovery and limit is not None:
         candidates = candidates[:limit]
+    if (
+        settings.run_budget_enabled
+        and settings.run_budget_max_wordpress_writes == 0
+    ):
+        outcomes.extend(
+            PublishOutcome(
+                schema_version="1.0",
+                html_path=candidate.html_path,
+                file_id=str(candidate.file_id or "") or None,
+                status="skipped",
+                error="wordpress_write_budget_zero",
+                publication_outcome="preflight_blocked",
+                transaction_outcomes=["preflight_blocked"],
+                requested_write_count=0,
+                actual_write_count=0,
+            )
+            for candidate in candidates
+        )
+        logger.info(
+            log_event(
+                root_ctx,
+                role="orchestrator",
+                event="publish_no_write_budget_blocked",
+                module=logger.name,
+                fields={"candidate_count": len(candidates)},
+            )
+        )
+        return outcomes
     blocked_post_types: dict[str, str] = {}
     for post_type in sorted(
         {
@@ -1711,6 +1723,26 @@ def run_publish(
             ):
                 idempotent_term_skip_file_ids.add(file_id)
 
+    auth_header = ""
+    if candidates:
+        auth_header = build_auth_header(
+            username=settings.wp.username,
+            app_password=settings.wp.app_password,
+            bearer_token=settings.wp.bearer_token,
+        )
+        logger.info(
+            log_event(
+                root_ctx,
+                role="orchestrator",
+                event="publish_auth_source",
+                module=logger.name,
+                fields={
+                    "source": (
+                        "bearer_token" if settings.wp.bearer_token else "app_password"
+                    )
+                },
+            )
+        )
     preflight_entries = _build_publish_preflight_entries(
         settings=settings,
         candidates=candidates,

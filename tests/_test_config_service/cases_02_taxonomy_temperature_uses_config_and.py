@@ -195,6 +195,39 @@ class TestConfigService02TaxonomyTemperatureUsesConfig(_TestConfigServiceBase):
 
         self.assertEqual(0, settings.run_budget_max_wordpress_writes)
 
+    def test_publish_settings_allow_credential_free_explicit_no_write_profile(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = self._write_config(tmp_dir, include_publish=True)
+            cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
+            cfg_data["publish"]["wp"] = {"site_url": "", "username": ""}
+            cfg_data["publish"]["run_budget"] = {
+                "enabled": True,
+                "max_wordpress_writes": 0,
+                "limit_decision": "stop",
+            }
+            Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
+            with patch.dict(
+                os.environ,
+                {
+                    "WP_SITE_URL": "",
+                    "WP_ADMIN_URL": "",
+                    "WP_USERNAME": "",
+                    "WP_APP_PASSWORD": "",
+                    "WP_BEARER_TOKEN": "",
+                },
+                clear=True,
+            ):
+                settings = load_publish_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                    RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+                )
+
+        self.assertEqual(0, settings.run_budget_max_wordpress_writes)
+        self.assertEqual("", settings.wp.site_url)
+        self.assertEqual("", settings.wp.username)
+        self.assertIsNone(settings.wp.app_password)
+        self.assertIsNone(settings.wp.bearer_token)
+
     def test_publish_settings_missing_site_url_raises(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             cfg_path = self._write_config(tmp_dir, include_publish=True)

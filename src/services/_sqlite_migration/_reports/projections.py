@@ -23,6 +23,7 @@ from src.services._sqlite_migration._reports.schema import (
     _REPORT_TAGS_TABLE_SQL,
     _REPORTS_CORE_TABLE_SQL,
     _REPORTS_REQUIRED_COLUMNS,
+    _REPORT_SOURCE_REUSE_TELEMETRY_TABLE_SQL,
     _SIGNAL_CANDIDATE_GROUPS_TABLE_SQL,
     _SIGNAL_CANDIDATES_TABLE_SQL,
     _SOURCE_IDENTITY_OBSERVATIONS_TABLE_SQL,
@@ -344,6 +345,38 @@ def _reports_db_022_add_execution_plan_prompt_family_reconciliation(
             table_name="artifact_execution_plan_runs",
             column_name=column_name,
             column_type=column_type,
+        )
+
+
+def _reports_db_027_create_source_reuse_telemetry(
+    conn: sqlite3.Connection,
+) -> None:
+    """Retain bounded canonical-source reuse decisions for audit and measurement."""
+    conn.execute(_REPORT_SOURCE_REUSE_TELEMETRY_TABLE_SQL)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_report_source_reuse_telemetry_identity "
+        "ON report_source_reuse_telemetry(canonical_source_identity, created_at_utc)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_report_source_reuse_telemetry_match "
+        "ON report_source_reuse_telemetry(matched_report_id, created_at_utc)"
+    )
+
+
+def _reports_db_028_add_source_reuse_attribution_statuses(
+    conn: sqlite3.Connection,
+) -> None:
+    """Make unavailable model/token/cost attribution explicit on existing rows."""
+    for column_name in (
+        "model_calls_avoided_status",
+        "tokens_avoided_status",
+        "estimated_cost_avoided_status",
+    ):
+        _add_column_if_missing(
+            conn,
+            table_name="report_source_reuse_telemetry",
+            column_name=column_name,
+            column_type="TEXT NOT NULL DEFAULT 'unavailable'",
         )
 
 

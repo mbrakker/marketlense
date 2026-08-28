@@ -24,6 +24,8 @@ from src.services._sqlite_migration._reports.projections import (
     _reports_db_020_expand_execution_plan_audit,
     _reports_db_022_add_execution_plan_prompt_family_reconciliation,
     _reports_db_023_create_corpus_rehabilitation_campaigns,
+    _reports_db_027_create_source_reuse_telemetry,
+    _reports_db_028_add_source_reuse_attribution_statuses,
 )
 from src.services._sqlite_migration._reports.routing import (
     _reports_db_006_create_or_upgrade_download_route_history,
@@ -62,6 +64,7 @@ from src.services._sqlite_migration._reports.schema import (
     _REPORT_TAGS_TABLE_SQL,
     _REPORTS_CORE_TABLE_SQL,
     _REPORTS_REQUIRED_COLUMNS,
+    _REPORT_SOURCE_REUSE_TELEMETRY_TABLE_SQL,
     _SIGNAL_CANDIDATE_GROUPS_TABLE_SQL,
     _SIGNAL_CANDIDATES_TABLE_SQL,
     _SOURCE_IDENTITY_OBSERVATIONS_TABLE_SQL,
@@ -202,5 +205,15 @@ _REPORTS_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
         migration_id="reports_db_026_create_validation_run_cohort_members",
         version=26,
         apply_fn=_reports_db_026_create_validation_run_cohort_members,
+    ),
+    _MigrationSpec(
+        migration_id="reports_db_027_create_source_reuse_telemetry",
+        version=27,
+        apply_fn=_reports_db_027_create_source_reuse_telemetry,
+    ),
+    _MigrationSpec(
+        migration_id="reports_db_028_add_source_reuse_attribution_statuses",
+        version=28,
+        apply_fn=_reports_db_028_add_source_reuse_attribution_statuses,
     ),
 )

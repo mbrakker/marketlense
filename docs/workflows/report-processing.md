@@ -118,6 +118,23 @@ An accepted email request has no artifact to hash, so its telemetry status is
 is never treated as a resolved or cohort-eligible report merely because the
 form submission succeeded.
 
+Before a Drive duplicate is acquired, ingest resolves the existing canonical
+source identity from the Drive MD5 and checks the canonical report store for a
+completed package with the same resolved identity and exact `md5:` content
+hash. It never uses the title, publisher, filename, URL, Drive ID, email path,
+or local path as a reuse key. A compatible ready package is returned as a
+normal skip without a second download, PDF/OCR/extraction/vector/model pass or
+independent report package. A stale rendered package resumes the matched
+canonical owner from `analysis_complete`, so the existing minimum-regeneration
+planner and E9 prompt-family materialisation logic decide the smallest safe
+repair. The direct report-pipeline boundary makes the same owner substitution
+for other acquisition routes after they have supplied a verified MD5; this
+keeps route-specific acquisition separate while preventing duplicate research.
+Missing, legacy, conflicting, ambiguous, or non-MD5-verifiable identities
+remain on normal processing. The source-reuse events retain only an opaque
+incoming reference hash, the canonical identity, matched package owner,
+checkpoint, decision reason, and bounded avoided-work counters.
+
 When a selected browser-route playbook contains validated private-API evidence,
 acquisition attempts its deterministic HTTP route before browser preflight,
 browser launch, or Browser Use. Endpoint schema, method, repeated-success
@@ -389,6 +406,18 @@ The retained-corpus E9 measurement is recorded in
 It distinguishes valid-family reuse from required quality repair; a retained
 output that does not pass the unchanged gates is not presented as a compatible
 zero-call replay.
+
+When a second acquisition route resolves to the same verified canonical source
+identity and exact content hash, the report-store source-reuse boundary selects
+one compatible retained package before duplicate Drive acquisition or at the
+generic pipeline entrypoint after verified acquisition. A ready package stops
+the duplicate before PDF/OCR/extraction/vector/research work. A stale package
+retains the compatible upstream owner and uses the existing minimum
+regeneration planner; E9 remains responsible for independently compatible
+prompt families below that checkpoint. The reports database records a bounded
+decision row using only a hash of the incoming route reference; unknown
+model/token/cost attribution remains unavailable rather than being inferred as
+zero. See [source identity operations](../ops/source-publication-metadata.md).
 
 Each non-prunable, reference-bearing artifact response (candidate insights,
 final insights, and quotes) is also checked against the canonical document map

@@ -57,7 +57,7 @@ All work is listed below in one register. `Active` items have detailed completio
 | Active | E11 | Measure and optimize structured-output recovery effectiveness | Turn central recovery-attempt telemetry into bounded quality and cost improvements. |
 | Active | E14 | Calibrate category-fit coverage from retained outcomes | Turn category-fit decisions into grounded mapping and recovery improvements. |
 | Active | E13 | Measure candidate-regeneration promotion effectiveness | Turn retained candidate lineage and promotion outcomes into bounded repair-quality improvements. |
-| Active | E8 | Use canonical source identity to suppress duplicate research work | Canonical source identity reuse outcome. |
+| Closed | E8 | Use canonical source identity to suppress duplicate research work | Exact canonical-identity/content-hash package reuse, bounded decision telemetry, focused route/regeneration regression tests, and [retained-corpus evidence](docs/quality/e8-source-reuse-evidence-2026-08-28.md) prove duplicate acquisition/research suppression with zero duplicate packages for supported equivalent-source cases. |
 | Closed | E9 | Materialize prompt-family outputs and route only their required model calls | All primary report model families now perform fail-closed pre-call provenance reuse; retained-corpus measurement shows material avoided calls with unchanged gates. |
 | Closed | E3 | Lineage-driven minimum regeneration | Remains closed; E7 owns expansion beyond the proven rendered-HTML family. |
 | Active | E12 | Persist pre-category editorial context checkpoints | Extend typed recovery from source/vector reuse to genuinely single-family taxonomy and category-fit retries. |

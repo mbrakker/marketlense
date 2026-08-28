@@ -660,6 +660,38 @@ CREATE TABLE IF NOT EXISTS source_identity_resolutions (
 );
 """
 
+_REPORT_SOURCE_REUSE_TELEMETRY_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS report_source_reuse_telemetry (
+  decision_id TEXT PRIMARY KEY,
+  schema_version TEXT NOT NULL,
+  incoming_file_id TEXT NOT NULL,
+  incoming_source_reference_hash TEXT NOT NULL,
+  canonical_source_identity TEXT NOT NULL DEFAULT '',
+  source_content_hash TEXT NOT NULL DEFAULT '',
+  matched_report_id TEXT NOT NULL DEFAULT '',
+  matched_source_metadata_hash TEXT NOT NULL DEFAULT '',
+  decision TEXT NOT NULL,
+  decision_reason TEXT NOT NULL,
+  highest_reused_checkpoint TEXT NOT NULL DEFAULT '',
+  reused_stages_json TEXT NOT NULL DEFAULT '[]',
+  regenerated_stages_json TEXT NOT NULL DEFAULT '[]',
+  acquisition_actions_avoided INTEGER NOT NULL DEFAULT 0,
+  browser_launches_avoided INTEGER NOT NULL DEFAULT 0,
+  pdf_parse_avoided INTEGER NOT NULL DEFAULT 0,
+  ocr_avoided INTEGER NOT NULL DEFAULT 0,
+  extraction_avoided INTEGER NOT NULL DEFAULT 0,
+  vector_work_avoided INTEGER NOT NULL DEFAULT 0,
+  model_calls_avoided_status TEXT NOT NULL DEFAULT 'unavailable',
+  model_calls_avoided INTEGER NOT NULL DEFAULT 0,
+  tokens_avoided_status TEXT NOT NULL DEFAULT 'unavailable',
+  input_tokens_avoided INTEGER NOT NULL DEFAULT 0,
+  output_tokens_avoided INTEGER NOT NULL DEFAULT 0,
+  estimated_cost_avoided_status TEXT NOT NULL DEFAULT 'unavailable',
+  estimated_cost_avoided_usd REAL NOT NULL DEFAULT 0,
+  created_at_utc TEXT NOT NULL
+);
+"""
+
 _SIGNAL_CANDIDATES_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS signal_candidates (
   candidate_id TEXT PRIMARY KEY,

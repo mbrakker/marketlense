@@ -48,6 +48,7 @@ from ._sqlite_migration.reports import (
     _REPORTS_CORE_TABLE_SQL,
     _REPORTS_DB_MIGRATIONS,
     _REPORTS_REQUIRED_COLUMNS,
+    _REPORT_SOURCE_REUSE_TELEMETRY_TABLE_SQL,
     _SIGNAL_CANDIDATE_GROUPS_TABLE_SQL,
     _SIGNAL_CANDIDATES_TABLE_SQL,
     _SOURCE_PUBLICATION_METADATA_TABLE_SQL,
@@ -75,6 +76,8 @@ from ._sqlite_migration.reports import (
     _reports_db_021_create_acquisition_resource_telemetry,
     _reports_db_022_add_execution_plan_prompt_family_reconciliation,
     _reports_db_023_create_corpus_rehabilitation_campaigns,
+    _reports_db_027_create_source_reuse_telemetry,
+    _reports_db_028_add_source_reuse_attribution_statuses,
 )
 from ._sqlite_migration.state import (
     _STATE_ARTIFACT_ACQUISITION_CACHE_TABLE_SQL,

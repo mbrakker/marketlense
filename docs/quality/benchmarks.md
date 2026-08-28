@@ -47,6 +47,26 @@ suite and every measured gate passed. Its estimated provider cost is zero
 because CI makes no live provider call; that is not evidence of live-pipeline
 cost.
 
+## Canonical source-reuse benchmark
+
+`scripts/quality/benchmark_source_reuse.py` compares a retained fresh run's
+completed-provider ledger usage with a repeated canonical-source reuse
+resolution against an SQLite backup. It verifies that the retained owner and
+its rendered output digest are selected on every replay, and records only
+bounded scalar counts, cost, and timings. The candidate never calls an
+acquisition service, browser, PDF/OCR/extraction/vector service, model, or
+publisher; the temporary database is deleted after the run.
+
+The baseline elapsed measurement is explicitly a completed-provider-call span.
+The candidate elapsed measurement is the pre-acquisition reuse-resolution
+median. They demonstrate the expensive-work suppression boundary, rather than
+claiming a complete fresh-workflow wall-time comparison. Missing timestamps or
+usage stay unavailable and fail the benchmark rather than being inferred.
+
+```powershell
+python scripts/quality/benchmark_source_reuse.py --reports-db state/reports.sqlite --usage-db state/llm_usage.sqlite --owner-report-id <owner-file-id> --baseline-run-id <fresh-run-id> --output-json out/source-reuse-benchmark.json
+```
+
 ## Claim embedding A/B benchmark
 
 `scripts/quality/claim_embedding_ab_benchmark.py` performs a bounded live

@@ -10,6 +10,7 @@ from src.orchestrators._publish_orchestrator.budget import (
     read_publish_budget_usage,
     record_publish_budget_write,
 )
+from src.orchestrators.publish_orchestrator import run_publish
 from src.utils.errors import AppError
 
 
@@ -93,3 +94,33 @@ def test_publish_budget_blocks_release_when_configured_projection_evidence_is_mi
 
     assert exc_info.value.code == "publish_budget_projection_not_release_ready"
     assert exc_info.value.retryable is False
+
+
+def test_explicit_no_write_publish_with_no_candidates_does_not_require_auth(tmp_path) -> None:
+    settings = PublishSettings(
+        schema_version="1.0",
+        output_dir=str(tmp_path / "out"),
+        state_db=str(tmp_path / "state.sqlite"),
+        reports_db=str(tmp_path / "reports.sqlite"),
+        category_mapping_path=str(tmp_path / "categories.yaml"),
+        wp=WordPressAuthSettings(
+            schema_version="1.0",
+            site_url="",
+            username="",
+            app_password=None,
+            bearer_token=None,
+            post_status="publish",
+        ),
+        run_budget_enabled=True,
+        run_budget_max_wordpress_writes=0,
+    )
+
+    html_path = tmp_path / "candidate.html"
+    html_path.write_text("<html><body>Candidate</body></html>", encoding="utf-8")
+
+    outcomes = run_publish(settings, html_paths=[str(html_path)], ctx=_ctx())
+
+    assert len(outcomes) == 1
+    assert outcomes[0].status == "skipped"
+    assert outcomes[0].error == "wordpress_write_budget_zero"
+    assert outcomes[0].actual_write_count == 0

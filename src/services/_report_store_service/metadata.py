@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from dataclasses import asdict, replace
+from datetime import datetime, timezone
 from typing import List, Optional
 from urllib.parse import urlsplit
 
@@ -13,6 +14,10 @@ from src.contracts.report_store import (
     ReportMetadataGetResponse,
     ReportMetadataListRequest,
     ReportMetadataListResponse,
+    ReportSourceReuseResolveRequest,
+    ReportSourceReuseResolveResponse,
+    ReportSourceReuseTelemetryRecord,
+    ReportSourceReuseTelemetryRecordRequest,
     ReportMetadataUpsertRequest,
     ReportPublicationMetadataGetRequest,
     ReportPublicationMetadataGetResponse,
@@ -1855,3 +1860,212 @@ def list_metadata(
         )
     )
     return ReportMetadataListResponse(schema_version="1.1", records=rows)
+
+
+def record_report_source_reuse_telemetry(
+    request: ReportSourceReuseTelemetryRecordRequest,
+    ctx: RunContext,
+) -> None:
+    """Persist one bounded, idempotent decision without retaining route references."""
+    record = request.record
+    reference_hash = sha256_json(str(record.incoming_source_reference or ""))
+    decision_id = sha256_json(
+        {
+            "incoming_file_id": str(record.incoming_file_id or ""),
+            "incoming_source_reference_hash": reference_hash,
+            "canonical_source_identity": record.canonical_source_identity,
+            "source_content_hash": record.source_content_hash,
+            "matched_report_id": record.matched_report_id,
+            "decision": record.decision,
+        }
+    )
+    with _metadata_conn(request.db_path, ctx) as conn:
+        conn.execute(
+            """
+            INSERT INTO report_source_reuse_telemetry(
+              decision_id, schema_version, incoming_file_id,
+              incoming_source_reference_hash, canonical_source_identity,
+              source_content_hash, matched_report_id,
+              matched_source_metadata_hash, decision, decision_reason,
+              highest_reused_checkpoint, reused_stages_json,
+              regenerated_stages_json, acquisition_actions_avoided,
+              browser_launches_avoided, pdf_parse_avoided, ocr_avoided,
+              extraction_avoided, vector_work_avoided, model_calls_avoided_status,
+              model_calls_avoided, tokens_avoided_status, input_tokens_avoided,
+              output_tokens_avoided, estimated_cost_avoided_status,
+              estimated_cost_avoided_usd, created_at_utc
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(decision_id) DO UPDATE SET
+              decision_reason=excluded.decision_reason,
+              highest_reused_checkpoint=excluded.highest_reused_checkpoint,
+              reused_stages_json=excluded.reused_stages_json,
+              regenerated_stages_json=excluded.regenerated_stages_json,
+              acquisition_actions_avoided=excluded.acquisition_actions_avoided,
+              browser_launches_avoided=excluded.browser_launches_avoided,
+              pdf_parse_avoided=excluded.pdf_parse_avoided,
+              ocr_avoided=excluded.ocr_avoided,
+              extraction_avoided=excluded.extraction_avoided,
+              vector_work_avoided=excluded.vector_work_avoided,
+              model_calls_avoided_status=excluded.model_calls_avoided_status,
+              model_calls_avoided=excluded.model_calls_avoided,
+              tokens_avoided_status=excluded.tokens_avoided_status,
+              input_tokens_avoided=excluded.input_tokens_avoided,
+              output_tokens_avoided=excluded.output_tokens_avoided,
+              estimated_cost_avoided_status=excluded.estimated_cost_avoided_status,
+              estimated_cost_avoided_usd=excluded.estimated_cost_avoided_usd
+            """,
+            (
+                decision_id,
+                record.schema_version,
+                str(record.incoming_file_id or ""),
+                reference_hash,
+                record.canonical_source_identity,
+                record.source_content_hash,
+                record.matched_report_id,
+                record.matched_source_metadata_hash,
+                record.decision,
+                record.decision_reason,
+                record.highest_reused_checkpoint,
+                json.dumps(record.reused_stages, separators=(",", ":")),
+                json.dumps(record.regenerated_stages, separators=(",", ":")),
+                record.acquisition_actions_avoided,
+                record.browser_launches_avoided,
+                record.pdf_parse_avoided,
+                record.ocr_avoided,
+                record.extraction_avoided,
+                record.vector_work_avoided,
+                record.model_calls_avoided_status,
+                record.model_calls_avoided,
+                record.tokens_avoided_status,
+                record.input_tokens_avoided,
+                record.output_tokens_avoided,
+                record.estimated_cost_avoided_status,
+                record.estimated_cost_avoided_usd,
+                datetime.now(timezone.utc).isoformat(),
+            ),
+        )
+
+
+def _source_reuse_telemetry_request(
+    request: ReportSourceReuseResolveRequest,
+    response: ReportSourceReuseResolveResponse,
+) -> ReportSourceReuseTelemetryRecordRequest:
+    return ReportSourceReuseTelemetryRecordRequest(
+        schema_version="1.0",
+        db_path=request.db_path,
+        record=ReportSourceReuseTelemetryRecord(
+            schema_version="1.0",
+            incoming_file_id=request.incoming_file_id,
+            incoming_source_reference=request.incoming_source_reference,
+            canonical_source_identity=response.canonical_source_identity,
+            source_content_hash=response.source_content_hash,
+            matched_report_id=response.report_id,
+            matched_source_metadata_hash=response.source_metadata_hash,
+            decision=response.decision,
+            decision_reason=response.reason,
+            highest_reused_checkpoint=response.highest_reusable_checkpoint,
+        ),
+    )
+
+
+def resolve_report_source_reuse(
+    request: ReportSourceReuseResolveRequest, ctx: RunContext
+) -> ReportSourceReuseResolveResponse:
+    """Return a retained package only when canonical identity and bytes match."""
+
+    identity = str(request.canonical_source_identity or "").strip()
+    identity_status = str(request.canonical_source_identity_status or "unknown").strip()
+    content_hash = str(request.source_content_hash or "").strip().lower()
+    md5 = content_hash.removeprefix("md5:") if content_hash.startswith("md5:") else ""
+    if not identity:
+        reason = "canonical_source_identity_missing"
+    elif identity_status != "resolved":
+        reason = "canonical_source_identity_unproven"
+    elif not md5 or len(md5) != 32 or any(char not in "0123456789abcdef" for char in md5):
+        reason = "source_content_hash_unverifiable"
+    else:
+        with _metadata_conn(request.db_path, ctx) as conn:
+            rows = conn.execute(
+                """
+                SELECT file_id, html_path, md5, source_metadata_hash,
+                       source_identity_status, updated_at
+                FROM reports
+                WHERE source_identity_id=?
+                ORDER BY updated_at DESC, file_id ASC
+                """,
+                (identity,),
+            ).fetchall()
+        candidates = [
+            row
+            for row in rows
+            if str(row[2] or "").strip().lower() == md5
+            and str(row[4] or "").strip() == "resolved"
+            and str(row[1] or "").strip()
+        ]
+        if candidates:
+            row = candidates[0]
+            response = ReportSourceReuseResolveResponse(
+                schema_version="1.0",
+                decision="reuse",
+                reason="canonical_identity_and_content_hash_match",
+                canonical_source_identity=identity,
+                source_content_hash=content_hash,
+                report_id=str(row[0] or "").strip(),
+                html_path=str(row[1] or "").strip(),
+                highest_reusable_checkpoint="render_complete",
+                source_metadata_hash=str(row[3] or "").strip(),
+            )
+            record_report_source_reuse_telemetry(
+                _source_reuse_telemetry_request(request, response), ctx
+            )
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="report_source_reuse_resolved",
+                    module=logger.name,
+                    fields={
+                        "incoming_file_id": request.incoming_file_id,
+                        "incoming_source_reference_hash": sha256_json(
+                            str(request.incoming_source_reference or "")
+                        ),
+                        "canonical_source_identity": identity,
+                        "matched_report_id": response.report_id,
+                        "decision": response.decision,
+                        "reason": response.reason,
+                        "highest_reusable_checkpoint": response.highest_reusable_checkpoint,
+                    },
+                )
+            )
+            return response
+        reason = (
+            "matching_package_missing"
+            if not rows
+            else "matching_package_content_or_validation_incompatible"
+        )
+    response = ReportSourceReuseResolveResponse(
+        schema_version="1.0",
+        decision="process",
+        reason=reason,
+        canonical_source_identity=identity,
+        source_content_hash=content_hash,
+    )
+    record_report_source_reuse_telemetry(_source_reuse_telemetry_request(request, response), ctx)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="report_source_reuse_resolved",
+            module=logger.name,
+            fields={
+                "incoming_file_id": request.incoming_file_id,
+                "incoming_source_reference_hash": sha256_json(
+                    str(request.incoming_source_reference or "")
+                ),
+                "canonical_source_identity": identity,
+                "decision": response.decision,
+                "reason": response.reason,
+            },
+        )
+    )
+    return response

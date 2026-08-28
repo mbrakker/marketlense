@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -12,7 +13,7 @@ from src.contracts.file_cache import (
     FileCacheMd5SidecarWriteResponse,
 )
 from src.contracts.files import DeleteFileResponse, FileStatResponse
-from src.contracts.ingest import IngestOutcome
+from src.contracts.ingest import IngestOutcome, RetainedReportPackage
 from src.contracts.pdf_utils import PdfEofCheckResponse, PdfIntegrityCheckResponse
 from src.contracts.remediation import RemediationListRequest
 from src.contracts.run_budget import RunBudget
@@ -157,6 +158,97 @@ def test_existing_html_cache_requires_passing_readiness(
     )
 
     assert (result.outcome.status, result.outcome.error) == ("processed", None)
+
+
+def test_stale_canonical_package_resumes_owner_without_duplicate_acquisition(
+    ingest_settings, run_context
+) -> None:
+    """Removing the canonical owner route would download and create another package."""
+    file = _drive_file(md5_checksum="drive-md5")
+    calls = {"downloads": 0, "report_id": "", "resume_stage": ""}
+
+    def _download(*_args, **_kwargs):
+        calls["downloads"] += 1
+        raise AssertionError("canonical stale reuse must not acquire the duplicate")
+
+    def _run_report_pipeline(
+        current_file,
+        _path,
+        _settings,
+        md5,
+        _ctx,
+        *,
+        resume_from_stage=None,
+        readiness_refresh_plan=None,
+        refresh_telemetry_path=None,
+        **_kwargs,
+    ):
+        calls["report_id"] = current_file.file_id
+        calls["resume_stage"] = resume_from_stage or ""
+        assert readiness_refresh_plan is not None
+        assert refresh_telemetry_path.endswith("publish_readiness_refresh_plan.json")
+        return _outcome(current_file, md5)
+
+    dependencies = _base_dependencies(
+        file_stat_fn=lambda request, _ctx: FileStatResponse(
+            schema_version="1.0",
+            path=request.path,
+            exists=False,
+            size_bytes=None,
+            mtime_utc=None,
+            md5=None,
+        ),
+        run_report_pipeline_fn=_run_report_pipeline,
+        write_md5_sidecar_fn=lambda request, _ctx: FileCacheMd5SidecarWriteResponse(
+            schema_version="1.0",
+            cache_path=request.cache_path,
+            sidecar_path=f"{request.cache_path}.md5.json",
+            written=True,
+            reason="written",
+        ),
+        download_pdf_to_path_fn=_download,
+        read_text_fn=lambda _request, _ctx: SimpleNamespace(content='{"status":"fail"}'),
+    )
+    dependencies = replace(
+        dependencies,
+        existing_report_html=lambda *_args, **_kwargs: RetainedReportPackage(
+            schema_version="1.0",
+            report_id="drive-original",
+            html_path="out/original.html",
+            canonical_source_identity="source:exact",
+            source_content_hash="md5:drive-md5",
+            reason="canonical_identity_and_content_hash_match",
+        ),
+    )
+
+    result = run_ingest_file(
+        file=file,
+        index=0,
+        settings=ingest_settings,
+        root_ctx=run_context,
+        dependencies=dependencies,
+    )
+
+    assert result.outcome.status == "processed", result.outcome.error
+    assert calls == {
+        "downloads": 0,
+        "report_id": "drive-original",
+        "resume_stage": "analysis_complete",
+    }
+    with sqlite3.connect(ingest_settings.reports_db) as conn:
+        telemetry = conn.execute(
+            """
+            SELECT highest_reused_checkpoint, reused_stages_json,
+                   regenerated_stages_json, acquisition_actions_avoided
+            FROM report_source_reuse_telemetry
+            """
+        ).fetchone()
+    assert telemetry == (
+        "analysis_complete",
+        "[\"acquisition\",\"source_prepared\",\"selection_complete\",\"analysis_complete\"]",
+        "[\"render_complete\"]",
+        1,
+    )
 
 
 def test_existing_html_cache_rejects_readiness_from_another_producer_revision(

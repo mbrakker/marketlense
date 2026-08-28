@@ -9657,6 +9657,187 @@
       ],
       "type": "object"
     },
+    "src.contracts._report_store.metadata.ReportSourceReuseResolveRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "canonical_source_identity": {
+          "type": "string"
+        },
+        "canonical_source_identity_status": {
+          "type": "string"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "incoming_file_id": {
+          "type": "string"
+        },
+        "incoming_source_reference": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_content_hash": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "incoming_file_id"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.metadata.ReportSourceReuseResolveResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "canonical_source_identity": {
+          "type": "string"
+        },
+        "decision": {
+          "type": "string"
+        },
+        "highest_reusable_checkpoint": {
+          "type": "string"
+        },
+        "html_path": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_content_hash": {
+          "type": "string"
+        },
+        "source_metadata_hash": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "decision",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.metadata.ReportSourceReuseTelemetryRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "acquisition_actions_avoided": {
+          "type": "integer"
+        },
+        "browser_launches_avoided": {
+          "type": "integer"
+        },
+        "canonical_source_identity": {
+          "type": "string"
+        },
+        "decision": {
+          "type": "string"
+        },
+        "decision_reason": {
+          "type": "string"
+        },
+        "estimated_cost_avoided_status": {
+          "type": "string"
+        },
+        "estimated_cost_avoided_usd": {
+          "type": "number"
+        },
+        "extraction_avoided": {
+          "type": "integer"
+        },
+        "highest_reused_checkpoint": {
+          "type": "string"
+        },
+        "incoming_file_id": {
+          "type": "string"
+        },
+        "incoming_source_reference": {
+          "type": "string"
+        },
+        "input_tokens_avoided": {
+          "type": "integer"
+        },
+        "matched_report_id": {
+          "type": "string"
+        },
+        "matched_source_metadata_hash": {
+          "type": "string"
+        },
+        "model_calls_avoided": {
+          "type": "integer"
+        },
+        "model_calls_avoided_status": {
+          "type": "string"
+        },
+        "ocr_avoided": {
+          "type": "integer"
+        },
+        "output_tokens_avoided": {
+          "type": "integer"
+        },
+        "pdf_parse_avoided": {
+          "type": "integer"
+        },
+        "regenerated_stages": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "reused_stages": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_content_hash": {
+          "type": "string"
+        },
+        "tokens_avoided_status": {
+          "type": "string"
+        },
+        "vector_work_avoided": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "incoming_file_id"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.metadata.ReportSourceReuseTelemetryRecordRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "record": {
+          "$ref": "#/$defs/src.contracts._report_store.metadata.ReportSourceReuseTelemetryRecord"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "record"
+      ],
+      "type": "object"
+    },
     "src.contracts._report_store.metadata.SourceIdentityObservation": {
       "additionalProperties": false,
       "properties": {
@@ -21790,6 +21971,40 @@
         "cover_style_path",
         "ingest_lock_path",
         "temperature"
+      ],
+      "type": "object"
+    },
+    "src.contracts.ingest.RetainedReportPackage": {
+      "additionalProperties": false,
+      "properties": {
+        "canonical_source_identity": {
+          "type": "string"
+        },
+        "html_path": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_content_hash": {
+          "type": "string"
+        },
+        "source_metadata_hash": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "report_id",
+        "html_path",
+        "canonical_source_identity",
+        "source_content_hash"
       ],
       "type": "object"
     },

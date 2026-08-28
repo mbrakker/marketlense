@@ -69,6 +69,12 @@ def load_publish_settings(
     wp_cfg = publish.get("wp", {}) or {}
     validation_cfg = publish.get("validation", {}) or {}
     run_budget_cfg = publish.get("run_budget", {}) or {}
+    max_wordpress_writes_raw = run_budget_cfg.get("max_wordpress_writes")
+    no_write_validation = (
+        _to_bool(run_budget_cfg.get("enabled"), True)
+        and not _is_missing(max_wordpress_writes_raw)
+        and _to_int(max_wordpress_writes_raw, 0) == 0
+    )
     cost_cfg = data.get("cost", {}) or {}
     authority_cfg = cost_cfg.get("budget_authority", {}) or {}
     category_mapping_path = _resolve_optional_path(
@@ -105,13 +111,13 @@ def load_publish_settings(
     site_url = wp_cfg.get("site_url") or _env_value("WP_SITE_URL")
     if not site_url and admin_url:
         site_url = _site_url_from_admin(admin_url)
-    if _is_missing(site_url):
+    if not no_write_validation and _is_missing(site_url):
         missing.append("publish.wp.site_url|env:WP_SITE_URL|env:WP_ADMIN_URL")
     site_url = site_url or ""
 
     app_password = os.getenv("WP_APP_PASSWORD", "")
     bearer_token = os.getenv("WP_BEARER_TOKEN", "")
-    if not app_password and not bearer_token:
+    if not no_write_validation and not app_password and not bearer_token:
         missing.append("env:WP_APP_PASSWORD|WP_BEARER_TOKEN")
 
     ssl_verify_raw: object = _env_value("WP_SSL_VERIFY")
@@ -132,7 +138,11 @@ def load_publish_settings(
     wp = WordPressAuthSettings(
         schema_version="1.0",
         site_url=_normalize_site_url(site_url),
-        username=need(wp_cfg, "username", "publish.wp.username", "WP_USERNAME"),
+        username=(
+            ""
+            if no_write_validation
+            else need(wp_cfg, "username", "publish.wp.username", "WP_USERNAME")
+        ),
         app_password=app_password or None,
         bearer_token=bearer_token or None,
         post_status=wp_cfg.get("post_status")

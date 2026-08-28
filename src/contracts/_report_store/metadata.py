@@ -246,6 +246,168 @@ class ReportMetadataListResponse:
 
 
 @dataclass(frozen=True)
+class ReportSourceReuseResolveRequest:
+    """Exact-content lookup for a retained report package from another route."""
+
+    schema_version: str = field(
+        metadata={"doc": "Canonical source-reuse lookup request schema version."}
+    )
+    db_path: str = field(
+        metadata={"doc": "Filesystem path to the report metadata SQLite database."}
+    )
+    incoming_file_id: str = field(
+        metadata={"doc": "Opaque identifier of the newly observed source reference."}
+    )
+    incoming_source_reference: str = field(
+        default="",
+        metadata={
+            "doc": "Bounded route-local reference retained only in source-reuse telemetry."
+        },
+    )
+    canonical_source_identity: str = field(
+        default="",
+        metadata={"doc": "Resolved canonical identity required for cross-route reuse."},
+    )
+    canonical_source_identity_status: str = field(
+        default="unknown",
+        metadata={"doc": "Resolved identity status; only resolved is reusable."},
+    )
+    source_content_hash: str = field(
+        default="",
+        metadata={"doc": "Algorithm-prefixed exact content hash for the incoming source."},
+    )
+
+
+@dataclass(frozen=True)
+class ReportSourceReuseResolveResponse:
+    """One deterministic retained-package candidate or a fail-closed decision."""
+
+    schema_version: str = field(
+        metadata={"doc": "Canonical source-reuse lookup response schema version."}
+    )
+    decision: str = field(
+        metadata={"doc": "reuse when exact canonical identity and content match; else process."}
+    )
+    reason: str = field(
+        metadata={"doc": "Bounded deterministic explanation for the decision."}
+    )
+    canonical_source_identity: str = field(
+        default="", metadata={"doc": "Canonical identity evaluated for reuse."}
+    )
+    source_content_hash: str = field(
+        default="", metadata={"doc": "Incoming exact content hash evaluated for reuse."}
+    )
+    report_id: str = field(
+        default="", metadata={"doc": "Retained canonical report package owner when reusable."}
+    )
+    html_path: str = field(
+        default="", metadata={"doc": "Retained rendered package path when available."}
+    )
+    highest_reusable_checkpoint: str = field(
+        default="", metadata={"doc": "Highest package checkpoint implied by retained metadata."}
+    )
+    source_metadata_hash: str = field(
+        default="", metadata={"doc": "Retained source-metadata compatibility hash."}
+    )
+
+
+@dataclass(frozen=True)
+class ReportSourceReuseTelemetryRecord:
+    """Bounded audit record for one canonical-source reuse decision."""
+
+    schema_version: str = field(
+        metadata={"doc": "Canonical source-reuse telemetry schema version."}
+    )
+    incoming_file_id: str = field(
+        metadata={"doc": "Opaque identifier of the incoming source reference."}
+    )
+    incoming_source_reference: str = field(
+        default="",
+        metadata={"doc": "Route-local reference hashed before persistence."},
+    )
+    canonical_source_identity: str = field(
+        default="", metadata={"doc": "Canonical identity evaluated for the decision."}
+    )
+    source_content_hash: str = field(
+        default="", metadata={"doc": "Exact source-content hash evaluated."}
+    )
+    matched_report_id: str = field(
+        default="", metadata={"doc": "Canonical retained package owner, when matched."}
+    )
+    matched_source_metadata_hash: str = field(
+        default="", metadata={"doc": "Matched source metadata compatibility hash."}
+    )
+    decision: str = field(default="process", metadata={"doc": "reuse or process."})
+    decision_reason: str = field(
+        default="", metadata={"doc": "Bounded deterministic decision explanation."}
+    )
+    highest_reused_checkpoint: str = field(
+        default="", metadata={"doc": "Highest checkpoint actually reused."}
+    )
+    reused_stages: Tuple[str, ...] = field(
+        default_factory=tuple,
+        metadata={"doc": "Ordered bounded stage names actually reused."},
+    )
+    regenerated_stages: Tuple[str, ...] = field(
+        default_factory=tuple,
+        metadata={"doc": "Ordered bounded stage names regenerated after reuse."},
+    )
+    acquisition_actions_avoided: int = field(
+        default=0, metadata={"doc": "Observed avoided duplicate acquisition actions."}
+    )
+    browser_launches_avoided: int = field(
+        default=0, metadata={"doc": "Observed avoided duplicate browser launches."}
+    )
+    pdf_parse_avoided: int = field(
+        default=0, metadata={"doc": "Observed avoided PDF parsing operations."}
+    )
+    ocr_avoided: int = field(
+        default=0, metadata={"doc": "Observed avoided OCR operations."}
+    )
+    extraction_avoided: int = field(
+        default=0, metadata={"doc": "Observed avoided extraction operations."}
+    )
+    vector_work_avoided: int = field(
+        default=0, metadata={"doc": "Observed avoided vector operations."}
+    )
+    model_calls_avoided_status: str = field(
+        default="unavailable",
+        metadata={"doc": "observed or unavailable model-call attribution state."},
+    )
+    model_calls_avoided: int = field(
+        default=0, metadata={"doc": "Observed avoided model calls when attributable."}
+    )
+    tokens_avoided_status: str = field(
+        default="unavailable",
+        metadata={"doc": "observed or unavailable token attribution state."},
+    )
+    input_tokens_avoided: int = field(
+        default=0, metadata={"doc": "Observed avoided input tokens when attributable."}
+    )
+    output_tokens_avoided: int = field(
+        default=0, metadata={"doc": "Observed avoided output tokens when attributable."}
+    )
+    estimated_cost_avoided_status: str = field(
+        default="unavailable",
+        metadata={"doc": "observed or unavailable provider-cost attribution state."},
+    )
+    estimated_cost_avoided_usd: float = field(
+        default=0.0, metadata={"doc": "Observed avoided provider cost when attributable."}
+    )
+
+
+@dataclass(frozen=True)
+class ReportSourceReuseTelemetryRecordRequest:
+    schema_version: str = field(
+        metadata={"doc": "Source-reuse telemetry persistence request schema version."}
+    )
+    db_path: str = field(metadata={"doc": "Reports SQLite database path."})
+    record: ReportSourceReuseTelemetryRecord = field(
+        metadata={"doc": "Bounded idempotent source-reuse decision record."}
+    )
+
+
+@dataclass(frozen=True)
 class ReportSourceIdentityResolveRequest:
     schema_version: str = field(
         metadata={"doc": "Report source identity lookup request schema version."}

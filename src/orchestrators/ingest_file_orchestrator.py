@@ -3,7 +3,7 @@ from __future__ import annotations
 import inspect
 import json
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Callable, Optional
@@ -16,9 +16,13 @@ from src.contracts.file_cache import (
     FileCacheMd5SidecarWriteResponse,
 )
 from src.contracts.files import DeleteFileRequest, FileStatRequest, ReadTextRequest
-from src.contracts.ingest import IngestOutcome, IngestSettings
+from src.contracts.ingest import IngestOutcome, IngestSettings, RetainedReportPackage
 from src.contracts.pdf_utils import PdfEofCheckRequest, PdfIntegrityCheckRequest
 from src.contracts.publish_readiness import PublishReadinessRefreshPlan
+from src.contracts.report_store import (
+    ReportSourceReuseTelemetryRecord,
+    ReportSourceReuseTelemetryRecordRequest,
+)
 from src.contracts.remediation import RemediationArtifactReference
 from src.contracts.run_budget import RunBudget
 from src.contracts.run_context import RunContext
@@ -36,6 +40,7 @@ from src.orchestrators._report_analysis_orchestrator.manifest import (
     record_validation_manifest_stage,
 )
 from src.orchestrators.remediation_orchestrator import record_workflow_failure
+from src.services.report_store_service import record_report_source_reuse_telemetry
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 
@@ -110,7 +115,7 @@ class IngestFileDependencies:
         FileCacheMd5SidecarWriteResponse,
     ]
     existing_report_html: Callable[
-        [DriveFile, str, IngestSettings, RunContext], Optional[str]
+        [DriveFile, str, IngestSettings, RunContext], Optional[str | RetainedReportPackage]
     ]
     run_step_with_retry: Callable[[str, RunContext, Callable[[], Any], int], Any]
     file_stat: Callable[[FileStatRequest, RunContext], Any]
@@ -154,6 +159,7 @@ class _IngestFileRuntime:
     drive_md5: str | None
     state_checked_md5: str | None
     report_checked_md5: str | None
+    retained_package: RetainedReportPackage | None = None
     readiness_refresh_required: bool = False
     readiness_refresh_plan: PublishReadinessRefreshPlan | None = None
     readiness_refresh_telemetry_path: str = ""
@@ -319,18 +325,27 @@ def _maybe_skip_existing_report_html(
             )
         )
         return None
-    existing_html = dependencies.existing_report_html(
+    existing = dependencies.existing_report_html(
         runtime.file,
         runtime.md5,
         settings,
         file_ctx,
     )
     runtime.report_checked_md5 = runtime.md5
+    if isinstance(existing, RetainedReportPackage):
+        runtime.retained_package = existing
+        existing_html = existing.html_path
+    else:
+        existing_html = existing
     if not existing_html:
         return None
     readiness_plan = _existing_publish_readiness_refresh_plan(
         existing_html,
-        report_id=runtime.file.file_id,
+        report_id=(
+            runtime.retained_package.report_id
+            if runtime.retained_package is not None
+            else runtime.file.file_id
+        ),
         dependencies=dependencies,
         file_ctx=file_ctx,
     )
@@ -352,6 +367,11 @@ def _maybe_skip_existing_report_html(
                     "file_id": runtime.file.file_id,
                     "md5": runtime.md5,
                     "html_path": existing_html,
+                    "matched_report_id": (
+                        runtime.retained_package.report_id
+                        if runtime.retained_package is not None
+                        else runtime.file.file_id
+                    ),
                     "readiness_status": readiness_plan.previous_readiness_state,
                     "refresh_reason": readiness_plan.reason,
                 },
@@ -368,9 +388,51 @@ def _maybe_skip_existing_report_html(
                 "file_id": runtime.file.file_id,
                 "md5": runtime.md5,
                 "html_path": existing_html,
+                "matched_report_id": (
+                    runtime.retained_package.report_id
+                    if runtime.retained_package is not None
+                    else runtime.file.file_id
+                ),
             },
         )
     )
+    if runtime.retained_package is not None:
+        record_report_source_reuse_telemetry(
+            ReportSourceReuseTelemetryRecordRequest(
+                schema_version="1.0",
+                db_path=settings.reports_db,
+                record=ReportSourceReuseTelemetryRecord(
+                    schema_version="1.0",
+                    incoming_file_id=runtime.file.file_id,
+                    incoming_source_reference=f"drive:{runtime.file.file_id}",
+                    canonical_source_identity=(
+                        runtime.retained_package.canonical_source_identity
+                    ),
+                    source_content_hash=runtime.retained_package.source_content_hash,
+                    matched_report_id=runtime.retained_package.report_id,
+                    matched_source_metadata_hash=(
+                        runtime.retained_package.source_metadata_hash
+                    ),
+                    decision="reuse",
+                    decision_reason=runtime.retained_package.reason,
+                    highest_reused_checkpoint="render_complete",
+                    reused_stages=(
+                        "acquisition",
+                        "source_prepared",
+                        "selection_complete",
+                        "analysis_complete",
+                        "render_complete",
+                    ),
+                    acquisition_actions_avoided=1,
+                    browser_launches_avoided=1,
+                    pdf_parse_avoided=1,
+                    ocr_avoided=1,
+                    extraction_avoided=1,
+                    vector_work_avoided=1,
+                ),
+            ),
+            file_ctx,
+        )
     return _skip_result(
         index=index,
         file=runtime.file,
@@ -942,6 +1004,125 @@ def run_ingest_file(
         )
         if skipped is not None:
             return skipped
+
+        if runtime.retained_package is not None and runtime.readiness_refresh_required:
+            canonical_file = replace(
+                runtime.file, file_id=runtime.retained_package.report_id
+            )
+            outcome = dependencies.run_step_with_retry(
+                "generate_report",
+                file_ctx,
+                lambda: _run_report_pipeline_latest_safe(
+                    dependencies,
+                    canonical_file,
+                    runtime.cache_path,
+                    settings,
+                    runtime.md5,
+                    file_ctx,
+                    resume_from_stage="analysis_complete",
+                    readiness_refresh_plan=runtime.readiness_refresh_plan,
+                    refresh_telemetry_path=runtime.readiness_refresh_telemetry_path,
+                ),
+                0,
+            )
+            outcome = replace(
+                outcome,
+                file_id=runtime.file.file_id,
+                name=runtime.display_name,
+                md5=runtime.md5,
+            )
+            dependencies.state_record(
+                StateRecordRequest(
+                    schema_version="1.0",
+                    state_db=settings.state_db,
+                    file_id=runtime.file.file_id,
+                    md5=runtime.md5 or "",
+                    openai_file_id=outcome.openai_file_id or "",
+                    vector_store_id=outcome.vector_store_id,
+                    vector_store_status=outcome.vector_store_status,
+                    indexed_at_utc=outcome.indexed_at_utc,
+                    last_error=outcome.error or outcome.vector_store_last_error,
+                    text_validation_status=outcome.text_validation_status,
+                    text_validation_reason=outcome.text_validation_reason,
+                    text_validation_pages=outcome.text_validation_pages,
+                    doc_map_summary=outcome.doc_map_summary,
+                    ocr_fallback_used=outcome.ocr_fallback_used,
+                    ocr_pdf_path=outcome.ocr_pdf_path,
+                ),
+                file_ctx,
+            )
+            record_report_source_reuse_telemetry(
+                ReportSourceReuseTelemetryRecordRequest(
+                    schema_version="1.0",
+                    db_path=settings.reports_db,
+                    record=ReportSourceReuseTelemetryRecord(
+                        schema_version="1.0",
+                        incoming_file_id=runtime.file.file_id,
+                        incoming_source_reference=f"drive:{runtime.file.file_id}",
+                        canonical_source_identity=(
+                            runtime.retained_package.canonical_source_identity
+                        ),
+                        source_content_hash=runtime.retained_package.source_content_hash,
+                        matched_report_id=runtime.retained_package.report_id,
+                        matched_source_metadata_hash=(
+                            runtime.retained_package.source_metadata_hash
+                        ),
+                        decision="reuse",
+                        decision_reason=runtime.retained_package.reason,
+                        highest_reused_checkpoint="analysis_complete",
+                        reused_stages=(
+                            "acquisition",
+                            "source_prepared",
+                            "selection_complete",
+                            "analysis_complete",
+                        ),
+                        regenerated_stages=("render_complete",),
+                        acquisition_actions_avoided=1,
+                        browser_launches_avoided=1,
+                        pdf_parse_avoided=1,
+                        ocr_avoided=1,
+                        extraction_avoided=1,
+                        vector_work_avoided=1,
+                    ),
+                ),
+                file_ctx,
+            )
+            logger.info(
+                log_event(
+                    file_ctx,
+                    role="orchestrator",
+                    event="canonical_source_package_reused",
+                    module=logger_name,
+                    fields={
+                        "incoming_file_id": runtime.file.file_id,
+                        "canonical_source_identity": (
+                            runtime.retained_package.canonical_source_identity
+                        ),
+                        "matched_report_id": runtime.retained_package.report_id,
+                        "highest_reused_checkpoint": "analysis_complete",
+                        "reused_stages": [
+                            "acquisition",
+                            "source_prepared",
+                            "selection_complete",
+                            "analysis_complete",
+                        ],
+                        "regenerated_stages": ["render_complete"],
+                        "decision_reason": runtime.retained_package.reason,
+                        "model_calls_avoided_status": "unavailable",
+                        "tokens_avoided_status": "unavailable",
+                        "estimated_cost_avoided_status": "unavailable",
+                        "acquisition_avoided": True,
+                        "browser_avoided": True,
+                        "pdf_ocr_avoided": True,
+                    },
+                )
+            )
+            return _file_result(
+                index=index,
+                outcome=outcome,
+                processed=1,
+                had_error=outcome.status == "error",
+            )
 
         quarantined = _matching_source_quarantine(
             runtime,

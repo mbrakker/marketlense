@@ -84,12 +84,44 @@ change invalidates rendered HTML and downstream publication only; it does not
 require source parsing, OCR, selection, report analysis, artifact generation,
 validation, or a provider call.
 
+## Cross-route retained-package reuse
+
+`resolve_report_source_reuse` is the report-store boundary for duplicate
+suppression. It returns a package only when both a `resolved` canonical source
+identity and its exact `md5:` content hash match a retained, resolved report
+record with a rendered package. It does not treat source URL, Drive/file ID,
+email attachment path, title, publisher, or filename as identity evidence.
+When more than one historic package is eligible, it picks the most recently
+updated package with a stable file-ID tie-breaker; this converges repeated
+duplicate submissions without merging different bytes.
+
+Drive ingestion makes that lookup before downloading a duplicate. The generic
+report-pipeline entrypoint repeats it once a non-Drive route has a verified
+content hash, then resumes the canonical package at `latest_safe`. A ready
+package skips the duplicate altogether. A stale package uses the existing
+analysis-complete recovery and therefore preserves minimum regeneration and
+prompt-family reuse. Unresolved, conflicting, legacy, changed, missing, or
+unverifiable content fails closed to the normal route.
+
+Migrations 27 and 28 retain the bounded `report_source_reuse_telemetry` decision in
+the existing reports store; it is an audit record, not a second cache. It keeps
+the incoming opaque file ID, a SHA-256 of the route-local reference, canonical
+identity/content hash, matched package, actual reused checkpoint/stages,
+regenerated stages, decision/reason, and scalar avoided acquisition, browser,
+PDF, OCR, extraction, and vector work. Model-call, token, and cost fields are
+explicitly `unavailable` unless their owning usage telemetry can attribute a
+value. Replaying the same route/reference and decision upserts one stable
+record. A stale retained package updates that record from its candidate
+render-complete checkpoint to the actual analysis-complete reuse plus the
+render-only regeneration.
+
 ## Operator validation and rollback
 
 Run the focused checks after a source-provenance change:
 
 ```powershell
 python -m pytest -q tests/test_source_identity_provenance.py tests/test_source_publication_metadata.py tests/test_report_render_generator_publication_metadata.py tests/test_minimal_execution_planner.py tests/test_wordpress_report_card_contract.py
+python -m pytest -q tests/test_report_source_reuse.py tests/test_ingest_file_orchestrator.py tests/test_report_pipeline_orchestrator.py
 python scripts/ci/check_contract_schemas.py --snapshot docs/quality/contract_schemas.json
 ```
 
