@@ -2,7 +2,7 @@
 
 > **Evidence type:** Deterministic local fixture, retained-corpus benchmark, and regression evidence
 > **Scope:** Canonical source identity duplicate suppression
-> **Status:** Release verification active for the supported resolved-identity and exact-content-hash path; closure requires exact-HEAD CI.
+> **Status:** Complete for the supported resolved-identity and exact-content-hash path; exact-HEAD CI and release-evidence review passed.
 
 ## Fixture result
 
