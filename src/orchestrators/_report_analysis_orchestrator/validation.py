@@ -290,8 +290,12 @@ def _candidate_validation_report(
     candidate: CandidateIntegrityResult,
 ) -> ValidationReport:
     issues = list(candidate.issues) + list(validation.issues)
-    severity = "error" if any(item.severity == "error" for item in issues) else (
-        "warning" if any(item.severity == "warning" for item in issues) else "pass"
+    severity = (
+        "error"
+        if any(item.severity == "error" for item in issues)
+        else (
+            "warning" if any(item.severity == "warning" for item in issues) else "pass"
+        )
     )
     return ValidationReport(
         schema_version=validation.schema_version,

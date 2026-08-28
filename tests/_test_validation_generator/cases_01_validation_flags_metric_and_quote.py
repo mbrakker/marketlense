@@ -56,8 +56,12 @@ def test_validation_blocks_more_than_doubled_when_evidence_only_doubles(tmp_path
     }
     result = validate_report(
         ValidationRequest(
-            schema_version="1.0", report_id="r-double", report=_report(),
-            artifacts=artifacts, evidence_packs={}, vector_store_id=None,
+            schema_version="1.0",
+            report_id="r-double",
+            report=_report(),
+            artifacts=artifacts,
+            evidence_packs={},
+            vector_store_id=None,
         ),
         _settings(tmp_path),
         _ctx(),
@@ -68,6 +72,7 @@ def test_validation_blocks_more_than_doubled_when_evidence_only_doubles(tmp_path
 
     assert result.status == "fail"
     assert any("more than doubled" in issue.message for issue in result.issues)
+
 
 def test_number_validation_ignores_soft_planning_timeframes():
     artifacts = {
@@ -86,6 +91,7 @@ def test_number_validation_ignores_soft_planning_timeframes():
     )
 
     assert not any(issue.rule_id == "numbers" for issue in issues)
+
 
 def test_validation_accepts_paraphrased_metrics_and_quotes(tmp_path):
     settings = _settings(tmp_path)
@@ -152,6 +158,7 @@ def test_validation_accepts_paraphrased_metrics_and_quotes(tmp_path):
     assert all(issue.severity != "error" for issue in result.issues)
     assert any("semantically supported" in issue.message for issue in result.issues)
     assert analysis_store.stored and analysis_store.stored[0][2] == "validation"
+
 
 def test_validation_detects_new_numbers_and_grounding(tmp_path):
     settings = _settings(tmp_path)
@@ -411,6 +418,7 @@ def test_commentary_numbers_allowed_when_in_report_or_evidence(tmp_path):
     assert result.status == "pass"
     assert not any("Number" in issue.message for issue in result.issues)
 
+
 def test_validation_allows_interpretation_and_recommendation_in_allowed_sections(
     tmp_path,
 ):
@@ -469,6 +477,7 @@ def test_validation_allows_interpretation_and_recommendation_in_allowed_sections
     assert not any(issue.severity == "error" for issue in result.issues)
     assert any(issue.affected_section == "expert_comment" for issue in result.issues)
 
+
 def test_validation_fails_on_report_directive_misattribution(tmp_path):
     settings = _settings(tmp_path)
     artifacts = {
@@ -515,6 +524,7 @@ def test_validation_fails_on_report_directive_misattribution(tmp_path):
     )
     assert any(issue.severity == "error" for issue in result.issues)
 
+
 def test_validation_number_matching_normalizes_percent_and_billions(tmp_path):
     settings = _settings(tmp_path)
     artifacts = {
@@ -560,6 +570,7 @@ def test_validation_number_matching_normalizes_percent_and_billions(tmp_path):
     assert result.status == "pass"
     assert not any("Number" in issue.message for issue in result.issues)
 
+
 def test_validation_number_check_ignores_units_and_matches_numeric_value(tmp_path):
     settings = _settings(tmp_path)
     artifacts = {
@@ -604,6 +615,7 @@ def test_validation_number_check_ignores_units_and_matches_numeric_value(tmp_pat
     )
     assert result.status == "pass"
     assert not any("Number" in issue.message for issue in result.issues)
+
 
 def test_grounding_unsupported_number_with_unit_mismatch_is_blocking(
     tmp_path,
@@ -659,10 +671,9 @@ def test_grounding_unsupported_number_with_unit_mismatch_is_blocking(
         analysis_store=FakeAnalysisStore(),
     )
     assert result.status == "fail"
-    assert any(
-        "unsupported_number" in issue.message for issue in result.issues
-    )
+    assert any("unsupported_number" in issue.message for issue in result.issues)
     assert any(issue.severity == "error" for issue in result.issues)
+
 
 def test_validation_warns_on_data_gap(tmp_path):
     settings = _settings(tmp_path)
@@ -698,6 +709,7 @@ def test_validation_warns_on_data_gap(tmp_path):
     assert result.status == "pass"
     assert result.severity == "warning"
     assert any(issue.severity == "warning" for issue in result.issues)
+
 
 def test_validation_issue_order_preserved_with_parallel_checks(tmp_path):
     settings = _settings(tmp_path)
@@ -796,6 +808,7 @@ def test_validation_issue_order_preserved_with_parallel_checks(tmp_path):
     )
     assert len([req for req in fake_openai.requests if req[0] == "chat"]) == 2
 
+
 def test_validation_grounding_uses_chat_path_when_flag_disabled(tmp_path):
     settings = _settings(tmp_path, validation_grounding_use_vector_store=False)
     fake_openai = FakeOpenAI(
@@ -823,6 +836,7 @@ def test_validation_grounding_uses_chat_path_when_flag_disabled(tmp_path):
     assert grounding_calls
     assert grounding_calls[0][0] == "chat"
 
+
 def test_validation_grounding_uses_vector_path_when_flag_enabled(tmp_path):
     settings = _settings(tmp_path, validation_grounding_use_vector_store=True)
     fake_openai = FakeOpenAI(
@@ -849,6 +863,7 @@ def test_validation_grounding_uses_vector_path_when_flag_enabled(tmp_path):
     ]
     assert grounding_calls
     assert grounding_calls[0][0] == "vector"
+
 
 def test_validation_cache_isolated_by_grounding_retrieval_mode(tmp_path):
     artifacts = {"insights_final": []}
@@ -938,6 +953,7 @@ def test_validation_reuses_retained_primary_model_rules_before_provider_call(tmp
     assert first.issues == replay.issues
     assert first_client.requests
     assert replay_client.requests == []
+
 
 __all__ = [
     "test_validation_flags_metric_and_quote_mismatches",

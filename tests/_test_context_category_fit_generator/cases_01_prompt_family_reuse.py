@@ -25,7 +25,9 @@ from tests.test_context_category_fit_generator import (
 )
 
 
-def test_context_category_fit_reuses_retained_primary_output_before_model_call() -> None:
+def test_context_category_fit_reuses_retained_primary_output_before_model_call() -> (
+    None
+):
     context = ReportCategoryContext(
         schema_version="1.0",
         report_id="file-reused",

@@ -562,8 +562,7 @@ def generate_figure_captions(
                         ),
                         model_pricing=runtime.settings.model_pricing,
                         publisher_name=runtime.publisher_name,
-                        report_name=runtime.source_report_name
-                        or runtime.report_title,
+                        report_name=runtime.source_report_name or runtime.report_title,
                         source_url=runtime.source_url,
                         prompt_namespace=prompt_namespace,
                         prompt_hash=prompt_set.user.sha256,
