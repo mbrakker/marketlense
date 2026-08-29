@@ -150,7 +150,8 @@ def test_render_surfaces_public_advisory_metric_spine_and_claim_support(tmp_path
     assert "Priority moves" in html
     assert "Use margin-safe pricing scenarios in the next planning cycle." in html
     assert "Watchouts" in html
-    assert "Blended growth metrics can hide value-segment softness." in html
+    assert "Do not treat blended category growth as a single demand signal." in html
+    assert "Blended growth metrics can hide value-segment softness." not in html
     assert "Metric spine" in html
     assert "Premium demand growth" in html
     assert "18%" in html
@@ -164,6 +165,64 @@ def test_render_surfaces_public_advisory_metric_spine_and_claim_support(tmp_path
     assert "canonical_claim_id" not in html
     assert "report:executive_advisory" not in html
     assert "metric-internal-1" not in html
+
+
+def test_render_omits_empty_decision_brief_sections(tmp_path):
+    data = {
+        "title": "Sparse Advisory Report",
+        "tldr": "TLDR",
+        "insights": ["Legacy insight"] * 5,
+        "quote": {"text": "Quote", "author": "Author"},
+        "commentary": "Commentary",
+        "publisher": "Publisher",
+        "taxonomy": ["strategy"],
+        "region": "Global",
+        "time_period": "2026",
+        "contents_page_number": 0,
+        "artifacts": {
+            "summary": {"tldr": "Advisory TLDR"},
+            "executive_advisory": {
+                "decision_brief": {
+                    "status": "generated",
+                    "strategic_context": "",
+                    "decision_implications": [],
+                    "priority_moves": [],
+                    "watchouts": [],
+                    "confidence_note": "Evidence-linked insights available",
+                },
+                "recommendations": {
+                    "status": "generated",
+                    "items": [
+                        {
+                            "id": "r1",
+                            "recommendation": "Unsupported recommendation.",
+                        }
+                    ],
+                },
+                "risks": {
+                    "status": "generated",
+                    "items": [{"id": "risk1", "risk": "Unsupported risk."}],
+                },
+            },
+        },
+    }
+    req = RenderRequest(
+        schema_version="1.0",
+        data=data,
+        doc_name="sparse-advisory.pdf",
+        file_id="file_sparse_advisory",
+        out_dir=str(tmp_path),
+        preview_png=None,
+    )
+
+    resp = render_report(req, _ctx())
+    html = Path(resp.html_path).read_text(encoding="utf-8")
+
+    assert "Decision brief" in html
+    assert "Priority moves" not in html
+    assert "Watchouts" not in html
+    assert "Unsupported recommendation." not in html
+    assert "Unsupported risk." not in html
 
 
 def test_render_surfaces_topics_key_figures_and_chart_insight_cards(tmp_path):

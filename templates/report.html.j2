@@ -248,16 +248,13 @@
           </section>
           {% endif %}
 
-          {% if view.advisory.recommendations or view.advisory.decision.priority_moves %}
+          {% if view.advisory.decision.priority_moves %}
           <section class="advisory-panel">
             <div class="advisory-panel-head">
               <span class="badge green">Actionable</span>
               <h3>Priority moves</h3>
             </div>
             <ul class="advisory-list">
-              {% for item in view.advisory.recommendations %}
-              <li>{{ item.text }}</li>
-              {% endfor %}
               {% for item in view.advisory.decision.priority_moves %}
               <li>{{ item }}</li>
               {% endfor %}
@@ -265,16 +262,13 @@
           </section>
           {% endif %}
 
-          {% if view.advisory.risks or view.advisory.decision.watchouts %}
+          {% if view.advisory.decision.watchouts %}
           <section class="advisory-panel">
             <div class="advisory-panel-head">
               <span class="badge">Caveat-aware</span>
               <h3>Watchouts</h3>
             </div>
             <ul class="advisory-list">
-              {% for item in view.advisory.risks %}
-              <li>{{ item.text }}</li>
-              {% endfor %}
               {% for item in view.advisory.decision.watchouts %}
               <li>{{ item }}</li>
               {% endfor %}

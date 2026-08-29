@@ -8,6 +8,8 @@ The report pipeline produces source-attributed HTML and structured report artifa
 
 Report-local output can include summaries, insights, quotes, figure selections, topics, key figures, and other approved public modules when supported by the retained artifact contract. Internal evidence identifiers and machine-only publication data are not public output.
 
+When evidence supports a Decision Brief, it serves a distinct role from the Executive Summary. Its strategic context is the concise report thesis (`tldr` or compact TLDR), never the full executive-summary prose. Decision implications use evidence-linked insight `so_what` fields; priority moves use supported `now_what` fields or evidence-linked explicit recommendations; and watchouts use evidence-linked risks or counter-signals plus retained limitations. Unsupported sections are omitted rather than inferred, while the retained evidence links continue to identify the supporting source material.
+
 Public titles are normalized from retained metadata before rendering: filename
 separators, document suffixes, literal truncation marks, and repeated adjacent
 years are removed. SEO descriptions end at a word and sentence boundary within

@@ -126,6 +126,120 @@ def test_build_executive_advisory_artifacts_surfaces_not_found_states() -> None:
     assert advisory["audience_variants"]["status"] == "not_requested"
 
 
+def test_build_executive_advisory_artifacts_separates_decision_roles() -> None:
+    executive_summary = (
+        "Wallet adoption is rising, fraud pressure is increasing, and merchants "
+        "need more flexible payment orchestration."
+    )
+    advisory = build_executive_advisory_artifacts(
+        summary={
+            "tldr": "Payment infrastructure is becoming a strategic merchant choice.",
+            "executive_summary": executive_summary,
+        },
+        insights_final=[
+            {
+                "id": "i1",
+                "text": "Enterprise merchants are adopting wallets faster.",
+                "so_what": "Wallet coverage now shapes conversion resilience.",
+                "now_what": "Prioritize wallet coverage in the next roadmap.",
+                "evidence_id": "ev1",
+            },
+            {
+                "id": "i2",
+                "text": "Adoption remains uneven across merchant segments.",
+                "coverage_role": "counter_signal",
+                "evidence_id": "ev2",
+            },
+        ],
+        quotes_final=[{"id": "q1", "text": "Quote", "evidence_id": "q1"}],
+        metric_spine=[],
+        evidence_packs={
+            "recommendations": {
+                "recommendations": [
+                    {
+                        "id": "r1",
+                        "recommendation": "Test wallet coverage by merchant segment.",
+                        "evidence_id": "ev1",
+                    }
+                ]
+            },
+            "risk_register": {
+                "risk_register": [
+                    {
+                        "id": "risk1",
+                        "risk": "Wallet adoption could remain uneven by segment.",
+                        "evidence_id": "ev2",
+                    }
+                ]
+            },
+            "limitations": {
+                "limitations": [
+                    {"description": "The report does not compare every merchant segment."}
+                ]
+            },
+        },
+    )
+
+    decision_brief = advisory["decision_brief"]
+    assert decision_brief["strategic_context"] == (
+        "Payment infrastructure is becoming a strategic merchant choice."
+    )
+    assert decision_brief["strategic_context"] != executive_summary
+    assert decision_brief["decision_implications"] == [
+        "Wallet coverage now shapes conversion resilience."
+    ]
+    assert "Enterprise merchants are adopting wallets faster." not in decision_brief[
+        "decision_implications"
+    ]
+    assert decision_brief["priority_moves"] == [
+        "Prioritize wallet coverage in the next roadmap.",
+        "Test wallet coverage by merchant segment.",
+    ]
+    assert decision_brief["watchouts"] == [
+        "Adoption remains uneven across merchant segments.",
+        "Wallet adoption could remain uneven by segment.",
+        "The report does not compare every merchant segment.",
+    ]
+    assert decision_brief["evidence_links"] == ["ev1", "ev2", "q1"]
+
+
+def test_build_executive_advisory_artifacts_omits_unsupported_decision_fields() -> None:
+    executive_summary = "Wallet adoption is rising among enterprise merchants."
+    advisory = build_executive_advisory_artifacts(
+        summary={"executive_summary": executive_summary},
+        insights_final=[
+            {
+                "id": "i1",
+                "text": "Wallet adoption is rising among enterprise merchants.",
+                "evidence_id": "ev1",
+            }
+        ],
+        quotes_final=[],
+        metric_spine=[],
+        evidence_packs={
+            "recommendations": {
+                "recommendations": [
+                    {
+                        "id": "r1",
+                        "recommendation": "Expand wallet coverage.",
+                    }
+                ]
+            },
+            "risk_register": {
+                "risk_register": [
+                    {"id": "risk1", "risk": "Segment adoption may vary."}
+                ]
+            },
+        },
+    )
+
+    decision_brief = advisory["decision_brief"]
+    assert decision_brief["strategic_context"] == ""
+    assert decision_brief["decision_implications"] == []
+    assert decision_brief["priority_moves"] == []
+    assert decision_brief["watchouts"] == []
+
+
 def test_assemble_artifacts_builds_universal_claim_ledger() -> None:
     payload = assemble_artifacts_payload(
         report_id="ledger-report",
@@ -408,6 +522,8 @@ def test_generate_artifacts_passes_metric_spine_to_editorial_prompts(tmp_path) -
 __all__ = [
     "test_derive_metric_spine_selects_strong_supported_metrics",
     "test_build_executive_advisory_artifacts_surfaces_not_found_states",
+    "test_build_executive_advisory_artifacts_separates_decision_roles",
+    "test_build_executive_advisory_artifacts_omits_unsupported_decision_fields",
     "test_assemble_artifacts_builds_universal_claim_ledger",
     "test_assemble_artifacts_builds_topics_key_figures_and_chart_cards",
     "test_generate_artifacts_passes_metric_spine_to_editorial_prompts",

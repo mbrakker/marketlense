@@ -954,6 +954,50 @@ def _business_implication(
     return context or _s(figure.get("label")).strip()
 
 
+def _unique_advisory_texts(values: List[str], *, limit: int = 3) -> List[str]:
+    texts: List[str] = []
+    seen: set[str] = set()
+    for value in values:
+        text = _s(value).strip()
+        normalized = " ".join(text.split()).casefold()
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        texts.append(text)
+        if len(texts) >= limit:
+            break
+    return texts
+
+
+def _has_advisory_evidence(item: Dict[str, Any]) -> bool:
+    return bool(_s(item.get("evidence_id")).strip() or item.get("evidence_spans"))
+
+
+def _decision_brief_context(summary: Dict[str, Any]) -> str:
+    context = _s(summary.get("tldr") or summary.get("card_tldr_compact")).strip()
+    executive_summary = _s(summary.get("executive_summary")).strip()
+    if " ".join(context.split()).casefold() == " ".join(
+        executive_summary.split()
+    ).casefold():
+        return ""
+    return context
+
+
+def _limitation_texts(limitations: List[Any]) -> List[str]:
+    return [
+        _s(item)
+        if isinstance(item, str)
+        else _s(
+            item.get("description")
+            or item.get("limitation")
+            or item.get("text")
+            or item.get("summary")
+        )
+        for item in limitations
+        if isinstance(item, (str, dict))
+    ]
+
+
 def build_executive_advisory_artifacts(
     *,
     summary: Dict[str, Any],
@@ -964,22 +1008,68 @@ def build_executive_advisory_artifacts(
 ) -> Dict[str, Any]:
     recommendations_pack = evidence_packs.get("recommendations", {})
     risks_pack = evidence_packs.get("risk_register", {})
+    limitations_pack = evidence_packs.get("limitations", {})
     recommendations = (
         recommendations_pack.get("recommendations")
         if isinstance(recommendations_pack, dict)
         else []
     )
-    risks = risks_pack.get("risks") if isinstance(risks_pack, dict) else []
+    risks = (
+        risks_pack.get("risk_register") or risks_pack.get("risks")
+        if isinstance(risks_pack, dict)
+        else []
+    )
+    limitations = (
+        limitations_pack.get("limitations")
+        if isinstance(limitations_pack, dict)
+        else []
+    )
     if not isinstance(recommendations, list):
         recommendations = []
     if not isinstance(risks, list):
         risks = []
+    if not isinstance(limitations, list):
+        limitations = []
     supported_insights = [
         item
         for item in insights_final
         if isinstance(item, dict)
-        and (_s(item.get("evidence_id")).strip() or item.get("evidence_spans"))
+        and _has_advisory_evidence(item)
     ]
+    grounded_recommendations = [
+        item
+        for item in recommendations
+        if isinstance(item, dict) and _has_advisory_evidence(item)
+    ]
+    grounded_risks = [
+        item
+        for item in risks
+        if isinstance(item, dict) and _has_advisory_evidence(item)
+    ]
+    decision_implications = _unique_advisory_texts(
+        [_s(item.get("so_what")) for item in supported_insights]
+    )
+    priority_moves = _unique_advisory_texts(
+        [
+            *[_s(item.get("now_what")) for item in supported_insights],
+            *[
+                _s(item.get("recommendation") or item.get("text"))
+                for item in grounded_recommendations
+            ],
+        ]
+    )
+    watchouts = _unique_advisory_texts(
+        [
+            *[
+                _s(item.get("text"))
+                for item in supported_insights
+                if _s(item.get("coverage_role")).strip().casefold()
+                in {"counter_signal", "strategic_risk"}
+            ],
+            *[_s(item.get("risk") or item.get("text")) for item in grounded_risks],
+            *_limitation_texts(limitations),
+        ]
+    )
     return {
         "schema_version": "1.0",
         "decision_brief": {
@@ -987,28 +1077,19 @@ def build_executive_advisory_artifacts(
             "status": "generated"
             if supported_insights or metric_spine
             else "not_found",
-            "strategic_context": _s(summary.get("executive_summary")).strip(),
-            "decision_implications": [
-                _s(item.get("text")).strip()
-                for item in supported_insights[:3]
-                if _s(item.get("text")).strip()
-            ],
-            "priority_moves": [
-                _s(item.get("recommendation") or item.get("text")).strip()
-                for item in recommendations[:3]
-                if isinstance(item, dict)
-                and _s(item.get("recommendation") or item.get("text")).strip()
-            ],
-            "watchouts": [
-                _s(item.get("risk") or item.get("text")).strip()
-                for item in risks[:3]
-                if isinstance(item, dict)
-                and _s(item.get("risk") or item.get("text")).strip()
-            ],
+            "strategic_context": _decision_brief_context(summary),
+            "decision_implications": decision_implications,
+            "priority_moves": priority_moves,
+            "watchouts": watchouts,
             "evidence_links": sorted(
                 {
                     _s(item.get("evidence_id")).strip()
-                    for item in [*supported_insights, *quotes_final]
+                    for item in [
+                        *supported_insights,
+                        *grounded_recommendations,
+                        *grounded_risks,
+                        *quotes_final,
+                    ]
                     if isinstance(item, dict) and _s(item.get("evidence_id")).strip()
                 }
             ),

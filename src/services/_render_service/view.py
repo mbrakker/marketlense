@@ -402,8 +402,6 @@ def _build_render_view(
             "has_signal_cards": bool(signal_cards),
             "has_advisory": bool(
                 advisory["decision"]["available"]
-                or advisory["recommendations"]
-                or advisory["risks"]
                 or advisory["metric_spine"]
                 or advisory["claim_support"]
             ),
