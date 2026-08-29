@@ -70,6 +70,16 @@ class FakePromptClient:
         return SimpleNamespace(text=request.template.text)
 
 
+class RecordingPromptClient(FakePromptClient):
+    def __init__(self):
+        self.findings_variables = None
+
+    def render_prompt(self, request, ctx):
+        if "doc_map_sections_json" in request.variables:
+            self.findings_variables = dict(request.variables)
+        return super().render_prompt(request, ctx)
+
+
 class FakeOpenAIClient:
     def __init__(self, parsed):
         self._parsed = parsed
@@ -247,6 +257,28 @@ def substantive_doc_map(doc_id="d1"):
                 ),
                 "key_points": ["Campaign signals need a shared measurement view."],
             }
+        ],
+    }
+
+
+def multi_section_doc_map(doc_id="d1"):
+    return {
+        **substantive_doc_map(doc_id),
+        "sections": [
+            {
+                "id": "measurement-methods",
+                "title": "Cross-channel measurement methods",
+                "summary": "Connects retail media, ecommerce, and store activity.",
+                "key_points": ["Campaign signals need a shared measurement view."],
+                "pages": [2],
+            },
+            {
+                "id": "investment-outlook",
+                "title": "Investment outlook",
+                "summary": "Explains where buyers are increasing investment.",
+                "key_points": ["Budgets follow attributable outcomes."],
+                "pages": [8],
+            },
         ],
     }
 

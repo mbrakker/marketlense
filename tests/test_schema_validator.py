@@ -64,6 +64,27 @@ def test_validate_schema_fails_when_doc_map_section_missing_summary_or_key_point
     assert exc.value.code == "schema_missing_required"
 
 
+def test_validate_schema_passes_for_findings_linked_to_doc_map_section():
+    payload = {
+        "findings": [
+            {
+                "id": "f1",
+                "text": "Investment follows attributable outcomes.",
+                "evidence": "The report links buyer budgets to attribution.",
+                "pages": [8],
+                "section_id": "investment-outlook",
+                "section_title": "Investment outlook",
+            }
+        ]
+    }
+    validate_schema(
+        SchemaValidateRequest(
+            schema_version="1.0", payload=payload, schema_name="findings_pack"
+        ),
+        _ctx(),
+    )
+
+
 def test_validate_schema_allows_nullable_union_fields():
     payload = {
         "taxonomy": ["Retail", "FMCG"],

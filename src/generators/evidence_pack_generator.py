@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict
@@ -82,6 +83,43 @@ _OPTIONAL_EVIDENCE_PACKS = {
     "recommendations",
     "contradictions",
 }
+
+
+def _findings_prompt_user_variables(doc_map: dict) -> Dict[str, str]:
+    sections: list[dict[str, object]] = []
+    raw_sections = doc_map.get("sections")
+    if isinstance(raw_sections, list):
+        for raw_section in raw_sections:
+            if not isinstance(raw_section, dict):
+                continue
+            section_id = str(raw_section.get("id") or "").strip()
+            section_title = str(raw_section.get("title") or "").strip()
+            if not section_id or not section_title:
+                continue
+            key_points = raw_section.get("key_points")
+            pages = raw_section.get("pages")
+            sections.append(
+                {
+                    "id": section_id,
+                    "title": section_title,
+                    "summary": str(raw_section.get("summary") or "").strip(),
+                    "key_points": [
+                        str(point).strip()
+                        for point in key_points
+                        if str(point).strip()
+                    ]
+                    if isinstance(key_points, list)
+                    else [],
+                    "pages": [
+                        page
+                        for page in pages
+                        if isinstance(page, int) and not isinstance(page, bool)
+                    ]
+                    if isinstance(pages, list)
+                    else [],
+                }
+            )
+    return {"doc_map_sections_json": json.dumps(sections, ensure_ascii=False)}
 
 
 def _pack_parallel_workers(settings: AppSettings, step_count: int) -> int:
@@ -370,6 +408,27 @@ def generate_evidence_packs(
         )
 
     parallel_strategies = strategies[1:]
+    findings_prompt_user_variables: Dict[str, str] = {}
+    if any(strategy.pack_name == "findings" for strategy in parallel_strategies):
+        findings_prompt_user_variables = _findings_prompt_user_variables(
+            results["doc_map"]
+        )
+        logger.info(
+            log_event(
+                step_ctx,
+                role="generator",
+                event="findings_doc_map_context_prepared",
+                module=logger.name,
+                fields={
+                    "report_id": report_id,
+                    "sections_count": len(
+                        json.loads(
+                            findings_prompt_user_variables["doc_map_sections_json"]
+                        )
+                    ),
+                },
+            )
+        )
     parallel_results: Dict[str, dict] = {}
     if parallel_strategies and parallel_workers > 1:
         with ThreadPoolExecutor(max_workers=parallel_workers) as executor:
@@ -394,6 +453,11 @@ def generate_evidence_packs(
                     prompt_family_reuse_reader=prompt_family_reuse_reader,
                     prompt_family_materializer=prompt_family_materializer,
                     strategy=strategy,
+                    prompt_user_variables=(
+                        findings_prompt_user_variables
+                        if strategy.pack_name == "findings"
+                        else {}
+                    ),
                 )
                 futures[future] = step_name
             first_error: Optional[Tuple[str, Exception]] = None
@@ -450,6 +514,11 @@ def generate_evidence_packs(
                 prompt_family_reuse_reader=prompt_family_reuse_reader,
                 prompt_family_materializer=prompt_family_materializer,
                 strategy=strategy,
+                prompt_user_variables=(
+                    findings_prompt_user_variables
+                    if strategy.pack_name == "findings"
+                    else {}
+                ),
             )
     for strategy in parallel_strategies:
         results[strategy.pack_name] = parallel_results[strategy.pack_name]
@@ -482,6 +551,7 @@ def _generate_pack(
     prompt_family_reuse_reader,
     prompt_family_materializer,
     strategy: EvidencePackStrategy,
+    prompt_user_variables: Optional[Dict[str, str]] = None,
 ) -> dict:
     pack_name = strategy.pack_name
     prompt_namespace = _prompt_namespace_for_strategy(strategy)
@@ -505,7 +575,7 @@ def _generate_pack(
         ctx=ctx,
         prompt_client=prompt_client,
         system_variables={},
-        user_variables={},
+        user_variables=prompt_user_variables or {},
         default_model=settings.openai_model,
     )
     logger.info(
@@ -537,6 +607,7 @@ def _generate_pack(
                 "schema_name": schema_name,
                 "vector_store_id": vector_store_id,
                 "vector_store_content_hash": vector_store_content_hash,
+                "prompt_user_variables": prompt_user_variables or {},
             }
         )
         if vector_provenance_verified
@@ -647,6 +718,7 @@ def _generate_pack(
                     "report_name": report_name,
                     "vector_store_id": vector_store_id,
                     "pack_name": pack_name,
+                    **(prompt_user_variables or {}),
                 },
                 settings=settings,
                 ctx=ctx,

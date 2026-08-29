@@ -1,2 +1,14 @@
 schema_version: "1.0"
-allowlist: []
+allowlist:
+  - pattern: "totals.total_tokens"
+    owner: "MarketLense engineering"
+    reason: "DocMap-guided findings adds the compact section projection to the existing findings prompt."
+    expires_on: "2026-09-30"
+    max_delta_absolute: 230
+    max_delta_percent: 0.01
+  - pattern: "families.report.total_tokens"
+    owner: "MarketLense engineering"
+    reason: "DocMap-guided findings adds the compact section projection to the existing findings prompt."
+    expires_on: "2026-09-30"
+    max_delta_absolute: 230
+    max_delta_percent: 0.01

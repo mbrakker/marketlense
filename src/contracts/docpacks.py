@@ -90,6 +90,12 @@ class FindingEntry:
     confidence: str = field(
         default="", metadata={"doc": "Model confidence descriptor/value."}
     )
+    section_id: str = field(
+        default="", metadata={"doc": "Source DocMap section identifier, if linked."}
+    )
+    section_title: str = field(
+        default="", metadata={"doc": "Source DocMap section title, if linked."}
+    )
     pages: List[int] = field(
         default_factory=list,
         metadata={"doc": "One-based page numbers supporting the finding."},

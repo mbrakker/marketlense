@@ -1,10 +1,21 @@
 text: |
-  Extract the top findings from file_search evidence.
+  Extract concise findings from file_search evidence using the following DocMap
+  major sections to guide retrieval. The DocMap is planning context only: every
+  finding and its evidence must still be grounded in file_search.
+
+  {{ doc_map_sections_json }}
+
+  Prefer distinct supported sections when the report contains multiple major
+  themes. Do not pad a narrow or sparse report: return only the findings the
+  file_search evidence supports.
+
   For each finding include:
   - id
   - text
   - evidence
   - confidence
+  - section_id (copy the matching DocMap id, or "")
+  - section_title (copy the matching DocMap title, or "")
   - pages
 
   Return JSON only:

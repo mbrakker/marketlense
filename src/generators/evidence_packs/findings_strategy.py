@@ -57,6 +57,16 @@ def normalize_findings(raw_findings: object) -> list[dict[str, object]]:
                 "evidence": evidence_value,
                 "confidence": coerce_confidence(item.get("confidence")),
                 "pages": pages,
+                "section_id": first_non_empty_text(
+                    item.get("section_id"),
+                    item.get("sectionId"),
+                    item.get("doc_map_section_id"),
+                ),
+                "section_title": first_non_empty_text(
+                    item.get("section_title"),
+                    item.get("sectionTitle"),
+                    item.get("doc_map_section_title"),
+                ),
             }
         )
     return normalized

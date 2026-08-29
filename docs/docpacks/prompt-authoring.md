@@ -21,6 +21,11 @@ Each pack prompt must explicitly define:
 - Use stable field names that match typed contracts in `src/contracts/docpacks.py`.
 - Avoid ambiguous free-form instructions for required structured fields.
 - Keep retrieval context references explicit (do not invent source IDs).
+- The findings prompt receives `doc_map_sections_json` only after a usable
+  DocMap is generated. Use it to seek supported findings across major sections,
+  copy only its exact section IDs/titles, and keep file-search evidence as the
+  sole grounding source. Do not require one finding per section or trigger
+  additional calls for sparse reports.
 
 ## Logging and Reproducibility
 

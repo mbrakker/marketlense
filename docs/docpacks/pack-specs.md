@@ -34,12 +34,23 @@ Typed contracts live in:
 
 `doc_map` is always enforced as the first pack step.
 
+After a usable `doc_map` is generated, the existing single `findings` pack call
+receives a compact JSON projection of its major sections (`id`, `title`,
+`summary`, `key_points`, and `pages`). This guides evidence retrieval across
+report themes without adding per-section model calls. The projection is planning
+context only: each finding remains grounded in file-search evidence.
+
 `doc_map.sections[]` requires:
 
 - `id`
 - `title`
 - `summary` (brief section synopsis)
 - `key_points` (array of concise supporting bullets; may be empty when source is sparse)
+
+`findings.findings[]` retains its existing `id`, `text`, `evidence`,
+`confidence`, and `pages` fields. It may additionally link a grounded finding
+to the supplied DocMap with optional `section_id` and `section_title`. These
+links are additive, so legacy retained findings packs remain schema-valid.
 
 Schema validity alone does not make a `doc_map` usable. Before a map can advance
 generation or be reused from cache, the generator verifies that it has at least

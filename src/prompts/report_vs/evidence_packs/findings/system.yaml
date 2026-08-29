@@ -11,6 +11,8 @@ text: |
         "text": "string",
         "evidence": "string",
         "confidence": "string",
+        "section_id": "string",
+        "section_title": "string",
         "pages": [1]
       }
     ],
@@ -22,4 +24,7 @@ text: |
   - "id" must be stable and unique within this output.
   - "pages" must contain positive integers only; use [] when page is unknown.
   - Keep "confidence" concise (e.g., low/medium/high).
+  - When a finding is supported by a listed DocMap section, copy that exact
+    section's id and title into "section_id" and "section_title"; otherwise use
+    empty strings. Do not invent section IDs or titles.
   - If no grounded findings exist, return [] and set "not_found_reason".

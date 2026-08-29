@@ -132,6 +132,80 @@ def test_generate_evidence_packs_marks_optional_empty_pack_as_abstained(tmp_path
     assert packs["findings"]["family_status"]["reason"] == "source_has_no_findings"
 
 
+def test_generate_evidence_packs_passes_doc_map_sections_to_findings_and_retains_links(
+    tmp_path,
+):
+    prompt_client = RecordingPromptClient()
+    packs = generate_evidence_packs(
+        report_id="r1",
+        report_name="report",
+        vector_store_id="vs_1",
+        settings=_settings(tmp_path, evidence_pack_registry=["doc_map", "findings"]),
+        ctx=_ctx(),
+        openai_client=RoutedOpenAIClient(
+            {
+                "doc_map": multi_section_doc_map(),
+                "findings": {
+                    "findings": [
+                        {
+                            "id": "finding-1",
+                            "text": (
+                                "Unified measurement connects retail media and "
+                                "store outcomes."
+                            ),
+                            "evidence": (
+                                "The report describes a shared cross-channel view."
+                            ),
+                            "pages": [2],
+                            "section_id": "measurement-methods",
+                            "section_title": "Cross-channel measurement methods",
+                        },
+                        {
+                            "id": "finding-2",
+                            "text": "Investment follows attributable outcomes.",
+                            "evidence": (
+                                "The outlook links buyer budgets to attribution."
+                            ),
+                            "pages": [8],
+                            "section_id": "investment-outlook",
+                            "section_title": "Investment outlook",
+                        },
+                    ]
+                },
+            }
+        ),
+        prompt_client=prompt_client,
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    assert prompt_client.findings_variables is not None
+    sections = json.loads(prompt_client.findings_variables["doc_map_sections_json"])
+    assert [section["id"] for section in sections] == [
+        "measurement-methods",
+        "investment-outlook",
+    ]
+    assert packs["findings"]["findings"] == [
+        {
+            "id": "finding-1",
+            "text": "Unified measurement connects retail media and store outcomes.",
+            "evidence": "The report describes a shared cross-channel view.",
+            "confidence": "",
+            "pages": [2],
+            "section_id": "measurement-methods",
+            "section_title": "Cross-channel measurement methods",
+        },
+        {
+            "id": "finding-2",
+            "text": "Investment follows attributable outcomes.",
+            "evidence": "The outlook links buyer budgets to attribution.",
+            "confidence": "",
+            "pages": [8],
+            "section_id": "investment-outlook",
+            "section_title": "Investment outlook",
+        },
+    ]
+
+
 def test_generate_evidence_packs_logs_prompt_observability_and_response_metadata(
     tmp_path, caplog, assert_logs_have_required_fields
 ):
@@ -818,6 +892,7 @@ __all__ = [
     "test_evidence_pack_outcome_records_caller_prompt_family",
     "test_generate_evidence_packs_creates_context_when_missing",
     "test_generate_evidence_packs_marks_optional_empty_pack_as_abstained",
+    "test_generate_evidence_packs_passes_doc_map_sections_to_findings_and_retains_links",
     "test_generate_evidence_packs_logs_prompt_observability_and_response_metadata",
     "test_generate_evidence_packs_handles_missing_json",
     "test_generate_evidence_packs_propagates_retryable_app_error",
