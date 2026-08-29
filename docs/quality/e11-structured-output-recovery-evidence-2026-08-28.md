@@ -99,3 +99,13 @@ E11 therefore remains active. A future closure cohort must be freshly admitted
 under the current configuration with canonical source identities, then pass the
 existing schema, grounding, and editorial gates before its terminal outcome
 events can be compared with this baseline.
+
+### Canonical retained replay
+
+The approved `corpus_rehab_2b9799be10ecba64cc4ddd8d` campaign subsequently
+processed the three canonical retained reports through the `artifact_repair`
+queue. All three jobs succeeded, with 87, 91, and 219 validated artifacts
+reused respectively. Its planned and actual provider-call counts were both
+zero, and no report-analysis or publication job was queued. This is successful
+safe retained replay evidence, but intentionally produces no new
+structured-output recovery outcomes; it does not change the E11 status.
