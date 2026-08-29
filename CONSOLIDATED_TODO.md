@@ -1,6 +1,6 @@
 # Consolidated TODO
 
-Last audited: 2026-08-27
+Last audited: 2026-08-29
 
 This is the repository's single, source-neutral work register. Every task is evaluated by its current codebase evidence and project decision—not by where it was first proposed. Equivalent tasks are merged under one owner; deferred, closed, and excluded work stays visible in the same register.
 
@@ -54,7 +54,7 @@ All work is listed below in one register. `Active` items have detailed completio
 | Active | P8 | Complete concise public evidence, methodology, and related-content surfaces | Public evidence/discovery outcome. |
 | Active | E6 | Retain a hash-pinned claim-embedding benchmark export | Semantic benchmark coverage outcome. |
 | Active | E10 | Attest active model-pricing rates before they become stale | Keep cost attribution and spend enforcement trustworthy as provider pricing changes. |
-| Active | E11 | Measure and optimize structured-output recovery effectiveness | Turn central recovery-attempt telemetry into bounded quality and cost improvements. |
+| Closed | E11 | Measure and optimize structured-output recovery effectiveness | A fresh isolated three-PDF cohort retained 74 attributed outcomes with 100% first-pass validity and zero repair cost/tokens; schema, grounding, and publication safeguards remained enforced. |
 | Active | E14 | Calibrate category-fit coverage from retained outcomes | Turn category-fit decisions into grounded mapping and recovery improvements. |
 | Active | E13 | Measure candidate-regeneration promotion effectiveness | Turn retained candidate lineage and promotion outcomes into bounded repair-quality improvements. |
 | Closed | E8 | Use canonical source identity to suppress duplicate research work | Exact canonical-identity/content-hash package reuse, bounded decision telemetry, focused route/regeneration regression tests, and [retained-corpus evidence](docs/quality/e8-source-reuse-evidence-2026-08-28.md) prove duplicate acquisition/research suppression with zero duplicate packages for supported equivalent-source cases. Release verification passed exact-HEAD CI and evidence review. |
@@ -93,6 +93,8 @@ All work is listed below in one register. `Active` items have detailed completio
 | Excluded | X3 | Invented acquisition-form identity facts or public pipeline diagnostics | Only verified identity facts may be mapped; diagnostics remain operator-only. |
 
 ## Recently Closed
+
+- **E11 — Measure and optimize structured-output recovery effectiveness (2026-08-29):** The canonical bounded scorecard now supports optional run-ID filtering so a cohort denominator cannot absorb unrelated log traffic. Against the retained 5,038-output baseline (91.624% first-pass validity, 7.285% terminal structured-output failures, and $0.031435 repair cost), a fresh isolated three-PDF Drive/OpenAI cohort retained 74 fully attributed `report_analysis` outcomes from `openai:gpt-5.6-luna`: 100.000% first-pass valid, zero repair attempts/tokens/cost, and zero terminal structured-output failures. This is an observed +8.376 percentage-point first-pass result; because the historical baseline has partial attribution and the current cohort uses the current model, it is not a single-cause claim. Schema, semantic, grounding, and editorial gates remained active; the one non-ready report was held before publication. The guarded publish command made no HTTP request or WordPress write. See [`docs/quality/e11-structured-output-recovery-evidence-2026-08-28.md`](docs/quality/e11-structured-output-recovery-evidence-2026-08-28.md).
 
 - **E9 — Materialize prompt-family outputs and route only their required model calls (2026-08-27):** Independently retained, hash-verified primary outputs now cover document map, every enabled evidence pack, taxonomy, context-category fit, figure captions, seven editorial artifact families, and semantic/grounding validators. Exact report/source, prompt/dependency, provider/model-policy, schema/validator, semantic-input, configuration, output, and validation provenance is required before a family can bypass its provider route; missing or invalid proof remains a bounded existing-recovery regeneration reason. A representative retained-source live full report pass made 17 calls (131,302 input / 14,837 output tokens; $0.044064); its replay reused nine valid families and made only eight required repair/validation calls (69,998 / 8,142; $0.023770), reducing calls 52.9% and cost 46.1% without weakening gates. Focused compatibility, single-family, direct non-artifact pre-call, recovery, rendering, and publish-readiness tests passed; the retained evidence record is [`docs/quality/e9-prompt-family-reuse-evidence-2026-08-27.md`](docs/quality/e9-prompt-family-reuse-evidence-2026-08-27.md).
 
@@ -407,31 +409,6 @@ ingest, explicit-resume, publish-readiness, and publication regressions passed.
 - A bounded read-only check reports active, expiring, stale, held, and missing route rates against configured production routes with version/source metadata only.
 - Operator acknowledgement creates a reviewed rate-card transition with before/after estimates for recent canonical usage; activation remains an explicit configuration change.
 - Tests prove unknown, expired, held, and changed-rate routes cannot silently bypass canonical spend authority.
-
-#### E11. Measure and optimize structured-output recovery effectiveness
-
-- **Title:** Measure and optimize structured-output recovery effectiveness
-- **Impact 5 / effort: 2**
-- **Context:** Validation-run reliability artifacts now retain an attributed cohort funnel and per-attempt usage, repair, and failure data. They are not yet the compatible cross-run recovery scorecard required to compare first-pass success, repair/regeneration use, abstentions, latency, tokens, and cost by artifact and policy identity.
-- **Benefit:** Identify the highest-value schema, prompt, and provider fixes that improve first-pass validity and lower repair/regeneration cost without weakening schema or abstention contracts.
-- **Risks to avoid:** Aggregate only bounded metadata and never raw prompts, evidence, or model responses. Group by compatible artifact schema, provider, model, and policy versions. Produce operator recommendations and alerts only; do not automatically change routing, prompts, or failure policy.
-- **Success criteria:**
-
-- A read-only report groups compatible runs by artifact family and reports first-pass success, deterministic-repair success, model-repair success, regeneration success, abstention, terminal failure, latency, tokens, and cost.
-- The report identifies the dominant classified error classes and provider-schema incompatibilities without exposing retained content.
-- Configurable alert thresholds create actionable operator findings, not automatic behavior changes.
-- A retained and live cohort demonstrate a material first-pass-validity or recovery-cost improvement driven by a measured finding.
-
-- **E11 implementation evidence (2026-08-28):** The canonical recovery service
-  now emits one typed, bounded output-level outcome alongside attempt telemetry,
-  and the read-only scorecard groups rate/cost results by compatible current
-  attribution while exposing legacy gaps as `partial`. The retained 2026-08-25
-  to 2026-08-28 baseline found 5,038 observations, 91.624% first-pass validity,
-  7.285% terminal failure, 42,092/5,437 repair tokens, and $0.031435 estimated
-  repair cost. A quote-aware literal-newline repair is deterministic and
-  validator-preserving, but only fixture evidence exists after the change.
-  E11 remains active pending a representative post-change cohort; see
-  [`docs/quality/e11-structured-output-recovery-evidence-2026-08-28.md`](docs/quality/e11-structured-output-recovery-evidence-2026-08-28.md).
 
 #### E14. Calibrate category-fit coverage from retained outcomes
 

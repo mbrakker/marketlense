@@ -118,3 +118,54 @@ def test_effectiveness_report_groups_current_and_legacy_outcomes(
     assert model_group["failure_reason"] == "invalid_json"
     assert report["availability"]["legacy_attribution"] == "partial"
     assert report["availability"]["elapsed_repair_ms"] == "partial"
+
+
+def test_effectiveness_report_filters_to_requested_run_id(tmp_path: Path) -> None:
+    """A validation scorecard must not absorb unrelated recovery telemetry."""
+
+    log_path = tmp_path / "recovery.log"
+    output_path = tmp_path / "report.json"
+    log_path.write_text(
+        "\n".join(
+            [
+                _event(
+                    "structured_output_recovery_outcome",
+                    {
+                        "outcome_id": "included",
+                        "repair_strategy": "first_pass",
+                        "provider_attempts": 1,
+                        "terminal": "success",
+                    },
+                    run_id="target-run",
+                ),
+                _event(
+                    "structured_output_recovery_outcome",
+                    {
+                        "outcome_id": "excluded",
+                        "repair_strategy": "model_repair",
+                        "provider_attempts": 2,
+                        "terminal": "success",
+                    },
+                    run_id="other-run",
+                ),
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    command = [
+        sys.executable,
+        "scripts/quality/structured_output_recovery_effectiveness.py",
+        "--log",
+        str(log_path),
+        "--run-id",
+        "target-run",
+        "--output",
+        str(output_path),
+    ]
+    completed = subprocess.run(command, check=False, capture_output=True, text=True)
+
+    assert completed.returncode == 0, completed.stderr
+    report = json.loads(output_path.read_text(encoding="utf-8"))
+    assert report["metrics"]["output_count"] == 1
+    assert report["metrics"]["repair_attempts_per_output"] == 0.0

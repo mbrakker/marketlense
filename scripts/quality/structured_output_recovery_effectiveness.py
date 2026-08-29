@@ -14,7 +14,9 @@ _LEGACY_EVENT = "structured_output_attempt"
 _UNKNOWN = "unavailable"
 
 
-def _event_records(paths: Iterable[Path]) -> list[dict[str, Any]]:
+def _event_records(
+    paths: Iterable[Path], *, run_id: str | None = None
+) -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
     for path in paths:
         with path.open(encoding="utf-8", errors="replace") as handle:
@@ -26,8 +28,11 @@ def _event_records(paths: Iterable[Path]) -> list[dict[str, Any]]:
                     record = json.loads(line[start:])
                 except json.JSONDecodeError:
                     continue
-                if record.get("event") in {_CURRENT_EVENT, _LEGACY_EVENT}:
-                    records.append(record)
+                if record.get("event") not in {_CURRENT_EVENT, _LEGACY_EVENT}:
+                    continue
+                if run_id is not None and record.get("run_id") != run_id:
+                    continue
+                records.append(record)
     return records
 
 
@@ -307,9 +312,13 @@ def _groups(outcomes: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--log", action="append", type=Path, required=True)
+    parser.add_argument(
+        "--run-id",
+        help="Include only recovery events emitted by this workflow run.",
+    )
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    report = build_report(_event_records(args.log))
+    report = build_report(_event_records(args.log, run_id=args.run_id))
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
         json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8"

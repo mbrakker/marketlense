@@ -1,6 +1,6 @@
 # E11 Structured-Output Recovery Effectiveness Evidence
 
-> **Evidence date:** 2026-08-28
+> **Evidence date:** 2026-08-29
 > **Scope:** Read-only aggregation of the retained standard-log shards from
 > 2026-08-25 through 2026-08-28. These logs include historical automated and
 > representative processing activity; this is not a fresh live cohort.
@@ -73,14 +73,12 @@ path and fail closed.
 
 ## Status
 
-This is a measured telemetry and safe-repair foundation, not closure evidence
-for E11. No fresh representative retained/live cohort with the new terminal
-events exists yet, so no production first-pass, repair-cost, or terminal-failure
-improvement is claimed. E11 remains active until a compatible post-change
-cohort demonstrates a material observed improvement with unchanged
-schema/grounding/editorial gates.
+Closed on the scoped post-change cohort below. The observed improvement is
+real and retained, but it is a three-document current-model cohort compared
+with partially attributed historical telemetry; it is an operational result,
+not a causal claim about a single model or repair alone.
 
-## Subsequent bounded validation (2026-08-29)
+## Earlier bounded validation (2026-08-29)
 
 Three credentialed OpenAI integration-smoke invocations passed against the
 current service boundary. Each invocation was independently bounded and made
@@ -95,10 +93,8 @@ source-identity evidence. These are fail-closed admission safeguards, not
 structured-output recovery observations. No provenance check was bypassed, and
 no recovery-effectiveness improvement is claimed from these runs.
 
-E11 therefore remains active. A future closure cohort must be freshly admitted
-under the current configuration with canonical source identities, then pass the
-existing schema, grounding, and editorial gates before its terminal outcome
-events can be compared with this baseline.
+Those preliminary attempts did not establish closure; the fresh cohort below
+was then admitted with current provenance and executed the normal pipeline.
 
 ### Canonical retained replay
 
@@ -109,3 +105,48 @@ reused respectively. Its planned and actual provider-call counts were both
 zero, and no report-analysis or publication job was queued. This is successful
 safe retained replay evidence, but intentionally produces no new
 structured-output recovery outcomes; it does not change the E11 status.
+
+## Fresh isolated post-change cohort (2026-08-29)
+
+Run `9f51aea0-ba99-4960-a23b-052ac9f21072` admitted and processed three
+canonical-source PDFs through the normal Drive, acquisition, ingest, analysis,
+validation, and local publish-readiness path. The isolated reports database
+retained only canonical source-identity provenance; all derived report records
+and artifacts were cleared before admission, preventing E9 artifact reuse from
+entering the measurement. The run was bounded to three PDFs and $6.00; it made
+85 provider calls (756,312 input / 77,923 output tokens; $0.244772 total).
+
+The canonical run-filtered scorecard was generated with:
+
+```powershell
+python scripts/quality/structured_output_recovery_effectiveness.py `
+  --log logs/market_lense_2026-08-29.log `
+  --run-id 9f51aea0-ba99-4960-a23b-052ac9f21072 `
+  --output out/e11_live_recovery_20260829/structured-output-recovery-scorecard.json
+```
+
+Its ignored local evidence artifact has SHA-256
+`852c6c8ebc6e344948b1dfc4768bb4f64bbd32b42607c6fea839fb45424675e7`.
+All 74 structured-output terminal outcomes were attributed to
+`report_analysis` / `openai:gpt-5.6-luna` and had a first-pass-valid result:
+
+| Metric | Retained baseline | Fresh cohort | Observed change |
+| --- | ---: | ---: | ---: |
+| Structured output observations | 5,038 | 74 | — |
+| First-pass valid rate | 91.624% | 100.000% | +8.376 percentage points |
+| Repair attempts per output | 0.096 | 0.000 | -0.096 |
+| Repair input/output tokens | 42,092 / 5,437 | 0 / 0 | eliminated in cohort |
+| Estimated repair cost | $0.031435 | $0.000000 | eliminated in cohort |
+| Terminal structured-output failure rate | 7.285% | 0.000% | -7.285 percentage points |
+
+The cohort preserved schema, semantic, grounding, and editorial validation;
+structured-output recovery made no model-repair call and did not bypass any
+validator. Two reports completed successfully. One separate report was held by
+the existing publish-readiness gate after bounded content-quality regeneration;
+this was not a structured-output failure and no substitute was selected.
+
+A guarded `publish-wp --require-full-validation-manifest` attempt then stopped
+at `validation_cohort_publication_not_ready` before any HTTP request or
+WordPress write. WordPress credentials were blank and the isolated profile set
+the WordPress-write budget to zero. This verifies the intended safe terminal
+state without claiming a publication success.

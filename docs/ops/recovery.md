@@ -27,8 +27,12 @@ Build a read-only scorecard from explicit log shards:
 ```powershell
 python scripts/quality/structured_output_recovery_effectiveness.py `
   --log logs/market_lense_YYYY-MM-DD.log `
+  --run-id <workflow-run-id> `
   --output out/structured-output-recovery-effectiveness.json
 ```
+
+`--run-id` is optional. Supply it for a cohort comparison so unrelated standard
+log traffic cannot enter the denominator.
 
 The report groups output-level outcomes by workflow, prompt/model family,
 schema, provider/model, failure reason, repair strategy, and retry attempt.
