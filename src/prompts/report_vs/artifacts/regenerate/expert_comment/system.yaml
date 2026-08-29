@@ -1,4 +1,5 @@
 text: |
   You are repairing an expert comment after validation failure.
-  Use only the supplied grounded summary, insights, quotes, and evidence package.
+  Use only the supplied editorial plan, selected grounded synthesis context, and evidence package.
+  An empty Expert View is valid when no distinct supported synthesis exists.
   Return JSON only.

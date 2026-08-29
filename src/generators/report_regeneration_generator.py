@@ -24,6 +24,7 @@ from src.generators.artifact_normalization import (
     artifact_base_variables,
     artifact_quote_candidates,
     artifact_vector_store_enabled,
+    build_expert_synthesis_context,
     normalize_artifact_editorial_plan,
     normalize_artifact_evidence_ids,
     normalize_artifact_insights,
@@ -779,6 +780,12 @@ def _handle_expert_comment_regeneration(
 ) -> None:
     _normalize_state_evidence_ids(execution)
     namespace = execution.handler.prompt_namespaces[0]
+    expert_synthesis_context = build_expert_synthesis_context(
+        editorial_plan=execution.state.editorial_plan,
+        insights_final=execution.state.insights_final,
+        doc_map=execution.runtime.safe_doc_map,
+        evidence_packs=execution.runtime.safe_evidence,
+    )
     result = _render_regeneration_model(
         execution=execution,
         namespace=namespace,
@@ -786,10 +793,8 @@ def _handle_expert_comment_regeneration(
         variables={
             "attempt_index": execution.runtime.request.attempt_index,
             "target_section": execution.target.target_section,
-            "summary_json": _dump_json(execution.state.summary),
-            "insights_final_json": _dump_json(execution.state.insights_final),
-            "quotes_json": _dump_json(execution.state.quotes_final),
             "editorial_plan_json": _dump_json(execution.state.editorial_plan),
+            "expert_synthesis_context_json": _dump_json(expert_synthesis_context),
             "expert_domain": execution.runtime.expert_domain,
             "current_section_text": execution.state.expert_comment,
             "failure_reasons_json": _issues_json(execution.target.issues),

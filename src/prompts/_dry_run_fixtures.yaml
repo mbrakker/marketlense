@@ -6,6 +6,8 @@ shared:
     {"scope":{"summary":"Global enterprise payments market in 2026."},"findings":[{"id":"f1","text":"Digital wallets continue to expand in B2B and consumer checkout flows."},{"id":"f2","text":"Merchants prioritize orchestration, fraud controls, and conversion."}],"methods":{"methods":["Executive interviews","Cross-market survey"]},"limitations":{"items":["Forward-looking findings depend on disclosed assumptions."]}}
   editorial_plan_json: &editorial_plan_json >-
     {"report_thesis":"Enterprise payment growth increasingly depends on wallet and orchestration execution.","themes":[{"theme":"Wallet adoption","priority":1,"evidence_ids":["f1"]},{"theme":"Merchant orchestration","priority":2,"evidence_ids":["f2"]}]}
+  expert_synthesis_context_json: &expert_synthesis_context_json >-
+    {"schema_version":"1.0","themes":[{"theme":"Wallet adoption","priority":1,"evidence":[{"evidence_id":"f1","source_pack":"findings","text":"Digital wallets continue to expand in B2B and consumer checkout flows."}]},{"theme":"Merchant orchestration","priority":2,"evidence":[{"evidence_id":"f2","source_pack":"findings","text":"Merchants prioritize orchestration, fraud controls, and conversion."}]}],"insight_implications":[{"evidence_id":"f1","so_what":"Wallet coverage shapes checkout resilience."}],"limitations":[{"evidence_id":"","text":"Forward-looking findings depend on disclosed assumptions."}],"counter_signals":[{"evidence_id":"f2","text":"Merchant priorities vary by risk and conversion context."}]}
   summary_json: &summary_json >-
     {"tldr":"Digital wallets and payment orchestration are reshaping enterprise checkout.","card_tldr_compact":"Wallets and orchestration reshape enterprise checkout.","executive_summary":"The report finds that wallet growth, fraud pressure, and orchestration complexity are changing merchant priorities."}
   quotes_json: &quotes_json >-
@@ -269,11 +271,9 @@ fixtures:
     system_variables:
       expert_domain: "enterprise payments strategy"
     user_variables:
-      summary_json: *summary_json
-      insights_final_json: *insights_final_json
-      quotes_json: *quotes_json
       metric_spine_json: *metric_spine_json
       editorial_plan_json: *editorial_plan_json
+      expert_synthesis_context_json: *expert_synthesis_context_json
   - namespace: "report_vs/artifacts/editorial_plan"
     family: "publishing"
     model: "openai/gpt-5-mini"
@@ -339,10 +339,8 @@ fixtures:
       fix_checklist_json: *fix_checklist_json
       grounding_package_json: *grounding_package_json
       expert_domain: "enterprise payments strategy"
-      summary_json: *summary_json
-      insights_final_json: *insights_final_json
-      quotes_json: *quotes_json
       editorial_plan_json: *editorial_plan_json
+      expert_synthesis_context_json: *expert_synthesis_context_json
   - namespace: "report_vs/artifacts/regenerate/insights_candidates"
     family: "publishing"
     model: "openai/gpt-5-mini"

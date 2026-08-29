@@ -35,6 +35,7 @@ from src.generators.artifact_normalization import (
     artifact_retrieval_mode,
     artifact_vector_store_enabled,
     bind_artifact_evidence_spans,
+    build_expert_synthesis_context,
     fallback_artifact_insights_from_findings,
     normalize_artifact_editorial_plan,
     normalize_artifact_evidence_ids,
@@ -741,13 +742,17 @@ def generate_artifacts(
         )
     metric_spine = derive_metric_spine(safe_evidence)
     metric_spine_json = _dump_json(metric_spine)
+    expert_synthesis_context = build_expert_synthesis_context(
+        editorial_plan=editorial_plan,
+        insights_final=insights_final,
+        doc_map=safe_doc_map,
+        evidence_packs=safe_evidence,
+    )
 
     expert_ctx = child_context(ctx, task_id=f"{ctx.task_id}:expert_comment")
     expert_vars = {
         "editorial_plan_json": editorial_plan_json,
-        "summary_json": _dump_json(summary),
-        "insights_final_json": _dump_json(insights_final),
-        "quotes_json": _dump_json(quotes_final),
+        "expert_synthesis_context_json": _dump_json(expert_synthesis_context),
         "metric_spine_json": metric_spine_json,
         "expert_domain": expert_domain,
     }

@@ -17,3 +17,13 @@ allowlist:
     reason: "DocMap-guided final-insight prompts add bounded section-coverage instructions."
     expires_on: "2026-09-30"
     max_delta_absolute: 80
+  - pattern: "totals.total_tokens"
+    owner: "MarketLense engineering"
+    reason: "Expert View now receives bounded plan-linked evidence, implications, limitations, and counter-signals instead of summary prose."
+    expires_on: "2026-09-30"
+    max_delta_absolute: 320
+  - pattern: "families.publishing.total_tokens"
+    owner: "MarketLense engineering"
+    reason: "Expert View now receives bounded plan-linked evidence, implications, limitations, and counter-signals instead of summary prose."
+    expires_on: "2026-09-30"
+    max_delta_absolute: 320

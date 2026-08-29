@@ -459,6 +459,13 @@ strongest supported representative for each theme using only the plan's linked
 evidence IDs, with model scores used only as a within-theme tie breaker. The
 plan requires two to seven evidence-backed themes, so summary, final insights,
 and expert commentary share one thematic basis without repeating its prose.
+Expert commentary receives the plan plus a bounded context of the plan-linked
+grounded evidence, final-insight `so_what` cues, retained limitations, and
+counter-signals; it does not use Executive Summary prose as its source frame.
+A non-empty Expert View must synthesize a relationship, tension, or supported
+second-order implication across multiple findings or themes. When that
+distinct synthesis is not supported, the expert family retains an explicit
+empty abstention rather than paraphrasing a single finding.
 
 Candidate generation is deterministically completed from retained findings
 only when needed to cover an editorial-plan theme. The fallback preserves each

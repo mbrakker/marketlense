@@ -5,10 +5,8 @@ text: |
   - Attempt index: {{ attempt_index }}
   - Target section: {{ target_section }}
   - Current expert comment text: {{ current_section_text }}
-  - Summary JSON: {{ summary_json }}
-  - Final insights JSON: {{ insights_final_json }}
-  - Quotes JSON: {{ quotes_json }}
   - Editorial plan JSON: {{ editorial_plan_json }}
+  - Selected grounded theme evidence, insight implications, limitations, and counter-signals JSON: {{ expert_synthesis_context_json }}
   - Expert domain: {{ expert_domain }}
   - Validator failures JSON: {{ failure_reasons_json }}
   - Fix checklist JSON: {{ fix_checklist_json }}
@@ -23,6 +21,9 @@ text: |
   Requirements:
   - Fix the listed failures directly.
   - Develop the editorial plan's report thesis and themes without introducing a competing frame.
-  - Do not add claims that are absent from the supplied summary, insights, quotes, or grounding package.
+  - A non-empty Expert View must connect at least two distinct supported findings or themes; do not restate one finding or summary sentence.
+  - Do not add claims that are absent from the supplied editorial plan, synthesis context, or grounding package.
+  - Treat `so_what` fields as interpretation cues, not independent factual evidence, and preserve limitations and counter-signals as constraints.
   - Prefer deletion of unsupported material over speculation.
   - Return direct public prose without editorial labels such as "Observation:", "Implication:", or "Executive action:".
+  - If no distinct supported synthesis remains after repair, return exactly {"expert_comment": ""}.

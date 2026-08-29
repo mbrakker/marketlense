@@ -285,6 +285,165 @@ def select_artifact_insights(
     return selected
 
 
+def build_expert_synthesis_context(
+    *,
+    editorial_plan: Dict[str, Any],
+    insights_final: List[Dict[str, Any]],
+    doc_map: Dict[str, Any],
+    evidence_packs: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Build the bounded, evidence-first input for Expert View synthesis."""
+    plan = normalize_artifact_editorial_plan(editorial_plan)
+    span_index = _build_evidence_span_index(
+        doc_map=doc_map, evidence_packs=evidence_packs
+    )
+    themes: List[Dict[str, Any]] = []
+    for theme in plan["themes"]:
+        evidence = []
+        for evidence_id in theme["evidence_ids"][:3]:
+            spans = span_index.get(_s(evidence_id).casefold(), [])
+            if not spans:
+                continue
+            span = spans[0]
+            evidence.append(
+                {
+                    "evidence_id": _s(span.get("evidence_id")),
+                    "source_pack": _s(span.get("source_pack")),
+                    "text": _s(span.get("text")),
+                }
+            )
+        themes.append(
+            {
+                "theme": theme["theme"],
+                "priority": theme["priority"],
+                "evidence": evidence,
+            }
+        )
+    return {
+        "schema_version": "1.0",
+        "themes": themes,
+        "insight_implications": _expert_insight_implications(insights_final),
+        "limitations": _expert_context_items(
+            evidence_packs.get("limitations"),
+            item_key="limitations",
+            text_keys=("description", "limitation", "text", "summary"),
+        ),
+        "counter_signals": _expert_counter_signals(insights_final, evidence_packs),
+    }
+
+
+def _expert_insight_implications(
+    insights_final: List[Dict[str, Any]],
+) -> List[Dict[str, str]]:
+    implications: List[Dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for insight in insights_final:
+        if not isinstance(insight, dict):
+            continue
+        implication = _s(insight.get("so_what")).strip()
+        if not implication:
+            continue
+        evidence_id = _s(insight.get("evidence_id")).strip()
+        key = (evidence_id.casefold(), normalize_text(implication))
+        if key in seen:
+            continue
+        seen.add(key)
+        implications.append(
+            {"evidence_id": evidence_id, "so_what": implication}
+        )
+        if len(implications) == 7:
+            break
+    return implications
+
+
+def _expert_counter_signals(
+    insights_final: List[Dict[str, Any]], evidence_packs: Dict[str, Any]
+) -> List[Dict[str, str]]:
+    counter_signals: List[Dict[str, str]] = []
+    for insight in insights_final:
+        if not isinstance(insight, dict):
+            continue
+        if _s(insight.get("coverage_role")).strip() not in {
+            "counter_signal",
+            "strategic_risk",
+        }:
+            continue
+        _append_expert_context_item(
+            counter_signals,
+            evidence_id=_s(insight.get("evidence_id")),
+            text=_s(insight.get("text")),
+        )
+    counter_signals.extend(
+        _expert_context_items(
+            evidence_packs.get("risk_register"),
+            item_key="risk_register",
+            text_keys=("risk", "text", "summary", "description"),
+            existing=counter_signals,
+        )
+    )
+    return counter_signals[:7]
+
+
+def _expert_context_items(
+    pack: Any,
+    *,
+    item_key: str,
+    text_keys: tuple[str, ...],
+    existing: List[Dict[str, str]] | None = None,
+) -> List[Dict[str, str]]:
+    items = pack.get(item_key) if isinstance(pack, dict) else []
+    if not isinstance(items, list):
+        return []
+    context_items: List[Dict[str, str]] = []
+    seen = {
+        (
+            _s(item.get("evidence_id")).casefold(),
+            normalize_text(_s(item.get("text"))),
+        )
+        for item in (existing or [])
+        if isinstance(item, dict)
+    }
+    for item in items:
+        if isinstance(item, str):
+            text = item.strip()
+            evidence_id = ""
+        elif isinstance(item, dict):
+            text = _pick_first_non_empty_text(
+                *(item.get(key) for key in text_keys)
+            )
+            evidence_id = _s(item.get("evidence_id") or item.get("id")).strip()
+        else:
+            continue
+        if not text:
+            continue
+        key = (evidence_id.casefold(), normalize_text(text))
+        if key in seen:
+            continue
+        seen.add(key)
+        context_items.append({"evidence_id": evidence_id, "text": text})
+        if len(context_items) == 7:
+            break
+    return context_items
+
+
+def _append_expert_context_item(
+    items: List[Dict[str, str]], *, evidence_id: str, text: str
+) -> None:
+    if not text.strip():
+        return
+    key = (evidence_id.casefold(), normalize_text(text))
+    if any(
+        key
+        == (
+            _s(item.get("evidence_id")).casefold(),
+            normalize_text(_s(item.get("text"))),
+        )
+        for item in items
+    ):
+        return
+    items.append({"evidence_id": evidence_id.strip(), "text": text.strip()})
+
+
 def _ranked_unique_insights(
     final_insights: List[Dict[str, Any]], candidate_insights: List[Dict[str, Any]]
 ) -> List[tuple[int, Dict[str, Any]]]:

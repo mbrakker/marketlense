@@ -216,6 +216,18 @@ class _FakeOpenAIClient:
                 },
                 request_id="req-quotes",
             )
+        if "system::report_vs/artifacts/regenerate/expert_comment" in req.system_prompt:
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text='{"expert_comment":"Retention and margin evidence create a supported planning tension."}',
+                parsed_json={
+                    "expert_comment": (
+                        "Retention and margin evidence create a supported planning "
+                        "tension."
+                    )
+                },
+                request_id="req-expert",
+            )
         raise AssertionError(
             f"Unexpected prompt payload: {req.system_prompt} {req.user_prompt}"
         )
@@ -577,6 +589,81 @@ def test_regenerate_artifacts_refreshes_cover_semantics_from_retained_analysis(
         "A rising time series is the strongest visual story."
     )
     assert response.prompt_namespaces == ["report_vs/artifacts/cover_semantics"]
+
+
+def test_regenerate_artifacts_expert_comment_uses_grounded_synthesis_context(
+    tmp_path,
+):
+    prompt_client = _FakePromptClient()
+    openai_client = _FakeOpenAIClient()
+    current_artifacts = _current_artifacts()
+    current_artifacts["insights_final"][0]["so_what"] = (
+        "The primary finding changes the operating tradeoff."
+    )
+    current_artifacts["insights_final"][1]["coverage_role"] = "counter_signal"
+    evidence_packs = _evidence_packs()
+    evidence_packs["limitations"] = {
+        "limitations": [
+            {
+                "description": "The report does not compare segments.",
+                "evidence_id": "f1",
+            }
+        ]
+    }
+
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=RegenerationPlan(
+                mode="targeted",
+                targets=[
+                    RegenerationTarget(
+                        target_section="expert_comment",
+                        regenerate_steps=["expert_comment"],
+                        prompt_namespaces=[
+                            "report_vs/artifacts/regenerate/expert_comment"
+                        ],
+                        issues=[],
+                    )
+                ],
+                unmappable_issues=[],
+                broad_retry_allowed=False,
+            ),
+            current_artifacts=current_artifacts,
+            doc_map=evidence_packs["doc_map"],
+            evidence_packs=evidence_packs,
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current_artifacts["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=openai_client,
+        prompt_client=prompt_client,
+    )
+
+    assert response.prompt_namespaces == [
+        "report_vs/artifacts/regenerate/expert_comment"
+    ]
+    variables = prompt_client.render_calls[0]["variables"]
+    assert "summary_json" not in variables
+    context = json.loads(variables["expert_synthesis_context_json"])
+    assert [theme["theme"] for theme in context["themes"]] == [
+        "Primary evidence",
+        "Margin evidence",
+    ]
+    assert context["insight_implications"] == [
+        {
+            "evidence_id": "f1",
+            "so_what": "The primary finding changes the operating tradeoff.",
+        }
+    ]
+    assert context["limitations"] == [
+        {"evidence_id": "f1", "text": "The report does not compare segments."}
+    ]
 
 
 def test_regenerate_artifacts_summary_only_keeps_other_sections_unchanged(tmp_path):
