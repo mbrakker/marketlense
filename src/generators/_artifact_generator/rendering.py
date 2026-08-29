@@ -32,6 +32,7 @@ from src.utils.logging import log_event
 logger = logging.getLogger("market_lense.artifact_generator")
 
 _ARTIFACT_RESPONSE_ROOTS = {
+    "report_vs/artifacts/editorial_plan": "editorial_plan",
     "report_vs/artifacts/summary": "summary",
     "report_vs/artifacts/insights_candidates": "insights_candidates",
     "report_vs/artifacts/insights_final": "insights_final",

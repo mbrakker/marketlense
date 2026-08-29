@@ -63,6 +63,20 @@ def _doc_map(section_count: int) -> dict[str, object]:
     }
 
 
+def _editorial_plan(*evidence_ids: str) -> dict[str, object]:
+    return {
+        "report_thesis": "The report's retained themes determine the planning outlook.",
+        "themes": [
+            {
+                "theme": f"Theme {index}",
+                "priority": index,
+                "evidence_ids": [evidence_id],
+            }
+            for index, evidence_id in enumerate(evidence_ids, start=1)
+        ],
+    }
+
+
 def test_select_artifact_insights_keeps_representative_sections_for_broad_doc_map():
     candidates = [
         _insight("f1", score=0.99, text="Macro demand is accelerating."),
@@ -77,8 +91,7 @@ def test_select_artifact_insights_keeps_representative_sections_for_broad_doc_ma
     selected = select_artifact_insights(
         final_insights=candidates[:3],
         candidate_insights=candidates,
-        doc_map=_doc_map(6),
-        evidence_packs=_section_linked_findings(6),
+        editorial_plan=_editorial_plan("f1", "f2", "f3", "f4", "f5", "f6"),
     )
 
     assert [item["evidence_id"] for item in selected] == [
@@ -105,15 +118,11 @@ def test_select_artifact_insights_keeps_narrow_doc_map_compact():
     selected = select_artifact_insights(
         final_insights=candidates,
         candidate_insights=candidates,
-        doc_map=_doc_map(1),
-        evidence_packs=_section_linked_findings(1),
+        editorial_plan=_editorial_plan("f1", "f2"),
     )
 
-    assert [item["text"] for item in selected] == [
-        "Demand is increasing.",
-        "Demand is increasing faster.",
-    ]
-    assert len(selected) == 2
+    assert [item["text"] for item in selected] == ["Demand is increasing."]
+    assert len(selected) == 1
 
 
 def test_select_artifact_insights_does_not_repeat_broad_themes_to_fill_target():
@@ -127,8 +136,7 @@ def test_select_artifact_insights_does_not_repeat_broad_themes_to_fill_target():
     selected = select_artifact_insights(
         final_insights=candidates,
         candidate_insights=candidates,
-        doc_map=_doc_map(7),
-        evidence_packs=_section_linked_findings(7),
+        editorial_plan=_editorial_plan("f1", "f2", "f3"),
     )
 
     assert [item["evidence_id"] for item in selected] == ["f1", "f2", "f3"]
@@ -150,15 +158,14 @@ def test_select_artifact_insights_maps_pages_within_doc_map_section_ranges():
     selected = select_artifact_insights(
         final_insights=candidates,
         candidate_insights=candidates,
-        doc_map=doc_map,
-        evidence_packs=_section_linked_findings(3),
+        editorial_plan=_editorial_plan("f4", "f6"),
     )
 
     assert [item["evidence_id"] for item in selected] == ["f4", "f6"]
 
 
 def _generation_evidence(section_count: int) -> dict[str, object]:
-    evidence = _section_linked_findings(section_count)
+    evidence = _section_linked_findings(max(section_count, 2))
     evidence["quote_candidates"] = {
         "quote_candidates": [
             {
@@ -172,8 +179,11 @@ def _generation_evidence(section_count: int) -> dict[str, object]:
     return evidence
 
 
-def _generation_responses(candidates: list[dict[str, object]]) -> dict[str, object]:
+def _generation_responses(
+    candidates: list[dict[str, object]], *, plan_evidence_ids: list[str]
+) -> dict[str, object]:
     return {
+        "editorial_plan": {"editorial_plan": _editorial_plan(*plan_evidence_ids)},
         "summary": {
             "summary": {
                 "tldr": "The retained evidence changes the planning outlook.",
@@ -221,7 +231,11 @@ def test_generate_artifacts_retains_broad_doc_map_theme_coverage(tmp_path):
         evidence_packs=_generation_evidence(6),
         settings=_settings(tmp_path),
         ctx=_ctx(),
-        openai_client=FakeOpenAI(_generation_responses(candidates)),
+        openai_client=FakeOpenAI(
+            _generation_responses(
+                candidates, plan_evidence_ids=[f"f{index}" for index in range(1, 7)]
+            )
+        ),
         prompt_client=CapturingPromptClient(),
         analysis_store=FakeAnalysisStore(),
     )
@@ -250,15 +264,14 @@ def test_generate_artifacts_keeps_narrow_doc_map_compact(tmp_path):
         evidence_packs=_generation_evidence(1),
         settings=_settings(tmp_path),
         ctx=_ctx(),
-        openai_client=FakeOpenAI(_generation_responses(candidates)),
+        openai_client=FakeOpenAI(
+            _generation_responses(candidates, plan_evidence_ids=["f1", "f2"])
+        ),
         prompt_client=CapturingPromptClient(),
         analysis_store=FakeAnalysisStore(),
     )
 
-    assert [item["text"] for item in payload["insights_final"]] == [
-        "Demand is increasing.",
-        "Demand is increasing faster.",
-    ]
+    assert [item["evidence_id"] for item in payload["insights_final"]] == ["f1", "f2"]
     assert payload["family_status"]["insights_bundle"]["status"] == "generated"
 
 
@@ -278,7 +291,11 @@ def test_generate_artifacts_completes_broad_theme_coverage_from_findings(tmp_pat
         evidence_packs=_generation_evidence(6),
         settings=_settings(tmp_path),
         ctx=_ctx(),
-        openai_client=FakeOpenAI(_generation_responses(candidates)),
+        openai_client=FakeOpenAI(
+            _generation_responses(
+                candidates, plan_evidence_ids=[f"f{index}" for index in range(1, 7)]
+            )
+        ),
         prompt_client=CapturingPromptClient(),
         analysis_store=FakeAnalysisStore(),
     )

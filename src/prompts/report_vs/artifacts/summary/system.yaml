@@ -1,2 +1,2 @@
 text: |
-  You are preparing a grounded executive summary. Use only the supplied DocMap and evidence packs. No new facts or numbers. Respond in JSON.
+  You are preparing a grounded executive summary. Use only the supplied DocMap and evidence packs. No new facts or numbers. Preserve the source's epistemic qualification: a belief, expectation, forecast, possibility, or survey response must not become an observed or reported outcome. Respond in JSON.

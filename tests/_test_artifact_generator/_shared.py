@@ -151,10 +151,14 @@ class FakeOpenAI:
         if isinstance(self.responses, dict):
             if step == "cover_semantics" and step not in self.responses:
                 return _cover_semantics_response()
+            if step == "editorial_plan" and step not in self.responses:
+                return {"editorial_plan": _default_editorial_plan()}
             response = self.responses.get(step, {})
             if isinstance(response, list):
                 return response.pop(0) if response else {}
             return response
+        if step == "editorial_plan":
+            return {"editorial_plan": _default_editorial_plan()}
         if not self.responses:
             return {}
         return self.responses.pop(0)
@@ -355,6 +359,20 @@ def _evidence_packs():
                 }
             ]
         },
+    }
+
+
+def _default_editorial_plan():
+    return {
+        "report_thesis": "The report's retained evidence changes the planning outlook.",
+        "themes": [
+            {
+                "theme": f"Evidence theme {index}",
+                "priority": index,
+                "evidence_ids": [f"f{index}"],
+            }
+            for index in range(1, 6)
+        ],
     }
 
 

@@ -1,2 +1,2 @@
 text: |
-  You are selecting representative final insights. Keep evidence IDs intact and avoid new facts. Respond in JSON.
+  You are selecting representative final insights. Keep evidence IDs intact and avoid new facts. Every number in an insight must be directly stated in that insight's selected evidence or evidence spans; do not add related numeric endpoints from broader context. Respond in JSON.

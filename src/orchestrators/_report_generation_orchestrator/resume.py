@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 from copy import deepcopy
 from dataclasses import asdict, replace
@@ -19,8 +20,10 @@ from src.contracts.files import (
     FileStatRequest,
     PipelineCheckpointReadRequest,
     PipelineStageCheckpoint,
+    ReadTextRequest,
 )
 from src.contracts.ingest import IngestOutcome
+from src.contracts.prompts import PromptLoadRequest
 from src.contracts.regeneration import (
     ArtifactRegenerationRequest,
     RegenerationPlan,
@@ -43,6 +46,7 @@ from src.contracts.report_store import (
 from src.contracts.semantic_ids import ReportId
 from src.contracts.validation import ValidationRequest
 from src.contracts.vector_store import VectorStoreDeleteRequest
+from src.generators.artifact_normalization import normalize_artifact_editorial_plan
 from src.generators.normalize_generator import normalize_report
 from src.generators.report_analysis_generator import start_vector_store_indexing
 from src.generators.report_generation_dependencies import ReportGenerationDependencies
@@ -79,9 +83,11 @@ from src.orchestrators._report_analysis_orchestrator.validation import (
 )
 from src.orchestrators.analytics_projection_orchestrator import run_analytics_projection
 from src.orchestrators.report_analysis_orchestrator import run_report_analysis
+from src.services import prompt_service
 from src.services.file_service import (
     file_stat,
     read_pipeline_checkpoint,
+    read_text,
 )
 from src.services.report_store_service import check_artifact_reuse
 from src.utils.clock import utc_now_iso as _utc_now_iso
@@ -484,6 +490,7 @@ def _validate_checkpoint_artifacts(
         checkpoint_path,
         require_artifact_lineage=require_artifact_lineage,
     )
+    _validate_checkpoint_editorial_plan(runtime, checkpoint, checkpoint_path)
     raw_integrity = checkpoint.payload.get("artifact_integrity")
     if not isinstance(raw_integrity, dict):
         return
@@ -589,6 +596,101 @@ def _validate_checkpoint_artifacts(
             },
         )
     )
+
+
+def _validate_checkpoint_editorial_plan(
+    runtime: ReportRuntimeState,
+    checkpoint: PipelineStageCheckpoint,
+    checkpoint_path: str,
+) -> None:
+    artifacts_path = str(checkpoint.artifact_refs.get("artifacts") or "").strip()
+    if not artifacts_path:
+        return
+    if not file_stat(
+        FileStatRequest(schema_version="1.0", path=artifacts_path), runtime.ctx
+    ).exists:
+        return
+    try:
+        payload = json.loads(
+            read_text(
+                ReadTextRequest(schema_version="1.0", path=artifacts_path), runtime.ctx
+            ).content
+        )
+        if not isinstance(payload, dict):
+            raise ValueError("artifacts payload must be an object")
+        normalize_artifact_editorial_plan(payload.get("editorial_plan"))
+        _validate_checkpoint_artifact_prompt_identities(runtime, payload, checkpoint_path)
+    except AppError as exc:
+        if exc.code == "report_pipeline_checkpoint_prompt_identity_invalid":
+            raise
+        raise AppError(
+            code="report_pipeline_checkpoint_artifact_schema_invalid",
+            message="Checkpoint artifacts do not satisfy the current editorial plan contract",
+            cause=exc,
+            retryable=False,
+            context={
+                "file_id": runtime.file.file_id,
+                "stage_name": checkpoint.stage_name,
+                "artifacts_path": artifacts_path,
+                "checkpoint_path": checkpoint_path,
+            },
+        ) from exc
+    except (OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise AppError(
+            code="report_pipeline_checkpoint_artifact_schema_invalid",
+            message="Checkpoint artifacts do not satisfy the current editorial plan contract",
+            cause=exc,
+            retryable=False,
+            context={
+                "file_id": runtime.file.file_id,
+                "stage_name": checkpoint.stage_name,
+                "artifacts_path": artifacts_path,
+                "checkpoint_path": checkpoint_path,
+            },
+        ) from exc
+
+
+def _validate_checkpoint_artifact_prompt_identities(
+    runtime: ReportRuntimeState,
+    artifacts_payload: dict[str, object],
+    checkpoint_path: str,
+) -> None:
+    raw_cache = artifacts_payload.get("_cache")
+    raw_prompts = raw_cache.get("prompts") if isinstance(raw_cache, dict) else None
+    if not isinstance(raw_prompts, dict):
+        raise AppError(
+            code="report_pipeline_checkpoint_prompt_identity_invalid",
+            message="Checkpoint artifacts lack retained prompt identities",
+            retryable=False,
+            context={"checkpoint_path": checkpoint_path},
+        )
+    for namespace, raw_identity in raw_prompts.items():
+        normalized_namespace = str(namespace or "").strip()
+        if not normalized_namespace.startswith("report_vs/artifacts/"):
+            continue
+        cached_identity = raw_identity if isinstance(raw_identity, dict) else {}
+        cached_hash = str(cached_identity.get("prompt_content_hash") or "").strip()
+        current_prompt = prompt_service.load_prompt_set(
+            PromptLoadRequest(
+                schema_version="1.0",
+                namespace=normalized_namespace,
+                reload_if_changed=True,
+            ),
+            runtime.ctx,
+        )
+        if cached_hash and cached_hash == current_prompt.prompt_content_hash:
+            continue
+        raise AppError(
+            code="report_pipeline_checkpoint_prompt_identity_invalid",
+            message="Checkpoint artifact prompt identity is stale or incomplete",
+            retryable=False,
+            context={
+                "checkpoint_path": checkpoint_path,
+                "prompt_namespace": normalized_namespace,
+                "cached_prompt_content_hash": cached_hash,
+                "current_prompt_content_hash": current_prompt.prompt_content_hash,
+            },
+        )
 
 
 def _validate_checkpoint_artifact_lineage(

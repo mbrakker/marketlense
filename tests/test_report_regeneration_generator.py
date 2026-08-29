@@ -133,6 +133,15 @@ class _FakeOpenAIClient:
                             "metric": dict(METRIC),
                             "pages": [1],
                         }
+                        ,
+                        {
+                            "id": "insight-2",
+                            "text": "Repaired margin insight",
+                            "evidence_id": "f2",
+                            "evidence": "Evidence text 2",
+                            "metric": dict(METRIC),
+                            "pages": [2],
+                        }
                     ]
                 },
                 request_id="req-final",
@@ -154,6 +163,16 @@ class _FakeOpenAIClient:
                             "metric": dict(METRIC),
                             "pages": [1],
                             "score": 1.0,
+                        }
+                        ,
+                        {
+                            "id": "candidate-2",
+                            "text": "Repaired margin candidate",
+                            "evidence_id": "f2",
+                            "evidence": "Evidence text 2",
+                            "metric": dict(METRIC),
+                            "pages": [2],
+                            "score": 0.9,
                         }
                     ]
                 },
@@ -256,6 +275,13 @@ def _ctx() -> RunContext:
 def _current_artifacts() -> dict:
     return {
         "schema_version": "3.0",
+        "editorial_plan": {
+            "report_thesis": "The report's retained evidence changes planning.",
+            "themes": [
+                {"theme": "Primary evidence", "priority": 1, "evidence_ids": ["f1"]},
+                {"theme": "Margin evidence", "priority": 2, "evidence_ids": ["f2"]},
+            ],
+        },
         "toc_topics": ["Topic"],
         "summary": {
             "tldr": "Old TLDR.",
@@ -372,7 +398,8 @@ def _evidence_packs() -> dict:
         },
         "findings": {
             "findings": [
-                {"id": "f1", "evidence": "Evidence text", "text": "Finding text"}
+                {"id": "f1", "evidence": "Evidence text", "text": "Finding text"},
+                {"id": "f2", "evidence": "Evidence text 2", "text": "Second finding"},
             ]
         },
         "quote_candidates": {
@@ -431,7 +458,7 @@ def test_regenerate_artifacts_insights_bundle_uses_targeted_steps_and_preserves_
     )
 
     assert response.regenerated_sections == ["insights_candidates", "insights_final"]
-    assert len(response.updated_artifacts["insights_candidates"]) == 1
+    assert len(response.updated_artifacts["insights_candidates"]) == 2
     assert len(response.updated_artifacts["insights_final"]) == 2
     assert (
         response.updated_artifacts["family_status"]["insights_bundle"]["status"]

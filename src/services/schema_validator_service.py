@@ -297,6 +297,15 @@ def validate_evidence_references(
                     span_value = str(span.get("evidence_id") or "").strip()
                     if span_value:
                         references.append(span_value)
+    editorial_plan = artifacts_payload.get("editorial_plan")
+    if isinstance(editorial_plan, dict):
+        for theme in editorial_plan.get("themes") or []:
+            if not isinstance(theme, dict):
+                continue
+            for evidence_id in theme.get("evidence_ids") or []:
+                value = str(evidence_id or "").strip()
+                if value:
+                    references.append(value)
     for key in ("insights_candidates", "insights_final", "quotes_final"):
         for item in artifacts_payload.get(key) or []:
             if not isinstance(item, dict):

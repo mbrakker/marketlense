@@ -133,6 +133,7 @@ def test_assemble_artifacts_builds_universal_claim_ledger() -> None:
         doc_map=_doc_map(),
         evidence_packs=_evidence_packs(),
         toc_bundle={"toc_entries": []},
+        editorial_plan=_default_editorial_plan(),
         summary={
             "tldr": "Wallet adoption is rising.",
             "card_tldr_compact": "Wallet adoption is rising.",
@@ -242,6 +243,7 @@ def test_assemble_artifacts_builds_topics_key_figures_and_chart_cards() -> None:
                 }
             ]
         },
+        editorial_plan=_default_editorial_plan(),
         summary={
             "tldr": "Wallet adoption is rising.",
             "card_tldr_compact": "Wallet adoption is rising.",

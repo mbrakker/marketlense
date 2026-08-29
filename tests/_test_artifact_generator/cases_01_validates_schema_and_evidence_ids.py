@@ -30,6 +30,13 @@ def _assemble_summary_payload(summary, *, ctx=None):
         doc_map={"sections": []},
         evidence_packs={},
         toc_bundle={"toc_entries": []},
+        editorial_plan={
+            "report_thesis": "Retail shifts change planning.",
+            "themes": [
+                {"theme": "Retail shifts", "priority": 1, "evidence_ids": ["f1"]},
+                {"theme": "Customer trust", "priority": 2, "evidence_ids": ["f2"]},
+            ],
+        },
         summary=summary,
         cover_semantics=_cover_semantics(),
         insights_candidates=[],
@@ -40,6 +47,7 @@ def _assemble_summary_payload(summary, *, ctx=None):
         source_status={"not_available": False, "reason": ""},
         family_status=family_status,
         ctx=ctx or _ctx(),
+        validate_references=False,
     )
 
 
@@ -84,6 +92,13 @@ def test_assemble_artifacts_retains_canonical_category_ids():
         doc_map={"sections": []},
         evidence_packs={},
         toc_bundle={"toc_entries": []},
+        editorial_plan={
+            "report_thesis": "Retail shifts change planning.",
+            "themes": [
+                {"theme": "Retail shifts", "priority": 1, "evidence_ids": ["f1"]},
+                {"theme": "Customer trust", "priority": 2, "evidence_ids": ["f2"]},
+            ],
+        },
         summary=summary,
         cover_semantics=_cover_semantics(),
         insights_candidates=[],
@@ -95,6 +110,7 @@ def test_assemble_artifacts_retains_canonical_category_ids():
         family_status=family_status,
         category_ids=["consumer-retail", "digital-commerce"],
         ctx=_ctx(),
+        validate_references=False,
     )
 
     assert payload["categories"] == ["consumer-retail", "digital-commerce"]
@@ -373,7 +389,7 @@ def test_generate_artifacts_validates_schema_and_evidence_ids(tmp_path):
     ]
     assert payload["family_status"]["summary"]["status"] == "generated"
     assert payload["family_status"]["quotes"]["status"] == "generated"
-    assert len([req for req in fake_openai.requests if req[0] == "chat"]) == 8
+    assert len([req for req in fake_openai.requests if req[0] == "chat"]) == 9
     assert len([req for req in fake_openai.requests if req[0] == "vector"]) == 0
     assert payload["toc_entries"][0]["section_title"] == "Intro"
     assert payload["toc_topics"] == ["Intro"]
@@ -516,8 +532,8 @@ def test_generate_artifacts_abstains_low_confidence_families_and_marks_regenerat
 
     assert payload["summary"]["tldr"] == ""
     assert payload["summary"]["executive_summary"] == ""
-    assert len(payload["insights_candidates"]) == 2
-    assert len(payload["insights_final"]) == 2
+    assert len(payload["insights_candidates"]) == 5
+    assert len(payload["insights_final"]) == 5
     assert payload["quotes_final"] == []
     assert payload["family_status"]["summary"]["status"] == "abstained"
     assert payload["family_status"]["summary"]["policy_action"] == "regenerate"
@@ -621,7 +637,13 @@ def test_generate_artifacts_completes_partial_insight_candidates_from_findings(
         "f4",
         "f5",
     ]
-    assert len(payload["insights_final"]) == 2
+    assert [item["evidence_id"] for item in payload["insights_final"]] == [
+        "f1",
+        "f2",
+        "f3",
+        "f4",
+        "f5",
+    ]
     assert payload["family_status"]["insights_bundle"]["status"] == "generated"
 
 

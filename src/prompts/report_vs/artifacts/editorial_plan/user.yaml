@@ -1,0 +1,20 @@
+text: |
+  Context:
+  - DocMap JSON: {{ doc_map_json }}
+  - Evidence packs JSON: {{ evidence_json }}
+
+  Task: Return exactly this JSON object:
+  {
+    "editorial_plan": {
+      "report_thesis": "<one grounded sentence expressing the report's central decision-relevant conclusion>",
+      "themes": [
+        {
+          "theme": "<concise editorial theme>",
+          "priority": 1,
+          "evidence_ids": ["<one or more existing evidence IDs from the supplied context>"]
+        }
+      ]
+    }
+  }
+
+  Choose two to seven distinct themes, ordered by unique positive priority. Each theme must have one or more evidence IDs that exist in the supplied findings, quote candidates, key metrics, or DocMap sections. Do not add facts, numbers, or rationale fields.

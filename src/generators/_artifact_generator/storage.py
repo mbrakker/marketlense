@@ -42,6 +42,7 @@ from src.generators.analysis_store_adapter import (
 )
 from src.generators.artifact_normalization import (
     bind_artifact_evidence_spans,
+    normalize_artifact_editorial_plan,
     normalize_artifact_evidence_ids,
     normalize_artifact_insights,
     normalize_artifact_toc_entries,
@@ -88,6 +89,7 @@ def assemble_artifacts_payload(
     doc_map: Dict[str, Any],
     evidence_packs: Dict[str, Any],
     toc_bundle: Dict[str, Any],
+    editorial_plan: Dict[str, Any],
     summary: Dict[str, Any],
     cover_semantics: Dict[str, str],
     insights_candidates: List[Dict[str, Any]],
@@ -103,6 +105,7 @@ def assemble_artifacts_payload(
     validate_references: bool = True,
 ) -> Dict[str, Any]:
     del report_name
+    editorial_plan = normalize_artifact_editorial_plan(editorial_plan)
     toc_entries = normalize_artifact_toc_entries(toc_bundle.get("toc_entries"))
     toc_topics = [
         _s(entry.get("display_title")).strip()
@@ -203,6 +206,7 @@ def assemble_artifacts_payload(
                 if _s(category_id).strip()
             )
         ),
+        "editorial_plan": editorial_plan,
         "toc_entries": toc_entries,
         "toc_topics": toc_topics,
         "toc_topics_expanded": topic_briefs,
@@ -253,7 +257,11 @@ def assemble_artifacts_payload(
             ctx,
         )
         if validate_references:
-            validate_evidence_references(artifacts_payload, evidence_packs, ctx)
+            validate_evidence_references(
+                artifacts_payload,
+                {**evidence_packs, "doc_map": doc_map},
+                ctx,
+            )
     except AppError as exc:
         logger.info(
             log_event(
@@ -1157,6 +1165,7 @@ def _artifact_cache_meta(
 ) -> Dict[str, Any]:
     prompt_meta: Dict[str, Any] = {}
     namespaces = [
+        "report_vs/artifacts/editorial_plan",
         "report_vs/artifacts/summary",
         "report_vs/artifacts/cover_semantics",
         "report_vs/artifacts/insights_candidates",
@@ -1350,6 +1359,9 @@ def _adapt_cached_artifacts_payload(
     payload = _attach_cached_artifact_family_status(payload)
     try:
         payload = _adapt_cached_artifact_schema(payload)
+        payload["editorial_plan"] = normalize_artifact_editorial_plan(
+            payload.get("editorial_plan")
+        )
         _validate_cover_semantics(payload.get("cover_semantics"), ctx=ctx)
         raw_summary = payload.get("summary")
         _validate_card_tldrs(

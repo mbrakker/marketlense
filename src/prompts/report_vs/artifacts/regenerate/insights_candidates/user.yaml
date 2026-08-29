@@ -10,6 +10,7 @@ text: |
   - Grounding package JSON: {{ grounding_package_json }}
   - DocMap JSON: {{ doc_map_json }}
   - Evidence packs JSON: {{ evidence_json }}
+  - Editorial plan JSON: {{ editorial_plan_json }}
 
   Task:
   Return a JSON object with `insights_candidates` as an array of grounded candidate insights.
@@ -24,6 +25,7 @@ text: |
 
   Requirements:
   - Repair or remove unsupported items implicated by the failures.
+  - Keep candidates within the editorial plan's themes and linked evidence IDs.
   - Keep each `evidence_id` to a single existing ID or an empty string.
   - Keep each candidate tightly grounded to the supplied evidence.
   - Do not invent metrics or page numbers.

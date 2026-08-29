@@ -4,6 +4,8 @@ shared:
     {"title":"Enterprise Payments Outlook 2026","publisher":"Market Lense Research","summary":"A report on digital payments growth, wallets, and merchant infrastructure.","sections":[{"id":"s1","title":"Market landscape","summary":"Wallet adoption keeps rising across enterprise commerce."}]}
   evidence_json: &evidence_json >-
     {"scope":{"summary":"Global enterprise payments market in 2026."},"findings":[{"id":"f1","text":"Digital wallets continue to expand in B2B and consumer checkout flows."},{"id":"f2","text":"Merchants prioritize orchestration, fraud controls, and conversion."}],"methods":{"methods":["Executive interviews","Cross-market survey"]},"limitations":{"items":["Forward-looking findings depend on disclosed assumptions."]}}
+  editorial_plan_json: &editorial_plan_json >-
+    {"report_thesis":"Enterprise payment growth increasingly depends on wallet and orchestration execution.","themes":[{"theme":"Wallet adoption","priority":1,"evidence_ids":["f1"]},{"theme":"Merchant orchestration","priority":2,"evidence_ids":["f2"]}]}
   summary_json: &summary_json >-
     {"tldr":"Digital wallets and payment orchestration are reshaping enterprise checkout.","card_tldr_compact":"Wallets and orchestration reshape enterprise checkout.","executive_summary":"The report finds that wallet growth, fraud pressure, and orchestration complexity are changing merchant priorities."}
   quotes_json: &quotes_json >-
@@ -271,6 +273,16 @@ fixtures:
       insights_final_json: *insights_final_json
       quotes_json: *quotes_json
       metric_spine_json: *metric_spine_json
+      editorial_plan_json: *editorial_plan_json
+  - namespace: "report_vs/artifacts/editorial_plan"
+    family: "publishing"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    benchmark: *benchmark_publishing_artifact
+    system_variables: {}
+    user_variables:
+      doc_map_json: *doc_map_json
+      evidence_json: *evidence_json
   - namespace: "report_vs/artifacts/insights_candidates"
     family: "publishing"
     model: "openai/gpt-5-mini"
@@ -280,6 +292,7 @@ fixtures:
     user_variables:
       doc_map_json: *doc_map_json
       evidence_json: *evidence_json
+      editorial_plan_json: *editorial_plan_json
   - namespace: "report_vs/artifacts/insights_final"
     family: "publishing"
     model: "openai/gpt-5-mini"
@@ -289,6 +302,7 @@ fixtures:
     user_variables:
       doc_map_json: *doc_map_json
       evidence_json: *evidence_json
+      editorial_plan_json: *editorial_plan_json
       insights_candidates_json: *insights_candidates_json
       final_insight_target_count: *final_insight_target_count
   - namespace: "report_vs/artifacts/linkedin_post"
@@ -328,6 +342,7 @@ fixtures:
       summary_json: *summary_json
       insights_final_json: *insights_final_json
       quotes_json: *quotes_json
+      editorial_plan_json: *editorial_plan_json
   - namespace: "report_vs/artifacts/regenerate/insights_candidates"
     family: "publishing"
     model: "openai/gpt-5-mini"
@@ -343,6 +358,7 @@ fixtures:
       grounding_package_json: *grounding_package_json
       doc_map_json: *doc_map_json
       evidence_json: *evidence_json
+      editorial_plan_json: *editorial_plan_json
   - namespace: "report_vs/artifacts/regenerate/insights_final"
     family: "publishing"
     model: "openai/gpt-5-mini"
@@ -358,6 +374,7 @@ fixtures:
       grounding_package_json: *grounding_package_json
       doc_map_json: *doc_map_json
       evidence_json: *evidence_json
+      editorial_plan_json: *editorial_plan_json
       insights_candidates_json: *insights_candidates_json
       final_insight_target_count: *final_insight_target_count
   - namespace: "report_vs/artifacts/regenerate/linkedin_post"
@@ -406,6 +423,7 @@ fixtures:
       grounding_package_json: *grounding_package_json
       doc_map_json: *doc_map_json
       evidence_json: *evidence_json
+      editorial_plan_json: *editorial_plan_json
   - namespace: "report_vs/artifacts/summary"
     family: "publishing"
     model: "openai/gpt-5-mini"
@@ -415,6 +433,7 @@ fixtures:
     user_variables:
       doc_map_json: *doc_map_json
       evidence_json: *evidence_json
+      editorial_plan_json: *editorial_plan_json
   - namespace: "report_vs/artifacts/cover_semantics"
     family: "publishing"
     model: "openai/gpt-5-mini"

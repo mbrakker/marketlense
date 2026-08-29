@@ -85,8 +85,8 @@ def test_artifact_cache_isolated_by_retrieval_mode(tmp_path):
         prompt_client=FakePromptClient(),
         md5=md5,
     )
-    assert len(chat_openai.requests) == 7
-    assert len([req for req in chat_openai.requests if req[0] == "chat"]) == 7
+    assert len(chat_openai.requests) == 8
+    assert len([req for req in chat_openai.requests if req[0] == "chat"]) == 8
 
     vector_settings = _settings(tmp_path, artifacts_use_vector_store=True)
     vector_openai = FakeOpenAI(responses)
@@ -102,8 +102,8 @@ def test_artifact_cache_isolated_by_retrieval_mode(tmp_path):
         prompt_client=FakePromptClient(),
         md5=md5,
     )
-    assert len(vector_openai.requests) == 7
-    assert len([req for req in vector_openai.requests if req[0] == "vector"]) == 7
+    assert len(vector_openai.requests) == 8
+    assert len([req for req in vector_openai.requests if req[0] == "vector"]) == 8
     assert set(
         vector_payload["_cache"]["family_reuse_telemetry"][
             "regeneration_reasons"
@@ -180,6 +180,13 @@ def test_load_cached_artifacts_refreshes_derived_family_status(tmp_path):
         "toc_entries": [],
         "toc_topics": [],
         "toc_topics_expanded": [],
+        "editorial_plan": {
+            "report_thesis": "Engagement changes planning.",
+            "themes": [
+                {"theme": "Engagement", "priority": 1, "evidence_ids": ["sec-07"]},
+                {"theme": "Practice", "priority": 2, "evidence_ids": ["sec-07"]}
+            ]
+        },
         "summary": {
             "tldr": "Grounded TLDR.",
             "executive_summary": "Grounded executive summary.",
@@ -238,6 +245,13 @@ def test_load_cached_artifacts_rejects_legacy_tldr_that_cannot_be_compact(tmp_pa
         "toc_entries": [],
         "toc_topics": [],
         "toc_topics_expanded": [],
+        "editorial_plan": {
+            "report_thesis": "Forest-risk engagement changes planning.",
+            "themes": [
+                {"theme": "Forest risk", "priority": 1, "evidence_ids": ["sec-10"]},
+                {"theme": "Engagement", "priority": 2, "evidence_ids": ["sec-10"]}
+            ]
+        },
         "summary": {
             "tldr": (
                 "One two three four five six seven eight nine ten eleven twelve "
@@ -288,6 +302,13 @@ def test_load_cached_artifacts_clears_doc_map_only_quotes_after_policy_refresh(
         "toc_entries": [],
         "toc_topics": [],
         "toc_topics_expanded": [],
+        "editorial_plan": {
+            "report_thesis": "Forest-risk engagement changes planning.",
+            "themes": [
+                {"theme": "Forest risk", "priority": 1, "evidence_ids": ["sec-10"]},
+                {"theme": "Engagement", "priority": 2, "evidence_ids": ["sec-10"]}
+            ]
+        },
         "summary": {
             "tldr": "",
             "executive_summary": "",
@@ -419,7 +440,7 @@ def test_generate_artifacts_with_auto_context_preserves_input_evidence(tmp_path)
     )
     assert payload["source_status"]["evidence_present"] is True
     assert payload["source_status"]["not_available"] is False
-    assert len(fake_openai.requests) == 7
+    assert len(fake_openai.requests) == 8
 
 
 def test_compatible_retained_families_make_zero_model_calls(tmp_path) -> None:
@@ -455,6 +476,7 @@ def test_compatible_retained_families_make_zero_model_calls(tmp_path) -> None:
         analysis_store=FakeAnalysisStore(),
     )
     retained = {
+        "report_vs/artifacts/editorial_plan": first["editorial_plan"],
         "report_vs/artifacts/summary": first["summary"],
         "report_vs/artifacts/insights_candidates": first["insights_candidates"],
         "report_vs/artifacts/quotes": first["quotes_final"],
@@ -496,10 +518,10 @@ def test_compatible_retained_families_make_zero_model_calls(tmp_path) -> None:
     assert replay["summary"] == first["summary"]
     assert first["_cache"]["family_reuse_telemetry"] == {
         **first["_cache"]["family_reuse_telemetry"],
-        "actual_model_calls": 7,
-        "input_tokens": 700,
-        "output_tokens": 140,
-        "estimated_cost_usd": 0.00294,
+        "actual_model_calls": 8,
+        "input_tokens": 800,
+        "output_tokens": 160,
+        "estimated_cost_usd": 0.00336,
     }
     assert replay["_cache"]["family_reuse_telemetry"] == {
         **replay["_cache"]["family_reuse_telemetry"],
@@ -507,7 +529,7 @@ def test_compatible_retained_families_make_zero_model_calls(tmp_path) -> None:
         "input_tokens": 0,
         "output_tokens": 0,
         "estimated_cost_usd": 0.0,
-        "model_calls_avoided": 7,
+        "model_calls_avoided": 8,
     }
     assert replay["_cache"]["family_reuse_telemetry"]["reused_families"] == sorted(
         retained
@@ -516,6 +538,7 @@ def test_compatible_retained_families_make_zero_model_calls(tmp_path) -> None:
 
 def test_vector_store_identity_is_part_of_family_reuse_proof(tmp_path) -> None:
     retained = {
+        "report_vs/artifacts/editorial_plan": _default_editorial_plan(),
         "report_vs/artifacts/summary": {
             "tldr": "Grounded TLDR.",
             "card_tldr_compact": "Grounded TLDR.",
@@ -653,6 +676,7 @@ def test_persisted_compatible_families_replay_without_model_calls(tmp_path) -> N
 
 def test_invalidating_one_family_calls_only_its_model_route(tmp_path) -> None:
     retained = {
+        "report_vs/artifacts/editorial_plan": _default_editorial_plan(),
         "report_vs/artifacts/summary": {
             "tldr": "Grounded TLDR.",
             "card_tldr_compact": "Grounded TLDR.",

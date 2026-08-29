@@ -583,7 +583,7 @@ def _report_pipeline_resume_options(
     auto_resume_from_latest_safe: bool,
 ) -> tuple[str | None, bool]:
     if force_report_cards and has_existing_report_html:
-        return "analysis_complete", False
+        return "latest_safe", True
     return None, auto_resume_from_latest_safe
 
 

@@ -8,6 +8,7 @@ text: |
   - Summary JSON: {{ summary_json }}
   - Final insights JSON: {{ insights_final_json }}
   - Quotes JSON: {{ quotes_json }}
+  - Editorial plan JSON: {{ editorial_plan_json }}
   - Expert domain: {{ expert_domain }}
   - Validator failures JSON: {{ failure_reasons_json }}
   - Fix checklist JSON: {{ fix_checklist_json }}
@@ -21,6 +22,7 @@ text: |
 
   Requirements:
   - Fix the listed failures directly.
+  - Develop the editorial plan's report thesis and themes without introducing a competing frame.
   - Do not add claims that are absent from the supplied summary, insights, quotes, or grounding package.
   - Prefer deletion of unsupported material over speculation.
   - Return direct public prose without editorial labels such as "Observation:", "Implication:", or "Executive action:".

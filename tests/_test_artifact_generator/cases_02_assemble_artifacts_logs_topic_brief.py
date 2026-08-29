@@ -77,6 +77,7 @@ def test_assemble_artifacts_logs_topic_brief_mapping_audit(
             ],
             "toc_topics": ["Demand outlook"],
         },
+        editorial_plan=_default_editorial_plan(),
         summary=summary,
         cover_semantics=_cover_semantics(),
         insights_candidates=[],
@@ -186,10 +187,14 @@ def test_generate_artifacts_backfills_missing_ids(tmp_path):
         payload["family_status"]["summary"]["reason"]
         == "summary_missing_claim_evidence"
     )
-    assert payload["insights_candidates"] == []
-    assert payload["insights_final"] == []
-    assert payload["family_status"]["insights_bundle"]["status"] == "abstained"
-    assert payload["family_status"]["insights_bundle"]["policy_action"] == "regenerate"
+    assert [item["evidence_id"] for item in payload["insights_candidates"]] == [
+        "f1", "f2", "f3", "f4", "f5"
+    ]
+    assert [item["evidence_id"] for item in payload["insights_final"]] == [
+        "f1", "f2", "f3", "f4", "f5"
+    ]
+    assert payload["family_status"]["insights_bundle"]["status"] == "generated"
+    assert payload["family_status"]["insights_bundle"]["policy_action"] == "keep"
     assert payload["quotes_final"][0]["evidence_id"] == "q1"
     assert payload["quotes_final"][0]["evidence_spans"][0]["source_pack"] == (
         "quote_candidates"
@@ -465,6 +470,7 @@ def test_generate_artifacts_runs_llm_steps_serially_without_executor(
     }
     assert fake_openai.max_in_flight == 1
     assert [req[2] for req in fake_openai.requests if req[0] == "vector"] == [
+        "editorial_plan",
         "summary",
         "insights_candidates",
         "quotes",
@@ -473,14 +479,14 @@ def test_generate_artifacts_runs_llm_steps_serially_without_executor(
         "expert_comment",
         "linkedin_post",
     ]
-    assert len([req for req in fake_openai.requests if req[0] == "vector"]) == 7
+    assert len([req for req in fake_openai.requests if req[0] == "vector"]) == 8
     response_events = [
         json.loads(record.message)
         for record in caplog.records
         if record.name == "market_lense.artifact_generator"
         and json.loads(record.message).get("event") == "artifact_model_response"
     ]
-    assert len(response_events) == 7
+    assert len(response_events) == 8
     assert_logs_have_required_fields(response_events)
 
 
@@ -636,7 +642,7 @@ def test_generate_artifacts_uses_vector_path_when_flag_enabled(tmp_path):
         prompt_client=FakePromptClient(),
         analysis_store=FakeAnalysisStore(),
     )
-    assert len([req for req in fake_openai.requests if req[0] == "vector"]) == 7
+    assert len([req for req in fake_openai.requests if req[0] == "vector"]) == 8
     assert len([req for req in fake_openai.requests if req[0] == "chat"]) == 0
 
 

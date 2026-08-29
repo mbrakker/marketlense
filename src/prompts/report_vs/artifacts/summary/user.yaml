@@ -8,6 +8,7 @@ text: |
   Context:
   - DocMap JSON: {{ doc_map_json }}
   - Evidence packs JSON: {{ evidence_json }}
+  - Editorial plan JSON: {{ editorial_plan_json }}
 
   Source-of-truth summary schema:
   {{ summary_schema }}
@@ -24,6 +25,7 @@ text: |
     }
   }
   - Keep claims specific and tied to evidence identifiers present in the provided context.
+  - Follow the editorial plan's report thesis and themes; do not introduce a competing thematic frame.
   - Write for executives: answer "so what" before background, prefer decisions and tradeoffs over descriptive recap.
   - Include no more than one caveat, and only when the evidence explicitly supports it.
   - Author both TLDRs independently from the same evidence. The compact TLDR must not be a clipped prefix of the standard TLDR.

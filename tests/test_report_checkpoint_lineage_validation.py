@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
@@ -326,6 +327,84 @@ def test_checkpoint_artifact_integrity_accepts_retained_file(tmp_path: Path) -> 
         _integrity_checkpoint(artifact_path),
         "checkpoint.json",
     )
+
+
+def test_checkpoint_rejects_legacy_artifacts_without_editorial_plan(
+    tmp_path: Path,
+) -> None:
+    runtime = _runtime(tmp_path)
+    artifact_path = tmp_path / "artifacts.json"
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "toc_topics": ["Overview"],
+                "summary": {},
+                "cover_semantics": {},
+                "insights_candidates": [],
+                "insights_final": [],
+                "quotes_final": [],
+                "expert_comment": "",
+                "linkedin_post": "",
+            }
+        ),
+        encoding="utf-8",
+    )
+    checkpoint = replace(
+        _checkpoint(artifact_id=""),
+        artifact_refs={"artifacts": str(artifact_path)},
+        payload={},
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        _validate_checkpoint_artifacts(runtime, checkpoint, "checkpoint.json")
+
+    assert exc_info.value.code == "report_pipeline_checkpoint_artifact_schema_invalid"
+
+
+def test_checkpoint_rejects_artifacts_with_stale_editorial_prompt_identity(
+    tmp_path: Path,
+) -> None:
+    runtime = _runtime(tmp_path)
+    artifact_path = tmp_path / "artifacts.json"
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "editorial_plan": {
+                    "report_thesis": "Evidence supports one clear report thesis.",
+                    "themes": [
+                        {
+                            "theme": "The priority theme is evidence-led.",
+                            "priority": 1,
+                            "evidence_ids": ["finding-1"],
+                        },
+                        {
+                            "theme": "A second theme preserves the minimal contract.",
+                            "priority": 2,
+                            "evidence_ids": ["finding-2"],
+                        },
+                    ],
+                },
+                "_cache": {
+                    "prompts": {
+                        "report_vs/artifacts/editorial_plan": {
+                            "prompt_content_hash": "stale-prompt-hash"
+                        }
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    checkpoint = replace(
+        _checkpoint(artifact_id=""),
+        artifact_refs={"artifacts": str(artifact_path)},
+        payload={},
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        _validate_checkpoint_artifacts(runtime, checkpoint, "checkpoint.json")
+
+    assert exc_info.value.code == "report_pipeline_checkpoint_prompt_identity_invalid"
 
 
 @pytest.mark.parametrize(

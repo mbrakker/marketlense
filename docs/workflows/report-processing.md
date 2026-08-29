@@ -48,11 +48,11 @@ supports readable, normally spaced titles through 140 characters; only an
 unbreakable token or a longer title is a render error, rather than silently
 truncating public source metadata.
 
-`ingest --force-report-cards` resumes from the validated analysis checkpoint,
-not `latest_safe`, only when an existing rendered package has a missing or
-invalid card manifest. It rebuilds that render/card package and avoids a second
-analysis or model-generation pass. New files follow the normal pipeline and
-therefore never request a nonexistent checkpoint.
+`ingest --force-report-cards` requests `latest_safe` when an existing rendered
+package needs repair. Checkpoint validation includes the current editorial-plan
+contract, so a legacy artifact package without that plan is rejected and the
+pipeline restarts from the latest compatible retained stage. New files follow
+the normal pipeline and therefore never request a nonexistent checkpoint.
 
 A frozen-cohort replay receives one new, cohort-wide validation attempt number
 with its previous attempt as parent. Every stage in that replay uses that same
@@ -371,8 +371,12 @@ bounded sequence is exhausted.
 
 Before the artifact generator enters this structured-output path, it checks
 each independently retained artifact prompt family against its exact retained
-provenance. The seven current routes are summary, candidate insights, quotes,
-final insights, cover semantics, expert comment, and LinkedIn post. Reuse
+provenance. The eight current routes are editorial plan, summary, candidate
+insights, quotes, final insights, cover semantics, expert comment, and LinkedIn
+post. The editorial plan is generated once from DocMap and grounded evidence;
+it retains one report thesis plus ordered themes, each with linked evidence
+IDs. Summary, final insights, and expert commentary consume that same plan.
+Reuse
 requires a verified report/source identity, prompt and execution identities,
 provider/model and model-policy namespace, schema/validator, semantic input,
 configuration-policy, and output hashes, plus a passed validation state. A
@@ -449,15 +453,15 @@ result remains empty. Candidate insights may complete a partial substantive
 final-insight response, but they never replace a safety abstention or an
 unknown-evidence rejection.
 
-Final-insight selection uses substantive DocMap breadth to set a bounded target
-of two to seven grounded items. It first keeps the strongest representative of
-each supported DocMap theme, using finding-to-section links, document-map
-references, and source pages before score-based tie breaking. A broad report
-can therefore retain more distinct themes when the evidence supports them,
-while a narrow report remains compact.
+Final-insight selection follows the editorial plan's ordered themes rather
+than independently deriving thematic coverage from DocMap. It keeps the
+strongest supported representative for each theme using only the plan's linked
+evidence IDs, with model scores used only as a within-theme tie breaker. The
+plan requires two to seven evidence-backed themes, so summary, final insights,
+and expert commentary share one thematic basis without repeating its prose.
 
 Candidate generation is deterministically completed from retained findings
-when needed for representative theme coverage. The fallback preserves each
+only when needed to cover an editorial-plan theme. The fallback preserves each
 finding ID, text, and source evidence; it never invents editorial claims or
 turns one weak candidate into several apparent insights. Fewer than two
 grounded insights remains an insufficient-evidence outcome for bounded

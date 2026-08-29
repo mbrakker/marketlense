@@ -9,6 +9,7 @@ text: |
   - Candidate insights JSON: {{ insights_candidates_json }}
   - DocMap JSON: {{ doc_map_json }}
   - Evidence packs JSON: {{ evidence_json }}
+  - Editorial plan JSON: {{ editorial_plan_json }}
 
   Source-of-truth final insight schema:
   {{ insights_final_schema }}
@@ -16,7 +17,7 @@ text: |
   Target final insight count: {{ final_insight_target_count }}.
 
   Task: Choose {{ final_insight_target_count }} strongest, non-overlapping insights. Preserve and propagate their evidence_id fields as single IDs. Return a JSON object with `insights_final` as an array matching the candidate shape, including scores, coverage_role, so_what, now_what, and report_type_lens.
-  Selection rule: cover distinct substantive DocMap sections before selecting another insight from the same report theme. Within comparable thematic coverage, maximize strategic value using decision_relevance_score, metric_strength_score, novelty_score, and coverage_role diversity. Do not pad a narrow report with near-duplicates merely to reach a generic bundle size.
+  Selection rule: follow editorial-plan priority order and select one supported representative for each plan theme using only that theme's linked evidence IDs. Within a theme, maximize strategic value using decision_relevance_score, metric_strength_score, novelty_score, and coverage_role. Do not introduce a different theme set or pad with near-duplicates.
   Tighten wording for executive relevance but do not change the underlying facts.
   Do not output arrays/comma-separated values inside evidence_id; if uncertain, use an empty string.
   Prefer insights that can carry a clear metric, claim-level evidence, or public-safe proof point into final editorial artifacts.

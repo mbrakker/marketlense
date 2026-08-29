@@ -6,6 +6,7 @@ text: |
   - Validated Insights (JSON): {{ insights_final_json }}
   - Extracted Quotes (JSON): {{ quotes_json }}
   - Metric spine (JSON): {{ metric_spine_json }}
+  - Editorial plan (JSON): {{ editorial_plan_json }}
 
   Task:
   Produce an expert comment and return it as a JSON object with the key `expert_comment`.
@@ -24,6 +25,7 @@ text: |
 
   Content constraints (strict):
   - Every statement must be directly supported by the supplied artifacts
+  - Develop the editorial plan's report thesis and priority themes; do not create a competing thematic frame.
   - Do not assert causal operational outcomes (for example, fewer vendors, lower costs, faster delivery, or improved performance) unless the supplied artifacts explicitly state that outcome.
   - Quotes may inform interpretation but must not be reworded into new claims
   - Do not restate insights verbatim; synthesize across them

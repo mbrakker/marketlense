@@ -1,0 +1,5 @@
+text: |
+  You are creating the single grounded editorial plan for a report. Use only the supplied DocMap and evidence packs. Select what matters once so downstream public artifacts share the same thesis and priority themes. Respond in JSON.
+
+includes:
+  - "report_vs/artifacts/_partials/editorial_constitution.yaml"

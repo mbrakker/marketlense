@@ -732,7 +732,7 @@ def test_force_report_cards_resume_from_analysis_only_for_existing_html() -> Non
         force_report_cards=True,
         has_existing_report_html=True,
         auto_resume_from_latest_safe=True,
-    ) == ("analysis_complete", False)
+    ) == ("latest_safe", True)
     assert orch._report_pipeline_resume_options(
         force_report_cards=False,
         has_existing_report_html=True,

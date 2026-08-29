@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 from src.contracts.config import AppSettings
 from src.contracts.ingest import IngestSettings
 from src.utils.coercion import stripped_string_value as _s
+from src.utils.errors import AppError
 from src.utils.json_utils import dump_json_object as _dump_json
 from src.utils.text_normalization import normalize_text
 
@@ -32,7 +33,6 @@ INSIGHT_SCORE_FIELDS = (
     "novelty_score",
 )
 MIN_FINAL_ARTIFACT_INSIGHTS = 2
-MAX_FINAL_ARTIFACT_INSIGHTS = 7
 COVERAGE_ROLE_VALUES = {
     "market_context",
     "behavior_shift",
@@ -92,6 +92,78 @@ def artifact_base_variables(
     return {
         "doc_map_json": _dump_json(doc_map or {}),
         "evidence_json": _dump_json(evidence_packs or {}),
+    }
+
+
+def normalize_artifact_editorial_plan(value: Any) -> Dict[str, Any]:
+    """Validate the report-level thematic decision used by public artifacts."""
+    data = value if isinstance(value, dict) else {}
+    report_thesis = _s(data.get("report_thesis")).strip()
+    raw_themes = data.get("themes")
+    if not report_thesis or not isinstance(raw_themes, list) or len(raw_themes) < 2:
+        raise AppError(
+            code="editorial_plan_invalid",
+            message="Editorial plan requires a report thesis and at least two themes",
+            retryable=False,
+        )
+    if len(raw_themes) > 7:
+        raise AppError(
+            code="editorial_plan_invalid",
+            message="Editorial plan must contain no more than seven themes",
+            retryable=False,
+        )
+    themes: List[Dict[str, Any]] = []
+    seen_themes: set[str] = set()
+    seen_priorities: set[int] = set()
+    for raw_theme in raw_themes:
+        if not isinstance(raw_theme, dict):
+            raise AppError(
+                code="editorial_plan_invalid",
+                message="Editorial plan themes must be objects",
+                retryable=False,
+            )
+        theme = _s(raw_theme.get("theme")).strip()
+        priority = raw_theme.get("priority")
+        raw_evidence_ids = raw_theme.get("evidence_ids")
+        if (
+            not theme
+            or not isinstance(priority, int)
+            or priority <= 0
+            or not isinstance(raw_evidence_ids, list)
+        ):
+            raise AppError(
+                code="editorial_plan_invalid",
+                message=(
+                    "Editorial plan themes require text, positive priority, "
+                    "and evidence IDs"
+                ),
+                retryable=False,
+            )
+        theme_key = normalize_text(theme)
+        evidence_ids = list(
+            dict.fromkeys(
+                _s(evidence_id).strip()
+                for evidence_id in raw_evidence_ids
+                if _s(evidence_id).strip()
+            )
+        )
+        if not evidence_ids or theme_key in seen_themes or priority in seen_priorities:
+            raise AppError(
+                code="editorial_plan_invalid",
+                message=(
+                    "Editorial plan themes must have unique priorities and "
+                    "evidence IDs"
+                ),
+                retryable=False,
+            )
+        seen_themes.add(theme_key)
+        seen_priorities.add(priority)
+        themes.append(
+            {"theme": theme, "priority": priority, "evidence_ids": evidence_ids}
+        )
+    return {
+        "report_thesis": report_thesis,
+        "themes": sorted(themes, key=lambda item: item["priority"]),
     }
 
 
@@ -186,100 +258,31 @@ def normalize_artifact_insights(items: Any, *, prefix: str) -> List[Dict[str, An
     return normalized
 
 
-def artifact_insight_target_count(doc_map: Dict[str, Any]) -> int:
-    """Return a bounded final-insight target derived from supported DocMap breadth."""
-    section_count = len(_substantive_doc_map_sections(doc_map))
-    if section_count <= 2:
-        return MIN_FINAL_ARTIFACT_INSIGHTS
-    return min(section_count, MAX_FINAL_ARTIFACT_INSIGHTS)
-
-
 def select_artifact_insights(
     *,
     final_insights: List[Dict[str, Any]],
     candidate_insights: List[Dict[str, Any]],
-    doc_map: Dict[str, Any],
-    evidence_packs: Dict[str, Any],
+    editorial_plan: Dict[str, Any],
 ) -> List[Dict[str, Any]]:
-    """Keep the strongest representatives of the report's supported themes.
-
-    Final-model output remains the preferred editorial ordering, but a section's
-    highest-scoring candidate is selected only once before another candidate from
-    the same DocMap theme can enter the bounded result.
-    """
-    target_count = artifact_insight_target_count(doc_map)
+    """Keep one strongest insight for each theme chosen by the editorial plan."""
+    plan = normalize_artifact_editorial_plan(editorial_plan)
     ranked = _ranked_unique_insights(final_insights, candidate_insights)
-    if not ranked:
-        return []
-
-    evidence_sections = _finding_sections_by_evidence_id(evidence_packs)
-    sections = _substantive_doc_map_sections(doc_map)
-    by_theme: Dict[str, List[tuple[int, Dict[str, Any]]]] = {}
-    for source_order, insight in ranked:
-        theme = _insight_theme_key(
-            insight,
-            evidence_sections=evidence_sections,
-            sections=sections,
-        )
-        by_theme.setdefault(theme, []).append((source_order, insight))
-
     selected: List[Dict[str, Any]] = []
     selected_keys: set[tuple[str, str]] = set()
-    representatives = sorted(
-        (_best_ranked_insight(items) for items in by_theme.values()),
-        key=_insight_rank_key,
-    )
-    for _, insight in representatives:
-        _append_distinct_insight(selected, selected_keys, insight)
-        if len(selected) == target_count:
-            return selected
-
-    if len(selected) >= MIN_FINAL_ARTIFACT_INSIGHTS:
-        return selected
-
-    for _, insight in sorted(ranked, key=_insight_rank_key):
-        _append_distinct_insight(selected, selected_keys, insight)
-        if len(selected) == MIN_FINAL_ARTIFACT_INSIGHTS:
-            break
+    for theme in plan["themes"]:
+        evidence_ids = {
+            normalize_text(evidence_id) for evidence_id in theme["evidence_ids"]
+        }
+        matching = [
+            item
+            for item in ranked
+            if normalize_text(_s(item[1].get("evidence_id"))) in evidence_ids
+        ]
+        if matching:
+            _append_distinct_insight(
+                selected, selected_keys, _best_ranked_insight(matching)[1]
+            )
     return selected
-
-
-def _substantive_doc_map_sections(doc_map: Dict[str, Any]) -> List[Dict[str, Any]]:
-    raw_sections = doc_map.get("sections") if isinstance(doc_map, dict) else []
-    if not isinstance(raw_sections, list):
-        return []
-    sections: List[Dict[str, Any]] = []
-    seen: set[str] = set()
-    for index, raw_section in enumerate(raw_sections):
-        if not isinstance(raw_section, dict):
-            continue
-        section_id = _s(raw_section.get("id")).strip()
-        title = _s(raw_section.get("title")).strip()
-        summary = _s(raw_section.get("summary")).strip()
-        key_points = raw_section.get("key_points")
-        pages = raw_section.get("pages")
-        has_key_points = isinstance(key_points, list) and any(
-            _s(point).strip() for point in key_points
-        )
-        has_pages = isinstance(pages, list) and any(
-            isinstance(page, int) for page in pages
-        )
-        if not title or not (summary or has_key_points or has_pages):
-            continue
-        normalized_id = normalize_text(section_id or title)
-        if not normalized_id or normalized_id in seen:
-            continue
-        seen.add(normalized_id)
-        sections.append(
-            {
-                "id": section_id or f"section-{index + 1}",
-                "title": title,
-                "pages": [page for page in pages if isinstance(page, int)]
-                if isinstance(pages, list)
-                else [],
-            }
-        )
-    return sections
 
 
 def _ranked_unique_insights(
@@ -297,82 +300,6 @@ def _ranked_unique_insights(
             seen.add(duplicate_key)
         ranked.append((source_order, dict(insight)))
     return ranked
-
-
-def _finding_sections_by_evidence_id(
-    evidence_packs: Dict[str, Any],
-) -> Dict[str, str]:
-    findings_pack = (
-        evidence_packs.get("findings") if isinstance(evidence_packs, dict) else {}
-    )
-    findings = findings_pack.get("findings") if isinstance(findings_pack, dict) else []
-    if not isinstance(findings, list):
-        return {}
-    sections: Dict[str, str] = {}
-    for finding in findings:
-        if not isinstance(finding, dict):
-            continue
-        evidence_id = normalize_text(_s(finding.get("id")))
-        section_id = normalize_text(_s(finding.get("section_id")))
-        if evidence_id and section_id:
-            sections[evidence_id] = section_id
-    return sections
-
-
-def _insight_theme_key(
-    insight: Dict[str, Any],
-    *,
-    evidence_sections: Dict[str, str],
-    sections: List[Dict[str, Any]],
-) -> str:
-    evidence_id = normalize_text(_s(insight.get("evidence_id")))
-    if evidence_id in evidence_sections:
-        return f"section:{evidence_sections[evidence_id]}"
-    for section in sections:
-        section_id = normalize_text(_s(section.get("id")))
-        if evidence_id and evidence_id in {section_id, f"doc map {section_id}"}:
-            return f"section:{section_id}"
-    insight_pages = {
-        page for page in insight.get("pages", []) if isinstance(page, int)
-    }
-    page_matches = [
-        section
-        for section in sections
-        if insight_pages.intersection(
-            {page for page in section.get("pages", []) if isinstance(page, int)}
-        )
-    ]
-    if page_matches:
-        return f"section:{normalize_text(_s(page_matches[0].get('id')))}"
-    ranged_section = _doc_map_section_for_page(sections, insight_pages)
-    if ranged_section is not None:
-        return f"section:{normalize_text(_s(ranged_section.get('id')))}"
-    coverage_role = normalize_text(_s(insight.get("coverage_role")))
-    if coverage_role:
-        return f"role:{coverage_role}"
-    return f"insight:{evidence_id or normalize_text(_s(insight.get('text')))}"
-
-
-def _doc_map_section_for_page(
-    sections: List[Dict[str, Any]], insight_pages: set[int]
-) -> Dict[str, Any] | None:
-    """Map a page between section starts to its preceding DocMap section."""
-    section_starts: List[tuple[int, Dict[str, Any]]] = []
-    for section in sections:
-        section_pages = [
-            page for page in section.get("pages", []) if isinstance(page, int)
-        ]
-        if section_pages:
-            section_starts.append((min(section_pages), section))
-    if not section_starts:
-        return None
-    for page in sorted(insight_pages):
-        matching_sections = [
-            item for item in section_starts if item[0] <= page
-        ]
-        if matching_sections:
-            return max(matching_sections, key=lambda item: item[0])[1]
-    return None
 
 
 def _best_ranked_insight(

@@ -31,12 +31,12 @@ from src.generators._artifact_generator.storage import (
 from src.generators._artifact_generator.toc import build_toc_artifacts
 from src.generators.artifact_normalization import (
     artifact_base_variables,
-    artifact_insight_target_count,
     artifact_quote_candidates,
     artifact_retrieval_mode,
     artifact_vector_store_enabled,
     bind_artifact_evidence_spans,
     fallback_artifact_insights_from_findings,
+    normalize_artifact_editorial_plan,
     normalize_artifact_evidence_ids,
     normalize_artifact_insights,
     normalize_artifact_quotes,
@@ -95,6 +95,7 @@ class PromptFamilyReuseTelemetry(TypedDict):
 
 
 _ARTIFACT_FAMILY_ROOTS = {
+    "report_vs/artifacts/editorial_plan": "editorial_plan",
     "report_vs/artifacts/summary": "summary",
     "report_vs/artifacts/insights_candidates": "insights_candidates",
     "report_vs/artifacts/quotes": "quotes_final",
@@ -170,6 +171,12 @@ def generate_artifacts(
         payload: Dict[str, Any], task_ctx: RunContext
     ) -> None:
         validate_evidence_references(payload, reference_evidence_packs, task_ctx)
+
+    def validate_editorial_plan(
+        payload: Dict[str, Any], task_ctx: RunContext
+    ) -> None:
+        normalize_artifact_editorial_plan(payload.get("editorial_plan"))
+        validate_required_evidence_references(payload, task_ctx)
 
     has_density_input = isinstance(source_status, dict) and (
         "text_density" in source_status or "density_threshold" in source_status
@@ -541,6 +548,19 @@ def generate_artifacts(
         )
 
     base_vars = artifact_base_variables(safe_doc_map, safe_evidence)
+    editorial_plan_ctx = child_context(ctx, task_id=f"{ctx.task_id}:editorial_plan")
+    editorial_plan_result = resolve_or_render_family(
+        namespace="report_vs/artifacts/editorial_plan",
+        variables=base_vars,
+        ctx=editorial_plan_ctx,
+        payload_validator=lambda payload: validate_editorial_plan(
+            payload, editorial_plan_ctx
+        ),
+    )
+    editorial_plan = normalize_artifact_editorial_plan(
+        editorial_plan_result.get("editorial_plan")
+    )
+    editorial_plan_json = _dump_json(editorial_plan)
 
     insights_final_ctx = child_context(ctx, task_id=f"{ctx.task_id}:insights_final")
 
@@ -554,14 +574,14 @@ def generate_artifacts(
             schema_version="1.0",
             step_name="summary",
             namespace="report_vs/artifacts/summary",
-            variables=base_vars,
+            variables={**base_vars, "editorial_plan_json": editorial_plan_json},
             ctx=child_context(ctx, task_id=f"{ctx.task_id}:summary"),
         ),
         ArtifactRenderTask(
             schema_version="1.0",
             step_name="insights_candidates",
             namespace="report_vs/artifacts/insights_candidates",
-            variables=base_vars,
+            variables={**base_vars, "editorial_plan_json": editorial_plan_json},
             ctx=child_context(ctx, task_id=f"{ctx.task_id}:insights_candidates"),
         ),
         ArtifactRenderTask(
@@ -595,15 +615,15 @@ def generate_artifacts(
         if _s(candidate.get("text")).strip()
     ]
     initial_candidate_count = len(insights_candidates)
-    final_insight_target_count = artifact_insight_target_count(safe_doc_map)
+    final_insight_target_count = len(editorial_plan["themes"])
     fallback_candidates = fallback_artifact_insights_from_findings(
-        safe_evidence.get("findings"), limit=final_insight_target_count
+        safe_evidence.get("findings"),
+        limit=sum(len(theme["evidence_ids"]) for theme in editorial_plan["themes"]),
     )
     insights_candidates = select_artifact_insights(
         final_insights=insights_candidates,
         candidate_insights=fallback_candidates,
-        doc_map=safe_doc_map,
-        evidence_packs=safe_evidence,
+        editorial_plan=editorial_plan,
     )
     completed_candidate_count = len(
         [
@@ -633,6 +653,7 @@ def generate_artifacts(
 
     insights_final_vars = {
         **base_vars,
+        "editorial_plan_json": editorial_plan_json,
         "insights_candidates_json": _dump_json(insights_candidates),
         "final_insight_target_count": final_insight_target_count,
     }
@@ -649,8 +670,7 @@ def generate_artifacts(
             insights_final_result.get("insights_final"), prefix="insight"
         ),
         candidate_insights=insights_candidates,
-        doc_map=safe_doc_map,
-        evidence_packs=safe_evidence,
+        editorial_plan=editorial_plan,
     )
     cover_semantics_variables = {
         **base_vars,
@@ -724,6 +744,7 @@ def generate_artifacts(
 
     expert_ctx = child_context(ctx, task_id=f"{ctx.task_id}:expert_comment")
     expert_vars = {
+        "editorial_plan_json": editorial_plan_json,
         "summary_json": _dump_json(summary),
         "insights_final_json": _dump_json(insights_final),
         "quotes_json": _dump_json(quotes_final),
@@ -787,6 +808,7 @@ def generate_artifacts(
         doc_map=safe_doc_map,
         evidence_packs=safe_evidence,
         toc_bundle=toc_bundle,
+        editorial_plan=editorial_plan,
         summary=summary,
         cover_semantics=cover_semantics,
         insights_candidates=insights_candidates,

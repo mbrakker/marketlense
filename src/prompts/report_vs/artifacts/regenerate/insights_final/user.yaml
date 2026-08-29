@@ -11,6 +11,7 @@ text: |
   - Grounding package JSON: {{ grounding_package_json }}
   - DocMap JSON: {{ doc_map_json }}
   - Evidence packs JSON: {{ evidence_json }}
+  - Editorial plan JSON: {{ editorial_plan_json }}
   - Target final insight count: {{ final_insight_target_count }}
 
   Task:
@@ -20,7 +21,7 @@ text: |
 
   Requirements:
   - Prefer repaired candidates that directly resolve the listed failures.
-  - Cover distinct substantive DocMap sections before selecting another insight from the same report theme; do not pad narrow reports with near-duplicates.
+  - Follow editorial-plan priority order and choose only its linked evidence IDs; do not introduce a separate theme selection.
   - Keep `evidence_id` to a single existing ID or an empty string.
   - `so_what` must state a report-specific business implication; `now_what` must
     state a concrete, report-specific decision or action. Neither field may be

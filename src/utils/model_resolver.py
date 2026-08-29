@@ -14,6 +14,7 @@ from src.contracts.llm import (
 from src.utils.errors import AppError
 
 REPORT_GENERATION_NAMESPACES: tuple[str, ...] = (
+    "report_vs/artifacts/editorial_plan",
     "report_vs/artifacts/summary",
     "report_vs/artifacts/cover_semantics",
     "report_vs/artifacts/cover_semantics_repair",
@@ -61,6 +62,7 @@ PRODUCTION_LLM_NAMESPACES: tuple[str, ...] = (
     "rank_candidates/crop_refine",
     "report_vs/artifacts/cover_semantics",
     "report_vs/artifacts/cover_semantics_repair",
+    "report_vs/artifacts/editorial_plan",
     "report_vs/artifacts/expert_comment",
     "report_vs/artifacts/insights_candidates",
     "report_vs/artifacts/insights_final",

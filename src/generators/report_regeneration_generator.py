@@ -22,9 +22,9 @@ from src.generators.artifact_generator import (
 )
 from src.generators.artifact_normalization import (
     artifact_base_variables,
-    artifact_insight_target_count,
     artifact_quote_candidates,
     artifact_vector_store_enabled,
+    normalize_artifact_editorial_plan,
     normalize_artifact_evidence_ids,
     normalize_artifact_insights,
     normalize_artifact_quotes,
@@ -54,6 +54,7 @@ class _RegenerationState:
     toc_entries: List[Dict[str, Any]]
     toc_topics: List[str]
     topic_briefs: List[Dict[str, Any]]
+    editorial_plan: Dict[str, Any]
     summary: Dict[str, Any]
     insights_candidates: List[Dict[str, Any]]
     insights_final: List[Dict[str, Any]]
@@ -245,6 +246,7 @@ def regenerate_artifacts(
             "toc_topics": state.toc_topics,
             "toc_topics_expanded": state.topic_briefs,
         },
+        editorial_plan=state.editorial_plan,
         summary=summary,
         cover_semantics=state.cover_semantics,
         insights_candidates=insights_candidates,
@@ -579,6 +581,9 @@ def _build_regeneration_state(
         toc_entries=toc_entries,
         toc_topics=toc_topics,
         topic_briefs=topic_briefs,
+        editorial_plan=normalize_artifact_editorial_plan(
+            safe_artifacts.get("editorial_plan")
+        ),
         summary=_copy_dict(safe_artifacts.get("summary")),
         insights_candidates=_copy_list(safe_artifacts.get("insights_candidates")),
         insights_final=_copy_list(safe_artifacts.get("insights_final")),
@@ -638,6 +643,7 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
             "failure_reasons_json": _issues_json(execution.target.issues),
             "fix_checklist_json": _fix_checklist_json(execution.target),
             "grounding_package_json": _dump_json(execution.grounding_package),
+            "editorial_plan_json": _dump_json(execution.state.editorial_plan),
         },
     )
     execution.state.summary = normalize_artifact_summary(result.get("summary"))
@@ -698,9 +704,8 @@ def _handle_insights_bundle_regeneration(
             "failure_reasons_json": _issues_json(execution.target.issues),
             "fix_checklist_json": _fix_checklist_json(execution.target),
             "grounding_package_json": _dump_json(execution.grounding_package),
-            "final_insight_target_count": artifact_insight_target_count(
-                execution.runtime.safe_doc_map
-            ),
+            "editorial_plan_json": _dump_json(execution.state.editorial_plan),
+            "final_insight_target_count": len(execution.state.editorial_plan["themes"]),
         },
     )
     execution.state.insights_final = select_artifact_insights(
@@ -708,8 +713,7 @@ def _handle_insights_bundle_regeneration(
             final_result.get("insights_final"), prefix="insight"
         ),
         candidate_insights=execution.state.insights_candidates,
-        doc_map=execution.runtime.safe_doc_map,
-        evidence_packs=execution.runtime.safe_evidence,
+        editorial_plan=execution.state.editorial_plan,
     )
     execution.state.regenerated_sections.extend(
         ["insights_candidates", "insights_final"]
@@ -785,6 +789,7 @@ def _handle_expert_comment_regeneration(
             "summary_json": _dump_json(execution.state.summary),
             "insights_final_json": _dump_json(execution.state.insights_final),
             "quotes_json": _dump_json(execution.state.quotes_final),
+            "editorial_plan_json": _dump_json(execution.state.editorial_plan),
             "expert_domain": execution.runtime.expert_domain,
             "current_section_text": execution.state.expert_comment,
             "failure_reasons_json": _issues_json(execution.target.issues),

@@ -10,6 +10,7 @@ text: |
   - Grounding package JSON: {{ grounding_package_json }}
   - DocMap JSON: {{ doc_map_json }}
   - Evidence packs JSON: {{ evidence_json }}
+  - Editorial plan JSON: {{ editorial_plan_json }}
 
   Task:
   Return a JSON object with:
@@ -31,6 +32,7 @@ text: |
 
   Requirements:
   - Fix the listed failures directly.
+  - Retain the editorial plan's report thesis and themes; do not introduce a competing frame.
   - Keep `evidence_id` to a single existing ID or an empty string.
   - Keep `claim_evidence_map` brief and fully grounded.
   - Author both TLDRs independently from the same evidence. The compact TLDR must not be a clipped prefix of the standard TLDR.
