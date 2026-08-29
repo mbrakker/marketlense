@@ -4,6 +4,7 @@ import logging
 from typing import Any, Dict, List
 
 from src.contracts.analysis_family import AnalysisFamilyStatus
+from src.generators.artifact_normalization import MIN_FINAL_ARTIFACT_INSIGHTS
 from src.utils.analysis_family import (
     family_is_abstained,
     serialize_family_status,
@@ -238,7 +239,10 @@ def _insights_confidence_score(
     ]
     if nonempty_final:
         score += 0.28
-        score += 0.32 * (min(len(nonempty_final), 5) / 5.0)
+        score += 0.32 * (
+            min(len(nonempty_final), MIN_FINAL_ARTIFACT_INSIGHTS)
+            / MIN_FINAL_ARTIFACT_INSIGHTS
+        )
     evidence_supported = [
         item
         for item in nonempty_final
@@ -247,8 +251,11 @@ def _insights_confidence_score(
     if nonempty_final:
         score += 0.24 * (len(evidence_supported) / len(nonempty_final))
     if isinstance(insights_candidates, list) and insights_candidates:
-        score += 0.16 * (min(len(insights_candidates), 5) / 5.0)
-    if len(nonempty_final) < 5:
+        score += 0.16 * (
+            min(len(insights_candidates), MIN_FINAL_ARTIFACT_INSIGHTS)
+            / MIN_FINAL_ARTIFACT_INSIGHTS
+        )
+    if len(nonempty_final) < MIN_FINAL_ARTIFACT_INSIGHTS:
         return 0.0
     return score
 
@@ -263,7 +270,7 @@ def _insights_confidence_reason(
         for item in insights_final
         if isinstance(item, dict) and _s(item.get("text")).strip()
     ]
-    if len(nonempty_final) < 5:
+    if len(nonempty_final) < MIN_FINAL_ARTIFACT_INSIGHTS:
         return "insights_missing_required_count"
     if not any(
         _s(item.get("evidence_id")).strip() or _s(item.get("evidence")).strip()

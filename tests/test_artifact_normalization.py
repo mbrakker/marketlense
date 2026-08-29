@@ -5,7 +5,6 @@ from src.generators.artifact_normalization import (
     fallback_artifact_insights_from_findings,
     normalize_artifact_insights,
     normalize_artifact_summary,
-    pad_artifact_insights,
 )
 
 
@@ -63,58 +62,6 @@ def test_normalize_artifact_insights_preserves_scoring_and_strategy_fields():
             "metric_strength_score": 0.8,
             "novelty_score": 0.7,
         }
-    ]
-
-
-def test_pad_artifact_insights_preserves_candidate_strategy_fields():
-    padded = pad_artifact_insights(
-        [],
-        [
-            {
-                "id": "i1",
-                "text": "Wallet adoption changes checkout planning.",
-                "evidence_id": "f1",
-                "evidence": "Wallet adoption is rising.",
-                "metric": {"value": "42", "unit": "percent"},
-                "pages": [4],
-                "score": 0.91,
-                "decision_relevance_score": 0.95,
-                "metric_strength_score": 0.8,
-                "novelty_score": 0.7,
-                "coverage_role": "operating_implication",
-                "so_what": (
-                    "Checkout teams need to treat wallets as core infrastructure."
-                ),
-                "now_what": (
-                    "Prioritize wallet coverage in payment orchestration roadmaps."
-                ),
-                "report_type_lens": "operations",
-            }
-        ],
-    )
-
-    assert padded[0]["coverage_role"] == "operating_implication"
-    assert padded[0]["so_what"].startswith("Checkout teams")
-    assert padded[0]["now_what"].startswith("Prioritize wallet")
-    assert padded[0]["report_type_lens"] == "operations"
-    assert padded[0]["decision_relevance_score"] == 0.95
-
-
-def test_pad_artifact_insights_does_not_repeat_one_candidate_to_fill_the_bundle():
-    padded = pad_artifact_insights(
-        [],
-        [
-            {
-                "id": "IC1",
-                "text": "Podcast ad-supported audio share is 19%.",
-                "evidence_id": "share_of_ear",
-                "evidence": "19% daily share.",
-            }
-        ],
-    )
-
-    assert [item["text"] for item in padded if item["text"]] == [
-        "Podcast ad-supported audio share is 19%."
     ]
 
 
@@ -206,23 +153,22 @@ def test_fallback_artifact_insights_uses_distinct_grounded_findings_only():
     ]
 
 
-def test_insights_family_abstains_when_fewer_than_five_distinct_claims_exist():
-    insights = pad_artifact_insights(
-        [],
+def test_insights_family_abstains_when_fewer_than_two_grounded_claims_exist():
+    insights = normalize_artifact_insights(
         [
             {
-                "id": f"IC{index}",
-                "text": f"Distinct insight {index}.",
+                "id": "IC1",
+                "text": "One supported report theme remains.",
                 "evidence_id": "share_of_ear",
                 "evidence": "Grounded source evidence.",
             }
-            for index in range(1, 5)
         ],
+        prefix="insight",
     )
 
     statuses = build_artifact_family_status(
         summary={},
-        insights_candidates=insights[:4],
+        insights_candidates=insights,
         insights_final=insights,
         quotes_final=[],
         expert_comment="",
@@ -273,20 +219,3 @@ def test_normalize_artifact_insights_drops_unknown_optional_strategy_fields():
 
     assert "coverage_role" not in insights[0]
     assert "report_type_lens" not in insights[0]
-
-
-def test_pad_artifact_insights_repairs_candidate_cross_enum_strategy_fields():
-    padded = pad_artifact_insights(
-        [],
-        [
-            {
-                "id": "i1",
-                "text": "Technology adoption changes operating priorities.",
-                "coverage_role": "technology_shift",
-                "report_type_lens": "operating_implication",
-            }
-        ],
-    )
-
-    assert padded[0]["coverage_role"] == "market_context"
-    assert padded[0]["report_type_lens"] == "operations"

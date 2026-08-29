@@ -516,8 +516,8 @@ def test_generate_artifacts_abstains_low_confidence_families_and_marks_regenerat
 
     assert payload["summary"]["tldr"] == ""
     assert payload["summary"]["executive_summary"] == ""
-    assert len(payload["insights_candidates"]) == 5
-    assert len(payload["insights_final"]) == 5
+    assert len(payload["insights_candidates"]) == 2
+    assert len(payload["insights_final"]) == 2
     assert payload["quotes_final"] == []
     assert payload["family_status"]["summary"]["status"] == "abstained"
     assert payload["family_status"]["summary"]["policy_action"] == "regenerate"
@@ -621,7 +621,7 @@ def test_generate_artifacts_completes_partial_insight_candidates_from_findings(
         "f4",
         "f5",
     ]
-    assert len(payload["insights_final"]) == 5
+    assert len(payload["insights_final"]) == 2
     assert payload["family_status"]["insights_bundle"]["status"] == "generated"
 
 

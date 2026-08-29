@@ -31,6 +31,7 @@ from src.generators._artifact_generator.storage import (
 from src.generators._artifact_generator.toc import build_toc_artifacts
 from src.generators.artifact_normalization import (
     artifact_base_variables,
+    artifact_insight_target_count,
     artifact_quote_candidates,
     artifact_retrieval_mode,
     artifact_vector_store_enabled,
@@ -42,7 +43,7 @@ from src.generators.artifact_normalization import (
     normalize_artifact_source_status,
     normalize_artifact_summary,
     normalize_expert_domain,
-    pad_artifact_insights,
+    select_artifact_insights,
     strip_artifact_inline_reference_ids,
 )
 from src.generators.prompt_preparation import prepare_prompt_bundle
@@ -588,38 +589,28 @@ def generate_artifacts(
         stage_one_results.get("insights_candidates", {}).get("insights_candidates"),
         prefix="candidate",
     )
-    insights_candidates = pad_artifact_insights([], insights_candidates)
     insights_candidates = [
         candidate
         for candidate in insights_candidates
         if _s(candidate.get("text")).strip()
     ]
     initial_candidate_count = len(insights_candidates)
-    if initial_candidate_count < 5:
-        fallback_candidates = fallback_artifact_insights_from_findings(
-            safe_evidence.get("findings")
-        )
-        existing_evidence_ids = {
-            _s(candidate.get("evidence_id")).strip()
-            for candidate in insights_candidates
-            if _s(candidate.get("evidence_id")).strip()
-        }
-        fallback_candidates = [
-            candidate
-            for candidate in fallback_candidates
-            if _s(candidate.get("evidence_id")).strip() not in existing_evidence_ids
+    final_insight_target_count = artifact_insight_target_count(safe_doc_map)
+    fallback_candidates = fallback_artifact_insights_from_findings(
+        safe_evidence.get("findings"), limit=final_insight_target_count
+    )
+    insights_candidates = select_artifact_insights(
+        final_insights=insights_candidates,
+        candidate_insights=fallback_candidates,
+        doc_map=safe_doc_map,
+        evidence_packs=safe_evidence,
+    )
+    completed_candidate_count = len(
+        [
+            candidate for candidate in insights_candidates if _s(candidate.get("text"))
         ]
-        insights_candidates = pad_artifact_insights(
-            insights_candidates,
-            fallback_candidates,
-        )
-        completed_candidate_count = len(
-            [
-                candidate
-                for candidate in insights_candidates
-                if _s(candidate.get("text"))
-            ]
-        )
+    )
+    if completed_candidate_count > initial_candidate_count:
         logger.info(
             log_event(
                 ctx,
@@ -643,6 +634,7 @@ def generate_artifacts(
     insights_final_vars = {
         **base_vars,
         "insights_candidates_json": _dump_json(insights_candidates),
+        "final_insight_target_count": final_insight_target_count,
     }
     insights_final_result = resolve_or_render_family(
         namespace="report_vs/artifacts/insights_final",
@@ -652,11 +644,13 @@ def generate_artifacts(
             payload, insights_final_ctx
         ),
     )
-    insights_final = pad_artifact_insights(
-        normalize_artifact_insights(
+    insights_final = select_artifact_insights(
+        final_insights=normalize_artifact_insights(
             insights_final_result.get("insights_final"), prefix="insight"
         ),
-        insights_candidates,
+        candidate_insights=insights_candidates,
+        doc_map=safe_doc_map,
+        evidence_packs=safe_evidence,
     )
     cover_semantics_variables = {
         **base_vars,

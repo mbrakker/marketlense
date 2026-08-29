@@ -22,6 +22,7 @@ from src.generators.artifact_generator import (
 )
 from src.generators.artifact_normalization import (
     artifact_base_variables,
+    artifact_insight_target_count,
     artifact_quote_candidates,
     artifact_vector_store_enabled,
     normalize_artifact_evidence_ids,
@@ -32,7 +33,7 @@ from src.generators.artifact_normalization import (
     normalize_artifact_toc_entries,
     normalize_artifact_topics,
     normalize_expert_domain,
-    pad_artifact_insights,
+    select_artifact_insights,
     strip_artifact_inline_reference_ids,
 )
 from src.generators.validation.evidence import retrieve_evidence_windows
@@ -697,13 +698,18 @@ def _handle_insights_bundle_regeneration(
             "failure_reasons_json": _issues_json(execution.target.issues),
             "fix_checklist_json": _fix_checklist_json(execution.target),
             "grounding_package_json": _dump_json(execution.grounding_package),
+            "final_insight_target_count": artifact_insight_target_count(
+                execution.runtime.safe_doc_map
+            ),
         },
     )
-    execution.state.insights_final = pad_artifact_insights(
-        normalize_artifact_insights(
+    execution.state.insights_final = select_artifact_insights(
+        final_insights=normalize_artifact_insights(
             final_result.get("insights_final"), prefix="insight"
         ),
-        execution.state.insights_candidates,
+        candidate_insights=execution.state.insights_candidates,
+        doc_map=execution.runtime.safe_doc_map,
+        evidence_packs=execution.runtime.safe_evidence,
     )
     execution.state.regenerated_sections.extend(
         ["insights_candidates", "insights_final"]

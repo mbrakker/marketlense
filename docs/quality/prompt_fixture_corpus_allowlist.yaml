@@ -12,3 +12,8 @@ allowlist:
     expires_on: "2026-09-30"
     max_delta_absolute: 230
     max_delta_percent: 0.01
+  - pattern: "families.publishing.total_tokens"
+    owner: "MarketLense engineering"
+    reason: "DocMap-guided final-insight prompts add bounded section-coverage instructions."
+    expires_on: "2026-09-30"
+    max_delta_absolute: 80

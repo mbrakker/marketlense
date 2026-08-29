@@ -449,17 +449,19 @@ result remains empty. Candidate insights may complete a partial substantive
 final-insight response, but they never replace a safety abstention or an
 unknown-evidence rejection.
 
-If a model returns no candidate insights despite a generated findings pack,
-artifact assembly uses up to five distinct findings that each retain a finding
-ID, text, and source evidence. This first-run fallback does not invent
-editorial claims or duplicate a weak candidate; it provides the final-insight
-family with addressable grounded inputs before any regeneration is considered.
+Final-insight selection uses substantive DocMap breadth to set a bounded target
+of two to seven grounded items. It first keeps the strongest representative of
+each supported DocMap theme, using finding-to-section links, document-map
+references, and source pages before score-based tie breaking. A broad report
+can therefore retain more distinct themes when the evidence supports them,
+while a narrow report remains compact.
 
-Insight padding never turns one grounded candidate into several apparently
-independent claims. It retains each normalized text-and-evidence pair once and
-uses empty slots for the rest; the existing family policy then records an
-insufficient distinct-evidence outcome for bounded recovery or explicit
-abstention rather than sending fabricated duplicates to validation.
+Candidate generation is deterministically completed from retained findings
+when needed for representative theme coverage. The fallback preserves each
+finding ID, text, and source evidence; it never invents editorial claims or
+turns one weak candidate into several apparent insights. Fewer than two
+grounded insights remains an insufficient-evidence outcome for bounded
+recovery or explicit abstention rather than a padded result.
 
 The publish-readiness identifier gate targets identifier-shaped internal tokens
 and private locations, not ordinary editorial language such as

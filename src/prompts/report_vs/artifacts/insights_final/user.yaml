@@ -13,8 +13,10 @@ text: |
   Source-of-truth final insight schema:
   {{ insights_final_schema }}
 
-  Task: Choose the five strongest, non-overlapping insights. Preserve and propagate their evidence_id fields as single IDs. Return a JSON object with `insights_final` as an array (exactly five items) matching the candidate shape, including scores, coverage_role, so_what, now_what, and report_type_lens.
-  Selection rule: maximize total strategic value by considering decision_relevance_score, metric_strength_score, novelty_score, and coverage_role diversity. Avoid selecting five items with the same role unless the candidate set truly has no other grounded role.
+  Target final insight count: {{ final_insight_target_count }}.
+
+  Task: Choose {{ final_insight_target_count }} strongest, non-overlapping insights. Preserve and propagate their evidence_id fields as single IDs. Return a JSON object with `insights_final` as an array matching the candidate shape, including scores, coverage_role, so_what, now_what, and report_type_lens.
+  Selection rule: cover distinct substantive DocMap sections before selecting another insight from the same report theme. Within comparable thematic coverage, maximize strategic value using decision_relevance_score, metric_strength_score, novelty_score, and coverage_role diversity. Do not pad a narrow report with near-duplicates merely to reach a generic bundle size.
   Tighten wording for executive relevance but do not change the underlying facts.
   Do not output arrays/comma-separated values inside evidence_id; if uncertain, use an empty string.
   Prefer insights that can carry a clear metric, claim-level evidence, or public-safe proof point into final editorial artifacts.

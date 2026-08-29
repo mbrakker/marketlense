@@ -1633,9 +1633,9 @@ def _validate_artifact_semantic_fields(
                 missing_fields.append(
                     f"summary.claim_evidence_map[{index}].evidence_spans"
                 )
-    if not insights_abstained and len(insights_final) < 5:
+    if not insights_abstained and len(insights_final) < 2:
         missing_fields.append("insights_final")
-    for index, insight in enumerate(insights_final[:5]):
+    for index, insight in enumerate(insights_final):
         if insights_abstained:
             break
         if not isinstance(insight, dict) or _missing_text(insight.get("text")):

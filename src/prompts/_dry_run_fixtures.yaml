@@ -14,6 +14,7 @@ shared:
     {"insights":[{"insight_id":"i1","headline":"Wallets become the default enterprise checkout layer","supporting_evidence_ids":["f1"]}]}
   insights_final_json: &insights_final_json >-
     {"insights":[{"insight_id":"i1","headline":"Wallets become the default enterprise checkout layer","body":"Payment teams increasingly treat wallet support as core checkout infrastructure rather than an optional channel.","supporting_evidence_ids":["f1","f2"]}]}
+  final_insight_target_count: &final_insight_target_count 2
   metrics_json: &metrics_json >-
     [{"metric_id":"m1","label":"Wallet share of digital checkout","value":"42%","supporting_evidence_ids":["f1"]}]
   metric_spine_json: &metric_spine_json >-
@@ -289,6 +290,7 @@ fixtures:
       doc_map_json: *doc_map_json
       evidence_json: *evidence_json
       insights_candidates_json: *insights_candidates_json
+      final_insight_target_count: *final_insight_target_count
   - namespace: "report_vs/artifacts/linkedin_post"
     family: "publishing"
     model: "openai/gpt-5-mini"
@@ -357,6 +359,7 @@ fixtures:
       doc_map_json: *doc_map_json
       evidence_json: *evidence_json
       insights_candidates_json: *insights_candidates_json
+      final_insight_target_count: *final_insight_target_count
   - namespace: "report_vs/artifacts/regenerate/linkedin_post"
     family: "publishing"
     model: "openai/gpt-5-mini"
