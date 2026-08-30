@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from src.services._render_service.normalization import (
     _build_core_signal,
+    _core_signal_heading,
     _sanitize_public_prose,
 )
 
@@ -128,6 +132,51 @@ def test_core_signal_does_not_split_common_geographic_abbreviations() -> None:
     )
 
     assert signal["body"].endswith("monetization.")
+
+
+def test_core_signal_heading_preserves_iab_between_coordination() -> None:
+    fixture_path = (
+        Path(__file__).resolve().parent
+        / "fixtures"
+        / "editorial_temporal"
+        / "iab_pwc_quarterly.json"
+    )
+    fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+
+    assert _core_signal_heading(fixture["core_signal_source"]) == fixture[
+        "expected_core_signal_heading"
+    ]
+
+
+def test_core_signal_heading_keeps_noun_lists_at_clause_boundaries() -> None:
+    text = (
+        "Search, video, and creator partnerships shape the media mix, and "
+        "measurement must unify results across every channel."
+    )
+
+    assert _core_signal_heading(text) == (
+        "Search, video, and creator partnerships shape the media mix."
+    )
+
+
+def test_core_signal_heading_splits_independent_comma_clauses() -> None:
+    text = (
+        "Consumer demand is rising across key commerce categories, and "
+        "investment is following in the fastest-growing formats."
+    )
+
+    assert _core_signal_heading(text) == (
+        "Consumer demand is rising across key commerce categories."
+    )
+
+
+def test_core_signal_heading_preserves_a_complete_clause_before_comma_but() -> None:
+    text = (
+        "The market is expanding materially, but eCommerce remains one channel "
+        "within a broader retail market by 2028."
+    )
+
+    assert _core_signal_heading(text) == "The market is expanding materially."
 
 
 def test_render_sanitizer_removes_editorial_labels_without_hiding_prose() -> None:

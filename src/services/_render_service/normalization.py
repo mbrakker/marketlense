@@ -37,6 +37,19 @@ _MECHANICAL_PUBLIC_SCAFFOLD = re.compile(
     r"immediate implication)\s*:",
     re.IGNORECASE,
 )
+_CORE_SIGNAL_CLAUSE_BOUNDARY = re.compile(
+    r";|:|\s+(?:but|while)\s+|,\s+(?:and|but|while)\s+(?=(?:(?:it|they|"
+    r"we|you|he|she|this|"
+    r"that|these|those)\s+(?:is|are|was|were|be|been|being|can|could|will|"
+    r"would|should|may|might|must|do|does|did|has|have|had|[a-z]+(?:s|ed))\b|"
+    r"[a-z]+\s+(?:is|are|was|were|be|been|being|can|could|will|would|should|"
+    r"may|might|must|do|does|did|has|have|had)\b))|"
+    r"\s+and\s+(?=(?:is|are|was|were|be|been|being|can|could|will|would|"
+    r"should|may|might|must|do|does|did|has|have|had|[a-z]+(?:s|ed))\b)|"
+    r"\s+to\s+(?=(?:contextualize|enable|support|reduce|improve|accelerate|"
+    r"inform|guide)\b)",
+    re.IGNORECASE,
+)
 
 
 def _build_tag_acronym_map(acronyms: list[str]) -> dict[str, str]:
@@ -190,13 +203,11 @@ def _core_signal_heading(text: str) -> str:
             candidate = strategic_tail.group(1).strip().rstrip(".?! ") + "."
             if len(candidate) <= 80 and len(candidate.split()) >= 4:
                 return candidate[0].upper() + candidate[1:]
-        clause = re.split(
-            r"\s+(?:and|but|while)\s+|;|:|,\s+|\s+to\s+(?=(?:"
-            r"contextualize|enable|support|reduce|improve|accelerate|inform|guide)\b)",
-            raw_sentence,
-            maxsplit=1,
-        )[0]
-        candidate = clause.rstrip(".?! ") + "."
+        # A bare "and" is not a boundary unless it starts a predicate; this
+        # preserves coordinated terms such as "between scale and momentum"
+        # and "search and video".
+        clause = _CORE_SIGNAL_CLAUSE_BOUNDARY.split(raw_sentence, maxsplit=1)[0]
+        candidate = clause.rstrip(".,?! ") + "."
         if len(candidate) <= 80 and len(candidate.split()) >= 5:
             return candidate
     return ""

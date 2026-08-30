@@ -65,9 +65,13 @@ source-proven qualifier, or when it contains malformed wording such as `in to`
 or `between and`. It does not infer a missing period and does not reject a valid
 same-year comparison merely because both qualifiers contain the same year.
 
-The report header's Core signal uses only a complete retained sentence. It
-deterministically prefers a substantive market, metric, constraint, or adoption
-finding over a sentence that merely describes the report or study. It otherwise uses the explicit
+The report header's Core signal uses only a complete retained sentence or a
+bounded complete clause. Its deterministic clause extraction preserves
+coordinated terms (for example, `between scale and momentum` and `search and
+video`) and splits only at a clear boundary such as a semicolon, colon, or
+comma followed by a conjunction. It deterministically prefers a substantive
+market, metric, constraint, or adoption finding over a sentence that merely
+describes the report or study. It otherwise uses the explicit
 `Source-backed market signal` heading with a complete supporting sentence; it
 never uses a clipped fragment, literal ellipsis, or a pending-data fallback
 when a grounded summary is available.
