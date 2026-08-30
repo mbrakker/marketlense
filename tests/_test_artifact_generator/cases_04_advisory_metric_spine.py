@@ -55,6 +55,109 @@ def test_derive_metric_spine_selects_strong_supported_metrics() -> None:
     ]
 
 
+def test_metric_spine_prioritizes_high_priority_theme_over_context_and_id() -> None:
+    spine = derive_metric_spine(
+        {
+            "key_metrics": {
+                "key_metrics": [
+                    {
+                        "metric_id": "a-secondary",
+                        "metric": "Secondary metric",
+                        "value": "12",
+                        "unit": "percent",
+                        "timeframe": "2026",
+                        "segment": "all respondents",
+                        "geography": "Global",
+                        "evidence_id": "metric-secondary",
+                    },
+                    {
+                        "metric_id": "z-headline",
+                        "metric": "Headline metric",
+                        "value": "68",
+                        "unit": "percent",
+                        "timeframe": "2026",
+                        "segment": "decision makers",
+                        "evidence_id": "metric-headline",
+                    },
+                ]
+            }
+        },
+        editorial_plan={
+            "report_thesis": "The headline metric changes the planning outlook.",
+            "themes": [
+                {
+                    "theme": "Headline change",
+                    "priority": 1,
+                    "evidence_ids": ["metric-headline"],
+                },
+                {
+                    "theme": "Secondary context",
+                    "priority": 2,
+                    "evidence_ids": ["metric-secondary"],
+                },
+            ],
+        },
+    )
+
+    assert [item["metric_id"] for item in spine] == [
+        "z-headline",
+        "a-secondary",
+    ]
+    assert spine[0]["evidence_id"] == "metric-headline"
+    assert spine[0]["value"] == "68"
+
+
+def test_derive_metric_spine_keeps_incomplete_headline_metric_source_backed() -> None:
+    spine = derive_metric_spine(
+        {
+            "key_metrics": {
+                "key_metrics": [
+                    {
+                        "metric_id": "secondary",
+                        "metric": "Complete secondary metric",
+                        "value": "12",
+                        "unit": "percent",
+                        "timeframe": "2026",
+                        "segment": "all respondents",
+                        "geography": "Global",
+                        "evidence_id": "metric-secondary",
+                    },
+                    {
+                        "metric_id": "headline",
+                        "metric": "Incomplete headline metric",
+                        "value": "68",
+                        "unit": "percent",
+                        "evidence_id": "metric-headline",
+                    },
+                ]
+            }
+        },
+        editorial_plan={
+            "report_thesis": "The headline metric changes the planning outlook.",
+            "themes": [
+                {
+                    "theme": "Headline change",
+                    "priority": 1,
+                    "evidence_ids": ["metric-headline"],
+                },
+                {
+                    "theme": "Secondary context",
+                    "priority": 2,
+                    "evidence_ids": ["metric-secondary"],
+                },
+            ],
+        },
+    )
+
+    assert [item["metric_id"] for item in spine] == ["headline", "secondary"]
+    assert spine[0]["missing_context_notes"] == [
+        "timeframe",
+        "segment",
+        "geography",
+    ]
+    assert spine[0]["evidence_id"] == "metric-headline"
+
+
 def test_derive_metric_spine_from_insights_uses_embedded_metric_contract() -> None:
     spine = derive_metric_spine_from_insights(
         [
@@ -521,6 +624,8 @@ def test_generate_artifacts_passes_metric_spine_to_editorial_prompts(tmp_path) -
 
 __all__ = [
     "test_derive_metric_spine_selects_strong_supported_metrics",
+    "test_metric_spine_prioritizes_high_priority_theme_over_context_and_id",
+    "test_derive_metric_spine_keeps_incomplete_headline_metric_source_backed",
     "test_build_executive_advisory_artifacts_surfaces_not_found_states",
     "test_build_executive_advisory_artifacts_separates_decision_roles",
     "test_build_executive_advisory_artifacts_omits_unsupported_decision_fields",

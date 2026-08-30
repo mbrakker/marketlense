@@ -8,6 +8,15 @@ The report pipeline produces source-attributed HTML and structured report artifa
 
 Report-local output can include summaries, insights, quotes, figure selections, topics, key figures, and other approved public modules when supported by the retained artifact contract. Internal evidence identifiers and machine-only publication data are not public output.
 
+The public metric spine is a bounded selection of source-backed textual metrics.
+It ranks a metric whose evidence ID directly supports a selected editorial-plan
+theme ahead of secondary metrics; the plan's positive priority order resolves
+that editorial relevance. Missing timeframe, segment, or geography remains
+visible as a metric caveat and is a secondary quality factor only among metrics
+with the same editorial relevance. The spine retains the source metric's label,
+display value, unit, and evidence ID; chart, table, and crop selection are
+separate flows.
+
 When evidence supports a Decision Brief, it serves a distinct role from the Executive Summary. Its strategic context is the concise report thesis (`tldr` or compact TLDR), never the full executive-summary prose. Decision implications use evidence-linked insight `so_what` fields; priority moves use supported `now_what` fields or evidence-linked explicit recommendations; and watchouts use evidence-linked risks or counter-signals plus retained limitations. Unsupported sections are omitted rather than inferred, while the retained evidence links continue to identify the supporting source material.
 
 LinkedIn output uses the persisted editorial plan as its primary thematic frame,

@@ -177,8 +177,11 @@ def assemble_artifacts_payload(
             )
         )
     metric_spine = _merge_metric_spines(
-        derive_metric_spine(evidence_packs),
-        derive_metric_spine_from_insights(insights_final),
+        derive_metric_spine(evidence_packs, editorial_plan=editorial_plan),
+        derive_metric_spine_from_insights(
+            insights_final, editorial_plan=editorial_plan
+        ),
+        editorial_plan=editorial_plan,
     )
     topics_covered = build_topics_covered(
         toc_entries=toc_entries,
@@ -423,7 +426,11 @@ def build_universal_claim_ledger(
     return ledger
 
 
-def derive_metric_spine(evidence_packs: Dict[str, Any]) -> List[Dict[str, Any]]:
+def derive_metric_spine(
+    evidence_packs: Dict[str, Any],
+    *,
+    editorial_plan: Dict[str, Any] | None = None,
+) -> List[Dict[str, Any]]:
     raw_metrics: list[Any] = []
     key_metrics = (
         evidence_packs.get("key_metrics") if isinstance(evidence_packs, dict) else {}
@@ -466,18 +473,13 @@ def derive_metric_spine(evidence_packs: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "evidence_id": evidence_id,
             }
         )
-    return sorted(
-        spine,
-        key=lambda item: (
-            len(item["missing_context_notes"]),
-            item["metric_id"],
-            item["label"],
-        ),
-    )[:6]
+    return _rank_metric_spine(spine, editorial_plan=editorial_plan)
 
 
 def derive_metric_spine_from_insights(
     insights_final: List[Dict[str, Any]],
+    *,
+    editorial_plan: Dict[str, Any] | None = None,
 ) -> List[Dict[str, Any]]:
     spine: List[Dict[str, Any]] = []
     for index, insight in enumerate(insights_final, start=1):
@@ -521,19 +523,14 @@ def derive_metric_spine_from_insights(
                 "evidence_id": evidence_id,
             }
         )
-    return sorted(
-        spine,
-        key=lambda item: (
-            len(item["missing_context_notes"]),
-            item["metric_id"],
-            item["label"],
-        ),
-    )[:6]
+    return _rank_metric_spine(spine, editorial_plan=editorial_plan)
 
 
 def _merge_metric_spines(
     primary: List[Dict[str, Any]],
     secondary: List[Dict[str, Any]],
+    *,
+    editorial_plan: Dict[str, Any] | None = None,
 ) -> List[Dict[str, Any]]:
     merged: List[Dict[str, Any]] = []
     seen: set[str] = set()
@@ -547,14 +544,54 @@ def _merge_metric_spines(
             continue
         seen.add(key)
         merged.append(item)
+    return _rank_metric_spine(merged, editorial_plan=editorial_plan)
+
+
+def _rank_metric_spine(
+    metrics: List[Dict[str, Any]],
+    *,
+    editorial_plan: Dict[str, Any] | None,
+) -> List[Dict[str, Any]]:
     return sorted(
-        merged,
+        metrics,
         key=lambda item: (
+            *_metric_editorial_rank(item, editorial_plan=editorial_plan),
             len(item.get("missing_context_notes") or []),
             _s(item.get("metric_id")).strip(),
             _s(item.get("label")).strip(),
         ),
     )[:6]
+
+
+def _metric_editorial_rank(
+    metric: Dict[str, Any],
+    *,
+    editorial_plan: Dict[str, Any] | None,
+) -> tuple[int, int]:
+    evidence_id = _s(metric.get("evidence_id")).strip().casefold()
+    raw_themes = editorial_plan.get("themes") if isinstance(editorial_plan, dict) else []
+    themes = raw_themes if isinstance(raw_themes, list) else []
+    priorities: List[int] = []
+    for theme in themes:
+        if not isinstance(theme, dict):
+            continue
+        priority = theme.get("priority")
+        evidence_ids = theme.get("evidence_ids")
+        if (
+            not isinstance(priority, int)
+            or priority <= 0
+            or not isinstance(evidence_ids, list)
+            or not evidence_id
+        ):
+            continue
+        if evidence_id in {
+            _s(theme_evidence_id).strip().casefold()
+            for theme_evidence_id in evidence_ids
+        }:
+            priorities.append(priority)
+    if priorities:
+        return (0, min(priorities))
+    return (1, 0)
 
 
 def _metric_label_from_insight_text(text: str) -> str:
