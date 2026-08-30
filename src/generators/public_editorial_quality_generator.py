@@ -497,7 +497,10 @@ def _key_figure_issues(
                     issue
                     for issue in field_issues
                     if issue.rule_id
-                    != "public_editorial_quality.sentence_fragment"
+                    not in {
+                        "public_editorial_quality.sentence_fragment",
+                        "public_editorial_quality.temporal_integrity",
+                    }
                 ]
             issues.extend(field_issues)
     return issues
@@ -647,7 +650,7 @@ def _public_text_items(artifacts: dict[str, Any]) -> Iterable[dict[str, Any]]:
     summary_value = artifacts.get("summary")
     summary: dict[str, Any] = summary_value if isinstance(summary_value, dict) else {}
     summary_evidence = _summary_evidence_ids(summary)
-    for field_name in ("tldr", "executive_summary"):
+    for field_name in ("tldr", "card_tldr_compact", "executive_summary"):
         value = _sanitize_public_prose(summary.get(field_name))
         if value:
             yield _item(

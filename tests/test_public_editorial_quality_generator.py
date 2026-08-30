@@ -6,7 +6,9 @@ from pathlib import Path
 
 import pytest
 
+from src.contracts.public_editorial_quality import PUBLIC_EDITORIAL_VALIDATOR_VERSION
 from src.generators.public_editorial_quality_generator import (
+    _public_text_items,
     evaluate_public_editorial_quality,
     validation_issues_from_public_editorial_quality,
 )
@@ -35,6 +37,10 @@ def _rule_ids(report) -> set[str]:
     return {issue.rule_id for issue in report.issues}
 
 
+def test_public_editorial_validator_version_invalidates_retained_v1_results() -> None:
+    assert PUBLIC_EDITORIAL_VALIDATOR_VERSION == "public-editorial-quality:v2"
+
+
 def _temporal_artifacts(*, text: str, evidence: str) -> dict:
     return {
         "insights_final": [
@@ -50,6 +56,126 @@ def _temporal_artifacts(*, text: str, evidence: str) -> dict:
             }
         ]
     }
+
+
+def _compact_tldr_artifacts(*, text: str, evidence: str) -> dict:
+    return {
+        "summary": {
+            "tldr": "The retained Summary remains available.",
+            "card_tldr_compact": text,
+            "executive_summary": "The retained Summary remains available.",
+            "claim_evidence_map": [
+                {
+                    "claim": text,
+                    "evidence_id": "summary-evidence",
+                    "evidence": evidence,
+                    "pages": [1],
+                }
+            ],
+        }
+    }
+
+
+def test_public_text_items_includes_compact_summary_tldr_with_summary_evidence() -> None:
+    artifacts = _compact_tldr_artifacts(
+        text="U.S. internet advertising reached $258.6 billion in 2024.",
+        evidence="U.S. internet advertising reached $258.6 billion in 2024.",
+    )
+
+    compact_item = next(
+        item
+        for item in _public_text_items(artifacts)
+        if item["artifact"] == "summary" and item["field"] == "card_tldr_compact"
+    )
+
+    assert compact_item["evidence_ids"] == ["summary-evidence"]
+    assert compact_item["evidence_text"] == (
+        "U.S. internet advertising reached $258.6 billion in 2024."
+    )
+    assert compact_item["repair_target"] == "summary"
+
+
+def test_compact_tldr_blocks_iab_truncated_currency_before_retained_decimal() -> None:
+    report = evaluate_public_editorial_quality(
+        report_id="iab-2024",
+        artifacts=_compact_tldr_artifacts(
+            text="U.S. internet advertising reached $258.",
+            evidence="U.S. internet advertising reached $258.6 billion in 2024.",
+        ),
+    )
+
+    issues = [
+        issue
+        for issue in report.issues
+        if issue.rule_id == "public_editorial_quality.incomplete_numeric_expression"
+    ]
+
+    assert report.status == "fail"
+    assert [(issue.affected_artifact, issue.affected_field) for issue in issues] == [
+        ("summary", "card_tldr_compact")
+    ]
+    assert issues[0].evidence_ids == ["summary-evidence"]
+    assert issues[0].repair_target == "summary"
+
+
+def test_compact_tldr_blocks_collapsed_quarterly_comparison() -> None:
+    report = evaluate_public_editorial_quality(
+        report_id="iab-quarterly",
+        artifacts=_compact_tldr_artifacts(
+            text="Share fell from 43% in 2025 to 41% in 2025.",
+            evidence="Share fell from 43% in Q1 2025 to 41% in Q2 2025.",
+        ),
+    )
+
+    issues = [
+        issue
+        for issue in report.issues
+        if issue.rule_id == "public_editorial_quality.temporal_integrity"
+    ]
+
+    assert report.status == "fail"
+    assert [(issue.affected_artifact, issue.affected_field) for issue in issues] == [
+        ("summary", "card_tldr_compact")
+    ]
+    assert issues[0].repair_target == "summary"
+
+
+def test_compact_tldr_failure_routes_to_existing_summary_regeneration() -> None:
+    artifacts = _compact_tldr_artifacts(
+        text="U.S. internet advertising reached $258.",
+        evidence="U.S. internet advertising reached $258.6 billion in 2024.",
+    )
+    report = evaluate_public_editorial_quality(
+        report_id="iab-2024", artifacts=artifacts
+    )
+
+    plan = _build_regeneration_plan(
+        issues=validation_issues_from_public_editorial_quality(report),
+        artifacts=artifacts,
+        broad_retry_available=True,
+    )
+
+    assert plan.mode == "targeted"
+    assert [target.target_section for target in plan.targets] == ["summary"]
+    assert [issue.affected_section for issue in plan.targets[0].issues] == [
+        "card_tldr_compact"
+    ]
+
+
+def test_compact_tldr_accepts_complete_currency_and_time_qualifier() -> None:
+    report = evaluate_public_editorial_quality(
+        report_id="iab-2024",
+        artifacts=_compact_tldr_artifacts(
+            text="U.S. internet advertising reached $258.6 billion in 2024.",
+            evidence="U.S. internet advertising reached $258.6 billion in 2024.",
+        ),
+    )
+
+    assert report.status == "pass"
+    assert not {
+        "public_editorial_quality.incomplete_numeric_expression",
+        "public_editorial_quality.temporal_integrity",
+    } & _rule_ids(report)
 
 
 @pytest.mark.parametrize(
@@ -484,6 +610,32 @@ def test_numeric_key_figure_display_is_not_treated_as_sentence_prose() -> None:
     )
 
     assert "public_editorial_quality.sentence_fragment" not in _rule_ids(report)
+
+
+def test_key_figure_numeric_display_does_not_repeat_comparative_periods() -> None:
+    artifacts = deepcopy(_retained_artifacts())
+    evidence = "Share fell from 43% in Q1 2024 to 41% in Q2 2025E."
+    artifacts["insights_final"][0].update(
+        {
+            "text": evidence,
+            "evidence": evidence,
+            "evidence_id": "retained-comparison",
+        }
+    )
+    artifacts["key_figures"] = [
+        {
+            "label": evidence,
+            "figure": "43% to 41% share of Google searches resulting in clicks",
+            "why_it_matters": evidence,
+            "evidence_id": "retained-comparison",
+        }
+    ]
+
+    report = evaluate_public_editorial_quality(
+        report_id="retained-report", artifacts=artifacts
+    )
+
+    assert "public_editorial_quality.temporal_integrity" not in _rule_ids(report)
 
 
 def test_selective_repair_targets_only_the_failed_insight_bundle() -> None:

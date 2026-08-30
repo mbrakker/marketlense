@@ -12,6 +12,15 @@ The existing `public_editorial_quality_before.json`, `public_editorial_quality_a
 
 `PublicEditorialQualityReport` is a versioned private audit artifact. It records the report ID, stable rule ID, severity, affected artifact and field, retained evidence IDs, deterministic explanation, repair eligibility and status, validator version, and schema version. It is never rendered as reader-facing content.
 
+The retained Summary `tldr`, `card_tldr_compact`, and `executive_summary` share
+the same evidence-linked public-prose checks and the existing `summary` repair
+target. This ensures the short standalone report-card sentence is validated
+before it can supply SEO or social metadata.
+
+Standalone key-figure displays retain their numeric-grounding checks, while
+their linked label and explanation carry the temporal-integrity requirement;
+a compact display need not repeat dates that those public prose fields retain.
+
 ## Blocking rules
 
 The gate blocks public release unless semantic and grounding validation passed, category decisions agree, every material claim has a valid retained evidence ID, and every regenerated artifact was promoted. It blocks unsupported numeric claims; source-proven comparative temporal loss and malformed `in to` / `between and` comparisons; internal IDs and evidence tokens; placeholders; malformed extraction and OCR fragments; mojibake; missing rendered assets; duplicate boilerplate; filename-style titles and duplicated years; fragments; generic figure labels; unsupported certainty; empty or non-specific decision implications; mechanical labels; literal truncation; private paths and Drive URLs; and invalid public source links.
