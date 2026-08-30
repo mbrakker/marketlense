@@ -683,6 +683,7 @@ def _handle_insights_bundle_regeneration(
             "failure_reasons_json": _issues_json(execution.target.issues),
             "fix_checklist_json": _fix_checklist_json(execution.target),
             "grounding_package_json": _dump_json(execution.grounding_package),
+            "editorial_plan_json": _dump_json(execution.state.editorial_plan),
         },
     )
     execution.state.insights_candidates = normalize_artifact_insights(
@@ -819,7 +820,8 @@ def _handle_linkedin_post_regeneration(
         variables={
             "attempt_index": execution.runtime.request.attempt_index,
             "target_section": execution.target.target_section,
-            "summary_json": _dump_json(execution.state.summary),
+            "editorial_plan_json": _dump_json(execution.state.editorial_plan),
+            "doc_map_json": execution.runtime.base_vars["doc_map_json"],
             "insights_final_json": _dump_json(execution.state.insights_final),
             "current_section_text": execution.state.linkedin_post,
             "failure_reasons_json": _issues_json(execution.target.issues),

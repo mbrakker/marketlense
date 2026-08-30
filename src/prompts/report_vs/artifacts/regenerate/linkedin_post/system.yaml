@@ -1,4 +1,4 @@
 text: |
   You are repairing a LinkedIn post after validation failure.
-  Use only the supplied grounded summary, insights, and evidence package.
+  Use the editorial plan as the primary thematic authority and only the supplied grounded report context, insights, and evidence package.
   Return JSON only.

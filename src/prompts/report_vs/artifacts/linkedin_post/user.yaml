@@ -2,25 +2,27 @@ includes:
   - "report_vs/artifacts/_partials/editorial_constitution.yaml"
 text: |
   Context (authoritative sources only):
-  - TLDR + Executive Summary (JSON): {{ summary_json }}
-  - Validated Insights (JSON): {{ insights_final_json }}
-  - Metric spine (JSON): {{ metric_spine_json }}
+  - Editorial plan (primary thematic authority, JSON): {{ editorial_plan_json }}
+  - Report context including title, publisher/source, and scope (JSON): {{ doc_map_json }}
+  - Validated representative insights (supporting evidence, JSON): {{ insights_final_json }}
+  - Metric spine (supporting evidence, JSON): {{ metric_spine_json }}
 
   Task:
   Create a single LinkedIn post and return it as a JSON object with the key `linkedin_post`.
 
   Writing requirements:
-  - Max 500 words
-  - Expert, strategic, and insight-led (written for senior ecommerce / digital leaders)
-  - Start with a strong, concrete insight or implication, not a generic hook
-  - Focus on "what this means" for the market or decision-makers
-  - Use a confident, human tone (no AI patterns, no em dashes, no clichés, never use "—")
-  - No emojis
-  - Avoid hashtags except 2–3 highly relevant industry hashtags as a part of generated text
-  - Use the strongest metric spine entries as public-facing proof points when they are complete enough to cite
-  - Make the executive takeaway clear before adding supporting detail
-  - Use direct prose rather than labels such as "Executive takeaway:", "Observation:", or "Implication:"
-  - Prefer concise bullets only when they make quantified evidence easier to scan
+  - Target 180–280 words. The hard maximum is 500 words.
+  - Use the editorial plan to select one central, source-supported insight, tension, or implication. Do not turn the post into a mini-summary.
+  - For a broad report, explicitly frame the post as one representative angle or lens from the report; do not imply that it summarises the whole report. For a narrow report, the post may express the overall report thesis.
+  - Open with a concrete insight, tension, implication, or material metric, not generic framing.
+  - Near the beginning, naturally name the report publisher/source from the report context when known.
+  - Explain why the selected angle matters, then use two to four supporting proof points from final insights and the metric spine. Use no more than four quantitative proof points. Select the four or fewer quantitative proof points before drafting, then use no more than four distinct numerical values in the post; a percentage and its comparison value count separately. Do not introduce any additional number, percentage, currency figure, volume, or comparison beyond that selection. A report title or source period may include its year without counting as a proof point.
+  - Add one distinct, source-supported interpretation or decision implication. An optional closing may ask a genuine professional question or state a clear implication.
+  - Write for experienced ecommerce, digital, and strategy operators in a concise, confident, human voice. Use direct prose, not labels such as "Executive takeaway:", "Observation:", or "Implication:".
+  - Do not use these recurring formulations: "The evidence points to", "The market signals are clear", "For senior leaders", "The strategic question is not simply", or "The practical agenda".
+  - Do not use engagement bait such as "Like if you agree", "Comment below", or unnecessary tagging. Use zero to three highly relevant hashtags only when they add professional context.
+  - Do not use emojis, clichés, em dashes, or the character "—".
+  - Do not use bullets. Use short paragraphs separated by blank lines so every supporting point remains native LinkedIn prose.
 
   Content constraints (strict):
   - Every statement must be directly supported by the provided JSON artifacts

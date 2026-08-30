@@ -729,6 +729,104 @@ def test_invalidating_one_family_calls_only_its_model_route(tmp_path) -> None:
     )
 
 
+def test_editorial_plan_change_invalidates_only_linkedin_family_reuse(tmp_path) -> None:
+    retained = {
+        "report_vs/artifacts/summary": {
+            "tldr": "Grounded TLDR.",
+            "card_tldr_compact": "Grounded TLDR.",
+            "executive_summary": "Executive summary.",
+            "claim_evidence_map": [],
+        },
+        "report_vs/artifacts/insights_candidates": [],
+        "report_vs/artifacts/quotes": [],
+        "report_vs/artifacts/insights_final": [],
+        "report_vs/artifacts/cover_semantics": _cover_semantics(),
+        "report_vs/artifacts/expert_comment": "Grounded comment.",
+        "report_vs/artifacts/linkedin_post": "Retained LinkedIn post.",
+    }
+    first_plan = _default_editorial_plan()
+    second_plan = {
+        **_default_editorial_plan(),
+        "report_thesis": "Margin pressure changes the retained planning outlook.",
+    }
+    first_linkedin_input_hash = ""
+
+    def reuse_reader(request, _ctx):
+        nonlocal first_linkedin_input_hash
+        if request.family_id == "report_vs/artifacts/editorial_plan":
+            return PromptFamilyReuseResponse(
+                schema_version="1.0", reusable=False, reason="input_hash_changed"
+            )
+        if request.family_id == "report_vs/artifacts/linkedin_post":
+            if not first_linkedin_input_hash:
+                first_linkedin_input_hash = request.relevant_input_hash
+                return PromptFamilyReuseResponse(
+                    schema_version="1.0",
+                    reusable=True,
+                    reason="reused",
+                    output_payload=retained[request.family_id],
+                    artifact_id="retained:linkedin",
+                    output_hash="retained-hash",
+                )
+            if request.relevant_input_hash != first_linkedin_input_hash:
+                return PromptFamilyReuseResponse(
+                    schema_version="1.0", reusable=False, reason="input_hash_changed"
+                )
+        return PromptFamilyReuseResponse(
+            schema_version="1.0",
+            reusable=True,
+            reason="reused",
+            output_payload=retained[request.family_id],
+            artifact_id="retained:" + request.family_id,
+            output_hash="retained-hash",
+        )
+
+    generate_artifacts(
+        report_id="linkedin-plan-reuse",
+        report_name="LinkedIn Plan Reuse",
+        doc_map=_doc_map(),
+        evidence_packs=_evidence_packs(),
+        settings=_settings(tmp_path),
+        md5="linkedin-plan-reuse-md5",
+        openai_client=FakeOpenAI({"editorial_plan": {"editorial_plan": first_plan}}),
+        prompt_client=FakePromptClient(),
+        analysis_store=FakeAnalysisStore(),
+        prompt_family_reuse_reader=reuse_reader,
+    )
+
+    second_client = FakeOpenAI(
+        {
+            "editorial_plan": {"editorial_plan": second_plan},
+            "linkedin_post": {"linkedin_post": "Margin pressure changes planning."},
+        }
+    )
+    replay = generate_artifacts(
+        report_id="linkedin-plan-reuse",
+        report_name="LinkedIn Plan Reuse",
+        doc_map=_doc_map(),
+        evidence_packs=_evidence_packs(),
+        settings=_settings(tmp_path),
+        md5="linkedin-plan-reuse-md5",
+        openai_client=second_client,
+        prompt_client=FakePromptClient(),
+        analysis_store=FakeAnalysisStore(),
+        prompt_family_reuse_reader=reuse_reader,
+    )
+
+    assert [request[2] for request in second_client.requests] == [
+        "editorial_plan",
+        "linkedin_post",
+    ]
+    telemetry = replay["_cache"]["family_reuse_telemetry"]
+    assert telemetry["regenerated_families"] == [
+        "report_vs/artifacts/editorial_plan",
+        "report_vs/artifacts/linkedin_post",
+    ]
+    assert telemetry["reused_families"] == sorted(
+        retained.keys() - {"report_vs/artifacts/linkedin_post"}
+    )
+
+
 __all__ = [
     "test_artifact_cache_isolated_by_retrieval_mode",
     "test_load_cached_artifacts_rejects_schema_invalid_payload",
@@ -740,4 +838,5 @@ __all__ = [
     "test_vector_store_identity_is_part_of_family_reuse_proof",
     "test_persisted_compatible_families_replay_without_model_calls",
     "test_invalidating_one_family_calls_only_its_model_route",
+    "test_editorial_plan_change_invalidates_only_linkedin_family_reuse",
 ]

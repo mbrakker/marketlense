@@ -759,7 +759,8 @@ def generate_artifacts(
 
     linkedin_ctx = child_context(ctx, task_id=f"{ctx.task_id}:linkedin_post")
     linkedin_vars = {
-        "summary_json": _dump_json(summary),
+        "editorial_plan_json": editorial_plan_json,
+        "doc_map_json": base_vars["doc_map_json"],
         "insights_final_json": _dump_json(insights_final),
         "metric_spine_json": metric_spine_json,
     }

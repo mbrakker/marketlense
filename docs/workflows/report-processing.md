@@ -375,7 +375,12 @@ provenance. The eight current routes are editorial plan, summary, candidate
 insights, quotes, final insights, cover semantics, expert comment, and LinkedIn
 post. The editorial plan is generated once from DocMap and grounded evidence;
 it retains one report thesis plus ordered themes, each with linked evidence
-IDs. Summary, final insights, and expert commentary consume that same plan.
+IDs. Summary, final insights, expert commentary, and the LinkedIn post consume
+that same plan. LinkedIn uses it to select one source-supported angle: for a
+broad report it explicitly presents a representative lens rather than a
+whole-report recap, while a narrow report may express its full thesis. Final
+insights and the metric spine provide supporting proof, with report context used
+for natural publisher attribution when available.
 Reuse
 requires a verified report/source identity, prompt and execution identities,
 provider/model and model-policy namespace, schema/validator, semantic input,

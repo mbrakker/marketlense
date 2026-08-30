@@ -109,6 +109,7 @@ def test_editorial_plan_is_the_shared_basis_for_summary_insights_and_expert(tmp_
         "report_vs/artifacts/summary",
         "report_vs/artifacts/insights_final",
         "report_vs/artifacts/expert_comment",
+        "report_vs/artifacts/linkedin_post",
     ):
         assert json.loads(
             prompt_client.variables_for_namespace(namespace)["editorial_plan_json"]

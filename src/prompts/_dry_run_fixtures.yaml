@@ -312,7 +312,8 @@ fixtures:
     benchmark: *benchmark_publishing_artifact
     system_variables: {}
     user_variables:
-      summary_json: *summary_json
+      editorial_plan_json: *editorial_plan_json
+      doc_map_json: *doc_map_json
       insights_final_json: *insights_final_json
       metric_spine_json: *metric_spine_json
   - namespace: "report_vs/artifacts/quotes"
@@ -388,7 +389,8 @@ fixtures:
       failure_reasons_json: *failure_reasons_json
       fix_checklist_json: *fix_checklist_json
       grounding_package_json: *grounding_package_json
-      summary_json: *summary_json
+      editorial_plan_json: *editorial_plan_json
+      doc_map_json: *doc_map_json
       insights_final_json: *insights_final_json
   - namespace: "report_vs/artifacts/regenerate/quotes"
     family: "publishing"

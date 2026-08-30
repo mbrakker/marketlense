@@ -228,6 +228,17 @@ class _FakeOpenAIClient:
                 },
                 request_id="req-expert",
             )
+        if "system::report_vs/artifacts/regenerate/linkedin_post" in req.system_prompt:
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text='{"linkedin_post":"Retention efficiency is replacing broad expansion."}',
+                parsed_json={
+                    "linkedin_post": (
+                        "Retention efficiency is replacing broad expansion."
+                    )
+                },
+                request_id="req-linkedin",
+            )
         raise AssertionError(
             f"Unexpected prompt payload: {req.system_prompt} {req.user_prompt}"
         )
@@ -493,6 +504,14 @@ def test_regenerate_artifacts_insights_bundle_uses_targeted_steps_and_preserves_
     first_user_prompt = openai_client.calls[0].user_prompt
     assert "Unsupported insight value" in first_user_prompt
     assert "Evidence text" in first_user_prompt
+    candidate_variables = prompt_client.render_calls[1]["variables"]
+    assert json.loads(candidate_variables["editorial_plan_json"]) == {
+        "report_thesis": "The report's retained evidence changes planning.",
+        "themes": [
+            {"theme": "Primary evidence", "priority": 1, "evidence_ids": ["f1"]},
+            {"theme": "Margin evidence", "priority": 2, "evidence_ids": ["f2"]},
+        ],
+    }
 
 
 def test_regenerate_artifacts_dispatches_summary_via_target_section_registry(tmp_path):
@@ -664,6 +683,57 @@ def test_regenerate_artifacts_expert_comment_uses_grounded_synthesis_context(
     assert context["limitations"] == [
         {"evidence_id": "f1", "text": "The report does not compare segments."}
     ]
+
+
+def test_regenerate_artifacts_linkedin_post_receives_editorial_plan(tmp_path):
+    prompt_client = _FakePromptClient()
+    openai_client = _FakeOpenAIClient()
+    current_artifacts = _current_artifacts()
+
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=RegenerationPlan(
+                mode="targeted",
+                targets=[
+                    RegenerationTarget(
+                        target_section="linkedin_post",
+                        regenerate_steps=["linkedin_post"],
+                        prompt_namespaces=[
+                            "report_vs/artifacts/regenerate/linkedin_post"
+                        ],
+                        issues=[],
+                    )
+                ],
+                unmappable_issues=[],
+                broad_retry_allowed=False,
+            ),
+            current_artifacts=current_artifacts,
+            doc_map=_evidence_packs()["doc_map"],
+            evidence_packs=_evidence_packs(),
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current_artifacts["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=openai_client,
+        prompt_client=prompt_client,
+    )
+
+    assert response.prompt_namespaces == [
+        "report_vs/artifacts/regenerate/linkedin_post"
+    ]
+    assert json.loads(prompt_client.render_calls[0]["variables"]["editorial_plan_json"]) == {
+        "report_thesis": "The report's retained evidence changes planning.",
+        "themes": [
+            {"theme": "Primary evidence", "priority": 1, "evidence_ids": ["f1"]},
+            {"theme": "Margin evidence", "priority": 2, "evidence_ids": ["f2"]},
+        ],
+    }
 
 
 def test_regenerate_artifacts_summary_only_keeps_other_sections_unchanged(tmp_path):

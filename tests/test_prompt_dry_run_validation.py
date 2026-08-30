@@ -64,6 +64,55 @@ def test_final_insights_regeneration_prompt_requires_decision_implications() -> 
     assert "now_what" in prompt_set.user.text
 
 
+@pytest.mark.parametrize(
+    ("namespace", "scope"),
+    [
+        ("report_vs/artifacts/linkedin_post", "Broad report scope"),
+        ("report_vs/artifacts/regenerate/linkedin_post", "Narrow report scope"),
+    ],
+)
+def test_linkedin_prompt_materializes_editorial_plan_and_report_scope(
+    namespace: str, scope: str
+) -> None:
+    prompt_set = prompt_service.load_prompt_set(
+        PromptLoadRequest(schema_version="1.0", namespace=namespace, force_reload=True),
+        _ctx(),
+    )
+    variables = {
+        "editorial_plan_json": '{"report_thesis":"Retention is the angle."}',
+        "doc_map_json": json.dumps({"scope": scope, "publisher": "Source Co."}),
+        "summary_json": '{"executive_summary":"Secondary context."}',
+        "insights_final_json": '[{"text":"Supporting insight."}]',
+        "metric_spine_json": '[]',
+        "attempt_index": 1,
+        "target_section": "linkedin_post",
+        "current_section_text": "Current post.",
+        "failure_reasons_json": "[]",
+        "fix_checklist_json": "[]",
+        "grounding_package_json": "{}",
+    }
+
+    rendered = prompt_service.render_prompt(
+        prompt_service.PromptRenderRequest(
+            schema_version="1.0", template=prompt_set.user, variables=variables
+        ),
+        _ctx(),
+    )
+
+    assert "Retention is the angle." in rendered.text
+    assert scope in rendered.text
+    assert "Secondary context." not in rendered.text
+    assert "180–280 words" in rendered.text
+    assert "no more than four quantitative proof points" in rendered.text
+    assert (
+        "Select the four or fewer quantitative proof points before drafting"
+        in rendered.text
+    )
+    assert "no more than four distinct numerical values" in rendered.text
+    assert "Do not use bullets" in rendered.text
+    assert "The evidence points to" in rendered.text
+
+
 def test_validate_prompt_dry_run_repository_covers_all_discovered_namespaces(
     caplog,
     assert_logs_have_required_fields,

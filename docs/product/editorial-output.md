@@ -10,6 +10,16 @@ Report-local output can include summaries, insights, quotes, figure selections, 
 
 When evidence supports a Decision Brief, it serves a distinct role from the Executive Summary. Its strategic context is the concise report thesis (`tldr` or compact TLDR), never the full executive-summary prose. Decision implications use evidence-linked insight `so_what` fields; priority moves use supported `now_what` fields or evidence-linked explicit recommendations; and watchouts use evidence-linked risks or counter-signals plus retained limitations. Unsupported sections are omitted rather than inferred, while the retained evidence links continue to identify the supporting source material.
 
+LinkedIn output uses the persisted editorial plan as its primary thematic frame,
+then final representative insights and the metric spine as evidence. It targets
+180–280 words (with the retained 500-word hard maximum), opens on one concrete
+report-backed angle, attributes a known publisher naturally, and limits normal
+posts to four quantitative proof points. Broad reports identify the post as a
+representative lens rather than a complete recap; narrow reports may state the
+whole thesis. The prompt retains factual grounding and clean paragraph
+construction without adding a post-generation rewrite or a new publication
+gate.
+
 Public titles are normalized from retained metadata before rendering: filename
 separators, document suffixes, literal truncation marks, and repeated adjacent
 years are removed. SEO descriptions end at a word and sentence boundary within

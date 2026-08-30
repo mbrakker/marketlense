@@ -5,8 +5,9 @@ text: |
   - Attempt index: {{ attempt_index }}
   - Target section: {{ target_section }}
   - Current LinkedIn post text: {{ current_section_text }}
-  - Summary JSON: {{ summary_json }}
-  - Final insights JSON: {{ insights_final_json }}
+  - Editorial plan JSON (primary thematic authority): {{ editorial_plan_json }}
+  - Report context including title, publisher/source, and scope JSON: {{ doc_map_json }}
+  - Final insights JSON (supporting evidence): {{ insights_final_json }}
   - Validator failures JSON: {{ failure_reasons_json }}
   - Fix checklist JSON: {{ fix_checklist_json }}
   - Grounding package JSON: {{ grounding_package_json }}
@@ -19,6 +20,13 @@ text: |
 
   Requirements:
   - Fix the listed failures directly.
+  - Keep one central, source-supported insight, tension, or implication selected from the editorial plan; do not turn the post into a mini-summary.
+  - For a broad report, explicitly frame the repaired post as one representative angle rather than a complete report summary. For a narrow report, it may express the overall thesis.
+  - Target 180–280 words while retaining the hard 500-word maximum. Attribute the publisher/source naturally near the beginning when known from the report context.
+  - Use two to four supporting proof points and no more than four quantitative proof points. Select the four or fewer quantitative proof points before drafting, then use no more than four distinct numerical values in the post; a percentage and its comparison value count separately. Do not introduce any additional number, percentage, currency figure, volume, or comparison beyond that selection. A report title or source period may include its year without counting as a proof point.
+  - Include one distinct source-supported interpretation or decision implication. Do not introduce unsupported claims, numbers, quotes, recommendations, or causal outcomes.
+  - Avoid the phrases "The evidence points to", "The market signals are clear", "For senior leaders", "The strategic question is not simply", and "The practical agenda"; do not use engagement bait or unnecessary tagging.
+  - Use zero to three highly relevant hashtags only when useful. Do not use bullets. Use short paragraphs separated by blank lines so every supporting point remains native LinkedIn prose.
   - Do not introduce unsupported claims, numbers, or quotes.
   - Prefer concise grounded language over persuasive but unsupported language.
   - Return direct public prose without editorial labels such as "Executive takeaway:", "Observation:", or "Implication:".
