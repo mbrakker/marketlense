@@ -117,18 +117,17 @@ def _build_findings(
 def _build_metrics(
     *,
     report_id: ReportId,
-    metrics_pack: dict[str, Any],
+    metric_spine: Any,
     generated_at_utc: str,
     analysis_run_id: str,
 ) -> list[ReportMetricProjection]:
-    raw_metrics = metrics_pack.get("key_metrics")
-    metrics: list[Any] = raw_metrics if isinstance(raw_metrics, list) else []
+    metrics: list[Any] = metric_spine if isinstance(metric_spine, list) else []
     rows: list[ReportMetricProjection] = []
     for index, raw in enumerate(metrics):
         if not isinstance(raw, dict):
             continue
-        metric_id = _clean_text(raw.get("id"))
-        metric = _clean_text(raw.get("metric"))
+        metric_id = _clean_text(raw.get("metric_id"))
+        metric = _clean_text(raw.get("label") or raw.get("metric"))
         value = _clean_text(raw.get("value"))
         if not metric_id or not metric or not value:
             raise AppError(
@@ -150,11 +149,10 @@ def _build_metrics(
                 evidence_id=_clean_text(raw.get("evidence_id")),
                 pages=_clean_int_list(raw.get("pages") or []),
                 lineage=_lineage(
-                    source_pack="key_metrics",
-                    source_ref=f"key_metrics[{index}]",
+                    source_pack="artifacts.metric_spine",
+                    source_ref=f"metric_spine[{index}]",
                     generated_at_utc=generated_at_utc,
                     analysis_run_id=analysis_run_id,
-                    model=_source_pack_model(metrics_pack),
                 ),
             )
         )

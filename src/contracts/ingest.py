@@ -492,12 +492,6 @@ class IngestSettings:
             "doc": "Ordered evidence-pack registry. `doc_map` should remain first as a hard gate."
         },
     )
-    evidence_pack_enable_new_variety_packs: bool = field(
-        default=False,
-        metadata={
-            "doc": "Feature flag enabling additional evidence-pack families (key_metrics, risk_register, recommendations, contradictions)."
-        },
-    )
     artifact_parallel_workers: int = field(
         default=4,
         metadata={

@@ -362,7 +362,6 @@ def _settings_for_sample(*, root_path: Path, profile: EvidencePackWorkerProfile)
         cost_ledger_path=str(root_path / "cost-ledger.jsonl"),
         cost_daily_path=str(root_path / "cost-daily.json"),
         evidence_pack_registry=list(_PACK_REGISTRY),
-        evidence_pack_enable_new_variety_packs=False,
         evidence_pack_parallel_workers=profile.parallel_workers,
         vector_store_keep=False,
     )

@@ -187,7 +187,6 @@ def _config_load_complete_fields(
         "evidence_pack_doc_map_max_attempts": settings.evidence_pack_doc_map_max_attempts,
         "evidence_pack_doc_map_retry_delay_ms": settings.evidence_pack_doc_map_retry_delay_ms,
         "evidence_pack_registry": settings.evidence_pack_registry,
-        "evidence_pack_enable_new_variety_packs": settings.evidence_pack_enable_new_variety_packs,
         "artifact_parallel_workers": settings.artifact_parallel_workers,
         "artifact_global_max_in_flight": settings.artifact_global_max_in_flight,
         "artifact_global_min_interval_ms": settings.artifact_global_min_interval_ms,
@@ -466,9 +465,6 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
             "evidence_pack_doc_map_retry_delay_ms"
         ],
         evidence_pack_registry=evidence_pack_settings["evidence_pack_registry"],
-        evidence_pack_enable_new_variety_packs=evidence_pack_settings[
-            "evidence_pack_enable_new_variety_packs"
-        ],
         artifact_parallel_workers=artifact_settings["artifact_parallel_workers"],
         artifact_global_max_in_flight=artifact_settings[
             "artifact_global_max_in_flight"

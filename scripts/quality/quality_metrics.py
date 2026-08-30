@@ -29,10 +29,6 @@ PACK_SCHEMA_MAP = {
     "quote_candidates": "quote_candidates_pack",
     "artifacts": "artifacts",
     "validation": "validation_report",
-    "key_metrics": "key_metrics_pack",
-    "risk_register": "risk_register_pack",
-    "recommendations": "recommendations_pack",
-    "contradictions": "contradictions_pack",
 }
 
 

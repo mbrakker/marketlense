@@ -172,9 +172,6 @@ def _collect_evidence_quality_grades(evidence_packs: dict) -> dict[str, str]:
     for pack_name, root_key in (
         ("findings", "findings"),
         ("quote_candidates", "quote_candidates"),
-        ("key_metrics", "key_metrics"),
-        ("risk_register", "risk_register"),
-        ("recommendations", "recommendations"),
     ):
         pack = evidence_packs.get(pack_name)
         if not isinstance(pack, dict):
@@ -185,13 +182,6 @@ def _collect_evidence_quality_grades(evidence_packs: dict) -> dict[str, str]:
             grade = _quality_grade(item) or _default_quality_grade(pack_name)
             _register(item.get("id"), grade)
             _register(item.get("evidence_id"), grade)
-    contradictions_pack = evidence_packs.get("contradictions")
-    if isinstance(contradictions_pack, dict):
-        for item in contradictions_pack.get("contradictions") or []:
-            if not isinstance(item, dict):
-                continue
-            for evidence_id in item.get("evidence_ids") or []:
-                _register(evidence_id, _quality_grade(item) or "explicit_finding")
     doc_map = evidence_packs.get("doc_map")
     if isinstance(doc_map, dict):
         for section in doc_map.get("sections") or []:
@@ -219,9 +209,6 @@ def _default_quality_grade(pack_name: str) -> str:
     return {
         "findings": "explicit_finding",
         "quote_candidates": "direct_quote",
-        "key_metrics": "direct_metric",
-        "risk_register": "explicit_risk",
-        "recommendations": "explicit_recommendation",
     }.get(pack_name, "source_backed")
 
 

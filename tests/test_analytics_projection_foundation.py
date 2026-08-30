@@ -174,18 +174,6 @@ def _analysis_state(
                 }
             ]
         },
-        "key_metrics": {
-            "key_metrics": [
-                {
-                    "id": "m1",
-                    "metric": "Budget growth",
-                    "value": "18",
-                    "unit": "%",
-                    "evidence_id": "f1",
-                    "pages": [2],
-                }
-            ]
-        },
         "taxonomy": {
             "taxonomy": ["AI", "Enterprise"],
             "primary_tags": ["AI"],
@@ -205,6 +193,16 @@ def _analysis_state(
         },
     }
     artifacts = {
+        "metric_spine": [
+            {
+                "metric_id": "m1",
+                "label": "Budget growth",
+                "value": "18",
+                "unit": "%",
+                "evidence_id": "f1",
+                "pages": [2],
+            }
+        ],
         "summary": {
             "tldr": "Short summary",
             "executive_summary": "Executive summary",

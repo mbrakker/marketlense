@@ -37,7 +37,6 @@ from src.generators.artifact_generator import (
     build_key_figures,
     build_topic_briefs,
     build_topics_covered,
-    derive_metric_spine,
     derive_metric_spine_from_insights,
     generate_artifacts,
 )

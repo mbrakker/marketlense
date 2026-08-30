@@ -274,15 +274,25 @@ def validate_evidence_references(
             value = str(section.get("id") or "").strip()
             if value:
                 evidence_ids.add(value)
-    metrics_payload = evidence_pack_payloads.get("key_metrics")
-    if isinstance(metrics_payload, dict):
-        for item in metrics_payload.get("key_metrics") or []:
+    # These families are no longer generated.  Retained reports from before the
+    # representative-evidence path may still cite their stable IDs, however, so
+    # allow those artifacts to be validated and replayed without reintroducing
+    # a model call or a current output contract for the retired families.
+    for pack_name, item_key in (
+        ("key_metrics", "key_metrics"),
+        ("recommendations", "recommendations"),
+        ("risk_register", "risks"),
+        ("contradictions", "contradictions"),
+    ):
+        legacy_payload = evidence_pack_payloads.get(pack_name)
+        if not isinstance(legacy_payload, dict):
+            continue
+        for item in legacy_payload.get(item_key) or []:
             if not isinstance(item, dict):
                 continue
             value = str(item.get("id") or "").strip()
             if value:
                 evidence_ids.add(value)
-
     references: list[str] = []
     summary = artifacts_payload.get("summary")
     if isinstance(summary, dict):

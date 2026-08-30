@@ -115,10 +115,6 @@ class RoutedOpenAIClient:
             "findings",
             "limitations",
             "quote_candidates",
-            "key_metrics",
-            "risk_register",
-            "recommendations",
-            "contradictions",
         ):
             if task_id.endswith(f":{candidate}"):
                 pack = candidate
@@ -287,7 +283,6 @@ def _settings(
     tmp_path,
     *,
     evidence_pack_registry=None,
-    evidence_pack_enable_new_variety_packs=False,
 ):
     return AppSettings(
         schema_version="1.0",
@@ -330,7 +325,6 @@ def _settings(
             "limitations",
             "quote_candidates",
         ],
-        evidence_pack_enable_new_variety_packs=evidence_pack_enable_new_variety_packs,
         cost_ledger_path=str(tmp_path / "cost-ledger.jsonl"),
         cost_daily_path=str(tmp_path / "cost-daily.json"),
         model_pricing={

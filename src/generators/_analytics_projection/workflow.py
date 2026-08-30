@@ -110,7 +110,7 @@ def build_projection(
     )
     metrics = _build_metrics(
         report_id=report_id,
-        metrics_pack=analysis.evidence_packs.get("key_metrics", {}),
+        metric_spine=artifacts.get("metric_spine", []),
         generated_at_utc=generated_at_utc,
         analysis_run_id=analysis_run_id,
     )

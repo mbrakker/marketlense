@@ -176,13 +176,9 @@ def assemble_artifacts_payload(
                 module=logger.name,
                 fields=evidence_span_stats,
             )
-        )
-    metric_spine = _merge_metric_spines(
-        derive_metric_spine(evidence_packs, editorial_plan=editorial_plan),
-        derive_metric_spine_from_insights(
-            insights_final, editorial_plan=editorial_plan
-        ),
-        editorial_plan=editorial_plan,
+    )
+    metric_spine = derive_metric_spine_from_insights(
+        insights_final, editorial_plan=editorial_plan
     )
     topics_covered = build_topics_covered(
         toc_entries=toc_entries,
@@ -427,59 +423,6 @@ def build_universal_claim_ledger(
     return ledger
 
 
-def derive_metric_spine(
-    evidence_packs: Dict[str, Any],
-    *,
-    editorial_plan: Dict[str, Any] | None = None,
-) -> List[Dict[str, Any]]:
-    raw_metrics: list[Any] = []
-    key_metrics = (
-        evidence_packs.get("key_metrics") if isinstance(evidence_packs, dict) else {}
-    )
-    if isinstance(key_metrics, dict):
-        raw_metrics = key_metrics.get("metrics") or key_metrics.get("key_metrics") or []
-    if not isinstance(raw_metrics, list):
-        return []
-    spine: List[Dict[str, Any]] = []
-    for raw in raw_metrics:
-        if not isinstance(raw, dict):
-            continue
-        value = _s(raw.get("value") or raw.get("raw_value")).strip()
-        unit = _s(raw.get("unit")).strip()
-        evidence_id = _s(raw.get("evidence_id")).strip()
-        label = _s(raw.get("label") or raw.get("metric")).strip()
-        if not value or not evidence_id or not label:
-            continue
-        missing_context_notes = [
-            field_name
-            for field_name in ("timeframe", "segment", "geography")
-            if not _s(raw.get(field_name)).strip()
-        ]
-        item = {
-                "schema_version": "1.0",
-                "metric_id": _s(raw.get("metric_id") or evidence_id).strip(),
-                "label": label,
-                "value": value,
-                "unit": unit,
-                "timeframe": _s(raw.get("timeframe")).strip(),
-                "segment": _s(raw.get("segment")).strip(),
-                "geography": _s(raw.get("geography")).strip(),
-                "comparator": _s(raw.get("comparator")).strip(),
-                "baseline": _s(raw.get("baseline")).strip(),
-                "delta": _s(raw.get("delta")).strip(),
-                "sample_size": _s(raw.get("sample_size")).strip(),
-                "confidence": (_s(raw.get("confidence")).strip() or "source_backed"),
-                "missing_context_notes": missing_context_notes,
-                "evidence_id": evidence_id,
-            }
-        numeric_metadata = numeric_metadata_for_complete_display(value)
-        if numeric_metadata is not None:
-            item["source_display_value"] = value
-            item["numeric_metadata"] = numeric_metadata
-        spine.append(item)
-    return _rank_metric_spine(spine, editorial_plan=editorial_plan)
-
-
 def derive_metric_spine_from_insights(
     insights_final: List[Dict[str, Any]],
     *,
@@ -531,27 +474,6 @@ def derive_metric_spine_from_insights(
             item["numeric_metadata"] = numeric_metadata
         spine.append(item)
     return _rank_metric_spine(spine, editorial_plan=editorial_plan)
-
-
-def _merge_metric_spines(
-    primary: List[Dict[str, Any]],
-    secondary: List[Dict[str, Any]],
-    *,
-    editorial_plan: Dict[str, Any] | None = None,
-) -> List[Dict[str, Any]]:
-    merged: List[Dict[str, Any]] = []
-    seen: set[str] = set()
-    for item in [*primary, *secondary]:
-        evidence_id = _s(item.get("evidence_id")).strip()
-        label = _s(item.get("label")).strip().lower()
-        value = _s(item.get("value")).strip().lower()
-        unit = _s(item.get("unit")).strip().lower()
-        key = "|".join([evidence_id, label, value, unit])
-        if key in seen:
-            continue
-        seen.add(key)
-        merged.append(item)
-    return _rank_metric_spine(merged, editorial_plan=editorial_plan)
 
 
 def _rank_metric_spine(
@@ -875,7 +797,7 @@ def _evidence_items(evidence_packs: Dict[str, Any]) -> List[Dict[str, Any]]:
     for pack_name, pack in evidence_packs.items():
         if not isinstance(pack, dict):
             continue
-        for key in ("findings", "quotes", "metrics", "key_metrics", "items"):
+        for key in ("findings", "quotes", "metrics", "items"):
             raw_items = pack.get(key)
             if not isinstance(raw_items, list):
                 continue
@@ -1057,28 +979,12 @@ def build_executive_advisory_artifacts(
     metric_spine: List[Dict[str, Any]],
     evidence_packs: Dict[str, Any],
 ) -> Dict[str, Any]:
-    recommendations_pack = evidence_packs.get("recommendations", {})
-    risks_pack = evidence_packs.get("risk_register", {})
     limitations_pack = evidence_packs.get("limitations", {})
-    recommendations = (
-        recommendations_pack.get("recommendations")
-        if isinstance(recommendations_pack, dict)
-        else []
-    )
-    risks = (
-        risks_pack.get("risk_register") or risks_pack.get("risks")
-        if isinstance(risks_pack, dict)
-        else []
-    )
     limitations = (
         limitations_pack.get("limitations")
         if isinstance(limitations_pack, dict)
         else []
     )
-    if not isinstance(recommendations, list):
-        recommendations = []
-    if not isinstance(risks, list):
-        risks = []
     if not isinstance(limitations, list):
         limitations = []
     supported_insights = [
@@ -1088,14 +994,28 @@ def build_executive_advisory_artifacts(
         and _has_advisory_evidence(item)
     ]
     grounded_recommendations = [
-        item
-        for item in recommendations
-        if isinstance(item, dict) and _has_advisory_evidence(item)
+        {
+            "id": _s(item.get("id")).strip(),
+            "recommendation": _s(item.get("now_what")).strip(),
+            "rationale": "",
+            "evidence_id": _s(item.get("evidence_id")).strip(),
+        }
+        for item in supported_insights
+        if _s(item.get("now_what")).strip()
     ]
     grounded_risks = [
-        item
-        for item in risks
-        if isinstance(item, dict) and _has_advisory_evidence(item)
+        {
+            "id": _s(item.get("id")).strip(),
+            "risk": _s(item.get("text")).strip(),
+            "impact": "",
+            "likelihood": "",
+            "mitigation": "",
+            "evidence_id": _s(item.get("evidence_id")).strip(),
+        }
+        for item in supported_insights
+        if _s(item.get("coverage_role")).strip().casefold()
+        in {"counter_signal", "strategic_risk"}
+        and _s(item.get("text")).strip()
     ]
     decision_implications = _unique_advisory_texts(
         [_s(item.get("so_what")) for item in supported_insights]
@@ -1103,10 +1023,7 @@ def build_executive_advisory_artifacts(
     priority_moves = _unique_advisory_texts(
         [
             *[_s(item.get("now_what")) for item in supported_insights],
-            *[
-                _s(item.get("recommendation") or item.get("text"))
-                for item in grounded_recommendations
-            ],
+            *[_s(item.get("recommendation")) for item in grounded_recommendations],
         ]
     )
     watchouts = _unique_advisory_texts(
@@ -1117,7 +1034,7 @@ def build_executive_advisory_artifacts(
                 if _s(item.get("coverage_role")).strip().casefold()
                 in {"counter_signal", "strategic_risk"}
             ],
-            *[_s(item.get("risk") or item.get("text")) for item in grounded_risks],
+            *[_s(item.get("risk")) for item in grounded_risks],
             *_limitation_texts(limitations),
         ]
     )
@@ -1152,13 +1069,17 @@ def build_executive_advisory_artifacts(
         },
         "recommendations": {
             "schema_version": "1.0",
-            "status": "generated" if recommendations else "recommendations_not_found",
-            "items": recommendations,
+            "status": (
+                "generated"
+                if grounded_recommendations
+                else "recommendations_not_found"
+            ),
+            "items": grounded_recommendations,
         },
         "risks": {
             "schema_version": "1.0",
-            "status": "generated" if risks else "risks_not_found",
-            "items": risks,
+            "status": "generated" if grounded_risks else "risks_not_found",
+            "items": grounded_risks,
         },
         "coverage_diagnostics": {
             "schema_version": "1.0",
@@ -1273,10 +1194,6 @@ def _has_evidence_content(
             or pack.get("methods")
             or pack.get("scope")
             or pack.get("limitations")
-            or pack.get("key_metrics")
-            or pack.get("risk_register")
-            or pack.get("recommendations")
-            or pack.get("contradictions")
         ):
             return True
     return False

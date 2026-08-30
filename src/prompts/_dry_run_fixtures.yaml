@@ -493,13 +493,6 @@ fixtures:
     benchmark: *benchmark_report_extract
     system_variables: {}
     user_variables: {}
-  - namespace: "report_vs/evidence_packs/contradictions"
-    family: "report"
-    model: "openai/gpt-5-mini"
-    temperature: 0.0
-    benchmark: *benchmark_report_extract
-    system_variables: {}
-    user_variables: {}
   - namespace: "report_vs/evidence_packs/findings"
     family: "report"
     model: "openai/gpt-5-mini"
@@ -509,13 +502,6 @@ fixtures:
     user_variables:
       doc_map_sections_json: >-
         [{"id":"overview","title":"Executive overview","summary":"Summary of the report central market theme.","key_points":["Demand is shifting toward measurable outcomes."],"pages":[1]}]
-  - namespace: "report_vs/evidence_packs/key_metrics"
-    family: "report"
-    model: "openai/gpt-5-mini"
-    temperature: 0.0
-    benchmark: *benchmark_report_extract
-    system_variables: {}
-    user_variables: {}
   - namespace: "report_vs/evidence_packs/limitations"
     family: "report"
     model: "openai/gpt-5-mini"
@@ -531,20 +517,6 @@ fixtures:
     system_variables: {}
     user_variables: {}
   - namespace: "report_vs/evidence_packs/quote_candidates"
-    family: "report"
-    model: "openai/gpt-5-mini"
-    temperature: 0.0
-    benchmark: *benchmark_report_extract
-    system_variables: {}
-    user_variables: {}
-  - namespace: "report_vs/evidence_packs/recommendations"
-    family: "report"
-    model: "openai/gpt-5-mini"
-    temperature: 0.0
-    benchmark: *benchmark_report_extract
-    system_variables: {}
-    user_variables: {}
-  - namespace: "report_vs/evidence_packs/risk_register"
     family: "report"
     model: "openai/gpt-5-mini"
     temperature: 0.0

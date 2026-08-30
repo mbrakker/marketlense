@@ -373,14 +373,6 @@ def _expert_counter_signals(
             evidence_id=_s(insight.get("evidence_id")),
             text=_s(insight.get("text")),
         )
-    counter_signals.extend(
-        _expert_context_items(
-            evidence_packs.get("risk_register"),
-            item_key="risk_register",
-            text_keys=("risk", "text", "summary", "description"),
-            existing=counter_signals,
-        )
-    )
     return counter_signals[:7]
 
 
@@ -913,9 +905,6 @@ def _collect_known_evidence_ids(
             for item_key in (
                 "findings",
                 "quote_candidates",
-                "key_metrics",
-                "risk_register",
-                "recommendations",
             ):
                 items = pack.get(item_key)
                 if not isinstance(items, list):
@@ -1147,53 +1136,6 @@ def _build_evidence_span_index(
                     start_offset=item.get("start_offset"),
                     end_offset=item.get("end_offset"),
                 )
-        for pack_name, root_key, text_keys in (
-            ("key_metrics", "key_metrics", ("metric", "value", "unit")),
-            (
-                "risk_register",
-                "risk_register",
-                ("risk", "impact", "likelihood", "mitigation"),
-            ),
-            ("recommendations", "recommendations", ("recommendation", "rationale")),
-        ):
-            pack = evidence_packs.get(pack_name)
-            if not isinstance(pack, dict):
-                continue
-            for item in pack.get(root_key) or []:
-                if not isinstance(item, dict):
-                    continue
-                _register(
-                    evidence_id=item.get("id") or item.get("evidence_id"),
-                    source_pack=pack_name,
-                    pages=_coerce_span_pages(item),
-                    text=" ".join(
-                        value
-                        for value in (_s(item.get(key)).strip() for key in text_keys)
-                        if value
-                    ),
-                )
-        contradictions_pack = evidence_packs.get("contradictions")
-        if isinstance(contradictions_pack, dict):
-            for item in contradictions_pack.get("contradictions") or []:
-                if not isinstance(item, dict):
-                    continue
-                contradiction_text = " ".join(
-                    value
-                    for value in (
-                        _s(item.get("statement_a")).strip(),
-                        _s(item.get("statement_b")).strip(),
-                        _s(item.get("explanation")).strip(),
-                    )
-                    if value
-                )
-                for evidence_id in item.get("evidence_ids") or []:
-                    _register(
-                        evidence_id=evidence_id,
-                        source_pack="contradictions",
-                        pages=_coerce_span_pages(item),
-                        text=contradiction_text,
-                    )
-
     if isinstance(doc_map, dict):
         for section in doc_map.get("sections") or []:
             if not isinstance(section, dict):

@@ -196,7 +196,7 @@ def test_validate_evidence_references_passes_for_known_ids():
     validate_evidence_references(artifacts_payload, evidence_packs, _ctx())
 
 
-def test_validate_evidence_references_accepts_key_metric_ids():
+def test_validate_evidence_references_accepts_retained_key_metric_ids():
     artifacts_payload = {
         "summary": {"claim_evidence_map": [{"claim": "c", "evidence_id": "m2"}]},
         "insights_candidates": [{"id": "i1", "evidence_id": "m3"}],

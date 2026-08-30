@@ -108,7 +108,6 @@ ingest:
       - "findings"
       - "limitations"
       - "quote_candidates"
-    enable_new_variety_packs: false
   artifacts:
     parallel_workers: 5
     global_max_in_flight: 5

@@ -280,9 +280,6 @@ def _evidence_source_pages(evidence_packs: dict[str, Any]) -> dict[str, set[int]
     for pack_name, item_key in (
         ("findings", "findings"),
         ("quote_candidates", "quote_candidates"),
-        ("key_metrics", "key_metrics"),
-        ("risk_register", "risk_register"),
-        ("recommendations", "recommendations"),
     ):
         pack = evidence_packs.get(pack_name)
         if not isinstance(pack, dict):

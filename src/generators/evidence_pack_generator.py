@@ -45,7 +45,6 @@ from src.generators.evidence_packs.doc_map_strategy import (
 from src.generators.evidence_packs.registry import (
     DEFAULT_PACK_REGISTRY,
     PACK_STRATEGIES,
-    VARIETY_PACKS,
 )
 from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.generators.structured_output_execution import (
@@ -78,10 +77,6 @@ _OPTIONAL_EVIDENCE_PACKS = {
     "findings",
     "limitations",
     "quote_candidates",
-    "key_metrics",
-    "risk_register",
-    "recommendations",
-    "contradictions",
 }
 
 
@@ -131,9 +126,6 @@ def _pack_parallel_workers(settings: AppSettings, step_count: int) -> int:
 
 def _resolve_pack_steps(settings: AppSettings) -> list[EvidencePackStrategy]:
     raw_registry = getattr(settings, "evidence_pack_registry", None)
-    enable_variety = bool(
-        getattr(settings, "evidence_pack_enable_new_variety_packs", False)
-    )
     registry: list[str] = []
     if isinstance(raw_registry, list):
         for value in raw_registry:
@@ -142,10 +134,6 @@ def _resolve_pack_steps(settings: AppSettings) -> list[EvidencePackStrategy]:
                 registry.append(token)
     if not registry:
         registry = list(DEFAULT_PACK_REGISTRY)
-    if enable_variety:
-        for pack_name in VARIETY_PACKS:
-            if pack_name not in registry:
-                registry.append(pack_name)
     if "doc_map" not in registry:
         registry = ["doc_map", *registry]
     elif registry[0] != "doc_map":
@@ -213,10 +201,6 @@ def _pack_confidence_score(pack_name: str, payload: dict) -> float:
         "findings",
         "limitations",
         "quote_candidates",
-        "key_metrics",
-        "risk_register",
-        "recommendations",
-        "contradictions",
     }:
         return _scalar_or_list_pack_confidence(payload, root_key=pack_name)
     return 0.0

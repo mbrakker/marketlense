@@ -19,17 +19,9 @@ Typed contracts live in:
 - `artifacts` -> schema: `src/schemas/artifacts.schema.json`
 - `validation` -> schema: `src/schemas/validation_report.schema.json`
 
-## Variety Packs
-
-- `key_metrics` -> schema: `src/schemas/key_metrics_pack.schema.json`
-- `risk_register` -> schema: `src/schemas/risk_register_pack.schema.json`
-- `recommendations` -> schema: `src/schemas/recommendations_pack.schema.json`
-- `contradictions` -> schema: `src/schemas/contradictions_pack.schema.json`
-
-## Registry and Feature Flags
+## Registry
 
 - Registry key: `ingest.evidence_packs.registry`
-- Variety flag: `ingest.evidence_packs.enable_new_variety_packs`
 - Strict schema flag: `analysis.strict_schema_validation`
 
 `doc_map` is always enforced as the first pack step.
@@ -52,6 +44,15 @@ context only: each finding remains grounded in file-search evidence.
 to the supplied DocMap with optional `section_id` and `section_title`. These
 links are additive, so legacy retained findings packs remain schema-valid.
 
+The production registry has one representative-evidence path. Its final
+insights retain source-backed metrics, priority moves, and counter-signals;
+artifact assembly deterministically projects those supported fields into the
+metric spine, recommendation, and risk outputs. It does not schedule separate
+key-metric, recommendation, risk-register, or contradiction model families.
+Retained artifacts that cite IDs from those retired families remain readable for
+validation and replay only; this compatibility path never schedules or
+normalizes a retired family for new reports.
+
 Schema validity alone does not make a `doc_map` usable. Before a map can advance
 generation or be reused from cache, the generator verifies that it has at least
 one subject-specific section and source-derived narrative terms. Runtime control
@@ -67,6 +68,8 @@ Cross-pack checks require `artifacts` evidence references to resolve to known ID
 - `doc_map.sections[].id`
 - `findings.findings[].id`
 - `quote_candidates.quote_candidates[].id`
+- IDs in retained specialist-family payloads, when replaying an artifact created
+  before those families were retired
 
 `artifacts.toc_entries[]` is the authoritative Covered topics structure, deterministically derived from eligible `doc_map.sections[]`, with:
 

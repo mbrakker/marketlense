@@ -4,160 +4,6 @@ from __future__ import annotations
 from ._shared import *  # noqa: F401,F403
 
 
-def test_derive_metric_spine_selects_strong_supported_metrics() -> None:
-    spine = derive_metric_spine(
-        {
-            "key_metrics": {
-                "metrics": [
-                    {
-                        "metric_id": "m2",
-                        "label": "Low support metric",
-                        "value": "",
-                        "unit": "percent",
-                        "evidence_id": "ev2",
-                    },
-                    {
-                        "metric_id": "m1",
-                        "label": "Wallet adoption",
-                        "value": "42",
-                        "unit": "percent",
-                        "timeframe": "2026",
-                        "segment": "enterprise merchants",
-                        "geography": "Global",
-                        "comparator": "2025",
-                        "delta": "+7 points",
-                        "sample_size": "n=500",
-                        "evidence_id": "ev1",
-                    },
-                ]
-            }
-        }
-    )
-
-    assert spine == [
-        {
-            "schema_version": "1.0",
-            "metric_id": "m1",
-            "label": "Wallet adoption",
-            "value": "42",
-            "unit": "percent",
-            "timeframe": "2026",
-            "segment": "enterprise merchants",
-            "geography": "Global",
-            "comparator": "2025",
-            "baseline": "",
-            "delta": "+7 points",
-            "sample_size": "n=500",
-            "confidence": "source_backed",
-            "missing_context_notes": [],
-            "evidence_id": "ev1",
-        }
-    ]
-
-
-def test_metric_spine_prioritizes_high_priority_theme_over_context_and_id() -> None:
-    spine = derive_metric_spine(
-        {
-            "key_metrics": {
-                "key_metrics": [
-                    {
-                        "metric_id": "a-secondary",
-                        "metric": "Secondary metric",
-                        "value": "12",
-                        "unit": "percent",
-                        "timeframe": "2026",
-                        "segment": "all respondents",
-                        "geography": "Global",
-                        "evidence_id": "metric-secondary",
-                    },
-                    {
-                        "metric_id": "z-headline",
-                        "metric": "Headline metric",
-                        "value": "68",
-                        "unit": "percent",
-                        "timeframe": "2026",
-                        "segment": "decision makers",
-                        "evidence_id": "metric-headline",
-                    },
-                ]
-            }
-        },
-        editorial_plan={
-            "report_thesis": "The headline metric changes the planning outlook.",
-            "themes": [
-                {
-                    "theme": "Headline change",
-                    "priority": 1,
-                    "evidence_ids": ["metric-headline"],
-                },
-                {
-                    "theme": "Secondary context",
-                    "priority": 2,
-                    "evidence_ids": ["metric-secondary"],
-                },
-            ],
-        },
-    )
-
-    assert [item["metric_id"] for item in spine] == [
-        "z-headline",
-        "a-secondary",
-    ]
-    assert spine[0]["evidence_id"] == "metric-headline"
-    assert spine[0]["value"] == "68"
-
-
-def test_derive_metric_spine_keeps_incomplete_headline_metric_source_backed() -> None:
-    spine = derive_metric_spine(
-        {
-            "key_metrics": {
-                "key_metrics": [
-                    {
-                        "metric_id": "secondary",
-                        "metric": "Complete secondary metric",
-                        "value": "12",
-                        "unit": "percent",
-                        "timeframe": "2026",
-                        "segment": "all respondents",
-                        "geography": "Global",
-                        "evidence_id": "metric-secondary",
-                    },
-                    {
-                        "metric_id": "headline",
-                        "metric": "Incomplete headline metric",
-                        "value": "68",
-                        "unit": "percent",
-                        "evidence_id": "metric-headline",
-                    },
-                ]
-            }
-        },
-        editorial_plan={
-            "report_thesis": "The headline metric changes the planning outlook.",
-            "themes": [
-                {
-                    "theme": "Headline change",
-                    "priority": 1,
-                    "evidence_ids": ["metric-headline"],
-                },
-                {
-                    "theme": "Secondary context",
-                    "priority": 2,
-                    "evidence_ids": ["metric-secondary"],
-                },
-            ],
-        },
-    )
-
-    assert [item["metric_id"] for item in spine] == ["headline", "secondary"]
-    assert spine[0]["missing_context_notes"] == [
-        "timeframe",
-        "segment",
-        "geography",
-    ]
-    assert spine[0]["evidence_id"] == "metric-headline"
-
-
 def test_derive_metric_spine_from_insights_uses_embedded_metric_contract() -> None:
     spine = derive_metric_spine_from_insights(
         [
@@ -281,7 +127,7 @@ def test_build_executive_advisory_artifacts_surfaces_not_found_states() -> None:
                 "text": "Wallet adoption is rising among enterprise merchants.",
                 "evidence_id": "ev1",
                 "evidence_spans": [
-                    {"evidence_id": "ev1", "source_pack": "key_metrics"}
+                    {"evidence_id": "ev1", "source_pack": "findings"}
                 ],
             }
         ],
@@ -325,24 +171,6 @@ def test_build_executive_advisory_artifacts_separates_decision_roles() -> None:
         quotes_final=[{"id": "q1", "text": "Quote", "evidence_id": "q1"}],
         metric_spine=[],
         evidence_packs={
-            "recommendations": {
-                "recommendations": [
-                    {
-                        "id": "r1",
-                        "recommendation": "Test wallet coverage by merchant segment.",
-                        "evidence_id": "ev1",
-                    }
-                ]
-            },
-            "risk_register": {
-                "risk_register": [
-                    {
-                        "id": "risk1",
-                        "risk": "Wallet adoption could remain uneven by segment.",
-                        "evidence_id": "ev2",
-                    }
-                ]
-            },
             "limitations": {
                 "limitations": [
                     {"description": "The report does not compare every merchant segment."}
@@ -364,14 +192,38 @@ def test_build_executive_advisory_artifacts_separates_decision_roles() -> None:
     ]
     assert decision_brief["priority_moves"] == [
         "Prioritize wallet coverage in the next roadmap.",
-        "Test wallet coverage by merchant segment.",
     ]
     assert decision_brief["watchouts"] == [
         "Adoption remains uneven across merchant segments.",
-        "Wallet adoption could remain uneven by segment.",
         "The report does not compare every merchant segment.",
     ]
     assert decision_brief["evidence_links"] == ["ev1", "ev2", "q1"]
+    assert advisory["recommendations"] == {
+        "schema_version": "1.0",
+        "status": "generated",
+        "items": [
+            {
+                "id": "i1",
+                "recommendation": "Prioritize wallet coverage in the next roadmap.",
+                "rationale": "",
+                "evidence_id": "ev1",
+            }
+        ],
+    }
+    assert advisory["risks"] == {
+        "schema_version": "1.0",
+        "status": "generated",
+        "items": [
+            {
+                "id": "i2",
+                "risk": "Adoption remains uneven across merchant segments.",
+                "impact": "",
+                "likelihood": "",
+                "mitigation": "",
+                "evidence_id": "ev2",
+            }
+        ],
+    }
 
 
 @pytest.mark.parametrize(
@@ -389,20 +241,15 @@ def test_metric_spine_preserves_source_display_and_exposes_complete_numeric_meta
     unit: str,
     magnitude: str,
 ) -> None:
-    spine = derive_metric_spine(
-        {
-            "key_metrics": {
-                "key_metrics": [
-                    {
-                        "metric_id": "headline",
-                        "metric": "Headline value",
-                        "value": display,
-                        "unit": "",
-                        "evidence_id": "metric-headline",
-                    }
-                ]
+    spine = derive_metric_spine_from_insights(
+        [
+            {
+                "id": "headline",
+                "text": "Headline value",
+                "evidence_id": "metric-headline",
+                "metric": {"value": display, "unit": ""},
             }
-        }
+        ]
     )
 
     assert spine[0]["value"] == display
@@ -433,21 +280,7 @@ def test_build_executive_advisory_artifacts_omits_unsupported_decision_fields() 
         ],
         quotes_final=[],
         metric_spine=[],
-        evidence_packs={
-            "recommendations": {
-                "recommendations": [
-                    {
-                        "id": "r1",
-                        "recommendation": "Expand wallet coverage.",
-                    }
-                ]
-            },
-            "risk_register": {
-                "risk_register": [
-                    {"id": "risk1", "risk": "Segment adoption may vary."}
-                ]
-            },
-        },
+        evidence_packs={},
     )
 
     decision_brief = advisory["decision_brief"]
@@ -527,21 +360,6 @@ def test_assemble_artifacts_builds_universal_claim_ledger() -> None:
 
 def test_assemble_artifacts_builds_topics_key_figures_and_chart_cards() -> None:
     evidence = _evidence_packs()
-    evidence["key_metrics"] = {
-        "metrics": [
-            {
-                "metric_id": "m1",
-                "label": "Wallet adoption",
-                "value": "42",
-                "unit": "percent",
-                "timeframe": "2026",
-                "segment": "enterprise merchants",
-                "geography": "Global",
-                "delta": "+7 points",
-                "evidence_id": "f1",
-            }
-        ]
-    }
     evidence["visual_candidates"] = {
         "chart_candidates": [
             {
@@ -601,10 +419,18 @@ def test_assemble_artifacts_builds_topics_key_figures_and_chart_cards() -> None:
         insights_final=[
             {
                 "id": "i1",
-                "text": "Enterprise merchants are adopting wallets faster.",
-                "evidence_id": "f1",
-                "evidence": "Revenue +10% YoY",
-                "metric": {},
+                    "text": "Enterprise merchants are adopting wallets faster.",
+                    "evidence_id": "f1",
+                    "evidence": "Revenue +10% YoY",
+                    "metric": {
+                        "label": "Wallet adoption",
+                        "value": "42",
+                        "unit": "percent",
+                        "timeframe": "2026",
+                        "segment": "enterprise merchants",
+                        "geography": "Global",
+                        "delta": "+7 points",
+                    },
                 "pages": [2],
             }
         ],
@@ -647,22 +473,6 @@ def test_assemble_artifacts_builds_topics_key_figures_and_chart_cards() -> None:
 
 def test_generate_artifacts_passes_metric_spine_to_editorial_prompts(tmp_path) -> None:
     evidence = _evidence_packs()
-    evidence["key_metrics"] = {
-        "metrics": [
-            {
-                "metric_id": "m1",
-                "label": "Wallet adoption",
-                "value": "42",
-                "unit": "percent",
-                "timeframe": "2026",
-                "segment": "enterprise merchants",
-                "geography": "Global",
-                "delta": "+7 points",
-                "sample_size": "n=500",
-                "evidence_id": "f1",
-            }
-        ]
-    }
     responses = {
         "summary": {
             "tldr": "Wallet adoption is rising.",
@@ -681,7 +491,7 @@ def test_generate_artifacts_passes_metric_spine_to_editorial_prompts(tmp_path) -
             "insights_candidates": [
                 {
                     "id": "i1",
-                    "text": "Wallet adoption is rising among merchants.",
+                    "text": "Wallet adoption: adoption is rising among merchants.",
                     "evidence_id": "f1",
                     "evidence": "Revenue +10% YoY",
                     "metric": {},
@@ -693,10 +503,18 @@ def test_generate_artifacts_passes_metric_spine_to_editorial_prompts(tmp_path) -
             "insights_final": [
                 {
                     "id": "i1",
-                    "text": "Wallet adoption is rising among merchants.",
+                    "text": "Wallet adoption: adoption is rising among merchants.",
                     "evidence_id": "f1",
                     "evidence": "Revenue +10% YoY",
-                    "metric": {},
+                    "metric": {
+                            "value": "42",
+                        "unit": "percent",
+                        "timeframe": "2026",
+                        "segment": "enterprise merchants",
+                        "geography": "Global",
+                        "delta": "+7 points",
+                        "sample_size": "n=500",
+                    },
                     "pages": [2],
                 }
             ]
@@ -737,9 +555,7 @@ def test_generate_artifacts_passes_metric_spine_to_editorial_prompts(tmp_path) -
 
 
 __all__ = [
-    "test_derive_metric_spine_selects_strong_supported_metrics",
-    "test_metric_spine_prioritizes_high_priority_theme_over_context_and_id",
-    "test_derive_metric_spine_keeps_incomplete_headline_metric_source_backed",
+    "test_derive_metric_spine_from_insights_uses_embedded_metric_contract",
     "test_metric_spine_label_does_not_split_a_decimal_display",
     "test_metric_spine_label_keeps_leading_abbreviation_with_its_sentence",
     "test_metric_spine_label_keeps_a_complete_long_source_sentence",

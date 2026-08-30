@@ -15136,9 +15136,6 @@
         "evidence_pack_doc_map_retry_delay_ms": {
           "type": "integer"
         },
-        "evidence_pack_enable_new_variety_packs": {
-          "type": "boolean"
-        },
         "evidence_pack_global_max_in_flight": {
           "type": "integer"
         },
@@ -18116,57 +18113,6 @@
       ],
       "type": "object"
     },
-    "src.contracts.docpacks.ContradictionEntry": {
-      "additionalProperties": false,
-      "properties": {
-        "evidence_ids": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "explanation": {
-          "type": "string"
-        },
-        "id": {
-          "type": "string"
-        },
-        "schema_version": {
-          "type": "string"
-        },
-        "statement_a": {
-          "type": "string"
-        },
-        "statement_b": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "id",
-        "statement_a",
-        "statement_b"
-      ],
-      "type": "object"
-    },
-    "src.contracts.docpacks.ContradictionsPack": {
-      "additionalProperties": false,
-      "properties": {
-        "contradictions": {
-          "items": {
-            "$ref": "#/$defs/src.contracts.docpacks.ContradictionEntry"
-          },
-          "type": "array"
-        },
-        "not_found_reason": {
-          "type": "string"
-        },
-        "schema_version": {
-          "type": "string"
-        }
-      },
-      "required": [],
-      "type": "object"
-    },
     "src.contracts.docpacks.DocMapPack": {
       "additionalProperties": false,
       "properties": {
@@ -18298,60 +18244,6 @@
       "required": [],
       "type": "object"
     },
-    "src.contracts.docpacks.KeyMetricsEntry": {
-      "additionalProperties": false,
-      "properties": {
-        "evidence_id": {
-          "type": "string"
-        },
-        "id": {
-          "type": "string"
-        },
-        "metric": {
-          "type": "string"
-        },
-        "pages": {
-          "items": {
-            "type": "integer"
-          },
-          "type": "array"
-        },
-        "schema_version": {
-          "type": "string"
-        },
-        "unit": {
-          "type": "string"
-        },
-        "value": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "id",
-        "metric",
-        "value"
-      ],
-      "type": "object"
-    },
-    "src.contracts.docpacks.KeyMetricsPack": {
-      "additionalProperties": false,
-      "properties": {
-        "key_metrics": {
-          "items": {
-            "$ref": "#/$defs/src.contracts.docpacks.KeyMetricsEntry"
-          },
-          "type": "array"
-        },
-        "not_found_reason": {
-          "type": "string"
-        },
-        "schema_version": {
-          "type": "string"
-        }
-      },
-      "required": [],
-      "type": "object"
-    },
     "src.contracts.docpacks.LimitationsPack": {
       "additionalProperties": false,
       "properties": {
@@ -18435,100 +18327,6 @@
         "quote_candidates": {
           "items": {
             "$ref": "#/$defs/src.contracts.docpacks.QuoteCandidateEntry"
-          },
-          "type": "array"
-        },
-        "schema_version": {
-          "type": "string"
-        }
-      },
-      "required": [],
-      "type": "object"
-    },
-    "src.contracts.docpacks.RecommendationEntry": {
-      "additionalProperties": false,
-      "properties": {
-        "evidence_id": {
-          "type": "string"
-        },
-        "id": {
-          "type": "string"
-        },
-        "rationale": {
-          "type": "string"
-        },
-        "recommendation": {
-          "type": "string"
-        },
-        "schema_version": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "id",
-        "recommendation"
-      ],
-      "type": "object"
-    },
-    "src.contracts.docpacks.RecommendationsPack": {
-      "additionalProperties": false,
-      "properties": {
-        "not_found_reason": {
-          "type": "string"
-        },
-        "recommendations": {
-          "items": {
-            "$ref": "#/$defs/src.contracts.docpacks.RecommendationEntry"
-          },
-          "type": "array"
-        },
-        "schema_version": {
-          "type": "string"
-        }
-      },
-      "required": [],
-      "type": "object"
-    },
-    "src.contracts.docpacks.RiskRegisterEntry": {
-      "additionalProperties": false,
-      "properties": {
-        "evidence_id": {
-          "type": "string"
-        },
-        "id": {
-          "type": "string"
-        },
-        "impact": {
-          "type": "string"
-        },
-        "likelihood": {
-          "type": "string"
-        },
-        "mitigation": {
-          "type": "string"
-        },
-        "risk": {
-          "type": "string"
-        },
-        "schema_version": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "id",
-        "risk"
-      ],
-      "type": "object"
-    },
-    "src.contracts.docpacks.RiskRegisterPack": {
-      "additionalProperties": false,
-      "properties": {
-        "not_found_reason": {
-          "type": "string"
-        },
-        "risk_register": {
-          "items": {
-            "$ref": "#/$defs/src.contracts.docpacks.RiskRegisterEntry"
           },
           "type": "array"
         },
@@ -21644,9 +21442,6 @@
         },
         "evidence_pack_doc_map_retry_delay_ms": {
           "type": "integer"
-        },
-        "evidence_pack_enable_new_variety_packs": {
-          "type": "boolean"
         },
         "evidence_pack_global_max_in_flight": {
           "type": "integer"

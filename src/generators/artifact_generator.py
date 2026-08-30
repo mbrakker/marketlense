@@ -13,7 +13,6 @@ from src.generators._artifact_generator.storage import (
     build_executive_advisory_artifacts,
     build_key_figures,
     build_topics_covered,
-    derive_metric_spine,
     derive_metric_spine_from_insights,
     store_artifacts_payload,
 )
@@ -39,7 +38,6 @@ __all__ = [
     "build_toc_artifacts",
     "build_toc_entries",
     "build_topic_briefs",
-    "derive_metric_spine",
     "derive_metric_spine_from_insights",
     "generate_artifacts",
     "render_artifact_json_model",

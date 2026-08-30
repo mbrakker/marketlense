@@ -25,7 +25,7 @@ from src.generators._artifact_generator.storage import (
     _validate_card_tldrs,
     _validate_cover_semantics,
     assemble_artifacts_payload,
-    derive_metric_spine,
+    derive_metric_spine_from_insights,
     store_artifacts_payload,
 )
 from src.generators._artifact_generator.toc import build_toc_artifacts
@@ -740,7 +740,10 @@ def generate_artifacts(
                 fields=evidence_span_stats,
             )
         )
-    metric_spine = derive_metric_spine(safe_evidence)
+    metric_spine = derive_metric_spine_from_insights(
+        insights_final,
+        editorial_plan=editorial_plan,
+    )
     metric_spine_json = _dump_json(metric_spine)
     expert_synthesis_context = build_expert_synthesis_context(
         editorial_plan=editorial_plan,

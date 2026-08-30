@@ -131,15 +131,6 @@ def test_expert_comment_receives_grounded_theme_context_not_summary_prose(tmp_pa
             }
         ]
     }
-    evidence["risk_register"] = {
-        "risk_register": [
-            {
-                "id": "risk-1",
-                "risk": "Margin pressure may constrain expansion choices.",
-                "evidence_id": "f2",
-            }
-        ]
-    }
     responses = {
         "editorial_plan": {"editorial_plan": plan},
         "summary": {
@@ -250,10 +241,9 @@ def test_expert_comment_receives_grounded_theme_context_not_summary_prose(tmp_pa
             "text": "The report does not compare retention by region.",
         }
     ]
-    assert {item["text"] for item in synthesis_context["counter_signals"]} == {
-        "Margin pressure in EU",
-        "Margin pressure may constrain expansion choices.",
-    }
+    assert synthesis_context["counter_signals"] == [
+        {"evidence_id": "f2", "text": "Margin pressure in EU"}
+    ]
 
 
 def test_expert_synthesis_context_keeps_string_limitations_from_evidence_pack():

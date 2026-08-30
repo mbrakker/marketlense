@@ -136,19 +136,15 @@ Generated from CLI registrations, configuration example, architecture policy, or
 
 - `src/schemas/artifacts.schema.json`
 - `src/schemas/context_category_fit.schema.json`
-- `src/schemas/contradictions_pack.schema.json`
 - `src/schemas/doc_map.schema.json`
 - `src/schemas/evidence_pack.schema.json`
 - `src/schemas/findings_pack.schema.json`
 - `src/schemas/grounding_validation_output.schema.json`
-- `src/schemas/key_metrics_pack.schema.json`
 - `src/schemas/limitations_pack.schema.json`
 - `src/schemas/methods_pack.schema.json`
 - `src/schemas/publish_readiness.schema.json`
 - `src/schemas/quote_candidates_pack.schema.json`
-- `src/schemas/recommendations_pack.schema.json`
 - `src/schemas/regeneration_candidate_audit.schema.json`
-- `src/schemas/risk_register_pack.schema.json`
 - `src/schemas/scope_pack.schema.json`
 - `src/schemas/semantic_validation_output.schema.json`
 - `src/schemas/taxonomy.schema.json`

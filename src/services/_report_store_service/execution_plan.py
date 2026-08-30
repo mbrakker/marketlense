@@ -157,14 +157,10 @@ def build_current_report_execution_compatibility(
         "report_vs/artifacts/insights_final",
         "report_vs/artifacts/cover_semantics",
         "report_vs/artifacts/cover_semantics_repair",
-        "report_vs/evidence_packs/contradictions",
         "report_vs/evidence_packs/findings",
-        "report_vs/evidence_packs/key_metrics",
         "report_vs/evidence_packs/limitations",
         "report_vs/evidence_packs/methods",
         "report_vs/evidence_packs/quote_candidates",
-        "report_vs/evidence_packs/recommendations",
-        "report_vs/evidence_packs/risk_register",
         "report_vs/evidence_packs/scope",
     ):
         prompt_set = prompt_service.load_prompt_set(

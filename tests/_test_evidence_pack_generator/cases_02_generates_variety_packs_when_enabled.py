@@ -4,124 +4,6 @@ from __future__ import annotations
 from ._shared import *  # noqa: F401,F403
 
 
-def test_generate_evidence_packs_generates_variety_packs_when_enabled(tmp_path):
-    fake_openai = RoutedOpenAIClient(
-        payloads_by_pack={
-            "doc_map": {
-                **substantive_doc_map(),
-            },
-            "scope": {"scope": "Scope summary"},
-            "methods": {"methods": ["Survey"]},
-            "findings": {
-                "findings": [{"id": "f1", "text": "Finding", "evidence": "Evidence"}]
-            },
-            "limitations": {"limitations": ["Small sample"]},
-            "quote_candidates": {
-                "quote_candidates": [
-                    {"id": "q1", "text": "Quote", "source": "CEO", "page": 2}
-                ]
-            },
-            "key_metrics": {
-                "key_metrics": [
-                    {
-                        "id": "m1",
-                        "metric": "Growth",
-                        "value": "10",
-                        "unit": "%",
-                        "evidence_id": "f1",
-                        "pages": [2],
-                    }
-                ]
-            },
-            "risk_register": {
-                "risk_register": [
-                    {
-                        "id": "r1",
-                        "risk": "Churn risk",
-                        "impact": "Revenue",
-                        "likelihood": "Medium",
-                        "mitigation": "Retention",
-                        "evidence_id": "f1",
-                    }
-                ]
-            },
-            "recommendations": {
-                "recommendations": [
-                    {
-                        "id": "rec1",
-                        "recommendation": "Invest in retention",
-                        "rationale": "Churn pressure",
-                        "evidence_id": "f1",
-                    }
-                ]
-            },
-            "contradictions": {
-                "contradictions": [
-                    {
-                        "id": "c1",
-                        "statement_a": "Demand up",
-                        "statement_b": "Conversion down",
-                        "explanation": "Segment split",
-                        "evidence_ids": ["f1"],
-                    }
-                ]
-            },
-        }
-    )
-    packs = generate_evidence_packs(
-        report_id="r1",
-        report_name="report",
-        vector_store_id="vs_1",
-        settings=_settings(tmp_path, evidence_pack_enable_new_variety_packs=True),
-        ctx=_ctx(),
-        openai_client=fake_openai,
-        prompt_client=FakePromptClient(),
-        analysis_store=FakeAnalysisStore(),
-    )
-    assert "key_metrics" in packs
-    assert "risk_register" in packs
-    assert "recommendations" in packs
-    assert "contradictions" in packs
-    assert packs["key_metrics"]["key_metrics"][0]["id"] == "m1"
-    assert packs["risk_register"]["risk_register"][0]["id"] == "r1"
-    assert packs["recommendations"]["recommendations"][0]["id"] == "rec1"
-    assert packs["contradictions"]["contradictions"][0]["id"] == "c1"
-
-
-def test_generate_evidence_packs_variety_pack_non_json_terminally_fails(tmp_path):
-    fake_openai = RoutedOpenAIClient(
-        payloads_by_pack={
-            "doc_map": {
-                **substantive_doc_map(),
-            },
-            "key_metrics": None,
-        },
-        text_by_pack={
-            "key_metrics": "not-json",
-        },
-    )
-    analysis_store = FakeAnalysisStore()
-    with pytest.raises(AppError) as exc_info:
-        generate_evidence_packs(
-            report_id="r1",
-            report_name="report",
-            vector_store_id="vs_1",
-            settings=_settings(
-                tmp_path,
-                evidence_pack_registry=["doc_map", "key_metrics"],
-                evidence_pack_enable_new_variety_packs=True,
-            ),
-            ctx=_ctx(),
-            openai_client=fake_openai,
-            prompt_client=FakePromptClient(),
-            analysis_store=analysis_store,
-        )
-    assert exc_info.value.code == "evidence_pack_invalid_json"
-    stored_packs = [entry[1] for entry in analysis_store.stored]
-    assert "doc_map" in stored_packs
-    assert "key_metrics" not in stored_packs
-
-
 def test_strip_json_fence_requires_closing_fence():
     raw = '```json\n{"key":1}\n'
     assert _strip_json_fence(raw) == raw.strip()
@@ -135,7 +17,6 @@ def test_strip_json_fence_strips_allowed_json_fence():
 def test_resolve_pack_steps_prepends_doc_map_when_missing():
     settings = SimpleNamespace(
         evidence_pack_registry=["scope", "methods"],
-        evidence_pack_enable_new_variety_packs=False,
     )
     steps = _resolve_pack_steps(settings)
     assert all(isinstance(strategy, EvidencePackStrategy) for strategy in steps)
@@ -144,6 +25,23 @@ def test_resolve_pack_steps_prepends_doc_map_when_missing():
         "scope",
         "methods",
     ]
+
+
+def test_resolve_pack_steps_excludes_retired_specialist_families():
+    settings = SimpleNamespace(
+        evidence_pack_registry=[
+            "doc_map",
+            "findings",
+            "key_metrics",
+            "risk_register",
+            "recommendations",
+            "contradictions",
+        ],
+    )
+
+    steps = _resolve_pack_steps(settings)
+
+    assert [strategy.pack_name for strategy in steps] == ["doc_map", "findings"]
 
 
 def test_pack_strategy_registry_exposes_expected_prompt_and_schema_metadata():
@@ -157,13 +55,6 @@ def test_pack_strategy_registry_exposes_expected_prompt_and_schema_metadata():
             "evidence_packs/quote_candidates",
             "quote_candidates_pack",
         ),
-        "key_metrics": ("evidence_packs/key_metrics", "key_metrics_pack"),
-        "risk_register": ("evidence_packs/risk_register", "risk_register_pack"),
-        "recommendations": (
-            "evidence_packs/recommendations",
-            "recommendations_pack",
-        ),
-        "contradictions": ("evidence_packs/contradictions", "contradictions_pack"),
     }
     assert set(PACK_STRATEGIES.keys()) == set(expected.keys())
     for pack_name, (prompt_ns, schema_name) in expected.items():
@@ -257,11 +148,10 @@ def test_load_cached_evidence_pack_rejects_identifier_only_doc_map(tmp_path):
 
 
 __all__ = [
-    "test_generate_evidence_packs_generates_variety_packs_when_enabled",
-    "test_generate_evidence_packs_variety_pack_non_json_terminally_fails",
     "test_strip_json_fence_requires_closing_fence",
     "test_strip_json_fence_strips_allowed_json_fence",
     "test_resolve_pack_steps_prepends_doc_map_when_missing",
+    "test_resolve_pack_steps_excludes_retired_specialist_families",
     "test_pack_strategy_registry_exposes_expected_prompt_and_schema_metadata",
     "test_load_cached_evidence_pack_normalizes_legacy_payload_before_validation",
     "test_load_cached_evidence_pack_rejects_identifier_only_doc_map",

@@ -313,21 +313,6 @@ def _resolve_evidence_pack_settings(
                 env_key="EVIDENCE_PACK_DOC_MAP_RETRY_DELAY_MS",
                 minimum=0,
             ),
-            _SettingSpec(
-                field_name="evidence_pack_enable_new_variety_packs",
-                config_key="enable_new_variety_packs",
-                default=_to_config_bool(
-                    _default_config_value(
-                        "ingest",
-                        "evidence_packs",
-                        "enable_new_variety_packs",
-                        fallback=False,
-                    ),
-                    False,
-                ),
-                coerce=_to_config_bool,
-                env_key="EVIDENCE_PACK_ENABLE_NEW_VARIETY_PACKS",
-            ),
         ],
     )
     evidence_pack_registry_raw = evidence_packs_cfg.get("registry")
