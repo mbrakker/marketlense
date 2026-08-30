@@ -44,6 +44,7 @@ from src.generators.artifact_normalization import (
     normalize_artifact_source_status,
     normalize_artifact_summary,
     normalize_expert_domain,
+    REQUIRED_REPORT_PAYLOAD_INSIGHTS,
     select_artifact_insights,
     strip_artifact_inline_reference_ids,
 )
@@ -616,10 +617,15 @@ def generate_artifacts(
         if _s(candidate.get("text")).strip()
     ]
     initial_candidate_count = len(insights_candidates)
-    final_insight_target_count = len(editorial_plan["themes"])
+    final_insight_target_count = max(
+        REQUIRED_REPORT_PAYLOAD_INSIGHTS, len(editorial_plan["themes"])
+    )
     fallback_candidates = fallback_artifact_insights_from_findings(
         safe_evidence.get("findings"),
-        limit=sum(len(theme["evidence_ids"]) for theme in editorial_plan["themes"]),
+        limit=max(
+            final_insight_target_count,
+            sum(len(theme["evidence_ids"]) for theme in editorial_plan["themes"]),
+        ),
     )
     insights_candidates = select_artifact_insights(
         final_insights=insights_candidates,

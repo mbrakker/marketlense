@@ -50,6 +50,8 @@ from src.utils.slugify import slugify
 
 CROP_FILENAME_ID_MAX_LEN = 96
 CROP_FILENAME_MAX_LEN = 96
+_WINDOWS_SAFE_ARTIFACT_PATH_LENGTH = 240
+_FINGERPRINT_SIDECAR_SUFFIX = ".fingerprint.json"
 
 
 @dataclass(frozen=True)
@@ -60,18 +62,37 @@ class _ResolvedCropRegion:
     filename: str
 
 
-def _crop_output_filename(report_name: str, item: CropItem, idx: int) -> str:
+def _crop_output_filename(
+    output_dir: Path,
+    report_name: str,
+    item: CropItem,
+    idx: int,
+) -> str:
+    """Build a crop name that leaves room for its fingerprint sidecar.
+
+    Crop artifacts are always accompanied by ``.fingerprint.json``.  Bound the
+    PNG name against the full output directory, rather than only against a
+    fixed filename maximum, so deep isolated run directories remain usable on
+    Windows.
+    """
     safe_report_name = safe_path_segment(report_name, fallback="report")
     item_slug = slugify(str(item.id or ""))
     if not item_slug:
         item_slug = f"item-{idx}"
     if len(item_slug) > CROP_FILENAME_ID_MAX_LEN:
         item_slug = item_slug[:CROP_FILENAME_ID_MAX_LEN]
+    available_filename_length = max(
+        24,
+        _WINDOWS_SAFE_ARTIFACT_PATH_LENGTH
+        - len(str(output_dir.resolve()))
+        - 1
+        - len(_FINGERPRINT_SIDECAR_SUFFIX),
+    )
     return bounded_artifact_filename(
         f"{safe_report_name}-{item_slug}",
         compact_stem=item_slug,
         extension=".png",
-        max_length=CROP_FILENAME_MAX_LEN,
+        max_length=min(CROP_FILENAME_MAX_LEN, available_filename_length),
     )
 
 
@@ -190,7 +211,7 @@ def _crop_regions(
                     index=idx,
                     item=it,
                     rect=rect,
-                    filename=_crop_output_filename(safe_report_name, it, idx),
+                    filename=_crop_output_filename(output_dir, safe_report_name, it, idx),
                 )
             )
 

@@ -481,8 +481,8 @@ def test_regenerate_artifacts_insights_bundle_uses_targeted_steps_and_preserves_
     )
 
     assert response.regenerated_sections == ["insights_candidates", "insights_final"]
-    assert len(response.updated_artifacts["insights_candidates"]) == 2
-    assert len(response.updated_artifacts["insights_final"]) == 2
+    assert len(response.updated_artifacts["insights_candidates"]) == 4
+    assert len(response.updated_artifacts["insights_final"]) == 5
     assert (
         response.updated_artifacts["family_status"]["insights_bundle"]["status"]
         == "generated"
@@ -512,6 +512,8 @@ def test_regenerate_artifacts_insights_bundle_uses_targeted_steps_and_preserves_
             {"theme": "Margin evidence", "priority": 2, "evidence_ids": ["f2"]},
         ],
     }
+    final_variables = prompt_client.render_calls[3]["variables"]
+    assert final_variables["final_insight_target_count"] == 5
 
 
 def test_regenerate_artifacts_dispatches_summary_via_target_section_registry(tmp_path):

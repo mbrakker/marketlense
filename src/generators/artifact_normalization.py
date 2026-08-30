@@ -33,6 +33,7 @@ INSIGHT_SCORE_FIELDS = (
     "novelty_score",
 )
 MIN_FINAL_ARTIFACT_INSIGHTS = 2
+REQUIRED_REPORT_PAYLOAD_INSIGHTS = 5
 COVERAGE_ROLE_VALUES = {
     "market_context",
     "behavior_shift",
@@ -264,9 +265,10 @@ def select_artifact_insights(
     candidate_insights: List[Dict[str, Any]],
     editorial_plan: Dict[str, Any],
 ) -> List[Dict[str, Any]]:
-    """Keep one strongest insight for each theme chosen by the editorial plan."""
+    """Keep theme coverage, then fill the report's required grounded insight slots."""
     plan = normalize_artifact_editorial_plan(editorial_plan)
     ranked = _ranked_unique_insights(final_insights, candidate_insights)
+    required_count = max(REQUIRED_REPORT_PAYLOAD_INSIGHTS, len(plan["themes"]))
     selected: List[Dict[str, Any]] = []
     selected_keys: set[tuple[str, str]] = set()
     for theme in plan["themes"]:
@@ -282,6 +284,10 @@ def select_artifact_insights(
             _append_distinct_insight(
                 selected, selected_keys, _best_ranked_insight(matching)[1]
             )
+    for _, insight in ranked:
+        if len(selected) >= required_count:
+            break
+        _append_distinct_insight(selected, selected_keys, insight)
     return selected
 
 

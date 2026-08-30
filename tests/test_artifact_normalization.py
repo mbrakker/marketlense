@@ -5,6 +5,7 @@ from src.generators.artifact_normalization import (
     fallback_artifact_insights_from_findings,
     normalize_artifact_insights,
     normalize_artifact_summary,
+    select_artifact_insights,
 )
 
 
@@ -219,3 +220,29 @@ def test_normalize_artifact_insights_drops_unknown_optional_strategy_fields():
 
     assert "coverage_role" not in insights[0]
     assert "report_type_lens" not in insights[0]
+
+
+def test_select_artifact_insights_fills_required_report_slots_after_theme_coverage():
+    """A four-theme plan must not truncate an otherwise grounded five-insight report."""
+    plan = {
+        "report_thesis": "The report supports five distinct grounded decisions.",
+        "themes": [
+            {"theme": f"Theme {index}", "priority": index, "evidence_ids": [f"e{index}"]}
+            for index in range(1, 5)
+        ],
+    }
+    final_insights = [
+        {"id": f"final-{index}", "text": f"Final insight {index}.", "evidence_id": f"e{index}", "score": 0.9}
+        for index in range(1, 5)
+    ]
+    candidate_insights = [
+        {"id": "candidate-5", "text": "Fifth grounded insight.", "evidence_id": "e5", "score": 0.8}
+    ]
+
+    selected = select_artifact_insights(
+        final_insights=final_insights,
+        candidate_insights=candidate_insights,
+        editorial_plan=plan,
+    )
+
+    assert [item["evidence_id"] for item in selected] == ["e1", "e2", "e3", "e4", "e5"]

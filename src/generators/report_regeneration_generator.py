@@ -25,6 +25,7 @@ from src.generators.artifact_normalization import (
     artifact_quote_candidates,
     artifact_vector_store_enabled,
     build_expert_synthesis_context,
+    fallback_artifact_insights_from_findings,
     normalize_artifact_editorial_plan,
     normalize_artifact_evidence_ids,
     normalize_artifact_insights,
@@ -34,6 +35,7 @@ from src.generators.artifact_normalization import (
     normalize_artifact_toc_entries,
     normalize_artifact_topics,
     normalize_expert_domain,
+    REQUIRED_REPORT_PAYLOAD_INSIGHTS,
     select_artifact_insights,
     strip_artifact_inline_reference_ids,
 )
@@ -686,9 +688,19 @@ def _handle_insights_bundle_regeneration(
             "editorial_plan_json": _dump_json(execution.state.editorial_plan),
         },
     )
-    execution.state.insights_candidates = normalize_artifact_insights(
-        candidates_result.get("insights_candidates"),
-        prefix="candidate",
+    target_count = max(
+        REQUIRED_REPORT_PAYLOAD_INSIGHTS,
+        len(execution.state.editorial_plan["themes"]),
+    )
+    execution.state.insights_candidates = select_artifact_insights(
+        final_insights=normalize_artifact_insights(
+            candidates_result.get("insights_candidates"),
+            prefix="candidate",
+        ),
+        candidate_insights=fallback_artifact_insights_from_findings(
+            execution.runtime.safe_evidence.get("findings"), limit=target_count
+        ),
+        editorial_plan=execution.state.editorial_plan,
     )
     final_ctx = child_context(
         execution.target_ctx, task_id=f"{execution.target_ctx.task_id}:final"
@@ -707,7 +719,7 @@ def _handle_insights_bundle_regeneration(
             "fix_checklist_json": _fix_checklist_json(execution.target),
             "grounding_package_json": _dump_json(execution.grounding_package),
             "editorial_plan_json": _dump_json(execution.state.editorial_plan),
-            "final_insight_target_count": len(execution.state.editorial_plan["themes"]),
+            "final_insight_target_count": target_count,
         },
     )
     execution.state.insights_final = select_artifact_insights(

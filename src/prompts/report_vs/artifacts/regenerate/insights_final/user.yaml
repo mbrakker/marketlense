@@ -21,7 +21,7 @@ text: |
 
   Requirements:
   - Prefer repaired candidates that directly resolve the listed failures.
-  - Follow editorial-plan priority order and choose only its linked evidence IDs; do not introduce a separate theme selection.
+  - Follow editorial-plan priority order and choose one supported representative for each theme. If the target count exceeds the number of themes, fill the remaining slots with distinct supported candidates from the supplied candidate set; do not use near-duplicates.
   - Keep `evidence_id` to a single existing ID or an empty string.
   - `so_what` must state a report-specific business implication; `now_what` must
     state a concrete, report-specific decision or action. Neither field may be

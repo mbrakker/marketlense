@@ -229,6 +229,41 @@ def test_crop_regions_reuses_fingerprint_cache_on_partial_change_rerun(
     assert any(event.get("event") == "crop_region_cache_hit" for event in events)
 
 
+def test_crop_regions_bounds_filename_for_fingerprint_sidecar_in_deep_output_path(
+    tmp_path,
+) -> None:
+    pdf_path = tmp_path / "crop.pdf"
+    _build_basic_pdf(pdf_path)
+    out_dir = tmp_path / "isolated-p6-validation"
+    report_name = "activate-technology-and-media-outlook-2025-ecommerce-pdf"
+    result = crop_regions(
+        CropRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name=report_name,
+            items=[
+                CropItem(
+                    id="chart-2-0",
+                    type="chart",
+                    score=91.0,
+                    page=0,
+                    bbox=(60.0, 90.0, 360.0, 280.0),
+                )
+            ],
+            subdir="slices",
+            mode="legacy",
+        ),
+        _ctx(),
+    )
+
+    artifact_path = out_dir / result.paths[0]
+    sidecar_path = artifact_path.with_name(f"{artifact_path.name}.fingerprint.json")
+    assert artifact_path.exists()
+    assert sidecar_path.exists()
+    assert len(str(sidecar_path.resolve())) <= 240
+
+
 def test_publication_strict_cache_rejects_cached_crop_from_qa_diagnostics(
     tmp_path, caplog
 ) -> None:
@@ -373,6 +408,7 @@ __all__ = [
     "test_render_preview_reuses_fingerprint_cache_on_partial_change_rerun",
     "test_render_page_for_crop_refine_invalidates_stale_artifact_version",
     "test_crop_regions_reuses_fingerprint_cache_on_partial_change_rerun",
+    "test_crop_regions_bounds_filename_for_fingerprint_sidecar_in_deep_output_path",
     "test_publication_strict_cache_rejects_cached_crop_from_qa_diagnostics",
     "test_publication_strict_cache_regenerates_missing_or_invalid_qa_diagnostics",
     "test_publication_strict_cache_invalidates_old_crop_artifact_version",
