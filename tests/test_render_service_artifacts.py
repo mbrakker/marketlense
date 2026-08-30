@@ -1,5 +1,6 @@
 import json
 import re
+from html import unescape
 from pathlib import Path
 
 import pytest
@@ -9,6 +10,7 @@ from src.contracts.report_assets import RenderRequest
 from src.contracts.run_context import RunContext
 from src.services._render_service.normalization import _public_citation_label
 from src.services._render_service.view import (
+    _build_seo_title,
     _marketlense_article_url,
     _normalize_public_title,
     _seo_description,
@@ -734,9 +736,147 @@ def test_render_surfaces_report_identity_line_and_source_note(tmp_path):
 
     assert "Title: Retail trends 2026" in html
     assert "Publisher: Capgemini" in html
-    assert "Year: 2026" in html
+    assert "Period: 2026" in html
     assert "Author: Mark Ruston" in html
     assert "Source URL: Not available" in html
+
+
+@pytest.mark.parametrize(
+    (
+        "title",
+        "publisher",
+        "time_period",
+        "doc_map",
+        "expected_seo_title",
+        "expected_period",
+    ),
+    [
+        (
+            "Email, SMS, and push marketing statistics for ecommerce in 2024",
+            "Omnisend",
+            "2023",
+            {},
+            (
+                "Email, SMS, and push marketing statistics for ecommerce in 2024 "
+                "| Omnisend | MarketBearing"
+            ),
+            "Period: 2023",
+        ),
+        (
+            "Activate Technology & Media Outlook 2025: eCommerce",
+            "Activate Consulting",
+            "2024",
+            {},
+            (
+                "Activate Technology & Media Outlook 2025: eCommerce "
+                "| Activate Consulting | MarketBearing"
+            ),
+            "Period: 2024",
+        ),
+        (
+            "Ecommerce marketing report",
+            "",
+            "2024",
+            {},
+            "Ecommerce marketing report 2024 | MarketBearing",
+            "Period: 2024",
+        ),
+        (
+            "Retail outlook 2025",
+            "",
+            "January to December 2024",
+            {"publicationDate": "2025-01-15"},
+            "Retail outlook 2025 | MarketBearing",
+            "Period: January to December 2024",
+        ),
+    ],
+)
+def test_rendered_report_identity_keeps_title_year_and_labels_source_period(
+    tmp_path: Path,
+    title: str,
+    publisher: str,
+    time_period: str,
+    doc_map: dict[str, str],
+    expected_seo_title: str,
+    expected_period: str,
+) -> None:
+    response = render_report(
+        RenderRequest(
+            schema_version="1.0",
+            data={
+                "title": title,
+                "publisher": publisher,
+                "time_period": time_period,
+                "evidence_packs": {"doc_map": doc_map},
+                "artifacts": {"summary": {"tldr": "Source-backed summary."}},
+            },
+            doc_name="year-identity.pdf",
+            file_id="year-identity",
+            out_dir=str(tmp_path),
+            preview_png=None,
+        ),
+        _ctx(),
+    )
+
+    html = Path(response.html_path).read_text(encoding="utf-8")
+
+    title_values = re.findall(
+        r'<title>([^<]+)</title>|(?:property="og:title"|name="twitter:title") '
+        r'content="([^"]+)"',
+        html,
+    )
+    rendered_titles = [
+        unescape(next(value for value in values if value)) for values in title_values
+    ]
+    assert rendered_titles == [expected_seo_title] * 3
+    assert f"Title: {title}" in html
+    assert expected_period in html
+    assert "Year:" not in html
+    json_ld = json.loads(
+        re.search(
+            r'<script type="application/ld\+json">(.*?)</script>', html
+        ).group(1)
+    )
+    assert json_ld["headline"] == title
+
+
+def test_render_omits_ambiguous_inferred_year_when_title_already_names_another_year(
+    tmp_path: Path,
+) -> None:
+    response = render_report(
+        RenderRequest(
+            schema_version="1.0",
+            data={
+                "title": "Technology outlook 2025",
+                "evidence_packs": {"doc_map": {"year": "2024"}},
+                "artifacts": {"summary": {"tldr": "Source-backed summary."}},
+            },
+            doc_name="ambiguous-year.pdf",
+            file_id="ambiguous-year",
+            out_dir=str(tmp_path),
+            preview_png=None,
+        ),
+        _ctx(),
+    )
+
+    html = Path(response.html_path).read_text(encoding="utf-8")
+
+    assert "<title>Technology outlook 2025 | MarketBearing</title>" in html
+    assert "Title: Technology outlook 2025" in html
+    assert "2024" not in html
+
+
+def test_seo_title_does_not_append_a_year_when_a_compacted_subtitle_has_one() -> None:
+    assert (
+        _build_seo_title(
+            "A deliberately long primary report name that exceeds the SEO limit: "
+            "2025 edition",
+            "2024",
+            "Publisher",
+        )
+        == "A deliberately long primary report name that exceeds the SEO limit "
+        "| Publisher | MarketBearing"
+    )
 
 
 def test_render_relabels_unknown_quote_speakers_and_shows_citation_micro_lines(
@@ -914,7 +1054,7 @@ def test_render_surfaces_editorial_details_from_evidence_packs(tmp_path):
     assert "Ordered chapters" in html
     assert "1. Demand outlook" in html
     assert "Pages: 4, 5" in html
-    assert "Year: 2026" in html
+    assert "Period: 2026 (fieldwork Oct 2025)" in html
     assert "2026" in html
     assert "Fieldwork: fieldwork Oct 2025" in html
     assert "fieldwork Oct 2025" in html

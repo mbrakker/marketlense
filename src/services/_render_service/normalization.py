@@ -421,7 +421,7 @@ def _build_report_identity_items(
     *,
     report_title: str,
     publisher: str,
-    focus_year: str,
+    source_period: str,
     fieldwork_dates: str,
     region: str,
     report_author: str,
@@ -431,8 +431,8 @@ def _build_report_identity_items(
         items.append(f"Title: {report_title}")
     if publisher:
         items.append(f"Publisher: {publisher}")
-    if focus_year:
-        items.append(f"Year: {focus_year}")
+    if source_period:
+        items.append(f"Period: {source_period}")
     if fieldwork_dates:
         items.append(f"Fieldwork: {fieldwork_dates}")
     if region:

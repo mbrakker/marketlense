@@ -169,6 +169,11 @@ def _build_render_view(
     focus_year = _extract_focus_year(
         time_period, doc_map.get("year"), doc_map.get("publicationDate"), report_title
     )
+    source_period = _public_source_period(
+        report_title=report_title,
+        time_period=time_period,
+        focus_year=focus_year,
+    )
     methodology_items = _coerce_methodology(doc_map, evidence_packs)
     fieldwork_dates = _extract_fieldwork_dates(
         time_period,
@@ -298,6 +303,7 @@ def _build_render_view(
         "publisher": publisher,
         "region": region,
         "focus_year": focus_year,
+        "source_period": source_period,
         "fieldwork_dates": fieldwork_dates,
         "source_url": source_url,
         "canonical_url": canonical_url,
@@ -309,7 +315,7 @@ def _build_render_view(
         "report_identity_items": _build_report_identity_items(
             report_title=report_title,
             publisher=publisher,
-            focus_year=focus_year,
+            source_period=source_period,
             fieldwork_dates=fieldwork_dates,
             region=region,
             report_author=report_author,
@@ -348,8 +354,8 @@ def _build_render_view(
             "facts": [
                 item
                 for item in (
-                    {"label": "Report focus year", "value": focus_year}
-                    if focus_year
+                    {"label": "Period", "value": source_period}
+                    if source_period
                     else None,
                     {"label": "Fieldwork", "value": fieldwork_dates}
                     if fieldwork_dates
@@ -527,11 +533,21 @@ def _is_sentence_boundary(text: str, index: int, char: str) -> bool:
 
 def _build_seo_title(report_title: str, focus_year: str, publisher: str) -> str:
     base_title = _normalize_public_title(report_title, max_length=72)
-    if focus_year and focus_year not in base_title:
+    if focus_year and not _YEAR_PATTERN.search(report_title):
         base_title = f"{base_title} {focus_year}"
     publisher_short = _normalize_public_title(publisher, max_length=40)
     publisher_segment = f" | {publisher_short}" if publisher_short else ""
     return f"{base_title}{publisher_segment} | MarketBearing"
+
+
+def _public_source_period(
+    *, report_title: str, time_period: str, focus_year: str
+) -> str:
+    if time_period:
+        return time_period
+    if not _YEAR_PATTERN.search(report_title):
+        return focus_year
+    return ""
 
 
 __all__ = [

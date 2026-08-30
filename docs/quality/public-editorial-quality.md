@@ -28,6 +28,8 @@ First-run artifact assembly removes editorial scaffold labels from executive-sum
 
 Complete report titles remain retained in source evidence and metadata. At the public rendering boundary, the complete normalized title is used in the HTML heading and derived SEO title when it fits the configured display limit. When it does not fit, a colon, en dash, or em dash followed by whitespace marks a clarification subtitle and only the primary segment is used. The renderer never character-truncates a primary report name, avoiding cover-layout overflow without rewriting source provenance or splitting ordinary hyphenated words.
 
+Public SEO titles append an inferred source year only when the normalized report title contains no year. A title-contained year remains the report's public identity even when source-period metadata differs. Explicit source periods render as `Period`, not as a report-edition label; when an inferred year conflicts with a title year and no explicit source period establishes its meaning, it is omitted from public identity. These presentation rules do not alter retained source metadata.
+
 ## Provenance and staleness
 
 The retained provenance distinguishes the internal acquisition path, internal archive URL, publisher landing page, original report URL, and MarketLense article URL. Internal locations are recorded only as retained hashes and are never legal public original-source links. A public source hyperlink is allowed only when it matches resolved publisher provenance; otherwise the source section renders `Source URL: Not available` without a link. Missing a public URL alone is not a publish blocker; unresolved publisher identity, unsafe URLs, or missing source disclosure remain blockers.
