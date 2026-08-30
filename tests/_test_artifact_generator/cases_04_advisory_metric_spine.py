@@ -200,6 +200,74 @@ def test_derive_metric_spine_from_insights_uses_embedded_metric_contract() -> No
     ]
 
 
+def test_metric_spine_label_does_not_split_a_decimal_display() -> None:
+    spine = derive_metric_spine_from_insights(
+        [
+            {
+                "id": "insight-revenue",
+                "text": (
+                    "Global eCommerce is forecast to grow from $7.2 trillion "
+                    "in 2024 to $10.4 trillion in 2028."
+                ),
+                "evidence_id": "finding-revenue",
+                "metric": {
+                    "value": "$7.2T to $10.4T",
+                    "unit": "global sales",
+                },
+            }
+        ]
+    )
+
+    assert spine[0]["label"] == (
+        "Global eCommerce is forecast to grow from $7.2 trillion in 2024 to "
+        "$10.4 trillion in 2028."
+    )
+
+
+def test_metric_spine_label_keeps_leading_abbreviation_with_its_sentence() -> None:
+    spine = derive_metric_spine_from_insights(
+        [
+            {
+                "id": "insight-retail-media",
+                "text": (
+                    "U.S. retail media revenue is forecast to nearly double from "
+                    "$54 billion in 2024 to $101 billion in 2028."
+                ),
+                "evidence_id": "finding-retail-media",
+                "metric": {"value": "$54B to $101B", "unit": "USD revenue"},
+            }
+        ]
+    )
+
+    assert spine[0]["label"] == (
+        "U.S. retail media revenue is forecast to nearly double from $54 billion "
+        "in 2024 to $101 billion in 2028."
+    )
+
+
+def test_metric_spine_label_keeps_a_complete_long_source_sentence() -> None:
+    text = (
+        "Generative AI is already used for shopping inspiration or research by 41% "
+        "of online shoppers aged 18-34, compared with 9% of shoppers aged 55 and "
+        "older."
+    )
+    spine = derive_metric_spine_from_insights(
+        [
+            {
+                "id": "insight-generative-ai",
+                "text": text,
+                "evidence_id": "finding-generative-ai",
+                "metric": {
+                    "value": "41% vs. 9%",
+                    "unit": "share of online shoppers",
+                },
+            }
+        ]
+    )
+
+    assert spine[0]["label"] == text
+
+
 def test_build_executive_advisory_artifacts_surfaces_not_found_states() -> None:
     advisory = build_executive_advisory_artifacts(
         summary={
@@ -672,6 +740,9 @@ __all__ = [
     "test_derive_metric_spine_selects_strong_supported_metrics",
     "test_metric_spine_prioritizes_high_priority_theme_over_context_and_id",
     "test_derive_metric_spine_keeps_incomplete_headline_metric_source_backed",
+    "test_metric_spine_label_does_not_split_a_decimal_display",
+    "test_metric_spine_label_keeps_leading_abbreviation_with_its_sentence",
+    "test_metric_spine_label_keeps_a_complete_long_source_sentence",
     "test_metric_spine_preserves_source_display_and_exposes_complete_numeric_metadata",
     "test_build_executive_advisory_artifacts_surfaces_not_found_states",
     "test_build_executive_advisory_artifacts_separates_decision_roles",

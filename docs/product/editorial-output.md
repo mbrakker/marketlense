@@ -16,10 +16,13 @@ visible as a metric caveat and is a secondary quality factor only among metrics
 with the same editorial relevance. The spine retains the source metric's label,
 exact display value, unit, and evidence ID. When that complete display can be
 parsed without alteration, it also carries derived numeric metadata; the raw
-display remains authoritative. A decimal-ending generated display is rejected
-only when its linked retained source continues the exact same display with a
-digit, then the existing scoped artifact recovery handles it. Chart, table, and
-crop selection are separate flows.
+display remains authoritative. A generated decimal-ending display, or a
+currency integer whose linked retained source continues with a decimal digit,
+is rejected only when that exact source continuation proves truncation; the
+existing scoped artifact recovery then handles it. Chart, table, and crop
+selection are separate flows. Derived metric labels retain a leading geographic
+initialism and the complete first source sentence rather than emitting a clipped
+fragment.
 
 When evidence supports a Decision Brief, it serves a distinct role from the Executive Summary. Its strategic context is the concise report thesis (`tldr` or compact TLDR), never the full executive-summary prose. Decision implications use evidence-linked insight `so_what` fields; priority moves use supported `now_what` fields or evidence-linked explicit recommendations; and watchouts use evidence-linked risks or counter-signals plus retained limitations. Unsupported sections are omitted rather than inferred, while the retained evidence links continue to identify the supporting source material.
 

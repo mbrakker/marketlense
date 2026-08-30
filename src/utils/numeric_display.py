@@ -18,10 +18,13 @@ class NumericDisplayMetadata(TypedDict):
 _INCOMPLETE_DECIMAL_DISPLAY = re.compile(
     r"(?<![A-Za-z0-9])(?P<display>[$€£¥]?\s*\d+(?:,\d{3})*\.)(?!\d)"
 )
+_INCOMPLETE_CURRENCY_INTEGER_DISPLAY = re.compile(
+    r"(?<![A-Za-z0-9])(?P<display>[$€£¥]\s*\d{1,3}(?:,\d{3})*)(?![\d.,])"
+)
 
 
 def incomplete_source_numeric_displays(text: str, source_text: str) -> list[str]:
-    """Return decimal-ending displays only when linked source text continues them."""
+    """Return displays whose linked retained source proves a missing decimal digit."""
 
     if not text or not source_text:
         return []
@@ -29,6 +32,10 @@ def incomplete_source_numeric_displays(text: str, source_text: str) -> list[str]
     for match in _INCOMPLETE_DECIMAL_DISPLAY.finditer(text):
         display = match.group("display")
         if re.search(re.escape(display) + r"\d", source_text, re.IGNORECASE):
+            incomplete.append(display)
+    for match in _INCOMPLETE_CURRENCY_INTEGER_DISPLAY.finditer(text):
+        display = match.group("display")
+        if re.search(re.escape(display) + r"\.\d", source_text, re.IGNORECASE):
             incomplete.append(display)
     return list(dict.fromkeys(incomplete))
 

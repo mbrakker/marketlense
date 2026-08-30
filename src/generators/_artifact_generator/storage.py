@@ -607,9 +607,16 @@ def _metric_label_from_insight_text(text: str) -> str:
         return ""
     if ":" in token:
         token = token.split(":", 1)[0]
-    if "." in token:
-        token = token.split(".", 1)[0]
-    return token.strip()[:120]
+    leading_initialism = re.match(r"^(?:[A-Za-z]\.){2,}\s+", token)
+    if leading_initialism:
+        prefix = leading_initialism.group(0).strip()
+        remainder = token[leading_initialism.end() :]
+        sentence = (
+            f"{prefix} {re.split(r'(?<=[.!?])\s+', remainder, maxsplit=1)[0]}".strip()
+        )
+    else:
+        sentence = re.split(r"(?<=[.!?])\s+", token, maxsplit=1)[0].strip()
+    return sentence
 
 
 def build_topics_covered(

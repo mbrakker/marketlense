@@ -154,6 +154,7 @@ def evaluate_public_editorial_quality(
     for item in _public_text_items(safe_artifacts):
         issues.extend(_text_issues(report_id, item))
     issues.extend(_insight_issues(report_id, safe_artifacts))
+    issues.extend(_key_figure_issues(report_id, safe_artifacts))
     issues.extend(_figure_issues(report_id, safe_artifacts))
     if html:
         issues.extend(_html_issues(report_id, html=html, html_path=html_path))
@@ -310,8 +311,8 @@ def _text_issues(
                 "public_editorial_quality.incomplete_numeric_expression",
                 item,
                 (
-                    "contains a decimal-ending numeric display truncated before "
-                    "a retained source digit"
+                    "contains a numeric display truncated before a retained "
+                    "source decimal digit"
                 ),
             )
         )
@@ -418,6 +419,49 @@ def _insight_issues(
                     )
                 else:
                     issues.extend(_text_issues(report_id, implication))
+    return issues
+
+
+def _key_figure_issues(
+    report_id: str, artifacts: dict[str, Any]
+) -> list[PublicEditorialQualityIssue]:
+    """Check public metric projections against their linked retained insight text."""
+
+    evidence_text_by_id: dict[str, str] = {}
+    for insight in _dict_items(artifacts.get("insights_final")):
+        evidence_id = str(insight.get("evidence_id") or "").strip()
+        if not evidence_id:
+            continue
+        evidence_text = " ".join(
+            value
+            for value in (
+                str(insight.get("evidence") or "").strip(),
+                str(insight.get("text") or "").strip(),
+            )
+            if value
+        )
+        if evidence_text:
+            evidence_text_by_id[evidence_id] = evidence_text
+
+    issues: list[PublicEditorialQualityIssue] = []
+    for index, figure in enumerate(_dict_items(artifacts.get("key_figures")), start=1):
+        evidence_id = str(figure.get("evidence_id") or "").strip()
+        evidence_text = evidence_text_by_id.get(evidence_id, "")
+        if not evidence_id or not evidence_text:
+            continue
+        for field_name in ("label", "figure", "why_it_matters"):
+            value = _sanitize_public_prose(figure.get(field_name))
+            if not value:
+                continue
+            item = _item(
+                artifact="key_figures",
+                field=f"key_figures:{index}.{field_name}",
+                text=value,
+                evidence_ids=[evidence_id],
+                repair_target="insights_bundle",
+                evidence_text=evidence_text,
+            )
+            issues.extend(_text_issues(report_id, item))
     return issues
 
 

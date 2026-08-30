@@ -379,6 +379,69 @@ def test_incomplete_currency_display_routes_to_existing_insight_repair() -> None
     assert [target.target_section for target in plan.targets] == ["insights_bundle"]
 
 
+def test_currency_integer_truncated_before_source_decimal_routes_to_repair() -> None:
+    artifacts = _retained_artifacts()
+    artifacts["insights_final"][0].update(
+        {
+            "text": "Revenue is projected to grow from $2 next year.",
+            "evidence": "Revenue is projected to grow from $2.7 trillion next year.",
+            "evidence_id": "retained-revenue",
+        }
+    )
+
+    report = evaluate_public_editorial_quality(
+        report_id="retained-report", artifacts=artifacts
+    )
+    plan = _build_regeneration_plan(
+        issues=validation_issues_from_public_editorial_quality(report),
+        artifacts=artifacts,
+        broad_retry_available=True,
+    )
+
+    assert "public_editorial_quality.incomplete_numeric_expression" in _rule_ids(report)
+    assert plan.mode == "targeted"
+    assert [target.target_section for target in plan.targets] == ["insights_bundle"]
+
+
+def test_truncated_key_figure_label_uses_linked_insight_for_repair() -> None:
+    artifacts = _retained_artifacts()
+    artifacts["insights_final"][0].update(
+        {
+            "id": "revenue-insight",
+            "text": "Revenue is projected to grow from $2.7 trillion next year.",
+            "evidence_id": "retained-revenue",
+            "evidence": "Revenue is projected to grow from $2.7 trillion next year.",
+        }
+    )
+    artifacts["key_figures"] = [
+        {
+            "label": "Revenue is projected to grow from $2",
+            "figure": "$2.7 trillion projected revenue",
+            "why_it_matters": "Revenue is projected to grow from $2",
+            "evidence_id": "retained-revenue",
+        }
+    ]
+
+    report = evaluate_public_editorial_quality(
+        report_id="retained-report", artifacts=artifacts
+    )
+    plan = _build_regeneration_plan(
+        issues=validation_issues_from_public_editorial_quality(report),
+        artifacts=artifacts,
+        broad_retry_available=True,
+    )
+
+    affected_fields = {
+        issue.affected_field
+        for issue in report.issues
+        if issue.rule_id == "public_editorial_quality.incomplete_numeric_expression"
+    }
+    assert "key_figures:1.label" in affected_fields
+    assert "key_figures:1.why_it_matters" in affected_fields
+    assert plan.mode == "targeted"
+    assert [target.target_section for target in plan.targets] == ["insights_bundle"]
+
+
 @pytest.mark.parametrize("display", ["$1.3T", "€2.4bn", "12.5%"])
 def test_complete_source_numeric_displays_remain_valid_editorial_copy(
     display: str,
