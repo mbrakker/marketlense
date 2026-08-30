@@ -408,6 +408,8 @@ def test_render_includes_artifact_sections(tmp_path):
     assert "Source language behind the read" in html
     assert "Artifact quote" in html
     assert "MarketBearing expert view" in html
+    assert "MarketBearing analysis" in html
+    assert "Focused on trust, operating model and commercial execution." not in html
     assert "LinkedIn-ready post" in html
     assert 'id="expert"' in html
     assert 'id="overview"' in html

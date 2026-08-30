@@ -8,6 +8,11 @@ The report pipeline produces source-attributed HTML and structured report artifa
 
 Report-local output can include summaries, insights, quotes, figure selections, topics, key figures, and other approved public modules when supported by the retained artifact contract. Internal evidence identifiers and machine-only publication data are not public output.
 
+The Expert View side panel carries only the neutral `MarketBearing analysis`
+identity. Report-specific interpretation belongs exclusively to the generated
+Expert View body; an unsupported synthesis renders the existing explicit
+abstention notice instead of generic theme claims.
+
 The public metric spine is a bounded selection of source-backed textual metrics.
 It ranks a metric whose evidence ID directly supports a selected editorial-plan
 theme ahead of secondary metrics; the plan's positive priority order resolves
