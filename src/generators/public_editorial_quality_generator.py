@@ -22,9 +22,11 @@ from src.contracts.public_editorial_quality import (
 )
 from src.contracts.validation import ValidationIssue, ValidationReport
 from src.services.render_service import _sanitize_public_prose
+from src.utils.numeric_display import incomplete_source_numeric_displays
 
 BLOCKING_RULE_IDS = {
     "public_editorial_quality.unsupported_numeric_claim",
+    "public_editorial_quality.incomplete_numeric_expression",
     "public_editorial_quality.material_claim_evidence_missing",
     "public_editorial_quality.internal_identifier",
     "public_editorial_quality.placeholder",
@@ -299,6 +301,18 @@ def _text_issues(
                 "public_editorial_quality.fallback_boilerplate",
                 item,
                 "matches prohibited generic fallback boilerplate",
+            )
+        )
+    if incomplete_source_numeric_displays(text, str(item.get("evidence_text") or "")):
+        issues.append(
+            _issue(
+                report_id,
+                "public_editorial_quality.incomplete_numeric_expression",
+                item,
+                (
+                    "contains a decimal-ending numeric display truncated before "
+                    "a retained source digit"
+                ),
             )
         )
     if field.endswith((".so_what", ".now_what")) and _is_nonspecific_action(text):

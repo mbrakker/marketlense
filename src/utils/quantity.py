@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import math
 import re
+from dataclasses import dataclass
 from typing import List, Optional, Sequence, Tuple
 
 from src.utils.text_normalization import normalize_for_lookup, normalize_text
@@ -15,7 +15,7 @@ _COMP_RE = (
     r"more than|over|above|greater than|at least|"
     r"less than|under|below|at most|about|around|approximately)"
 )
-_MAG_RE = r"(?:k|m|mm|mn|b|bn|tn|thousand|million|billion|trillion)\b"
+_MAG_RE = r"(?:k|m|mm|mn|b|bn|t|tn|thousand|million|billion|trillion)\b"
 
 _RANGE_RE = re.compile(
     rf"\b(?:between\s+)?(?P<low>{_NUMBER_RE})\s*(?:-|to|and)\s*(?P<high>{_NUMBER_RE})\s*"
@@ -66,6 +66,7 @@ _MAG_FACTORS = {
     "b": 1_000_000_000.0,
     "bn": 1_000_000_000.0,
     "billion": 1_000_000_000.0,
+    "t": 1_000_000_000_000.0,
     "tn": 1_000_000_000_000.0,
     "trillion": 1_000_000_000_000.0,
 }

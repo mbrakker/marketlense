@@ -306,6 +306,52 @@ def test_build_executive_advisory_artifacts_separates_decision_roles() -> None:
     assert decision_brief["evidence_links"] == ["ev1", "ev2", "q1"]
 
 
+@pytest.mark.parametrize(
+    ("display", "numeric_value", "unit_family", "unit", "magnitude"),
+    [
+        ("$1.3T", 1_300_000_000_000.0, "currency", "USD", "t"),
+        ("€2.4bn", 2_400_000_000.0, "currency", "EUR", "bn"),
+        ("12.5%", 12.5, "percent", "percent", ""),
+    ],
+)
+def test_metric_spine_preserves_source_display_and_exposes_complete_numeric_metadata(
+    display: str,
+    numeric_value: float,
+    unit_family: str,
+    unit: str,
+    magnitude: str,
+) -> None:
+    spine = derive_metric_spine(
+        {
+            "key_metrics": {
+                "key_metrics": [
+                    {
+                        "metric_id": "headline",
+                        "metric": "Headline value",
+                        "value": display,
+                        "unit": "",
+                        "evidence_id": "metric-headline",
+                    }
+                ]
+            }
+        }
+    )
+
+    assert spine[0]["value"] == display
+    assert spine[0]["source_display_value"] == display
+    assert spine[0]["numeric_metadata"] == {
+        "value": numeric_value,
+        "unit_family": unit_family,
+        "unit": unit,
+        "magnitude": magnitude,
+    }
+    figures = build_key_figures(
+        metric_spine=spine,
+        evidence_packs={},
+    )
+    assert figures[0]["figure"] == display
+
+
 def test_build_executive_advisory_artifacts_omits_unsupported_decision_fields() -> None:
     executive_summary = "Wallet adoption is rising among enterprise merchants."
     advisory = build_executive_advisory_artifacts(
@@ -626,6 +672,7 @@ __all__ = [
     "test_derive_metric_spine_selects_strong_supported_metrics",
     "test_metric_spine_prioritizes_high_priority_theme_over_context_and_id",
     "test_derive_metric_spine_keeps_incomplete_headline_metric_source_backed",
+    "test_metric_spine_preserves_source_display_and_exposes_complete_numeric_metadata",
     "test_build_executive_advisory_artifacts_surfaces_not_found_states",
     "test_build_executive_advisory_artifacts_separates_decision_roles",
     "test_build_executive_advisory_artifacts_omits_unsupported_decision_fields",

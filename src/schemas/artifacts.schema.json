@@ -91,6 +91,17 @@
           "metric_id": { "type": "string" },
           "label": { "type": "string" },
           "value": { "type": "string" },
+          "source_display_value": { "type": "string" },
+          "numeric_metadata": {
+            "type": "object",
+            "required": ["value", "unit_family", "unit", "magnitude"],
+            "properties": {
+              "value": { "type": "number" },
+              "unit_family": { "type": "string" },
+              "unit": { "type": "string" },
+              "magnitude": { "type": "string" }
+            }
+          },
           "unit": { "type": "string" },
           "timeframe": { "type": "string" },
           "segment": { "type": "string" },

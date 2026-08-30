@@ -353,6 +353,54 @@ def test_selective_repair_targets_only_the_failed_insight_bundle() -> None:
     assert plan.targets[0].issues[0].evidence_ids
 
 
+def test_incomplete_currency_display_routes_to_existing_insight_repair() -> None:
+    artifacts = _retained_artifacts()
+    artifacts["insights_final"][0].update(
+        {
+            "text": "Revenue is projected to reach $1. next year.",
+            "evidence": "Revenue is projected to reach $1.3T next year.",
+            "evidence_id": "retained-revenue",
+        }
+    )
+
+    report = evaluate_public_editorial_quality(
+        report_id="retained-report", artifacts=artifacts
+    )
+    plan = _build_regeneration_plan(
+        issues=validation_issues_from_public_editorial_quality(report),
+        artifacts=artifacts,
+        broad_retry_available=True,
+    )
+
+    assert "public_editorial_quality.incomplete_numeric_expression" in _rule_ids(
+        report
+    )
+    assert plan.mode == "targeted"
+    assert [target.target_section for target in plan.targets] == ["insights_bundle"]
+
+
+@pytest.mark.parametrize("display", ["$1.3T", "€2.4bn", "12.5%"])
+def test_complete_source_numeric_displays_remain_valid_editorial_copy(
+    display: str,
+) -> None:
+    artifacts = _retained_artifacts()
+    artifacts["insights_final"][0].update(
+        {
+            "text": f"The retained finding reports {display} in revenue.",
+            "evidence": f"The retained finding reports {display} in revenue.",
+            "evidence_id": "retained-metric",
+        }
+    )
+
+    report = evaluate_public_editorial_quality(
+        report_id="retained-report", artifacts=artifacts
+    )
+
+    assert "public_editorial_quality.incomplete_numeric_expression" not in _rule_ids(
+        report
+    )
+
+
 def test_missing_evidence_abstains_without_broad_regeneration() -> None:
     artifacts = deepcopy(_retained_artifacts())
     artifacts["insights_final"][0].update({"evidence_id": "", "evidence": ""})

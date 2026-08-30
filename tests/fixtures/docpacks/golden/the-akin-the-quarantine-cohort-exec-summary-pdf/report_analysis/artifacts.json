@@ -1,5 +1,24 @@
 {
   "schema_version": "3.0",
+  "editorial_plan": {
+    "report_thesis": "Gen Q developed a digital-first identity during the pandemic, creating durable risks for brands and institutions.",
+    "themes": [
+      {
+        "theme": "Digital-first identity",
+        "priority": 1,
+        "evidence_ids": [
+          "finding-1"
+        ]
+      },
+      {
+        "theme": "Algorithmic harms",
+        "priority": 2,
+        "evidence_ids": [
+          "finding-3"
+        ]
+      }
+    ]
+  },
   "toc_topics": [
     "What Defines Gen Q",
     "What Created Gen Q",

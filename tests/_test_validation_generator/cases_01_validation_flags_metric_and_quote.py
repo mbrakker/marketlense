@@ -1,6 +1,8 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+from src.generators.validation.semantic import run_semantic_validation
+
 from ._shared import *  # noqa: F401,F403
 
 
@@ -955,6 +957,38 @@ def test_validation_reuses_retained_primary_model_rules_before_provider_call(tmp
     assert replay_client.requests == []
 
 
+def test_semantic_validation_reuses_retained_result_without_recovery_state(tmp_path):
+    reused = SimpleNamespace(
+        reusable=True,
+        reason="compatible_retained_output",
+        output_payload={"metrics": [], "quotes": []},
+    )
+    client = FakeOpenAI(semantic_payload={"metrics": [], "quotes": []})
+
+    outcome = run_semantic_validation(
+        insights=[
+            {
+                "id": "insight_1",
+                "text": "Revenue reached $1.3T.",
+                "metric": {"value": "$1.3T", "unit": "", "timeframe": "2024"},
+            }
+        ],
+        quotes=[],
+        evidence_texts=["Revenue reached $1.3T in 2024."],
+        settings=_settings(tmp_path),
+        prompt_client=FakePromptClient(),
+        openai_client=client,
+        ctx=_ctx(),
+        report_id="semantic-reuse",
+        source_id="source:semantic-reuse",
+        prompt_family_reuse_reader=lambda _request, _ctx: reused,
+        prompt_family_materializer=lambda _request, _ctx: None,
+    )
+
+    assert outcome.issues == []
+    assert client.requests == []
+
+
 __all__ = [
     "test_validation_flags_metric_and_quote_mismatches",
     "test_number_validation_ignores_soft_planning_timeframes",
@@ -973,4 +1007,5 @@ __all__ = [
     "test_validation_grounding_uses_vector_path_when_flag_enabled",
     "test_validation_cache_isolated_by_grounding_retrieval_mode",
     "test_validation_reuses_retained_primary_model_rules_before_provider_call",
+    "test_semantic_validation_reuses_retained_result_without_recovery_state",
 ]

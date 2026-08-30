@@ -354,8 +354,12 @@ def run_semantic_validation(
                 module=LOGGER_NAME,
                 fields={
                     "has_json": isinstance(parsed, dict),
-                    "attempt_count": recovery.attempts,
-                    "final_disposition": recovery.disposition,
+                    "attempt_count": recovery.attempts if reused_payload is None else 0,
+                    "final_disposition": (
+                        recovery.disposition
+                        if reused_payload is None
+                        else "reused"
+                    ),
                 },
             )
         )

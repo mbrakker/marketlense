@@ -14,8 +14,12 @@ theme ahead of secondary metrics; the plan's positive priority order resolves
 that editorial relevance. Missing timeframe, segment, or geography remains
 visible as a metric caveat and is a secondary quality factor only among metrics
 with the same editorial relevance. The spine retains the source metric's label,
-display value, unit, and evidence ID; chart, table, and crop selection are
-separate flows.
+exact display value, unit, and evidence ID. When that complete display can be
+parsed without alteration, it also carries derived numeric metadata; the raw
+display remains authoritative. A decimal-ending generated display is rejected
+only when its linked retained source continues the exact same display with a
+digit, then the existing scoped artifact recovery handles it. Chart, table, and
+crop selection are separate flows.
 
 When evidence supports a Decision Brief, it serves a distinct role from the Executive Summary. Its strategic context is the concise report thesis (`tldr` or compact TLDR), never the full executive-summary prose. Decision implications use evidence-linked insight `so_what` fields; priority moves use supported `now_what` fields or evidence-linked explicit recommendations; and watchouts use evidence-linked risks or counter-signals plus retained limitations. Unsupported sections are omitted rather than inferred, while the retained evidence links continue to identify the supporting source material.
 

@@ -65,6 +65,7 @@ from src.utils.model_resolver import (
     resolve_routing_policy,
     routing_policies_from_config,
 )
+from src.utils.numeric_display import numeric_metadata_for_complete_display
 
 logger = logging.getLogger("market_lense.artifact_generator")
 EVIDENCE_QUALITY_BY_SUPPORT_TYPE = {
@@ -447,15 +448,14 @@ def derive_metric_spine(
         unit = _s(raw.get("unit")).strip()
         evidence_id = _s(raw.get("evidence_id")).strip()
         label = _s(raw.get("label") or raw.get("metric")).strip()
-        if not value or not unit or not evidence_id or not label:
+        if not value or not evidence_id or not label:
             continue
         missing_context_notes = [
             field_name
             for field_name in ("timeframe", "segment", "geography")
             if not _s(raw.get(field_name)).strip()
         ]
-        spine.append(
-            {
+        item = {
                 "schema_version": "1.0",
                 "metric_id": _s(raw.get("metric_id") or evidence_id).strip(),
                 "label": label,
@@ -472,7 +472,11 @@ def derive_metric_spine(
                 "missing_context_notes": missing_context_notes,
                 "evidence_id": evidence_id,
             }
-        )
+        numeric_metadata = numeric_metadata_for_complete_display(value)
+        if numeric_metadata is not None:
+            item["source_display_value"] = value
+            item["numeric_metadata"] = numeric_metadata
+        spine.append(item)
     return _rank_metric_spine(spine, editorial_plan=editorial_plan)
 
 
@@ -496,15 +500,14 @@ def derive_metric_spine_from_insights(
         label = _s(metric.get("label") or metric.get("metric")).strip()
         if not label:
             label = _metric_label_from_insight_text(_s(insight.get("text")).strip())
-        if not value or not unit or not evidence_id or not label:
+        if not value or not evidence_id or not label:
             continue
         missing_context_notes = [
             field_name
             for field_name in ("timeframe", "segment", "geography")
             if not _s(metric.get(field_name)).strip()
         ]
-        spine.append(
-            {
+        item = {
                 "schema_version": "1.0",
                 "metric_id": _s(insight.get("id") or metric.get("metric_id")).strip()
                 or f"insight_metric_{index}",
@@ -522,7 +525,11 @@ def derive_metric_spine_from_insights(
                 "missing_context_notes": missing_context_notes,
                 "evidence_id": evidence_id,
             }
-        )
+        numeric_metadata = numeric_metadata_for_complete_display(value)
+        if numeric_metadata is not None:
+            item["source_display_value"] = value
+            item["numeric_metadata"] = numeric_metadata
+        spine.append(item)
     return _rank_metric_spine(spine, editorial_plan=editorial_plan)
 
 
@@ -717,7 +724,7 @@ def build_key_figures(
         label = _s(metric.get("label")).strip()
         value = _s(metric.get("value")).strip()
         unit = _s(metric.get("unit")).strip()
-        if not label or not value or not unit or not evidence_id:
+        if not label or not value or not evidence_id:
             continue
         page_values = evidence_pages.get(evidence_id, []) or artifact_pages.get(
             evidence_id, []
