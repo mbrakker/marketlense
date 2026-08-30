@@ -38,9 +38,10 @@ gate.
 
 Public titles are normalized from retained metadata before rendering: filename
 separators, document suffixes, literal truncation marks, and repeated adjacent
-years are removed. SEO descriptions end at a word and sentence boundary within
-the configured length. A public canonical URL is emitted only after a
-MarketLense WordPress URL is known; the original report URL remains a source
+years are removed. SEO descriptions prefer a complete retained compact TLDR;
+otherwise they end at a real sentence boundary within the configured length,
+never a decimal or abbreviation period. A public canonical URL is emitted only
+after a MarketLense WordPress URL is known; the original report URL remains a source
 citation and is never presented as the public canonical page.
 
 The deterministic public-editorial gate blocks common UTF-8 mojibake sequences

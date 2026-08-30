@@ -58,6 +58,11 @@ _MONTH_PATTERN = re.compile(
 _YEAR_PATTERN = re.compile(r"\b(20\d{2})\b")
 _ISO_DATE_PATTERN = re.compile(r"\b20\d{2}-\d{2}-\d{2}\b")
 _SENTENCE_SPLIT_PATTERN = re.compile(r"(?<=[.!?])\s+")
+_SENTENCE_ABBREVIATION_AT_END = re.compile(
+    r"\b(?:(?:[A-Za-z]\.){2,}|(?:e\.g|i\.e|etc|vs|mr|mrs|ms|dr|prof|sr|jr|"
+    r"inc|ltd|co|corp|no|st)\.)$",
+    re.IGNORECASE,
+)
 
 
 def _build_figure_slides(
@@ -174,6 +179,7 @@ def _build_render_view(
     tldr_text = _sanitize_public_prose(
         _pick_first_text(summary.get("tldr"), data.get("tldr"))
     )
+    compact_tldr = _sanitize_public_prose(summary.get("card_tldr_compact"))
     not_available = bool(
         source_status.get("not_available")
         if "not_available" in source_status
@@ -410,11 +416,12 @@ def _build_render_view(
             ),
         },
         "seo": {
-            "description": _seo_description(
-                _pick_first_text(
-                    tldr_text, executive_summary, f"Digest for {report_title}."
+            "description": _pick_first_text(
+                _seo_description(compact_tldr, fallback=""),
+                _seo_description(
+                    _pick_first_text(tldr_text, executive_summary),
+                    fallback=f"Digest for {report_title}.",
                 ),
-                fallback=f"Digest for {report_title}.",
             ),
             "title": "",
             "robots": _s(data.get("robots"))
@@ -489,12 +496,33 @@ def _seo_description(value: str, *, fallback: str, max_length: int = 180) -> str
     if len(text) <= max_length:
         return text if re.search(r"[.!?;:]$", text) else f"{text}."
     boundary = max(
-        (index for index, char in enumerate(text[: max_length + 1]) if char in ".!?;:"),
+        (
+            index
+            for index, char in enumerate(text[:max_length])
+            if _is_sentence_boundary(text, index, char)
+        ),
         default=-1,
     )
     if boundary >= 0:
         return text[: boundary + 1].strip()
     return fallback
+
+
+def _is_sentence_boundary(text: str, index: int, char: str) -> bool:
+    if char in "!?":
+        return True
+    if char != ".":
+        return False
+    if index + 1 < len(text) and text[index + 1].isalnum():
+        return False
+    if (
+        index > 0
+        and index + 1 < len(text)
+        and text[index - 1].isdigit()
+        and text[index + 1].isdigit()
+    ):
+        return False
+    return not _SENTENCE_ABBREVIATION_AT_END.search(text[: index + 1])
 
 
 def _build_seo_title(report_title: str, focus_year: str, publisher: str) -> str:

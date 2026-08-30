@@ -1,3 +1,5 @@
+import json
+import re
 from pathlib import Path
 
 import pytest
@@ -53,6 +55,128 @@ def test_public_title_and_meta_description_are_bounded_editorial_prose() -> None
         )
         == "Digest for Retail Trends 2026."
     )
+
+
+@pytest.mark.parametrize(
+    ("description", "max_length", "expected"),
+    [
+        (
+            "IAB reports $258.6 billion in internet advertising revenue. "
+            "Later context is excluded.",
+            65,
+            "IAB reports $258.6 billion in internet advertising revenue.",
+        ),
+        (
+            "Growth reached 12.5%, with $1.3T and €2.4bn in tracked activity. "
+            "Later context is excluded.",
+            75,
+            "Growth reached 12.5%, with $1.3T and €2.4bn in tracked activity.",
+        ),
+        (
+            "The U.S. market remained the largest contributor. "
+            "Later context is excluded.",
+            55,
+            "The U.S. market remained the largest contributor.",
+        ),
+        (
+            "The first finding is complete. "
+            "The second finding is excluded by the maximum.",
+            35,
+            "The first finding is complete.",
+        ),
+    ],
+)
+def test_seo_description_keeps_decimals_and_recognizes_real_sentence_boundaries(
+    description: str, max_length: int, expected: str
+) -> None:
+    assert (
+        _seo_description(
+            description,
+            fallback="Digest for Retail Trends 2026.",
+            max_length=max_length,
+        )
+        == expected
+    )
+
+
+def test_seo_description_never_exceeds_its_maximum_length() -> None:
+    description = (
+        "A complete source-backed finding ends here. "
+        "Another sentence is excluded."
+    )
+
+    result = _seo_description(
+        description,
+        fallback="Digest for Retail Trends 2026.",
+        max_length=43,
+    )
+
+    assert result == "A complete source-backed finding ends here."
+    assert len(result) <= 43
+
+
+@pytest.mark.parametrize(
+    "description",
+    [
+        "Revenue reached $258.6 billion before the longer finding can finish",
+        "Growth reached 12.5% with $1.3T and €2.4bn before the longer "
+        "finding can finish",
+        "The U.S. market remained the largest contributor before the longer "
+        "finding can finish",
+    ],
+)
+def test_seo_description_uses_fallback_instead_of_partial_decimal_or_abbreviation(
+    description: str,
+) -> None:
+    fallback = "Digest for Retail Trends 2026."
+
+    assert _seo_description(description, fallback=fallback, max_length=25) == fallback
+
+
+def test_iab_compact_tldr_drives_all_rendered_metadata_descriptions(
+    tmp_path: Path,
+) -> None:
+    compact_tldr = "IAB reports $258.6 billion in internet advertising revenue."
+    response = render_report(
+        RenderRequest(
+            schema_version="1.0",
+            data={
+                "title": "IAB Internet Advertising Revenue Report",
+                "artifacts": {
+                    "summary": {
+                        "card_tldr_compact": compact_tldr,
+                        "tldr": (
+                            "A generic TLDR that must not be used for SEO metadata."
+                        ),
+                        "executive_summary": (
+                            "A generic executive summary that must not be used."
+                        ),
+                    }
+                },
+            },
+            doc_name="iab-report.pdf",
+            file_id="iab-report",
+            out_dir=str(tmp_path),
+            preview_png=None,
+        ),
+        _ctx(),
+    )
+
+    html = Path(response.html_path).read_text(encoding="utf-8")
+    descriptions = re.findall(
+        r'<meta (?:name|property)="(?:description|og:description|twitter:description)" '
+        r'content="([^"]+)">',
+        html,
+    )
+    json_ld_match = re.search(
+        r'<script type="application/ld\+json">(.*?)</script>', html
+    )
+
+    assert descriptions == [compact_tldr, compact_tldr, compact_tldr]
+    assert json_ld_match is not None
+    assert json.loads(json_ld_match.group(1))["description"] == compact_tldr
+    assert "$258.6 billion" in descriptions[0]
+    assert descriptions[0] != "$258."
 
 
 def test_public_citation_label_rejects_internal_provenance_identifiers() -> None:
