@@ -114,7 +114,13 @@ def test_editorial_plan_is_the_shared_basis_for_summary_insights_and_expert(tmp_
         assert json.loads(
             prompt_client.variables_for_namespace(namespace)["editorial_plan_json"]
         ) == plan
-    assert [item["evidence_id"] for item in payload["insights_final"]] == ["f3", "f2"]
+    assert [item["evidence_id"] for item in payload["insights_final"]] == [
+        "f3",
+        "f2",
+        "f1",
+        "f2",
+        "f3",
+    ]
     assert "retention-led efficiency" in payload["summary"]["executive_summary"].lower()
     assert "operating tradeoff" in payload["expert_comment"].lower()
 

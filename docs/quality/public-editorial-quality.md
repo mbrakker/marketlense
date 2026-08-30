@@ -14,13 +14,13 @@ The existing `public_editorial_quality_before.json`, `public_editorial_quality_a
 
 ## Blocking rules
 
-The gate blocks public release unless semantic and grounding validation passed, category decisions agree, every material claim has a valid retained evidence ID, and every regenerated artifact was promoted. It blocks unsupported numeric claims; internal IDs and evidence tokens; placeholders; malformed extraction and OCR fragments; mojibake; missing rendered assets; duplicate boilerplate; filename-style titles and duplicated years; fragments; generic figure labels; unsupported certainty; empty or non-specific decision implications; mechanical labels; literal truncation; private paths and Drive URLs; and invalid public source links.
+The gate blocks public release unless semantic and grounding validation passed, category decisions agree, every material claim has a valid retained evidence ID, and every regenerated artifact was promoted. It blocks unsupported numeric claims; source-proven comparative temporal loss and malformed `in to` / `between and` comparisons; internal IDs and evidence tokens; placeholders; malformed extraction and OCR fragments; mojibake; missing rendered assets; duplicate boilerplate; filename-style titles and duplicated years; fragments; generic figure labels; unsupported certainty; empty or non-specific decision implications; mechanical labels; literal truncation; private paths and Drive URLs; and invalid public source links.
 
 It inspects headings, body text, captions, quotations, link labels and hrefs, alt attributes, JSON-LD, canonical and Open Graph metadata. A public chart card must be linked end-to-end to an accepted crop candidate, source page, evidence ID, insight ID, caption, and public takeaway. Weak, text-only, or incomplete cards are omitted during rendering and a mismatch between that public projection and the retained card set fails readiness. Cropping is not modified by this gate.
 
 A standalone key-figure display is checked as a grounded numeric value, not as sentence prose. Its accompanying label and explanation remain subject to public-prose checks; this avoids falsely rejecting a supported display such as `70 percent` solely because it is intentionally not a sentence.
 
-Duplicate detection compares normalized claim-token sets and material-number overlap. Regexes are used only for deterministic syntax defects such as IDs and placeholders; semantic duplication is not determined by a regex alone.
+Duplicate detection compares normalized claim-token sets and material-number overlap. The temporal-integrity rule activates only when public prose restates both non-year values of a retained source comparison with at least two distinct temporal qualifiers. It requires the source's explicit quarter, half-year, month/year, fiscal-year, and forecast markers, but does not infer missing periods or treat the shared `2025` in `Q1 2025` versus `Q2 2025` as a conflict. Regexes are otherwise used only for deterministic syntax defects such as IDs and placeholders; semantic duplication is not determined by a regex alone.
 
 ## First-run prevention
 

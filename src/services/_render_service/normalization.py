@@ -27,8 +27,8 @@ _ISO_DATE_PATTERN = re.compile(r"\b20\d{2}-\d{2}-\d{2}\b")
 _SENTENCE_SPLIT_PATTERN = re.compile(r"(?<=[.!?])\s+")
 _SENTENCE_ABBREVIATION = re.compile(r"\b(?:U\.S|U\.K|e\.g|i\.e)\.", re.I)
 _INLINE_INTERNAL_REFERENCE = re.compile(
-    r"(?:\s*[\[(](?:[a-z]{1,4}|finding|insight|claim)[_-]?\d{1,5}[\])]|"
-    r"\b(?:[a-z]{1,4}|finding|insight|claim)[_-]?\d{1,5}\b)",
+    r"(?:\s*[\[(](?!(?:q[1-4]|h[12])\b)(?:[a-z]{1,4}|finding|insight|claim)[_-]?\d{1,5}[\])]|"
+    r"\b(?!(?:q[1-4]|h[12])\b)(?:[a-z]{1,4}|finding|insight|claim)[_-]?\d{1,5}\b)",
     re.IGNORECASE,
 )
 _PUBLIC_TRUNCATION_MARKER = re.compile(r"(?:\.\.\.|…)")

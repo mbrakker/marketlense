@@ -134,3 +134,22 @@ def test_render_sanitizer_removes_editorial_labels_without_hiding_prose() -> Non
     assert _sanitize_public_prose("Observation: Demand is accelerating.") == (
         "Demand is accelerating."
     )
+
+
+def test_render_sanitizer_preserves_quarterly_and_half_year_periods() -> None:
+    text = "Share moved from 43% in Q1 2025 to 41% in Q2 2025 and from H1 2025 to H2 2025."
+
+    assert _sanitize_public_prose(text) == text
+
+
+def test_core_signal_preserves_distinct_quarterly_periods() -> None:
+    signal = _build_core_signal(
+        tldr_text="",
+        executive_summary="",
+        insights=[
+            {"text": "Share moved from 43% in Q1 2025 to 41% in Q2 2025."}
+        ],
+    )
+
+    assert "Q1 2025" in signal["body"]
+    assert "Q2 2025" in signal["body"]

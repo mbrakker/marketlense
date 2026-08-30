@@ -26,6 +26,8 @@ mutation_cov_*/
 
 # Ignore local test fixtures (large PDFs, generated data)
 tests/fixtures/*
+!tests/fixtures/editorial_temporal/
+!tests/fixtures/editorial_temporal/*.json
 !tests/fixtures/low_text_status.json
 !tests/fixtures/docpacks/
 !tests/fixtures/docpacks/golden/

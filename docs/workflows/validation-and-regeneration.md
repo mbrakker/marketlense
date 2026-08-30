@@ -60,6 +60,15 @@ unknown values still fail closed.
 
 The deterministic [public editorial quality diagnostics](../quality/public-editorial-quality.md) run before the regeneration loop and after its final attempt. They retain repair eligibility and evidence IDs and may route scoped regeneration, but they are not an independent release decision. After the final render, the canonical `publish_readiness.json` evaluates the exact HTML and normalized WordPress projection together with the final semantic/grounding report, category decisions, evidence lineage, accepted crop linkage, promotion state, provenance, and metadata surfaces. Publication consumes that signed/hash-bound artifact instead of rereading `validation.json` as a second policy. A public-copy finding is regenerated only when retained source text, an explicit evidence ID, and a supported target exist; otherwise it is explicitly abstained and final readiness remains failed. This preserves passing fields and prevents generic fallback copy.
 
+The same deterministic public-editorial path checks comparative temporal
+integrity. When public prose repeats both values from a retained source
+comparison, it must retain each source-proven quarter, half-year, month/year,
+fiscal-year, and forecast qualifier. A lost qualifier or malformed `in to` /
+`between and` comparison is an ordinary evidence-linked public-editorial issue:
+the existing bounded targeted regeneration repairs only its supported family,
+then the candidate is revalidated. The check never reconstructs an omitted
+source period and accepts valid comparisons that share a calendar year.
+
 Prompt fixtures and regression controls are documented in [quality testing](../quality/testing.md). Operator recovery starts with [recovery](../ops/recovery.md).
 
 ## Immutable validation cohorts and closure

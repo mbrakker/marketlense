@@ -20,14 +20,149 @@ _GOLDEN_ARTIFACT = next(
         "*/report_analysis/artifacts.json"
     )
 )
+_TEMPORAL_FIXTURE_DIR = Path(__file__).parent / "fixtures" / "editorial_temporal"
 
 
 def _retained_artifacts() -> dict:
     return json.loads(_GOLDEN_ARTIFACT.read_text(encoding="utf-8"))
 
 
+def _temporal_fixture(name: str) -> dict:
+    return json.loads((_TEMPORAL_FIXTURE_DIR / name).read_text(encoding="utf-8"))
+
+
 def _rule_ids(report) -> set[str]:
     return {issue.rule_id for issue in report.issues}
+
+
+def _temporal_artifacts(*, text: str, evidence: str) -> dict:
+    return {
+        "insights_final": [
+            {
+                "id": "insight-temporal",
+                "text": text,
+                "evidence_id": "temporal-evidence",
+                "evidence": evidence,
+                "metric": {},
+                "pages": [1],
+                "so_what": "The comparison should inform the next reporting review.",
+                "now_what": "Review the distinct source periods before acting.",
+            }
+        ]
+    }
+
+
+@pytest.mark.parametrize(
+    ("text", "evidence"),
+    [
+        (
+            "Share fell from 43% in 2025 to 41% in 2025.",
+            "Share fell from 43% in Q1 2025 to 41% in Q2 2025.",
+        ),
+        (
+            "Demand moved from 15.7% in to 14.3% in.",
+            "Demand moved from 15.7% in Q1 2025 to 14.3% in Q2 2025.",
+        ),
+        (
+            "Quarterly growth moved from 15.7% in 2024 to 14.3% in 2024.",
+            "Quarterly growth moved from 15.7% in Q1 to 14.3% in Q4.",
+        ),
+    ],
+)
+def test_temporal_integrity_blocks_lost_or_malformed_quarterly_comparison(
+    text: str, evidence: str
+) -> None:
+    report = evaluate_public_editorial_quality(
+        report_id="activate-iab-temporal", artifacts=_temporal_artifacts(text=text, evidence=evidence)
+    )
+
+    assert "public_editorial_quality.temporal_integrity" in _rule_ids(report)
+
+
+@pytest.mark.parametrize(
+    ("fixture_name", "text_key"),
+    [
+        ("activate_2026.json", "collapsed_comparison"),
+        ("iab_pwc_quarterly.json", "collapsed_comparison"),
+        ("iab_pwc_quarterly.json", "malformed_comparison"),
+    ],
+)
+def test_temporal_integrity_blocks_named_regression_fixtures(
+    fixture_name: str, text_key: str
+) -> None:
+    fixture = _temporal_fixture(fixture_name)
+    report = evaluate_public_editorial_quality(
+        report_id=fixture["report_id"],
+        artifacts=_temporal_artifacts(
+            text=fixture[text_key], evidence=fixture["source_comparison"]
+        ),
+    )
+
+    assert "public_editorial_quality.temporal_integrity" in _rule_ids(report)
+
+
+@pytest.mark.parametrize(
+    "evidence",
+    [
+        "Conversion increased from 32% in H1 2025 to 35% in H2 2025.",
+        "Conversion increased from 32% in January 2025 to 35% in March 2025.",
+        "Conversion increased from 32% in FY 2024 to 35% in FY 2025.",
+        "Conversion is forecast to increase from 32% in Q1 2025 to 35% in Q2 2025.",
+    ],
+)
+def test_temporal_integrity_accepts_source_proven_distinct_comparisons(
+    evidence: str,
+) -> None:
+    report = evaluate_public_editorial_quality(
+        report_id="temporal-periods", artifacts=_temporal_artifacts(text=evidence, evidence=evidence)
+    )
+
+    assert "public_editorial_quality.temporal_integrity" not in _rule_ids(report)
+
+
+@pytest.mark.parametrize("surface", ["summary", "expert_comment", "linkedin_post"])
+def test_temporal_integrity_covers_downstream_editorial_surfaces(surface: str) -> None:
+    source = "Share fell from 43% in Q1 2025 to 41% in Q2 2025."
+    collapsed = "Share fell from 43% in 2025 to 41% in 2025."
+    artifacts = _temporal_artifacts(text=source, evidence=source)
+    if surface == "summary":
+        artifacts["summary"] = {
+            "tldr": collapsed,
+            "executive_summary": "The source comparison remains material.",
+            "claim_evidence_map": [
+                {
+                    "claim": collapsed,
+                    "evidence": source,
+                    "evidence_id": "temporal-evidence",
+                }
+            ],
+        }
+    else:
+        artifacts[surface] = collapsed
+
+    report = evaluate_public_editorial_quality(
+        report_id="temporal-downstream", artifacts=artifacts
+    )
+
+    issues = [
+        issue
+        for issue in report.issues
+        if issue.rule_id == "public_editorial_quality.temporal_integrity"
+    ]
+    assert any(issue.affected_artifact == surface for issue in issues)
+    assert all(issue.repair_eligible for issue in issues)
+
+
+def test_temporal_integrity_blocks_malformed_between_comparison() -> None:
+    report = evaluate_public_editorial_quality(
+        report_id="iab-quarterly",
+        artifacts=_temporal_artifacts(
+            text="Demand moved between and the two reported periods.",
+            evidence="Demand moved from 15.7% in Q1 2025 to 14.3% in Q2 2025.",
+        ),
+    )
+
+    assert "public_editorial_quality.temporal_integrity" in _rule_ids(report)
 
 
 def _set_near_duplicate(payload: dict) -> None:

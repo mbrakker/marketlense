@@ -27,6 +27,7 @@ from src.utils.numeric_display import incomplete_source_numeric_displays
 BLOCKING_RULE_IDS = {
     "public_editorial_quality.unsupported_numeric_claim",
     "public_editorial_quality.incomplete_numeric_expression",
+    "public_editorial_quality.temporal_integrity",
     "public_editorial_quality.material_claim_evidence_missing",
     "public_editorial_quality.internal_identifier",
     "public_editorial_quality.placeholder",
@@ -98,6 +99,20 @@ _NUMBER = re.compile(
     r"(?<![A-Za-z])(?:\d{1,3}(?:[,.]\d{3})+|\d+(?:[.,]\d+)?)(?:\s*%|\s*(?:million|billion|m|bn|x))?",
     re.I,
 )
+_TEMPORAL_QUALIFIER = re.compile(
+    r"\b(?:Q[1-4]|H[12])(?:\s*(?:FY\s*)?20\d{2})?\b|"
+    r"\b(?:January|February|March|April|May|June|July|August|September|"
+    r"October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|"
+    r"Oct|Nov|Dec)\.?\s+20\d{2}\b|"
+    r"\b(?:FY\s*20\d{2}|fiscal\s+year\s+20\d{2})\b",
+    re.IGNORECASE,
+)
+_FORECAST_MARKER = re.compile(
+    r"\b(?:forecast(?:s|ed|ing)?|project(?:s|ed|ion|ions)?|"
+    r"expect(?:s|ed|ation|ations)?|outlook)\b",
+    re.IGNORECASE,
+)
+_MALFORMED_TEMPORAL_COMPARISON = re.compile(r"\b(?:in\s+to|between\s+and)\b", re.I)
 _CERTAINTY = re.compile(
     r"\b(?:will|certain(?:ly)?|guarantee[sd]?|proves?|always|undeniably)\b", re.I
 )
@@ -314,6 +329,18 @@ def _text_issues(
                     "contains a numeric display truncated before a retained "
                     "source decimal digit"
                 ),
+            )
+        )
+    temporal_explanation = _temporal_integrity_explanation(
+        text, str(item.get("evidence_text") or "")
+    )
+    if temporal_explanation:
+        issues.append(
+            _issue(
+                report_id,
+                "public_editorial_quality.temporal_integrity",
+                item,
+                temporal_explanation,
             )
         )
     if field.endswith((".so_what", ".now_what")) and _is_nonspecific_action(text):
@@ -631,10 +658,18 @@ def _public_text_items(artifacts: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 "summary",
                 evidence_text=" ".join(_summary_evidence_texts(summary)),
             )
+    downstream_evidence_ids, downstream_evidence_text = _downstream_evidence(artifacts)
     for field_name in ("expert_comment", "linkedin_post"):
         value = _sanitize_public_prose(artifacts.get(field_name))
         if value:
-            yield _item(field_name, field_name, value, [], field_name, evidence_text="")
+            yield _item(
+                field_name,
+                field_name,
+                value,
+                downstream_evidence_ids,
+                field_name,
+                evidence_text=downstream_evidence_text,
+            )
 
 
 def _issue(
@@ -823,10 +858,114 @@ def _summary_evidence_ids(summary: dict[str, Any]) -> list[str]:
 
 def _summary_evidence_texts(summary: dict[str, Any]) -> list[str]:
     return [
-        str(item.get("claim") or "").strip()
+        str(item.get("evidence") or item.get("claim") or "").strip()
         for item in _dict_items(summary.get("claim_evidence_map"))
-        if str(item.get("claim") or "").strip()
+        if str(item.get("evidence") or item.get("claim") or "").strip()
     ]
+
+
+def _downstream_evidence(artifacts: dict[str, Any]) -> tuple[list[str], str]:
+    insights = _dict_items(artifacts.get("insights_final"))
+    evidence_ids = [str(item.get("evidence_id") or "").strip() for item in insights]
+    evidence_text = " ".join(
+        str(item.get("evidence") or "").strip()
+        for item in insights
+        if str(item.get("evidence") or "").strip()
+    )
+    return [value for value in evidence_ids if value], evidence_text
+
+
+def _temporal_integrity_explanation(text: str, evidence_text: str) -> str:
+    """Identify only source-proven loss of a comparative time qualifier."""
+    if _MALFORMED_TEMPORAL_COMPARISON.search(text):
+        return "contains malformed comparative temporal wording"
+    if not evidence_text:
+        return ""
+
+    claim_numbers = _material_numbers(text)
+    if len(claim_numbers) < 2:
+        return ""
+    claim_qualifiers = _temporal_qualifiers(text)
+    for source_sentence in _sentences(evidence_text):
+        source_pairs = _number_temporal_qualifier_pairs(source_sentence)
+        source_numbers = {number for number, _ in source_pairs}
+        source_qualifiers = {
+            qualifier
+            for number, qualifier in source_pairs
+            if number in claim_numbers
+        }
+        if (
+            len(source_numbers & claim_numbers) < 2
+            or len(source_qualifiers) < 2
+        ):
+            continue
+        if any(
+            not _claim_retains_temporal_qualifier(qualifier, claim_qualifiers)
+            for qualifier in source_qualifiers
+        ):
+            return "loses distinct source-proven comparative temporal qualifiers"
+        if _FORECAST_MARKER.search(source_sentence) and not _FORECAST_MARKER.search(text):
+            return "loses the source-proven forecast marker for a period comparison"
+    return ""
+
+
+def _material_numbers(text: str) -> set[str]:
+    return {
+        normalized
+        for value in _NUMBER.findall(text)
+        if (normalized := _normalized_number(value))
+        and not (len(normalized) == 4 and 1900 <= int(normalized) <= 2100)
+    }
+
+
+def _temporal_qualifiers(text: str) -> set[str]:
+    return {
+        " ".join(match.group(0).casefold().replace(".", "").split())
+        for match in _TEMPORAL_QUALIFIER.finditer(text)
+    }
+
+
+def _number_temporal_qualifier_pairs(text: str) -> list[tuple[str, str]]:
+    material_matches = [
+        (match, normalized)
+        for match in _NUMBER.finditer(text)
+        if (normalized := _normalized_number(match.group(0)))
+        and not (len(normalized) == 4 and 1900 <= int(normalized) <= 2100)
+    ]
+    pairs: list[tuple[str, str]] = []
+    for index, (match, number) in enumerate(material_matches):
+        next_start = (
+            material_matches[index + 1][0].start()
+            if index + 1 < len(material_matches)
+            else len(text)
+        )
+        qualifier = _TEMPORAL_QUALIFIER.search(text[match.end() : next_start])
+        if qualifier:
+            pairs.append(
+                (
+                    number,
+                    " ".join(qualifier.group(0).casefold().replace(".", "").split()),
+                )
+            )
+    return pairs
+
+
+def _claim_retains_temporal_qualifier(
+    source_qualifier: str, claim_qualifiers: set[str]
+) -> bool:
+    if source_qualifier in claim_qualifiers:
+        return True
+    return bool(
+        re.fullmatch(r"(?:q[1-4]|h[12])", source_qualifier)
+        and any(
+            qualifier.startswith(f"{source_qualifier} ")
+            for qualifier in claim_qualifiers
+        )
+    )
+
+
+def _sentences(text: str) -> list[str]:
+    return [sentence for sentence in re.split(r"(?<=[.!?])\s+", text) if sentence]
 
 
 def _evidence_status(item: dict[str, Any]) -> str:

@@ -22,6 +22,9 @@ from src.contracts.regeneration import (
 )
 from src.contracts.run_context import RunContext
 from src.generators.report_regeneration_generator import regenerate_artifacts
+from src.generators.public_editorial_quality_generator import (
+    evaluate_public_editorial_quality,
+)
 from src.utils.errors import AppError
 
 METRIC = {
@@ -245,6 +248,49 @@ class _FakeOpenAIClient:
 
     def openai_respond_with_vector_store(self, req, ctx):
         return self.openai_chat_json(req, ctx)
+
+
+class _TemporalSummaryOpenAIClient(_FakeOpenAIClient):
+    def openai_chat_json(self, req, ctx):
+        if "system::report_vs/artifacts/regenerate/summary" in req.system_prompt:
+            source = "Share fell from 43% in Q1 2025 to 41% in Q2 2025."
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text=json.dumps(
+                    {
+                        "summary": {
+                            "tldr": source,
+                            "card_tldr_compact": source,
+                            "executive_summary": source,
+                            "claim_evidence_map": [
+                                {
+                                    "claim": source,
+                                    "evidence_id": "f1",
+                                    "evidence": source,
+                                    "pages": [1],
+                                }
+                            ],
+                        }
+                    }
+                ),
+                parsed_json={
+                    "summary": {
+                        "tldr": source,
+                        "card_tldr_compact": source,
+                        "executive_summary": source,
+                        "claim_evidence_map": [
+                            {
+                                "claim": source,
+                                "evidence_id": "f1",
+                                "evidence": source,
+                                "pages": [1],
+                            }
+                        ],
+                    }
+                },
+                request_id="req-temporal-summary",
+            )
+        return super().openai_chat_json(req, ctx)
 
 
 def _settings(tmp_path: Path) -> IngestSettings:
@@ -791,6 +837,77 @@ def test_regenerate_artifacts_summary_only_keeps_other_sections_unchanged(tmp_pa
         response.updated_artifacts["insights_final"][0]["text"] == "Old final insight"
     )
     assert response.updated_artifacts["quotes_final"][0]["text"] == "Old quote"
+
+
+def test_regeneration_repairs_a_source_proven_lost_quarterly_comparison(tmp_path):
+    source = "Share fell from 43% in Q1 2025 to 41% in Q2 2025."
+    current_artifacts = _current_artifacts()
+    current_artifacts["summary"].update(
+        {
+            "tldr": "Share fell from 43% in 2025 to 41% in 2025.",
+            "executive_summary": "Share fell from 43% in 2025 to 41% in 2025.",
+            "claim_evidence_map": [
+                {
+                    "claim": "Share fell from 43% in 2025 to 41% in 2025.",
+                    "evidence_id": "f1",
+                    "evidence": source,
+                    "pages": [1],
+                }
+            ],
+        }
+    )
+    evidence_packs = _evidence_packs()
+    evidence_packs["findings"]["findings"][0]["evidence"] = source
+
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="activate-2026",
+            report_name="Activate 2026",
+            attempt_index=1,
+            plan=RegenerationPlan(
+                mode="targeted",
+                targets=[
+                    RegenerationTarget(
+                        target_section="summary",
+                        regenerate_steps=["summary"],
+                        prompt_namespaces=["report_vs/artifacts/regenerate/summary"],
+                        issues=[
+                            RegenerationIssue(
+                                rule_id="public_editorial_quality.temporal_integrity",
+                                affected_section="summary.tldr",
+                                message="lost distinct source-proven comparative temporal qualifiers",
+                                severity="error",
+                                evidence_ids=["f1"],
+                                pages=[1],
+                            )
+                        ],
+                    )
+                ],
+                unmappable_issues=[],
+                broad_retry_allowed=True,
+            ),
+            current_artifacts=current_artifacts,
+            doc_map=evidence_packs["doc_map"],
+            evidence_packs=evidence_packs,
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current_artifacts["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=_TemporalSummaryOpenAIClient(),
+        prompt_client=_FakePromptClient(),
+    )
+
+    assert response.regenerated_sections == ["summary"]
+    assert response.updated_artifacts["summary"]["tldr"] == source
+    assert not any(
+        issue.rule_id == "public_editorial_quality.temporal_integrity"
+        for issue in evaluate_public_editorial_quality(
+            report_id="activate-2026", artifacts=response.updated_artifacts
+        ).issues
+    )
 
 
 def test_regenerate_artifacts_applies_family_policy_to_unsupported_quotes(

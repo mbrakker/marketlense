@@ -65,6 +65,33 @@ def test_final_insights_regeneration_prompt_requires_decision_implications() -> 
 
 
 @pytest.mark.parametrize(
+    "namespace",
+    [
+        "report_vs/evidence_packs/findings",
+        "report_vs/artifacts/insights_candidates",
+        "report_vs/artifacts/insights_final",
+        "report_vs/artifacts/summary",
+        "report_vs/artifacts/expert_comment",
+        "report_vs/artifacts/linkedin_post",
+        "report_vs/artifacts/regenerate/insights_candidates",
+        "report_vs/artifacts/regenerate/insights_final",
+        "report_vs/artifacts/regenerate/summary",
+        "report_vs/artifacts/regenerate/expert_comment",
+        "report_vs/artifacts/regenerate/linkedin_post",
+    ],
+)
+def test_editorial_prompts_require_distinct_temporal_qualifiers(namespace: str) -> None:
+    prompt_set = prompt_service.load_prompt_set(
+        PromptLoadRequest(schema_version="1.0", namespace=namespace, force_reload=True),
+        _ctx(),
+    )
+
+    assert "distinct temporal qualifiers" in (
+        f"{prompt_set.system.text}\n{prompt_set.user.text}"
+    )
+
+
+@pytest.mark.parametrize(
     ("namespace", "scope"),
     [
         ("report_vs/artifacts/linkedin_post", "Broad report scope"),

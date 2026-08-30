@@ -83,6 +83,29 @@ def test_normalize_artifact_summary_removes_editorial_scaffold_labels() -> None:
     )
 
 
+def test_initial_artifact_normalization_preserves_distinct_quarterly_periods() -> None:
+    source = "Share fell from 43% in Q1 2025 to 41% in Q2 2025."
+
+    summary = normalize_artifact_summary(
+        {
+            "tldr": source,
+            "card_tldr_compact": source,
+            "executive_summary": source,
+            "claim_evidence_map": [
+                {"claim": source, "evidence": source, "evidence_id": "activate-43-41"}
+            ],
+        }
+    )
+    insights = normalize_artifact_insights(
+        [{"id": "candidate-1", "text": source, "evidence": source}],
+        prefix="candidate",
+    )
+
+    assert summary["tldr"] == source
+    assert summary["claim_evidence_map"][0]["evidence"] == source
+    assert insights[0]["text"] == source
+
+
 def test_fallback_artifact_insights_uses_distinct_grounded_findings_only():
     findings = {
         "findings": [

@@ -54,6 +54,16 @@ views, and LinkedIn posts. Source links are emitted only for public, credential-
 HTTP(S) URLs. When no verified publisher link is available, the report keeps a
 plain disclosure and never exposes a local cache or operational path.
 
+Comparative claims preserve source-proven temporal context from findings through
+candidate and final insights, summaries, Expert View, LinkedIn, and the rendered
+Core signal. A source comparison that uses distinct quarters, half-years,
+month/year values, fiscal years, or a forecast marker retains those qualifiers;
+it is never reduced to a shared year. The deterministic editorial check blocks a
+public claim only when it restates both source comparison values but loses a
+source-proven qualifier, or when it contains malformed wording such as `in to`
+or `between and`. It does not infer a missing period and does not reject a valid
+same-year comparison merely because both qualifiers contain the same year.
+
 The report header's Core signal uses only a complete retained sentence. It
 deterministically prefers a substantive market, metric, constraint, or adoption
 finding over a sentence that merely describes the report or study. It otherwise uses the explicit
