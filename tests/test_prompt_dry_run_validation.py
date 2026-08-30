@@ -140,6 +140,31 @@ def test_linkedin_prompt_materializes_editorial_plan_and_report_scope(
     assert "The evidence points to" in rendered.text
 
 
+@pytest.mark.parametrize(
+    "namespace",
+    [
+        "report_vs/artifacts/linkedin_post",
+        "report_vs/artifacts/regenerate/linkedin_post",
+    ],
+)
+def test_linkedin_prompts_require_plain_text_paragraphs_without_markdown_or_bullets(
+    namespace: str,
+) -> None:
+    prompt_set = prompt_service.load_prompt_set(
+        PromptLoadRequest(schema_version="1.0", namespace=namespace, force_reload=True),
+        _ctx(),
+    )
+
+    prompt_text = f"{prompt_set.system.text}\n{prompt_set.user.text}"
+
+    assert "Do not use bullets" in prompt_text
+    assert "Markdown formatting" in prompt_text
+    assert "plain-text short paragraphs separated by blank lines" in prompt_text
+    assert "two newline characters" in prompt_text
+    assert "Do not return fewer than 180 words" in prompt_text
+    assert "optional bullets" not in prompt_text
+
+
 def test_validate_prompt_dry_run_repository_covers_all_discovered_namespaces(
     caplog,
     assert_logs_have_required_fields,

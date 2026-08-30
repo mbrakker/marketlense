@@ -22,7 +22,7 @@ text: |
   - Do not use these recurring formulations: "The evidence points to", "The market signals are clear", "For senior leaders", "The strategic question is not simply", or "The practical agenda".
   - Do not use engagement bait such as "Like if you agree", "Comment below", or unnecessary tagging. Use zero to three highly relevant hashtags only when they add professional context.
   - Do not use emojis, clichés, em dashes, or the character "—".
-  - Do not use bullets. Use short paragraphs separated by blank lines so every supporting point remains native LinkedIn prose.
+  - Use only plain-text short paragraphs separated by blank lines so every supporting point remains native LinkedIn prose. Write at least three paragraphs and separate each with two newline characters. Do not return fewer than 180 words or more than 280 words. Do not use bullets or Markdown formatting, including *title*, **bold**, headings, code fences, or Markdown links.
 
   Content constraints (strict):
   - Every statement must be directly supported by the provided JSON artifacts

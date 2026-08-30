@@ -37,7 +37,7 @@ from src.generators.artifact_normalization import (
     normalize_expert_domain,
     REQUIRED_REPORT_PAYLOAD_INSIGHTS,
     select_artifact_insights,
-    strip_artifact_inline_reference_ids,
+    strip_linkedin_inline_reference_ids,
 )
 from src.generators.validation.evidence import retrieve_evidence_windows
 from src.generators.validation.preparation import prepare_validation_inputs
@@ -841,7 +841,7 @@ def _handle_linkedin_post_regeneration(
             "grounding_package_json": _dump_json(execution.grounding_package),
         },
     )
-    execution.state.linkedin_post = strip_artifact_inline_reference_ids(
+    execution.state.linkedin_post = strip_linkedin_inline_reference_ids(
         _s(result.get("linkedin_post"))
     )
     execution.state.regenerated_sections.append("linkedin_post")

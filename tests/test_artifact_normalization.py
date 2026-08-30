@@ -6,6 +6,7 @@ from src.generators.artifact_normalization import (
     normalize_artifact_insights,
     normalize_artifact_summary,
     select_artifact_insights,
+    strip_linkedin_inline_reference_ids,
 )
 
 
@@ -81,6 +82,12 @@ def test_normalize_artifact_summary_removes_editorial_scaffold_labels() -> None:
         "Brand tracking joins survey design and activation. "
         "The service covers 50 markets. Teams can compare markets."
     )
+
+
+def test_linkedin_reference_id_stripping_preserves_blank_line_paragraphs() -> None:
+    assert strip_linkedin_inline_reference_ids(
+        "First paragraph (IC-12).\n\nSecond paragraph (F-2)."
+    ) == "First paragraph.\n\nSecond paragraph."
 
 
 def test_initial_artifact_normalization_preserves_distinct_quarterly_periods() -> None:

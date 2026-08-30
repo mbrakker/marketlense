@@ -26,7 +26,7 @@ text: |
   - Use two to four supporting proof points and no more than four quantitative proof points. Select the four or fewer quantitative proof points before drafting, then use no more than four distinct numerical values in the post; a percentage and its comparison value count separately. Do not introduce any additional number, percentage, currency figure, volume, or comparison beyond that selection. A report title or source period may include its year without counting as a proof point.
   - Include one distinct source-supported interpretation or decision implication. Do not introduce unsupported claims, numbers, quotes, recommendations, or causal outcomes.
   - Avoid the phrases "The evidence points to", "The market signals are clear", "For senior leaders", "The strategic question is not simply", and "The practical agenda"; do not use engagement bait or unnecessary tagging.
-  - Use zero to three highly relevant hashtags only when useful. Do not use bullets. Use short paragraphs separated by blank lines so every supporting point remains native LinkedIn prose.
+  - Use zero to three highly relevant hashtags only when useful. Use only plain-text short paragraphs separated by blank lines so every supporting point remains native LinkedIn prose. Write at least three paragraphs and separate each with two newline characters. Do not return fewer than 180 words or more than 280 words. Do not use bullets or Markdown formatting, including *title*, **bold**, headings, code fences, or Markdown links.
   - Do not introduce unsupported claims, numbers, or quotes.
   - Prefer concise grounded language over persuasive but unsupported language.
   - Return direct public prose without editorial labels such as "Executive takeaway:", "Observation:", or "Implication:".

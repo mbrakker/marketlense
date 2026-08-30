@@ -48,8 +48,12 @@ report-backed angle, attributes a known publisher naturally, and limits normal
 posts to four quantitative proof points. Broad reports identify the post as a
 representative lens rather than a complete recap; narrow reports may state the
 whole thesis. The prompt retains factual grounding and clean paragraph
-construction without adding a post-generation rewrite or a new publication
-gate.
+construction. At the public rendering boundary, the LinkedIn-only sanitizer
+removes internal identifiers, placeholders, truncation-marked output, bullets,
+and Markdown constructs while preserving newline and paragraph structure for
+the existing `white-space: pre-line` presentation. It does not alter Expert
+View or the general public-prose sanitizer, add an LLM call, or add a new
+publication gate.
 
 Public titles are normalized from retained metadata before rendering: filename
 separators, document suffixes, literal truncation marks, and repeated adjacent

@@ -261,6 +261,33 @@ def test_render_removes_inline_internal_evidence_tokens_from_public_prose(
     assert "The retained signal is actionable." in html
 
 
+def test_render_preserves_linkedin_paragraphs_without_markdown_emphasis(tmp_path: Path) -> None:
+    response = render_report(
+        RenderRequest(
+            schema_version="1.0",
+            data={
+                "title": "LinkedIn formatting report",
+                "artifacts": {
+                    "linkedin_post": (
+                        "*Activate Technology & Media Outlook: 2026 Edition*\n\n"
+                        "The source-backed angle survives as a second paragraph."
+                    )
+                },
+            },
+            doc_name="linkedin-formatting.pdf",
+            file_id="linkedin-formatting",
+            out_dir=str(tmp_path),
+            preview_png=None,
+        ),
+        _ctx(),
+    )
+
+    html = Path(response.html_path).read_text(encoding="utf-8")
+
+    assert "*Activate Technology" not in html
+    assert "Activate Technology & Media Outlook: 2026 Edition\n\nThe source-backed" in html
+
+
 def test_render_does_not_repeat_toc_summaries_across_public_sections(
     tmp_path: Path,
 ) -> None:

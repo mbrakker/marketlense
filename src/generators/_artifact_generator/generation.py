@@ -46,7 +46,7 @@ from src.generators.artifact_normalization import (
     normalize_expert_domain,
     REQUIRED_REPORT_PAYLOAD_INSIGHTS,
     select_artifact_insights,
-    strip_artifact_inline_reference_ids,
+    strip_linkedin_inline_reference_ids,
 )
 from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.services import prompt_service, report_analysis_store_service
@@ -797,7 +797,7 @@ def generate_artifacts(
     expert_result = distribution_results.get("expert_comment", {})
     linkedin_result = distribution_results.get("linkedin_post", {})
     expert_comment = _s(expert_result.get("expert_comment"))
-    linkedin_post = strip_artifact_inline_reference_ids(
+    linkedin_post = strip_linkedin_inline_reference_ids(
         _s(linkedin_result.get("linkedin_post"))
     )
     (

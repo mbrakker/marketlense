@@ -38,6 +38,7 @@ from .normalization import (
     _is_visual_candidate_slide,
     _pick_first_text,
     _s,
+    _sanitize_linkedin_post,
     _sanitize_public_prose,
     _split_summary_bullets,
     _unwrap_doc_map,
@@ -377,7 +378,7 @@ def _build_render_view(
         "quotes": quotes,
         "commentary": _sanitize_public_prose(data.get("commentary")),
         "expert_comment": _sanitize_public_prose(artifacts.get("expert_comment")),
-        "linkedin_post": _sanitize_public_prose(artifacts.get("linkedin_post")),
+        "linkedin_post": _sanitize_linkedin_post(artifacts.get("linkedin_post")),
         "figures": {
             "slides": figure_slides,
             "visual_candidates": visual_candidate_slides,
@@ -404,7 +405,7 @@ def _build_render_view(
             "has_quotes": bool(quotes),
             "has_appendix": bool(
                 _sanitize_public_prose(artifacts.get("expert_comment"))
-                or _sanitize_public_prose(artifacts.get("linkedin_post"))
+                or _sanitize_linkedin_post(artifacts.get("linkedin_post"))
                 or expert_status["status"] == "abstained"
                 or linkedin_status["status"] == "abstained"
             ),

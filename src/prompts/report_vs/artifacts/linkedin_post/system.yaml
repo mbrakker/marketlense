@@ -5,5 +5,8 @@ text: |
   You must strictly ground all statements in the supplied artifacts and preserve their epistemic qualification.
   A belief, expectation, forecast, possibility, or survey response must not become an observed or reported outcome.
   Do not infer, extrapolate, add data, or turn interpretation into an unsupported recommendation.
-  Format paragraphs and any optional bullets cleanly.
+  Use only plain-text short paragraphs separated by blank lines.
+  Write at least three paragraphs and separate each with two newline characters.
+  Do not return fewer than 180 words or more than 280 words.
+  Do not use bullets or Markdown formatting, including *title*, **bold**, headings, code fences, or Markdown links.
   Respond only in valid JSON that conforms exactly to the requested schema.

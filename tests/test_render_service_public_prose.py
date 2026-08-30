@@ -6,6 +6,7 @@ from pathlib import Path
 from src.services._render_service.normalization import (
     _build_core_signal,
     _core_signal_heading,
+    _sanitize_linkedin_post,
     _sanitize_public_prose,
 )
 
@@ -189,6 +190,17 @@ def test_render_sanitizer_preserves_quarterly_and_half_year_periods() -> None:
     text = "Share moved from 43% in Q1 2025 to 41% in Q2 2025 and from H1 2025 to H2 2025."
 
     assert _sanitize_public_prose(text) == text
+
+
+def test_linkedin_sanitizer_preserves_paragraph_breaks_and_removes_publication_defects() -> None:
+    assert _sanitize_linkedin_post(
+        "*Activate Technology & Media Outlook: 2026 Edition* (finding_12)\n\n"
+        "A supported second paragraph.\n\n"
+        "[PLACEHOLDER]"
+    ) == (
+        "Activate Technology & Media Outlook: 2026 Edition\n\n"
+        "A supported second paragraph."
+    )
 
 
 def test_core_signal_preserves_distinct_quarterly_periods() -> None:

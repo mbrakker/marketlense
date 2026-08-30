@@ -33,6 +33,12 @@ _INLINE_INTERNAL_REFERENCE = re.compile(
     re.IGNORECASE,
 )
 _PUBLIC_TRUNCATION_MARKER = re.compile(r"(?:\.\.\.|…)")
+_LINKEDIN_MARKDOWN_LINK = re.compile(r"\[([^\]\n]+)\]\([^\)\n]+\)")
+_LINKEDIN_MARKDOWN_HEADING = re.compile(r"(?m)^\s{0,3}#{1,6}\s+")
+_LINKEDIN_LIST_MARKER = re.compile(r"(?m)^(\s*)(?:[-+*]|\d+[.)])\s+")
+_LINKEDIN_PLACEHOLDER = re.compile(
+    r"\[(?:placeholder|todo|tbd|not available|n/?a|unknown)\]", re.IGNORECASE
+)
 _MECHANICAL_PUBLIC_SCAFFOLD = re.compile(
     r"\b(?:answer|observation|implication|executive action|executive takeaway|concrete finding|"
     r"immediate implication)\s*:",
@@ -92,6 +98,25 @@ def _sanitize_public_prose(value: object) -> str:
     if _PUBLIC_TRUNCATION_MARKER.search(sanitized):
         return ""
     return _MECHANICAL_PUBLIC_SCAFFOLD.sub("", sanitized).strip()
+
+
+def _sanitize_linkedin_post(value: object) -> str:
+    """Return plain LinkedIn prose while retaining its paragraph structure."""
+    text = _s(value)
+    if not text:
+        return ""
+    sanitized = _INLINE_INTERNAL_REFERENCE.sub("", text.replace("\r\n", "\n"))
+    sanitized = _LINKEDIN_PLACEHOLDER.sub("", sanitized)
+    if _PUBLIC_TRUNCATION_MARKER.search(sanitized):
+        return ""
+    sanitized = _LINKEDIN_MARKDOWN_LINK.sub(r"\1", sanitized)
+    sanitized = _LINKEDIN_MARKDOWN_HEADING.sub("", sanitized)
+    sanitized = _LINKEDIN_LIST_MARKER.sub(r"\1", sanitized)
+    sanitized = re.sub(r"[*_`]", "", sanitized)
+    sanitized = _MECHANICAL_PUBLIC_SCAFFOLD.sub("", sanitized)
+    return "\n".join(
+        re.sub(r"[ \t]{2,}", " ", line).strip() for line in sanitized.split("\n")
+    ).strip()
 
 
 def _split_summary_bullets(text: str, *, max_items: int = 5) -> list[str]:
@@ -1251,6 +1276,7 @@ __all__ = [
     "_coerce_list",
     "_coerce_positive_int",
     "_pick_first_text",
+    "_sanitize_linkedin_post",
     "_sanitize_public_prose",
     "_split_summary_bullets",
     "_sentence_excerpt",

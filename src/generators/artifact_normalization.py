@@ -575,6 +575,19 @@ def strip_artifact_inline_reference_ids(text: str) -> str:
     return cleaned.strip(" ,;:-")
 
 
+def strip_linkedin_inline_reference_ids(text: str) -> str:
+    """Remove internal LinkedIn reference tokens without flattening paragraphs."""
+    cleaned = INLINE_REFERENCE_GROUP_RE.sub("", text.replace("\r\n", "\n"))
+    lines = []
+    for line in cleaned.split("\n"):
+        line = re.sub(r"[ \t]{2,}", " ", line)
+        line = re.sub(r"[ \t]+([,.;:!?])", r"\1", line)
+        line = re.sub(r"([(\[])\s+", r"\1", line)
+        line = re.sub(r"\s+([)\]])", r"\1", line)
+        lines.append(line.strip(" ,;:-"))
+    return "\n".join(lines).strip("\n")
+
+
 def normalize_artifact_topics(value: Any) -> List[str]:
     topics = value if isinstance(value, list) else []
     normalized: List[str] = []
