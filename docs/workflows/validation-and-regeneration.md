@@ -37,6 +37,10 @@ compatibility changes are still checked by the canonical lineage graph and can
 therefore move the resume point earlier. Missing, malformed, unsigned, or
 unprovable readiness/lineage is recorded as `blocked` before preflight or
 provider construction; it never permits a guessed checkpoint or unsafe reuse.
+When an enforced refresh plan is present, the ingest handoff does not pin a
+resume stage: the minimum-regeneration planner supplies the compatible latest
+safe boundary. This preserves a render-only refresh when valid while allowing
+a deterministic policy or lineage change to request the earlier safe stage.
 
 When a repair is supported, the workflow maps validation issues to the narrowest appropriate artifact family and revalidates the result. Retry and backoff are controlled by orchestration; generators surface typed errors rather than retrying provider calls themselves. Publication policy determines whether unresolved validation issues block WordPress side effects.
 

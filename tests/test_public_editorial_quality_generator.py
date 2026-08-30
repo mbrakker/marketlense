@@ -333,6 +333,24 @@ def test_short_prose_and_legitimate_b2b_terminology_are_not_fragments() -> None:
     assert "public_editorial_quality.ocr_fragment" not in _rule_ids(report)
 
 
+def test_numeric_key_figure_display_is_not_treated_as_sentence_prose() -> None:
+    artifacts = deepcopy(_retained_artifacts())
+    artifacts["key_figures"] = [
+        {
+            "label": "Retained adoption finding",
+            "figure": "70 percent",
+            "why_it_matters": "The retained adoption finding affects planning.",
+            "evidence_id": "F1",
+        }
+    ]
+
+    report = evaluate_public_editorial_quality(
+        report_id="retained-report", artifacts=artifacts
+    )
+
+    assert "public_editorial_quality.sentence_fragment" not in _rule_ids(report)
+
+
 def test_selective_repair_targets_only_the_failed_insight_bundle() -> None:
     artifacts = deepcopy(_retained_artifacts())
     artifacts["insights_final"][0].update(

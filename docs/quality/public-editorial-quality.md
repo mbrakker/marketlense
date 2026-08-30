@@ -18,6 +18,8 @@ The gate blocks public release unless semantic and grounding validation passed, 
 
 It inspects headings, body text, captions, quotations, link labels and hrefs, alt attributes, JSON-LD, canonical and Open Graph metadata. A public chart card must be linked end-to-end to an accepted crop candidate, source page, evidence ID, insight ID, caption, and public takeaway. Weak, text-only, or incomplete cards are omitted during rendering and a mismatch between that public projection and the retained card set fails readiness. Cropping is not modified by this gate.
 
+A standalone key-figure display is checked as a grounded numeric value, not as sentence prose. Its accompanying label and explanation remain subject to public-prose checks; this avoids falsely rejecting a supported display such as `70 percent` solely because it is intentionally not a sentence.
+
 Duplicate detection compares normalized claim-token sets and material-number overlap. Regexes are used only for deterministic syntax defects such as IDs and placeholders; semantic duplication is not determined by a regex alone.
 
 ## First-run prevention

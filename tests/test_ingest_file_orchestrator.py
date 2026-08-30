@@ -165,7 +165,12 @@ def test_stale_canonical_package_resumes_owner_without_duplicate_acquisition(
 ) -> None:
     """Removing the canonical owner route would download and create another package."""
     file = _drive_file(md5_checksum="drive-md5")
-    calls = {"downloads": 0, "report_id": "", "resume_stage": ""}
+    calls = {
+        "downloads": 0,
+        "report_id": "",
+        "resume_stage": "",
+        "auto_resume": False,
+    }
 
     def _download(*_args, **_kwargs):
         calls["downloads"] += 1
@@ -179,12 +184,14 @@ def test_stale_canonical_package_resumes_owner_without_duplicate_acquisition(
         _ctx,
         *,
         resume_from_stage=None,
+        auto_resume_from_latest_safe=False,
         readiness_refresh_plan=None,
         refresh_telemetry_path=None,
         **_kwargs,
     ):
         calls["report_id"] = current_file.file_id
         calls["resume_stage"] = resume_from_stage or ""
+        calls["auto_resume"] = auto_resume_from_latest_safe
         assert readiness_refresh_plan is not None
         assert refresh_telemetry_path.endswith("publish_readiness_refresh_plan.json")
         return _outcome(current_file, md5)
@@ -235,7 +242,8 @@ def test_stale_canonical_package_resumes_owner_without_duplicate_acquisition(
     assert calls == {
         "downloads": 0,
         "report_id": "drive-original",
-        "resume_stage": "analysis_complete",
+        "resume_stage": "",
+        "auto_resume": True,
     }
     with sqlite3.connect(ingest_settings.reports_db) as conn:
         telemetry = conn.execute(
@@ -392,7 +400,7 @@ def test_existing_html_cache_rejects_readiness_from_another_producer_revision(
     )
 
     assert (result.outcome.status, result.outcome.error) == ("processed", None)
-    assert resumed_from == {"stage": "analysis_complete", "auto": False}
+    assert resumed_from == {"stage": None, "auto": True}
 
 
 def test_expired_readiness_uses_the_existing_enforced_render_recovery_path(
@@ -523,8 +531,8 @@ def test_expired_readiness_uses_the_existing_enforced_render_recovery_path(
 
     assert result.outcome.status == "processed"
     assert captured == {
-        "auto": False,
-        "stage": "analysis_complete",
+        "auto": True,
+        "stage": None,
         "mode": "enforce",
         "intent": "render_repair",
         "invalidations": {"rendered_html": "publish_readiness.expired"},

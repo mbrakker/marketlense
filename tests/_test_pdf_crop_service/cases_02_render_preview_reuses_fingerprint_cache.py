@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
+from os.path import relpath
+from pathlib import Path
 from threading import Barrier
 
 from ._shared import *  # noqa: F401,F403
@@ -43,6 +45,32 @@ def test_fingerprint_sidecar_write_is_safe_for_concurrent_same_artifact(
         descriptor.cache_key
     )
     assert list(sidecar_path.parent.glob(f"{sidecar_path.name}.tmp-write-*")) == []
+
+
+def test_fingerprint_sidecar_resolves_relative_artifact_paths(tmp_path) -> None:
+    artifact_path = Path(
+        relpath(tmp_path / "slices" / "report-chart-1.png", start=Path.cwd())
+    )
+    artifact_path.parent.mkdir(parents=True)
+    artifact_path.write_bytes(b"image")
+    descriptor = PdfArtifactFingerprintDescriptor(
+        artifact_kind="crop_region",
+        source_pdf_path="source.pdf",
+        output_rel_path="slices/report-chart-1.png",
+        page=1,
+        artifact_identity="chart-1",
+        content_fingerprint="content",
+        settings_payload={"dpi": 144},
+        artifact_version="1.0",
+    )
+
+    written = Path(write_artifact_sidecar(descriptor, artifact_path))
+
+    assert written.is_absolute()
+    assert written == artifact_path.resolve().with_name(
+        f"{artifact_path.name}.fingerprint.json"
+    )
+
 
 def test_render_preview_reuses_fingerprint_cache_on_partial_change_rerun(
     tmp_path, caplog
@@ -341,6 +369,7 @@ def test_publication_strict_cache_invalidates_old_crop_artifact_version(
 
 __all__ = [
     "test_fingerprint_sidecar_write_is_safe_for_concurrent_same_artifact",
+    "test_fingerprint_sidecar_resolves_relative_artifact_paths",
     "test_render_preview_reuses_fingerprint_cache_on_partial_change_rerun",
     "test_render_page_for_crop_refine_invalidates_stale_artifact_version",
     "test_crop_regions_reuses_fingerprint_cache_on_partial_change_rerun",

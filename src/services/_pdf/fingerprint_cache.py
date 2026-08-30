@@ -172,6 +172,10 @@ def write_artifact_sidecar(
     descriptor: PdfArtifactFingerprintDescriptor,
     artifact_path: Path,
 ) -> str:
+    # Crop callers may supply paths rooted at the workspace rather than an
+    # absolute path. Resolve once so tempfile and os.replace always address
+    # the same directory on Windows.
+    artifact_path = artifact_path.resolve()
     record = descriptor.record()
     sidecar_path = _sidecar_path(artifact_path)
     sidecar_path.parent.mkdir(parents=True, exist_ok=True)

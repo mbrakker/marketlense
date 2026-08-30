@@ -1021,7 +1021,11 @@ def run_ingest_file(
                     settings,
                     runtime.md5,
                     file_ctx,
-                    resume_from_stage="analysis_complete",
+                    # Let an enforced minimal execution plan choose its
+                    # compatible recovery boundary. A retained canonical
+                    # package can require render-only recovery after a
+                    # deterministic readiness-rule change.
+                    resume_from_stage=None,
                     readiness_refresh_plan=runtime.readiness_refresh_plan,
                     refresh_telemetry_path=runtime.readiness_refresh_telemetry_path,
                 ),
@@ -1281,9 +1285,9 @@ def run_ingest_file(
                 settings,
                 runtime.md5,
                 file_ctx,
-                resume_from_stage=(
-                    "analysis_complete" if runtime.readiness_refresh_required else None
-                ),
+                # Readiness refreshes retain the source and canonical package,
+                # but the enforced plan owns the compatible recovery boundary.
+                resume_from_stage=None,
                 readiness_refresh_plan=runtime.readiness_refresh_plan,
                 refresh_telemetry_path=runtime.readiness_refresh_telemetry_path,
             ),

@@ -461,7 +461,18 @@ def _key_figure_issues(
                 repair_target="insights_bundle",
                 evidence_text=evidence_text,
             )
-            issues.extend(_text_issues(report_id, item))
+            field_issues = _text_issues(report_id, item)
+            if field_name == "figure":
+                # A key-figure display can be a standalone number/unit rather
+                # than reader-facing sentence prose. Keep numeric-grounding
+                # checks, but do not require that display to be a sentence.
+                field_issues = [
+                    issue
+                    for issue in field_issues
+                    if issue.rule_id
+                    != "public_editorial_quality.sentence_fragment"
+                ]
+            issues.extend(field_issues)
     return issues
 
 
