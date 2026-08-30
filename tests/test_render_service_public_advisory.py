@@ -313,6 +313,60 @@ def test_render_surfaces_topics_key_figures_and_chart_insight_cards(tmp_path):
     assert "Do not publish as a claim." not in html
 
 
+def test_render_omits_malformed_retained_key_figures_and_normalizes_currency_unit(
+    tmp_path,
+):
+    response = render_report(
+        RenderRequest(
+            schema_version="1.0",
+            data={
+                "title": "IAB key figure regression",
+                "tldr": "The source report retains supporting metric evidence.",
+                "publisher": "IAB",
+                "artifacts": {
+                    "key_figures": [
+                        {
+                            "figure": "19.2%; $62.1; $102.9; 39.8% growth; $ billion; $ billion; share",
+                            "unit": "$ billion; $ billion; share",
+                            "label": "Composite metric must not be public.",
+                        },
+                        {
+                            "figure": "258.6 $ billion",
+                            "unit": "$ billion",
+                            "label": "U.S. internet advertising revenue",
+                        },
+                    ],
+                    "metric_spine": [
+                        {
+                            "value": "19.2%; $62.1; $102.9; 39.8% growth",
+                            "unit": "$ billion; $ billion; share",
+                            "label": "Composite advisory metric must not be public.",
+                        },
+                        {
+                            "value": "258.6",
+                            "unit": "$ billion",
+                            "label": "Advisory revenue metric",
+                        },
+                    ],
+                },
+            },
+            doc_name="iab-key-figure-regression.pdf",
+            file_id="iab-key-figure-regression",
+            out_dir=str(tmp_path),
+            preview_png=None,
+        ),
+        _ctx(),
+    )
+
+    html = Path(response.html_path).read_text(encoding="utf-8")
+
+    assert "19.2%; $62.1" not in html
+    assert "Composite metric must not be public." not in html
+    assert "Composite advisory metric must not be public." not in html
+    assert "258.6 $ billion" not in html
+    assert "$258.6 billion" in html
+
+
 def test_render_removes_mechanical_scaffolding_from_commentary(tmp_path):
     response = render_report(
         RenderRequest(

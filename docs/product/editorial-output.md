@@ -24,6 +24,16 @@ selection are separate flows. Derived metric labels retain a leading geographic
 initialism and the complete first source sentence rather than emitting a clipped
 fragment.
 
+Each public metric-spine item represents exactly one primary human-readable
+value, or one coherent comparison/range. Semicolon-packed values or units and
+other clearly composite displays fail closed: the Key Figure is omitted while
+the retained insight prose, supporting evidence, and evidence ID remain
+available. Units must express one semantic unit without repeating currency
+symbols or magnitude words already in the value; an unambiguous numeric value
+with a malformed `$ billion` unit is rendered as a conventional currency value
+and magnitude. This display rule does not alter Editorial Plan ranking or the
+separate chart, table, and crop paths.
+
 When evidence supports a Decision Brief, it serves a distinct role from the Executive Summary. Its strategic context is the concise report thesis (`tldr` or compact TLDR), never the full executive-summary prose. Decision implications use evidence-linked insight `so_what` fields; priority moves use supported `now_what` fields; and watchouts use evidence-linked counter-signals plus retained limitations. Unsupported sections are omitted rather than inferred, while the retained evidence links continue to identify the supporting source material.
 
 LinkedIn output uses the persisted editorial plan as its primary thematic frame,

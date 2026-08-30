@@ -114,6 +114,72 @@ def test_metric_spine_label_keeps_a_complete_long_source_sentence() -> None:
     assert spine[0]["label"] == text
 
 
+@pytest.mark.parametrize(
+    ("value", "unit", "expected_display"),
+    [
+        ("70%", "percent", "70%"),
+        ("$258.6", "billion", "$258.6 billion"),
+        ("258.6", "$ billion", "$258.6 billion"),
+        ("$7.2T to $10.4T", "", "$7.2T to $10.4T"),
+    ],
+)
+def test_metric_spine_renders_one_clean_primary_metric(
+    value: str, unit: str, expected_display: str
+) -> None:
+    spine = derive_metric_spine_from_insights(
+        [
+            {
+                "id": "primary-metric",
+                "text": "The source-backed insight retains supporting numbers in prose.",
+                "evidence_id": "iab-primary-metric",
+                "metric": {"value": value, "unit": unit},
+            }
+        ]
+    )
+
+    figures = build_key_figures(metric_spine=spine, evidence_packs={})
+
+    assert [figure["figure"] for figure in figures] == [expected_display]
+
+
+def test_metric_spine_omits_iab_semicolon_packed_metric_but_preserves_insight() -> None:
+    fixture_path = (
+        Path(__file__).resolve().parents[1]
+        / "fixtures"
+        / "editorial_temporal"
+        / "iab_pwc_quarterly.json"
+    )
+    fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+    insight = {
+        "id": "iab-composite-metric",
+        "text": fixture["source_comparison"],
+        "evidence_id": fixture["report_id"],
+        "metric": {
+            "value": fixture["malformed_key_figure_value"],
+            "unit": fixture["malformed_key_figure_unit"],
+        },
+    }
+
+    assert derive_metric_spine_from_insights([insight]) == []
+    assert insight["text"] == fixture["source_comparison"]
+    assert insight["evidence_id"] == fixture["report_id"]
+
+
+def test_metric_spine_omits_metric_when_no_clean_display_is_available() -> None:
+    spine = derive_metric_spine_from_insights(
+        [
+            {
+                "id": "composite-metric",
+                "text": "Supporting values remain available in the insight text.",
+                "evidence_id": "source-1",
+                "metric": {"value": "19.2%; $62.1; $102.9", "unit": "share"},
+            }
+        ]
+    )
+
+    assert spine == []
+
+
 def test_build_executive_advisory_artifacts_surfaces_not_found_states() -> None:
     advisory = build_executive_advisory_artifacts(
         summary={
@@ -126,9 +192,7 @@ def test_build_executive_advisory_artifacts_surfaces_not_found_states() -> None:
                 "id": "i1",
                 "text": "Wallet adoption is rising among enterprise merchants.",
                 "evidence_id": "ev1",
-                "evidence_spans": [
-                    {"evidence_id": "ev1", "source_pack": "findings"}
-                ],
+                "evidence_spans": [{"evidence_id": "ev1", "source_pack": "findings"}],
             }
         ],
         quotes_final=[],
@@ -173,7 +237,9 @@ def test_build_executive_advisory_artifacts_separates_decision_roles() -> None:
         evidence_packs={
             "limitations": {
                 "limitations": [
-                    {"description": "The report does not compare every merchant segment."}
+                    {
+                        "description": "The report does not compare every merchant segment."
+                    }
                 ]
             },
         },
@@ -187,9 +253,10 @@ def test_build_executive_advisory_artifacts_separates_decision_roles() -> None:
     assert decision_brief["decision_implications"] == [
         "Wallet coverage now shapes conversion resilience."
     ]
-    assert "Enterprise merchants are adopting wallets faster." not in decision_brief[
-        "decision_implications"
-    ]
+    assert (
+        "Enterprise merchants are adopting wallets faster."
+        not in decision_brief["decision_implications"]
+    )
     assert decision_brief["priority_moves"] == [
         "Prioritize wallet coverage in the next roadmap.",
     ]
@@ -419,18 +486,18 @@ def test_assemble_artifacts_builds_topics_key_figures_and_chart_cards() -> None:
         insights_final=[
             {
                 "id": "i1",
-                    "text": "Enterprise merchants are adopting wallets faster.",
-                    "evidence_id": "f1",
-                    "evidence": "Revenue +10% YoY",
-                    "metric": {
-                        "label": "Wallet adoption",
-                        "value": "42",
-                        "unit": "percent",
-                        "timeframe": "2026",
-                        "segment": "enterprise merchants",
-                        "geography": "Global",
-                        "delta": "+7 points",
-                    },
+                "text": "Enterprise merchants are adopting wallets faster.",
+                "evidence_id": "f1",
+                "evidence": "Revenue +10% YoY",
+                "metric": {
+                    "label": "Wallet adoption",
+                    "value": "42",
+                    "unit": "percent",
+                    "timeframe": "2026",
+                    "segment": "enterprise merchants",
+                    "geography": "Global",
+                    "delta": "+7 points",
+                },
                 "pages": [2],
             }
         ],
@@ -507,7 +574,7 @@ def test_generate_artifacts_passes_metric_spine_to_editorial_prompts(tmp_path) -
                     "evidence_id": "f1",
                     "evidence": "Revenue +10% YoY",
                     "metric": {
-                            "value": "42",
+                        "value": "42",
                         "unit": "percent",
                         "timeframe": "2026",
                         "segment": "enterprise merchants",
@@ -559,6 +626,9 @@ __all__ = [
     "test_metric_spine_label_does_not_split_a_decimal_display",
     "test_metric_spine_label_keeps_leading_abbreviation_with_its_sentence",
     "test_metric_spine_label_keeps_a_complete_long_source_sentence",
+    "test_metric_spine_renders_one_clean_primary_metric",
+    "test_metric_spine_omits_iab_semicolon_packed_metric_but_preserves_insight",
+    "test_metric_spine_omits_metric_when_no_clean_display_is_available",
     "test_metric_spine_preserves_source_display_and_exposes_complete_numeric_metadata",
     "test_build_executive_advisory_artifacts_surfaces_not_found_states",
     "test_build_executive_advisory_artifacts_separates_decision_roles",

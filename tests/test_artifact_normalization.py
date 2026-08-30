@@ -250,16 +250,30 @@ def test_select_artifact_insights_fills_required_report_slots_after_theme_covera
     plan = {
         "report_thesis": "The report supports five distinct grounded decisions.",
         "themes": [
-            {"theme": f"Theme {index}", "priority": index, "evidence_ids": [f"e{index}"]}
+            {
+                "theme": f"Theme {index}",
+                "priority": index,
+                "evidence_ids": [f"e{index}"],
+            }
             for index in range(1, 5)
         ],
     }
     final_insights = [
-        {"id": f"final-{index}", "text": f"Final insight {index}.", "evidence_id": f"e{index}", "score": 0.9}
+        {
+            "id": f"final-{index}",
+            "text": f"Final insight {index}.",
+            "evidence_id": f"e{index}",
+            "score": 0.9,
+        }
         for index in range(1, 5)
     ]
     candidate_insights = [
-        {"id": "candidate-5", "text": "Fifth grounded insight.", "evidence_id": "e5", "score": 0.8}
+        {
+            "id": "candidate-5",
+            "text": "Fifth grounded insight.",
+            "evidence_id": "e5",
+            "score": 0.8,
+        }
     ]
 
     selected = select_artifact_insights(
@@ -269,3 +283,29 @@ def test_select_artifact_insights_fills_required_report_slots_after_theme_covera
     )
 
     assert [item["evidence_id"] for item in selected] == ["e1", "e2", "e3", "e4", "e5"]
+
+
+def test_normalize_artifact_insights_omits_composite_public_metric_fields() -> None:
+    insight = normalize_artifact_insights(
+        [
+            {
+                "id": "iab-composite",
+                "text": "The insight keeps all supporting figures in its public prose.",
+                "evidence_id": "iab-evidence-1",
+                "evidence": "19.2%, $62.1 billion, and $102.9 billion are source-backed.",
+                "metric": {
+                    "value": "19.2%; $62.1; $102.9; 39.8% growth",
+                    "unit": "$ billion; $ billion; share",
+                },
+            }
+        ],
+        prefix="insight",
+    )[0]
+
+    assert insight["metric"]["value"] == ""
+    assert insight["metric"]["unit"] == ""
+    assert (
+        insight["text"]
+        == "The insight keeps all supporting figures in its public prose."
+    )
+    assert insight["evidence_id"] == "iab-evidence-1"

@@ -9,6 +9,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from PIL import Image
 
 from src.utils.coercion import stripped_string_value as _s
+from src.utils.public_metric_display import normalize_public_metric_display
 
 logger = logging.getLogger("market_lense.render_service")
 TEMPLATES_DIR = Path(__file__).resolve().parents[3] / "templates"
@@ -529,6 +530,9 @@ def _coerce_public_metric_spine(
         unit = _s(item.get("unit"))
         if not label or not value:
             continue
+        value, unit = normalize_public_metric_display(value=value, unit=unit)
+        if not value:
+            continue
         metric_value = (
             f"{value}{unit}"
             if unit in {"%", "pp"}
@@ -683,6 +687,9 @@ def _coerce_public_key_figures(
         if not value or not label:
             continue
         unit = _s(item.get("unit"))
+        value, unit = normalize_public_metric_display(value=value, unit=unit)
+        if not value:
+            continue
         if unit and unit.casefold() in value.casefold():
             display_value = value
         elif unit in {"%", "pp"}:

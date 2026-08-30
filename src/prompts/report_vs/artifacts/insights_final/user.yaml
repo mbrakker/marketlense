@@ -21,3 +21,4 @@ text: |
   Tighten wording for executive relevance but do not change the underlying facts.
   Do not output arrays/comma-separated values inside evidence_id; if uncertain, use an empty string.
   Prefer insights that can carry a clear metric, claim-level evidence, or public-safe proof point into final editorial artifacts.
+  Retain at most one public primary metric per insight: `metric.value` must be one complete human-readable metric or one coherent comparison/range, never a semicolon-separated list. `metric.unit` must be one semantic unit and must not repeat currency symbols or magnitude words already in `metric.value`. Keep any additional supporting numbers in `text` and `evidence`.

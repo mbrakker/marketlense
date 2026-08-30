@@ -28,3 +28,4 @@ text: |
     empty, generic, or a citation label.
   - Remove unsupported wording rather than hedge it.
   - Do not output unsupported metrics, quotes, or conclusions.
+  - Retain at most one public primary metric per insight: `metric.value` must be one complete human-readable metric or one coherent comparison/range, never a semicolon-separated list. `metric.unit` must be one semantic unit and must not repeat currency symbols or magnitude words already in `metric.value`. Keep additional supporting numbers in `text` and `evidence`.

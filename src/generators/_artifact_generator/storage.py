@@ -66,6 +66,7 @@ from src.utils.model_resolver import (
     routing_policies_from_config,
 )
 from src.utils.numeric_display import numeric_metadata_for_complete_display
+from src.utils.public_metric_display import normalize_public_metric_display
 
 logger = logging.getLogger("market_lense.artifact_generator")
 EVIDENCE_QUALITY_BY_SUPPORT_TYPE = {
@@ -176,7 +177,7 @@ def assemble_artifacts_payload(
                 module=logger.name,
                 fields=evidence_span_stats,
             )
-    )
+        )
     metric_spine = derive_metric_spine_from_insights(
         insights_final, editorial_plan=editorial_plan
     )
@@ -437,6 +438,7 @@ def derive_metric_spine_from_insights(
             continue
         value = _s(metric.get("value") or metric.get("raw_value")).strip()
         unit = _s(metric.get("unit")).strip()
+        value, unit = normalize_public_metric_display(value=value, unit=unit)
         evidence_id = _s(
             insight.get("evidence_id") or metric.get("evidence_id")
         ).strip()
@@ -450,24 +452,24 @@ def derive_metric_spine_from_insights(
             for field_name in ("timeframe", "segment", "geography")
             if not _s(metric.get(field_name)).strip()
         ]
-        item = {
-                "schema_version": "1.0",
-                "metric_id": _s(insight.get("id") or metric.get("metric_id")).strip()
-                or f"insight_metric_{index}",
-                "label": label,
-                "value": value,
-                "unit": unit,
-                "timeframe": _s(metric.get("timeframe")).strip(),
-                "segment": _s(metric.get("segment")).strip(),
-                "geography": _s(metric.get("geography")).strip(),
-                "comparator": _s(metric.get("comparator")).strip(),
-                "baseline": _s(metric.get("baseline")).strip(),
-                "delta": _s(metric.get("delta") or metric.get("trend")).strip(),
-                "sample_size": _s(metric.get("sample_size")).strip(),
-                "confidence": _s(metric.get("confidence")).strip() or "source_backed",
-                "missing_context_notes": missing_context_notes,
-                "evidence_id": evidence_id,
-            }
+        item: Dict[str, Any] = {
+            "schema_version": "1.0",
+            "metric_id": _s(insight.get("id") or metric.get("metric_id")).strip()
+            or f"insight_metric_{index}",
+            "label": label,
+            "value": value,
+            "unit": unit,
+            "timeframe": _s(metric.get("timeframe")).strip(),
+            "segment": _s(metric.get("segment")).strip(),
+            "geography": _s(metric.get("geography")).strip(),
+            "comparator": _s(metric.get("comparator")).strip(),
+            "baseline": _s(metric.get("baseline")).strip(),
+            "delta": _s(metric.get("delta") or metric.get("trend")).strip(),
+            "sample_size": _s(metric.get("sample_size")).strip(),
+            "confidence": _s(metric.get("confidence")).strip() or "source_backed",
+            "missing_context_notes": missing_context_notes,
+            "evidence_id": evidence_id,
+        }
         numeric_metadata = numeric_metadata_for_complete_display(value)
         if numeric_metadata is not None:
             item["source_display_value"] = value
@@ -498,7 +500,9 @@ def _metric_editorial_rank(
     editorial_plan: Dict[str, Any] | None,
 ) -> tuple[int, int]:
     evidence_id = _s(metric.get("evidence_id")).strip().casefold()
-    raw_themes = editorial_plan.get("themes") if isinstance(editorial_plan, dict) else []
+    raw_themes = (
+        editorial_plan.get("themes") if isinstance(editorial_plan, dict) else []
+    )
     themes = raw_themes if isinstance(raw_themes, list) else []
     priorities: List[int] = []
     for theme in themes:
@@ -949,9 +953,10 @@ def _has_advisory_evidence(item: Dict[str, Any]) -> bool:
 def _decision_brief_context(summary: Dict[str, Any]) -> str:
     context = _s(summary.get("tldr") or summary.get("card_tldr_compact")).strip()
     executive_summary = _s(summary.get("executive_summary")).strip()
-    if " ".join(context.split()).casefold() == " ".join(
-        executive_summary.split()
-    ).casefold():
+    if (
+        " ".join(context.split()).casefold()
+        == " ".join(executive_summary.split()).casefold()
+    ):
         return ""
     return context
 
@@ -990,8 +995,7 @@ def build_executive_advisory_artifacts(
     supported_insights = [
         item
         for item in insights_final
-        if isinstance(item, dict)
-        and _has_advisory_evidence(item)
+        if isinstance(item, dict) and _has_advisory_evidence(item)
     ]
     grounded_recommendations = [
         {
@@ -1070,9 +1074,7 @@ def build_executive_advisory_artifacts(
         "recommendations": {
             "schema_version": "1.0",
             "status": (
-                "generated"
-                if grounded_recommendations
-                else "recommendations_not_found"
+                "generated" if grounded_recommendations else "recommendations_not_found"
             ),
             "items": grounded_recommendations,
         },

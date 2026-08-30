@@ -8,6 +8,7 @@ from src.contracts.ingest import IngestSettings
 from src.utils.coercion import stripped_string_value as _s
 from src.utils.errors import AppError
 from src.utils.json_utils import dump_json_object as _dump_json
+from src.utils.public_metric_display import normalize_public_metric_display
 from src.utils.text_normalization import normalize_text
 
 METRIC_FIELDS = (
@@ -152,8 +153,7 @@ def normalize_artifact_editorial_plan(value: Any) -> Dict[str, Any]:
             raise AppError(
                 code="editorial_plan_invalid",
                 message=(
-                    "Editorial plan themes must have unique priorities and "
-                    "evidence IDs"
+                    "Editorial plan themes must have unique priorities and evidence IDs"
                 ),
                 retryable=False,
             )
@@ -232,6 +232,9 @@ def normalize_artifact_insights(items: Any, *, prefix: str) -> List[Dict[str, An
             continue
         metric_raw = _to_dict(item.get("metric"))
         metric = {key: _s(metric_raw.get(key, "")) for key in METRIC_FIELDS}
+        metric["value"], metric["unit"] = normalize_public_metric_display(
+            value=metric["value"], unit=metric["unit"]
+        )
         pages_raw_obj = item.get("pages")
         pages_raw = pages_raw_obj if isinstance(pages_raw_obj, list) else []
         pages = [int(p) for p in pages_raw if isinstance(p, int)]
@@ -354,9 +357,7 @@ def _expert_insight_implications(
         if key in seen:
             continue
         seen.add(key)
-        implications.append(
-            {"evidence_id": evidence_id, "so_what": implication}
-        )
+        implications.append({"evidence_id": evidence_id, "so_what": implication})
         if len(implications) == 7:
             break
     return implications
@@ -406,9 +407,7 @@ def _expert_context_items(
             text = item.strip()
             evidence_id = ""
         elif isinstance(item, dict):
-            text = _pick_first_non_empty_text(
-                *(item.get(key) for key in text_keys)
-            )
+            text = _pick_first_non_empty_text(*(item.get(key) for key in text_keys))
             evidence_id = _s(item.get("evidence_id") or item.get("id")).strip()
         else:
             continue

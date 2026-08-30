@@ -3,6 +3,9 @@
   "source_comparison": "Year-over-year quarterly growth was 15.7% in Q1, 15.2% in Q2, 14.7% in Q3, and 14.3% in Q4.",
   "collapsed_comparison": "Quarterly growth moved from 15.7% in 2024 to 14.3% in 2024.",
   "malformed_comparison": "Quarterly growth moved from 15.7% in to 14.3% in.",
+  "malformed_key_figure_value": "19.2%; $62.1; $102.9; 39.8% growth",
+  "malformed_key_figure_unit": "$ billion; $ billion; share",
+  "clean_currency_key_figure": "$258.6 billion",
   "core_signal_source": "The format mix creates a tradeoff between scale and momentum, and it changes how global teams allocate budgets across fast-growing channels.",
   "expected_core_signal_heading": "The format mix creates a tradeoff between scale and momentum."
 }
