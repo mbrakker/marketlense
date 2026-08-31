@@ -5,13 +5,14 @@ from pathlib import Path
 
 from src.services._render_service.normalization import (
     _build_core_signal,
+    _coerce_insights,
     _core_signal_heading,
     _sanitize_linkedin_post,
     _sanitize_public_prose,
 )
 
 
-def test_core_signal_uses_a_complete_later_sentence_before_a_fallback() -> None:
+def test_core_signal_uses_the_selected_insight_before_summary_fallback() -> None:
     signal = _build_core_signal(
         tldr_text=(
             "The first source sentence is deliberately longer than the compact "
@@ -29,8 +30,11 @@ def test_core_signal_uses_a_complete_later_sentence_before_a_fallback() -> None:
         ],
     )
 
-    assert signal["heading"] == "Demand is accelerating."
-    assert signal["body"].endswith(".")
+    assert signal["heading"] == "Source-backed market signal"
+    assert signal["body"] == (
+        "The leading finding is intentionally longer than the compact signal limit "
+        "so the renderer must not publish a clipped claim."
+    )
     assert signal["heading"] != "Executive signal pending"
     assert signal["body"] != "Source-supported signal unavailable for this report."
 
@@ -75,7 +79,7 @@ def test_core_signal_derives_a_short_heading_from_a_long_strategic_claim() -> No
     assert signal["heading"] != "Source-backed market signal"
 
 
-def test_core_signal_prefers_a_curated_strategic_implication() -> None:
+def test_core_signal_ignores_a_selected_insight_implication() -> None:
     signal = _build_core_signal(
         tldr_text="",
         executive_summary="",
@@ -94,10 +98,150 @@ def test_core_signal_prefers_a_curated_strategic_implication() -> None:
         ],
     )
 
-    assert signal["heading"] == (
-        "You can benchmark bespoke tracker results against a large harmonized dataset."
+    assert signal["heading"] == "Source-backed market signal"
+    assert signal["body"].startswith("GWI harmonizes bespoke studies")
+
+
+def test_core_signal_keeps_yougov_heading_and_body_on_one_insight() -> None:
+    fixture_path = (
+        Path(__file__).resolve().parent
+        / "fixtures"
+        / "editorial_temporal"
+        / "yougov_core_signal_pairing.json"
     )
-    assert signal["heading"] != "Source-backed market signal"
+    fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+
+    signal = _build_core_signal(
+        tldr_text="",
+        executive_summary="",
+        insights=fixture["insights"],
+    )
+
+    assert signal["heading"] == fixture["expected"]["heading"]
+    assert signal["body"] == fixture["expected"]["body"]
+    assert signal["insight_id"] == fixture["expected"]["insight_id"]
+    assert signal["evidence_id"] == fixture["expected"]["evidence_id"]
+    assert "benefits" not in signal["heading"].casefold()
+    assert "benefits" not in signal["body"].casefold()
+
+
+def test_core_signal_uses_the_selected_benefit_insight_for_both_fields() -> None:
+    insight = {
+        "id": "benefits",
+        "evidence_id": "finding-benefits",
+        "text": (
+            "The strongest perceived benefits are operational: 54% cite greater "
+            "efficiency and cost savings."
+        ),
+    }
+
+    signal = _build_core_signal(tldr_text="", executive_summary="", insights=[insight])
+
+    assert signal["heading"] == "The strongest perceived benefits are operational."
+    assert signal["body"] == insight["text"]
+    assert signal["insight_id"] == insight["id"]
+    assert signal["evidence_id"] == insight["evidence_id"]
+
+
+def test_core_signal_uses_the_selected_risk_insight_for_both_fields() -> None:
+    insight = {
+        "id": "risks",
+        "evidence_id": "finding-risks",
+        "text": (
+            "Misinformation and deepfakes are the leading concern at 57%; privacy "
+            "follows at 49% and job displacement at 44%."
+        ),
+    }
+
+    signal = _build_core_signal(tldr_text="", executive_summary="", insights=[insight])
+
+    assert (
+        signal["heading"]
+        == "Misinformation and deepfakes are the leading concern at 57%."
+    )
+    assert signal["body"] == insight["text"]
+    assert signal["insight_id"] == insight["id"]
+    assert signal["evidence_id"] == insight["evidence_id"]
+
+
+def test_core_signal_shortens_a_long_selected_insight() -> None:
+    insight = {
+        "id": "funnel-coverage",
+        "evidence_id": "finding-funnel",
+        "text": (
+            "Brand tracking pinpoints where audiences drop out of the purchase "
+            "funnel and reveals emotional gaps that weaken conversion."
+        ),
+    }
+
+    signal = _build_core_signal(tldr_text="", executive_summary="", insights=[insight])
+
+    assert signal["heading"] == (
+        "Brand tracking pinpoints where audiences drop out of the purchase funnel."
+    )
+    assert signal["body"] == insight["text"]
+    assert signal["insight_id"] == insight["id"]
+    assert signal["evidence_id"] == insight["evidence_id"]
+
+
+def test_core_signal_retains_normalized_insight_identity() -> None:
+    insights = _coerce_insights(
+        [
+            {
+                "id": "risk-insight",
+                "evidence_id": "finding-risk",
+                "text": "Misinformation and deepfakes are the leading concern at 57%.",
+            }
+        ],
+        report_title="YouGov AI report",
+    )
+
+    signal = _build_core_signal(tldr_text="", executive_summary="", insights=insights)
+
+    assert signal["heading"] == signal["body"]
+    assert signal["insight_id"] == "risk-insight"
+    assert signal["evidence_id"] == "finding-risk"
+
+
+def test_core_signal_preserves_selected_numeric_values() -> None:
+    cases = (
+        (
+            "decimal",
+            "Growth reaches 12.5% in the tracked market; leaders should plan "
+            "carefully for sustained cross-channel demand.",
+            "Growth reaches 12.5% in the tracked market.",
+        ),
+        (
+            "time",
+            "Super Users spend 17:06 daily compared with other audiences; "
+            "retailers need plans.",
+            "Super Users spend 17:06 daily compared with other audiences.",
+        ),
+        (
+            "ratio",
+            "Premium streaming inventory converts at a 3:1 ratio; buyers need "
+            "plans for concentrated demand across the year.",
+            "Premium streaming inventory converts at a 3:1 ratio.",
+        ),
+    )
+
+    for identifier, text, heading in cases:
+        signal = _build_core_signal(
+            tldr_text="",
+            executive_summary="",
+            insights=[
+                {
+                    "id": identifier,
+                    "evidence_id": f"finding-{identifier}",
+                    "text": text,
+                }
+            ],
+        )
+
+        assert signal["heading"] == heading
+        assert signal["body"] == text
+        assert signal["insight_id"] == identifier
+        assert signal["evidence_id"] == f"finding-{identifier}"
 
 
 def test_core_signal_does_not_break_a_numeric_fact_at_its_thousands_separator() -> None:

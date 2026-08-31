@@ -1,0 +1,22 @@
+{
+  "insights": [
+    {
+      "id": "yougov-benefits",
+      "evidence_id": "finding-benefits",
+      "text": "The strongest perceived benefits are operational: 54% cite greater efficiency and cost savings.",
+      "so_what": "The strongest perceived benefits are operational."
+    },
+    {
+      "id": "yougov-risks",
+      "evidence_id": "finding-risks",
+      "text": "Misinformation and deepfakes are the leading concern at 57%; privacy follows at 49% and job displacement at 44%.",
+      "so_what": "Misinformation and deepfakes are the leading concern."
+    }
+  ],
+  "expected": {
+    "heading": "Misinformation and deepfakes are the leading concern at 57%.",
+    "body": "Misinformation and deepfakes are the leading concern at 57%; privacy follows at 49% and job displacement at 44%.",
+    "insight_id": "yougov-risks",
+    "evidence_id": "finding-risks"
+  }
+}

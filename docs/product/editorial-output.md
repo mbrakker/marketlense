@@ -106,8 +106,12 @@ source-proven qualifier, or when it contains malformed wording such as `in to`
 or `between and`. It does not infer a missing period and does not reject a valid
 same-year comparison merely because both qualifiers contain the same year.
 
-The report header's Core signal uses only a complete retained sentence or a
-bounded complete clause. Its deterministic clause extraction preserves
+The report header's Core signal selects one retained insight sentence before
+deriving either field. Both its heading and body come from that same selected
+insight, and the renderer retains its selected insight and evidence identifiers
+in the view model for traceability; it never combines a strategic implication
+or another finding with the selected sentence. Its deterministic clause
+extraction preserves
 coordinated terms (for example, `between scale and momentum` and `search and
 video`) and splits only at a clear boundary such as a semicolon, colon, or
 comma followed by a conjunction. It deterministically prefers a substantive

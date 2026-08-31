@@ -66,7 +66,11 @@ _CORE_SIGNAL_CLAUSE_BOUNDARY = re.compile(
     r"[a-z]+\s+(?:is|are|was|were|be|been|being|can|could|will|would|should|"
     r"may|might|must|do|does|did|has|have|had)\b))|"
     r"\s+and\s+(?=(?:is|are|was|were|be|been|being|can|could|will|would|"
-    r"should|may|might|must|do|does|did|has|have|had|[a-z]+(?:s|ed))\b)|"
+    r"should|may|might|must|do|does|did|has|have|had|changes?|creates?|"
+    r"drives?|enables?|supports?|reduces?|improves?|accelerates?|informs?|"
+    r"guides?|requires?|shows?|signals?|shifts?|increases?|decreases?|grows?|"
+    r"falls?|remains?|becomes?|continues?|reflects?|indicates?|helps?|makes?|"
+    r"puts?|leaves?|reveals?)\b)|"
     r"\s+to\s+(?=(?:contextualize|enable|support|reduce|improve|accelerate|"
     r"inform|guide)\b)",
     re.IGNORECASE,
@@ -191,40 +195,54 @@ def _complete_sentences(text: str) -> list[str]:
 def _build_core_signal(
     *, tldr_text: str, executive_summary: str, insights: list[dict[str, str]]
 ) -> dict[str, str]:
-    insight_texts = [
-        _s(insight.get("text"))
-        for insight in insights
-        if isinstance(insight, dict) and _s(insight.get("text"))
-    ]
-    strategic_texts = [
-        _s(insight.get("so_what"))
-        for insight in insights
-        if isinstance(insight, dict) and _s(insight.get("so_what"))
-    ]
-    source_texts = insight_texts + [_s(tldr_text), _s(executive_summary)]
-    candidates = [
-        sentence.strip()
-        for source_text in source_texts
-        for sentence in _complete_sentences(source_text)
-        if sentence.strip()
-    ]
+    candidates: list[dict[str, str]] = []
+    for index, insight in enumerate(insights):
+        if not isinstance(insight, dict):
+            continue
+        text = _s(insight.get("text"))
+        if not text:
+            continue
+        for sentence in _complete_sentences(text):
+            body = sentence.strip()
+            if body:
+                candidates.append(
+                    {
+                        "body": body,
+                        "insight_id": _s(insight.get("id")) or f"insight-{index + 1}",
+                        "evidence_id": _s(insight.get("evidence_id")),
+                    }
+                )
+
+    # Summary prose is a fallback only. A selected retained insight is the
+    # canonical unit for both the displayed heading and the supporting body.
+    if not candidates:
+        for source_id, source_text in (
+            ("summary-tldr", _s(tldr_text)),
+            ("summary-executive", _s(executive_summary)),
+        ):
+            for sentence in _complete_sentences(source_text):
+                body = sentence.strip()
+                if body:
+                    candidates.append(
+                        {
+                            "body": body,
+                            "insight_id": source_id,
+                            "evidence_id": "",
+                        }
+                    )
+
     ranked_candidates = sorted(
         enumerate(candidates),
-        key=lambda item: (-_core_signal_score(item[1]), item[0]),
+        key=lambda item: (-_core_signal_score(item[1]["body"]), item[0]),
     )
-    heading = _pick_first_text(
-        *(_core_signal_heading(candidate) for candidate in strategic_texts),
-        *(_core_signal_heading(candidate) for candidate in source_texts),
-    )
-    body = _pick_first_text(
-        *(
-            _sentence_excerpt(candidate, max_chars=320)
-            for _, candidate in ranked_candidates
-        ),
-    )
+    selected = ranked_candidates[0][1] if ranked_candidates else {}
+    body = _s(selected.get("body"))
+    heading = _core_signal_heading(body) if body else ""
     return {
         "heading": heading or "Source-backed market signal",
         "body": body or "Source-supported signal unavailable for this report.",
+        "insight_id": _s(selected.get("insight_id")),
+        "evidence_id": _s(selected.get("evidence_id")),
     }
 
 
@@ -838,9 +856,11 @@ def _coerce_insights(
             continue
         insights.append(
             {
+                "id": _s(item.get("id")),
                 "text": text,
                 "so_what": _sanitize_public_prose(item.get("so_what")),
                 "now_what": _sanitize_public_prose(item.get("now_what")),
+                "evidence_id": _s(item.get("evidence_id")),
                 "citation_line": _build_citation_micro_line(
                     report_title=report_title,
                     evidence_id=_s(item.get("evidence_id")),
