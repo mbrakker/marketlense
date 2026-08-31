@@ -20,6 +20,7 @@ SCHEMAS_ROOT = Path(__file__).resolve().parents[1] / "schemas"
 _SCHEMA_CACHE: Dict[str, dict] = {}
 _VALIDATOR_CACHE: Dict[str, Draft202012Validator] = {}
 _PROVIDER_OMITTED_PROPERTIES = frozenset({"_cache", "family_status"})
+_PROVIDER_OMITTED_CONSTRAINTS = frozenset({"allOf", "if", "then", "else", "not"})
 
 
 def _load_schema(name: str) -> dict:
@@ -95,12 +96,15 @@ def _strict_provider_schema(value: Any) -> Any:
         return value
     projected: dict[str, Any] = {}
     for key, item in value.items():
-        if key in {"additionalProperties", "required"}:
+        if key in {
+            "additionalProperties",
+            "required",
+            *_PROVIDER_OMITTED_CONSTRAINTS,
+        }:
             continue
         # OpenAI's strict response-format subset accepts ``anyOf`` but rejects
-        # ``oneOf``.  These report schemas use oneOf only for disjoint scalar
-        # and object alternatives, so this provider-only projection preserves
-        # the accepted values while canonical validation keeps exact oneOf.
+        # ``oneOf`` and conditional constraints. Canonical validation keeps
+        # those exact constraints after the provider returns its response.
         provider_key = "anyOf" if key == "oneOf" else key
         if key == "properties" and isinstance(item, dict):
             projected[provider_key] = {

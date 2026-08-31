@@ -279,6 +279,35 @@ def multi_section_doc_map(doc_id="d1"):
     }
 
 
+def counterbalanced_doc_map(doc_id="d1"):
+    return {
+        **substantive_doc_map(doc_id),
+        "sections": [
+            {
+                "id": "efficiency-value",
+                "title": "Efficiency and value",
+                "summary": "AI tools can improve operational efficiency.",
+                "key_points": ["35% expect efficiency gains from AI."],
+                "pages": [4],
+            },
+            {
+                "id": "cost-savings",
+                "title": "Cost savings",
+                "summary": "AI adoption can reduce operating costs.",
+                "key_points": ["36% expect cost savings from AI."],
+                "pages": [5],
+            },
+            {
+                "id": "trust-governance",
+                "title": "Trust, risk, and governance",
+                "summary": "Consumers need safeguards for AI-generated media.",
+                "key_points": ["Trust concerns require governance controls."],
+                "pages": [12],
+            },
+        ],
+    }
+
+
 def _settings(
     tmp_path,
     *,

@@ -8,6 +8,15 @@ The report pipeline produces source-attributed HTML and structured report artifa
 
 Report-local output can include summaries, insights, quotes, figure selections, topics, key figures, and other approved public modules when supported by the retained artifact contract. Internal evidence identifiers and machine-only publication data are not public output.
 
+The single Editorial Plan treats the DocMap as the authority for report breadth.
+For broad reports, its two-to-seven themes represent materially different major
+source areas and preserve both source-backed sides of a material
+decision-relevant tension. It does not manufacture balance or pad a narrow,
+one-sided report. DocMap-aware findings extraction applies the same principle:
+when file-search evidence supports materially different or counterbalancing
+major sections, it retrieves both sides rather than substituting several close
+subtopics from one side.
+
 The Expert View side panel carries only the neutral `MarketBearing analysis`
 identity. Report-specific interpretation belongs exclusively to the generated
 Expert View body; an unsupported synthesis renders the existing explicit

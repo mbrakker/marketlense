@@ -454,6 +454,17 @@ def test_provider_schema_projection_uses_openai_supported_union_keyword() -> Non
     assert [branch["type"] for branch in scope["anyOf"]] == ["string", "object"]
 
 
+def test_provider_schema_projection_omits_unsupported_conditional_keywords() -> None:
+    schema = provider_output_schema("artifacts", "insights_candidates")
+    metric = schema["properties"]["insights_candidates"]["items"]["properties"][
+        "metric"
+    ]
+
+    assert "allOf" not in metric
+    assert "if" not in metric
+    assert "then" not in metric
+
+
 def test_context_category_fit_provider_schema_allows_five_selected_categories() -> None:
     schema = provider_output_schema("context_category_fit")
 

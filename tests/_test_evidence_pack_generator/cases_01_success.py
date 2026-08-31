@@ -206,6 +206,56 @@ def test_generate_evidence_packs_passes_doc_map_sections_to_findings_and_retains
     ]
 
 
+def test_findings_context_retains_counterbalancing_major_docmap_sections(tmp_path):
+    prompt_client = RecordingPromptClient()
+    packs = generate_evidence_packs(
+        report_id="counterbalanced-doc-map",
+        report_name="Counterbalanced DocMap",
+        vector_store_id="vs_1",
+        settings=_settings(tmp_path, evidence_pack_registry=["doc_map", "findings"]),
+        ctx=_ctx(),
+        openai_client=RoutedOpenAIClient(
+            {
+                "doc_map": counterbalanced_doc_map(),
+                "findings": {
+                    "findings": [
+                        {
+                            "id": "benefit-1",
+                            "text": "AI can improve operational efficiency.",
+                            "evidence": "35% expect efficiency gains from AI.",
+                            "pages": [4],
+                            "section_id": "efficiency-value",
+                            "section_title": "Efficiency and value",
+                        },
+                        {
+                            "id": "risk-1",
+                            "text": "AI-generated media needs trust safeguards.",
+                            "evidence": "Trust concerns require governance controls.",
+                            "pages": [12],
+                            "section_id": "trust-governance",
+                            "section_title": "Trust, risk, and governance",
+                        },
+                    ]
+                },
+            }
+        ),
+        prompt_client=prompt_client,
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    assert prompt_client.findings_variables is not None
+    sections = json.loads(prompt_client.findings_variables["doc_map_sections_json"])
+    assert [section["id"] for section in sections] == [
+        "efficiency-value",
+        "cost-savings",
+        "trust-governance",
+    ]
+    assert [finding["section_id"] for finding in packs["findings"]["findings"]] == [
+        "efficiency-value",
+        "trust-governance",
+    ]
+
+
 def test_generate_evidence_packs_logs_prompt_observability_and_response_metadata(
     tmp_path, caplog, assert_logs_have_required_fields
 ):
@@ -893,6 +943,7 @@ __all__ = [
     "test_generate_evidence_packs_creates_context_when_missing",
     "test_generate_evidence_packs_marks_optional_empty_pack_as_abstained",
     "test_generate_evidence_packs_passes_doc_map_sections_to_findings_and_retains_links",
+    "test_findings_context_retains_counterbalancing_major_docmap_sections",
     "test_generate_evidence_packs_logs_prompt_observability_and_response_metadata",
     "test_generate_evidence_packs_handles_missing_json",
     "test_generate_evidence_packs_propagates_retryable_app_error",

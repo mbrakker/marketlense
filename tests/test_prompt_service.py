@@ -106,6 +106,30 @@ def test_artifact_prompts_include_shared_editorial_constitution() -> None:
     )
 
 
+def test_editorial_plan_and_findings_prompts_require_representative_counterbalance() -> None:
+    editorial_plan_prompt = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/editorial_plan",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+    findings_prompt = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/evidence_packs/findings",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+
+    assert "DocMap is the authority for report breadth" in editorial_plan_prompt.user.text
+    assert "counterbalancing" in editorial_plan_prompt.user.text
+    assert "executive-summary" in editorial_plan_prompt.user.text
+    assert "counterbalancing" in findings_prompt.user.text
+
+
 def test_summary_and_expert_prompts_prevent_first_run_readiness_failures() -> None:
     doc_map_prompt = load_prompt_set(
         PromptLoadRequest(
