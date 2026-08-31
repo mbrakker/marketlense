@@ -5,6 +5,7 @@ from src.generators._artifact_generator.family_policy import (
     build_artifact_family_status,
 )
 from src.generators.artifact_normalization import (
+    bind_artifact_evidence_spans,
     fallback_artifact_insights_from_findings,
     normalize_artifact_insights,
     normalize_artifact_summary,
@@ -126,6 +127,57 @@ def test_linkedin_reference_id_stripping_preserves_blank_line_paragraphs() -> No
     assert strip_linkedin_inline_reference_ids(
         "First paragraph (IC-12).\n\nSecond paragraph (F-2)."
     ) == "First paragraph.\n\nSecond paragraph."
+
+
+def test_binding_known_evidence_canonicalizes_model_supplied_claim_pages() -> None:
+    summary = {
+        "claim_evidence_map": [
+            {
+                "claim": "Known finding remains grounded.",
+                "evidence_id": "finding-1",
+                "evidence": "Known evidence.",
+                "pages": [7, 99],
+                "evidence_spans": [
+                    {
+                        "evidence_id": "finding-1",
+                        "source_pack": "model",
+                        "page": 99,
+                        "text": "Model supplied page.",
+                    }
+                ],
+            }
+        ]
+    }
+
+    bind_artifact_evidence_spans(
+        summary=summary,
+        insights_candidates=[],
+        insights_final=[],
+        quotes_final=[],
+        doc_map={},
+        evidence_packs={
+            "findings": {
+                "findings": [
+                    {
+                        "id": "finding-1",
+                        "evidence": "Known evidence.",
+                        "pages": [7],
+                    }
+                ]
+            }
+        },
+    )
+
+    claim = summary["claim_evidence_map"][0]
+    assert claim["pages"] == [7]
+    assert claim["evidence_spans"] == [
+        {
+            "evidence_id": "finding-1",
+            "source_pack": "findings",
+            "page": 7,
+            "text": "Known evidence.",
+        }
+    ]
 
 
 def test_initial_artifact_normalization_preserves_distinct_quarterly_periods() -> None:

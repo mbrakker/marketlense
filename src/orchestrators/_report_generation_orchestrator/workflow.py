@@ -77,6 +77,9 @@ STAGE_SOURCE_PREPARED = "source_prepared"
 STAGE_SELECTION_COMPLETE = "selection_complete"
 STAGE_ANALYSIS_COMPLETE = "analysis_complete"
 STAGE_RENDER_COMPLETE = "render_complete"
+_UNATTRIBUTED_PUBLISHER_IDS = frozenset(
+    {"", "unattributed", "drive_unattributed", "unknown", "unknown publisher"}
+)
 
 
 def _should_fresh_start_after_latest_safe_rejection(error: AppError) -> bool:
@@ -123,6 +126,42 @@ def _build_model_client(
     return llm_service.build_client_for_settings(settings, scope=scope)
 
 
+def _admission_context_identity(
+    ctx: RunContext,
+    *,
+    fallback_report_name: str,
+) -> SourceIdentityResolution | None:
+    """Project a retained, admitted source identity into a fresh runtime.
+
+    A frozen validation replay intentionally does not re-run source discovery or
+    admission. Its signed admission decision is therefore the canonical source
+    identity available before the report store has any source rows. Do not
+    manufacture an identity from an MD5-only context or an unattributed
+    publisher: those states remain subject to the normal fail-closed metadata
+    governance path.
+    """
+
+    identity_id = str(ctx.source_identity_id or "").strip()
+    publisher = str(ctx.publisher_id or "").strip()
+    if (
+        not str(ctx.admission_decision_hash or "").strip()
+        or not identity_id
+        or publisher.casefold() in _UNATTRIBUTED_PUBLISHER_IDS
+    ):
+        return None
+    return SourceIdentityResolution(
+        schema_version="1.0",
+        source_identity_id=identity_id,
+        canonical_title=fallback_report_name,
+        title_evidence_locator="admission_preflight.decision",
+        publisher_id=publisher,
+        publisher_name=publisher,
+        resolution_method="admission_preflight_context",
+        identity_confidence="high",
+        identity_status="resolved",
+    )
+
+
 def _resolve_runtime_source_identity(
     *,
     file: DriveFile,
@@ -156,16 +195,14 @@ def _resolve_runtime_source_identity(
                 },
             )
         )
-        return (
-            "",
-            fallback_report_name,
-            "",
-            SourcePublicationMetadata(schema_version="1.0", evidence_status="unknown"),
-            SourceIdentityResolution(
-                schema_version="1.0",
-                identity_status="unknown",
-                identity_issues=("identity_resolution_failed",),
-            ),
+        # A retained admission decision can still provide a verified identity
+        # for a fresh isolated replay when the optional report-store lookup is
+        # temporarily unavailable. Continue to the normal observation lookup
+        # and the narrowly scoped admission-context fallback below.
+        identity = SourceIdentityResolution(
+            schema_version="1.0",
+            identity_status="unknown",
+            identity_issues=("identity_resolution_failed",),
         )
     publisher_name = str(getattr(identity, "publisher_name", "") or "").strip()
     source_report_name = (
@@ -209,6 +246,18 @@ def _resolve_runtime_source_identity(
                 },
             )
         )
+    admitted_identity = _admission_context_identity(
+        ctx,
+        fallback_report_name=fallback_report_name,
+    )
+    if (
+        admitted_identity is not None
+        and str(getattr(source_identity, "identity_status", "") or "").casefold()
+        != "resolved"
+    ):
+        source_identity = admitted_identity
+        publisher_name = admitted_identity.publisher_name
+        source_report_name = admitted_identity.canonical_title
     publication_resolution = "unresolved"
     try:
         publication_response = deps.render.get_report_publication_metadata(

@@ -21,7 +21,10 @@ from src.contracts.regeneration import (
     RegenerationTarget,
 )
 from src.contracts.run_context import RunContext
-from src.generators.report_regeneration_generator import regenerate_artifacts
+from src.generators.report_regeneration_generator import (
+    _restore_final_insight_evidence_bindings,
+    regenerate_artifacts,
+)
 from src.generators.public_editorial_quality_generator import (
     evaluate_public_editorial_quality,
 )
@@ -560,6 +563,51 @@ def test_regenerate_artifacts_insights_bundle_uses_targeted_steps_and_preserves_
     }
     final_variables = prompt_client.render_calls[3]["variables"]
     assert final_variables["final_insight_target_count"] == 5
+
+
+def test_final_insight_reuses_same_id_candidate_evidence_when_model_omits_it() -> None:
+    final_insights = [
+        {
+            "id": "insight-email-automation",
+            "text": "The repaired wording remains specific to automation.",
+            "evidence_id": "",
+            "evidence": "",
+            "evidence_spans": [],
+            "pages": [],
+            "metric": dict(METRIC),
+        }
+    ]
+    candidates = [
+        {
+            "id": "insight-email-automation",
+            "text": "Candidate wording.",
+            "evidence_id": "finding-5",
+            "evidence": "Automated messages drove the reported result.",
+            "evidence_spans": [
+                {
+                    "evidence_id": "finding-5",
+                    "source_pack": "findings",
+                    "page": 8,
+                    "text": "Automated messages drove the reported result.",
+                }
+            ],
+            "pages": [8],
+            "metric": dict(METRIC),
+        }
+    ]
+
+    restored = _restore_final_insight_evidence_bindings(
+        final_insights=final_insights,
+        candidate_insights=candidates,
+        prior_final_insights=[],
+    )
+
+    assert restored[0]["text"] == (
+        "The repaired wording remains specific to automation."
+    )
+    assert restored[0]["evidence_id"] == "finding-5"
+    assert restored[0]["evidence"] == "Automated messages drove the reported result."
+    assert restored[0]["pages"] == [8]
 
 
 def test_regenerate_artifacts_dispatches_summary_via_target_section_registry(tmp_path):

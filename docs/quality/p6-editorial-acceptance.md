@@ -58,6 +58,70 @@ The retained `final.html` files are byte-identical SHA-256 copies of the pipelin
 | 4 |  |  |  |  |
 | 5 |  |  |  |  |
 
+## Batch 1 upgraded-checkout rerun (2026-08-31)
+
+The same five frozen canonical sources were generated afresh on the upgraded checkout. Only exact source PDFs and canonical source-identity provenance were recovered for admission; prior editorial, analysis, HTML, and validation artifacts were not reused. No prompt, editorial logic, source selection, generated HTML, or report content was manually changed.
+
+| # | Report | Publisher | Source PDF | Final HTML | Pipeline | Readiness |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | Email, SMS, and push marketing statistics for ecommerce in 2024 | Omnisend | [Google Drive PDF](https://drive.google.com/file/d/1_7x4DqjM4r52fo3qyZNiw1v0l11K0WrO/view) | [final.html](../../out/p6_editorial_acceptance/batch_01_upgrade_rerun_20260831/report_01/final.html) | failed: validation_failed | held: publish_readiness_failed |
+| 2 | Activate Technology & Media Outlook 2025: eCommerce | Activate Consulting | [Google Drive PDF](https://drive.google.com/file/d/19BcPSRlpaxSSLFsitNaoRLTUgptmvPq1/view) | [final.html](../../out/p6_editorial_acceptance/batch_01_upgrade_rerun_20260831/report_02/final.html) | pass (warning) | publish_ready |
+| 3 | Internet Advertising Revenue Report: Full-year 2024 results | IAB | [Google Drive PDF](https://drive.google.com/file/d/1UrnZwv5BD8Jiy8ML8nU4CA0W9-ImUF6-/view) | [final.html](../../out/p6_editorial_acceptance/batch_01_upgrade_rerun_20260831/report_03/final.html) | failed: validation_failed | held: publish_readiness_failed |
+| 4 | Trust or trepidation?: How Brits feel about generative AI in media | YouGov | [Google Drive PDF](https://drive.google.com/file/d/1sZqPKxGqkEAvQr-fP90m53z2Y0l0jLkd/view) | [final.html](../../out/p6_editorial_acceptance/batch_01_upgrade_rerun_20260831/report_04/final.html) | pass (warning) | publish_ready |
+| 5 | Activate Technology & Media Outlook 2026 | Activate Consulting | [Google Drive PDF](https://drive.google.com/file/d/1mXGpczPyU-BCF9nhgQPsMQ7xoUQ7QGM1/view) | [final.html](../../out/p6_editorial_acceptance/batch_01_upgrade_rerun_20260831/report_05/final.html) | pass | publish_ready |
+
+- Repository HEAD: `8034f69e1b85ab450e0fa2cb93564db6621cdfa3`.
+- Generation run: `4828e5e0-bca3-4189-997d-c4e697de4088`; validation run: `validation:31a397c3506c40b657e8bb7527cd844c58eb388f769d04371d0715c1f468f04c`.
+- Configuration: [`p6_editorial_acceptance_batch_01_upgrade_rerun_20260831`](../../src/config/app.p6_editorial_acceptance_batch_01_upgrade_rerun_20260831.yaml), hash `eb9399c82b12805dbbbaa1b41f0910e98a761ef94fae8d07583f8faa4d2874d8`.
+- Attributable provider use: 159 calls, 1,685,386 input tokens, 184,371 output tokens, estimated USD 0.558318.
+- All five sources received the pipeline's bounded targeted validation recovery. It succeeded for reports 2, 4, and 5; reports 1 and 3 reached terminal validation failure and remain in the cohort denominator.
+
+All five Google Drive IDs, PDF MD5 checksums, and canonical source identities match the frozen cohort. The retained HTML files are byte-identical SHA-256 copies of their pipeline HTML counterparts. The normal admission, schema, grounding, semantic, chart/table, editorial, final-HTML, and publish-readiness stages reached their recorded terminal outcomes; none was bypassed. Google Drive reads/writes, WordPress writes, browser launches, and public writes were zero.
+
+The review package is [manifest.json](../../out/p6_editorial_acceptance/batch_01_upgrade_rerun_20260831/manifest.json), with [cohort provenance](../../out/p6_editorial_acceptance/batch_01_upgrade_rerun_20260831/cohort_manifest.json).
+
+### Human-review results for the 2026-08-31 rerun
+
+| # | Reviewer | Review date | Editorial decision | Notes |
+| --- | --- | --- | --- | --- |
+| 1 |  |  |  |  |
+| 2 |  |  |  |  |
+| 3 |  |  |  |  |
+| 4 |  |  |  |  |
+| 5 |  |  |  |  |
+
+## Batch 1 upgraded-checkout rerun for human review (2026-08-30)
+
+This is a fresh rerun of the same frozen five-source P6 Batch 1 cohort after the system upgrade. It retained only exact source-PDF and canonical source-identity provenance for admission; no earlier editorial, analysis, or generated-report artifact was reused. No prompt, editorial rule, source selection, or generated HTML was manually changed.
+
+| # | Report | Publisher | Source PDF | Final HTML | Pipeline | Readiness |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | Email, SMS, and push marketing statistics for ecommerce in 2024 | Omnisend | [Google Drive PDF](https://drive.google.com/file/d/1_7x4DqjM4r52fo3qyZNiw1v0l11K0WrO/view) | [final.html](../../out/p6_editorial_acceptance/batch_01_upgrade_rerun_20260830_v2/report_01/final.html) | pass | publish_ready |
+| 2 | Activate Technology & Media Outlook 2025: eCommerce | Activate Consulting | [Google Drive PDF](https://drive.google.com/file/d/19BcPSRlpaxSSLFsitNaoRLTUgptmvPq1/view) | [final.html](../../out/p6_editorial_acceptance/batch_01_upgrade_rerun_20260830_v2/report_02/final.html) | pass (warning) | publish_ready |
+| 3 | Internet Advertising Revenue Report: Full-year 2024 results | IAB | [Google Drive PDF](https://drive.google.com/file/d/1UrnZwv5BD8Jiy8ML8nU4CA0W9-ImUF6-/view) | [final.html](../../out/p6_editorial_acceptance/batch_01_upgrade_rerun_20260830_v2/report_03/final.html) | pass (warning) | publish_ready |
+| 4 | Trust or trepidation?: How Brits feel about generative AI in media | YouGov | [Google Drive PDF](https://drive.google.com/file/d/1sZqPKxGqkEAvQr-fP90m53z2Y0l0jLkd/view) | [final.html](../../out/p6_editorial_acceptance/batch_01_upgrade_rerun_20260830_v2/report_04/final.html) | pass (warning) | publish_ready |
+| 5 | Activate Technology & Media Outlook 2026 | Activate Consulting | [Google Drive PDF](https://drive.google.com/file/d/1mXGpczPyU-BCF9nhgQPsMQ7xoUQ7QGM1/view) | [final.html](../../out/p6_editorial_acceptance/batch_01_upgrade_rerun_20260830_v2/report_05/final.html) | pass | publish_ready |
+
+- Repository HEAD: `015c91e5f31b43c069130391b092879df38b42ea`.
+- Generation run: `ab82ec36-ecda-4da9-964c-3d5ed3a2cc92`; validation run: `validation:886a74a398aee4e9c4b9981d8be52de7d2c5123ca691150a08554e40c0685629`.
+- Configuration: [`p6_editorial_acceptance_batch_01_upgrade_rerun_20260830_v2`](../../src/config/app.p6_editorial_acceptance_batch_01_upgrade_rerun_20260830_v2.yaml), hash `0be543ac4d0af98bd810a17916188ed62e6cb95bc9fe46a3d0c9e5dda98c8c42`.
+- Attributable provider use: 127 calls, 1,178,058 input tokens, 125,718 output tokens, estimated USD 0.386468.
+- Normal bounded validation regeneration ran for reports 1, 4, and 5; it was not an operator-initiated quality rerun. Reports 2 and 3 required no regeneration.
+
+All five source PDF MD5 values and five canonical identities match the frozen admitted cohort. The retained files are byte-identical SHA-256 copies of the final pipeline HTML. The normal admission, schema, grounding, semantic, chart/table, editorial, final-HTML, and publish-readiness stages all reached their recorded terminal outcomes; no gate was bypassed. Drive reads/writes, WordPress writes, public writes, and browser launches were zero.
+
+The current review package is [manifest.json](../../out/p6_editorial_acceptance/batch_01_upgrade_rerun_20260830_v2/manifest.json), with [cohort provenance](../../out/p6_editorial_acceptance/batch_01_upgrade_rerun_20260830_v2/cohort_manifest.json).
+
+### Human-review results for the upgraded-checkout rerun
+
+| # | Reviewer | Review date | Editorial decision | Notes |
+| --- | --- | --- | --- | --- |
+| 1 |  |  |  |  |
+| 2 |  |  |  |  |
+| 3 |  |  |  |  |
+| 4 |  |  |  |  |
+| 5 |  |  |  |  |
+
 ## Batch 1 rerun after system upgrade (2026-08-30)
 
 The same five frozen canonical sources were rerun with the production-intended upgraded checkout. The rerun used only the exact source-PDF provenance required for admission; it did not reuse the original Batch 1 editorial or derived report artifacts. No prompt, editorial logic, generated HTML, or individual report content was manually changed.

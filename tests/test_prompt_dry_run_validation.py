@@ -67,6 +67,28 @@ def test_final_insights_regeneration_prompt_requires_decision_implications() -> 
 @pytest.mark.parametrize(
     "namespace",
     [
+        "report_vs/artifacts/regenerate/insights_final",
+        "report_vs/artifacts/regenerate/summary",
+    ],
+)
+def test_regeneration_prompts_require_exact_retained_evidence_bindings(
+    namespace: str,
+) -> None:
+    prompt_set = prompt_service.load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0", namespace=namespace, force_reload=True
+        ),
+        _ctx(),
+    )
+
+    assert "exact page" in prompt_set.user.text
+    assert "empty" in prompt_set.user.text
+    assert "numeric value" in prompt_set.user.text
+
+
+@pytest.mark.parametrize(
+    "namespace",
+    [
         "report_vs/evidence_packs/findings",
         "report_vs/artifacts/insights_candidates",
         "report_vs/artifacts/insights_final",

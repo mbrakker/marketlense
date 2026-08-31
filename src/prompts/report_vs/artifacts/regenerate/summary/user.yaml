@@ -33,9 +33,10 @@ text: |
   Requirements:
   - Fix the listed failures directly.
   - Retain the editorial plan's report thesis and themes; do not introduce a competing frame.
-  - Keep `evidence_id` to a single existing ID or an empty string.
+  - Every retained `claim_evidence_map` entry must use one existing `evidence_id`; omit a claim rather than output an empty or unverifiable binding.
+  - Copy the linked evidence ID and its exact page number(s) from the grounding package. Do not add, reorder, or infer adjacent pages.
   - Keep `claim_evidence_map` brief and fully grounded.
   - Author both TLDRs independently from the same evidence. The compact TLDR must not be a clipped prefix of the standard TLDR.
   - End each TLDR with complete sentence punctuation. Never use an ellipsis.
   - Do not use mechanical lead-ins or labels such as "Answer:", "Observation:", or "Implication:"; write direct public prose throughout the executive summary.
-  - Do not introduce unsupported numbers, entities, quotes, or conclusions.
+  - Do not introduce unsupported numbers, entities, quotes, or conclusions. A numeric value may appear only when it is explicitly supported by that claim's linked retained evidence.

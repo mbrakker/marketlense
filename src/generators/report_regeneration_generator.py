@@ -563,6 +563,50 @@ def _unique_ints(values) -> List[int]:
     return unique
 
 
+def _restore_final_insight_evidence_bindings(
+    *,
+    final_insights: List[Dict[str, Any]],
+    candidate_insights: List[Dict[str, Any]],
+    prior_final_insights: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Restore only a missing final-insight binding from the same stable ID.
+
+    Regeneration intentionally lets the model rewrite final-insight editorial
+    wording.  It must not, however, discard a retained evidence binding when
+    the regenerated candidate (or the prior final insight) has the same stable
+    identity.  Unknown or conflicting model-supplied IDs stay untouched for
+    the normal grounding gate to reject.
+    """
+    binding_fields = ("evidence_id", "evidence", "evidence_spans", "pages")
+    bindings: Dict[str, Dict[str, Any]] = {}
+    # The just-regenerated candidate is the current source of truth; it
+    # intentionally overrides a compatible prior final binding.
+    for source in (prior_final_insights, candidate_insights):
+        for insight in source:
+            if not isinstance(insight, dict):
+                continue
+            insight_id = _s(insight.get("id")).strip()
+            evidence_id = _s(insight.get("evidence_id")).strip()
+            if not insight_id or not evidence_id:
+                continue
+            bindings[insight_id] = {
+                field_name: deepcopy(insight[field_name])
+                for field_name in binding_fields
+                if field_name in insight
+            }
+
+    restored: List[Dict[str, Any]] = []
+    for insight in final_insights:
+        if not isinstance(insight, dict):
+            continue
+        repaired = dict(insight)
+        insight_id = _s(repaired.get("id")).strip()
+        if not _s(repaired.get("evidence_id")).strip() and insight_id in bindings:
+            repaired.update(deepcopy(bindings[insight_id]))
+        restored.append(repaired)
+    return restored
+
+
 def _build_regeneration_state(
     *,
     safe_artifacts: Dict[str, Any],
@@ -723,8 +767,12 @@ def _handle_insights_bundle_regeneration(
         },
     )
     execution.state.insights_final = select_artifact_insights(
-        final_insights=normalize_artifact_insights(
-            final_result.get("insights_final"), prefix="insight"
+        final_insights=_restore_final_insight_evidence_bindings(
+            final_insights=normalize_artifact_insights(
+                final_result.get("insights_final"), prefix="insight"
+            ),
+            candidate_insights=execution.state.insights_candidates,
+            prior_final_insights=execution.state.insights_final,
         ),
         candidate_insights=execution.state.insights_candidates,
         editorial_plan=execution.state.editorial_plan,

@@ -307,6 +307,87 @@ def test_frozen_cohort_rejects_stale_admission_provenance(
         )
 
 
+def test_frozen_cohort_replay_uses_retained_admission_decisions(
+    ingest_settings, run_context
+) -> None:
+    file = DriveFile("1.0", "file-a", "A.pdf", "2026-01-01", "md5-a")
+    stored: dict[str, bytes] = {}
+    processed_contexts = []
+    deps = _batch_dependencies(
+        file_exists=lambda request, _ctx: SimpleNamespace(
+            exists=request.path in stored
+        ),
+        read_text=lambda request, _ctx: SimpleNamespace(
+            content=stored[request.path].decode("utf-8")
+        ),
+        write_bytes=lambda request, _ctx: (
+            stored.__setitem__(request.path, request.content)
+            or SimpleNamespace(bytes_written=len(request.content))
+        ),
+        process_file=lambda current, index, _settings, ctx, _force: (
+            processed_contexts.append(ctx)
+            or orch._FileProcessResult(
+                index=index,
+                outcome=IngestOutcome(
+                    schema_version="1.0",
+                    file_id=current.file_id,
+                    name=current.name or current.file_id,
+                    md5=current.md5_checksum,
+                    html_path="out/file-a.html",
+                    status="processed",
+                ),
+                processed=1,
+                had_error=False,
+            )
+        ),
+    )
+    orch._frozen_cohort(
+        cohort_size=1,
+        cohort_manifest="cohorts/replay.json",
+        selected_files=[file],
+        settings=ingest_settings,
+        deps=deps,
+        root_ctx=run_context,
+        admission_decisions=[
+            {
+                "file_id": file.file_id,
+                "source_identity_id": "source:canonical-a",
+                "publisher_id": "publisher:a",
+                "outcome": "admitted",
+            }
+        ],
+    )
+
+    replayed = orch._frozen_cohort(
+        cohort_size=1,
+        cohort_manifest="cohorts/replay.json",
+        selected_files=[],
+        settings=ingest_settings,
+        deps=deps,
+        root_ctx=run_context,
+    )
+    decisions = orch._load_frozen_cohort_admission_decisions(
+        cohort_manifest="cohorts/replay.json",
+        files=replayed,
+        deps=deps,
+        root_ctx=run_context,
+    )
+    results = orch._process_ingest_batch(
+        replayed,
+        settings=ingest_settings,
+        deps=deps,
+        root_ctx=run_context,
+        force_report_cards=False,
+        admission_decisions=decisions,
+        admission_already_decided=True,
+    )
+
+    assert [result.outcome.file_id for result in results] == ["file-a"]
+    assert len(processed_contexts) == 1
+    assert processed_contexts[0].publisher_id == "publisher:a"
+    assert processed_contexts[0].source_identity_id == "source:canonical-a"
+
+
 def test_provenance_recovery_creates_linked_manifest_with_identical_members(
     ingest_settings, run_context
 ) -> None:
@@ -735,7 +816,13 @@ def test_frozen_cohort_preserves_admitted_publisher_in_manifest_and_stage_record
             "WHERE validation_run_id=?",
             (manifest["validation_run_id"],),
         ).fetchall()
+        source_identity_ids = connection.execute(
+            "SELECT DISTINCT source_identity_id FROM validation_run_cohort_members "
+            "WHERE validation_run_id=?",
+            (manifest["validation_run_id"],),
+        ).fetchall()
     assert publisher_ids == [("publisher:fixture",)]
+    assert source_identity_ids == [("source:md5-owned",)]
 
 
 def test_admission_preflight_rejects_duplicate_source_identity_before_freeze(

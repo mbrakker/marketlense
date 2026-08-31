@@ -22,10 +22,10 @@ text: |
   Requirements:
   - Prefer repaired candidates that directly resolve the listed failures.
   - Follow editorial-plan priority order and choose one supported representative for each theme. If the target count exceeds the number of themes, fill the remaining slots with distinct supported candidates from the supplied candidate set; do not use near-duplicates.
-  - Keep `evidence_id` to a single existing ID or an empty string.
+  - For every retained insight, preserve a stable `id` and copy one existing `evidence_id` with its exact page number(s) from the supplied candidate or grounding package. Remove an insight rather than output an empty, invented, or unverifiable evidence binding.
   - `so_what` must state a report-specific business implication; `now_what` must
     state a concrete, report-specific decision or action. Neither field may be
     empty, generic, or a citation label.
   - Remove unsupported wording rather than hedge it.
-  - Do not output unsupported metrics, quotes, or conclusions.
+  - Do not output unsupported metrics, quotes, or conclusions. Every numeric value must be explicitly supported by the insight's linked retained evidence.
   - Retain at most one public primary metric per insight: `metric.value` must be one complete human-readable metric or one coherent comparison/range, never a semicolon-separated list. When `metric.value` is present, retain or repair `metric.label` as a concise human-readable description of that exact source-backed metric; never use a general multi-metric insight or a different metric's subject. `metric.unit` must be one semantic unit and must not repeat currency symbols or magnitude words already in `metric.value`. Keep additional supporting numbers in `text` and `evidence`.

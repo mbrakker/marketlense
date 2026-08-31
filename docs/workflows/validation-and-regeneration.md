@@ -86,6 +86,16 @@ source metadata. Cohort loading recomputes the content hash and derived
 validation-run identity, so an edited member list cannot reuse the original
 cohort or validation identity. Legacy schema-`1.0` manifests remain readable
 only for replay compatibility.
+For a replay in an isolated reports database, the manifest's retained
+admission decisions are hash-validated and reused as the canonical admission
+record. This preserves the already-approved canonical source and publisher
+identity without re-admitting a source from incomplete local history; a
+missing, changed, non-admitted, or member-inconsistent decision fails closed.
+All validation-run stage records use that same canonical source identity.
+Before report-store source rows exist in an isolated replay, report generation
+projects that admitted identity and its verified publisher from the signed
+admission context. It never promotes an MD5-only or explicitly unattributed
+context; those inputs still fail the required public-metadata governance gate.
 Drive discovery carries the same resolved run-budget and usage-ledger path as
 the later ingest pipeline, so an isolated canary cannot silently reserve shared
 budget capacity before membership is frozen.
@@ -178,6 +188,14 @@ contradicted, using an invalid comparison, missing material evidence, or citing
 a hallucinated evidence ID are blocking failures. An explicitly declared,
 schema-valid family abstention is retained as abstention rather than being
 mistaken for lost evidence; it remains subject to the normal publication policy.
+
+For a recognized evidence ID, artifact normalization derives the canonical
+source span and page set from the retained evidence index; model-supplied pages
+and spans cannot expand or replace that provenance. During an insights-bundle
+repair, a final insight that accidentally omits its evidence binding may recover
+only the binding fields from a same-stable-ID current candidate or prior final
+insight. Its rewritten prose is never copied or repaired by this step, and an
+unknown or conflicting ID is left for the normal grounding gate to reject.
 
 Every candidate writes a schema-backed
 `regeneration_candidate_audit_<attempt>.json`. It records the original

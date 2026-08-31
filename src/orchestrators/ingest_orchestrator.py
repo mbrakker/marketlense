@@ -1067,6 +1067,76 @@ def _select_admitted_cohort(
     return admitted, admission_decisions
 
 
+def _load_frozen_cohort_admission_decisions(
+    *,
+    cohort_manifest: str,
+    files: list[DriveFile],
+    deps: IngestBatchDependencies,
+    root_ctx: RunContext,
+) -> list[dict[str, Any]]:
+    """Load immutable admission decisions for an already-validated cohort.
+
+    A replay may use a clean reports database, where source-identity lookup has
+    no historical rows. The frozen manifest therefore remains the canonical
+    source of its prior deterministic admission decision; it is validated here
+    rather than re-admitting the same source under weaker conditions.
+    """
+    try:
+        payload = json.loads(
+            deps.read_text(
+                ReadTextRequest(schema_version="1.0", path=cohort_manifest),
+                root_ctx,
+            ).content
+        )
+        decisions = payload["admission_decisions"]
+        if not isinstance(decisions, list) or not decisions:
+            raise ValueError("admission decisions are missing")
+        expected_hash = sha256(
+            json.dumps(decisions, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
+        if str(payload.get("admission_decision_hash") or "") != expected_hash:
+            raise ValueError("admission decision hash is invalid")
+        decisions_by_file_id: dict[str, dict[str, Any]] = {}
+        for decision in decisions:
+            if not isinstance(decision, dict):
+                raise ValueError("admission decision must be an object")
+            file_id = str(decision.get("file_id") or "")
+            if not file_id or file_id in decisions_by_file_id:
+                raise ValueError("admission decision file identity is invalid")
+            decisions_by_file_id[file_id] = decision
+        members = payload.get("members")
+        if not isinstance(members, list):
+            raise ValueError("cohort members are missing")
+        members_by_file_id = {
+            str(member.get("file_id") or ""): member
+            for member in members
+            if isinstance(member, dict)
+        }
+        for file in files:
+            member = members_by_file_id.get(file.file_id)
+            decision = decisions_by_file_id.get(file.file_id)
+            if member is None or decision is None:
+                raise ValueError("cohort admission decision is missing")
+            if str(decision.get("outcome") or "") != "admitted":
+                raise ValueError("cohort member was not admitted")
+            if str(decision.get("source_identity_id") or "") != str(
+                member.get("source_identity_id") or ""
+            ):
+                raise ValueError("cohort source identity is inconsistent")
+            if str(decision.get("publisher_id") or "") != str(
+                member.get("publisher_id") or ""
+            ):
+                raise ValueError("cohort publisher identity is inconsistent")
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise AppError(
+            code="ingest_cohort_manifest_invalid",
+            message="Cohort admission decisions are not valid for replay",
+            cause=exc,
+            retryable=False,
+        ) from exc
+    return decisions
+
+
 def _load_frozen_cohort(
     *,
     cohort_manifest: str,
@@ -1492,9 +1562,16 @@ def _record_cohort_ingest_manifest(
         decision = decisions_by_file_id.get(file.file_id, {})
         return str(decision.get("publisher_id") or "unattributed")
 
+    def _source_identity_id(file: DriveFile) -> str:
+        decision = decisions_by_file_id.get(file.file_id, {})
+        return str(
+            decision.get("source_identity_id") or file.md5_checksum or file.file_id
+        )
+
     if outcomes is None:
         for file in files:
             publisher_id = _publisher_id(file)
+            source_identity_id = _source_identity_id(file)
             for stage in (
                 "discovery",
                 "candidate_qualification",
@@ -1512,7 +1589,7 @@ def _record_cohort_ingest_manifest(
                             entity_type="report",
                             publisher_id=publisher_id,
                             report_id=file.file_id,
-                            source_identity_id=file.md5_checksum or file.file_id,
+                            source_identity_id=source_identity_id,
                             stage=stage,
                             attempt_number=attempt_number,
                             parent_attempt_number=parent_attempt_number,
@@ -1541,6 +1618,7 @@ def _record_cohort_ingest_manifest(
     outcome_by_id = {outcome.file_id: outcome for outcome in outcomes or []}
     for file in files:
         publisher_id = _publisher_id(file)
+        source_identity_id = _source_identity_id(file)
         outcome = outcome_by_id.get(file.file_id)
         terminal = outcome is not None
         readiness_status = (
@@ -1582,6 +1660,7 @@ def _record_cohort_ingest_manifest(
                 attempt_number=attempt_number,
                 parent_attempt_number=parent_attempt_number,
                 publisher_id=publisher_id,
+                source_identity_id=source_identity_id,
                 failure_code=(
                     outcome.error
                     or (
@@ -1606,6 +1685,7 @@ def _record_cohort_ingest_manifest(
                 attempt_number=attempt_number,
                 parent_attempt_number=parent_attempt_number,
                 publisher_id=publisher_id,
+                source_identity_id=source_identity_id,
                 html_path=reused_validated_html_path,
             )
         record_validation_run_manifest_stage(
@@ -1620,7 +1700,7 @@ def _record_cohort_ingest_manifest(
                     entity_type="report",
                     publisher_id=publisher_id,
                     report_id=file.file_id,
-                    source_identity_id=file.md5_checksum or file.file_id,
+                    source_identity_id=source_identity_id,
                     stage="ingestion",
                     attempt_number=attempt_number,
                     parent_attempt_number=parent_attempt_number,
@@ -1676,6 +1756,7 @@ def _record_failed_cohort_stage_closure(
     attempt_number: int,
     parent_attempt_number: int,
     publisher_id: str,
+    source_identity_id: str,
     failure_code: str,
 ) -> None:
     """Close unreachable stages explicitly for a terminal failed cohort member.
@@ -1717,7 +1798,7 @@ def _record_failed_cohort_stage_closure(
                     entity_type="report",
                     publisher_id=publisher_id,
                     report_id=file.file_id,
-                    source_identity_id=file.md5_checksum or file.file_id,
+                    source_identity_id=source_identity_id,
                     stage=stage,
                     attempt_number=attempt_number,
                     parent_attempt_number=parent_attempt_number,
@@ -1756,6 +1837,7 @@ def _record_reused_cohort_stage_closure(
     attempt_number: int,
     parent_attempt_number: int,
     publisher_id: str,
+    source_identity_id: str,
     html_path: str,
 ) -> None:
     """Record the validated artifact reuse that closes an idempotent replay."""
@@ -1786,7 +1868,7 @@ def _record_reused_cohort_stage_closure(
                     entity_type="report",
                     publisher_id=publisher_id,
                     report_id=file.file_id,
-                    source_identity_id=file.md5_checksum or file.file_id,
+                    source_identity_id=source_identity_id,
                     stage=stage,
                     attempt_number=attempt_number,
                     parent_attempt_number=parent_attempt_number,
@@ -2589,6 +2671,7 @@ def run_ingest(
             root_ctx=root_ctx,
         )
         manifest_files: list[DriveFile] | None = None
+        admission_decisions: list[dict[str, Any]] | None = None
         if cohort_manifest:
             manifest_exists = deps.file_exists(
                 FileExistsRequest(schema_version="1.0", path=cohort_manifest), root_ctx
@@ -2602,6 +2685,12 @@ def run_ingest(
                     expected_producer_build_identity=(
                         root_ctx.producer_commit_sha or "workspace"
                     ),
+                    deps=deps,
+                    root_ctx=root_ctx,
+                )
+                admission_decisions = _load_frozen_cohort_admission_decisions(
+                    cohort_manifest=cohort_manifest,
+                    files=manifest_files,
                     deps=deps,
                     root_ctx=root_ctx,
                 )
@@ -2681,7 +2770,6 @@ def run_ingest(
                 processed_so_far += sum(row.processed for row in batch)
         else:
             files_to_process = manifest_files
-            admission_decisions: list[dict[str, Any]] | None = None
             if cohort_size is not None:
                 if manifest_files is None:
                     files_to_process, admission_decisions = _run_step_with_retry(

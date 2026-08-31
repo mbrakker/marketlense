@@ -723,6 +723,15 @@ def bind_artifact_evidence_spans(
     unbound_count = 0
     pruned_claim_count = 0
 
+    def _canonical_pages(spans: List[Dict[str, Any]]) -> List[int]:
+        return list(
+            dict.fromkeys(
+                int(span["page"])
+                for span in spans
+                if isinstance(span.get("page"), int) and span["page"] > 0
+            )
+        )
+
     def _bind_item(item: Any, *, page_keys: tuple[str, ...]) -> None:
         nonlocal bound_count, unbound_count
         if not isinstance(item, dict):
@@ -735,7 +744,16 @@ def bind_artifact_evidence_spans(
             item.get("evidence_spans"), evidence_id=evidence_id
         )
         derived = [dict(span) for span in span_index.get(evidence_id.casefold(), [])]
-        spans = existing or derived
+        # A resolvable evidence ID has an authoritative retained span.  Do not
+        # let model-supplied page metadata override it: the generator may add
+        # adjacent pages or retain stale spans while changing its copy.
+        spans = derived or existing
+        if derived:
+            pages = _canonical_pages(derived)
+            if "pages" in page_keys:
+                item["pages"] = pages
+            elif "page" in page_keys and pages:
+                item["page"] = pages[0]
         if not spans:
             fallback_pages: List[int] = []
             for key in page_keys:
@@ -787,7 +805,9 @@ def bind_artifact_evidence_spans(
             derived = [
                 dict(span) for span in span_index.get(evidence_id.casefold(), [])
             ]
-            spans = existing or derived
+            spans = derived or existing
+            if derived:
+                claim["pages"] = _canonical_pages(derived)
             if not spans:
                 claim_pages = [
                     int(page)
