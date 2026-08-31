@@ -180,6 +180,81 @@ def test_core_signal_heading_preserves_a_complete_clause_before_comma_but() -> N
     assert _core_signal_heading(text) == "The market is expanding materially."
 
 
+def test_core_signal_falls_back_for_over_limit_activate_time_sentence() -> None:
+    signal = _build_core_signal(
+        tldr_text="",
+        executive_summary="",
+        insights=[
+            {
+                "text": (
+                    "Super Users are 28% of the U.S. population yet spend 17:06 per "
+                    "day with technology and media versus 9:31 for all other users, "
+                    "concentrating disproportionate attention and platform impact."
+                )
+            }
+        ],
+    )
+
+    assert signal["heading"] == "Source-backed market signal"
+    assert "17:06" in signal["body"]
+    assert "9:31" in signal["body"]
+
+
+def test_core_signal_heading_preserves_1706_before_a_semicolon_boundary() -> None:
+    text = (
+        "Super Users spend 17:06 daily compared with other audiences; retailers "
+        "need plans for their concentrated attention."
+    )
+
+    assert _core_signal_heading(text) == (
+        "Super Users spend 17:06 daily compared with other audiences."
+    )
+
+
+def test_core_signal_heading_preserves_931_before_a_semicolon_boundary() -> None:
+    text = (
+        "Other users spend 9:31 daily across technology and media; retailers need "
+        "plans for their concentrated attention."
+    )
+
+    assert _core_signal_heading(text) == (
+        "Other users spend 9:31 daily across technology and media."
+    )
+
+
+def test_core_signal_heading_preserves_ratio_before_a_semicolon_boundary() -> None:
+    text = (
+        "Premium streaming inventory converts at a 3:1 ratio; buyers need plans "
+        "for its concentrated demand."
+    )
+
+    assert _core_signal_heading(text) == (
+        "Premium streaming inventory converts at a 3:1 ratio."
+    )
+
+
+def test_core_signal_heading_splits_at_a_prose_colon() -> None:
+    text = (
+        "Retailers face increasing acquisition costs across channels: they need "
+        "simpler checkout journeys to protect conversion."
+    )
+
+    assert _core_signal_heading(text) == (
+        "Retailers face increasing acquisition costs across channels."
+    )
+
+
+def test_core_signal_heading_splits_at_a_semicolon() -> None:
+    text = (
+        "Retailers face increasing acquisition costs across channels; they need "
+        "simpler checkout journeys to protect conversion."
+    )
+
+    assert _core_signal_heading(text) == (
+        "Retailers face increasing acquisition costs across channels."
+    )
+
+
 def test_render_sanitizer_removes_editorial_labels_without_hiding_prose() -> None:
     assert _sanitize_public_prose("Observation: Demand is accelerating.") == (
         "Demand is accelerating."

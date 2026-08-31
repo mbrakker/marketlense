@@ -58,7 +58,7 @@ _MECHANICAL_PUBLIC_SCAFFOLD = re.compile(
     re.IGNORECASE,
 )
 _CORE_SIGNAL_CLAUSE_BOUNDARY = re.compile(
-    r";|:|\s+(?:but|while)\s+|,\s+(?:and|but|while)\s+(?=(?:(?:it|they|"
+    r";|(?<!\d):(?!\d)|\s+(?:but|while)\s+|,\s+(?:and|but|while)\s+(?=(?:(?:it|they|"
     r"we|you|he|she|this|"
     r"that|these|those)\s+(?:is|are|was|were|be|been|being|can|could|will|"
     r"would|should|may|might|must|do|does|did|has|have|had|[a-z]+(?:s|ed))\b|"

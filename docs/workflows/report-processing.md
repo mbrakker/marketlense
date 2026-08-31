@@ -95,7 +95,8 @@ metadata record, or source attribution. The cover's core signal prefers the
 ordered, grounded strategic implication of a final insight, then its ordered
 factual claim. When the retained claim is too long, deterministic clause
 selection keeps a short complete strategic clause (including a supported
-outcome phrase) and never splits numeric thousands separators; generic signal
+outcome phrase) and never splits structured numeric tokens such as thousands
+separators, times, or ratios; generic signal
 copy remains only for an absent usable claim.
 
 Card-cover title layout preserves the complete normalized title. When an
