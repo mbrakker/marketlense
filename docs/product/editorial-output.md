@@ -63,6 +63,15 @@ never a decimal or abbreviation period. A public canonical URL is emitted only
 after a MarketLense WordPress URL is known; the original report URL remains a source
 citation and is never presented as the public canonical page.
 
+The retained `time_period` remains source metadata. The public `Period` is a
+deterministic, fail-closed projection that accepts only concise source-backed
+years, year lists or ranges, month/year values, explicit dates or date ranges,
+and quarter, half-year, or fiscal-year expressions. Surrounding prose is never
+published; one unambiguous embedded year may be shown alone, while ambiguous or
+unparseable values are omitted. Public `Fieldwork` is likewise limited to the
+explicit date range adjacent to a fieldwork marker, preferring methodology and
+time-period metadata before executive-summary fallback text.
+
 The deterministic public-editorial gate blocks common UTF-8 mojibake sequences
 and replacement characters in reader-facing prose. It retains a bounded defect
 record for targeted repair rather than silently rewriting source-derived text.

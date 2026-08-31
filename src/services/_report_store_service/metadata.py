@@ -14,10 +14,6 @@ from src.contracts.report_store import (
     ReportMetadataGetResponse,
     ReportMetadataListRequest,
     ReportMetadataListResponse,
-    ReportSourceReuseResolveRequest,
-    ReportSourceReuseResolveResponse,
-    ReportSourceReuseTelemetryRecord,
-    ReportSourceReuseTelemetryRecordRequest,
     ReportMetadataUpsertRequest,
     ReportPublicationMetadataGetRequest,
     ReportPublicationMetadataGetResponse,
@@ -25,6 +21,10 @@ from src.contracts.report_store import (
     ReportSourceIdentityGetResponse,
     ReportSourceIdentityResolveRequest,
     ReportSourceIdentityResolveResponse,
+    ReportSourceReuseResolveRequest,
+    ReportSourceReuseResolveResponse,
+    ReportSourceReuseTelemetryRecord,
+    ReportSourceReuseTelemetryRecordRequest,
     SourceIdentityObservation,
     SourceIdentityObservationRecordRequest,
     SourceIdentityObservationRecordResponse,
@@ -40,7 +40,6 @@ from src.utils.cache_utils import sha256_json
 from src.utils.coercion import clean_string_list, coerce_int
 from src.utils.errors import AppError
 from src.utils.logging import log_event
-from src.utils.time_period import normalize_time_period
 
 from .common import (
     ACCESS_TIMEOUT_SECONDS,
@@ -1390,7 +1389,7 @@ def _row_to_metadata_response(row: tuple, ctx: RunContext) -> ReportMetadataGetR
     contents_page_number = 0
     evidence_pack_paths: dict[str, str] = {}
     raw_time_period = row[7] if isinstance(row[7], str) else None
-    time_period = normalize_time_period(raw_time_period)
+    time_period = raw_time_period
 
     try:
         parsed = json.loads(taxonomy_json)
@@ -1696,7 +1695,7 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
         if request.time_period and request.time_period.strip()
         else None
     )
-    time_period = normalize_time_period(raw_time_period)
+    time_period = raw_time_period
     metadata_clean = _clean_metadata(request.pdf_metadata)
     metadata_json = json.dumps(metadata_clean, ensure_ascii=True)
     analysis_mode = (

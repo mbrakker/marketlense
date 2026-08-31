@@ -816,7 +816,7 @@ def test_render_surfaces_report_identity_line_and_source_note(tmp_path):
             "January to December 2024",
             {"publicationDate": "2025-01-15"},
             "Retail outlook 2025 | MarketBearing",
-            "Period: January to December 2024",
+            "Period: January–December 2024",
         ),
     ],
 )
@@ -1083,10 +1083,10 @@ def test_render_surfaces_editorial_details_from_evidence_packs(tmp_path):
     assert "Ordered chapters" in html
     assert "1. Demand outlook" in html
     assert "Pages: 4, 5" in html
-    assert "Period: 2026 (fieldwork Oct 2025)" in html
+    assert "Period: 2026" in html
+    assert "Period: 2026 (fieldwork Oct 2025)" not in html
     assert "2026" in html
-    assert "Fieldwork: fieldwork Oct 2025" in html
-    assert "fieldwork Oct 2025" in html
+    assert "Fieldwork:" not in html
 
 
 def test_render_hides_figure_sections_when_disabled(tmp_path):

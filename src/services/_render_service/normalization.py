@@ -25,6 +25,19 @@ _MONTH_PATTERN = re.compile(
 )
 _YEAR_PATTERN = re.compile(r"\b(20\d{2})\b")
 _ISO_DATE_PATTERN = re.compile(r"\b20\d{2}-\d{2}-\d{2}\b")
+_FIELDWORK_DATE_RANGE_PATTERN = re.compile(
+    r"\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|"
+    r"jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|"
+    r"dec(?:ember)?)\s+\d{1,2},?\s+20\d{2}\s*(?:-|to|through|until)\s*"
+    r"(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|"
+    r"jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|"
+    r"dec(?:ember)?)\s+\d{1,2},?\s+20\d{2}\b",
+    re.IGNORECASE,
+)
+_FIELDWORK_ISO_RANGE_PATTERN = re.compile(
+    r"\b20\d{2}-\d{2}-\d{2}\s*(?:-|to|through|until)\s*20\d{2}-\d{2}-\d{2}\b",
+    re.IGNORECASE,
+)
 _SENTENCE_SPLIT_PATTERN = re.compile(r"(?<=[.!?])\s+")
 _SENTENCE_ABBREVIATION = re.compile(r"\b(?:U\.S|U\.K|e\.g|i\.e)\.", re.I)
 _INLINE_INTERNAL_REFERENCE = re.compile(
@@ -282,19 +295,19 @@ def _extract_fieldwork_dates(*values: object) -> str:
         candidate = _s(value)
         if not candidate:
             continue
-        if "fieldwork" in candidate.lower():
-            fieldwork_index = candidate.lower().find("fieldwork")
-            return candidate[fieldwork_index:].strip(" ()")
-        months = _MONTH_PATTERN.findall(candidate)
-        if len(months) >= 2:
-            return f"{months[0]} to {months[-1]}"
-        if len(months) == 1:
-            return months[0]
-        iso_dates = _ISO_DATE_PATTERN.findall(candidate)
-        if len(iso_dates) >= 2:
-            return f"{iso_dates[0]} to {iso_dates[-1]}"
-        if len(iso_dates) == 1:
-            return iso_dates[0]
+        marker = candidate.casefold().find("fieldwork")
+        if marker < 0:
+            continue
+        # The date can precede or follow the marker, but only the nearby
+        # clause is eligible. This prevents methodology or summary prose from
+        # becoming public Fieldwork metadata.
+        window = candidate[max(0, marker - 120) : marker + 320]
+        match = _FIELDWORK_DATE_RANGE_PATTERN.search(window)
+        if match:
+            return match.group(0)
+        match = _FIELDWORK_ISO_RANGE_PATTERN.search(window)
+        if match:
+            return match.group(0)
     return ""
 
 

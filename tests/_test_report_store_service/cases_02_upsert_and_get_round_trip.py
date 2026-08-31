@@ -41,7 +41,7 @@ class TestReportStoreService02UpsertAndGetRound(unittest.TestCase):
             self.assertEqual(["Ads", "Measurement"], first.taxonomy)
             self.assertEqual("Publisher Inc", first.publisher)
             self.assertEqual("US", first.region)
-            self.assertEqual("Q1 2026, Q2 2026, Q3 2026", first.time_period)
+            self.assertEqual("Q1 to Q3 2026", first.time_period)
             self.assertEqual("https://example.com/report", first.source_url)
             self.assertEqual("/tmp/report.html", first.html_path)
             self.assertEqual("abc123", first.md5)
@@ -83,10 +83,7 @@ class TestReportStoreService02UpsertAndGetRound(unittest.TestCase):
             self.assertIsNone(second.publisher)
             self.assertIsNone(second.source_url)
             self.assertEqual("North America", second.region)
-            self.assertEqual(
-                "Jun 2023, Jul 2023, Aug 2023, Sep 2023, Oct 2023, Nov 2023",
-                second.time_period,
-            )
+            self.assertEqual("june to novemeber 2023", second.time_period)
             self.assertEqual(0, second.contents_page_number)
 
             time.sleep(0.01)
@@ -99,7 +96,9 @@ class TestReportStoreService02UpsertAndGetRound(unittest.TestCase):
                     publisher="Publisher Inc",
                     taxonomy=["Measurement"],
                     region="United Kingdom",
-                    time_period="2026 (looking ahead / next 12 months, fieldwork Oct 2025)",
+                    time_period=(
+                        "2026 (looking ahead / next 12 months, fieldwork Oct 2025)"
+                    ),
                     source_url="https://example.com/final",
                     html_path="/tmp/report-v3.html",
                     md5="ghi789",
@@ -114,7 +113,10 @@ class TestReportStoreService02UpsertAndGetRound(unittest.TestCase):
                 ctx,
             )
             assert third is not None
-            self.assertEqual("2026", third.time_period)
+            self.assertEqual(
+                "2026 (looking ahead / next 12 months, fieldwork Oct 2025)",
+                third.time_period,
+            )
 
     def test_metadata_uses_report_source_url_when_payload_url_missing(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

@@ -3,7 +3,6 @@ from __future__ import annotations
 import re
 from typing import Optional
 
-
 _MONTH_TO_INDEX = {
     "jan": 1,
     "january": 1,
@@ -72,9 +71,43 @@ _MONTH_RANGE_RE = re.compile(
     re.IGNORECASE,
 )
 _MULTI_VALUE_SPLIT_RE = re.compile(r"\s*[,;|\n]\s*")
+_YEAR_TOKEN_RE = re.compile(r"\b(?:19|20)\d{2}\b")
+_YEAR_LIST_RE = re.compile(
+    r"^(?P<years>(?:19|20)\d{2}(?:\s*[,;/|]\s*(?:19|20)\d{2})+)$"
+)
+_YEAR_RANGE_TOKEN_RE = re.compile(
+    r"\b(?P<from>(?:19|20)\d{2})\s*(?:-|to)\s*(?P<to>(?:19|20)\d{2})\b",
+    re.IGNORECASE,
+)
+_DATE_RANGE_RE = re.compile(
+    r"(?P<from_m>[A-Za-z.]+)\s+(?P<from_d>\d{1,2}),?\s+"
+    r"(?P<from_y>(?:19|20)\d{2})\s*(?:-|to|through|until)\s*"
+    r"(?P<to_m>[A-Za-z.]+)\s+(?P<to_d>\d{1,2}),?\s+"
+    r"(?P<to_y>(?:19|20)\d{2})",
+    re.IGNORECASE,
+)
+_DATE_RE = re.compile(
+    r"(?P<m>[A-Za-z.]+)\s+(?P<d>\d{1,2}),?\s+(?P<y>(?:19|20)\d{2})",
+    re.IGNORECASE,
+)
+_HALF_YEAR_RE = re.compile(
+    r"^(?:(?P<h>H[12]|[12]H|first half|second half)\s*(?P<y>(?:19|20)\d{2})|"
+    r"(?P<year>(?:19|20)\d{2})\s*(?P<year_h>H[12]|[12]H))$",
+    re.IGNORECASE,
+)
+_FISCAL_YEAR_RE = re.compile(
+    r"^(?:FY\s*(?P<fy>(?:19|20)\d{2})|fiscal\s+year\s*(?P<fiscal>(?:19|20)\d{2})|"
+    r"(?P<year>(?:19|20)\d{2})\s+fiscal\s+year)$",
+    re.IGNORECASE,
+)
 
 
 def normalize_time_period(value: Optional[str]) -> Optional[str]:
+    """Project untrusted period metadata into a concise public temporal label.
+
+    This is intentionally a public projection: callers retaining source metadata
+    must store their raw value and only use this result at a display boundary.
+    """
     if value is None:
         return None
 
@@ -82,41 +115,137 @@ def normalize_time_period(value: Optional[str]) -> Optional[str]:
     if not normalized:
         return None
 
-    # Model-produced metadata must remain a compact period label.  A long
-    # response can contain valid years followed by prompt or schema debris;
-    # retain only the unambiguous period tokens rather than persisting that
-    # untrusted prose into rendered card fields.
-    if len(normalized) > 120:
-        extracted_years = re.findall(r"\b(?:19|20)\d{2}\b", normalized)
-        if extracted_years:
-            return ", ".join(_dedupe_preserve_order(extracted_years))
+    candidates = (normalized, _strip_annotations(normalized))
+    for candidate in candidates:
+        parsed = _parse_public_period(candidate)
+        if parsed:
+            return parsed
+    for candidate in candidates:
+        embedded = _find_embedded_public_period(candidate)
+        if embedded:
+            return embedded
+
+    # Surrounding prose is not public metadata. A lone year is nevertheless
+    # safe to recover when it is the only temporal value in the raw metadata.
+    years = _dedupe_preserve_order(_YEAR_TOKEN_RE.findall(normalized))
+    return years[0] if len(years) == 1 else None
+
+
+def _find_embedded_public_period(value: str) -> Optional[str]:
+    candidates: list[str] = []
+    for match in _DATE_RANGE_RE.finditer(value):
+        if period := _format_date_range(match):
+            candidates.append(period)
+    for match in _YEAR_RANGE_TOKEN_RE.finditer(value):
+        candidates.append(f"{match.group('from')}–{match.group('to')}")
+    unique = _dedupe_preserve_order(candidates)
+    return unique[0] if len(unique) == 1 else None
+
+
+def _parse_public_period(value: str) -> Optional[str]:
+    date_range = _DATE_RANGE_RE.fullmatch(value)
+    if date_range:
+        return _format_date_range(date_range)
+
+    date = _DATE_RE.fullmatch(value)
+    if date:
+        return _format_date(date.group("m"), date.group("d"), date.group("y"))
+
+    year_range = _YEAR_RANGE_RE.fullmatch(value)
+    if year_range:
+        return f"{year_range.group('from')}–{year_range.group('to')}"
+
+    year_list = _YEAR_LIST_RE.fullmatch(value)
+    if year_list:
+        return ", ".join(_YEAR_TOKEN_RE.findall(year_list.group("years")))
+
+    quarter = _parse_public_quarter(value)
+    if quarter:
+        return quarter
+
+    half_year = _HALF_YEAR_RE.fullmatch(value)
+    if half_year:
+        half = half_year.group("h") or half_year.group("year_h") or ""
+        year = half_year.group("y") or half_year.group("year") or ""
+        return f"H{half[-1]} {year}"
+
+    fiscal_year = _FISCAL_YEAR_RE.fullmatch(value)
+    if fiscal_year:
+        year = (
+            fiscal_year.group("fy")
+            or fiscal_year.group("fiscal")
+            or fiscal_year.group("year")
+        )
+        return f"FY{year}"
+
+    month = _parse_public_month(value)
+    if month:
+        return month
+
+    if _YEAR_RE.fullmatch(value):
+        return value
+    return None
+
+
+def _parse_public_quarter(value: str) -> Optional[str]:
+    compact = re.sub(r"\s+", " ", value).strip()
+    match = _QUARTER_YEAR_RE.fullmatch(compact)
+    if match:
+        return f"Q{match.group('q')} {match.group('y')}"
+    match = _YEAR_QUARTER_RE.fullmatch(compact)
+    if match:
+        return f"Q{match.group('q')} {match.group('y')}"
+    match = _QUARTER_RANGE_SAME_YEAR_RE.fullmatch(compact)
+    if match:
+        return f"Q{match.group('from_q')}–Q{match.group('to_q')} {match.group('y')}"
+    match = _QUARTER_RANGE_RE.fullmatch(compact)
+    if match:
+        return (
+            f"Q{match.group('from_q')} {match.group('from_y')}–"
+            f"Q{match.group('to_q')} {match.group('to_y')}"
+        )
+    return None
+
+
+def _parse_public_month(value: str) -> Optional[str]:
+    match = _MONTH_YEAR_RE.fullmatch(value)
+    if match:
+        month = _month_to_full(match.group("m"))
+        return f"{month} {match.group('y')}" if month else None
+    match = _YEAR_MONTH_RE.fullmatch(value)
+    if match:
+        month = _month_to_full(match.group("m"))
+        return f"{month} {match.group('y')}" if month else None
+    match = _MONTH_RANGE_SAME_YEAR_RE.fullmatch(value)
+    if match:
+        first = _month_to_full(match.group("from_m"))
+        last = _month_to_full(match.group("to_m"))
+        return f"{first}–{last} {match.group('y')}" if first and last else None
+    match = _MONTH_RANGE_RE.fullmatch(value)
+    if match:
+        first = _month_to_full(match.group("from_m"))
+        last = _month_to_full(match.group("to_m"))
+        if first and last:
+            return f"{first} {match.group('from_y')}–{last} {match.group('to_y')}"
+    return None
+
+
+def _format_date_range(match: re.Match[str]) -> Optional[str]:
+    start = _format_date(
+        match.group("from_m"), match.group("from_d"), match.group("from_y")
+    )
+    end = _format_date(match.group("to_m"), match.group("to_d"), match.group("to_y"))
+    return f"{start} to {end}" if start and end else None
+
+
+def _format_date(month_token: str, day: str, year: str) -> Optional[str]:
+    month = _month_to_full(month_token)
+    if month is None:
         return None
-
-    stripped = _strip_annotations(normalized)
-
-    parsed = _parse_period_expression(stripped)
-    if parsed:
-        return ", ".join(_dedupe_preserve_order(parsed))
-
-    parsed = _parse_period_expression(normalized)
-    if parsed:
-        return ", ".join(_dedupe_preserve_order(parsed))
-
-    candidate_parts = _split_parts(stripped) + _split_parts(normalized)
-    if len(candidate_parts) <= 1:
-        return normalized
-
-    merged: list[str] = []
-    for part in candidate_parts:
-        if part in merged:
-            continue
-        parsed_part = _parse_period_expression(part)
-        if parsed_part:
-            merged.extend(parsed_part)
-
-    if merged:
-        return ", ".join(_dedupe_preserve_order(merged))
-    return normalized
+    day_number = int(day)
+    if not 1 <= day_number <= 31:
+        return None
+    return f"{month} {day_number}, {year}"
 
 
 def _parse_period_expression(value: str) -> list[str]:
@@ -262,6 +391,26 @@ def _month_to_short(token: str) -> Optional[str]:
     if index is None:
         return None
     return _INDEX_TO_MONTH_SHORT[index]
+
+
+def _month_to_full(token: str) -> Optional[str]:
+    index = _month_to_index(token)
+    if index is None:
+        return None
+    return [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+    ][index - 1]
 
 
 def _dedupe_preserve_order(values: list[str]) -> list[str]:

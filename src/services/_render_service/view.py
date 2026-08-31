@@ -9,6 +9,7 @@ from urllib.parse import urlsplit
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from src.contracts.report_assets import RenderRequest
+from src.utils.time_period import normalize_time_period
 
 from .normalization import (
     _build_core_signal,
@@ -170,18 +171,20 @@ def _build_render_view(
     focus_year = _extract_focus_year(
         time_period, doc_map.get("year"), doc_map.get("publicationDate"), report_title
     )
+    methodology_items = _coerce_methodology(doc_map, evidence_packs)
+    fieldwork_dates = _extract_fieldwork_dates(
+        *methodology_items,
+        time_period,
+        _s(doc_map.get("methodology")),
+        _s(summary.get("executive_summary")),
+    )
     source_period = _public_source_period(
         report_title=report_title,
         time_period=time_period,
         focus_year=focus_year,
     )
-    methodology_items = _coerce_methodology(doc_map, evidence_packs)
-    fieldwork_dates = _extract_fieldwork_dates(
-        time_period,
-        *methodology_items,
-        _s(summary.get("executive_summary")),
-        _s(doc_map.get("methodology")),
-    )
+    if _same_temporal_value(source_period, fieldwork_dates):
+        source_period = ""
     tldr_text = _sanitize_public_prose(
         _pick_first_text(summary.get("tldr"), data.get("tldr"))
     )
@@ -544,11 +547,18 @@ def _build_seo_title(report_title: str, focus_year: str, publisher: str) -> str:
 def _public_source_period(
     *, report_title: str, time_period: str, focus_year: str
 ) -> str:
-    if time_period:
-        return time_period
+    if projected := normalize_time_period(time_period):
+        return projected
     if not _YEAR_PATTERN.search(report_title):
         return focus_year
     return ""
+
+
+def _same_temporal_value(left: str, right: str) -> bool:
+    def _normalize(value: str) -> str:
+        return re.sub(r"\s*(?:-|–|—|to)\s*", " to ", value.casefold()).strip()
+
+    return bool(left and right and _normalize(left) == _normalize(right))
 
 
 __all__ = [

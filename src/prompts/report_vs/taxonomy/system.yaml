@@ -16,4 +16,5 @@ text: |
   - tag_evidence should contain short evidence items for the chosen tags; prefer evidence from distinct sections when available.
   - each tag_evidence item should include tag, tier (primary or secondary), section_label, and a short evidence string.
   - region and time_period should be empty strings if not stated.
+  - time_period must be concise, source-backed temporal text only (for example, `2025`, `Q2 2025`, `FY2025`, or `January 2024 to March 2024`); never include explanatory prose, findings, methodology, or commentary.
   - do not add fields beyond the schema.
