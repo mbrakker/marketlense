@@ -82,6 +82,11 @@ _UNATTRIBUTED_PUBLISHER_IDS = frozenset(
 )
 
 
+def _manifest_source_identity_id(ctx: RunContext, fallback: str) -> str:
+    """Keep an inherited cohort identity when recording a pipeline stage."""
+    return str(ctx.source_identity_id or "").strip() or fallback
+
+
 def _should_fresh_start_after_latest_safe_rejection(error: AppError) -> bool:
     """Allow a clean retained-source rebuild only after lineage rejection."""
 
@@ -739,11 +744,19 @@ def run_report_generation(
                     "resume_stage": STAGE_ANALYSIS_COMPLETE,
                 },
             ) from exc
+        manifest_source_identity_id = _manifest_source_identity_id(
+            runtime.ctx,
+            runtime.md5 or runtime.file.file_id,
+        )
         manifest_ctx = replace(
             runtime.ctx,
             report_id=runtime.file.file_id,
-            source_identity_id=runtime.md5 or runtime.file.file_id,
-            publisher_id=runtime.publisher_name or "unattributed",
+            source_identity_id=manifest_source_identity_id,
+            publisher_id=(
+                str(runtime.ctx.publisher_id or "").strip()
+                or runtime.publisher_name
+                or "unattributed"
+            ),
             workflow="report_generation",
             stage="rendering",
             artifact_family="rendered_html",
@@ -752,7 +765,7 @@ def run_report_generation(
             settings=runtime.settings,
             ctx=manifest_ctx,
             stage="rendering",
-            source_identity_id=runtime.md5 or runtime.file.file_id,
+            source_identity_id=manifest_source_identity_id,
             input_artifact_ids=tuple(analysis.evidence_paths.values()),
             output_artifact_ids=(outcome.html_path or "",),
         )
@@ -760,7 +773,7 @@ def run_report_generation(
             settings=runtime.settings,
             ctx=manifest_ctx,
             stage="final_html_validation",
-            source_identity_id=runtime.md5 or runtime.file.file_id,
+            source_identity_id=manifest_source_identity_id,
             input_artifact_ids=(outcome.html_path or "",),
             output_artifact_ids=(outcome.html_path or "",),
         )

@@ -4,9 +4,27 @@ from src.contracts.drive import DriveFile
 from src.contracts.run_context import RunContext
 from src.orchestrators._report_generation_orchestrator.workflow import (
     _admission_context_identity,
+    _manifest_source_identity_id,
     _resolve_runtime_source_identity,
 )
 from src.utils.errors import AppError
+
+
+def test_render_manifest_identity_preserves_admitted_identity_over_pdf_checksum() -> None:
+    """A frozen cohort must not create a second MD5-keyed manifest entity."""
+    ctx = RunContext(
+        schema_version="1.0",
+        run_id="run",
+        task_id="task",
+        span_id="span",
+        source_identity_id="source:admitted-report",
+        publisher_id="Verified Publisher",
+        admission_decision_hash="admission-hash",
+        validation_run_id="validation:run",
+        cohort_id="cohort",
+    )
+
+    assert _manifest_source_identity_id(ctx, "pdf-md5") == "source:admitted-report"
 
 
 def test_runtime_source_identity_uses_verified_admission_context_when_store_is_empty(

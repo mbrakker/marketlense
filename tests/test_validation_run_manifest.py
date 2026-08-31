@@ -219,6 +219,119 @@ def test_manifest_attempt_resolution_requires_one_cohort_wide_lineage(tmp_path) 
     )
 
 
+def _insert_legacy_shadow_attempt(
+    db_path: str,
+    *,
+    report_id: str = "report-1",
+    source_identity_id: str,
+    terminal_outcome: str = "",
+) -> None:
+    """Model a malformed current row written by a pre-invariant workflow."""
+    with sqlite3.connect(db_path) as conn:
+        conn.execute(
+            """
+            INSERT INTO validation_run_entity_attempts(
+                attempt_id, validation_run_id, entity_key, entity_type, publisher_id,
+                report_id, source_identity_id, cohort_id, attempt_number,
+                parent_attempt_number, cohort_disposition, is_current, created_at_utc,
+                terminal_outcome, terminal_stage, failure_code, completed_at_utc
+            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """,
+            (
+                f"legacy-shadow-{report_id}-{source_identity_id}",
+                "validation-1",
+                f"report|{report_id}|{source_identity_id}",
+                "report",
+                "publisher-1",
+                report_id,
+                source_identity_id,
+                "cohort-1",
+                1,
+                0,
+                "final_validation",
+                1,
+                "2026-07-21T10:00:00Z",
+                terminal_outcome,
+                "ingestion" if terminal_outcome else "",
+                "",
+                "2026-07-21T10:01:00Z" if terminal_outcome else "",
+            ),
+        )
+
+
+def test_next_replay_supersedes_current_identity_not_in_frozen_cohort(tmp_path) -> None:
+    """A replay keeps historical bad identity records out of its current lineage."""
+    db_path = str(tmp_path / "reports.sqlite")
+    _create(db_path)
+    record_validation_run_manifest_stage(
+        ValidationRunManifestRecordRequest(
+            schema_version="1.0",
+            db_path=db_path,
+            record=_record(attempt=1, stage="discovery"),
+        ),
+        _ctx(),
+    )
+    _insert_legacy_shadow_attempt(
+        db_path,
+        source_identity_id="checksum-that-is-not-a-cohort-identity",
+    )
+
+    next_attempt = resolve_validation_run_manifest_attempt(
+        ValidationRunManifestAttemptResolveRequest(
+            schema_version="1.0",
+            db_path=db_path,
+            validation_run_id="validation-1",
+            mode="next_replay",
+        ),
+        _ctx(),
+    )
+
+    with sqlite3.connect(db_path) as conn:
+        current_identity_rows = conn.execute(
+            "SELECT source_identity_id FROM validation_run_entity_attempts "
+            "WHERE validation_run_id='validation-1' AND is_current=1"
+        ).fetchall()
+        superseded_shadow_rows = conn.execute(
+            "SELECT is_current FROM validation_run_entity_attempts "
+            "WHERE validation_run_id='validation-1' "
+            "AND source_identity_id='checksum-that-is-not-a-cohort-identity'"
+        ).fetchall()
+
+    assert (next_attempt.attempt_number, next_attempt.parent_attempt_number) == (2, 1)
+    assert current_identity_rows == [("source-1",)]
+    assert superseded_shadow_rows == [(0,)]
+
+
+def test_manifest_rejects_stage_identity_that_conflicts_with_frozen_member(
+    tmp_path,
+) -> None:
+    """A processing stage cannot introduce a second identity for an admitted report."""
+    db_path = str(tmp_path / "reports.sqlite")
+    _create(db_path)
+    record_validation_run_manifest_stage(
+        ValidationRunManifestRecordRequest(
+            schema_version="1.0",
+            db_path=db_path,
+            record=_record(attempt=1, stage="discovery"),
+        ),
+        _ctx(),
+    )
+
+    with pytest.raises(AppError, match="immutable identity"):
+        record_validation_run_manifest_stage(
+            ValidationRunManifestRecordRequest(
+                schema_version="1.0",
+                db_path=db_path,
+                record=_record(
+                    attempt=1,
+                    stage="taxonomy",
+                    source_identity_id="checksum-that-is-not-a-cohort-identity",
+                ),
+            ),
+            _ctx(),
+        )
+
+
 def test_manifest_rejects_nonterminal_outcomes_at_closure(tmp_path) -> None:
     db_path = str(tmp_path / "reports.sqlite")
     _create(db_path)
@@ -477,13 +590,6 @@ def test_manifest_audit_rejects_overlapping_reports_and_source_identities(
         _record(attempt=1, stage="discovery"),
         _record(
             attempt=1,
-            stage="acquisition",
-            report_id="report-1",
-            source_identity_id="source-2",
-            terminal=True,
-        ),
-        _record(
-            attempt=1,
             stage="discovery",
             report_id="report-2",
             source_identity_id="source-1",
@@ -503,6 +609,11 @@ def test_manifest_audit_rejects_overlapping_reports_and_source_identities(
             ),
             _ctx(),
         )
+    _insert_legacy_shadow_attempt(
+        db_path,
+        source_identity_id="source-2",
+        terminal_outcome="publish_ready",
+    )
 
     audit = audit_validation_run_manifest(
         ValidationRunManifestAuditRequest(

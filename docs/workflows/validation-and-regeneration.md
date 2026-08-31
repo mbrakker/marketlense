@@ -75,6 +75,13 @@ Prompt fixtures and regression controls are documented in [quality testing](../q
 
 Release and reliability runs use an immutable admitted cohort. The cohort is
 persisted before report generation, and its content hash is the cohort ID.
+
+Every final-validation stage must retain the frozen member's exact canonical
+source identity. A conflicting identity is rejected at recording time. During
+an explicit replay, legacy current records whose report ID conflicts with that
+frozen identity are retained as `superseded` history and excluded from the
+current lineage before the next attempt is resolved; this repairs ledger state
+without concealing it or changing the admitted cohort.
 Its validation-run ID is separately derived from that cohort ID together with
 the admission configuration hash, policy hash, and producer-build identity.
 Consequently, replay is idempotent only for the same complete provenance; a

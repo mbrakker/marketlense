@@ -587,6 +587,23 @@ def _report_pipeline_resume_options(
     return None, auto_resume_from_latest_safe
 
 
+def _file_processing_context(file: DriveFile, root_ctx: RunContext) -> RunContext:
+    """Preserve an admitted source identity while scoping work to one file."""
+    return replace(
+        root_ctx,
+        report_id=file.file_id,
+        source_identity_id=(
+            str(root_ctx.source_identity_id or "").strip()
+            or file.md5_checksum
+            or file.file_id
+        ),
+        publisher_id=(root_ctx.publisher_id or "unattributed"),
+        workflow="report_generation",
+        stage="report_pipeline",
+        artifact_family="report",
+    )
+
+
 def _process_file(
     file: DriveFile,
     index: int,
@@ -594,15 +611,7 @@ def _process_file(
     root_ctx: RunContext,
     force_report_cards: bool,
 ) -> _FileProcessResult:
-    file_ctx = replace(
-        root_ctx,
-        report_id=file.file_id,
-        source_identity_id=(file.md5_checksum or file.file_id),
-        publisher_id=(root_ctx.publisher_id or "unattributed"),
-        workflow="report_generation",
-        stage="report_pipeline",
-        artifact_family="report",
-    )
+    file_ctx = _file_processing_context(file, root_ctx)
 
     def _run_pipeline(
         current_file: DriveFile,

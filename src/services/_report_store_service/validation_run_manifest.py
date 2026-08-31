@@ -262,10 +262,7 @@ def record_validation_run_manifest_stage(
                 inserted=False,
                 superseded_attempts=0,
             )
-        if (
-            record.stage == "discovery"
-            and record.cohort_disposition == "final_validation"
-        ):
+        if record.cohort_disposition == "final_validation":
             member_row = conn.execute(
                 """
                 SELECT entity_type, publisher_id, source_identity_id
@@ -279,7 +276,7 @@ def record_validation_run_manifest_stage(
                 record.publisher_id,
                 record.source_identity_id,
             )
-            if member_row is None:
+            if member_row is None and record.stage == "discovery":
                 conn.execute(
                     """
                     INSERT INTO validation_run_cohort_members(
@@ -297,10 +294,12 @@ def record_validation_run_manifest_stage(
                         record.started_at_utc,
                     ),
                 )
-            elif tuple(str(value) for value in member_row) != member_identity:
+            elif member_row is not None and tuple(
+                str(value) for value in member_row
+            ) != member_identity:
                 raise AppError(
                     code="validation_manifest_cohort_member_conflict",
-                    message="Discovery changed the immutable identity of a cohort report",
+                    message="Stage changed the immutable identity of a cohort report",
                     retryable=False,
                 )
         superseded = conn.execute(
@@ -430,6 +429,38 @@ def resolve_validation_run_manifest_attempt(
                 code="validation_manifest_run_missing",
                 message="Validation manifest attempt resolution requires a created run",
                 retryable=False,
+            )
+        if request.mode == "next_replay":
+            conn.execute(
+                """
+                UPDATE validation_run_entity_attempts
+                SET is_current=0,
+                    terminal_outcome=CASE
+                        WHEN terminal_outcome='' THEN 'superseded'
+                        ELSE terminal_outcome
+                    END,
+                    terminal_stage=CASE
+                        WHEN terminal_stage='' THEN 'identity_reconciliation'
+                        ELSE terminal_stage
+                    END,
+                    failure_code=CASE
+                        WHEN failure_code='' THEN 'source_identity_not_in_frozen_cohort'
+                        ELSE failure_code
+                    END,
+                    completed_at_utc=CASE
+                        WHEN completed_at_utc='' THEN CURRENT_TIMESTAMP
+                        ELSE completed_at_utc
+                    END
+                WHERE validation_run_id=? AND cohort_disposition='final_validation'
+                  AND is_current=1
+                  AND EXISTS(
+                      SELECT 1 FROM validation_run_cohort_members AS member
+                      WHERE member.validation_run_id=validation_run_entity_attempts.validation_run_id
+                        AND member.report_id=validation_run_entity_attempts.report_id
+                        AND member.source_identity_id<>validation_run_entity_attempts.source_identity_id
+                  )
+                """,
+                (str(request.validation_run_id),),
             )
         rows = conn.execute(
             """

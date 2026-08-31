@@ -36,6 +36,24 @@ def _batch_dependencies(**overrides):
     return replace(orch.IngestBatchDependencies.default(), **defaults)
 
 
+def test_file_processing_context_preserves_admitted_identity_over_pdf_checksum(
+    run_context,
+) -> None:
+    """Pipeline stages must retain the identity that was admitted to the cohort."""
+    file = DriveFile("1.0", "file", "Report.pdf", None, "pdf-md5")
+    admitted_ctx = replace(
+        run_context,
+        source_identity_id="source:admitted-report",
+        publisher_id="Verified Publisher",
+        admission_decision_hash="admission-hash",
+    )
+
+    file_ctx = orch._file_processing_context(file, admitted_ctx)
+
+    assert file_ctx.source_identity_id == "source:admitted-report"
+    assert file_ctx.publisher_id == "Verified Publisher"
+
+
 def test_attempt_limited_ingest_keeps_failed_candidate_in_the_result(
     ingest_settings,
 ) -> None:
