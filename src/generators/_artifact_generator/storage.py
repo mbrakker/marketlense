@@ -444,8 +444,10 @@ def derive_metric_spine_from_insights(
         ).strip()
         label = _s(metric.get("label") or metric.get("metric")).strip()
         if not label:
-            label = _metric_label_from_insight_text(_s(insight.get("text")).strip())
-        if not value or not evidence_id or not label:
+            label = _metric_label_from_insight_text(
+                _s(insight.get("text")).strip(), value=value
+            )
+        if not value or not evidence_id or not _is_complete_metric_label(label):
             continue
         missing_context_notes = [
             field_name
@@ -527,22 +529,83 @@ def _metric_editorial_rank(
     return (1, 0)
 
 
-def _metric_label_from_insight_text(text: str) -> str:
+def _metric_label_from_insight_text(text: str, *, value: str) -> str:
+    """Derive a legacy label only when a sentence can be tied to the metric."""
     token = _s(text).strip()
     if not token:
         return ""
-    if ":" in token:
-        token = token.split(":", 1)[0]
-    leading_initialism = re.match(r"^(?:[A-Za-z]\.){2,}\s+", token)
-    if leading_initialism:
-        prefix = leading_initialism.group(0).strip()
-        remainder = token[leading_initialism.end() :]
-        sentence = (
-            f"{prefix} {re.split(r'(?<=[.!?])\s+', remainder, maxsplit=1)[0]}".strip()
-        )
-    else:
-        sentence = re.split(r"(?<=[.!?])\s+", token, maxsplit=1)[0].strip()
-    return sentence
+    metric_numbers = _metric_measurement_numbers(value, retain_bare=True)
+    if not metric_numbers:
+        return ""
+    heading, separator, remainder = token.partition(":")
+    if (
+        separator
+        and not _metric_measurement_numbers(heading)
+        and _metric_measurement_numbers(remainder) == metric_numbers
+    ):
+        return heading.strip()
+    sentences = _abbreviation_safe_sentences(token)
+    matching = [
+        sentence
+        for sentence in sentences
+        if _metric_measurement_numbers(sentence) == metric_numbers
+    ]
+    if len(matching) == 1:
+        return matching[0]
+    matching_clauses = [
+        clause
+        for sentence in sentences
+        for clause in re.split(r"[;,]", sentence)
+        if _metric_measurement_numbers(clause) == metric_numbers
+        and len(re.findall(r"[A-Za-z]+", clause)) >= 3
+        and clause.lstrip()[:1].isupper()
+    ]
+    if len(matching_clauses) == 1:
+        return matching_clauses[0].strip()
+    return ""
+
+
+def _abbreviation_safe_sentences(text: str) -> List[str]:
+    protected: List[str] = []
+
+    def protect(match: re.Match[str]) -> str:
+        protected.append(match.group(0))
+        return f"\uFFF0{len(protected) - 1}\uFFF1"
+
+    compact = re.sub(r"\b(?:[A-Za-z]\.){2,}", protect, text)
+    sentences = re.split(r"(?<=[.!?])\s+", compact)
+
+    def restore(sentence: str) -> str:
+        return re.sub(
+            r"\uFFF0(\d+)\uFFF1",
+            lambda match: protected[int(match.group(1))],
+            sentence,
+        ).strip()
+
+    return [restored for item in sentences if (restored := restore(item))]
+
+
+def _metric_measurement_numbers(text: str, *, retain_bare: bool = False) -> List[str]:
+    matches = re.finditer(
+        r"(?P<currency>[$€£¥])?\s*(?P<number>\d+(?:,\d{3})*(?:\.\d+)?)"
+        r"(?:\s*(?P<unit>%|percent\b|pct\b|pp\b|bps\b|thousand\b|"
+        r"million\b|billion\b|trillion\b|mm\b|mn\b|bn\b|tn\b|k\b|m\b|b\b|t\b))?",
+        text,
+        re.IGNORECASE,
+    )
+    numbers: List[str] = []
+    for match in matches:
+        number = match.group("number").replace(",", "")
+        if not retain_bare and not (
+            match.group("currency") or match.group("unit")
+        ):
+            continue
+        numbers.append(number)
+    return numbers
+
+
+def _is_complete_metric_label(label: str) -> bool:
+    return bool(label) and not label.endswith(("U.S.", "U.K.", "...", "…"))
 
 
 def build_topics_covered(

@@ -29,4 +29,4 @@ text: |
   - Keep each `evidence_id` to a single existing ID or an empty string.
   - Keep each candidate tightly grounded to the supplied evidence.
   - Do not invent metrics or page numbers.
-  - Keep at most one public primary metric per candidate: `metric.value` must be one complete human-readable metric or one coherent comparison/range, never a semicolon-separated list. `metric.unit` must be one semantic unit and must not repeat currency symbols or magnitude words already in `metric.value`. Retain additional supporting numbers in `text` and `evidence`.
+  - Keep at most one public primary metric per candidate: `metric.value` must be one complete human-readable metric or one coherent comparison/range, never a semicolon-separated list. When `metric.value` is present, provide `metric.label` as a concise human-readable description of that exact source-backed metric, never a general multi-metric insight or another metric's subject. `metric.unit` must be one semantic unit and must not repeat currency symbols or magnitude words already in `metric.value`. Retain additional supporting numbers in `text` and `evidence`.

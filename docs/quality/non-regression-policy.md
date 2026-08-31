@@ -11,8 +11,8 @@ Current baseline artifact:
 - `docs/quality/baseline_2026-02-21.json`
 - `docs/quality/prompt_fixture_corpus_baseline_2026-04-26.json`
 
-The prompt fixture corpus baseline was last refreshed on 2026-08-30 after the
-committed public key-figure display prompt update. Its unmeasured warm-up validates
+The prompt fixture corpus baseline was last refreshed on 2026-08-31 after the
+committed metric-specific key-figure label prompt update. Its unmeasured warm-up validates
 prompt sources; measured passes render from that verified cache so the runtime
 budget does not vary with host filesystem hashing. No temporary prompt regression
 exceptions remain

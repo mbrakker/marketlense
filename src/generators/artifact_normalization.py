@@ -12,6 +12,7 @@ from src.utils.public_metric_display import normalize_public_metric_display
 from src.utils.text_normalization import normalize_text
 
 METRIC_FIELDS = (
+    "label",
     "value",
     "unit",
     "trend",

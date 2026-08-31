@@ -25,9 +25,13 @@ display remains authoritative. A generated decimal-ending display, or a
 currency integer whose linked retained source continues with a decimal digit,
 is rejected only when that exact source continuation proves truncation; the
 existing scoped artifact recovery then handles it. Chart, table, and crop
-selection are separate flows. Derived metric labels retain a leading geographic
-initialism and the complete first source sentence rather than emitting a clipped
-fragment.
+selection are separate flows. Every newly generated metric with a public value
+also carries a concise metric-specific label bound to the same evidence ID; the
+spine uses that explicit label rather than an insight-level statement. Legacy
+artifacts without the field remain readable through abbreviation-safe sentence
+handling, but a legacy Key Figure is omitted when no single metric-specific
+label can be established. Labels never stop at a geographic initialism such as
+`U.S.` or `U.K.`.
 
 Each public metric-spine item represents exactly one primary human-readable
 value, or one coherent comparison/range. Semicolon-packed values or units and

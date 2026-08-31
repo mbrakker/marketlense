@@ -1,0 +1,10 @@
+{
+  "insight_id": "activate-generative-ai-users",
+  "insight_text": "Monthly U.S. adult generative AI users reached 128 million.",
+  "evidence_id": "activate-ai-users",
+  "metric": {
+    "label": "Monthly U.S. adult generative AI users",
+    "value": "128 million",
+    "unit": ""
+  }
+}

@@ -18,7 +18,7 @@ def _insight(
         "text": text or f"{evidence_id} changes the planning outlook.",
         "evidence_id": evidence_id,
         "evidence": f"Evidence for {evidence_id}.",
-        "metric": {"value": "10", "unit": "%"},
+        "metric": {"label": "Planning outlook change", "value": "10", "unit": "%"},
         "pages": [int(evidence_id.removeprefix("f")) + 1],
         "score": score,
         "decision_relevance_score": score,

@@ -1,6 +1,8 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+from src.generators.artifact_normalization import normalize_artifact_insights
+
 from ._shared import *  # noqa: F401,F403
 
 
@@ -44,6 +46,173 @@ def test_derive_metric_spine_from_insights_uses_embedded_metric_contract() -> No
             "evidence_id": "q5",
         }
     ]
+
+
+def test_metric_label_survives_candidate_to_final_insight_to_key_figure() -> None:
+    candidate = normalize_artifact_insights(
+        [
+            {
+                "id": "iab-video-growth",
+                "text": (
+                    "Search retained the largest share of U.S. digital ad revenue. "
+                    "Digital video revenue grew 19.2%."
+                ),
+                "evidence_id": "iab-video",
+                "metric": {
+                    "label": "Digital video revenue growth",
+                    "value": "19.2%",
+                    "unit": "",
+                },
+            }
+        ],
+        prefix="candidate",
+    )
+    final = normalize_artifact_insights(candidate, prefix="insight")
+
+    spine = derive_metric_spine_from_insights(final)
+    figures = build_key_figures(metric_spine=spine, evidence_packs={})
+
+    assert spine[0]["label"] == "Digital video revenue growth"
+    assert spine[0]["evidence_id"] == "iab-video"
+    assert figures[0]["figure"] == "19.2%"
+    assert figures[0]["label"] == "Digital video revenue growth"
+    assert figures[0]["evidence_id"] == "iab-video"
+
+
+def test_iab_19_2_key_figure_uses_its_explicit_digital_video_label() -> None:
+    fixture_path = (
+        Path(__file__).resolve().parents[1]
+        / "fixtures"
+        / "editorial_temporal"
+        / "iab_video_19_2_key_figure.json"
+    )
+    fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+    spine = derive_metric_spine_from_insights(
+        [
+            {
+                "id": fixture["insight_id"],
+                "text": fixture["insight_text"],
+                "evidence_id": fixture["evidence_id"],
+                "metric": fixture["metric"],
+            }
+        ]
+    )
+
+    assert spine[0]["value"] == "19.2%"
+    assert spine[0]["label"] == "Digital video revenue growth"
+    assert spine[0]["evidence_id"] == "iab-video"
+
+
+def test_activate_2026_128_million_key_figure_uses_its_explicit_metric_label() -> None:
+    fixture_path = (
+        Path(__file__).resolve().parents[1]
+        / "fixtures"
+        / "editorial_temporal"
+        / "activate_2026_128m_key_figure.json"
+    )
+    fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+    spine = derive_metric_spine_from_insights(
+        [
+            {
+                "id": fixture["insight_id"],
+                "text": fixture["insight_text"],
+                "evidence_id": fixture["evidence_id"],
+                "metric": fixture["metric"],
+            }
+        ]
+    )
+
+    assert spine[0]["value"] == "128 million"
+    assert spine[0]["label"] == "Monthly U.S. adult generative AI users"
+    assert spine[0]["evidence_id"] == "activate-ai-users"
+
+
+@pytest.mark.parametrize(
+    ("text", "value"),
+    [
+        ("Monthly U.S. adult generative AI users reached 128 million.", "128 million"),
+        ("Monthly U.K. adult generative AI users reached 8 million.", "8 million"),
+    ],
+)
+def test_legacy_metric_label_never_truncates_us_or_uk_abbreviations(
+    text: str, value: str
+) -> None:
+    spine = derive_metric_spine_from_insights(
+        [
+            {
+                "id": "legacy-users",
+                "text": text,
+                "evidence_id": "legacy-users",
+                "metric": {"value": value, "unit": ""},
+            }
+        ]
+    )
+
+    assert spine[0]["label"] == text
+    assert not spine[0]["label"].endswith(("U.S.", "U.K."))
+
+
+def test_legacy_multi_metric_insight_uses_the_sentence_for_its_metric_not_the_first_sentence(
+) -> None:
+    spine = derive_metric_spine_from_insights(
+        [
+            {
+                "id": "legacy-iab-video",
+                "text": (
+                    "Search retained the largest share of U.S. digital ad revenue. "
+                    "Digital video revenue grew 19.2%."
+                ),
+                "evidence_id": "iab-video",
+                "metric": {"value": "19.2%", "unit": ""},
+            }
+        ]
+    )
+
+    assert spine[0]["label"] == "Digital video revenue grew 19.2%."
+    assert "Search retained" not in spine[0]["label"]
+
+
+def test_legacy_metric_omits_key_figure_when_no_metric_specific_label_is_reliable(
+) -> None:
+    insight = {
+        "id": "legacy-ambiguous",
+        "text": "Search held 42% share; 19.2%.",
+        "evidence_id": "iab-mixed",
+        "metric": {"value": "19.2%", "unit": ""},
+    }
+
+    assert derive_metric_spine_from_insights([insight]) == []
+
+
+def test_legacy_metric_uses_its_complete_clause_when_supporting_metrics_follow() -> None:
+    spine = derive_metric_spine_from_insights(
+        [
+            {
+                "id": "legacy-activate-users",
+                "text": (
+                    "Monthly U.S. adult generative AI users reached 128 million in "
+                    "2025, up 45 million year over year."
+                ),
+                "evidence_id": "activate-ai-users",
+                "metric": {"value": "128 million", "unit": ""},
+            }
+        ]
+    )
+
+    assert spine[0]["label"] == (
+        "Monthly U.S. adult generative AI users reached 128 million in 2025"
+    )
+
+
+def test_legacy_metric_omits_a_lowercase_clause_without_a_complete_subject() -> None:
+    insight = {
+        "id": "legacy-fragment",
+        "text": "Search held 42% share; cited by 19.2% of users.",
+        "evidence_id": "legacy-fragment",
+        "metric": {"value": "19.2%", "unit": ""},
+    }
+
+    assert derive_metric_spine_from_insights([insight]) == []
 
 
 def test_metric_spine_label_does_not_split_a_decimal_display() -> None:
@@ -132,7 +301,11 @@ def test_metric_spine_renders_one_clean_primary_metric(
                 "id": "primary-metric",
                 "text": "The source-backed insight retains supporting numbers in prose.",
                 "evidence_id": "iab-primary-metric",
-                "metric": {"value": value, "unit": unit},
+                "metric": {
+                    "label": "Source-backed primary metric",
+                    "value": value,
+                    "unit": unit,
+                },
             }
         ]
     )
@@ -314,7 +487,11 @@ def test_metric_spine_preserves_source_display_and_exposes_complete_numeric_meta
                 "id": "headline",
                 "text": "Headline value",
                 "evidence_id": "metric-headline",
-                "metric": {"value": display, "unit": ""},
+                "metric": {
+                    "label": "Source-backed headline metric",
+                    "value": display,
+                    "unit": "",
+                },
             }
         ]
     )
@@ -574,6 +751,7 @@ def test_generate_artifacts_passes_metric_spine_to_editorial_prompts(tmp_path) -
                     "evidence_id": "f1",
                     "evidence": "Revenue +10% YoY",
                     "metric": {
+                        "label": "Enterprise wallet adoption",
                         "value": "42",
                         "unit": "percent",
                         "timeframe": "2026",
@@ -614,14 +792,22 @@ def test_generate_artifacts_passes_metric_spine_to_editorial_prompts(tmp_path) -
         "report_vs/artifacts/linkedin_post"
     )
 
-    assert payload["metric_spine"][0]["label"] == "Wallet adoption"
+    assert payload["metric_spine"][0]["label"] == "Enterprise wallet adoption"
     assert json.loads(expert_vars["metric_spine_json"])[0]["evidence_id"] == "f1"
     assert json.loads(linkedin_vars["metric_spine_json"])[0]["label"] == (
-        "Wallet adoption"
+        "Enterprise wallet adoption"
     )
 
 
 __all__ = [
+    "test_metric_label_survives_candidate_to_final_insight_to_key_figure",
+    "test_iab_19_2_key_figure_uses_its_explicit_digital_video_label",
+    "test_activate_2026_128_million_key_figure_uses_its_explicit_metric_label",
+    "test_legacy_metric_label_never_truncates_us_or_uk_abbreviations",
+    "test_legacy_multi_metric_insight_uses_the_sentence_for_its_metric_not_the_first_sentence",
+    "test_legacy_metric_omits_key_figure_when_no_metric_specific_label_is_reliable",
+    "test_legacy_metric_uses_its_complete_clause_when_supporting_metrics_follow",
+    "test_legacy_metric_omits_a_lowercase_clause_without_a_complete_subject",
     "test_derive_metric_spine_from_insights_uses_embedded_metric_contract",
     "test_metric_spine_label_does_not_split_a_decimal_display",
     "test_metric_spine_label_keeps_leading_abbreviation_with_its_sentence",

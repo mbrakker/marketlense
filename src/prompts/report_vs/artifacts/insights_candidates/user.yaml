@@ -19,7 +19,7 @@ text: |
   - evidence_id: exactly one existing evidence ID from the provided context.
     Do not output arrays or comma-separated IDs; if uncertain, use an empty string.
   - evidence: short supporting quote/number
-  - metric: object with fields {value, unit, trend, timeframe, geography, segment, sample_size, confidence} (empty strings allowed but keep present)
+  - metric: object with fields {label, value, unit, trend, timeframe, geography, segment, sample_size, confidence} (empty strings allowed but keep present)
   - pages: page numbers if available
   - score, decision_relevance_score, metric_strength_score, novelty_score: numeric scores from 0-1
   - coverage_role: one of market_context, behavior_shift, strategic_risk, operating_implication, investment_signal, proof_point, counter_signal
@@ -28,4 +28,4 @@ text: |
   - report_type_lens: one of market_size, consumer_behavior, technology_shift, channel_strategy, brand_strategy, investment_outlook, risk_regulation, operations, creative_culture
   Produce candidates for the editorial plan's themes and retain their linked evidence IDs; do not independently introduce another theme set.
   Do not hallucinate numbers; lift them from the provided context only.
-  For each metric, `metric.value` must contain one complete human-readable primary metric or one coherent comparison/range. Never put a semicolon-separated metric list in `metric.value`. `metric.unit` must represent one semantic unit and must not repeat currency symbols or magnitude words already contained in `metric.value`. Keep supporting numbers in `text` and `evidence`, not in the public metric display.
+  For each metric, `metric.value` must contain one complete human-readable primary metric or one coherent comparison/range. When `metric.value` is present, `metric.label` is required: make it a concise human-readable description of that exact source-backed metric (for example, `Digital video revenue growth`, `Monthly U.S. adult generative AI users`, or `Global eCommerce sales`), never a general insight or search statement. Never put a semicolon-separated metric list in `metric.value`. `metric.unit` must represent one semantic unit and must not repeat currency symbols or magnitude words already contained in `metric.value`. Keep supporting numbers in `text` and `evidence`, not in the public metric display.

@@ -327,6 +327,7 @@
           "metric": {
             "type": "object",
             "properties": {
+              "label": { "type": "string" },
               "value": { "type": "string" },
               "unit": { "type": "string" },
               "trend": { "type": "string" },
@@ -335,7 +336,19 @@
               "segment": { "type": "string" },
               "sample_size": { "type": "string" },
               "confidence": { "type": "string" }
-            }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "required": ["value"],
+                  "properties": { "value": { "type": "string", "minLength": 1 } }
+                },
+                "then": {
+                  "required": ["label"],
+                  "properties": { "label": { "type": "string", "minLength": 1 } }
+                }
+              }
+            ]
           },
           "pages": {
             "type": "array",
@@ -387,6 +400,7 @@
           "metric": {
             "type": "object",
             "properties": {
+              "label": { "type": "string" },
               "value": { "type": "string" },
               "unit": { "type": "string" },
               "trend": { "type": "string" },
@@ -395,7 +409,19 @@
               "segment": { "type": "string" },
               "sample_size": { "type": "string" },
               "confidence": { "type": "string" }
-            }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "required": ["value"],
+                  "properties": { "value": { "type": "string", "minLength": 1 } }
+                },
+                "then": {
+                  "required": ["label"],
+                  "properties": { "label": { "type": "string", "minLength": 1 } }
+                }
+              }
+            ]
           },
           "pages": {
             "type": "array",

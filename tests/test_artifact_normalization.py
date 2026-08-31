@@ -1,3 +1,6 @@
+import pytest
+
+from src.contracts.run_context import RunContext
 from src.generators._artifact_generator.family_policy import (
     build_artifact_family_status,
 )
@@ -8,9 +11,12 @@ from src.generators.artifact_normalization import (
     select_artifact_insights,
     strip_linkedin_inline_reference_ids,
 )
+from src.services.schema_validator_service import validate_output_schema
+from src.utils.errors import AppError
 
 
-def test_normalize_artifact_insights_preserves_scoring_and_strategy_fields():
+def test_normalize_artifact_insights_preserves_metric_label_scoring_and_strategy_fields(
+) -> None:
     insights = normalize_artifact_insights(
         [
             {
@@ -18,7 +24,11 @@ def test_normalize_artifact_insights_preserves_scoring_and_strategy_fields():
                 "text": "Wallet adoption changes checkout planning.",
                 "evidence_id": "f1",
                 "evidence": "Wallet adoption is rising.",
-                "metric": {"value": "42", "unit": "percent"},
+                "metric": {
+                    "label": "Enterprise wallet adoption",
+                    "value": "42",
+                    "unit": "percent",
+                },
                 "pages": [4],
                 "score": 0.91,
                 "decision_relevance_score": 0.95,
@@ -45,6 +55,7 @@ def test_normalize_artifact_insights_preserves_scoring_and_strategy_fields():
             "evidence": "Wallet adoption is rising.",
             "evidence_spans": [],
             "metric": {
+                "label": "Enterprise wallet adoption",
                 "value": "42",
                 "unit": "percent",
                 "trend": "",
@@ -65,6 +76,33 @@ def test_normalize_artifact_insights_preserves_scoring_and_strategy_fields():
             "novelty_score": 0.7,
         }
     ]
+
+
+@pytest.mark.parametrize("root_key", ["insights_candidates", "insights_final"])
+def test_insight_metric_value_requires_a_human_readable_label_in_output_schema(
+    root_key: str,
+) -> None:
+    payload = {
+        root_key: [
+            {
+                "id": "i1",
+                "text": "Digital video revenue grew.",
+                "evidence_id": "iab-video",
+                "metric": {"value": "19.2%", "unit": ""},
+            }
+        ]
+    }
+    ctx = RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
+
+    with pytest.raises(AppError) as captured:
+        validate_output_schema(
+            payload=payload,
+            schema_name="artifacts",
+            root_key=root_key,
+            ctx=ctx,
+        )
+
+    assert captured.value.code == "schema_missing_required"
 
 
 def test_normalize_artifact_summary_removes_editorial_scaffold_labels() -> None:
@@ -152,6 +190,7 @@ def test_fallback_artifact_insights_uses_distinct_grounded_findings_only():
             "evidence": "The report identifies where audiences drop off.",
             "evidence_spans": [],
             "metric": {
+                "label": "",
                 "value": "",
                 "unit": "",
                 "trend": "",
@@ -170,6 +209,7 @@ def test_fallback_artifact_insights_uses_distinct_grounded_findings_only():
             "evidence": "The report covers more than 50 markets.",
             "evidence_spans": [],
             "metric": {
+                "label": "",
                 "value": "",
                 "unit": "",
                 "trend": "",

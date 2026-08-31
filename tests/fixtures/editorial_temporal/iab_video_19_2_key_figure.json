@@ -1,0 +1,10 @@
+{
+  "insight_id": "iab-video-growth",
+  "insight_text": "Search retained the largest share of U.S. digital ad revenue. Digital video revenue grew 19.2%.",
+  "evidence_id": "iab-video",
+  "metric": {
+    "label": "Digital video revenue growth",
+    "value": "19.2%",
+    "unit": ""
+  }
+}
