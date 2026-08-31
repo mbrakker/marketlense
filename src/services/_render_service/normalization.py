@@ -53,7 +53,8 @@ _LINKEDIN_PLACEHOLDER = re.compile(
     r"\[(?:placeholder|todo|tbd|not available|n/?a|unknown)\]", re.IGNORECASE
 )
 _MECHANICAL_PUBLIC_SCAFFOLD = re.compile(
-    r"\b(?:answer|observation|implication|executive action|executive takeaway|concrete finding|"
+    r"\b(?:answer|observation|implication|executive action|executive takeaway|"
+    r"concrete finding|"
     r"immediate implication)\s*:",
     re.IGNORECASE,
 )
