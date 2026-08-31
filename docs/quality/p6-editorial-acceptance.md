@@ -1,6 +1,6 @@
 # P6 editorial acceptance validation
 
-Status: **ACTIVE — Batch 1 awaiting human review**
+Status: **ACTIVE — Batch 1 human-review score matrix recorded**
 
 ## Batch 1 cohort definition
 
@@ -57,6 +57,40 @@ The retained `final.html` files are byte-identical SHA-256 copies of the pipelin
 | 3 |  |  |  |  |
 | 4 |  |  |  |  |
 | 5 |  |  |  |  |
+
+### Score matrix — latest five-report rerun
+
+The following reviewer-supplied matrix applies to the latest five-report
+rerun. It is a qualitative human-review record, not an automated judgment and
+does not change any generated HTML, prompt, editorial rule, or cohort member.
+Charts and tables are excluded from this benchmark as agreed. Scores are out
+of 10; LinkedIn quality is assessed separately; `Weighted /100` uses the same
+editorial weighting as the prior matrix, normalized without charts/tables.
+
+| Dimension | Activate eCom 2025 (#2) | IAB 2024 (#3) | YouGov AI (#4) | Omnisend (#1) | Activate 2026 (#5) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Factual fidelity | 9.5 | 9.5 | 9.5 | 9.5 | 9.0 |
+| Evidence selection | 9.0 | 9.0 | 9.5 | 9.0 | 9.0 |
+| Analytical depth | 8.0 | 8.5 | 9.0 | 9.0 | 8.5 |
+| Insight specificity | 9.5 | 9.5 | 9.5 | 9.0 | 9.0 |
+| Commercial relevance | 9.5 | 9.0 | 9.0 | 9.0 | 9.0 |
+| Charts & tables | — | — | — | — | — |
+| Narrative structure | 9.0 | 9.0 | 9.0 | 9.0 | 8.5 |
+| Editorial clarity | 9.0 | 9.0 | 9.0 | 9.0 | 8.5 |
+| Expert credibility / human feel | 8.5 | 8.5 | 9.5 | 8.5 | 8.0 |
+| Completeness | 9.0 | 9.0 | 9.5 | 9.0 | 8.0 |
+| LinkedIn quality | 9.2 | 9.1 | 9.2 | 9.0 | 9.0 |
+| **Weighted /100** | **89.7** | **90.0** | **92.8** | **90.3** | **86.7** |
+
+Exact reviewed HTML outputs:
+
+| # | Report | Reviewed final HTML |
+| --- | --- | --- |
+| 1 | Omnisend | [final HTML](../../out/p6_editorial_acceptance/batch_01_evidence_reliability_20260831_v6/pipeline_output/2023-email-sms-and-push-report-pdf.html) |
+| 2 | Activate eCom 2025 | [final HTML](../../out/p6_editorial_acceptance/batch_01_evidence_reliability_20260831_v6/pipeline_output/2412-activate-technology-and-media-outlook-2025-ecommerce-pdf.html) |
+| 3 | IAB 2024 | [final HTML](../../out/p6_editorial_acceptance/batch_01_evidence_reliability_20260831_v6/pipeline_output/iab-pwc-internet-ad-revenue-report-full-year-2024-pdf.html) |
+| 4 | YouGov AI | [final HTML](../../out/p6_editorial_acceptance/batch_01_evidence_reliability_20260831_v6/pipeline_output/uk-attitudes-to-ai-in-media-report-2025-pdf.html) |
+| 5 | Activate 2026 | [final HTML](../../out/p6_editorial_acceptance/batch_01_evidence_reliability_20260831_v6/pipeline_output/activate-technology-media-outlook-2026-acig-pdf.html) |
 
 ## Batch 1 upgraded-checkout rerun (2026-08-31)
 
