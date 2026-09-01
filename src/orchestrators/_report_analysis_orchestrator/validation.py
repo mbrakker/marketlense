@@ -759,7 +759,10 @@ def _run_validation_regeneration_loop(
             else:
                 promotion_outcome = "rolled_back"
                 artifacts_path = current_artifacts_path
-                working_artifacts = candidate_artifacts
+                # A rejected candidate has never become canonical.  Retrying
+                # from it would turn rollback into an untracked mutation and
+                # compound the original failure on every later attempt.
+                working_artifacts = deepcopy(promoted_artifacts)
             candidate_audit_path = _store_regeneration_candidate_audit(
                 runtime=runtime,
                 dependencies=dependencies,

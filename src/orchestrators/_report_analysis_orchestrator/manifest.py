@@ -46,12 +46,16 @@ def record_validation_manifest_stage(
     validation_run_id = str(getattr(ctx, "validation_run_id", "") or "").strip()
     if not validation_run_id:
         return
+    inherited_source_identity_id = str(
+        getattr(ctx, "source_identity_id", "") or ""
+    ).strip()
     required = {
         "validation_run_id": validation_run_id,
         "cohort_id": str(getattr(ctx, "cohort_id", "") or "").strip(),
         "run_id": str(getattr(ctx, "run_id", "") or "").strip(),
         "report_id": str(getattr(ctx, "report_id", "") or "").strip(),
-        "source_identity_id": str(source_identity_id or "").strip(),
+        "source_identity_id": inherited_source_identity_id
+        or str(source_identity_id or "").strip(),
         "configuration_hash": str(getattr(ctx, "configuration_hash", "") or "").strip(),
         "policy_hash": str(getattr(ctx, "policy_hash", "") or "").strip(),
         "producer": str(getattr(ctx, "producer_commit_sha", "") or "workspace").strip(),

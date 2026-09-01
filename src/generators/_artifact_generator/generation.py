@@ -30,6 +30,7 @@ from src.generators._artifact_generator.storage import (
 )
 from src.generators._artifact_generator.toc import build_toc_artifacts
 from src.generators.artifact_normalization import (
+    REQUIRED_REPORT_PAYLOAD_INSIGHTS,
     artifact_base_variables,
     artifact_quote_candidates,
     artifact_retrieval_mode,
@@ -44,7 +45,7 @@ from src.generators.artifact_normalization import (
     normalize_artifact_source_status,
     normalize_artifact_summary,
     normalize_expert_domain,
-    REQUIRED_REPORT_PAYLOAD_INSIGHTS,
+    preserve_public_source_displays,
     select_artifact_insights,
     strip_linkedin_inline_reference_ids,
 )
@@ -799,6 +800,12 @@ def generate_artifacts(
     expert_comment = _s(expert_result.get("expert_comment"))
     linkedin_post = strip_linkedin_inline_reference_ids(
         _s(linkedin_result.get("linkedin_post"))
+    )
+    expert_comment, linkedin_post = preserve_public_source_displays(
+        summary=summary,
+        insights_final=insights_final,
+        expert_comment=expert_comment,
+        linkedin_post=linkedin_post,
     )
     (
         summary,

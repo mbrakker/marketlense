@@ -131,6 +131,11 @@ __all__ = [
 ]
 
 
+def _analysis_source_identity_id(ctx: Any, fallback: str) -> str:
+    """Preserve the immutable source identity admitted by the ingest cohort."""
+    return str(ctx.source_identity_id or "").strip() or fallback
+
+
 def _artifact_family_statuses(artifacts_payload: Any) -> dict[str, str]:
     """Return only durable artifact-family state, never generated artifact content."""
 
@@ -320,7 +325,10 @@ def run_report_analysis(
     mode_ctx = replace(
         child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:vector_store"),
         report_id=runtime.file.file_id,
-        source_identity_id=runtime.md5 or runtime.file.file_id,
+        source_identity_id=_analysis_source_identity_id(
+            runtime.ctx,
+            runtime.md5 or runtime.file.file_id,
+        ),
         publisher_id=runtime.publisher_name or "unattributed",
         workflow="report_analysis",
         stage="vector_store",

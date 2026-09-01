@@ -1,0 +1,55 @@
+schema_version: "1.0"
+
+# Isolated, non-public validation of the two previously held sources plus the
+# intervening accepted cohort member. It replays immutable source provenance
+# only; no prior analysis, editorial, validation, or rendered HTML is reusable.
+paths:
+  output_dir: "./out/p6_editorial_acceptance/batch_02/hold_remediation_validation_20260901"
+  cache_dir: "./cache/p6_editorial_acceptance/batch_02/hold_remediation_validation_20260901"
+  state_db: "./state/p6_editorial_acceptance/batch_02/hold_remediation_validation_20260901/index.sqlite"
+  reports_db: "./state/p6_editorial_acceptance/batch_02/hold_remediation_validation_20260901/reports.sqlite"
+  signal_store_db: "./state/p6_editorial_acceptance/batch_02/hold_remediation_validation_20260901/signals.sqlite"
+  ingest_lock: "./state/p6_editorial_acceptance/batch_02/hold_remediation_validation_20260901/ingest.lock"
+
+ingest:
+  run_budget:
+    max_spend_usd: 2.5
+    max_pdfs: 3
+    max_retries: 6
+    max_runtime_seconds: 21600
+    limit_decision: "stop"
+
+browser_download:
+  output_dir: "./out/p6_editorial_acceptance/batch_02/hold_remediation_validation_20260901/browser_downloads"
+  drive_upload:
+    enabled: false
+    required: false
+  run_budget:
+    max_browser_launches: 0
+    max_pdfs: 3
+    max_drive_writes: 0
+    max_drive_reads: 0
+    max_mailbox_reads: 0
+    max_retries: 6
+    max_runtime_seconds: 10800
+    limit_decision: "stop"
+
+analysis:
+  cost_ledger_path: "./state/p6_editorial_acceptance/batch_02/hold_remediation_validation_20260901/llm_cost_ledger.jsonl"
+
+cost:
+  usage_db_path: "./state/p6_editorial_acceptance/batch_02/hold_remediation_validation_20260901/llm_usage.sqlite"
+  daily_path: "./state/p6_editorial_acceptance/batch_02/hold_remediation_validation_20260901/llm_cost_daily.json"
+  ledger_path: "./state/p6_editorial_acceptance/batch_02/hold_remediation_validation_20260901/llm_cost_ledger.jsonl"
+
+publish:
+  wp:
+    site_url: ""
+    username: ""
+    post_status: "draft"
+  projection_daily_path: "./state/p6_editorial_acceptance/batch_02/hold_remediation_validation_20260901/projection_cost_daily.json"
+  projection_ledger_path: "./state/p6_editorial_acceptance/batch_02/hold_remediation_validation_20260901/projection_cost_ledger.jsonl"
+  run_budget:
+    enabled: true
+    max_wordpress_writes: 0
+    limit_decision: "stop"

@@ -81,6 +81,23 @@ INLINE_REFERENCE_GROUP_RE = re.compile(
     rf"[\(\[]\s*{INLINE_REFERENCE_TOKEN_RE}(?:\s*[/,;|]\s*{INLINE_REFERENCE_TOKEN_RE})*\s*[\)\]]"
 )
 EVIDENCE_TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z0-9_-]*")
+_SOURCE_CURRENCY_DECIMAL_DISPLAY_RE = re.compile(
+    r"(?<![A-Za-z0-9])(?P<display>[$€£¥]\s*\d{1,3}(?:,\d{3})*\.\d+)(?!\d)"
+)
+_INCOMPLETE_CURRENCY_DECIMAL_RE = re.compile(
+    r"(?<![A-Za-z0-9])(?P<display>[$€£¥]\s*\d{1,3}(?:,\d{3})*\.)(?!\d)"
+)
+_INCOMPLETE_CURRENCY_INTEGER_RE = re.compile(
+    r"(?<![A-Za-z0-9])(?P<display>[$€£¥]\s*\d{1,3}(?:,\d{3})*)(?![\d.,])"
+)
+_TEMPORAL_QUALIFIER_RE = re.compile(
+    r"\b(?:Q[1-4]|H[12])(?:\s*(?:FY\s*)?20\d{2})?\b|"
+    r"\b(?:January|February|March|April|May|June|July|August|September|"
+    r"October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|"
+    r"Oct|Nov|Dec)\.?\s+20\d{2}\b|"
+    r"\b(?:FY\s*20\d{2}|fiscal\s+year\s+20\d{2})\b",
+    re.IGNORECASE,
+)
 QUOTE_ALIAS_RE = re.compile(r"^quote[-_]?(\d+)$", re.IGNORECASE)
 PUBLIC_EDITORIAL_SCAFFOLD_RE = re.compile(
     r"\b(?:answer|scale|implication|delivery and workflow|evidence note|caveat)\s*:\s*",
@@ -218,6 +235,141 @@ def normalize_artifact_summary(value: Any) -> Dict[str, Any]:
         ),
         "claim_evidence_map": _normalize_claims(claim_map),
     }
+
+
+def preserve_public_source_displays(
+    *,
+    summary: Dict[str, Any],
+    insights_final: List[Dict[str, Any]],
+    expert_comment: str,
+    linkedin_post: str,
+) -> tuple[str, str]:
+    """Restore only unique source-proven numeric precision and time qualifiers.
+
+    Model prose may abbreviate a retained display (``$3.0T`` to ``$3T``) or
+    drop a year from a comparison (``January 2025`` to ``January``).  Those
+    are presentation losses, not editorial choices.  This narrow normalizer
+    repairs them only when the linked retained evidence identifies one exact
+    replacement, leaving ambiguous or unsupported wording untouched.
+    """
+
+    safe_summary = summary if isinstance(summary, dict) else {}
+    summary_evidence = " ".join(
+        _s(item.get("evidence"))
+        for item in safe_summary.get("claim_evidence_map", [])
+        if isinstance(item, dict) and _s(item.get("evidence")).strip()
+    )
+    for field_name in ("tldr", "card_tldr_compact", "executive_summary"):
+        safe_summary[field_name] = _preserve_source_displays(
+            _s(safe_summary.get(field_name)), summary_evidence
+        )
+
+    downstream_evidence: list[str] = []
+    for insight in insights_final:
+        if not isinstance(insight, dict):
+            continue
+        evidence = _s(insight.get("evidence"))
+        for field_name in ("text", "so_what", "now_what"):
+            if field_name in insight:
+                insight[field_name] = _preserve_source_displays(
+                    _s(insight.get(field_name)), evidence
+                )
+        downstream_evidence.extend(
+            value
+            for value in (evidence, _s(insight.get("text")))
+            if value.strip()
+        )
+    combined_downstream_evidence = " ".join(downstream_evidence)
+    return (
+        _preserve_source_displays(expert_comment, combined_downstream_evidence),
+        _preserve_source_displays(linkedin_post, combined_downstream_evidence),
+    )
+
+
+def _preserve_source_displays(text: str, evidence: str) -> str:
+    if not text or not evidence:
+        return text
+    repaired = _restore_unique_currency_decimals(text, evidence)
+    repaired = _omit_ambiguous_truncated_currency_sentences(repaired, evidence)
+    return _restore_unique_temporal_qualifiers(repaired, evidence)
+
+
+def _restore_unique_currency_decimals(text: str, evidence: str) -> str:
+    displays_by_base = _currency_displays_by_base(evidence)
+
+    def complete(match: re.Match[str]) -> str:
+        display = match.group("display")
+        candidates = displays_by_base.get(_display_key(display.rstrip(".")), set())
+        return next(iter(candidates)) if len(candidates) == 1 else display
+
+    repaired = _INCOMPLETE_CURRENCY_DECIMAL_RE.sub(complete, text)
+    return _INCOMPLETE_CURRENCY_INTEGER_RE.sub(complete, repaired)
+
+
+def _omit_ambiguous_truncated_currency_sentences(text: str, evidence: str) -> str:
+    """Drop a sentence only when its shortened display has competing sources."""
+
+    displays_by_base = _currency_displays_by_base(evidence)
+    retained: list[str] = []
+    for sentence in re.split(r"(?<=[.!?])(?=\s|$)", text):
+        incomplete = [
+            match.group("display").rstrip(".")
+            for pattern in (
+                _INCOMPLETE_CURRENCY_DECIMAL_RE,
+                _INCOMPLETE_CURRENCY_INTEGER_RE,
+            )
+            for match in pattern.finditer(sentence)
+        ]
+        if any(
+            len(displays_by_base.get(_display_key(display), set())) > 1
+            for display in incomplete
+        ):
+            continue
+        retained.append(sentence.strip())
+    return " ".join(value for value in retained if value).strip()
+
+
+def _currency_displays_by_base(evidence: str) -> Dict[str, set[str]]:
+    displays_by_base: Dict[str, set[str]] = {}
+    for match in _SOURCE_CURRENCY_DECIMAL_DISPLAY_RE.finditer(evidence):
+        display = match.group("display")
+        base = re.sub(r"\.\d+$", "", display)
+        displays_by_base.setdefault(_display_key(base), set()).add(display)
+    return displays_by_base
+
+
+def _display_key(value: str) -> str:
+    return re.sub(r"\s+", "", value).casefold()
+
+
+def _restore_unique_temporal_qualifiers(text: str, evidence: str) -> str:
+    qualifiers_by_month: Dict[str, set[str]] = {}
+    for qualifier in _TEMPORAL_QUALIFIER_RE.finditer(evidence):
+        value = qualifier.group().strip()
+        month_match = re.match(
+            r"(?P<month>[A-Za-z]+)\.?\s+(?P<year>20\d{2})$", value
+        )
+        if month_match:
+            qualifiers_by_month.setdefault(
+                month_match.group("month").casefold(), set()
+            ).add(value)
+    repaired = text
+    for qualifiers in qualifiers_by_month.values():
+        if len(qualifiers) != 1:
+            continue
+        qualifier = next(iter(qualifiers))
+        month_match = re.match(
+            r"(?P<month>[A-Za-z]+)\.?\s+(?P<year>20\d{2})$", qualifier
+        )
+        if not month_match:
+            continue
+        month = month_match.group("month")
+        year = month_match.group("year")
+        bare_month = re.compile(
+            rf"\b{re.escape(month)}\.?\b(?!\s+20\d{{2}})", re.IGNORECASE
+        )
+        repaired = bare_month.sub(f"{month} {year}", repaired)
+    return repaired
 
 
 def _strip_public_editorial_scaffold(value: str) -> str:

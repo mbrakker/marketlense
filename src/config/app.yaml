@@ -277,6 +277,35 @@ llm_execution_policies:
     structured_output_mode: json_object
     fallback_policy: same_provider_only
     pricing_key: "gpt-5.6-luna"
+  # Public distribution copy is constrained to retained evidence.  Keep its
+  # sampling deterministic so a faithful first-pass draft is preferred over
+  # stylistic variation that can require a regeneration cycle.
+  report_vs/artifacts/linkedin_post:
+    schema_version: "1.0"
+    provider: openai
+    model: "gpt-5.6-luna"
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 8192
+    retrieval_mode: inherit
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    fallback_policy: same_provider_only
+    pricing_key: "gpt-5.6-luna"
+  report_vs/artifacts/regenerate/linkedin_post:
+    schema_version: "1.0"
+    provider: openai
+    model: "gpt-5.6-luna"
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 8192
+    retrieval_mode: inherit
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    fallback_policy: same_provider_only
+    pricing_key: "gpt-5.6-luna"
   report_vs/artifacts/cover_semantics_repair:
     schema_version: "1.0"
     provider: openai

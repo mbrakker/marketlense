@@ -388,6 +388,38 @@ def test_analysis_stage_recorder_uses_inherited_validation_provenance(tmp_path) 
     } == {("taxonomy", "succeeded", 1)}
 
 
+def test_analysis_stage_recorder_preserves_inherited_identity_over_pdf_checksum(
+    tmp_path,
+) -> None:
+    """A frozen cohort cannot gain a checksum-keyed analysis-stage entity."""
+    db_path = str(tmp_path / "reports.sqlite")
+    _create(db_path)
+    ctx = replace(
+        _ctx(),
+        producer_commit_sha="build-sha",
+        validation_run_id="validation-1",
+        cohort_id="cohort-1",
+        report_id="report-1",
+        source_identity_id="source:admitted-report",
+        publisher_id="publisher-1",
+        configuration_hash="config-hash",
+        policy_hash="policy-hash",
+    )
+
+    record_validation_analysis_stage(
+        settings=SimpleNamespace(reports_db=db_path),
+        ctx=ctx,
+        stage="taxonomy",
+        source_identity_id="pdf-checksum",
+    )
+
+    with sqlite3.connect(db_path) as connection:
+        identities = connection.execute(
+            "SELECT DISTINCT source_identity_id FROM validation_run_entity_attempts"
+        ).fetchall()
+    assert identities == [("source:admitted-report",)]
+
+
 def test_analysis_stage_recorder_uses_workspace_identity_for_local_runs(
     tmp_path,
 ) -> None:

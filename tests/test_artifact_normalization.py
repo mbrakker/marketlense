@@ -9,8 +9,12 @@ from src.generators.artifact_normalization import (
     fallback_artifact_insights_from_findings,
     normalize_artifact_insights,
     normalize_artifact_summary,
+    preserve_public_source_displays,
     select_artifact_insights,
     strip_linkedin_inline_reference_ids,
+)
+from src.generators.public_editorial_quality_generator import (
+    evaluate_public_editorial_quality,
 )
 from src.services.schema_validator_service import validate_output_schema
 from src.utils.errors import AppError
@@ -201,6 +205,89 @@ def test_initial_artifact_normalization_preserves_distinct_quarterly_periods() -
     assert summary["tldr"] == source
     assert summary["claim_evidence_map"][0]["evidence"] == source
     assert insights[0]["text"] == source
+
+
+def test_preserve_public_source_displays_repairs_unique_proven_values() -> None:
+    summary = {
+        "tldr": "The report has a material outlook.",
+        "card_tldr_compact": "The report has a material outlook.",
+        "executive_summary": "Global eCommerce is forecast to add over $3T.",
+        "claim_evidence_map": [
+            {
+                "claim": "Global eCommerce is forecast to add over $3T.",
+                "evidence_id": "market-growth",
+                "evidence": "Global eCommerce is forecast to add over $3.0T.",
+            }
+        ],
+    }
+    insights = [
+        {
+            "id": "ad-market",
+            "text": (
+                "The 2025 U.S. ad-spend forecast was revised from +7.3% in "
+                "January to +5.7% in September."
+            ),
+            "evidence_id": "ad-market-growth",
+            "evidence": (
+                "The January 2025 outlook forecast +7.3%, while the September "
+                "2025 update revised it to +5.7%."
+            ),
+            "metric": {},
+            "pages": [1],
+        }
+    ]
+
+    preserve_public_source_displays(
+        summary=summary,
+        insights_final=insights,
+        expert_comment="",
+        linkedin_post="",
+    )
+
+    assert summary["executive_summary"] == (
+        "Global eCommerce is forecast to add over $3.0T."
+    )
+    assert insights[0]["text"] == (
+        "The 2025 U.S. ad-spend forecast was revised from +7.3% in January "
+        "2025 to +5.7% in September 2025."
+    )
+    quality = evaluate_public_editorial_quality(
+        report_id="source-display-preservation",
+        artifacts={"summary": summary, "insights_final": insights},
+    )
+    assert quality.status == "pass"
+
+
+def test_preserve_public_source_displays_omits_ambiguous_truncated_currency_sentence(
+) -> None:
+    summary = {
+        "tldr": "The report has a material outlook.",
+        "card_tldr_compact": "The report has a material outlook.",
+        "executive_summary": "Commerce is forecast to add over $3T through 2028.",
+        "claim_evidence_map": [
+            {
+                "claim": "Two distinct forecast figures are retained.",
+                "evidence_id": "ambiguous-growth",
+                "evidence": (
+                    "Consumer revenues rise to $3.0T while B2B revenues rise "
+                    "to $3.2T."
+                ),
+            }
+        ],
+    }
+
+    preserve_public_source_displays(
+        summary=summary,
+        insights_final=[],
+        expert_comment="",
+        linkedin_post="",
+    )
+
+    assert summary["executive_summary"] == ""
+    quality = evaluate_public_editorial_quality(
+        report_id="ambiguous-source-display", artifacts={"summary": summary}
+    )
+    assert quality.status == "pass"
 
 
 def test_fallback_artifact_insights_uses_distinct_grounded_findings_only():

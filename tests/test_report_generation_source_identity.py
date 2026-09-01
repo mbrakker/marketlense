@@ -7,6 +7,7 @@ from src.orchestrators._report_generation_orchestrator.workflow import (
     _manifest_source_identity_id,
     _resolve_runtime_source_identity,
 )
+from src.orchestrators.report_analysis_orchestrator import _analysis_source_identity_id
 from src.utils.errors import AppError
 
 
@@ -25,6 +26,19 @@ def test_render_manifest_identity_preserves_admitted_identity_over_pdf_checksum(
     )
 
     assert _manifest_source_identity_id(ctx, "pdf-md5") == "source:admitted-report"
+
+
+def test_analysis_context_identity_preserves_admitted_identity_over_pdf_checksum() -> None:
+    """Analysis must not discard the immutable identity inherited from ingest."""
+    ctx = RunContext(
+        schema_version="1.0",
+        run_id="run",
+        task_id="task",
+        span_id="span",
+        source_identity_id="source:admitted-report",
+    )
+
+    assert _analysis_source_identity_id(ctx, "pdf-md5") == "source:admitted-report"
 
 
 def test_runtime_source_identity_uses_verified_admission_context_when_store_is_empty(

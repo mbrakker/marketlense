@@ -257,6 +257,114 @@ def test_run_report_analysis_rolls_back_failed_candidate_regeneration(tmp_path):
     assert state.regeneration_attempts[0].candidate_audit_path
     assert state.validation_report.status == "fail"
 
+
+def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback(
+    tmp_path,
+):
+    runtime = replace(
+        _runtime(tmp_path),
+        settings=replace(
+            _runtime(tmp_path).settings, validation_regeneration_max_attempts=2
+        ),
+    )
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    original = _artifacts(
+        summary={
+            "tldr": "original artifact",
+            "executive_summary": "Original summary",
+            "claim_evidence_map": [],
+        }
+    )
+    candidates = [
+        _artifacts(
+            summary={
+                "tldr": "failed candidate",
+                "executive_summary": "Failed candidate summary",
+                "claim_evidence_map": [],
+            }
+        ),
+        _artifacts(
+            summary={
+                "tldr": "repaired artifact",
+                "executive_summary": "Repaired summary",
+                "claim_evidence_map": [],
+            }
+        ),
+    ]
+    regeneration_inputs = []
+    validation_calls = 0
+
+    def _run_validation(req, settings, ctx, *, pack_name, report_name, md5):
+        nonlocal validation_calls
+        del req, settings, ctx, pack_name, report_name, md5
+        validation_calls += 1
+        if validation_calls < 3:
+            return ValidationReport(
+                schema_version="1.1",
+                status="fail",
+                issues=[
+                    ValidationIssue(
+                        schema_version="1.0",
+                        message="[grounding] Unsupported summary claim",
+                        severity="error",
+                        affected_section="summary",
+                        rule_id="grounding",
+                        repair_target="summary",
+                    )
+                ],
+                severity="error",
+            )
+        return ValidationReport(
+            schema_version="1.1", status="pass", issues=[], severity="pass"
+        )
+
+    def _regenerate(request):
+        regeneration_inputs.append(request.current_artifacts["summary"]["tldr"])
+        attempt = request.attempt_index
+        return ArtifactRegenerationResponse(
+            updated_artifacts=candidates[attempt - 1],
+            regenerated_sections=["summary"],
+            prompt_namespaces=["report_vs/artifacts/regenerate/summary"],
+            candidate_artifacts_path=str(
+                tmp_path / "out" / f"artifacts_regen_candidate_{attempt}.json"
+            ),
+        )
+
+    deps = _deps(
+        generate_evidence_packs=lambda **kwargs: {
+            "doc_map": {"docMap": {"title": "Doc Title"}},
+            "findings": {
+                "findings": [
+                    {"id": f"f{index}", "pages": [index]}
+                    for index in range(1, 6)
+                ]
+            },
+            "quote_candidates": {"quote_candidates": [{"id": "q1", "page": 1}]},
+        },
+        generate_artifacts=lambda **kwargs: original,
+        run_validation=_run_validation,
+        regenerate_artifacts=_regenerate,
+    )
+
+    state = run_report_analysis(
+        runtime,
+        source,
+        selection,
+        VectorStoreIndexingState(
+            vector_store_id="vs_1",
+            openai_file_id="file_1",
+            vector_store_status="completed",
+            indexed_at_utc="2026-01-01T00:00:00Z",
+            last_error=None,
+        ),
+        deps,
+    )
+
+    assert regeneration_inputs == ["original artifact", "original artifact"]
+    assert len(state.regeneration_attempts) == 2
+    assert state.regeneration_attempts[0].promotion_outcome == "rolled_back"
+
 def test_run_report_analysis_maps_topic_section_failures_to_topics_regeneration(
     tmp_path,
 ):

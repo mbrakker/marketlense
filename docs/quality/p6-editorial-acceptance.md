@@ -205,3 +205,65 @@ All five canonical identities and exact Drive file IDs were verified against the
 | 3 |  |  |  |  |
 | 4 |  |  |  |  |
 | 5 |  |  |  |  |
+
+## Batch 2 cohort definition
+
+Status: **ACTIVE — Batch 2 awaiting human review**
+
+Batch 2 is a fixed five-report blind editorial-review cohort. Its immutable admission record is [cohort_manifest_final_generation.json](../../out/p6_editorial_acceptance/batch_02/cohort_manifest_final_generation.json); all five admitted reports remain in the denominator, including outputs held by final publish-readiness.
+
+| # | Report | Publisher | Source PDF | Retained final HTML | Pipeline | Readiness |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | Activate Consulting Technology & Media Outlook 2025 | Activate Consulting | [Google Drive PDF](https://drive.google.com/file/d/1snMTUyfA1GMDKMMT5Y8XZs8kivti7m1f/view) | [final.html](../../out/p6_editorial_acceptance/batch_02/report_01/final.html) | held: `publish_readiness_failed` | fail |
+| 2 | The Post-COVID Online Shopper: New Challenges and Opportunities | Activate Consulting | [Google Drive PDF](https://drive.google.com/file/d/1E0hEr2nEfRjTsgT3clKCn4b30Hg6xp1Z/view) | [final.html](../../out/p6_editorial_acceptance/batch_02/report_02/final.html) | processed (validation warning) | pass |
+| 3 | Annual Report 2025 | IAB | [Google Drive PDF](https://drive.google.com/file/d/1xyRvXkqInet89EjHW4hyfAoMRO69Vpow/view) | [final.html](../../out/p6_editorial_acceptance/batch_02/report_03/final.html) | held: `publish_readiness_failed` | fail |
+| 4 | Retail Marketing Trends: How To Win in 2026 | StackAdapt Inc. | [Google Drive PDF](https://drive.google.com/file/d/1zt4RcZ-7dFNtf9zVWK2kUMpqJMSouUGn/view) | [final.html](../../out/p6_editorial_acceptance/batch_02/report_04/final.html) | processed | pass |
+| 5 | Your definitive guide to AI-powered mobile marketing | Adjust | [Google Drive PDF](https://drive.google.com/file/d/1Y6gEFvvBcsabWsOX-t0LDxtlDo87Ue3h/view) | [final.html](../../out/p6_editorial_acceptance/batch_02/report_05/final.html) | processed | pass |
+
+## Selection methodology
+
+Selection occurred before final generation from real Drive PDFs, excluding every Batch 1 canonical identity. Admission preflight required a unique canonical source identity, duplicate/mirror exclusion, matching PDF MD5 provenance, readable structure, and sufficient evidence potential. The deterministic cohort includes a 206-page, data-heavy technology/media outlook; a 38-page online-shopper report; a 49-page digital-advertising annual report; a 22-page retail-marketing trend report; and a 24-page AI-powered mobile-marketing guide. This gives coverage of ecommerce, marketplace/shopper behaviour, digital advertising, retail/consumer behaviour, and an adjacent MarketLense topic without selecting on generated editorial quality.
+
+## Run and configuration identity
+
+- Repository HEAD and producer build identity: `3b0baa0f1f4a6705d36a39b0e42e718ba4e31f39`
+- Final generation run: `85e8effd-a70e-45f9-b7ae-41eb4d992df6`
+- Validation run: `validation:cee70e95a26bf1f87183b0be7f04f7de9594a351437d15617dc35491289bac29`
+- Cohort ID: `6bc24060e7fb7d5e107c17d012492f9a550f2ceff67bf5dc3f3dcb2d99e55d64`
+- Profile: [`p6_editorial_acceptance_batch_02_final_generation_20260901`](../../src/config/app.p6_editorial_acceptance_batch_02_final_generation_20260901.yaml); configuration hash `8bacef60b0bb707fae98285a6280d0bfae67109bb665eec1df0fe6a74932b25c`; policy hash `77302ec0862da786102ee09959e210ef62e9bf9ae8b2df1e5972b9cbaf9e2df7`
+- Model: `gpt-5.6-luna`
+
+Only immutable source identity and source-PDF provenance were recovered into the final isolated run; no E8/E9 editorial, analysis, validation, report, or rendered-HTML artifact was reused. A report-agnostic validation-manifest source-identity correction was made before this clean run; it preserved the admitted canonical identity at the report-analysis stage and did not modify prompts, editorial logic, or individual report content.
+
+## Pipeline and readiness results
+
+All five sources completed the normal fresh ingest/report-generation path and emitted an HTML artifact. Reports 1 and 3 reached terminal `publish_readiness_failed` holds after the normal bounded regeneration path; their outputs are retained for human review and were neither replaced nor manually repaired. Report 2 had one normal retry after `llm_usage_projection_busy`; report 4 had two such retries; report 5 had no retry. Reports 1 and 3 also had three bounded validation/artifact regeneration attempts each. No retry or regeneration was initiated to improve an editorial review result.
+
+The canonical publish-readiness evidence reports three passes (2, 4, 5) and two failures (1, 3). The held reports failed the existing `editorial_quality`, `regeneration_promotion`, and `semantic_grounding` readiness rules; this is a recorded automated gate outcome, not a human editorial score.
+
+Every retained `final.html` is a byte-identical SHA-256 copy of the pipeline HTML artifact. The source cache MD5 values match the frozen Drive file identities. The normal admission, schema, grounding, semantic, chart/table, editorial, final-HTML, and publish-readiness gates reached recorded terminal outcomes; none was bypassed. Google Drive remained read-only: Drive writes, WordPress writes, and public writes were zero.
+
+The full package, including source IDs, canonical identities, pipeline paths, readiness, recovery history, hashes, and per-report provider attribution, is [manifest.json](../../out/p6_editorial_acceptance/batch_02/manifest.json).
+
+## Attributable provider usage
+
+| # | Calls | Input tokens | Output tokens | Estimated cost (USD) |
+| --- | ---: | ---: | ---: | ---: |
+| 1 | 59 | 788,396 | 82,736 | 0.246267 |
+| 2 | 29 | 241,033 | 25,285 | 0.078547 |
+| 3 | 38 | 562,533 | 50,423 | 0.167967 |
+| 4 | 24 | 174,958 | 21,621 | 0.059244 |
+| 5 | 20 | 212,207 | 17,959 | 0.063992 |
+| Final-output run total | 170 | 1,979,127 | 198,024 | 0.616017 |
+
+Three earlier held runs are retained only for audit: the first reached an immutable validation-manifest identity hold before provider generation (zero calls), and the other two used 49 calls, 37,784 input tokens, 22,088 output tokens, and USD 0.034062. Across all Batch 2 generation attempts the total was 219 calls, 2,016,911 input tokens, 220,112 output tokens, and USD 0.650079.
+
+## Human-review results
+
+| # | Reviewer | Review date | Editorial decision | Notes |
+| --- | --- | --- | --- | --- |
+| 1 |  |  |  |  |
+| 2 |  |  |  |  |
+| 3 |  |  |  |  |
+| 4 |  |  |  |  |
+| 5 |  |  |  |  |
