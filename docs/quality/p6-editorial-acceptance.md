@@ -208,7 +208,7 @@ All five canonical identities and exact Drive file IDs were verified against the
 
 ## Batch 2 cohort definition
 
-Status: **ACTIVE — Batch 2 awaiting human review**
+Status: **ACTIVE — Batch 2 human-review score matrix recorded**
 
 Batch 2 is a fixed five-report blind editorial-review cohort. Its immutable admission record is [cohort_manifest_final_generation.json](../../out/p6_editorial_acceptance/batch_02/cohort_manifest_final_generation.json); all five admitted reports remain in the denominator, including outputs held by final publish-readiness.
 
@@ -267,3 +267,41 @@ Three earlier held runs are retained only for audit: the first reached an immuta
 | 3 |  |  |  |  |
 | 4 |  |  |  |  |
 | 5 |  |  |  |  |
+
+### Score matrix — upgraded rerun
+
+The following reviewer-supplied scores apply to the fresh upgraded rerun
+(`46203b2a-4820-4392-863a-d6964fcf69f6`), not the earlier final-generation
+attempt recorded above. This is a human-review record, not an automated
+judgment; it does not change the cohort, prompts, editorial logic, or generated
+HTML. The review date and reviewer identity were not supplied. Charts and
+tables are excluded from this benchmark. Scores are out of 10; LinkedIn quality
+is assessed separately; `Weighted /100` uses the established editorial weighting
+normalized without charts/tables.
+
+| Dimension | Adjust AI Mobile (#5) | StackAdapt Retail 2026 (#4) | IAB Annual 2025 (#3) | Activate Post-COVID (#2) | Activate Outlook 2025 (#1) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Factual fidelity | 9.5 | 9.5 | 9.5 | 9.5 | 9.5 |
+| Evidence selection | 9.0 | 9.0 | 9.0 | 9.5 | 8.5 |
+| Analytical depth | 8.5 | 8.5 | 9.0 | 9.0 | 8.5 |
+| Insight specificity | 8.5 | 9.0 | 9.5 | 9.5 | 9.0 |
+| Commercial relevance | 9.0 | 9.5 | 9.0 | 9.0 | 9.0 |
+| Charts & tables | — | — | — | — | — |
+| Narrative structure | 9.0 | 8.5 | 9.0 | 9.5 | 8.5 |
+| Editorial clarity | 9.0 | 8.5 | 9.0 | 9.5 | 9.0 |
+| Expert credibility / human feel | 8.5 | 9.0 | 9.0 | 9.5 | 8.5 |
+| Completeness | 9.0 | 8.5 | 8.5 | 9.5 | 8.0 |
+| LinkedIn quality | 9.1 | 9.2 | 9.2 | 9.3 | 8.9 |
+| **Weighted /100** | **88.9** | **89.4** | **91.1** | **93.6** | **87.8** |
+
+Exact reviewed rerun outputs:
+
+| # | Report | Reviewed final HTML |
+| --- | --- | --- |
+| 1 | Activate Consulting Technology & Media Outlook 2025 | [final HTML](../../out/p6_editorial_acceptance/batch_02/pipeline_output_rerun_20260901/activate-technology-and-media-outlook-2025-pdf.html) |
+| 2 | The Post-COVID Online Shopper: New Challenges and Opportunities | [final HTML](../../out/p6_editorial_acceptance/batch_02/pipeline_output_rerun_20260901/activate-2022-post-covid-shopper-pdf.html) |
+| 3 | IAB Annual Report 2025 | [final HTML](../../out/p6_editorial_acceptance/batch_02/pipeline_output_rerun_20260901/2025-iab-annual-report-pdf.html) |
+| 4 | StackAdapt Retail Marketing Trends 2026 | [final HTML](../../out/p6_editorial_acceptance/batch_02/pipeline_output_rerun_20260901/stackadapt-retail-marketing-trends-report-2026-pdf.html) |
+| 5 | Adjust AI-powered mobile marketing | [final HTML](../../out/p6_editorial_acceptance/batch_02/pipeline_output_rerun_20260901/adjust-ai-and-machine-learning-guide-pdf.html) |
+
+The machine-readable companion is [rerun_20260901_human_review.json](../../out/p6_editorial_acceptance/batch_02/rerun_20260901_human_review.json).
