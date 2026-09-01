@@ -187,6 +187,13 @@ and the public-editorial check. The corresponding validation result is retained
 under `validation_regen_candidate_<attempt>.json`; a candidate failure cannot
 replace either canonical artifact or canonical validation output.
 
+The regeneration loop treats canonical artifacts and `validation.json` as one
+promoted state. It builds every next repair plan from that matching pair. A
+rejected candidate leaves both members unchanged; its artifact, validation
+snapshot, and candidate audit remain diagnostic-only negative feedback. A
+passing candidate promotes the artifact and its matching validation report
+together, after every required gate has passed.
+
 The deterministic candidate check is complete only when all evidence IDs,
 source pages, and material lineage relationships validate. A grounding-provider
 failure is release-blocking unless that complete deterministic check passed. In

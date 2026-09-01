@@ -82,6 +82,7 @@
       "evidence_id": "finding-1",
       "evidence": "Generation Q: born 2003–2012; Size: 200+ mil globally; Spend: $400–450 bil.",
       "metric": {
+        "label": "Gen Q population and spend",
         "value": "200+; 400–450",
         "unit": "million (people); billion USD (spend)",
         "trend": "",
@@ -102,6 +103,7 @@
       "evidence_id": "finding-3",
       "evidence": "Stats reported: 88% spend most free time online; 97% often struggle to stay offline; 83% care more about how they appear online vs IRL; 72% feel “more themselves” online.",
       "metric": {
+        "label": "Online behavior indicators",
         "value": "88; 97; 83; 72",
         "unit": "%",
         "trend": "",
@@ -224,6 +226,7 @@
       "evidence_id": "finding-1",
       "evidence": "Generation Q: born 2003–2012; Size: 200+ mil globally; Spend: $400–450 bil.",
       "metric": {
+        "label": "Gen Q population and spend",
         "value": "200+; 400–450",
         "unit": "million (people); billion USD (spend)",
         "trend": "",
@@ -244,6 +247,7 @@
       "evidence_id": "finding-3",
       "evidence": "Stats reported: 88% spend most free time online; 97% often struggle to stay offline; 83% care more about how they appear online vs IRL; 72% feel “more themselves” online.",
       "metric": {
+        "label": "Online behavior indicators",
         "value": "88; 97; 83; 72",
         "unit": "%",
         "trend": "",

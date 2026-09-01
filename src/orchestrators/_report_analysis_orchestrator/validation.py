@@ -436,6 +436,7 @@ def _run_validation_regeneration_loop(
         mode_ctx,
     ).output_path
     promoted_artifacts = deepcopy(current_artifacts)
+    promoted_validation_report = current_validation_report
     working_artifacts = deepcopy(current_artifacts)
     logger.info(
         log_event(
@@ -651,7 +652,7 @@ def _run_validation_regeneration_loop(
             if candidate_enforced
             else "validation"
         )
-        current_validation_report = _run_validation_with_fallback(
+        candidate_validation_report = _run_validation_with_fallback(
             runtime=runtime,
             mode_ctx=attempt_ctx,
             dependencies=dependencies,
@@ -671,8 +672,8 @@ def _run_validation_regeneration_loop(
             pack_name=validation_pack_name,
             openai_client=validation_openai_client,
         )
-        current_validation_report = _candidate_validation_report(
-            current_validation_report, candidate_result
+        candidate_validation_report = _candidate_validation_report(
+            candidate_validation_report, candidate_result
         )
         editorial_validation, editorial_path = (
             _evaluate_and_store_public_editorial_quality(
@@ -683,18 +684,18 @@ def _run_validation_regeneration_loop(
                 ctx=attempt_ctx,
             )
         )
-        current_validation_report = _merge_public_editorial_quality(
-            current_validation_report, editorial_validation
+        candidate_validation_report = _merge_public_editorial_quality(
+            candidate_validation_report, editorial_validation
         )
         candidate_validation_path = _store_validation_snapshot(
             runtime=runtime,
             dependencies=dependencies,
-            report=current_validation_report,
+            report=candidate_validation_report,
             pack_name=validation_pack_name,
             ctx=attempt_ctx,
         )
-        current_validation_report = replace(
-            current_validation_report, source_path=candidate_validation_path
+        candidate_validation_report = replace(
+            candidate_validation_report, source_path=candidate_validation_path
         )
         evidence_paths[f"public_editorial_quality_regen_attempt_{attempt_index}"] = (
             editorial_path
@@ -702,7 +703,7 @@ def _run_validation_regeneration_loop(
         validation_snapshot_path = _store_validation_snapshot(
             runtime=runtime,
             dependencies=dependencies,
-            report=current_validation_report,
+            report=candidate_validation_report,
             pack_name=f"validation_regen_attempt_{attempt_index}",
             ctx=attempt_ctx,
         )
@@ -712,7 +713,7 @@ def _run_validation_regeneration_loop(
         promotion_outcome = "not_attempted"
         artifacts_path = regeneration_response.artifacts_path
         if candidate_enforced:
-            if current_validation_report.status == "pass":
+            if candidate_validation_report.status == "pass":
                 try:
                     artifacts_path = _promote_regeneration_candidate(
                         runtime=runtime,
@@ -734,26 +735,35 @@ def _run_validation_regeneration_loop(
                             current_artifacts_path=candidate_parent_path,
                             candidate_artifacts_path=candidate_artifacts_path,
                             candidate_result=candidate_result,
-                            validation_report=current_validation_report,
+                            validation_report=candidate_validation_report,
                             promotion_outcome="rolled_back",
                         ),
                         ctx=attempt_ctx,
                     )
                     raise
-                promotion_outcome = "promoted"
-                promoted_artifacts = candidate_artifacts
-                working_artifacts = candidate_artifacts
-                current_artifacts_path = artifacts_path
                 canonical_validation_path = _store_validation_snapshot(
                     runtime=runtime,
                     dependencies=dependencies,
-                    report=current_validation_report,
+                    report=candidate_validation_report,
                     pack_name="validation",
                     ctx=attempt_ctx,
                 )
-                current_validation_report = replace(
-                    current_validation_report, source_path=canonical_validation_path
+                promotion_state = (
+                    candidate_artifacts,
+                    replace(
+                        candidate_validation_report,
+                        source_path=canonical_validation_path,
+                    ),
+                    artifacts_path,
                 )
+                (
+                    promoted_artifacts,
+                    promoted_validation_report,
+                    current_artifacts_path,
+                ) = promotion_state
+                working_artifacts = promoted_artifacts
+                current_validation_report = promoted_validation_report
+                promotion_outcome = "promoted"
                 evidence_paths["artifacts"] = artifacts_path
                 evidence_paths["validation"] = canonical_validation_path
             else:
@@ -763,6 +773,7 @@ def _run_validation_regeneration_loop(
                 # from it would turn rollback into an untracked mutation and
                 # compound the original failure on every later attempt.
                 working_artifacts = deepcopy(promoted_artifacts)
+                current_validation_report = promoted_validation_report
             candidate_audit_path = _store_regeneration_candidate_audit(
                 runtime=runtime,
                 dependencies=dependencies,
@@ -774,7 +785,7 @@ def _run_validation_regeneration_loop(
                     current_artifacts_path=candidate_parent_path,
                     candidate_artifacts_path=candidate_artifacts_path,
                     candidate_result=candidate_result,
-                    validation_report=current_validation_report,
+                    validation_report=candidate_validation_report,
                     promotion_outcome=promotion_outcome,
                 ),
                 ctx=attempt_ctx,
@@ -784,6 +795,8 @@ def _run_validation_regeneration_loop(
             # regeneration always supplies candidate_artifacts_path above.
             promoted_artifacts = candidate_artifacts
             working_artifacts = candidate_artifacts
+            promoted_validation_report = candidate_validation_report
+            current_validation_report = promoted_validation_report
             if artifacts_path:
                 current_artifacts_path = artifacts_path
                 evidence_paths["artifacts"] = artifacts_path
@@ -908,7 +921,7 @@ def _run_validation_regeneration_loop(
     )
     return (
         promoted_artifacts,
-        current_validation_report,
+        promoted_validation_report,
         attempts,
         loop_state,
         evidence_paths,

@@ -33,6 +33,13 @@ def _valid_artifacts_payload() -> dict:
     return {
         "schema_version": "1.0",
         "toc_topics": [],
+        "editorial_plan": {
+            "report_thesis": "The retained evidence supports the report thesis.",
+            "themes": [
+                {"theme": "Trend", "priority": 1, "evidence_ids": ["f1"]},
+                {"theme": "Implication", "priority": 2, "evidence_ids": ["f2"]},
+            ],
+        },
         "summary": {
             "tldr": "Complete standard TLDR.",
             "card_tldr_compact": "Complete compact TLDR.",

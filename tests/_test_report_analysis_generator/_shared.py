@@ -143,6 +143,21 @@ def _artifacts(**overrides) -> dict:
     payload = {
         "schema_version": "1.0",
         "toc_topics": ["Topic"],
+        "editorial_plan": {
+            "report_thesis": "Evidence supports the report thesis.",
+            "themes": [
+                {"theme": "Theme 1", "priority": 1, "evidence_ids": ["f1"]},
+                {"theme": "Theme 2", "priority": 2, "evidence_ids": ["f2"]},
+            ],
+        },
+        "cover_semantics": {
+            "evidence_shape": "trend",
+            "direction": "rising",
+            "geography_scope": "global",
+            "evidence_density": "balanced",
+            "domain_layer": "forecast",
+            "selection_reason": "Retained evidence supports the cover direction.",
+        },
         "summary": {
             "tldr": "summary",
             "executive_summary": "Summary",

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 def test_run_report_analysis_allows_abstained_quote_family(tmp_path):
     runtime = replace(
         _runtime(tmp_path),
@@ -60,6 +61,7 @@ def test_run_report_analysis_allows_abstained_quote_family(tmp_path):
     assert validation_calls
     assert state.payload.quote.text == ""
     assert state.artifacts_payload["family_status"]["quotes"]["status"] == "abstained"
+
 
 def test_run_report_analysis_regenerates_failed_section_until_pass(
     tmp_path,
@@ -176,7 +178,12 @@ def test_run_report_analysis_regenerates_failed_section_until_pass(
 
 
 def test_run_report_analysis_rolls_back_failed_candidate_regeneration(tmp_path):
-    runtime = _runtime(tmp_path)
+    runtime = replace(
+        _runtime(tmp_path),
+        settings=replace(
+            _runtime(tmp_path).settings, validation_regeneration_max_attempts=1
+        ),
+    )
     source = _source(runtime)
     selection = _selection(runtime, source)
     original = _artifacts(
@@ -189,11 +196,11 @@ def test_run_report_analysis_rolls_back_failed_candidate_regeneration(tmp_path):
     candidate = _artifacts(
         summary={
             "tldr": "candidate artifact",
+            "card_tldr_compact": "Candidate summary",
             "executive_summary": "Candidate summary",
             "claim_evidence_map": [],
-        }
+        },
     )
-    candidate["insights_final"][0]["evidence_id"] = ""
     validation_calls = 0
 
     def _run_validation(req, settings, ctx, *, pack_name, report_name, md5):
@@ -217,13 +224,29 @@ def test_run_report_analysis_rolls_back_failed_candidate_regeneration(tmp_path):
                 severity="error",
             )
         return ValidationReport(
-            schema_version="1.1", status="pass", issues=[], severity="pass"
+            schema_version="1.1",
+            status="fail",
+            issues=[
+                ValidationIssue(
+                    schema_version="1.0",
+                    message="[grounding] Candidate introduced issue Y",
+                    severity="error",
+                    affected_section="linkedin_post",
+                    rule_id="candidate_y",
+                    repair_target="linkedin_post",
+                )
+            ],
+            severity="error",
         )
 
     deps = _deps(
         generate_evidence_packs=lambda **kwargs: {
             "doc_map": {"docMap": {"title": "Doc Title"}},
-            "findings": {"findings": [{"id": "f1", "pages": [1]}]},
+            "findings": {
+                "findings": [
+                    {"id": f"f{index}", "pages": [index]} for index in range(1, 6)
+                ]
+            },
             "quote_candidates": {"quote_candidates": [{"id": "q1", "page": 1}]},
         },
         generate_artifacts=lambda **kwargs: original,
@@ -256,6 +279,13 @@ def test_run_report_analysis_rolls_back_failed_candidate_regeneration(tmp_path):
     assert state.regeneration_attempts[0].promotion_outcome == "rolled_back"
     assert state.regeneration_attempts[0].candidate_audit_path
     assert state.validation_report.status == "fail"
+    assert [issue.rule_id for issue in state.validation_report.issues] == ["grounding"]
+    candidate_audit = json.loads(
+        Path(state.regeneration_attempts[0].candidate_audit_path).read_text(
+            encoding="utf-8"
+        )
+    )
+    assert candidate_audit["validation_issues"] == ["candidate_y:linkedin_post"]
 
 
 def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback(
@@ -280,26 +310,29 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
         _artifacts(
             summary={
                 "tldr": "failed candidate",
+                "card_tldr_compact": "Failed candidate summary",
                 "executive_summary": "Failed candidate summary",
                 "claim_evidence_map": [],
-            }
+            },
         ),
         _artifacts(
             summary={
                 "tldr": "repaired artifact",
+                "card_tldr_compact": "Repaired summary",
                 "executive_summary": "Repaired summary",
                 "claim_evidence_map": [],
-            }
+            },
         ),
     ]
     regeneration_inputs = []
+    regeneration_targets = []
     validation_calls = 0
 
     def _run_validation(req, settings, ctx, *, pack_name, report_name, md5):
         nonlocal validation_calls
         del req, settings, ctx, pack_name, report_name, md5
         validation_calls += 1
-        if validation_calls < 3:
+        if validation_calls == 1:
             return ValidationReport(
                 schema_version="1.1",
                 status="fail",
@@ -315,12 +348,31 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
                 ],
                 severity="error",
             )
+        if validation_calls == 2:
+            return ValidationReport(
+                schema_version="1.1",
+                status="fail",
+                issues=[
+                    ValidationIssue(
+                        schema_version="1.0",
+                        message="[grounding] Candidate introduced issue Y",
+                        severity="error",
+                        affected_section="linkedin_post",
+                        rule_id="candidate_y",
+                        repair_target="linkedin_post",
+                    )
+                ],
+                severity="error",
+            )
         return ValidationReport(
             schema_version="1.1", status="pass", issues=[], severity="pass"
         )
 
     def _regenerate(request):
         regeneration_inputs.append(request.current_artifacts["summary"]["tldr"])
+        regeneration_targets.append(
+            [target.target_section for target in request.plan.targets]
+        )
         attempt = request.attempt_index
         return ArtifactRegenerationResponse(
             updated_artifacts=candidates[attempt - 1],
@@ -336,8 +388,7 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
             "doc_map": {"docMap": {"title": "Doc Title"}},
             "findings": {
                 "findings": [
-                    {"id": f"f{index}", "pages": [index]}
-                    for index in range(1, 6)
+                    {"id": f"f{index}", "pages": [index]} for index in range(1, 6)
                 ]
             },
             "quote_candidates": {"quote_candidates": [{"id": "q1", "page": 1}]},
@@ -362,8 +413,22 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
     )
 
     assert regeneration_inputs == ["original artifact", "original artifact"]
+    assert regeneration_targets == [["summary"], ["summary"]]
     assert len(state.regeneration_attempts) == 2
     assert state.regeneration_attempts[0].promotion_outcome == "rolled_back"
+    assert state.regeneration_attempts[1].promotion_outcome == "promoted"
+    assert state.artifacts_payload["summary"]["tldr"] == "repaired artifact"
+    assert state.validation_report is not None
+    assert state.validation_report.status == "pass"
+    assert (
+        state.regeneration_attempts[1].artifacts_path
+        == state.evidence_paths["artifacts"]
+    )
+    assert (
+        state.regeneration_attempts[1].validation_path
+        == state.evidence_paths["validation"]
+    )
+
 
 def test_run_report_analysis_maps_topic_section_failures_to_topics_regeneration(
     tmp_path,
@@ -498,6 +563,7 @@ def test_run_report_analysis_maps_topic_section_failures_to_topics_regeneration(
         "toc_topics_expanded",
     ]
 
+
 def test_run_report_analysis_stops_after_regeneration_max_attempts(tmp_path):
     runtime = replace(
         _runtime(tmp_path),
@@ -630,6 +696,7 @@ def test_run_report_analysis_stops_after_regeneration_max_attempts(tmp_path):
     assert state.regeneration_loop_state.max_reached is True
     assert state.regeneration_loop_state.attempt_count == 3
 
+
 def test_run_report_analysis_uses_one_broad_retry_for_unmappable_failures(tmp_path):
     runtime = _runtime(tmp_path)
     source = _source(runtime)
@@ -644,13 +711,13 @@ def test_run_report_analysis_uses_one_broad_retry_for_unmappable_failures(tmp_pa
             schema_version="1.1",
             status="fail",
             issues=[
-                    ValidationIssue(
-                        schema_version="1.0",
-                        message="[global_consistency] Global consistency mismatch",
-                        severity="error",
-                        affected_section="global_consistency",
-                        rule_id="global_consistency",
-                    )
+                ValidationIssue(
+                    schema_version="1.0",
+                    message="[global_consistency] Global consistency mismatch",
+                    severity="error",
+                    affected_section="global_consistency",
+                    rule_id="global_consistency",
+                )
             ],
             severity="error",
             source_path=str(tmp_path / "out" / "validation.json"),
@@ -716,6 +783,7 @@ def test_run_report_analysis_uses_one_broad_retry_for_unmappable_failures(tmp_pa
     assert state.validation_report.status == "fail"
     assert state.regeneration_loop_state is not None
     assert state.regeneration_loop_state.final_status == "skipped"
+
 
 def test_run_report_analysis_maps_semantic_pack_failure_to_rule_specific_targets(
     tmp_path,
@@ -869,9 +937,12 @@ def test_run_report_analysis_maps_semantic_pack_failure_to_rule_specific_targets
     )
     assert_logs_have_required_fields(plan_events + complete_events)
 
+
 __all__ = [
     "test_run_report_analysis_allows_abstained_quote_family",
     "test_run_report_analysis_regenerates_failed_section_until_pass",
+    "test_run_report_analysis_rolls_back_failed_candidate_regeneration",
+    "test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback",
     "test_run_report_analysis_maps_topic_section_failures_to_topics_regeneration",
     "test_run_report_analysis_stops_after_regeneration_max_attempts",
     "test_run_report_analysis_uses_one_broad_retry_for_unmappable_failures",
