@@ -1,3 +1,4 @@
+# ruff: noqa: F405
 from __future__ import annotations
 
 from .builders import *  # noqa: F401,F403
@@ -352,11 +353,14 @@ def test_candidate_page_plan_recall_floor_includes_top_scoring_pages() -> None:
 
     assert len(plan.chart_pages or []) == 2
     assert plan.chart_pages == plan.table_pages
-    assert sum(
-        1
-        for record in plan.page_triage_records
-        if record.action == "include_recall_floor"
-    ) == 2
+    assert (
+        sum(
+            1
+            for record in plan.page_triage_records
+            if record.action == "include_recall_floor"
+        )
+        == 2
+    )
     assert plan.page_triage_skipped_pages == 2
 
 
@@ -392,6 +396,44 @@ def test_extract_best_figure_writes_asset_and_logs(
     assert_logs_have_required_fields(events)
     event_names = {str(event["event"]) for event in events}
     assert {"figure_extract_start", "figure_extract_complete"} <= event_names
+
+
+def test_extract_best_figure_converts_non_rgb_embedded_images_to_png(
+    tmp_path,
+) -> None:
+    pdf_path = tmp_path / "cmyk-figure.pdf"
+    out_dir = tmp_path / "out"
+    doc = fitz.open()
+    try:
+        page = doc.new_page(width=600, height=500)
+        cmyk = fitz.Pixmap(fitz.csCMYK, fitz.IRect(0, 0, 400, 300), False)
+        cmyk.clear_with(0)
+        page.insert_image(fitz.Rect(50, 80, 450, 380), pixmap=cmyk)
+        page.insert_text((50, 50), "Figure 1. CMYK chart", fontsize=14)
+        doc.save(pdf_path.as_posix())
+    finally:
+        doc.close()
+
+    source = fitz.open(pdf_path)
+    try:
+        xref = source[0].get_images(full=True)[0][0]
+        assert fitz.Pixmap(source, xref).colorspace != fitz.csRGB
+    finally:
+        source.close()
+
+    response = extract_best_figure(
+        FigureExtractRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="report",
+        ),
+        _ctx(),
+    )
+
+    assert response.image_path == "report/assets/report.png"
+    with Image.open(out_dir / response.image_path) as image:
+        assert image.mode == "RGB"
 
 
 def test_extract_best_figure_compacts_filename_for_long_report_slug(tmp_path) -> None:

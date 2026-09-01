@@ -8,6 +8,8 @@ Date: 2026-05-28
 
 This preserves the modular monolith. It does not introduce a new service boundary, entrypoint, deployable component, provider interaction, prompt/config/schema change, or alternate crop workflow.
 
+Crop, crop-refine, preview rendering, and best-figure extraction normalize non-RGB PyMuPDF pixmaps to RGB before PNG encoding. This keeps source PDFs with non-RGB page or embedded-image colorspaces processable without changing candidate or crop selection, image-quality thresholds, cache identity, or validation behavior.
+
 ## Boundary Rationale
 
 The prior module combined several stable responsibilities: PIL image trimming, PyMuPDF rectangle adjustment, adjacent-page table augmentation, cache-backed crop artifact writes, crop-refine page/bbox helpers, and preview rendering. The new modules separate those responsibilities without changing thresholds, branch order, render settings, fingerprint payloads, filenames, logging events, or contracts.

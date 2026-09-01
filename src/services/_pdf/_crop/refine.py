@@ -19,6 +19,7 @@ from src.contracts.report_assets import (
 )
 from src.contracts.run_context import RunContext
 from src.services._pdf._crop.geometry import _crop_refine_edge_guard_rect
+from src.services._pdf._crop.image_ops import _png_safe_pixmap
 from src.services._pdf.fingerprint_cache import (
     CROP_REFINE_PAGE_ARTIFACT_VERSION,
     PdfArtifactFingerprintDescriptor,
@@ -121,7 +122,9 @@ def render_page_for_crop_refine(
             )
         else:
             zoom = max(float(request.dpi), 72.0) / 72.0
-            pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
+            pix = _png_safe_pixmap(
+                page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
+            )
             pix.save(abs_path.as_posix())
             write_artifact_sidecar(descriptor, abs_path)
             crop_logger.info(

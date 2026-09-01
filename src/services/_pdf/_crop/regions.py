@@ -27,6 +27,7 @@ from src.services._pdf._crop.geometry import (
 from src.services._pdf._crop.image_ops import (
     PDF_CROP_EXCEPTIONS,
     _content_aware_trim,
+    _png_safe_pixmap,
     _render_clip_image,
     _stack_crop_images,
     _trim_uniform_border,
@@ -211,7 +212,9 @@ def _crop_regions(
                     index=idx,
                     item=it,
                     rect=rect,
-                    filename=_crop_output_filename(output_dir, safe_report_name, it, idx),
+                    filename=_crop_output_filename(
+                        output_dir, safe_report_name, it, idx
+                    ),
                 )
             )
 
@@ -397,10 +400,12 @@ def _crop_regions(
                         )
                     paths.append(rel.as_posix())
                     continue
-            pix = page.get_pixmap(
-                matrix=fitz.Matrix(render_scale, render_scale),
-                clip=region.rect,
-                alpha=False,
+            pix = _png_safe_pixmap(
+                page.get_pixmap(
+                    matrix=fitz.Matrix(render_scale, render_scale),
+                    clip=region.rect,
+                    alpha=False,
+                )
             )
             img: Optional[Image.Image] = None
             effective_mode = _effective_crop_mode(mode, it.type)

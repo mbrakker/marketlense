@@ -11,6 +11,8 @@ from typing import List
 import pymupdf as fitz
 from PIL import Image
 
+from src.services._pdf.shared import _png_safe_pixmap
+
 from src.services._pdf._crop.boundary_detectors import (
     detect_rendered_crop_boundaries,
     rgb_pixel,
@@ -529,10 +531,12 @@ def _stack_crop_images(images: list[Image.Image]) -> Image.Image:
 def _render_clip_image(
     page: fitz.Page, rect: fitz.Rect, *, render_scale: float = 2.0
 ) -> Image.Image:
-    pix = page.get_pixmap(
-        matrix=fitz.Matrix(render_scale, render_scale),
-        clip=rect,
-        alpha=False,
+    pix = _png_safe_pixmap(
+        page.get_pixmap(
+            matrix=fitz.Matrix(render_scale, render_scale),
+            clip=rect,
+            alpha=False,
+        )
     )
     return Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
 
@@ -551,6 +555,7 @@ __all__ = [
     "_col_is_bg",
     "_trim_uniform_border",
     "_content_aware_trim",
+    "_png_safe_pixmap",
     "verify_crop_image",
     "_uniform_border_trim_amounts",
     "_stack_crop_images",

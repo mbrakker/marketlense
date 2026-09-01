@@ -3,6 +3,19 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+from src.services._pdf._crop.image_ops import _png_safe_pixmap
+
+
+def test_png_safe_pixmap_converts_cmyk_before_png_encoding() -> None:
+    cmyk = fitz.Pixmap(fitz.csCMYK, fitz.IRect(0, 0, 3, 2), False)
+    cmyk.clear_with(0)
+
+    normalized = _png_safe_pixmap(cmyk)
+
+    assert normalized.colorspace == fitz.csRGB
+    assert normalized.alpha == 0
+    assert normalized.tobytes("png").startswith(b"\x89PNG\r\n\x1a\n")
+
 
 def test_strict_crop_filenames_do_not_collide_across_table_and_chart_calls(tmp_path):
     pdf_path = tmp_path / "sample.pdf"

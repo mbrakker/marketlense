@@ -14,7 +14,10 @@ import pymupdf as fitz
 
 from src.contracts.report_assets import PreviewRequest, PreviewResponse
 from src.contracts.run_context import RunContext
-from src.services._pdf._crop.image_ops import PREVIEW_RENDER_EXCEPTIONS
+from src.services._pdf._crop.image_ops import (
+    PREVIEW_RENDER_EXCEPTIONS,
+    _png_safe_pixmap,
+)
 from src.services._pdf.fingerprint_cache import (
     PREVIEW_ARTIFACT_VERSION,
     PdfArtifactFingerprintDescriptor,
@@ -166,7 +169,9 @@ def _page_png(
                 )
             return rel_png.as_posix()
         zoom = dpi / 72.0
-        pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
+        pix = _png_safe_pixmap(
+            page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
+        )
         pix.save(abs_png.as_posix())
         write_artifact_sidecar(descriptor, abs_png)
         if ctx is not None:

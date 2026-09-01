@@ -153,6 +153,8 @@ def validate_regeneration_candidate(
         candidate = candidate_by_key.get(key)
         if candidate is not None and candidate.evidence_ids:
             continue
+        if _has_unique_evidence_continuity_match(original, candidate_records):
+            continue
         if _family_for_kind(original.entity_kind) in abstained_families:
             continue
         issues.append(
@@ -168,6 +170,34 @@ def validate_regeneration_candidate(
         issues=issues,
     )
     return CandidateIntegrityResult(issues=issues, evidence_lineage=lineage)
+
+
+def _has_unique_evidence_continuity_match(
+    original: _EvidenceRecord,
+    candidate_records: Sequence[_EvidenceRecord],
+) -> bool:
+    """Accept only an unambiguous same-family identifier normalization.
+
+    Regeneration may normalize a malformed internal artifact identifier while
+    preserving the material evidence and exact source pages.  The candidate is
+    continuous only when exactly one material record in the same artifact
+    family has the original evidence set and source-page set; multiple matches
+    remain a validation failure rather than an arbitrary choice.
+    """
+
+    original_evidence_ids = frozenset(original.evidence_ids)
+    original_source_pages = frozenset(original.source_pages)
+    if not original_evidence_ids or not original_source_pages:
+        return False
+    matches = [
+        candidate
+        for candidate in candidate_records
+        if candidate.entity_kind == original.entity_kind
+        and candidate.material
+        and frozenset(candidate.evidence_ids) == original_evidence_ids
+        and frozenset(candidate.source_pages) == original_source_pages
+    ]
+    return len(matches) == 1
 
 
 def _records(artifacts: dict[str, Any]) -> list[_EvidenceRecord]:
@@ -237,13 +267,9 @@ def _record(
     page_values: list[object] = list(raw_pages) if isinstance(raw_pages, list) else []
     page_values.append(item.get("page"))
     page_values.extend(
-        span.get("page")
-        for span in evidence_spans or []
-        if isinstance(span, dict)
+        span.get("page") for span in evidence_spans or [] if isinstance(span, dict)
     )
-    pages = _positive_ints(
-        page_values
-    )
+    pages = _positive_ints(page_values)
     return _EvidenceRecord(
         entity_kind=entity_kind,
         entity_id=entity_id,
@@ -270,9 +296,7 @@ def _evidence_source_pages(evidence_packs: dict[str, Any]) -> dict[str, set[int]
             list(raw_pages) if isinstance(raw_pages, list) else []
         )
         page_values.append(item.get("page"))
-        source_pages = _positive_ints(
-            page_values
-        )
+        source_pages = _positive_ints(page_values)
         pages.setdefault(key, set()).update(source_pages)
 
     if not isinstance(evidence_packs, dict):
@@ -406,8 +430,6 @@ def _string_values(values: Iterable[object]) -> list[str]:
 def _positive_ints(values: Iterable[object]) -> list[int]:
     return list(
         dict.fromkeys(
-            int(value)
-            for value in values
-            if isinstance(value, int) and value > 0
+            int(value) for value in values if isinstance(value, int) and value > 0
         )
     )

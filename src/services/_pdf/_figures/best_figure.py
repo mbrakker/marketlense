@@ -11,8 +11,9 @@ from src.contracts.run_context import RunContext
 from src.utils.logging import log_event
 from src.utils.path_utils import bounded_artifact_filename, safe_path_segment
 
-from ..shared import figure_logger
+from ..shared import _png_safe_pixmap, figure_logger
 from ..visual_heuristics import PDF_FIGURE_EXCEPTIONS
+
 
 def extract_best_figure(
     request: FigureExtractRequest, ctx: RunContext
@@ -190,11 +191,9 @@ def _extract_best_figure_png(
                     score = (area**0.9) * (1 + 0.15 * cap_score + 0.10 * prox_bonus)
 
                     if score > best[1]:
-                        pix = fitz.Pixmap(local_doc, xref)
+                        pix = _png_safe_pixmap(fitz.Pixmap(local_doc, xref))
                         if pix.width * pix.height < 80_000:
                             continue
-                        if pix.n >= 4:
-                            pix = fitz.Pixmap(fitz.csRGB, pix)
                         best = (
                             pix,
                             score,

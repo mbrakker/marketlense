@@ -69,6 +69,15 @@ The retained report includes non-blocking measurements for insight-role diversit
 
 Only a failed field with retained source text, explicit evidence ID, and a supported existing regeneration target may be regenerated. Passing fields remain unchanged. If that grounding is absent, the repair diagnostic records `abstained`, does not use a generic replacement, and the final readiness artifact remains failed.
 
+Before a regenerated artifact can be promoted, deterministic candidate validation
+requires material-evidence continuity. A stable internal artifact identifier is
+the default continuity key. If a regeneration normalizes that identifier, the
+candidate is continuous only when exactly one material record in the same
+artifact family retains the identical evidence-ID set and source-page set.
+Ambiguous, cross-family, incomplete, or changed-evidence cases remain blocked;
+the validator never chooses between candidate records or treats identifier
+normalization as a waiver.
+
 The former `ingest.validation.public_editorial_quality.disabled_rule_waivers` setting applies only to retained repair diagnostics. It cannot waive the signed final HTML/projection decision or allow WordPress to reinterpret a failed artifact.
 
 ## CI and human review
