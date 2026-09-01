@@ -305,3 +305,62 @@ Exact reviewed rerun outputs:
 | 5 | Adjust AI-powered mobile marketing | [final HTML](../../out/p6_editorial_acceptance/batch_02/pipeline_output_rerun_20260901/adjust-ai-and-machine-learning-guide-pdf.html) |
 
 The machine-readable companion is [rerun_20260901_human_review.json](../../out/p6_editorial_acceptance/batch_02/rerun_20260901_human_review.json).
+
+## Batch 3 cohort definition
+
+Status: **ACTIVE — Batch 3 awaiting human review**
+
+Batch 3 is a fixed five-report blind editorial-review cohort. Its immutable source-admission record is [cohort_manifest.json](../../out/p6_editorial_acceptance/batch_03/cohort_manifest.json). Every admitted report remains in the denominator, including the report held by final publish-readiness.
+
+| # | Report | Publisher | Source PDF | Retained final HTML | Pipeline | Readiness |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | Rewire to Restart: The Post-COVID-19 Agenda for Technology and Media Companies | Activate Consulting | [Google Drive PDF](https://drive.google.com/file/d/1BproyPIQZFHWYDII93LhAOmIyujqbXb-/view) | [final.html](../../out/p6_editorial_acceptance/batch_03/report_01/final.html) | publish ready | pass |
+| 2 | Activate Technology & Media Outlook 2019 | Activate | [Google Drive PDF](https://drive.google.com/file/d/1XrJsFV192cAIrhNuqRQlN3W7Lpm2SU6P/view) | [final.html](../../out/p6_editorial_acceptance/batch_03/report_02/final.html) | held: `publish_readiness_failed` | fail |
+| 3 | Beyond the Hype Cycle: The Metaverse Matters Now More Than Ever | Activate | [Google Drive PDF](https://drive.google.com/file/d/1YWo18NdOzGjRNmTG7C32gnn8dMgFJ1fg/view) | [final.html](../../out/p6_editorial_acceptance/batch_03/report_03/final.html) | publish ready | pass |
+| 4 | Activate Technology & Media Outlook 2025: Social Video | Activate Consulting | [Google Drive PDF](https://drive.google.com/file/d/1nrXx69QT4pqye59eEi2CS6WaoZEt9Cb5/view) | [final.html](../../out/p6_editorial_acceptance/batch_03/report_04/final.html) | publish ready | pass |
+| 5 | Activate Technology & Media Outlook 2025: Sports Media & Betting | Activate Consulting | [Google Drive PDF](https://drive.google.com/file/d/1IJhpjavmEXAOoSdPqQUsRbBGMPU7cyp0/view) | [final.html](../../out/p6_editorial_acceptance/batch_03/report_05/final.html) | publish ready | pass |
+
+## Selection methodology
+
+Selection was frozen before generation from real Drive PDFs, excluding the canonical source identities used by Batches 1 and 2. Admission required a resolved and unique canonical source identity, matching source-PDF MD5 provenance, readable structure, sufficient evidence potential, and no duplicate or near-duplicate match. The deterministic cohort deliberately contains a 154-page data-heavy technology/media outlook, 61-page and 32-page narrative/trend reports, and shorter 11-page and 18-page data-led reports. It covers retail/consumer behaviour, ecommerce/marketplaces/digital advertising, social-video advertising, and adjacent technology/media subjects without selecting on generated editorial quality.
+
+Only source identity and PDF provenance were seeded into the isolated Batch 3 admission store. No E8/E9 editorial, analysis, validation, report, or rendered HTML artifact was reused.
+
+## Run and configuration identity
+
+- Repository HEAD and producer build identity: `4e2758f88d4b10c2241eebc922c76ed009767989`
+- Cohort-freeze run: `71d8a2b9-bc6a-4491-b2a8-dc2786736efd`
+- Fresh generation run: `50023592-4ac7-4406-8cd0-b79c56085122`
+- Validation run: `validation:380f6404e34eca22191a238504e09d06d12ee25d3af8256f935970ac709576e9`
+- Cohort ID: `85f2836aa060ef195a0e66f1594a5c39155109a4332261bb9949b3e59065d96c`
+- Profile: [`p6_editorial_acceptance_batch_03_20260901`](../../src/config/app.p6_editorial_acceptance_batch_03_20260901.yaml); configuration hash `d4f30e0abe077ac306e225e2387e3d11b81685095c343b591095d803911b41b8`; policy hash `574a6d2a59915204d3e24359356e80368713e26b4c4121086c13ee7d3061a9e2`
+- Model: `gpt-5.6-luna`
+
+## Pipeline and readiness results
+
+All five sources completed the normal fresh ingest/report-generation path and emitted a pipeline HTML artifact. Reports 1, 3, 4, and 5 passed publish-readiness. Report 2 exhausted the normal three bounded validation/artifact regeneration attempts and was held with `publish_readiness_failed`; it remains in the review denominator and its generated HTML was retained without manual change. Its canonical validation contains the existing editorial-quality and semantic-grounding failures, including an unsupported numeric claim. This is an automated gate outcome, not a human editorial score.
+
+The five source cache MD5 values match the frozen Drive-file membership, and every retained `final.html` is a byte-identical SHA-256 copy of its pipeline output; the same hashes are recorded by the respective publish-readiness records. Five unique canonical identities were processed. The normal source/admission, schema, grounding, semantic, chart/table, editorial, and publish-readiness gates reached recorded terminal outcomes; no gate was waived or bypassed. The isolated publication ledger has zero rows, and the profile permits zero WordPress, Drive-write, and public-write operations.
+
+The full review package is [manifest.json](../../out/p6_editorial_acceptance/batch_03/manifest.json).
+
+## Attributable provider usage
+
+| # | Calls | Input tokens | Output tokens | Estimated cost (USD) |
+| --- | ---: | ---: | ---: | ---: |
+| 1 | 38 | 243,986 | 31,868 | 0.087040 |
+| 2 | 59 | 456,010 | 57,679 | 0.160418 |
+| 3 | 46 | 240,634 | 33,572 | 0.088414 |
+| 4 | 20 | 147,277 | 18,284 | 0.051395 |
+| 5 | 30 | 241,493 | 29,970 | 0.079941 |
+| **Batch 3 total** | **193** | **1,329,400** | **171,373** | **0.467208** |
+
+## Human-review results
+
+| # | Reviewer | Review date | Editorial decision | Notes |
+| --- | --- | --- | --- | --- |
+| 1 |  |  |  |  |
+| 2 |  |  |  |  |
+| 3 |  |  |  |  |
+| 4 |  |  |  |  |
+| 5 |  |  |  |  |
