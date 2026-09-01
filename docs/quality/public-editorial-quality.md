@@ -43,9 +43,9 @@ timeframe, quarter, half, month/year, fiscal year, and forecast notation. It
 applies to summary prose, final-insight prose and metric fields, Expert View,
 and LinkedIn copy. A display already verbatim in linked source evidence remains
 unchanged even when another source display has a similar shortened form. If an
-abbreviated display could refer to two retained source displays, the entire
-affected public sentence is omitted rather than inventing precision. These
-fail-closed controls never select between competing facts,
+abbreviated display could refer to two retained source displays, it remains
+unchanged for the existing validation gates to assess. These fail-closed
+controls never select between competing facts,
 relax a quality rule, or repair a report manually. The LinkedIn publication and
 LinkedIn-regeneration namespaces use their separately configured execution
 policies because that surface must restate retained evidence faithfully; schema,

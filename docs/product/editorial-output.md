@@ -34,8 +34,9 @@ display remains authoritative. Public summary, insight, Expert View, and
 LinkedIn copy preserve the exact uniquely linked source display for signs,
 precision, currency, magnitude, units, ratios, ranges, and temporal or
 forecast qualifiers. A changed or abbreviated form is restored only when one
-source display is unambiguous; a competing display is omitted and the existing
-public-quality gate remains enforced. Chart, table, and crop selection are
+source display is unambiguous; competing or unsupported displays remain
+unchanged and the existing public-quality gate remains enforced. Chart, table,
+and crop selection are
 separate flows. Every newly generated metric with a public value
 also carries a concise metric-specific label bound to the same evidence ID; the
 spine uses that explicit label rather than an insight-level statement. Legacy

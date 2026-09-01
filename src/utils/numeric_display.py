@@ -146,21 +146,6 @@ def preserve_unique_source_displays(text: str, source_text: str) -> str:
     return repaired
 
 
-def ambiguous_source_display_spans(
-    text: str, source_text: str
-) -> list[tuple[int, int]]:
-    """Return public spans whose abbreviated display maps to competing sources."""
-
-    source_by_key = _source_displays_by_key(source_text)
-    ambiguous: list[tuple[int, int]] = []
-    for start, end, display, keys in _fact_display_matches(text):
-        if any(display in source_by_key.get(key, set()) for key in keys):
-            continue
-        if any(len(source_by_key.get(key, set())) > 1 for key in keys):
-            ambiguous.append((start, end))
-    return ambiguous
-
-
 def _source_display_replacements(
     text: str, source_text: str
 ) -> list[tuple[int, int, str]]:

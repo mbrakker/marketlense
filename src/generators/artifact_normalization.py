@@ -8,10 +8,7 @@ from src.contracts.ingest import IngestSettings
 from src.utils.coercion import stripped_string_value as _s
 from src.utils.errors import AppError
 from src.utils.json_utils import dump_json_object as _dump_json
-from src.utils.numeric_display import (
-    ambiguous_source_display_spans,
-    preserve_unique_source_displays,
-)
+from src.utils.numeric_display import preserve_unique_source_displays
 from src.utils.public_metric_display import normalize_public_metric_display
 from src.utils.text_normalization import normalize_text
 
@@ -274,33 +271,7 @@ def preserve_public_source_displays(
 
 
 def _preserve_source_displays(text: str, evidence: str) -> str:
-    repaired = preserve_unique_source_displays(text, evidence)
-    ambiguous_spans = ambiguous_source_display_spans(repaired, evidence)
-    if not ambiguous_spans:
-        return repaired
-    return _omit_ambiguous_source_display_sentences(repaired, ambiguous_spans)
-
-
-def _omit_ambiguous_source_display_sentences(
-    text: str, ambiguous_spans: list[tuple[int, int]]
-) -> str:
-    """Fail closed when a sentence cannot retain one exact source display."""
-
-    retained: list[str] = []
-    sentence_start = 0
-    for match in re.finditer(r"(?<=[.!?])(?=\s|$)", text):
-        sentence_end = match.start()
-        if not any(
-            sentence_start <= start < sentence_end
-            for start, _ in ambiguous_spans
-        ):
-            retained.append(text[sentence_start:sentence_end].strip())
-        sentence_start = match.end()
-    if sentence_start < len(text) and not any(
-        sentence_start <= start < len(text) for start, _ in ambiguous_spans
-    ):
-        retained.append(text[sentence_start:].strip())
-    return " ".join(value for value in retained if value)
+    return preserve_unique_source_displays(text, evidence)
 
 
 def _strip_public_editorial_scaffold(value: str) -> str:

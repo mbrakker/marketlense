@@ -260,12 +260,15 @@ def test_preserve_public_source_displays_repairs_unique_proven_values() -> None:
     assert quality.status == "pass"
 
 
-def test_preserve_public_source_displays_omits_ambiguous_truncated_currency_sentence(
+def test_preserve_public_source_displays_leaves_ambiguous_display_and_prose_unchanged(
 ) -> None:
     summary = {
         "tldr": "The report has a material outlook.",
         "card_tldr_compact": "The report has a material outlook.",
-        "executive_summary": "Commerce is forecast to add over $3T through 2028.",
+        "executive_summary": (
+            "The market outlook remains material. Commerce is forecast to add over "
+            "$3T through 2028. Planning assumptions remain under review."
+        ),
         "claim_evidence_map": [
             {
                 "claim": "Two distinct forecast figures are retained.",
@@ -285,11 +288,17 @@ def test_preserve_public_source_displays_omits_ambiguous_truncated_currency_sent
         linkedin_post="",
     )
 
-    assert summary["executive_summary"] == ""
+    assert summary["executive_summary"] == (
+        "The market outlook remains material. Commerce is forecast to add over "
+        "$3T through 2028. Planning assumptions remain under review."
+    )
     quality = evaluate_public_editorial_quality(
         report_id="ambiguous-source-display", artifacts={"summary": summary}
     )
-    assert quality.status == "pass"
+    assert quality.status == "fail"
+    assert {
+        issue.rule_id for issue in quality.issues
+    } >= {"public_editorial_quality.incomplete_numeric_expression"}
 
 
 def test_source_displays_restore_exact_metric_comparisons() -> None:
