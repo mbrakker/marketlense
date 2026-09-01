@@ -153,7 +153,9 @@ def ambiguous_source_display_spans(
 
     source_by_key = _source_displays_by_key(source_text)
     ambiguous: list[tuple[int, int]] = []
-    for start, end, _, keys in _fact_display_matches(text):
+    for start, end, display, keys in _fact_display_matches(text):
+        if any(display in source_by_key.get(key, set()) for key in keys):
+            continue
         if any(len(source_by_key.get(key, set())) > 1 for key in keys):
             ambiguous.append((start, end))
     return ambiguous

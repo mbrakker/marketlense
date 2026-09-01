@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import pytest
 
 from src.contracts.run_context import RunContext
@@ -448,6 +450,124 @@ def test_source_displays_preserve_unqualified_decimal_precision() -> None:
     )
 
     assert summary["executive_summary"] == "The index reached 7.30."
+
+
+def test_source_display_preservation_covers_all_public_fields_idempotently() -> None:
+    summary = {
+        "tldr": "The forecast reaches $3T in H1 2026.",
+        "card_tldr_compact": "The forecast reaches $3T in H1 2026.",
+        "executive_summary": "The forecast reaches $3T in H1 2026.",
+        "claim_evidence_map": [
+            {
+                "claim": "The forecast period is source-backed.",
+                "evidence_id": "forecast",
+                "evidence": "The forecast reaches $3.0T in H1 FY2026E.",
+            }
+        ],
+    }
+    insights = [
+        {
+            "id": "growth",
+            "text": "Growth reaches 7.3% in January.",
+            "so_what": "Plan for 7.3% in January.",
+            "now_what": "Compare 7.3% in January before committing spend.",
+            "evidence_id": "growth",
+            "evidence": "Growth reaches +7.30% in January 2025.",
+            "metric": {"value": "7.3%", "timeframe": "January"},
+            "pages": [1],
+        }
+    ]
+
+    expert_comment, linkedin_post = preserve_public_source_displays(
+        summary=summary,
+        insights_final=insights,
+        expert_comment="Growth reaches 7.3% in January.",
+        linkedin_post="Growth reaches 7.3% in January.",
+    )
+    first_pass = deepcopy((summary, insights, expert_comment, linkedin_post))
+
+    expert_comment, linkedin_post = preserve_public_source_displays(
+        summary=summary,
+        insights_final=insights,
+        expert_comment=expert_comment,
+        linkedin_post=linkedin_post,
+    )
+
+    assert summary["tldr"] == "The forecast reaches $3.0T in H1 FY2026E."
+    assert summary["card_tldr_compact"] == summary["tldr"]
+    assert summary["executive_summary"] == summary["tldr"]
+    assert insights[0]["text"] == "Growth reaches +7.30% in January 2025."
+    assert insights[0]["so_what"] == "Plan for +7.30% in January 2025."
+    assert insights[0]["now_what"] == (
+        "Compare +7.30% in January 2025 before committing spend."
+    )
+    assert insights[0]["metric"] == {
+        "value": "+7.30%",
+        "timeframe": "January 2025",
+    }
+    assert expert_comment == "Growth reaches +7.30% in January 2025."
+    assert linkedin_post == expert_comment
+    quality = evaluate_public_editorial_quality(
+        report_id="first-pass-source-display",
+        artifacts={
+            "summary": summary,
+            "insights_final": insights,
+            "expert_comment": expert_comment,
+            "linkedin_post": linkedin_post,
+        },
+    )
+    assert quality.status == "pass"
+    assert (summary, insights, expert_comment, linkedin_post) == first_pass
+
+
+def test_source_display_preservation_leaves_unsupported_values_unchanged() -> None:
+    summary = {
+        "tldr": "Margin reaches 8.5% in March 2027.",
+        "card_tldr_compact": "Margin reaches 8.5% in March 2027.",
+        "executive_summary": "Margin reaches 8.5% in March 2027.",
+        "claim_evidence_map": [
+            {
+                "claim": "A different source display is retained.",
+                "evidence_id": "margin",
+                "evidence": "Margin reaches +7.30% in January 2025.",
+            }
+        ],
+    }
+
+    preserve_public_source_displays(
+        summary=summary,
+        insights_final=[],
+        expert_comment="",
+        linkedin_post="",
+    )
+
+    assert summary["executive_summary"] == "Margin reaches 8.5% in March 2027."
+
+
+def test_exact_source_display_survives_ambiguous_shortening() -> None:
+    summary = {
+        "tldr": "The forecast reaches $3.0T.",
+        "card_tldr_compact": "The forecast reaches $3.0T.",
+        "executive_summary": "The forecast reaches $3.0T.",
+        "claim_evidence_map": [
+            {
+                "claim": "One displayed source value is already exact.",
+                "evidence_id": "forecast",
+                "evidence": (
+                    "Consumer demand reaches $3.0T while B2B demand reaches $3.2T."
+                ),
+            }
+        ],
+    }
+
+    preserve_public_source_displays(
+        summary=summary,
+        insights_final=[],
+        expert_comment="",
+        linkedin_post="",
+    )
+
+    assert summary["executive_summary"] == "The forecast reaches $3.0T."
 
 
 def test_fallback_artifact_insights_uses_distinct_grounded_findings_only():
