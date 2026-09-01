@@ -907,7 +907,9 @@ def _temporal_integrity_explanation(text: str, evidence_text: str) -> str:
             for qualifier in source_qualifiers
         ):
             return "loses distinct source-proven comparative temporal qualifiers"
-        if _FORECAST_MARKER.search(source_sentence) and not _FORECAST_MARKER.search(text):
+        if _FORECAST_MARKER.search(source_sentence) and not _FORECAST_MARKER.search(
+            text
+        ):
             return "loses the source-proven forecast marker for a period comparison"
     return ""
 

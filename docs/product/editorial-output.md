@@ -30,11 +30,13 @@ visible as a metric caveat and is a secondary quality factor only among metrics
 with the same editorial relevance. The spine retains the source metric's label,
 exact display value, unit, and evidence ID. When that complete display can be
 parsed without alteration, it also carries derived numeric metadata; the raw
-display remains authoritative. A generated decimal-ending display, or a
-currency integer whose linked retained source continues with a decimal digit,
-is rejected only when that exact source continuation proves truncation; the
-existing scoped artifact recovery then handles it. Chart, table, and crop
-selection are separate flows. Every newly generated metric with a public value
+display remains authoritative. Public summary, insight, Expert View, and
+LinkedIn copy preserve the exact uniquely linked source display for signs,
+precision, currency, magnitude, units, ratios, ranges, and temporal or
+forecast qualifiers. A changed or abbreviated form is restored only when one
+source display is unambiguous; a competing display is omitted and the existing
+public-quality gate remains enforced. Chart, table, and crop selection are
+separate flows. Every newly generated metric with a public value
 also carries a concise metric-specific label bound to the same evidence ID; the
 spine uses that explicit label rather than an insight-level statement. Legacy
 artifacts without the field remain readable through abbreviation-safe sentence

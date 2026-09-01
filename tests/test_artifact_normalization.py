@@ -290,6 +290,166 @@ def test_preserve_public_source_displays_omits_ambiguous_truncated_currency_sent
     assert quality.status == "pass"
 
 
+def test_source_displays_restore_exact_metric_comparisons() -> None:
+    summary = {
+        "tldr": "The forecast reaches $3T in Q1 2025.",
+        "card_tldr_compact": "The forecast reaches $3T in Q1 2025.",
+        "executive_summary": "The forecast reaches $3T in Q1 2025.",
+        "claim_evidence_map": [
+            {
+                "claim": "A forecast metric is retained.",
+                "evidence_id": "forecast-metric",
+                "evidence": "The forecast reaches $3.0T in Q1 FY2025E.",
+            }
+        ],
+    }
+    insights = [
+        {
+            "id": "comparison",
+            "text": (
+                "The outlook moves from 7.3% in January to 5.7% in September, "
+                "with a 3 : 1 ratio and a 10%-15% range."
+            ),
+            "so_what": "Plan for 7.3% in January rather than 5.7% in September.",
+            "now_what": "Compare the 10%-15% range before committing spend.",
+            "evidence_id": "period-comparison",
+            "evidence": (
+                "The outlook moves from +7.30% in January 2025 to -5.70% in "
+                "September 2025, with a 3:1 ratio and a 10.00% to 15.00% range."
+            ),
+            "metric": {"value": "7.3%", "timeframe": "January"},
+            "pages": [1],
+        }
+    ]
+
+    expert_comment, linkedin_post = preserve_public_source_displays(
+        summary=summary,
+        insights_final=insights,
+        expert_comment="The outlook moves from 7.3% in January to 5.7% in September.",
+        linkedin_post="The outlook moves from 7.3% in January to 5.7% in September.",
+    )
+
+    assert summary["executive_summary"] == "The forecast reaches $3.0T in Q1 FY2025E."
+    assert insights[0]["text"] == (
+        "The outlook moves from +7.30% in January 2025 to -5.70% in "
+        "September 2025, with a 3:1 ratio and a 10.00% to 15.00% range."
+    )
+    assert insights[0]["so_what"] == (
+        "Plan for +7.30% in January 2025 rather than -5.70% in September 2025."
+    )
+    assert insights[0]["now_what"] == (
+        "Compare the 10.00% to 15.00% range before committing spend."
+    )
+    assert insights[0]["metric"] == {
+        "value": "+7.30%",
+        "timeframe": "January 2025",
+    }
+    assert expert_comment == (
+        "The outlook moves from +7.30% in January 2025 to -5.70% in September 2025."
+    )
+    assert linkedin_post == expert_comment
+
+
+def test_preserve_public_source_displays_restores_month_and_half_year_forms() -> None:
+    summary = {
+        "tldr": "H1 2026 demand was measured in Jan 2025.",
+        "card_tldr_compact": "H1 2026 demand was measured in Jan 2025.",
+        "executive_summary": "H1 2026 demand was measured in Jan 2025.",
+        "claim_evidence_map": [
+            {
+                "claim": "The source period is explicit.",
+                "evidence_id": "source-period",
+                "evidence": "H1 FY2026E demand was measured in January 2025.",
+            }
+        ],
+    }
+
+    preserve_public_source_displays(
+        summary=summary,
+        insights_final=[],
+        expert_comment="",
+        linkedin_post="",
+    )
+
+    assert summary["executive_summary"] == (
+        "H1 FY2026E demand was measured in January 2025."
+    )
+
+
+def test_source_displays_restore_standalone_forecast_markers() -> None:
+    summary = {
+        "tldr": "The 2026 period changes planning assumptions.",
+        "card_tldr_compact": "The 2026 period changes planning assumptions.",
+        "executive_summary": "The 2026 period changes planning assumptions.",
+        "claim_evidence_map": [
+            {
+                "claim": "The source forecast period is explicit.",
+                "evidence_id": "forecast-period",
+                "evidence": "The 2026E outlook changes planning assumptions.",
+            }
+        ],
+    }
+
+    preserve_public_source_displays(
+        summary=summary,
+        insights_final=[],
+        expert_comment="",
+        linkedin_post="",
+    )
+
+    assert summary["executive_summary"] == (
+        "The 2026E period changes planning assumptions."
+    )
+
+
+def test_source_display_preservation_leaves_ordinary_may_paraphrase_untouched() -> None:
+    summary = {
+        "tldr": "Higher demand may reshape planning.",
+        "card_tldr_compact": "Higher demand may reshape planning.",
+        "executive_summary": "Higher demand may reshape planning.",
+        "claim_evidence_map": [
+            {
+                "claim": "The source has a May observation.",
+                "evidence_id": "may-observation",
+                "evidence": "May 2025 demand increased year over year.",
+            }
+        ],
+    }
+
+    preserve_public_source_displays(
+        summary=summary,
+        insights_final=[],
+        expert_comment="",
+        linkedin_post="",
+    )
+
+    assert summary["executive_summary"] == "Higher demand may reshape planning."
+
+
+def test_source_displays_preserve_unqualified_decimal_precision() -> None:
+    summary = {
+        "tldr": "The index reached 7.3.",
+        "card_tldr_compact": "The index reached 7.3.",
+        "executive_summary": "The index reached 7.3.",
+        "claim_evidence_map": [
+            {
+                "claim": "The source has a precise index value.",
+                "evidence_id": "index-value",
+                "evidence": "The index reached 7.30.",
+            }
+        ],
+    }
+
+    preserve_public_source_displays(
+        summary=summary,
+        insights_final=[],
+        expert_comment="",
+        linkedin_post="",
+    )
+
+    assert summary["executive_summary"] == "The index reached 7.30."
+
+
 def test_fallback_artifact_insights_uses_distinct_grounded_findings_only():
     findings = {
         "findings": [
@@ -478,7 +638,9 @@ def test_normalize_artifact_insights_omits_composite_public_metric_fields() -> N
                 "id": "iab-composite",
                 "text": "The insight keeps all supporting figures in its public prose.",
                 "evidence_id": "iab-evidence-1",
-                "evidence": "19.2%, $62.1 billion, and $102.9 billion are source-backed.",
+                "evidence": (
+                    "19.2%, $62.1 billion, and $102.9 billion are source-backed."
+                ),
                 "metric": {
                     "value": "19.2%; $62.1; $102.9; 39.8% growth",
                     "unit": "$ billion; $ billion; share",
