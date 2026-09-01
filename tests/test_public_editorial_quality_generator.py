@@ -23,6 +23,7 @@ _GOLDEN_ARTIFACT = next(
     )
 )
 _TEMPORAL_FIXTURE_DIR = Path(__file__).parent / "fixtures" / "editorial_temporal"
+_RELATIONSHIP_FIXTURE_DIR = Path(__file__).parent / "fixtures" / "editorial_relationships"
 
 
 def _retained_artifacts() -> dict:
@@ -33,12 +34,16 @@ def _temporal_fixture(name: str) -> dict:
     return json.loads((_TEMPORAL_FIXTURE_DIR / name).read_text(encoding="utf-8"))
 
 
+def _relationship_fixture(name: str) -> dict:
+    return json.loads((_RELATIONSHIP_FIXTURE_DIR / name).read_text(encoding="utf-8"))
+
+
 def _rule_ids(report) -> set[str]:
     return {issue.rule_id for issue in report.issues}
 
 
 def test_public_editorial_validator_version_invalidates_retained_v1_results() -> None:
-    assert PUBLIC_EDITORIAL_VALIDATOR_VERSION == "public-editorial-quality:v2"
+    assert PUBLIC_EDITORIAL_VALIDATOR_VERSION == "public-editorial-quality:v3"
 
 
 def _temporal_artifacts(*, text: str, evidence: str) -> dict:
@@ -74,6 +79,161 @@ def _compact_tldr_artifacts(*, text: str, evidence: str) -> dict:
             ],
         }
     }
+
+
+def test_social_video_fixture_preserves_forecast_period_value_pairs() -> None:
+    fixture = _relationship_fixture("social_video_ordered_metrics.json")
+
+    valid = evaluate_public_editorial_quality(
+        report_id="social-video",
+        artifacts=_temporal_artifacts(
+            text=fixture["valid_claim"], evidence=fixture["evidence"]
+        ),
+    )
+    swapped_value = evaluate_public_editorial_quality(
+        report_id="social-video",
+        artifacts=_temporal_artifacts(
+            text=fixture["swapped_value_claim"], evidence=fixture["evidence"]
+        ),
+    )
+    swapped_period = evaluate_public_editorial_quality(
+        report_id="social-video",
+        artifacts=_temporal_artifacts(
+            text=fixture["swapped_period_claim"], evidence=fixture["evidence"]
+        ),
+    )
+
+    assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(valid)
+    assert "public_editorial_quality.metric_label_relationship" in _rule_ids(
+        swapped_value
+    )
+    assert "public_editorial_quality.metric_label_relationship" in _rule_ids(
+        swapped_period
+    )
+
+
+def test_period_relationship_check_allows_an_implicit_shared_comparison_endpoint() -> None:
+    evidence = (
+        "Streaming viewing increased from 41% in 2022 to 70% in 2024, "
+        "while traditional-TV viewing declined from 69% to 60%."
+    )
+    report = evaluate_public_editorial_quality(
+        report_id="streaming-comparison",
+        artifacts=_temporal_artifacts(
+            text="Streaming reached 70% in 2024 while traditional TV remained 60% in 2024.",
+            evidence=evidence,
+        ),
+    )
+
+    assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(
+        report
+    )
+
+
+def test_ordered_category_value_series_rejects_swapped_values_and_categories() -> None:
+    evidence = "Platform preference: Alpha 43%; Beta 41%; Gamma 43%."
+
+    valid = evaluate_public_editorial_quality(
+        report_id="category-series",
+        artifacts=_temporal_artifacts(
+            text="Alpha has a 43% preference rate and Beta has 41%.",
+            evidence=evidence,
+        ),
+    )
+    swapped_value = evaluate_public_editorial_quality(
+        report_id="category-series",
+        artifacts=_temporal_artifacts(
+            text="Beta has a 43% preference rate.", evidence=evidence
+        ),
+    )
+    swapped_category = evaluate_public_editorial_quality(
+        report_id="category-series",
+        artifacts=_temporal_artifacts(
+            text="Gamma has a 41% preference rate.", evidence=evidence
+        ),
+    )
+
+    assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(valid)
+    assert "public_editorial_quality.metric_label_relationship" in _rule_ids(
+        swapped_value
+    )
+    assert "public_editorial_quality.metric_label_relationship" in _rule_ids(
+        swapped_category
+    )
+
+
+def test_same_value_under_multiple_categories_requires_its_claimed_category() -> None:
+    evidence = "Regional share: North 32%; South 32%; East 27%."
+    report = evaluate_public_editorial_quality(
+        report_id="category-series",
+        artifacts=_temporal_artifacts(
+            text="East accounts for 32% of regional share.", evidence=evidence
+        ),
+    )
+
+    assert "public_editorial_quality.unsupported_numeric_claim" not in _rule_ids(report)
+    assert "public_editorial_quality.metric_label_relationship" in _rule_ids(report)
+
+
+def test_relationship_check_applies_to_summary_expert_linkedin_and_key_figures() -> None:
+    evidence = "Average daily social-video time: 2023 0:48; 2024E 0:52; 2028E 0:57."
+    artifacts = _temporal_artifacts(
+        text="Average daily social-video time reaches 0:48 in 2024E.", evidence=evidence
+    )
+    artifacts["summary"] = {
+        "tldr": "Average daily social-video time reaches 0:48 in 2024E.",
+        "claim_evidence_map": [
+            {"evidence_id": "temporal-evidence", "evidence": evidence}
+        ],
+    }
+    artifacts["expert_comment"] = "Average daily social-video time reaches 0:48 in 2024E."
+    artifacts["linkedin_post"] = "Average daily social-video time reaches 0:48 in 2024E."
+    artifacts["key_figures"] = [
+        {
+            "label": "Average daily social-video time reaches 0:48 in 2024E.",
+            "figure": "0:48 in 2024E",
+            "why_it_matters": "Average daily social-video time reaches 0:48 in 2024E.",
+            "evidence_id": "temporal-evidence",
+        }
+    ]
+
+    report = evaluate_public_editorial_quality(
+        report_id="social-video", artifacts=artifacts
+    )
+
+    failed_fields = {
+        issue.affected_field
+        for issue in report.issues
+        if issue.rule_id == "public_editorial_quality.metric_label_relationship"
+    }
+    assert {
+        "insights:insight-temporal",
+        "tldr",
+        "expert_comment",
+        "linkedin_post",
+        "key_figures:1.label",
+        "key_figures:1.figure",
+        "key_figures:1.why_it_matters",
+    } <= failed_fields
+
+
+def test_relationship_failure_uses_existing_targeted_regeneration() -> None:
+    evidence = "Average daily social-video time: 2023 0:48; 2024E 0:52; 2028E 0:57."
+    artifacts = _temporal_artifacts(
+        text="Average daily social-video time reaches 0:48 in 2024E.", evidence=evidence
+    )
+    report = evaluate_public_editorial_quality(
+        report_id="social-video", artifacts=artifacts
+    )
+
+    plan = _build_regeneration_plan(
+        issues=validation_issues_from_public_editorial_quality(report),
+        artifacts=artifacts,
+        broad_retry_available=True,
+    )
+
+    assert plan.mode == "targeted"
+    assert [target.target_section for target in plan.targets] == ["insights_bundle"]
 
 
 def test_public_text_items_includes_compact_summary_tldr_with_summary_evidence() -> None:

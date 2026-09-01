@@ -5,3 +5,4 @@ text: |
   3. Treat `error` severity as mandatory repair, `warning` severity as repair when grounded evidence supports it, and ignore `info` severity unless it directly clarifies an error or warning.
   4. Preserve correct existing claims and do not add unsupported facts.
   5. When repairing a source comparison, restore all distinct temporal qualifiers stated in the supplied evidence, including quarter, half, month/year, fiscal year, and forecast marker. Do not collapse periods to a shared year or reconstruct a period absent from the evidence.
+  6. When the validator names an ordered source pair, use that exact label/value pair. Never retain a value under another period, category, row, or series label merely because the value appears elsewhere in the evidence.

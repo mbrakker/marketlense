@@ -45,6 +45,14 @@ handling, but a legacy Key Figure is omitted when no single metric-specific
 label can be established. Labels never stop at a geographic initialism such as
 `U.S.` or `U.K.`.
 
+For ordered source metrics, validation preserves the relationship between each
+label and value: a year, forecast period, quarter, category, or table row is
+bound to its own source value. A public claim cannot pass merely because its
+value and label both occur elsewhere in retained evidence. This applies to the
+summary, findings and their rendered Core Signal, Key Figures, Expert View,
+and LinkedIn. The existing targeted regeneration path receives the
+evidence-linked blocker; no separate model call or artifact family is added.
+
 Each public metric-spine item represents exactly one primary human-readable
 value, or one coherent comparison/range. Semicolon-packed values or units and
 other clearly composite displays fail closed: the Key Figure is omitted while

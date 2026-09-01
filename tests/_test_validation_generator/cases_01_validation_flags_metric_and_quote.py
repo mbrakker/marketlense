@@ -95,6 +95,50 @@ def test_number_validation_ignores_soft_planning_timeframes():
     assert not any(issue.rule_id == "numbers" for issue in issues)
 
 
+def test_number_validation_preserves_ordered_source_period_value_pairs() -> None:
+    fixture_path = (
+        Path(__file__).resolve().parents[1]
+        / "fixtures"
+        / "editorial_relationships"
+        / "social_video_ordered_metrics.json"
+    )
+    fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+    artifacts = {
+        "summary": {
+            "tldr": fixture["swapped_value_claim"],
+            "executive_summary": fixture["swapped_value_claim"],
+        },
+        "expert_comment": fixture["swapped_value_claim"],
+        "linkedin_post": fixture["valid_claim"],
+        "insights_final": [
+            {
+                "id": "social-time",
+                "text": fixture["swapped_value_claim"],
+            }
+        ],
+        "key_figures": [
+            {"figure": "0:48 in 2024E"},
+        ],
+    }
+
+    issues = validate_new_numbers(
+        artifacts=artifacts,
+        insights=[],
+        report=_report(),
+        evidence_texts=[fixture["evidence"]],
+        evidence_windows=[],
+        source_text=fixture["source_ordered_text"],
+    )
+
+    failed_sections = {issue.affected_section for issue in issues}
+    assert "summary.tldr" in failed_sections
+    assert "summary.executive_summary" in failed_sections
+    assert "expert_comment" in failed_sections
+    assert "insights:social-time.text" in failed_sections
+    assert "key_figures:1.figure" in failed_sections
+    assert "linkedin_post" not in failed_sections
+
+
 def test_validation_accepts_paraphrased_metrics_and_quotes(tmp_path):
     settings = _settings(tmp_path)
     artifacts = {
@@ -992,6 +1036,7 @@ def test_semantic_validation_reuses_retained_result_without_recovery_state(tmp_p
 __all__ = [
     "test_validation_flags_metric_and_quote_mismatches",
     "test_number_validation_ignores_soft_planning_timeframes",
+    "test_number_validation_preserves_ordered_source_period_value_pairs",
     "test_validation_accepts_paraphrased_metrics_and_quotes",
     "test_validation_detects_new_numbers_and_grounding",
     "test_claim_support_rejects_strong_claims_backed_only_by_weak_evidence",

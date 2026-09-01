@@ -69,6 +69,16 @@ the existing bounded targeted regeneration repairs only its supported family,
 then the candidate is revalidated. The check never reconstructs an omitted
 source period and accepts valid comparisons that share a calendar year.
 
+Ordered source evidence is validated as label/value tuples rather than as an
+independent bag of numeric tokens. The deterministic numeric gate recovers
+period/time order from retained source text where chart extraction emits
+separate ordered label and value runs, and public-copy validation also checks
+explicit period/value and category/value tuples. A mismatched year, forecast
+marker, quarter, category, or row fails closed even if the same number occurs
+elsewhere. The normal targeted regeneration receives the existing affected
+section and grounding package; it adds neither a model call nor an artifact
+family.
+
 Prompt fixtures and regression controls are documented in [quality testing](../quality/testing.md). Operator recovery starts with [recovery](../ops/recovery.md).
 
 ## Immutable validation cohorts and closure

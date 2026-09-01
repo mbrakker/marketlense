@@ -28,6 +28,7 @@ BLOCKING_RULE_IDS = {
     "public_editorial_quality.unsupported_numeric_claim",
     "public_editorial_quality.incomplete_numeric_expression",
     "public_editorial_quality.temporal_integrity",
+    "public_editorial_quality.metric_label_relationship",
     "public_editorial_quality.material_claim_evidence_missing",
     "public_editorial_quality.internal_identifier",
     "public_editorial_quality.placeholder",
@@ -111,6 +112,34 @@ _FORECAST_MARKER = re.compile(
     r"\b(?:forecast(?:s|ed|ing)?|project(?:s|ed|ion|ions)?|"
     r"expect(?:s|ed|ation|ations)?|outlook)\b",
     re.IGNORECASE,
+)
+_RELATIONSHIP_VALUE = (
+    r"(?:\d{1,3}:\d{2}|\d{1,3}(?:[,.]\d{3})+|\d+(?:[.,]\d+)?)"
+    r"(?:\s*%|\s*(?:million|billion|m|bn|x))?"
+)
+_PERIOD_LABEL = (
+    r"(?:Q[1-4]\s*(?:FY\s*)?(?:19|20)\d{2}E?|"
+    r"(?:19|20)\d{2}E?\s*Q[1-4]|(?:19|20)\d{2}E?)"
+)
+_PERIOD_VALUE_PAIR = re.compile(
+    rf"(?P<label>{_PERIOD_LABEL})\s*(?:[:=,]|\s)\s*"
+    rf"(?P<value>{_RELATIONSHIP_VALUE})(?![A-Za-z0-9%])",
+    re.IGNORECASE,
+)
+_VALUE_PERIOD_PAIR = re.compile(
+    rf"(?P<value>{_RELATIONSHIP_VALUE})(?![A-Za-z0-9%])\s*"
+    rf"(?:\(?\s*(?:in|for|at|during|by|of)?\s*)?"
+    rf"(?P<label>{_PERIOD_LABEL})\b",
+    re.IGNORECASE,
+)
+_CAPITALIZED_CATEGORY_VALUE_PAIR = re.compile(
+    rf"\b(?P<label>[A-Z][A-Za-z0-9&/-]*(?:\s+(?:[A-Z][A-Za-z0-9&/-]*|and|&)){{0,4}})"
+    rf"\s*(?::|is|has|accounts\s+for|at|reaches)?\s*"
+    rf"(?P<value>{_RELATIONSHIP_VALUE})(?![A-Za-z0-9%])"
+)
+_DELIMITED_CATEGORY_VALUE_PAIR = re.compile(
+    rf"(?:^|[;,\n])\s*(?P<label>[A-Za-z][A-Za-z0-9&/ -]{{0,48}}?)"
+    rf"\s*(?::|=)\s*(?P<value>{_RELATIONSHIP_VALUE})(?![A-Za-z0-9%])"
 )
 _MALFORMED_TEMPORAL_COMPARISON = re.compile(r"\b(?:in\s+to|between\s+and)\b", re.I)
 _CERTAINTY = re.compile(
@@ -343,6 +372,18 @@ def _text_issues(
                 temporal_explanation,
             )
         )
+    relationship_explanation = _metric_label_relationship_explanation(
+        text, str(item.get("evidence_text") or "")
+    )
+    if relationship_explanation:
+        issues.append(
+            _issue(
+                report_id,
+                "public_editorial_quality.metric_label_relationship",
+                item,
+                relationship_explanation,
+            )
+        )
     if field.endswith((".so_what", ".now_what")) and _is_nonspecific_action(text):
         issues.append(
             _issue(
@@ -459,14 +500,7 @@ def _key_figure_issues(
         evidence_id = str(insight.get("evidence_id") or "").strip()
         if not evidence_id:
             continue
-        evidence_text = " ".join(
-            value
-            for value in (
-                str(insight.get("evidence") or "").strip(),
-                str(insight.get("text") or "").strip(),
-            )
-            if value
-        )
+        evidence_text = str(insight.get("evidence") or "").strip()
         if evidence_text:
             evidence_text_by_id[evidence_id] = evidence_text
 
@@ -912,6 +946,90 @@ def _temporal_integrity_explanation(text: str, evidence_text: str) -> str:
         ):
             return "loses the source-proven forecast marker for a period comparison"
     return ""
+
+
+def _metric_label_relationship_explanation(text: str, evidence_text: str) -> str:
+    """Reject a retained structured value when its source label changes."""
+    if not evidence_text:
+        return ""
+
+    evidence_period_pairs = _period_value_pairs(evidence_text)
+    claim_period_pairs = _period_value_pairs(text)
+    evidence_period_values = {value for _period, value in evidence_period_pairs}
+    for pair in claim_period_pairs:
+        if pair[1] in evidence_period_values and pair not in evidence_period_pairs:
+            return "attaches a retained metric value to a different source period"
+
+    evidence_category_pairs = _structured_category_value_pairs(evidence_text)
+    if len(evidence_category_pairs) < 2:
+        return ""
+    evidence_values_by_category: dict[str, set[str]] = {}
+    for category, value in evidence_category_pairs:
+        evidence_values_by_category.setdefault(category, set()).add(value)
+    for category, values in evidence_values_by_category.items():
+        for value in _values_near_label(text, category):
+            if value not in values:
+                return "attaches a retained metric value to a different source category"
+    return ""
+
+
+def _period_value_pairs(text: str) -> set[tuple[str, str]]:
+    pairs: set[tuple[str, str]] = set()
+    for pattern in (_PERIOD_VALUE_PAIR, _VALUE_PERIOD_PAIR):
+        for match in pattern.finditer(text):
+            value = _normalized_relationship_value(match.group("value"))
+            label = _normalized_relationship_label(match.group("label"))
+            if value and label:
+                pairs.add((label, value))
+    return pairs
+
+
+def _structured_category_value_pairs(text: str) -> set[tuple[str, str]]:
+    pairs: set[tuple[str, str]] = set()
+    for pattern in (
+        _CAPITALIZED_CATEGORY_VALUE_PAIR,
+        _DELIMITED_CATEGORY_VALUE_PAIR,
+    ):
+        for match in pattern.finditer(text):
+            value = _normalized_relationship_value(match.group("value"))
+            label = _normalized_relationship_label(match.group("label"))
+            if value and label and not _is_year_value(value):
+                pairs.add((label, value))
+    return pairs
+
+
+def _values_near_label(text: str, label: str) -> set[str]:
+    values: set[str] = set()
+    normalized_text = _normalized_relationship_search_text(text)
+    label_pattern = re.compile(
+        rf"(?<![A-Za-z0-9]){re.escape(label)}(?![A-Za-z0-9])", re.IGNORECASE
+    )
+    for label_match in label_pattern.finditer(normalized_text):
+        window = normalized_text[label_match.end() : label_match.end() + 80]
+        value_match = re.search(
+            rf"{_RELATIONSHIP_VALUE}(?![A-Za-z0-9%])", window, re.IGNORECASE
+        )
+        if value_match:
+            value = _normalized_relationship_value(value_match.group(0))
+            if value and not _is_year_value(value):
+                values.add(value)
+    return values
+
+
+def _normalized_relationship_label(value: str) -> str:
+    return " ".join(value.casefold().replace("–", "-").split())
+
+
+def _normalized_relationship_value(value: str) -> str:
+    return "".join(value.casefold().replace(",", "").split())
+
+
+def _normalized_relationship_search_text(value: str) -> str:
+    return value.casefold().replace("–", "-")
+
+
+def _is_year_value(value: str) -> bool:
+    return bool(re.fullmatch(r"(?:19|20)\d{2}e?", value))
 
 
 def _material_numbers(text: str) -> set[str]:

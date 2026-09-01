@@ -1,0 +1,7 @@
+{
+  "evidence": "Average daily social-video time: 2023 0:48; 2024E 0:52; 2028E 0:57.",
+  "source_ordered_text": "2019 2020 2021 2022 2023 2024E 2028E Average daily social-video time 0:20 0:28 0:36 0:43 0:48 0:52 0:57.",
+  "valid_claim": "Average daily social-video time rises from 0:52 in 2024E to 0:57 in 2028E.",
+  "swapped_value_claim": "Average daily social-video time reaches 0:48 in 2024E.",
+  "swapped_period_claim": "Average daily social-video time reaches 0:52 in 2028E."
+}

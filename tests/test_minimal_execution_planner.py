@@ -223,8 +223,8 @@ def test_compatibility_matrix_invalidates_only_the_required_family(
             versions,
             validator_versions={
                 **versions.validator_versions,
-                "validation": "validator-v1|public-editorial-quality:v2",
-                "public_editorial_quality": "public-editorial-quality:v2",
+                "validation": "validator-v1|public-editorial-quality:v3",
+                "public_editorial_quality": "public-editorial-quality:v3",
             },
         )
     elif change == "crop":

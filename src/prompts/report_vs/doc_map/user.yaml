@@ -22,4 +22,5 @@ text: |
     Include a source-derived document brief and at least one section with subject-specific
     content whenever the report contains readable content.
   - If a field is unknown, use an empty string or empty array (do not invent values).
+  - For ordered charts, tables, and metric series, keep each value attached to its displayed year, forecast period, quarter, category, or row. Do not infer a label from an adjacent value.
   - Output JSON only (no markdown, no commentary).

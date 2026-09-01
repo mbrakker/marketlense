@@ -22,6 +22,7 @@ text: |
   Rules:
   - Every finding must be decision-relevant and evidence-grounded.
   - When a finding compares periods, retain the source's distinct temporal qualifiers exactly, including quarter, half, month/year, fiscal year, and forecast marker. Do not collapse distinct periods to a shared year or infer a period not present in the evidence.
+  - For an ordered metric series, preserve every source label/value tuple. A value may not be moved to another year, forecast period, quarter, category, or row even when that value appears elsewhere in the retrieved evidence.
   - "id" must be stable and unique within this output.
   - "pages" must contain positive integers only; use [] when page is unknown.
   - Keep "confidence" concise (e.g., low/medium/high).
