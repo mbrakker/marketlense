@@ -277,14 +277,91 @@ llm_execution_policies:
     structured_output_mode: json_object
     fallback_policy: same_provider_only
     pricing_key: "gpt-5.6-luna"
-  # Public distribution copy is constrained to retained evidence.  Keep its
-  # sampling deterministic so a faithful first-pass draft is preferred over
-  # stylistic variation that can require a regeneration cycle.
-  report_vs/artifacts/linkedin_post:
+  # Evidence-constrained public artifact families use exact policies so their
+  # sampling does not inherit future changes to unrelated report_vs workloads.
+  report_vs/evidence_packs:
     schema_version: "1.0"
     provider: openai
     model: "gpt-5.6-luna"
     temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 8192
+    retrieval_mode: inherit
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    fallback_policy: same_provider_only
+    pricing_key: "gpt-5.6-luna"
+  report_vs/artifacts/summary:
+    schema_version: "1.0"
+    provider: openai
+    model: "gpt-5.6-luna"
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 8192
+    retrieval_mode: inherit
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    fallback_policy: same_provider_only
+    pricing_key: "gpt-5.6-luna"
+  report_vs/artifacts/insights_final:
+    schema_version: "1.0"
+    provider: openai
+    model: "gpt-5.6-luna"
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 8192
+    retrieval_mode: inherit
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    fallback_policy: same_provider_only
+    pricing_key: "gpt-5.6-luna"
+  report_vs/artifacts/editorial_plan:
+    schema_version: "1.0"
+    provider: openai
+    model: "gpt-5.6-luna"
+    temperature: 0.3
+    seed_policy: inherit
+    max_output_tokens: 8192
+    retrieval_mode: inherit
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    fallback_policy: same_provider_only
+    pricing_key: "gpt-5.6-luna"
+  report_vs/artifacts/insights_candidates:
+    schema_version: "1.0"
+    provider: openai
+    model: "gpt-5.6-luna"
+    temperature: 0.4
+    seed_policy: inherit
+    max_output_tokens: 8192
+    retrieval_mode: inherit
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    fallback_policy: same_provider_only
+    pricing_key: "gpt-5.6-luna"
+  report_vs/artifacts/expert_comment:
+    schema_version: "1.0"
+    provider: openai
+    model: "gpt-5.6-luna"
+    temperature: 0.4
+    seed_policy: inherit
+    max_output_tokens: 8192
+    retrieval_mode: inherit
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    fallback_policy: same_provider_only
+    pricing_key: "gpt-5.6-luna"
+  report_vs/artifacts/linkedin_post:
+    schema_version: "1.0"
+    provider: openai
+    model: "gpt-5.6-luna"
+    temperature: 0.5
     seed_policy: inherit
     max_output_tokens: 8192
     retrieval_mode: inherit

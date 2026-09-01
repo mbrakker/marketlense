@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
+import yaml
 
 from src.contracts.llm import LLMRoutingPolicy
 from src.utils.errors import AppError
@@ -141,6 +144,59 @@ def test_execution_policy_uses_longest_prefix_and_changes_identity() -> None:
     assert validation.policy_source == "report_vs/validate"
     assert validation.policy.temperature == 0.0
     assert validation.policy_hash != artifact.policy_hash
+
+
+def test_public_artifact_execution_policies_use_exact_namespace_temperatures() -> None:
+    config_path = Path(__file__).resolve().parents[1] / "src" / "config" / "app.yaml"
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    ingest = config["ingest"]
+    policies = execution_policies_from_config(
+        config["llm_execution_policies"],
+        model_overrides=config["openai_models"],
+        legacy_routing=config["llm_routing"],
+        default_model=ingest["openai_model"],
+        default_temperature=ingest["temperature"],
+        default_seed=ingest["seed"],
+        default_timeout_seconds=ingest["timeout_seconds"],
+    )
+
+    expected_artifacts = {
+        "report_vs/evidence_packs": 0.0,
+        "report_vs/artifacts/summary": 0.0,
+        "report_vs/artifacts/insights_final": 0.0,
+        "report_vs/artifacts/editorial_plan": 0.3,
+        "report_vs/artifacts/insights_candidates": 0.4,
+        "report_vs/artifacts/expert_comment": 0.4,
+        "report_vs/artifacts/linkedin_post": 0.5,
+    }
+    for namespace, expected_temperature in expected_artifacts.items():
+        decision = resolve_execution_policy(
+            namespace,
+            policies,
+            default_model=ingest["openai_model"],
+            default_temperature=ingest["temperature"],
+            default_seed=ingest["seed"],
+            default_timeout_seconds=ingest["timeout_seconds"],
+        )
+        assert decision.policy_source == namespace
+        assert decision.policy.temperature == expected_temperature
+
+    preserved_namespaces = {
+        "report_vs/taxonomy": 0.0,
+        "report_vs/figure_caption": 0.0,
+        "browser_report_download/browser_route": 0.0,
+    }
+    for namespace, expected_temperature in preserved_namespaces.items():
+        decision = resolve_execution_policy(
+            namespace,
+            policies,
+            default_model=ingest["openai_model"],
+            default_temperature=ingest["temperature"],
+            default_seed=ingest["seed"],
+            default_timeout_seconds=ingest["timeout_seconds"],
+        )
+        assert decision.policy_source == namespace
+        assert decision.policy.temperature == expected_temperature
 
 
 def test_legacy_exact_model_override_retains_inherited_execution_controls() -> None:

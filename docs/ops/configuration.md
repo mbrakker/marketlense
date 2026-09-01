@@ -59,6 +59,14 @@ ship its matching rate card together.
 
 The important operator sections are `paths`, `ingest`, `publish`, `browser_download`, `mailbox_acquisition`, `publisher_discovery`, and `workflow_control`. The committed base leaves both recovery reapers and the supervisor disabled. The reviewed `MARKET_LENSE_CONFIG_PROFILE=autonomous_mvp` overlay enables the lease-protected supervisor plus remediation and deferred-work reapers with a two-record limit each; normal queue-worker batches remain disabled so the existing durable workers retain execution ownership. `workflow_control.remediation_reaper.execution_enabled` and `workflow_control.deferred_work_reaper.execution_enabled` remain independent rollback gates, while their record limits, lease duration, and retry delay bound each invocation. `openai_models`, `llm_routing`, `llm_execution_policies`, and `cost` govern model routing and accounting. `llm_execution_policies` is the versioned namespace policy for provider/model, sampling, output limits, timeout, structured-output mode, compaction, pricing key, and same-provider fallback. Settings startup resolves the complete finite production namespace inventory before any provider client can be used; an unknown or uncovered reachable namespace rejects configuration. The workflow preflight then retains the exact resolved namespace/provider/model/full-policy matrix and policy hashes with the run-owned artifacts. Provider-owned retries remain forbidden and workflow retry policy remains orchestrator-owned. The compatibility adapter preserves historical non-report namespaces until they are explicitly migrated. An external host owns recurrence for `workflow_control.supervisor`; the command itself is one-shot.
 
+Evidence-constrained first-pass artifact families use exact execution-policy
+overrides rather than inheriting the broad `report_vs` policy: evidence packs,
+summary, and final insights use temperature `0.0`; editorial planning uses
+`0.3`; insight candidates and Expert View use `0.4`; and LinkedIn uses `0.5`.
+These namespace-specific policies leave report extraction, validation,
+taxonomy, browser, and regeneration routes on their independently configured
+policies.
+
 Every configured generative route, including
 `publisher_inventory/meaningful_candidate_screen`, is deliberately routed and
 priced as `gpt-5.6-luna`. The browser/OpenRouter fallback uses the exact

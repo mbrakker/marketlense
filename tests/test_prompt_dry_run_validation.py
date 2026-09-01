@@ -248,7 +248,7 @@ def test_prompt_dry_run_uses_the_runtime_execution_policy() -> None:
     assert result.execution_policy_hash == expected.policy_hash
 
 
-def test_linkedin_publication_copy_uses_the_low_variance_execution_policy() -> None:
+def test_linkedin_publication_copy_uses_the_configured_execution_policy() -> None:
     response = validate_prompt_dry_run(
         PromptDryRunRequest(
             schema_version="1.0", namespaces=["report_vs/artifacts/linkedin_post"]
@@ -257,7 +257,7 @@ def test_linkedin_publication_copy_uses_the_low_variance_execution_policy() -> N
     )
 
     result = response.results[0]
-    assert result.temperature == 0.0
+    assert result.temperature == 0.5
 
 
 def test_validate_prompt_dry_run_rejects_missing_fixture(
