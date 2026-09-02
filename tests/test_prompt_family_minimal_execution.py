@@ -100,3 +100,47 @@ def test_prompt_change_targets_only_changed_family_and_downstream_dependents() -
     ]
     assert plan.required_prompt_families == [candidate_family, final_family]
     assert plan.reused_prompt_families == [summary_family]
+
+
+def test_upstream_prompt_change_uses_normal_analysis_resume() -> None:
+    """An evidence-pack change must not enter an artifact-only repair path."""
+    findings_family = "report_vs/evidence_packs/findings"
+    findings = _artifact(
+        "findings",
+        "prompt_family:" + findings_family,
+        findings_family,
+        [],
+        "retained-findings",
+    )
+
+    plan = plan_minimal_execution(
+        MinimalExecutionPlanInput(
+            schema_version="1.0",
+            execution_intent="targeted_repair",
+            report_id="report-1",
+            source_id="source-1",
+            current_source_content_hashes={},
+            retained_graph=RetainedArtifactGraph(
+                schema_version="1.0",
+                artifacts=[findings],
+                edges=[],
+            ),
+            requested_output_families=[findings_family],
+            current_compatibility=ExecutionCompatibilityVersions(
+                schema_version="1.0",
+                schema_versions={"*": "1.0"},
+                processing_versions={"*": "report_generation_checkpoint_v2"},
+                prompt_versions={findings_family: "current-findings"},
+                model_policy_versions={"*": "routing-v1"},
+            ),
+        )
+    )
+
+    assert plan.required_prompt_families == []
+    assert plan.required_stages == ["analysis_complete", "render_complete"]
+    assert plan.required_external_calls == [
+        "html_render",
+        "report_analysis_model",
+        "validator_model",
+        "vector_store",
+    ]

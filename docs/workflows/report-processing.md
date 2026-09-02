@@ -412,6 +412,14 @@ or any mismatch in prompt, schema, model policy, configuration, input, output,
 or validation provenance, falls through to the existing bounded recovery and
 minimum-regeneration flow.
 
+Artifact-only prompt repair is limited to the retained editorial artifacts
+(summary, insights, quotes, cover semantics, Expert Comment, and LinkedIn)
+and the grounding or semantic validation families, because those have precise
+checkpoint-based regeneration handlers. A changed upstream prompt family such
+as taxonomy, document mapping, or an evidence pack instead resumes normal
+analysis from the earliest compatible checkpoint. It must never be presented
+to the artifact-only executor or treated as a successful narrow repair.
+
 The retained-corpus E9 measurement is recorded in
 [the bounded evidence note](../quality/e9-prompt-family-reuse-evidence-2026-08-27.md).
 It distinguishes valid-family reuse from required quality repair; a retained

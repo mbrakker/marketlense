@@ -74,6 +74,17 @@ _FAMILY_STAGE = {
     "rendered_html": "render_complete",
     "publication": "publication_complete",
 }
+_TARGETED_PROMPT_REPAIR_FAMILIES = {
+    "report_vs/artifacts/summary",
+    "report_vs/artifacts/insights_candidates",
+    "report_vs/artifacts/insights_final",
+    "report_vs/artifacts/quotes",
+    "report_vs/artifacts/cover_semantics",
+    "report_vs/artifacts/expert_comment",
+    "report_vs/artifacts/linkedin_post",
+    "report_vs/validate/grounding",
+    "report_vs/validate/semantic",
+}
 
 
 def _canonical_json(value: object) -> str:
@@ -639,7 +650,16 @@ def plan_minimal_execution(
             and _family_for(item) in validation_prompt_families
             and item.artifact_id in relevant_artifact_ids
         )
-    required_prompt_families = sorted(required_prompt_family_set)
+    # Artifact-only repair is available solely for the families whose
+    # regeneration handler can consume a retained analysis checkpoint.  A
+    # changed upstream family (for example an evidence pack) must take the
+    # normal checkpoint resume path so it can rebuild its dependencies rather
+    # than failing after the plan has been accepted.
+    required_prompt_families = (
+        sorted(required_prompt_family_set)
+        if required_prompt_family_set <= _TARGETED_PROMPT_REPAIR_FAMILIES
+        else []
+    )
     reused_prompt_families = sorted(
         {
             _family_for(item)
