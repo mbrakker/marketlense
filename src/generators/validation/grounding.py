@@ -380,9 +380,20 @@ def run_grounding_check(
                 )
                 if not classification:
                     classification = infer_claim_classification(section_key, text)
+                entailment_outcome = normalize_entailment_outcome(
+                    s(entry.get("entailment_outcome"))
+                )
                 violation_type = normalize_violation_type(
                     s(entry.get("violation_type") or entry.get("failure_type"))
                 )
+                if entailment_outcome == "contradicted":
+                    violation_type = "contradicted"
+                elif (
+                    entailment_outcome == "not_established"
+                    and classification == "factual_claim"
+                    and violation_type not in GROUNDING_HARD_FAILURES
+                ):
+                    violation_type = "unsupported_factual_claim"
                 if not violation_type:
                     violation_type = infer_violation_type(
                         section_key=section_key,
@@ -507,6 +518,13 @@ def normalize_claim_classification(value: str) -> str:
         return "analyst_interpretation"
     if normalized in {"prescriptive_recommendation", "recommendation", "prescriptive"}:
         return "prescriptive_recommendation"
+    return ""
+
+
+def normalize_entailment_outcome(value: str) -> str:
+    normalized = value.strip().lower()
+    if normalized in {"contradicted", "not_established"}:
+        return normalized
     return ""
 
 
