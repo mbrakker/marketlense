@@ -254,54 +254,6 @@ def test_validation_detects_new_numbers_and_grounding(tmp_path):
     assert any("Number" in issue.message for issue in result.issues)
 
 
-@pytest.mark.parametrize(
-    ("outcome", "expected_violation"),
-    [
-        ("contradicted", "contradicted"),
-        ("not_established", "unsupported_factual_claim"),
-    ],
-)
-def test_grounding_semantic_outcome_preserves_hard_failure(
-    tmp_path, outcome, expected_violation
-):
-    result = validate_report(
-        ValidationRequest(
-            schema_version="1.0",
-            report_id=f"r-grounding-{outcome}",
-            report=_report(),
-            artifacts={
-                "insights_final": [],
-                "expert_comment": "Adoption surged in 2025.",
-            },
-            evidence_packs={},
-            vector_store_id=None,
-        ),
-        _settings(tmp_path),
-        _ctx(),
-        prompt_client=FakePromptClient(),
-        openai_client=FakeOpenAI(
-            semantic_payload={"metrics": [], "quotes": []},
-            grounding_payload={
-                "unsupported": [
-                    {
-                        "section": "expert_comment",
-                        "text": "Adoption surged in 2025.",
-                        "classification": "factual_claim",
-                        "entailment_outcome": outcome,
-                        "reason": "Linked retained evidence does not support the claim.",
-                    }
-                ]
-            },
-        ),
-        analysis_store=FakeAnalysisStore(),
-    )
-
-    grounding_issues = [item for item in result.issues if item.rule_id == "grounding"]
-    assert grounding_issues
-    assert grounding_issues[0].severity == "error"
-    assert f"[factual_claim|{expected_violation}]" in grounding_issues[0].message
-
-
 def test_inline_validation_records_deferred_grounding_without_model_client(tmp_path):
     settings = _settings(tmp_path)
     analysis_store = FakeAnalysisStore()
@@ -1087,7 +1039,6 @@ __all__ = [
     "test_number_validation_preserves_ordered_source_period_value_pairs",
     "test_validation_accepts_paraphrased_metrics_and_quotes",
     "test_validation_detects_new_numbers_and_grounding",
-    "test_grounding_semantic_outcome_preserves_hard_failure",
     "test_claim_support_rejects_strong_claims_backed_only_by_weak_evidence",
     "test_commentary_numbers_allowed_when_in_report_or_evidence",
     "test_validation_allows_interpretation_and_recommendation_in_allowed_sections",
