@@ -129,9 +129,7 @@ def test_regeneration_prompts_require_exact_retained_evidence_bindings(
     namespace: str,
 ) -> None:
     prompt_set = prompt_service.load_prompt_set(
-        PromptLoadRequest(
-            schema_version="1.0", namespace=namespace, force_reload=True
-        ),
+        PromptLoadRequest(schema_version="1.0", namespace=namespace, force_reload=True),
         _ctx(),
     )
 
@@ -186,7 +184,7 @@ def test_linkedin_prompt_materializes_editorial_plan_and_report_scope(
         "doc_map_json": json.dumps({"scope": scope, "publisher": "Source Co."}),
         "summary_json": '{"executive_summary":"Secondary context."}',
         "insights_final_json": '[{"text":"Supporting insight."}]',
-        "metric_spine_json": '[]',
+        "metric_spine_json": "[]",
         "attempt_index": 1,
         "target_section": "linkedin_post",
         "current_section_text": "Current post.",

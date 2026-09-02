@@ -296,9 +296,7 @@ def test_grounding_semantic_outcome_preserves_hard_failure(
         analysis_store=FakeAnalysisStore(),
     )
 
-    grounding_issues = [
-        item for item in result.issues if item.rule_id == "grounding"
-    ]
+    grounding_issues = [item for item in result.issues if item.rule_id == "grounding"]
     assert grounding_issues
     assert grounding_issues[0].severity == "error"
     assert f"[factual_claim|{expected_violation}]" in grounding_issues[0].message
