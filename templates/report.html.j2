@@ -54,6 +54,7 @@
         {% endif %}
       </div>
 
+      {% if view.core_signal.heading and view.core_signal.body %}
       <aside class="signal-panel" aria-label="Core report signal and score">
         <div class="signal-top">
           <p class="eyebrow">Core signal</p>
@@ -83,6 +84,7 @@
           </div>
         </div>
       </aside>
+      {% endif %}
     </div>
   </section>
 

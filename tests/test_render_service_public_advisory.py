@@ -9,6 +9,57 @@ def _ctx():
     return RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
 
 
+def test_render_never_exposes_generic_core_signal_copy(tmp_path):
+    insight = (
+        "Digital engagement is forecast to stay above 2019 levels after routines "
+        "return to normal, led by browsing at 15% and gaming at 14%, while "
+        "remaining below shelter-in-place peaks."
+    )
+    response = render_report(
+        RenderRequest(
+            schema_version="1.0",
+            data={
+                "title": "Core Signal Regression Report",
+                "publisher": "MarketLense",
+                "artifacts": {"insights_final": [{"text": insight}]},
+            },
+            doc_name="core-signal-regression.pdf",
+            file_id="file-core-signal-regression",
+            out_dir=str(tmp_path),
+        ),
+        _ctx(),
+    )
+
+    html = Path(response.html_path).read_text(encoding="utf-8")
+
+    assert "Source-backed market signal" not in html
+    assert f"<h2>{insight}</h2>" in html
+    assert f"<p>{insight}</p>" in html
+
+
+def test_render_omits_core_signal_when_no_complete_sentence_is_available(tmp_path):
+    response = render_report(
+        RenderRequest(
+            schema_version="1.0",
+            data={
+                "title": "No Core Signal Report",
+                "publisher": "MarketLense",
+                "artifacts": {},
+            },
+            doc_name="no-core-signal.pdf",
+            file_id="file-no-core-signal",
+            out_dir=str(tmp_path),
+        ),
+        _ctx(),
+    )
+
+    html = Path(response.html_path).read_text(encoding="utf-8")
+
+    assert 'class="signal-panel"' not in html
+    assert "Source-backed market signal" not in html
+    assert "Source-supported signal unavailable for this report." not in html
+
+
 def test_render_surfaces_public_advisory_metric_spine_and_claim_support(tmp_path):
     data = {
         "title": "Advisory Report",

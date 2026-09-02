@@ -1,0 +1,60 @@
+{
+  "reports": [
+    {
+      "name": "Rewire to Restart",
+      "insight": {
+        "id": "insight-001",
+        "evidence_id": "finding-2",
+        "text": "Digital engagement is forecast to stay above 2019 levels after routines return to normal, led by browsing at 15% and gaming at 14%, while remaining below shelter-in-place peaks."
+      },
+      "expected": {
+        "heading": "Digital engagement is forecast to stay above 2019 levels after routines return to normal, led by browsing at 15% and gaming at 14%, while remaining below shelter-in-place peaks.",
+        "body": "Digital engagement is forecast to stay above 2019 levels after routines return to normal, led by browsing at 15% and gaming at 14%, while remaining below shelter-in-place peaks.",
+        "insight_id": "insight-001",
+        "evidence_id": "finding-2"
+      }
+    },
+    {
+      "name": "Outlook 2019",
+      "insight": {
+        "id": "insight-03",
+        "evidence_id": "finding-04",
+        "text": "U.S. adults are forecast to spend 11 additional minutes per day with technology and media, rising from 12:21 in 2018E to 12:32 in 2022E."
+      },
+      "expected": {
+        "heading": "U.S. adults are forecast to spend 11 additional minutes per day with technology and media, rising from 12:21 in 2018E to 12:32 in 2022E.",
+        "body": "U.S. adults are forecast to spend 11 additional minutes per day with technology and media, rising from 12:21 in 2018E to 12:32 in 2022E.",
+        "insight_id": "insight-03",
+        "evidence_id": "finding-04"
+      }
+    },
+    {
+      "name": "Social Video",
+      "insight": {
+        "id": "insight-002",
+        "evidence_id": "finding-1",
+        "text": "Social-video time growth is forecast to slow from a 21% CAGR during 2019–2024E to a 2% CAGR during 2024E–2028E."
+      },
+      "expected": {
+        "heading": "Social-video time growth is forecast to slow from a 21% CAGR during 2019–2024E to a 2% CAGR during 2024E–2028E.",
+        "body": "Social-video time growth is forecast to slow from a 21% CAGR during 2019–2024E to a 2% CAGR during 2024E–2028E.",
+        "insight_id": "insight-002",
+        "evidence_id": "finding-1"
+      }
+    },
+    {
+      "name": "Sports Media & Betting",
+      "insight": {
+        "id": "insight_sports_betting_market_growth",
+        "evidence_id": "f10",
+        "text": "U.S. sports betting amount wagered is forecast to reach approximately $199B in 2028, representing a 9% CAGR from 2023–2028E, assuming 47 states legalize sports betting by 2028."
+      },
+      "expected": {
+        "heading": "U.S. sports betting amount wagered is forecast to reach approximately $199B in 2028, representing a 9% CAGR from 2023–2028E, assuming 47 states legalize sports betting by 2028.",
+        "body": "U.S. sports betting amount wagered is forecast to reach approximately $199B in 2028, representing a 9% CAGR from 2023–2028E, assuming 47 states legalize sports betting by 2028.",
+        "insight_id": "insight_sports_betting_market_growth",
+        "evidence_id": "f10"
+      }
+    }
+  ]
+}

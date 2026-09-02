@@ -91,13 +91,14 @@ available`.
 
 Public title selection rejects runtime file-name slugs and decodes URL-encoded
 canonical, PDF-metadata, and document-map titles before they reach the HTML,
-metadata record, or source attribution. The cover's core signal prefers the
-ordered, grounded strategic implication of a final insight, then its ordered
-factual claim. When the retained claim is too long, deterministic clause
-selection keeps a short complete strategic clause (including a supported
-outcome phrase) and never splits structured numeric tokens such as thousands
-separators, times, or ratios; generic signal
-copy remains only for an absent usable claim.
+metadata record, or source attribution. The cover's core signal selects one
+grounded final-insight sentence for both fields. When the retained claim is too
+long, deterministic clause selection keeps a short complete strategic clause
+(including a supported outcome phrase) and never splits structured numeric
+tokens such as thousands separators, times, or ratios. If no safe short clause
+can be retained, the complete selected sentence is the heading; if no complete
+sentence exists, the signal panel is omitted rather than emitting generic
+system copy.
 
 Card-cover title layout preserves the complete normalized title. When an
 title word or hyphen segment is wider than an empty title line, the deterministic

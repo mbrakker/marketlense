@@ -12,7 +12,7 @@ from src.services._render_service.normalization import (
 )
 
 
-def test_core_signal_uses_the_selected_insight_before_summary_fallback() -> None:
+def test_core_signal_uses_complete_sentence_if_no_short_heading() -> None:
     signal = _build_core_signal(
         tldr_text=(
             "The first source sentence is deliberately longer than the compact "
@@ -30,13 +30,16 @@ def test_core_signal_uses_the_selected_insight_before_summary_fallback() -> None
         ],
     )
 
-    assert signal["heading"] == "Source-backed market signal"
+    assert signal["heading"] == (
+        "The leading finding is intentionally longer than the compact signal limit "
+        "so the renderer must not publish a clipped claim."
+    )
     assert signal["body"] == (
         "The leading finding is intentionally longer than the compact signal limit "
         "so the renderer must not publish a clipped claim."
     )
-    assert signal["heading"] != "Executive signal pending"
-    assert signal["body"] != "Source-supported signal unavailable for this report."
+    assert signal["heading"] == signal["body"]
+    assert signal["heading"] != "Source-backed market signal"
 
 
 def test_core_signal_prefers_market_evidence_over_report_annotation() -> None:
@@ -79,7 +82,7 @@ def test_core_signal_derives_a_short_heading_from_a_long_strategic_claim() -> No
     assert signal["heading"] != "Source-backed market signal"
 
 
-def test_core_signal_ignores_a_selected_insight_implication() -> None:
+def test_core_signal_uses_selected_sentence_not_implication() -> None:
     signal = _build_core_signal(
         tldr_text="",
         executive_summary="",
@@ -98,8 +101,9 @@ def test_core_signal_ignores_a_selected_insight_implication() -> None:
         ],
     )
 
-    assert signal["heading"] == "Source-backed market signal"
-    assert signal["body"].startswith("GWI harmonizes bespoke studies")
+    assert signal["heading"] == signal["body"]
+    assert signal["heading"].startswith("GWI harmonizes bespoke studies")
+    assert signal["heading"] != "Source-backed market signal"
 
 
 def test_core_signal_keeps_yougov_heading_and_body_on_one_insight() -> None:
@@ -123,6 +127,26 @@ def test_core_signal_keeps_yougov_heading_and_body_on_one_insight() -> None:
     assert signal["evidence_id"] == fixture["expected"]["evidence_id"]
     assert "benefits" not in signal["heading"].casefold()
     assert "benefits" not in signal["body"].casefold()
+
+
+def test_core_signal_batch_03_fixture_pairs_never_use_generic_headings() -> None:
+    fixture_path = (
+        Path(__file__).resolve().parent
+        / "fixtures"
+        / "editorial_core_signal"
+        / "batch_03_core_signals.json"
+    )
+    fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+
+    for report in fixture["reports"]:
+        signal = _build_core_signal(
+            tldr_text="",
+            executive_summary="",
+            insights=[report["insight"]],
+        )
+
+        assert signal == report["expected"], report["name"]
+        assert signal["heading"] != "Source-backed market signal", report["name"]
 
 
 def test_core_signal_uses_the_selected_benefit_insight_for_both_fields() -> None:
@@ -324,7 +348,7 @@ def test_core_signal_heading_preserves_a_complete_clause_before_comma_but() -> N
     assert _core_signal_heading(text) == "The market is expanding materially."
 
 
-def test_core_signal_falls_back_for_over_limit_activate_time_sentence() -> None:
+def test_core_signal_uses_complete_heading_for_long_time_sentence() -> None:
     signal = _build_core_signal(
         tldr_text="",
         executive_summary="",
@@ -339,7 +363,8 @@ def test_core_signal_falls_back_for_over_limit_activate_time_sentence() -> None:
         ],
     )
 
-    assert signal["heading"] == "Source-backed market signal"
+    assert signal["heading"] == signal["body"]
+    assert signal["heading"] != "Source-backed market signal"
     assert "17:06" in signal["body"]
     assert "9:31" in signal["body"]
 

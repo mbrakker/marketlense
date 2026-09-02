@@ -239,8 +239,8 @@ def _build_core_signal(
     body = _s(selected.get("body"))
     heading = _core_signal_heading(body) if body else ""
     return {
-        "heading": heading or "Source-backed market signal",
-        "body": body or "Source-supported signal unavailable for this report.",
+        "heading": heading or body,
+        "body": body,
         "insight_id": _s(selected.get("insight_id")),
         "evidence_id": _s(selected.get("evidence_id")),
     }

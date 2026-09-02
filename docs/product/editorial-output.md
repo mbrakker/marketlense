@@ -127,10 +127,12 @@ coordinated terms (for example, `between scale and momentum` and `search and
 video`) and splits only at a clear boundary such as a semicolon, colon, or
 comma followed by a conjunction. It deterministically prefers a substantive
 market, metric, constraint, or adoption finding over a sentence that merely
-describes the report or study. It otherwise uses the explicit
-`Source-backed market signal` heading with a complete supporting sentence; it
-never uses a clipped fragment, literal ellipsis, or a pending-data fallback
-when a grounded summary is available.
+describes the report or study. It reuses that deterministic shortening logic
+for the heading and, when no safe short clause exists, uses the complete
+selected sentence rather than generic system copy. If no complete selected
+sentence is available, the signal panel is omitted. It never uses a clipped
+fragment, literal ellipsis, pending-data fallback, or `Source-backed market
+signal` as reader-facing copy.
 
 Context-first category assignment uses category definitions, inclusion conditions, and exclusion conditions to assign public Topics. A non-rejected primary or secondary candidate that is semantically ambiguous is repaired once or fails closed; it cannot silently leave a report without its identified category. Taxonomy tags remain supporting metadata and prompt vocabulary; they are not a competing weighted category scorer.
 
