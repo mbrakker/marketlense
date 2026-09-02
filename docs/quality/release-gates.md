@@ -39,4 +39,10 @@ storage policy. Generated screenshots belong in ignored runtime output or, when
 they are intentional test inputs, under `tests/fixtures`; expired screenshot
 exceptions are removed together with the tracked runtime artifacts.
 
+Documentation may retain relative pointers to ignored runtime evidence under
+`out/`, `output/`, `cache/`, `logs/`, `state/`, or `temp/`. The documentation
+gate validates versioned link targets and heading anchors, while treating those
+runtime pointers as audit references because a clean CI checkout does not
+contain their artifacts.
+
 Run the focused checks appropriate to the changed area before the aggregate suite. This document explains gate categories; it does not record pass/fail results. See [benchmarks](benchmarks.md) and [evidence](evidence.md).

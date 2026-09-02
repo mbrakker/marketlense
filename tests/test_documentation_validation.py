@@ -58,3 +58,15 @@ def test_markdown_link_validation_detects_missing_relative_file(tmp_path: Path) 
             path=Path("README.md"), reason="missing link target: docs/missing.md"
         ),
     )
+
+
+def test_markdown_link_validation_allows_ignored_runtime_artifact_pointers(
+    tmp_path: Path,
+) -> None:
+    subprocess.run(["git", "init", "--quiet"], cwd=tmp_path, check=True)
+    (tmp_path / "README.md").write_text(
+        "[Run output](out/validation/report.html)\n",
+        encoding="utf-8",
+    )
+
+    assert validate_markdown_links(tmp_path) == ()

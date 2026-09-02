@@ -30,6 +30,9 @@ FIRST_PARTY_EXCLUDED_DIRECTORIES = frozenset(
         "tools",
     }
 )
+RUNTIME_ARTIFACT_LINK_DIRECTORIES = frozenset(
+    {"cache", "logs", "out", "output", "state", "temp"}
+)
 MARKDOWN_LINK = re.compile(r"!?\[[^\]]*\]\(([^)]+)\)")
 CANONICAL_TOPIC = re.compile(r"^> \*\*Canonical topic:\*\* (.+?)\s*$", re.MULTILINE)
 REQUIRED_CANONICAL_DOCUMENTS = (
@@ -145,6 +148,14 @@ def _is_external_target(target: str) -> bool:
     return normalized.startswith(("http://", "https://", "mailto:", "tel:"))
 
 
+def _is_ignored_runtime_artifact(destination: Path, root: Path) -> bool:
+    try:
+        relative = destination.relative_to(root)
+    except ValueError:
+        return False
+    return any(part in RUNTIME_ARTIFACT_LINK_DIRECTORIES for part in relative.parts)
+
+
 def validate_markdown_links(root: Path) -> tuple[DocumentationViolation, ...]:
     """Validate first-party relative Markdown links and known heading anchors."""
     violations: list[DocumentationViolation] = []
@@ -159,6 +170,8 @@ def validate_markdown_links(root: Path) -> tuple[DocumentationViolation, ...]:
                 continue
             destination = source if not target else (source.parent / target).resolve()
             if not destination.exists():
+                if _is_ignored_runtime_artifact(destination, root):
+                    continue
                 violations.append(
                     DocumentationViolation(
                         relative_path, f"missing link target: {raw_target}"
