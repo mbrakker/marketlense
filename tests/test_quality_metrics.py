@@ -3,7 +3,15 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from scripts.quality.quality_metrics import collect_candidate_pack_metrics
+import pytest
+
+from scripts.quality.migrate_golden_artifact_fixtures import migrate_artifact_payload
+from scripts.quality.quality_metrics import (
+    collect_candidate_pack_metrics,
+    collect_docpack_metrics,
+)
+
+_GOLDEN_DOCPACK_ROOT = Path(__file__).parent / "fixtures" / "docpacks" / "golden"
 
 
 def _write_candidate_pack(root: Path, report_name: str, payload: dict) -> None:
@@ -102,3 +110,54 @@ def test_collect_candidate_pack_metrics_tolerates_invalid_payloads(tmp_path) -> 
         "crop_path_coverage_rate": 1.0,
         "preview_text_rate": 1.0,
     }
+
+
+def test_golden_docpack_artifacts_remain_schema_valid() -> None:
+    metrics = collect_docpack_metrics(str(_GOLDEN_DOCPACK_ROOT))
+
+    assert metrics["packs"]["artifacts"]["schema_valid_rate"] == 1.0
+
+
+def test_migrate_artifact_payload_derives_only_retained_fields() -> None:
+    payload = {
+        "summary": {"tldr": "The report's retained thesis."},
+        "insights_final": [
+            {
+                "text": "First retained finding.",
+                "evidence_id": "finding-1",
+                "metric": {"value": "20", "unit": "%"},
+            },
+            {
+                "text": "Second retained finding.",
+                "evidence_id": "finding-2",
+                "metric": {"value": "2", "label": "Existing label"},
+            },
+        ],
+        "insights_candidates": [],
+        "quotes_final": [],
+    }
+
+    assert migrate_artifact_payload(payload) is True
+    assert payload["editorial_plan"] == {
+        "report_thesis": "The report's retained thesis.",
+        "themes": [
+            {
+                "theme": "First retained finding.",
+                "priority": 1,
+                "evidence_ids": ["finding-1"],
+            },
+            {
+                "theme": "Second retained finding.",
+                "priority": 2,
+                "evidence_ids": ["finding-2"],
+            },
+        ],
+    }
+    assert payload["insights_final"][0]["metric"]["label"] == "First retained finding."
+    assert payload["insights_final"][1]["metric"]["label"] == "Existing label"
+    assert migrate_artifact_payload(payload) is False
+
+
+def test_migrate_artifact_payload_rejects_untraceable_editorial_plan() -> None:
+    with pytest.raises(ValueError, match="evidence-linked source statements"):
+        migrate_artifact_payload({"summary": {"tldr": "A thesis."}})

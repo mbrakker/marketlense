@@ -58,7 +58,8 @@
         "geography": "Global (18 markets)",
         "segment": "All respondents; Gen Z subgroup noted",
         "sample_size": "≈20,000",
-        "confidence": "0.85"
+        "confidence": "0.85",
+        "label": "AI-enabled chat is already mainstream: 53% of respondents report using AI chat in their personal lives, rising to 70% among Gen Z."
       },
       "pages": [],
       "score": 0.95
@@ -76,7 +77,8 @@
         "geography": "Global (18 markets)",
         "segment": "Overall; Millennials and Gen Z highlighted",
         "sample_size": "≈20,000",
-        "confidence": "0.82"
+        "confidence": "0.82",
+        "label": "Many users form emotionally significant bonds with chatbots: 32% say they sometimes feel an AI chatbot understands them better than friends/family (46% Millennials; 42% Gen Z)."
       },
       "pages": [],
       "score": 0.92
@@ -94,7 +96,8 @@
         "geography": "Global (18 markets)",
         "segment": "All respondents; generational gap noted",
         "sample_size": "≈20,000",
-        "confidence": "0.8"
+        "confidence": "0.8",
+        "label": "Less than half (46%) of respondents feel confident they can spot AI-generated content, with a wide generational gap (64% Gen Z vs 24% Boomers)."
       },
       "pages": [],
       "score": 0.9
@@ -112,7 +115,8 @@
         "geography": "Global (markets vary: India/China more receptive; UK/Spain/Japan more resistant)",
         "segment": "All respondents; market-level differences noted",
         "sample_size": "≈20,000",
-        "confidence": "0.8"
+        "confidence": "0.8",
+        "label": "A sizable share of consumers resist AI influencers: 43% say they aren’t interested in following AI-generated influencers."
       },
       "pages": [],
       "score": 0.82
@@ -130,7 +134,8 @@
         "geography": "Global (report-level)",
         "segment": "Primarily Gen Z & Millennials called out in narrative",
         "sample_size": "≈20,000 (survey backbone)",
-        "confidence": "0.78"
+        "confidence": "0.78",
+        "label": "Escape behaviors are widespread: major shares say modern life is stressful (70%), cute products bring joy (63%), and 36% define themselves by fandoms."
       },
       "pages": [],
       "score": 0.88
@@ -148,7 +153,8 @@
         "geography": "Global headline; UK stat for 16–21 cohort",
         "segment": "Younger cohorts (Gen Z, 16–21 UK subgroup)",
         "sample_size": "≈20,000 (survey backbone); BSI source for UK stat",
-        "confidence": "0.8"
+        "confidence": "0.8",
+        "label": "Pushback against constant connectivity is significant: 40% try to switch off as much as possible and 50% try to ration their screen time (47% of UK 16–21s would prefer a pre-internet childhood)."
       },
       "pages": [],
       "score": 0.86
@@ -166,7 +172,8 @@
         "geography": "UK (National Trust membership stat)",
         "segment": "18–25-year-olds (UK)",
         "sample_size": "",
-        "confidence": "0.75"
+        "confidence": "0.75",
+        "label": "Reconnection with nature is measurable: the UK National Trust reported a 39% rise in 18–25-year-old members last year, illustrating youth-driven interest in outdoors and hyperlocal experiences."
       },
       "pages": [],
       "score": 0.78
@@ -186,7 +193,8 @@
         "geography": "Global (18 markets)",
         "segment": "All respondents; Gen Z subgroup noted",
         "sample_size": "≈20,000",
-        "confidence": "0.85"
+        "confidence": "0.85",
+        "label": "AI chat is mainstream: 53% use it in personal life, rising to 70% among Gen Z."
       },
       "pages": []
     },
@@ -203,7 +211,8 @@
         "geography": "Global (18 markets)",
         "segment": "Overall; Millennials and Gen Z highlighted",
         "sample_size": "≈20,000",
-        "confidence": "0.82"
+        "confidence": "0.82",
+        "label": "Emotional bonds with chatbots: 32% sometimes feel an AI chatbot understands them better than friends/family (46% Millennials; 42% Gen Z)."
       },
       "pages": []
     },
@@ -220,7 +229,8 @@
         "geography": "Global (report-level)",
         "segment": "Primarily Gen Z & Millennials called out in narrative",
         "sample_size": "≈20,000 (survey backbone)",
-        "confidence": "0.78"
+        "confidence": "0.78",
+        "label": "Escapism is widespread: 70% say modern life is so stressful they need to escape; 63% say cute products bring joy; 36% define themselves by fandoms."
       },
       "pages": []
     },
@@ -237,7 +247,8 @@
         "geography": "Global headline; UK stat for 16–21 cohort",
         "segment": "Younger cohorts (Gen Z, 16–21 UK subgroup)",
         "sample_size": "≈20,000 (survey backbone); BSI source for UK stat",
-        "confidence": "0.8"
+        "confidence": "0.8",
+        "label": "Pushback against constant connectivity: 40% try to switch off and 50% ration screen time; 47% of UK 16–21s would prefer a pre‑internet childhood."
       },
       "pages": []
     },
@@ -254,7 +265,8 @@
         "geography": "UK (National Trust membership stat)",
         "segment": "18–25-year-olds (UK)",
         "sample_size": "",
-        "confidence": "0.75"
+        "confidence": "0.75",
+        "label": "Reconnection with nature: the UK National Trust saw a 39% rise in 18–25-year-old members last year, signaling youth interest in the outdoors and hyperlocal experiences."
       },
       "pages": []
     }
@@ -308,5 +320,24 @@
     "domain_layer": "forecast",
     "selection_reason": "Derived deterministically from the published report copy during legacy card migration.",
     "geography_scope": "country"
+  },
+  "editorial_plan": {
+    "report_thesis": "Consumers are simultaneously deepening ties with AI and seeking analog, nature-led and community-grounded antidotes to stress, pushing brands to win with—rather than follow—the algorithm.",
+    "themes": [
+      {
+        "theme": "AI chat is mainstream: 53% use it in personal life, rising to 70% among Gen Z.",
+        "priority": 1,
+        "evidence_ids": [
+          "electric_dreams"
+        ]
+      },
+      {
+        "theme": "Emotional bonds with chatbots: 32% sometimes feel an AI chatbot understands them better than friends/family (46% Millennials; 42% Gen Z).",
+        "priority": 2,
+        "evidence_ids": [
+          "electric_dreams"
+        ]
+      }
+    ]
   }
 }

@@ -184,5 +184,24 @@
     "domain_layer": "forecast",
     "selection_reason": "Derived deterministically from the published report copy during legacy card migration.",
     "geography_scope": "global"
+  },
+  "editorial_plan": {
+    "report_thesis": "The EvidencePack Collection Scope defines objectives, roles, controls, constraints, deliverables, and acceptance criteria for collecting and preserving high-sensitivity digital evidence for Incident ABC.",
+    "themes": [
+      {
+        "theme": "Collect and preserve all relevant digital evidence related to Incident ABC for forensic analysis.",
+        "priority": 1,
+        "evidence_ids": [
+          "quote_1"
+        ]
+      },
+      {
+        "theme": "Ensure chain-of-custody and access controls are maintained for all collected items.",
+        "priority": 2,
+        "evidence_ids": [
+          "quote_2"
+        ]
+      }
+    ]
   }
 }

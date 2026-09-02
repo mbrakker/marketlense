@@ -58,7 +58,8 @@
         "geography": "global (travel); U.S. (unit sales)",
         "segment": "travel & hospitality",
         "sample_size": "",
-        "confidence": "0.88"
+        "confidence": "0.88",
+        "label": "Global travel is projected to grow 5.8% annually through 2032, reinforcing an experience-led growth opportunity as U.S. unit sales remain flat."
       },
       "pages": [],
       "score": 0.9
@@ -76,7 +77,8 @@
         "geography": "",
         "segment": "shoppers earning > $100,000",
         "sample_size": "",
-        "confidence": "0.85"
+        "confidence": "0.85",
+        "label": "Private labels now drive store choice among high earners: 70% of shoppers with incomes over $100,000 choose their grocery store based on private-label offerings."
       },
       "pages": [],
       "score": 0.88
@@ -94,7 +96,8 @@
         "geography": "",
         "segment": "shoppers (general)",
         "sample_size": "",
-        "confidence": "0.85"
+        "confidence": "0.85",
+        "label": "Nearly half of shoppers (44%) are buying private‑label or low‑cost brands over name brands, indicating broad private‑label uptake."
       },
       "pages": [],
       "score": 0.85
@@ -112,7 +115,8 @@
         "geography": "",
         "segment": "consumers switching to cheaper alternatives",
         "sample_size": "",
-        "confidence": "0.85"
+        "confidence": "0.85",
+        "label": "When switching to cheaper alternatives consumers prioritize positive user reviews (66%), money‑back guarantees/return policies (60%), and clear quality certifications (58%)."
       },
       "pages": [],
       "score": 0.86
@@ -130,7 +134,8 @@
         "geography": "Walmart (referrals)",
         "segment": "",
         "sample_size": "",
-        "confidence": "0.87"
+        "confidence": "0.87",
+        "label": "Searchless/GEO dynamics are emerging: one in five (20%) of Walmart’s referral clicks in August came from ChatGPT, up 15% from July."
       },
       "pages": [],
       "score": 0.9
@@ -148,7 +153,8 @@
         "geography": "",
         "segment": "consumers",
         "sample_size": "",
-        "confidence": "0.86"
+        "confidence": "0.86",
+        "label": "Consumer appetite for GenAI in shopping is rising: 71% want GenAI-integrated shopping interactions today versus 56% last year."
       },
       "pages": [],
       "score": 0.9
@@ -166,7 +172,8 @@
         "geography": "",
         "segment": "consumers",
         "sample_size": "",
-        "confidence": "0.9"
+        "confidence": "0.9",
+        "label": "Trust constraints on AI are material: only 36% trust GenAI product suggestions, while 66% trust a digital assistant more when it provides clear explanations and 52% would switch retailers for better data protection."
       },
       "pages": [],
       "score": 0.92
@@ -186,7 +193,8 @@
         "geography": "global (travel); U.S. (unit sales)",
         "segment": "travel & hospitality",
         "sample_size": "",
-        "confidence": "0.88"
+        "confidence": "0.88",
+        "label": "Global travel will grow 5.8% annually through 2032, underscoring an experience‑led growth opportunity as U.S. unit sales remain flat."
       },
       "pages": []
     },
@@ -203,7 +211,8 @@
         "geography": "",
         "segment": "shoppers earning > $100,000",
         "sample_size": "",
-        "confidence": "0.85"
+        "confidence": "0.85",
+        "label": "Private labels now drive store choice for high earners: 70% of shoppers making over $100,000 choose their grocery store based on private‑label offerings."
       },
       "pages": []
     },
@@ -220,7 +229,8 @@
         "geography": "Walmart (referrals)",
         "segment": "",
         "sample_size": "",
-        "confidence": "0.87"
+        "confidence": "0.87",
+        "label": "Searchless/GEO is emerging: 20% of Walmart’s August referral clicks came from ChatGPT, up 15% from July."
       },
       "pages": []
     },
@@ -237,7 +247,8 @@
         "geography": "",
         "segment": "consumers",
         "sample_size": "",
-        "confidence": "0.86"
+        "confidence": "0.86",
+        "label": "Consumer appetite for GenAI in shopping is rising: 71% want GenAI‑integrated shopping interactions today versus 56% last year."
       },
       "pages": []
     },
@@ -254,7 +265,8 @@
         "geography": "",
         "segment": "consumers",
         "sample_size": "",
-        "confidence": "0.9"
+        "confidence": "0.9",
+        "label": "AI trust remains constrained: 36% trust GenAI product suggestions; 66% trust assistants more with clear explanations; 52% would switch retailers for better data protection."
       },
       "pages": []
     }
@@ -301,5 +313,24 @@
     "domain_layer": "forecast",
     "selection_reason": "Derived deterministically from the published report copy during legacy card migration.",
     "geography_scope": "global"
+  },
+  "editorial_plan": {
+    "report_thesis": "Five forces—experience-led retail, premium private labels, searchless shopping, invisible AI, and trust—are redefining how customers discover, decide, and buy in 2026.",
+    "themes": [
+      {
+        "theme": "Global travel will grow 5.8% annually through 2032, underscoring an experience‑led growth opportunity as U.S. unit sales remain flat.",
+        "priority": 1,
+        "evidence_ids": [
+          "finding-1"
+        ]
+      },
+      {
+        "theme": "Private labels now drive store choice for high earners: 70% of shoppers making over $100,000 choose their grocery store based on private‑label offerings.",
+        "priority": 2,
+        "evidence_ids": [
+          "finding-4"
+        ]
+      }
+    ]
   }
 }

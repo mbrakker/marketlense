@@ -133,7 +133,8 @@
         "geography": "worldwide",
         "segment": "internet users aged 16+",
         "sample_size": "",
-        "confidence": "0.24"
+        "confidence": "0.24",
+        "label": "Social customer care is critical for brand reputation because more than 70% of worldwide internet users (aged 16+) use social platforms to find information about brands."
       },
       "pages": [],
       "score": 0.24
@@ -187,7 +188,8 @@
         "geography": "",
         "segment": "",
         "sample_size": "",
-        "confidence": "0.24"
+        "confidence": "0.24",
+        "label": "Brands adopting AI-driven personalization can see a measurable uplift—around a 2% increase in incremental sales."
       },
       "pages": [],
       "score": 0.24
@@ -258,7 +260,8 @@
         "geography": "worldwide",
         "segment": "internet users aged 16+",
         "sample_size": "",
-        "confidence": "0.24"
+        "confidence": "0.24",
+        "label": "With more than 70% of worldwide internet users (16+) using social platforms to research brands, social customer care is critical for brand reputation."
       },
       "pages": []
     },
@@ -275,7 +278,8 @@
         "geography": "",
         "segment": "",
         "sample_size": "",
-        "confidence": "0.24"
+        "confidence": "0.24",
+        "label": "AI-driven personalization can deliver around a 2% lift in incremental sales."
       },
       "pages": []
     }
@@ -315,5 +319,24 @@
     "domain_layer": "forecast",
     "selection_reason": "Derived deterministically from the published report copy during legacy card migration.",
     "geography_scope": "global"
+  },
+  "editorial_plan": {
+    "report_thesis": "In 2026, AI-shaped discovery, LLM reputation, misinformation resilience, social customer care, and personalization at scale move to the center of marketing strategy.",
+    "themes": [
+      {
+        "theme": "By 2028, AI-powered search will displace conventional web search as the primary consumer discovery channel.",
+        "priority": 1,
+        "evidence_ids": [
+          "finding_1"
+        ]
+      },
+      {
+        "theme": "As journalists and influencers increasingly use LLMs for research, LLM reputation management is emerging as a distinct discipline.",
+        "priority": 2,
+        "evidence_ids": [
+          "finding_2"
+        ]
+      }
+    ]
   }
 }

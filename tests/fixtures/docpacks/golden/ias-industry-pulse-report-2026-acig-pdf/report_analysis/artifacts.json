@@ -71,7 +71,8 @@
         "geography": "United Kingdom",
         "segment": "U.K. digital media experts (Advertisers, Agencies, Publishers & platforms)",
         "sample_size": "220",
-        "confidence": "0.9"
+        "confidence": "0.9",
+        "label": "Digital video is the top priority format for U.K. media experts, cited by 87% as a primary format for 2026."
       },
       "pages": [
         3
@@ -91,7 +92,8 @@
         "geography": "United Kingdom",
         "segment": "U.K. digital media experts",
         "sample_size": "220",
-        "confidence": "0.88"
+        "confidence": "0.88",
+        "label": "Ad adjacency to AI-generated content is a major upcoming challenge—56% of experts name it a top media challenge for the year ahead."
       },
       "pages": [
         3
@@ -111,7 +113,8 @@
         "geography": "United Kingdom",
         "segment": "Retail media networks (as evaluated by U.K. media experts)",
         "sample_size": "220",
-        "confidence": "0.87"
+        "confidence": "0.87",
+        "label": "Measuring attention is seen as critical for retail media network performance—84% of experts agree it’s an important campaign metric."
       },
       "pages": [
         29
@@ -131,7 +134,8 @@
         "geography": "United Kingdom",
         "segment": "Connected TV (CTV)",
         "sample_size": "220",
-        "confidence": "0.86"
+        "confidence": "0.86",
+        "label": "Brand-safety concerns in Connected TV are growing—82% of experts expect brand-safety issues in CTV as inventory and sellers increase."
       },
       "pages": [
         25
@@ -151,7 +155,8 @@
         "geography": "United Kingdom",
         "segment": "Digital video / influencer adjacency",
         "sample_size": "220",
-        "confidence": "0.88"
+        "confidence": "0.88",
+        "label": "Influencer/creator suitability is critical for digital-video adjacency—89% say creator safety and suitability are important considerations."
       },
       "pages": [
         21
@@ -213,7 +218,8 @@
         "geography": "United Kingdom",
         "segment": "U.K. digital media experts (Advertisers, Agencies, Publishers & platforms)",
         "sample_size": "220",
-        "confidence": "0.9"
+        "confidence": "0.9",
+        "label": "Digital video is the top priority for 2026—87% of U.K. media experts name it a primary format."
       },
       "pages": [
         3
@@ -232,7 +238,8 @@
         "geography": "United Kingdom",
         "segment": "U.K. digital media experts",
         "sample_size": "220",
-        "confidence": "0.88"
+        "confidence": "0.88",
+        "label": "AI-generated content adjacency is a major challenge—56% of experts cite it as a top issue for the year ahead."
       },
       "pages": [
         3
@@ -251,7 +258,8 @@
         "geography": "United Kingdom",
         "segment": "Retail media networks (as evaluated by U.K. media experts)",
         "sample_size": "220",
-        "confidence": "0.87"
+        "confidence": "0.87",
+        "label": "Attention measurement is critical for retail media networks—84% of experts say it’s an important campaign metric."
       },
       "pages": [
         29
@@ -270,7 +278,8 @@
         "geography": "United Kingdom",
         "segment": "Connected TV (CTV)",
         "sample_size": "220",
-        "confidence": "0.86"
+        "confidence": "0.86",
+        "label": "CTV brand-safety concerns are rising—82% of experts expect issues to grow as inventory and sellers increase."
       },
       "pages": [
         25
@@ -289,7 +298,8 @@
         "geography": "United Kingdom",
         "segment": "Digital video / influencer adjacency",
         "sample_size": "220",
-        "confidence": "0.88"
+        "confidence": "0.88",
+        "label": "Creator suitability is critical for digital-video adjacency—89% say influencer safety/suitability is an important consideration."
       },
       "pages": [
         21
@@ -338,5 +348,24 @@
     "domain_layer": "grid",
     "selection_reason": "Derived deterministically from the published report copy during legacy card migration.",
     "geography_scope": "country"
+  },
+  "editorial_plan": {
+    "report_thesis": "UK media experts are prioritizing digital video and social media for 2026 while tightening quality controls across AI, CTV, and retail media to protect attention, suitability, and safety.",
+    "themes": [
+      {
+        "theme": "Digital video is the top priority for 2026—87% of U.K. media experts name it a primary format.",
+        "priority": 1,
+        "evidence_ids": [
+          "f1"
+        ]
+      },
+      {
+        "theme": "AI-generated content adjacency is a major challenge—56% of experts cite it as a top issue for the year ahead.",
+        "priority": 2,
+        "evidence_ids": [
+          "f2"
+        ]
+      }
+    ]
   }
 }

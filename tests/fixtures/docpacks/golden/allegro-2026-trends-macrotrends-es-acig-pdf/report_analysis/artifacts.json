@@ -308,5 +308,24 @@
     "domain_layer": "forecast",
     "selection_reason": "Derived deterministically from the published report copy during legacy card migration.",
     "geography_scope": "unknown"
+  },
+  "editorial_plan": {
+    "report_thesis": "En 2026, la ventaja competitiva se concentrará en personalización adaptativa, decisiones guiadas por valores y transparencia radical, con IA/datos como tejido conectivo y sostenibilidad alineada con la rentabilidad.",
+    "themes": [
+      {
+        "theme": "La personalización adaptativa es la expectativa por defecto en B2C y B2B.",
+        "priority": 1,
+        "evidence_ids": [
+          "F1"
+        ]
+      },
+      {
+        "theme": "Ecosistemas omnicanal y plataformas integradas están definiendo la competencia en comercio y experiencia del cliente.",
+        "priority": 2,
+        "evidence_ids": [
+          "F3"
+        ]
+      }
+    ]
   }
 }

@@ -177,5 +177,24 @@
     "domain_layer": "forecast",
     "selection_reason": "Derived deterministically from the published report copy during legacy card migration.",
     "geography_scope": "global"
+  },
+  "editorial_plan": {
+    "report_thesis": "Sensor Tower forecasts 2026 will be reshaped by Generative AI and vertical video: GenAI apps surpass $10B, image ads outpace video, GenAI rivals paid traffic, and ChatGPT could become the top-grossing app.",
+    "themes": [
+      {
+        "theme": "Generative AI apps will exceed $10B in consumer spend in 2026, with 7.2B downloads (+82% YoY).",
+        "priority": 1,
+        "evidence_ids": [
+          "turn3file2"
+        ]
+      },
+      {
+        "theme": "Short Drama–led vertical video is projected to surpass OTT streaming globally on downloads in 2026.",
+        "priority": 2,
+        "evidence_ids": [
+          "turn3file1"
+        ]
+      }
+    ]
   }
 }

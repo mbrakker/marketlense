@@ -60,7 +60,8 @@
         "geography": "Worldwide",
         "segment": "Creators",
         "sample_size": "6,500+",
-        "confidence": ""
+        "confidence": "",
+        "label": "AI adoption is now mainstream: 87% of creators use generative-AI tools and 66% use AI tools weekly."
       },
       "pages": []
     },
@@ -181,7 +182,8 @@
         "geography": "Worldwide",
         "segment": "Creators",
         "sample_size": "6,500+",
-        "confidence": ""
+        "confidence": "",
+        "label": "AI is mainstream among creators: 87% use generative AI; 66% use it weekly."
       },
       "pages": []
     },
@@ -289,5 +291,24 @@
     "domain_layer": "forecast",
     "selection_reason": "Derived deterministically from the published report copy during legacy card migration.",
     "geography_scope": "unknown"
+  },
+  "editorial_plan": {
+    "report_thesis": "As AI commoditizes polish, advantage shifts to clear vision and fast orchestration of tools, with authenticity and real-world experiences emerging as the decisive edges.",
+    "themes": [
+      {
+        "theme": "AI is mainstream among creators: 87% use generative AI; 66% use it weekly.",
+        "priority": 1,
+        "evidence_ids": [
+          "F1"
+        ]
+      },
+      {
+        "theme": "The 'In‑the‑Box' revolution collapses full production pipelines into accessible, unified AI studios, democratizing pro video creation.",
+        "priority": 2,
+        "evidence_ids": [
+          "F2"
+        ]
+      }
+    ]
   }
 }

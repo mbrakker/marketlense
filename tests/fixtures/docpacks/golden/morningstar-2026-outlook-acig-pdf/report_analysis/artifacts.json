@@ -71,7 +71,8 @@
         "geography": "Global / USD vs major currencies",
         "segment": "Major FX basket",
         "sample_size": "DXY and selected major currencies (as reported)",
-        "confidence": "0.85"
+        "confidence": "0.85",
+        "label": "The US dollar experienced a pronounced depreciation in 2025—DXY fell nearly 10% through September, with the dollar down ~13.5% vs the euro and ~13.9% vs the Swiss franc—creating potential currency appreciation opportunities in non‑US assets."
       },
       "pages": [
         7,
@@ -92,7 +93,8 @@
         "geography": "Global (34 currencies tracked)",
         "segment": "Developed & Emerging market currencies",
         "sample_size": "34",
-        "confidence": "0.78"
+        "confidence": "0.78",
+        "label": "Valuation still favours non‑USD currencies: among 34 tracked developed and emerging currencies, only 9 are more overvalued than the US dollar—implying many currencies remain cheaper and could add value for US investors."
       },
       "pages": [
         9
@@ -112,7 +114,8 @@
         "geography": "Global fixed‑income markets (investor-domicile dependent)",
         "segment": "Intermediate‑dated sovereign and aggregate bonds; hedged sovereigns",
         "sample_size": "",
-        "confidence": "0.82"
+        "confidence": "0.82",
+        "label": "Intermediate‑dated bonds (5–10 year maturities) are the fixed‑income 'sweet spot' today—yields comparable to cash, roll‑down capital appreciation potential, and upside if central banks cut rates; currency‑hedged global sovereigns currently out‑yield US Treasuries for some investors."
       },
       "pages": [
         15,
@@ -155,7 +158,8 @@
         "geography": "Global private markets",
         "segment": "Private equity, private credit, real assets; semiliquid vehicles",
         "sample_size": "",
-        "confidence": "0.75"
+        "confidence": "0.75",
+        "label": "Private markets have grown materially and can modestly lift long‑term portfolio returns: global private‑asset AUM now exceeds $15 trillion, semiliquid vehicles hold about $450 billion, and simulations show adding a 5%–10% diversified private sleeve can raise median lifetime returns by 20–40 basis points annually."
       },
       "pages": [
         28,
@@ -176,7 +180,8 @@
         "geography": "South Africa (rand‑based investors)",
         "segment": "Local banks; diversified miners",
         "sample_size": "",
-        "confidence": "0.72"
+        "confidence": "0.72",
+        "label": "South African assets look especially compelling for local investors: local banks and diversified miners are positioned to deliver higher expected real returns—Morningstar highlights ~8% expected real returns for certain local banks and that SA equities are priced for higher expected returns than EM/DM peers."
       },
       "pages": [
         32
@@ -216,7 +221,8 @@
         "geography": "United States (US market cap)",
         "segment": "Top‑10 large‑cap stocks",
         "sample_size": "10",
-        "confidence": "0.81"
+        "confidence": "0.81",
+        "label": "Market concentration risk is elevated: the top 10 US stocks account for over one‑third of market capitalization, increasing diversification benefits from allocations to US small caps and non‑US equities."
       },
       "pages": [
         15
@@ -238,7 +244,8 @@
         "geography": "Global / USD vs major currencies",
         "segment": "Major FX basket",
         "sample_size": "DXY and selected major currencies (as reported)",
-        "confidence": "0.85"
+        "confidence": "0.85",
+        "label": "The US dollar depreciated sharply in 2025—DXY fell nearly 10% through September, with the dollar down ~13.5% vs the euro and ~13.9% vs the Swiss franc—creating potential FX tailwinds in non‑US assets."
       },
       "pages": [
         7,
@@ -258,7 +265,8 @@
         "geography": "Global fixed‑income markets (investor-domicile dependent)",
         "segment": "Intermediate‑dated sovereign and aggregate bonds; hedged sovereigns",
         "sample_size": "",
-        "confidence": "0.82"
+        "confidence": "0.82",
+        "label": "Intermediate‑dated bonds (5–10 years) are the fixed‑income 'sweet spot'—cash‑like yields, roll‑down capital appreciation, and upside if central banks cut; currency‑hedged global sovereigns currently out‑yield US Treasuries for some investors."
       },
       "pages": [
         15,
@@ -299,7 +307,8 @@
         "geography": "Global private markets",
         "segment": "Private equity, private credit, real assets; semiliquid vehicles",
         "sample_size": "",
-        "confidence": "0.75"
+        "confidence": "0.75",
+        "label": "Private markets have scaled and can modestly lift long‑term portfolio returns: global private‑asset AUM now exceeds $15 trillion, and simulations show adding a 5%–10% diversified private sleeve can raise median lifetime returns by 20–40 bps annually."
       },
       "pages": [
         28,
@@ -319,7 +328,8 @@
         "geography": "United States (US market cap)",
         "segment": "Top‑10 large‑cap stocks",
         "sample_size": "10",
-        "confidence": "0.81"
+        "confidence": "0.81",
+        "label": "Market concentration risk is elevated: the top 10 US stocks account for over one‑third of market capitalization, increasing diversification benefits from allocations to US small caps and non‑US equities."
       },
       "pages": [
         15
@@ -375,5 +385,24 @@
     "domain_layer": "forecast",
     "selection_reason": "Derived deterministically from the published report copy during legacy card migration.",
     "geography_scope": "global"
+  },
+  "editorial_plan": {
+    "report_thesis": "Diversify beyond US mega-caps, tilt modestly toward non-US assets amid a still-overvalued dollar, favor intermediate-term bonds and income-friendly markets like the UK and Brazil, and selectively expand private-market exposure while staying disciplined as AI reshapes the landscape.",
+    "themes": [
+      {
+        "theme": "The US dollar depreciated sharply in 2025—DXY fell nearly 10% through September, with the dollar down ~13.5% vs the euro and ~13.9% vs the Swiss franc—creating potential FX tailwinds in non‑US assets.",
+        "priority": 1,
+        "evidence_ids": [
+          "qc-003"
+        ]
+      },
+      {
+        "theme": "Intermediate‑dated bonds (5–10 years) are the fixed‑income 'sweet spot'—cash‑like yields, roll‑down capital appreciation, and upside if central banks cut; currency‑hedged global sovereigns currently out‑yield US Treasuries for some investors.",
+        "priority": 2,
+        "evidence_ids": [
+          "qc-001"
+        ]
+      }
+    ]
   }
 }
