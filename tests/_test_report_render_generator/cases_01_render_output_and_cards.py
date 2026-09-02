@@ -617,6 +617,7 @@ def test_render_report_output_uses_html_cache_hit_and_skips_render(tmp_path):
         "time_period": "Q1 2026",
         "canonical_url": "",
         "source": "",
+        "source_publication_date": "",
     }
     template_contents = {
         "report.html.j2": "template",
@@ -990,7 +991,7 @@ def test_render_only_regenerates_card_manifest_when_it_is_missing(tmp_path):
     assert outcome.report_card_manifest_path.endswith("report-card-manifest.json")
 
 
-def test_render_normalizes_retained_cover_period_before_card_generation(tmp_path):
+def test_render_omits_ambiguous_retained_cover_period_before_card_generation(tmp_path):
     runtime = _runtime(tmp_path, md5="md5")
     source = _source(runtime)
     selection = _selection(runtime, source)
@@ -1039,7 +1040,7 @@ def test_render_normalizes_retained_cover_period_before_card_generation(tmp_path
         preview_resp=render_preview_asset(runtime, source, deps),
     )
 
-    assert generated_covers[0].reports[0].time_period == "2025, 2026"
+    assert generated_covers[0].reports[0].time_period is None
 
 
 def test_render_report_output_does_not_write_manifest_after_cover_error(tmp_path):
