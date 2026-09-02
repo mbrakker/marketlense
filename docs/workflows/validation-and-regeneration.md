@@ -14,6 +14,18 @@ remain blocking. Material unsupported claims, numbers, contradictions, missing
 evidence, and other error-severity grounding findings are unchanged and still
 fail the report before publication.
 
+Grounding judges semantic entailment against linked retained evidence, not
+wording similarity. It accepts synonyms, natural paraphrase, sentence or
+clause reordering, active/passive voice, concise executive wording, and
+canonically equivalent quantity displays when the material meaning is
+unchanged. It rejects a changed factual proposition, number/unit/currency/
+magnitude, direction, timeframe, geography, population or segment, comparison
+baseline, forecast-versus-observed status, attribution, certainty, or
+causality. The grounding model classifies factual prose as `entailed`,
+`contradicted`, or `not_established`; only the latter two produce the existing
+blocking factual validation failures. The check uses retained evidence only and
+does not contain publisher- or report-specific exceptions.
+
 Cached rendered HTML is reusable only when its retained readiness artifact
 still verifies the exact HTML, report ID, configuration hash, policy hash, and
 producer revision. The cache boundary classifies the canonical
