@@ -246,5 +246,24 @@
     "domain_layer": "grid",
     "selection_reason": "Derived deterministically from the published report copy during legacy card migration.",
     "geography_scope": "unknown"
+  },
+  "editorial_plan": {
+    "report_thesis": "Insufficient evidence was provided to generate a grounded executive summary.",
+    "themes": [
+      {
+        "theme": "Evidence pack doc_map is missing (not_found_reason = 'model_returned_no_json'), blocking mapping between findings and the source document.",
+        "priority": 1,
+        "evidence_ids": [
+          "evidence_packs.doc_map.not_found_reason"
+        ]
+      },
+      {
+        "theme": "Evidence pack scope is missing (scope.not_found_reason = 'model_returned_no_json').",
+        "priority": 2,
+        "evidence_ids": [
+          "evidence_packs.scope.not_found_reason"
+        ]
+      }
+    ]
   }
 }

@@ -63,7 +63,8 @@
         "geography": "Global",
         "segment": "Gold (physical & central bank demand)",
         "sample_size": "",
-        "confidence": "0.9"
+        "confidence": "0.9",
+        "label": "Gold breached USD 4,000 per troy ounce in October 2025, reflecting structural demand for out‑of‑system assets."
       },
       "pages": [
         27
@@ -83,7 +84,8 @@
         "geography": "United States",
         "segment": "Policy rate / sovereign yield",
         "sample_size": "",
-        "confidence": "0.88"
+        "confidence": "0.88",
+        "label": "By November 2025 the US Federal Reserve had cut the policy rate by a cumulative 150 basis points to a 3.75–4.0% range, with the 10‑year UST trading near 4%."
       },
       "pages": [],
       "score": 0.92
@@ -101,7 +103,8 @@
         "geography": "India",
         "segment": "Macroeconomic composition / equities",
         "sample_size": "",
-        "confidence": "0.8"
+        "confidence": "0.8",
+        "label": "India is a predominantly domestic‑demand economy (~60% of GDP) and its equities have materially outperformed global peers."
       },
       "pages": [],
       "score": 0.85
@@ -119,7 +122,8 @@
         "geography": "NATO / Europe (notably Germany)",
         "segment": "Defence spending / fiscal policy",
         "sample_size": "",
-        "confidence": "0.86"
+        "confidence": "0.86",
+        "label": "Europe has shifted to fiscal activism: NATO member nations committed to a 5% of GDP defence‑spending target by 2035—more than double the prior 2% guideline."
       },
       "pages": [],
       "score": 0.86
@@ -137,7 +141,8 @@
         "geography": "United States",
         "segment": "Households vs public sector",
         "sample_size": "",
-        "confidence": "0.78"
+        "confidence": "0.78",
+        "label": "US private‑sector balance sheets are markedly stronger post‑GFC—US households have ‘more than doubled’ net wealth—while public‑sector debt service costs now exceed defence spending, highlighting fiscal‑dominance risks."
       },
       "pages": [],
       "score": 0.89
@@ -193,7 +198,8 @@
         "geography": "Global",
         "segment": "Gold (physical & central bank demand)",
         "sample_size": "",
-        "confidence": "0.9"
+        "confidence": "0.9",
+        "label": "Gold breached USD 4,000/oz in October 2025 amid structural demand for out‑of‑system assets."
       },
       "pages": [
         27
@@ -212,7 +218,8 @@
         "geography": "United States",
         "segment": "Policy rate / sovereign yield",
         "sample_size": "",
-        "confidence": "0.88"
+        "confidence": "0.88",
+        "label": "By Nov 2025, the Fed had cut 150 bp to a 3.75–4.0% range; the 10‑year UST traded near 4%."
       },
       "pages": []
     },
@@ -229,7 +236,8 @@
         "geography": "India",
         "segment": "Macroeconomic composition / equities",
         "sample_size": "",
-        "confidence": "0.8"
+        "confidence": "0.8",
+        "label": "India’s economy is ~60% domestic demand, and its equities have materially outperformed global peers."
       },
       "pages": []
     },
@@ -246,7 +254,8 @@
         "geography": "United States",
         "segment": "Households vs public sector",
         "sample_size": "",
-        "confidence": "0.78"
+        "confidence": "0.78",
+        "label": "US private‑sector balance sheets are markedly stronger post‑GFC—household net wealth has more than doubled—while federal interest outlays now exceed defence spending, underscoring fiscal‑dominance risks."
       },
       "pages": []
     },
@@ -310,5 +319,24 @@
     "domain_layer": "forecast",
     "selection_reason": "Derived deterministically from the published report copy during legacy card migration.",
     "geography_scope": "global"
+  },
+  "editorial_plan": {
+    "report_thesis": "Julius Baer’s Secular Outlook frames a multipolar, innovation-led decade with normalized rates, policy-driven shifts in China and Europe, and rising roles for gold and CHF assets amid elevated systemic risks.",
+    "themes": [
+      {
+        "theme": "Gold breached USD 4,000/oz in October 2025 amid structural demand for out‑of‑system assets.",
+        "priority": 1,
+        "evidence_ids": [
+          "finding-1"
+        ]
+      },
+      {
+        "theme": "By Nov 2025, the Fed had cut 150 bp to a 3.75–4.0% range; the 10‑year UST traded near 4%.",
+        "priority": 2,
+        "evidence_ids": [
+          "finding-3"
+        ]
+      }
+    ]
   }
 }

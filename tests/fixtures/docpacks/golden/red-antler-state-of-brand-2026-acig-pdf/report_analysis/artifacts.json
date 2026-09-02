@@ -71,7 +71,8 @@
         "geography": "",
         "segment": "brands/marketers",
         "sample_size": "",
-        "confidence": "0.9"
+        "confidence": "0.9",
+        "label": "In a 'two-seconds-til-swipe' attention economy, brands must convert raw metrics into single, actionable guidance rather than more dashboards."
       },
       "pages": [],
       "score": 0.9
@@ -199,7 +200,8 @@
         "geography": "",
         "segment": "brands/marketers",
         "sample_size": "",
-        "confidence": "0.9"
+        "confidence": "0.9",
+        "label": "In the 'two-seconds-til-swipe' attention economy, convert raw metrics into single, actionable guidance—not more dashboards."
       },
       "pages": []
     },
@@ -321,5 +323,24 @@
     "domain_layer": "grid",
     "selection_reason": "Derived deterministically from the published report copy during legacy card migration.",
     "geography_scope": "unknown"
+  },
+  "editorial_plan": {
+    "report_thesis": "In today’s Dichotomy Economy, brands that pick a side—turning data into action, proving their claims, and being explicit about AI—win, while hedging in the murky middle loses.",
+    "themes": [
+      {
+        "theme": "In the 'two-seconds-til-swipe' attention economy, convert raw metrics into single, actionable guidance—not more dashboards.",
+        "priority": 1,
+        "evidence_ids": [
+          "finding-1"
+        ]
+      },
+      {
+        "theme": "Proof via transparent back-end visibility builds loyalty better than value statements alone.",
+        "priority": 2,
+        "evidence_ids": [
+          "finding-2"
+        ]
+      }
+    ]
   }
 }

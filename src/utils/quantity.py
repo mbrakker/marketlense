@@ -9,7 +9,7 @@ from src.utils.text_normalization import normalize_for_lookup, normalize_text
 
 Comparator = str
 
-_NUMBER_RE = r"(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?"
+_NUMBER_RE = r"[+-]?\s*(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?"
 _COMP_RE = (
     r"(?:>=|<=|>|<|~|≈|"
     r"more than|over|above|greater than|at least|"
@@ -18,9 +18,9 @@ _COMP_RE = (
 _MAG_RE = r"(?:k|m|mm|mn|b|bn|t|tn|thousand|million|billion|trillion)\b"
 
 _RANGE_RE = re.compile(
-    rf"\b(?:between\s+)?(?P<low>{_NUMBER_RE})\s*(?:-|to|and)\s*(?P<high>{_NUMBER_RE})\s*"
-    r"(?P<unit>%|percent|pct|pp|percentage points?|basis points?|bps|usd|eur|gbp|jpy|"
-    r"k|m|mm|mn|b|bn|tn|thousand|million|billion|trillion)?\b",
+    rf"(?<!\w)(?:between\s+)?(?P<low>{_NUMBER_RE})\s*(?:-|to|and)\s*(?P<high>{_NUMBER_RE})\s*"
+    r"(?P<unit>percentage points?|basis points?|%|percent|pct|pp|bps|usd|eur|gbp|jpy|"
+    r"k|m|mm|mn|b|bn|tn|thousand|million|billion|trillion)?(?!\w)",
     re.IGNORECASE,
 )
 _RATIO_RE = re.compile(
@@ -36,10 +36,10 @@ _MAIN_RE = re.compile(
     r"(?P<currency>[$€£¥])?\s*"
     rf"(?P<number>{_NUMBER_RE})"
     rf"(?:\s*(?P<magnitude>{_MAG_RE}))?"
-    r"(?:\s*(?P<unit>%|percent|pct|pp|percentage points?|basis points?|bps|usd|eur|gbp|jpy|"
+    r"(?:\s*(?P<unit>percentage points?|basis points?|%|percent|pct|pp|bps|usd|eur|gbp|jpy|"
     r"users?|downloads?|respondents?|impressions?|installs?|visits?|sessions?|"
     r"minutes?|hours?|days?|weeks?|months?|years?|points?|index|rank|"
-    r"yoy|mom|qoq|cagr|per day|per month|per year))?",
+    r"times?|yoy|mom|qoq|cagr|per day|per month|per year))?",
     re.IGNORECASE,
 )
 _TIMEFRAME_RE = re.compile(
@@ -128,6 +128,22 @@ class Quantity:
     high: Optional[float] = None
 
 
+@dataclass(frozen=True)
+class CanonicalQuantity:
+    """Universal, display-independent primitives for one explicit quantity."""
+
+    value: float
+    sign: int
+    scale: float
+    comparator: Comparator
+    unit_family: str
+    unit: str
+    currency: str
+    low: Optional[float]
+    high: Optional[float]
+    timeframe: str
+
+
 def extract_quantities(text: str) -> List[Quantity]:
     normalized = normalize_for_lookup(text)
     if not normalized:
@@ -172,6 +188,35 @@ def quantities_match(candidate: Quantity, evidence: Quantity) -> bool:
         return any(_value_supported_by_comparator(v, candidate, tol) for v in ev_values)
 
     return _inequality_compatible(candidate, evidence, tol)
+
+
+def canonicalize_quantity(quantity: Quantity) -> CanonicalQuantity:
+    """Return the explicit universal primitives of a parsed quantity.
+
+    This retains unit, currency, range, and timeframe identity. It is not a
+    metric or subject-equivalence mechanism.
+    """
+    scale = _MAG_FACTORS.get(_clean_unit(quantity.magnitude), 1.0)
+    raw_value = quantity.value / scale
+    raw_low = quantity.low / scale if quantity.low is not None else None
+    raw_high = quantity.high / scale if quantity.high is not None else None
+    return CanonicalQuantity(
+        value=abs(_round_canonical(raw_value)),
+        sign=_sign(raw_value),
+        scale=scale,
+        comparator="eq" if quantity.comparator == "approx" else quantity.comparator,
+        unit_family=quantity.unit_family,
+        unit=quantity.unit,
+        currency=quantity.unit if quantity.unit_family == "currency" else "",
+        low=_round_canonical(raw_low) if raw_low is not None else None,
+        high=_round_canonical(raw_high) if raw_high is not None else None,
+        timeframe=normalize_for_lookup(quantity.timeframe),
+    )
+
+
+def quantities_canonically_equivalent(left: Quantity, right: Quantity) -> bool:
+    """Compare only explicit universal quantity primitives."""
+    return canonicalize_quantity(left) == canonicalize_quantity(right)
 
 
 def should_ground_quantity(
@@ -371,9 +416,14 @@ def _extract_main(text: str) -> List[Quantity]:
 
 def _dedupe_quantities(values: Sequence[Quantity]) -> List[Quantity]:
     ordered = sorted(values, key=lambda q: (q.start, q.end))
+    ranges = [quantity for quantity in ordered if quantity.comparator == "range"]
     deduped: List[Quantity] = []
     seen: set[Tuple[str, str, int, int, int]] = set()
     for quantity in ordered:
+        if quantity.comparator != "range" and any(
+            span.start <= quantity.start and quantity.end <= span.end for span in ranges
+        ):
+            continue
         key = (
             quantity.unit_family,
             quantity.comparator,
@@ -401,15 +451,22 @@ def _resolve_unit_family(
     sentence_norm = normalize_text(sentence)
     around = sentence_norm[max(0, span[0] - 32) : min(len(sentence_norm), span[1] + 32)]
     near = sentence_norm[max(0, span[0] - 10) : min(len(sentence_norm), span[1] + 10)]
+    following = sentence_norm[span[1] : min(len(sentence_norm), span[1] + 24)]
 
     if not magnitude_norm:
-        if "trillion" in near or re.search(r"\btn\b", near):
+        currency_scale_context = re.match(
+            r"\s*(?:in\s+)?(?:annual\s+)?(?:usd|eur|gbp|jpy)\s+(?:k|m|mm|mn|b|bn|t|tn|"
+            r"thousands?|millions?|billions?|trillions?)\b",
+            following,
+        )
+        magnitude_text = following if currency_scale_context else near
+        if "trillion" in magnitude_text or re.search(r"\btn\b", magnitude_text):
             magnitude_norm = "tn"
-        elif "billion" in near or re.search(r"\bbn\b", near):
+        elif "billion" in magnitude_text or re.search(r"\bbn\b", magnitude_text):
             magnitude_norm = "b"
-        elif "million" in near or re.search(r"\bmn\b|\bmm\b", near):
+        elif "million" in magnitude_text or re.search(r"\bmn\b|\bmm\b", magnitude_text):
             magnitude_norm = "m"
-        elif "thousand" in near or re.search(r"\bk\b", near):
+        elif "thousand" in magnitude_text or re.search(r"\bk\b", magnitude_text):
             magnitude_norm = "k"
 
     if currency in _CURRENCY_SYMBOL_TO_CODE:
@@ -435,6 +492,9 @@ def _resolve_unit_family(
             else "bps",
             magnitude_norm,
         )
+
+    if unit_norm in {"time", "times"}:
+        return "ratio", "x", magnitude_norm
 
     if unit_norm in {"yoy", "mom", "qoq", "cagr"} or "per " in unit_norm:
         return "rate", unit_norm or "rate", magnitude_norm
@@ -682,9 +742,21 @@ def _to_float(value: str) -> Optional[float]:
     if not text:
         return None
     try:
-        return float(text.replace(",", ""))
+        return float(re.sub(r"^([+-])\s+", r"\1", text).replace(",", ""))
     except ValueError:
         return None
+
+
+def _round_canonical(value: float) -> float:
+    return round(value, 12)
+
+
+def _sign(value: float) -> int:
+    if value > 0:
+        return 1
+    if value < 0:
+        return -1
+    return 0
 
 
 def _clean_unit(value: str) -> str:

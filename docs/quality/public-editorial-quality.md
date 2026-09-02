@@ -21,6 +21,14 @@ Standalone key-figure displays retain their numeric-grounding checks, while
 their linked label and explanation carry the temporal-integrity requirement;
 a compact display need not repeat dates that those public prose fields retain.
 
+Numeric grounding compares explicit universal quantity primitives in canonical
+form. It normalizes equivalent notation such as `$3T` and `$3 trillion`,
+`20%` and `20 percent`, or `2x` and `2 times`, but does not equate currencies,
+scales, unit families, count units, signs, ratios, ranges, or attached
+timeframes. This numeric comparison does not establish that different business
+subjects or metrics are equivalent; semantic grounding and the unchanged
+publication-readiness decision remain responsible for that validation.
+
 ## Blocking rules
 
 The gate blocks public release unless semantic and grounding validation passed, category decisions agree, every material claim has a valid retained evidence ID, and every regenerated artifact was promoted. It blocks unsupported numeric claims; source-proven comparative temporal loss and malformed `in to` / `between and` comparisons; internal IDs and evidence tokens; placeholders; malformed extraction and OCR fragments; mojibake; missing rendered assets; duplicate boilerplate; filename-style titles and duplicated years; fragments; generic figure labels; unsupported certainty; empty or non-specific decision implications; mechanical labels; literal truncation; private paths and Drive URLs; and invalid public source links.

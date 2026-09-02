@@ -79,7 +79,8 @@
         "geography": "",
         "segment": "",
         "sample_size": "",
-        "confidence": "0.95"
+        "confidence": "0.95",
+        "label": "Collected evidence is retained for 365 days."
       },
       "pages": [],
       "score": 0.85
@@ -241,7 +242,8 @@
         "geography": "",
         "segment": "",
         "sample_size": "",
-        "confidence": "0.95"
+        "confidence": "0.95",
+        "label": "Collected evidence is retained for 365 days."
       },
       "pages": []
     },
@@ -322,5 +324,24 @@
     "domain_layer": "forecast",
     "selection_reason": "Derived deterministically from the published report copy during legacy card migration.",
     "geography_scope": "country"
+  },
+  "editorial_plan": {
+    "report_thesis": "Only a default investigation scope is available; no methods, findings, limitations, or DocMap content have been produced.",
+    "themes": [
+      {
+        "theme": "Evidence collection timeframe: 2025-11-05 to 2026-02-03.",
+        "priority": 1,
+        "evidence_ids": [
+          "scope.timeframe"
+        ]
+      },
+      {
+        "theme": "Sensitivity: confidential; owner: Digital Forensics (primary contact: Lead Analyst, lead.analyst@example.com).",
+        "priority": 2,
+        "evidence_ids": [
+          "scope.sensitivity_and_responsible_team"
+        ]
+      }
+    ]
   }
 }

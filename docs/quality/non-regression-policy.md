@@ -30,6 +30,11 @@ Golden corpus source:
 - candidate packs copied from `out/1/*/candidates/candidates.json` (or another root via `--source-candidate-root`)
 - stored in `tests/fixtures/candidate_extraction/golden/`
 
+When the artifact schema gains required structural fields, migrate retained
+golden artifact data with `python scripts/quality/migrate_golden_artifact_fixtures.py`.
+The migration derives only from each fixture's existing evidence-linked text;
+it must not be used to refresh or lower the quality baseline.
+
 ## CI Gates
 
 The CI workflow enforces:

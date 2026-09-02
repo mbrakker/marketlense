@@ -60,7 +60,8 @@
         "geography": "Global (English‑language searches)",
         "segment": "Gen Z; Millennials",
         "sample_size": "",
-        "confidence": ""
+        "confidence": "",
+        "label": "Search interest in \"niche perfume collection\" rose 500% year‑over‑year, signalling a major surge in scent‑layering and bespoke fragrance searches."
       },
       "pages": [],
       "score": 0.9
@@ -78,7 +79,8 @@
         "geography": "Global (English‑language searches)",
         "segment": "Millennials; Baby Boomers",
         "sample_size": "",
-        "confidence": ""
+        "confidence": "",
+        "label": "Searches for \"scotland highlands aesthetic\" surged 465%, the largest single‑term travel increase reported, highlighting strong demand for mystical, atmospheric destinations."
       },
       "pages": [],
       "score": 0.95
@@ -96,7 +98,8 @@
         "geography": "Global (English‑language searches)",
         "segment": "",
         "sample_size": "",
-        "confidence": ""
+        "confidence": "",
+        "label": "\"Lace nails\" searches jumped 215%, indicating rapid adoption of lace textures across beauty and fashion."
       },
       "pages": [],
       "score": 0.8
@@ -114,7 +117,8 @@
         "geography": "Global (English‑language searches)",
         "segment": "",
         "sample_size": "",
-        "confidence": ""
+        "confidence": "",
+        "label": "\"afrobohemian home decor\" searches rose 220%, showing notable momentum for African+bohemian interior styling."
       },
       "pages": [],
       "score": 0.85
@@ -132,7 +136,8 @@
         "geography": "Global (English‑language searches)",
         "segment": "Gen Z; Millennials",
         "sample_size": "",
-        "confidence": ""
+        "confidence": "",
+        "label": "\"avant garde make‑up editorial\" searches increased 270%, underscoring a strong shift toward experimental, asymmetrical beauty looks."
       },
       "pages": [],
       "score": 0.9
@@ -150,7 +155,8 @@
         "geography": "Global (English‑language searches)",
         "segment": "Millennials; Gen Z",
         "sample_size": "",
-        "confidence": ""
+        "confidence": "",
+        "label": "\"gothic coffin nails\" searches rose 180%, supporting growth in dark‑romantic and gothic beauty trends."
       },
       "pages": [],
       "score": 0.85
@@ -168,7 +174,8 @@
         "geography": "Global (English‑language searches)",
         "segment": "Gen Z; Millennials",
         "sample_size": "",
-        "confidence": ""
+        "confidence": "",
+        "label": "\"jelly blush\" searches rose 130%, indicating rising interest in tactile, jelly/gummy textures in beauty."
       },
       "pages": [],
       "score": 0.8
@@ -188,7 +195,8 @@
         "geography": "Global (English‑language searches)",
         "segment": "Gen Z; Millennials",
         "sample_size": "",
-        "confidence": ""
+        "confidence": "",
+        "label": "\"niche perfume collection\" searches rose 500% YoY, signaling a major surge in scent-layering and bespoke fragrance interest."
       },
       "pages": []
     },
@@ -205,7 +213,8 @@
         "geography": "Global (English‑language searches)",
         "segment": "Millennials; Baby Boomers",
         "sample_size": "",
-        "confidence": ""
+        "confidence": "",
+        "label": "\"scotland highlands aesthetic\" searches surged 465%, the largest single‑term travel increase reported, highlighting demand for mystical, atmospheric destinations."
       },
       "pages": []
     },
@@ -222,7 +231,8 @@
         "geography": "Global (English‑language searches)",
         "segment": "Gen Z; Millennials",
         "sample_size": "",
-        "confidence": ""
+        "confidence": "",
+        "label": "\"avant garde make‑up editorial\" searches increased 270%, underscoring a shift toward experimental, asymmetrical beauty looks."
       },
       "pages": []
     },
@@ -239,7 +249,8 @@
         "geography": "Global (English‑language searches)",
         "segment": "",
         "sample_size": "",
-        "confidence": ""
+        "confidence": "",
+        "label": "\"afrobohemian home decor\" searches rose 220%, showing momentum for African+bohemian interior styling."
       },
       "pages": []
     },
@@ -256,7 +267,8 @@
         "geography": "Global (English‑language searches)",
         "segment": "",
         "sample_size": "",
-        "confidence": ""
+        "confidence": "",
+        "label": "\"lace nails\" searches jumped 215%, signaling fast adoption of lace textures across beauty and fashion."
       },
       "pages": []
     }
@@ -303,5 +315,24 @@
     "domain_layer": "forecast",
     "selection_reason": "Derived deterministically from the published report copy during legacy card migration.",
     "geography_scope": "global"
+  },
+  "editorial_plan": {
+    "report_thesis": "Pinterest Predicts 2026 outlines 21 data-backed trends across categories, with Gen Z and Millennials driving many aesthetics while Boomers and Gen X shape select food and travel shifts.",
+    "themes": [
+      {
+        "theme": "\"niche perfume collection\" searches rose 500% YoY, signaling a major surge in scent-layering and bespoke fragrance interest.",
+        "priority": 1,
+        "evidence_ids": [
+          "insight_scentstacking_nicheperfume_500"
+        ]
+      },
+      {
+        "theme": "\"scotland highlands aesthetic\" searches surged 465%, the largest single‑term travel increase reported, highlighting demand for mystical, atmospheric destinations.",
+        "priority": 2,
+        "evidence_ids": [
+          "insight_mysticoutlands_scotland_465"
+        ]
+      }
+    ]
   }
 }
