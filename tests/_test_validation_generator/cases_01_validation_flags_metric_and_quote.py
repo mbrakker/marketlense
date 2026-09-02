@@ -617,7 +617,7 @@ def test_validation_number_matching_normalizes_percent_and_billions(tmp_path):
     assert not any("Number" in issue.message for issue in result.issues)
 
 
-def test_validation_number_check_ignores_units_and_matches_numeric_value(tmp_path):
+def test_validation_number_check_rejects_changed_explicit_units(tmp_path):
     settings = _settings(tmp_path)
     artifacts = {
         "insights_final": [
@@ -659,8 +659,8 @@ def test_validation_number_check_ignores_units_and_matches_numeric_value(tmp_pat
         openai_client=fake_openai,
         analysis_store=FakeAnalysisStore(),
     )
-    assert result.status == "pass"
-    assert not any("Number" in issue.message for issue in result.issues)
+    assert result.status == "fail"
+    assert any("Number" in issue.message for issue in result.issues)
 
 
 def test_grounding_unsupported_number_with_unit_mismatch_is_blocking(
@@ -1044,7 +1044,7 @@ __all__ = [
     "test_validation_allows_interpretation_and_recommendation_in_allowed_sections",
     "test_validation_fails_on_report_directive_misattribution",
     "test_validation_number_matching_normalizes_percent_and_billions",
-    "test_validation_number_check_ignores_units_and_matches_numeric_value",
+    "test_validation_number_check_rejects_changed_explicit_units",
     "test_grounding_unsupported_number_with_unit_mismatch_is_blocking",
     "test_validation_warns_on_data_gap",
     "test_validation_issue_order_preserved_with_parallel_checks",
