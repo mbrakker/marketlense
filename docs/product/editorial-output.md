@@ -87,11 +87,18 @@ never a decimal or abbreviation period. A public canonical URL is emitted only
 after a MarketLense WordPress URL is known; the original report URL remains a source
 citation and is never presented as the public canonical page.
 
-The retained `time_period` remains source metadata. The public `Period` is a
-deterministic, fail-closed projection that accepts only concise source-backed
-years, year lists or ranges, month/year values, explicit dates or date ranges,
-and quarter, half-year, or fiscal-year expressions. Surrounding prose is never
-published; one unambiguous embedded year may be shown alone, while ambiguous or
+The retained `time_period` remains source metadata. Public report dates are a
+deterministic, fail-closed projection with distinct semantics: `Edition` comes
+only from a title that explicitly names an annual report or outlook edition;
+`Published` comes only from verified source-publication provenance and keeps
+its supplied year, month, or day precision; and `Data period` comes from the
+distinct source observation period. A publication year is never inferred from
+data metadata, and a data year is never presented as an edition. Identical
+values that add no information are not repeated. Source values accepted for a
+data period are concise years (including explicit estimate markers), year lists
+or ranges, month/year values, explicit dates or date ranges, and quarter,
+half-year, or fiscal-year expressions. Surrounding prose is never published;
+one unambiguous embedded year may be shown alone, while ambiguous or
 unparseable values are omitted. Public `Fieldwork` is likewise limited to the
 explicit date range adjacent to a fieldwork marker, preferring methodology and
 time-period metadata before executive-summary fallback text.

@@ -455,6 +455,7 @@ def render_report_output(
         child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:render_metadata"),
     )
     render_data_dict = deepcopy(analysis.data_dict)
+    public_publication_date = _publication_date(runtime)
     existing_title = str(render_data_dict.get("title") or "").strip()
     existing_publisher = str(render_data_dict.get("publisher") or "").strip()
     existing_time_period = str(render_data_dict.get("time_period") or "").strip()
@@ -517,6 +518,7 @@ def render_report_output(
     # Only a resolved publisher URL is eligible for public original-source
     # attribution. Acquisition and archive locations remain retained-only.
     render_data_dict["source"] = _verified_public_source_url(runtime)
+    render_data_dict["source_publication_date"] = public_publication_date
     render_data_dict.pop("_source_download_href", None)
 
     doc_name = runtime.file_name
@@ -817,7 +819,7 @@ def render_report_output(
                     schema_version="1.0",
                     title=cover_title,
                     publisher=cover_publisher,
-                    published_date=_publication_date(runtime),
+                    published_date=public_publication_date,
                     region=cover_region or "",
                     covered_period=cover_time_period or "",
                     tldr_compact=str(summary.get("card_tldr_compact") or ""),

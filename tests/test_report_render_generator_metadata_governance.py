@@ -105,7 +105,8 @@ def test_render_report_output_omits_an_unverified_source_date(tmp_path):
     html_path.parent.mkdir(parents=True, exist_ok=True)
 
     def _render_report(req, ctx):
-        del req, ctx
+        del ctx
+        captured["render_data"] = dict(req.data)
         html_path.write_text("<html></html>", encoding="utf-8")
         return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
 
@@ -132,6 +133,7 @@ def test_render_report_output_omits_an_unverified_source_date(tmp_path):
     )
 
     assert captured["manifest"].published_date == ""
+    assert captured["render_data"]["source_publication_date"] == ""
 
 
 def test_render_report_output_uses_resolved_identity_for_generated_metadata(

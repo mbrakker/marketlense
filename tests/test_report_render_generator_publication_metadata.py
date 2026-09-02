@@ -70,7 +70,8 @@ def test_render_report_output_writes_verified_source_date_to_complete_manifest(
     html_path.parent.mkdir(parents=True, exist_ok=True)
 
     def _render_report(req, ctx):
-        del req, ctx
+        del ctx
+        captured["render_data"] = dict(req.data)
         html_path.write_text("<html></html>", encoding="utf-8")
         return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
 
@@ -135,6 +136,7 @@ def test_render_report_output_writes_verified_source_date_to_complete_manifest(
     assert manifest.source_metadata_hash == "source-metadata-hash"
     assert manifest.source_identity_status == "resolved"
     assert manifest.source_publication_date_status == "verified"
+    assert captured["render_data"]["source_publication_date"] == "2026-06-09"
     assert outcome.schema_version == "1.1"
     assert outcome.report_card_manifest_path == str(
         Path(runtime.settings.output_dir)

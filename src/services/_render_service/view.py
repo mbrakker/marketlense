@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
+from datetime import date
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
@@ -58,6 +59,19 @@ _MONTH_PATTERN = re.compile(
     re.IGNORECASE,
 )
 _YEAR_PATTERN = re.compile(r"\b(20\d{2})\b")
+_PUBLICATION_YEAR_PATTERN = re.compile(r"^(?:19|20)\d{2}$")
+_PUBLICATION_MONTH_PATTERN = re.compile(
+    r"^(?P<year>(?:19|20)\d{2})-(?P<month>0[1-9]|1[0-2])$"
+)
+_PUBLICATION_DAY_PATTERN = re.compile(
+    r"^(?P<year>(?:19|20)\d{2})-(?P<month>0[1-9]|1[0-2])-"
+    r"(?P<day>0[1-9]|[12]\d|3[01])$"
+)
+_EDITION_SIGNAL_PATTERN = re.compile(
+    r"\b(?:outlook|report|edition|predictions?|predicts|trends?|year\s+in\s+sport|"
+    r"state\s+of\s+(?:the\s+)?brand)\b",
+    re.IGNORECASE,
+)
 _ISO_DATE_PATTERN = re.compile(r"\b20\d{2}-\d{2}-\d{2}\b")
 _SENTENCE_SPLIT_PATTERN = re.compile(r"(?<=[.!?])\s+")
 _SENTENCE_ABBREVIATION_AT_END = re.compile(
@@ -178,13 +192,13 @@ def _build_render_view(
         _s(doc_map.get("methodology")),
         _s(summary.get("executive_summary")),
     )
-    source_period = _public_source_period(
+    public_dates = _public_report_dates(
         report_title=report_title,
         time_period=time_period,
-        focus_year=focus_year,
+        source_publication_date=_s(data.get("source_publication_date")),
     )
-    if _same_temporal_value(source_period, fieldwork_dates):
-        source_period = ""
+    if _same_temporal_value(public_dates["data_period"], fieldwork_dates):
+        public_dates["data_period"] = ""
     tldr_text = _sanitize_public_prose(
         _pick_first_text(summary.get("tldr"), data.get("tldr"))
     )
@@ -307,7 +321,9 @@ def _build_render_view(
         "publisher": publisher,
         "region": region,
         "focus_year": focus_year,
-        "source_period": source_period,
+        "edition": public_dates["edition"],
+        "published_date": public_dates["published_date"],
+        "data_period": public_dates["data_period"],
         "fieldwork_dates": fieldwork_dates,
         "source_url": source_url,
         "canonical_url": canonical_url,
@@ -319,7 +335,9 @@ def _build_render_view(
         "report_identity_items": _build_report_identity_items(
             report_title=report_title,
             publisher=publisher,
-            source_period=source_period,
+            edition=public_dates["edition"],
+            published_date=public_dates["published_date"],
+            data_period=public_dates["data_period"],
             fieldwork_dates=fieldwork_dates,
             region=region,
             report_author=report_author,
@@ -358,8 +376,14 @@ def _build_render_view(
             "facts": [
                 item
                 for item in (
-                    {"label": "Period", "value": source_period}
-                    if source_period
+                    {"label": "Edition", "value": public_dates["edition"]}
+                    if public_dates["edition"]
+                    else None,
+                    {"label": "Published", "value": public_dates["published_date"]}
+                    if public_dates["published_date"]
+                    else None,
+                    {"label": "Data period", "value": public_dates["data_period"]}
+                    if public_dates["data_period"]
                     else None,
                     {"label": "Fieldwork", "value": fieldwork_dates}
                     if fieldwork_dates
@@ -544,13 +568,53 @@ def _build_seo_title(report_title: str, focus_year: str, publisher: str) -> str:
     return f"{base_title}{publisher_segment} | MarketBearing"
 
 
-def _public_source_period(
-    *, report_title: str, time_period: str, focus_year: str
-) -> str:
-    if projected := normalize_time_period(time_period):
-        return projected
-    if not _YEAR_PATTERN.search(report_title):
-        return focus_year
+def _public_report_dates(
+    *, report_title: str, time_period: str, source_publication_date: str
+) -> dict[str, str]:
+    """Project retained dates into distinct reader-facing semantics."""
+    edition = _edition_from_title(report_title)
+    published_date = _format_source_publication_date(source_publication_date)
+    data_period = normalize_time_period(time_period) or ""
+    if _same_temporal_value(edition, published_date):
+        published_date = ""
+    if _same_temporal_value(data_period, edition) or _same_temporal_value(
+        data_period, published_date
+    ):
+        data_period = ""
+    return {
+        "edition": edition,
+        "published_date": published_date,
+        "data_period": data_period,
+    }
+
+
+def _edition_from_title(report_title: str) -> str:
+    """Return one named annual edition from a title, never source data metadata."""
+    if not _EDITION_SIGNAL_PATTERN.search(report_title):
+        return ""
+    years = list(dict.fromkeys(_YEAR_PATTERN.findall(report_title)))
+    return years[0] if len(years) == 1 else ""
+
+
+def _format_source_publication_date(value: str) -> str:
+    """Format only canonical source provenance at its recorded precision."""
+    normalized = value.strip()
+    if _PUBLICATION_YEAR_PATTERN.fullmatch(normalized):
+        return normalized
+    if month_match := _PUBLICATION_MONTH_PATTERN.fullmatch(normalized):
+        return date(
+            int(month_match.group("year")), int(month_match.group("month")), 1
+        ).strftime("%B %Y")
+    if day_match := _PUBLICATION_DAY_PATTERN.fullmatch(normalized):
+        try:
+            published = date(
+                int(day_match.group("year")),
+                int(day_match.group("month")),
+                int(day_match.group("day")),
+            )
+        except ValueError:
+            return ""
+        return f"{published.strftime('%B')} {published.day}, {published.year}"
     return ""
 
 

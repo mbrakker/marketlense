@@ -478,7 +478,9 @@ def _build_report_identity_items(
     *,
     report_title: str,
     publisher: str,
-    source_period: str,
+    edition: str,
+    published_date: str,
+    data_period: str,
     fieldwork_dates: str,
     region: str,
     report_author: str,
@@ -488,8 +490,12 @@ def _build_report_identity_items(
         items.append(f"Title: {report_title}")
     if publisher:
         items.append(f"Publisher: {publisher}")
-    if source_period:
-        items.append(f"Period: {source_period}")
+    if edition:
+        items.append(f"Edition: {edition}")
+    if published_date:
+        items.append(f"Published: {published_date}")
+    if data_period:
+        items.append(f"Data period: {data_period}")
     if fieldwork_dates:
         items.append(f"Fieldwork: {fieldwork_dates}")
     if region:

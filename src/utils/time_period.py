@@ -47,6 +47,12 @@ _INDEX_TO_MONTH_SHORT = {
 }
 
 _YEAR_RE = re.compile(r"^(?P<y>\d{4})$")
+_YEAR_ESTIMATE_RE = re.compile(r"^(?P<y>(?:19|20)\d{2})E$", re.IGNORECASE)
+_YEAR_RANGE_ESTIMATE_RE = re.compile(
+    r"^(?P<from>(?:19|20)\d{2})(?P<from_estimate>E?)\s*(?:-|to)\s*"
+    r"(?P<to>(?:19|20)\d{2})(?P<to_estimate>E?)$",
+    re.IGNORECASE,
+)
 _YEAR_RANGE_RE = re.compile(
     r"^(?P<from>\d{4})\s*(?:-|to)\s*(?P<to>\d{4})$", re.IGNORECASE
 )
@@ -151,6 +157,13 @@ def _parse_public_period(value: str) -> Optional[str]:
     if date:
         return _format_date(date.group("m"), date.group("d"), date.group("y"))
 
+    estimate_range = _YEAR_RANGE_ESTIMATE_RE.fullmatch(value)
+    if estimate_range:
+        return (
+            f"{estimate_range.group('from')}{estimate_range.group('from_estimate').upper()}"
+            f"–{estimate_range.group('to')}{estimate_range.group('to_estimate').upper()}"
+        )
+
     year_range = _YEAR_RANGE_RE.fullmatch(value)
     if year_range:
         return f"{year_range.group('from')}–{year_range.group('to')}"
@@ -181,6 +194,10 @@ def _parse_public_period(value: str) -> Optional[str]:
     month = _parse_public_month(value)
     if month:
         return month
+
+    estimate = _YEAR_ESTIMATE_RE.fullmatch(value)
+    if estimate:
+        return f"{estimate.group('y')}E"
 
     if _YEAR_RE.fullmatch(value):
         return value

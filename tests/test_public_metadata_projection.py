@@ -63,6 +63,41 @@ def test_public_period_projects_explicit_date_range() -> None:
     )
 
 
+def test_public_date_metadata_fixtures_use_unambiguous_labels(tmp_path: Path) -> None:
+    fixture_path = (
+        Path(__file__).parent
+        / "fixtures"
+        / "editorial_temporal"
+        / "report_date_metadata.json"
+    )
+    fixture = json.loads(fixture_path.read_text("utf-8"))
+
+    for case in fixture["cases"]:
+        response = render_report(
+            RenderRequest(
+                schema_version="1.0",
+                data={
+                    "title": case["title"],
+                    "publisher": "Activate",
+                    "source_publication_date": case["source_publication_date"],
+                    "time_period": case["time_period"],
+                    "artifacts": {"summary": {"tldr": "Source-backed summary."}},
+                },
+                doc_name=f"{case['name']}.pdf",
+                file_id=case["name"],
+                out_dir=str(tmp_path / case["name"]),
+                preview_png=None,
+            ),
+            RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+        )
+        html = Path(response.html_path).read_text(encoding="utf-8")
+
+        for label, value in case["expected_labels"].items():
+            assert f"{label}: {value}" in html, case["name"]
+        for label in case["absent_labels"]:
+            assert f"{label}:" not in html, case["name"]
+
+
 def test_fieldwork_extracts_only_the_explicit_date_range() -> None:
     assert (
         _extract_fieldwork_dates(
@@ -82,7 +117,7 @@ def test_fieldwork_does_not_include_the_remaining_sentence() -> None:
     )
 
 
-def test_omnisend_public_metadata_regression_fixture_renders_a_clean_period(
+def test_omnisend_public_metadata_regression_fixture_renders_a_clean_data_period(
     tmp_path: Path,
 ) -> None:
     fixture_dir = Path(__file__).parent / "fixtures" / "editorial_temporal"
@@ -108,7 +143,7 @@ def test_omnisend_public_metadata_regression_fixture_renders_a_clean_period(
     )
     html = Path(response.html_path).read_text(encoding="utf-8")
 
-    assert f"Period: {omnisend['expected_period']}" in html
+    assert f"Data period: {omnisend['expected_period']}" in html
     assert omnisend["time_period"] not in html
 
 

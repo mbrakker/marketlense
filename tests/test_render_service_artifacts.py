@@ -765,7 +765,7 @@ def test_render_surfaces_report_identity_line_and_source_note(tmp_path):
 
     assert "Title: Retail trends 2026" in html
     assert "Publisher: Capgemini" in html
-    assert "Period: 2026" in html
+    assert "Edition: 2026" in html
     assert "Author: Mark Ruston" in html
     assert "Source URL: Not available" in html
 
@@ -777,7 +777,7 @@ def test_render_surfaces_report_identity_line_and_source_note(tmp_path):
         "time_period",
         "doc_map",
         "expected_seo_title",
-        "expected_period",
+        "expected_metadata",
     ),
     [
         (
@@ -789,7 +789,7 @@ def test_render_surfaces_report_identity_line_and_source_note(tmp_path):
                 "Email, SMS, and push marketing statistics for ecommerce in 2024 "
                 "| Omnisend | MarketBearing"
             ),
-            "Period: 2023",
+            ("Data period: 2023",),
         ),
         (
             "Activate Technology & Media Outlook 2025: eCommerce",
@@ -800,7 +800,7 @@ def test_render_surfaces_report_identity_line_and_source_note(tmp_path):
                 "Activate Technology & Media Outlook 2025: eCommerce "
                 "| Activate Consulting | MarketBearing"
             ),
-            "Period: 2024",
+            ("Edition: 2025", "Data period: 2024"),
         ),
         (
             "Ecommerce marketing report",
@@ -808,7 +808,7 @@ def test_render_surfaces_report_identity_line_and_source_note(tmp_path):
             "2024",
             {},
             "Ecommerce marketing report 2024 | MarketBearing",
-            "Period: 2024",
+            ("Data period: 2024",),
         ),
         (
             "Retail outlook 2025",
@@ -816,18 +816,18 @@ def test_render_surfaces_report_identity_line_and_source_note(tmp_path):
             "January to December 2024",
             {"publicationDate": "2025-01-15"},
             "Retail outlook 2025 | MarketBearing",
-            "Period: January–December 2024",
+            ("Edition: 2025", "Data period: January–December 2024"),
         ),
     ],
 )
-def test_rendered_report_identity_keeps_title_year_and_labels_source_period(
+def test_rendered_report_identity_keeps_title_year_and_labels_distinct_dates(
     tmp_path: Path,
     title: str,
     publisher: str,
     time_period: str,
     doc_map: dict[str, str],
     expected_seo_title: str,
-    expected_period: str,
+    expected_metadata: tuple[str, ...],
 ) -> None:
     response = render_report(
         RenderRequest(
@@ -859,7 +859,9 @@ def test_rendered_report_identity_keeps_title_year_and_labels_source_period(
     ]
     assert rendered_titles == [expected_seo_title] * 3
     assert f"Title: {title}" in html
-    assert expected_period in html
+    for expected_value in expected_metadata:
+        assert expected_value in html
+    assert "Period:" not in html
     assert "Year:" not in html
     json_ld = json.loads(
         re.search(
@@ -1083,8 +1085,8 @@ def test_render_surfaces_editorial_details_from_evidence_packs(tmp_path):
     assert "Ordered chapters" in html
     assert "1. Demand outlook" in html
     assert "Pages: 4, 5" in html
-    assert "Period: 2026" in html
-    assert "Period: 2026 (fieldwork Oct 2025)" not in html
+    assert "Data period: 2026" in html
+    assert "Data period: 2026 (fieldwork Oct 2025)" not in html
     assert "2026" in html
     assert "Fieldwork:" not in html
 

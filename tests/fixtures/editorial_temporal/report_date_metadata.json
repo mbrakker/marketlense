@@ -1,0 +1,58 @@
+{
+  "cases": [
+    {
+      "name": "edition differs from verified publication month",
+      "title": "Activate Technology & Media Outlook 2019",
+      "source_publication_date": "2018-11",
+      "time_period": "",
+      "expected_labels": {
+        "Edition": "2019",
+        "Published": "November 2018"
+      },
+      "absent_labels": ["Data period", "Period"]
+    },
+    {
+      "name": "equal edition and publication year is not duplicated",
+      "title": "Activate Technology & Media Outlook 2025: Sports Media & Betting",
+      "source_publication_date": "2025",
+      "time_period": "2025",
+      "expected_labels": {
+        "Edition": "2025"
+      },
+      "absent_labels": ["Published", "Data period", "Period"]
+    },
+    {
+      "name": "data year remains distinct from edition",
+      "title": "Activate Technology & Media Outlook 2025: Social Video",
+      "source_publication_date": "",
+      "time_period": "2024-2028E",
+      "expected_labels": {
+        "Edition": "2025",
+        "Data period": "2024–2028E"
+      },
+      "absent_labels": ["Published", "Period"]
+    },
+    {
+      "name": "explicit observation range is a data period",
+      "title": "Consumer Outlook 2025",
+      "source_publication_date": "2025-02-10",
+      "time_period": "December 16, 2024 to January 2, 2025",
+      "expected_labels": {
+        "Edition": "2025",
+        "Published": "February 10, 2025",
+        "Data period": "December 16, 2024 to January 2, 2025"
+      },
+      "absent_labels": ["Period"]
+    },
+    {
+      "name": "missing publication date is omitted",
+      "title": "Rewire to Restart: The Post-COVID-19 Agenda",
+      "source_publication_date": "",
+      "time_period": "2020",
+      "expected_labels": {
+        "Data period": "2020"
+      },
+      "absent_labels": ["Edition", "Published", "Period"]
+    }
+  ]
+}
