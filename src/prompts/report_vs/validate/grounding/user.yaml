@@ -9,10 +9,14 @@ text: |
   - Review each sentence in the artifacts (insights, quotes, summaries, expert comment, LinkedIn post).
   - Distinguish factual claims vs interpretation vs recommendations.
   - In `expert_comment` and `linkedin_post`, interpretation/recommendation text is allowed unless it introduces unsupported facts or numbers.
+  - For each factual claim, decide whether its linked retained evidence entails its material meaning. Do not use lexical overlap, copied wording, or vocabulary similarity as the test.
+  - `entailed` permits synonyms, sentence restructuring, clause reordering, active/passive changes, concise executive wording, and canonically equivalent quantity displays only when material meaning is unchanged.
+  - `contradicted` means the linked retained evidence conflicts with the claim. `not_established` means the linked retained evidence does not establish the claim.
+  - A claim is not entailed if it changes factual proposition, number/unit/currency/magnitude, direction, timeframe, geography, population/segment, comparison baseline, forecast vs observed status, attribution, certainty, or causality.
   - Mark unsupported only when one of these applies:
-    1) hallucinated entity/event or unsupported factual assertion,
+    1) factual `contradicted` or factual `not_established` assertion,
     2) unsupported number/new metric not present in evidence,
     3) misattributed quote,
     4) sentence claims the report instructed/recommended something that the report did not state.
-  - Provide `classification`, `violation_type`, and a short `reason` for each unsupported sentence.
+  - For a factual semantic failure, provide `classification`, `entailment_outcome`, `violation_type`, and a short `reason`. Do not include entailed sentences.
   - Keep the response as JSON with `unsupported` array only; omit additional prose.

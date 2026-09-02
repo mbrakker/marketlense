@@ -64,6 +64,60 @@ def test_final_insights_regeneration_prompt_requires_decision_implications() -> 
     assert "now_what" in prompt_set.user.text
 
 
+def test_grounding_prompt_accepts_materially_entailed_paraphrases() -> None:
+    prompt_set = prompt_service.load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/validate/grounding",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+
+    prompt_text = f"{prompt_set.system.text}\n{prompt_set.user.text}"
+
+    for allowed_transformation in (
+        "synonyms",
+        "sentence restructuring",
+        "clause reordering",
+        "active/passive",
+        "concise executive wording",
+        "canonically equivalent quantity displays",
+    ):
+        assert allowed_transformation in prompt_text
+    assert "entailed" in prompt_text
+
+
+def test_grounding_prompt_rejects_adversarial_near_equivalence() -> None:
+    prompt_set = prompt_service.load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/validate/grounding",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+
+    prompt_text = f"{prompt_set.system.text}\n{prompt_set.user.text}"
+
+    for protected_dimension in (
+        "factual proposition",
+        "number/unit/currency/magnitude",
+        "direction",
+        "timeframe",
+        "geography",
+        "population/segment",
+        "comparison baseline",
+        "forecast vs observed status",
+        "attribution",
+        "certainty",
+        "causality",
+    ):
+        assert protected_dimension in prompt_text
+    assert "contradicted" in prompt_text
+    assert "not_established" in prompt_text
+
+
 @pytest.mark.parametrize(
     "namespace",
     [
