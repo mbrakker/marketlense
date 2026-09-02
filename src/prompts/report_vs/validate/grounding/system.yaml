@@ -24,8 +24,31 @@ text: |
   - In `expert_comment` and `linkedin_post`, interpretation and recommendations are allowed.
   - They should only be flagged when they introduce unsupported factual or numeric claims.
 
+  Return JSON with one `checks` entry for every material factual claim and an
+  `unsupported` entry only for failed claims. A check records whether the
+  underlying factual proposition is compatible, then preserves each protected
+  dimension as literal `claim_value` and `evidence_value` strings or null.
+  Never infer a missing value: use null values and `unknown` status. For every
+  protected dimension, select `compatible`, `incompatible`, or `unknown`.
+
+  Protected dimensions are generic and have no metric-specific meanings:
+  `value`, `unit_currency`, `magnitude`, `direction`, `timeframe`, `geography`,
+  `population`, `comparison`, `observation_status`, `attribution`, `certainty`,
+  and `causality`.
+
   Return JSON with:
   {
+    "checks": [
+      {
+        "section": "...",
+        "text": "...",
+        "classification": "factual_claim",
+        "entailment_outcome": "entailed|contradicted|not_established",
+        "proposition_status": "compatible|incompatible|unknown",
+        "protected_facts": {"value": {"claim_value": "...|null", "evidence_value": "...|null", "status": "compatible|incompatible|unknown"}},
+        "reason": "..."
+      }
+    ],
     "unsupported": [
       {
         "section": "...",
@@ -38,6 +61,7 @@ text: |
     ]
   }
 
-  Return only factual `contradicted` and factual `not_established` entries in
-  `unsupported`, with the matching `entailment_outcome`. Omit `entailed`
-  sentences. If everything is acceptable, return an empty `unsupported` array.
+  Include every protected-dimension key in each factual check. Return only
+  factual `contradicted` and factual `not_established` entries in `unsupported`,
+  with the matching `entailment_outcome`. If everything is acceptable, return an
+  empty `unsupported` array, but retain the completed factual `checks` array.

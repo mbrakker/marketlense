@@ -96,6 +96,10 @@ class FakeOpenAI:
 
     def openai_chat_json(self, req, ctx):
         payload = self._next_payload(ctx)
+        if str(getattr(ctx, "task_id", "")).endswith(":grounding") and isinstance(
+            payload, dict
+        ):
+            payload = {"checks": [], **payload}
         with self._lock:
             self.requests.append(("chat", req.model, str(getattr(ctx, "task_id", ""))))
         return OpenAIResponseResult(

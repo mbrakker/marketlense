@@ -28837,6 +28837,72 @@
       ],
       "type": "object"
     },
+    "src.contracts.protected_facts.ProtectedFactComparison": {
+      "additionalProperties": false,
+      "properties": {
+        "dimensions": {
+          "type": "string"
+        },
+        "proposition_status": {
+          "enum": [
+            "compatible",
+            "incompatible",
+            "unknown"
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "proposition_status",
+        "dimensions"
+      ],
+      "type": "object"
+    },
+    "src.contracts.protected_facts.ProtectedFactDimension": {
+      "additionalProperties": false,
+      "properties": {
+        "claim_value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "evidence_value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "compatible",
+            "incompatible",
+            "unknown"
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "claim_value",
+        "evidence_value",
+        "status"
+      ],
+      "type": "object"
+    },
     "src.contracts.public_editorial_quality.PublicEditorialQualityIssue": {
       "additionalProperties": false,
       "properties": {

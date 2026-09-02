@@ -18,13 +18,20 @@ Grounding judges semantic entailment against linked retained evidence, not
 wording similarity. It accepts synonyms, natural paraphrase, sentence or
 clause reordering, active/passive voice, concise executive wording, and
 canonically equivalent quantity displays when the material meaning is
-unchanged. It rejects a changed factual proposition, number/unit/currency/
-magnitude, direction, timeframe, geography, population or segment, comparison
-baseline, forecast-versus-observed status, attribution, certainty, or
-causality. The grounding model classifies factual prose as `entailed`,
-`contradicted`, or `not_established`; only the latter two produce the existing
-blocking factual validation failures. The check uses retained evidence only and
-does not contain publisher- or report-specific exceptions.
+unchanged. For every material factual claim, its structured comparison retains
+literal claim and evidence values, or `null` and `unknown` when a dimension is
+absent; it never infers a missing dimension. The generic dimensions are value,
+unit/currency, magnitude, direction, timeframe, geography, population/segment/
+sample, comparison relationship/baseline, observed/forecast/estimate/target
+status, source attribution, certainty/modal strength, and causal relationship.
+The underlying factual proposition must also remain compatible. An incompatible
+proposition or present dimension is an existing blocking contradiction, so a
+forecast cannot become an observation, respondents cannot become companies,
+association cannot become causation, and `may`/`could`/`expect` cannot become
+`will` or a guarantee. The grounding model classifies factual prose as
+`entailed`, `contradicted`, or `not_established`; only the latter two produce
+the existing blocking factual validation failures. The check uses retained
+evidence only and does not contain publisher- or report-specific exceptions.
 
 Cached rendered HTML is reusable only when its retained readiness artifact
 still verifies the exact HTML, report ID, configuration hash, policy hash, and

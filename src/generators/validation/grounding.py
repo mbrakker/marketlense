@@ -5,6 +5,7 @@ import re
 from dataclasses import asdict
 from typing import Any, List, Sequence
 
+from src.contracts.protected_facts import ProtectedFactComparison
 from src.contracts.prompt_family_materialization import (
     PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
     PromptFamilyMaterializationRequest,
@@ -309,6 +310,7 @@ def run_grounding_check(
         else:
             response_payload = reused_payload
         unsupported: list[Any] = response_payload.get("unsupported") or []
+        checks: list[Any] = response_payload.get("checks") or []
         if (
             reused_payload is None
             and source_id
@@ -363,6 +365,50 @@ def run_grounding_check(
                 },
             )
         )
+        failed_check_keys = set()
+        if isinstance(checks, list):
+            for entry in checks:
+                if not isinstance(entry, dict):
+                    continue
+                comparison = ProtectedFactComparison.from_payload(
+                    entry.get("protected_facts"),
+                    proposition_status=s(entry.get("proposition_status")),
+                )
+                outcome = normalize_entailment_outcome(
+                    s(entry.get("entailment_outcome"))
+                )
+                incompatible_dimensions = comparison.incompatible_dimensions
+                if (
+                    outcome == "entailed"
+                    and comparison.proposition_status == "compatible"
+                    and not incompatible_dimensions
+                ):
+                    continue
+                text = s(entry.get("text"))
+                section = s(entry.get("section") or "grounding")
+                violation_type = (
+                    "contradicted"
+                    if incompatible_dimensions or outcome == "contradicted"
+                    else "unsupported_factual_claim"
+                )
+                dimension_text = (
+                    f" Protected dimensions: {', '.join(incompatible_dimensions)}."
+                    if incompatible_dimensions
+                    else ""
+                )
+                reason = s(entry.get("reason") or "Unsupported factual claim")
+                issues.append(
+                    issue(
+                        rule_id=RULE_ID,
+                        message=(
+                            f"[factual_claim|{violation_type}]"
+                            f" {reason}.{dimension_text}: {text[:200]}"
+                        ),
+                        severity="error",
+                        section=section,
+                    )
+                )
+                failed_check_keys.add((section, text))
         if isinstance(unsupported, list):
             evidence_quantities = collect_quantities_from_texts(evidence_texts)
             for window in evidence_windows:
@@ -372,6 +418,8 @@ def run_grounding_check(
                     continue
                 text = s(entry.get("text"))
                 section = s(entry.get("section") or "grounding")
+                if (section, text) in failed_check_keys:
+                    continue
                 reason = s(entry.get("reason") or "Unsupported sentence")
                 section_key = section_root(section)
                 current_policy = section_policy(section_key)
@@ -523,7 +571,7 @@ def normalize_claim_classification(value: str) -> str:
 
 def normalize_entailment_outcome(value: str) -> str:
     normalized = value.strip().lower()
-    if normalized in {"contradicted", "not_established"}:
+    if normalized in {"entailed", "contradicted", "not_established"}:
         return normalized
     return ""
 

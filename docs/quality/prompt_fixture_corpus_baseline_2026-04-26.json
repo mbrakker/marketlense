@@ -92,17 +92,17 @@
       "total_tokens": 19901
     },
     "validation": {
-      "estimated_cost_usd": 0.001235,
+      "estimated_cost_usd": 0.001335,
       "expected_browser_attempts": 0,
       "expected_ocr_calls": 0,
       "expected_output_tokens": 760,
       "expected_tool_calls": 0,
       "family": "validation",
-      "input_tokens": 1613,
+      "input_tokens": 2113,
       "namespace_count": 2,
       "runtime_ms": 1.7379,
       "schema_version": "1.0",
-      "total_tokens": 2373
+      "total_tokens": 2873
     }
   },
   "fixture_count": 44,
@@ -699,18 +699,18 @@
       "total_tokens": 369
     },
     "report_vs/validate/grounding": {
-      "estimated_cost_usd": 0.000671,
+      "estimated_cost_usd": 0.000771,
       "expected_browser_attempts": 0,
       "expected_ocr_calls": 0,
       "expected_output_tokens": 380,
       "expected_tool_calls": 0,
       "family": "validation",
-      "input_tokens": 1073,
+      "input_tokens": 1573,
       "model": "gpt-5.6-luna",
       "namespace": "report_vs/validate/grounding",
       "runtime_ms": 0.8667,
       "schema_version": "1.0",
-      "total_tokens": 1453
+      "total_tokens": 1953
     },
     "report_vs/validate/semantic": {
       "estimated_cost_usd": 0.000564,
@@ -729,16 +729,16 @@
   },
   "schema_version": "1.0",
   "totals": {
-    "estimated_cost_usd": 0.04705,
+    "estimated_cost_usd": 0.04715,
     "expected_browser_attempts": 7,
     "expected_ocr_calls": 1,
     "expected_output_tokens": 30720,
     "expected_tool_calls": 0,
     "family": "totals",
-    "input_tokens": 50937,
+    "input_tokens": 51437,
     "namespace_count": 44,
     "runtime_ms": 41.6647,
     "schema_version": "1.0",
-    "total_tokens": 81657
+    "total_tokens": 82157
   }
 }
