@@ -71,24 +71,77 @@ def test_editorial_plan_is_the_shared_basis_for_summary_insights_and_expert(tmp_
                 "tldr": "Retention efficiency is becoming the central growth lever.",
                 "card_tldr_compact": "Retention efficiency now leads growth.",
                 "executive_summary": "The report thesis is that growth is shifting toward retention-led efficiency. Margin pressure makes this prioritization more urgent.",
-                "claim_evidence_map": [{"claim": "Retention is stabilizing.", "evidence_id": "f3", "evidence": "Retention improved", "pages": [4]}],
+                "claim_evidence_map": [
+                    {
+                        "claim": "Retention is stabilizing.",
+                        "evidence_id": "f3",
+                        "evidence": "Retention improved",
+                        "pages": [4],
+                    }
+                ],
             }
         },
         "insights_candidates": {
             "insights_candidates": [
-                {"id": "candidate-1", "text": "Retention efficiency is the main growth lever.", "evidence_id": "f3", "evidence": "Retention improved", "metric": {}, "pages": [4], "score": 0.8},
-                {"id": "candidate-2", "text": "Margin pressure constrains expansion.", "evidence_id": "f2", "evidence": "Margin declined", "metric": {}, "pages": [3], "score": 0.9},
+                {
+                    "id": "candidate-1",
+                    "text": "Retention efficiency is the main growth lever.",
+                    "evidence_id": "f3",
+                    "evidence": "Retention improved",
+                    "metric": {},
+                    "pages": [4],
+                    "score": 0.8,
+                },
+                {
+                    "id": "candidate-2",
+                    "text": "Margin pressure constrains expansion.",
+                    "evidence_id": "f2",
+                    "evidence": "Margin declined",
+                    "metric": {},
+                    "pages": [3],
+                    "score": 0.9,
+                },
             ]
         },
-        "quotes": {"quotes_final": [{"text": "We are expanding rapidly", "speaker": "CEO", "citation": "", "page": 3, "evidence_id": "q1"}]},
+        "quotes": {
+            "quotes_final": [
+                {
+                    "text": "We are expanding rapidly",
+                    "speaker": "CEO",
+                    "citation": "",
+                    "page": 3,
+                    "evidence_id": "q1",
+                }
+            ]
+        },
         "insights_final": {
             "insights_final": [
-                {"id": "candidate-2", "text": "Margin pressure constrains expansion.", "evidence_id": "f2", "evidence": "Margin declined", "metric": {}, "pages": [3], "score": 0.9},
-                {"id": "candidate-1", "text": "Retention efficiency is the main growth lever.", "evidence_id": "f3", "evidence": "Retention improved", "metric": {}, "pages": [4], "score": 0.8},
+                {
+                    "id": "candidate-2",
+                    "text": "Margin pressure constrains expansion.",
+                    "evidence_id": "f2",
+                    "evidence": "Margin declined",
+                    "metric": {},
+                    "pages": [3],
+                    "score": 0.9,
+                },
+                {
+                    "id": "candidate-1",
+                    "text": "Retention efficiency is the main growth lever.",
+                    "evidence_id": "f3",
+                    "evidence": "Retention improved",
+                    "metric": {},
+                    "pages": [4],
+                    "score": 0.8,
+                },
             ]
         },
-        "expert_comment": {"expert_comment": "The thesis points to a different operating tradeoff: retain demand efficiently while protecting margin."},
-        "linkedin_post": {"linkedin_post": "Retention efficiency is changing the planning outlook."},
+        "expert_comment": {
+            "expert_comment": "The thesis points to a different operating tradeoff: retain demand efficiently while protecting margin."
+        },
+        "linkedin_post": {
+            "linkedin_post": "Retention efficiency is changing the planning outlook."
+        },
     }
     prompt_client = CapturingPromptClient()
 
@@ -111,9 +164,12 @@ def test_editorial_plan_is_the_shared_basis_for_summary_insights_and_expert(tmp_
         "report_vs/artifacts/expert_comment",
         "report_vs/artifacts/linkedin_post",
     ):
-        assert json.loads(
-            prompt_client.variables_for_namespace(namespace)["editorial_plan_json"]
-        ) == plan
+        assert (
+            json.loads(
+                prompt_client.variables_for_namespace(namespace)["editorial_plan_json"]
+            )
+            == plan
+        )
     assert [item["evidence_id"] for item in payload["insights_final"]] == [
         "f3",
         "f2",
@@ -123,6 +179,209 @@ def test_editorial_plan_is_the_shared_basis_for_summary_insights_and_expert(tmp_
     ]
     assert "retention-led efficiency" in payload["summary"]["executive_summary"].lower()
     assert "operating tradeoff" in payload["expert_comment"].lower()
+
+
+def test_editorial_plan_keeps_current_metric_and_central_publisher_forecast(tmp_path):
+    current_users_id = "current-users"
+    forecast_id = "publisher-forecast"
+    promotional_id = "opening-promotion"
+    plan = {
+        "report_thesis": (
+            "Practical Metaverse adoption has current reach and a material "
+            "publisher growth forecast."
+        ),
+        "themes": [
+            {
+                "theme": "Current reach and forecast growth",
+                "priority": 1,
+                "evidence_ids": [current_users_id, forecast_id],
+            },
+            {
+                "theme": "Practical operating focus",
+                "priority": 2,
+                "evidence_ids": ["secondary-economy"],
+            },
+        ],
+    }
+    evidence = {
+        "findings": {
+            "findings": [
+                {
+                    "id": current_users_id,
+                    "text": "300M+ active users currently participate in Metaverse games and virtual-world platforms.",
+                    "evidence": "300M+ active users currently participate in Metaverse games and virtual-world platforms.",
+                    "pages": [4],
+                },
+                {
+                    "id": forecast_id,
+                    "text": "Activate forecasts 600M+ Metaverse users by 2026, a central forecast repeated in the executive summary and opening takeaways.",
+                    "evidence": "Activate forecasts 600M+ Metaverse users by 2026.",
+                    "pages": [5],
+                },
+                {
+                    "id": "secondary-economy",
+                    "text": "Virtual economies support creator and commerce activity.",
+                    "evidence": "Virtual economies support creator and commerce activity.",
+                    "pages": [9],
+                },
+                {
+                    "id": "secondary-ai",
+                    "text": "Generative AI can reduce creation barriers.",
+                    "evidence": "Generative AI can reduce creation barriers.",
+                    "pages": [11],
+                },
+                {
+                    "id": "secondary-governance",
+                    "text": "Governance remains a planning consideration.",
+                    "evidence": "Governance remains a planning consideration.",
+                    "pages": [13],
+                },
+                {
+                    "id": promotional_id,
+                    "text": "Activate offers consulting services for digital transformation.",
+                    "evidence": "Activate offers consulting services for digital transformation.",
+                    "pages": [1],
+                },
+            ]
+        },
+        "quote_candidates": {"quote_candidates": []},
+    }
+    responses = {
+        "editorial_plan": {"editorial_plan": plan},
+        "summary": {
+            "summary": {
+                "tldr": "Current Metaverse reach sits beside Activate's forecast of 600M+ users by 2026.",
+                "card_tldr_compact": "Activate forecasts 600M+ Metaverse users by 2026.",
+                "executive_summary": "The report identifies 300M+ active users in Metaverse games and virtual-world platforms today. Activate forecasts 600M+ Metaverse users by 2026. The forecast is a publisher projection, not an observed current-state measure.",
+                "claim_evidence_map": [
+                    {
+                        "claim": "Activate forecasts 600M+ Metaverse users by 2026.",
+                        "evidence_id": forecast_id,
+                        "evidence": "Activate forecasts 600M+ Metaverse users by 2026.",
+                        "pages": [5],
+                    }
+                ],
+            }
+        },
+        "insights_candidates": {
+            "insights_candidates": [
+                {
+                    "id": "current-reach",
+                    "text": "300M+ active users currently participate in Metaverse games and virtual-world platforms.",
+                    "evidence_id": current_users_id,
+                    "evidence": "300M+ active users currently participate in Metaverse games and virtual-world platforms.",
+                    "metric": {
+                        "label": "Current Metaverse users",
+                        "value": "300M+",
+                        "unit": "users",
+                    },
+                    "pages": [4],
+                    "score": 0.9,
+                },
+                {
+                    "id": "forecast-growth",
+                    "text": "Activate forecasts 600M+ Metaverse users by 2026.",
+                    "evidence_id": forecast_id,
+                    "evidence": "Activate forecasts 600M+ Metaverse users by 2026.",
+                    "metric": {
+                        "label": "Activate forecast Metaverse users",
+                        "value": "600M+",
+                        "unit": "users",
+                        "timeframe": "2026",
+                    },
+                    "pages": [5],
+                    "score": 0.89,
+                },
+            ]
+        },
+        "quotes": {"quotes_final": []},
+        "insights_final": {
+            "insights_final": [
+                {
+                    "id": "current-reach",
+                    "text": "300M+ active users currently participate in Metaverse games and virtual-world platforms.",
+                    "evidence_id": current_users_id,
+                    "evidence": "300M+ active users currently participate in Metaverse games and virtual-world platforms.",
+                    "metric": {
+                        "label": "Current Metaverse users",
+                        "value": "300M+",
+                        "unit": "users",
+                    },
+                    "pages": [4],
+                    "score": 0.9,
+                },
+                {
+                    "id": "forecast-growth",
+                    "text": "Activate forecasts 600M+ Metaverse users by 2026.",
+                    "evidence_id": forecast_id,
+                    "evidence": "Activate forecasts 600M+ Metaverse users by 2026.",
+                    "metric": {
+                        "label": "Activate forecast Metaverse users",
+                        "value": "600M+",
+                        "unit": "users",
+                        "timeframe": "2026",
+                    },
+                    "pages": [5],
+                    "score": 0.89,
+                },
+            ]
+        },
+        "expert_comment": {
+            "expert_comment": "Current reach gives the forecast context: Activate's forecast of 600M+ Metaverse users by 2026 is a projection, while 300M+ active users is the observed starting point."
+        },
+        "linkedin_post": {
+            "linkedin_post": "Activate forecasts 600M+ Metaverse users by 2026."
+        },
+    }
+    prompt_client = CapturingPromptClient()
+    openai_client = FakeOpenAI(responses)
+
+    payload = generate_artifacts(
+        report_id="central-forecast",
+        report_name="Central Forecast",
+        doc_map={
+            "title": "Metaverse outlook",
+            "sections": [{"id": "s1", "title": "Executive summary"}],
+        },
+        evidence_packs=evidence,
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=openai_client,
+        prompt_client=prompt_client,
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    assert payload["editorial_plan"]["themes"][0]["evidence_ids"] == [
+        current_users_id,
+        forecast_id,
+    ]
+    assert promotional_id not in {
+        evidence_id
+        for theme in payload["editorial_plan"]["themes"]
+        for evidence_id in theme["evidence_ids"]
+    }
+    assert (
+        "Activate forecasts 600M+ Metaverse users by 2026"
+        in payload["summary"]["executive_summary"]
+    )
+    assert forecast_id in {
+        insight["evidence_id"] for insight in payload["insights_final"]
+    }
+    assert "Activate's forecast" in payload["expert_comment"]
+    for namespace in (
+        "report_vs/artifacts/summary",
+        "report_vs/artifacts/insights_candidates",
+        "report_vs/artifacts/insights_final",
+        "report_vs/artifacts/expert_comment",
+    ):
+        assert (
+            json.loads(
+                prompt_client.variables_for_namespace(namespace)["editorial_plan_json"]
+            )
+            == plan
+        )
+    assert [step for _, _, step in openai_client.requests].count("editorial_plan") == 1
+    assert len(openai_client.requests) == 8
 
 
 def test_expert_comment_receives_grounded_theme_context_not_summary_prose(tmp_path):
@@ -260,9 +519,7 @@ def test_expert_synthesis_context_keeps_string_limitations_from_evidence_pack():
         evidence_packs={
             **_evidence_packs(),
             "limitations": {
-                "limitations": [
-                    "Sample sizes vary across the report's analyses."
-                ]
+                "limitations": ["Sample sizes vary across the report's analyses."]
             },
         },
     )
@@ -402,9 +659,7 @@ def test_editorial_plan_prompt_and_inputs_invalidate_artifact_cache_identity(tmp
         "settings": _settings(tmp_path),
         "ctx": _ctx(),
     }
-    first = _artifact_cache_meta(
-        **common, prompt_client=PlanPromptClient("a" * 64)
-    )
+    first = _artifact_cache_meta(**common, prompt_client=PlanPromptClient("a" * 64))
     changed_prompt = _artifact_cache_meta(
         **common, prompt_client=PlanPromptClient("b" * 64)
     )
@@ -424,6 +679,7 @@ def test_editorial_plan_prompt_and_inputs_invalidate_artifact_cache_identity(tmp
 __all__ = [
     "test_editorial_plan_normalizes_priority_and_rejects_unknown_evidence_id",
     "test_editorial_plan_is_the_shared_basis_for_summary_insights_and_expert",
+    "test_editorial_plan_keeps_current_metric_and_central_publisher_forecast",
     "test_expert_comment_receives_grounded_theme_context_not_summary_prose",
     "test_expert_synthesis_context_keeps_string_limitations_from_evidence_pack",
     "test_expert_comment_can_abstain_when_no_distinct_synthesis_is_returned",

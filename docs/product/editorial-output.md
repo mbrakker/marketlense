@@ -17,6 +17,15 @@ when file-search evidence supports materially different or counterbalancing
 major sections, it retrieves both sides rather than substituting several close
 subtopics from one side.
 
+A source-backed publisher forecast may be retained from evidence extraction
+through the Editorial Plan beside current-state evidence when it is materially
+central to the report's stated argument and corroborated by substantive
+synthesis such as executive-summary or opening-takeaway repetition. Page
+placement, repetition alone, and promotional copy do not establish that
+centrality. Public output keeps it explicitly framed as the publisher's
+forecast rather than an observed fact; speculative projections retain their
+source caveat.
+
 The Expert View side panel carries only the neutral `MarketBearing analysis`
 identity. Report-specific interpretation belongs exclusively to the generated
 Expert View body; an unsupported synthesis renders the existing explicit

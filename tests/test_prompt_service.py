@@ -106,7 +106,9 @@ def test_artifact_prompts_include_shared_editorial_constitution() -> None:
     )
 
 
-def test_editorial_plan_and_findings_prompts_require_representative_counterbalance() -> None:
+def test_editorial_plan_and_findings_prompts_require_representative_counterbalance() -> (
+    None
+):
     editorial_plan_prompt = load_prompt_set(
         PromptLoadRequest(
             schema_version="1.0",
@@ -124,10 +126,48 @@ def test_editorial_plan_and_findings_prompts_require_representative_counterbalan
         _ctx(),
     )
 
-    assert "DocMap is the authority for report breadth" in editorial_plan_prompt.user.text
+    assert (
+        "DocMap is the authority for report breadth" in editorial_plan_prompt.user.text
+    )
     assert "counterbalancing" in editorial_plan_prompt.user.text
     assert "executive-summary" in editorial_plan_prompt.user.text
     assert "counterbalancing" in findings_prompt.user.text
+
+
+def test_editorial_plan_prompt_retains_substantive_central_forecasts() -> None:
+    editorial_plan_prompt = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/editorial_plan",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+
+    prompt_text = editorial_plan_prompt.user.text.casefold()
+
+    assert "materially central" in prompt_text
+    assert "page position" in prompt_text
+    assert "promotional" in prompt_text
+    assert "forecast" in prompt_text
+
+
+def test_findings_prompt_retains_substantive_central_forecasts() -> None:
+    findings_prompt = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/evidence_packs/findings",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+
+    prompt_text = findings_prompt.user.text.casefold()
+
+    assert "materially central" in prompt_text
+    assert "publisher forecast" in prompt_text
+    assert "promotional" in prompt_text
+    assert "current-state" in prompt_text
 
 
 def test_summary_and_expert_prompts_prevent_first_run_readiness_failures() -> None:
