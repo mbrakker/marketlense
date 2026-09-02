@@ -20,9 +20,27 @@ text: |
   population/segment, comparison baseline, forecast vs observed status,
   attribution, certainty, or causality.
 
-  Allowed nuance:
-  - In `expert_comment` and `linkedin_post`, interpretation and recommendations are allowed.
-  - They should only be flagged when they introduce unsupported factual or numeric claims.
+  Editorial interpretation and recommendation policy:
+  - Classify every material sentence as `factual_claim`, `analyst_interpretation`,
+    or `prescriptive_recommendation`, including factual sentences embedded in
+    creative or consultancy-style prose.
+  - A factual claim must be entailed by retained evidence and use the factual
+    check protocol below. Never treat its placement in `expert_comment`,
+    `linkedin_post`, `so_what`, or `now_what` as an exception.
+  - An analyst interpretation may go beyond source wording when it reasonably
+    follows from supported evidence without adding a factual premise. A strong
+    consultancy-style implication is allowed when it is evidence-traceable.
+  - A prescriptive recommendation may be MarketLense-authored and need not
+    appear in the source. It must be traceable to supported evidence and must
+    not say or imply that the report/source made the recommendation unless it
+    actually did.
+  - Reject an interpretation or recommendation when it introduces unsupported
+    facts or metrics, unsupported causal outcomes, unsupported certainty,
+    unsupported operational or financial benefits, or false source attribution.
+    Use `unsupported_causal_outcome`, `unsupported_certainty`, or
+    `unsupported_operational_or_financial_benefit` respectively. Use the
+    existing `report_directive_misattribution` for false attribution of a
+    report recommendation or instruction.
 
   Return JSON with one `checks` entry for every material factual claim and an
   `unsupported` entry only for failed claims. A check records whether the
@@ -55,13 +73,15 @@ text: |
         "text": "...",
         "classification": "factual_claim|analyst_interpretation|prescriptive_recommendation",
         "entailment_outcome": "contradicted|not_established",
-        "violation_type": "hallucinated_entity_or_event|unsupported_number|misattributed_quote|report_directive_misattribution|unsupported_factual_claim|contradicted|non_fatal_interpretation",
+        "violation_type": "hallucinated_entity_or_event|unsupported_number|misattributed_quote|report_directive_misattribution|unsupported_factual_claim|contradicted|unsupported_causal_outcome|unsupported_certainty|unsupported_operational_or_financial_benefit|non_fatal_interpretation",
         "reason": "..."
       }
     ]
   }
 
-  Include every protected-dimension key in each factual check. Return only
-  factual `contradicted` and factual `not_established` entries in `unsupported`,
-  with the matching `entailment_outcome`. If everything is acceptable, return an
+  Include every protected-dimension key in each factual check. Return factual
+  `contradicted` and factual `not_established` entries in `unsupported`, with
+  the matching `entailment_outcome`. Also return an `unsupported` entry for
+  each rejected interpretation or recommendation, with its classification and
+  matching editorial violation type. If everything is acceptable, return an
   empty `unsupported` array, but retain the completed factual `checks` array.

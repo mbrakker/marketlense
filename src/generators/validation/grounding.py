@@ -434,6 +434,7 @@ def run_grounding_check(
                 violation_type = normalize_violation_type(
                     s(entry.get("violation_type") or entry.get("failure_type"))
                 )
+                violation_type_supplied = bool(violation_type)
                 if entailment_outcome == "contradicted":
                     violation_type = "contradicted"
                 elif (
@@ -449,6 +450,12 @@ def run_grounding_check(
                         text=text,
                         reason=reason,
                     )
+                if (
+                    not violation_type_supplied
+                    and classification != "factual_claim"
+                    and violation_type == "non_fatal_interpretation"
+                ):
+                    violation_type = "unsupported_factual_claim"
                 if is_retrieval_failure(reason):
                     violation_type = "evidence_retrieval_failure"
 
@@ -528,6 +535,8 @@ def grounding_payload(request: ValidationRequest, artifacts: dict) -> dict:
                     "geography": s(metric.get("geography")),
                     "segment": s(metric.get("segment")),
                 },
+                "so_what": sanitize_citation_tokens(s(insight.get("so_what"))),
+                "now_what": sanitize_citation_tokens(s(insight.get("now_what"))),
             }
         )
     summary_clean: dict[str, Any] = {
@@ -585,7 +594,7 @@ def infer_claim_classification(section_key: str, text: str) -> str:
             lowered,
         ):
             return "prescriptive_recommendation"
-        return "analyst_interpretation"
+        return "factual_claim"
     if (
         policy == "mixed"
         and not METRIC_ATTRIBUTION_RE.search(lowered)
@@ -610,6 +619,14 @@ def normalize_violation_type(value: str) -> str:
         "report_said_x": "report_directive_misattribution",
         "unsupported_factual_claim": "unsupported_factual_claim",
         "factual_claim": "unsupported_factual_claim",
+        "unsupported_causal_outcome": "unsupported_causal_outcome",
+        "unsupported_causality": "unsupported_causal_outcome",
+        "unsupported_certainty": "unsupported_certainty",
+        "unsupported_operational_or_financial_benefit": (
+            "unsupported_operational_or_financial_benefit"
+        ),
+        "unsupported_financial_benefit": "unsupported_operational_or_financial_benefit",
+        "unsupported_operational_benefit": "unsupported_operational_or_financial_benefit",
         "numerically_inconsistent": "numerically_inconsistent",
         "numeric_inconsistency": "numerically_inconsistent",
         "contradicted": "contradicted",

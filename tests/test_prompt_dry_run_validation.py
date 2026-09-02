@@ -118,6 +118,29 @@ def test_grounding_prompt_rejects_adversarial_near_equivalence() -> None:
     assert "not_established" in prompt_text
 
 
+def test_grounding_prompt_distinguishes_editorial_interpretation_and_advice() -> None:
+    prompt_set = prompt_service.load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/validate/grounding",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+
+    prompt_text = f"{prompt_set.system.text}\n{prompt_set.user.text}"
+
+    for required_rule in (
+        "analyst_interpretation",
+        "prescriptive_recommendation",
+        "unsupported causal outcomes",
+        "operational or financial benefits",
+        "false source attribution",
+        "MarketLense-authored",
+    ):
+        assert required_rule in prompt_text
+
+
 @pytest.mark.parametrize(
     "namespace",
     [

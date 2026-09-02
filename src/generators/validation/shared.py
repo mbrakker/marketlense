@@ -21,7 +21,10 @@ GROUNDING_HARD_FAILURES = {
     "numerically_inconsistent",
     "report_directive_misattribution",
     "unsupported_factual_claim",
+    "unsupported_causal_outcome",
+    "unsupported_certainty",
     "unsupported_number",
+    "unsupported_operational_or_financial_benefit",
 }
 STRICT_SECTION_PREFIXES = {"insights", "quotes", "key_data_insights", "claims_list"}
 MIXED_SECTION_PREFIXES = {"summary", "executive_summary"}

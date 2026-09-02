@@ -33,6 +33,21 @@ association cannot become causation, and `may`/`could`/`expect` cannot become
 the existing blocking factual validation failures. The check uses retained
 evidence only and does not contain publisher- or report-specific exceptions.
 
+Every material sentence is also classified as a factual claim, an analyst
+interpretation, or a prescriptive recommendation. Final-insight `so_what` and
+`now_what`, Expert Comment, and LinkedIn copy are all included. An
+interpretation can go beyond the source wording when it reasonably follows
+from supported evidence without adding a factual premise. A recommendation can
+be MarketLense-authored and need not appear in the report, but it remains
+traceable to retained evidence and cannot be attributed to the report unless
+the report actually made it. Unsupported facts or metrics, causal outcomes,
+certainty, operational or financial benefits, and false source attribution are
+blocking grounding failures for interpretation and recommendation just as they
+are for factual copy. Placement in a creative paragraph never bypasses the
+factual validator. An unsupported editorial sentence without a recognized
+classification or failure type fails closed as an unsupported factual claim;
+the provider may not use incomplete metadata to downgrade a finding.
+
 Cached rendered HTML is reusable only when its retained readiness artifact
 still verifies the exact HTML, report ID, configuration hash, policy hash, and
 producer revision. The cache boundary classifies the canonical

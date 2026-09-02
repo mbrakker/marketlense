@@ -6,9 +6,10 @@ text: |
   {{ evidence_json }}
 
   Task:
-  - Review each sentence in the artifacts (insights, quotes, summaries, expert comment, LinkedIn post).
-  - Distinguish factual claims vs interpretation vs recommendations.
-  - In `expert_comment` and `linkedin_post`, interpretation/recommendation text is allowed unless it introduces unsupported facts or numbers.
+  - Review each material sentence in the artifacts: insights (including `so_what` and `now_what`), quotes, summaries, expert comment, and LinkedIn post.
+  - Classify every material sentence as `factual_claim`, `analyst_interpretation`, or `prescriptive_recommendation`. A factual sentence remains factual when it appears in creative or consultancy-style prose.
+  - An interpretation may use stronger editorial wording than the source when it reasonably follows from supported evidence and adds no factual premise. A recommendation may be MarketLense-authored, need not appear in the source, and may say a brand should reconsider treating something as experimental when the supported evidence logically warrants it.
+  - Reject an interpretation or recommendation that adds an unsupported fact or metric, causal outcome, certainty, operational or financial benefit, or false source attribution. Do not label MarketLense-authored advice as a report recommendation unless the report actually recommends it.
   - For each factual claim, decide whether its linked retained evidence entails its material meaning. Do not use lexical overlap, copied wording, or vocabulary similarity as the test.
   - `entailed` permits synonyms, sentence restructuring, clause reordering, active/passive changes, concise executive wording, and canonically equivalent quantity displays only when material meaning is unchanged.
   - `contradicted` means the linked retained evidence conflicts with the claim. `not_established` means the linked retained evidence does not establish the claim.
@@ -28,6 +29,7 @@ text: |
     1) factual `contradicted` or factual `not_established` assertion,
     2) unsupported number/new metric not present in evidence,
     3) misattributed quote,
-    4) sentence claims the report instructed/recommended something that the report did not state.
-  - For a factual semantic failure, provide `classification`, `entailment_outcome`, `violation_type`, and a short `reason`. Do not include entailed sentences.
+    4) sentence claims the report instructed/recommended something that the report did not state,
+    5) interpretation/recommendation adds an unsupported causal outcome, certainty, operational or financial benefit, factual premise, metric, or source attribution.
+  - For a factual semantic failure, provide `classification`, `entailment_outcome`, `violation_type`, and a short `reason`. For a rejected interpretation or recommendation, provide `classification`, `violation_type`, and a short `reason`. Do not include acceptable sentences.
   - Keep the response as JSON with `checks` and `unsupported` arrays only; omit additional prose.
