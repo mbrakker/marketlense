@@ -461,11 +461,17 @@ final-insight response, but they never replace a safety abstention or an
 unknown-evidence rejection.
 
 Final-insight selection follows the editorial plan's ordered themes rather
-than independently deriving thematic coverage from DocMap. It keeps the
+than independently deriving a second theme set from DocMap. It keeps the
 strongest supported representative for each theme using only the plan's linked
-evidence IDs, with model scores used only as a within-theme tie breaker. The
-plan requires two to seven evidence-backed themes, so summary, final insights,
-and expert commentary share one thematic basis without repeating its prose.
+evidence IDs, with model scores used only as a within-theme tie breaker. For a
+very broad DocMap, a narrow deterministic guard may replace redundant,
+lowest-priority themes only when section-linked findings demonstrate omitted
+material evidence across earlier, middle, and later source areas. It preserves
+the existing plan count and uses those existing findings; it is not a chapter
+quota, does not run another model call, and does not activate for narrow or
+one-sided reports. The plan requires two to seven evidence-backed themes, so
+summary, final insights, and expert commentary share one thematic basis without
+repeating its prose.
 Expert commentary receives the plan plus a bounded context of the plan-linked
 grounded evidence, final-insight `so_what` cues, retained limitations, and
 counter-signals; it does not use Executive Summary prose as its source frame.

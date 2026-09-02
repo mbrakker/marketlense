@@ -21,6 +21,7 @@ from src.generators.artifact_generator import (
     store_artifacts_payload,
 )
 from src.generators.artifact_normalization import (
+    REQUIRED_REPORT_PAYLOAD_INSIGHTS,
     artifact_base_variables,
     artifact_quote_candidates,
     artifact_vector_store_enabled,
@@ -35,8 +36,8 @@ from src.generators.artifact_normalization import (
     normalize_artifact_toc_entries,
     normalize_artifact_topics,
     normalize_expert_domain,
-    REQUIRED_REPORT_PAYLOAD_INSIGHTS,
     select_artifact_insights,
+    stabilize_broad_artifact_editorial_plan,
     strip_linkedin_inline_reference_ids,
 )
 from src.generators.validation.evidence import retrieve_evidence_windows
@@ -160,6 +161,11 @@ def regenerate_artifacts(
         safe_artifacts=safe_artifacts,
         fallback_toc_bundle=fallback_toc_bundle,
         source_status=availability,
+    )
+    state.editorial_plan = stabilize_broad_artifact_editorial_plan(
+        state.editorial_plan,
+        doc_map=safe_doc_map,
+        evidence_packs=safe_evidence,
     )
     runtime = _RegenerationRuntime(
         request=request,

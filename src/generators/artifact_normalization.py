@@ -170,6 +170,210 @@ def normalize_artifact_editorial_plan(value: Any) -> Dict[str, Any]:
     }
 
 
+def stabilize_broad_artifact_editorial_plan(
+    editorial_plan: Dict[str, Any],
+    *,
+    doc_map: Dict[str, Any],
+    evidence_packs: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Keep a broad plan from concentrating its themes in one source area.
+
+    This is deliberately a narrow deterministic guard on the existing single
+    editorial plan. It activates only when linked findings provide distinct
+    early, middle, and late section evidence that the plan has omitted.
+    """
+    plan = normalize_artifact_editorial_plan(editorial_plan)
+    sections = _material_doc_map_sections(doc_map)
+    findings_by_section = _section_linked_findings(evidence_packs, sections)
+    if not _has_broad_section_coverage(sections, findings_by_section):
+        return plan
+
+    theme_sections = [
+        _theme_section_id(theme, findings_by_section) for theme in plan["themes"]
+    ]
+    if not _plan_is_materially_clustered(theme_sections, sections):
+        return plan
+
+    kept, redundant = _split_distinct_plan_themes(plan["themes"], theme_sections)
+    represented_sections = {section_id for _, section_id in kept if section_id}
+    coverage_themes = _unrepresented_band_themes(
+        sections=sections,
+        findings_by_section=findings_by_section,
+        represented_sections=represented_sections,
+        existing_theme_names={normalize_text(theme["theme"]) for theme, _ in kept},
+    )
+    if not coverage_themes:
+        return plan
+
+    desired_count = len(plan["themes"])
+    combined = [
+        *[theme for theme, _ in kept],
+        *coverage_themes,
+        *[theme for theme, _ in redundant],
+    ][:desired_count]
+    if len(combined) != desired_count:
+        return plan
+    return {
+        "report_thesis": plan["report_thesis"],
+        "themes": [
+            {**theme, "priority": index}
+            for index, theme in enumerate(combined, start=1)
+        ],
+    }
+
+
+def _material_doc_map_sections(doc_map: Dict[str, Any]) -> List[Dict[str, str]]:
+    raw_sections = doc_map.get("sections") if isinstance(doc_map, dict) else []
+    if not isinstance(raw_sections, list):
+        return []
+    sections: List[Dict[str, str]] = []
+    seen_ids: set[str] = set()
+    for index, raw_section in enumerate(raw_sections):
+        if not isinstance(raw_section, dict):
+            continue
+        section_id = _s(raw_section.get("id")).strip()
+        title = _s(raw_section.get("title")).strip()
+        summary = _s(raw_section.get("summary")).strip()
+        key_points = raw_section.get("key_points")
+        has_key_points = isinstance(key_points, list) and any(
+            _s(point).strip() for point in key_points
+        )
+        normalized_id = normalize_text(section_id or title)
+        if not title or not normalized_id or normalized_id in seen_ids:
+            continue
+        if not (summary or has_key_points):
+            continue
+        seen_ids.add(normalized_id)
+        sections.append(
+            {
+                "id": normalized_id,
+                "title": title,
+                "order": str(index),
+            }
+        )
+    return sections
+
+
+def _section_linked_findings(
+    evidence_packs: Dict[str, Any], sections: List[Dict[str, str]]
+) -> Dict[str, List[str]]:
+    valid_sections = {section["id"] for section in sections}
+    findings_pack = (
+        evidence_packs.get("findings") if isinstance(evidence_packs, dict) else {}
+    )
+    findings = findings_pack.get("findings") if isinstance(findings_pack, dict) else []
+    if not isinstance(findings, list):
+        return {}
+    linked: Dict[str, List[str]] = {}
+    for finding in findings:
+        if not isinstance(finding, dict):
+            continue
+        finding_id = _s(finding.get("id")).strip()
+        section_id = normalize_text(_s(finding.get("section_id")))
+        finding_text = _s(finding.get("text")).strip()
+        if not finding_id or not finding_text or section_id not in valid_sections:
+            continue
+        linked.setdefault(section_id, []).append(finding_id)
+    return linked
+
+
+def _has_broad_section_coverage(
+    sections: List[Dict[str, str]], findings_by_section: Dict[str, List[str]]
+) -> bool:
+    if len(sections) < 6 or len(findings_by_section) < 4:
+        return False
+    bands = {
+        _section_band(int(section["order"]), len(sections))
+        for section in sections
+        if section["id"] in findings_by_section
+    }
+    return bands == {0, 1, 2}
+
+
+def _theme_section_id(
+    theme: Dict[str, Any], findings_by_section: Dict[str, List[str]]
+) -> str:
+    evidence_ids = {
+        normalize_text(evidence_id) for evidence_id in theme["evidence_ids"]
+    }
+    for section_id, finding_ids in findings_by_section.items():
+        if evidence_ids.intersection(
+            normalize_text(finding_id) for finding_id in finding_ids
+        ):
+            return section_id
+    return ""
+
+
+def _plan_is_materially_clustered(
+    theme_sections: List[str], sections: List[Dict[str, str]]
+) -> bool:
+    mapped_sections = [section_id for section_id in theme_sections if section_id]
+    if len(mapped_sections) < 4 or len(set(mapped_sections)) >= 3:
+        return False
+    section_orders = {section["id"]: int(section["order"]) for section in sections}
+    mapped_bands = {
+        _section_band(section_orders[section_id], len(sections))
+        for section_id in mapped_sections
+    }
+    return len(mapped_bands) == 1
+
+
+def _split_distinct_plan_themes(
+    themes: List[Dict[str, Any]], theme_sections: List[str]
+) -> tuple[List[tuple[Dict[str, Any], str]], List[tuple[Dict[str, Any], str]]]:
+    kept: List[tuple[Dict[str, Any], str]] = []
+    redundant: List[tuple[Dict[str, Any], str]] = []
+    seen_sections: set[str] = set()
+    for theme, section_id in zip(themes, theme_sections, strict=True):
+        if section_id and section_id not in seen_sections:
+            seen_sections.add(section_id)
+            kept.append((theme, section_id))
+        else:
+            redundant.append((theme, section_id))
+    return kept, redundant
+
+
+def _unrepresented_band_themes(
+    *,
+    sections: List[Dict[str, str]],
+    findings_by_section: Dict[str, List[str]],
+    represented_sections: set[str],
+    existing_theme_names: set[str],
+) -> List[Dict[str, Any]]:
+    represented_bands = {
+        _section_band(int(section["order"]), len(sections))
+        for section in sections
+        if section["id"] in represented_sections
+    }
+    selected: List[Dict[str, Any]] = []
+    for section in sections:
+        section_id = section["id"]
+        title_key = normalize_text(section["title"])
+        band = _section_band(int(section["order"]), len(sections))
+        if (
+            section_id in represented_sections
+            or section_id not in findings_by_section
+            or band in represented_bands
+            or not title_key
+            or title_key in existing_theme_names
+        ):
+            continue
+        selected.append(
+            {
+                "theme": section["title"],
+                "priority": 0,
+                "evidence_ids": [findings_by_section[section_id][0]],
+            }
+        )
+        represented_bands.add(band)
+        existing_theme_names.add(title_key)
+    return selected
+
+
+def _section_band(section_order: int, section_count: int) -> int:
+    return min(2, (3 * section_order) // section_count)
+
+
 def normalize_artifact_source_status(
     source_status: Optional[Dict[str, Any]],
     settings: AppSettings | IngestSettings,
@@ -259,9 +463,7 @@ def preserve_public_source_displays(
                         _s(metric.get(field_name)), evidence
                     )
         downstream_evidence.extend(
-            value
-            for value in (evidence, _s(insight.get("text")))
-            if value.strip()
+            value for value in (evidence, _s(insight.get("text"))) if value.strip()
         )
     combined_downstream_evidence = " ".join(downstream_evidence)
     return (

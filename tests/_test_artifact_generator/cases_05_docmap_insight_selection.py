@@ -169,6 +169,118 @@ def test_select_artifact_insights_maps_pages_within_doc_map_section_ranges():
     assert [item["evidence_id"] for item in selected] == ["f4", "f6", "f5"]
 
 
+def test_generate_artifacts_repairs_a_clustered_broad_plan_with_early_middle_and_late_themes(
+    tmp_path,
+):
+    doc_map = _doc_map(7)
+    for section, page in zip(
+        doc_map["sections"], (1, 10, 20, 30, 40, 50, 60), strict=True
+    ):
+        section["pages"] = [page]
+    evidence = _generation_evidence(7)
+    findings = evidence["findings"]["findings"]
+    for finding, section_id, page in zip(
+        findings,
+        (
+            "section-1",
+            "section-1",
+            "section-2",
+            "section-2",
+            "section-2",
+            "section-4",
+            "section-7",
+        ),
+        (2, 3, 11, 12, 13, 31, 61),
+        strict=True,
+    ):
+        finding["section_id"] = section_id
+        finding["pages"] = [page]
+    candidates = [
+        _insight(evidence_id, score=score, coverage_role=coverage_role)
+        for evidence_id, score, coverage_role in zip(
+            ("f1", "f2", "f3", "f4", "f5", "f6", "f7"),
+            (0.99, 0.98, 0.97, 0.96, 0.95, 0.94, 0.93),
+            (
+                "market_context",
+                "behavior_shift",
+                "strategic_risk",
+                "operating_implication",
+                "investment_signal",
+                "proof_point",
+                "counter_signal",
+            ),
+            strict=True,
+        )
+    ]
+    for candidate, finding in zip(candidates, findings, strict=True):
+        candidate["pages"] = list(finding["pages"])
+
+    openai_client = FakeOpenAI(
+        _generation_responses(
+            candidates,
+            plan_evidence_ids=["f1", "f2", "f3", "f4", "f5"],
+        )
+    )
+    payload = generate_artifacts(
+        report_id="clustered-broad-plan",
+        report_name="Clustered broad plan",
+        doc_map=doc_map,
+        evidence_packs=evidence,
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=openai_client,
+        prompt_client=CapturingPromptClient(),
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    assert [
+        theme["evidence_ids"][0] for theme in payload["editorial_plan"]["themes"]
+    ] == [
+        "f1",
+        "f3",
+        "f6",
+        "f7",
+        "f2",
+    ]
+    candidate_ids = [item["evidence_id"] for item in payload["insights_candidates"]]
+    assert candidate_ids == ["f1", "f3", "f6", "f7", "f2"], candidate_ids
+    insight_ids = [item["evidence_id"] for item in payload["insights_final"]]
+    assert insight_ids == ["f1", "f3", "f6", "f7", "f2"], insight_ids
+    assert len(payload["insights_final"]) == 5, payload["insights_final"]
+    assert [step for _, _, step in openai_client.requests].count("editorial_plan") == 1
+    assert len(openai_client.requests) == 8
+
+
+def test_generate_artifacts_does_not_expand_a_narrow_editorial_plan(tmp_path):
+    candidates = [
+        _insight("f1", score=0.99, text="Demand is increasing."),
+        _insight("f2", score=0.98, text="Demand is shifting."),
+    ]
+
+    payload = generate_artifacts(
+        report_id="narrow-plan",
+        report_name="Narrow plan",
+        doc_map=_doc_map(2),
+        evidence_packs=_generation_evidence(2),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=FakeOpenAI(
+            _generation_responses(candidates, plan_evidence_ids=["f1", "f2"])
+        ),
+        prompt_client=CapturingPromptClient(),
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    assert [
+        theme["evidence_ids"][0] for theme in payload["editorial_plan"]["themes"]
+    ] == [
+        "f1",
+        "f2",
+    ]
+    assert len(payload["insights_final"]) == 4, payload["insights_final"]
+    assert {item["evidence_id"] for item in payload["insights_final"]} == {"f1", "f2"}
+
+
 def _generation_evidence(section_count: int) -> dict[str, object]:
     evidence = _section_linked_findings(max(section_count, 2))
     evidence["quote_candidates"] = {
@@ -326,6 +438,8 @@ __all__ = [
     "test_select_artifact_insights_keeps_distinct_grounded_slots_for_narrow_doc_map",
     "test_select_artifact_insights_fills_report_slots_after_theme_coverage",
     "test_select_artifact_insights_maps_pages_within_doc_map_section_ranges",
+    "test_generate_artifacts_repairs_a_clustered_broad_plan_with_early_middle_and_late_themes",
+    "test_generate_artifacts_does_not_expand_a_narrow_editorial_plan",
     "test_generate_artifacts_retains_broad_doc_map_theme_coverage",
     "test_generate_artifacts_fills_narrow_doc_map_to_required_grounded_slots",
     "test_generate_artifacts_completes_broad_theme_coverage_from_findings",

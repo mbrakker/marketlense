@@ -47,6 +47,7 @@ from src.generators.artifact_normalization import (
     normalize_expert_domain,
     preserve_public_source_displays,
     select_artifact_insights,
+    stabilize_broad_artifact_editorial_plan,
     strip_linkedin_inline_reference_ids,
 )
 from src.generators.prompt_preparation import prepare_prompt_bundle
@@ -175,9 +176,7 @@ def generate_artifacts(
     ) -> None:
         validate_evidence_references(payload, reference_evidence_packs, task_ctx)
 
-    def validate_editorial_plan(
-        payload: Dict[str, Any], task_ctx: RunContext
-    ) -> None:
+    def validate_editorial_plan(payload: Dict[str, Any], task_ctx: RunContext) -> None:
         normalize_artifact_editorial_plan(payload.get("editorial_plan"))
         validate_required_evidence_references(payload, task_ctx)
 
@@ -560,8 +559,10 @@ def generate_artifacts(
             payload, editorial_plan_ctx
         ),
     )
-    editorial_plan = normalize_artifact_editorial_plan(
-        editorial_plan_result.get("editorial_plan")
+    editorial_plan = stabilize_broad_artifact_editorial_plan(
+        normalize_artifact_editorial_plan(editorial_plan_result.get("editorial_plan")),
+        doc_map=safe_doc_map,
+        evidence_packs=safe_evidence,
     )
     editorial_plan_json = _dump_json(editorial_plan)
 
@@ -634,9 +635,7 @@ def generate_artifacts(
         editorial_plan=editorial_plan,
     )
     completed_candidate_count = len(
-        [
-            candidate for candidate in insights_candidates if _s(candidate.get("text"))
-        ]
+        [candidate for candidate in insights_candidates if _s(candidate.get("text"))]
     )
     if completed_candidate_count > initial_candidate_count:
         logger.info(
