@@ -1,15 +1,18 @@
 # Consolidated TODO
 
 Last audited: 2026-09-04
+Audit basis: repository `main` at `28ad708f3bc3badf568c5f8e31f8c9d94df52775`, current first-party implementation, WordPress theme/plugin code, and retained hosted-site evidence. Hosted-only completion criteria remain open unless a current deployed smoke/readback proves them; the temporary HTTP sandbox is not treated as a production-hosting defect.
 
-This is the repository's single, source-neutral work register. Every task is evaluated by its current codebase evidence and project decision—not by where it was first proposed. Equivalent tasks are merged under one owner; deferred, closed, and excluded work stays visible in the same register.
+This is the repository's single, source-neutral work register. Every canonical task ID appears once in the Unified Work Register. Historical evidence may explain a closure, but it must not redefine current status.
 
 ## How to Use This Backlog
 
-- An item is activated only after an owner, baseline, target, and review date are recorded in its implementation plan or issue.
-- One item owns one outcome. Overlapping requests are merged here rather than tracked in parallel.
-- Every implementation follows `AGENTS.md`: preserve role boundaries, use typed contracts, avoid placeholders and private-helper patching, and verify behavior with real boundary tests.
-- Remove an item when every stated completion check is met. Move its short evidence to **Recently Closed**.
+- The Unified Work Register is the canonical status source. `Active` items have current baseline and measurable completion checks below; `Deferred`, `Closed`, and `Excluded` items remain visible in the register.
+- Activate work only when the outcome and completion evidence are clear enough to execute. A separate issue/plan, named owner, target date, or review date is optional unless the work itself requires one; do not create process records solely to satisfy the backlog.
+- One item owns one outcome. Merge overlapping requests into the existing owner rather than creating parallel tasks.
+- Every implementation follows `AGENTS.md`: preserve role boundaries, use typed contracts, avoid placeholders/private-helper patching, and verify behavior at the real boundary.
+- Quantitative current-state claims must cite or name retained evidence with an exact producer SHA/date when they are used for release or closure decisions.
+- Close an item only when every stated completion check is met. Keep closure evidence concise here and retain detailed artifacts in `docs/quality/`, `docs/CTO_evidence/`, release evidence, or git history.
 
 | Priority | Execution lane | Goal |
 | --- | --- | --- |
@@ -21,581 +24,163 @@ This is the repository's single, source-neutral work register. Every task is eva
 
 ## Unified Work Register
 
-All work is listed below in one register. `Active` items have detailed completion checks in **Active Backlog**. `Deferred`, `Closed`, and `Excluded` are not lower-class sources; they are simply the current evidence-based outcome for the same planning standard.
-
 | Status | ID | Work item | Current outcome / merge target |
 | --- | --- | --- | --- |
-| Closed | A1 | Single autonomous supervisor, read-only `PipelinePlan`, and mandatory workflow-control authority | Plan authorization is enforced by CLI/UI control payloads; retained plan run and full regression passed. |
-| Closed | A2 | Configured run profiles | Seven typed profiles now resolve identically in plan, CLI, and UI payloads. |
-| Closed | A3 | Workflow-wide remediation-ledger rollout | The 31-workflow coverage matrix, fail-closed bounded reaper, read-only soak, and strict retained evidence bundle passed. |
-| Closed | A4 | Quarantine irreparably malformed Drive PDFs | Deterministic structural validation, durable quarantine, and retained-file revalidation are active. |
-| Closed | A6 | Budget-manager closeout and operational proof | Live Drive, OpenAI vector-store, and LLM calls recorded actual use; next governed calls were stopped before provider I/O and strict evidence passed. |
-| Closed | A10 | Budget-deferred-work recovery and operator requeue | Autonomous-MVP recovery is enabled only for three proof-bound adapters; unsupported work remains held. |
-| Closed | A11 | Ledger-driven recurring-failure prevention and operator prioritization | Read-only deterministic remediation-opportunity report groups recurring failures and holds every item without a runtime executor. |
-| Closed | A7 | Budget-aware model routing, compaction, and failure-class fallback | YAML routing, anchor-preserving compaction, same-provider fallback, retained-corpus evidence gate, and regression coverage are active. |
-| Active | A8 | Compare retained model-call replay bundles | Standalone read-only regression outcome. |
-| Closed | A9 | Canonical report-source identity and publication provenance | Schema v19 immutable observations, deterministic source resolution, safe public projection, render-only invalidation, and live idempotent source capture passed. |
-| Closed | P1 | Publish snapshot naming and synchronous idempotent publishing | Public/UI terminology now says Publish Readiness; the compatibility alias preserves callers and synchronous review-gated publishing remains unchanged. |
-| Closed | A14 | Calibrate acquisition policy from retained route economics | Read-only compatible cohort statistics and thresholded operator proposals are active. |
-| Active | A15 | Complete explicit model-policy coverage and policy-effectiveness evidence | Extend hash-pinned controls and measured cost/quality evidence to every production model namespace. |
-| Active | A17 | Calibrate deterministic admission thresholds from retained preflight funnels | Produce compatible-cohort, read-only threshold proposals without automatically admitting a source. |
-| Active | A18 | Harden discovery recall and authoritative acquisition handoff | Establish ground-truth recall, reversible candidate state, real recovery, and a lossless authoritative qualification handoff. |
-| Active | A19 | Harden acquisition routes, terminal semantics, and artifact verification | Make every route converge on consistent verified-artifact semantics, correct mailbox/onsite state, bounded recovery, and measurable route economics. |
-| Closed | A16 | Durable corpus rehabilitation campaign execution | Review-gated retained-evidence campaigns now queue idempotent repair work without public writes. |
-| Active | P2 | Harden bounded public-observability events | Narrow log-event size-bound hardening for public-facing boundaries. |
-| Active | P3 | Resolve hosted-site trust blockers | Safe-error boundary completed; hosted trust outcome remains. |
-| Active | P10 | Operate correlated public-render failure telemetry | Hosted release-observability outcome. |
-| Closed | P12 | Release-locked sandbox publish canary | Exact-HEAD isolated three-report cohort published with authenticated readback and an identical zero-write replay on 2026-08-27. |
-| Closed | P14 | Retain isolated live proof of strict cohort-manifest publication binding | The same isolated cohort bound 3/3 admitted members only, retained a deterministic candidate set, and replayed it with no WordPress writes. |
-| Closed | P15 | Operate canonical publish-readiness telemetry and refresh planning | Typed deterministic refresh plans now route only proven minimum recovery work. |
-| Closed | P13 | Make WordPress file-ID lookup independently authoritative | Authenticated immutable file-ID lookup now matches remote posts from isolated state, fails closed on ambiguity, and preserves no-write reuse. |
-| Active | P4 | Close public briefing, correction, and submission intake | Implemented; close after hosted smoke proves the live intake routes. |
-| Active | P5 | Finish responsive search and navigation | Responsive public-workflow outcome. |
-| Active | P6 | Raise report-card and evidence-exhibit editorial quality | Release gate is implemented and live-validated; blind human editorial acceptance remains. |
-| Active | P7 | Improve hosted public-site performance without contract loss | Measured public-performance outcome. |
+| Closed | A1 | Single autonomous supervisor, read-only `PipelinePlan`, and mandatory workflow-control authority | Plan authorization is enforced by CLI/UI control payloads; retained plan run and regression evidence passed. |
+| Closed | A2 | Configured run profiles | Seven typed profiles resolve identically through plan, CLI, and UI. |
+| Closed | A3 | Workflow-wide remediation-ledger rollout | The 31-workflow coverage matrix, bounded fail-closed reaper, read-only soak, and strict retained evidence passed. |
+| Closed | A4 | Quarantine irreparably malformed Drive PDFs | `pdf-integrity-v1`, durable quarantine, and retained-file revalidation are implemented. |
+| Closed | A5 | Terminal blocker and avoided-browser-spend route policy | Proven terminal blockers stop unnecessary browser escalation and retain avoided-work evidence. |
+| Closed | A6 | Budget-manager closeout and operational proof | Live governed Drive/vector/LLM calls recorded actual use and subsequent calls were stopped before provider I/O at budget limits. |
+| Closed | A7 | Budget-aware model routing, compaction, and failure-class fallback | Explicit route policy, anchor-preserving compaction, same-provider fallback, and retained-corpus gates are implemented. |
+| Active | A8 | Compare retained model-call replay bundles | Build a deterministic, zero-provider comparison outcome for retained replay bundles. |
+| Closed | A9 | Canonical report-source identity and publication provenance | Immutable source observations, deterministic resolution, safe projection, and render-only invalidation are implemented. |
+| Closed | A10 | Budget-deferred-work recovery and operator requeue | Three proof-bound recovery adapters are enabled; unsupported work remains held. |
+| Closed | A11 | Ledger-driven recurring-failure prevention and operator prioritization | Deterministic remediation-opportunity grouping exists and unregistered execution remains held. |
+| Closed | A12 | Complete configured model-pricing coverage for spend budgets | Versioned approved pricing, cached-input billing, attribution, and hold-before-I/O behavior are implemented. |
+| Closed | A13 | Former recovery/backlog source item | Historical recovery ownership was merged into A10; backlog-source integrity is enforced separately by CI tests. |
+| Closed | A14 | Build retained route-economics calibration and proposal tooling | Read-only compatible-cohort route economics and thresholded operator proposals/abstentions are implemented; A19 owns mechanism-level telemetry improvements. |
+| Active | A15 | Complete explicit model-policy coverage and policy-effectiveness evidence | Retire remaining compatibility fallback and retain decision-useful compatible evidence. |
+| Closed | A16 | Durable corpus rehabilitation campaign execution | Review-gated retained-evidence campaigns enqueue idempotent repair work without public writes. |
+| Active | A17 | Calibrate deterministic admission thresholds from retained preflight funnels | Produce read-only compatible-cohort threshold proposals without automatic admission changes. |
+| Active | A18 | Harden discovery recall and authoritative acquisition handoff | Establish ground-truth recall, reversible candidate state, executable recovery, and a lossless authoritative qualification handoff. |
+| Active | A19 | Harden acquisition routes, terminal semantics, and artifact verification | Make every route converge on consistent verified-artifact semantics, correct mailbox/onsite state, bounded recovery, and mechanism-level economics. |
+| Closed | P0 | Public editorial remediation and sandbox end-to-end baseline | The baseline remediation/publish path was proven on a bounded sandbox cohort; successor public outcomes are owned by P2-P10/P12-P15. |
+| Closed | P1 | Publish snapshot naming and synchronous idempotent publishing | Public/UI terminology uses Publish Readiness; synchronous review-gated idempotent publishing is preserved. |
+| Active | P2 | Harden bounded WordPress public-observability events | Define and enforce a bounded/redacted PHP event contract for intake and public-render boundaries; R6 owns aggregate reduction telemetry. |
+| Deferred | P3 | Production HTTPS and canonical transport | Activate with production-host migration. Current sandbox HTTP is intentional; do not spend MVP effort retrofitting temporary hosting. |
+| Active | P4 | Close public briefing, correction, and submission intake | WordPress-native intake exists; close with P2-compliant events and current hosted smoke of validation, persistence, and confirmation. |
+| Active | P5 | Validate and close responsive search and navigation | Mobile navigation/search/filter implementation exists; remaining work is hosted visual/accessibility verification and regression evidence. |
+| Active | P6 | Complete blind human editorial acceptance | Automated readiness is implemented; close against the retained multi-batch human-review protocol rather than a superseded 30×3 rubric. |
+| Active | P7 | Fix public performance measurement and reach hosted targets | Correct the measurement contract first, then optimize against explicit targets without metadata/content regression. |
 | Active | P8 | Complete concise public evidence, methodology, and related-content surfaces | Public evidence/discovery outcome. |
-| Active | E6 | Retain a hash-pinned claim-embedding benchmark export | Semantic benchmark coverage outcome. |
+| Closed | P9 | Retained public-advisory benchmark | Saved baseline comparison and grounded repair proposal/abstention output are implemented. |
+| Active | P10 | Operate correlated public-render failure telemetry | Hosted aggregation/alerting outcome; safe render boundary itself is implemented. |
+| Closed | P11 | Establish verified acquisition-to-ingest file/identity handoff | Canonical retained-file, MD5, source-identity, and idempotent ingest handoff were proven; A19 owns stronger cross-route structural artifact acceptance. |
+| Closed | P12 | Release-locked sandbox publish canary | Exact-HEAD isolated three-report cohort published with authenticated readback and zero-write replay. |
+| Closed | P13 | Make WordPress file-ID lookup independently authoritative | Authenticated immutable file-ID lookup reuses matching posts, fails closed on ambiguity, and preserves no-write reuse. |
+| Closed | P14 | Retain isolated live proof of strict cohort-manifest publication binding | The isolated cohort bound only admitted members and replayed with no WordPress writes. |
+| Closed | P15 | Operate canonical publish-readiness telemetry and refresh planning | Typed deterministic refresh plans route only proven minimum recovery work. |
+| Closed | E1 | Claim-embedding freshness, retention, and cost controls | Due-work selection, leases, budgets/retries, health telemetry, and live bounded embedding proof are implemented. |
+| Closed | E2 | Retained-artifact benchmark | Briefing/Signal prompt-token deltas, overlap/source coverage, and no-vector fallback are measured. |
+| Closed | E3 | Lineage-driven minimum regeneration | Deterministic minimum regeneration authority and render-only enforcement are implemented. |
+| Closed | E4 | Executable retained PDF benchmark corpus in CI | Retained corpus is hash-pinned and CI-gated. |
+| Closed | E5 | Crop-QA scorecards and selection telemetry | Retained crop-QA sidecars support operator-only quality/clipping/storage scorecards. |
+| Active | E6 | Retain a hash-pinned claim-embedding benchmark export | Persist approved vectors for reproducible zero-provider semantic benchmarking. |
+| Closed | E7 | Planner-enforced artifact-family reuse | Retained render/crop/checkpoint/publication reuse is planner-enforced with plan/actual reconciliation. |
+| Closed | E8 | Use canonical source identity to suppress duplicate research work | Exact identity/content-hash package reuse is implemented with retained evidence. |
+| Closed | E9 | Materialize prompt-family outputs and route only required model calls | Primary model families use fail-closed pre-call provenance reuse. |
 | Active | E10 | Attest active model-pricing rates before they become stale | Keep cost attribution and spend enforcement trustworthy as provider pricing changes. |
-| Closed | E11 | Measure and optimize structured-output recovery effectiveness | A fresh isolated three-PDF cohort retained 74 attributed outcomes with 100% first-pass validity and zero repair cost/tokens; schema, grounding, and publication safeguards remained enforced. |
-| Active | E14 | Calibrate category-fit coverage from retained outcomes | Turn category-fit decisions into grounded mapping and recovery improvements. |
-| Active | E13 | Measure candidate-regeneration promotion effectiveness | Turn retained candidate lineage and promotion outcomes into bounded repair-quality improvements. |
-| Closed | E8 | Use canonical source identity to suppress duplicate research work | Exact canonical-identity/content-hash package reuse, bounded decision telemetry, focused route/regeneration regression tests, and [retained-corpus evidence](docs/quality/e8-source-reuse-evidence-2026-08-28.md) prove duplicate acquisition/research suppression with zero duplicate packages for supported equivalent-source cases. Release verification passed exact-HEAD CI and evidence review. |
-| Closed | E9 | Materialize prompt-family outputs and route only their required model calls | All primary report model families now perform fail-closed pre-call provenance reuse; retained-corpus measurement shows material avoided calls with unchanged gates. |
-| Closed | E3 | Lineage-driven minimum regeneration | Remains closed; E7 owns expansion beyond the proven rendered-HTML family. |
-| Active | E12 | Persist pre-category editorial context checkpoints | Extend typed recovery from source/vector reuse to genuinely single-family taxonomy and category-fit retries. |
-| Closed | E4 | Executable retained PDF benchmark corpus in CI | Retained corpus is hash-pinned and CI-gated; local release-equivalent run passed. |
-| Active | R1 | Publish release-evidence reviews where reviewers work | Reviewer-surface outcome, including exact-tested-HEAD linkage and runtime-corpus expansion. |
-| Active | R2 | Enforce role boundaries, direct-I/O discipline, and controlled module growth | Architecture enforcement outcome. |
-| Active | R3 | Restore service quality coverage above the retained baseline | Retained-baseline outcome. |
-| Active | R6 | Review bounded-log reduction telemetry and remediate recurring callers | Operator feedback outcome for attempted oversized standard events. |
+| Closed | E11 | Measure and optimize structured-output recovery effectiveness | Fresh isolated cohort retained 100% first-pass structured validity with zero repair cost/tokens while downstream gates remained active. |
+| Active | E12 | Persist pre-category editorial context checkpoints | Extend typed recovery to genuinely category-only retries. |
+| Active | E13 | Measure candidate-regeneration promotion effectiveness | Compare compatible candidate cohorts and reduce repeated unsuccessful repair spend. |
+| Active | E14 | Calibrate category-fit coverage from retained outcomes | Turn retained category-fit decisions into grounded mapping/prompt proposals. |
+| Active | R1 | Publish release-evidence reviews where reviewers work | Link exact-tested-HEAD evidence/approval to the PR/release surface and declare runtime-corpus representativeness. |
+| Active | R2 | Enforce role boundaries, direct-I/O discipline, and controlled module growth | Close targeted boundary-coverage and expiring-waiver gaps without generic governance noise. |
+| Active | R3 | Restore service quality coverage above the retained baseline | Add behavior-focused service coverage and refresh the baseline only from a passing exact-commit run. |
+| Closed | R4 | Publication usage/projection reconciliation guard | Missing/invalid/materially lagged usage/projection evidence stops public writes without rebuilding. |
 | Closed | R5 | Hash-verified dependency lock artifacts | Native Ubuntu CPython 3.12 wheelhouse and offline hash-locked install are verified. |
-| Active | S3 | Simplify the PDF visual-heuristics boundary | Canonical PDF-boundary outcome. |
-| Active | S4 | Give WordPress shortcodes semantic ownership | WordPress boundary outcome. |
-| Deferred | D1 | Full report-generation DAG scheduler | Revisit when profiling shows material idle dependency time beyond simple parallelism. |
-| Deferred | D2 | Streaming Drive prefetch queue and worker-safe PDF context pooling | Revisit when batches wait on Drive while worker capacity is idle. |
-| Deferred | D3 | Adaptive concurrency and route-specific worker buffers | Revisit when sustained runs show throttling, SQLite contention, or browser saturation. |
-| Deferred | D4 | Multi-provider failover | Revisit when outages create measurable failed-run volume or a service-level commitment requires it. |
+| Active | R6 | Review bounded-log reduction telemetry and remediate recurring callers | Aggregate reduction attempts and convert recurring oversized callers into bounded remediation. |
+| Closed | S1 | Canonical service-boundary audit | CI-enforced service-boundary audit preserves approved external-effect ownership. |
+| Closed | S2 | Publish/ingest facade audit | CI-enforced facade/decomposition coverage preserves routing, retries, state, and external-effect contracts. |
+| Active | S3 | Simplify the PDF visual-heuristics boundary | Only address measured remaining coupling behind the canonical PDF boundary. |
+| Active | S4 | Give WordPress shortcodes semantic ownership | Split the catch-all shortcode owner into coherent feature families without output/hook changes. |
+| Deferred | D1 | Full report-generation DAG scheduler | Revisit only if profiling shows material idle dependency time beyond simple parallelism. |
+| Deferred | D2 | Streaming Drive prefetch queue and worker-safe PDF context pooling | Revisit if batches materially wait on Drive while workers are idle. |
+| Deferred | D3 | Adaptive concurrency and route-specific worker buffers | Revisit on sustained throttling, SQLite contention, or browser saturation. |
+| Deferred | D4 | Multi-provider failover | Revisit when outage volume or an SLA justifies the complexity. |
 | Deferred | D5 | Same-publisher warm workers/session reuse | Revisit when same-publisher volume justifies session-isolation risk. |
-| Deferred | D6 | Arbitrary generic DAG or due-work scheduler | The implemented typed durable workflow queue owns new work and budget deferrals; keep a user-configurable scheduler deferred. |
-| Closed | D7 | Complete queue-backed publication coverage and live recovery proof | Typed Signal/Briefing/cover/readiness/WordPress workers, Strategy Outputs UI submission, deferred-work handoff, architecture enforcement, recovery, and controlled live provider/dry-run WordPress evidence are retained. |
+| Deferred | D6 | Arbitrary generic DAG or due-work scheduler | Typed durable workflow queues own current work; keep a user-configurable generic scheduler deferred. |
+| Closed | D7 | Complete queue-backed publication coverage and live recovery proof | Critical publication queues have canonical handlers and retained controlled live evidence. |
 | Deferred | D8 | LinkedIn persona variants and comparative positioning | Revisit when an active distribution workflow measures their value. |
-| Deferred | D9 | Golden-output prompt evaluation and broader prompt-family scoring | Revisit when the existing fixture corpus cannot detect a measured quality regression. |
-| Deferred | D11 | Root pre-commit, declarative quality-gate manifest, stricter mypy/Ruff, and hygiene scorecards | Revisit when current CI/quality-policy evidence proves a specific enforcement gap. |
-| Deferred | D12 | Governed staging WordPress publish/projection canary | Revisit when a non-public staging site and a named human approver are available; use the typed publish/projection queues to verify a real post readback and projection mutation without public release risk. |
-| Closed | C1 | Cached-provider accounting reconciliation corpus | Real `provider_hit` fixture and cached-token tamper rejection are in the CI-covered ledger path. |
-| Closed | C2 | Bounded multimodal crop-QA escalation | Typed escalation generator and deterministic no-model default are implemented and tested. |
+| Deferred | D9 | Golden-output prompt evaluation and broader prompt-family scoring | Revisit only when current fixtures fail to detect a measured quality regression. |
+| Deferred | D10 | Browser executor/static-DOM/prompt-payload/route-playbook tuning | Revisit only from a measured acquisition gap; A18/A19 own current correctness work. |
+| Deferred | D11 | Root pre-commit, declarative quality-gate manifest, stricter mypy/Ruff, and hygiene scorecards | Revisit when current CI evidence proves a specific enforcement gap. |
+| Deferred | D12 | Governed staging WordPress publish/projection canary | Revisit when a non-public staging site and named human approver are available. |
+| Closed | C1 | Cached-provider accounting reconciliation corpus | Real provider-hit and tamper-rejection fixtures are in the CI accounting path. |
+| Closed | C2 | Bounded multimodal crop-QA escalation | Typed escalation generator and deterministic no-model default are implemented/tested. |
 | Closed | C3 | Lazy model construction, ranking/crop shortcuts, prefetch, and route prompt improvements | Landed behind existing boundaries with retained regression evidence. |
-| Closed | C4 | Capability maps and autonomous release/remediation summaries | Generated capability maps and autonomous smoke evidence are present. |
-| Closed | C5 | Prompt partials/schema snippets and prompt fixture regression | Landed with dry-run and corpus validation. |
-| Closed | C6 | Core discovery, mailbox acquisition, signal persistence, and claim-embedding persistence | Durable paths, fallback behavior, and focused tests are present. |
-| Closed | C7 | Logging content-exposure controls | Redaction, deterministic bounds, retained-content checks, and regression coverage are active; P2 and R6 retain hardening and monitoring. |
-| Closed | C8 | CTO evidence-collector integrity | Snapshot, exact-HEAD, provenance, consistency, and inventory validation are implemented; R1 owns runtime-corpus expansion. |
+| Closed | C4 | Capability maps and autonomous release/remediation summaries | Generated capability maps and autonomous smoke evidence exist. |
+| Closed | C5 | Prompt partials/schema snippets and prompt fixture regression | Dry-run and corpus validation are implemented. |
+| Closed | C6 | Establish baseline discovery/mailbox/signal/embedding persistence paths | Durable baseline paths exist; A18/A19 own discovery/acquisition correctness hardening rather than reopening this capability milestone. |
+| Closed | C7 | Logging content-exposure controls | Python structured logging is bounded/redacted; P2 owns WordPress public-boundary events and R6 owns reduction telemetry. |
+| Closed | C8 | CTO evidence-collector integrity | Snapshot, exact-HEAD, provenance, consistency, and inventory validation are implemented; R1 owns reviewer-surface/runtime-corpus expansion. |
 | Excluded | X1 | Draft HTML published before enrichment | Public progressive enrichment is not permitted. |
 | Excluded | X2 | Automatic lower private-API promotion thresholds | Conservative thresholds remain mandatory. |
-| Excluded | X3 | Invented acquisition-form identity facts or public pipeline diagnostics | Only verified identity facts may be mapped; diagnostics remain operator-only. |
-
-## Recently Closed
-
-- **E11 — Measure and optimize structured-output recovery effectiveness (2026-08-29):** The canonical bounded scorecard now supports optional run-ID filtering so a cohort denominator cannot absorb unrelated log traffic. Against the retained 5,038-output baseline (91.624% first-pass validity, 7.285% terminal structured-output failures, and $0.031435 repair cost), a fresh isolated three-PDF Drive/OpenAI cohort retained 74 fully attributed `report_analysis` outcomes from `openai:gpt-5.6-luna`: 100.000% first-pass valid, zero repair attempts/tokens/cost, and zero terminal structured-output failures. This is an observed +8.376 percentage-point first-pass result; because the historical baseline has partial attribution and the current cohort uses the current model, it is not a single-cause claim. Schema, semantic, grounding, and editorial gates remained active; the one non-ready report was held before publication. The guarded publish command made no HTTP request or WordPress write. See [`docs/quality/e11-structured-output-recovery-evidence-2026-08-28.md`](docs/quality/e11-structured-output-recovery-evidence-2026-08-28.md).
-
-- **E9 — Materialize prompt-family outputs and route only their required model calls (2026-08-27):** Independently retained, hash-verified primary outputs now cover document map, every enabled evidence pack, taxonomy, context-category fit, figure captions, seven editorial artifact families, and semantic/grounding validators. Exact report/source, prompt/dependency, provider/model-policy, schema/validator, semantic-input, configuration, output, and validation provenance is required before a family can bypass its provider route; missing or invalid proof remains a bounded existing-recovery regeneration reason. A representative retained-source live full report pass made 17 calls (131,302 input / 14,837 output tokens; $0.044064); its replay reused nine valid families and made only eight required repair/validation calls (69,998 / 8,142; $0.023770), reducing calls 52.9% and cost 46.1% without weakening gates. Focused compatibility, single-family, direct non-artifact pre-call, recovery, rendering, and publish-readiness tests passed; the retained evidence record is [`docs/quality/e9-prompt-family-reuse-evidence-2026-08-27.md`](docs/quality/e9-prompt-family-reuse-evidence-2026-08-27.md).
-
-- **A10 — Budget-deferred-work recovery and operator requeue (2026-08-10):** The reviewed `autonomous_mvp` configuration overlay enables the one-shot supervisor plus bounded deferred-work and remediation reapers at two records per pass, without enabling queue-worker batches or a second scheduler. The only legacy deferred-work adapters are `report_generation`, `report_download`, and `publisher_inventory`; unknown workflows remain remediation-held. Report recovery now forbids `latest_safe` fresh fallback, so invalid checkpoint proof cannot restart PDF/OCR/extraction/model work. Structured recovery events retain adapter, due time, plan hash, reused-artifact summary, attempt, terminal result, and bounded reason. Focused recovery/configuration tests passed (61). A retained real render recovery resolved from `analysis_complete` with one attempt and zero new provider calls/cost, avoiding source preparation, selection, analysis, PDF/OCR/crop, vector, analysis-model, and validator-model work. Real report-download and publisher-inventory recovery handoffs each converged on one durable pending canonical queue job across repeated submissions. Existing E11 owns recovery-effectiveness measurement, so no duplicate follow-up task was added.
-
-- **Task 1 — Fixed cohort and execution-limit semantics (2026-07-26):** Ingest now exposes distinct `--cohort-size`, `--attempt-limit`, `--success-target`, and `--cohort-manifest` controls; the legacy `--limit` remains only as an explicit deprecated attempt-limit alias and cannot be combined with its replacement. New schema-`1.1` cohort manifests freeze immutable Drive members before model-backed report work and retain each report ID, canonical source identity, deterministic selection reason, configuration hash, policy hash, cohort ID, and derived validation-run ID. Replay recomputes and verifies both identities so tampered membership fails closed, while schema-`1.0` manifests remain readable. Fixed-cohort and attempt-limit failures stay in the denominator and never trigger replacement; only explicit `--success-target` may continue selection. Focused regression coverage proves manifest replay, identity changes on membership changes, tamper rejection, distinct CLI controls, and the failed-member/no-replacement case. A fresh isolated real Drive/OpenAI run froze a one-report cohort before 22 provider calls (144,203 tokens; $0.114671); its independent category-fit gate failure remained the sole cohort denominator member with zero replacements, and a second manifest replay selected no substitute. P12 owns the significant next step of repeat sandbox publishing, while P14 owns manifest-authoritative publication selection, so no duplicate follow-up item was added.
-
-- **Task 9 — Validation-run attribution and reliability telemetry (2026-07-26):** Settings startup resolves the complete finite production model-policy namespace inventory and rejects an unknown or uncovered route before provider I/O; run preflight retains the resolved namespace/provider/model/full-policy matrix. Validation-run model usage also fails closed without complete validation/cohort/workflow/report/publisher identity; workflow/stage/artifact/action/semantic-task context; prompt/policy namespaces; provider/model/cache/token/cost/repair data; and configuration/policy/build provenance. Ingest and publication materialize the same deterministic manifest-and-ledger-derived reliability artifact, with the complete admitted-to-readback funnel, per-transition failure code/count/duration/usage/recovery/intervention/rerun metrics, and stable failure Pareto. Publication continues to verify the existing signed `publish_readiness.json` instead of reinterpreting a report package. A fresh isolated Drive/OpenAI run (52 attributed calls, 474,235 tokens, $0.309298) and its guarded publish pass exercised both artifact writes; the live failure telemetry exposed and then verified the optional-repair-skip accounting correction. The active E11 recovery-effectiveness item remains the significant follow-on owner, so no duplicate backlog item was added.
-
-- **Task 8 — Canonical publish-readiness gate (2026-07-26):** Report rendering now persists one signed, hash-bound `publish_readiness.json` decision over the exact final HTML and normalized WordPress projection. It records report/artifact/HTML/projection/configuration/policy/revision hashes, all rule results, classified provenance, and expiry/staleness conditions. The canonical gate requires final semantic and grounding success, consistent category decisions, retained material-claim evidence, promoted regeneration, and complete accepted-crop-to-evidence-to-insight-to-caption-to-takeaway linkage. It blocks internal identifiers, raw evidence/OCR text, mojibake, placeholders, mechanical scaffolding, repeated boilerplate, broken local assets, private paths or Drive URLs, filename-style titles, duplicated years, unresolved truncation, and unsafe source provenance across visible and metadata surfaces. Weak, text-only, unaccepted, and unlinked figure cards are omitted without changing crops. Publication verifies the retained artifact before every WordPress preflight action and verifies the actual media-substituted projection; it no longer reinterprets validation artifacts independently. A real retained provider-produced Mintel package passed the gate with matching final HTML and projection hashes and zero rendered visual/chart cards, removing its four retained weak-evidence cards. The focused affected regression suite passed 117 tests.
-- **Task 6 — Grounding-safe atomic regeneration (2026-07-26):** Regeneration now persists `artifacts_regen_candidate_<attempt>.json` and a schema-backed candidate audit before touching `artifacts.json`. Schema, evidence-ID, source-page, deterministic lineage, grounding, semantic, and public-editorial validation all pass before the canonical atomic store promotes the candidate; the prior artifact remains recoverable until that replacement succeeds. Unsupported, numerically inconsistent, contradicted, invalid-comparison, missing-material-evidence, and hallucinated-evidence-ID findings now block readiness, as does a grounding-provider failure unless the complete deterministic candidate check passed. Audits retain material claim/insight identity, original/candidate evidence IDs and pages, issue codes, scope, before/after hashes, and promotion/rollback outcome. A real retained provider-produced artifact passed as an unchanged candidate, while a hallucinated-ID candidate was blocked with the canonical SHA-256 unchanged. A fresh isolated Drive/LLM run admitted one 140-page, 6.20 MB source and made 20 real model calls (98,380 input / 38,925 output tokens, $0.102448); it correctly stopped at the unrelated category-fit policy gate, and the zero-candidate publish preflight made no WordPress write. The full regression suite passed (4,810 tests plus 20 subtests).
-- **Task 5 — Failure-specific checkpoint recovery (2026-07-24):** A finite, typed recovery registry now maps taxonomy JSON/schema, category-fit contradiction, unsupported material claim, final-HTML internal identifier, missing card manifest, and WordPress readback failures to their retryability, scope, one-attempt ceiling, required checkpoint, reusable artifacts, invalidations, next action, and typed terminal fallback. The durable remediation ledger auto-enqueues only rules with current validated proof, revalidates that proof immediately before execution, preserves run/report/artifact/budget identity, and terminates rather than looping after a failed attempt. The report and publishing paths supply the retained checkpoint/lineage evidence; the adapter performs targeted report repair or GET-only WordPress reconciliation. A real retained-report recovery rerendered and revalidated only the final HTML, resolved its durable job, issued zero provider calls, consumed zero new tokens/cost, and avoided source preparation, selection, analysis, PDF/OCR/crop/vector/model/validator work. Relative to that report's retained 23-call analysis run, this avoided replaying 112,670 input tokens, 47,271 output tokens, and $0.121702 observed model spend. The fresh current-policy discovery→acquisition→ingest→publish workflow passed with an authenticated zero-write WordPress reuse, and the full suite passed (4,795 tests plus 20 subtests).
-- **Task 4 — Unified structured-output recovery (2026-07-24):** All required report JSON families now use one typed, schema-constrained execution service: document map, taxonomy, category fit, evidence packs, report artifacts, cover semantics, and semantic/grounding validation. It normalizes Unicode/fences, parses deterministically, validates and normalizes the canonical schema, performs one deterministic repair, one original-response/exact-error model repair, one source-evidence regeneration, then records either an explicit downstream-contract abstention or a typed terminal failure. Each attempt retains report/family, attempt, error class, provider/model, tokens, cost, and final disposition; empty output cannot become a successful artifact. Existing retained Stocksy empty document-map/taxonomy artifacts are covered by regression tests. A real fixed Drive cohort initially exposed two OpenAI strict-schema incompatibilities (`oneOf` and persisted-only fields); the provider projection now converts disjoint unions to `anyOf` and omits storage-owned fields while canonical validation remains unchanged. The same cohort then completed discovery through ingestion and rendering with real model calls, validation, targeted recovery/regeneration, one draft WordPress write/readback, and a zero-write idempotent repeat.
-- **Task 3 — Deterministic admission preflight (2026-07-24):** A typed, versioned preflight now gates every acquired source before vector-store creation, evidence generation, OCR, or editorial model work. It deterministically records supported-PDF and readable-structure checks, native-text and configured size/page thresholds, exact duplicate identity and near-title signal, quarantine, source/publisher/title/URL identity, evidence-family potential, canonical runtime dependencies/paths, model-policy coverage, and a budget forecast. The retained decision hash and bounded input summary are persisted both in the admission funnel and fixed cohort manifest; rejected sources remain visible in that funnel but are skipped and excluded from the ingest-reliability denominator. A fresh 24-page, 8.31 MB live Drive source was admitted with a `0.008281 USD` forecast, completed the full report pipeline, and its controlled WordPress draft creation and strict idempotent repeat passed with no second write. Focused admission-to-publication regression coverage passed (146 tests).
-- **P13 — Authoritative WordPress file-ID lookup (2026-07-23):** The canonical authenticated lookup now validates each returned post against immutable `ml_file_id`/content provenance and fails closed if more than one active post matches. A fresh isolated-state one-report canary matched an existing remote post without a local publish-idempotency record, performed zero WordPress writes, completed authenticated readback, recorded a reused repeat publication, and passed full validation-manifest closure. Focused ambiguity/no-write coverage and the full suite passed.
-- **P0/P1 remediation and sandbox end-to-end validation (2026-07-20):** The canonical runtime/path/policy and public-editorial remediation package was exercised against an isolated real-report namespace. The final recovery makes a missing report-card manifest invalidate render reuse, rebuilds the required assets/manifest, and treats blocked public metadata as a typed render error. Optional card placeholders now normalize to omission rather than leaking or blocking valid public cards; `--force-report-cards` requests the analysis checkpoint only for an existing rendered package, while new files take the normal pipeline. The 60-minute report-analysis lease and spend-only budget profile were active. A five-report live Drive cohort completed in 46.23 minutes; every package passed semantic and editorial validation and had all three card assets. Canonical sandbox publication created three new posts, reused two existing posts, and a repeat made zero new writes through durable idempotency. The affected regression suite passed 122 tests; the isolated ledger recorded 159 completed LLM calls, 1,883,341 tokens, and $1.152941 estimated spend, below the $6 cap.
-- **A16 — Durable corpus rehabilitation campaign execution (2026-07-19):** Reports schema v23 persists immutable candidate classification, source checksum/reference, immutable reusable-artifact IDs, campaign/approval hashes, planned-unavailable versus actual cost, and item-level queue identity. Submission rereads the current retained corpus before each queue handoff and holds changed evidence; it uses the canonical maintenance queue rather than reimplementing repair. The real retained-corpus canary classified 99 reports (25 reusable, 36 lineage-incomplete, 38 provenance-incomplete), approved one eligible report with 115 reusable artifacts, and idempotently retained one `artifact_repair` queue job across a second submission. It made zero provider calls, recorded $0 actual cost, and made no public write.
-- **A14 — Calibrate acquisition policy from retained route economics (2026-07-19):** The read-only route-economics command groups only policy-compatible publisher/route cohorts and reports count, verified-success rate, median/p95 elapsed time, browser/model cost, incomplete-field state, and avoided operations. It emits proposals only above deterministic sample/improvement thresholds and never mutates routing or history. A live StackAdapt direct-PDF canary reached the canonical PDF budget stop before provider I/O, persisted one complete 3,860 ms/$0 resource envelope, and correctly returned `no_recommendation: insufficient_direct_sample`; focused route-policy and telemetry regression tests passed.
-- **A4 — Quarantine irreparably malformed Drive PDFs (2026-07-19):** The deterministic `pdf-integrity-v1` gate now checks PDF header, EOF, parser opening, page count, and byte hashes before extraction, OCR, or model work. A matching unchanged Drive checksum is skipped from durable state; a valid replacement supersedes the old active record. The real retained Capgemini benchmark PDF passed the operator revalidation path (540,430 bytes, 15 pages) and recorded a `cleared` state with no provider call. Focused structural, migration, ingest-stop, durable-state, and operator CLI tests passed.
-- **A2 — Configured run profiles (2026-07-19):** `safe_default`, `fast_cached`, `repair_failed`, `publish_ready`, `browser_acquisition`, `cost_saver`, and `high_quality` are parsed from the canonical YAML controls, resolved deterministically with a profile hash, and carried through plan, CLI, and UI execution payloads. The live `plan --profile browser_acquisition` resolved the expected browser-safe controls, while tests cover recommendation, explicit override, invalid profile, incompatible profile, and CLI/UI identity.
-- **A11 — Ledger-driven recurring-failure prevention and operator prioritization (2026-07-19):** `remediation-opportunities` now groups canonical records by workflow, failed stage, typed error, proposed action, retryability, and runbook coverage. It emits only bounded record IDs and opaque source/publisher hashes with recurrence, age, attempted operation/cost, checkpoint/idempotency proof counts, deterministic priority reasons, and an explicit `held_unregistered` disposition. The live retained ledger reported 24 records in 15 groups; its most recurrent group had eight records and was held because its runbook mapping and execution proof were absent. No remediation record, provider call, or external side effect was changed.
-- **D7 — Queue-backed publication coverage and live recovery proof (2026-07-18):** All critical queues have registered non-compatibility handlers and architecture tests prohibit direct major-stage chaining and UI subprocess ownership. A controlled live Briefing used real projected evidence from two publishers, one real model call (8,796 input / 3,460 output tokens), a frozen manifest, durable cover/readiness completion, and an explicit approval-driven `wordpress_publish --dry-run` with zero WordPress write. A live Signal root completed one candidate stage plus eight independent generation, cover, and readiness paths. The legacy deferred-work adapter preserves rows while routing new work through the shared lifecycle. D12 owns the separate staging-only verified WordPress post/projection canary.
-- **E7 — Planner-enforced artifact-family reuse (2026-07-17):** Enforce mode now covers retained render, crop, checkpointed analysis/validator, combined crop-plus-analysis, publication preflight, and cross-report reads with a persisted plan/actual reconciliation, report-artifact lease, canonical lineage replacement, and requested-family dependency scoping. Real retained-report replays matched every planned stage/call/side effect: the final post-fix render-only canary completed in 1.190 s (1.190 s audited) with exactly `render_complete`, `html_render`, and checkpoint/HTML writes; crop-only completed in 15.760 s (15.513 s audited) with only crop QA/render and HTML render; and a real model-policy repair issued 17 LLM calls (134,969 input / 40,241 output tokens, estimated $0.114225) while retaining source extraction. The final HTML was complete (77,911 bytes, 469 tags, five images, no `undefined`). A temporary normal-policy replay rejected an incomplete payload before rendering or publication, and a later normal-policy repair completed in 245.980 s with a matched audit. A final full fresh rebuild was correctly stopped by canonical PDF budget authority before provider I/O; no budget bypass was attempted.
-- **A3 — Workflow-wide remediation-ledger rollout (2026-07-17):** The generated 31-workflow matrix is CI-checked. A controlled typed `provider_timeout` persisted one remediation record across two submissions; the bounded reaper inspected it once and held it as `operator_action_required` without an executor or external side effect. The read-only soak reported one created, one deduplicated, zero stale, zero eligible, and one held record with no missing runbook mapping. Strict evidence bundle `21a046e89de64aa3a4fcc73250e74074` passed on exact commit `3da3d70e4b202cd2be4f206347982b9d55c94a13`.
-- **A6 — Budget-manager closeout and operational proof (2026-07-17):** The public vector-store service now forwards a typed `RunBudget` and preserves canonical budget-stop errors. A live Drive list, OpenAI vector-store create/delete, and minimal OpenAI JSON call completed under canonical authority; ledger evidence recorded one Drive read, one vector create, one vector cleanup, and 168 LLM tokens. The next Drive and vector calls were blocked before provider I/O. Temporary vector stores were removed. The strict exact-HEAD bundle passed.
-- **A9 — Canonical report-source identity and publication provenance (2026-07-17):** Reports schema v19 stores immutable, hash-addressed source observations and deterministic resolutions; it preserves v18 compatibility, projects safe source fields to analytics, report cards, and WordPress, and invalidates only rendering/publication when source metadata changes. A live Julius Baer landing page returned HTTP 200 with 218,676 bounded HTML bytes; its existing retained PDF benchmark resolved verified source provenance, while an exact repeat produced no duplicate observation. No LLM call or production write was made.
-- **A12 — Complete configured model-pricing coverage for spend budgets (2026-07-18):** The canonical rate card now pins active OpenAI routes to an effective version/source, separately bills cached input, and holds unpriced or unapproved routes before provider I/O. Usage events project cost by report, workflow, prompt namespace, artifact family, and publisher. A bounded live OpenAI embedding recorded 49 input tokens, $0.000001 estimated spend, and complete claim-embedding attribution; the SQLite ledger and JSONL/daily projections reconciled exactly across 1,206 events.
-- **E1 — Claim-embedding freshness, retention, and cost controls (2026-07-18):** The existing queue now uses deterministic due-work selection, expiring atomic leases, rechecks before provider I/O, bounded retries/budgets, and a health surface with age percentiles, throughput, drain estimate, failure reasons, model drift, and avoided calls. A live one-row OpenAI canary embedded one valid claim with no duplicate work; queue depth fell from 2,648 to 2,647 and content-hash skips rose from four to five. Historic non-claim rows remain explicitly `unknown_requires_review`, not silently embedded.
-- **P11 — Verified acquisition-to-ingest handoff and live proof (2026-07-19):** Direct, browser, and mailbox acquisition now share one verified file/MD5/source-identity handoff that upserts the canonical report record and enqueues idempotent `source_ingest` work. A live authenticated Drive PDF download (6,203,358 bytes, MD5 verified) reached `analysis_complete` through the retained artifact with 21 real model calls and no public write. The same closeout added bounded acquisition resource telemetry and route suppression; live direct, browser, and mailbox canaries recorded their actual resource envelopes without a Drive or WordPress write.
-- **C8 — CTO evidence-collector integrity (2026-07-17):** The strict collector snapshots retained inputs, validates exact repository HEAD, checks log-content coverage, run IDs, provenance, summary consistency, and every inventoried file hash before publishing. It fails closed without a partial final bundle. R1 owns expansion of the retained runtime corpus, not collector integrity.
-- **C7 — Logging content exposure (2026-07-16):** Standard events apply deterministic byte, depth, node, collection, and text bounds; report and browser terminal events emit scalar summaries with retained audit references; CI rejects direct `fields=asdict(...)` serialization. Focused report/logging and browser suites passed, as did guarded live browser and OpenAI runs. P2 retains the narrow public-boundary size-limit hardening and R6 owns ongoing reduction-telemetry review.
-- **A7 (2026-07-14):** The retained 15-report corpus is now a required no-provider routing gate across 30 configured prompt routes. It confirms explicit policy selection, same-provider constraints, and zero lost retained evidence IDs; focused routing/compaction/fallback tests and the full suite pass.
-- **R5 (2026-07-15):** The canonical lock records SHA-256 hashes for all 177 active Ubuntu CPython 3.12 artifacts, including `numpy==2.4.2` from its official manylinux wheel. CI installs with `--require-hashes`; a native official-PyPI wheelhouse passed an offline clean install, while a tampered NumPy hash failed before package installation.
-- **R4 (2026-07-15):** Publication reads canonical SQLite usage plus projection status; normal bounded lag is accounted, while missing, invalid, or material lag stops the final public write without triggering a rebuild.
-- **E5 (2026-07-15):** Retained crop-QA sidecars now form operator-only scorecards and selection telemetry, including deterministic quality/clipping/storage comparisons with no public diagnostic rendering.
-- **E3 (2026-07-16):** Lineage-driven minimum regeneration is now the deterministic authority for report and publication repair. It captures current compatibility, persists plan/actual audits, fails historic provenance closed, exposes validated cross-report claim/evidence/summary/chart/metadata reads, and has a render-only enforcement path. A retained provider-backed full run completed in 208.51 seconds; the subsequent enforced render-only replay completed in 0.87 seconds with source, selection, analysis, model, projection, and WordPress work avoided. E3 remains closed; E7 owns all further artifact-family reuse expansion.
-- **E2 (2026-07-15):** The retained-artifact benchmark reports Briefing and Signal prompt/token deltas, overlap, source/citation coverage, and explicitly records the deterministic fallback when no retained embedding export exists.
-- **P9 (2026-07-15):** The retained public-advisory benchmark now compares a saved baseline and emits typed per-insight source-grounded repair proposals or explicit abstentions without altering public rendering.
-- **S1/S2 (2026-07-15):** Canonical service-boundary and publish/ingest facade audits remain CI-enforced; focused decomposition regression coverage preserves the existing routing, retries, state transitions, and external-effect contracts.
-- **P1 (2026-07-14):** `build_publish_readiness_snapshot` is the canonical UI/ops boundary, with the old queue-named callable retained only as a compatibility alias. Publish remains synchronous, idempotent, and review-gated; focused tests and the full suite pass.
-- **Public WordPress safe-error boundary (2026-07-14):** Public shortcode rendering now returns a branded correlated HTTP 500 section on forced report, publisher, archive, or generic shortcode exceptions, while the private structured event retains exception details. The real local Studio route `/publisher/not-extracted/` changed from an incorrect 200 report archive to the branded 404; homepage, reports, and publisher directory remained HTTP 200 with no public diagnostic signatures.
-
-## Screenshot Baseline Completion Evidence
-
-The original ten-item screenshot baseline is complete in the committed implementation. Its broader successor work remains Active above only where it adds new scope beyond that baseline (for example hosted HTTPS in P3, full intake flows in P4, or visual screenshot comparison plus accessible mobile-menu interaction in P5).
-
-- **Public quality gate (2026-07-14):** The real local Studio site passed the new Playwright-backed responsive gate on the homepage, reports archive, and a retained report detail at 390px, 768px, and 1440px: 9/9 checks had no horizontal overflow and no visible broken image. The same live site passed the public SEO/performance gate across seven public routes with HTTP 200, complete canonical/social metadata, and no configured threshold violations.
-- **Core safety, budget, recovery, route-memory, lineage, retained-benchmark, WordPress projection, LLM routing, and publication-gate baseline (2026-07-14):** The implementation is covered by the committed typed contracts and control paths. A focused regression run passed 50 tests across run budgets, canonical LLM accounting, UI-run recovery, artifact lineage, publication, and retained report quality. The underlying A3/A6/E3 implementation evidence remains retained; A3 and A6 are active only for bounded rollout and operational proof, while E7 owns any E3 expansion.
+| Excluded | X3 | Invented acquisition-form identity facts or public pipeline diagnostics | Map only verified identity facts; diagnostics remain operator-only. |
 
 ## Active Backlog
 
-### 1. Autonomous Safety and Cost Control
+The register currently contains **23 Active outcomes**. Their baseline/target below is authoritative; old historical descriptions do not override it.
 
-#### A15. Complete explicit model-policy coverage and policy-effectiveness evidence
+### A18. Harden discovery recall and authoritative acquisition handoff
 
-- **Title:** Complete explicit model-policy coverage and policy-effectiveness evidence
-- **Impact 5 / effort: 2**
-- **Context:** Settings startup now resolves the finite reachable production namespace inventory before provider use, and `policy-effectiveness` emits bounded execution-identity cohorts from the canonical ledger. The 2026-07-19 unknown-namespace failure is historical evidence for this guard, not a current description of the path. Remaining work is to retire the compatibility adapter for every reachable namespace and retain enough compatible production evidence to make the report decision-useful.
-- **Benefit:** Every materially expensive model call can be governed by an auditable policy and operators can safely identify policies that reduce cost or improve validated output quality.
-- **Risks to avoid:** Preserve each namespace's current semantic contract, provider boundary, retry ownership, and cache compatibility; do not infer a policy from one noisy run or change routing autonomously.
-- **Success criteria:**
-
-- Eliminate compatibility fallback for every reachable production namespace while preserving the current versioned output, timeout, retrieval, and structured-output controls; an unregistered reachable namespace must continue to fail at preflight.
-- Keep `policy-effectiveness` bounded and complete for compatible execution identities, including provider calls, validated-output rate, cache reuse, elapsed time, tokens, and cost, without retaining prompts, sources, or model output.
-- Retained-corpus and bounded live checks prove policy hashes invalidate incompatible cache reuse, preserve output contracts, and produce an operator-reviewable cost or quality conclusion without autonomous policy changes.
-
-#### A17. Calibrate deterministic admission thresholds from retained preflight funnels
-
-- **Title:** Calibrate deterministic admission thresholds from retained preflight funnels
-- **Impact 5 / effort: 2**
-- **Context:** Versioned admission decisions now retain compatible configuration, policy, runtime, source-size/page/text, duplicate, evidence-potential, forecast, and outcome metadata. Operators can see rejection counts but cannot yet compare compatible cohorts to tell whether the configured native-text, size/page, or evidence-potential thresholds are optimally preventing downstream cost without discarding viable reports.
-- **Benefit:** Reviewable, evidence-based threshold proposals can reduce avoidable acquisition, vector, and model spend while preserving a high-quality source pool and the deterministic fail-closed boundary.
-- **Risks to avoid:** Never mutate admission configuration automatically, merge incompatible policy/preflight versions, use source text or prompts in the report, or treat a small/noisy cohort as a policy recommendation.
-- **Success criteria:**
-
-- A read-only command groups only compatible retained decision cohorts and reports bounded outcome funnels, downstream provider/vector work avoided, and admitted-source completion/validation rates.
-- It emits threshold proposals only after configured minimum sample and confidence/improvement gates, with the exact compatible decision hashes and counterfactual impact range retained for operator review.
-- Tests cover incompatible-version exclusion, insufficient samples, deterministic ordering, and zero model/vector/external-write behavior; a bounded live replay produces an operator-reviewable no-change or recommendation result.
-
-#### A18. Harden discovery recall and authoritative acquisition handoff
-
-- **Title:** Harden discovery recall and authoritative acquisition handoff
-- **Impact 5 / effort: 4**
-- **Context:** Publisher discovery has strong route memory, coverage regression checks, candidate screening, landing-page verification, and acquisition recovery, but several decisions are still irreversible too early. HTTP discovery hard-drops candidates below a heuristic confidence threshold before semantic screening; deterministic screening can hard-reject plausible report pages; the raw snapshot is also the delta authority, so a false-negative can become permanently “seen” when another candidate in the same batch qualifies. Recovery recipes are persisted as `scheduled` opportunities but do not currently form an authoritative executed second pass. The canonical durable discovery handler also queues only URL/title/publisher context and drops acquisition-relevant candidate evidence such as candidate PDF URL, source-page URLs, discovery provenance/confidence, and discovery-route recommendation. Acquisition can then apply a separate report-likelihood readiness classifier to sources that discovery already qualified, creating conflicting eligibility authorities. The current audit measures acquisition success only among discovered candidates and therefore cannot measure discovery recall against a known publisher inventory.
-- **Benefit:** Discovery becomes high-recall and reversible while acquisition focuses on route execution rather than reclassification. Silent report loss, multilingual/external-host bias, stale candidate decisions, and unnecessary browser/model work become measurable and recoverable without adding publisher-specific rule sprawl; the durable queue receives the same qualification evidence used by direct/audit execution.
-- **Risks to avoid:** Do not replace deterministic obvious-junk filtering with unconstrained crawling, weaken acquisition artifact verification, create a second generic scheduler, or add large language/URL keyword taxonomies. Preserve route memory, canonical source identity, budget authority, idempotency, existing retry ownership, and fail-closed downstream admission/publication gates.
+- **Baseline:** discovery has route memory, screening, landing verification, coverage regression checks, and recovery records, but early irreversible filtering and raw-snapshot delta semantics can hide false negatives; the durable handoff loses candidate acquisition evidence and acquisition can reclassify already-qualified reports.
+- **Target:** discovery is high-recall, reversible, and authoritative for report qualification; acquisition receives the same typed evidence used by direct/audit execution and chooses *how* to acquire rather than re-deciding *whether* the source is a report.
 - **Implementation order:**
+  1. Retain a hash-pinned discovery gold corpus of roughly 15-20 representative publishers/known report URLs across static, paginated, JS, gated, multilingual, direct-PDF, and external/microsite cases.
+  2. Convert the HTTP `0.60` threshold to ranking/triage for plausible candidates; deterministic hard rejection is only for indisputable junk.
+  3. Persist candidate lifecycle state (`observed`, `screened`, `qualified`, `acquisition_attempted`, `acquired`) with decision/policy identity and re-screen rules.
+  4. Execute deferred recovery through the existing durable queue/remediation boundary or stop labelling non-executable records `scheduled`.
+  5. Preserve a typed qualified acquisition context (`canonical_url`, title, candidate PDF URL, source-page URLs, discovery provenance/confidence, route recommendation, qualification/policy identity) through the durable queue.
+  6. Require bounded first-run completeness proof before a publisher snapshot becomes the long-lived baseline.
+- **Completion evidence:** at least **97% report recall** on the fixed gold corpus with no material precision regression; mixed-delta/policy-change re-screen fixtures; one retained executed recovery; no hard-drop solely for missing English keywords/multilingual/external-host status; discovery-qualified sources reach route planning without the ad-hoc readiness classifier.
 
-1. **Establish ground-truth discovery recall.** Retain a hash-pinned gold corpus of roughly 15–20 representative publishers and known report URLs across static, paginated, JS-hydrated, mixed-content, gated, multilingual, direct-PDF, and external/microsite cases. Score report-level recall and precision independently of the production discovery result, and distinguish first-run completeness from steady-state delta discovery.
-2. **Make early discovery filtering permissive and reversible.** Convert the HTTP `0.60` confidence threshold from a hard discard into ranking/triage for plausible candidates; reserve deterministic hard rejection for indisputable junk such as social/navigation/assets/pagination. Let ambiguous candidates reach the authoritative semantic/landing-page qualification seam. Treat English report keywords, multilingual terms, and same-domain status as evidence features rather than mandatory eligibility conditions; preserve strongly related external/microsite candidates for verification.
-3. **Separate observation from decision state.** Persist candidate lifecycle state (`observed`, `screened`, `qualified`, `acquisition_attempted`, `acquired`) plus screening/quality policy hashes, decision, reason, confidence, and evaluation time. Re-screen when a candidate was never evaluated, the decision policy changed, the prior decision was uncertain/recoverable, or retry is due. A raw snapshot observation must never by itself suppress future screening; mixed batches containing both qualified and rejected candidates must not bury the rejected candidate permanently.
-4. **Make deferred recovery real or stop calling it scheduled.** Consume typed recovery recipes through the existing durable queue/remediation boundary with idempotent `scheduled -> recovered|failed|held` transitions and bounded attempts, or rename/remove the scheduling terminology if no executor is justified. Prove a retained challenge/protected/transient candidate can be recovered without manual DB edits.
-5. **Make discovery qualification authoritative and lossless at the acquisition handoff.** Introduce one typed acquisition context carrying only acquisition-relevant qualified evidence (`canonical_url`, title, candidate PDF URL, source-page URLs, discovery provenance/confidence, discovery route/recommendation, and qualification/policy identity). The durable discovery queue must preserve it. A qualified report source must not be rejected again by an independent report-likelihood heuristic; keep `candidate_download_readiness` only for ad-hoc/direct URLs that bypass discovery.
-6. **Prove first-run completeness before a snapshot becomes authoritative.** Require a bounded completeness proof such as explicit terminal pagination, declared total/structured source agreement, sitemap/archive corroboration, or one verification browser pass before the first snapshot becomes the long-lived baseline; subsequent delta runs can remain cheap and route-memory driven.
+### A19. Harden acquisition routes, terminal semantics, and artifact verification
 
-- **Success criteria:**
-
-- The fixed discovery gold corpus reaches at least **97% report recall** with no material precision regression from the retained baseline, and release evidence reports recall and precision separately rather than only funnel consistency.
-- First-run publisher discovery requires a bounded completeness proof before its snapshot becomes the long-lived baseline.
-- Regression fixtures prove a false-negative in a mixed accepted/rejected delta remains eligible for later re-screening, and a screening/quality policy-hash change can reconsider prior decisions without rediscovering a new URL.
-- The HTTP and deterministic prefilters no longer hard-drop plausible report-detail candidates solely because they lack English report keywords, are multilingual, or use a strongly related external host; obvious junk remains deterministically excluded before model work.
-- At least one retained deferred-recovery case executes through the canonical durable queue/remediation path to a terminal state with bounded attempts and idempotent replay; no record may remain semantically `scheduled` without executable work behind it.
-- The canonical durable queue preserves the typed qualified acquisition context so the production worker receives the same candidate PDF/source-page/provenance/route evidence available to direct and audit execution.
-- Discovery-qualified sources reach acquisition route planning without a second report-likelihood rejection, while direct/ad-hoc URLs retain a fail-closed readiness guard; tests cover both paths.
-
-#### A19. Harden acquisition routes, terminal semantics, and artifact verification
-
-- **Title:** Harden acquisition routes, terminal semantics, and artifact verification
-- **Impact 5 / effort: 4**
-- **Context:** Acquisition has a strong cheap-to-expensive ladder—cache, deterministic HTTP/PDF extraction, private APIs and specialist routes, deterministic browser playbooks, rendered preflight, then Browser Use—but its route contracts are not yet equally strict. The canonical queue can start mailbox polling for `email_required` even when no form was submitted and drops the request watermark that should exclude older deliveries. Static email-gate timeout can become terminal email-gate evidence. On-site HTML/Markdown capture can be called successful even though canonical source ingest accepts retained PDFs only. Direct and browser PDF verification is weaker than the existing `pdf-integrity-v1` structural gate; mailbox attachments are weaker still. Direct `.pdf` requests can be barred from evidence-triggered browser recovery even when they return HTML/WAF wrappers. Mailbox attachment materialization, ZIP extraction, candidate rejection, link ranking, and retry behavior also create avoidable cost or false-negative risk. Route analytics currently collapse materially different acquisition mechanisms into broad route kinds, reducing the value of A14 route-economics calibration.
-- **Benefit:** Every route converges on one trustworthy definition of acquired source, false terminal states disappear, mailbox and browser work become cheaper and safer, route learning is based on genuinely usable artifacts, and retained economics can compare the mechanisms that actually succeeded.
-- **Risks to avoid:** Preserve the existing cheap-to-expensive escalation, conservative private-API promotion, deterministic browser playbooks, route memory, bounded browser/LLM use, and existing downstream source identity. Do not add publisher-specific rule sprawl, broaden authenticated/private API access, auto-submit unrelated lead forms, or turn listing-hub recovery into a second discovery system.
+- **Baseline:** acquisition has a strong cheap-to-expensive ladder, deterministic browser/private-API/specialist capabilities, route memory and budgets, but route contracts are inconsistent: mailbox state/watermark semantics, structural verification, onsite non-PDF success, direct-PDF wrapper recovery, mailbox ZIP/link handling, route accounting, cache freshness, and durable archive completion can diverge.
+- **Target:** every acquisition mechanism converges on one ingest-compatible verified-artifact definition and accurate terminal/resource semantics while preserving cheap-first routing and bounded provider use.
 - **Implementation order:**
-
-1. **Correct terminal-state and mailbox semantics.** Only verified `email_requested` may enqueue mailbox delivery; `email_required` must remain an identity/configuration-required state and must not poll an inbox. Carry the verified form-submission timestamp (or durable mail-request ID containing it) into `MailboxDeliveryPayload.request_watermark` so older messages cannot satisfy the new request. Split broad access blockers into actionable classes such as rate-limited/transient service, JavaScript/WAF challenge, CAPTCHA, authentication-required, forbidden/access-blocked, and terminal-not-found.
-2. **Use one canonical artifact acceptance boundary.** Reuse the existing structural `pdf-integrity-v1` checks for HTTP, browser, mailbox attachment/ZIP, cache, and specialist routes before route success, route-memory promotion, cache population, durable archive completion, or ingest handoff. Acquisition may be terminally `acquired` only with an ingest-compatible verified artifact. Until ingest intentionally supports non-PDF sources, on-site HTML/Markdown remain support/forensic captures; a successful on-site route must materialize a validated browser-rendered PDF. Distinguish `artifact_verified_locally`, `artifact_archived`, and `acquisition_complete` so mandatory durable archive failure cannot leave a completed acquisition state.
-3. **Harden cheap HTTP and cache routes without making them browser-first.** Allow one evidence-triggered browser recovery when an apparent direct `.pdf` target proves to be HTML/access challenge rather than PDF. Replace the special ≤64 KB wrapper-file interpretation with the bounded canonical HTML fetch/classifier. Rank report-page PDF candidates by explicit candidate PDF evidence, DOM/CTA relation, MIME/response evidence, source relationship, and only then URL/title token overlap; use a small bounded candidate cap rather than destructive lexical rejection. Accept extensionless private-API artifact URLs after content verification, retain stale/failure cooldown for learned endpoints, and revalidate mutable cache entries using ETag/Last-Modified/final URL/content-length/publication/version evidence when available while keeping immutable/versioned cache reuse cheap.
-4. **Make browser automation side effects evidence-gated.** Pre-LLM automatic form submission should run only for `browser_email_form` or when strong local report-delivery form evidence is proven; a generic `browser_pdf_click` page must not submit an unrelated newsletter/contact/demo form before the Agent classifies it. Rank browser-preflight PDF candidates with DOM/network/response evidence rather than URL tokens alone. Use a genuinely generic browser acquisition prompt when route evidence cannot distinguish PDF click, email form, onsite, listing, or tracker. Keep publisher-specific deterministic playbooks and private-API evidence conservative; eligible deterministic routes should still run before Browser Use.
-5. **Keep listing-hub recovery exceptional and self-healing.** A successful `browser_listing_hub` run must emit the resolved canonical report-detail/download target back to discovery/source state so later runs acquire directly; it should not remain the publisher's normal acquisition path. Browser-to-HTTP recovery decisions should be based on observed evidence rather than broad terminal-family labels where a cheap recovery is still plausible.
-6. **Unify on-site and specialist completeness.** Use one completeness evaluator for direct-HTTP and browser on-site capture; truncated HTML can never be `complete`. Separate text completeness from visual/report completeness so charts/tables are not silently treated as captured because text frames are present. Adobe/InDesign output should report `text_complete` when visual assets are not captured. Preserve Issuu's all-declared-pages requirement but download/render pages with bounded concurrency and disk streaming instead of retaining arbitrary page payloads in memory.
-7. **Make mailbox acquisition metadata-first, bounded, and artifact-verified.** Search/rank message metadata, sender, subject, timestamps, short body/HTML snippets, attachment metadata, anchor text and local CTA context before materializing attachments. Use one message-affinity scorer for attachments and links. Bound ZIP member count, single/total decompressed bytes, compression ratio, and PDF count; stream members to bounded temporary files. Key non-retryable candidate suppression by message + normalized exact candidate URL + failure class rather than message + host. Continue through a bounded number of candidate links after candidate-specific retryable failures unless the error is provider-global or the run budget is exhausted. Improve IMAP provider-side filtering/windowing so a busy inbox cannot hide the correct message behind unrelated newest-N messages. Reserve/finalize mailbox budget per actual provider attempt.
-8. **Make route accounting describe what actually happened.** Persist `planned_route_family`, `resolution_method`, `route_kind`, outcome/status, browser launched, Browser Use Agent called, mailbox reads, elapsed time, resource counts, and cost. Do not collapse direct PDF, embedded PDF, private API, browser preflight, deterministic playbook, Browser Use, Issuu, Adobe, and mailbox mechanisms into the same `pdf_download` audit bucket. Feed compatible retained mechanism-level evidence into A14 rather than adding a second policy system. Add bounded cooldown/suppression for repeatedly proven deterministic-route failures without suppressing cheap first evidence.
-9. **Align route budgets with actual side effects.** Reserve HTTP, browser launch, Browser Use/model, form submission, mailbox read, PDF materialization, and Drive write according to the route operation actually attempted rather than reserving a PDF-processing slot for every acquisition attempt. Preserve existing hard budget authority and fail-before-provider behavior.
-
-- **Success criteria:**
-
-- `email_required` never enqueues mailbox work; `email_requested` always carries verified submission timing, and fixtures prove an older matching email cannot satisfy a newer request.
-- Static email-gate HTTP timeout remains `unknown/escalate` and cannot itself produce `email_required` or `email_requested`.
-- One shared structural PDF verifier rejects truncated/malformed pseudo-PDFs consistently across direct HTTP, browser, cache, mailbox PDF, ZIP PDF, private-API/specialist output, and acquisition-to-ingest handoff before route success is learned.
-- On-site HTML/Markdown capture cannot produce terminal acquisition success while ingest remains PDF-only; a successful on-site path produces a structurally verified browser-rendered PDF and records whether the source is publisher-supplied versus rendered capture.
-- An apparent `.pdf` URL that returns a proven HTML/WAF/viewer wrapper can make one bounded browser recovery attempt; genuine direct PDFs still complete without browser launch.
-- Report-page and browser-preflight PDF fixtures with opaque CDN/extensionless URLs can succeed from strong DOM/MIME/candidate evidence without requiring report-title tokens in the URL, while bounded caps prevent unconstrained probing.
-- Pre-LLM form automation cannot submit an unrelated newsletter/contact/demo form on a `browser_pdf_click` route; verified report-gate forms retain deterministic zero-Agent completion where supported.
-- Listing-hub recovery records and reuses the resolved report-detail/download target so the next acquisition does not repeat listing discovery.
-- Direct and browser on-site routes use the same completeness evaluator; truncated content is never complete, Adobe text-only capture is explicitly labelled, and Issuu retains all-declared-pages verification with bounded concurrency/memory.
-- Mailbox fixtures prove irrelevant messages do not materialize attachments, ZIP bombs/oversized archives are bounded, valid sibling links are not suppressed by one failed same-host URL, and a retryable top candidate does not prevent a bounded lower-ranked valid candidate from succeeding.
-- Acquisition audit/route economics distinguish the actual resolution mechanisms and include browser/Agent/mailbox/resource/cost/latency signals needed for A14 compatible-cohort comparison.
-- Mutable cache fixtures cannot reuse stale artifacts after remote freshness evidence changes; immutable/versioned artifacts retain zero-provider reuse where safe. Required durable archive failure leaves a recoverable pre-completion state and converges idempotently after storage recovers.
-- Route-specific budget tests prove email-form/onsite/mailbox work is not blocked solely by an exhausted PDF-processing allowance when no PDF operation is attempted, while actual PDF/browser/mailbox side effects remain bounded by canonical limits.
-
-#### A8. Compare retained model-call replay bundles
-
-- **Title:** Compare retained model-call replay bundles
-- **Impact 4 / effort: 2**
-- **Context:** Model-call replay bundles are retained, but comparing prompt, contract, evidence, and output changes currently requires manual inspection across artifacts and logs.
-- **Benefit:** Regression evidence becomes reviewable without live calls, cost, or log archaeology.
-- **Risks to avoid:** Keep comparison deterministic and bounded; do not invoke providers by default.
-- **Success criteria:**
-
-- The command compares deterministic fields, schema validity, prompt hashes, and selected evidence without provider calls by default.
-- Output is bounded, reproducible, and links regressions to artifact family and remediation.
-- Tests cover equivalent, changed, missing, and malformed bundles, including deterministic output ordering and zero-provider-call default execution.
-
-### 2. Public Trust and Publishing
-
-#### P2. Harden bounded public-observability events
-
-- **Title:** Harden bounded public-observability events
-- **Impact 4 / effort: 1**
-- **Context:** Shared structured logging already has deterministic event-size limits and generic regression coverage, but public intake and public-render boundary events need a narrow contract check as their fields evolve. R6 owns aggregate reduction telemetry; this item owns the per-event size and content-safety guard at those public boundaries.
-- **Benefit:** Public-facing workflows retain useful correlation and outcome signals without allowing a new high-cardinality field, user submission, or exception detail to make a standard event oversized or content-bearing.
-- **Risks to avoid:** Do not create a second logger, retain dropped content, or expose private diagnostics in a public artifact. Use the canonical log schema and scalar summaries, hashes, or retained-artifact references.
-- **Success criteria:**
-
-- Public intake and public-render success/failure events remain at or below the canonical byte limit with maximum-size representative fields.
-- Focused tests prove that oversized submissions and exception-like inputs preserve the correlation/outcome summary while omitting user text, paths, stack details, and discarded values.
-- A bounded reduction remains visible to R6 without duplicating telemetry storage or changing the public response contract.
-
-#### P3. Resolve hosted-site trust blockers
-
-- **Title:** Resolve hosted-site trust blockers
-- **Impact 5 / effort: 2**
-- **Context:** Live public-site checks found HTTPS failure and HTTP sitemap URLs. The public rendering failure boundary and branded handling of the legacy `/publisher/not-extracted/` sentinel are complete.
-- **Benefit:** Transport, safe errors, and reliable navigation meet the baseline expected of a trust-positioned research product.
-- **Risks to avoid:** Verify staging and production separately and never disclose stack traces, paths, or diagnostics publicly.
-- **Success criteria:**
-
-- HTTP redirects to successful HTTPS; robots and sitemap URLs are canonical HTTPS.
-- Hosted smoke evidence covers transport, representative pages, and sitemap behavior in both staging and production.
-
-#### P10. Operate correlated public-render failure telemetry
-
-- **Title:** Operate correlated public-render failure telemetry
-- **Impact 4 / effort: 2**
-- **Context:** The public shortcode boundary now emits the stable `marketlense_public_render_failure` event with a correlation ID, route, entity context, and private exception diagnostics, but hosted release evidence does not yet aggregate or alert on those events.
-- **Benefit:** A bad public projection can be identified and repaired from one correlation ID before it becomes a repeated visitor-facing outage, without publishing diagnostic detail.
-- **Risks to avoid:** Keep exception messages, traces, filesystem paths, and identifiers in private logs only; do not add a public diagnostics route.
-- **Success criteria:**
-
-- Hosted smoke records a bounded count of boundary failures and correlation IDs without serializing private exception fields into artifacts available to visitors.
-- Release evidence distinguishes zero failures, expected injected failures, and unexpected render failures by route/entity type.
-- Tests prove log redaction, deterministic aggregation, and that no public response or public artifact contains a stack/path signature.
-
-#### P4. Close public briefing, correction, and submission intake
-
-- **Title:** Close public briefing, correction, and submission intake
-- **Impact 5 / effort: 2**
-- **Context:** `Request a briefing`, `Send a correction`, and submission CTAs now collect structured requests through the approved boundary. The remaining closeout is hosted smoke evidence for the live routes, validation, delivery/persistence, and confirmation behavior.
-- **Benefit:** Visitors can convert, correct, or submit sources through a trustworthy route that gives operators usable context, with closure based on the deployed behavior rather than implementation alone.
-- **Risks to avoid:** Collect only necessary data, preserve redacted logging, and do not treat a local or simulated result as hosted proof.
-- **Success criteria:**
-
-- Correction and submission forms collect only the documented, necessary fields and present confirmation/error states.
-- Requests use an approved service boundary with redacted structured logging.
-- Hosted smoke checks prove each CTA route, validation, empty/spam rejection, successful persistence/delivery, and confirmation state in the deployed environment; then move P4 to Recently Closed.
-
-#### P5. Finish responsive search and navigation
-
-- **Title:** Finish responsive search and navigation
-- **Impact 4 / effort: 3**
-- **Context:** Visual QA found search overflow, cramped archive controls, an unfinished mobile menu, a stray list artifact, tall hero stacking, and clipped header-search text.
-- **Benefit:** Search and navigation remain credible and usable on the screens where users actually discover and evaluate content.
-- **Risks to avoid:** Do not alter archive-query semantics or projection contracts while changing theme behavior.
-- **Success criteria:**
-
-- No horizontal overflow, clipping, overlap, or unusable search/filter controls on homepage, search, archive, detail, contact, and submit views.
-- Mobile navigation has accessible open/close and focus behavior with an intentional panel/backdrop.
-- Retained visual-smoke screenshots cover each key view at phone, tablet, and desktop widths and are compared for regressions.
-
-#### P6. Raise report-card and evidence-exhibit editorial quality
-
-- **Title:** Raise report-card and evidence-exhibit editorial quality
-- **Impact 4 / effort: 3**
-- **Context:** The canonical hash-bound `publish_readiness.json` now validates the exact final HTML and WordPress projection, including semantic/grounding state, material evidence, accepted crop lineage, public-source provenance, metadata, and internal-leakage checks. It replaces publication-side heuristic rechecks; retained before/after diagnostics still request only evidence-grounded repairs. The remaining acceptance is qualitative human review.
-- **Benefit:** High-value research reads as analyst-curated while retaining deterministic evidence provenance and auditability.
-- **Risks to avoid:** Do not fabricate claims, hide evidence provenance, or substitute automated scores for the specified blind human assessment.
-- **Success criteria:**
-
-- Public copy rejects raw figure labels, OCR fragments, generic boilerplate, required-field placeholders, and internal identifiers.
-- Blank/low-information thumbnails use deterministic covers or validated source previews.
-- Audit identifiers remain available without being reader-facing labels; regression checks fail known leakage patterns in rendered output.
-- Three independent blind evaluators assess 30 paired public reports with median readability, decision usefulness, evidence clarity, and appropriate certainty at least 4/5, and an explicit record of any outlier/appeal decision.
-
-### Closed P12. Release-locked sandbox publish canary
-
-**Status: Closed (2026-08-27).**
-
-- **Title:** Release-locked sandbox publish canary
-- **Impact 5 / effort: 2**
-- **Context:** The 2026-07-20 bounded sandbox run processed five reports, created or matched posts, and repeated with zero new writes. It predates the release-locked cohort-manifest workflow, so it is useful transaction evidence but not the recurring, immutable-cohort release proof this item requires.
-- **Benefit:** A small, real, manifest-backed cohort catches render-reuse, card-asset, WordPress-readback, and idempotency regressions before a release affects a wider report set.
-- **Risks to avoid:** Run only against the named sandbox and isolated state; require explicit approval, canonical spend authority, the existing validation/editorial gates, a fixed low cohort cap, and retained non-sensitive evidence. Never turn this into production auto-publishing.
-- **Success criteria:**
-
-- A release command selects a small, diverse, already-authorized real-report cohort and records deterministic cohort identity, configuration/policy hashes, and spend forecast before work begins.
-- Every member must pass semantic validation, public editorial quality, complete manifest/asset checks, canonical publish readback, and a repeat idempotency lookup; any failure stops the cohort and preserves the failed evidence.
-- Retained evidence compares the cohort's actual calls/tokens/spend, elapsed time, package completeness, created-versus-reused posts, and typed failures with the approved forecast; focused tests cover target isolation and no-write behavior when approval is absent.
-
-**2026-08-26 current-release attempt (not a successful canary):** Exact producer `29a7424902d7e84d8c282ab8a3bcb55c8cb73d59` used an isolated, budgeted sandbox profile. After the initial pre-freeze source-identity rejections, canonical acquisition found compatible real reports and froze the immutable three-member manifest `out/p12_p14_canary_20260826/output/cohorts/bd73897b-b09f-4ef1-832e-ede96fb6ea22.json` (cohort `d4aeeb4fa0d28fc803d3d8427050c3752de71d88d656a7f26fa97b7231234814`; validation run `validation:8439f6863b21fbdf990aa91a49a8437abacaf58c88590c9067621e76955454b6`; configuration hash `3cbd9303b17de4d7762c89c208204c604b0ecfd9eee93ee01317396d8c123e4d`; policy hash `77302ec0862da786102ee09959e210ef62e9bf9ae8b2df1e5972b9cbaf9e2df7`). All three admitted members ran without replacement. One reached `publish_ready`; two retained the typed terminal `publish_readiness_failed` evidence. The normal run recorded 63 model calls, 587,087 input tokens, 64,531 output tokens, and $0.194855 estimated cost from 21:16:47 to 21:20:33 UTC, against the admission estimate of three calls, 26,960 tokens, and $0.029968. The cohort consequently stopped before publication; replay was not run at that point.
-
-| Retained canary measure | Result |
-| --- | --- |
-| Frozen / admitted / publish-ready | 3 / 3 / 1 |
-| Bound / published / authenticated readbacks | 0 / 0 / 0 |
-| Non-manifest candidates admitted or published | 0 / 0 |
-| WordPress writes / browser launches / retries | 0 / 0 / 0 |
-| Replacement reports / operator interventions after freeze | 0 / 0 |
-| Candidate-set artifact and hash | Not created: binding correctly failed closed |
-
-**2026-08-27 successful current-HEAD proof:** Exact producer `1d0a5bec844c95feb8adbc2f8668ac00b29f8ea6` retained the original immutable three-member cohort above and used only canonical linked provenance recovery after the typed failures; no member was replaced and no report artifact was manually edited. The final linked manifest is `out/p12_p14_canary_20260826/output/cohorts/bd73897b-b09f-4ef1-832e-ede96fb6ea22-recovered-1d0a5bec-budget64.json`, with the retained cohort/configuration/policy identities and producer revision. All three members reached current `publish_ready`, strict binding, draft publication, and authenticated `published_verified` readback. The successful first publication run created 3 posts and 6 media mutations (9 WordPress writes); the identical replay made 0 posts, updates, media, taxonomy, or other WordPress writes while all three authenticated lookups/readbacks succeeded. The completed normal processing across the retained cohort recorded 63 model calls, 587,087 input tokens, 64,531 output tokens, and $0.194855 estimated cost, versus the approved admission forecast of 3 calls, 26,960 tokens, and $0.029968 (within the isolated $6 spend cap); the final publish took about 101 seconds and replay about 10 seconds. Browser launches and retries were 0. Three controlled post-freeze interventions occurred (readiness-severity/source-identity correction, stale-readiness deterministic refresh, and isolated sandbox write-cap calibration); none weakened a gate, changed membership, or regenerated report analysis. The earlier 3-write sandbox cap stopped publication with typed evidence before post creation; the final temporary profile retained a 64-write hard ceiling for the normal taxonomy/media/post lifecycle.
-
-| Retained successful-canary measure | Result |
-| --- | --- |
-| Frozen / admitted / publish-ready / candidates bound | 3 / 3 / 3 / 3 |
-| Published / authenticated readbacks / current terminal state | 3 / 3 / `published_verified` (3/3) |
-| Non-manifest candidates considered or published | 0 / 0 |
-| First successful publication writes | 3 posts, 0 updates, 6 media, 0 new taxonomy; total 9 |
-| Identical replay writes | 0 posts, 0 updates, 0 media, 0 taxonomy; total 0 |
-| Reused posts/artifacts / browser launches / retries | 3 / cached source-analysis packages / 0 / 0 |
-| LLM calls / input tokens / output tokens / estimated cost | 63 / 587,087 / 64,531 / $0.194855 |
-| Candidate-set artifact / deterministic hash | `out/p12_p14_canary_20260826/output/cohorts/d4aeeb4fa0d28fc803d3d8427050c3752de71d88d656a7f26fa97b7231234814/publication_candidate_set.json` / `fac0fc50a1f15205eb960a0d4b7915a39fce4bd035ea8dfec0e7c05aa0e3a99a` on first success and replay |
-
-**2026-08-27 exact-HEAD replay refresh:** Runtime producer `6999c85f69fdf9ac23780b1abff0b06adf1c4979` completed the minimum canonical linked-provenance and readiness refresh for the same three-member frozen cohort. The canonical strict cohort replay bound 3/3 members and performed 3/3 authenticated readbacks with 0 posts, updates, media, taxonomy, or other WordPress writes. The hash/count/result-only retained record is [p12_p14_exact_head_canary_20260827.json](docs/CTO_evidence/p12_p14_exact_head_canary_20260827.json).
-
-### Closed P14. Retain isolated live proof of strict cohort-manifest publication binding
-
-**Status: Closed (2026-08-27).**
-
-- **Title:** Retain isolated live proof of strict cohort-manifest publication binding
-- **Impact 5 / effort: 1**
-- **Context:** `publish-wp --cohort-manifest` binds every admitted member to exactly one existing, identity-compatible, publish-ready Report artifact before any WordPress call. Missing, duplicate, changed, stale, incompatible, ambiguous, and unready bindings fail closed; no non-manifest artifact can enter publication. The resolved ordered set is retained as `publication_candidate_set.json` with `candidate_set_hash`, manifest/cohort identity, and configuration/policy/artifact provenance. The bounded isolated live proof below closes this item.
-- **Benefit:** The immutable cohort becomes the authoritative candidate set, preventing unrelated drafts from being preflighted or published and making bounded canaries safer to run in shared artifact namespaces.
-- **Risks to avoid:** Preserve the existing no-manifest bulk-publish behavior, canonical artifact/path validation, approval gates, idempotency lookup, and fail-closed handling for missing or ambiguous cohort artifacts.
-- **Implemented evidence:** Focused cohort/publication fixtures cover successful one-member binding, missing member, duplicate mapping, changed mapping, stale/incompatible mapping, unready member, unrelated artifact isolation, deterministic hash reuse, and zero WordPress calls on binding failure. The no-manifest publication path remains covered by the publish-orchestrator regression suite.
-
-**2026-08-26 live-proof status:** The isolated immutable cohort above exercised P14. Its `publish-wp --cohort-manifest` resolution returned the typed `validation_cohort_publication_mapping_incompatible` error before any WordPress operation. The isolated publication state contains 0 published records and the budget ledger records 0 WordPress writes; no non-manifest candidate was admitted. Because two members were not publish-ready and the retained mapping was incompatible, resolution produced no `publication_candidate_set.json` or `candidate_set_hash`, no preflight, and no WordPress post. This is retained fail-closed evidence that preceded the positive proof below.
-
-**Retained P14 fixture measurement** — baseline is the behavior immediately before `98f41eba`; current is `98f41eba`/current `HEAD`. The controlled fixtures use one valid admitted member, one changed/ambiguous member mapping, and one unrelated artifact in the same output namespace.
-
-| Measure | Baseline | Current | Result |
-| --- | --- | --- | --- |
-| Valid manifest members resolved | 1/1 | 1/1 | No valid-publication coverage loss. |
-| Silent exclusions | 1 possible changed member excluded by membership filter | 0 | Eliminated. |
-| Ambiguous mappings accepted | 1 possible manifest/report-store disagreement accepted | 0 | Eliminated by binding failure. |
-| Unrelated candidates admitted | 0/1 | 0/1 | Remains excluded. |
-| WordPress calls before binding failure | Not bounded by a cohort-wide binding barrier | 0 | Binding fails before any WordPress call. |
-| Valid publication coverage | 1/1 | 1/1 | Unchanged. |
-
-- **Closed proof criterion:** A bounded isolated live cohort retains `publication_candidate_set.json` and `candidate_set_hash`, shows only admitted report IDs through preflight and WordPress records, and confirms the same zero-write replay boundary against the configured sandbox.
-
-**2026-08-27 positive live proof:** The closed P12 cohort above resolved all 3 admitted members to exactly 3 identity-compatible, current-ready candidates before any WordPress operation. Its first successful strict bind retained `candidate_set_hash` `fac0fc50a1f15205eb960a0d4b7915a39fce4bd035ea8dfec0e7c05aa0e3a99a`; the identical replay retained the same hash and candidate count. Binding telemetry recorded 0 silent exclusions, 0 ambiguous mappings, and 0 unrelated candidates. The three candidates alone reached WordPress preflight/publication and all authenticated readbacks passed. The replay's canonical actuals record 0 WordPress writes, including media and taxonomy, while retaining the readback proof. This satisfies the isolated positive live-proof criterion without changing the no-manifest publication path.
-
-**2026-08-27 exact-HEAD replay refresh:** The same immutable cohort under producer `6999c85f69fdf9ac23780b1abff0b06adf1c4979` resolved a new current candidate set of 3/3 and retained `candidate_set_hash` `dd7fa1a64250296fb31307134a82c0abc26903212dfa4d1edf32c14e5117b3df`. The replay admitted 0 non-manifest candidates, verified all 3 existing WordPress records through authenticated readback, and made 0 WordPress writes. Scalar-only evidence is retained in [p12_p14_exact_head_canary_20260827.json](docs/CTO_evidence/p12_p14_exact_head_canary_20260827.json).
-
-### Closed P15. Operate canonical publish-readiness telemetry and refresh planning
-
-**Closed 2026-08-27:** The canonical signed readiness artifact now deterministically
-classifies retained packages as ready, expiring, stale, failed, incompatible, or
-missing/unverifiable and persists a typed
-publish_readiness_refresh_plan.json with reason, invalidation, current
-configuration/policy/producer identities, canonical plan hash, actual
-reuse/regeneration, avoided work, and terminal result. It supplies
-forced-invalidations only to the established enforce-mode minimum-regeneration
-planner; it does not add a scheduler or a publication path. Valid stale,
-expiry, projection, and render-only readiness failures use analysis_complete
-to rerender with zero acquisition, PDF/OCR, extraction, analysis, model, or
-browser stages. Semantic/grounding failure moves to selection_complete; invalid
-upstream lineage moves to source_prepared; missing or unverifiable proof is
-persisted as blocked before preflight/provider construction.
-
-The retained-fixture measurement compares eight full-pipeline external-work
-categories with one render-only category: provider/model calls are 0 after
-refresh, seven external-work categories are avoided, full-pipeline regeneration
-drops from one to zero, and a successful new readiness decision converges to no
-further work. Tokens, cost, and elapsed time remain explicitly unpriced in
-these deterministic fixtures. Focused readiness, lineage, enforcement,
-ingest, explicit-resume, publish-readiness, and publication regressions passed.
-
-#### P7. Improve hosted public-site performance without contract loss
-
-- **Title:** Improve hosted public-site performance without contract loss
-- **Impact 4 / effort: 3**
-- **Context:** The hosted gate measures stable SEO/performance baselines, but homepage, report archive, and signal archive response-start and DOM-complete values remain materially above documented targets.
-- **Benefit:** Existing measurement drives real discovery and research performance gains rather than merely preventing further regression.
-- **Risks to avoid:** Do not weaken metadata, public contracts, archive completeness, or projection boundaries to gain speed.
-- **Success criteria:**
-
-- Homepage, reports, briefings, signals, methodology, contact, and submit pages improve against `config/public_site_baselines.yaml` without increased page weight or request count.
-- Remaining target gaps are measured and documented.
-- Hosted evidence confirms canonical URLs, Open Graph, Twitter metadata, archive completeness, and representative page contracts remain intact after optimisation.
-
-#### P8. Complete concise public evidence, methodology, and related-content surfaces
-
-- **Title:** Complete concise public evidence, methodology, and related-content surfaces
-- **Impact 5 / effort: 3**
-- **Context:** Rendering already redacts canonical IDs and exposes claim-support labels, but lacks a compact source/excerpt/limitation contract and the first useful approved relationship links.
-- **Benefit:** Decision-useful evidence and discovery improve trust while keeping OCR, model, crop, and vector diagnostics operator-only.
-- **Risks to avoid:** Remain concise and source-grounded; fail closed when approved data is missing.
-- **Success criteria:**
-
-- Claim support can show source report, publisher, page, concise excerpt, limitation, and original link where approved.
-- Methodology shows scope, source pages, material limitations, and evidence state.
-- Report pages start with deterministic related report, briefing, topic, and publisher links; tests prove redaction and fail-closed behavior when approved data is absent.
-
-### 3. Evidence Quality and Reuse
-
-#### E6. Retain a hash-pinned claim-embedding benchmark export
-
-- **Impact 4 / effort: 2**
-- **Context:** The semantic-selection benchmark correctly falls back when a retained corpus has no persisted vectors, so it cannot yet measure real semantic ranking on the fixed corpus.
-- **Benefit:** A bounded, redacted export makes semantic quality and prompt savings reproducible without live embedding calls.
-- **Success criteria:** Persist a hash-pinned, retention-governed benchmark export containing only approved vector IDs/content hashes/vectors; benchmark it in CI and compare semantic coverage against lexical fallback without provider calls.
-
-#### E10. Attest active model-pricing rates before they become stale
-
-- **Title:** Attest active model-pricing rates before they become stale
-- **Impact 5 / effort: 1**
-- **Context:** Cost-governed routes fail closed when canonical pricing is missing, stale, invalid, or explicitly held. The bundled OpenAI GPT-5.6 family rates were refreshed on 2026-08-11, but price-source review, expiry visibility, and the reviewed-rate transition remain manual operator work.
-- **Benefit:** Spend estimates and report-level attribution remain trustworthy as providers update model pricing, without restoring silent zero-cost execution.
-- **Risks to avoid:** Do not scrape or activate a provider rate automatically; preserve explicit operator approval, effective dates, source provenance, and the existing hold-before-I/O behavior.
-- **Success criteria:**
-
-- A bounded read-only check reports active, expiring, stale, held, and missing route rates against configured production routes with version/source metadata only.
-- Operator acknowledgement creates a reviewed rate-card transition with before/after estimates for recent canonical usage; activation remains an explicit configuration change.
-- Tests prove unknown, expired, held, and changed-rate routes cannot silently bypass canonical spend authority.
-
-#### E14. Calibrate category-fit coverage from retained outcomes
-
-- **Title:** Calibrate category-fit coverage from retained outcomes
-- **Impact 5 / effort: 2**
-- **Context:** Category fitting now reconciles model advice with deterministic inclusion, exclusion, and centrality rules, can select up to five grounded categories, and preserves supported assignments without unnecessary repair. Operators still lack a compatible-cohort view of selection coverage, rescue and repair use, selected-category distribution, and the mapping concepts responsible for uncategorized outcomes.
-- **Benefit:** A bounded scorecard can identify high-value mapping and prompt improvements that increase evidence-backed category coverage while reducing unnecessary model repairs, latency, and spend.
-- **Risks to avoid:** Aggregate only category IDs, rule IDs, decision/count outcomes, model and policy hashes, and bounded usage metadata; never retain raw report context, prompts, or model responses. Do not automatically add mappings, weaken explicit exclusions, or turn a legitimate out-of-taxonomy report into a forced category.
-- **Success criteria:**
-
-- A read-only compatible-cohort report shows nonempty-selection rate, explicit-uncategorized rate, selected-count distribution, deterministic-rescue rate, repair rate, validation outcome, latency, tokens, and cost by mapping/prompt/model/policy identity.
-- The report ranks recurring uncovered semantic concepts and excess-repair causes as operator-reviewable mapping or prompt proposals, while retaining explicit-exclusion outcomes separately.
-- A retained and bounded live cohort demonstrates a measured increase in grounded nonempty selection or a reduction in unnecessary category-repair calls, with no automatic taxonomy or policy change.
-
-#### E13. Measure candidate-regeneration promotion effectiveness
-
-- **Title:** Measure candidate-regeneration promotion effectiveness
-- **Impact 5 / effort: 2**
-- **Context:** Candidate regeneration now retains atomic promotion/rollback state, evidence lineage, source-page continuity, validation issue codes, transformation scope, and before/after hashes. Operators cannot yet compare compatible candidate cohorts to identify which repair target or prompt reliably improves grounded output versus repeatedly rolling back.
-- **Benefit:** A bounded, evidence-safe cohort view can prioritize the repair prompts and deterministic checks that increase successful grounded promotion while avoiding repeated model spend on candidates that cannot pass lineage or source-page policy.
-- **Risks to avoid:** Aggregate only hashes, bounded counts, rule/target identifiers, and version-compatible policy metadata; never emit raw prompts, source extracts, candidate text, or model responses. Produce recommendations only and never auto-relax a blocking groundability rule.
-- **Success criteria:**
-
-- A read-only report groups compatible candidate audits by repair target, issue class, schema/policy/prompt identity, and promotion/rollback outcome, with attempt count, remapping/lost-evidence counts, source-page failures, latency, tokens, and cost.
-- The report identifies high-confidence rollback patterns and separately reports valid evidence remappings and abstentions, without treating either as ungrounded content.
-- Retained and bounded live cohorts demonstrate at least one operator-reviewable reduction in repeated failed repair calls or an improvement in promotion rate, with no automatic prompt, routing, or validation-policy change.
-
-#### E12. Persist pre-category editorial context checkpoints
-
-- **Title:** Persist pre-category editorial context checkpoints
-- **Impact 5 / effort: 3**
-- **Context:** Task 5 now reuses validated source, selection, and vector-store artifacts for taxonomy/category recovery, but the analysis pipeline materializes taxonomy and evidence context inside one pre-category execution boundary. A durable checkpoint immediately before category fitting would let category-only recovery avoid even the unrelated taxonomy/evidence provider calls while preserving current proof and lineage requirements.
-- **Benefit:** A category-fit failure can regenerate exactly its one editorial family, then deterministically assemble only its dependent artifacts, reducing recovery latency, model calls, and spend on real report cohorts.
-- **Risks to avoid:** Preserve the existing source/vector identity, taxonomy/evidence hashes, validation contracts, and bounded recovery ceilings. Do not retain raw prompts or duplicate the report-analysis orchestration boundary.
-- **Success criteria:**
-
-- Persist a versioned, lineage-validated pre-category checkpoint containing only the approved taxonomy/evidence references and their compatibility hashes.
-- Make taxonomy and category recovery plans name their exact model family and required deterministic downstream work; fail closed when any retained context is stale or incomplete.
-- A retained-report live recovery and focused tests prove category-only recovery makes no source, vector, taxonomy, or evidence provider call and records measured avoided tokens/cost.
-
-### 4. Release Integrity and Architectural Enforcement
-
-#### R1. Publish release-evidence reviews where reviewers work
-
-- **Title:** Publish release-evidence reviews where reviewers work
-- **Impact 3 / effort: 2**
-- **Context:** CI now generates the release-evidence review and appends a bounded GitHub job summary with the exact tested SHA, queue-evidence status, and unwaived issues. The remaining work is to make the archived-bundle link and final approval state available on the relevant PR/release surface, and to expand the strict retained runtime corpus with an explicit representativeness label.
-- **Benefit:** Release readiness, the exact tested revision, and the scope of runtime evidence are visible where reviewers already work, reducing missed evidence and review latency.
-- **Risks to avoid:** Keep summaries bounded and links stable while preserving all unwaived issue detail. Do not imply that a smoke-only corpus proves representative report processing.
-- **Success criteria:**
-
-- Keep the CI review and bounded job summary linked to the exact tested HEAD or an explicit unavailable/mismatch result.
-- PR/release automation links the archived bundle and final approval status to the reviewed commit.
-- The retained runtime corpus expands under the existing strict collector with declared scope/provenance; inline review distinguishes representative processing from smoke-only evidence.
-- README distinguishes inline review from full archived evidence, and tests cover bounded summaries, exact-HEAD mismatch, runtime-corpus scope, and unwaived detail retention.
-
-#### R2. Enforce role boundaries, direct-I/O discipline, and controlled module growth
-
-- **Title:** Enforce role boundaries, direct-I/O discipline, and controlled module growth
-- **Impact 4 / effort: 3**
-- **Context:** CI already enforces role imports, direct-I/O ownership, service-boundary mapping, forbidden patching, refactor-movement evidence, coverage, mutation, and repository hygiene. The remaining gaps are targeted: require evidence for missing service-boundary coverage where it matters, and turn approved facade/waiver exceptions into narrow, expiring, owner-accountable records without creating generic governance noise.
-- **Benefit:** Architectural constraints prevent drift before merge instead of relying on manual review and retrospective refactors.
-- **Risks to avoid:** Use narrow, expiry-owned waivers and avoid noisy generic governance checks.
-- **Success criteria:**
-
-- New gates target first-party files only and require owner, reason, and expiry for every new waiver.
-- A targeted service-boundary coverage gap is a failure unless explicitly waived; do not infer an integration-test requirement for pure or inaccessible boundaries.
-- Documentation explains adding and retiring a waiver; tests prove the targeted violations fail and valid waivers expire as intended.
-
-#### R3. Restore service quality coverage above the retained baseline
-
-- **Title:** Restore service quality coverage above the retained baseline
-- **Impact 4 / effort: 3**
-- **Context:** The committed baseline currently records `src/services` coverage of 82.5763%, above the enforced 75% floor. The former 82.9680% comparison target has no retained baseline artifact in this repository, so it cannot serve as a verifiable acceptance threshold. Recent service growth still needs behavior-focused coverage and a clean, exact-commit full-suite measurement before the baseline is reset.
-- **Benefit:** The retained quality baseline continues to reflect real protection for durable external and stateful boundaries.
-- **Risks to avoid:** Add behavior tests with observable contracts or state; do not weaken floors, add exemptions, or add coverage-only paths.
-- **Success criteria:**
-
-- New behavior-focused coverage prioritizes ledger recovery, browser-worker lifecycle, and artifact-lineage failure paths.
-- Assertions cover returned contracts or persisted state, not coverage-only paths.
-- The quality baseline is refreshed only by a passing full CI run, records its exact SHA and measured service coverage, and demonstrates no reduction in global/generator/orchestrator coverage.
-
-#### R6. Review bounded-log reduction telemetry and remediate recurring callers
-
-- **Title:** Review bounded-log reduction telemetry and remediate recurring callers
-- **Impact 4 / effort: 2**
-- **Context:** Standard structured logging now bounds nested values and emits `log_payload_reduced` only when an event exceeds the byte contract, but operators do not yet aggregate those events to distinguish legitimate high-cardinality summaries from callers that still attempt to serialize domain payloads.
-- **Benefit:** Repeated source/model/browser payload attempts become measurable remediation work, preserving useful operational summaries while reducing log volume and accidental content-retention risk.
-- **Risks to avoid:** Aggregate only bounded metadata, hashes, event/module identifiers, and counts; never reconstruct discarded content or create a second unrestricted log store.
-- **Success criteria:**
-
-- Release evidence reports reduction-event count, event/module grouping, attempted-size percentiles, and zero-content samples.
-- A thresholded review identifies recurring callers and links them to an owner or remediation item without exposing discarded values.
-- Tests prove deterministic aggregation, redaction preservation, and that the scorecard cannot contain source text, prompts, model output, browser terminal text, or credentials.
-
-### 5. Boundary Simplification
-
-All work in this lane is movement-only unless behavior change receives explicit approval. Public facades, order, retries, idempotency, logs, and side effects must remain stable.
-
-#### S3. Simplify the PDF visual-heuristics boundary
-
-- **Title:** Simplify the PDF visual-heuristics boundary
-- **Impact 4 / effort: 4**
-- **Context:** The visual-heuristics, panel-detection, visual-candidate, crop, and table families have already been decomposed behind compatibility facades and documented movement evidence. This item no longer authorizes a broad facade cleanup; it owns only a measured remaining coupling that demonstrably obscures the canonical PDF boundary.
-- **Benefit:** A smaller semantic surface keeps the PDF capability navigable, replaceable, and testable without scattering external-library access.
-- **Risks to avoid:** Preserve candidate/crop outputs, artifact paths, and the one canonical external/library boundary.
-- **Success criteria:**
-
-- Identify a specific remaining coupling with a dependency or ownership audit before changing it; retain compatibility facades that preserve approved callers.
-- Keep visual heuristics capability-owned and testable behind the canonical PDF boundary.
-- Equivalence tests preserve candidate/crop behavior, artifact paths, cache semantics, and benchmark signatures.
-
-#### S4. Give WordPress shortcodes semantic ownership
-
-- **Title:** Give WordPress shortcodes semantic ownership
-- **Impact 4 / effort: 4**
-- **Context:** The WordPress shortcode class owns several unrelated public surfaces, making it difficult to isolate presentation changes and trace a shortcode to its feature contract.
-- **Benefit:** Shortcode behavior becomes understandable by stable feature ownership rather than one catch-all class.
-- **Risks to avoid:** Do not add navigation-only layers or alter public hooks/output during a movement-only refactor.
-- **Success criteria:**
-
-- Each extracted unit owns a coherent shortcode family and documents why the boundary reduces coupling.
-- Public shortcode behavior, output, and WordPress hooks remain unchanged.
-- PHP/runtime tests cover each public surface and compatibility facade, proving unchanged output and hook registration.
+  1. Only verified `email_requested` may enqueue mailbox delivery; carry verified submission timing/request identity and split broad access blockers into actionable classes.
+  2. Reuse `pdf-integrity-v1` before success/learning/cache/archive/ingest for HTTP, browser, mailbox/ZIP, cache, private-API and specialist PDF outputs. Distinguish local verification, durable archive, and acquisition completion.
+  3. Permit one evidence-triggered browser recovery when an apparent direct PDF is actually an HTML/WAF/viewer wrapper; rank opaque/extensionless PDF candidates from DOM/MIME/source evidence before lexical hints.
+  4. Gate pre-LLM form side effects on proven report-delivery evidence; keep deterministic playbooks/private APIs ahead of Browser Use where eligible.
+  5. Make listing-hub recovery self-healing by persisting the resolved direct detail/download target.
+  6. Use one onsite completeness evaluator; HTML/Markdown remain support artifacts while ingest is PDF-only; label Adobe text-only output explicitly and bound Issuu memory/concurrency.
+  7. Make mailbox acquisition metadata-first, ZIP-bounded, candidate-specific in suppression, and capable of bounded fallback to lower-ranked valid links.
+  8. Persist mechanism-level route/resource accounting (`planned_route_family`, `resolution_method`, route kind/outcome, browser/Agent/mailbox use, latency, cost/resources) for A14.
+  9. Reserve budgets for actual HTTP/browser/model/form/mailbox/PDF/Drive side effects rather than one generic PDF-processing reservation.
+- **Completion evidence:** old mail cannot satisfy a new request; `email_required` never polls; shared structural verifier rejects malformed PDFs on every route; onsite success produces a verified PDF; wrapper-PDF browser fallback is bounded; unrelated forms cannot be auto-submitted; listing-hub next run is direct; ZIP bombs/oversized archives are bounded; mechanism-level economics are retained; mutable cache freshness changes invalidate reuse; required archive failure remains recoverable pre-completion; route-specific budget tests match actual side effects.
+
+### Remaining Active Outcomes
+
+| ID | Current baseline | Target / completion proof |
+| --- | --- | --- |
+| A8 | Replay bundles exist; comparison is manual. | Deterministic bounded comparison of schema/prompt/evidence/output identities, including equivalent/changed/missing/malformed cases, with zero provider calls by default. |
+| A15 | Production namespace inventory and `policy-effectiveness` exist; compatibility fallback/evidence gaps remain. | No reachable production namespace uses compatibility fallback; compatible retained/live cohorts report calls, validity, reuse, latency, tokens/cost and produce reviewable conclusions without autonomous policy changes. |
+| A17 | Versioned admission decisions exist; no compatible-cohort calibration outcome. | Read-only funnel/counterfactual proposals gated by minimum sample/confidence; incompatible versions excluded; zero model/vector/external writes. |
+| P2 | Python structured logging is bounded, but WordPress intake/render events are direct PHP JSON/error-log events with different semantics. | One WordPress-local bounded/redacted public-event contract; tests prove correlation/outcome survive while user text, paths, stack content and discarded values do not; R6 receives only bounded reduction metadata. |
+| P4 | Briefing/correction/submission forms persist private WordPress records with nonce/honeypot/validation. | Use the P2-governed WordPress event contract; current hosted smoke proves each CTA, validation, spam/empty rejection, successful persistence, and confirmation/error state. |
+| P5 | Mobile nav, header search, archive filters and responsive CSS exist. | Current hosted screenshots at phone/tablet/desktop show no overflow/clipping/overlap; keyboard/focus/open-close behavior is accessible across homepage, search, archive, detail, contact and submit. |
+| P6 | Automated publish-readiness is strong; retained five-report human batches use a 10-point editorial matrix and some review fields remain incomplete. | Complete **three fixed five-report representative cohorts** with human reviewer attribution using the stable 10-point rubric (factual fidelity, evidence selection, analytical depth, specificity, commercial relevance, narrative structure, clarity, expert/human feel, completeness; LinkedIn separately; charts/tables excluded until their subproject). Close when all 15 have completed human decisions, aggregate weighted median is at least **85/100**, and no factual-fidelity score is below **8/10** without an explicit retained appeal/outlier disposition. |
+| P7 | `public_site_seo_performance.py` currently times HTTP fetch/parse/resource HEAD probes as `dom_complete_ms` and gates on YAML `baseline`, while the YAML `target` is not the pass criterion. | First make metrics truthful: use real browser navigation timing for DOM/load metrics or rename the HTTP probe; baseline remains regression ceiling and target attainment is reported separately. Refresh the baseline review date only from a current hosted measurement. Then improve all seven public routes toward YAML targets without increasing page weight/request count or losing canonical/social/archive contracts. |
+| P8 | Safe public projections exist; concise evidence/limitations/related-content contract remains incomplete. | Approved source/publisher/page/excerpt/limitation/original-link support; concise methodology; deterministic related report/briefing/topic/publisher links; fail closed/redact when approved data is absent. |
+| P10 | Safe public render boundary and correlation IDs exist; hosted aggregation/alerting does not. | Hosted release evidence aggregates bounded failure counts/correlation IDs and distinguishes zero/expected-injected/unexpected failures without exposing private diagnostics. |
+| E6 | A/B script deliberately does not retain vectors, so fixed-corpus semantic ranking cannot run provider-free. | Hash-pinned retention-governed export of approved vector IDs/content hashes/vectors; CI benchmark compares semantic coverage to lexical fallback with zero provider calls. |
+| E10 | Cost routes fail closed on missing/stale/held rates; review/transition remains manual. | Read-only active/expiring/stale/held/missing rate check plus explicitly reviewed before/after rate-card transition; unknown/expired/held routes cannot bypass spend authority. |
+| E12 | Taxonomy/evidence context is materialized within one pre-category execution boundary. | Versioned lineage-validated pre-category checkpoint; category-only recovery makes no source/vector/taxonomy/evidence provider call and records avoided tokens/cost. |
+| E13 | Candidate audits retain promotion/rollback/lineage metadata; compatible-cohort effectiveness view is missing. | Read-only compatible cohort by repair target/issue/schema/policy/prompt with promotion/rollback, attempts, lineage failures, latency/tokens/cost; show at least one reviewable reduction in repeated failed repair work or improved promotion rate. |
+| E14 | Category decisions retain deterministic/model outcomes but no operator cohort scorecard. | Read-only compatible-cohort selection/rescue/repair/latency/token/cost scorecard and bounded mapping/prompt proposals; demonstrate increased grounded coverage or reduced unnecessary repairs without automatic taxonomy changes. |
+| R1 | CI creates bounded release review/job summary and archives evidence. | PR/release surface links exact-tested-HEAD bundle and final approval; runtime corpus carries declared representativeness; mismatch/unavailable/unwaived cases remain visible. |
+| R2 | CI already enforces core architecture/import/I/O/policy rules. | Targeted missing service-boundary evidence fails unless covered by narrow owner/reason/expiry waiver; tests prove expiry and valid exceptions without adding broad governance noise. |
+| R3 | Retained service coverage is 82.5763% with enforced 75% floor. | Behavior tests prioritize stateful/external failure paths; refresh the retained baseline only from passing exact-commit full CI with no regression in global/generator/orchestrator coverage. |
+| R6 | `log_payload_reduced` exists; operator aggregation does not. | Release evidence groups count/module/event/attempted-size percentiles with zero-content samples; thresholded recurring callers get ownership/remediation without reconstructing discarded content. |
+| S3 | PDF visual families are already decomposed behind compatibility facades. | Change only a measured remaining coupling; preserve canonical PDF external/library boundary, candidate/crop outputs, paths, cache semantics and benchmark signatures. |
+| S4 | One shortcode class owns several unrelated public semantics. | Extract coherent shortcode families behind compatibility registration; public hooks/output remain unchanged and PHP/runtime tests cover each surface. |
+
+## Deferred Work
+
+Deferred means **not an MVP blocker under current evidence**. In particular, P3 is intentionally tied to production-host migration rather than the temporary HTTP sandbox. D10 remains deferred because A18/A19 own current browser/acquisition correctness and no separate tuning program should compete with them.
+
+## Recently Closed / Retained Evidence
+
+The Unified Work Register is the status authority. Detailed historical narratives are intentionally not duplicated here because they became stale and contradictory. Retained proof remains in `docs/quality/`, `docs/CTO_evidence/`, release evidence, and git history. Recent/high-value closure references include:
+
+- **E11:** [`docs/quality/e11-structured-output-recovery-evidence-2026-08-28.md`](docs/quality/e11-structured-output-recovery-evidence-2026-08-28.md).
+- **E9:** [`docs/quality/e9-prompt-family-reuse-evidence-2026-08-27.md`](docs/quality/e9-prompt-family-reuse-evidence-2026-08-27.md).
+- **E8:** [`docs/quality/e8-source-reuse-evidence-2026-08-28.md`](docs/quality/e8-source-reuse-evidence-2026-08-28.md).
+- **P12/P14:** [`docs/CTO_evidence/p12_p14_exact_head_canary_20260827.json`](docs/CTO_evidence/p12_p14_exact_head_canary_20260827.json).
+- **P6 human-review evidence:** [`docs/quality/p6-editorial-acceptance.md`](docs/quality/p6-editorial-acceptance.md) remains Active evidence, not closure evidence.
 
 ## Guardrails
 
@@ -603,7 +188,8 @@ All work in this lane is movement-only unless behavior change receives explicit 
 - Never publish incomplete public pages for later enrichment; preview/draft is allowed only outside the public release surface.
 - Never invent identity attributes for acquisition forms; map only configured, verified values.
 - Never lower private-API promotion thresholds automatically.
-- Never publish OCR, model, crop, vector, or validation diagnostics as public product content.
+- Never publish OCR, model, crop, vector, validation, filesystem, stack-trace, or other operator diagnostics as public product content.
+- WordPress remains a rendering/publication boundary for intelligence; do not move report intelligence generation into the theme/plugin.
 
 ### Non-negotiable publishing guardrail
 
@@ -611,16 +197,19 @@ Automation may plan, resume, retry, repair, validate, render, draft, hold, and n
 
 ## Current-State Evidence
 
-- A1 plan-first authority is now typed and checksum-bound across CLI/UI control payloads. A retained publish plan emitted no external mutation; a live zero-item publish invocation authorized before correctly failing local missing-credential validation; the full suite passed 3,888 tests in 461.92 seconds.
-- Canonical LLM accounting uses SQLite with deterministic JSONL/daily projections, reconciliation, replay suppression, task-median forecasting, and configured OpenAI day guardrails.
-- The retained CI accounting corpus now includes valid, invalid, replay-suppressed, and real cached-provider (`provider_hit`) events; cached-token tampering is rejected by reconciliation tests. This closes the former cached-provider corpus task.
-- Claim embeddings, stale/no-embedding fallback, bounded semantic preselection, durable Signal artifacts, artifact lineage storage, and lineage invalidation are present.
-- Workflow-control intent/preflight, UI dead letters, mailbox acquisition, resume checkpoints, prompt dry runs, provider decisions, and deterministic JSON-chat compaction are present.
-- Public report rendering exposes approved advisory/metric-spine data while redacting canonical IDs; strict crop acceptance emits typed QA sidecars.
-- WordPress report, briefing, and signal entities have REST draft/readback verification; `sync-wordpress-intelligence` now projects 64 retained local public entities (47 reports, 5 briefings, 12 signals, and 29 publishers) through the authenticated plugin route, while missing/invalid projections render neutral values. Hosted HTTPS/error handling, intake, responsive UI, and editorial leakage remain active public-site gaps.
-- CI runs formatting, typing, architecture/import checks, forbidden-patching checks, hygiene, coverage, mutation, prompt regression, release-evidence archival, hash-pinned PDF candidate/crop/trend gates, public report-quality gates, and WordPress staging verification when configured.
+- Canonical workflow-control, budgets, recovery, model-policy routing, source identity, artifact lineage, publish readiness, and idempotent WordPress publication boundaries are implemented with retained evidence.
+- WordPress currently has baseline public render safety, private intake persistence, responsive navigation/search/filter implementation, and authenticated draft/readback support. P2/P4/P5/P10 own deployed operational proof rather than missing baseline implementation.
+- `sync-wordpress-intelligence` has retained evidence for **64 public content entities** — 47 reports, 5 briefings, and 12 signals — **plus 29 publishers**. Do not describe that as 64 total entities.
+- HTTPS on the temporary sandbox is intentionally deferred to production-host migration under P3; it is not counted as an autonomous-MVP implementation blocker.
+- P6 is an editorial human-acceptance outcome, not an automated-gate implementation gap.
+- P7 is not closeable until its measurement semantics distinguish HTTP probe timing from real browser DOM/load timing and report baseline regression separately from target attainment.
+- CI covers formatting, typing, architecture/import checks, forbidden patching, hygiene, coverage, mutation, prompt regression, release-evidence archival, PDF candidate/crop/trend gates, public report-quality gates, and WordPress staging verification when configured.
 
 ## Audit Notes
 
-- This register replaces duplicated simplification context, migrated x100 intake, and repeated launch plans with source-neutral status rows. No task is excluded because of its origin.
-- The active backlog contains 30 outcome-owned items. Deferred, closed, and excluded rows remain visible above; any newly discovered work must be merged into an existing outcome or justified as a new one.
+- Full backlog/code/WordPress reconciliation performed on 2026-09-04 against exact repository HEAD `28ad708f3bc3badf568c5f8e31f8c9d94df52775`.
+- The prior register reported 30 Active outcomes while containing 24 Active rows. P3 is now correctly Deferred for production-host migration, leaving **23 Active outcomes**.
+- Historical canonical IDs that previously existed only in closure prose/context are restored to the Unified Work Register: A5, A12, A13, P0, P9, P11, E1, E2, E5, E7, R4, S1, S2, and D10.
+- The obsolete statement that closed A3/A6 remained Active has been removed; E3 no longer delegates current work to already-closed E7.
+- C6, P11, and A14 closure wording is narrowed to the capability/tooling actually proven so A18/A19 can own current production-hardening work without contradiction.
+- Public-site states now distinguish implemented-but-unverified outcomes from missing implementation, and intentional sandbox HTTP from production transport requirements.
