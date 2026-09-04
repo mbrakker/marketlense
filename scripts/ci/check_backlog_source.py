@@ -43,13 +43,7 @@ _ACTIVE_REGISTER_ROW = re.compile(
     r"^\|\s*Active\s*\|\s*([A-Z]+\d+)\s*\|\s*([^|]+?)\s*\|",
     re.MULTILINE,
 )
-_ACTIVE_DETAIL_HEADING = re.compile(
-    r"^#{3,4}\s+([A-Z]+\d+)\.\s+(.+?)\s*$", re.MULTILINE
-)
-_ACTIVE_DETAIL_ROW = re.compile(
-    r"^\|\s*([A-Z]+\d+)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*$",
-    re.MULTILINE,
-)
+_ACTIVE_DETAIL_HEADING = re.compile(r"^####\s+([A-Z]+\d+)\.\s+(.+?)\s*$", re.MULTILINE)
 _DETAIL_TITLE = re.compile(r"^- \*\*Title:\*\*\s*(.+?)\s*$", re.MULTILINE)
 
 
@@ -107,17 +101,19 @@ def validate_canonical_backlog(
 ) -> tuple[BacklogIntegritySummary, tuple[BacklogSourceViolation, ...]]:
     """Validate active register/detail correspondence in stable backlog Markdown.
 
-    Detailed active work may use either an ``###/#### ID. title`` section or the
-    compact ``| ID | baseline | completion proof |`` table inside Active Backlog.
-    Historical prose and Recently Closed evidence are never active definitions.
+    This intentionally understands only the canonical table and `#### ID. title`
+    structure. It never treats historical prose or Recently Closed evidence as
+    active definitions.
     """
 
     register_text = _section_text(text, _UNIFIED_REGISTER_HEADING)
     active_backlog_text = _section_text(text, _ACTIVE_BACKLOG_HEADING)
+    # The active area can contain the following `## Recently Closed` heading in
+    # files authored before the section helper was introduced; keep the boundary
+    # explicit for deterministic migration compatibility.
     active_backlog_text = active_backlog_text.split(_RECENTLY_CLOSED_HEADING, 1)[0]
     register_rows = tuple(_ACTIVE_REGISTER_ROW.finditer(register_text))
     detail_headings = tuple(_ACTIVE_DETAIL_HEADING.finditer(active_backlog_text))
-    compact_detail_rows = tuple(_ACTIVE_DETAIL_ROW.finditer(active_backlog_text))
 
     register_by_id: dict[str, list[str]] = {}
     for row in register_rows:
@@ -134,14 +130,6 @@ def validate_canonical_backlog(
             active_backlog_text[heading.end() : section_end], heading.group(2)
         )
         detail_by_id.setdefault(heading.group(1), []).append(title)
-
-    for row in compact_detail_rows:
-        item_id = row.group(1)
-        register_titles = register_by_id.get(item_id)
-        # The compact detail form deliberately keeps the canonical title only in
-        # the register; its two cells are baseline and completion proof.
-        title = register_titles[0] if register_titles else item_id
-        detail_by_id.setdefault(item_id, []).append(title)
 
     violations: list[BacklogSourceViolation] = []
     duplicate_register_ids = sorted(
@@ -220,7 +208,7 @@ def validate_canonical_backlog(
 
     summary = BacklogIntegritySummary(
         active_register_items=len(register_rows),
-        detailed_active_sections=len(detail_by_id),
+        detailed_active_sections=len(detail_headings),
         duplicate_ids=len(duplicate_register_ids) + len(duplicate_detail_ids),
         missing_detail_sections=len(missing_details),
         orphan_detail_sections=len(orphan_details),
