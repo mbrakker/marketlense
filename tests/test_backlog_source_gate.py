@@ -127,6 +127,44 @@ def test_canonical_backlog_accepts_matching_active_register_and_detail() -> None
     assert violations == ()
 
 
+def test_canonical_backlog_accepts_compact_active_detail_table() -> None:
+    summary, violations = validate_canonical_backlog(
+        _canonical_backlog(
+            register=(
+                "| Active | A10 | Budget deferred recovery | bounded outcome |\n"
+                "| Active | A11 | Recurring failure review | bounded outcome |"
+            ),
+            details=(
+                "### Remaining Active Outcomes\n\n"
+                "| ID | Current baseline | Target / completion proof |\n"
+                "| --- | --- | --- |\n"
+                "| A10 | Recovery records exist. | Prove bounded replay. |\n"
+                "| A11 | Failure groups exist. | Prove operator review. |"
+            ),
+        )
+    )
+
+    assert summary.active_register_items == 2
+    assert summary.detailed_active_sections == 2
+    assert violations == ()
+
+
+def test_canonical_backlog_accepts_level_three_active_detail_heading() -> None:
+    summary, violations = validate_canonical_backlog(
+        _canonical_backlog(
+            register="| Active | A10 | Budget deferred recovery | bounded outcome |",
+            details=(
+                "### A10. Budget deferred recovery\n\n"
+                "- **Title:** Budget deferred recovery"
+            ),
+        )
+    )
+
+    assert summary.active_register_items == 1
+    assert summary.detailed_active_sections == 1
+    assert violations == ()
+
+
 def test_canonical_backlog_reports_missing_detail_section() -> None:
     _, violations = validate_canonical_backlog(
         _canonical_backlog(
