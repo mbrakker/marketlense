@@ -142,7 +142,12 @@ def test_grounding_blocks_incompatible_proposition_and_dimensions(tmp_path) -> N
 
     assert len(issues) == 1
     assert issues[0].severity == "error"
-    for label in ("factual_proposition", "population", "observation_status", "causality"):
+    for label in (
+        "factual_proposition",
+        "population",
+        "observation_status",
+        "causality",
+    ):
         assert label in issues[0].message
 
 

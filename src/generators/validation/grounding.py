@@ -5,12 +5,12 @@ import re
 from dataclasses import asdict
 from typing import Any, List, Sequence
 
-from src.contracts.protected_facts import ProtectedFactComparison
 from src.contracts.prompt_family_materialization import (
     PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
     PromptFamilyMaterializationRequest,
     PromptFamilyReuseRequest,
 )
+from src.contracts.protected_facts import ProtectedFactComparison
 from src.contracts.schema_validation import SchemaValidateRequest
 from src.contracts.structured_output import StructuredOutputExecutionRequest
 from src.contracts.validation import ValidationIssue, ValidationRequest
@@ -124,7 +124,9 @@ def run_grounding_check(
             module=LOGGER_NAME,
             fields={
                 "prompt_content_hash": prompt_bundle.prompt_content_hash,
-                "execution_identity": prompt_bundle.execution_identity.execution_identity,
+                "execution_identity": (
+                    prompt_bundle.execution_identity.execution_identity
+                ),
             },
         )
     )
@@ -471,7 +473,10 @@ def run_grounding_check(
                     issues.append(
                         issue(
                             rule_id=RULE_ID,
-                            message=f"[{classification}|{violation_type}] {reason}: {text[:200]}",
+                            message=(
+                                f"[{classification}|{violation_type}] "
+                                f"{reason}: {text[:200]}"
+                            ),
                             severity=severity,
                             section=section,
                         )
@@ -590,7 +595,10 @@ def infer_claim_classification(section_key: str, text: str) -> str:
     policy = section_policy(section_key)
     if policy == "soft":
         if re.search(
-            r"\b(should|must|need to|recommend|recommended|prioriti[sz]e|consider|action|next step|implement)\b",
+            (
+                r"\b(should|must|need to|recommend|recommended|prioriti[sz]e|"
+                r"consider|action|next step|implement)\b"
+            ),
             lowered,
         ):
             return "prescriptive_recommendation"
@@ -626,7 +634,9 @@ def normalize_violation_type(value: str) -> str:
             "unsupported_operational_or_financial_benefit"
         ),
         "unsupported_financial_benefit": "unsupported_operational_or_financial_benefit",
-        "unsupported_operational_benefit": "unsupported_operational_or_financial_benefit",
+        "unsupported_operational_benefit": (
+            "unsupported_operational_or_financial_benefit"
+        ),
         "numerically_inconsistent": "numerically_inconsistent",
         "numeric_inconsistency": "numerically_inconsistent",
         "contradicted": "contradicted",

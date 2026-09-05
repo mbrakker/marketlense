@@ -21,12 +21,22 @@ def _artifacts_for(section: str, text: str) -> dict:
                 "text": "Wallet adoption rose among surveyed consumers.",
                 "evidence_id": "evidence-1",
                 "evidence": "Wallet adoption rose among surveyed consumers.",
-                "so_what": "This makes wallet coverage a more important journey consideration.",
-                "now_what": "Brands should reconsider treating wallet coverage as experimental.",
+                "so_what": (
+                    "This makes wallet coverage a more important journey "
+                    "consideration."
+                ),
+                "now_what": (
+                    "Brands should reconsider treating wallet coverage as "
+                    "experimental."
+                ),
             }
         ],
-        "expert_comment": "The shift makes wallet coverage a more important journey consideration.",
-        "linkedin_post": "Brands should reconsider treating wallet coverage as experimental.",
+        "expert_comment": (
+            "The shift makes wallet coverage a more important journey consideration."
+        ),
+        "linkedin_post": (
+            "Brands should reconsider treating wallet coverage as experimental."
+        ),
     }
     if section == "expert_comment":
         artifacts["expert_comment"] = text
@@ -147,7 +157,9 @@ def test_grounding_blocks_unsupported_editorial_outcomes(
     assert f"[{classification}|{violation_type}]" in issues[0].message
 
 
-def test_grounding_keeps_factual_sentence_in_creative_paragraph_strict(tmp_path) -> None:
+def test_grounding_keeps_factual_sentence_in_creative_paragraph_strict(
+    tmp_path,
+) -> None:
     issues = _issues(
         tmp_path,
         section="linkedin_post",
