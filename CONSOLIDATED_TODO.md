@@ -1,7 +1,7 @@
 # Consolidated TODO
 
-Last audited: 2026-09-04
-Audit basis: repository `main` product implementation at `28ad708f3bc3badf568c5f8e31f8c9d94df52775`, current WordPress theme/plugin code, and retained hosted-site evidence. Subsequent commits before this edit changed backlog documentation/gating only, not product behavior. Hosted-only completion criteria remain open unless a current deployed smoke/readback proves them; the temporary HTTP sandbox is not treated as a production-hosting defect.
+Last audited: 2026-09-05
+Audit basis: repository `main` product implementation at `28ad708f3bc3badf568c5f8e31f8c9d94df52775`, current WordPress theme/plugin code, retained hosted-site evidence, and a targeted crop-path review against current `main` at `1aa50412a863ef1891f14f1b81f72a4230353aed`. Hosted-only completion criteria remain open unless a current deployed smoke/readback proves them; the temporary HTTP sandbox is not treated as a production-hosting defect.
 
 This is the repository's single, source-neutral work register. Every canonical task ID appears once in the Unified Work Register. Historical evidence may explain a closure, but it must not redefine current status.
 
@@ -76,6 +76,7 @@ This is the repository's single, source-neutral work register. Every canonical t
 | Active | E12 | Persist pre-category editorial context checkpoints | Extend typed recovery to genuinely category-only retries. |
 | Active | E13 | Measure candidate-regeneration promotion effectiveness | Compare compatible candidate cohorts and reduce repeated unsuccessful repair spend. |
 | Active | E14 | Calibrate category-fit coverage from retained outcomes | Turn retained category-fit decisions into grounded mapping/prompt proposals. |
+| Active | E15 | Make publication crops visually complete and repairable | Replace shrink-biased crop refinement/QA with completeness-first localization, directional bbox repair, and human-grounded production evidence. |
 | Active | R1 | Publish release-evidence reviews where reviewers work | Link exact-tested-HEAD evidence/approval to the PR/release surface and declare runtime-corpus representativeness. |
 | Active | R2 | Enforce role boundaries, direct-I/O discipline, and controlled module growth | Close targeted boundary-coverage and expiring-waiver gaps without generic governance noise. |
 | Active | R3 | Restore service quality coverage above the retained baseline | Add behavior-focused service coverage and refresh the baseline only from a passing exact-commit run. |
@@ -112,7 +113,7 @@ This is the repository's single, source-neutral work register. Every canonical t
 
 ## Active Backlog
 
-The register currently contains **23 Active outcomes**. Every item below is implementation-ready and uses the same four-part contract: **Baseline**, **Target behaviour**, **What to implement, in order**, and **Acceptance criteria**.
+The register currently contains **24 Active outcomes**. Every item below is implementation-ready and uses the same four-part contract: **Baseline**, **Target behaviour**, **What to implement, in order**, and **Acceptance criteria**.
 
 ### 1. Autonomous Safety and Cost Control
 
@@ -418,6 +419,30 @@ The register currently contains **23 Active outcomes**. Every item below is impl
   - Proposals are bounded to mapping/prompt review and include sample/confidence evidence; no automatic taxonomy/policy change occurs.
   - Retained/bounded live evidence demonstrates a measured increase in **grounded** nonempty selection or a reduction in unnecessary category-repair calls with no increase in invalid/forced assignments, or records a justified no-change result.
 
+#### E15. Make publication crops visually complete and repairable
+
+- **Baseline:** The selected chart/table path already has candidate detection, semantic ranking, optional vision crop refinement, PDF geometry tightening, strict raster QA, sidecars, scorecards and bounded escalation. Visual review nevertheless shows crop geometry is not publication-ready. Current refinement can skip vision for candidates judged an “obvious pass” from usefulness/structure signals rather than boundary certainty; vision receives an unannotated full-page render at low refinement DPI; several later stages can tighten/trim the bbox; `edge_clipped_content` is currently routed through another inward content-aware trim; the table boundary detector is observational rather than rejecting; chart completeness is asymmetric; an empty refined bbox can fail open to the whole page; and some fallback/publication paths can reuse lower-DPI crops. Existing retained crop scorecards/goldens mostly prove deterministic regression stability against the same QA logic, not human semantic completeness of the final visual.
+- **Target behaviour:** Every accepted publication crop contains the complete semantic visual—chart/table title when attached, full plot/table body, axes, labels, legend, annotations, headers, rows/columns, units, and attached note/source where applicable. Modest safe whitespace is preferable to missing content. Final geometry is localized once, protected by deterministic PDF-aware guardrails, rendered consistently, validated by type-specific completeness checks, and repaired by changing the bbox in the correct direction rather than cosmetically trimming an already-rendered PNG.
+- **What to implement, in order:**
+  1. Establish a retained human-labelled production crop corpus of roughly **50–100 visuals across 15–20 materially different publishers/report layouts**, with target visual identity, expected/acceptable bbox, required semantic components, defect edge/type, publication-ready decision, and exact source/producer hashes. Measure candidate recall separately from bbox completeness so discovery misses are not confused with crop failures.
+  2. For the small set of final ranked publication candidates, make visual crop localization mandatory until retained evidence proves a boundary-confidence skip is equivalent. Feed the model both an annotated full-page image with the candidate box visibly marked and a higher-resolution local context image around the candidate (roughly **180–220 DPI**); map the returned geometry deterministically back to PDF coordinates.
+  3. Make the crop-refine objective explicit and ordered: **semantic completeness → exclusion of unrelated neighbours → safe margin → tightness**. Define required components separately for charts and tables and prefer a small margin over uncertain exclusion of an attached title, label, legend, note, or source.
+  4. Simplify post-model geometry to safety guardrails rather than repeated re-cropping: intersect with the physical page, fall back to the original candidate bbox on invalid/empty model output, expand for meaningfully intersected text/table rules/attached components, add a small safety margin, and prohibit heuristic inward shrink unless the removed region is provably whitespace/unrelated. Never convert an invalid model bbox into a whole-page crop.
+  5. Standardize every crop that can become public to the configured final publication resolution (**216 DPI** under the current profile). Treat candidate-pack/preview crops as previews; do not reuse a lower-DPI cached crop as the final public asset unless its sidecar proves the required publication DPI/profile.
+  6. Reduce raster trimming to conservative, provable background removal with a small per-edge cap and retained safety padding. Remove clipped-content defects from inward trim repair; a crop that is missing content cannot be repaired by deleting more pixels.
+  7. Implement directional bbox repair with at most one bounded rerender by default: neighbour contamination shrinks only the offending edge; clipping or a missing semantic component expands only the relevant edge. Retain before/after bbox, defect edge/type, repair action, render profile and QA result in the sidecar.
+  8. Make final QA type-aware and rejecting: table validation checks outer-rule/text crossings plus complete headers/rows/columns where detectable; chart validation checks all four edges and protects title/legend/axes/labels/annotations/source. Normalize defect labels so deterministic QA, escalation and release gates use the same canonical taxonomy.
+  9. Run the retained corpus through the actual `publication_strict` path before and after the change, including the model-localization path where applicable. Use the human labels—not the cropper's own score—as the primary correctness outcome; only after the target is met should adaptive skipping or heuristic deletion be reconsidered for cost/speed.
+- **Acceptance criteria:**
+  - On the retained representative corpus, at least **95% of accepted publication crops** receive a human `publication_ready` decision, and no accepted crop has critical semantic clipping of a chart title/axis/label/legend or a table header/row/column; attached source/note content is preserved where the human label marks it required.
+  - The before/after corpus shows a material reduction in clipping and neighbour-contamination defects versus the exact retained baseline with no material regression in candidate recall or selected-visual usefulness.
+  - Invalid/out-of-page/empty model geometry never becomes a whole-page crop; it deterministically falls back to the original candidate geometry or a typed rejection.
+  - `edge_clipped_content`/missing-component failures can only trigger bbox expansion/rerender or rejection, never an inward PNG-only trim; neighbour contamination can only shrink the implicated edge.
+  - Table completeness can reject a demonstrably cut boundary/header/row/column, and chart completeness evaluates top/right as well as left/bottom with canonical defect labels shared by escalation.
+  - Every final public crop sidecar proves the configured publication DPI/profile, and lower-DPI preview/fallback artifacts cannot silently enter the public asset set.
+  - Focused tests cover annotated/local vision inputs, invalid-bbox fallback, directional repair, four-edge chart validation, table-boundary rejection, conservative trim, DPI reuse, and sidecar taxonomy; the retained production-strict golden/human corpus passes on the exact implementation SHA.
+  - The final selected-visual path remains bounded: no more than the configured localization call plus one repair/rerender per candidate by default, and no new model/library is introduced unless the retained corpus proves the existing stack cannot reach the target.
+
 ### 4. Release Integrity and Architectural Enforcement
 
 #### R1. Publish release-evidence reviews where reviewers work
@@ -559,8 +584,9 @@ Automation may plan, resume, retry, repair, validate, render, draft, hold, and n
 
 ## Audit Notes
 
-- Full backlog/code/WordPress reconciliation performed on 2026-09-04 against exact product-code HEAD `28ad708f3bc3badf568c5f8e31f8c9d94df52775`; subsequent backlog/parser commits did not change product behavior.
-- The register contains **23 Active outcomes**, and each now has a full execution section with baseline, target behaviour, ordered implementation work, and acceptance criteria.
+- Full backlog/code/WordPress reconciliation performed on 2026-09-04 against exact product-code HEAD `28ad708f3bc3badf568c5f8e31f8c9d94df52775`; targeted crop-path review refreshed on 2026-09-05 against current `main` at `1aa50412a863ef1891f14f1b81f72a4230353aed`.
+- The register contains **24 Active outcomes**, and each has a full execution section with baseline, target behaviour, ordered implementation work, and acceptance criteria.
+- E15 was added from the crop-path review because crop correctness is a user-visible quality outcome distinct from closed E5 telemetry, closed C2 escalation infrastructure, and S3's behavior-preserving simplification scope.
 - P3 is correctly Deferred for production-host migration rather than counted as a temporary-sandbox MVP blocker.
 - Historical canonical IDs previously present only in closure prose/context remain restored to the Unified Work Register: A5, A12, A13, P0, P9, P11, E1, E2, E5, E7, R4, S1, S2, and D10.
 - The obsolete statement that closed A3/A6 remained Active is removed; E3 no longer delegates current work to already-closed E7.
