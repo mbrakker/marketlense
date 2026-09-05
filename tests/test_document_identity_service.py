@@ -24,6 +24,20 @@ def test_extract_publisher_imprint_accepts_explicit_document_evidence(
     assert len(observation.evidence_hash) == 64
 
 
+def test_extract_publisher_imprint_accepts_repeated_document_header_domain() -> None:
+    observation = extract_publisher_imprint(
+        "www.activate.com\n"
+        "Technology & Media Outlook\n"
+        "www.activate.com\n"
+        "Market analysis\n"
+        "www.activate.com\n"
+    )
+
+    assert observation is not None
+    assert observation.publisher_name == "activate.com"
+    assert observation.evidence_locator == "document_pack:first_pages:repeated_domain"
+
+
 @pytest.mark.parametrize(
     "text",
     (

@@ -28,7 +28,7 @@
         "properties": {
           "section": {"type": "string"},
           "text": {"type": "string"},
-          "classification": {"const": "factual_claim"},
+          "classification": {"type": "string", "const": "factual_claim"},
           "entailment_outcome": {"type": "string", "enum": ["entailed", "contradicted", "not_established"]},
           "proposition_status": {"type": "string", "enum": ["compatible", "incompatible", "unknown"]},
           "protected_facts": {

@@ -3,6 +3,7 @@ import pytest
 from src.contracts.run_context import RunContext
 from src.contracts.schema_validation import SchemaValidateRequest
 from src.services.schema_validator_service import (
+    provider_output_schema,
     validate_evidence_references,
     validate_schema,
 )
@@ -148,6 +149,16 @@ def test_validate_schema_enforces_one_of_for_methods_items():
             _ctx(),
         )
     assert exc.value.code == "schema_type_mismatch"
+
+
+def test_provider_schema_types_const_values_for_strict_openai_responses():
+    schema = provider_output_schema("grounding_validation_output")
+
+    classification = schema["properties"]["checks"]["items"]["properties"][
+        "classification"
+    ]
+
+    assert classification == {"const": "factual_claim", "type": "string"}
 
 
 def test_validate_evidence_references_passes_for_known_ids():

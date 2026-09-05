@@ -1,0 +1,50 @@
+schema_version: "1.0"
+
+# One-report, no-publication replay of Drive admission with live model calls.
+paths:
+  output_dir: "./out/drive_admission_live_20260905_retry"
+  cache_dir: "./cache/drive_admission_live_20260905_retry"
+  state_db: "./state/drive_admission_live_20260905_retry/index.sqlite"
+  reports_db: "./state/drive_admission_live_20260905_retry/reports.sqlite"
+  signal_store_db: "./state/drive_admission_live_20260905_retry/signals.sqlite"
+  ingest_lock: "./state/drive_admission_live_20260905_retry/ingest.lock"
+
+ingest:
+  run_budget:
+    max_spend_usd: 6.0
+    max_pdfs: 1
+    max_retries: 3
+    max_runtime_seconds: 14400
+    limit_decision: "stop"
+
+browser_download:
+  drive_upload:
+    enabled: false
+    required: false
+  run_budget:
+    max_browser_launches: 0
+    max_drive_writes: 0
+    max_pdfs: 1
+    max_retries: 3
+    max_runtime_seconds: 14400
+    limit_decision: "stop"
+
+analysis:
+  cost_ledger_path: "./state/drive_admission_live_20260905_retry/llm_cost_ledger.jsonl"
+
+cost:
+  usage_db_path: "./state/drive_admission_live_20260905_retry/llm_usage.sqlite"
+  daily_path: "./state/drive_admission_live_20260905_retry/llm_cost_daily.json"
+  ledger_path: "./state/drive_admission_live_20260905_retry/llm_cost_ledger.jsonl"
+
+publish:
+  wp:
+    site_url: ""
+    username: ""
+    post_status: "draft"
+  projection_daily_path: "./state/drive_admission_live_20260905_retry/projection_cost_daily.json"
+  projection_ledger_path: "./state/drive_admission_live_20260905_retry/projection_cost_ledger.jsonl"
+  run_budget:
+    enabled: true
+    max_wordpress_writes: 0
+    limit_decision: "stop"

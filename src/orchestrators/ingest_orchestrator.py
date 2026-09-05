@@ -38,6 +38,7 @@ from src.contracts.report_cards import ReportCardManifest
 from src.contracts.report_store import (
     ReportMetadataGetRequest,
     ReportSourceIdentityGetRequest,
+    ReportSourceRecordRequest,
     ReportSourceReuseResolveRequest,
     SourceIdentityObservationRecordRequest,
 )
@@ -59,8 +60,8 @@ from src.contracts.validation_reliability import (
     ValidationReliabilityWriteRequest,
 )
 from src.contracts.validation_run_manifest import (
-    ValidationRunManifestAuditRequest,
     ValidationRunManifestAttemptResolveRequest,
+    ValidationRunManifestAuditRequest,
     ValidationRunManifestCreateRequest,
     ValidationRunManifestRecordRequest,
     ValidationRunManifestStageRecord,
@@ -133,6 +134,7 @@ from src.services.report_store_service import (
     audit_validation_run_manifest,
     create_validation_run_manifest,
     get_report_source_identity,
+    record_report_source,
     record_source_identity_observation,
     record_validation_run_manifest_stage,
     resolve_report_source_reuse,
@@ -213,6 +215,9 @@ class IngestBatchDependencies:
     record_source_identity_observation: Callable[
         [SourceIdentityObservationRecordRequest, RunContext], Any
     ] = field(default=record_source_identity_observation)
+    record_report_source: Callable[[ReportSourceRecordRequest, RunContext], Any] = (
+        field(default=record_report_source)
+    )
 
     @classmethod
     def default(cls) -> "IngestBatchDependencies":
@@ -918,6 +923,7 @@ def _cohort_admission_preflight(
         evaluate_budget_request=deps.evaluate_budget_request,
         get_source_identity=deps.get_source_identity,
         record_source_identity_observation=deps.record_source_identity_observation,
+        record_report_source=deps.record_report_source,
     )
     for file in files:
         file_ctx = child_context(root_ctx, task_id=f"admission:{file.file_id}")

@@ -113,8 +113,16 @@ verified on-site capture follow the same source-record and observation path.
 A configured publisher carries both its stable `publisher_id` and display name
 on the acquisition request. The stable ID is retained in source identity and
 resource accounting so admission can enforce a per-publisher cohort limit
-without inferring provenance from a Drive filename or folder. An artifact
-without a known stable publisher ID is not eligible for that limited cohort.
+without inferring provenance from a Drive filename or folder. For a retained
+Drive artifact that has no prior source record, admission may establish that
+identity only after local PDF integrity and text checks pass and the bounded
+document sample contains one unambiguous publisher imprint. A repeated,
+standalone `www.<publisher-domain>` header on at least two sampled pages is
+such an imprint; its domain is retained as the publisher identity together
+with the exact MD5 and Drive-artifact reference. This records a normal source
+row and immutable identity observation before the cohort is frozen. Filenames,
+folder names, and Drive IDs are never publisher evidence, and a document with
+no unambiguous imprint remains ineligible for that limited cohort.
 An accepted email request has no artifact to hash, so its telemetry status is
 `provisional` until mailbox delivery retains and verifies the attachment; it
 is never treated as a resolved or cohort-eligible report merely because the
@@ -360,7 +368,9 @@ category fit, evidence packs (findings, methods, limitations, scope and quote
 candidates), report artifacts (summary, insights, expert commentary, LinkedIn
 material and cover semantics), and model-backed grounding and semantic
 validation output. The service requests provider JSON Schema constraints when
-the endpoint supports them, then applies Unicode and fence normalization,
+the endpoint supports them; fixed (`const`) response values retain their
+concrete JSON types so strict provider schemas remain valid. It then applies
+Unicode and fence normalization,
 deterministic extraction/parsing, contract normalization, one deterministic
 JSON repair, one model repair using the original response plus exact errors,
 and one source-evidence regeneration. Every attempt writes a bounded audit

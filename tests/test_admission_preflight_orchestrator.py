@@ -13,6 +13,7 @@ from src.orchestrators.admission_preflight_orchestrator import (
 from src.services.report_store_service import (
     get_report_source_identity,
     record_report_source,
+    record_source_identity_observation,
 )
 
 
@@ -309,6 +310,39 @@ def test_admission_validation_run_promotes_retained_checksum_publisher(
     assert result.admitted is True
     assert result.decision.publisher_id == "Acme Research"
     assert result.decision.source_identity_id.startswith("source:")
+
+
+def test_admission_records_new_drive_source_from_repeated_document_imprint(
+    ingest_settings, run_context, tmp_path
+) -> None:
+    reports_db = str(tmp_path / "reports.sqlite")
+    result = run_admission_preflight(
+        _request(replace(ingest_settings, reports_db=reports_db)),
+        run_context,
+        dependencies=replace(
+            _dependencies(),
+            get_source_identity=get_report_source_identity,
+            record_report_source=record_report_source,
+            record_source_identity_observation=record_source_identity_observation,
+            extract_pdf_text=lambda _request, _ctx: SimpleNamespace(
+                text=(
+                    "www.activate.com\n"
+                    "Technology & Media Outlook\n"
+                    "www.activate.com\n"
+                    "www.activate.com\n"
+                ),
+                char_count=2_000,
+                pages_extracted=3,
+                text_density=666.0,
+            ),
+        ),
+    )
+
+    assert result.admitted is True
+    assert result.decision.outcome == "admitted"
+    assert result.decision.publisher_id == "activate.com"
+    assert result.decision.source_identity_id.startswith("source:")
+    assert result.decision.source_url == "drive://source-1"
 
 
 def test_admission_rejects_unresolved_publisher_before_cohort_freeze(

@@ -6,6 +6,7 @@ from dataclasses import asdict, dataclass, replace
 from hashlib import sha256
 from pathlib import Path
 from typing import Any, Callable
+from urllib.parse import quote
 
 from src.contracts.admission_preflight import (
     AdmissionOutcome,
@@ -18,6 +19,7 @@ from src.contracts.pdf_text import PdfTextExtractRequest
 from src.contracts.pdf_utils import PdfIntegrityCheckRequest
 from src.contracts.report_store import (
     ReportSourceIdentityGetRequest,
+    ReportSourceRecordRequest,
     SourceIdentityObservation,
     SourceIdentityObservationRecordRequest,
 )
@@ -30,9 +32,11 @@ from src.services.llm_usage_ledger_service import evaluate_budget_request
 from src.services.pdf_service import check_pdf_integrity, extract_pdf_text
 from src.services.report_store_service import (
     get_report_source_identity,
+    record_report_source,
     record_source_identity_observation,
 )
 from src.services.state_service import get_source_quarantine
+from src.utils.clock import utc_now_iso
 from src.utils.costing import estimate_cost_usd
 from src.utils.errors import AppError
 from src.utils.logging import log_event
@@ -198,6 +202,9 @@ class AdmissionPreflightDependencies:
     record_source_identity_observation: Callable[
         [SourceIdentityObservationRecordRequest, RunContext], Any
     ] = record_source_identity_observation
+    record_report_source: Callable[[ReportSourceRecordRequest, RunContext], Any] = (
+        record_report_source
+    )
 
 
 @dataclass(frozen=True)
@@ -432,39 +439,69 @@ def run_admission_preflight(
                         imprint = extract_publisher_imprint(
                             str(getattr(text, "text", "") or "")
                         )
-                        if imprint is not None and source_record_id > 0:
-                            resolved = deps.record_source_identity_observation(
-                                SourceIdentityObservationRecordRequest(
-                                    schema_version="1.0",
-                                    db_path=str(request.settings.reports_db),
-                                    observation=SourceIdentityObservation(
+                        if imprint is not None:
+                            artifact_url = _drive_artifact_url(file.file_id)
+                            if source_record_id <= 0:
+                                source_record_id = int(
+                                    getattr(
+                                        deps.record_report_source(
+                                            ReportSourceRecordRequest(
+                                                schema_version="1.0",
+                                                db_path=str(
+                                                    request.settings.reports_db
+                                                ),
+                                                source_domain="drive.google.com",
+                                                report_name=title,
+                                                landing_page_url=artifact_url,
+                                                downloaded_at_utc=utc_now_iso(),
+                                                md5=source_identity,
+                                                publisher_name=imprint.publisher_name,
+                                                source_page_url=artifact_url,
+                                            ),
+                                            ctx,
+                                        ),
+                                        "record_id",
+                                        0,
+                                    )
+                                    or 0
+                                )
+                            if source_record_id > 0:
+                                resolved = deps.record_source_identity_observation(
+                                    SourceIdentityObservationRecordRequest(
                                         schema_version="1.0",
-                                        source_record_id=source_record_id,
-                                        canonical_title=title,
-                                        title_evidence_locator=imprint.evidence_locator,
-                                        publisher_name=imprint.publisher_name,
-                                        canonical_landing_page_url=str(
-                                            getattr(
-                                                resolved,
-                                                "canonical_landing_page_url",
-                                                "",
-                                            )
-                                            or ""
+                                        db_path=str(request.settings.reports_db),
+                                        observation=SourceIdentityObservation(
+                                            schema_version="1.0",
+                                            source_record_id=source_record_id,
+                                            canonical_title=title,
+                                            title_evidence_locator=imprint.evidence_locator,
+                                            publisher_id=imprint.publisher_name,
+                                            publisher_name=imprint.publisher_name,
+                                            canonical_landing_page_url=str(
+                                                getattr(
+                                                    resolved,
+                                                    "canonical_landing_page_url",
+                                                    "",
+                                                )
+                                                or ""
+                                            ),
+                                            acquired_artifact_url=artifact_url,
+                                            source_page_url=str(
+                                                getattr(resolved, "source_page_url", "")
+                                                or artifact_url
+                                            ),
+                                            retrieved_at_utc=utc_now_iso(),
+                                            acquisition_route="drive_archive",
+                                            content_hash=f"md5:{source_identity}",
+                                            resolution_method=imprint.resolution_method,
+                                            identity_confidence="medium",
                                         ),
-                                        source_page_url=str(
-                                            getattr(resolved, "source_page_url", "")
-                                            or ""
-                                        ),
-                                        content_hash=f"md5:{source_identity}",
-                                        resolution_method=imprint.resolution_method,
-                                        identity_confidence="medium",
                                     ),
-                                ),
-                                ctx,
-                            ).resolution
-                            publisher = str(
-                                getattr(resolved, "publisher_name", "") or ""
-                            ).strip()
+                                    ctx,
+                                ).resolution
+                                publisher = str(
+                                    getattr(resolved, "publisher_name", "") or ""
+                                ).strip()
                     if (
                         str(getattr(resolved, "identity_status", "") or "")
                         == "resolved"
@@ -479,7 +516,8 @@ def run_admission_preflight(
                             getattr(resolved, "publisher_id", "") or publisher
                         )
                         source_url = str(
-                            getattr(resolved, "canonical_landing_page_url", "") or ""
+                            getattr(resolved, "canonical_landing_page_url", "")
+                            or source_url
                         )
                 except (AppError, AttributeError, TypeError, ValueError):
                     pass
@@ -578,6 +616,12 @@ def _normalized_media_type(file: DriveFile) -> str:
     # The canonical Drive listing itself is PDF-scoped, so metadata-only rows
     # remain valid without manufacturing an external MIME assertion.
     return "application/pdf" if not name or name.endswith(".pdf") else ""
+
+
+def _drive_artifact_url(file_id: str) -> str:
+    """Return the safe HTTPS reference for one retained Drive artifact."""
+
+    return f"https://drive.google.com/file/d/{quote(file_id, safe='-_')}/view"
 
 
 def _stable_title(file: DriveFile) -> str:
