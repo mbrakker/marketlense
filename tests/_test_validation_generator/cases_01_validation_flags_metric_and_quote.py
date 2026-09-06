@@ -139,6 +139,79 @@ def test_number_validation_preserves_ordered_source_period_value_pairs() -> None
     assert "linkedin_post" not in failed_sections
 
 
+def test_validation_uses_retained_source_text_for_ordered_period_value_pairs(
+    tmp_path,
+) -> None:
+    fixture_path = (
+        Path(__file__).resolve().parents[1]
+        / "fixtures"
+        / "editorial_relationships"
+        / "social_video_ordered_metrics.json"
+    )
+    fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+    result = validate_report(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="social-video",
+            report=_report(),
+            artifacts={
+                "summary": {"tldr": fixture["swapped_value_claim"]},
+                "insights_final": [],
+            },
+            evidence_packs={},
+            source_text=fixture["source_ordered_text"],
+        ),
+        _settings(tmp_path),
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=FakeOpenAI({"unsupported": []}),
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    assert any(
+        issue.rule_id == "numbers"
+        and issue.affected_section == "summary.tldr"
+        and "2024e with 0:52" in issue.message
+        for issue in result.issues
+    )
+
+
+def test_validation_cache_changes_when_retained_source_text_changes(tmp_path) -> None:
+    from src.generators.validation.cache import validation_cache_meta
+
+    common = {
+        "schema_version": "1.0",
+        "report_id": "social-video-cache",
+        "report": _report(),
+        "artifacts": {"insights_final": []},
+        "evidence_packs": {},
+    }
+    early = validation_cache_meta(
+        request=ValidationRequest(
+            **common,
+            source_text="2023 2024E 0:48 0:52",
+        ),
+        settings=_settings(tmp_path),
+        prompt_client=FakePromptClient(),
+        ctx=_ctx(),
+        md5="source-md5",
+        grounding_retrieval_mode="chat",
+    )
+    corrected = validation_cache_meta(
+        request=ValidationRequest(
+            **common,
+            source_text="2023 2024E 0:47 0:52",
+        ),
+        settings=_settings(tmp_path),
+        prompt_client=FakePromptClient(),
+        ctx=_ctx(),
+        md5="source-md5",
+        grounding_retrieval_mode="chat",
+    )
+
+    assert early["inputs_sha256"] != corrected["inputs_sha256"]
+
+
 def test_validation_accepts_paraphrased_metrics_and_quotes(tmp_path):
     settings = _settings(tmp_path)
     artifacts = {
@@ -1122,6 +1195,8 @@ __all__ = [
     "test_validation_flags_metric_and_quote_mismatches",
     "test_number_validation_ignores_soft_planning_timeframes",
     "test_number_validation_preserves_ordered_source_period_value_pairs",
+    "test_validation_uses_retained_source_text_for_ordered_period_value_pairs",
+    "test_validation_cache_changes_when_retained_source_text_changes",
     "test_validation_accepts_paraphrased_metrics_and_quotes",
     "test_validation_detects_new_numbers_and_grounding",
     "test_claim_support_rejects_strong_claims_backed_only_by_weak_evidence",

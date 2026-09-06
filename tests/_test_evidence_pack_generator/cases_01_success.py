@@ -206,6 +206,53 @@ def test_generate_evidence_packs_passes_doc_map_sections_to_findings_and_retains
     ]
 
 
+def test_generate_evidence_packs_passes_source_temporal_relationships_to_findings(
+    tmp_path,
+):
+    prompt_client = RecordingPromptClient()
+    generate_evidence_packs(
+        report_id="source-temporal-pairs",
+        report_name="Source temporal pairs",
+        vector_store_id="vs_1",
+        source_text=(
+            "2019 2020 2021 2022 2023 2024E 2028E "
+            "0:20 0:28 0:36 0:43 0:48 0:52 0:57"
+        ),
+        settings=_settings(tmp_path, evidence_pack_registry=["doc_map", "findings"]),
+        ctx=_ctx(),
+        openai_client=RoutedOpenAIClient(
+            {
+                "doc_map": substantive_doc_map(),
+                "findings": {
+                    "findings": [
+                        {
+                            "id": "finding-1",
+                            "text": "Source-backed social-video growth.",
+                            "evidence": "The source reports a social-video series.",
+                            "pages": [2],
+                        }
+                    ]
+                },
+            }
+        ),
+        prompt_client=prompt_client,
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    assert prompt_client.findings_variables is not None
+    assert json.loads(
+        prompt_client.findings_variables["source_temporal_relationships_json"]
+    ) == [
+        {"period": "2019", "value": "0:20"},
+        {"period": "2020", "value": "0:28"},
+        {"period": "2021", "value": "0:36"},
+        {"period": "2022", "value": "0:43"},
+        {"period": "2023", "value": "0:48"},
+        {"period": "2024e", "value": "0:52"},
+        {"period": "2028e", "value": "0:57"},
+    ]
+
+
 def test_findings_context_retains_counterbalancing_major_docmap_sections(tmp_path):
     prompt_client = RecordingPromptClient()
     packs = generate_evidence_packs(

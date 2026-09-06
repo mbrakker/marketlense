@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 PUBLIC_EDITORIAL_QUALITY_SCHEMA_VERSION = "1.0"
-PUBLIC_EDITORIAL_VALIDATOR_VERSION = "public-editorial-quality:v3"
+PUBLIC_EDITORIAL_VALIDATOR_VERSION = "public-editorial-quality:v4"
 
 
 @dataclass(frozen=True)

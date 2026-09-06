@@ -23,6 +23,12 @@ METRIC_FIELDS = (
     "sample_size",
     "confidence",
 )
+METRIC_BINDING_FIELDS = (
+    "subject",
+    "cohort",
+    "denominator",
+    "observation_status",
+)
 INSIGHT_TEXT_FIELDS = (
     "coverage_role",
     "so_what",
@@ -654,6 +660,13 @@ def normalize_artifact_insights(items: Any, *, prefix: str) -> List[Dict[str, An
             continue
         metric_raw = _to_dict(item.get("metric"))
         metric = {key: _s(metric_raw.get(key, "")) for key in METRIC_FIELDS}
+        metric.update(
+            {
+                key: _s(metric_raw.get(key, ""))
+                for key in METRIC_BINDING_FIELDS
+                if key in metric_raw
+            }
+        )
         metric["value"], metric["unit"] = normalize_public_metric_display(
             value=metric["value"], unit=metric["unit"]
         )

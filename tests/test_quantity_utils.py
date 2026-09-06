@@ -94,6 +94,37 @@ def test_ranges_approx_and_sample_size() -> None:
     assert any(q.unit_family == "count" and q.value == 4500 for q in parsed)
 
 
+def test_extract_quantities_does_not_treat_year_to_percent_as_a_range() -> None:
+    """A year used as a comparison point must not become a percentage range."""
+
+    parsed = extract_quantities(
+        "Retail Search increased from 16.3% in 2024 to 17.8% in 2025."
+    )
+
+    assert not any(q.value == 1020.9 for q in parsed)
+    assert any(q.value == 17.8 and q.unit_family == "percent" for q in parsed)
+
+
+def test_quantity_match_normalizes_hyphenated_user_count_noun() -> None:
+    """A hyphenated user-count noun must retain the same source quantity."""
+
+    assert _numeric_grounding_match(
+        "its 9.25 million-user total may not represent unique individuals.",
+        "Kepios reported 9.25 million social media users.",
+    )
+
+
+def test_extract_quantities_ignores_year_range_endpoint_and_b2b_token() -> None:
+    """Date spans and B2B labels must not become public numeric claims."""
+
+    parsed = extract_quantities(
+        "Revenue grows in 2020E–2024E while B2B commercial models expand."
+    )
+
+    assert not any(quantity.value == -2024.0 for quantity in parsed)
+    assert not any(quantity.value == 2_000_000_000.0 for quantity in parsed)
+
+
 def test_property_like_equivalent_surface_forms() -> None:
     groups = [
         [

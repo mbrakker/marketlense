@@ -5,6 +5,21 @@ text: |
 
   {{ doc_map_sections_json }}
 
+  The following deterministic source label/value relationships are binding
+  whenever a finding uses the listed period and value. They are extracted from
+  the retained source text, so they take precedence over an ambiguous
+  file_search rendering of the same chart. Do not omit, reorder, or reassociate
+  a listed pair; if it cannot be supported, omit the metric from the finding.
+
+  {{ source_temporal_relationships_json }}
+
+  For a chart or table finding, verify one complete source tuple before writing
+  it: value, metric/category, subject or cohort, denominator, geography, and
+  period/status. Use file_search to inspect the actual row, column, or legend.
+  A number visible elsewhere in the same chart is not evidence for a different
+  row, cohort, category, or denominator. Omit a numeric finding when the exact
+  tuple cannot be established.
+
   Prefer distinct supported sections when the report contains multiple major
   themes. When materially different or counterbalancing major DocMap sections
   exist and file_search supports them, retrieve evidence from both sides. Do

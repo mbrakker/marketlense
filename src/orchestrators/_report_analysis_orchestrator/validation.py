@@ -412,6 +412,7 @@ def _run_validation_regeneration_loop(
     category_labels: List[str],
     vector_store_id: Optional[str],
     dependencies: ReportAnalysisDependencies,
+    source_text: str = "",
     validation_openai_client=None,
     regeneration_openai_client=None,
 ) -> tuple[
@@ -668,6 +669,7 @@ def _run_validation_regeneration_loop(
                 publisher_name=runtime.publisher_name,
                 report_name=runtime.source_report_name or runtime.report_title,
                 source_url=runtime.source_url,
+                source_text=source_text,
             ),
             pack_name=validation_pack_name,
             openai_client=validation_openai_client,

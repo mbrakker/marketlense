@@ -107,11 +107,33 @@ Ordered source evidence is validated as label/value tuples rather than as an
 independent bag of numeric tokens. The deterministic numeric gate recovers
 period/time order from retained source text where chart extraction emits
 separate ordered label and value runs, and public-copy validation also checks
-explicit period/value and category/value tuples. A mismatched year, forecast
-marker, quarter, category, or row fails closed even if the same number occurs
-elsewhere. The normal targeted regeneration receives the existing affected
-section and grounding package; it adds neither a model call nor an artifact
-family.
+explicit period/value and category/value tuples. Every retained primary metric
+also preserves its source-bound subject, cohort, denominator, and
+observed/forecast/estimate status when supplied, alongside the existing metric,
+period, geography, unit, and evidence ID. A mismatched year, forecast marker,
+quarter, category, cohort, denominator, or row fails closed even if the same
+number occurs elsewhere. The normal targeted regeneration receives the
+existing affected section and grounding package; it adds neither a model call
+nor an artifact family.
+
+For a table or chart claim, grounding treats a retained evidence sentence as a
+candidate transcription rather than final authority. It rechecks the source
+visual through retrieval and requires the complete value/category/cohort/
+denominator tuple. A number from an adjacent row, column, or legend is a
+contradiction even if an earlier evidence pack repeated that association.
+
+The source phase passes its retained extracted text into both validation and
+the findings prompt. Validation treats that text as an input to its cache key,
+and the prompt receives only the deterministic period/value tuples, not a
+second unconstrained source interpretation. This lets a source chart whose
+labels and values are emitted as separate runs retain the correct pairs through
+evidence generation and public-copy repair.
+
+The numeric gate also distinguishes a comparison year from a numeric range
+(for example, `2024 to 17.8%`) and canonicalizes singular/plural count nouns.
+Those deterministic normalizations prevent a valid source-backed comparison or
+count from being rejected while preserving the existing value, unit, period,
+and relationship checks.
 
 Prompt fixtures and regression controls are documented in [quality testing](../quality/testing.md). Operator recovery starts with [recovery](../ops/recovery.md).
 

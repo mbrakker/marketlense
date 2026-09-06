@@ -86,6 +86,47 @@ def test_normalize_artifact_insights_preserves_metric_label_scoring_and_strategy
     ]
 
 
+def test_normalize_artifact_insights_preserves_numeric_relationship_binding() -> None:
+    insights = normalize_artifact_insights(
+        [
+            {
+                "id": "super-users",
+                "text": "Super Users account for 59% of total eCommerce spend.",
+                "evidence_id": "finding-super-users",
+                "evidence": (
+                    "Super Users are 23% of users and account for 59% of total "
+                    "eCommerce spend."
+                ),
+                "metric": {
+                    "label": "Share of eCommerce spend",
+                    "value": "59%",
+                    "subject": "Super Users",
+                    "cohort": "technology and media users",
+                    "denominator": "total eCommerce spend",
+                    "observation_status": "observed",
+                },
+            }
+        ],
+        prefix="insight",
+    )
+
+    assert insights[0]["metric"] == {
+        "label": "Share of eCommerce spend",
+        "value": "59%",
+        "unit": "",
+        "trend": "",
+        "timeframe": "",
+        "geography": "",
+        "segment": "",
+        "sample_size": "",
+        "confidence": "",
+        "subject": "Super Users",
+        "cohort": "technology and media users",
+        "denominator": "total eCommerce spend",
+        "observation_status": "observed",
+    }
+
+
 @pytest.mark.parametrize("root_key", ["insights_candidates", "insights_final"])
 def test_insight_metric_value_requires_a_human_readable_label_in_output_schema(
     root_key: str,

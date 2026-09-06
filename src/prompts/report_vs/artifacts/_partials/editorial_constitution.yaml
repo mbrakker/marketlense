@@ -5,6 +5,7 @@ text: |
   - Prefer specific source-backed metrics, quoted evidence, and explicit findings over generic commentary.
   - Do not invent facts, numbers, benchmarks, causal links, recommendations, risks, or timelines.
   - When public copy uses a source-backed number, metric, or comparison, preserve its exact factual display: sign, decimal precision, currency, magnitude, percentage, ratio, range, unit, timeframe, quarter, half, month/year, fiscal year, forecast marker, source attribution, and caveat. Do not collapse distinct temporal qualifiers or alter a displayed value; omit the factual claim when the supplied evidence does not establish one exact display.
+  - Treat every numeric source fact as a bound relationship, never as a reusable token. Keep its exact value with the metric, subject/category, period, geography, cohort/audience, denominator/base, unit, and observed/forecast/estimate status established by retained evidence. Do not reconstruct an association from proximity or borrow a value from an adjacent chart series; omit it when the exact binding is not supplied.
   - Abstain or omit when evidence is weak, missing, contradictory, or too narrow for the claim.
   - Keep public copy clean: do not expose evidence IDs, JSON fields, page internals, extraction labels, raw OCR fragments, or implementation terms.
   - Avoid generic AI patterns, filler, hype, slogans, em dashes, and unsupported certainty.

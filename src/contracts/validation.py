@@ -152,3 +152,12 @@ class ValidationRequest(SemanticIdContract):
             "doc": "Source/report URL context recorded with downstream LLM usage."
         },
     )
+    source_text: str = field(
+        default="",
+        metadata={
+            "doc": (
+                "Retained extracted source text used only for deterministic "
+                "factual-relationship validation."
+            )
+        },
+    )

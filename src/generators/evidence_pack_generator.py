@@ -51,6 +51,7 @@ from src.generators.structured_output_execution import (
     invoke_structured_output_model,
     recovery_prompt_bundle,
 )
+from src.generators.validation.relationships import period_time_pairs
 from src.services import file_service, prompt_service, report_analysis_store_service
 from src.services.prompt_family_materialization_service import (
     materialize_prompt_family,
@@ -80,7 +81,9 @@ _OPTIONAL_EVIDENCE_PACKS = {
 }
 
 
-def _findings_prompt_user_variables(doc_map: dict) -> Dict[str, str]:
+def _findings_prompt_user_variables(
+    doc_map: dict, source_text: str = ""
+) -> Dict[str, str]:
     sections: list[dict[str, object]] = []
     raw_sections = doc_map.get("sections")
     if isinstance(raw_sections, list):
@@ -114,7 +117,16 @@ def _findings_prompt_user_variables(doc_map: dict) -> Dict[str, str]:
                     else [],
                 }
             )
-    return {"doc_map_sections_json": json.dumps(sections, ensure_ascii=False)}
+    source_temporal_relationships = [
+        {"period": period, "value": value}
+        for period, value in sorted(period_time_pairs(source_text))
+    ]
+    return {
+        "doc_map_sections_json": json.dumps(sections, ensure_ascii=False),
+        "source_temporal_relationships_json": json.dumps(
+            source_temporal_relationships, ensure_ascii=False
+        ),
+    }
 
 
 def _pack_parallel_workers(settings: AppSettings, step_count: int) -> int:
@@ -274,6 +286,7 @@ def generate_evidence_packs(
     vector_store_content_hash: Optional[str] = None,
     publisher_name: str = "",
     source_url: str = "",
+    source_text: str = "",
     *,
     openai_client=None,
     prompt_client=prompt_service,
@@ -395,7 +408,7 @@ def generate_evidence_packs(
     findings_prompt_user_variables: Dict[str, str] = {}
     if any(strategy.pack_name == "findings" for strategy in parallel_strategies):
         findings_prompt_user_variables = _findings_prompt_user_variables(
-            results["doc_map"]
+            results["doc_map"], source_text
         )
         logger.info(
             log_event(

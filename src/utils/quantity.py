@@ -32,7 +32,7 @@ _RATIO_RE = re.compile(
 _N_EQUALS_RE = re.compile(r"\bn\s*=\s*(?P<n>\d{1,3}(?:,\d{3})+|\d+)\b", re.IGNORECASE)
 _MULT_RE = re.compile(rf"\b(?P<num>{_NUMBER_RE})\s*x\b", re.IGNORECASE)
 _MAIN_RE = re.compile(
-    rf"(?P<prefix>{_COMP_RE})?\s*"
+    rf"(?<![A-Za-z0-9])(?P<prefix>{_COMP_RE})?\s*"
     r"(?P<currency>[$€£¥])?\s*"
     rf"(?P<number>{_NUMBER_RE})"
     rf"(?:\s*(?P<magnitude>{_MAG_RE}))?"
@@ -271,6 +271,12 @@ def _extract_ranges(text: str) -> List[Quantity]:
         if low is None or high is None:
             continue
         unit = _clean_unit(match.group("unit"))
+        if unit in {"%", "percent", "pct", "pp", "percentage point", "percentage points"} and re.fullmatch(
+            r"20\d{2}", match.group("low").strip()
+        ):
+            # "from 16.3% in 2024 to 17.8%" is a time comparison, not a
+            # 2024-to-17.8 percent range.
+            continue
         family, canonical_unit, magnitude = _resolve_unit_family(
             unit=unit,
             currency="",
@@ -386,6 +392,22 @@ def _extract_main(text: str) -> List[Quantity]:
         magnitude_raw = _clean_unit(match.group("magnitude"))
         unit_raw = _clean_unit(match.group("unit"))
         currency = _s(match.group("currency"))
+        raw_number = match.group("number").strip()
+        if re.fullmatch(r"-\s*20\d{2}", raw_number):
+            # Normalization spaces an en dash, which otherwise makes the
+            # second endpoint in 2020E–2024E look like a negative number.
+            continue
+        if (
+            number.is_integer()
+            and 1900 <= number <= 2100
+            and not magnitude_raw
+            and not unit_raw
+            and not currency
+        ):
+            # Bare year labels are temporal context, not independently
+            # groundable quantities. This also prevents an en dash in a date
+            # span (for example, 2020E–2024E) from becoming a negative value.
+            continue
         family, unit, magnitude = _resolve_unit_family(
             unit=unit_raw,
             currency=currency,
@@ -519,7 +541,7 @@ def _resolve_unit_family(
         "session",
         "sessions",
     }:
-        return "count", unit_norm, magnitude_norm
+        return "count", unit_norm.removesuffix("s"), magnitude_norm
 
     if magnitude_norm:
         following_count_unit = re.search(
@@ -529,7 +551,11 @@ def _resolve_unit_family(
             following,
         )
         if following_count_unit:
-            return "count", following_count_unit.group(1), magnitude_norm
+            return (
+                "count",
+                following_count_unit.group(1).removesuffix("s"),
+                magnitude_norm,
+            )
 
     if unit_norm in {
         "minute",
@@ -718,10 +744,13 @@ def _looks_like_non_metric_token(quantity: Quantity, sentence: str) -> bool:
         ]
         if re.fullmatch(r"[\s\[\(]*\d{1,2}[\]\)\s]*", around):
             return True
-    if quantity.value.is_integer() and 1900 <= int(quantity.value) <= 2100:
-        # Year labels are often metadata unless there are explicit metric cues.
-        if not _has_metric_context(sentence):
-            return True
+    # Year labels are often metadata unless there are explicit metric cues.
+    if (
+        quantity.value.is_integer()
+        and 1900 <= int(quantity.value) <= 2100
+        and not _has_metric_context(sentence)
+    ):
+        return True
     if any(token in sentence for token in ("page ", "p.", "pp.")):
         return True
     return False

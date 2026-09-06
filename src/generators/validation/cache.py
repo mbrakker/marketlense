@@ -21,6 +21,8 @@ from src.generators.analysis_pack_cache import (
 )
 from src.generators.analysis_store_adapter import (
     resolve_pack_path as resolve_analysis_pack_path,
+)
+from src.generators.analysis_store_adapter import (
     store_pack as store_analysis_pack,
 )
 from src.services import file_service
@@ -32,7 +34,7 @@ from src.utils.model_resolver import resolve_model
 
 from .shared import LOGGER_NAME, logger
 
-VALIDATION_RULESET_VERSION = "4"
+VALIDATION_RULESET_VERSION = "7"
 
 
 def validation_cache_meta(
@@ -65,6 +67,7 @@ def validation_cache_meta(
             "report": request.report.to_dict(),
             "artifacts": request.artifacts,
             "evidence_packs": request.evidence_packs,
+            "source_text_sha256": sha256_json(str(request.source_text or "")),
             "vector_store_id": request.vector_store_id or "",
             "validation_mode": request.validation_mode,
             "data_gap_policy": getattr(settings, "validation_data_gap_policy", "warn"),

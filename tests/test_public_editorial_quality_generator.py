@@ -43,7 +43,7 @@ def _rule_ids(report) -> set[str]:
 
 
 def test_public_editorial_validator_version_invalidates_retained_v1_results() -> None:
-    assert PUBLIC_EDITORIAL_VALIDATOR_VERSION == "public-editorial-quality:v3"
+    assert PUBLIC_EDITORIAL_VALIDATOR_VERSION == "public-editorial-quality:v4"
 
 
 def _temporal_artifacts(*, text: str, evidence: str) -> dict:
@@ -172,6 +172,24 @@ def test_same_value_under_multiple_categories_requires_its_claimed_category() ->
     )
 
     assert "public_editorial_quality.unsupported_numeric_claim" not in _rule_ids(report)
+    assert "public_editorial_quality.metric_label_relationship" in _rule_ids(report)
+
+
+def test_relationship_check_rejects_value_attached_to_wrong_cohort_and_denominator(
+) -> None:
+    """Catch the cohort/value swap that token-presence checks would accept."""
+    evidence = (
+        "Super Users are 23% of users and account for 59% of total eCommerce spend. "
+        "All other users are 77% of users and account for 41% of total eCommerce spend."
+    )
+    report = evaluate_public_editorial_quality(
+        report_id="activate-2021",
+        artifacts=_temporal_artifacts(
+            text="Super Users account for 77% of total eCommerce spend.",
+            evidence=evidence,
+        ),
+    )
+
     assert "public_editorial_quality.metric_label_relationship" in _rule_ids(report)
 
 

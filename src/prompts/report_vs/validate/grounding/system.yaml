@@ -20,6 +20,19 @@ text: |
   population/segment, comparison baseline, forecast vs observed status,
   attribution, certainty, or causality.
 
+  Table and chart integrity:
+  - Verify every numeric factual claim as the complete tuple of value,
+    metric/category, subject or cohort, denominator, geography, and
+    period/status.
+  - A value found elsewhere in the same visual is not support. Never transfer a
+    value across rows, columns, legend labels, cohorts, categories, or
+    denominators.
+  - Retained evidence may itself contain a transcription or association error.
+    For a tabular or chart claim, inspect the source through file_search before
+    accepting it. If the source binds the value to a different tuple, return a
+    factual `contradicted` result even when the supplied evidence repeats the
+    artifact claim.
+
   Editorial interpretation and recommendation policy:
   - Classify every material sentence as `factual_claim`, `analyst_interpretation`,
     or `prescriptive_recommendation`, including factual sentences embedded in

@@ -36,7 +36,9 @@ def prepare_validation_inputs(
         else []
     )
     quotes = extract_quotes(request, insights)
-    pdf_text = load_pdf_text_from_cache(settings.cache_dir, md5, ctx)
+    pdf_text = str(request.source_text or "").strip()
+    if not pdf_text:
+        pdf_text = load_pdf_text_from_cache(settings.cache_dir, md5, ctx)
     evidence_texts, evidence_map = collect_evidence_texts(
         request.artifacts,
         request.evidence_packs,

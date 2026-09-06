@@ -110,6 +110,10 @@
           "baseline": { "type": "string" },
           "delta": { "type": "string" },
           "sample_size": { "type": "string" },
+          "subject": { "type": "string" },
+          "cohort": { "type": "string" },
+          "denominator": { "type": "string" },
+          "observation_status": { "type": "string" },
           "confidence": { "type": "string" },
           "missing_context_notes": {
             "type": "array",
@@ -159,6 +163,10 @@
           "segment": { "type": "string" },
           "geography": { "type": "string" },
           "timeframe": { "type": "string" },
+          "subject": { "type": "string" },
+          "cohort": { "type": "string" },
+          "denominator": { "type": "string" },
+          "observation_status": { "type": "string" },
           "source_page": { "type": ["integer", "null"] },
           "why_it_matters": { "type": "string" },
           "caveat": { "type": "string" },
@@ -335,7 +343,11 @@
               "geography": { "type": "string" },
               "segment": { "type": "string" },
               "sample_size": { "type": "string" },
-              "confidence": { "type": "string" }
+              "confidence": { "type": "string" },
+              "subject": { "type": "string" },
+              "cohort": { "type": "string" },
+              "denominator": { "type": "string" },
+              "observation_status": { "type": "string" }
             },
             "allOf": [
               {
@@ -408,7 +420,11 @@
               "geography": { "type": "string" },
               "segment": { "type": "string" },
               "sample_size": { "type": "string" },
-              "confidence": { "type": "string" }
+              "confidence": { "type": "string" },
+              "subject": { "type": "string" },
+              "cohort": { "type": "string" },
+              "denominator": { "type": "string" },
+              "observation_status": { "type": "string" }
             },
             "allOf": [
               {

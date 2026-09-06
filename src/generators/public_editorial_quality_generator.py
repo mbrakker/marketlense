@@ -141,6 +141,17 @@ _DELIMITED_CATEGORY_VALUE_PAIR = re.compile(
     rf"(?:^|[;,\n])\s*(?P<label>[A-Za-z][A-Za-z0-9&/ -]{{0,48}}?)"
     rf"\s*(?::|=)\s*(?P<value>{_RELATIONSHIP_VALUE})(?![A-Za-z0-9%])"
 )
+_SUBJECT_VALUE_RELATIONSHIP = re.compile(
+    rf"(?:^|[.;]\s*)(?P<subject>[A-Z][A-Za-z0-9&/-]*(?:\s+[A-Za-z0-9&/-]+){{0,4}}?)"
+    rf"\s+(?:is|are|represents?)\s+(?P<value>{_RELATIONSHIP_VALUE})(?![A-Za-z0-9%])"
+    rf"(?:\s+of\s+(?P<context>[^.;]+?))?(?=\s+(?:and|but)\b|[.;]|$)",
+    re.IGNORECASE,
+)
+_SUBJECT_ACCOUNT_RELATIONSHIP = re.compile(
+    rf"(?:^|[.;]\s*)(?P<prefix>[^.;]{{1,100}}?)\baccounts?\s+for\s+(?P<value>{_RELATIONSHIP_VALUE})(?![A-Za-z0-9%])"
+    rf"(?:\s+of\s+(?P<context>[^.;]+?))?(?=[.;]|$)",
+    re.IGNORECASE,
+)
 _MALFORMED_TEMPORAL_COMPARISON = re.compile(r"\b(?:in\s+to|between\s+and)\b", re.I)
 _CERTAINTY = re.compile(
     r"\b(?:will|certain(?:ly)?|guarantee[sd]?|proves?|always|undeniably)\b", re.I
@@ -957,15 +968,43 @@ def _metric_label_relationship_explanation(text: str, evidence_text: str) -> str
             return "attaches a retained metric value to a different source period"
 
     evidence_category_pairs = _structured_category_value_pairs(evidence_text)
-    if len(evidence_category_pairs) < 2:
-        return ""
     evidence_values_by_category: dict[str, set[str]] = {}
-    for category, value in evidence_category_pairs:
-        evidence_values_by_category.setdefault(category, set()).add(value)
-    for category, values in evidence_values_by_category.items():
-        for value in _values_near_label(text, category):
-            if value not in values:
-                return "attaches a retained metric value to a different source category"
+    if len(evidence_category_pairs) >= 2:
+        for category, value in evidence_category_pairs:
+            evidence_values_by_category.setdefault(category, set()).add(value)
+        for category, values in evidence_values_by_category.items():
+            for value in _values_near_label(text, category):
+                if value not in values:
+                    return (
+                        "attaches a retained metric value to a different source category"
+                    )
+
+    evidence_relationships = _subject_value_relationships(evidence_text)
+    claim_relationships = _subject_value_relationships(text)
+    values_by_relationship: dict[str, set[str]] = {}
+    for relationship, value in evidence_relationships:
+        values_by_relationship.setdefault(relationship, set()).add(value)
+    evidence_values = {value for _relationship, value in evidence_relationships}
+    for relationship, value in claim_relationships:
+        # A value that occurs in retained evidence is not automatically valid:
+        # it must remain bound to this exact subject and reported base.
+        if (
+            relationship in values_by_relationship
+            and value not in values_by_relationship[relationship]
+        ):
+            return (
+                "attaches a retained metric value to a different source cohort "
+                "or denominator"
+            )
+        if relationship not in values_by_relationship and value in evidence_values:
+            subject = relationship.split(" | ", 1)[0]
+            if any(
+                source.startswith(f"{subject} | ")
+                for source in values_by_relationship
+            ):
+                return (
+                    "attaches a retained metric value to a different source denominator"
+                )
     return ""
 
 
@@ -992,6 +1031,37 @@ def _structured_category_value_pairs(text: str) -> set[tuple[str, str]]:
             if value and label and not _is_year_value(value):
                 pairs.add((label, value))
     return pairs
+
+
+def _subject_value_relationships(text: str) -> set[tuple[str, str]]:
+    """Return literal subject/base/value bindings from prose-style source facts.
+
+    Table-like labels are handled separately above.  This intentionally covers
+    the common retained-evidence form ``cohort ... accounts for N% of base``
+    so a value cannot be reused merely because it appears in an adjacent cohort
+    sentence.  The parser does not infer a missing subject or base.
+    """
+
+    pairs: set[tuple[str, str]] = set()
+    for pattern in (_SUBJECT_VALUE_RELATIONSHIP, _SUBJECT_ACCOUNT_RELATIONSHIP):
+        for match in pattern.finditer(text):
+            subject_text = match.groupdict().get("subject") or _account_subject(
+                match.group("prefix")
+            )
+            subject = _normalized_relationship_label(subject_text)
+            context = _normalized_relationship_label(match.group("context") or "")
+            value = _normalized_relationship_value(match.group("value"))
+            if subject and context and value and not _is_year_value(value):
+                pairs.add((f"{subject} | {context}", value))
+    return pairs
+
+
+def _account_subject(prefix: str) -> str:
+    """Keep the named cohort before a preceding value clause, if present."""
+
+    return re.split(r"\b(?:is|are|represents?)\b", prefix, maxsplit=1, flags=re.I)[
+        0
+    ].strip()
 
 
 def _values_near_label(text: str, label: str) -> set[str]:

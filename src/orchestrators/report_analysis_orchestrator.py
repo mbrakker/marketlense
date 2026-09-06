@@ -480,6 +480,7 @@ def run_report_analysis(
                 md5=runtime.md5,
                 publisher_name=runtime.publisher_name,
                 source_url=runtime.source_url,
+                source_text=source.text_response.text,
                 **evidence_kwargs,
             )
             taxonomy_state, taxonomy_repaired = taxonomy_future.result()
@@ -544,6 +545,7 @@ def run_report_analysis(
                 md5=runtime.md5,
                 publisher_name=runtime.publisher_name,
                 source_url=runtime.source_url,
+                source_text=source.text_response.text,
                 **evidence_kwargs,
             )
         elif evidence_error is not None:
@@ -999,6 +1001,7 @@ def run_report_analysis(
             publisher_name=runtime.publisher_name,
             report_name=runtime.source_report_name or runtime.report_title,
             source_url=runtime.source_url,
+            source_text=source.text_response.text,
         ),
         pack_name="validation",
         openai_client=validation_openai_client,
@@ -1062,6 +1065,7 @@ def run_report_analysis(
             current_validation_report=validation_report,
             evidence_packs=packs,
             source_status=source.text_status,
+            source_text=source.text_response.text,
             category_labels=category_assignment.category_labels,
             vector_store_id=vector_state.vector_store_id,
             dependencies=dependencies,

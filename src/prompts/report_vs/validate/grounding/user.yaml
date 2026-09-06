@@ -11,6 +11,15 @@ text: |
   - An interpretation may use stronger editorial wording than the source when it reasonably follows from supported evidence and adds no factual premise. A recommendation may be MarketLense-authored, need not appear in the source, and may say a brand should reconsider treating something as experimental when the supported evidence logically warrants it.
   - Reject an interpretation or recommendation that adds an unsupported fact or metric, causal outcome, certainty, operational or financial benefit, or false source attribution. Do not label MarketLense-authored advice as a report recommendation unless the report actually recommends it.
   - For each factual claim, decide whether its linked retained evidence entails its material meaning. Do not use lexical overlap, copied wording, or vocabulary similarity as the test.
+  - For a claim drawn from a chart or table, verify the complete source tuple:
+    value, metric/category, subject or cohort, denominator, geography, and
+    period/status. A numeric match elsewhere in the same visual does not entail
+    the claim. Never move a value between rows, columns, legend labels, cohorts,
+    or denominators.
+  - Treat supplied retained evidence as a claim to verify, not as an authority.
+    When it describes a table or chart, use file_search to inspect the source
+    visual or its surrounding text. If the source assigns the same value to a
+    different cohort, category, or denominator, mark the claim `contradicted`.
   - `entailed` permits synonyms, sentence restructuring, clause reordering, active/passive changes, concise executive wording, and canonically equivalent quantity displays only when material meaning is unchanged.
   - `contradicted` means the linked retained evidence conflicts with the claim. `not_established` means the linked retained evidence does not establish the claim.
   - A claim is not entailed if it changes factual proposition, number/unit/currency/magnitude, direction, timeframe, geography, population/segment, comparison baseline, forecast vs observed status, attribution, certainty, or causality.
