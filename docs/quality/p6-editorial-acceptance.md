@@ -58,7 +58,192 @@ The retained `final.html` files are byte-identical SHA-256 copies of the pipelin
 | 4 |  |  |  |  |
 | 5 |  |  |  |  |
 
-### Score matrix — latest five-report rerun
+## Batch 4 cohort definition
+
+Status: **ACTIVE — Batch 4 awaiting human review**
+
+Batch 4 is a fixed five-report blind editorial-review cohort. Its immutable
+source-admission record is
+[cohort_manifest.json](../../out/p6_editorial_acceptance/batch_04/cohort_manifest.json).
+Every admitted report remains in the denominator, including the three reports
+held by terminal publish-readiness.
+
+| # | Report | Publisher | Source PDF | Retained final HTML | Pipeline | Readiness |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | IAB Europe's Guide to AI in Retail & Commerce Media | IAB Europe | [Google Drive PDF](https://drive.google.com/file/d/1cV8YPeywPjeVVNkaolx9N-s79az36IdC/view) | [final.html](../../out/p6_editorial_acceptance/batch_04/report_01/final.html) | publish ready | pass |
+| 2 | AdEx Benchmark 2025 | IAB Europe | [Google Drive PDF](https://drive.google.com/file/d/1jFEpfx1vKGRLe6Fzu9j5gvStybdw_b-L/view) | [final.html](../../out/p6_editorial_acceptance/batch_04/report_02/final.html) | held: `publish_readiness_failed` | fail |
+| 3 | Consumer Outlook: Guide to 2026 | Nielsen Consumer LLC (NIQ) | [Google Drive PDF](https://drive.google.com/file/d/1pJCS1n66eAtMLZ4IG5c2ewvFnMWISVuu/view) | [final.html](../../out/p6_editorial_acceptance/batch_04/report_03/final.html) | publish ready | pass |
+| 4 | Digital 2022: Sweden | Kepios | [Google Drive PDF](https://drive.google.com/file/d/1VjpLrz_05XjQbCot8CHXCf-JO2e3H1m4/view) | [final.html](../../out/p6_editorial_acceptance/batch_04/report_04/final.html) | held: `publish_readiness_failed` | fail |
+| 5 | Activate Technology & Media Outlook 2021 | Activate | [Google Drive PDF](https://drive.google.com/file/d/1vnLPEBR8UyybsI3WSlAyoWPM2fyjeE2L/view) | [final.html](../../out/p6_editorial_acceptance/batch_04/report_05/final.html) | held: `publish_readiness_failed` | fail |
+
+## Selection methodology
+
+Selection was frozen before generation from real Google Drive PDFs, excluding
+the canonical source identities used by Batches 1–3. Admission required a
+unique canonical source identity, matching source-PDF MD5 provenance, readable
+structure, sufficient evidence potential, and no duplicate or near-duplicate
+match. The deterministic cohort spans a 23-page retail-commerce-media AI
+guide, a 57-page data-heavy European advertising benchmark, a 50-page global
+consumer outlook, a deliberately short 12-page digital-adoption report, and a
+148-page technology/media outlook. It covers retail-commerce media, digital
+advertising, retail/consumer behaviour, digital adoption, and an adjacent
+technology/media topic without selecting on generated editorial quality.
+
+Only source identity and PDF provenance were seeded into the isolated Batch 4
+admission store. No E8/E9 editorial, analysis, validation, report, or rendered
+HTML artifact was reused.
+
+## Run and configuration identity
+
+- Repository HEAD: `66703454fc2bf41dd07fc7695312819e020646b1`
+- Fresh generation run: `21b168ae-92fb-46c0-a466-431a90aac013`
+- Validation run: `validation:e541e839449b974ff950ae52e7b68767fbc14378b5a851ca2e7e3e0699f62c3f`
+- Cohort ID: `7161d8ca32d304605c6a736613b217f719a4e9012ef564116986b598293962d8`
+- Profile: [`p6_editorial_acceptance_batch_04_20260905`](../../src/config/app.p6_editorial_acceptance_batch_04_20260905.yaml); configuration hash `3df39fd57789d33977c154145922252f11bd9a33dc862039f3fba814caa6f91f`; policy hash `574a6d2a59915204d3e24359356e80368713e26b4c4121086c13ee7d3061a9e2`
+- Model: `gpt-5.6-luna`
+
+## Pipeline and readiness results
+
+All five sources completed the normal fresh ingest/report-generation path and
+emitted a pipeline HTML artifact. Reports 1 and 3 passed publish-readiness.
+Reports 2, 4, and 5 each exhausted the normal three bounded
+validation/artifact regeneration attempts and were held with
+`publish_readiness_failed`. They remain in the Batch 4 denominator; their
+generated HTML artifacts were retained without replacement or manual repair.
+
+The three holds preserve the existing automated gate results. Report 2 has
+editorial-quality and semantic-grounding readiness failures; reports 4 and 5
+have semantic-grounding readiness failures, and report 4 also has an
+editorial-quality failure. These are automated validation outcomes, not human
+editorial scores.
+
+The five source-cache MD5 values match the frozen Drive-file membership, and
+every retained `final.html` is a byte-identical SHA-256 copy of its canonical
+pipeline output. Five unique canonical identities were processed. The normal
+source/admission, schema, grounding, semantic, chart/table, editorial,
+final-HTML, and publish-readiness gates reached recorded terminal outcomes;
+none was waived or bypassed. The isolated run permitted zero Google Drive,
+WordPress, and public writes, and recorded none.
+
+The full package, including source IDs, canonical identities, pipeline paths,
+readiness, recovery history, hashes, and per-report provider attribution, is
+[manifest.json](../../out/p6_editorial_acceptance/batch_04/manifest.json).
+
+## Attributable provider usage
+
+| # | Calls | Input tokens | Output tokens | Estimated cost (USD) |
+| --- | ---: | ---: | ---: | ---: |
+| 1 | 23 | 183,454 | 21,616 | 0.062380 |
+| 2 | 50 | 496,579 | 66,058 | 0.177577 |
+| 3 | 34 | 274,215 | 34,195 | 0.095374 |
+| 4 | 41 | 469,677 | 56,910 | 0.161473 |
+| 5 | 50 | 460,946 | 66,200 | 0.170622 |
+| **Batch 4 total** | **198** | **1,884,871** | **244,979** | **0.667426** |
+
+## Human-review results
+
+| # | Reviewer | Review date | Editorial decision | Notes |
+| --- | --- | --- | --- | --- |
+| 1 |  |  |  |  |
+| 2 |  |  |  |  |
+| 3 |  |  |  |  |
+| 4 |  |  |  |  |
+| 5 |  |  |  |  |
+
+### Batch 4 held-report revalidation (2026-09-05)
+
+The three original Batch 4 holds were replayed through the normal pipeline
+after report- and publisher-agnostic validation corrections. The replay used
+only the retained frozen source admission and PDF provenance records, with new
+empty state, cache, and output locations; it did not reuse editorial,
+validation, report, or HTML artifacts.
+
+- Generation run: `0d8ffc77-e15c-43ff-82d3-365bf61ae9e1`; validation run:
+  `validation:8e152fb45a4ae18e5d99994cb710b39e0d11a1177b79f368d2ed04f936d2dc91`.
+- Profile:
+  [`p6_editorial_acceptance_batch_04_hold_revalidation_20260905`](../../src/config/app.p6_editorial_acceptance_batch_04_hold_revalidation_20260905.yaml);
+  configuration hash `0a3e490c5c207d42053a0329a9af3170d544e1f7a7c8aae2c445c442db82cc8b`.
+- The prior sentence-local numeric false positives, source-document-map
+  grounding omission, and key-figure-label fragment false positives do not
+  appear in the terminal reports. All three sources nevertheless remain held
+  on newly generated artifact-quality, exact metric-display, numeric-context,
+  or grounding violations after their normal bounded recovery attempts; no
+  validator, threshold, or retry limit was relaxed.
+
+| Original # | Report | Revalidation HTML | Pipeline | Readiness | Calls | Input / output tokens | Cost (USD) |
+| --- | --- | --- | --- | --- | ---: | ---: | ---: |
+| 2 | Europe: Digital Advertising Market 2025 | [pipeline HTML](../../out/p6_editorial_acceptance/batch_04/hold_revalidation_20260905/pipeline_output/iab-europe-adex-benchmark-2025-updated-pdf.html) | held: `publish_readiness_failed` | fail | 41 | 282,884 / 43,971 | 0.108336 |
+| 4 | Digital 2022: Sweden | [pipeline HTML](../../out/p6_editorial_acceptance/batch_04/hold_revalidation_20260905/pipeline_output/digital-2022-sweden-pdf.html) | held: `publish_readiness_failed` | fail | 38 | 373,142 / 47,674 | 0.131085 |
+| 5 | ACTIVATE TECHNOLOGY & MEDIA OUTLOOK 2021 | [pipeline HTML](../../out/p6_editorial_acceptance/batch_04/hold_revalidation_20260905/pipeline_output/activate-technology-and-media-outlook-2021-pdf.html) | held: `publish_readiness_failed` | fail | 53 | 599,083 / 75,019 | 0.208829 |
+| **Revalidation total** |  |  |  |  | **132** | **1,255,109 / 166,664** | **0.448250** |
+
+The replay profile permits zero Google Drive writes, WordPress writes, and
+public writes. All three preserved exact source file IDs and MD5 checksums.
+The retained pipeline HTML files remain unedited outputs; they are included
+only as diagnostic evidence and do not replace the Batch 4 review package.
+
+### Batch 4 held-report revalidation — shared first-run fixes (2026-09-06)
+
+Follow-up clean replays retained only the frozen source-admission provenance.
+They exercised three shared controls: exact restoration of a uniquely linked
+source range when public copy retains its endpoints, resilient deferral of a
+retryable vector-store metadata mirror after indexing, and unit-aware numeric
+comparison for data rates and descriptive count labels. No prompt or
+publisher/report-specific rule was added, and no generated HTML was manually
+changed.
+
+| Original # | Report | Final revalidation HTML | Generation run | Pipeline | Readiness | Calls | Input / output tokens | Cost (USD) |
+| --- | --- | --- | --- | --- | --- | ---: | ---: | ---: |
+| 2 | Europe: Digital Advertising Market 2025 | [pipeline HTML](../../out/p6_editorial_acceptance/batch_04/hold_revalidation_2_20260906/pipeline_output/iab-europe-adex-benchmark-2025-updated-pdf.html) | `bad03641-a77a-454e-84eb-c8ebc920031a` | pass | pass | 35 | 245,743 / 33,120 | 0.088392 |
+| 4 | Digital 2022: Sweden | [pipeline HTML](../../out/p6_editorial_acceptance/batch_04/hold_revalidation_4_20260906/pipeline_output/digital-2022-sweden-pdf.html) | `5a555552-74df-417e-b5fc-2e2e4e083383` | held: `validation_failed` | fail | 47 | 509,479 / 71,781 | 0.187024 |
+| 5 | ACTIVATE TECHNOLOGY & MEDIA OUTLOOK 2021 | [pipeline HTML](../../out/p6_editorial_acceptance/batch_04/hold_revalidation_3_20260906/pipeline_output/activate-technology-and-media-outlook-2021-pdf.html) | `e445abb0-9211-406f-84be-e52218a0b66a` | pass | pass | 29 | 249,693 / 31,884 | 0.087949 |
+
+The residual Sweden hold is intentional: its final `insight-003` states
+`90.8 percent`, but that value is absent from the insight's linked retained
+evidence. The unchanged `public_editorial_quality.unsupported_numeric_claim`
+gate therefore rejects it after normal bounded recovery. No source value was
+guessed, no prose was deleted, and no failed candidate was promoted. Source
+file IDs and MD5 checksums again matched the frozen cohort; Google Drive,
+WordPress, and public-write budgets were zero.
+
+### Batch 4 final Sweden revalidation — canonical evidence and fail-closed rendering (2026-09-06)
+
+The frozen source for original report 4 was replayed in a new isolated profile
+after the shared canonical-evidence binding and fail-closed final-render
+controls were added. The original Batch 4 manifest remains the immutable
+first-run record; this is the current operational result for that same source,
+not a replacement cohort member. The replay bound generated insight evidence to
+the uniquely linked retained source record before numeric validation. It also
+permits final HTML only after the matching canonical validation report passes.
+
+| Original # | Report | Source PDF | Final revalidation HTML | Generation run | Pipeline | Readiness |
+| --- | --- | --- | --- | --- | --- | --- |
+| 4 | Digital 2022: Sweden | [Google Drive PDF](https://drive.google.com/file/d/1VjpLrz_05XjQbCot8CHXCf-JO2e3H1m4/view) | [pipeline HTML](../../out/p6_editorial_acceptance/batch_04/hold_revalidation_6_20260906/pipeline_output/digital-2022-sweden-pdf.html) | `6fd26b37-1321-49cd-a909-89d7d0d8b9fb` | pass | pass |
+
+The final HTML SHA-256 is
+`1a6194dc8a68f54de730f138c02bafdbbed26692b315da138e5002131526008e`;
+the source cache MD5 remains `617fb02f275d64c0b16c76a763311d82` and matches
+the frozen Drive member. This replay made 20 provider calls (200,027 input and
+23,297 output tokens; USD 0.067710). Drive writes, WordPress writes, and public
+writes were zero. Canonical validation, public editorial quality, semantic
+grounding, final-HTML validation, and publish-readiness all recorded `pass`;
+no gate was waived or bypassed.
+
+#### Current Batch 4 operational outcomes
+
+The first-run manifest continues to preserve its original outcomes. The table
+below records the latest terminal result for each immutable cohort member,
+using the later isolated replay only for reports that had originally been held.
+
+| # | Report | Publisher | Source PDF | Final HTML | Pipeline | Readiness |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | IAB Europe's Guide to AI in Retail & Commerce Media | IAB Europe | [Google Drive PDF](https://drive.google.com/file/d/1cV8YPeywPjeVVNkaolx9N-s79az36IdC/view) | [final.html](../../out/p6_editorial_acceptance/batch_04/report_01/final.html) | pass | pass |
+| 2 | AdEx Benchmark 2025 | IAB Europe | [Google Drive PDF](https://drive.google.com/file/d/1jFEpfx1vKGRLe6Fzu9j5gvStybdw_b-L/view) | [pipeline HTML](../../out/p6_editorial_acceptance/batch_04/hold_revalidation_2_20260906/pipeline_output/iab-europe-adex-benchmark-2025-updated-pdf.html) | pass | pass |
+| 3 | Consumer Outlook: Guide to 2026 | Nielsen Consumer LLC (NIQ) | [Google Drive PDF](https://drive.google.com/file/d/1pJCS1n66eAtMLZ4IG5c2ewvFnMWISVuu/view) | [final.html](../../out/p6_editorial_acceptance/batch_04/report_03/final.html) | pass | pass |
+| 4 | Digital 2022: Sweden | Kepios | [Google Drive PDF](https://drive.google.com/file/d/1VjpLrz_05XjQbCot8CHXCf-JO2e3H1m4/view) | [pipeline HTML](../../out/p6_editorial_acceptance/batch_04/hold_revalidation_6_20260906/pipeline_output/digital-2022-sweden-pdf.html) | pass | pass |
+| 5 | Activate Technology & Media Outlook 2021 | Activate | [Google Drive PDF](https://drive.google.com/file/d/1vnLPEBR8UyybsI3WSlAyoWPM2fyjeE2L/view) | [pipeline HTML](../../out/p6_editorial_acceptance/batch_04/hold_revalidation_3_20260906/pipeline_output/activate-technology-and-media-outlook-2021-pdf.html) | pass | pass |
+
+## Batch 1 score matrix — latest five-report rerun
 
 The following reviewer-supplied matrix applies to the latest five-report
 rerun. It is a qualitative human-review record, not an automated judgment and

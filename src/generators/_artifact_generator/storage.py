@@ -46,6 +46,7 @@ from src.generators.artifact_normalization import (
     normalize_artifact_evidence_ids,
     normalize_artifact_insights,
     normalize_artifact_toc_entries,
+    preserve_public_source_displays,
 )
 from src.services import file_service
 from src.services.prompt_service import build_llm_execution_identity
@@ -178,6 +179,12 @@ def assemble_artifacts_payload(
                 fields=evidence_span_stats,
             )
         )
+    expert_comment, linkedin_post = preserve_public_source_displays(
+        summary=summary,
+        insights_final=insights_final,
+        expert_comment=expert_comment,
+        linkedin_post=linkedin_post,
+    )
     metric_spine = derive_metric_spine_from_insights(
         insights_final, editorial_plan=editorial_plan
     )
@@ -570,7 +577,7 @@ def _abbreviation_safe_sentences(text: str) -> List[str]:
 
     def protect(match: re.Match[str]) -> str:
         protected.append(match.group(0))
-        return f"\uFFF0{len(protected) - 1}\uFFF1"
+        return f"\ufff0{len(protected) - 1}\ufff1"
 
     compact = re.sub(r"\b(?:[A-Za-z]\.){2,}", protect, text)
     sentences = re.split(r"(?<=[.!?])\s+", compact)
@@ -596,9 +603,7 @@ def _metric_measurement_numbers(text: str, *, retain_bare: bool = False) -> List
     numbers: List[str] = []
     for match in matches:
         number = match.group("number").replace(",", "")
-        if not retain_bare and not (
-            match.group("currency") or match.group("unit")
-        ):
+        if not retain_bare and not (match.group("currency") or match.group("unit")):
             continue
         numbers.append(number)
     return numbers
@@ -714,6 +719,13 @@ def build_key_figures(
         summary=summary or {},
         insights_final=insights_final or [],
     )
+    insight_text_by_id = {
+        _s(insight.get("id")).strip(): _s(insight.get("text")).strip()
+        for insight in (insights_final or [])
+        if isinstance(insight, dict)
+        and _s(insight.get("id")).strip()
+        and _s(insight.get("text")).strip()
+    }
     figures: List[Dict[str, Any]] = []
     for metric in metric_spine:
         evidence_id = _s(metric.get("evidence_id")).strip()
@@ -742,7 +754,12 @@ def build_key_figures(
                 "geography": _s(metric.get("geography")).strip(),
                 "timeframe": _s(metric.get("timeframe")).strip(),
                 "source_page": page_values[0] if page_values else None,
-                "why_it_matters": _key_figure_why_it_matters(metric),
+                "why_it_matters": _key_figure_why_it_matters(
+                    metric,
+                    insight_text=insight_text_by_id.get(
+                        _s(metric.get("metric_id")).strip(), ""
+                    ),
+                ),
                 "caveat": ("Missing context: " + ", ".join(missing) if missing else ""),
                 "evidence_id": evidence_id,
                 "related_chart_candidate": _related_chart_candidate_id(
@@ -902,7 +919,11 @@ def _evidence_ids_by_page(evidence_packs: Dict[str, Any]) -> Dict[int, List[str]
     return ids_by_page
 
 
-def _key_figure_why_it_matters(metric: Dict[str, Any]) -> str:
+def _key_figure_why_it_matters(
+    metric: Dict[str, Any], *, insight_text: str = ""
+) -> str:
+    if insight_text:
+        return insight_text
     label = _s(metric.get("label")).strip()
     segment = _s(metric.get("segment")).strip()
     geography = _s(metric.get("geography")).strip()

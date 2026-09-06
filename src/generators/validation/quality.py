@@ -38,8 +38,10 @@ _CONCRETE_SIGNAL = re.compile(
 
 def run_artifact_quality_rule(runtime: ValidationRuntime) -> List[ValidationIssue]:
     issues: List[ValidationIssue] = []
-    artifacts = runtime.request.artifacts if isinstance(runtime.request.artifacts, dict) else {}
-    for path, text in _artifact_copy_fields(artifacts):
+    artifacts = (
+        runtime.request.artifacts if isinstance(runtime.request.artifacts, dict) else {}
+    )
+    for path, text, has_structured_category in _artifact_copy_fields(artifacts):
         normalized = " ".join(text.split())
         if not normalized:
             continue
@@ -60,7 +62,11 @@ def run_artifact_quality_rule(runtime: ValidationRuntime) -> List[ValidationIssu
                 )
             )
         first_sentence = _first_sentence(normalized)
-        if first_sentence and not _has_concrete_signal(first_sentence):
+        if (
+            first_sentence
+            and not has_structured_category
+            and not _has_concrete_signal(first_sentence)
+        ):
             issues.append(
                 ValidationIssue(
                     schema_version="1.0",
@@ -75,19 +81,21 @@ def run_artifact_quality_rule(runtime: ValidationRuntime) -> List[ValidationIssu
     return issues
 
 
-def _artifact_copy_fields(artifacts: dict) -> Iterable[tuple[str, str]]:
+def _artifact_copy_fields(artifacts: dict) -> Iterable[tuple[str, str, bool]]:
     for key in ("expert_comment", "linkedin_post"):
         text = _s(artifacts.get(key)).strip()
         if text:
-            yield key, text
+            yield key, text, False
     summary = artifacts.get("summary")
     if isinstance(summary, dict):
         for key in ("tldr", "card_tldr_compact", "executive_summary"):
             text = _s(summary.get(key)).strip()
             if text:
-                yield f"summary.{key}", text
-    yield from _copy_from_list(artifacts.get("insights_final"), "insights_final", ("text",))
+                yield f"summary.{key}", text, False
     yield from _copy_from_list(
+        artifacts.get("insights_final"), "insights_final", ("text",)
+    )
+    yield from _topic_copy_fields(
         artifacts.get("topics_covered"),
         "topics_covered",
         ("why_it_matters",),
@@ -100,11 +108,21 @@ def _artifact_copy_fields(artifacts: dict) -> Iterable[tuple[str, str]]:
     yield from _copy_from_list(
         artifacts.get("chart_insight_cards"),
         "chart_insight_cards",
-        ("caption", "takeaway", "business_implication", "avoid_reason_if_weak"),
+        ("takeaway", "business_implication", "avoid_reason_if_weak"),
     )
+    for index, item in enumerate(artifacts.get("chart_insight_cards") or []):
+        if not isinstance(item, dict):
+            continue
+        caption = _s(item.get("caption")).strip()
+        if caption:
+            # Chart captions are display labels, not sentence prose. Other
+            # editorial-quality checks still apply to their retained text.
+            yield f"chart_insight_cards[{index}].caption", caption, True
 
 
-def _copy_from_list(value: Any, section: str, keys: tuple[str, ...]) -> Iterable[tuple[str, str]]:
+def _copy_from_list(
+    value: Any, section: str, keys: tuple[str, ...]
+) -> Iterable[tuple[str, str, bool]]:
     if not isinstance(value, list):
         return
     for index, item in enumerate(value):
@@ -113,7 +131,22 @@ def _copy_from_list(value: Any, section: str, keys: tuple[str, ...]) -> Iterable
         for key in keys:
             text = _s(item.get(key)).strip()
             if text:
-                yield f"{section}[{index}].{key}", text
+                yield f"{section}[{index}].{key}", text, False
+
+
+def _topic_copy_fields(
+    value: Any, section: str, keys: tuple[str, ...]
+) -> Iterable[tuple[str, str, bool]]:
+    if not isinstance(value, list):
+        return
+    for index, item in enumerate(value):
+        if not isinstance(item, dict):
+            continue
+        has_structured_category = bool(_s(item.get("topic")).strip())
+        for key in keys:
+            text = _s(item.get(key)).strip()
+            if text:
+                yield f"{section}[{index}].{key}", text, has_structured_category
 
 
 def _is_allowed_technical_usage(text: str, label: str) -> bool:
@@ -123,7 +156,7 @@ def _is_allowed_technical_usage(text: str, label: str) -> bool:
 
 
 def _first_sentence(text: str) -> str:
-    parts = re.split(r"(?<=[.!?])\s+", text, maxsplit=1)
+    parts = re.split(r"(?<=[.!?])\s+(?=[A-Z0-9\"“'])", text, maxsplit=1)
     return parts[0].strip()
 
 

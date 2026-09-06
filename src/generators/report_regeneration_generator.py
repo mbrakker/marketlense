@@ -36,6 +36,7 @@ from src.generators.artifact_normalization import (
     normalize_artifact_toc_entries,
     normalize_artifact_topics,
     normalize_expert_domain,
+    preserve_public_source_displays,
     select_artifact_insights,
     stabilize_broad_artifact_editorial_plan,
     strip_linkedin_inline_reference_ids,
@@ -229,6 +230,12 @@ def regenerate_artifacts(
             )
         )
 
+    state.expert_comment, state.linkedin_post = preserve_public_source_displays(
+        summary=state.summary,
+        insights_final=state.insights_final,
+        expert_comment=state.expert_comment,
+        linkedin_post=state.linkedin_post,
+    )
     (
         summary,
         insights_candidates,

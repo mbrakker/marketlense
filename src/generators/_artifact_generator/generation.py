@@ -746,6 +746,15 @@ def generate_artifacts(
                 fields=evidence_span_stats,
             )
         )
+    # Canonical evidence is now bound, so source-display preservation can
+    # replace any generated insight number that exceeds its linked record
+    # before it feeds downstream public-copy families.
+    preserve_public_source_displays(
+        summary=summary,
+        insights_final=insights_final,
+        expert_comment="",
+        linkedin_post="",
+    )
     metric_spine = derive_metric_spine_from_insights(
         insights_final,
         editorial_plan=editorial_plan,

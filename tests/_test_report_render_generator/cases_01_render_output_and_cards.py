@@ -416,6 +416,46 @@ def test_render_report_output_sources_metadata_from_db_and_returns_complete_outc
     assert render_calls == ["DB Title"]
 
 
+def test_render_report_output_does_not_emit_html_for_failed_canonical_validation(
+    tmp_path,
+) -> None:
+    runtime = _runtime(tmp_path, md5="md5")
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    analysis = replace(
+        _analysis(runtime, source, selection),
+        validation_report=ValidationReport(
+            schema_version="1.1",
+            status="fail",
+            severity="error",
+            issues=[],
+            source_path="validation.json",
+        ),
+    )
+    render_calls: list[object] = []
+    metadata_calls: list[object] = []
+    deps = _deps(
+        render_report=lambda req, ctx: render_calls.append((req, ctx)),
+        upsert_report_metadata=lambda req, ctx: metadata_calls.append((req, ctx)),
+    )
+
+    outcome = render_report_output(
+        runtime,
+        source,
+        selection,
+        analysis,
+        deps,
+        preview_resp=render_preview_asset(runtime, source, deps),
+    )
+
+    assert outcome.status == "error"
+    assert outcome.error == "validation_failed"
+    assert outcome.html_path == ""
+    assert outcome.publish_readiness_status is None
+    assert render_calls == []
+    assert metadata_calls == []
+
+
 def test_render_report_output_passes_db_source_url_to_public_renderer(tmp_path):
     runtime = _runtime(tmp_path, md5="md5")
     source = _source(runtime)

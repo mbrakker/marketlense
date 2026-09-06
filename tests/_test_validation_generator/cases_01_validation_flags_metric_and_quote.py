@@ -416,6 +416,91 @@ def test_artifact_quality_flags_banned_generic_copy_and_allows_technical_terms(
     assert not any("financial leverage" in message.lower() for message in messages)
 
 
+def test_artifact_quality_uses_a_source_topic_heading_as_public_category(tmp_path):
+    settings = _settings(tmp_path)
+    result = validate_report(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="quality-topic-category",
+            report=_report(),
+            artifacts={
+                "summary": {"claim_evidence_map": []},
+                "insights_final": [],
+                "quotes_final": [],
+                "topics_covered": [
+                    {
+                        "topic": "Population by age",
+                        "why_it_matters": (
+                            "The report presents the median age and the "
+                            "distribution across age groups."
+                        ),
+                    }
+                ],
+            },
+            evidence_packs={},
+            vector_store_id=None,
+            validation_mode="inline_deterministic",
+        ),
+        settings,
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=None,
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    assert not any(
+        issue.rule_id == "artifact_quality"
+        and issue.affected_section == "topics_covered[0].why_it_matters"
+        for issue in result.issues
+    )
+
+
+def test_artifact_quality_keeps_us_abbreviation_with_its_opening_sentence(tmp_path):
+    settings = _settings(tmp_path)
+    result = validate_report(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="quality-us-opening",
+            report=_report(),
+            artifacts={
+                "summary": {"claim_evidence_map": []},
+                "insights_final": [
+                    {
+                        "id": "usage",
+                        "text": (
+                            "U.S. household data usage is forecast to rise from "
+                            "475GB per month to 1,000GB per month by 2024E."
+                        ),
+                        "evidence_id": "usage",
+                        "evidence": (
+                            "U.S. household data usage is forecast to rise from "
+                            "475GB per month to 1,000GB per month by 2024E."
+                        ),
+                        "metric": {
+                            "value": "475GB per month to 1,000GB per month by 2024E"
+                        },
+                    }
+                ],
+                "quotes_final": [],
+            },
+            evidence_packs={},
+            vector_store_id=None,
+            validation_mode="inline_deterministic",
+        ),
+        settings,
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=None,
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    assert not any(
+        issue.rule_id == "artifact_quality"
+        and issue.affected_section == "insights_final[0].text"
+        for issue in result.issues
+    )
+
+
 def test_commentary_numbers_allowed_when_in_report_or_evidence(tmp_path):
     settings = _settings(tmp_path)
     artifacts = {
@@ -1040,6 +1125,8 @@ __all__ = [
     "test_validation_accepts_paraphrased_metrics_and_quotes",
     "test_validation_detects_new_numbers_and_grounding",
     "test_claim_support_rejects_strong_claims_backed_only_by_weak_evidence",
+    "test_artifact_quality_uses_a_source_topic_heading_as_public_category",
+    "test_artifact_quality_keeps_us_abbreviation_with_its_opening_sentence",
     "test_commentary_numbers_allowed_when_in_report_or_evidence",
     "test_validation_allows_interpretation_and_recommendation_in_allowed_sections",
     "test_validation_fails_on_report_directive_misattribution",

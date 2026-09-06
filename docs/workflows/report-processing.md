@@ -81,6 +81,14 @@ The same render outcome fails closed when required report-card metadata, such
 as publisher, fails public-metadata governance. Such a package remains a render
 error with the typed reason and cannot be mistaken for a publication candidate.
 
+Rendering also fails closed when the matching canonical analysis validation is
+not `pass` after its bounded regeneration loop. The workflow records
+`validation_failed` with no final HTML path, skips metadata-to-HTML linkage and
+publish-readiness creation, and retains only the analysis artifacts and
+candidate audits for diagnosis. A rejected regeneration candidate therefore
+cannot be rendered as a public package or replace the artifact/validation pair
+from which the next bounded attempt is planned.
+
 Before rendering, a resolved canonical source identity supplies the title and
 publisher when analysis or stored report metadata contains a generated
 file/checksum name or a placeholder publisher. This is a deterministic

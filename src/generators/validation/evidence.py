@@ -75,6 +75,16 @@ def collect_evidence_texts(
                 add(s(quote.get("citation")))
 
     if isinstance(evidence_packs, dict):
+        doc_map = ensure_dict(evidence_packs.get("doc_map"))
+        if doc_map:
+            add(s(doc_map.get("summary")))
+            for section in doc_map.get("sections") or []:
+                if not isinstance(section, dict):
+                    continue
+                add(s(section.get("summary")))
+                for key_point in section.get("key_points") or []:
+                    add(s(key_point))
+
         for pack in evidence_packs.values():
             if not isinstance(pack, dict):
                 continue

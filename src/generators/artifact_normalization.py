@@ -87,6 +87,28 @@ PUBLIC_EDITORIAL_SCAFFOLD_RE = re.compile(
     r"\b(?:answer|scale|implication|delivery and workflow|evidence note|caveat)\s*:\s*",
     re.IGNORECASE,
 )
+_LABELLED_METRIC_VALUE_RE = re.compile(
+    r"\b(?P<label>[A-Za-z][A-Za-z0-9&/ -]{0,72}?)\s+"
+    r"(?:grew|increased|rose|reached)\s+(?P<value>[+-]?\d+(?:[,.]\d+)?\s*%)",
+    re.IGNORECASE,
+)
+_PARALLEL_LABELLED_METRICS_RE = re.compile(
+    r"\b(?P<labels>[A-Za-z][A-Za-z0-9&/ ,;-]{0,96}?)\s+"
+    r"(?:grew|increased|rose|reached)\s+"
+    r"(?P<values>[+-]?\d+(?:[,.]\d+)?\s*%"
+    r"(?:\s*(?:,|and)\s*[+-]?\d+(?:[,.]\d+)?\s*%)+)",
+    re.IGNORECASE,
+)
+_PARALLEL_PERCENT_VALUE_RE = re.compile(r"[+-]?\d+(?:[,.]\d+)?\s*%")
+_SOURCE_RANGE_DISPLAY_RE = re.compile(
+    r"(?P<display>"
+    r"(?P<start>[+-]?(?:[$€£¥]\s*)?\d+(?:[,.]\d+)?(?:\s*%)?)"
+    r"(?P<between>(?:\s+[A-Za-z][A-Za-z/-]*){1,8}\s+)"
+    r"to\s+(?P<end>[+-]?(?:[$€£¥]\s*)?\d+(?:[,.]\d+)?(?:\s*%)?)"
+    r"(?P<tail>(?:\s+(?:by|in|during)\s+(?:[A-Za-z]+\s+)?\d{4}(?:E)?)?)"
+    r")",
+    re.IGNORECASE,
+)
 
 
 def artifact_base_variables(
@@ -462,18 +484,161 @@ def preserve_public_source_displays(
                     metric[field_name] = _preserve_source_displays(
                         _s(metric.get(field_name)), evidence
                     )
+        if _has_unsupported_material_number(_s(insight.get("text")), evidence, metric):
+            # The evidence was bound from a canonical retained record. Replace
+            # only a generated numeric claim that exceeds that record with its
+            # exact source-backed statement before artifact retention.
+            insight["text"] = evidence
         downstream_evidence.extend(
             value for value in (evidence, _s(insight.get("text"))) if value.strip()
         )
-    combined_downstream_evidence = " ".join(downstream_evidence)
+    combined_downstream_evidence = " ".join([summary_evidence, *downstream_evidence])
     return (
-        _preserve_source_displays(expert_comment, combined_downstream_evidence),
-        _preserve_source_displays(linkedin_post, combined_downstream_evidence),
+        _preserve_downstream_source_displays(
+            expert_comment, combined_downstream_evidence
+        ),
+        _preserve_downstream_source_displays(
+            linkedin_post, combined_downstream_evidence
+        ),
     )
 
 
 def _preserve_source_displays(text: str, evidence: str) -> str:
     return preserve_unique_source_displays(text, evidence)
+
+
+def _has_unsupported_material_number(text: str, evidence: str, metric: object) -> bool:
+    number_pattern = r"\d{1,3}(?:[,.]\d{3})+|\d+(?:[.,]\d+)?"
+    evidence_numbers = {
+        _normalise_numeric_display(match.group())
+        for match in re.finditer(number_pattern, f"{evidence} {metric or ''}")
+    }
+    material_numbers = {
+        _normalise_numeric_display(match.group())
+        for match in re.finditer(number_pattern, text)
+        if not re.fullmatch(
+            r"(?:19|20)\d{2}", _normalise_numeric_display(match.group())
+        )
+    }
+    return bool(material_numbers - evidence_numbers)
+
+
+def _preserve_downstream_source_displays(text: str, evidence: str) -> str:
+    return _preserve_source_range_displays(
+        _preserve_parallel_labelled_metric_displays(
+            _preserve_source_displays(text, evidence), evidence
+        ),
+        evidence,
+    )
+
+
+def _preserve_source_range_displays(text: str, evidence: str) -> str:
+    """Restore a unique source range when prose drops its in-range display.
+
+    This applies only where the public copy retains the exact start/end
+    displays, while the retained evidence has one unambiguous intervening
+    source display (such as a unit or source-relative timeframe). It never
+    infers missing text or selects among competing source displays.
+    """
+
+    source_displays_by_pair: dict[tuple[str, str], set[str]] = {}
+    for match in _SOURCE_RANGE_DISPLAY_RE.finditer(evidence):
+        display = match.group("display")
+        between = match.group("between")
+        if not display or not between.strip():
+            continue
+        pair = (
+            _normalise_numeric_display(match.group("start")),
+            _normalise_numeric_display(match.group("end")),
+        )
+        if all(pair):
+            source_displays_by_pair.setdefault(pair, set()).add(display)
+
+    repaired = text
+    for pair, displays in source_displays_by_pair.items():
+        if len(displays) != 1:
+            continue
+        start, end = pair
+        public_range = re.compile(
+            rf"(?<![\d.]){re.escape(start)}\s+to\s+{re.escape(end)}(?![\d.])",
+            re.IGNORECASE,
+        )
+        source_display = next(iter(displays))
+        if len(public_range.findall(repaired)) == 1:
+            repaired = public_range.sub(source_display, repaired, count=1)
+    return repaired
+
+
+def _normalise_numeric_display(value: str) -> str:
+    return "".join(value.casefold().split())
+
+
+def _preserve_parallel_labelled_metric_displays(text: str, evidence: str) -> str:
+    """Restore ordered values only for uniquely matched source categories."""
+
+    source_values_by_label: dict[str, set[str]] = {}
+    for match in _LABELLED_METRIC_VALUE_RE.finditer(evidence):
+        label = _normalise_metric_label(match.group("label"))
+        value = match.group("value")
+        if label and value:
+            source_values_by_label.setdefault(label, set()).add(value)
+
+    replacements: list[tuple[int, int, str]] = []
+    for match in _PARALLEL_LABELLED_METRICS_RE.finditer(text):
+        labels = _parallel_metric_labels(match.group("labels"))
+        values = list(_PARALLEL_PERCENT_VALUE_RE.finditer(match.group("values")))
+        if len(labels) < 2 or len(labels) != len(values):
+            continue
+        source_displays: list[str] = []
+        for label in labels:
+            source_display = _unique_source_value_for_label(
+                label, source_values_by_label
+            )
+            if source_display is None:
+                break
+            source_displays.append(source_display)
+        if len(source_displays) != len(labels):
+            continue
+        value_offset = match.start("values")
+        for value_match, source_display in zip(values, source_displays, strict=True):
+            if value_match.group() != source_display:
+                replacements.append(
+                    (
+                        value_offset + value_match.start(),
+                        value_offset + value_match.end(),
+                        source_display,
+                    )
+                )
+
+    repaired = text
+    for start, end, source_display in reversed(replacements):
+        repaired = repaired[:start] + source_display + repaired[end:]
+    return repaired
+
+
+def _parallel_metric_labels(value: str) -> list[str]:
+    last_clause = re.split(r"[,;:]\s*", value)[-1]
+    labels = [
+        _normalise_metric_label(label)
+        for label in re.split(r"\s+(?:and|&)\s+", last_clause, flags=re.IGNORECASE)
+    ]
+    return [label for label in labels if label]
+
+
+def _normalise_metric_label(value: str) -> str:
+    return " ".join(value.casefold().replace("-", " ").split())
+
+
+def _unique_source_value_for_label(
+    label: str, source_values_by_label: dict[str, set[str]]
+) -> str | None:
+    values = {
+        value
+        for source_label, displays in source_values_by_label.items()
+        if source_label == label or source_label.endswith(f" {label}")
+        for value in displays
+    }
+    return next(iter(values)) if len(values) == 1 else None
 
 
 def _strip_public_editorial_scaffold(value: str) -> str:
@@ -988,7 +1153,12 @@ def bind_artifact_evidence_spans(
             )
         )
 
-    def _bind_item(item: Any, *, page_keys: tuple[str, ...]) -> None:
+    def _bind_item(
+        item: Any,
+        *,
+        page_keys: tuple[str, ...],
+        bind_canonical_evidence: bool = False,
+    ) -> None:
         nonlocal bound_count, unbound_count
         if not isinstance(item, dict):
             return
@@ -1010,6 +1180,16 @@ def bind_artifact_evidence_spans(
                 item["pages"] = pages
             elif "page" in page_keys and pages:
                 item["page"] = pages[0]
+            if bind_canonical_evidence:
+                canonical_evidence = " ".join(
+                    dict.fromkeys(
+                        _s(span.get("text")).strip()
+                        for span in derived
+                        if _s(span.get("text")).strip()
+                    )
+                )
+                if canonical_evidence:
+                    item["evidence"] = canonical_evidence
         if not spans:
             fallback_pages: List[int] = []
             for key in page_keys:
@@ -1092,9 +1272,9 @@ def bind_artifact_evidence_spans(
         summary["claim_evidence_map"] = bound_claims
 
     for item in insights_candidates:
-        _bind_item(item, page_keys=("pages",))
+        _bind_item(item, page_keys=("pages",), bind_canonical_evidence=True)
     for item in insights_final:
-        _bind_item(item, page_keys=("pages",))
+        _bind_item(item, page_keys=("pages",), bind_canonical_evidence=True)
     for item in quotes_final:
         _bind_item(item, page_keys=("page",))
 

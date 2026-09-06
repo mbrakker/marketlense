@@ -721,6 +721,79 @@ def test_run_report_analysis_uses_context_fit_categories_not_taxonomy_tags(tmp_p
     assert metadata_updates[0].run_budget.run_id == runtime.ctx.run_id
 
 
+def test_run_report_analysis_defers_retryable_vector_metadata_sync_failure(
+    tmp_path,
+    caplog,
+    assert_logs_have_required_fields,
+):
+    caplog.set_level(
+        logging.WARNING, logger="market_lense.report_analysis_orchestrator"
+    )
+    runtime = _runtime(tmp_path)
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+
+    def fail_metadata_sync(request, ctx):
+        del request, ctx
+        raise AppError(
+            code="vector_store_metadata_update_failed",
+            message="provider metadata update failed",
+            retryable=True,
+        )
+
+    state = run_report_analysis(
+        runtime,
+        source,
+        selection,
+        VectorStoreIndexingState(
+            vector_store_id="vs_1",
+            openai_file_id="file_1",
+            vector_store_status="completed",
+            indexed_at_utc="2026-01-01T00:00:00Z",
+            last_error=None,
+        ),
+        _deps(
+            vector_store_update_metadata=fail_metadata_sync,
+            generate_evidence_packs=lambda **kwargs: {
+                "doc_map": {
+                    "title": "Doc Title",
+                    "publisher": "Doc Publisher",
+                    "summary": "A report about AI-led shopping journeys.",
+                    "sections": [],
+                },
+                "scope": {"scope": "Retail commerce strategy"},
+                "methods": {"methods": ["Survey"]},
+                "findings": {
+                    "findings": [
+                        {"id": "f1", "text": "AI is reshaping retail execution."}
+                    ]
+                },
+                "limitations": {"limitations": []},
+            },
+            generate_artifacts=lambda **kwargs: _artifacts(),
+            run_validation=lambda *args, **kwargs: ValidationReport(
+                schema_version="1.1",
+                status="pass",
+                issues=[],
+                severity="pass",
+                source_path=str(tmp_path / "out" / "validation.json"),
+            ),
+        ),
+    )
+
+    assert state.vector_store_status == "completed"
+    events = _orchestrator_events(caplog)
+    assert_logs_have_required_fields(events)
+    assert any(
+        event.get("event") == "vector_store_metadata_update_deferred"
+        and event.get("fields", {}).get("error_code")
+        == "vector_store_metadata_update_failed"
+        and event.get("fields", {}).get("next_action")
+        == "continue_with_locally_retained_classification"
+        for event in events
+    )
+
+
 def test_run_report_analysis_repairs_taxonomy_invalid_json_on_first_attempt(tmp_path):
     runtime = _runtime(tmp_path)
     source = _source(runtime)
@@ -909,6 +982,7 @@ __all__ = [
     "test_run_report_analysis_falls_back_when_validation_raises",
     "test_run_report_analysis_surfaces_doc_map_empty",
     "test_run_report_analysis_uses_context_fit_categories_not_taxonomy_tags",
+    "test_run_report_analysis_defers_retryable_vector_metadata_sync_failure",
     "test_run_report_analysis_repairs_taxonomy_invalid_json_on_first_attempt",
     "test_run_report_analysis_returns_complete_report_payload_contract",
     "test_run_report_analysis_fails_on_incomplete_report_payload_contract",

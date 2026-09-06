@@ -20,6 +20,10 @@ before it can supply SEO or social metadata.
 Standalone key-figure displays retain their numeric-grounding checks, while
 their linked label and explanation carry the temporal-integrity requirement;
 a compact display need not repeat dates that those public prose fields retain.
+Key-figure supporting copy reuses the linked retained final insight when one is
+available, rather than reconstructing a comparison from separated metric
+metadata. This preserves the already grounded source display, including its
+comparison endpoints and forecast qualifiers.
 
 Numeric grounding compares explicit universal quantity primitives in canonical
 form. It normalizes equivalent notation such as `$3T` and `$3 trillion`,
@@ -28,10 +32,21 @@ scales, unit families, count units, signs, ratios, ranges, or attached
 timeframes. This numeric comparison does not establish that different business
 subjects or metrics are equivalent; semantic grounding and the unchanged
 publication-readiness decision remain responsible for that validation.
+Quantity extraction recognizes data-rate units and can retain a count unit
+after neutral descriptive words following a magnitude; it still compares the
+full unit and any attached temporal context rather than inferring a metric.
 
 ## Blocking rules
 
 The gate blocks public release unless semantic and grounding validation passed, category decisions agree, every material claim has a valid retained evidence ID, and every regenerated artifact was promoted. It blocks unsupported numeric claims; source-proven comparative temporal loss and malformed `in to` / `between and` comparisons; internal IDs and evidence tokens; placeholders; malformed extraction and OCR fragments; mojibake; missing rendered assets; duplicate boilerplate; filename-style titles and duplicated years; fragments; generic figure labels; unsupported certainty; empty or non-specific decision implications; mechanical labels; literal truncation; private paths and Drive URLs; and invalid public source links.
+
+After the normal bounded regeneration loop, rendering is permitted only when the
+matching canonical validation report passes. A failed or missing canonical
+validation report returns the typed `validation_failed` ingest outcome without
+calling the HTML renderer, updating report metadata with an HTML path, or
+creating a readiness artifact. The retained artifacts, failed validation, and
+rejected-candidate audits remain private diagnostics; they are never a final
+public report.
 
 It inspects headings, body text, captions, quotations, link labels and hrefs, alt attributes, JSON-LD, canonical and Open Graph metadata. A public chart card must be linked end-to-end to an accepted crop candidate, source page, evidence ID, insight ID, caption, and public takeaway. Weak, text-only, or incomplete cards are omitted during rendering and a mismatch between that public projection and the retained card set fails readiness. Cropping is not modified by this gate.
 
@@ -53,11 +68,42 @@ and LinkedIn copy. A display already verbatim in linked source evidence remains
 unchanged even when another source display has a similar shortened form. If an
 abbreviated display could refer to two retained source displays, it remains
 unchanged for the existing validation gates to assess. These fail-closed
-controls never select between competing facts,
+controls also restore an ordered set of percentage displays only when every
+explicit public category has exactly one matching labelled source display;
+otherwise they abstain. They never select between competing facts,
 relax a quality rule, or repair a report manually. The LinkedIn publication and
 LinkedIn-regeneration namespaces use their separately configured execution
 policies because that surface must restate retained evidence faithfully; schema,
 grounding, semantic, editorial, and signed-readiness gates still run unchanged.
+When public prose keeps both endpoints of a uniquely retained source range but
+omits its intervening unit or source-relative timeframe, the same pass restores
+that exact source range display. It abstains if more than one retained display
+has those endpoints.
+
+Before this pass evaluates an insight, its displayed evidence is rebound from
+the uniquely linked canonical evidence span; model-supplied evidence prose is
+not an authority for public grounding. If a final-insight body contains a
+material numeric display absent from that canonical evidence and its retained
+metric, the body is replaced before initial validation with the exact linked
+evidence statement. The pass never manufactures a display, selects among
+multiple source values, or changes unsupported non-numeric prose. Numeric-only
+comparison permits a standalone display to omit a timeframe only when every
+other canonical primitive matches its linked source; two explicit, conflicting
+timeframes remain a validation failure.
+
+Artifact-quality checks evaluate a visible source topic heading together with
+its accompanying topic summary, so the source heading supplies the displayed
+category signal. Chart captions and key-figure labels are treated as structured
+display labels rather than sentence prose, while their other retained-text and
+grounding checks remain active. Opening-sentence detection also keeps dotted
+abbreviations such as `U.S.` with the following clause.
+
+After a vector store has indexed a source, retryable provider failures while
+mirroring locally retained taxonomy/category metadata are recorded as deferred
+metadata synchronization and do not stop report analysis. The canonical local
+classification, source artifacts, and every validation/readiness gate remain
+unchanged; non-retryable metadata contract or configuration failures still stop
+the workflow.
 
 Complete report titles remain retained in source evidence and metadata. At the public rendering boundary, the complete normalized title is used in the HTML heading and derived SEO title when it fits the configured display limit. When it does not fit, a colon, en dash, or em dash followed by whitespace marks a clarification subtitle and only the primary segment is used. The renderer never character-truncates a primary report name, avoiding cover-layout overflow without rewriting source provenance or splitting ordinary hyphenated words.
 

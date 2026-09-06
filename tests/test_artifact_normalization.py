@@ -22,8 +22,9 @@ from src.services.schema_validator_service import validate_output_schema
 from src.utils.errors import AppError
 
 
-def test_normalize_artifact_insights_preserves_metric_label_scoring_and_strategy_fields(
-) -> None:
+def test_normalize_artifact_insights_preserves_metric_label_scoring_and_strategy_fields() -> (
+    None
+):
     insights = normalize_artifact_insights(
         [
             {
@@ -130,9 +131,12 @@ def test_normalize_artifact_summary_removes_editorial_scaffold_labels() -> None:
 
 
 def test_linkedin_reference_id_stripping_preserves_blank_line_paragraphs() -> None:
-    assert strip_linkedin_inline_reference_ids(
-        "First paragraph (IC-12).\n\nSecond paragraph (F-2)."
-    ) == "First paragraph.\n\nSecond paragraph."
+    assert (
+        strip_linkedin_inline_reference_ids(
+            "First paragraph (IC-12).\n\nSecond paragraph (F-2)."
+        )
+        == "First paragraph.\n\nSecond paragraph."
+    )
 
 
 def test_binding_known_evidence_canonicalizes_model_supplied_claim_pages() -> None:
@@ -184,6 +188,49 @@ def test_binding_known_evidence_canonicalizes_model_supplied_claim_pages() -> No
             "text": "Known evidence.",
         }
     ]
+
+
+def test_binding_known_evidence_replaces_model_supplied_insight_evidence() -> None:
+    insights = [
+        {
+            "id": "insight-1",
+            "text": "The audience reached 9.25 million users, or 90.8 percent.",
+            "evidence_id": "finding-1",
+            "evidence": "Model-supplied evidence claims 90.8 percent.",
+        }
+    ]
+
+    bind_artifact_evidence_spans(
+        summary={},
+        insights_candidates=[],
+        insights_final=insights,
+        quotes_final=[],
+        doc_map={},
+        evidence_packs={
+            "findings": {
+                "findings": [
+                    {
+                        "id": "finding-1",
+                        "evidence": (
+                            "There were 9.25 million users; the number increased "
+                            "by 930 thousand (+11.2 percent)."
+                        ),
+                    }
+                ]
+            }
+        },
+    )
+
+    assert insights[0]["evidence"] == (
+        "There were 9.25 million users; the number increased by 930 thousand "
+        "(+11.2 percent)."
+    )
+    quality = evaluate_public_editorial_quality(
+        report_id="canonical-evidence", artifacts={"insights_final": insights}
+    )
+    assert "public_editorial_quality.unsupported_numeric_claim" in {
+        issue.rule_id for issue in quality.issues
+    }
 
 
 def test_initial_artifact_normalization_preserves_distinct_quarterly_periods() -> None:
@@ -260,8 +307,9 @@ def test_preserve_public_source_displays_repairs_unique_proven_values() -> None:
     assert quality.status == "pass"
 
 
-def test_preserve_public_source_displays_leaves_ambiguous_display_and_prose_unchanged(
-) -> None:
+def test_preserve_public_source_displays_leaves_ambiguous_display_and_prose_unchanged() -> (
+    None
+):
     summary = {
         "tldr": "The report has a material outlook.",
         "card_tldr_compact": "The report has a material outlook.",
@@ -274,8 +322,7 @@ def test_preserve_public_source_displays_leaves_ambiguous_display_and_prose_unch
                 "claim": "Two distinct forecast figures are retained.",
                 "evidence_id": "ambiguous-growth",
                 "evidence": (
-                    "Consumer revenues rise to $3.0T while B2B revenues rise "
-                    "to $3.2T."
+                    "Consumer revenues rise to $3.0T while B2B revenues rise to $3.2T."
                 ),
             }
         ],
@@ -296,9 +343,9 @@ def test_preserve_public_source_displays_leaves_ambiguous_display_and_prose_unch
         report_id="ambiguous-source-display", artifacts={"summary": summary}
     )
     assert quality.status == "fail"
-    assert {
-        issue.rule_id for issue in quality.issues
-    } >= {"public_editorial_quality.incomplete_numeric_expression"}
+    assert {issue.rule_id for issue in quality.issues} >= {
+        "public_editorial_quality.incomplete_numeric_expression"
+    }
 
 
 def test_source_displays_restore_exact_metric_comparisons() -> None:
@@ -359,6 +406,62 @@ def test_source_displays_restore_exact_metric_comparisons() -> None:
         "The outlook moves from +7.30% in January 2025 to -5.70% in September 2025."
     )
     assert linkedin_post == expert_comment
+
+
+def test_source_display_preservation_replaces_unsupported_insight_number_with_evidence() -> (
+    None
+):
+    source = (
+        "There were 9.25 million social media users in January 2022; the number "
+        "increased by 930 thousand (+11.2 percent) between 2021 and 2022."
+    )
+    insights = [
+        {
+            "id": "social-media",
+            "text": (
+                "Social media reached 9.25 million users, or 90.8 percent of the "
+                "population."
+            ),
+            "evidence": source,
+            "metric": {"value": "9.25 million", "unit": "users"},
+        }
+    ]
+
+    preserve_public_source_displays(
+        summary={}, insights_final=insights, expert_comment="", linkedin_post=""
+    )
+
+    assert insights[0]["text"] == source
+    quality = evaluate_public_editorial_quality(
+        report_id="numeric-source-fallback", artifacts={"insights_final": insights}
+    )
+    assert "public_editorial_quality.unsupported_numeric_claim" not in {
+        issue.rule_id for issue in quality.issues
+    }
+
+
+def test_source_displays_restore_uniquely_labelled_parallel_metric_values() -> None:
+    summary = {"claim_evidence_map": []}
+    insights = [
+        {
+            "id": "growth-drivers",
+            "evidence": (
+                "Total video grew 19.6% to €34.0 billion, while social grew "
+                "19.2% to €35.5 billion."
+            ),
+        }
+    ]
+
+    expert_comment, _ = preserve_public_source_displays(
+        summary=summary,
+        insights_final=insights,
+        expert_comment=("Video and social grew 19.1% and 19.1% as growth drivers."),
+        linkedin_post="",
+    )
+
+    assert expert_comment == (
+        "Video and social grew 19.6% and 19.2% as growth drivers."
+    )
 
 
 def test_preserve_public_source_displays_restores_month_and_half_year_forms() -> None:
@@ -551,6 +654,58 @@ def test_source_display_preservation_leaves_unsupported_values_unchanged() -> No
     )
 
     assert summary["executive_summary"] == "Margin reaches 8.5% in March 2027."
+
+
+def test_source_display_preservation_restores_unique_range_qualifiers() -> None:
+    insights = [
+        {
+            "id": "subscriptions",
+            "text": "Subscriptions are forecast to increase.",
+            "evidence": (
+                "Average paid subscriptions are forecast to rise from 4.1 "
+                "subscriptions per subscriber today to 5.7 by 2024."
+            ),
+        }
+    ]
+
+    expert_comment, _ = preserve_public_source_displays(
+        summary={},
+        insights_final=insights,
+        expert_comment=(
+            "Paid subscriptions are forecast to rise from 4.1 to 5.7, "
+            "which changes distribution planning."
+        ),
+        linkedin_post="",
+    )
+
+    assert expert_comment == (
+        "Paid subscriptions are forecast to rise from 4.1 subscriptions per "
+        "subscriber today to 5.7 by 2024, which changes distribution planning."
+    )
+
+
+def test_source_display_preservation_abstains_for_ambiguous_range_qualifiers() -> None:
+    insights = [
+        {
+            "id": "subscriptions-one",
+            "text": "Subscriptions are forecast to increase.",
+            "evidence": "Subscriptions rise from 4.1 per user to 5.7 by 2024.",
+        },
+        {
+            "id": "subscriptions-two",
+            "text": "Subscriptions are forecast to increase.",
+            "evidence": "Subscriptions rise from 4.1 per household to 5.7 by 2024.",
+        },
+    ]
+
+    expert_comment, _ = preserve_public_source_displays(
+        summary={},
+        insights_final=insights,
+        expert_comment="Subscriptions rise from 4.1 to 5.7.",
+        linkedin_post="",
+    )
+
+    assert expert_comment == "Subscriptions rise from 4.1 to 5.7."
 
 
 def test_exact_source_display_survives_ambiguous_shortening() -> None:

@@ -38,6 +38,7 @@ _MAIN_RE = re.compile(
     rf"(?:\s*(?P<magnitude>{_MAG_RE}))?"
     r"(?:\s*(?P<unit>percentage points?|basis points?|%|percent|pct|pp|bps|usd|eur|gbp|jpy|"
     r"users?|downloads?|respondents?|impressions?|installs?|visits?|sessions?|"
+    r"kbps|mbps|gbps|"
     r"minutes?|hours?|days?|weeks?|months?|years?|points?|index|rank|"
     r"times?|yoy|mom|qoq|cagr|per day|per month|per year))?",
     re.IGNORECASE,
@@ -499,6 +500,9 @@ def _resolve_unit_family(
     if unit_norm in {"yoy", "mom", "qoq", "cagr"} or "per " in unit_norm:
         return "rate", unit_norm or "rate", magnitude_norm
 
+    if unit_norm in {"kbps", "mbps", "gbps"}:
+        return "data_rate", unit_norm, magnitude_norm
+
     if unit_norm in {
         "user",
         "users",
@@ -516,6 +520,16 @@ def _resolve_unit_family(
         "sessions",
     }:
         return "count", unit_norm, magnitude_norm
+
+    if magnitude_norm:
+        following_count_unit = re.search(
+            r"\b(user|users|download|downloads|respondent|respondents|"
+            r"impression|impressions|install|installs|visit|visits|"
+            r"session|sessions)\b",
+            following,
+        )
+        if following_count_unit:
+            return "count", following_count_unit.group(1), magnitude_norm
 
     if unit_norm in {
         "minute",

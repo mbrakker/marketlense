@@ -21,6 +21,7 @@ from src.contracts.report_generation import (
     ReportSelectionState,
     ReportSourceState,
 )
+from src.contracts.run_context import RunContext
 from src.contracts.semantic_ids import ReportId
 from src.contracts.validation import ValidationRequest
 from src.contracts.vector_store import (
@@ -288,6 +289,63 @@ def _resolve_taxonomy_with_repair(
                 repair_response=repair_response,
             ),
             True,
+        )
+
+
+def _sync_vector_store_metadata(
+    *,
+    runtime: ReportRuntimeState,
+    mode_ctx: RunContext,
+    vector_store_id: str,
+    taxonomy: list[str],
+    categories: list[str],
+    region: str,
+    time_period: str,
+    dependencies: ReportAnalysisDependencies,
+) -> None:
+    """Synchronize retained classification metadata without blocking analysis.
+
+    The vector store is already indexed at this point. A retryable provider
+    failure to mirror locally retained classification metadata must remain
+    observable, but cannot invalidate source extraction or public validation.
+    Non-retryable contract/configuration failures still stop the workflow.
+    """
+
+    try:
+        dependencies.vector_store_update_metadata(
+            VectorStoreUpdateMetadataRequest(
+                schema_version="1.0",
+                vector_store_id=vector_store_id,
+                metadata=VectorStoreMetadata(
+                    schema_version="1.0",
+                    report_id=ReportId(runtime.file.file_id),
+                    report_name=runtime.report_title,
+                    taxonomy=taxonomy,
+                    categories=categories,
+                    region=region,
+                    time_period=time_period,
+                ),
+                run_budget=report_runtime_run_budget(runtime),
+            ),
+            child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:metadata"),
+        )
+    except AppError as exc:
+        if not exc.retryable:
+            raise
+        logger.warning(
+            log_event(
+                mode_ctx,
+                role="orchestrator",
+                event="vector_store_metadata_update_deferred",
+                module=logger.name,
+                fields={
+                    "file_id": runtime.file.file_id,
+                    "vector_store_id": vector_store_id,
+                    "error_code": exc.code,
+                    "retryable": True,
+                    "next_action": "continue_with_locally_retained_classification",
+                },
+            )
         )
 
 
@@ -749,22 +807,15 @@ def run_report_analysis(
         ),
     )
     if vector_state.vector_store_id:
-        dependencies.vector_store_update_metadata(
-            VectorStoreUpdateMetadataRequest(
-                schema_version="1.0",
-                vector_store_id=vector_state.vector_store_id,
-                metadata=VectorStoreMetadata(
-                    schema_version="1.0",
-                    report_id=ReportId(runtime.file.file_id),
-                    report_name=runtime.report_title,
-                    taxonomy=taxonomy_state.taxonomy,
-                    categories=category_assignment.categories,
-                    region=taxonomy_state.region,
-                    time_period=taxonomy_state.time_period,
-                ),
-                run_budget=report_runtime_run_budget(runtime),
-            ),
-            child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:metadata"),
+        _sync_vector_store_metadata(
+            runtime=runtime,
+            mode_ctx=mode_ctx,
+            vector_store_id=vector_state.vector_store_id,
+            taxonomy=taxonomy_state.taxonomy,
+            categories=category_assignment.categories,
+            region=taxonomy_state.region,
+            time_period=taxonomy_state.time_period,
+            dependencies=dependencies,
         )
     logger.info(
         log_event(

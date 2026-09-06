@@ -56,6 +56,30 @@ def test_month_unit_is_not_parsed_as_million_magnitude() -> None:
     assert not any(q.value == 12_000_000 for q in parsed)
 
 
+def test_data_rate_units_match_across_source_and_public_prose() -> None:
+    assert _numeric_grounding_match(
+        "Median mobile speed was 59.61 Mbps.",
+        "Mobile speed reached 59.61 Mbps.",
+    )
+    assert _first("Median mobile speed was 59.61 Mbps.").unit_family == "data_rate"
+
+
+def test_count_unit_is_found_after_descriptive_words_following_a_magnitude() -> None:
+    assert _numeric_grounding_match(
+        "9.25 million social media users represented the population.",
+        "9.25 million users",
+    )
+
+
+def test_numeric_grounding_matches_standalone_key_figure_value_to_timed_source() -> (
+    None
+):
+    assert _numeric_grounding_match(
+        "9.88 million users",
+        "There were 9.88 million internet users in January 2022.",
+    )
+
+
 def test_percentage_points_require_change_context() -> None:
     assert not _any_match("Satisfaction is 3pp.", "Satisfaction is 3%.")
     assert _any_match(

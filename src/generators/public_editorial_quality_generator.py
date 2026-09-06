@@ -523,18 +523,19 @@ def _key_figure_issues(
                 evidence_text=evidence_text,
             )
             field_issues = _text_issues(report_id, item)
-            if field_name == "figure":
-                # A key-figure display can be a standalone number/unit rather
-                # than reader-facing sentence prose. Keep numeric-grounding
-                # checks, but do not require that display to be a sentence.
+            if field_name in {"label", "figure"}:
+                # Key-figure labels and displays are reader-facing metric
+                # phrases, not sentence prose. Keep all factual and
+                # evidence checks, but do not require a complete sentence.
+                excluded_rule_ids = {
+                    "public_editorial_quality.sentence_fragment",
+                }
+                if field_name == "figure":
+                    excluded_rule_ids.add("public_editorial_quality.temporal_integrity")
                 field_issues = [
                     issue
                     for issue in field_issues
-                    if issue.rule_id
-                    not in {
-                        "public_editorial_quality.sentence_fragment",
-                        "public_editorial_quality.temporal_integrity",
-                    }
+                    if issue.rule_id not in excluded_rule_ids
                 ]
             issues.extend(field_issues)
     return issues
@@ -927,14 +928,9 @@ def _temporal_integrity_explanation(text: str, evidence_text: str) -> str:
         source_pairs = _number_temporal_qualifier_pairs(source_sentence)
         source_numbers = {number for number, _ in source_pairs}
         source_qualifiers = {
-            qualifier
-            for number, qualifier in source_pairs
-            if number in claim_numbers
+            qualifier for number, qualifier in source_pairs if number in claim_numbers
         }
-        if (
-            len(source_numbers & claim_numbers) < 2
-            or len(source_qualifiers) < 2
-        ):
+        if len(source_numbers & claim_numbers) < 2 or len(source_qualifiers) < 2:
             continue
         if any(
             not _claim_retains_temporal_qualifier(qualifier, claim_qualifiers)

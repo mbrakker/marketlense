@@ -442,6 +442,45 @@ def render_report_output(
     preview_resp,
     reuse_report_card_assets: bool = False,
 ) -> IngestOutcome:
+    validation_status = str(
+        getattr(analysis.validation_report, "status", "") or ""
+    ).strip()
+    if validation_status != "pass":
+        logger.info(
+            log_event(
+                runtime.ctx,
+                role="generator",
+                event="render_blocked_by_canonical_validation",
+                module=logger.name,
+                fields={
+                    "file_id": runtime.file.file_id,
+                    "validation_status": validation_status or "missing",
+                    "validation_path": str(
+                        getattr(analysis.validation_report, "source_path", "") or ""
+                    ),
+                },
+            )
+        )
+        return IngestOutcome(
+            schema_version="1.1",
+            file_id=runtime.file.file_id,
+            name=runtime.file_name,
+            md5=runtime.md5,
+            html_path="",
+            status="error",
+            error="validation_failed",
+            vector_store_id=analysis.vector_store_id,
+            vector_store_status=analysis.vector_store_status,
+            indexed_at_utc=analysis.indexed_at_utc,
+            openai_file_id=analysis.openai_file_id,
+            evidence_packs=dict(analysis.evidence_paths),
+            vector_store_last_error=analysis.last_error,
+            text_validation_status=source.text_validation_status,
+            text_validation_reason=source.text_validation_reason,
+            text_validation_pages=source.text_validation_pages,
+            ocr_fallback_used=source.ocr_fallback_used,
+            ocr_pdf_path=source.ocr_pdf_path or None,
+        )
     dependencies.upsert_report_metadata(
         _build_metadata_upsert_request(runtime, source, analysis, html_path_value=None),
         runtime.ctx,
