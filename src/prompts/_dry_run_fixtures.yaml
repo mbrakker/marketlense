@@ -2,6 +2,8 @@ schema_version: "1.0"
 shared:
   doc_map_json: &doc_map_json >-
     {"title":"Enterprise Payments Outlook 2026","publisher":"Market Lense Research","summary":"A report on digital payments growth, wallets, and merchant infrastructure.","sections":[{"id":"s1","title":"Market landscape","summary":"Wallet adoption keeps rising across enterprise commerce."}]}
+  report_identity_json: &report_identity_json >-
+    {"title":"Enterprise Payments Outlook 2026","publisher":"Market Lense Research","scope":"Global enterprise payments market in 2026."}
   evidence_json: &evidence_json >-
     {"scope":{"summary":"Global enterprise payments market in 2026."},"findings":[{"id":"f1","text":"Digital wallets continue to expand in B2B and consumer checkout flows."},{"id":"f2","text":"Merchants prioritize orchestration, fraud controls, and conversion."}],"methods":{"methods":["Executive interviews","Cross-market survey"]},"limitations":{"items":["Forward-looking findings depend on disclosed assumptions."]}}
   editorial_plan_json: &editorial_plan_json >-
@@ -390,8 +392,7 @@ fixtures:
       fix_checklist_json: *fix_checklist_json
       grounding_package_json: *grounding_package_json
       editorial_plan_json: *editorial_plan_json
-      doc_map_json: *doc_map_json
-      insights_final_json: *insights_final_json
+      report_identity_json: *report_identity_json
   - namespace: "report_vs/artifacts/regenerate/quotes"
     family: "publishing"
     model: "openai/gpt-5-mini"

@@ -9,8 +9,6 @@ text: |
   - Validator failures JSON: {{ failure_reasons_json }}
   - Fix checklist JSON: {{ fix_checklist_json }}
   - Grounding package JSON: {{ grounding_package_json }}
-  - DocMap JSON: {{ doc_map_json }}
-  - Evidence packs JSON: {{ evidence_json }}
 
   Task:
   Return a JSON object with `quotes_final` as an array of 2-4 grounded quotes.
@@ -22,6 +20,9 @@ text: |
   - evidence_id
 
   Requirements:
+  - Treat the current quotes and quote candidates as failed editorial input, not
+    source evidence. Use only `grounding_package.relevant_evidence`; never use
+    an ID listed in `grounding_package.quarantined_evidence_ids`.
   - Quotes must be verbatim or directly supported by the supplied evidence.
   - Keep `evidence_id` to a single existing ID or an empty string.
   - Do not paraphrase a quote as if it were verbatim.

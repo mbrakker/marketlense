@@ -32,6 +32,12 @@ class RegenerationIssue:
         default_factory=list,
         metadata={"doc": "Evidence identifiers relevant to the failed section."},
     )
+    excluded_evidence_ids: List[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Evidence identifiers quarantined from this repair after a fidelity failure."
+        },
+    )
     pages: List[int] = field(
         default_factory=list,
         metadata={

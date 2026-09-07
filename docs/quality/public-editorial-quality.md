@@ -17,6 +17,31 @@ the same evidence-linked public-prose checks and the existing `summary` repair
 target. This ensures the short standalone report-card sentence is validated
 before it can supply SEO or social metadata.
 
+## Source-fidelity hard gate
+
+The assessment separates reader-facing quality measurements from
+publishability. A high report-quality score never offsets an unresolved
+source-fidelity failure. `publishable` is false while any of these unwaivable
+classes remains open: unsupported factual claim; incorrect numeric value;
+incorrect value/label relationship; incorrect timeframe; incorrect
+denominator/cohort/geography; forecast represented as observed; incorrect
+report identity; incorrect publisher/author attribution; or malformed/truncated
+public claim.
+
+Each assessed surface has a stable atomic item ID and smallest repair target.
+The inventory covers summary variants, final-insight text and implications, key
+figures, quotes, chart cards, Expert View, LinkedIn, and rendered identity
+metadata. Final readiness projects unresolved hard failures as
+`publish_readiness.source_fidelity`, so publication fails closed even if an
+earlier aggregate validation result passed.
+
+The existing grounding call is the single batched LLM source-fidelity audit. It
+receives the atomic public-item inventory, retained evidence, and report
+identity metadata, and judges source fidelity only—not writing quality.
+Deterministic numeric, temporal, tuple-relationship, malformed-fragment, and
+metadata checks run first. Supported failures use the item's atomic target;
+unmappable or exhausted failures remain non-publishable with diagnostics.
+
 Standalone key-figure displays retain their numeric-grounding checks, while
 their linked label and explanation carry the temporal-integrity requirement;
 a compact display need not repeat dates that those public prose fields retain.
@@ -33,8 +58,11 @@ timeframes. This numeric comparison does not establish that different business
 subjects or metrics are equivalent; semantic grounding and the unchanged
 publication-readiness decision remain responsible for that validation.
 Quantity extraction recognizes data-rate units and can retain a count unit
-after neutral descriptive words following a magnitude; it still compares the
-full unit and any attached temporal context rather than inferring a metric.
+after neutral descriptive words following a magnitude. It also treats `H:MM`
+viewing durations as one minute-valued time quantity (rather than independent
+hour and minute numbers) and recognizes compact forecast labels such as
+`2024E`. It still compares the full unit and any attached temporal context
+rather than inferring a metric.
 
 ## Blocking rules
 
@@ -121,7 +149,7 @@ The retained report includes non-blocking measurements for insight-role diversit
 
 ## Repair and waivers
 
-Only a failed field with retained source text, explicit evidence ID, and a supported existing regeneration target may be regenerated. Passing fields remain unchanged. If that grounding is absent, the repair diagnostic records `abstained`, does not use a generic replacement, and the final readiness artifact remains failed.
+Only a failed field with retained source text, explicit evidence ID, and a supported existing regeneration target may be regenerated. Passing fields remain unchanged. A source-fidelity, numeric, metric-relationship, or grounding failure quarantines its implicated evidence IDs from that atomic repair: its prompt receives only deterministic, retained alternative evidence selected from the source packs. The rejected public copy and synthesis context are diagnostic inputs, never substitute evidence. If an approved alternative is absent, the repair diagnostic records `abstained`, does not use a generic replacement, and the final readiness artifact remains failed.
 
 Before a regenerated artifact can be promoted, deterministic candidate validation
 requires material-evidence continuity. A stable internal artifact identifier is

@@ -20,6 +20,12 @@ text: |
 
   Requirements:
   - Fix the listed failures directly.
+  - Treat the current comment and synthesis context as failed editorial input,
+    not source evidence. Make factual assertions only from
+    `grounding_package.relevant_evidence`; never use an ID listed in
+    `grounding_package.quarantined_evidence_ids`.
+  - If the approved evidence cannot support a distinct two-finding synthesis,
+    return an empty Expert View rather than reuse the failed evidence or claim.
   - Develop the editorial plan's report thesis and themes without introducing a competing frame.
   - A non-empty Expert View must connect at least two distinct supported findings or themes; do not restate one finding or summary sentence.
   - Do not add claims that are absent from the supplied editorial plan, synthesis context, or grounding package.

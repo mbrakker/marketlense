@@ -17,6 +17,7 @@ from bs4 import BeautifulSoup
 
 from src.contracts.public_editorial_quality import (
     PublicEditorialQualityIssue,
+    PublicEditorialQualityItem,
     PublicEditorialQualityMeasurement,
     PublicEditorialQualityReport,
 )
@@ -56,6 +57,19 @@ ADVISORY_RULE_IDS = {
     "public_editorial_quality.chart_insight_linkage",
     "public_editorial_quality.source_note_completeness",
     "public_editorial_quality.action_specificity",
+}
+
+# These failures are source-fidelity release blockers, not weighted editorial
+# quality deductions.  They deliberately cannot be waived: any one prevents
+# publication even when every advisory quality measurement is excellent.
+HARD_FAIL_CLASS_BY_RULE_ID = {
+    "public_editorial_quality.unsupported_numeric_claim": "incorrect_numeric_value",
+    "public_editorial_quality.incomplete_numeric_expression": "malformed_or_truncated_public_claim",
+    "public_editorial_quality.material_claim_evidence_missing": "unsupported_factual_claim",
+    "public_editorial_quality.literal_truncation": "malformed_or_truncated_public_claim",
+    "public_editorial_quality.malformed_extraction_fragment": "malformed_or_truncated_public_claim",
+    "public_editorial_quality.ocr_fragment": "malformed_or_truncated_public_claim",
+    "public_editorial_quality.sentence_fragment": "malformed_or_truncated_public_claim",
 }
 
 _INTERNAL_IDENTIFIER = re.compile(
@@ -200,6 +214,7 @@ def evaluate_public_editorial_quality(
     html: str = "",
     html_path: str = "",
     disabled_rule_waivers: dict[str, str] | None = None,
+    metadata_evidence: dict[str, object] | None = None,
 ) -> PublicEditorialQualityReport:
     """Evaluate public fields and rendered HTML using enabled deterministic rules."""
     safe_artifacts = artifacts if isinstance(artifacts, dict) else {}
@@ -213,19 +228,33 @@ def evaluate_public_editorial_quality(
     issues.extend(_figure_issues(report_id, safe_artifacts))
     if html:
         issues.extend(_html_issues(report_id, html=html, html_path=html_path))
+    issues.extend(
+        _metadata_issues(
+            report_id, safe_artifacts, metadata_evidence or {}, html=html
+        )
+    )
 
-    filtered = [issue for issue in issues if issue.rule_id not in waivers]
+    # Source-fidelity failures are an explicit release policy and are never
+    # eligible for a quality-rule waiver.
+    filtered = [
+        issue
+        for issue in issues
+        if issue.rule_id not in waivers or issue.hard_fail_class
+    ]
     filtered.sort(
         key=lambda item: (item.rule_id, item.affected_field, item.explanation)
     )
+    hard_fail_count = sum(bool(issue.hard_fail_class) for issue in filtered)
+    status = "fail" if any(issue.severity == "error" for issue in filtered) else "pass"
     return PublicEditorialQualityReport(
         report_id=str(report_id),
-        status="fail"
-        if any(issue.severity == "error" for issue in filtered)
-        else "pass",
+        status=status,
         issues=filtered,
         measurements=_measurements(safe_artifacts),
+        items=enumerate_public_editorial_items(safe_artifacts),
         disabled_rule_waivers=waivers,
+        publishable=status == "pass" and hard_fail_count == 0,
+        hard_fail_count=hard_fail_count,
     )
 
 
@@ -246,7 +275,8 @@ def validation_issues_from_public_editorial_quality(
             affected_section=issue.affected_field,
             rule_id=issue.rule_id,
             repair_target=issue.repair_target if issue.repair_eligible else "",
-            entity_id="",
+            entity_id=issue.public_item_id,
+            evidence_ids=list(issue.evidence_ids),
         )
         for issue in report.issues
         if issue.severity == "error"
@@ -695,7 +725,48 @@ def _html_issues(
 def _public_text_items(artifacts: dict[str, Any]) -> Iterable[dict[str, Any]]:
     summary_value = artifacts.get("summary")
     summary: dict[str, Any] = summary_value if isinstance(summary_value, dict) else {}
-    summary_evidence = _summary_evidence_ids(summary)
+    summary_evidence = _summary_evidence_items(summary)
+    for field_name in ("tldr", "card_tldr_compact", "executive_summary"):
+        value = _sanitize_public_prose(summary.get(field_name))
+        if value:
+            if summary_evidence:
+                for evidence_id, evidence_text in summary_evidence:
+                    yield _item(
+                        "summary",
+                        field_name,
+                        value,
+                        [evidence_id],
+                        "summary",
+                        evidence_text=evidence_text,
+                    )
+            else:
+                yield _item("summary", field_name, value, [], "summary")
+    downstream_evidence = _downstream_evidence_items(artifacts)
+    for field_name in ("expert_comment", "linkedin_post"):
+        value = _sanitize_public_prose(artifacts.get(field_name))
+        if value:
+            if downstream_evidence:
+                for evidence_id, evidence_text in downstream_evidence:
+                    yield _item(
+                        field_name,
+                        field_name,
+                        value,
+                        [evidence_id],
+                        field_name,
+                        evidence_text=evidence_text,
+                    )
+            else:
+                yield _item(field_name, field_name, value, [], field_name)
+
+
+def _public_inventory_text_items(artifacts: dict[str, Any]) -> Iterable[dict[str, Any]]:
+    """Enumerate each public surface once while retaining all source bindings."""
+
+    summary_value = artifacts.get("summary")
+    summary: dict[str, Any] = summary_value if isinstance(summary_value, dict) else {}
+    summary_evidence = _summary_evidence_items(summary)
+    summary_ids = [evidence_id for evidence_id, _ in summary_evidence]
+    summary_text = " ".join(text for _, text in summary_evidence)
     for field_name in ("tldr", "card_tldr_compact", "executive_summary"):
         value = _sanitize_public_prose(summary.get(field_name))
         if value:
@@ -703,11 +774,13 @@ def _public_text_items(artifacts: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 "summary",
                 field_name,
                 value,
-                summary_evidence,
+                summary_ids,
                 "summary",
-                evidence_text=" ".join(_summary_evidence_texts(summary)),
+                evidence_text=summary_text,
             )
-    downstream_evidence_ids, downstream_evidence_text = _downstream_evidence(artifacts)
+    downstream_evidence = _downstream_evidence_items(artifacts)
+    downstream_ids = [evidence_id for evidence_id, _ in downstream_evidence]
+    downstream_text = " ".join(text for _, text in downstream_evidence)
     for field_name in ("expert_comment", "linkedin_post"):
         value = _sanitize_public_prose(artifacts.get(field_name))
         if value:
@@ -715,9 +788,9 @@ def _public_text_items(artifacts: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 field_name,
                 field_name,
                 value,
-                downstream_evidence_ids,
+                downstream_ids,
                 field_name,
-                evidence_text=downstream_evidence_text,
+                evidence_text=downstream_text,
             )
 
 
@@ -741,6 +814,8 @@ def _issue(
         repair_eligible=eligible,
         repair_status="not_requested" if eligible else "abstained",
         repair_target=str(item.get("repair_target") or "") if eligible else "",
+        public_item_id=str(item.get("public_item_id") or ""),
+        hard_fail_class=_hard_fail_class(rule_id, explanation),
     )
 
 
@@ -868,6 +943,202 @@ def _item(
         "repair_target": repair_target,
         "evidence_status": evidence_status,
         "evidence_text": evidence_text,
+        "public_item_id": _public_item_id(artifact, field),
+    }
+
+
+def _public_item_id(artifact: str, field: str) -> str:
+    """Return a stable atomic identifier without retaining public copy."""
+    normalized_artifact = str(artifact or "").strip() or "item"
+    normalized_field = str(field or "").strip().replace(".", ":")
+    if normalized_artifact == "insights_final" and normalized_field.startswith(
+        "insights:"
+    ):
+        _, insight_id, *suffix = normalized_field.split(":")
+        return f"insight:{insight_id}:{suffix[0] if suffix else 'text'}"
+    return f"{normalized_artifact}:{normalized_field or 'text'}"
+
+
+def _hard_fail_class(rule_id: str, explanation: str) -> str:
+    if rule_id == "public_editorial_quality.temporal_integrity":
+        return (
+            "forecast_represented_as_observed"
+            if "forecast marker" in explanation
+            else "incorrect_timeframe"
+        )
+    if rule_id == "public_editorial_quality.metric_label_relationship":
+        return (
+            "incorrect_denominator_cohort_geography"
+            if "cohort" in explanation or "denominator" in explanation
+            else "incorrect_value_label_relationship"
+        )
+    return HARD_FAIL_CLASS_BY_RULE_ID.get(rule_id, "")
+
+
+def enumerate_public_editorial_items(
+    artifacts: dict[str, Any],
+) -> list[PublicEditorialQualityItem]:
+    """Enumerate public artifact surfaces without retaining their public text.
+
+    The item list is intentionally independent of pass/fail findings so a
+    source-fidelity auditor can account for every material public projection.
+    """
+    items: list[dict[str, Any]] = list(_public_inventory_text_items(artifacts))
+    for insight in _dict_items(artifacts.get("insights_final")):
+        insight_id = str(insight.get("id") or "").strip()
+        if not insight_id:
+            continue
+        evidence_id = str(insight.get("evidence_id") or "").strip()
+        for field_name in ("text", "so_what", "now_what"):
+            if _sanitize_public_prose(insight.get(field_name)):
+                items.append(
+                    _item(
+                        "insights_final",
+                        f"insights:{insight_id}.{field_name}"
+                        if field_name != "text"
+                        else f"insights:{insight_id}",
+                        _sanitize_public_prose(insight.get(field_name)),
+                        [evidence_id] if evidence_id else [],
+                        "insights_bundle",
+                        evidence_text=str(insight.get("evidence") or ""),
+                    )
+                )
+    for index, figure in enumerate(_dict_items(artifacts.get("key_figures")), start=1):
+        evidence_id = str(figure.get("evidence_id") or "").strip()
+        for field_name in ("label", "figure", "why_it_matters"):
+            if _sanitize_public_prose(figure.get(field_name)):
+                items.append(
+                    _item(
+                        "key_figures",
+                        f"key_figures:{index}.{field_name}",
+                        _sanitize_public_prose(figure.get(field_name)),
+                        [evidence_id] if evidence_id else [],
+                        "insights_bundle",
+                    )
+                )
+    for index, quote in enumerate(_dict_items(artifacts.get("quotes_final")), start=1):
+        if _sanitize_public_prose(quote.get("text")):
+            items.append(
+                _item(
+                    "quotes_final",
+                    f"quotes:{quote.get('id') or index}",
+                    _sanitize_public_prose(quote.get("text")),
+                    _string_list(quote.get("evidence_id")),
+                    "quotes",
+                )
+            )
+    for index, card in enumerate(_dict_items(artifacts.get("chart_insight_cards")), start=1):
+        for field_name in ("title", "caption", "public_takeaway"):
+            if _sanitize_public_prose(card.get(field_name)):
+                items.append(
+                    _item(
+                        "chart_insight_cards",
+                        f"chart_insight_cards:{index}.{field_name}",
+                        _sanitize_public_prose(card.get(field_name)),
+                        _string_list(card.get("evidence_id")),
+                        "insights_bundle",
+                    )
+                )
+    metadata = artifacts.get("public_metadata")
+    if isinstance(metadata, dict):
+        for field_name in ("title", "publisher", "author", "edition", "publication_date"):
+            if str(metadata.get(field_name) or "").strip():
+                items.append(
+                    _item(
+                        "public_metadata",
+                        f"metadata.{field_name}",
+                        str(metadata[field_name]).strip(),
+                        [],
+                        "metadata",
+                    )
+                )
+    deduped = {item["public_item_id"]: item for item in items}
+    return [
+        PublicEditorialQualityItem(
+            item_id=item_id,
+            artifact=str(item["artifact"]),
+            field_path=str(item["field"]),
+            evidence_ids=list(item["evidence_ids"]),
+            repair_target=str(item["repair_target"]),
+        )
+        for item_id, item in sorted(deduped.items())
+    ]
+
+
+def _metadata_issues(
+    report_id: str,
+    artifacts: dict[str, Any],
+    metadata_evidence: dict[str, object],
+    *,
+    html: str = "",
+) -> list[PublicEditorialQualityIssue]:
+    """Fail closed when rendered metadata conflicts with retained identity evidence."""
+    actual = dict(artifacts.get("public_metadata") or {})
+    if html:
+        document = BeautifulSoup(html, "html.parser")
+        title_node = document.select_one("h1#report-title")
+        if title_node:
+            actual["title"] = title_node.get_text(" ", strip=True)
+        for node in document.select(".meta-row .meta-pill"):
+            label, separator, value = node.get_text(" ", strip=True).partition(":")
+            if separator and label.casefold() in {
+                "publisher",
+                "author",
+                "edition",
+                "published",
+            }:
+                actual[
+                    "publication_date" if label.casefold() == "published" else label.casefold()
+                ] = value.strip()
+    if not actual:
+        return []
+    issues: list[PublicEditorialQualityIssue] = []
+    for field_name, hard_fail_class in (
+        ("title", "incorrect_report_identity"),
+        ("publisher", "incorrect_publisher_author_attribution"),
+        ("author", "incorrect_publisher_author_attribution"),
+        ("edition", "incorrect_timeframe"),
+        ("publication_date", "incorrect_timeframe"),
+    ):
+        expected = str(metadata_evidence.get(field_name) or "").strip()
+        observed = str(actual.get(field_name) or "").strip()
+        if not expected or not observed:
+            continue
+        generic_title = field_name == "title" and _is_generic_public_title(observed)
+        if generic_title or _normalized_text(expected) != _normalized_text(observed):
+            item = _item(
+                "rendered_html" if html else "public_metadata",
+                f"metadata.{field_name}",
+                observed,
+                [],
+                "metadata",
+            )
+            issue = _issue(
+                report_id,
+                "public_editorial_quality.metadata_identity",
+                item,
+                "uses a generic title despite retained identity evidence"
+                if generic_title
+                else "does not match retained source identity evidence",
+            )
+            issues.append(
+                PublicEditorialQualityIssue(
+                    **{
+                        **issue.__dict__,
+                        "hard_fail_class": hard_fail_class,
+                        "severity": "error",
+                    }
+                )
+            )
+    return issues
+
+
+def _is_generic_public_title(value: str) -> bool:
+    return _normalized_text(value) in {
+        "powerpoint presentation",
+        "presentation",
+        "report",
+        "untitled",
     }
 
 
@@ -897,31 +1168,28 @@ def _string_list(value: object) -> list[str]:
     )
 
 
-def _summary_evidence_ids(summary: dict[str, Any]) -> list[str]:
+def _summary_evidence_items(summary: dict[str, Any]) -> list[tuple[str, str]]:
     return [
-        str(item.get("evidence_id") or "").strip()
+        (
+            str(item.get("evidence_id") or "").strip(),
+            str(item.get("evidence") or item.get("claim") or "").strip(),
+        )
         for item in _dict_items(summary.get("claim_evidence_map"))
         if str(item.get("evidence_id") or "").strip()
+        and str(item.get("evidence") or item.get("claim") or "").strip()
     ]
 
 
-def _summary_evidence_texts(summary: dict[str, Any]) -> list[str]:
+def _downstream_evidence_items(artifacts: dict[str, Any]) -> list[tuple[str, str]]:
     return [
-        str(item.get("evidence") or item.get("claim") or "").strip()
-        for item in _dict_items(summary.get("claim_evidence_map"))
-        if str(item.get("evidence") or item.get("claim") or "").strip()
+        (
+            str(item.get("evidence_id") or "").strip(),
+            str(item.get("evidence") or "").strip(),
+        )
+        for item in _dict_items(artifacts.get("insights_final"))
+        if str(item.get("evidence_id") or "").strip()
+        and str(item.get("evidence") or "").strip()
     ]
-
-
-def _downstream_evidence(artifacts: dict[str, Any]) -> tuple[list[str], str]:
-    insights = _dict_items(artifacts.get("insights_final"))
-    evidence_ids = [str(item.get("evidence_id") or "").strip() for item in insights]
-    evidence_text = " ".join(
-        str(item.get("evidence") or "").strip()
-        for item in insights
-        if str(item.get("evidence") or "").strip()
-    )
-    return [value for value in evidence_ids if value], evidence_text
 
 
 def _temporal_integrity_explanation(text: str, evidence_text: str) -> str:
@@ -1272,6 +1540,8 @@ def _visible_report_id(report_id: str, text: str) -> bool:
 __all__ = [
     "ADVISORY_RULE_IDS",
     "BLOCKING_RULE_IDS",
+    "HARD_FAIL_CLASS_BY_RULE_ID",
+    "enumerate_public_editorial_items",
     "evaluate_public_editorial_quality",
     "merge_public_editorial_quality_validation",
     "public_html_quality_issues",

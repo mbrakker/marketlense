@@ -6,6 +6,10 @@ text: |
   - analyst_interpretation
   - prescriptive_recommendation
 
+  `public_factual_items` is the final public source-fidelity audit inventory.
+  Audit each factual or identity item against its supplied retained evidence and
+  report metadata only. Do not score or comment on writing quality or style.
+
   For a factual claim, make one semantic-entailment decision:
   - `entailed`: its material meaning follows from the linked retained evidence.
   - `contradicted`: linked retained evidence conflicts with its material meaning.

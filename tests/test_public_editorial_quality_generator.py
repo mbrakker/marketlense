@@ -9,6 +9,7 @@ import pytest
 from src.contracts.public_editorial_quality import PUBLIC_EDITORIAL_VALIDATOR_VERSION
 from src.generators.public_editorial_quality_generator import (
     _public_text_items,
+    enumerate_public_editorial_items,
     evaluate_public_editorial_quality,
     validation_issues_from_public_editorial_quality,
 )
@@ -43,7 +44,7 @@ def _rule_ids(report) -> set[str]:
 
 
 def test_public_editorial_validator_version_invalidates_retained_v1_results() -> None:
-    assert PUBLIC_EDITORIAL_VALIDATOR_VERSION == "public-editorial-quality:v4"
+    assert PUBLIC_EDITORIAL_VALIDATOR_VERSION == "public-editorial-quality:v5"
 
 
 def _temporal_artifacts(*, text: str, evidence: str) -> dict:
@@ -233,6 +234,51 @@ def test_relationship_check_applies_to_summary_expert_linkedin_and_key_figures()
         "key_figures:1.figure",
         "key_figures:1.why_it_matters",
     } <= failed_fields
+
+
+def test_expert_relationship_failure_retains_only_the_rejected_evidence_id() -> None:
+    artifacts = {
+        "insights_final": [
+            {
+                "id": "growth",
+                "text": "Revenue is forecast to rise from $1.4T in 2020E to $1.6T in 2024E.",
+                "evidence_id": "growth-evidence",
+                "evidence": "Revenue is forecast at $1.4T in 2020E and $1.6T in 2024E.",
+            },
+            {
+                "id": "subscriptions",
+                "text": "The average U.S. paid video streaming subscription owner had 4.1 subscriptions in 2020; the source forecasts 5.7 by 2024.",
+                "evidence_id": "subscription-evidence",
+                "evidence": "The chart reports 4.1 average paid video streaming subscriptions owned per subscriber in 2020 and states that Activate forecasts 5.7 by 2024.",
+            },
+        ],
+        "expert_comment": (
+            "Average paid video streaming subscriptions per subscriber are forecast to rise from 4.1 to 5.7 in 2020-2024."
+        ),
+    }
+
+    report = evaluate_public_editorial_quality(
+        report_id="mixed-status", artifacts=artifacts
+    )
+    issues = [
+        issue
+        for issue in report.issues
+        if issue.rule_id == "public_editorial_quality.metric_label_relationship"
+        and issue.affected_field == "expert_comment"
+    ]
+
+    assert len(issues) == 1
+    assert issues[0].evidence_ids == ["subscription-evidence"]
+
+    plan = _build_regeneration_plan(
+        issues=validation_issues_from_public_editorial_quality(report),
+        artifacts=artifacts,
+        broad_retry_available=True,
+    )
+
+    assert plan.targets[0].issues[0].excluded_evidence_ids == [
+        "subscription-evidence"
+    ]
 
 
 def test_relationship_failure_uses_existing_targeted_regeneration() -> None:
@@ -834,6 +880,7 @@ def test_selective_repair_targets_only_the_failed_insight_bundle() -> None:
     assert plan.mode == "targeted"
     assert [target.target_section for target in plan.targets] == ["insights_bundle"]
     assert plan.targets[0].issues[0].evidence_ids
+    assert plan.targets[0].issues[0].entity_id == "insight:IC-001:text"
 
 
 def test_incomplete_currency_display_routes_to_existing_insight_repair() -> None:
@@ -1000,3 +1047,91 @@ def test_config_keeps_only_explicit_public_editorial_rule_waivers() -> None:
     assert resolved["public_editorial_quality_disabled_rule_waivers"] == {
         "public_editorial_quality.placeholder": "approved rollout waiver"
     }
+
+
+def test_unsupported_public_factual_item_is_a_hard_publishability_failure() -> None:
+    artifacts = deepcopy(_retained_artifacts())
+    artifacts["insights_final"][0].update(
+        {
+            "id": "activate-2021-spend",
+            "text": "23% of users account for 77% of ecommerce spend.",
+            "evidence": "22% of users account for 77% of ecommerce spend.",
+            "evidence_id": "activate-2021-spend-evidence",
+        }
+    )
+
+    report = evaluate_public_editorial_quality(
+        report_id="activate-2021", artifacts=artifacts
+    )
+
+    hard_failure = next(
+        issue
+        for issue in report.issues
+        if issue.affected_field == "insights:activate-2021-spend"
+    )
+    assert report.publishable is False
+    assert hard_failure.hard_fail_class == "incorrect_numeric_value"
+    assert hard_failure.public_item_id == "insight:activate-2021-spend:text"
+
+
+def test_public_item_inventory_and_identity_evidence_fail_closed_atomically() -> None:
+    artifacts = deepcopy(_retained_artifacts())
+    artifacts["public_metadata"] = {
+        "title": "PowerPoint Presentation",
+        "publisher": "Wrong publisher",
+        "author": "Wrong author",
+        "edition": "2024",
+    }
+    artifacts["insights_final"][0].update(
+        {
+            "so_what": "The source-backed finding changes the next planning review.",
+            "now_what": "Compare the source-backed finding before allocating budget.",
+        }
+    )
+
+    report = evaluate_public_editorial_quality(
+        report_id="social-video",
+        artifacts=artifacts,
+        metadata_evidence={
+            "title": "Activate Technology & Media Outlook 2025: Social Video",
+            "publisher": "Activate Consulting",
+            "author": "Activate Research",
+            "edition": "2025",
+        },
+    )
+    item_ids = {item.item_id for item in enumerate_public_editorial_items(artifacts)}
+    hard_failures = {
+        (issue.affected_field, issue.hard_fail_class, issue.public_item_id)
+        for issue in report.issues
+        if issue.hard_fail_class
+    }
+
+    assert {
+        "summary:tldr",
+        "summary:card_tldr_compact",
+        "summary:executive_summary",
+        "insight:IC-001:text",
+        "insight:IC-001:so_what",
+        "insight:IC-001:now_what",
+        "quotes_final:quotes:1",
+        "public_metadata:metadata:title",
+        "public_metadata:metadata:publisher",
+        "public_metadata:metadata:author",
+        "public_metadata:metadata:edition",
+    } <= item_ids
+    assert (
+        "metadata.title",
+        "incorrect_report_identity",
+        "public_metadata:metadata:title",
+    ) in hard_failures
+    assert (
+        "metadata.publisher",
+        "incorrect_publisher_author_attribution",
+        "public_metadata:metadata:publisher",
+    ) in hard_failures
+    assert (
+        "metadata.edition",
+        "incorrect_timeframe",
+        "public_metadata:metadata:edition",
+    ) in hard_failures
+    assert report.publishable is False

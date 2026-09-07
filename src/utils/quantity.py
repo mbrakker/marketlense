@@ -31,6 +31,12 @@ _RATIO_RE = re.compile(
 )
 _N_EQUALS_RE = re.compile(r"\bn\s*=\s*(?P<n>\d{1,3}(?:,\d{3})+|\d+)\b", re.IGNORECASE)
 _MULT_RE = re.compile(rf"\b(?P<num>{_NUMBER_RE})\s*x\b", re.IGNORECASE)
+# Editorial reports commonly express daily viewing time as H:MM.  Treat that
+# pair as one time quantity, rather than two unrelated bare numbers, so its
+# value and attached forecast/observed timeframe remain groundable together.
+_DURATION_RE = re.compile(
+    r"(?<![\d:])(?P<hours>\d{1,2}):(?P<minutes>[0-5]\d)(?![\d:])"
+)
 _MAIN_RE = re.compile(
     rf"(?<![A-Za-z0-9])(?P<prefix>{_COMP_RE})?\s*"
     r"(?P<currency>[$€£¥])?\s*"
@@ -50,7 +56,7 @@ _TIMEFRAME_RE = re.compile(
     r"ytd|mtd|qtd|yoy|mom|qoq|"
     r"[a-z]{3,9}\s+\d{1,2}\s*-\s*[a-z]{3,9}\s+\d{1,2},?\s*20\d{2}|"
     r"[a-z]{3,9}\s+\d{1,2},?\s*20\d{2}|"
-    r"20\d{2}"
+    r"20\d{2}(?:e)?"
     r")\b",
     re.IGNORECASE,
 )
@@ -153,6 +159,7 @@ def extract_quantities(text: str) -> List[Quantity]:
     quantities.extend(_extract_ranges(normalized))
     quantities.extend(_extract_ratios(normalized))
     quantities.extend(_extract_n_equals(normalized))
+    quantities.extend(_extract_durations(normalized))
     quantities.extend(_extract_main(normalized))
     quantities.extend(_extract_multipliers(normalized))
     return _dedupe_quantities(quantities)
@@ -359,6 +366,31 @@ def _extract_n_equals(text: str) -> List[Quantity]:
     return output
 
 
+def _extract_durations(text: str) -> List[Quantity]:
+    """Extract H:MM values as a single duration measured in minutes."""
+
+    output: List[Quantity] = []
+    for match in _DURATION_RE.finditer(text):
+        hours = int(match.group("hours"))
+        minutes = int(match.group("minutes"))
+        output.append(
+            Quantity(
+                value=float(hours * 60 + minutes),
+                comparator="eq",
+                unit_family="time",
+                unit="minutes",
+                magnitude="",
+                start=match.start(),
+                end=match.end(),
+                sentence=text,
+                timeframe=infer_timeframe(text),
+                confidence=0.98,
+                raw=match.group(0),
+            )
+        )
+    return output
+
+
 def _extract_multipliers(text: str) -> List[Quantity]:
     output: List[Quantity] = []
     for match in _MULT_RE.finditer(text):
@@ -386,6 +418,8 @@ def _extract_multipliers(text: str) -> List[Quantity]:
 def _extract_main(text: str) -> List[Quantity]:
     output: List[Quantity] = []
     for match in _MAIN_RE.finditer(text):
+        if _is_duration_component(text, match.start("number"), match.end("number")):
+            continue
         number = _to_float(match.group("number"))
         if number is None:
             continue
@@ -435,6 +469,18 @@ def _extract_main(text: str) -> List[Quantity]:
             )
         )
     return output
+
+
+def _is_duration_component(text: str, start: int, end: int) -> bool:
+    """Return whether a numeric token is either side of an H:MM duration."""
+
+    before_is_duration = (
+        start >= 2 and text[start - 1] == ":" and text[start - 2].isdigit()
+    )
+    after_is_duration = (
+        end + 1 < len(text) and text[end] == ":" and text[end + 1].isdigit()
+    )
+    return before_is_duration or after_is_duration
 
 
 def _dedupe_quantities(values: Sequence[Quantity]) -> List[Quantity]:

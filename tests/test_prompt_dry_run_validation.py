@@ -205,6 +205,9 @@ def test_linkedin_prompt_materializes_editorial_plan_and_report_scope(
     variables = {
         "editorial_plan_json": '{"report_thesis":"Retention is the angle."}',
         "doc_map_json": json.dumps({"scope": scope, "publisher": "Source Co."}),
+        "report_identity_json": json.dumps(
+            {"scope": scope, "publisher": "Source Co."}
+        ),
         "summary_json": '{"executive_summary":"Secondary context."}',
         "insights_final_json": '[{"text":"Supporting insight."}]',
         "metric_spine_json": "[]",

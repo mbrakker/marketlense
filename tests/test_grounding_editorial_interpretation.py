@@ -91,6 +91,34 @@ def test_grounding_payload_retains_final_insight_implications() -> None:
 
     assert payload["insights_final"][0]["so_what"]
     assert payload["insights_final"][0]["now_what"]
+    audited_ids = {item["item_id"] for item in payload["public_factual_items"]}
+    assert {
+        "insight:insight-1:text",
+        "insight:insight-1:so_what",
+        "insight:insight-1:now_what",
+        "expert_comment",
+        "linkedin_post",
+        "metadata:title",
+    } <= audited_ids
+
+
+def test_grounding_failure_retains_atomic_public_item_id(tmp_path) -> None:
+    text = "Wallet coverage will certainly determine conversion."
+
+    issues = _issues(
+        tmp_path,
+        section="insights_final[0].so_what",
+        entry={
+            "section": "insights_final[0].so_what",
+            "text": text,
+            "classification": "analyst_interpretation",
+            "violation_type": "unsupported_certainty",
+            "reason": "The sentence adds unsupported certainty.",
+        },
+    )
+
+    assert len(issues) == 1
+    assert issues[0].entity_id == "insight:insight-1:so_what"
 
 
 @pytest.mark.parametrize(

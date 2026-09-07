@@ -8,8 +8,6 @@ text: |
   - Validator failures JSON: {{ failure_reasons_json }}
   - Fix checklist JSON: {{ fix_checklist_json }}
   - Grounding package JSON: {{ grounding_package_json }}
-  - DocMap JSON: {{ doc_map_json }}
-  - Evidence packs JSON: {{ evidence_json }}
   - Editorial plan JSON: {{ editorial_plan_json }}
 
   Task:
@@ -25,6 +23,12 @@ text: |
 
   Requirements:
   - Repair or remove unsupported items implicated by the failures.
+  - Treat `current_section` as failed copy, never as source evidence. Use only
+    `grounding_package.relevant_evidence`; never use an ID listed in
+    `grounding_package.quarantined_evidence_ids`.
+  - When no approved source directly supports the prior item, replace it with a
+    distinct approved evidence angle or remove it. Do not recreate the prior
+    assertion from memory, the editorial plan, or a nearby source value.
   - Keep candidates within the editorial plan's themes and linked evidence IDs.
   - Keep each `evidence_id` to a single existing ID or an empty string.
   - Keep each candidate tightly grounded to the supplied evidence.

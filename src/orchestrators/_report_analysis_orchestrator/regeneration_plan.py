@@ -215,7 +215,11 @@ def _normalize_regeneration_issue(
     issue: ValidationIssue,
     artifacts: Dict[str, Any],
 ) -> RegenerationIssue:
-    evidence_ids, pages = _issue_grounding(issue.affected_section, artifacts)
+    derived_evidence_ids, pages = _issue_grounding(issue.affected_section, artifacts)
+    evidence_ids = list(issue.evidence_ids) or derived_evidence_ids
+    excluded_evidence_ids = (
+        list(evidence_ids) if _quarantines_failed_evidence(issue) else []
+    )
     return RegenerationIssue(
         rule_id=issue.rule_id or _extract_rule_id(issue.message),
         affected_section=issue.affected_section,
@@ -224,7 +228,19 @@ def _normalize_regeneration_issue(
         repair_target=issue.repair_target,
         entity_id=issue.entity_id,
         evidence_ids=evidence_ids,
+        excluded_evidence_ids=excluded_evidence_ids,
         pages=pages,
+    )
+
+
+def _quarantines_failed_evidence(issue: ValidationIssue) -> bool:
+    """Keep a rejected binding out of the next atomic repair prompt."""
+
+    rule_id = str(issue.rule_id or "").strip().lower()
+    return str(issue.severity or "").strip().lower() == "error" and (
+        rule_id == "grounding"
+        or rule_id in {"numbers", "metrics"}
+        or rule_id.startswith("public_editorial_quality.")
     )
 
 

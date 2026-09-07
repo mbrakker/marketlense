@@ -7,6 +7,7 @@ text: |
 
   Task:
   - Review each material sentence in the artifacts: insights (including `so_what` and `now_what`), quotes, summaries, expert comment, and LinkedIn post.
+  - `public_factual_items` is the authoritative atomic final-public inventory. Audit every item that makes a factual or identity assertion against that item's `retained_evidence` and relevant report metadata. Do not judge writing quality, style, usefulness, or tone.
   - Classify every material sentence as `factual_claim`, `analyst_interpretation`, or `prescriptive_recommendation`. A factual sentence remains factual when it appears in creative or consultancy-style prose.
   - An interpretation may use stronger editorial wording than the source when it reasonably follows from supported evidence and adds no factual premise. A recommendation may be MarketLense-authored, need not appear in the source, and may say a brand should reconsider treating something as experimental when the supported evidence logically warrants it.
   - Reject an interpretation or recommendation that adds an unsupported fact or metric, causal outcome, certainty, operational or financial benefit, or false source attribution. Do not label MarketLense-authored advice as a report recommendation unless the report actually recommends it.

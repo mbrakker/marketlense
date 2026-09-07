@@ -8,8 +8,6 @@ text: |
   - Validator failures JSON: {{ failure_reasons_json }}
   - Fix checklist JSON: {{ fix_checklist_json }}
   - Grounding package JSON: {{ grounding_package_json }}
-  - DocMap JSON: {{ doc_map_json }}
-  - Evidence packs JSON: {{ evidence_json }}
   - Editorial plan JSON: {{ editorial_plan_json }}
 
   Task:
@@ -31,6 +29,9 @@ text: |
   }
 
   Requirements:
+  - Treat the current summary as failed copy, not source evidence. Use only
+    `grounding_package.relevant_evidence`; never use an ID listed in
+    `grounding_package.quarantined_evidence_ids`.
   - Fix the listed failures directly.
   - Retain the editorial plan's report thesis and themes; do not introduce a competing frame.
   - Every retained `claim_evidence_map` entry must use one existing `evidence_id`; omit a claim rather than output an empty or unverifiable binding.

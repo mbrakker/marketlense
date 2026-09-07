@@ -39,6 +39,12 @@ class ValidationIssue:
             "doc": "Optional stable entity identifier within the affected section."
         },
     )
+    evidence_ids: List[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Retained evidence identifiers implicated by the validation finding."
+        },
+    )
     schema_version: str = field(
         default="1.0", metadata={"doc": "Validation issue schema version."}
     )
@@ -80,6 +86,7 @@ class ValidationReport:
                     "rule_id": issue.rule_id,
                     "repair_target": issue.repair_target,
                     "entity_id": issue.entity_id,
+                    "evidence_ids": issue.evidence_ids,
                 }
                 for issue in self.issues
             ],

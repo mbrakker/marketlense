@@ -6,8 +6,7 @@ text: |
   - Target section: {{ target_section }}
   - Current LinkedIn post text: {{ current_section_text }}
   - Editorial plan JSON (primary thematic authority): {{ editorial_plan_json }}
-  - Report context including title, publisher/source, and scope JSON: {{ doc_map_json }}
-  - Final insights JSON (supporting evidence): {{ insights_final_json }}
+  - Report identity JSON: {{ report_identity_json }}
   - Validator failures JSON: {{ failure_reasons_json }}
   - Fix checklist JSON: {{ fix_checklist_json }}
   - Grounding package JSON: {{ grounding_package_json }}
@@ -20,6 +19,11 @@ text: |
 
   Requirements:
   - Fix the listed failures directly.
+  - Treat the current post and editorial plan as failed editorial input, not
+    source evidence. Use only `grounding_package.relevant_evidence`; never use
+    an ID listed in `grounding_package.quarantined_evidence_ids`.
+  - If the approved evidence cannot support the post, return an empty post
+    rather than reuse a rejected evidence binding or claim.
   - Keep one central, source-supported insight, tension, or implication selected from the editorial plan; do not turn the post into a mini-summary.
   - For a broad report, explicitly frame the repaired post as one representative angle rather than a complete report summary. For a narrow report, it may express the overall thesis.
   - Target 180–280 words while retaining the hard 500-word maximum. Attribute the publisher/source naturally near the beginning when known from the report context.

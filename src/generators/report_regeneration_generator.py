@@ -374,8 +374,10 @@ def _build_grounding_package(
     doc_map: Dict[str, Any],
 ) -> Dict[str, Any]:
     current_section = _current_section_payload(target.target_section, artifacts)
-    relevant_evidence = _collect_relevant_evidence_entries(
-        target.issues, evidence_packs, doc_map
+    quarantined_ids = _unique_strings(
+        evidence_id
+        for issue in target.issues
+        for evidence_id in issue.excluded_evidence_ids
     )
     search_text = " ".join(
         part
@@ -385,18 +387,88 @@ def _build_grounding_package(
         )
         if part
     )
-    evidence_windows = retrieve_evidence_windows(search_text, prepared.evidence_windows)
+    relevant_evidence = (
+        _replacement_evidence_entries(
+            evidence_packs=evidence_packs,
+            excluded_evidence_ids=set(quarantined_ids),
+            search_text=search_text,
+        )
+        if quarantined_ids
+        else _collect_relevant_evidence_entries(target.issues, evidence_packs, doc_map)
+    )
+    evidence_ids = _unique_strings(
+        _entry_evidence_id(entry) for entry in relevant_evidence
+    )
+    evidence_windows = (
+        []
+        if quarantined_ids
+        else retrieve_evidence_windows(search_text, prepared.evidence_windows)
+    )
     return {
         "current_section": current_section,
         "relevant_evidence": relevant_evidence,
         "evidence_windows": [
             {"idx": window.idx, "text": window.text} for window in evidence_windows[:4]
         ],
-        "evidence_ids": _unique_strings(
-            evidence_id for issue in target.issues for evidence_id in issue.evidence_ids
-        ),
+        "evidence_ids": evidence_ids,
+        "quarantined_evidence_ids": quarantined_ids,
         "pages": _unique_ints(page for issue in target.issues for page in issue.pages),
     }
+
+
+def _replacement_evidence_entries(
+    *,
+    evidence_packs: Dict[str, Any],
+    excluded_evidence_ids: set[str],
+    search_text: str,
+) -> List[Dict[str, Any]]:
+    """Select bounded, source-retained alternatives after a fidelity failure."""
+
+    query_tokens = {
+        token.strip(".,:;()[]{}\"'").casefold()
+        for token in search_text.split()
+        if len(token.strip(".,:;()[]{}\"'")) >= 4
+    }
+    candidates: List[Dict[str, Any]] = []
+    seen_ids: set[str] = set()
+    for pack_name, pack in evidence_packs.items():
+        for entry in _all_pack_entries(pack_name, pack):
+            evidence_id = _entry_evidence_id(entry)
+            if not evidence_id or evidence_id in excluded_evidence_ids:
+                continue
+            if evidence_id in seen_ids:
+                continue
+            seen_ids.add(evidence_id)
+            candidates.append(entry)
+
+    def rank(entry: Dict[str, Any]) -> tuple[int, str]:
+        serialized = _dump_json(entry).casefold()
+        overlap = sum(token in serialized for token in query_tokens)
+        return (-overlap, _entry_evidence_id(entry))
+
+    return sorted(candidates, key=rank)[:8]
+
+
+def _all_pack_entries(pack_name: str, value: Any) -> List[Dict[str, Any]]:
+    entries: List[Dict[str, Any]] = []
+    if isinstance(value, list):
+        for item in value:
+            entries.extend(_all_pack_entries(pack_name, item))
+        return entries
+    if not isinstance(value, dict):
+        return entries
+    if _s(value.get("id") or value.get("evidence_id")).strip():
+        entries.append({"pack_name": pack_name, "entry": value})
+    for nested in value.values():
+        if isinstance(nested, (dict, list)):
+            entries.extend(_all_pack_entries(pack_name, nested))
+    return entries
+
+
+def _entry_evidence_id(entry: Dict[str, Any]) -> str:
+    payload = entry.get("entry") if isinstance(entry, dict) else {}
+    payload = payload if isinstance(payload, dict) else {}
+    return _s(payload.get("id") or payload.get("evidence_id")).strip()
 
 
 def _collect_relevant_evidence_entries(
@@ -798,6 +870,9 @@ def _handle_insights_bundle_regeneration(
 
 def _handle_quotes_regeneration(execution: _RegenerationHandlerExecution) -> None:
     namespace = execution.handler.prompt_namespaces[0]
+    quarantined_ids = set(
+        execution.grounding_package.get("quarantined_evidence_ids") or []
+    )
     result = _render_regeneration_model(
         execution=execution,
         namespace=namespace,
@@ -807,7 +882,11 @@ def _handle_quotes_regeneration(execution: _RegenerationHandlerExecution) -> Non
             "attempt_index": execution.runtime.request.attempt_index,
             "target_section": execution.target.target_section,
             "current_section_json": _dump_json(execution.state.quotes_final),
-            "quote_candidates_json": _dump_json(execution.runtime.quote_candidates),
+            "quote_candidates_json": _dump_json(
+                _without_quarantined_evidence(
+                    execution.runtime.quote_candidates, quarantined_ids
+                )
+            ),
             "failure_reasons_json": _issues_json(execution.target.issues),
             "fix_checklist_json": _fix_checklist_json(execution.target),
             "grounding_package_json": _dump_json(execution.grounding_package),
@@ -860,6 +939,10 @@ def _handle_expert_comment_regeneration(
         doc_map=execution.runtime.safe_doc_map,
         evidence_packs=execution.runtime.safe_evidence,
     )
+    expert_synthesis_context = _exclude_quarantined_expert_context(
+        expert_synthesis_context,
+        set(execution.grounding_package.get("quarantined_evidence_ids") or []),
+    )
     result = _render_regeneration_model(
         execution=execution,
         namespace=namespace,
@@ -881,6 +964,29 @@ def _handle_expert_comment_regeneration(
     execution.state.prompt_namespaces.append(namespace)
 
 
+def _exclude_quarantined_expert_context(
+    context: Dict[str, Any], excluded_evidence_ids: set[str]
+) -> Dict[str, Any]:
+    if not excluded_evidence_ids:
+        return context
+    safe_context = deepcopy(context)
+    for theme in safe_context.get("themes") or []:
+        if isinstance(theme, dict):
+            theme["evidence"] = [
+                entry
+                for entry in theme.get("evidence") or []
+                if _s(entry.get("evidence_id")).strip() not in excluded_evidence_ids
+            ]
+    for key in ("insight_implications", "limitations", "counter_signals"):
+        safe_context[key] = [
+            entry
+            for entry in safe_context.get(key) or []
+            if not isinstance(entry, dict)
+            or _s(entry.get("evidence_id")).strip() not in excluded_evidence_ids
+        ]
+    return safe_context
+
+
 def _handle_linkedin_post_regeneration(
     execution: _RegenerationHandlerExecution,
 ) -> None:
@@ -894,8 +1000,9 @@ def _handle_linkedin_post_regeneration(
             "attempt_index": execution.runtime.request.attempt_index,
             "target_section": execution.target.target_section,
             "editorial_plan_json": _dump_json(execution.state.editorial_plan),
-            "doc_map_json": execution.runtime.base_vars["doc_map_json"],
-            "insights_final_json": _dump_json(execution.state.insights_final),
+            "report_identity_json": _dump_json(
+                _public_report_identity(execution.runtime.safe_doc_map)
+            ),
             "current_section_text": execution.state.linkedin_post,
             "failure_reasons_json": _issues_json(execution.target.issues),
             "fix_checklist_json": _fix_checklist_json(execution.target),
@@ -907,6 +1014,46 @@ def _handle_linkedin_post_regeneration(
     )
     execution.state.regenerated_sections.append("linkedin_post")
     execution.state.prompt_namespaces.append(namespace)
+
+
+def _without_quarantined_evidence(value: Any, excluded_evidence_ids: set[str]) -> Any:
+    if not excluded_evidence_ids:
+        return value
+    if isinstance(value, list):
+        return [
+            _without_quarantined_evidence(item, excluded_evidence_ids)
+            for item in value
+            if not (
+                isinstance(item, dict)
+                and _s(item.get("evidence_id") or item.get("id")).strip()
+                in excluded_evidence_ids
+            )
+        ]
+    if isinstance(value, dict):
+        return {
+            key: _without_quarantined_evidence(item, excluded_evidence_ids)
+            for key, item in value.items()
+        }
+    return value
+
+
+def _public_report_identity(doc_map: Dict[str, Any]) -> Dict[str, str]:
+    return {
+        key: _s(doc_map.get(key)).strip()
+        for key in (
+            "title",
+            "report_title",
+            "publisher",
+            "author",
+            "edition",
+            "publication_date",
+            "covered_period",
+            "region",
+            "scope",
+            "source_url",
+        )
+        if _s(doc_map.get(key)).strip()
+    }
 
 
 def _topics_section_payload(artifacts: Dict[str, Any]) -> Dict[str, Any]:

@@ -20,7 +20,11 @@
           "affected_section": { "type": "string" },
           "rule_id": { "type": "string" },
           "repair_target": { "type": "string" },
-          "entity_id": { "type": "string" }
+          "entity_id": { "type": "string" },
+          "evidence_ids": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
         }
       }
     }

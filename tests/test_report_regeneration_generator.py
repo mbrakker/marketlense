@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -21,12 +22,13 @@ from src.contracts.regeneration import (
     RegenerationTarget,
 )
 from src.contracts.run_context import RunContext
-from src.generators.report_regeneration_generator import (
-    _restore_final_insight_evidence_bindings,
-    regenerate_artifacts,
-)
 from src.generators.public_editorial_quality_generator import (
     evaluate_public_editorial_quality,
+)
+from src.generators.report_regeneration_generator import (
+    _build_grounding_package,
+    _restore_final_insight_evidence_bindings,
+    regenerate_artifacts,
 )
 from src.utils.errors import AppError
 
@@ -40,6 +42,39 @@ METRIC = {
     "sample_size": "",
     "confidence": "",
 }
+
+
+def test_grounding_package_quarantines_failed_evidence_and_uses_replacements() -> None:
+    target = RegenerationTarget(
+        target_section="insights_bundle",
+        issues=[
+            RegenerationIssue(
+                rule_id="grounding",
+                affected_section="insights:attention.so_what",
+                message="The claim adds an unsupported causal outcome.",
+                severity="error",
+                evidence_ids=["failed-evidence"],
+                excluded_evidence_ids=["failed-evidence"],
+            )
+        ],
+    )
+
+    package = _build_grounding_package(
+        target=target,
+        prepared=SimpleNamespace(evidence_windows=[]),
+        artifacts={"insights_final": []},
+        evidence_packs={
+            "findings": [
+                {"id": "failed-evidence", "text": "Unsupported source angle."},
+                {"id": "approved-evidence", "text": "Supported replacement angle."},
+            ]
+        },
+        doc_map={},
+    )
+
+    assert package["quarantined_evidence_ids"] == ["failed-evidence"]
+    assert package["evidence_ids"] == ["approved-evidence"]
+    assert "failed-evidence" not in json.dumps(package["relevant_evidence"])
 
 
 class _FakePromptClient:

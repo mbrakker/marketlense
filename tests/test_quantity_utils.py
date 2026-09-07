@@ -56,6 +56,20 @@ def test_month_unit_is_not_parsed_as_million_magnitude() -> None:
     assert not any(q.value == 12_000_000 for q in parsed)
 
 
+def test_duration_is_one_time_quantity_and_preserves_its_timeframe() -> None:
+    parsed = extract_quantities("Average daily viewing is 0:52 in 2024E.")
+
+    assert [(q.raw, q.value, q.unit_family, q.unit) for q in parsed] == [
+        ("0:52", 52.0, "time", "minutes")
+    ]
+    assert parsed[0].timeframe == "2024e"
+
+
+def test_duration_numeric_grounding_rejects_a_different_minute_value() -> None:
+    assert _numeric_grounding_match("0:52 in 2024E", "0:52 in 2024E")
+    assert not _numeric_grounding_match("0:48 in 2024E", "0:52 in 2024E")
+
+
 def test_data_rate_units_match_across_source_and_public_prose() -> None:
     assert _numeric_grounding_match(
         "Median mobile speed was 59.61 Mbps.",

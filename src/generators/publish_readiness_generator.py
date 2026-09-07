@@ -395,6 +395,7 @@ def evaluate_publish_readiness(
     policy_hash: str = "",
     producer_revision: str = "",
     provenance: dict[str, str] | None = None,
+    metadata_evidence: dict[str, object] | None = None,
     created_at: datetime | None = None,
 ) -> PublishReadinessArtifact:
     """Evaluate the one release policy over artifacts, final HTML and projection."""
@@ -406,6 +407,17 @@ def evaluate_publish_readiness(
     results.append(_category_result(safe_artifacts, category_ids, safe_packs))
     results.append(_material_evidence_result(safe_artifacts, safe_packs))
     results.append(_regeneration_result(regeneration_attempts))
+    results.append(
+        _source_fidelity_result(
+            evaluate_public_editorial_quality(
+                report_id=str(report_id),
+                artifacts=safe_artifacts,
+                html=final_html,
+                html_path=final_html_path,
+                metadata_evidence=metadata_evidence,
+            )
+        )
+    )
     results.append(_figure_linkage_result(safe_artifacts, safe_packs, final_html))
     results.extend(
         _html_results(
@@ -915,6 +927,27 @@ def _editorial_result(
             "canonical editorial rule failed",
         )
     return _pass("publish_readiness.editorial_quality", ["artifacts", "rendered_html"])
+
+
+def _source_fidelity_result(
+    report: PublicEditorialQualityReport,
+) -> PublishReadinessRuleResult:
+    """Project unwaivable atomic fidelity failures into signed readiness."""
+    hard_failures = [issue for issue in report.issues if issue.hard_fail_class]
+    if hard_failures:
+        return _fail(
+            "publish_readiness.source_fidelity",
+            sorted(
+                issue.public_item_id
+                for issue in hard_failures
+                if issue.public_item_id
+            ),
+            "unresolved source-fidelity hard failure: "
+            + ", ".join(
+                sorted({issue.hard_fail_class for issue in hard_failures})
+            ),
+        )
+    return _pass("publish_readiness.source_fidelity", ["public_items"])
 
 
 def _html_surfaces(document: BeautifulSoup) -> list[tuple[str, str]]:

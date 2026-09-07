@@ -1083,6 +1083,7 @@ def _persist_publish_readiness(
         policy_hash=runtime.ctx.policy_hash,
         producer_revision=runtime.ctx.producer_commit_sha,
         provenance=_source_provenance(runtime),
+        metadata_evidence=_source_fidelity_metadata(runtime, analysis),
     )
     response = dependencies.analysis_store_pack(
         AnalysisStorePackRequest(
@@ -1112,6 +1113,21 @@ def _persist_publish_readiness(
         )
     )
     return response.output_path, readiness.status
+
+
+def _source_fidelity_metadata(
+    runtime: ReportRuntimeState, analysis: ReportAnalysisState
+) -> dict[str, str]:
+    """Retained source identity expected on public report metadata surfaces."""
+    title = _resolved_identity_title(runtime) or str(analysis.payload.title or "").strip()
+    publisher = _resolved_identity_publisher(runtime) or str(
+        analysis.payload.publisher or ""
+    ).strip()
+    metadata = {"title": title, "publisher": publisher}
+    published = _publication_date(runtime)
+    if published:
+        metadata["publication_date"] = published
+    return {key: value for key, value in metadata.items() if value}
 
 
 def _verified_public_source_url(runtime: ReportRuntimeState) -> str:

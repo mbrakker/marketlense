@@ -390,3 +390,76 @@ def test_publish_readiness_rejects_malformed_plural_evidence_references() -> Non
         )
         assert rule.status == "fail"
         assert "invalid evidence reference shape" in rule.detail
+
+
+def test_publish_readiness_hard_blocks_an_unresolved_public_source_fidelity_failure() -> None:
+    artifacts, evidence_packs, html, provenance = _ready_inputs()
+    artifacts["insights_final"][0].update(
+        {
+            "id": "activate-2021-spend",
+            "text": "23% of users account for 77% of ecommerce spend.",
+            "evidence": "22% of users account for 77% of ecommerce spend.",
+            "evidence_id": "activate-2021-spend-evidence",
+        }
+    )
+
+    readiness = evaluate_publish_readiness(
+        report_id="activate-2021",
+        artifacts=artifacts,
+        evidence_packs=evidence_packs,
+        validation_report=ValidationReport(schema_version="1.1", status="pass"),
+        final_html=html,
+        final_html_path="",
+        category_ids=["markets"],
+        provenance=provenance,
+    )
+
+    fidelity = next(
+        result
+        for result in readiness.rule_results
+        if result.rule_id == "publish_readiness.source_fidelity"
+    )
+    assert readiness.status == "fail"
+    assert fidelity.status == "fail"
+    assert "insight:activate-2021-spend:text" in fidelity.surfaces
+
+
+def test_publish_readiness_blocks_generic_title_and_wrong_publisher_identity() -> None:
+    artifacts, evidence_packs, html, provenance = _ready_inputs()
+    html = html.replace(
+        "<h1>Revenue outlook 2026</h1>",
+        "<h1 id='report-title'>PowerPoint Presentation</h1>",
+    )
+    html = html.replace(
+        "</body>",
+        "<ul class='meta-row'><li class='meta-pill'>Publisher: Wrong Publisher</li></ul></body>",
+    )
+
+    readiness = evaluate_publish_readiness(
+        report_id="report-1",
+        artifacts=artifacts,
+        evidence_packs=evidence_packs,
+        validation_report=ValidationReport(schema_version="1.1", status="pass"),
+        final_html=html,
+        final_html_path="",
+        category_ids=["markets"],
+        provenance=provenance,
+        metadata_evidence={
+            "title": "Activate Technology & Media Outlook 2025: Social Video",
+            "publisher": "Activate Consulting",
+        },
+    )
+
+    fidelity = next(
+        result
+        for result in readiness.rule_results
+        if result.rule_id == "publish_readiness.source_fidelity"
+    )
+    assert readiness.status == "fail"
+    assert fidelity.status == "fail"
+    assert fidelity.surfaces == [
+        "rendered_html:metadata:publisher",
+        "rendered_html:metadata:title",
+    ]
+    assert "incorrect_publisher_author_attribution" in fidelity.detail
+    assert "incorrect_report_identity" in fidelity.detail

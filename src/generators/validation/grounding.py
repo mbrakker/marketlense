@@ -87,9 +87,11 @@ def run_grounding_check(
     prompt_ctx = child_context(ctx, task_id=f"{ctx.task_id}:grounding")
     prompt_namespace = "report_vs/validate/grounding"
     artifacts = request.artifacts if isinstance(request.artifacts, dict) else {}
+    audit_payload = grounding_payload(request, artifacts)
+    public_item_ids = _public_item_ids(audit_payload.get("public_factual_items"))
     prompt_vars = {
         "report_json": json.dumps(
-            grounding_payload(request, artifacts), ensure_ascii=False
+            audit_payload, ensure_ascii=False
         ),
         "evidence_json": json.dumps(list(evidence_texts), ensure_ascii=False),
     }
@@ -408,6 +410,9 @@ def run_grounding_check(
                         ),
                         severity="error",
                         section=section,
+                        entity_id=_public_item_id_for_failure(
+                            section, text, public_item_ids
+                        ),
                     )
                 )
                 failed_check_keys.add((section, text))
@@ -479,6 +484,9 @@ def run_grounding_check(
                             ),
                             severity=severity,
                             section=section,
+                            entity_id=_public_item_id_for_failure(
+                                section, text, public_item_ids
+                            ),
                         )
                     )
     except AppError as exc:
@@ -555,13 +563,19 @@ def grounding_payload(request: ValidationRequest, artifacts: dict) -> dict:
         )
         if isinstance(summary, dict)
         else "",
+        "card_tldr_compact": sanitize_citation_tokens(
+            s(summary.get("card_tldr_compact"))
+        )
+        if isinstance(summary, dict)
+        else "",
         "claim_evidence_map": summary.get("claim_evidence_map")
         if isinstance(summary, dict)
         else [],
     }
-    return {
+    payload = {
         "tldr": request.report.tldr,
         "title": request.report.title,
+        "publisher": request.report.publisher,
         "insights_final": insights,
         "quotes_final": artifacts.get("quotes_final")
         if isinstance(artifacts, dict)
@@ -574,6 +588,153 @@ def grounding_payload(request: ValidationRequest, artifacts: dict) -> dict:
             s(artifacts.get("linkedin_post") if isinstance(artifacts, dict) else "")
         ),
     }
+    # This remains one batched grounding call.  The explicit inventory prevents
+    # public projections such as figures and downstream prose from becoming
+    # invisible merely because they are not top-level analysis artifacts.
+    payload["public_factual_items"] = _public_factual_items(
+        artifacts=artifacts,
+        report_title=request.report.title,
+        publisher=request.report.publisher,
+        insights=insights,
+        summary=summary_clean,
+    )
+    return payload
+
+
+def _public_factual_items(
+    *,
+    artifacts: dict,
+    report_title: str,
+    publisher: str,
+    insights: Sequence[dict],
+    summary: dict[str, Any],
+) -> List[dict]:
+    """Material public claims with their exact retained evidence payloads."""
+    items: List[dict] = []
+
+    def add(
+        item_id: str,
+        section: str,
+        text: object,
+        evidence_ids: Sequence[str] = (),
+        evidence_text: object = "",
+    ) -> None:
+        claim = sanitize_citation_tokens(s(text))
+        if claim:
+            items.append(
+                {
+                    "item_id": item_id,
+                    "section": section,
+                    "text": claim,
+                    "evidence_ids": [value for value in evidence_ids if value],
+                    "retained_evidence": s(evidence_text),
+                }
+            )
+
+    summary_evidence = [
+        entry
+        for entry in (
+            summary.get("claim_evidence_map", [])
+            if isinstance(summary.get("claim_evidence_map", []), list)
+            else []
+        )
+        if isinstance(entry, dict)
+    ]
+    evidence_ids = [s(entry.get("evidence_id")) for entry in summary_evidence]
+    evidence_text = "\n".join(s(entry.get("evidence")) for entry in summary_evidence)
+    for field_name in ("tldr", "card_tldr_compact", "executive_summary"):
+        add(
+            f"summary:{field_name}",
+            field_name,
+            summary.get(field_name),
+            evidence_ids,
+            evidence_text,
+        )
+    insight_evidence = {
+        s(insight.get("evidence_id")): s(insight.get("evidence"))
+        for insight in insights
+    }
+    for insight in insights:
+        insight_id = s(insight.get("id"))
+        evidence_id = s(insight.get("evidence_id"))
+        for field_name in ("text", "so_what", "now_what"):
+            add(
+                f"insight:{insight_id}:{field_name}",
+                f"insights:{insight_id}.{field_name}",
+                insight.get(field_name),
+                [evidence_id],
+                insight.get("evidence"),
+            )
+    for index, figure in enumerate(artifacts.get("key_figures", []), start=1):
+        if not isinstance(figure, dict):
+            continue
+        evidence_id = s(figure.get("evidence_id"))
+        for field_name in ("label", "figure", "why_it_matters"):
+            add(
+                f"key_figure:{index}:{field_name}",
+                f"key_figures:{index}.{field_name}",
+                figure.get(field_name),
+                [evidence_id],
+                insight_evidence.get(evidence_id, ""),
+            )
+    for family in ("expert_comment", "linkedin_post"):
+        add(
+            family,
+            family,
+            artifacts.get(family),
+            list(insight_evidence),
+            "\n".join(insight_evidence.values()),
+        )
+    add("metadata:title", "metadata.title", report_title)
+    add("metadata:publisher", "metadata.publisher", publisher)
+    return items
+
+
+def _public_item_ids(items: object) -> dict[tuple[str, str], str]:
+    """Index the retained atomic public inventory for failure attribution."""
+
+    indexed: dict[tuple[str, str], str] = {}
+    if not isinstance(items, list):
+        return indexed
+    for entry in items:
+        if not isinstance(entry, dict):
+            continue
+        section = s(entry.get("section"))
+        text = s(entry.get("text"))
+        item_id = s(entry.get("item_id"))
+        if section and text and item_id:
+            indexed[(section, text)] = item_id
+    return indexed
+
+
+def _public_item_id_for_failure(
+    section: str,
+    text: str,
+    public_item_ids: dict[tuple[str, str], str],
+) -> str:
+    """Return an atomic public item ID only for an exact audited assertion."""
+
+    direct = public_item_ids.get((s(section), s(text)))
+    if direct:
+        return direct
+    matches = {
+        item_id
+        for (item_section, item_text), item_id in public_item_ids.items()
+        if item_text == s(text)
+        and (
+            item_section == s(section)
+            or item_section.endswith(s(section))
+            or s(section).endswith(item_section)
+        )
+    }
+    if len(matches) == 1:
+        return next(iter(matches))
+    text_matches = {
+        item_id
+        for (_, item_text), item_id in public_item_ids.items()
+        if item_text == s(text)
+    }
+    return next(iter(text_matches)) if len(text_matches) == 1 else ""
 
 
 def normalize_claim_classification(value: str) -> str:
