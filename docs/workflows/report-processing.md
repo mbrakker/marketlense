@@ -89,17 +89,27 @@ candidate audits for diagnosis. A rejected regeneration candidate therefore
 cannot be rendered as a public package or replace the artifact/validation pair
 from which the next bounded attempt is planned.
 
-Before rendering, a resolved canonical source identity supplies the title and
-publisher when analysis or stored report metadata contains a generated
-file/checksum name or a placeholder publisher. Generic embedded-document
-titles such as `PowerPoint Presentation` are not public titles. When no usable
-source title remains, the renderer derives a readable label only from the
-acquired source filename by removing its extension and separators; it does not
-infer report content or depend on a publisher-specific naming convention. This
-is a deterministic attribution fallback, not an inference: unresolved
-identities still reach the same blocking public-metadata gate. A missing verified public source URL does
-not block that package; the public attribution states `Source URL: Not
-available`.
+Before analysis, source preparation resolves one canonical report title using a
+fixed hierarchy: an explicit cover/title-page title, a repeated in-document
+header, clear source content, a clean acquired filename, then only specific,
+credible PDF document metadata. Generic application/document labels (including
+`PowerPoint Presentation`, `Presentation`, `Document`, `Report`, `PDF`,
+`Untitled`, and Microsoft Office labels) and filename-only hashes or internal
+IDs are rejected. Scoring rewards prominence, recurrence, publisher/report
+language, and edition alignment; generic metadata cannot outrank visible source
+evidence.
+
+Only a material deterministic tie permits one bounded identity-resolution model
+call. It receives the cover/title-page image, the first pages' text, filename,
+and document metadata, and returns only title, edition, publisher candidate,
+confidence, and short evidence. It never regenerates editorial artifacts.
+The resolution is checkpointed and is the sole title authority for new source
+preparation: analysis, document-map, and report-store fields cannot replace it.
+Before rendering, a generic/missing final title or a title that conflicts with
+an explicit visible source title is a typed hard failure. Recovery is routed to
+metadata/identity resolution rather than editorial regeneration. A missing
+verified public source URL does not block that package; the public attribution
+states `Source URL: Not available`.
 
 Public title selection rejects runtime file-name slugs and decodes URL-encoded
 canonical, PDF-metadata, and document-map titles before they reach the HTML,

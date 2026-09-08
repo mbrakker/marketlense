@@ -42,6 +42,7 @@ from src.contracts.report_generation import (
     ReportSelectionState,
     ReportSourceState,
 )
+from src.contracts.report_identity import ReportTitleCandidate, ReportTitleResolution
 from src.contracts.report_models import Figure, Quote, ReportFigureAsset, ReportPayload
 from src.contracts.report_store import (
     SourceIdentityResolution,
@@ -1101,6 +1102,7 @@ def _source_checkpoint_payload(source: ReportSourceState) -> dict:
         "text_validation_reason": source.text_validation_reason,
         "text_validation_pages": list(source.text_validation_pages),
         "payload": source.payload.to_dict(),
+        "title_resolution": asdict(source.title_resolution),
         "analysis_pdf_path": source.analysis_pdf_path,
         "ocr_fallback_used": source.ocr_fallback_used,
         "ocr_pdf_path": source.ocr_pdf_path,
@@ -1314,11 +1316,45 @@ def _source_state_from_checkpoint(
             int(item) for item in raw_source["text_validation_pages"]
         ],
         payload=_report_payload_from_dict(raw_source["payload"]),
+        title_resolution=_title_resolution_from_dict(
+            raw_source.get("title_resolution")
+        ),
         analysis_pdf_path=str(raw_source.get("analysis_pdf_path") or ""),
         ocr_fallback_used=bool(raw_source.get("ocr_fallback_used", False)),
         ocr_pdf_path=str(raw_source.get("ocr_pdf_path") or ""),
         pdf_context=None,
         pdf_context_for_tasks=None,
+    )
+
+
+def _title_resolution_from_dict(raw: object) -> ReportTitleResolution:
+    if not isinstance(raw, dict):
+        return ReportTitleResolution()
+    candidates = tuple(
+        ReportTitleCandidate(
+            schema_version=str(item.get("schema_version") or "1.0"),
+            value=str(item.get("value") or ""),
+            source=str(item.get("source") or ""),
+            score=float(item.get("score") or 0.0),
+            page_number=int(item.get("page_number") or 0),
+            evidence=str(item.get("evidence") or ""),
+        )
+        for item in list(raw.get("candidates") or [])
+        if isinstance(item, dict)
+    )
+    return ReportTitleResolution(
+        schema_version=str(raw.get("schema_version") or "1.0"),
+        title=str(raw.get("title") or ""),
+        edition=str(raw.get("edition") or ""),
+        publisher_candidate=str(raw.get("publisher_candidate") or ""),
+        confidence=str(raw.get("confidence") or "unknown"),
+        evidence=tuple(
+            str(item) for item in list(raw.get("evidence") or []) if str(item)
+        ),
+        candidate_source=str(raw.get("candidate_source") or ""),
+        explicit_source_title=str(raw.get("explicit_source_title") or ""),
+        candidates=candidates,
+        issues=tuple(str(item) for item in list(raw.get("issues") or []) if str(item)),
     )
 
 

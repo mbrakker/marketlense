@@ -822,6 +822,9 @@ class OpenAIJSONImagePromptRequest:
     timeout_seconds: Optional[float] = field(
         default=None, metadata={"doc": "Request timeout in seconds, if set."}
     )
+    max_output_tokens: Optional[int] = field(
+        default=None, metadata={"doc": "Maximum completion tokens when supported."}
+    )
     cost_ledger_path: str = field(
         default="./out/cost-ledger.jsonl",
         metadata={"doc": "Filesystem path for the cost ledger JSONL output."},

@@ -33,10 +33,10 @@ from src.generators.report_render_generator import (
 )
 from src.generators.report_selection_generator import select_report_figures
 from src.generators.report_source_generator import prepare_report_source
-from src.orchestrators.report_analysis_orchestrator import run_report_analysis
 from src.orchestrators._report_analysis_orchestrator.manifest import (
     record_validation_manifest_stage,
 )
+from src.orchestrators.report_analysis_orchestrator import run_report_analysis
 from src.orchestrators.signal_candidate_orchestrator import (
     run_signal_candidate_extraction,
 )
@@ -557,6 +557,9 @@ def run_report_generation(
                 settings,
                 scope="pdf_text_ocr",
                 provided_client=source_openai_client,
+                openai_chat_json_with_images=(
+                    deps.source.openai_chat_json_with_images
+                ),
                 openai_ocr_pdf=deps.source.openai_ocr_pdf,
             )
         if requested_resume_stage != STAGE_RENDER_COMPLETE:
@@ -651,6 +654,7 @@ def run_report_generation(
             runtime,
             deps.source,
             ocr_openai_client=source_openai_client,
+            identity_openai_client=source_openai_client,
         )
         analysis_checkpoint_path = _write_stage_checkpoint(
             runtime,

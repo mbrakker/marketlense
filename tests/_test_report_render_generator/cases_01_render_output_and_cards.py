@@ -23,6 +23,7 @@ from src.contracts.report_generation import (
     ReportSelectionState,
     ReportSourceState,
 )
+from src.contracts.report_identity import ReportTitleResolution
 from src.contracts.report_models import Figure, Quote, ReportPayload
 from src.contracts.report_store import (
     ReportMetadataGetResponse,
@@ -493,6 +494,54 @@ def test_render_report_output_does_not_emit_html_for_failed_canonical_validation
     assert outcome.error == "validation_failed"
     assert outcome.html_path == ""
     assert outcome.publish_readiness_status is None
+    assert render_calls == []
+    assert metadata_calls == []
+
+
+@pytest.mark.parametrize(
+    ("resolution", "expected_error"),
+    [
+        (
+            ReportTitleResolution(
+                issues=("generic_title_missing",),
+            ),
+            "report_title_generic_or_missing",
+        ),
+        (
+            ReportTitleResolution(
+                title="Different Market Outlook 2026",
+                explicit_source_title="Market Outlook 2026",
+            ),
+            "report_title_conflicts_explicit_source",
+        ),
+    ],
+)
+def test_render_report_output_blocks_invalid_source_title_identity(
+    tmp_path, resolution, expected_error
+) -> None:
+    runtime = _runtime(tmp_path, md5="md5")
+    source = replace(_source(runtime), title_resolution=resolution)
+    selection = _selection(runtime, source)
+    analysis = _analysis(runtime, source, selection)
+    render_calls: list[object] = []
+    metadata_calls: list[object] = []
+    deps = _deps(
+        render_report=lambda req, ctx: render_calls.append((req, ctx)),
+        upsert_report_metadata=lambda req, ctx: metadata_calls.append((req, ctx)),
+    )
+
+    outcome = render_report_output(
+        runtime,
+        source,
+        selection,
+        analysis,
+        deps,
+        preview_resp=render_preview_asset(runtime, source, deps),
+    )
+
+    assert outcome.status == "error"
+    assert outcome.error == expected_error
+    assert outcome.html_path == ""
     assert render_calls == []
     assert metadata_calls == []
 

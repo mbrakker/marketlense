@@ -131,6 +131,7 @@ openai_models:
   report_vs/evidence_packs/methods: "gpt-5.6-luna"
   report_vs/evidence_packs/quote_candidates: "gpt-5.6-luna"
   report_vs/figure_caption: "gpt-5.6-luna"
+  report_vs/identity_resolution: "gpt-5.6-luna"
   report_vs/validate/grounding: "gpt-5.6-luna"
   report_vs/taxonomy: "gpt-5.6-luna"
   rank_candidates: "gpt-5.6-luna"
@@ -491,6 +492,20 @@ llm_execution_policies:
     provider_retry_count: 0
     structured_output_mode: json_object
     structured_output_schema_identity: "figure_caption.v1"
+    fallback_policy: same_provider_only
+    pricing_key: "gpt-5.6-luna"
+  report_vs/identity_resolution:
+    schema_version: "1.0"
+    provider: openai
+    model: "gpt-5.6-luna"
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 512
+    retrieval_mode: chat_json
+    timeout_seconds: 180
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    structured_output_schema_identity: "report_title_identity.v1"
     fallback_policy: same_provider_only
     pricing_key: "gpt-5.6-luna"
   rank_candidates:

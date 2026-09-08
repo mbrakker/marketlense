@@ -848,7 +848,8 @@ def run_report_analysis(
         doc_map_title, resolved_publisher, title_source, publisher_source = (
             resolve_doc_map_metadata(doc_map_pack)
         )
-        if doc_map_title:
+        source_title = str(getattr(source.title_resolution, "title", "") or "").strip()
+        if doc_map_title and not source_title:
             data.title = doc_map_title
         if resolved_publisher:
             data.publisher = resolved_publisher

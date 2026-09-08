@@ -49,6 +49,7 @@ from src.generators.report_generation_shared import (
     read_cache_json,
     write_cache_json,
 )
+from src.generators.report_title_resolution_generator import is_generic_report_title
 from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
@@ -61,9 +62,13 @@ _GENERATED_REPORT_TITLE = re.compile(
 _SOURCE_ID_TITLE = re.compile(r"^source[-_:][A-Za-z0-9_-]{20,}$", re.IGNORECASE)
 _GENERIC_PUBLIC_TITLES = {
     "document",
+    "microsoft powerpoint",
+    "microsoft word",
+    "pdf",
     "presentation",
     "powerpoint presentation",
     "report",
+    "slide deck",
     "untitled",
 }
 _HTML_RENDER_CONTRACT_VERSION = "2.0"
@@ -247,6 +252,7 @@ def _is_unusable_public_title(runtime: ReportRuntimeState, value: object) -> boo
     return (
         not title
         or _is_runtime_generated_title(runtime, title)
+        or is_generic_report_title(title)
         or (title.casefold() in _GENERIC_PUBLIC_TITLES)
     )
 
@@ -327,6 +333,14 @@ def _resolved_report_title(
     analysis: ReportAnalysisState,
     candidate: object | None = None,
 ) -> str:
+    source_resolution = source.title_resolution
+    source_title = str(getattr(source_resolution, "title", "") or "").strip()
+    if source_title or source_resolution.candidates or source_resolution.issues:
+        return (
+            ""
+            if _is_unusable_public_title(runtime, source_title)
+            else source_title
+        )
     resolved = _resolved_render_title(
         runtime,
         source,
@@ -341,6 +355,26 @@ def _resolved_report_title(
     if not _is_unusable_public_title(runtime, doc_map_title):
         return doc_map_title
     return _source_title_fallback(runtime)
+
+
+def _title_identity_error(
+    runtime: ReportRuntimeState,
+    source: ReportSourceState,
+    analysis: ReportAnalysisState,
+) -> str:
+    title = _resolved_report_title(runtime, source, analysis)
+    if _is_unusable_public_title(runtime, title):
+        return "report_title_generic_or_missing"
+    explicit = str(
+        getattr(source.title_resolution, "explicit_source_title", "") or ""
+    ).strip()
+    if explicit and _normalized_title(explicit) != _normalized_title(title):
+        return "report_title_conflicts_explicit_source"
+    return ""
+
+
+def _normalized_title(value: str) -> str:
+    return " ".join(value.casefold().split())
 
 
 def _build_metadata_upsert_request(
@@ -510,6 +544,43 @@ def render_report_output(
             html_path="",
             status="error",
             error="validation_failed",
+            vector_store_id=analysis.vector_store_id,
+            vector_store_status=analysis.vector_store_status,
+            indexed_at_utc=analysis.indexed_at_utc,
+            openai_file_id=analysis.openai_file_id,
+            evidence_packs=dict(analysis.evidence_paths),
+            vector_store_last_error=analysis.last_error,
+            text_validation_status=source.text_validation_status,
+            text_validation_reason=source.text_validation_reason,
+            text_validation_pages=source.text_validation_pages,
+            ocr_fallback_used=source.ocr_fallback_used,
+            ocr_pdf_path=source.ocr_pdf_path or None,
+        )
+    title_identity_error = _title_identity_error(runtime, source, analysis)
+    if title_identity_error:
+        logger.info(
+            log_event(
+                runtime.ctx,
+                role="generator",
+                event="render_blocked_by_report_title_identity",
+                module=logger.name,
+                fields={
+                    "file_id": runtime.file.file_id,
+                    "reason": title_identity_error,
+                    "candidate_source": str(
+                        getattr(source.title_resolution, "candidate_source", "") or ""
+                    ),
+                },
+            )
+        )
+        return IngestOutcome(
+            schema_version="1.1",
+            file_id=runtime.file.file_id,
+            name=runtime.file_name,
+            md5=runtime.md5,
+            html_path="",
+            status="error",
+            error=title_identity_error,
             vector_store_id=analysis.vector_store_id,
             vector_store_status=analysis.vector_store_status,
             indexed_at_utc=analysis.indexed_at_utc,

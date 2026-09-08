@@ -1,0 +1,4 @@
+text: |
+  Resolve this report's canonical identity from the attached cover/title-page image and this bounded source evidence.
+
+  {{ identity_evidence_json }}

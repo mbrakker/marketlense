@@ -11,6 +11,7 @@ from src.contracts.regeneration import (
     RegenerationAttemptResult,
     RegenerationLoopState,
 )
+from src.contracts.report_identity import ReportTitleResolution
 from src.contracts.report_models import ReportPayload
 from src.contracts.report_store import (
     SourceIdentityResolution,
@@ -204,6 +205,15 @@ class ReportSourceState:
     )
     payload: ReportPayload = field(
         metadata={"doc": "Base report payload seeded from source-only inputs."}
+    )
+    title_resolution: ReportTitleResolution = field(
+        default_factory=ReportTitleResolution,
+        metadata={
+            "doc": (
+                "Deterministic canonical source-title resolution used by downstream "
+                "public metadata."
+            )
+        },
     )
     analysis_pdf_path: str = field(
         default="",

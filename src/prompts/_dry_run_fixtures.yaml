@@ -609,6 +609,14 @@ fixtures:
     user_variables:
       report_json: *report_json
       evidence_json: *evidence_json
+  - namespace: "report_vs/identity_resolution"
+    family: "report"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    benchmark: *benchmark_report_extract
+    system_variables: {}
+    user_variables:
+      identity_evidence_json: '{"filename":"market-outlook-2026.pdf","document_metadata":{"Title":"PowerPoint Presentation"},"first_pages":[{"page_number":1,"text":"Market Outlook 2026 Report"}]}'
   - namespace: "report_vs/validate/semantic"
     family: "validation"
     model: "openai/gpt-5-mini"

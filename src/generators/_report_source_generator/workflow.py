@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 # ruff: noqa: F401,F403,F405,F821
-
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict
 from typing import cast
@@ -16,6 +15,10 @@ from src.generators.report_generation_shared import (
     logger,
     resolve_publisher,
 )
+from src.generators.report_title_identity_generator import (
+    resolve_ambiguous_report_title,
+)
+from src.generators.report_title_resolution_generator import resolve_report_title
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -36,6 +39,7 @@ def prepare_report_source(
     dependencies: ReportSourceDependencies,
     *,
     ocr_openai_client=None,
+    identity_openai_client=None,
 ) -> ReportSourceState:
     pdf_context = _build_pdf_context(runtime, dependencies)
     _, parallel_within_file = _report_worker_config(runtime)
@@ -391,8 +395,22 @@ def prepare_report_source(
             cache_prefix="ocr_contents" if ocr_fallback_used else "contents",
             dependencies=dependencies,
         )
+    title_resolution = resolve_report_title(
+        file_name=runtime.file_name,
+        pdf_metadata=info_resp.metadata,
+        pages=[(page.page_number, page.text) for page in text_resp.pages],
+        publisher_name=runtime.publisher_name,
+    )
+    title_resolution = resolve_ambiguous_report_title(
+        runtime=runtime,
+        dependencies=dependencies,
+        pdf_metadata=info_resp.metadata,
+        pages=[(page.page_number, page.text) for page in text_resp.pages],
+        deterministic_resolution=title_resolution,
+        llm_client=identity_openai_client,
+    )
     payload: ReportPayload = base_payload(
-        runtime.report_title,
+        title_resolution.title or runtime.report_title,
         contents_page_number,
         contents_heading,
         contents_image,
@@ -429,6 +447,7 @@ def prepare_report_source(
         text_validation_reason=text_validation_reason,
         text_validation_pages=text_validation_pages,
         payload=payload,
+        title_resolution=title_resolution,
         analysis_pdf_path=analysis_pdf_path,
         ocr_fallback_used=ocr_fallback_used,
         ocr_pdf_path=ocr_pdf_path,

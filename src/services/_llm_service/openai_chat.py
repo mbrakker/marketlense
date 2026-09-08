@@ -625,6 +625,7 @@ def openai_chat_json_with_images(
             "model": request.model,
             "temperature": request.temperature,
             "seed": request.seed,
+            "max_output_tokens": request.max_output_tokens,
             "response_format": "json_object",
         },
         context={
@@ -674,6 +675,8 @@ def openai_chat_json_with_images(
                 skipped_params.add("seed")
             else:
                 payload_args["seed"] = request.seed
+        if request.max_output_tokens is not None:
+            payload_args["max_output_tokens"] = request.max_output_tokens
         if skipped_params:
             logger.info(
                 log_event(

@@ -858,6 +858,9 @@ def test_rendered_report_identity_keeps_title_year_and_labels_distinct_dates(
         unescape(next(value for value in values if value)) for values in title_values
     ]
     assert rendered_titles == [expected_seo_title] * 3
+    heading = re.search(r'<h1 id="report-title">([^<]+)</h1>', html)
+    assert heading is not None
+    assert unescape(heading.group(1)) == title
     assert f"Title: {title}" in html
     for expected_value in expected_metadata:
         assert expected_value in html

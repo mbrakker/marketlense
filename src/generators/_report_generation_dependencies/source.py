@@ -11,6 +11,7 @@ from src.contracts.files import (
     WriteBytesRequest,
 )
 from src.contracts.openai import (
+    OpenAIJSONImagePromptRequest,
     OpenAIPdfOcrRequest,
     OpenAIPdfOcrResponse,
 )
@@ -38,18 +39,22 @@ from src.services.file_service import (
     file_stat,
     read_json_object_cache,
     read_text,
-    write_json_object_cache,
     write_bytes,
+    write_json_object_cache,
 )
 from src.services.pdf_service import (
     build_pdf_context,
-    detect_contents_page as detect_contents_page_service,
     extract_pdf_info,
     extract_pdf_text,
-    render_preview as render_preview_service,
     render_text_pdf,
     sample_pdf_text,
     split_pdf_for_ocr,
+)
+from src.services.pdf_service import (
+    detect_contents_page as detect_contents_page_service,
+)
+from src.services.pdf_service import (
+    render_preview as render_preview_service,
 )
 from src.services.prompt_service import load_prompt_set, render_prompt
 
@@ -74,6 +79,9 @@ class ReportSourceDependencies:
     file_stat: Callable[[FileStatRequest, RunContext], Any]
     read_text: Callable[[ReadTextRequest, RunContext], Any]
     write_bytes: Callable[[WriteBytesRequest, RunContext], Any]
+    openai_chat_json_with_images: Callable[
+        [OpenAIJSONImagePromptRequest, RunContext], Any
+    ] = llm_service.openai_chat_json_with_images
     read_json_object_cache: Callable[[JsonObjectCacheReadRequest, RunContext], Any] = (
         read_json_object_cache
     )
@@ -98,6 +106,7 @@ class ReportSourceDependencies:
             file_stat=file_stat,
             read_text=read_text,
             write_bytes=write_bytes,
+            openai_chat_json_with_images=llm_service.openai_chat_json_with_images,
             read_json_object_cache=read_json_object_cache,
             write_json_object_cache=write_json_object_cache,
         )
