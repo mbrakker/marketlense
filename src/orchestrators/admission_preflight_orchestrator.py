@@ -16,20 +16,30 @@ from src.contracts.admission_preflight import (
 from src.contracts.drive import DriveFile
 from src.contracts.files import WriteBytesRequest
 from src.contracts.pdf_text import PdfTextExtractRequest
-from src.contracts.pdf_utils import PdfIntegrityCheckRequest
+from src.contracts.pdf_utils import PdfInfoRequest, PdfIntegrityCheckRequest
 from src.contracts.report_store import (
     ReportSourceIdentityGetRequest,
     ReportSourceRecordRequest,
     SourceIdentityObservation,
     SourceIdentityObservationRecordRequest,
+    SourceProvenanceEvidence,
+    SourceProvenanceRoles,
 )
 from src.contracts.run_budget import BudgetRequest, RunBudget
 from src.contracts.run_context import RunContext
 from src.contracts.state import SourceQuarantineGetRequest
-from src.services.document_identity_service import extract_publisher_imprint
+from src.services.document_identity_service import (
+    SourceProvenanceObservation,
+    extract_publisher_imprint,
+    extract_source_provenance,
+)
 from src.services.file_service import write_bytes
 from src.services.llm_usage_ledger_service import evaluate_budget_request
-from src.services.pdf_service import check_pdf_integrity, extract_pdf_text
+from src.services.pdf_service import (
+    check_pdf_integrity,
+    extract_pdf_info,
+    extract_pdf_text,
+)
 from src.services.report_store_service import (
     get_report_source_identity,
     record_report_source,
@@ -48,6 +58,35 @@ from src.utils.model_resolver import (
 logger = logging.getLogger("market_lense.admission_preflight_orchestrator")
 ADMISSION_PREFLIGHT_VERSION = "2.0"
 _SUPPORTED_PDF_TYPES = {"application/pdf", "application/x-pdf"}
+
+
+def _source_provenance_roles(
+    observed: SourceProvenanceObservation,
+) -> SourceProvenanceRoles:
+    return SourceProvenanceRoles(
+        schema_version="1.0",
+        publication_name=observed.publication_name,
+        publisher_name=observed.publisher_name,
+        author_names=observed.author_names,
+        author_kind=observed.author_kind,
+        data_provider_names=observed.data_provider_names,
+        source_organization_names=observed.source_organization_names,
+        report_owner_name=observed.report_owner_name,
+        status=observed.status,
+        resolution_method=observed.resolution_method,
+        issues=observed.issues,
+        evidence=tuple(
+            SourceProvenanceEvidence(
+                schema_version="1.0",
+                role=item.role,
+                name=item.name,
+                evidence_kind=item.evidence_kind,
+                evidence_locator=item.evidence_locator,
+                evidence_hash=item.evidence_hash,
+            )
+            for item in observed.evidence
+        ),
+    )
 
 
 def admission_configuration_hash(settings: Any) -> str:
@@ -190,6 +229,7 @@ class AdmissionPreflightDependencies:
     extract_pdf_text: Callable[[PdfTextExtractRequest, RunContext], Any] = (
         extract_pdf_text
     )
+    extract_pdf_info: Callable[[PdfInfoRequest, RunContext], Any] = extract_pdf_info
     get_source_quarantine: Callable[[SourceQuarantineGetRequest, RunContext], Any] = (
         get_source_quarantine
     )
@@ -370,6 +410,26 @@ def run_admission_preflight(
             else:
                 evidence_potential = "sufficient"
                 try:
+                    pdf_info = deps.extract_pdf_info(
+                        PdfInfoRequest(
+                            schema_version="1.0",
+                            path=request.source_artifact_path,
+                        ),
+                        ctx,
+                    )
+                    pdf_metadata = dict(
+                        getattr(pdf_info, "metadata", {}) or {}
+                    )
+                except AppError:
+                    # PDF metadata supplements source-visible text but is never
+                    # required for structural admission.
+                    pdf_metadata = {}
+                observed_roles = extract_source_provenance(
+                    str(getattr(text, "text", "") or ""),
+                    pdf_metadata=pdf_metadata,
+                )
+                provenance_roles = _source_provenance_roles(observed_roles)
+                try:
                     source_response = deps.get_source_identity(
                         ReportSourceIdentityGetRequest(
                             schema_version="1.0",
@@ -386,6 +446,71 @@ def run_admission_preflight(
                     source_record_id = int(
                         getattr(resolved, "source_record_id", 0) or 0
                     )
+                    if provenance_roles.publisher_name:
+                        artifact_url = _drive_artifact_url(file.file_id)
+                        if source_record_id <= 0:
+                            source_record_id = int(
+                                getattr(
+                                    deps.record_report_source(
+                                        ReportSourceRecordRequest(
+                                            schema_version="1.0",
+                                            db_path=str(request.settings.reports_db),
+                                            source_domain="drive.google.com",
+                                            report_name=title,
+                                            landing_page_url=artifact_url,
+                                            downloaded_at_utc=utc_now_iso(),
+                                            md5=source_identity,
+                                            publisher_name=provenance_roles.publisher_name,
+                                            source_page_url=artifact_url,
+                                        ),
+                                        ctx,
+                                    ),
+                                    "record_id",
+                                    0,
+                                )
+                                or 0
+                            )
+                        if source_record_id > 0:
+                            resolved = deps.record_source_identity_observation(
+                                SourceIdentityObservationRecordRequest(
+                                    schema_version="1.0",
+                                    db_path=str(request.settings.reports_db),
+                                    observation=SourceIdentityObservation(
+                                        schema_version="1.0",
+                                        source_record_id=source_record_id,
+                                        canonical_title=title,
+                                        title_evidence_locator="source_visible_provenance",
+                                        publisher_id=provenance_roles.publisher_name,
+                                        publisher_name=provenance_roles.publisher_name,
+                                        provenance_roles=provenance_roles,
+                                        canonical_landing_page_url=str(
+                                            getattr(
+                                                resolved,
+                                                "canonical_landing_page_url",
+                                                "",
+                                            )
+                                            or ""
+                                        ),
+                                        acquired_artifact_url=artifact_url,
+                                        source_page_url=str(
+                                            getattr(resolved, "source_page_url", "")
+                                            or artifact_url
+                                        ),
+                                        retrieved_at_utc=utc_now_iso(),
+                                        acquisition_route="drive_archive",
+                                        content_hash=f"md5:{source_identity}",
+                                        resolution_method=(
+                                            provenance_roles.resolution_method
+                                        ),
+                                        identity_confidence="high",
+                                        identity_issues=provenance_roles.issues,
+                                    ),
+                                ),
+                                ctx,
+                            ).resolution
+                            publisher = str(
+                                getattr(resolved, "publisher_name", "") or ""
+                            ).strip()
                     if (
                         publisher
                         and str(getattr(source_response, "resolution_source", "") or "")
@@ -519,8 +644,17 @@ def run_admission_preflight(
                             getattr(resolved, "canonical_landing_page_url", "")
                             or source_url
                         )
-                except (AppError, AttributeError, TypeError, ValueError):
-                    pass
+                except AppError:
+                    raise
+                except (AttributeError, TypeError, ValueError) as exc:
+                    raise AppError(
+                        code="source_provenance_record_invalid",
+                        message=(
+                            "Could not persist explicit source provenance "
+                            "during admission"
+                        ),
+                        retryable=False,
+                    ) from exc
                 if not identity_resolved:
                     outcome = "missing_source_identity"
                 else:

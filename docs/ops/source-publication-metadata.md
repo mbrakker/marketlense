@@ -9,7 +9,10 @@
 Reports migration 19 adds an additive evidence model to the existing reports
 SQLite database. `SourceIdentityObservation` is an immutable, hash-addressed
 observation against an existing `report_sources` row. `SourceIdentityResolution`
-is its current deterministic resolution. The old `SourcePublicationMetadata`
+is its current deterministic resolution. Migration 29 adds an optional,
+separate `SourceProvenanceRoles` record to both: publication/report brand and
+publisher, author/byline (with person/organization kind), cited research/data
+providers, source organisations, and report owner. The old `SourcePublicationMetadata`
 record remains the date-extraction input and legacy compatibility boundary; it
 is not a substitute for the canonical source identity.
 
@@ -31,8 +34,15 @@ publisher from retained `reports` metadata with the same exact MD5 (including
 non-leaked title/publisher pair; conflicting rows fail closed and neither a
 title, filename, URL, nor partial publisher match is a lookup key. A non-empty
 publisher on a checksum-bound `report_sources` record is promoted to an
-immutable `exact_md5_database_record` observation. If no database fallback
-resolves identity, the bounded first-pages text sample may contribute one
+immutable `exact_md5_database_record` observation. The bounded first-pages
+text sample and PDF title metadata may also contribute distinct provenance
+roles even when that legacy database publisher is present. Publisher selection
+is role-specific: explicit report/site/PDF branding outranks explicit report
+publisher wording, which outranks a copyright/report owner. A named byline is
+author evidence only; organisations cited through `data from`, `data published
+by`, `analysis`, or `source` wording remain data-provider evidence only.
+Equally ranked publisher claims fail closed with `publisher_conflict`. If no
+database fallback resolves identity, the bounded first-pages text sample may contribute one
 unambiguous explicit imprint (`Published by`, `A report by`, or copyright
 notice) as a `document_imprint_extraction` observation. Filenames, generic
 prose, multiple different imprints, and placeholder-like values are never
@@ -71,6 +81,13 @@ rendered without a date, so private report processing remains possible.
 Conflicting date provenance is fail-closed at the existing publication-metadata
 boundary: it writes durable remediation evidence and prevents public use of an
 invented date.
+
+Publisher and author fields on public output are compared with the resolved
+role record, including rendered JSON-LD. A mismatch is a hard
+`incorrect_publisher_author_attribution` failure with the `metadata` repair
+target: only rendering metadata and downstream publication are regenerated.
+The LinkedIn artifact receives the same role record and may cite a byline, but
+must not describe a cited data provider as the publisher.
 
 Publisher identity is required for public output; a public publisher URL is
 not. When no resolved safe HTTP(S) URL exists, the rendered source section
@@ -125,7 +142,7 @@ regeneration.
 Run the focused checks after a source-provenance change:
 
 ```powershell
-python -m pytest -q tests/test_source_identity_provenance.py tests/test_source_publication_metadata.py tests/test_report_render_generator_publication_metadata.py tests/test_minimal_execution_planner.py tests/test_wordpress_report_card_contract.py
+python -m pytest -q tests/test_document_identity_service.py tests/test_source_identity_provenance.py tests/test_source_publication_metadata.py tests/test_report_render_generator_publication_metadata.py tests/test_public_editorial_quality_generator.py tests/test_minimal_execution_planner.py tests/test_wordpress_report_card_contract.py
 python -m pytest -q tests/test_report_source_reuse.py tests/test_ingest_file_orchestrator.py tests/test_report_pipeline_orchestrator.py
 python scripts/ci/check_contract_schemas.py --snapshot docs/quality/contract_schemas.json
 ```

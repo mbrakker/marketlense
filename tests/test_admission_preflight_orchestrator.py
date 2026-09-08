@@ -4,7 +4,10 @@ from dataclasses import replace
 from types import SimpleNamespace
 
 from src.contracts.drive import DriveFile
-from src.contracts.report_store import ReportSourceRecordRequest
+from src.contracts.report_store import (
+    ReportSourceIdentityGetRequest,
+    ReportSourceRecordRequest,
+)
 from src.orchestrators.admission_preflight_orchestrator import (
     AdmissionPreflightDependencies,
     AdmissionPreflightRequest,
@@ -343,6 +346,75 @@ def test_admission_records_new_drive_source_from_repeated_document_imprint(
     assert result.decision.publisher_id == "activate.com"
     assert result.decision.source_identity_id.startswith("source:")
     assert result.decision.source_url == "drive://source-1"
+
+
+def test_admission_records_explicit_provenance_when_source_identity_is_new(
+    ingest_settings, run_context, tmp_path
+) -> None:
+    """Source-visible publisher/byline/provider evidence creates the identity."""
+
+    reports_db = str(tmp_path / "reports.sqlite")
+    settings = replace(ingest_settings, reports_db=reports_db)
+    result = run_admission_preflight(
+        _request(
+            settings,
+            file=replace(_file(md5="digital-sweden-md5"), name="digital-sweden.pdf"),
+        ),
+        run_context,
+        dependencies=replace(
+            _dependencies(),
+            get_source_identity=get_report_source_identity,
+            record_report_source=record_report_source,
+            record_source_identity_observation=record_source_identity_observation,
+            check_pdf_integrity=lambda _request, _ctx: SimpleNamespace(
+                failure_code="",
+                page_count=12,
+                size_bytes=24_000,
+                md5="digital-sweden-md5",
+            ),
+            extract_pdf_info=lambda _request, _ctx: SimpleNamespace(
+                metadata={
+                    "Title": (
+                        "Digital 2022: Sweden � DataReportal � "
+                        "Global Digital Insights"
+                    )
+                }
+            ),
+            extract_pdf_text=lambda _request, _ctx: SimpleNamespace(
+                text=(
+                    "Digital 2022: Sweden\n"
+                    "By: Simon Kemp\n"
+                    "Copyright Kepios 2022\n"
+                    "Source: Kepios\n"
+                    "Source: Ookla\n"
+                    "Source: GSMA Intelligence"
+                ),
+                char_count=2_000,
+                pages_extracted=3,
+                text_density=666.0,
+            ),
+        ),
+    )
+
+    resolved = get_report_source_identity(
+        ReportSourceIdentityGetRequest(
+            schema_version="1.0",
+            db_path=reports_db,
+            report_title="Publisher outlook 2026",
+            md5="digital-sweden-md5",
+        ),
+        run_context,
+    ).resolution
+
+    assert result.admitted is True
+    assert result.decision.publisher_id == "DataReportal"
+    assert resolved.publisher_name == "DataReportal"
+    assert resolved.provenance_roles.author_names == ("Simon Kemp",)
+    assert resolved.provenance_roles.data_provider_names == (
+        "Kepios",
+        "Ookla",
+        "GSMA Intelligence",
+    )
 
 
 def test_admission_rejects_unresolved_publisher_before_cohort_freeze(

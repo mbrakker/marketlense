@@ -9868,6 +9868,9 @@
           },
           "type": "array"
         },
+        "provenance_roles": {
+          "$ref": "#/$defs/src.contracts._report_store.metadata.SourceProvenanceRoles"
+        },
         "publication_date": {
           "type": "string"
         },
@@ -9991,6 +9994,9 @@
         "observation_count": {
           "type": "integer"
         },
+        "provenance_roles": {
+          "$ref": "#/$defs/src.contracts._report_store.metadata.SourceProvenanceRoles"
+        },
         "publication_date": {
           "type": "string"
         },
@@ -10031,6 +10037,98 @@
           "type": "string"
         },
         "title_evidence_locator": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.metadata.SourceProvenanceEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_hash": {
+          "type": "string"
+        },
+        "evidence_kind": {
+          "type": "string"
+        },
+        "evidence_locator": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "role",
+        "name",
+        "evidence_kind",
+        "evidence_locator",
+        "evidence_hash"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.metadata.SourceProvenanceRoles": {
+      "additionalProperties": false,
+      "properties": {
+        "author_kind": {
+          "type": "string"
+        },
+        "author_names": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "data_provider_names": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/src.contracts._report_store.metadata.SourceProvenanceEvidence"
+          },
+          "type": "array"
+        },
+        "issues": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "publication_name": {
+          "type": "string"
+        },
+        "publisher_name": {
+          "type": "string"
+        },
+        "report_owner_name": {
+          "type": "string"
+        },
+        "resolution_method": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_organization_names": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "status": {
           "type": "string"
         }
       },
@@ -14786,6 +14884,16 @@
             "$ref": "#/$defs/src.contracts.claim_validation.ClaimValidationCheck"
           },
           "type": "array"
+        },
+        "protected_facts": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.protected_facts.ProtectedFactComparison"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "reasons": {
           "items": {
@@ -25007,6 +25115,16 @@
           },
           "type": "array"
         },
+        "max_output_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "model": {
           "type": "string"
         },
@@ -27167,6 +27285,12 @@
         "char_count": {
           "type": "integer"
         },
+        "pages": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.pdf_text.PdfTextPage"
+          },
+          "type": "array"
+        },
         "pages_extracted": {
           "type": "integer"
         },
@@ -27185,6 +27309,25 @@
         "text",
         "pages_extracted",
         "char_count"
+      ],
+      "type": "object"
+    },
+    "src.contracts.pdf_text.PdfTextPage": {
+      "additionalProperties": false,
+      "properties": {
+        "page_number": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "page_number",
+        "text"
       ],
       "type": "object"
     },
@@ -28921,6 +29064,12 @@
         "explanation": {
           "type": "string"
         },
+        "hard_fail_class": {
+          "type": "string"
+        },
+        "public_item_id": {
+          "type": "string"
+        },
         "repair_eligible": {
           "type": "boolean"
         },
@@ -28952,6 +29101,38 @@
         "severity",
         "affected_artifact",
         "affected_field"
+      ],
+      "type": "object"
+    },
+    "src.contracts.public_editorial_quality.PublicEditorialQualityItem": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact": {
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "field_path": {
+          "type": "string"
+        },
+        "item_id": {
+          "type": "string"
+        },
+        "repair_target": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "item_id",
+        "artifact",
+        "field_path"
       ],
       "type": "object"
     },
@@ -28991,9 +29172,18 @@
           },
           "type": "object"
         },
+        "hard_fail_count": {
+          "type": "integer"
+        },
         "issues": {
           "items": {
             "$ref": "#/$defs/src.contracts.public_editorial_quality.PublicEditorialQualityIssue"
+          },
+          "type": "array"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.public_editorial_quality.PublicEditorialQualityItem"
           },
           "type": "array"
         },
@@ -29002,6 +29192,9 @@
             "$ref": "#/$defs/src.contracts.public_editorial_quality.PublicEditorialQualityMeasurement"
           },
           "type": "array"
+        },
+        "publishable": {
+          "type": "boolean"
         },
         "report_id": {
           "type": "string"
@@ -30443,6 +30636,12 @@
           "type": "string"
         },
         "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "excluded_evidence_ids": {
           "items": {
             "type": "string"
           },
@@ -33673,6 +33872,9 @@
         },
         "text_validation_status": {
           "type": "string"
+        },
+        "title_resolution": {
+          "$ref": "#/$defs/src.contracts.report_identity.ReportTitleResolution"
         }
       },
       "required": [
@@ -33689,6 +33891,80 @@
         "text_validation_pages",
         "payload"
       ],
+      "type": "object"
+    },
+    "src.contracts.report_identity.ReportTitleCandidate": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence": {
+          "type": "string"
+        },
+        "page_number": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "score": {
+          "type": "number"
+        },
+        "source": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "value",
+        "source"
+      ],
+      "type": "object"
+    },
+    "src.contracts.report_identity.ReportTitleResolution": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_source": {
+          "type": "string"
+        },
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.report_identity.ReportTitleCandidate"
+          },
+          "type": "array"
+        },
+        "confidence": {
+          "type": "string"
+        },
+        "edition": {
+          "type": "string"
+        },
+        "evidence": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "explicit_source_title": {
+          "type": "string"
+        },
+        "issues": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "publisher_candidate": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [],
       "type": "object"
     },
     "src.contracts.report_models.CropItem": {
@@ -41253,6 +41529,12 @@
         "entity_id": {
           "type": "string"
         },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "message": {
           "type": "string"
         },
@@ -41336,6 +41618,9 @@
           "type": "string"
         },
         "source_id": {
+          "type": "string"
+        },
+        "source_text": {
           "type": "string"
         },
         "source_url": {

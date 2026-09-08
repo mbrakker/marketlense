@@ -1,0 +1,82 @@
+[
+  {
+    "id": "publisher_named_author_separate_provider",
+    "pdf_metadata": {
+      "Title": "Digital 2022: Sweden — DataReportal — Global Digital Insights"
+    },
+    "text": "DIGITAL 2022: SWEDEN\n15 FEBRUARY 2022 · SIMON KEMP\nKepios analysis indicates that internet users increased.\nData published by Ookla show connection speeds.",
+    "expected": {
+      "publication_name": "DataReportal",
+      "publisher_name": "DataReportal",
+      "author_names": ["Simon Kemp"],
+      "author_kind": "person",
+      "data_provider_names": ["Kepios", "Ookla"],
+      "report_owner_name": ""
+    }
+  },
+  {
+    "id": "corporate_author",
+    "pdf_metadata": {"Title": "Industry Outlook | IAB"},
+    "text": "Industry Outlook\nAuthor: IAB Research Team\nSource: Comscore",
+    "expected": {
+      "publication_name": "IAB",
+      "publisher_name": "IAB",
+      "author_names": ["IAB Research Team"],
+      "author_kind": "organization",
+      "data_provider_names": ["Comscore"],
+      "report_owner_name": ""
+    }
+  },
+  {
+    "id": "publisher_and_author_same_organisation",
+    "pdf_metadata": {"Title": "Media Outlook | Activate"},
+    "text": "Media Outlook\nA report by Activate\nCopyright © 2026 Activate",
+    "expected": {
+      "publication_name": "Activate",
+      "publisher_name": "Activate",
+      "author_names": ["Activate"],
+      "author_kind": "organization",
+      "data_provider_names": [],
+      "report_owner_name": "Activate"
+    }
+  },
+  {
+    "id": "multiple_cited_research_providers",
+    "pdf_metadata": {"Title": "Consumer Outlook | NIQ"},
+    "text": "Consumer Outlook\nPublished by NIQ\nKantar analysis shows demand shifts.\nData from GfK indicate price sensitivity.\nSource: Circana",
+    "expected": {
+      "publication_name": "NIQ",
+      "publisher_name": "NIQ",
+      "author_names": [],
+      "author_kind": "unknown",
+      "data_provider_names": ["Kantar", "GfK", "Circana"],
+      "report_owner_name": ""
+    }
+  },
+  {
+    "id": "missing_byline",
+    "pdf_metadata": {"Title": "Measurement Guide | IAB"},
+    "text": "Measurement Guide\nPublished by IAB\nData from Comscore support the analysis.",
+    "expected": {
+      "publication_name": "IAB",
+      "publisher_name": "IAB",
+      "author_names": [],
+      "author_kind": "unknown",
+      "data_provider_names": ["Comscore"],
+      "report_owner_name": ""
+    }
+  },
+  {
+    "id": "ambiguous_site_ownership",
+    "pdf_metadata": {"Title": "Digital 2024: Australia — DataReportal — Global Digital Insights"},
+    "text": "DIGITAL 2024: AUSTRALIA\nBy Simon Kemp\n© Kepios 2024\nKepios analysis indicates strong adoption.",
+    "expected": {
+      "publication_name": "DataReportal",
+      "publisher_name": "DataReportal",
+      "author_names": ["Simon Kemp"],
+      "author_kind": "person",
+      "data_provider_names": ["Kepios"],
+      "report_owner_name": "Kepios"
+    }
+  }
+]

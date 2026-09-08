@@ -633,6 +633,54 @@ class SourcePublicationMetadataUpsertResponse:
 
 
 @dataclass(frozen=True)
+class SourceProvenanceEvidence:
+    """One bounded source-visible assertion for a distinct provenance role."""
+
+    schema_version: str = field(metadata={"doc": "Provenance-evidence schema version."})
+    role: str = field(metadata={"doc": "publisher, author, provider, owner, or source organization."})
+    name: str = field(metadata={"doc": "Exact organisation or byline supported by evidence."})
+    evidence_kind: str = field(metadata={"doc": "Deterministic evidence category."})
+    evidence_locator: str = field(metadata={"doc": "Bounded source evidence location."})
+    evidence_hash: str = field(metadata={"doc": "Hash of the supporting source-visible value."})
+
+
+@dataclass(frozen=True)
+class SourceProvenanceRoles:
+    """Optional publication roles; data providers are never publisher aliases."""
+
+    schema_version: str = field(metadata={"doc": "Provenance-role schema version."})
+    publication_name: str = field(default="", metadata={"doc": "Canonical publication or report brand."})
+    publisher_name: str = field(default="", metadata={"doc": "Canonical public publisher."})
+    author_names: Tuple[str, ...] = field(default_factory=tuple, metadata={"doc": "Explicit byline or corporate author names."})
+    author_kind: str = field(default="unknown", metadata={"doc": "person, organization, or unknown."})
+    data_provider_names: Tuple[str, ...] = field(default_factory=tuple, metadata={"doc": "Cited research or data providers."})
+    source_organization_names: Tuple[str, ...] = field(default_factory=tuple, metadata={"doc": "Explicit source organisations, if any."})
+    report_owner_name: str = field(default="", metadata={"doc": "Explicit copyright or report owner."})
+    status: str = field(default="unknown", metadata={"doc": "resolved, ambiguous, conflicting, or unknown."})
+    resolution_method: str = field(default="", metadata={"doc": "Deterministic or validated LLM resolution method."})
+    issues: Tuple[str, ...] = field(default_factory=tuple, metadata={"doc": "Stable role conflict or gap codes."})
+    evidence: Tuple[SourceProvenanceEvidence, ...] = field(default_factory=tuple, metadata={"doc": "Bounded role evidence."})
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "author_names", tuple(self.author_names))
+        object.__setattr__(self, "data_provider_names", tuple(self.data_provider_names))
+        object.__setattr__(self, "source_organization_names", tuple(self.source_organization_names))
+        object.__setattr__(self, "issues", tuple(self.issues))
+        object.__setattr__(
+            self,
+            "evidence",
+            tuple(
+                item
+                if isinstance(item, SourceProvenanceEvidence)
+                else SourceProvenanceEvidence(
+                    schema_version="1.0", **item
+                )
+                for item in self.evidence
+            ),
+        )
+
+
+@dataclass(frozen=True)
 class SourceIdentityObservation:
     """An immutable, bounded observation used to resolve report-source identity."""
 
@@ -656,6 +704,10 @@ class SourceIdentityObservation:
     )
     publisher_name: str = field(
         default="", metadata={"doc": "Observed publisher display name, when known."}
+    )
+    provenance_roles: SourceProvenanceRoles = field(
+        default_factory=lambda: SourceProvenanceRoles(schema_version="1.0"),
+        metadata={"doc": "Separate source-visible publication provenance roles."},
     )
     canonical_landing_page_url: str = field(
         default="", metadata={"doc": "Canonical publisher landing-page URL."}
@@ -713,6 +765,14 @@ class SourceIdentityObservation:
         },
     )
 
+    def __post_init__(self) -> None:
+        if isinstance(self.provenance_roles, dict):
+            object.__setattr__(
+                self,
+                "provenance_roles",
+                SourceProvenanceRoles(**self.provenance_roles),
+            )
+
 
 @dataclass(frozen=True)
 class SourceIdentityResolution:
@@ -739,6 +799,10 @@ class SourceIdentityResolution:
     )
     publisher_name: str = field(
         default="", metadata={"doc": "Resolved publisher name."}
+    )
+    provenance_roles: SourceProvenanceRoles = field(
+        default_factory=lambda: SourceProvenanceRoles(schema_version="1.0"),
+        metadata={"doc": "Resolved separate source-visible publication roles."},
     )
     canonical_landing_page_url: str = field(
         default="", metadata={"doc": "Resolved canonical landing-page URL."}
@@ -796,6 +860,14 @@ class SourceIdentityResolution:
     observation_count: int = field(
         default=0, metadata={"doc": "Number of immutable observations considered."}
     )
+
+    def __post_init__(self) -> None:
+        if isinstance(self.provenance_roles, dict):
+            object.__setattr__(
+                self,
+                "provenance_roles",
+                SourceProvenanceRoles(**self.provenance_roles),
+            )
 
 
 @dataclass(frozen=True)

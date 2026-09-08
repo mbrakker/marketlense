@@ -70,6 +70,7 @@ PROJECTIONS = {
     "_reports_db_023_create_corpus_rehabilitation_campaigns",
     "_reports_db_027_create_source_reuse_telemetry",
     "_reports_db_028_add_source_reuse_attribution_statuses",
+    "_reports_db_029_add_source_provenance_roles",
 }
 
 

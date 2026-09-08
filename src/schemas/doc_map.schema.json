@@ -8,6 +8,30 @@
     "doc_id": { "type": "string" },
     "title": { "type": "string" },
     "summary": { "type": "string" },
+    "publisher": { "type": "string" },
+    "provenance_roles": {
+      "type": "object",
+      "properties": {
+        "publication_name": { "type": "string" },
+        "publisher_name": { "type": "string" },
+        "author_names": { "type": "array", "items": { "type": "string" } },
+        "author_kind": { "type": "string", "enum": ["person", "organization", "unknown"] },
+        "data_provider_names": { "type": "array", "items": { "type": "string" } },
+        "source_organization_names": { "type": "array", "items": { "type": "string" } },
+        "report_owner_name": { "type": "string" },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "role": { "type": "string" },
+              "name": { "type": "string" },
+              "source_excerpt": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
     "family_status": {
       "type": "object",
       "required": [

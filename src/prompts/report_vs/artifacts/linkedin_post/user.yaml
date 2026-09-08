@@ -3,7 +3,7 @@ includes:
 text: |
   Context (authoritative sources only):
   - Editorial plan (primary thematic authority, JSON): {{ editorial_plan_json }}
-  - Report context including title, publisher/source, and scope (JSON): {{ doc_map_json }}
+  - Report context including separate provenance roles, title, publisher, author/byline, data providers, and scope (JSON): {{ doc_map_json }}
   - Validated representative insights (supporting evidence, JSON): {{ insights_final_json }}
   - Metric spine (supporting evidence, JSON): {{ metric_spine_json }}
 
@@ -15,7 +15,7 @@ text: |
   - Use the editorial plan to select one central, source-supported insight, tension, or implication. Do not turn the post into a mini-summary.
   - For a broad report, explicitly frame the post as one representative angle or lens from the report; do not imply that it summarises the whole report. For a narrow report, the post may express the overall report thesis.
   - Open with a concrete insight, tension, implication, or material metric, not generic framing.
-  - Near the beginning, naturally name the report publisher/source from the report context when known.
+  - Near the beginning, naturally name the report publisher/publication from `provenance_roles.publisher_name` when known. A named byline may be named separately. Never attribute the report to an organisation listed only as a data or research provider.
   - Explain why the selected angle matters, then use two to four supporting proof points from final insights and the metric spine. Use no more than four quantitative proof points. Select the four or fewer quantitative proof points before drafting, then use no more than four distinct numerical values in the post; a percentage and its comparison value count separately. Do not introduce any additional number, percentage, currency figure, volume, or comparison beyond that selection. A report title or source period may include its year without counting as a proof point.
   - Add one distinct, source-supported interpretation or decision implication. An optional closing may ask a genuine professional question or state a clear implication.
   - Write for experienced ecommerce, digital, and strategy operators in a concise, confident, human voice. Use direct prose, not labels such as "Executive takeaway:", "Observation:", or "Implication:".

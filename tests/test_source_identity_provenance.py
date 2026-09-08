@@ -12,6 +12,8 @@ from src.contracts.report_store import (
     SourceIdentityObservation,
     SourceIdentityObservationRecordRequest,
     SourceIdentityResolution,
+    SourceProvenanceEvidence,
+    SourceProvenanceRoles,
 )
 from src.services.report_store_service import (
     get_report_source_identity,
@@ -89,6 +91,66 @@ def test_source_identity_contract_round_trips() -> None:
         observation_count=1,
     )
     assert SourceIdentityResolution(**asdict(resolution)) == resolution
+
+
+def test_source_identity_resolves_explicit_publication_roles_over_legacy_publisher(
+    tmp_path,
+) -> None:
+    ctx = new_run_context(task_id="source_identity_distinct_provenance_roles")
+    db_path = str(tmp_path / "reports.sqlite")
+    source = _record_source(
+        db_path=db_path,
+        title="Digital 2022: Sweden",
+        md5="digital-2022-sweden",
+        url="https://datareportal.com/reports/digital-2022-sweden",
+        ctx=ctx,
+    )
+    roles = SourceProvenanceRoles(
+        schema_version="1.0",
+        publication_name="DataReportal",
+        publisher_name="DataReportal",
+        author_names=("Simon Kemp",),
+        author_kind="person",
+        data_provider_names=("Kepios", "Ookla"),
+        source_organization_names=("Kepios", "Ookla"),
+        report_owner_name="Kepios",
+        status="resolved",
+        resolution_method="deterministic_source_visible_evidence",
+        evidence=(
+            SourceProvenanceEvidence(
+                schema_version="1.0",
+                role="publisher",
+                name="DataReportal",
+                evidence_kind="pdf_metadata_title_brand",
+                evidence_locator="pdf_metadata:Title",
+                evidence_hash="a" * 64,
+            ),
+        ),
+    )
+
+    recorded = record_source_identity_observation(
+        SourceIdentityObservationRecordRequest(
+            schema_version="1.0",
+            db_path=db_path,
+            observation=replace(
+                _observation(
+                    source_record_id=source.record_id,
+                    date="2022-02-15",
+                    date_status="verified",
+                ),
+                canonical_title="Digital 2022: Sweden",
+                publisher_name="Kepios",
+                content_hash="md5:digital-2022-sweden",
+                provenance_roles=roles,
+            ),
+        ),
+        ctx,
+    ).resolution
+
+    assert recorded.publisher_name == "DataReportal"
+    assert recorded.provenance_roles.author_names == ("Simon Kemp",)
+    assert recorded.provenance_roles.data_provider_names == ("Kepios", "Ookla")
+    assert recorded.provenance_roles.report_owner_name == "Kepios"
 
 
 def test_source_identity_migrates_v18_and_preserves_conflicting_observations(

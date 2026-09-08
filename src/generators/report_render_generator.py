@@ -142,6 +142,13 @@ def _public_source_note(runtime: ReportRuntimeState) -> str:
         note = f"Source: {title}"
     else:
         return ""
+    roles = getattr(identity, "provenance_roles", None)
+    authors = tuple(getattr(roles, "author_names", ()) or ())
+    providers = tuple(getattr(roles, "data_provider_names", ()) or ())
+    if authors:
+        note = f"{note}; by {authors[0]}"
+    if providers:
+        note = f"{note}. Underlying data: {', '.join(providers)}"
     if str(
         getattr(identity, "identity_status", "") or ""
     ).casefold() == "resolved" and not _verified_public_source_url(runtime):
@@ -287,6 +294,18 @@ def _resolved_identity_publisher(runtime: ReportRuntimeState) -> str:
     if str(getattr(identity, "identity_status", "") or "").casefold() != "resolved":
         return ""
     return str(getattr(identity, "publisher_name", "") or "").strip()
+
+
+def _resolved_identity_author(runtime: ReportRuntimeState) -> tuple[str, str]:
+    identity = runtime.source_identity
+    if str(getattr(identity, "identity_status", "") or "").casefold() != "resolved":
+        return "", "unknown"
+    roles = getattr(identity, "provenance_roles", None)
+    names = tuple(getattr(roles, "author_names", ()) or ())
+    return (
+        str(names[0]).strip() if names else "",
+        str(getattr(roles, "author_kind", "unknown") or "unknown"),
+    )
 
 
 def _source_derived_publisher(analysis: ReportAnalysisState) -> str:
@@ -609,6 +628,7 @@ def render_report_output(
     public_publication_date = _publication_date(runtime)
     existing_title = str(render_data_dict.get("title") or "").strip()
     existing_publisher = str(render_data_dict.get("publisher") or "").strip()
+    identity_author, identity_author_kind = _resolved_identity_author(runtime)
     existing_time_period = str(render_data_dict.get("time_period") or "").strip()
     if render_meta is None:
         render_data_dict["title"] = _resolved_report_title(
@@ -670,6 +690,9 @@ def render_report_output(
     # attribution. Acquisition and archive locations remain retained-only.
     render_data_dict["source"] = _verified_public_source_url(runtime)
     render_data_dict["source_publication_date"] = public_publication_date
+    if identity_author:
+        render_data_dict["report_identity_author"] = identity_author
+        render_data_dict["report_identity_author_kind"] = identity_author_kind
     render_data_dict.pop("_source_download_href", None)
 
     doc_name = runtime.file_name
@@ -863,7 +886,6 @@ def render_report_output(
                 },
             )
         )
-
     cover_meta = dependencies.get_report_metadata(
         ReportMetadataGetRequest(
             schema_version="1.0",
@@ -1242,6 +1264,9 @@ def _source_fidelity_metadata(
         or str(analysis.payload.publisher or "").strip()
     )
     metadata = {"title": title, "publisher": publisher}
+    author, _author_kind = _resolved_identity_author(runtime)
+    if author:
+        metadata["author"] = author
     published = _publication_date(runtime)
     if published:
         metadata["publication_date"] = published

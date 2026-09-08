@@ -29,6 +29,8 @@ from src.contracts.report_store import (
     SourceIdentityObservationRecordRequest,
     SourceIdentityObservationRecordResponse,
     SourceIdentityResolution,
+    SourceProvenanceEvidence,
+    SourceProvenanceRoles,
     SourcePublicationMetadata,
     SourcePublicationMetadataUpsertRequest,
     SourcePublicationMetadataUpsertResponse,
@@ -78,6 +80,49 @@ _IDENTITY_PUBLICATION_RANK = {
     "document_inferred": 2,
     "unknown": 3,
 }
+
+
+def _provenance_roles_to_json(roles: SourceProvenanceRoles) -> str:
+    return json.dumps(asdict(roles), ensure_ascii=True, separators=(",", ":"))
+
+
+def _provenance_roles_from_json(raw: object) -> SourceProvenanceRoles:
+    if not isinstance(raw, str) or not raw.strip():
+        return SourceProvenanceRoles(schema_version="1.0")
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError:
+        return SourceProvenanceRoles(schema_version="1.0")
+    if not isinstance(payload, dict):
+        return SourceProvenanceRoles(schema_version="1.0")
+    evidence: list[SourceProvenanceEvidence] = []
+    for item in payload.get("evidence") or []:
+        if not isinstance(item, dict):
+            continue
+        evidence.append(
+            SourceProvenanceEvidence(
+                schema_version=str(item.get("schema_version") or "1.0"),
+                role=str(item.get("role") or ""),
+                name=str(item.get("name") or ""),
+                evidence_kind=str(item.get("evidence_kind") or ""),
+                evidence_locator=str(item.get("evidence_locator") or ""),
+                evidence_hash=str(item.get("evidence_hash") or ""),
+            )
+        )
+    return SourceProvenanceRoles(
+        schema_version=str(payload.get("schema_version") or "1.0"),
+        publication_name=str(payload.get("publication_name") or ""),
+        publisher_name=str(payload.get("publisher_name") or ""),
+        author_names=tuple(str(value) for value in payload.get("author_names") or [] if str(value).strip()),
+        author_kind=str(payload.get("author_kind") or "unknown"),
+        data_provider_names=tuple(str(value) for value in payload.get("data_provider_names") or [] if str(value).strip()),
+        source_organization_names=tuple(str(value) for value in payload.get("source_organization_names") or [] if str(value).strip()),
+        report_owner_name=str(payload.get("report_owner_name") or ""),
+        status=str(payload.get("status") or "unknown"),
+        resolution_method=str(payload.get("resolution_method") or ""),
+        issues=tuple(str(value) for value in payload.get("issues") or [] if str(value).strip()),
+        evidence=tuple(evidence),
+    )
 _REPORT_METADATA_IDENTITY_PLACEHOLDERS = {
     "",
     "...",
@@ -414,6 +459,7 @@ def _identity_observation_from_row(
         identity_confidence=str(row[18] or "unknown").strip() or "unknown",
         identity_issues=_identity_issues_from_json(row[19]),
         supersedes_source_identity_id=str(row[20] or "").strip(),
+        provenance_roles=_provenance_roles_from_json(row[21]),
     )
 
 
@@ -425,6 +471,7 @@ def _identity_resolution_hash(resolution: SourceIdentityResolution) -> str:
             "canonical_title": resolution.canonical_title,
             "publisher_id": resolution.publisher_id,
             "publisher_name": resolution.publisher_name,
+            "provenance_roles": asdict(resolution.provenance_roles),
             "canonical_landing_page_url": resolution.canonical_landing_page_url,
             "acquired_artifact_url": resolution.acquired_artifact_url,
             "source_page_url": resolution.source_page_url,
@@ -467,6 +514,7 @@ def _identity_resolution_from_row(row: tuple[object, ...]) -> SourceIdentityReso
         identity_status=str(row[21] or "unknown").strip() or "unknown",
         source_metadata_hash=str(row[22] or "").strip(),
         observation_count=coerce_int(row[23], min_value=0),
+        provenance_roles=_provenance_roles_from_json(row[24]),
     )
     return (
         resolution
@@ -500,6 +548,61 @@ def _first_identity_value(
     return ""
 
 
+def _provenance_publisher_rank(roles: SourceProvenanceRoles) -> int:
+    if not roles.publisher_name:
+        return 99
+    kinds = {evidence.evidence_kind for evidence in roles.evidence if evidence.role == "publisher"}
+    if "pdf_metadata_title_brand" in kinds or "explicit_report_brand" in kinds:
+        return 0
+    if "copyright" in kinds:
+        return 1
+    return 2
+
+
+def _resolve_provenance_roles(
+    observations: tuple[SourceIdentityObservation, ...],
+) -> SourceProvenanceRoles:
+    role_observations = [
+        observation.provenance_roles
+        for observation in observations
+        if observation.provenance_roles.publisher_name
+        or observation.provenance_roles.author_names
+        or observation.provenance_roles.data_provider_names
+        or observation.provenance_roles.report_owner_name
+    ]
+    if not role_observations:
+        return SourceProvenanceRoles(schema_version="1.0")
+    ranked = sorted(role_observations, key=_provenance_publisher_rank)
+    selected = ranked[0]
+    publisher_rank = _provenance_publisher_rank(selected)
+    same_rank_publishers = {
+        roles.publisher_name.casefold()
+        for roles in ranked
+        if _provenance_publisher_rank(roles) == publisher_rank and roles.publisher_name
+    }
+    issues = set(selected.issues)
+    publisher = selected.publisher_name
+    if len(same_rank_publishers) > 1:
+        publisher = ""
+        issues.add("publisher_conflict")
+    providers: dict[str, str] = {}
+    source_organizations: dict[str, str] = {}
+    for roles in ranked:
+        for name in roles.data_provider_names:
+            providers.setdefault(name.casefold(), name)
+        for name in roles.source_organization_names:
+            source_organizations.setdefault(name.casefold(), name)
+    return replace(
+        selected,
+        publication_name=selected.publication_name or publisher,
+        publisher_name=publisher,
+        data_provider_names=tuple(providers.values()),
+        source_organization_names=tuple(source_organizations.values()),
+        status="conflicting" if "publisher_conflict" in issues else selected.status,
+        issues=tuple(sorted(issues)),
+    )
+
+
 def _identity_conflict_issues(
     observations: tuple[SourceIdentityObservation, ...],
 ) -> tuple[str, ...]:
@@ -515,9 +618,19 @@ def _identity_conflict_issues(
         ("canonical_landing_page_url", "canonical_landing_page_url_conflict"),
     ):
         values = {
-            str(getattr(observation, field_name) or "").strip().casefold()
+            (
+                observation.provenance_roles.publisher_name
+                if field_name == "publisher_name"
+                and observation.provenance_roles.publisher_name
+                else str(getattr(observation, field_name) or "").strip()
+            ).casefold()
             for observation in observations
-            if str(getattr(observation, field_name) or "").strip()
+            if (
+                observation.provenance_roles.publisher_name
+                if field_name == "publisher_name"
+                and observation.provenance_roles.publisher_name
+                else str(getattr(observation, field_name) or "").strip()
+            )
         }
         if len(values) > 1:
             issues.add(issue)
@@ -549,12 +662,14 @@ def _resolve_identity_observations(
             resolution, source_metadata_hash=_identity_resolution_hash(resolution)
         )
     chosen = min(observations, key=_observation_sort_key)
+    provenance_roles = _resolve_provenance_roles(observations)
     issues = _identity_conflict_issues(observations)
+    issues = tuple(sorted(set(issues) | set(provenance_roles.issues)))
     content_hash = _first_identity_value(observations, "content_hash")
     identity_material = content_hash or "|".join(
         (
             _first_identity_value(observations, "canonical_landing_page_url"),
-            _first_identity_value(observations, "publisher_name").casefold(),
+            (provenance_roles.publisher_name or _first_identity_value(observations, "publisher_name")).casefold(),
             _first_identity_value(observations, "canonical_title").casefold(),
         )
     )
@@ -581,7 +696,11 @@ def _resolve_identity_observations(
             observations, "title_evidence_locator"
         ),
         publisher_id=_first_identity_value(observations, "publisher_id"),
-        publisher_name=_first_identity_value(observations, "publisher_name"),
+        publisher_name=(
+            provenance_roles.publisher_name
+            or _first_identity_value(observations, "publisher_name")
+        ),
+        provenance_roles=provenance_roles,
         canonical_landing_page_url=_first_identity_value(
             observations, "canonical_landing_page_url"
         ),
@@ -669,7 +788,7 @@ def _identity_observations_for_source(
                publication_date_evidence_locator, discovered_at_utc,
                retrieved_at_utc, acquisition_route, content_hash,
                resolution_method, identity_confidence, identity_issues_json,
-               supersedes_source_identity_id
+               supersedes_source_identity_id, provenance_roles_json
         FROM source_identity_observations
         WHERE source_record_id=?
         ORDER BY observation_id ASC
@@ -690,6 +809,7 @@ def _store_identity_resolution(
         "title_evidence_locator",
         "publisher_id",
         "publisher_name",
+        "provenance_roles_json",
         "canonical_landing_page_url",
         "acquired_artifact_url",
         "source_page_url",
@@ -717,6 +837,7 @@ def _store_identity_resolution(
         resolution.title_evidence_locator,
         resolution.publisher_id,
         resolution.publisher_name,
+        _provenance_roles_to_json(resolution.provenance_roles),
         resolution.canonical_landing_page_url,
         resolution.acquired_artifact_url,
         resolution.source_page_url,
@@ -807,8 +928,9 @@ def record_source_identity_observation(
                 publication_date, publication_date_status,
                 publication_date_evidence_locator, discovered_at_utc, retrieved_at_utc,
                 acquisition_route, content_hash, resolution_method, identity_confidence,
-                identity_issues_json, supersedes_source_identity_id, created_at_utc
-            ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                identity_issues_json, supersedes_source_identity_id,
+                provenance_roles_json, created_at_utc
+            ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                      strftime('%Y-%m-%dT%H:%M:%fZ','now'))
             """,
             (
@@ -837,6 +959,7 @@ def record_source_identity_observation(
                     separators=(",", ":"),
                 ),
                 observation.supersedes_source_identity_id,
+                _provenance_roles_to_json(observation.provenance_roles),
             ),
         )
         resolution = _resolve_identity_observations(
@@ -955,7 +1078,8 @@ def get_report_source_identity(
                        discovered_at_utc, retrieved_at_utc, acquisition_route,
                        content_hash, resolution_method, identity_confidence,
                        identity_issues_json, supersedes_source_identity_id,
-                       identity_status, source_metadata_hash, observation_count
+                       identity_status, source_metadata_hash, observation_count,
+                       provenance_roles_json
                 FROM source_identity_resolutions WHERE source_record_id=?
                 """,
                 (source_record_id,),

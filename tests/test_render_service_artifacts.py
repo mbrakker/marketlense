@@ -1391,3 +1391,30 @@ def test_render_creates_missing_nested_output_directory(tmp_path):
 
     assert out_dir.exists()
     assert Path(response.html_path).exists()
+
+
+def test_render_json_ld_keeps_named_author_distinct_from_publisher(tmp_path):
+    response = render_report(
+        RenderRequest(
+            schema_version="1.0",
+            data={
+                "title": "Digital 2022: Sweden",
+                "publisher": "DataReportal",
+                "report_identity_author": "Simon Kemp",
+                "report_identity_author_kind": "person",
+                "artifacts": {"summary": {"tldr": "Source-backed summary."}},
+            },
+            doc_name="digital-2022-sweden.pdf",
+            file_id="digital-2022-sweden",
+            out_dir=str(tmp_path),
+            preview_png=None,
+        ),
+        _ctx(),
+    )
+
+    html = Path(response.html_path).read_text(encoding="utf-8")
+    json_ld = json.loads(
+        re.search(r'<script type="application/ld\+json">(.*?)</script>', html).group(1)
+    )
+    assert json_ld["publisher"] == {"@type": "Organization", "name": "DataReportal"}
+    assert json_ld["author"] == {"@type": "Person", "name": "Simon Kemp"}

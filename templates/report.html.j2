@@ -518,6 +518,9 @@
               {% if not view.source_download_href and not view.source_url %}
               <p class="muted">Source URL: Not available</p>
               {% endif %}
+              {% if view.source_attribution %}
+              <p class="muted">{{ view.source_attribution }}</p>
+              {% endif %}
             </div>
             <div class="method-list">
               {% for card in view.editorial_cards if card["items"] %}

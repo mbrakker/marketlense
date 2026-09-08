@@ -7,6 +7,7 @@ regeneration orchestrator can route without rewriting passing artifacts.
 
 from __future__ import annotations
 
+import json
 import re
 from collections import Counter
 from dataclasses import asdict
@@ -804,9 +805,12 @@ def _issue(
 ) -> PublicEditorialQualityIssue:
     evidence_ids = list(item.get("evidence_ids") or [])
     eligible = bool(
-        evidence_ids
-        and str(item.get("evidence_text") or "").strip()
-        and item.get("repair_target")
+        item.get("repair_target") == "metadata"
+        or (
+            evidence_ids
+            and str(item.get("evidence_text") or "").strip()
+            and item.get("repair_target")
+        )
     )
     return PublicEditorialQualityIssue(
         report_id=str(report_id),
@@ -1087,6 +1091,7 @@ def _metadata_issues(
 ) -> list[PublicEditorialQualityIssue]:
     """Fail closed when rendered metadata conflicts with retained identity evidence."""
     actual = dict(artifacts.get("public_metadata") or {})
+    json_ld_actual: dict[str, str] = {}
     if html:
         document = BeautifulSoup(html, "html.parser")
         title_node = document.select_one("h1#report-title")
@@ -1105,6 +1110,19 @@ def _metadata_issues(
                     if label.casefold() == "published"
                     else label.casefold()
                 ] = value.strip()
+        for node in document.select('script[type="application/ld+json"]'):
+            try:
+                payload = json.loads(node.get_text(strip=True))
+            except (TypeError, json.JSONDecodeError):
+                continue
+            if not isinstance(payload, dict):
+                continue
+            for field_name in ("publisher", "author"):
+                value = payload.get(field_name)
+                if isinstance(value, dict):
+                    name = str(value.get("name") or "").strip()
+                    if name:
+                        json_ld_actual[field_name] = name
     if not actual:
         return []
     issues: list[PublicEditorialQualityIssue] = []
@@ -1145,6 +1163,33 @@ def _metadata_issues(
                     }
                 )
             )
+    for field_name in ("publisher", "author"):
+        expected = str(metadata_evidence.get(field_name) or "").strip()
+        observed = json_ld_actual.get(field_name, "")
+        if not expected or not observed or _normalized_text(expected) == _normalized_text(observed):
+            continue
+        item = _item(
+            "rendered_html",
+            f"json_ld.{field_name}",
+            observed,
+            [],
+            "metadata",
+        )
+        issue = _issue(
+            report_id,
+            "public_editorial_quality.metadata_identity",
+            item,
+            "JSON-LD does not match retained source identity evidence",
+        )
+        issues.append(
+            PublicEditorialQualityIssue(
+                **{
+                    **issue.__dict__,
+                    "hard_fail_class": "incorrect_publisher_author_attribution",
+                    "severity": "error",
+                }
+            )
+        )
     return issues
 
 

@@ -844,6 +844,29 @@ def run_report_analysis(
     )
 
     doc_map_pack = packs.get("doc_map", {})
+    provenance_roles = getattr(runtime.source_identity, "provenance_roles", None)
+    source_publisher = str(
+        getattr(provenance_roles, "publisher_name", "") or ""
+    ).strip()
+    artifact_doc_map = dict(doc_map_pack) if isinstance(doc_map_pack, dict) else {}
+    if source_publisher:
+        artifact_doc_map["publisher"] = source_publisher
+    if provenance_roles is not None:
+        artifact_doc_map["provenance_roles"] = asdict(provenance_roles)
+    if artifact_doc_map != doc_map_pack:
+        packs["doc_map"] = artifact_doc_map
+        doc_map_path = dependencies.analysis_store_pack(
+            AnalysisStorePackRequest(
+                schema_version="1.0",
+                output_dir=runtime.settings.output_dir,
+                report_id=ReportId(runtime.file.file_id),
+                pack_name="doc_map",
+                payload=artifact_doc_map,
+                report_slug=runtime.report_name,
+            ),
+            mode_ctx,
+        ).output_path
+        mode_evidence_paths["doc_map"] = doc_map_path
     if isinstance(doc_map_pack, dict):
         doc_map_title, resolved_publisher, title_source, publisher_source = (
             resolve_doc_map_metadata(doc_map_pack)
@@ -851,7 +874,9 @@ def run_report_analysis(
         source_title = str(getattr(source.title_resolution, "title", "") or "").strip()
         if doc_map_title and not source_title:
             data.title = doc_map_title
-        if resolved_publisher:
+        if source_publisher:
+            data.publisher = source_publisher
+        elif resolved_publisher:
             data.publisher = resolved_publisher
         if doc_map_title or resolved_publisher:
             logger.info(
@@ -888,7 +913,7 @@ def run_report_analysis(
         artifacts_payload = dependencies.generate_artifacts(
             report_id=runtime.file.file_id,
             report_name=runtime.report_name,
-            doc_map=packs.get("doc_map", {}),
+            doc_map=artifact_doc_map,
             evidence_packs=packs,
             settings=runtime.settings,
             vector_store_id=vector_state.vector_store_id,
@@ -1154,9 +1179,21 @@ def run_report_analysis(
     data_dict["evidence_packs"] = packs
     if validation_report:
         data_dict["validation_report"] = validation_report.to_dict()
-    data_dict["report_identity_author"] = resolve_doc_map_primary_contributor(
-        packs.get("doc_map", {}) if isinstance(packs.get("doc_map"), dict) else {}
+    source_authors = tuple(getattr(provenance_roles, "author_names", ()) or ())
+    data_dict["report_identity_author"] = (
+        str(source_authors[0]).strip()
+        if source_authors
+        else resolve_doc_map_primary_contributor(
+            packs.get("doc_map", {})
+            if isinstance(packs.get("doc_map"), dict)
+            else {}
+        )
     )
+    data_dict["report_identity_author_kind"] = str(
+        getattr(provenance_roles, "author_kind", "unknown") or "unknown"
+    )
+    if provenance_roles is not None:
+        data_dict["source_provenance_roles"] = asdict(provenance_roles)
     data_dict["categories_display"] = category_assignment.category_labels
     data_dict["analysis_mode"] = runtime.analysis_mode
     data_dict["regeneration_loop_state"] = asdict(regeneration_loop_state)

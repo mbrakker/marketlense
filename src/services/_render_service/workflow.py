@@ -65,8 +65,15 @@ def render_report(request: RenderRequest, ctx: RunContext) -> RenderResponse:
         "@type": "Article",
         "headline": view["report_title"],
         "description": view["seo"]["description"],
-        "author": {"@type": "Organization", "name": view["publisher"]}
-        if view["publisher"]
+        "author": {
+            "@type": (
+                "Organization"
+                if view["report_author_kind"] == "organization"
+                else "Person"
+            ),
+            "name": view["report_author"],
+        }
+        if view["report_author"]
         else None,
         "publisher": {"@type": "Organization", "name": view["publisher"]}
         if view["publisher"]

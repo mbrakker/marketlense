@@ -1175,3 +1175,27 @@ def test_public_item_inventory_and_identity_evidence_fail_closed_atomically() ->
         "public_metadata:metadata:edition",
     ) in hard_failures
     assert report.publishable is False
+
+
+def test_json_ld_provenance_conflict_fails_metadata_only_repair() -> None:
+    report = evaluate_public_editorial_quality(
+        report_id="digital-2022-sweden",
+        artifacts={},
+        metadata_evidence={"publisher": "DataReportal", "author": "Simon Kemp"},
+        html=(
+            '<h1 id="report-title">Digital 2022: Sweden</h1>'
+            '<script type="application/ld+json">'
+            '{"publisher":{"@type":"Organization","name":"Kepios"},'
+            '"author":{"@type":"Organization","name":"Kepios"}}'
+            "</script>"
+        ),
+    )
+
+    assert report.publishable is False
+    assert {
+        (issue.affected_field, issue.hard_fail_class, issue.repair_target)
+        for issue in report.issues
+    } >= {
+        ("json_ld.publisher", "incorrect_publisher_author_attribution", "metadata"),
+        ("json_ld.author", "incorrect_publisher_author_attribution", "metadata"),
+    }

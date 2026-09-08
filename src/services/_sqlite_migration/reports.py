@@ -26,6 +26,7 @@ from src.services._sqlite_migration._reports.projections import (
     _reports_db_023_create_corpus_rehabilitation_campaigns,
     _reports_db_027_create_source_reuse_telemetry,
     _reports_db_028_add_source_reuse_attribution_statuses,
+    _reports_db_029_add_source_provenance_roles,
 )
 from src.services._sqlite_migration._reports.routing import (
     _reports_db_006_create_or_upgrade_download_route_history,
@@ -215,5 +216,10 @@ _REPORTS_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
         migration_id="reports_db_028_add_source_reuse_attribution_statuses",
         version=28,
         apply_fn=_reports_db_028_add_source_reuse_attribution_statuses,
+    ),
+    _MigrationSpec(
+        migration_id="reports_db_029_add_source_provenance_roles",
+        version=29,
+        apply_fn=_reports_db_029_add_source_provenance_roles,
     ),
 )

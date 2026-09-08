@@ -180,6 +180,25 @@ def _build_render_view(
         _coerce_dict(doc_map.get("publisher")).get("name"),
     )
     report_author = _s(data.get("report_identity_author"))
+    report_author_kind = _s(data.get("report_identity_author_kind")) or "unknown"
+    provenance_roles = _coerce_dict(data.get("source_provenance_roles"))
+    provider_names = [
+        _s(value)
+        for value in _coerce_list(provenance_roles.get("data_provider_names"))
+        if _s(value)
+    ]
+    source_attribution_parts = [
+        f"Publication: {publisher}" if publisher else "",
+        f"Byline: {report_author}" if report_author else "",
+        (
+            f"Underlying data: {', '.join(provider_names)}"
+            if provider_names
+            else ""
+        ),
+    ]
+    source_attribution = " · ".join(
+        part for part in source_attribution_parts if part
+    )
     region = _s(data.get("region"))
     time_period = _s(data.get("time_period"))
     focus_year = _extract_focus_year(
@@ -319,6 +338,8 @@ def _build_render_view(
     return {
         "report_title": report_title,
         "publisher": publisher,
+        "report_author": report_author,
+        "report_author_kind": report_author_kind,
         "region": region,
         "focus_year": focus_year,
         "edition": public_dates["edition"],
@@ -328,6 +349,7 @@ def _build_render_view(
         "source_url": source_url,
         "canonical_url": canonical_url,
         "source_download_href": source_download_href,
+        "source_attribution": source_attribution,
         "fallback_reason": _s(source_status.get("reason")),
         "not_available": not_available,
         "core_signal": core_signal,

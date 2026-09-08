@@ -380,6 +380,20 @@ def _reports_db_028_add_source_reuse_attribution_statuses(
         )
 
 
+def _reports_db_029_add_source_provenance_roles(conn: sqlite3.Connection) -> None:
+    """Persist distinct publisher, byline, provider, and ownership roles."""
+    for table_name in (
+        "source_identity_observations",
+        "source_identity_resolutions",
+    ):
+        _add_column_if_missing(
+            conn,
+            table_name=table_name,
+            column_name="provenance_roles_json",
+            column_type="TEXT NOT NULL DEFAULT '{}'",
+        )
+
+
 def _reports_db_023_create_corpus_rehabilitation_campaigns(
     conn: sqlite3.Connection,
 ) -> None:

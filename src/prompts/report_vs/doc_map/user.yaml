@@ -7,7 +7,13 @@ text: |
     - title
     - publisher
     - summary (document-level brief)
-  - When an explicitly named publisher or organization appears in branding, title, byline, copyright, contact, or report prose, set `publisher` to that exact organization name. Do not leave it empty in that case.
+  - Preserve source provenance roles in `provenance_roles`; none is required when unsupported.
+    - `publisher_name` and `publication_name`: only explicit publication/site/report branding, then explicit report publisher, then copyright/report owner.
+    - `author_names`: only an explicit named or corporate byline. A byline is not a publisher.
+    - `data_provider_names`: organizations cited as data or research sources. A cited provider is never a publisher merely because it appears in report prose.
+    - `source_organization_names` and `report_owner_name`: only when explicitly stated.
+    - Each populated role needs a short exact `source_excerpt` in `evidence`.
+  - Use `publisher` only for the explicit publisher/publication identity. Leave it empty if source evidence is ambiguous; do not infer it from a filename, taxonomy, cited provider, or byline.
   - Capture all major report sections in source order.
   - For each section, include:
     - id
