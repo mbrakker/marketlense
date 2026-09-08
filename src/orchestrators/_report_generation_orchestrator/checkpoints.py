@@ -19,7 +19,7 @@ from src.contracts.files import (
     PipelineStageCheckpoint,
 )
 from src.contracts.ingest import IngestOutcome, IngestSettings
-from src.contracts.pdf_text import PdfTextExtractResponse
+from src.contracts.pdf_text import PdfTextExtractResponse, PdfTextPage
 from src.contracts.pdf_utils import PdfInfoResponse
 from src.contracts.prompt_family_materialization import (
     PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
@@ -1147,6 +1147,14 @@ def _source_text_payload(source: ReportSourceState) -> dict:
         "pages_extracted": int(getattr(text, "pages_extracted", 0) or 0),
         "char_count": int(getattr(text, "char_count", 0) or 0),
         "text_density": float(getattr(text, "text_density", 0.0) or 0.0),
+        "pages": [
+            {
+                "page_number": int(getattr(page, "page_number", 0) or 0),
+                "text": str(getattr(page, "text", "") or ""),
+            }
+            for page in list(getattr(text, "pages", []) or [])
+            if int(getattr(page, "page_number", 0) or 0) > 0
+        ],
     }
 
 
@@ -1289,6 +1297,15 @@ def _source_state_from_checkpoint(
             pages_extracted=int(text_raw["pages_extracted"]),
             char_count=int(text_raw["char_count"]),
             text_density=float(text_raw.get("text_density") or 0.0),
+            pages=[
+                PdfTextPage(
+                    page_number=int(item["page_number"]), text=str(item["text"])
+                )
+                for item in list(text_raw.get("pages") or [])
+                if isinstance(item, dict)
+                and isinstance(item.get("page_number"), int)
+                and isinstance(item.get("text"), str)
+            ],
         ),
         text_status=dict(raw_source["text_status"]),
         text_validation_status=str(raw_source["text_validation_status"]),

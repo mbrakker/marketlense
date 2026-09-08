@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Literal
 
+from src.contracts.protected_facts import ProtectedFactComparison
+
 CLAIM_VALIDATION_SCHEMA_VERSION = "1.0"
 ClaimKind = Literal["numeric", "quotation", "descriptive", "causal", "interpretive"]
 ClaimValidationStatus = Literal[
@@ -59,6 +61,7 @@ class ClaimValidationResult:
     checks: list[ClaimValidationCheck] = field(default_factory=list)
     status: ClaimValidationStatus = field(default="unresolved")
     reasons: list[str] = field(default_factory=list)
+    protected_facts: ProtectedFactComparison | None = field(default=None)
     semantic_validator_used: bool = field(default=False)
     semantic_execution_identity: str = field(default="")
 

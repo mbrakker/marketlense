@@ -41,6 +41,10 @@ def test_derive_metric_spine_from_insights_uses_embedded_metric_contract() -> No
             "baseline": "",
             "delta": "",
             "sample_size": "",
+            "subject": "",
+            "cohort": "",
+            "denominator": "",
+            "observation_status": "",
             "confidence": "high",
             "missing_context_notes": ["geography"],
             "evidence_id": "q5",
@@ -152,8 +156,7 @@ def test_legacy_metric_label_never_truncates_us_or_uk_abbreviations(
     assert not spine[0]["label"].endswith(("U.S.", "U.K."))
 
 
-def test_legacy_multi_metric_insight_uses_the_sentence_for_its_metric_not_the_first_sentence(
-) -> None:
+def test_legacy_multi_metric_insight_uses_sentence_for_its_metric_not_first() -> None:
     spine = derive_metric_spine_from_insights(
         [
             {
@@ -172,8 +175,9 @@ def test_legacy_multi_metric_insight_uses_the_sentence_for_its_metric_not_the_fi
     assert "Search retained" not in spine[0]["label"]
 
 
-def test_legacy_metric_omits_key_figure_when_no_metric_specific_label_is_reliable(
-) -> None:
+def test_legacy_metric_omits_key_figure_when_no_metric_specific_label_is_reliable() -> (
+    None
+):
     insight = {
         "id": "legacy-ambiguous",
         "text": "Search held 42% share; 19.2%.",
@@ -184,7 +188,9 @@ def test_legacy_metric_omits_key_figure_when_no_metric_specific_label_is_reliabl
     assert derive_metric_spine_from_insights([insight]) == []
 
 
-def test_legacy_metric_uses_its_complete_clause_when_supporting_metrics_follow() -> None:
+def test_legacy_metric_uses_its_complete_clause_when_supporting_metrics_follow() -> (
+    None
+):
     spine = derive_metric_spine_from_insights(
         [
             {
@@ -299,7 +305,9 @@ def test_metric_spine_renders_one_clean_primary_metric(
         [
             {
                 "id": "primary-metric",
-                "text": "The source-backed insight retains supporting numbers in prose.",
+                "text": (
+                    "The source-backed insight retains supporting numbers in prose."
+                ),
                 "evidence_id": "iab-primary-metric",
                 "metric": {
                     "label": "Source-backed primary metric",
@@ -411,7 +419,9 @@ def test_build_executive_advisory_artifacts_separates_decision_roles() -> None:
             "limitations": {
                 "limitations": [
                     {
-                        "description": "The report does not compare every merchant segment."
+                        "description": (
+                            "The report does not compare every merchant segment."
+                        )
                     }
                 ]
             },
@@ -804,7 +814,7 @@ __all__ = [
     "test_iab_19_2_key_figure_uses_its_explicit_digital_video_label",
     "test_activate_2026_128_million_key_figure_uses_its_explicit_metric_label",
     "test_legacy_metric_label_never_truncates_us_or_uk_abbreviations",
-    "test_legacy_multi_metric_insight_uses_the_sentence_for_its_metric_not_the_first_sentence",
+    "test_legacy_multi_metric_insight_uses_sentence_for_its_metric_not_first",
     "test_legacy_metric_omits_key_figure_when_no_metric_specific_label_is_reliable",
     "test_legacy_metric_uses_its_complete_clause_when_supporting_metrics_follow",
     "test_legacy_metric_omits_a_lowercase_clause_without_a_complete_subject",

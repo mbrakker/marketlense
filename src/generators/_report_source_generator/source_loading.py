@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 # ruff: noqa: F401,F403,F405,F821
-
 import hashlib
 import random
 from typing import Optional
@@ -26,9 +25,9 @@ from src.generators.report_source_cache import (
 )
 from src.utils.logging import child_context, log_event
 
+from .cache_io import _adapt_cached_contents, _adapt_cached_pdf_info, _adapt_cached_text
 from .shared import *  # noqa: F401,F403
 from .shared import TextStatus
-from .cache_io import _adapt_cached_contents, _adapt_cached_pdf_info, _adapt_cached_text
 
 
 def _select_sample_pages(
@@ -373,6 +372,10 @@ def _load_text(
                 "pages_extracted": text_resp.pages_extracted,
                 "char_count": text_resp.char_count,
                 "text_density": text_resp.text_density,
+                "pages": [
+                    {"page_number": page.page_number, "text": page.text}
+                    for page in text_resp.pages
+                ],
             },
             ctx=text_ctx,
             dependencies=dependencies,

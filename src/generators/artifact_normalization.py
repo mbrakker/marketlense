@@ -964,6 +964,57 @@ def fallback_artifact_insights_from_findings(
     return normalize_artifact_insights(raw_candidates, prefix="finding")
 
 
+def fallback_artifact_insights_from_evidence(
+    findings_pack: Any,
+    quote_candidates_pack: Any,
+    *,
+    limit: int = 5,
+) -> List[Dict[str, Any]]:
+    """Build replacement candidates from fidelity-approved findings and quotes.
+
+    Callers must pass the evidence packs after fidelity exclusion. Quotes are
+    only used to fill a short findings pool, keeping replacement copy tied to
+    an existing evidence identifier and a PDF-validated source excerpt.
+    """
+    if limit <= 0:
+        return []
+    candidates = fallback_artifact_insights_from_findings(findings_pack, limit=limit)
+    seen_evidence_ids = {
+        normalize_text(_s(item.get("evidence_id")))
+        for item in candidates
+        if isinstance(item, dict)
+    }
+    raw_quotes = (
+        quote_candidates_pack.get("quote_candidates")
+        if isinstance(quote_candidates_pack, dict)
+        else []
+    )
+    if not isinstance(raw_quotes, list):
+        return candidates
+    for quote in raw_quotes:
+        if len(candidates) >= limit:
+            break
+        if not isinstance(quote, dict):
+            continue
+        evidence_id = _s(quote.get("id") or quote.get("evidence_id")).strip()
+        text = _s(quote.get("text")).strip()
+        normalized_id = normalize_text(evidence_id)
+        if not evidence_id or not text or normalized_id in seen_evidence_ids:
+            continue
+        page = quote.get("page")
+        candidates.append(
+            {
+                "id": evidence_id,
+                "text": text,
+                "evidence_id": evidence_id,
+                "evidence": text,
+                "pages": [page] if isinstance(page, int) and page > 0 else [],
+            }
+        )
+        seen_evidence_ids.add(normalized_id)
+    return normalize_artifact_insights(candidates, prefix="evidence")
+
+
 def _insight_duplicate_key(item: Dict[str, Any]) -> tuple[str, str] | None:
     text = normalize_text(_s(item.get("text")))
     if not text:

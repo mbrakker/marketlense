@@ -179,6 +179,8 @@ def test_pdf_text_service_facade_preserves_contracts_and_logs(
     assert "Market Lense synthetic PDF text" in text_response.text
     assert text_response.pages_extracted == 2
     assert text_response.text_density > 0
+    assert [page.page_number for page in text_response.pages] == [1, 2]
+    assert "Market Lense synthetic PDF text" in text_response.pages[0].text
     assert sample_response.any_text is True
     assert [sample.page_number for sample in sample_response.samples] == [1, 2]
     assert all(sample.word_count > 0 for sample in sample_response.samples)

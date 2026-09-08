@@ -32,6 +32,12 @@ from src.generators.analysis_store_adapter import (
 from src.generators.analysis_store_adapter import (
     store_pack as store_analysis_pack,
 )
+from src.generators.claim_validation_generator import (
+    _evidence_fidelity_candidates,
+    _source_index,
+    exclude_untrusted_evidence,
+    validate_evidence_fidelity,
+)
 from src.generators.evidence_packs.base import EvidencePackStrategy
 from src.generators.evidence_packs.doc_map_strategy import (
     normalize_payload as normalize_doc_map_payload,
@@ -52,6 +58,7 @@ from src.generators.structured_output_execution import (
     recovery_prompt_bundle,
 )
 from src.generators.validation.relationships import period_time_pairs
+from src.generators.validation.semantic import run_semantic_validation
 from src.services import file_service, prompt_service, report_analysis_store_service
 from src.services.prompt_family_materialization_service import (
     materialize_prompt_family,
@@ -102,9 +109,7 @@ def _findings_prompt_user_variables(
                     "title": section_title,
                     "summary": str(raw_section.get("summary") or "").strip(),
                     "key_points": [
-                        str(point).strip()
-                        for point in key_points
-                        if str(point).strip()
+                        str(point).strip() for point in key_points if str(point).strip()
                     ]
                     if isinstance(key_points, list)
                     else [],
@@ -287,6 +292,7 @@ def generate_evidence_packs(
     publisher_name: str = "",
     source_url: str = "",
     source_text: str = "",
+    source_spans: Optional[list[dict[str, object]]] = None,
     *,
     openai_client=None,
     prompt_client=prompt_service,
@@ -519,6 +525,69 @@ def generate_evidence_packs(
             )
     for strategy in parallel_strategies:
         results[strategy.pack_name] = parallel_results[strategy.pack_name]
+    validated_source_spans = source_spans or (
+        [{"id": "source:document", "text": source_text}] if source_text.strip() else []
+    )
+    if validated_source_spans:
+        initial_fidelity = validate_evidence_fidelity(
+            results, source_spans=validated_source_spans
+        )
+        candidate_texts = {
+            candidate.claim_id: text
+            for candidate, text in _evidence_fidelity_candidates(
+                results, _source_index(validated_source_spans)
+            )
+        }
+
+        def semantic_fallback(candidate, sources):
+            outcome = run_semantic_validation(
+                insights=[
+                    {
+                        "id": candidate.claim_id,
+                        "text": candidate_texts.get(candidate.claim_id, ""),
+                        "metric": {},
+                        "evidence_id": candidate.claim_id,
+                    }
+                ],
+                quotes=[],
+                evidence_texts=sources,
+                settings=settings,
+                prompt_client=prompt_client,
+                openai_client=openai_client,
+                ctx=child_context(ctx, task_id=f"{ctx.task_id}:evidence_fidelity"),
+                publisher_name=publisher_name,
+                report_name=report_name,
+                source_url=source_url,
+                report_id=report_id,
+                source_id=md5 or "",
+            )
+            support = outcome.metric_support.get(candidate.claim_id)
+            return (
+                bool(support and support.supported),
+                support.reason if support else "semantic_support_not_established",
+                outcome.execution_identity,
+            )
+
+        fidelity = (
+            validate_evidence_fidelity(
+                results,
+                source_spans=validated_source_spans,
+                semantic_validator=semantic_fallback,
+            )
+            if initial_fidelity.unresolved_factual_count
+            else initial_fidelity
+        )
+        results = exclude_untrusted_evidence(results, fidelity)
+        results["evidence_fidelity"] = asdict(fidelity)
+        _store_pack(
+            analysis_store=analysis_store,
+            output_dir=settings.output_dir,
+            report_id=report_id,
+            pack_name="evidence_fidelity",
+            payload=results["evidence_fidelity"],
+            ctx=ctx,
+            report_name=report_name,
+        )
     logger.info(
         log_event(
             ctx,

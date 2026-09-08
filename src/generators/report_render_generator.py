@@ -59,6 +59,13 @@ _GENERATED_REPORT_TITLE = re.compile(
     r"^[0-9a-f]{32,64}(?:[-_.](?:pdf|report))?$", re.IGNORECASE
 )
 _SOURCE_ID_TITLE = re.compile(r"^source[-_:][A-Za-z0-9_-]{20,}$", re.IGNORECASE)
+_GENERIC_PUBLIC_TITLES = {
+    "document",
+    "presentation",
+    "powerpoint presentation",
+    "report",
+    "untitled",
+}
 _HTML_RENDER_CONTRACT_VERSION = "2.0"
 
 
@@ -232,7 +239,41 @@ def _resolved_identity_title(runtime: ReportRuntimeState) -> str:
     if str(getattr(identity, "identity_status", "") or "").casefold() != "resolved":
         return ""
     title = unquote(str(getattr(identity, "canonical_title", "") or "")).strip()
-    return "" if _is_runtime_generated_title(runtime, title) else title
+    return "" if _is_unusable_public_title(runtime, title) else title
+
+
+def _is_unusable_public_title(runtime: ReportRuntimeState, value: object) -> bool:
+    title = unquote(str(value or "")).strip()
+    return (
+        not title
+        or _is_runtime_generated_title(runtime, title)
+        or (title.casefold() in _GENERIC_PUBLIC_TITLES)
+    )
+
+
+def _humanized_source_title(value: object) -> str:
+    """Turn an acquired source filename into a readable, publisher-neutral title."""
+    raw = unquote(str(value or "")).strip().replace("\\", "/").rsplit("/", 1)[-1]
+    raw = re.sub(r"\.pdf$", "", raw, flags=re.IGNORECASE)
+    if not raw or _is_generated_report_title(raw):
+        return ""
+    title = re.sub(r"[._-]+", " ", raw)
+    title = " ".join(title.split())
+    return "" if title.casefold() in _GENERIC_PUBLIC_TITLES else title
+
+
+def _source_title_fallback(runtime: ReportRuntimeState) -> str:
+    identity = runtime.source_identity
+    for value in (
+        getattr(identity, "canonical_title", ""),
+        runtime.report_title,
+        runtime.file_name,
+        getattr(runtime.file, "name", ""),
+    ):
+        title = _humanized_source_title(value)
+        if title:
+            return title
+    return ""
 
 
 def _resolved_identity_publisher(runtime: ReportRuntimeState) -> str:
@@ -267,7 +308,7 @@ def _resolved_render_title(
     candidate: object,
 ) -> str:
     title = str(candidate or runtime.report_title).strip()
-    if title and not _is_runtime_generated_title(runtime, title):
+    if not _is_unusable_public_title(runtime, title):
         return title
     identity_title = _resolved_identity_title(runtime)
     if identity_title:
@@ -275,9 +316,9 @@ def _resolved_render_title(
     metadata_title = unquote(
         str(source.info_response.metadata.get("Title") or "")
     ).strip()
-    if metadata_title and not _is_runtime_generated_title(runtime, metadata_title):
+    if not _is_unusable_public_title(runtime, metadata_title):
         return metadata_title
-    return title
+    return ""
 
 
 def _resolved_report_title(
@@ -293,13 +334,13 @@ def _resolved_report_title(
         if candidate is not None
         else (analysis.payload.title or runtime.report_title),
     )
-    if resolved and not _is_runtime_generated_title(runtime, resolved):
+    if resolved:
         return resolved
     doc_map = analysis.evidence_packs.get("doc_map") or {}
     doc_map_title = unquote(str(doc_map.get("title") or "")).strip()
-    if doc_map_title and not _is_runtime_generated_title(runtime, doc_map_title):
+    if not _is_unusable_public_title(runtime, doc_map_title):
         return doc_map_title
-    return resolved
+    return _source_title_fallback(runtime)
 
 
 def _build_metadata_upsert_request(
@@ -694,6 +735,7 @@ def render_report_output(
         if report_card_manifest_path:
             readiness_path, readiness_status = _persist_publish_readiness(
                 runtime=runtime,
+                source=source,
                 analysis=analysis,
                 dependencies=dependencies,
                 final_html_path=out_html,
@@ -1000,6 +1042,7 @@ def render_report_output(
 
     readiness_path, readiness_status = _persist_publish_readiness(
         runtime=runtime,
+        source=source,
         analysis=analysis,
         dependencies=dependencies,
         final_html_path=out_html,
@@ -1041,6 +1084,7 @@ def render_report_output(
 def _persist_publish_readiness(
     *,
     runtime: ReportRuntimeState,
+    source: ReportSourceState,
     analysis: ReportAnalysisState,
     dependencies: ReportRenderDependencies,
     final_html_path: str,
@@ -1083,7 +1127,7 @@ def _persist_publish_readiness(
         policy_hash=runtime.ctx.policy_hash,
         producer_revision=runtime.ctx.producer_commit_sha,
         provenance=_source_provenance(runtime),
-        metadata_evidence=_source_fidelity_metadata(runtime, analysis),
+        metadata_evidence=_source_fidelity_metadata(runtime, source, analysis),
     )
     response = dependencies.analysis_store_pack(
         AnalysisStorePackRequest(
@@ -1116,13 +1160,16 @@ def _persist_publish_readiness(
 
 
 def _source_fidelity_metadata(
-    runtime: ReportRuntimeState, analysis: ReportAnalysisState
+    runtime: ReportRuntimeState,
+    source: ReportSourceState,
+    analysis: ReportAnalysisState,
 ) -> dict[str, str]:
     """Retained source identity expected on public report metadata surfaces."""
-    title = _resolved_identity_title(runtime) or str(analysis.payload.title or "").strip()
-    publisher = _resolved_identity_publisher(runtime) or str(
-        analysis.payload.publisher or ""
-    ).strip()
+    title = _resolved_report_title(runtime, source, analysis)
+    publisher = (
+        _resolved_identity_publisher(runtime)
+        or str(analysis.payload.publisher or "").strip()
+    )
     metadata = {"title": title, "publisher": publisher}
     published = _publication_date(runtime)
     if published:

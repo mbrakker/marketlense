@@ -7,6 +7,19 @@ from src.contracts.pdf_context import PdfContext
 
 
 @dataclass(frozen=True)
+class PdfTextPage:
+    """Extracted text and one-based provenance for a source-PDF page."""
+
+    page_number: int = field(
+        metadata={"doc": "One-based page number from the source PDF."}
+    )
+    text: str = field(metadata={"doc": "Extracted text retained for this page."})
+    schema_version: str = field(
+        default="1.0", metadata={"doc": "PDF extracted-text page schema version."}
+    )
+
+
+@dataclass(frozen=True)
 class PdfTextExtractRequest:
     schema_version: str = field(
         metadata={"doc": "PDF text extract request schema version."}
@@ -30,6 +43,12 @@ class PdfTextExtractResponse:
     char_count: int = field(metadata={"doc": "Number of characters returned."})
     text_density: float = field(
         default=0.0, metadata={"doc": "Characters per page across the sampled pages."}
+    )
+    pages: List[PdfTextPage] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Optional page-level extracted text retained with source provenance."
+        },
     )
 
 
@@ -108,6 +127,9 @@ class PdfTextSampleResponse:
     document_confidence_score: float = field(
         default=0.0,
         metadata={
-            "doc": "Deterministic native-text confidence score aggregated across sampled pages."
+            "doc": (
+                "Deterministic native-text confidence score aggregated across "
+                "sampled pages."
+            )
         },
     )

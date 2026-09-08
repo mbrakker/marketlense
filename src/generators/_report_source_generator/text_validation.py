@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 # ruff: noqa: F401,F403,F405,F821
-
 from src.contracts.pdf_context import PdfContext
 from src.contracts.pdf_ocr import PdfOcrFallbackResponse
 from src.contracts.pdf_text import (
     PdfTextExtractResponse,
+    PdfTextPage,
     PdfTextSampleRequest,
 )
 from src.contracts.report_generation import ReportRuntimeState
@@ -41,6 +41,10 @@ def _text_response_from_ocr_pages(
         pages_extracted=len(pages),
         char_count=len(text_out),
         text_density=density,
+        pages=[
+            PdfTextPage(page_number=page.page_number, text=str(page.text or ""))
+            for page in pages
+        ],
     )
 
 

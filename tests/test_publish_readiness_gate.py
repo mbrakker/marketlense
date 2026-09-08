@@ -283,6 +283,98 @@ def test_publish_readiness_ignores_absent_scalar_evidence_id_in_claim_ledger() -
     assert material_rule.status == "pass"
 
 
+def test_publish_readiness_ignores_quarantined_evidence_absent_from_final_html() -> (
+    None
+):
+    """Private audit failures cannot block a public artifact that never uses them."""
+    artifacts, evidence_packs, html, provenance = _ready_inputs()
+    evidence_packs["evidence_fidelity"] = {
+        "readiness_status": "blocked",
+        "unsupported_factual_count": 1,
+        "unresolved_factual_count": 0,
+        "results": [
+            {
+                "candidate": {
+                    "claim_id": "evidence:findings:F2",
+                    "factual": True,
+                },
+                "status": "unsupported",
+            }
+        ],
+    }
+
+    readiness = evaluate_publish_readiness(
+        report_id="report-1",
+        artifacts=artifacts,
+        evidence_packs=evidence_packs,
+        validation_report=ValidationReport(schema_version="1.1", status="pass"),
+        final_html=html,
+        final_html_path="",
+        category_ids=["markets"],
+        provenance=provenance,
+    )
+
+    fidelity = next(
+        item
+        for item in readiness.rule_results
+        if item.rule_id == "publish_readiness.evidence_fidelity"
+    )
+    assert readiness.status == "pass"
+    assert fidelity.status == "pass"
+    assert fidelity.detail == "audit_untrusted=1; rendered_untrusted=0"
+
+
+def test_publish_readiness_blocks_quarantined_evidence_rendered_in_final_html() -> None:
+    artifacts, evidence_packs, html, provenance = _ready_inputs()
+    quarantined_claim = "Unverified revenue is forecast to double."
+    artifacts["insights_final"].append(
+        {
+            "id": "I2",
+            "text": quarantined_claim,
+            "evidence_id": "F2",
+            "evidence": quarantined_claim,
+        }
+    )
+    evidence_packs["findings"]["findings"].append(
+        {"id": "F2", "snippet": quarantined_claim, "page": 2}
+    )
+    evidence_packs["evidence_fidelity"] = {
+        "readiness_status": "blocked",
+        "unsupported_factual_count": 1,
+        "unresolved_factual_count": 0,
+        "results": [
+            {
+                "candidate": {
+                    "claim_id": "evidence:findings:F2",
+                    "factual": True,
+                },
+                "status": "unsupported",
+            }
+        ],
+    }
+    html = html.replace("</body>", f"<p>{quarantined_claim}</p></body>")
+
+    readiness = evaluate_publish_readiness(
+        report_id="report-1",
+        artifacts=artifacts,
+        evidence_packs=evidence_packs,
+        validation_report=ValidationReport(schema_version="1.1", status="pass"),
+        final_html=html,
+        final_html_path="",
+        category_ids=["markets"],
+        provenance=provenance,
+    )
+
+    fidelity = next(
+        item
+        for item in readiness.rule_results
+        if item.rule_id == "publish_readiness.evidence_fidelity"
+    )
+    assert readiness.status == "fail"
+    assert fidelity.status == "fail"
+    assert fidelity.surfaces == ["rendered_html:evidence:F2"]
+
+
 def test_publish_readiness_payload_round_trips_and_rejects_malformed_surfaces() -> None:
     artifacts, evidence_packs, html, provenance = _ready_inputs()
     readiness = evaluate_publish_readiness(
@@ -392,7 +484,7 @@ def test_publish_readiness_rejects_malformed_plural_evidence_references() -> Non
         assert "invalid evidence reference shape" in rule.detail
 
 
-def test_publish_readiness_hard_blocks_an_unresolved_public_source_fidelity_failure() -> None:
+def test_publish_readiness_hard_blocks_unresolved_public_source_fidelity() -> None:
     artifacts, evidence_packs, html, provenance = _ready_inputs()
     artifacts["insights_final"][0].update(
         {
@@ -432,7 +524,10 @@ def test_publish_readiness_blocks_generic_title_and_wrong_publisher_identity() -
     )
     html = html.replace(
         "</body>",
-        "<ul class='meta-row'><li class='meta-pill'>Publisher: Wrong Publisher</li></ul></body>",
+        (
+            "<ul class='meta-row'><li class='meta-pill'>Publisher: Wrong "
+            "Publisher</li></ul></body>"
+        ),
     )
 
     readiness = evaluate_publish_readiness(

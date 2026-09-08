@@ -24,7 +24,9 @@ _GOLDEN_ARTIFACT = next(
     )
 )
 _TEMPORAL_FIXTURE_DIR = Path(__file__).parent / "fixtures" / "editorial_temporal"
-_RELATIONSHIP_FIXTURE_DIR = Path(__file__).parent / "fixtures" / "editorial_relationships"
+_RELATIONSHIP_FIXTURE_DIR = (
+    Path(__file__).parent / "fixtures" / "editorial_relationships"
+)
 
 
 def _retained_artifacts() -> dict:
@@ -113,7 +115,9 @@ def test_social_video_fixture_preserves_forecast_period_value_pairs() -> None:
     )
 
 
-def test_period_relationship_check_allows_an_implicit_shared_comparison_endpoint() -> None:
+def test_period_relationship_check_allows_an_implicit_shared_comparison_endpoint() -> (
+    None
+):
     evidence = (
         "Streaming viewing increased from 41% in 2022 to 70% in 2024, "
         "while traditional-TV viewing declined from 69% to 60%."
@@ -121,14 +125,15 @@ def test_period_relationship_check_allows_an_implicit_shared_comparison_endpoint
     report = evaluate_public_editorial_quality(
         report_id="streaming-comparison",
         artifacts=_temporal_artifacts(
-            text="Streaming reached 70% in 2024 while traditional TV remained 60% in 2024.",
+            text=(
+                "Streaming reached 70% in 2024 while traditional TV remained 60% "
+                "in 2024."
+            ),
             evidence=evidence,
         ),
     )
 
-    assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(
-        report
-    )
+    assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(report)
 
 
 def test_ordered_category_value_series_rejects_swapped_values_and_categories() -> None:
@@ -176,8 +181,7 @@ def test_same_value_under_multiple_categories_requires_its_claimed_category() ->
     assert "public_editorial_quality.metric_label_relationship" in _rule_ids(report)
 
 
-def test_relationship_check_rejects_value_attached_to_wrong_cohort_and_denominator(
-) -> None:
+def test_relationship_check_rejects_wrong_cohort_and_denominator() -> None:
     """Catch the cohort/value swap that token-presence checks would accept."""
     evidence = (
         "Super Users are 23% of users and account for 59% of total eCommerce spend. "
@@ -194,7 +198,9 @@ def test_relationship_check_rejects_value_attached_to_wrong_cohort_and_denominat
     assert "public_editorial_quality.metric_label_relationship" in _rule_ids(report)
 
 
-def test_relationship_check_applies_to_summary_expert_linkedin_and_key_figures() -> None:
+def test_relationship_check_applies_to_summary_expert_linkedin_and_key_figures() -> (
+    None
+):
     evidence = "Average daily social-video time: 2023 0:48; 2024E 0:52; 2028E 0:57."
     artifacts = _temporal_artifacts(
         text="Average daily social-video time reaches 0:48 in 2024E.", evidence=evidence
@@ -205,8 +211,12 @@ def test_relationship_check_applies_to_summary_expert_linkedin_and_key_figures()
             {"evidence_id": "temporal-evidence", "evidence": evidence}
         ],
     }
-    artifacts["expert_comment"] = "Average daily social-video time reaches 0:48 in 2024E."
-    artifacts["linkedin_post"] = "Average daily social-video time reaches 0:48 in 2024E."
+    artifacts["expert_comment"] = (
+        "Average daily social-video time reaches 0:48 in 2024E."
+    )
+    artifacts["linkedin_post"] = (
+        "Average daily social-video time reaches 0:48 in 2024E."
+    )
     artifacts["key_figures"] = [
         {
             "label": "Average daily social-video time reaches 0:48 in 2024E.",
@@ -241,19 +251,29 @@ def test_expert_relationship_failure_retains_only_the_rejected_evidence_id() -> 
         "insights_final": [
             {
                 "id": "growth",
-                "text": "Revenue is forecast to rise from $1.4T in 2020E to $1.6T in 2024E.",
+                "text": (
+                    "Revenue is forecast to rise from $1.4T in 2020E to $1.6T in 2024E."
+                ),
                 "evidence_id": "growth-evidence",
                 "evidence": "Revenue is forecast at $1.4T in 2020E and $1.6T in 2024E.",
             },
             {
                 "id": "subscriptions",
-                "text": "The average U.S. paid video streaming subscription owner had 4.1 subscriptions in 2020; the source forecasts 5.7 by 2024.",
+                "text": (
+                    "The average U.S. paid video streaming subscription owner had 4.1 "
+                    "subscriptions in 2020; the source forecasts 5.7 by 2024."
+                ),
                 "evidence_id": "subscription-evidence",
-                "evidence": "The chart reports 4.1 average paid video streaming subscriptions owned per subscriber in 2020 and states that Activate forecasts 5.7 by 2024.",
+                "evidence": (
+                    "The chart reports 4.1 average paid video streaming subscriptions "
+                    "owned per subscriber in 2020 and states that Activate forecasts "
+                    "5.7 by 2024."
+                ),
             },
         ],
         "expert_comment": (
-            "Average paid video streaming subscriptions per subscriber are forecast to rise from 4.1 to 5.7 in 2020-2024."
+            "Average paid video streaming subscriptions per subscriber are forecast to "
+            "rise from 4.1 to 5.7 in 2020-2024."
         ),
     }
 
@@ -276,9 +296,7 @@ def test_expert_relationship_failure_retains_only_the_rejected_evidence_id() -> 
         broad_retry_available=True,
     )
 
-    assert plan.targets[0].issues[0].excluded_evidence_ids == [
-        "subscription-evidence"
-    ]
+    assert plan.targets[0].issues[0].excluded_evidence_ids == ["subscription-evidence"]
 
 
 def test_relationship_failure_uses_existing_targeted_regeneration() -> None:
@@ -300,7 +318,9 @@ def test_relationship_failure_uses_existing_targeted_regeneration() -> None:
     assert [target.target_section for target in plan.targets] == ["insights_bundle"]
 
 
-def test_public_text_items_includes_compact_summary_tldr_with_summary_evidence() -> None:
+def test_public_text_items_includes_compact_summary_tldr_with_summary_evidence() -> (
+    None
+):
     artifacts = _compact_tldr_artifacts(
         text="U.S. internet advertising reached $258.6 billion in 2024.",
         evidence="U.S. internet advertising reached $258.6 billion in 2024.",
@@ -423,7 +443,8 @@ def test_temporal_integrity_blocks_lost_or_malformed_quarterly_comparison(
     text: str, evidence: str
 ) -> None:
     report = evaluate_public_editorial_quality(
-        report_id="activate-iab-temporal", artifacts=_temporal_artifacts(text=text, evidence=evidence)
+        report_id="activate-iab-temporal",
+        artifacts=_temporal_artifacts(text=text, evidence=evidence),
     )
 
     assert "public_editorial_quality.temporal_integrity" in _rule_ids(report)
@@ -464,7 +485,8 @@ def test_temporal_integrity_accepts_source_proven_distinct_comparisons(
     evidence: str,
 ) -> None:
     report = evaluate_public_editorial_quality(
-        report_id="temporal-periods", artifacts=_temporal_artifacts(text=evidence, evidence=evidence)
+        report_id="temporal-periods",
+        artifacts=_temporal_artifacts(text=evidence, evidence=evidence),
     )
 
     assert "public_editorial_quality.temporal_integrity" not in _rule_ids(report)
@@ -641,7 +663,10 @@ def test_public_html_allows_ellipsis_that_closes_a_quoted_prompt() -> None:
     report = evaluate_public_editorial_quality(
         report_id="retained-report",
         artifacts=_retained_artifacts(),
-        html="<p>Use the prompt “We are doing this because we believe…” to surface assumptions.</p>",
+        html=(
+            "<p>Use the prompt “We are doing this because we believe…” to surface "
+            "assumptions.</p>"
+        ),
     )
 
     assert "public_editorial_quality.literal_truncation" not in _rule_ids(report)
@@ -902,9 +927,7 @@ def test_incomplete_currency_display_routes_to_existing_insight_repair() -> None
         broad_retry_available=True,
     )
 
-    assert "public_editorial_quality.incomplete_numeric_expression" in _rule_ids(
-        report
-    )
+    assert "public_editorial_quality.incomplete_numeric_expression" in _rule_ids(report)
     assert plan.mode == "targeted"
     assert [target.target_section for target in plan.targets] == ["insights_bundle"]
 
@@ -1030,6 +1053,23 @@ def test_rule_waiver_requires_a_nonempty_reason() -> None:
     assert report.disabled_rule_waivers == {
         "public_editorial_quality.internal_identifier": "approved migration waiver"
     }
+
+
+def test_sentence_fragment_waiver_preserves_repairable_quality_status() -> None:
+    artifacts = deepcopy(_retained_artifacts())
+    artifacts["insights_final"][0].update({"text": "Across the market, and"})
+
+    report = evaluate_public_editorial_quality(
+        report_id="retained-report",
+        artifacts=artifacts,
+        disabled_rule_waivers={
+            "public_editorial_quality.sentence_fragment": "controlled rollout"
+        },
+    )
+
+    assert "public_editorial_quality.sentence_fragment" not in _rule_ids(report)
+    assert report.hard_fail_count == 0
+    assert report.status == "pass"
 
 
 def test_config_keeps_only_explicit_public_editorial_rule_waivers() -> None:

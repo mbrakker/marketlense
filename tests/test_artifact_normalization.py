@@ -2,12 +2,17 @@ from copy import deepcopy
 
 import pytest
 
+from src.contracts.artifact_generation import ArtifactRenderTask
 from src.contracts.run_context import RunContext
 from src.generators._artifact_generator.family_policy import (
     build_artifact_family_status,
 )
+from src.generators._artifact_generator.generation import (
+    _render_insights_candidates_or_defer_to_fallback,
+)
 from src.generators.artifact_normalization import (
     bind_artifact_evidence_spans,
+    fallback_artifact_insights_from_evidence,
     fallback_artifact_insights_from_findings,
     normalize_artifact_insights,
     normalize_artifact_summary,
@@ -20,11 +25,10 @@ from src.generators.public_editorial_quality_generator import (
 )
 from src.services.schema_validator_service import validate_output_schema
 from src.utils.errors import AppError
+from src.utils.structured_output import StructuredOutputFailure
 
 
-def test_normalize_artifact_insights_preserves_metric_label_scoring_and_strategy_fields() -> (
-    None
-):
+def test_normalize_artifact_insights_preserves_metric_fields() -> None:
     insights = normalize_artifact_insights(
         [
             {
@@ -348,9 +352,7 @@ def test_preserve_public_source_displays_repairs_unique_proven_values() -> None:
     assert quality.status == "pass"
 
 
-def test_preserve_public_source_displays_leaves_ambiguous_display_and_prose_unchanged() -> (
-    None
-):
+def test_preserve_public_source_displays_leaves_ambiguous_prose_unchanged() -> None:
     summary = {
         "tldr": "The report has a material outlook.",
         "card_tldr_compact": "The report has a material outlook.",
@@ -449,9 +451,7 @@ def test_source_displays_restore_exact_metric_comparisons() -> None:
     assert linkedin_post == expert_comment
 
 
-def test_source_display_preservation_replaces_unsupported_insight_number_with_evidence() -> (
-    None
-):
+def test_source_display_preservation_replaces_unsupported_number() -> None:
     source = (
         "There were 9.25 million social media users in January 2022; the number "
         "increased by 930 thousand (+11.2 percent) between 2021 and 2022."
@@ -846,6 +846,88 @@ def test_fallback_artifact_insights_uses_distinct_grounded_findings_only():
             "pages": [7],
         },
     ]
+
+
+def test_fallback_artifact_insights_uses_approved_quote_when_findings_are_short():
+    fallback = fallback_artifact_insights_from_evidence(
+        {
+            "findings": [
+                {
+                    "id": "finding_1",
+                    "text": "Verified market growth remains material.",
+                    "evidence": "The market grew 10.5%.",
+                    "pages": [2],
+                }
+            ]
+        },
+        {
+            "quote_candidates": [
+                {
+                    "id": "quote_1",
+                    "text": "Video now accounts for more than half of display.",
+                    "source": "Chief Economist, p. 5",
+                    "page": 5,
+                }
+            ]
+        },
+        limit=2,
+    )
+
+    assert [(item["evidence_id"], item["text"]) for item in fallback] == [
+        ("finding_1", "Verified market growth remains material."),
+        ("quote_1", "Video now accounts for more than half of display."),
+    ]
+    assert fallback[1]["evidence"] == (
+        "Video now accounts for more than half of display."
+    )
+    assert fallback[1]["pages"] == [5]
+
+
+def test_insight_candidate_structured_output_failure_defers_to_source_fallback():
+    ctx = RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
+    task = ArtifactRenderTask(
+        schema_version="1.0",
+        step_name="insights_candidates",
+        namespace="report_vs/artifacts/insights_candidates",
+        variables={},
+        ctx=ctx,
+    )
+
+    def terminal_model_failure(_: ArtifactRenderTask):
+        raise StructuredOutputFailure(
+            code="artifact_json_invalid",
+            message="Model did not produce a substantive artifact.",
+            artifact_family="insights_candidates",
+            response_text="not-json",
+            repair_attempt=2,
+        )
+
+    assert _render_insights_candidates_or_defer_to_fallback(
+        task, terminal_model_failure
+    ) == {"insights_candidates": [], "_deferred_to_source_fallback": True}
+
+
+def test_non_candidate_structured_output_failure_is_not_masked():
+    ctx = RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
+    task = ArtifactRenderTask(
+        schema_version="1.0",
+        step_name="summary",
+        namespace="report_vs/artifacts/summary",
+        variables={},
+        ctx=ctx,
+    )
+
+    def terminal_model_failure(_: ArtifactRenderTask):
+        raise StructuredOutputFailure(
+            code="artifact_json_invalid",
+            message="Model did not produce a substantive artifact.",
+            artifact_family="summary",
+            response_text="not-json",
+            repair_attempt=2,
+        )
+
+    with pytest.raises(StructuredOutputFailure):
+        _render_insights_candidates_or_defer_to_fallback(task, terminal_model_failure)
 
 
 def test_insights_family_abstains_when_fewer_than_two_grounded_claims_exist():

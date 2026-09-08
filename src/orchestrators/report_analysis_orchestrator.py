@@ -441,6 +441,15 @@ def run_report_analysis(
         else None
     )
     evidence_kwargs["vector_store_content_hash"] = vector_store_content_hash
+    source_spans = [
+        {
+            "id": f"source:page:{page.page_number}",
+            "page": page.page_number,
+            "text": page.text,
+        }
+        for page in source.text_response.pages
+        if page.page_number > 0 and page.text.strip()
+    ]
     if artifact_openai_client is not None:
         artifact_kwargs["openai_client"] = artifact_openai_client
 
@@ -481,6 +490,7 @@ def run_report_analysis(
                 publisher_name=runtime.publisher_name,
                 source_url=runtime.source_url,
                 source_text=source.text_response.text,
+                source_spans=source_spans,
                 **evidence_kwargs,
             )
             taxonomy_state, taxonomy_repaired = taxonomy_future.result()
@@ -546,6 +556,7 @@ def run_report_analysis(
                 publisher_name=runtime.publisher_name,
                 source_url=runtime.source_url,
                 source_text=source.text_response.text,
+                source_spans=source_spans,
                 **evidence_kwargs,
             )
         elif evidence_error is not None:
@@ -699,37 +710,36 @@ def run_report_analysis(
         )
         category_repaired = True
         category_repair_code = _category_fit_repair_code(context_category_state)
-        if category_repair_code:
-            if category_repair_code == "category_fit_contradiction":
-                abstained_fit_response = _abstain_unresolved_category_fits(
-                    context_category_state.fit_response
+        if category_repair_code == "category_fit_contradiction":
+            abstained_fit_response = _abstain_unresolved_category_fits(
+                context_category_state.fit_response
+            )
+            context_category_state = replace(
+                context_category_state,
+                category_assignment=CategoryAssignment(
+                    schema_version="1.1",
+                    categories=[],
+                    category_labels=[],
+                    unmapped_tags=[],
+                ),
+                fit_response=abstained_fit_response,
+            )
+            logger.info(
+                log_event(
+                    mode_ctx,
+                    role="orchestrator",
+                    event="context_category_fit_abstained_after_repair",
+                    module=logger.name,
+                    fields={
+                        "file_id": runtime.file.file_id,
+                        "candidate_ids": _category_fit_ambiguity_ids(
+                            context_category_state
+                        ),
+                        "repair_attempt": 1,
+                    },
                 )
-                context_category_state = replace(
-                    context_category_state,
-                    category_assignment=CategoryAssignment(
-                        schema_version="1.1",
-                        categories=[],
-                        category_labels=[],
-                        unmapped_tags=[],
-                    ),
-                    fit_response=abstained_fit_response,
-                )
-                logger.info(
-                    log_event(
-                        mode_ctx,
-                        role="orchestrator",
-                        event="context_category_fit_abstained_after_repair",
-                        module=logger.name,
-                        fields={
-                            "file_id": runtime.file.file_id,
-                            "candidate_ids": _category_fit_ambiguity_ids(
-                                context_category_state
-                            ),
-                            "repair_attempt": 1,
-                        },
-                    )
-                )
-                category_repair_code = ""
+            )
+            category_repair_code = ""
         if category_repair_code:
             raise AppError(
                 code=category_repair_code,

@@ -91,9 +91,13 @@ from which the next bounded attempt is planned.
 
 Before rendering, a resolved canonical source identity supplies the title and
 publisher when analysis or stored report metadata contains a generated
-file/checksum name or a placeholder publisher. This is a deterministic
-attribution fallback, not an inference: unresolved identities still reach the
-same blocking public-metadata gate. A missing verified public source URL does
+file/checksum name or a placeholder publisher. Generic embedded-document
+titles such as `PowerPoint Presentation` are not public titles. When no usable
+source title remains, the renderer derives a readable label only from the
+acquired source filename by removing its extension and separators; it does not
+infer report content or depend on a publisher-specific naming convention. This
+is a deterministic attribution fallback, not an inference: unresolved
+identities still reach the same blocking public-metadata gate. A missing verified public source URL does
 not block that package; the public attribution states `Source URL: Not
 available`.
 
@@ -346,6 +350,28 @@ recorded explicitly when a terminal earlier failure makes it unsafe to run.
 Each admitted report must finish with exactly one current state:
 `published_verified`, `publish_ready`, `blocked`, `permanent_failure`,
 `abstained`, `cancelled`, or `superseded`.
+
+After evidence-pack generation, before category or editorial artifact generation,
+the evidence-fidelity gate compares generated findings and quote candidates with
+retained PDF-derived source text. It records hashes, source provenance,
+deterministic quantity/quote/protected-fact checks, semantic execution identity
+when needed, and a supported/unsupported/unresolved disposition. Unsupported or
+unresolved factual entries are removed from the editorial input and are never
+used as downstream fallback material. When the candidate-insights model exhausts
+its bounded JSON repair sequence, artifact generation instead derives a bounded
+replacement pool from the remaining fidelity-approved findings and quotes; every
+replacement keeps one approved evidence ID and source excerpt. Other artifact
+families still fail explicitly. If the approved pool cannot supply an artifact
+family's minimum grounded content, the existing family policy records an
+abstention rather than recreating rejected material. Publish readiness compares
+the retained `evidence_fidelity` audit with material claims actually present in
+the final HTML: an unsupported or unresolved candidate blocks only when its
+evidence ID is linked to rendered text. Quarantined audit-only candidates do
+not block publication. Deterministic support avoids a model call; unresolved factual
+paraphrases use the existing semantic-validation boundary. Structured-output
+recovery and the bounded validation regeneration loop run automatically only
+for repairable artifacts, then promote a replacement solely after it passes the
+same evidence and validation gates.
 
 For the final repeat, pass `--require-full-validation-manifest`. It rejects a
 closure with a missing terminal state, incorrect current-attempt overlap,

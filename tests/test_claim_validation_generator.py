@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from src.generators.claim_validation_generator import validate_retained_claims
+from src.generators.claim_validation_generator import (
+    exclude_untrusted_evidence,
+    validate_evidence_fidelity,
+    validate_retained_claims,
+)
 
 
 def _evidence() -> dict:
@@ -9,7 +13,10 @@ def _evidence() -> dict:
             "findings": [
                 {
                     "id": "f1",
-                    "text": "Wallet adoption reached 42% in Global enterprise merchants in 2026.",
+                    "text": (
+                        "Wallet adoption reached 42% in Global enterprise merchants in "
+                        "2026."
+                    ),
                     "page": 4,
                 },
                 {"id": "q1", "text": "Wallets are now core checkout infrastructure."},
@@ -43,6 +50,480 @@ def test_numeric_and_quote_claims_pass_without_semantic_call() -> None:
     assert package.readiness_status == "awaiting_review"
     assert package.semantic_validation_count == 0
     assert package.unsupported_factual_count == 0
+
+
+def test_evidence_fidelity_rejects_a_generated_finding_with_the_wrong_number() -> None:
+    package = validate_evidence_fidelity(
+        {
+            "findings": {
+                "findings": [
+                    {
+                        "id": "f1",
+                        "text": "Digital advertising grew 28% in 2025.",
+                        "pages": [4],
+                    }
+                ]
+            }
+        },
+        source_spans=[
+            {
+                "id": "source:page:4",
+                "page": 4,
+                "text": "Digital advertising grew 18% in 2025.",
+            }
+        ],
+        semantic_validator=lambda *_: (_ for _ in ()).throw(AssertionError("unused")),
+    )
+
+    assert package.readiness_status == "not_publishable"
+    assert package.unsupported_factual_count == 1
+    assert package.results[0].status == "unsupported"
+    assert any(
+        check.reason == "quantity_not_entailed" for check in package.results[0].checks
+    )
+
+
+def test_evidence_fidelity_excludes_an_unsupported_finding_from_editorial_input() -> (
+    None
+):
+    packs = {"findings": {"findings": [{"id": "f1", "text": "Demand grew 28%."}]}}
+    package = validate_evidence_fidelity(
+        packs,
+        source_spans=[{"id": "source:1", "text": "Demand grew 18%."}],
+    )
+
+    trusted = exclude_untrusted_evidence(packs, package)
+
+    assert trusted["findings"]["findings"] == []
+
+
+def test_evidence_fidelity_rejects_a_matching_value_with_the_wrong_period() -> None:
+    package = validate_evidence_fidelity(
+        {
+            "findings": {
+                "findings": [
+                    {
+                        "id": "f1",
+                        "text": "Digital advertising grew 18% in 2026.",
+                        "pages": [4],
+                    }
+                ]
+            }
+        },
+        source_spans=[
+            {
+                "id": "source:page:4",
+                "page": 4,
+                "text": "Digital advertising grew 18% in 2025.",
+            }
+        ],
+        semantic_validator=lambda *_: (_ for _ in ()).throw(AssertionError("unused")),
+    )
+
+    assert package.results[0].status == "unsupported"
+    assert any(
+        check.reason == "protected_fact_timeframe_incompatible"
+        for check in package.results[0].checks
+    )
+
+
+def test_evidence_fidelity_rejects_a_matching_value_with_the_wrong_geography() -> None:
+    package = validate_evidence_fidelity(
+        {
+            "findings": {
+                "findings": [
+                    {
+                        "id": "f1",
+                        "text": "Advertising grew 18% in Asia in 2025.",
+                        "pages": [4],
+                    }
+                ]
+            }
+        },
+        source_spans=[
+            {
+                "id": "source:page:4",
+                "page": 4,
+                "text": "Advertising grew 18% in Europe in 2025.",
+            }
+        ],
+        semantic_validator=lambda *_: (_ for _ in ()).throw(AssertionError("unused")),
+    )
+
+    assert package.results[0].status == "unsupported"
+    assert any(
+        check.reason == "protected_fact_geography_incompatible"
+        for check in package.results[0].checks
+    )
+
+
+def test_evidence_fidelity_rejects_wrong_unit_and_recovers_exact_page_provenance() -> (
+    None
+):
+    wrong_unit = validate_evidence_fidelity(
+        {
+            "findings": {
+                "findings": [{"id": "f1", "text": "Revenue reached $18m.", "page": 4}]
+            }
+        },
+        source_spans=[
+            {"id": "source:page:4", "page": 4, "text": "Revenue reached 18%."}
+        ],
+        semantic_validator=lambda *_: (_ for _ in ()).throw(AssertionError("unused")),
+    )
+    recovered_page = validate_evidence_fidelity(
+        {"findings": {"findings": [{"id": "f2", "text": "Revenue reached 18%."}]}},
+        source_spans=[
+            {"id": "source:page:4", "page": 4, "text": "Revenue reached 18%."}
+        ],
+    )
+
+    assert wrong_unit.results[0].status == "unsupported"
+    assert any(
+        check.reason == "protected_fact_unit_currency_incompatible"
+        for check in wrong_unit.results[0].checks
+    )
+    assert recovered_page.results[0].status == "supported"
+    assert recovered_page.results[0].candidate.evidence_references[0].page == 4
+
+
+def test_evidence_fidelity_recovers_page_provenance_from_exact_source_text() -> None:
+    package = validate_evidence_fidelity(
+        {
+            "findings": {
+                "findings": [
+                    {
+                        "id": "f1",
+                        "text": "Advertising grew 18% in 2025.",
+                        "evidence": "Advertising grew 18% in 2025.",
+                    }
+                ]
+            }
+        },
+        source_spans=[
+            {"id": "source:page:3", "page": 3, "text": "Other text."},
+            {
+                "id": "source:page:4",
+                "page": 4,
+                "text": "Advertising grew 18% in 2025.",
+            },
+        ],
+    )
+
+    assert package.results[0].status == "supported"
+    assert package.results[0].candidate.evidence_references[0].page == 4
+
+
+def test_evidence_fidelity_does_not_treat_explanatory_evidence_as_the_claim() -> None:
+    package = validate_evidence_fidelity(
+        {
+            "findings": {
+                "findings": [
+                    {
+                        "id": "f1",
+                        "text": "Digital advertising grew 18% in 2025.",
+                        "evidence": (
+                            "The report says search advertising grew 18% in 2025."
+                        ),
+                        "pages": [4],
+                    }
+                ]
+            }
+        },
+        source_spans=[
+            {
+                "id": "source:page:4",
+                "page": 4,
+                "text": "Digital advertising grew 18% in 2025.",
+            }
+        ],
+    )
+
+    assert package.results[0].status == "supported"
+    assert not any(
+        check.reason == "protected_fact_population_incompatible"
+        for check in package.results[0].checks
+    )
+
+
+def test_evidence_fidelity_accepts_an_implicit_count_on_the_matched_page() -> None:
+    package = validate_evidence_fidelity(
+        {
+            "findings": {
+                "findings": [
+                    {
+                        "id": "f1",
+                        "text": "All 30 covered markets grew in 2025.",
+                        "pages": [4],
+                    }
+                ]
+            }
+        },
+        source_spans=[
+            {
+                "id": "source:page:4",
+                "page": 4,
+                "text": (
+                    "Every one of the 30 markets covered in this report grew in 2025."
+                ),
+            }
+        ],
+    )
+
+    assert package.results[0].status == "supported"
+
+
+def test_evidence_fidelity_ignores_a_rhetorical_growth_subject_prefix() -> None:
+    package = validate_evidence_fidelity(
+        {
+            "findings": {
+                "findings": [
+                    {
+                        "id": "f1",
+                        "text": (
+                            "Video and Social were major growth engines: total video "
+                            "advertising grew 19.6%."
+                        ),
+                        "pages": [4],
+                    }
+                ]
+            }
+        },
+        source_spans=[
+            {
+                "id": "source:page:4",
+                "page": 4,
+                "text": "Total video advertising grew 19.6%.",
+            }
+        ],
+    )
+
+    assert package.results[0].status == "supported"
+
+
+def test_evidence_fidelity_accepts_a_subject_stated_after_another_growth_fact() -> None:
+    package = validate_evidence_fidelity(
+        {
+            "findings": {
+                "findings": [
+                    {
+                        "id": "f1",
+                        "text": "Central European markets grew more than 20% in 2025.",
+                        "pages": [4],
+                    }
+                ]
+            }
+        },
+        source_spans=[
+            {
+                "id": "source:page:4",
+                "page": 4,
+                "text": (
+                    "Video advertising grew 19.6%. At the same time, Central European "
+                    "markets grew more than 20% in 2025."
+                ),
+            }
+        ],
+    )
+
+    assert package.results[0].status == "supported"
+
+
+def test_evidence_fidelity_accepts_equivalent_counted_market_subjects() -> None:
+    package = validate_evidence_fidelity(
+        {
+            "findings": {
+                "findings": [
+                    {
+                        "id": "f1",
+                        "text": "All 30 covered markets grew in 2025.",
+                        "pages": [4],
+                    }
+                ]
+            }
+        },
+        source_spans=[
+            {
+                "id": "source:page:4",
+                "page": 4,
+                "text": (
+                    "Every one of the 30 markets covered in this report grew in 2025."
+                ),
+            }
+        ],
+    )
+
+    assert package.results[0].status == "supported"
+
+
+def test_evidence_fidelity_does_not_recover_a_page_from_a_common_year_alone() -> None:
+    package = validate_evidence_fidelity(
+        {"findings": {"findings": [{"id": "f1", "text": "Revenue grew in 2025."}]}},
+        source_spans=[
+            {
+                "id": "source:page:4",
+                "page": 4,
+                "text": "An unrelated event happened in 2025.",
+            }
+        ],
+    )
+
+    assert package.results[0].status == "unsupported"
+    assert package.results[0].candidate.evidence_references == []
+
+
+def test_evidence_fidelity_rejects_subject_rank_and_comparison_inversions() -> None:
+    package = validate_evidence_fidelity(
+        {
+            "findings": {
+                "findings": [
+                    {
+                        "id": "subject",
+                        "text": "Retail media grew 18% compared with 2024.",
+                    },
+                    {"id": "rank", "text": "Retail media was first in 2025."},
+                ]
+            }
+        },
+        source_spans=[
+            {
+                "id": "source:1",
+                "text": (
+                    "Search advertising grew 18% compared with 2023. Retail media was "
+                    "second in 2025."
+                ),
+            }
+        ],
+        semantic_validator=lambda *_: (_ for _ in ()).throw(AssertionError("unused")),
+    )
+
+    reasons = {reason for result in package.results for reason in result.reasons}
+    assert "protected_fact_population_incompatible" in reasons
+    assert "protected_fact_comparison_incompatible" in reasons
+    assert "protected_fact_observation_status_incompatible" in reasons
+
+
+def test_evidence_fidelity_rejects_direction_and_attribution_inversions() -> None:
+    package = validate_evidence_fidelity(
+        {
+            "findings": {
+                "findings": [
+                    {
+                        "id": "direction",
+                        "text": "IAB reported advertising declined 18% in 2025.",
+                    },
+                    {
+                        "id": "attribution",
+                        "text": "WFA reported advertising grew 18% in 2025.",
+                    },
+                ]
+            }
+        },
+        source_spans=[
+            {
+                "id": "source:1",
+                "text": "IAB reported advertising grew 18% in 2025.",
+            }
+        ],
+        semantic_validator=lambda *_: (_ for _ in ()).throw(AssertionError("unused")),
+    )
+
+    assert {result.status for result in package.results} == {"unsupported"}
+    reasons = {reason for result in package.results for reason in result.reasons}
+    assert "protected_fact_direction_incompatible" in reasons
+    assert "protected_fact_attribution_incompatible" in reasons
+
+
+def test_evidence_fidelity_accepts_a_numeric_paraphrase_without_semantic_call() -> None:
+    package = validate_evidence_fidelity(
+        {
+            "findings": {
+                "findings": [
+                    {"id": "f1", "text": "Advertising increased by 18% during 2025."}
+                ]
+            }
+        },
+        source_spans=[{"id": "source:1", "text": "Advertising grew 18% in 2025."}],
+        semantic_validator=lambda *_: (_ for _ in ()).throw(AssertionError("unused")),
+    )
+
+    assert package.results[0].status == "supported"
+    assert package.semantic_validation_count == 0
+
+
+def test_evidence_fidelity_rejects_an_exact_value_provided_only_as_a_bound() -> None:
+    package = validate_evidence_fidelity(
+        {"findings": {"findings": [{"id": "f1", "text": "Advertising grew 52%."}]}},
+        source_spans=[{"id": "source:1", "text": "Advertising grew more than 20%."}],
+    )
+
+    assert package.results[0].status == "unsupported"
+    assert "quantity_not_entailed" in package.results[0].reasons
+
+
+def test_evidence_fidelity_semantics_for_unresolved_descriptions() -> None:
+    calls = []
+
+    def semantic(candidate, sources):
+        calls.append((candidate.claim_id, sources))
+        return True, "semantic_supported", "semantic-execution"
+
+    package = validate_evidence_fidelity(
+        {"findings": {"findings": [{"id": "f1", "text": "Advertising is maturing."}]}},
+        source_spans=[
+            {"id": "source:1", "text": "Advertising has become an established channel."}
+        ],
+        semantic_validator=semantic,
+    )
+
+    assert package.results[0].status == "supported"
+    assert len(calls) == 1
+    assert package.semantic_execution_identities == ["semantic-execution"]
+
+
+def test_evidence_fidelity_rejects_fabricated_quote_and_missing_provenance() -> None:
+    fabricated = validate_evidence_fidelity(
+        {
+            "quote_candidates": {
+                "quote_candidates": [{"id": "q1", "text": '"Fabricated quote."'}]
+            }
+        },
+        source_spans=[{"id": "source:1", "text": "A real source sentence."}],
+    )
+    missing = validate_evidence_fidelity(
+        {"findings": {"findings": [{"id": "f1", "text": "Advertising grew 18%."}]}},
+        source_spans=[],
+    )
+
+    assert fabricated.results[0].status == "unsupported"
+    assert missing.results[0].status != "supported"
+
+
+def test_evidence_fidelity_accepts_a_normalized_quote_and_keeps_unknown_unknown() -> (
+    None
+):
+    quote = validate_evidence_fidelity(
+        {
+            "quote_candidates": {
+                "quote_candidates": [
+                    {"id": "q1", "text": '"Payments are now core infrastructure."'}
+                ]
+            }
+        },
+        source_spans=[
+            {"id": "source:1", "text": "Payments are now core infrastructure."}
+        ],
+        semantic_validator=lambda *_: (_ for _ in ()).throw(AssertionError("unused")),
+    )
+    unknown = validate_evidence_fidelity(
+        {"findings": {"findings": [{"id": "f1", "text": "Advertising grew 18%."}]}},
+        source_spans=[{"id": "source:1", "text": "Advertising grew 18%."}],
+    )
+
+    assert quote.results[0].status == "supported"
+    assert quote.semantic_validation_count == 0
+    assert unknown.results[0].protected_facts is not None
+    assert unknown.results[0].protected_facts.dimension("timeframe").status == "unknown"
 
 
 def test_changed_numeric_claim_blocks_readiness_without_model_call() -> None:

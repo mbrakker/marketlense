@@ -20,6 +20,7 @@ class SemanticCheckOutcome:
     metric_support: Dict[str, SemanticSupport]
     quote_support: Dict[str, SemanticSupport]
     issues: List[ValidationIssue]
+    execution_identity: str = ""
 
 
 @dataclass(frozen=True)

@@ -382,6 +382,47 @@ def test_resolved_report_title_replaces_source_identifier_with_document_map_titl
     )
 
 
+def test_resolved_report_title_rejects_generic_pdf_metadata_and_humanizes_source_name(
+    tmp_path,
+) -> None:
+    raw_file_name = "IAB_Europe_AdEx_Benchmark_2025_updated.pdf"
+    runtime = replace(
+        _runtime(tmp_path, md5="md5"),
+        file=DriveFile(
+            schema_version="1.0",
+            file_id="file-1",
+            name=raw_file_name,
+            modified_time="2026-06-10T08:30:00Z",
+            md5_checksum="md5",
+        ),
+        file_name=raw_file_name,
+        report_name=raw_file_name.removesuffix(".pdf"),
+        report_title=raw_file_name.removesuffix(".pdf"),
+        source_identity=SimpleNamespace(
+            identity_status="resolved",
+            canonical_title=raw_file_name,
+            publisher_name="IAB Europe",
+        ),
+    )
+    source = replace(
+        _source(runtime),
+        info_response=replace(
+            _source(runtime).info_response,
+            metadata={"Title": "PowerPoint Presentation"},
+        ),
+    )
+    selection = _selection(runtime, source)
+    analysis = replace(
+        _analysis(runtime, source, selection),
+        payload=replace(source.payload, title=runtime.report_title),
+        evidence_packs={"doc_map": {}},
+    )
+
+    assert _resolved_report_title(runtime, source, analysis) == (
+        "IAB Europe AdEx Benchmark 2025 updated"
+    )
+
+
 def test_render_report_output_sources_metadata_from_db_and_returns_complete_outcome(
     tmp_path, assert_no_defaulted_required_fields
 ):

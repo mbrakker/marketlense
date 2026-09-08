@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 # ruff: noqa: F401,F403,F405,F821
-
 from src.contracts.pdf_contents import PdfContentsDetectionResponse
-from src.contracts.pdf_text import PdfTextExtractResponse
+from src.contracts.pdf_text import PdfTextExtractResponse, PdfTextPage
 from src.contracts.pdf_utils import PdfInfoResponse
 
 from .shared import *  # noqa: F401,F403
@@ -108,12 +107,23 @@ def _adapt_cached_text(payload: dict[str, object]) -> PdfTextExtractResponse | N
         or text_density is None
     ):
         return None
+    raw_pages = payload.get("pages")
+    pages = []
+    if isinstance(raw_pages, list):
+        for item in raw_pages:
+            if not isinstance(item, dict):
+                continue
+            page_number = _cached_int(item.get("page_number"))
+            page_text = _cached_str(item.get("text"))
+            if page_number is not None and page_text is not None:
+                pages.append(PdfTextPage(page_number=page_number, text=page_text))
     return PdfTextExtractResponse(
         schema_version="1.0",
         text=text,
         pages_extracted=pages_extracted,
         char_count=char_count,
         text_density=text_density,
+        pages=pages,
     )
 
 

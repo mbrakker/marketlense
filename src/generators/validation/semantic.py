@@ -130,7 +130,9 @@ def run_semantic_validation(
             module=LOGGER_NAME,
             fields={
                 "prompt_content_hash": prompt_bundle.prompt_content_hash,
-                "execution_identity": prompt_bundle.execution_identity.execution_identity,
+                "execution_identity": (
+                    prompt_bundle.execution_identity.execution_identity
+                ),
             },
         )
     )
@@ -356,9 +358,7 @@ def run_semantic_validation(
                     "has_json": isinstance(parsed, dict),
                     "attempt_count": recovery.attempts if reused_payload is None else 0,
                     "final_disposition": (
-                        recovery.disposition
-                        if reused_payload is None
-                        else "reused"
+                        recovery.disposition if reused_payload is None else "reused"
                     ),
                 },
             )
@@ -384,7 +384,12 @@ def run_semantic_validation(
                 },
             )
         )
-        return outcome
+        return SemanticCheckOutcome(
+            metric_support=outcome.metric_support,
+            quote_support=outcome.quote_support,
+            issues=outcome.issues,
+            execution_identity=prompt_bundle.execution_identity.execution_identity,
+        )
     except AppError as exc:
         if exc.retryable:
             logger.info(
@@ -481,7 +486,10 @@ def parse_semantic_response(payload: dict) -> SemanticCheckOutcome:
                 issues.append(
                     issue(
                         rule_id=RULE_ID,
-                        message=f"Semantic check: metric for {label} not supported{reason_suffix}",
+                        message=(
+                            f"Semantic check: metric for {label} not supported"
+                            f"{reason_suffix}"
+                        ),
                         severity=severity,
                         section=f"insights:{label}",
                     )
@@ -511,7 +519,10 @@ def parse_semantic_response(payload: dict) -> SemanticCheckOutcome:
                 issues.append(
                     issue(
                         rule_id=RULE_ID,
-                        message=f"Semantic check: quote {label} not supported{reason_suffix}",
+                        message=(
+                            f"Semantic check: quote {label} not supported"
+                            f"{reason_suffix}"
+                        ),
                         severity=severity,
                         section=f"quotes:{label}",
                     )

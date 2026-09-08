@@ -406,6 +406,7 @@ def evaluate_publish_readiness(
     results.append(_validation_result(validation_report))
     results.append(_category_result(safe_artifacts, category_ids, safe_packs))
     results.append(_material_evidence_result(safe_artifacts, safe_packs))
+    results.append(_evidence_fidelity_result(safe_artifacts, safe_packs, final_html))
     results.append(_regeneration_result(regeneration_attempts))
     results.append(
         _source_fidelity_result(
@@ -699,6 +700,89 @@ def _material_evidence_result(
     )
 
 
+def _evidence_fidelity_result(
+    artifacts: dict[str, Any],
+    evidence_packs: dict[str, dict[str, Any]],
+    final_html: str,
+) -> PublishReadinessRuleResult:
+    """Block only factual evidence that remains in the rendered public output."""
+    fidelity = evidence_packs.get("evidence_fidelity")
+    if not isinstance(fidelity, dict):
+        return _pass("publish_readiness.evidence_fidelity", ["evidence_fidelity"])
+    untrusted_ids = _untrusted_factual_evidence_ids(fidelity)
+    if not untrusted_ids:
+        return _pass("publish_readiness.evidence_fidelity", ["evidence_fidelity"])
+    rendered_ids = _rendered_material_evidence_ids(artifacts, final_html)
+    rendered_untrusted_ids = sorted(untrusted_ids & rendered_ids)
+    if rendered_untrusted_ids:
+        return _fail(
+            "publish_readiness.evidence_fidelity",
+            [
+                f"rendered_html:evidence:{evidence_id}"
+                for evidence_id in rendered_untrusted_ids
+            ],
+            (
+                f"audit_untrusted={len(untrusted_ids)}; "
+                f"rendered_untrusted={len(rendered_untrusted_ids)}"
+            ),
+        )
+    return _pass(
+        "publish_readiness.evidence_fidelity",
+        ["evidence_fidelity", "rendered_html"],
+        f"audit_untrusted={len(untrusted_ids)}; rendered_untrusted=0",
+    )
+
+
+def _untrusted_factual_evidence_ids(fidelity: dict[str, Any]) -> set[str]:
+    """Return only audit candidates whose factual support was not established."""
+    identifiers: set[str] = set()
+    for result in _dict_items(fidelity.get("results")):
+        candidate = result.get("candidate")
+        if not isinstance(candidate, dict) or candidate.get("factual") is not True:
+            continue
+        if str(result.get("status") or "").casefold() == "supported":
+            continue
+        claim_id = str(candidate.get("claim_id") or "").strip()
+        parts = claim_id.split(":", 2)
+        if len(parts) == 3 and parts[0] == "evidence" and parts[2].strip():
+            identifiers.add(parts[2].strip())
+    return identifiers
+
+
+def _rendered_material_evidence_ids(
+    artifacts: dict[str, Any], final_html: str
+) -> set[str]:
+    """Map retained material claims to evidence only when their text is public HTML."""
+    rendered_text = _normalized_public_text(
+        BeautifulSoup(final_html, "html.parser").get_text(" ", strip=True)
+    )
+    if not rendered_text:
+        return set()
+    identifiers: set[str] = set()
+    for family, item in _material_claim_items(artifacts):
+        claim_text = _material_claim_text(family, item)
+        if not claim_text or claim_text not in rendered_text:
+            continue
+        evidence_ids = _claim_evidence_ids(item)
+        if evidence_ids:
+            identifiers.update(evidence_ids)
+    return identifiers
+
+
+def _material_claim_text(family: str, item: dict[str, Any]) -> str:
+    if family == "summary.claim_evidence_map":
+        value = item.get("claim")
+    elif family == "claim_ledgers":
+        value = item.get("claim_text") or item.get("claim") or item.get("statement")
+    else:
+        value = item.get("text") or item.get("claim") or item.get("caption")
+    return _normalized_public_text(str(value or ""))
+
+
+def _normalized_public_text(value: object) -> str:
+    return " ".join(str(value or "").casefold().split())
+
+
 def _regeneration_result(
     regeneration_attempts: Iterable[object],
 ) -> PublishReadinessRuleResult:
@@ -938,14 +1022,10 @@ def _source_fidelity_result(
         return _fail(
             "publish_readiness.source_fidelity",
             sorted(
-                issue.public_item_id
-                for issue in hard_failures
-                if issue.public_item_id
+                issue.public_item_id for issue in hard_failures if issue.public_item_id
             ),
             "unresolved source-fidelity hard failure: "
-            + ", ".join(
-                sorted({issue.hard_fail_class for issue in hard_failures})
-            ),
+            + ", ".join(sorted({issue.hard_fail_class for issue in hard_failures})),
         )
     return _pass("publish_readiness.source_fidelity", ["public_items"])
 
@@ -1203,8 +1283,12 @@ def _parse_utc(value: str) -> datetime | None:
     return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
 
 
-def _pass(rule_id: str, surfaces: list[str]) -> PublishReadinessRuleResult:
-    return PublishReadinessRuleResult(rule_id=rule_id, status="pass", surfaces=surfaces)
+def _pass(
+    rule_id: str, surfaces: list[str], detail: str = ""
+) -> PublishReadinessRuleResult:
+    return PublishReadinessRuleResult(
+        rule_id=rule_id, status="pass", surfaces=surfaces, detail=detail
+    )
 
 
 def _fail(rule_id: str, surfaces: list[str], detail: str) -> PublishReadinessRuleResult:

@@ -29,6 +29,7 @@ from src.contracts.pdf_text import (
     PdfTextContainsResponse,
     PdfTextExtractRequest,
     PdfTextExtractResponse,
+    PdfTextPage,
     PdfTextSample,
     PdfTextSampleRequest,
     PdfTextSampleResponse,
@@ -376,12 +377,20 @@ def extract_pdf_text(
     try:
         pages = min(len(reader.pages), max(request.max_pages, 0))
         chunks = []
+        extracted_pages = []
+        remaining_chars = max(request.max_chars, 0)
         for i in range(pages):
             try:
                 text = reader.pages[i].extract_text() or ""
             except PDF_TEXT_EXCEPTIONS:
                 text = ""
             chunks.append(text)
+            if remaining_chars <= 0:
+                retained_text = ""
+            else:
+                retained_text = text[:remaining_chars]
+                remaining_chars -= len(retained_text)
+            extracted_pages.append(PdfTextPage(page_number=i + 1, text=retained_text))
         raw_text = "\n\n".join(chunks)
         text_out = raw_text[: max(request.max_chars, 0)]
         density = _compute_text_density(raw_text, pages)
@@ -391,6 +400,7 @@ def extract_pdf_text(
             pages_extracted=pages,
             char_count=len(text_out),
             text_density=density,
+            pages=extracted_pages,
         )
         logger.info(
             log_event(

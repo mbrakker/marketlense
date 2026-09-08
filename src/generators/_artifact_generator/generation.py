@@ -37,6 +37,7 @@ from src.generators.artifact_normalization import (
     artifact_vector_store_enabled,
     bind_artifact_evidence_spans,
     build_expert_synthesis_context,
+    fallback_artifact_insights_from_evidence,
     fallback_artifact_insights_from_findings,
     normalize_artifact_editorial_plan,
     normalize_artifact_evidence_ids,
@@ -61,6 +62,7 @@ from src.utils.costing import estimate_cost_usd, estimate_text_tokens
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.model_client_contract import require_injected_model_client
+from src.utils.structured_output import StructuredOutputFailure
 
 logger = logging.getLogger("market_lense.artifact_generator")
 
@@ -108,6 +110,30 @@ _ARTIFACT_FAMILY_ROOTS = {
     "report_vs/artifacts/expert_comment": "expert_comment",
     "report_vs/artifacts/linkedin_post": "linkedin_post",
 }
+
+
+def _render_insights_candidates_or_defer_to_fallback(
+    task: ArtifactRenderTask, renderer: ArtifactTaskRenderer
+) -> Dict[str, Any]:
+    """Allow only candidate JSON exhaustion to fall back to approved evidence."""
+    try:
+        return renderer(task)
+    except StructuredOutputFailure as exc:
+        if task.step_name != "insights_candidates":
+            raise
+        logger.warning(
+            log_event(
+                task.ctx,
+                role="generator",
+                event="artifact_insights_candidates_deferred_to_source_fallback",
+                module=logger.name,
+                fields={
+                    "failure_code": exc.code,
+                    "repair_attempt": exc.context.get("repair_attempt", 0),
+                },
+            )
+        )
+        return {"insights_candidates": [], "_deferred_to_source_fallback": True}
 
 
 def _execute_artifact_tasks_serial(
@@ -226,11 +252,14 @@ def generate_artifacts(
                     ctx=task.ctx,
                 )
 
-        return resolve_or_render_family(
-            namespace=task.namespace,
-            variables=task.variables,
-            ctx=task.ctx,
-            payload_validator=payload_validator,
+        return _render_insights_candidates_or_defer_to_fallback(
+            task,
+            lambda current_task: resolve_or_render_family(
+                namespace=current_task.namespace,
+                variables=current_task.variables,
+                ctx=current_task.ctx,
+                payload_validator=payload_validator,
+            ),
         )
 
     def resolve_or_render_family(
@@ -622,12 +651,25 @@ def generate_artifacts(
     final_insight_target_count = max(
         REQUIRED_REPORT_PAYLOAD_INSIGHTS, len(editorial_plan["themes"])
     )
-    fallback_candidates = fallback_artifact_insights_from_findings(
-        safe_evidence.get("findings"),
-        limit=max(
-            final_insight_target_count,
-            sum(len(theme["evidence_ids"]) for theme in editorial_plan["themes"]),
-        ),
+    fallback_limit = max(
+        final_insight_target_count,
+        sum(len(theme["evidence_ids"]) for theme in editorial_plan["themes"]),
+    )
+    candidate_generation_deferred = bool(
+        stage_one_results.get("insights_candidates", {}).get(
+            "_deferred_to_source_fallback"
+        )
+    )
+    fallback_candidates = (
+        fallback_artifact_insights_from_evidence(
+            safe_evidence.get("findings"),
+            safe_evidence.get("quote_candidates"),
+            limit=fallback_limit,
+        )
+        if candidate_generation_deferred
+        else fallback_artifact_insights_from_findings(
+            safe_evidence.get("findings"), limit=fallback_limit
+        )
     )
     insights_candidates = select_artifact_insights(
         final_insights=insights_candidates,

@@ -64,12 +64,19 @@ ADVISORY_RULE_IDS = {
 # publication even when every advisory quality measurement is excellent.
 HARD_FAIL_CLASS_BY_RULE_ID = {
     "public_editorial_quality.unsupported_numeric_claim": "incorrect_numeric_value",
-    "public_editorial_quality.incomplete_numeric_expression": "malformed_or_truncated_public_claim",
-    "public_editorial_quality.material_claim_evidence_missing": "unsupported_factual_claim",
-    "public_editorial_quality.literal_truncation": "malformed_or_truncated_public_claim",
-    "public_editorial_quality.malformed_extraction_fragment": "malformed_or_truncated_public_claim",
+    "public_editorial_quality.incomplete_numeric_expression": (
+        "malformed_or_truncated_public_claim"
+    ),
+    "public_editorial_quality.material_claim_evidence_missing": (
+        "unsupported_factual_claim"
+    ),
+    "public_editorial_quality.literal_truncation": (
+        "malformed_or_truncated_public_claim"
+    ),
+    "public_editorial_quality.malformed_extraction_fragment": (
+        "malformed_or_truncated_public_claim"
+    ),
     "public_editorial_quality.ocr_fragment": "malformed_or_truncated_public_claim",
-    "public_editorial_quality.sentence_fragment": "malformed_or_truncated_public_claim",
 }
 
 _INTERNAL_IDENTIFIER = re.compile(
@@ -229,9 +236,7 @@ def evaluate_public_editorial_quality(
     if html:
         issues.extend(_html_issues(report_id, html=html, html_path=html_path))
     issues.extend(
-        _metadata_issues(
-            report_id, safe_artifacts, metadata_evidence or {}, html=html
-        )
+        _metadata_issues(report_id, safe_artifacts, metadata_evidence or {}, html=html)
     )
 
     # Source-fidelity failures are an explicit release policy and are never
@@ -1027,7 +1032,9 @@ def enumerate_public_editorial_items(
                     "quotes",
                 )
             )
-    for index, card in enumerate(_dict_items(artifacts.get("chart_insight_cards")), start=1):
+    for index, card in enumerate(
+        _dict_items(artifacts.get("chart_insight_cards")), start=1
+    ):
         for field_name in ("title", "caption", "public_takeaway"):
             if _sanitize_public_prose(card.get(field_name)):
                 items.append(
@@ -1041,7 +1048,13 @@ def enumerate_public_editorial_items(
                 )
     metadata = artifacts.get("public_metadata")
     if isinstance(metadata, dict):
-        for field_name in ("title", "publisher", "author", "edition", "publication_date"):
+        for field_name in (
+            "title",
+            "publisher",
+            "author",
+            "edition",
+            "publication_date",
+        ):
             if str(metadata.get(field_name) or "").strip():
                 items.append(
                     _item(
@@ -1088,7 +1101,9 @@ def _metadata_issues(
                 "published",
             }:
                 actual[
-                    "publication_date" if label.casefold() == "published" else label.casefold()
+                    "publication_date"
+                    if label.casefold() == "published"
+                    else label.casefold()
                 ] = value.strip()
     if not actual:
         return []
@@ -1244,7 +1259,8 @@ def _metric_label_relationship_explanation(text: str, evidence_text: str) -> str
             for value in _values_near_label(text, category):
                 if value not in values:
                     return (
-                        "attaches a retained metric value to a different source category"
+                        "attaches a retained metric value to a different source "
+                        "category"
                     )
 
     evidence_relationships = _subject_value_relationships(evidence_text)
@@ -1267,8 +1283,7 @@ def _metric_label_relationship_explanation(text: str, evidence_text: str) -> str
         if relationship not in values_by_relationship and value in evidence_values:
             subject = relationship.split(" | ", 1)[0]
             if any(
-                source.startswith(f"{subject} | ")
-                for source in values_by_relationship
+                source.startswith(f"{subject} | ") for source in values_by_relationship
             ):
                 return (
                     "attaches a retained metric value to a different source denominator"
