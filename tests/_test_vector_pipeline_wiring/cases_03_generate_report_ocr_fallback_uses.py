@@ -91,9 +91,11 @@ def test_generate_report_ocr_fallback_uses_ocr_pdf_for_vector_and_original_for_v
         openai_ocr_pdf=lambda req, ctx: SimpleNamespace(
             schema_version="1.0",
             pages=[
-                SimpleNamespace(schema_version="1.0", page_number=1, text="ocr text")
+                SimpleNamespace(
+                    schema_version="1.0", page_number=1, text="OCR Report 2025"
+                )
             ],
-            raw_text='{"pages":[{"page_number":1,"text":"ocr text"}]}',
+            raw_text='{"pages":[{"page_number":1,"text":"OCR Report 2025"}]}',
             model=req.model,
             request_id="req_ocr",
         ),
@@ -104,10 +106,15 @@ def test_generate_report_ocr_fallback_uses_ocr_pdf_for_vector_and_original_for_v
         ),
         extract_pdf_text=lambda req, ctx: SimpleNamespace(
             schema_version="1.0",
-            text="ocr text",
+            text="OCR Report 2025",
             pages_extracted=1,
-            char_count=8,
-            text_density=8.0,
+            char_count=15,
+            text_density=15.0,
+            pages=[
+                SimpleNamespace(
+                    schema_version="1.0", page_number=1, text="OCR Report 2025"
+                )
+            ],
         ),
         detect_contents_page=lambda req, ctx: SimpleNamespace(
             schema_version="1.0",

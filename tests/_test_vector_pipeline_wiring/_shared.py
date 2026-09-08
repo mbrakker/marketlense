@@ -8,111 +8,79 @@ __file__ = str(
 )
 
 import json
-
 import logging
-
 import sqlite3
-
 import threading
-
 from dataclasses import replace
-
 from pathlib import Path
-
 from types import SimpleNamespace
 
 import pytest
-
 from pypdf import PdfWriter
-
-from src.contracts.drive import DriveFile
-
-from src.contracts.files import ReadTextResponse
-
-from src.contracts.file_cache import (
-    FileCacheMd5SidecarResolveResponse,
-    FileCacheMd5SidecarWriteResponse,
-)
-
-from src.contracts.ingest import IngestOutcome, IngestSettings
-
-from src.contracts.signal_candidates import (
-    SIGNAL_CANDIDATE_SCHEMA_VERSION,
-    SignalCandidateBatch,
-    SignalCandidateExtractionOutcome,
-    SignalCandidateStoreResponse,
-)
 
 from src.contracts.context_category_fit import (
     CategoryFitCandidate,
     ContextCategoryFitResponse,
     ReportCategoryContext,
 )
-
-from src.contracts.report_generation import ReportRuntimeState
-
-from src.contracts.pdf_text import PdfTextSample, PdfTextSampleResponse
-
+from src.contracts.drive import DriveFile
+from src.contracts.file_cache import (
+    FileCacheMd5SidecarResolveResponse,
+    FileCacheMd5SidecarWriteResponse,
+)
+from src.contracts.files import ReadTextResponse
+from src.contracts.ingest import IngestOutcome, IngestSettings
+from src.contracts.pdf_text import PdfTextPage, PdfTextSample, PdfTextSampleResponse
 from src.contracts.report_analysis import AnalysisStorePackRequest
-
 from src.contracts.report_assets import RenderResponse
-
 from src.contracts.report_cards import (
     CardCoverAsset,
     CardCoverAssetSet,
     ReportCardManifestWriteResponse,
 )
-
-from src.contracts.report_store import ReportMetadataGetResponse
-
-from src.contracts.report_store import ReportSourceDiscoveryRecordRequest
-
-from src.contracts.report_store import ReportSourceQualityHistoryRequest
-
+from src.contracts.report_generation import ReportRuntimeState
+from src.contracts.report_store import (
+    ReportMetadataGetResponse,
+    ReportSourceDiscoveryRecordRequest,
+    ReportSourceQualityHistoryRequest,
+)
 from src.contracts.run_context import RunContext
-
+from src.contracts.signal_candidates import (
+    SIGNAL_CANDIDATE_SCHEMA_VERSION,
+    SignalCandidateBatch,
+    SignalCandidateExtractionOutcome,
+    SignalCandidateStoreResponse,
+)
 from src.contracts.state import StateGetRequest
-
 from src.contracts.taxonomy import TaxonomyExtractResponse
-
 from src.contracts.validation import ValidationReport
-
 from src.generators import report_analysis_generator as rag
 from src.generators.public_editorial_quality_generator import BLOCKING_RULE_IDS
-
 from src.generators.report_generation_dependencies import (
     FigureCaptionDependencies,
     ReportAnalysisDependencies,
     ReportGenerationDependencies,
     ReportRenderDependencies,
-    ReportSignalDependencies,
     ReportSelectionDependencies,
+    ReportSignalDependencies,
     ReportSourceDependencies,
     ReportSourceScoringDependencies,
 )
-
 from src.generators.report_generation_shared import derive_title, report_slug
-
 from src.orchestrators import ingest_orchestrator as orch
-
+from src.orchestrators import report_generation_orchestrator as rgo
 from src.orchestrators.ingest_file_orchestrator import (
     IngestFileDependencies,
     run_ingest_file,
 )
-
-from src.orchestrators import report_generation_orchestrator as rgo
-
 from src.services.file_service import file_stat
-
 from src.services.report_store_service import (
     list_report_source_quality_history,
     record_discovered_report_source,
 )
-
-from src.services.state_service import get as state_get, record as state_record
-
+from src.services.state_service import get as state_get
+from src.services.state_service import record as state_record
 from src.utils.errors import AppError
-
 from src.utils.slugify import slugify
 
 
@@ -574,10 +542,11 @@ def _base_vector_report_dependencies(
         ),
         "extract_pdf_text": lambda req, ctx: SimpleNamespace(
             schema_version="1.0",
-            text="text",
+            text="Checkpoint Title 2025 Report",
             pages_extracted=1,
-            char_count=4,
-            text_density=4.0,
+            char_count=28,
+            text_density=28.0,
+            pages=[PdfTextPage(page_number=1, text="Checkpoint Title 2025 Report")],
         ),
         "build_report_category_context": lambda req, ctx: ReportCategoryContext(
             schema_version="1.0",
