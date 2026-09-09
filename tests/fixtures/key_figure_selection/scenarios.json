@@ -1,0 +1,46 @@
+{
+  "many_strong_distinct_metrics": {
+    "summary": {
+      "executive_summary": "Retail media AI is scaling across operations, shopper journeys, and retailer adoption.",
+      "claim_evidence_map": [
+        {"evidence_id": "market-growth", "claim": "Retail media AI is growing.", "evidence": "The retail-media AI market is forecast to grow 30% from 2026 to 2030."},
+        {"evidence_id": "workflow-scale", "claim": "Teams are scaling AI workflows.", "evidence": "75% of retail-media teams use AI in campaign workflows."},
+        {"evidence_id": "shopper-behavior", "claim": "Shoppers respond to AI recommendations.", "evidence": "46% of shoppers bought after an AI recommendation."},
+        {"evidence_id": "retailer-adoption", "claim": "Retailers are adopting AI.", "evidence": "68% of retailers are exploring AI for commerce media."}
+      ]
+    },
+    "metrics": [
+      {"metric_id": "market-growth", "evidence_id": "market-growth", "label": "Retail-media AI market growth", "value": "30%", "unit": "", "timeframe": "2026 to 2030", "geography": "Europe", "subject": "retail-media AI market", "observation_status": "forecast", "confidence": "high", "evidence": "A Europe forecast says the retail-media AI market will grow 30% from 2026 to 2030."},
+      {"metric_id": "workflow-scale", "evidence_id": "workflow-scale", "label": "Retail-media teams using AI in campaign workflows", "value": "75%", "unit": "", "timeframe": "2026", "geography": "Europe", "segment": "retail-media teams", "observation_status": "observed", "confidence": "high", "evidence": "In 2026, 75% of Europe retail-media teams use AI in campaign workflows."},
+      {"metric_id": "shopper-behavior", "evidence_id": "shopper-behavior", "label": "Shoppers purchasing after an AI recommendation", "value": "46%", "unit": "", "timeframe": "2026", "geography": "Europe", "cohort": "shoppers", "denominator": "surveyed shoppers", "observation_status": "observed", "confidence": "high", "evidence": "In a 2026 Europe survey, 46% of surveyed shoppers purchased after an AI recommendation."},
+      {"metric_id": "retailer-adoption", "evidence_id": "retailer-adoption", "label": "Retailers exploring AI for commerce media", "value": "68%", "unit": "", "timeframe": "2026", "geography": "Europe", "segment": "retailers", "observation_status": "observed", "confidence": "high", "evidence": "In 2026, 68% of Europe retailers are exploring AI for commerce media."},
+      {"metric_id": "vendor-case-study", "evidence_id": "vendor-case-study", "label": "Vendor case-study conversion lift", "value": "300%", "unit": "", "timeframe": "2026", "segment": "one vendor client", "source_type": "vendor_case_study", "confidence": "medium", "evidence": "A 2026 vendor case study reports a 300% conversion lift for one client."},
+      {"metric_id": "generic-macro", "evidence_id": "generic-macro", "label": "Global GDP growth", "value": "2.8%", "unit": "", "timeframe": "2026", "geography": "Global", "subject": "macro economy", "confidence": "medium", "evidence": "The global macro outlook forecasts GDP growth of 2.8% in 2026."}
+    ],
+    "expected_ids": ["market-growth", "workflow-scale", "shopper-behavior", "retailer-adoption"]
+  },
+  "many_redundant_metrics": {
+    "metrics": [
+      {"metric_id": "adoption-1", "evidence_id": "adoption-1", "label": "Retailers exploring AI for commerce media", "value": "68%", "unit": "", "timeframe": "2026", "geography": "Europe", "segment": "retailers", "confidence": "high", "evidence": "In 2026, 68% of Europe retailers are exploring AI for commerce media."},
+      {"metric_id": "adoption-2", "evidence_id": "adoption-2", "label": "Retailer AI exploration rate", "value": "68%", "unit": "", "timeframe": "2026", "geography": "Europe", "segment": "retailers", "confidence": "high", "evidence": "In 2026, the Europe retailer AI exploration rate is 68%."},
+      {"metric_id": "adoption-3", "evidence_id": "adoption-3", "label": "Retailer adoption of AI for commerce media", "value": "68%", "unit": "", "timeframe": "2026", "geography": "Europe", "segment": "retailers", "confidence": "high", "evidence": "In 2026, 68% of Europe retailers report adoption of AI for commerce media."},
+      {"metric_id": "workflow-scale", "evidence_id": "workflow-scale", "label": "Retail-media teams using AI in campaign workflows", "value": "75%", "unit": "", "timeframe": "2026", "geography": "Europe", "segment": "retail-media teams", "confidence": "high", "evidence": "In 2026, 75% of Europe retail-media teams use AI in campaign workflows."}
+    ],
+    "expected_ids": ["adoption-1", "workflow-scale"]
+  },
+  "one_strong_metric_only": {
+    "metrics": [
+      {"metric_id": "one-strong", "evidence_id": "one-strong", "label": "Retail-media teams using AI in campaign workflows", "value": "75%", "unit": "", "timeframe": "2026", "geography": "Europe", "segment": "retail-media teams", "confidence": "high", "evidence": "In 2026, 75% of Europe retail-media teams use AI in campaign workflows."},
+      {"metric_id": "weak-filler", "evidence_id": "weak-filler", "label": "Generic market context", "value": "2%", "unit": "", "confidence": "low", "source_type": "vendor_case_study", "evidence": "A vendor case study cites 2% generic market context."}
+    ],
+    "expected_ids": ["one-strong"]
+  },
+  "qualitative_report": {"metrics": [], "expected_ids": []},
+  "forecast_vs_observed": {
+    "metrics": [
+      {"metric_id": "forecast", "evidence_id": "forecast", "label": "Retail-media AI market growth", "value": "30%", "unit": "", "timeframe": "2026 to 2030", "geography": "Europe", "observation_status": "forecast", "confidence": "high", "evidence": "A Europe forecast says retail-media AI market growth will be 30% from 2026 to 2030."},
+      {"metric_id": "observed", "evidence_id": "observed", "label": "Retailers exploring AI for commerce media", "value": "68%", "unit": "", "timeframe": "2026", "geography": "Europe", "observation_status": "observed", "confidence": "high", "evidence": "In 2026, 68% of Europe retailers are exploring AI for commerce media."}
+    ],
+    "expected_ids": ["forecast", "observed"]
+  }
+}

@@ -173,8 +173,7 @@ class _FakeOpenAIClient:
                             "evidence": "Evidence text",
                             "metric": dict(METRIC),
                             "pages": [1],
-                        }
-                        ,
+                        },
                         {
                             "id": "insight-2",
                             "text": "Repaired margin insight",
@@ -182,7 +181,7 @@ class _FakeOpenAIClient:
                             "evidence": "Evidence text 2",
                             "metric": dict(METRIC),
                             "pages": [2],
-                        }
+                        },
                     ]
                 },
                 request_id="req-final",
@@ -204,8 +203,7 @@ class _FakeOpenAIClient:
                             "metric": dict(METRIC),
                             "pages": [1],
                             "score": 1.0,
-                        }
-                        ,
+                        },
                         {
                             "id": "candidate-2",
                             "text": "Repaired margin candidate",
@@ -214,7 +212,7 @@ class _FakeOpenAIClient:
                             "metric": dict(METRIC),
                             "pages": [2],
                             "score": 0.9,
-                        }
+                        },
                     ]
                 },
                 request_id="req-candidates",
@@ -858,7 +856,9 @@ def test_regenerate_artifacts_linkedin_post_receives_editorial_plan(tmp_path):
     assert response.prompt_namespaces == [
         "report_vs/artifacts/regenerate/linkedin_post"
     ]
-    assert json.loads(prompt_client.render_calls[0]["variables"]["editorial_plan_json"]) == {
+    assert json.loads(
+        prompt_client.render_calls[0]["variables"]["editorial_plan_json"]
+    ) == {
         "report_thesis": "The report's retained evidence changes planning.",
         "themes": [
             {"theme": "Primary evidence", "priority": 1, "evidence_ids": ["f1"]},
@@ -1184,6 +1184,101 @@ def test_regenerate_artifacts_topics_rebuilds_topic_briefs_without_model_calls(
         response.updated_artifacts["toc_topics_expanded"][1]["section_title"]
         == "Sentiments on GenAI: How do APAC consumers perceive AI?"
     )
+
+
+def test_regenerate_artifacts_rebuilds_only_key_figures_without_model_calls(tmp_path):
+    prompt_client = _FakePromptClient()
+    openai_client = _FakeOpenAIClient()
+    current_artifacts = _current_artifacts()
+    current_artifacts["insights_final"][0].update(
+        {
+            "text": "Retail-media teams are using AI in campaign workflows.",
+            "evidence": "In 2026, 75% of Europe retail-media teams use AI in campaign workflows.",
+            "metric": {
+                **METRIC,
+                "label": "Retail-media teams using AI in campaign workflows",
+                "value": "75%",
+                "timeframe": "2026",
+                "geography": "Europe",
+                "segment": "retail-media teams",
+                "confidence": "high",
+            },
+        }
+    )
+    current_artifacts["key_figures"] = [
+        {
+            "figure_id": "bad-figure",
+            "label": "Retail-media teams using AI in campaign workflows",
+            "figure": "70%",
+            "evidence_id": "f1",
+        }
+    ]
+    evidence_packs = _evidence_packs()
+    evidence_packs["findings"]["findings"][0]["evidence"] = current_artifacts[
+        "insights_final"
+    ][0]["evidence"]
+
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=RegenerationPlan(
+                mode="targeted",
+                targets=[
+                    RegenerationTarget(
+                        target_section="key_figures",
+                        regenerate_steps=["key_figures"],
+                        prompt_namespaces=[],
+                        issues=[
+                            RegenerationIssue(
+                                rule_id="public_editorial_quality.metric_label_relationship",
+                                affected_section="key_figures:0.figure",
+                                message="The selected figure conflicts with its evidence.",
+                                severity="error",
+                                evidence_ids=["f1"],
+                                repair_target="key_figures",
+                            )
+                        ],
+                    )
+                ],
+                unmappable_issues=[],
+                broad_retry_allowed=True,
+            ),
+            current_artifacts=current_artifacts,
+            doc_map=evidence_packs["doc_map"],
+            evidence_packs=evidence_packs,
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current_artifacts["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=openai_client,
+        prompt_client=prompt_client,
+    )
+
+    assert response.regenerated_sections == ["key_figures"]
+    assert response.updated_artifacts["key_figures"][0]["figure"] == "75%"
+    assert response.updated_artifacts["summary"]["tldr"] == "Old TLDR."
+    assert response.updated_artifacts["summary"]["executive_summary"] == "Old summary"
+    assert [item["text"] for item in response.updated_artifacts["insights_final"]] == [
+        item["text"] for item in current_artifacts["insights_final"]
+    ]
+    assert [item["text"] for item in response.updated_artifacts["quotes_final"]] == [
+        "Old quote"
+    ]
+    assert (
+        response.updated_artifacts["expert_comment"]
+        == current_artifacts["expert_comment"]
+    )
+    assert (
+        response.updated_artifacts["linkedin_post"]
+        == current_artifacts["linkedin_post"]
+    )
+    assert openai_client.calls == []
+    assert prompt_client.render_calls == []
     assert openai_client.calls == []
     assert prompt_client.render_calls == []
 

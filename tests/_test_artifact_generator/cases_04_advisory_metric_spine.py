@@ -323,6 +323,31 @@ def test_metric_spine_renders_one_clean_primary_metric(
     assert [figure["figure"] for figure in figures] == [expected_display]
 
 
+def test_metric_spine_preserves_a_coherent_forecast_range_when_normalization_cannot_shorten_it() -> (
+    None
+):
+    spine = derive_metric_spine_from_insights(
+        [
+            {
+                "id": "market-range",
+                "text": "AI revenue is projected to rise from roughly $200 billion in 2023 to around $1.4 trillion by 2029.",
+                "evidence_id": "market-range",
+                "metric": {
+                    "label": "AI revenue market scale",
+                    "value": "~$1.4 trillion by 2029 (from ~$200 billion in 2023)",
+                    "unit": "USD",
+                    "timeframe": "2023-2029",
+                    "observation_status": "forecast",
+                },
+            }
+        ]
+    )
+
+    assert spine[0]["value"] == "~$1.4 trillion by 2029 (from ~$200 billion in 2023)"
+    assert spine[0]["unit"] == "USD"
+    assert spine[0]["observation_status"] == "forecast"
+
+
 def test_metric_spine_omits_iab_semicolon_packed_metric_but_preserves_insight() -> None:
     fixture_path = (
         Path(__file__).resolve().parents[1]
@@ -359,6 +384,76 @@ def test_metric_spine_omits_metric_when_no_clean_display_is_available() -> None:
     )
 
     assert spine == []
+
+
+def test_key_figures_add_a_distinct_retained_evidence_percentage_candidate() -> None:
+    insights = [
+        {
+            "id": "iab-market-scale",
+            "text": "AI revenue is projected to rise from roughly $200 billion in 2023 to around $1.4 trillion by 2029.",
+            "evidence_id": "iab-market-scale",
+            "evidence": (
+                "Market scale: AI revenue is projected to rise from roughly $200 billion in 2023 to around $1.4 trillion by 2029; "
+                "generative AI is expected to augment ~61% of jobs in Europe."
+            ),
+            "metric": {
+                "label": "AI revenue market scale",
+                "value": "~$1.4 trillion by 2029 (from ~$200 billion in 2023)",
+                "unit": "USD",
+                "timeframe": "2023-2029",
+                "geography": "Europe",
+                "confidence": "high",
+            },
+        }
+    ]
+    spine = derive_metric_spine_from_insights(insights)
+    figures = build_key_figures(
+        metric_spine=spine, evidence_packs={}, insights_final=insights
+    )
+
+    retained = next(item for item in figures if item["figure"] == "~61%")
+    assert (
+        retained["label"]
+        == "generative AI is expected to augment ~61% of jobs in Europe"
+    )
+    assert retained["geography"] == "Europe"
+    assert retained["observation_status"] == "forecast"
+
+
+def test_key_figures_add_retained_market_range_and_workflow_scale_candidates() -> None:
+    evidence_packs = {
+        "findings": {
+            "findings": [
+                {
+                    "id": "market-growth",
+                    "text": (
+                        "AI revenue is projected to rise from $200 billion in 2023 "
+                        "to around $1.4 trillion by 2029."
+                    ),
+                    "confidence": "high",
+                },
+                {
+                    "id": "workflow-scale",
+                    "text": (
+                        "The guide cites 20 million impression opportunities per "
+                        "second, 10 milliseconds to decide and thousands of variables "
+                        "per campaign."
+                    ),
+                    "confidence": "high",
+                },
+            ]
+        }
+    }
+    figures = build_key_figures(metric_spine=[], evidence_packs=evidence_packs)
+
+    assert [(item["figure"], item["label"]) for item in figures] == [
+        (
+            "$200 billion in 2023 to around $1.4 trillion by 2029",
+            "AI revenue is projected to rise",
+        ),
+        ("20 million", "impression opportunities per second"),
+    ]
+    assert figures[0]["observation_status"] == "forecast"
 
 
 def test_build_executive_advisory_artifacts_surfaces_not_found_states() -> None:

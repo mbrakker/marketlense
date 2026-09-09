@@ -30,6 +30,9 @@ from src.generators._artifact_generator.toc import (
     audit_topic_brief_mappings,
     build_legacy_topic_briefs,
 )
+from src.generators.public_editorial_quality_generator import (
+    evaluate_public_editorial_quality,
+)
 from src.generators.analysis_pack_cache import (
     CachedPackAdaptResult,
     load_cached_pack,
@@ -186,7 +189,7 @@ def assemble_artifacts_payload(
         linkedin_post=linkedin_post,
     )
     metric_spine = derive_metric_spine_from_insights(
-        insights_final, editorial_plan=editorial_plan
+        insights_final, editorial_plan=editorial_plan, evidence_packs=evidence_packs
     )
     topics_covered = build_topics_covered(
         toc_entries=toc_entries,
@@ -199,6 +202,7 @@ def assemble_artifacts_payload(
         evidence_packs=evidence_packs,
         summary=summary,
         insights_final=insights_final,
+        editorial_plan=editorial_plan,
     )
     chart_insight_cards = build_chart_insight_cards(
         key_figures=key_figures,
@@ -435,6 +439,24 @@ def derive_metric_spine_from_insights(
     insights_final: List[Dict[str, Any]],
     *,
     editorial_plan: Dict[str, Any] | None = None,
+    evidence_packs: Dict[str, Any] | None = None,
+) -> List[Dict[str, Any]]:
+    return _derive_metric_spine_from_insights(
+        insights_final,
+        editorial_plan=editorial_plan,
+        evidence_packs=evidence_packs,
+        include_retained_evidence_candidates=False,
+        limit=6,
+    )
+
+
+def _derive_metric_spine_from_insights(
+    insights_final: List[Dict[str, Any]],
+    *,
+    editorial_plan: Dict[str, Any] | None,
+    evidence_packs: Dict[str, Any] | None,
+    include_retained_evidence_candidates: bool,
+    limit: int | None,
 ) -> List[Dict[str, Any]]:
     spine: List[Dict[str, Any]] = []
     for index, insight in enumerate(insights_final, start=1):
@@ -443,9 +465,11 @@ def derive_metric_spine_from_insights(
         metric = insight.get("metric")
         if not isinstance(metric, dict):
             continue
-        value = _s(metric.get("value") or metric.get("raw_value")).strip()
-        unit = _s(metric.get("unit")).strip()
-        value, unit = normalize_public_metric_display(value=value, unit=unit)
+        raw_value = _s(metric.get("value") or metric.get("raw_value")).strip()
+        raw_unit = _s(metric.get("unit")).strip()
+        value, unit = normalize_public_metric_display(value=raw_value, unit=raw_unit)
+        if not value and _is_coherent_metric_display(raw_value, raw_unit):
+            value, unit = raw_value, raw_unit
         evidence_id = _s(
             insight.get("evidence_id") or metric.get("evidence_id")
         ).strip()
@@ -454,7 +478,28 @@ def derive_metric_spine_from_insights(
             label = _metric_label_from_insight_text(
                 _s(insight.get("text")).strip(), value=value
             )
+        if not label and _metric_text_is_unambiguous(
+            text=_s(insight.get("text")).strip(), value=value
+        ):
+            label = _s(insight.get("text")).strip()
         if not value or not evidence_id or not _is_complete_metric_label(label):
+            if include_retained_evidence_candidates and evidence_id:
+                spine.extend(
+                    _retained_evidence_percentage_candidates(
+                        insight=insight,
+                        primary_metric={
+                            "metric_id": _s(
+                                insight.get("id") or metric.get("metric_id")
+                            ).strip()
+                            or f"insight_metric_{index}",
+                            "value": value,
+                            "confidence": _s(metric.get("confidence")).strip()
+                            or "source_backed",
+                            "evidence_id": evidence_id,
+                        },
+                        index=index,
+                    )
+                )
             continue
         missing_context_notes = [
             field_name
@@ -478,7 +523,9 @@ def derive_metric_spine_from_insights(
             "subject": _s(metric.get("subject")).strip(),
             "cohort": _s(metric.get("cohort")).strip(),
             "denominator": _s(metric.get("denominator")).strip(),
-            "observation_status": _s(metric.get("observation_status")).strip(),
+            "observation_status": _s(
+                metric.get("observation_status") or metric.get("forecast_status")
+            ).strip(),
             "confidence": _s(metric.get("confidence")).strip() or "source_backed",
             "missing_context_notes": missing_context_notes,
             "evidence_id": evidence_id,
@@ -488,15 +535,215 @@ def derive_metric_spine_from_insights(
             item["source_display_value"] = value
             item["numeric_metadata"] = numeric_metadata
         spine.append(item)
-    return _rank_metric_spine(spine, editorial_plan=editorial_plan)
+        if include_retained_evidence_candidates:
+            spine.extend(
+                _retained_evidence_percentage_candidates(
+                    insight=insight,
+                    primary_metric=item,
+                    index=index,
+                )
+            )
+    if include_retained_evidence_candidates:
+        spine.extend(
+            _retained_evidence_pack_metric_candidates(
+                evidence_packs=evidence_packs or {}, existing_metrics=spine
+            )
+        )
+    return _rank_metric_spine(spine, editorial_plan=editorial_plan, limit=limit)
+
+
+def _retained_evidence_pack_metric_candidates(
+    *, evidence_packs: Dict[str, Any], existing_metrics: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    """Add only directly worded market-range and workflow-scale evidence facts."""
+
+    candidates: List[Dict[str, Any]] = []
+    range_pattern = re.compile(
+        r"(?P<label>[^.;]*?\b(?:projected|forecast|expected)[^.;]*?)\bfrom\s+"
+        r"(?P<value>\$[\d,.]+\s+(?:million|billion|trillion)\s+in\s+(?P<start>\d{4})\s+"
+        r"to\s+(?:around\s+)?\$[\d,.]+\s+(?:million|billion|trillion)\s+(?:by|in)\s+(?P<end>\d{4}))",
+        re.IGNORECASE,
+    )
+    workflow_pattern = re.compile(
+        r"(?P<value>\d+(?:\.\d+)?\s+(?:million|billion|trillion))\s+"
+        r"(?P<label>impression opportunities)\s+(?:per|every)\s+second",
+        re.IGNORECASE,
+    )
+    for item in _evidence_items(evidence_packs):
+        evidence_id = _s(
+            item.get("evidence_id") or item.get("id") or item.get("metric_id")
+        ).strip()
+        text = _s(item.get("text") or item.get("evidence")).strip()
+        if not evidence_id or not text:
+            continue
+        confidence = _s(item.get("confidence")).strip() or "source_backed"
+        for ordinal, match in enumerate(range_pattern.finditer(text), start=1):
+            value = _s(match.group("value")).strip()
+            if _evidence_metric_already_present(
+                evidence_id=evidence_id, value=value, metrics=existing_metrics
+            ):
+                continue
+            candidates.append(
+                _retained_evidence_metric(
+                    metric_id=f"{evidence_id}-range-{ordinal}",
+                    evidence_id=evidence_id,
+                    label=_s(match.group("label")).strip(" :;,."),
+                    value=value,
+                    timeframe=f"{match.group('start')} to {match.group('end')}",
+                    observation_status="forecast",
+                    confidence=confidence,
+                )
+            )
+        for ordinal, match in enumerate(workflow_pattern.finditer(text), start=1):
+            value = _s(match.group("value")).strip()
+            if _evidence_metric_already_present(
+                evidence_id=evidence_id, value=value, metrics=existing_metrics
+            ):
+                continue
+            candidates.append(
+                _retained_evidence_metric(
+                    metric_id=f"{evidence_id}-workflow-{ordinal}",
+                    evidence_id=evidence_id,
+                    label=f"{_s(match.group('label')).strip()} per second",
+                    value=value,
+                    confidence=confidence,
+                )
+            )
+    return candidates
+
+
+def _evidence_metric_already_present(
+    *, evidence_id: str, value: str, metrics: List[Dict[str, Any]]
+) -> bool:
+    target_numbers = set(_metric_measurement_numbers(value, retain_bare=True))
+    return any(
+        _s(metric.get("evidence_id")).strip() == evidence_id
+        and target_numbers
+        <= set(_metric_measurement_numbers(_s(metric.get("value")), retain_bare=True))
+        for metric in metrics
+        if isinstance(metric, dict)
+    )
+
+
+def _retained_evidence_metric(
+    *,
+    metric_id: str,
+    evidence_id: str,
+    label: str,
+    value: str,
+    confidence: str,
+    timeframe: str = "",
+    observation_status: str = "",
+) -> Dict[str, Any]:
+    return {
+        "schema_version": "1.0",
+        "metric_id": metric_id,
+        "label": label,
+        "value": value,
+        "unit": "",
+        "timeframe": timeframe,
+        "segment": "",
+        "geography": "",
+        "comparator": "",
+        "baseline": "",
+        "delta": "",
+        "sample_size": "",
+        "subject": label,
+        "cohort": "",
+        "denominator": "",
+        "observation_status": observation_status,
+        "confidence": confidence,
+        "missing_context_notes": [
+            field_name
+            for field_name, current in (
+                ("timeframe", timeframe),
+                ("segment", ""),
+                ("geography", ""),
+            )
+            if not current
+        ],
+        "evidence_id": evidence_id,
+    }
+
+
+def _retained_evidence_percentage_candidates(
+    *, insight: Dict[str, Any], primary_metric: Dict[str, Any], index: int
+) -> List[Dict[str, Any]]:
+    """Expose distinct, plainly labelled percentages already retained with an insight.
+
+    This is deliberately narrow: it never guesses a metric from arbitrary prose,
+    and keeps each source clause as its label so its qualifiers remain auditable.
+    """
+
+    evidence = _s(insight.get("evidence")).strip()
+    if not evidence:
+        return []
+    primary_numbers = set(
+        _metric_measurement_numbers(_s(primary_metric.get("value")), retain_bare=True)
+    )
+    candidates: List[Dict[str, Any]] = []
+    for clause_index, clause in enumerate(
+        re.split(r"[;.](?:\s+|$)", evidence), start=1
+    ):
+        source_clause = clause.strip(" ;.")
+        match = re.search(r"(?P<display>~?\s*\d+(?:\.\d+)?\s*%)", source_clause)
+        if not source_clause or match is None:
+            continue
+        display = re.sub(r"\s+", "", match.group("display"))
+        number = display.replace("~", "").replace("%", "").strip()
+        if number in primary_numbers:
+            continue
+        geography_match = re.search(
+            r"\b(Europe|European Union|United States|U\.S\.|United Kingdom|U\.K\.|UK|Global)\b",
+            source_clause,
+            re.IGNORECASE,
+        )
+        observation_status = (
+            "forecast"
+            if re.search(r"\b(expected|forecast|projected|will)\b", source_clause, re.I)
+            else ""
+        )
+        candidates.append(
+            {
+                "schema_version": "1.0",
+                "metric_id": (
+                    f"{_s(primary_metric.get('metric_id')).strip() or index}"
+                    f"-retained-{clause_index}"
+                ),
+                "label": source_clause,
+                "value": display,
+                "unit": "",
+                "timeframe": "",
+                "segment": "",
+                "geography": geography_match.group(0) if geography_match else "",
+                "comparator": "",
+                "baseline": "",
+                "delta": "",
+                "sample_size": "",
+                "subject": source_clause,
+                "cohort": "",
+                "denominator": "",
+                "observation_status": observation_status,
+                "confidence": _s(primary_metric.get("confidence")).strip()
+                or "source_backed",
+                "missing_context_notes": [
+                    field_name
+                    for field_name in ("timeframe", "segment", "geography")
+                    if not (geography_match if field_name == "geography" else False)
+                ],
+                "evidence_id": _s(primary_metric.get("evidence_id")).strip(),
+            }
+        )
+    return candidates
 
 
 def _rank_metric_spine(
     metrics: List[Dict[str, Any]],
     *,
     editorial_plan: Dict[str, Any] | None,
+    limit: int | None = 6,
 ) -> List[Dict[str, Any]]:
-    return sorted(
+    ranked = sorted(
         metrics,
         key=lambda item: (
             *_metric_editorial_rank(item, editorial_plan=editorial_plan),
@@ -504,7 +751,8 @@ def _rank_metric_spine(
             _s(item.get("metric_id")).strip(),
             _s(item.get("label")).strip(),
         ),
-    )[:6]
+    )
+    return ranked[:limit] if limit is not None else ranked
 
 
 def _metric_editorial_rank(
@@ -574,6 +822,27 @@ def _metric_label_from_insight_text(text: str, *, value: str) -> str:
     if len(matching_clauses) == 1:
         return matching_clauses[0].strip()
     return ""
+
+
+def _is_coherent_metric_display(value: str, unit: str) -> bool:
+    """Keep a source-provided range intact when display normalization abstains."""
+
+    return bool(
+        re.search(r"\d", value)
+        and ";" not in value
+        and ";" not in unit
+        and "\n" not in value
+    )
+
+
+def _metric_text_is_unambiguous(*, text: str, value: str) -> bool:
+    source_numbers = _metric_measurement_numbers(text, retain_bare=True)
+    display_numbers = _metric_measurement_numbers(value, retain_bare=True)
+    return (
+        bool(text)
+        and bool(display_numbers)
+        and set(source_numbers) == set(display_numbers)
+    )
 
 
 def _abbreviation_safe_sentences(text: str) -> List[str]:
@@ -717,6 +986,7 @@ def build_key_figures(
     evidence_packs: Dict[str, Any],
     summary: Dict[str, Any] | None = None,
     insights_final: List[Dict[str, Any]] | None = None,
+    editorial_plan: Dict[str, Any] | None = None,
 ) -> List[Dict[str, Any]]:
     evidence_pages = _evidence_pages(evidence_packs)
     artifact_pages = _artifact_pages_by_evidence_id(
@@ -730,8 +1000,34 @@ def build_key_figures(
         and _s(insight.get("id")).strip()
         and _s(insight.get("text")).strip()
     }
+    candidate_metrics = list(metric_spine)
+    if insights_final or evidence_packs:
+        retained_candidates = _derive_metric_spine_from_insights(
+            insights_final or [],
+            editorial_plan=editorial_plan,
+            evidence_packs=evidence_packs,
+            include_retained_evidence_candidates=True,
+            limit=None,
+        )
+        existing_ids = {
+            _s(metric.get("metric_id")).strip()
+            for metric in candidate_metrics
+            if isinstance(metric, dict)
+        }
+        candidate_metrics.extend(
+            candidate
+            for candidate in retained_candidates
+            if _s(candidate.get("metric_id")).strip() not in existing_ids
+        )
+    selected_metrics = _select_key_figure_metrics(
+        metric_spine=candidate_metrics,
+        evidence_packs=evidence_packs,
+        summary=summary or {},
+        insights_final=insights_final or [],
+        editorial_plan=editorial_plan,
+    )
     figures: List[Dict[str, Any]] = []
-    for metric in metric_spine:
+    for metric in selected_metrics:
         evidence_id = _s(metric.get("evidence_id")).strip()
         label = _s(metric.get("label")).strip()
         value = _s(metric.get("value")).strip()
@@ -777,6 +1073,310 @@ def build_key_figures(
             }
         )
     return figures
+
+
+_KEY_FIGURE_MAXIMUM = 5
+_KEY_FIGURE_MINIMUM_SCORE = 22
+_KEY_FIGURE_CONTEXT_FIELDS = (
+    "geography",
+    "timeframe",
+    "segment",
+    "subject",
+    "cohort",
+    "denominator",
+    "observation_status",
+)
+_KEY_FIGURE_DECISION_TERMS = {
+    "adoption",
+    "budget",
+    "buyer",
+    "campaign",
+    "commerce",
+    "conversion",
+    "cost",
+    "customer",
+    "demand",
+    "efficiency",
+    "market",
+    "media",
+    "merchant",
+    "purchase",
+    "revenue",
+    "retail",
+    "retailer",
+    "sales",
+    "shopper",
+    "workflow",
+}
+_KEY_FIGURE_GENERIC_MACRO_TERMS = {
+    "economy",
+    "economic",
+    "gdp",
+    "global",
+    "inflation",
+    "macro",
+    "unemployment",
+}
+_KEY_FIGURE_VENDOR_CASE_STUDY_TERMS = {
+    "case study",
+    "case-study",
+    "client",
+    "customer story",
+    "vendor",
+}
+_KEY_FIGURE_STOP_WORDS = {
+    "a",
+    "an",
+    "and",
+    "for",
+    "in",
+    "of",
+    "rate",
+    "the",
+    "to",
+    "using",
+}
+
+
+def _select_key_figure_metrics(
+    *,
+    metric_spine: List[Dict[str, Any]],
+    evidence_packs: Dict[str, Any],
+    summary: Dict[str, Any],
+    insights_final: List[Dict[str, Any]],
+    editorial_plan: Dict[str, Any] | None,
+) -> List[Dict[str, Any]]:
+    """Choose a small, non-redundant set without inventing replacement facts."""
+
+    evidence_text_by_id = _key_figure_evidence_text_by_id(
+        evidence_packs=evidence_packs, insights_final=insights_final
+    )
+    insights_by_evidence_id = {
+        _s(insight.get("evidence_id")).strip(): insight
+        for insight in insights_final
+        if isinstance(insight, dict) and _s(insight.get("evidence_id")).strip()
+    }
+    ranked = sorted(
+        (
+            metric
+            for metric in metric_spine
+            if isinstance(metric, dict)
+            and _s(metric.get("label")).strip()
+            and _s(metric.get("value")).strip()
+            and _s(metric.get("evidence_id")).strip()
+        ),
+        key=lambda metric: (
+            -_key_figure_score(
+                metric=metric,
+                summary=summary,
+                evidence_text=evidence_text_by_id.get(
+                    _s(metric.get("evidence_id")).strip(), ""
+                ),
+                editorial_plan=editorial_plan,
+            ),
+            _s(metric.get("metric_id")).strip(),
+            _s(metric.get("label")).strip(),
+        ),
+    )
+    selected: List[Dict[str, Any]] = []
+    for metric in ranked:
+        if len(selected) >= _KEY_FIGURE_MAXIMUM:
+            break
+        evidence_id = _s(metric.get("evidence_id")).strip()
+        evidence_text = evidence_text_by_id.get(evidence_id, "")
+        if (
+            _key_figure_score(
+                metric=metric,
+                summary=summary,
+                evidence_text=evidence_text,
+                editorial_plan=editorial_plan,
+            )
+            < _KEY_FIGURE_MINIMUM_SCORE
+        ):
+            continue
+        if any(_key_figures_are_redundant(metric, prior) for prior in selected):
+            continue
+        if not _key_figure_relationship_is_valid(
+            metric=metric,
+            insight=insights_by_evidence_id.get(evidence_id),
+            evidence_text=evidence_text,
+        ):
+            continue
+        selected.append(metric)
+    return selected
+
+
+def _key_figure_evidence_text_by_id(
+    *, evidence_packs: Dict[str, Any], insights_final: List[Dict[str, Any]]
+) -> Dict[str, str]:
+    texts: Dict[str, str] = {}
+    for item in _evidence_items(evidence_packs):
+        evidence_id = _s(
+            item.get("evidence_id") or item.get("id") or item.get("metric_id")
+        ).strip()
+        text = _s(item.get("evidence") or item.get("text") or item.get("quote")).strip()
+        if evidence_id and text and evidence_id not in texts:
+            texts[evidence_id] = text
+    for insight in insights_final:
+        if not isinstance(insight, dict):
+            continue
+        evidence_id = _s(insight.get("evidence_id")).strip()
+        text = _s(insight.get("evidence")).strip()
+        if evidence_id and text:
+            texts[evidence_id] = text
+    return texts
+
+
+def _key_figure_score(
+    *,
+    metric: Dict[str, Any],
+    summary: Dict[str, Any],
+    evidence_text: str,
+    editorial_plan: Dict[str, Any] | None,
+) -> int:
+    """Score retained metrics by editorial utility; low-scoring items stay omitted."""
+
+    label = _s(metric.get("label")).strip()
+    value = _s(metric.get("value")).strip()
+    combined = " ".join(
+        _s(metric.get(field_name)).strip()
+        for field_name in ("label", "subject", "segment", "cohort", "source_type")
+    ).casefold()
+    score = 18  # A clean labelled, evidence-linked primary display.
+    rank_group, priority = _metric_editorial_rank(metric, editorial_plan=editorial_plan)
+    if rank_group == 0:
+        score += max(12, 26 - (priority * 2))
+    claim_evidence_ids = {
+        _s(claim.get("evidence_id")).strip()
+        for claim in (summary.get("claim_evidence_map") or [])
+        if isinstance(claim, dict)
+    }
+    if _s(metric.get("evidence_id")).strip() in claim_evidence_ids:
+        score += 12
+    executive_summary = _s(
+        summary.get("executive_summary") or summary.get("tldr")
+    ).casefold()
+    if value.casefold() in executive_summary:
+        score += 7
+    if _key_figure_label_tokens(label) & _key_figure_label_tokens(executive_summary):
+        score += 4
+    score += min(
+        10,
+        2
+        * sum(
+            bool(_s(metric.get(field_name)).strip())
+            for field_name in _KEY_FIGURE_CONTEXT_FIELDS
+        ),
+    )
+    score += min(
+        9,
+        3 * len(_KEY_FIGURE_DECISION_TERMS & _key_figure_label_tokens(combined)),
+    )
+    confidence = _s(metric.get("confidence")).strip().casefold() or "source_backed"
+    score += {
+        "high": 10,
+        "medium": 5,
+        "source_backed": 7,
+        "low": -5,
+        "weak": -8,
+    }.get(confidence, 2)
+    if evidence_text:
+        score += 4
+    if _key_figure_is_vendor_case_study(metric, combined):
+        score -= 24
+    if _key_figure_is_generic_macro(metric, combined):
+        score -= 14
+    return score
+
+
+def _key_figure_is_vendor_case_study(metric: Dict[str, Any], combined: str) -> bool:
+    source_type = _s(
+        metric.get("source_type") or metric.get("evidence_type")
+    ).casefold()
+    return source_type in {"vendor_case_study", "case_study", "vendor"} or any(
+        term in combined for term in _KEY_FIGURE_VENDOR_CASE_STUDY_TERMS
+    )
+
+
+def _key_figure_is_generic_macro(metric: Dict[str, Any], combined: str) -> bool:
+    tokens = _key_figure_label_tokens(combined)
+    return bool(tokens & _KEY_FIGURE_GENERIC_MACRO_TERMS) and not bool(
+        tokens & _KEY_FIGURE_DECISION_TERMS
+    )
+
+
+def _key_figures_are_redundant(
+    candidate: Dict[str, Any], selected: Dict[str, Any]
+) -> bool:
+    candidate_tokens = _key_figure_label_tokens(_s(candidate.get("label")))
+    selected_tokens = _key_figure_label_tokens(_s(selected.get("label")))
+    if not candidate_tokens or not selected_tokens:
+        return False
+    overlap = len(candidate_tokens & selected_tokens)
+    union = len(candidate_tokens | selected_tokens)
+    same_context = all(
+        _s(candidate.get(field_name)).strip().casefold()
+        == _s(selected.get(field_name)).strip().casefold()
+        for field_name in ("timeframe", "geography", "segment", "cohort", "denominator")
+    )
+    same_value = _s(candidate.get("value")).strip() == _s(selected.get("value")).strip()
+    return overlap / union >= 0.6 or (same_context and same_value and overlap >= 2)
+
+
+def _key_figure_label_tokens(value: str) -> set[str]:
+    tokens: set[str] = set()
+    for token in re.findall(r"[a-z0-9]+", _s(value).casefold()):
+        if token in _KEY_FIGURE_STOP_WORDS or len(token) < 3:
+            continue
+        if token.endswith("ies"):
+            token = f"{token[:-3]}y"
+        elif token.startswith("explor"):
+            token = "explore"
+        elif token.startswith("adopt"):
+            token = "adopt"
+        elif token.endswith("s"):
+            token = token[:-1]
+        tokens.add(token)
+    return tokens
+
+
+def _key_figure_relationship_is_valid(
+    *, metric: Dict[str, Any], insight: Dict[str, Any] | None, evidence_text: str
+) -> bool:
+    """Run the public label/value fidelity rule for every selected projection."""
+
+    evidence_id = _s(metric.get("evidence_id")).strip()
+    report = evaluate_public_editorial_quality(
+        report_id="key-figure-selection",
+        artifacts={
+            "insights_final": [
+                {
+                    "id": _s((insight or {}).get("id")).strip() or evidence_id,
+                    "evidence_id": evidence_id,
+                    "evidence": evidence_text,
+                }
+            ],
+            "key_figures": [
+                {
+                    "label": _s(metric.get("label")).strip(),
+                    "figure": " ".join(
+                        part
+                        for part in (
+                            _s(metric.get("value")).strip(),
+                            _s(metric.get("unit")).strip(),
+                        )
+                        if part
+                    ),
+                    "why_it_matters": _s((insight or {}).get("text")).strip(),
+                    "evidence_id": evidence_id,
+                }
+            ],
+        },
+    )
+    return not any(
+        issue.rule_id == "public_editorial_quality.metric_label_relationship"
+        for issue in report.issues
+    )
 
 
 def _artifact_pages_by_evidence_id(

@@ -48,6 +48,8 @@ def _target_section(affected_section: str) -> str:
         return "summary"
     if section.startswith("insights"):
         return "insights_bundle"
+    if section.startswith("key_figures"):
+        return "key_figures"
     if section.startswith("key_data_insights"):
         return "insights_bundle"
     if section.startswith("claims_list"):
@@ -183,6 +185,7 @@ TARGET_ORDER = [
     "topics",
     "summary",
     "insights_bundle",
+    "key_figures",
     "quotes",
     "expert_comment",
     "linkedin_post",
@@ -251,6 +254,8 @@ def _target_steps(target_key: str) -> List[str]:
         return ["summary"]
     if target_key == "insights_bundle":
         return ["insights_candidates", "insights_final"]
+    if target_key == "key_figures":
+        return ["key_figures"]
     if target_key == "quotes":
         return ["quotes"]
     if target_key == "expert_comment":
@@ -270,6 +275,8 @@ def _target_prompt_namespaces(target_key: str) -> List[str]:
             "report_vs/artifacts/regenerate/insights_candidates",
             "report_vs/artifacts/regenerate/insights_final",
         ]
+    if target_key == "key_figures":
+        return []
     if target_key == "quotes":
         return ["report_vs/artifacts/regenerate/quotes"]
     if target_key == "expert_comment":
@@ -405,7 +412,9 @@ def _target_keys_for_issue(issue: RegenerationIssue) -> List[str]:
             if derived_target:
                 return [derived_target]
             affected = str(issue.affected_section or "").strip().lower()
-            if affected.startswith(("key_figures", "chart_insight_cards")):
+            if affected.startswith("key_figures"):
+                return ["key_figures"]
+            if affected.startswith("chart_insight_cards"):
                 return ["insights_bundle"]
             if affected.startswith("topics_covered"):
                 return ["topics"]

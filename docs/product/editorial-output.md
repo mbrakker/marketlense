@@ -54,6 +54,19 @@ handling, but a legacy Key Figure is omitted when no single metric-specific
 label can be established. Labels never stop at a geographic initialism such as
 `U.S.` or `U.K.`.
 
+Key Figures are a separate reader-facing projection of that spine. They select
+at most five source-backed, non-redundant metrics and do not impose a minimum:
+a qualitative report may legitimately show none or one. Selection favours
+editorial-plan centrality, executive-summary linkage, commercial relevance,
+specific source context, confidence, and report-specific evidence over generic
+macro context. Directly worded retained evidence may supply a narrowly scoped
+market-range or workflow-scale candidate when an insight did not separately
+model it. Vendor case studies and low-confidence context are down-ranked, and
+no weak metric is used merely to populate the module. Every selected projection
+runs the existing label/value relationship-fidelity check; a failed Key Figure
+is omitted and its targeted repair rebuilds only this deterministic projection,
+not the findings, summary, or report.
+
 For ordered source metrics, validation preserves the relationship between each
 label and value: a year, forecast period, quarter, category, or table row is
 bound to its own source value. A public claim cannot pass merely because its

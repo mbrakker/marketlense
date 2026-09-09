@@ -318,6 +318,35 @@ def test_relationship_failure_uses_existing_targeted_regeneration() -> None:
     assert [target.target_section for target in plan.targets] == ["insights_bundle"]
 
 
+def test_key_figure_relationship_failure_regenerates_only_key_figure_selection() -> (
+    None
+):
+    evidence = "Average daily social-video time: 2023 0:48; 2024E 0:52; 2028E 0:57."
+    artifacts = _temporal_artifacts(
+        text="Average daily social-video time reaches 0:52 in 2024E.", evidence=evidence
+    )
+    artifacts["key_figures"] = [
+        {
+            "label": "Average daily social-video time",
+            "figure": "0:48 in 2024E",
+            "why_it_matters": "Average daily social-video time reaches 0:48 in 2024E.",
+            "evidence_id": "temporal-evidence",
+        }
+    ]
+
+    report = evaluate_public_editorial_quality(
+        report_id="social-video", artifacts=artifacts
+    )
+    plan = _build_regeneration_plan(
+        issues=validation_issues_from_public_editorial_quality(report),
+        artifacts=artifacts,
+        broad_retry_available=True,
+    )
+
+    assert [target.target_section for target in plan.targets] == ["key_figures"]
+    assert plan.targets[0].regenerate_steps == ["key_figures"]
+
+
 def test_public_text_items_includes_compact_summary_tldr_with_summary_evidence() -> (
     None
 ):
@@ -992,7 +1021,7 @@ def test_truncated_key_figure_label_uses_linked_insight_for_repair() -> None:
     assert "key_figures:1.label" in affected_fields
     assert "key_figures:1.why_it_matters" in affected_fields
     assert plan.mode == "targeted"
-    assert [target.target_section for target in plan.targets] == ["insights_bundle"]
+    assert [target.target_section for target in plan.targets] == ["key_figures"]
 
 
 @pytest.mark.parametrize("display", ["$1.3T", "€2.4bn", "12.5%"])

@@ -964,6 +964,12 @@ def _handle_expert_comment_regeneration(
     execution.state.prompt_namespaces.append(namespace)
 
 
+def _handle_key_figures_regeneration(execution: _RegenerationHandlerExecution) -> None:
+    """Rebuild the deterministic Key Figure projection without rewriting editorial."""
+
+    execution.state.regenerated_sections.append("key_figures")
+
+
 def _exclude_quarantined_expert_context(
     context: Dict[str, Any], excluded_evidence_ids: set[str]
 ) -> Dict[str, Any]:
@@ -1075,6 +1081,10 @@ def _insights_bundle_section_payload(artifacts: Dict[str, Any]) -> Dict[str, Any
     }
 
 
+def _key_figures_section_payload(artifacts: Dict[str, Any]) -> List[Dict[str, Any]]:
+    return _copy_list(artifacts.get("key_figures"))
+
+
 def _quotes_section_payload(artifacts: Dict[str, Any]) -> List[Dict[str, Any]]:
     return _copy_list(artifacts.get("quotes_final"))
 
@@ -1117,6 +1127,15 @@ _REGENERATION_HANDLER_REGISTRY: Dict[str, _RegenerationHandler] = {
             "Each final insight must map cleanly to evidence_id and supporting evidence text.",
         ),
         handle=_handle_insights_bundle_regeneration,
+    ),
+    "key_figures": _RegenerationHandler(
+        target_section="key_figures",
+        prompt_namespaces=(),
+        current_section_payload=_key_figures_section_payload,
+        extra_fix_checklist=(
+            "Keep only source-backed, distinct metrics that pass label/value relationship fidelity.",
+        ),
+        handle=_handle_key_figures_regeneration,
     ),
     "quotes": _RegenerationHandler(
         target_section="quotes",

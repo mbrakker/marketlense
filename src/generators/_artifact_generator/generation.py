@@ -800,6 +800,7 @@ def generate_artifacts(
     metric_spine = derive_metric_spine_from_insights(
         insights_final,
         editorial_plan=editorial_plan,
+        evidence_packs=safe_evidence,
     )
     metric_spine_json = _dump_json(metric_spine)
     expert_synthesis_context = build_expert_synthesis_context(

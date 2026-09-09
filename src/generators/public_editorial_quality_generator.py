@@ -566,7 +566,7 @@ def _key_figure_issues(
                 field=f"key_figures:{index}.{field_name}",
                 text=value,
                 evidence_ids=[evidence_id],
-                repair_target="insights_bundle",
+                repair_target="key_figures",
                 evidence_text=evidence_text,
             )
             field_issues = _text_issues(report_id, item)
@@ -1166,7 +1166,11 @@ def _metadata_issues(
     for field_name in ("publisher", "author"):
         expected = str(metadata_evidence.get(field_name) or "").strip()
         observed = json_ld_actual.get(field_name, "")
-        if not expected or not observed or _normalized_text(expected) == _normalized_text(observed):
+        if (
+            not expected
+            or not observed
+            or _normalized_text(expected) == _normalized_text(observed)
+        ):
             continue
         item = _item(
             "rendered_html",
