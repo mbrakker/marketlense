@@ -27,6 +27,7 @@ from src.generators.public_editorial_quality_generator import (
 )
 from src.generators.report_regeneration_generator import (
     _build_grounding_package,
+    _merge_regenerated_insights_by_stable_id,
     _restore_final_insight_evidence_bindings,
     regenerate_artifacts,
 )
@@ -641,6 +642,35 @@ def test_final_insight_reuses_same_id_candidate_evidence_when_model_omits_it() -
     assert restored[0]["evidence_id"] == "finding-5"
     assert restored[0]["evidence"] == "Automated messages drove the reported result."
     assert restored[0]["pages"] == [8]
+
+
+def test_regeneration_keeps_unreplaced_insight_evidence_records() -> None:
+    current = [
+        {"id": "insight-one", "text": "Existing evidence one.", "evidence_id": "f1"},
+        {"id": "insight-two", "text": "Existing evidence two.", "evidence_id": "f2"},
+    ]
+    regenerated = [
+        {"id": "insight-one", "text": "Repaired evidence one.", "evidence_id": "f1"},
+        {
+            "id": "new-unstable-id",
+            "text": "Unrelated replacement.",
+            "evidence_id": "f3",
+        },
+    ]
+
+    merged = _merge_regenerated_insights_by_stable_id(
+        current_insights=current,
+        regenerated_insights=regenerated,
+        append_new=True,
+    )
+
+    assert [item["id"] for item in merged] == [
+        "insight-one",
+        "insight-two",
+        "new-unstable-id",
+    ]
+    assert merged[0]["text"] == "Repaired evidence one."
+    assert merged[1]["evidence_id"] == "f2"
 
 
 def test_regenerate_artifacts_dispatches_summary_via_target_section_registry(tmp_path):

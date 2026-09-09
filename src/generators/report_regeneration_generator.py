@@ -692,6 +692,39 @@ def _restore_final_insight_evidence_bindings(
     return restored
 
 
+def _merge_regenerated_insights_by_stable_id(
+    *,
+    current_insights: List[Dict[str, Any]],
+    regenerated_insights: List[Dict[str, Any]],
+    append_new: bool = False,
+) -> List[Dict[str, Any]]:
+    """Promote only explicit stable-ID replacements during targeted repair."""
+
+    replacements = {
+        _s(item.get("id")).strip(): item
+        for item in regenerated_insights
+        if isinstance(item, dict) and _s(item.get("id")).strip()
+    }
+    merged: List[Dict[str, Any]] = []
+    for current in current_insights:
+        if not isinstance(current, dict):
+            continue
+        stable_id = _s(current.get("id")).strip()
+        merged.append(deepcopy(replacements.get(stable_id, current)))
+    if append_new:
+        current_ids = {
+            _s(item.get("id")).strip()
+            for item in current_insights
+            if isinstance(item, dict)
+        }
+        merged.extend(
+            deepcopy(item)
+            for item in regenerated_insights
+            if isinstance(item, dict) and _s(item.get("id")).strip() not in current_ids
+        )
+    return merged
+
+
 def _build_regeneration_state(
     *,
     safe_artifacts: Dict[str, Any],
@@ -821,11 +854,17 @@ def _handle_insights_bundle_regeneration(
         REQUIRED_REPORT_PAYLOAD_INSIGHTS,
         len(execution.state.editorial_plan["themes"]),
     )
+    regenerated_candidates = normalize_artifact_insights(
+        candidates_result.get("insights_candidates"),
+        prefix="candidate",
+    )
+    execution.state.insights_candidates = _merge_regenerated_insights_by_stable_id(
+        current_insights=execution.state.insights_candidates,
+        regenerated_insights=regenerated_candidates,
+        append_new=True,
+    )
     execution.state.insights_candidates = select_artifact_insights(
-        final_insights=normalize_artifact_insights(
-            candidates_result.get("insights_candidates"),
-            prefix="candidate",
-        ),
+        final_insights=execution.state.insights_candidates,
         candidate_insights=fallback_artifact_insights_from_findings(
             execution.runtime.safe_evidence.get("findings"), limit=target_count
         ),
@@ -851,14 +890,19 @@ def _handle_insights_bundle_regeneration(
             "final_insight_target_count": target_count,
         },
     )
-    execution.state.insights_final = select_artifact_insights(
-        final_insights=_restore_final_insight_evidence_bindings(
-            final_insights=normalize_artifact_insights(
-                final_result.get("insights_final"), prefix="insight"
-            ),
-            candidate_insights=execution.state.insights_candidates,
-            prior_final_insights=execution.state.insights_final,
+    regenerated_final = _restore_final_insight_evidence_bindings(
+        final_insights=normalize_artifact_insights(
+            final_result.get("insights_final"), prefix="insight"
         ),
+        candidate_insights=execution.state.insights_candidates,
+        prior_final_insights=execution.state.insights_final,
+    )
+    execution.state.insights_final = _merge_regenerated_insights_by_stable_id(
+        current_insights=execution.state.insights_final,
+        regenerated_insights=regenerated_final,
+    )
+    execution.state.insights_final = select_artifact_insights(
+        final_insights=execution.state.insights_final,
         candidate_insights=execution.state.insights_candidates,
         editorial_plan=execution.state.editorial_plan,
     )

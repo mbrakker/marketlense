@@ -137,6 +137,12 @@ def _analysis_source_identity_id(ctx: Any, fallback: str) -> str:
     return str(ctx.source_identity_id or "").strip() or fallback
 
 
+def _serialize_source_provenance_roles(roles: Any) -> dict[str, Any]:
+    """Convert immutable source roles into JSON-schema-compatible payload data."""
+
+    return json.loads(json.dumps(asdict(roles)))
+
+
 def _artifact_family_statuses(artifacts_payload: Any) -> dict[str, str]:
     """Return only durable artifact-family state, never generated artifact content."""
 
@@ -852,7 +858,9 @@ def run_report_analysis(
     if source_publisher:
         artifact_doc_map["publisher"] = source_publisher
     if provenance_roles is not None:
-        artifact_doc_map["provenance_roles"] = asdict(provenance_roles)
+        artifact_doc_map["provenance_roles"] = _serialize_source_provenance_roles(
+            provenance_roles
+        )
     if artifact_doc_map != doc_map_pack:
         packs["doc_map"] = artifact_doc_map
         doc_map_path = dependencies.analysis_store_pack(
@@ -1184,9 +1192,7 @@ def run_report_analysis(
         str(source_authors[0]).strip()
         if source_authors
         else resolve_doc_map_primary_contributor(
-            packs.get("doc_map", {})
-            if isinstance(packs.get("doc_map"), dict)
-            else {}
+            packs.get("doc_map", {}) if isinstance(packs.get("doc_map"), dict) else {}
         )
     )
     data_dict["report_identity_author_kind"] = str(

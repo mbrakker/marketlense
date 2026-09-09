@@ -89,6 +89,13 @@ target: only rendering metadata and downstream publication are regenerated.
 The LinkedIn artifact receives the same role record and may cite a byline, but
 must not describe a cited data provider as the publisher.
 
+Before a resolved role record is retained in the JSON document-map payload,
+the pipeline serializes its immutable contract values to JSON-safe values.
+Tuple-backed role collections such as author, data-provider, and source-
+organization names therefore remain JSON arrays for the canonical schema;
+the conversion preserves every source-backed value and does not infer or
+change provenance.
+
 Publisher identity is required for public output; a public publisher URL is
 not. When no resolved safe HTTP(S) URL exists, the rendered source section
 shows `Source URL: Not available` and contains no original-source anchor. That

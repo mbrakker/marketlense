@@ -490,14 +490,23 @@ def preserve_public_source_displays(
                     metric[field_name] = _preserve_source_displays(
                         _s(metric.get(field_name)), evidence
                     )
-        if _has_unsupported_material_number(_s(insight.get("text")), evidence, metric):
+        text_has_unsupported_number = _has_unsupported_material_number(
+            _s(insight.get("text")), evidence
+        )
+        metric_has_unsupported_number = isinstance(metric, dict) and (
+            _has_unsupported_material_number(_s(metric.get("value")), evidence)
+        )
+        if text_has_unsupported_number:
             # The evidence was bound from a canonical retained record. Replace
             # only a generated numeric claim that exceeds that record with its
             # exact source-backed statement before artifact retention.
             insight["text"] = evidence
-        downstream_evidence.extend(
-            value for value in (evidence, _s(insight.get("text"))) if value.strip()
-        )
+        if isinstance(metric, dict) and (
+            not _s(metric.get("value")).strip() or metric_has_unsupported_number
+        ):
+            _clear_unproven_metric_metadata(metric)
+        if evidence.strip():
+            downstream_evidence.append(evidence)
     combined_downstream_evidence = " ".join([summary_evidence, *downstream_evidence])
     return (
         _preserve_downstream_source_displays(
@@ -513,11 +522,11 @@ def _preserve_source_displays(text: str, evidence: str) -> str:
     return preserve_unique_source_displays(text, evidence)
 
 
-def _has_unsupported_material_number(text: str, evidence: str, metric: object) -> bool:
+def _has_unsupported_material_number(text: str, evidence: str) -> bool:
     number_pattern = r"\d{1,3}(?:[,.]\d{3})+|\d+(?:[.,]\d+)?"
     evidence_numbers = {
         _normalise_numeric_display(match.group())
-        for match in re.finditer(number_pattern, f"{evidence} {metric or ''}")
+        for match in re.finditer(number_pattern, evidence)
     }
     material_numbers = {
         _normalise_numeric_display(match.group())
@@ -527,6 +536,77 @@ def _has_unsupported_material_number(text: str, evidence: str, metric: object) -
         )
     }
     return bool(material_numbers - evidence_numbers)
+
+
+def _clear_unproven_metric_metadata(metric: Dict[str, Any]) -> None:
+    """Remove metric context when its value is absent or not source-backed."""
+
+    for field_name in (*METRIC_FIELDS, *METRIC_BINDING_FIELDS):
+        if field_name in metric:
+            metric[field_name] = ""
+
+
+def constrain_summary_to_source_backed_claims(summary: Dict[str, Any]) -> bool:
+    """Fail closed to direct claim copy when a strong claim has weak evidence."""
+
+    claims = summary.get("claim_evidence_map") if isinstance(summary, dict) else None
+    if not isinstance(claims, list):
+        return False
+    valid_claims = [claim for claim in claims if isinstance(claim, dict)]
+    weak_strong_claims = [
+        claim for claim in valid_claims if _claim_is_strong_and_weakly_bound(claim)
+    ]
+    if not weak_strong_claims:
+        return False
+    direct_claims = [
+        claim for claim in valid_claims if _claim_has_direct_evidence(claim)
+    ]
+    if not direct_claims:
+        return False
+    public_claims = [_s(claim.get("claim")).strip() for claim in direct_claims]
+    public_claims = [claim for claim in public_claims if claim]
+    if not public_claims:
+        return False
+    summary["claim_evidence_map"] = direct_claims
+    summary["tldr"] = public_claims[0]
+    summary["card_tldr_compact"] = public_claims[0]
+    summary["executive_summary"] = " ".join(public_claims[:3])
+    return True
+
+
+def _claim_is_strong_and_weakly_bound(claim: Dict[str, Any]) -> bool:
+    claim_text = _s(claim.get("claim")).strip()
+    if not claim_text or not _strong_claim_text(claim_text):
+        return False
+    spans = [
+        span for span in claim.get("evidence_spans") or [] if isinstance(span, dict)
+    ]
+    return bool(spans) and not any(_span_is_direct(span) for span in spans)
+
+
+def _claim_has_direct_evidence(claim: Dict[str, Any]) -> bool:
+    return any(
+        _span_is_direct(span)
+        for span in claim.get("evidence_spans") or []
+        if isinstance(span, dict)
+    )
+
+
+def _span_is_direct(span: Dict[str, Any]) -> bool:
+    return _s(span.get("source_pack")).strip() in {
+        "findings",
+        "quote_candidates",
+    }
+
+
+def _strong_claim_text(text: str) -> bool:
+    return bool(
+        re.search(
+            r"(?:\d+(?:[\.,]\d+)?\s*(?:%|percent|percentage|bps|points|x|times|million|billion|trillion|k|m|bn)\b|[$€£]\s*\d|\b(?:proves?|guarantees?|must|will|always|never|only|highest|lowest|largest|smallest|dominates?|requires?)\b)",
+            text,
+            re.IGNORECASE,
+        )
+    )
 
 
 def _preserve_downstream_source_displays(text: str, evidence: str) -> str:

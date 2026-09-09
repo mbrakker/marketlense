@@ -7,8 +7,10 @@ from types import SimpleNamespace
 
 import pytest
 
+from src.contracts._report_store.metadata import SourceProvenanceRoles
 from src.contracts.artifact_generation import ArtifactRenderTask
 from src.contracts.run_context import RunContext
+from src.contracts.schema_validation import SchemaValidateRequest
 from src.generators.report_analysis_generator import VectorStoreIndexingState
 from src.orchestrators._report_analysis_orchestrator.artifact_batches import (
     _execute_artifact_step_batch,
@@ -19,6 +21,10 @@ from src.orchestrators._report_analysis_orchestrator.payload import (
 from src.orchestrators._report_analysis_orchestrator.vector_store import (
     _await_vector_store_indexing,
 )
+from src.orchestrators.report_analysis_orchestrator import (
+    _serialize_source_provenance_roles,
+)
+from src.services.schema_validator_service import validate_schema
 from src.utils.errors import AppError
 
 FACADE = Path("src/orchestrators/report_analysis_orchestrator.py")
@@ -79,6 +85,35 @@ def test_report_payload_completeness_lists_all_missing_public_surfaces() -> None
         "figure.title",
         "figure.evidence",
     }
+
+
+def test_source_provenance_roles_are_json_safe_for_doc_map_validation() -> None:
+    roles = SourceProvenanceRoles(
+        schema_version="1.0",
+        publisher_name="Example Publisher",
+        author_names=("Example Author",),
+        data_provider_names=("Example Data Provider",),
+        source_organization_names=("Example Organisation",),
+    )
+
+    serialized = _serialize_source_provenance_roles(roles)
+
+    assert serialized["author_names"] == ["Example Author"]
+    assert serialized["data_provider_names"] == ["Example Data Provider"]
+    assert serialized["source_organization_names"] == ["Example Organisation"]
+    validate_schema(
+        SchemaValidateRequest(
+            schema_version="1.0",
+            schema_name="doc_map",
+            payload={
+                "doc_id": "doc-1",
+                "title": "Document title",
+                "sections": [],
+                "provenance_roles": serialized,
+            },
+        ),
+        RunContext("1.0", "run", "analysis", "span"),
+    )
 
 
 def test_vector_store_wait_rejects_missing_store_identity() -> None:

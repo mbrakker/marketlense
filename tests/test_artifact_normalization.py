@@ -12,6 +12,7 @@ from src.generators._artifact_generator.generation import (
 )
 from src.generators.artifact_normalization import (
     bind_artifact_evidence_spans,
+    constrain_summary_to_source_backed_claims,
     fallback_artifact_insights_from_evidence,
     fallback_artifact_insights_from_findings,
     normalize_artifact_insights,
@@ -1064,3 +1065,83 @@ def test_normalize_artifact_insights_omits_composite_public_metric_fields() -> N
         == "The insight keeps all supporting figures in its public prose."
     )
     assert insight["evidence_id"] == "iab-evidence-1"
+
+
+def test_preservation_replaces_an_unsupported_insight_number_and_clears_metric() -> (
+    None
+):
+    summary = {"claim_evidence_map": []}
+    evidence = "Private-label expansion is one of the trends expected through 2026."
+    insights = [
+        {
+            "id": "private-label",
+            "text": "Private labels contributed +3.6% to global value growth.",
+            "evidence_id": "trend-1",
+            "evidence": evidence,
+            "metric": {
+                "label": "Private-label contribution",
+                "value": "+3.6%",
+                "unit": "percent",
+                "timeframe": "MAT",
+                "trend": "growth",
+            },
+        }
+    ]
+
+    preserve_public_source_displays(
+        summary=summary,
+        insights_final=insights,
+        expert_comment="",
+        linkedin_post="",
+    )
+
+    assert insights[0]["text"] == evidence
+    assert insights[0]["metric"]["value"] == ""
+    assert insights[0]["metric"]["label"] == ""
+    assert insights[0]["metric"]["timeframe"] == ""
+
+
+def test_summary_constraint_replaces_weakly_bound_summary_copy_with_direct_claims() -> (
+    None
+):
+    summary = {
+        "tldr": "Forecast growth will be led by unsupported drivers.",
+        "card_tldr_compact": "Unsupported drivers lead the forecast.",
+        "executive_summary": "Unsupported drivers lead the forecast.",
+        "claim_evidence_map": [
+            {
+                "claim": "The report forecasts almost $375B in global growth dollars.",
+                "evidence_id": "quote-1",
+                "evidence_spans": [
+                    {
+                        "evidence_id": "quote-1",
+                        "source_pack": "quote_candidates",
+                        "text": "The report forecasts almost $375B in global growth dollars.",
+                    }
+                ],
+            },
+            {
+                "claim": "Advertising will rely on multiple identity approaches.",
+                "evidence_id": "identity-section",
+                "evidence_spans": [
+                    {
+                        "evidence_id": "identity-section",
+                        "source_pack": "doc_map",
+                        "text": "The section examines identity approaches.",
+                    }
+                ],
+            },
+        ],
+    }
+
+    changed = constrain_summary_to_source_backed_claims(summary)
+
+    assert changed is True
+    assert (
+        summary["tldr"] == "The report forecasts almost $375B in global growth dollars."
+    )
+    assert summary["card_tldr_compact"] == summary["tldr"]
+    assert summary["executive_summary"] == summary["tldr"]
+    assert [claim["evidence_id"] for claim in summary["claim_evidence_map"]] == [
+        "quote-1"
+    ]

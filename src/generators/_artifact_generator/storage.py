@@ -30,9 +30,6 @@ from src.generators._artifact_generator.toc import (
     audit_topic_brief_mappings,
     build_legacy_topic_briefs,
 )
-from src.generators.public_editorial_quality_generator import (
-    evaluate_public_editorial_quality,
-)
 from src.generators.analysis_pack_cache import (
     CachedPackAdaptResult,
     load_cached_pack,
@@ -45,11 +42,15 @@ from src.generators.analysis_store_adapter import (
 )
 from src.generators.artifact_normalization import (
     bind_artifact_evidence_spans,
+    constrain_summary_to_source_backed_claims,
     normalize_artifact_editorial_plan,
     normalize_artifact_evidence_ids,
     normalize_artifact_insights,
     normalize_artifact_toc_entries,
     preserve_public_source_displays,
+)
+from src.generators.public_editorial_quality_generator import (
+    evaluate_public_editorial_quality,
 )
 from src.services import file_service
 from src.services.prompt_service import build_llm_execution_identity
@@ -169,6 +170,7 @@ def assemble_artifacts_payload(
         doc_map=doc_map,
         evidence_packs=evidence_packs,
     )
+    constrain_summary_to_source_backed_claims(summary)
     if (
         evidence_span_stats.get("bound_count", 0) > 0
         or evidence_span_stats.get("unbound_count", 0) > 0
@@ -1026,6 +1028,10 @@ def build_key_figures(
         insights_final=insights_final or [],
         editorial_plan=editorial_plan,
     )
+    evidence_text_by_id = _key_figure_evidence_text_by_id(
+        evidence_packs=evidence_packs,
+        insights_final=insights_final or [],
+    )
     figures: List[Dict[str, Any]] = []
     for metric in selected_metrics:
         evidence_id = _s(metric.get("evidence_id")).strip()
@@ -1042,7 +1048,11 @@ def build_key_figures(
             for item in (metric.get("missing_context_notes") or [])
             if _s(item).strip()
         ]
-        figure = f"{value} {unit}".strip()
+        figure = _key_figure_display(
+            value=value,
+            unit=unit,
+            evidence_text=evidence_text_by_id.get(evidence_id, ""),
+        )
         figures.append(
             {
                 "schema_version": "1.0",
@@ -1073,6 +1083,17 @@ def build_key_figures(
             }
         )
     return figures
+
+
+def _key_figure_display(*, value: str, unit: str, evidence_text: str) -> str:
+    """Keep the exact source display unless its unit is explicitly retained."""
+
+    if not unit:
+        return value
+    candidate = f"{value} {unit}".strip()
+    if re.search(rf"(?<!\w){re.escape(candidate)}(?!\w)", evidence_text, re.IGNORECASE):
+        return candidate
+    return value
 
 
 _KEY_FIGURE_MAXIMUM = 5

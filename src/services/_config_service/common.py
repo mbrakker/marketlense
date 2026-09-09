@@ -247,12 +247,15 @@ def _iter_config_overlay_paths(config_path: Path) -> list[Path]:
     if config_path.name != "app.yaml":
         return []
     overlays: list[Path] = []
+    # A developer-local overlay supplies baseline credentials and machine
+    # defaults. An explicitly requested profile is an operator decision and
+    # therefore must win for isolated paths and safety budgets.
+    local_overlay = config_path.with_name("app.local.yaml")
+    if local_overlay.exists():
+        overlays.append(local_overlay)
     profile = _env_value(CONFIG_PROFILE_ENV_KEY)
     if profile:
         overlays.append(config_path.with_name(f"app.{profile}.yaml"))
-    local_overlay = config_path.with_name("app.local.yaml")
-    if local_overlay not in overlays:
-        overlays.append(local_overlay)
     return [candidate for candidate in overlays if candidate.exists()]
 
 

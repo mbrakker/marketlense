@@ -243,6 +243,38 @@ using the later isolated replay only for reports that had originally been held.
 | 4 | Digital 2022: Sweden | Kepios | [Google Drive PDF](https://drive.google.com/file/d/1VjpLrz_05XjQbCot8CHXCf-JO2e3H1m4/view) | [pipeline HTML](../../out/p6_editorial_acceptance/batch_04/hold_revalidation_6_20260906/pipeline_output/digital-2022-sweden-pdf.html) | pass | pass |
 | 5 | Activate Technology & Media Outlook 2021 | Activate | [Google Drive PDF](https://drive.google.com/file/d/1vnLPEBR8UyybsI3WSlAyoWPM2fyjeE2L/view) | [pipeline HTML](../../out/p6_editorial_acceptance/batch_04/hold_revalidation_3_20260906/pipeline_output/activate-technology-and-media-outlook-2021-pdf.html) | pass | pass |
 
+### Batch 4 full-cohort shared-fix revalidation (2026-09-09)
+
+All five immutable Batch 4 sources were freshly replayed through the normal
+ingest and report-generation path after shared corrections to source-display
+preservation, evidence continuity during regeneration, source-backed summary
+constraint, key-figure display projection, and explicit-profile precedence.
+The run retained only the frozen source identities and PDF provenance; it did
+not reuse generated editorial or HTML artifacts, change prompts, suppress
+individual prose, or relax a validation/readiness rule.
+
+| # | Report | Source PDF | Pipeline HTML | Pipeline | Readiness |
+| --- | --- | --- | --- | --- | --- |
+| 1 | IAB Europe's Guide to AI in Retail & Commerce Media | [Google Drive PDF](https://drive.google.com/file/d/1cV8YPeywPjeVVNkaolx9N-s79az36IdC/view) | [final HTML](../../out/p6_editorial_acceptance/batch_04/human_review_rerun_20260909_r4/final_html/iab-europes-guide-to-ai-in-retail-commerce-media-june-26-pdf.html) | pass | pass |
+| 2 | AdEx Benchmark 2025 Report | [Google Drive PDF](https://drive.google.com/file/d/1jFEpfx1vKGRLe6Fzu9j5gvStybdw_b-L/view) | [final HTML](../../out/p6_editorial_acceptance/batch_04/human_review_rerun_20260909_r4/final_html/iab-europe-adex-benchmark-2025-updated-pdf.html) | pass (warning) | pass |
+| 3 | Consumer Outlook: Guide to 2026 | [Google Drive PDF](https://drive.google.com/file/d/1pJCS1n66eAtMLZ4IG5c2ewvFnMWISVuu/view) | [final HTML](../../out/p6_editorial_acceptance/batch_04/human_review_rerun_20260909_r4/final_html/nielsen-iq-consumer-outlook-to-2026-acig-pdf.html) | pass (warning) | pass |
+| 4 | DIGITAL 2022: SWEDEN | [Google Drive PDF](https://drive.google.com/file/d/1VjpLrz_05XjQbCot8CHXCf-JO2e3H1m4/view) | [final HTML](../../out/p6_editorial_acceptance/batch_04/human_review_rerun_20260909_r4/final_html/digital-2022-sweden-pdf.html) | pass (warning) | pass |
+| 5 | ACTIVATE TECHNOLOGY & MEDIA OUTLOOK 2021 | [Google Drive PDF](https://drive.google.com/file/d/1vnLPEBR8UyybsI3WSlAyoWPM2fyjeE2L/view) | [final HTML](../../out/p6_editorial_acceptance/batch_04/human_review_rerun_20260909_r4/final_html/activate-technology-and-media-outlook-2021-pdf.html) | pass (warning) | pass |
+
+- Generation run: `8b22cf77-b73c-42b5-8415-e23a714858c6`; validation run:
+  `validation:3d9bd82b7c2fa3e8e0ccf7898fca14ebfe16499eb2864f8893eb53851886bf9e`.
+- Profile:
+  [`p6_editorial_acceptance_batch_04_human_review_rerun_20260909_r4`](../../src/config/app.p6_editorial_acceptance_batch_04_human_review_rerun_20260909_r4.yaml);
+  configuration hash `62590fcaa5a130c41e7f234ce7a50323622b1320f82f7a2801b572f29ce9bb13`.
+- Provider use: 147 completed calls, 1,410,261 input tokens, 145,613 output
+  tokens, and estimated USD 0.455361. Report 5 used the pipeline's normal one
+  bounded expert-comment regeneration; no report was regenerated for a review
+  score.
+- The five retained cache MD5 values matched their frozen Drive members and all
+  five publish-readiness records passed every configured rule. The usage ledger
+  records five Drive reads for the exact PDFs and zero Drive writes, WordPress
+  writes, browser launches, or public writes.
+
 ## Batch 1 score matrix — latest five-report rerun
 
 The following reviewer-supplied matrix applies to the latest five-report

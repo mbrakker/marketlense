@@ -9,9 +9,14 @@
 Configuration resolves in this order:
 
 1. `src/config/app.yaml`, unless `MARKET_LENSE_CONFIG_PATH` selects another base file.
-2. `app.<profile>.yaml` next to the selected `app.yaml` when `MARKET_LENSE_CONFIG_PROFILE` is set.
-3. `app.local.yaml` next to the selected `app.yaml`, when present.
+2. `app.local.yaml` next to the selected `app.yaml`, when present.
+3. `app.<profile>.yaml` next to the selected `app.yaml` when `MARKET_LENSE_CONFIG_PROFILE` is set.
 4. Environment variables where the configuration loader supports an override.
+
+The explicitly selected profile is therefore authoritative over local-machine
+overrides. This lets a named isolated validation profile reliably control its
+paths and side-effect budgets while `app.local.yaml` still supplies local
+defaults when no profile is selected.
 
 An empty overlay value does not suppress a supported environment fallback. For a
 no-WordPress-write validation preflight, explicitly set `WP_SITE_URL`,

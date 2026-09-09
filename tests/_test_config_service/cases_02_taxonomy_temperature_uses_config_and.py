@@ -764,7 +764,9 @@ class TestConfigService02TaxonomyTemperatureUsesConfig(_TestConfigServiceBase):
         self.assertFalse(settings.candidate_screening_enabled)
         self.assertEqual("", settings.openai_api_key)
 
-    def test_load_settings_uses_env_config_path_profile_and_local_overlay(self) -> None:
+    def test_load_settings_gives_explicit_profile_precedence_over_local_overlay(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             cfg_path = Path(self._write_config(tmp_dir, include_analysis=False))
             profile_path = cfg_path.with_name("app.dev.yaml")
@@ -798,7 +800,7 @@ class TestConfigService02TaxonomyTemperatureUsesConfig(_TestConfigServiceBase):
                     ),
                 )
 
-        self.assertEqual(41, settings.batch_limit)
+        self.assertEqual(31, settings.batch_limit)
         self.assertEqual(["overview", "toc"], settings.contents_keywords)
 
     def test_load_settings_rejects_non_mapping_yaml_root(self) -> None:
