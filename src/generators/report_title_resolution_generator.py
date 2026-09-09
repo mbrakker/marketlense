@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from collections import Counter
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import replace
 from pathlib import PurePath
 from typing import Any
@@ -97,7 +97,7 @@ def is_generic_report_title(value: object) -> bool:
 def resolve_report_title(
     *,
     file_name: str,
-    pdf_metadata: dict[str, object] | None,
+    pdf_metadata: Mapping[str, object] | None,
     pages: Iterable[tuple[int, str]],
     publisher_name: str = "",
     identity_resolver: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
@@ -178,9 +178,7 @@ def resolve_report_title(
                 ),
                 evidence=tuple(
                     _clean(item)
-                    for item in (
-                        response.get("evidence") if isinstance(response, dict) else []
-                    )
+                    for item in _identity_evidence_items(response)
                     if _clean(item)
                 )[:4],
                 candidate_source="llm_identity_resolution",
@@ -202,10 +200,17 @@ def resolve_report_title(
     )
 
 
+def _identity_evidence_items(response: object) -> list[object]:
+    if not isinstance(response, dict):
+        return []
+    evidence = response.get("evidence")
+    return evidence if isinstance(evidence, list) else []
+
+
 def _candidates(
     *,
     file_name: str,
-    pdf_metadata: dict[str, object],
+    pdf_metadata: Mapping[str, object],
     pages: list[tuple[int, str]],
     publisher_name: str,
 ) -> list[ReportTitleCandidate]:

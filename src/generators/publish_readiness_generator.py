@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass, replace
 from datetime import UTC, datetime, timedelta
 from typing import Any, Iterable
@@ -395,7 +396,7 @@ def evaluate_publish_readiness(
     policy_hash: str = "",
     producer_revision: str = "",
     provenance: dict[str, str] | None = None,
-    metadata_evidence: dict[str, object] | None = None,
+    metadata_evidence: Mapping[str, object] | None = None,
     created_at: datetime | None = None,
 ) -> PublishReadinessArtifact:
     """Evaluate the one release policy over artifacts, final HTML and projection."""

@@ -102,7 +102,9 @@ evidence.
 Only a material deterministic tie permits one bounded identity-resolution model
 call. It receives the cover/title-page image, the first pages' text, filename,
 and document metadata, and returns only title, edition, publisher candidate,
-confidence, and short evidence. It never regenerates editorial artifacts.
+confidence, and short evidence. Model evidence is accepted only as a list;
+missing or malformed evidence abstains to an empty evidence set rather than
+interrupting title resolution. It never regenerates editorial artifacts.
 The resolution is checkpointed and is the sole title authority for new source
 preparation: analysis, document-map, and report-store fields cannot replace it.
 Before rendering, a generic/missing final title or a title that conflicts with

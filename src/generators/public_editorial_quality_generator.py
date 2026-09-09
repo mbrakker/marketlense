@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import re
 from collections import Counter
+from collections.abc import Mapping
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Iterable
@@ -222,7 +223,7 @@ def evaluate_public_editorial_quality(
     html: str = "",
     html_path: str = "",
     disabled_rule_waivers: dict[str, str] | None = None,
-    metadata_evidence: dict[str, object] | None = None,
+    metadata_evidence: Mapping[str, object] | None = None,
 ) -> PublicEditorialQualityReport:
     """Evaluate public fields and rendered HTML using enabled deterministic rules."""
     safe_artifacts = artifacts if isinstance(artifacts, dict) else {}
@@ -1085,7 +1086,7 @@ def enumerate_public_editorial_items(
 def _metadata_issues(
     report_id: str,
     artifacts: dict[str, Any],
-    metadata_evidence: dict[str, object],
+    metadata_evidence: Mapping[str, object],
     *,
     html: str = "",
 ) -> list[PublicEditorialQualityIssue]:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -25,7 +26,7 @@ def resolve_ambiguous_report_title(
     *,
     runtime: ReportRuntimeState,
     dependencies: ReportSourceDependencies,
-    pdf_metadata: dict[str, object],
+    pdf_metadata: Mapping[str, object],
     pages: list[tuple[int, str]],
     deterministic_resolution: ReportTitleResolution,
     llm_client: Any | None,
@@ -143,7 +144,7 @@ def _absolute_preview_path(runtime: ReportRuntimeState, value: object) -> Path |
 
 
 def _identity_evidence(
-    file_name: str, pdf_metadata: dict[str, object], pages: list[tuple[int, str]]
+    file_name: str, pdf_metadata: Mapping[str, object], pages: list[tuple[int, str]]
 ) -> dict[str, object]:
     return {
         "filename": str(file_name or "").strip(),

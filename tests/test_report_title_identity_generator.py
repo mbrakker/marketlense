@@ -11,6 +11,24 @@ from src.generators.report_title_identity_generator import (
 from src.generators.report_title_resolution_generator import resolve_report_title
 
 
+def test_title_resolution_ignores_non_list_identity_evidence() -> None:
+    result = resolve_report_title(
+        file_name="retail-media-outlook-2026.pdf",
+        pdf_metadata={"Title": "PowerPoint Presentation"},
+        pages=[
+            (2, "Retail Media Outlook 2026\nExample Research"),
+            (3, "Commerce Media Outlook 2026\nExample Research"),
+        ],
+        identity_resolver=lambda _: {
+            "title": "Retail Media Outlook 2026",
+            "evidence": None,
+        },
+    )
+
+    assert result.title == "Retail Media Outlook 2026"
+    assert result.evidence == ()
+
+
 def test_ambiguous_title_uses_one_bounded_identity_image_call(
     ingest_settings, run_context, tmp_path
 ) -> None:
