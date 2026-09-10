@@ -19,6 +19,9 @@ from src.contracts.validation_reliability import (
     ValidationReliabilityBuildRequest,
     ValidationReliabilityFailureCode,
     ValidationReliabilityFailureTransition,
+    ValidationReliabilityFirstAttemptEntity,
+    ValidationReliabilityFirstAttemptStage,
+    ValidationReliabilityFirstAttemptTransition,
     ValidationReliabilityTransition,
     ValidationReliabilityWriteRequest,
     ValidationReliabilityWriteResponse,
@@ -61,6 +64,17 @@ _STATE_STAGE_GROUPS: dict[str, tuple[str, ...]] = {
 _SUCCESS_OUTCOMES = {"succeeded", "publish_ready", "published_verified"}
 _COMPLETED_OUTCOMES = _SUCCESS_OUTCOMES | {"skipped"}
 _FAILURE_OUTCOMES = {"failed", "blocked", "permanent_failure"}
+_TERMINAL_FAILURE_OUTCOMES = {"blocked", "permanent_failure", "cancelled"}
+_RECOVERY_IDEMPOTENCY_STATES = {"replayed", "reused", "verified"}
+_AUTOMATIC_RECOVERY_DISPOSITIONS = {
+    "not_required",
+    "none",
+    "targeted_repair",
+    "full_rerun",
+    "structured_output_repair",
+    "queue_redelivery",
+    "process_restart",
+}
 _REQUIRED_USAGE_ATTRIBUTION = (
     "validation_run_id",
     "cohort_id",
@@ -90,7 +104,7 @@ def build_validation_reliability_artifact(
 
     _validate_build_request(request)
     run, attempts, stages = _read_manifest_rows(request, ctx)
-    usage_events = _read_usage_events(request, ctx)
+    usage_events, usage_attribution_available = _read_usage_events(request, ctx)
     _validate_usage_attribution(
         usage_events=usage_events,
         validation_run_id=str(request.validation_run_id),
@@ -153,6 +167,13 @@ def build_validation_reliability_artifact(
             _STATE_SEQUENCE, _STATE_SEQUENCE[1:], strict=False
         )
     )
+    first_attempt_entities = _first_attempt_entities(
+        current_attempts=current_attempts,
+        all_attempts_by_entity=all_attempts_by_entity,
+        stages_by_attempt=stages_by_attempt,
+        usage_events=usage_events,
+        usage_attribution_available=usage_attribution_available,
+    )
     failed_transitions = _failure_transition_metrics(failures)
     pareto = _failure_pareto(failures)
     artifact = ValidationReliabilityArtifact(
@@ -166,6 +187,13 @@ def build_validation_reliability_artifact(
         transitions=transitions,
         failed_transitions=failed_transitions,
         failure_pareto=pareto,
+        first_attempt_entities=first_attempt_entities,
+        first_attempt_transitions=_first_attempt_transition_metrics(
+            first_attempt_entities
+        ),
+        first_attempt_failure_pareto=_first_attempt_failure_pareto(
+            first_attempt_entities
+        ),
     )
     artifact = replace(artifact, artifact_hash=_artifact_hash(artifact))
     log_event_payload = {
@@ -175,6 +203,8 @@ def build_validation_reliability_artifact(
         "transition_count": len(artifact.transitions),
         "failed_transition_count": len(artifact.failed_transitions),
         "pareto_entry_count": len(artifact.failure_pareto),
+        "first_attempt_entity_count": len(artifact.first_attempt_entities),
+        "first_attempt_pareto_entry_count": len(artifact.first_attempt_failure_pareto),
         "artifact_hash": artifact.artifact_hash,
     }
     logging.getLogger("market_lense.validation_reliability_service").info(
@@ -312,7 +342,7 @@ def _read_manifest_rows(
                 """
                 SELECT attempt_id, stage, started_at_utc, completed_at_utc,
                        terminal_outcome, failure_code, repair_disposition,
-                       idempotency_state
+                       idempotency_state, entity_terminal
                 FROM validation_run_stage_records
                 WHERE validation_run_id=?
                 ORDER BY attempt_id, started_at_utc, stage
@@ -338,7 +368,7 @@ def _read_manifest_rows(
 
 def _read_usage_events(
     request: ValidationReliabilityBuildRequest, ctx: RunContext
-) -> list[dict[str, Any]]:
+) -> tuple[list[dict[str, Any]], bool]:
     try:
         with sqlite3.connect(request.usage_db_path) as conn:
             conn.row_factory = sqlite3.Row
@@ -347,9 +377,9 @@ def _read_usage_events(
                 for row in conn.execute("PRAGMA table_info(llm_usage_events)")
             }
             if not columns:
-                return []
+                return [], False
             if "validation_run_id" not in columns:
-                return []
+                return [], False
             event_count = int(
                 conn.execute(
                     "SELECT COUNT(*) FROM llm_usage_events WHERE validation_run_id=?",
@@ -357,7 +387,7 @@ def _read_usage_events(
                 ).fetchone()[0]
             )
             if event_count == 0:
-                return []
+                return [], True
             required = set(_REQUIRED_USAGE_ATTRIBUTION) | {
                 "timestamp_utc",
                 "input_tokens",
@@ -399,7 +429,7 @@ def _read_usage_events(
             retryable=False,
             context={"usage_db_path": request.usage_db_path},
         ) from exc
-    return [dict(row) for row in rows]
+    return [dict(row) for row in rows], True
 
 
 def _validate_usage_attribution(
@@ -577,6 +607,376 @@ def _recovery_dispositions(
     }
 
 
+def _first_attempt_entities(
+    *,
+    current_attempts: list[dict[str, Any]],
+    all_attempts_by_entity: dict[str, list[dict[str, Any]]],
+    stages_by_attempt: dict[str, list[dict[str, Any]]],
+    usage_events: list[dict[str, Any]],
+    usage_attribution_available: bool,
+) -> tuple[ValidationReliabilityFirstAttemptEntity, ...]:
+    entities: list[ValidationReliabilityFirstAttemptEntity] = []
+    for current_attempt in sorted(
+        current_attempts, key=lambda row: str(row["entity_key"])
+    ):
+        entity_key = str(current_attempt["entity_key"])
+        attempts = [
+            row
+            for row in all_attempts_by_entity[entity_key]
+            if str(row["cohort_disposition"]) != "out_of_cohort"
+        ]
+        if not attempts:
+            continue
+        first_attempt = attempts[0]
+        first_records = stages_by_attempt.get(str(first_attempt["attempt_id"]), [])
+        current_records = stages_by_attempt.get(str(current_attempt["attempt_id"]), [])
+        first_statuses = _cascaded_state_statuses(first_records)
+        eventual_statuses = _cascaded_state_statuses(current_records)
+        stages = tuple(
+            _first_attempt_stage(
+                from_state=from_state,
+                to_state=to_state,
+                first_attempt=first_attempt,
+                attempts=attempts,
+                first_statuses=first_statuses,
+                eventual_statuses=eventual_statuses,
+                stages_by_attempt=stages_by_attempt,
+                usage_events=usage_events,
+                usage_attribution_available=usage_attribution_available,
+            )
+            for from_state, to_state in zip(
+                _STATE_SEQUENCE, _STATE_SEQUENCE[1:], strict=False
+            )
+        )
+        terminal_disposition = _terminal_disposition(
+            attempts=attempts,
+            stages_by_attempt=stages_by_attempt,
+            eventual_success=eventual_statuses["publish_ready"],
+        )
+        publish_ready_stage = next(
+            stage for stage in stages if stage.to_state == "publish_ready"
+        )
+        entities.append(
+            ValidationReliabilityFirstAttemptEntity(
+                schema_version=_SCHEMA_VERSION,
+                entity_key=entity_key,
+                report_id=str(first_attempt["report_id"]),
+                first_attempt_number=int(first_attempt["attempt_number"]),
+                first_attempt_admitted=first_statuses["admitted"],
+                eventual_admitted=eventual_statuses["admitted"],
+                first_pass=first_statuses["publish_ready"],
+                eventual_success=eventual_statuses["publish_ready"],
+                bounded_recovery=any(
+                    stage.recovery_type == "bounded_recovery" for stage in stages
+                ),
+                operator_intervention=any(
+                    stage.operator_intervention for stage in stages
+                ),
+                terminal_failure=any(stage.terminal_failure for stage in stages),
+                verified_replay=any(stage.verified_replay for stage in stages),
+                attempts_required=publish_ready_stage.attempts_required,
+                terminal_disposition=terminal_disposition,
+                stages=stages,
+            )
+        )
+    return tuple(entities)
+
+
+def _first_attempt_stage(
+    *,
+    from_state: str,
+    to_state: str,
+    first_attempt: dict[str, Any],
+    attempts: list[dict[str, Any]],
+    first_statuses: dict[str, bool],
+    eventual_statuses: dict[str, bool],
+    stages_by_attempt: dict[str, list[dict[str, Any]]],
+    usage_events: list[dict[str, Any]],
+    usage_attribution_available: bool,
+) -> ValidationReliabilityFirstAttemptStage:
+    first_records = stages_by_attempt.get(str(first_attempt["attempt_id"]), [])
+    first_failure = _causal_first_failure(first_records, to_state)
+    successful_attempt = next(
+        (
+            attempt
+            for attempt in attempts
+            if _cascaded_state_statuses(
+                stages_by_attempt.get(str(attempt["attempt_id"]), [])
+            )[to_state]
+        ),
+        None,
+    )
+    attempts_through_success = (
+        [
+            attempt
+            for attempt in attempts
+            if int(attempt["attempt_number"])
+            <= int(successful_attempt["attempt_number"])
+        ]
+        if successful_attempt is not None
+        else attempts
+    )
+    recovery_records = _recovery_records_through_state(
+        attempts=attempts_through_success,
+        stages_by_attempt=stages_by_attempt,
+        to_state=to_state,
+    )
+    first_attempt_recovery_records = _recovery_records_through_state(
+        attempts=[first_attempt],
+        stages_by_attempt=stages_by_attempt,
+        to_state=to_state,
+    )
+    operator_intervention = any(
+        str(record["repair_disposition"]) == "operator_intervention"
+        for record in recovery_records
+    )
+    verified_replay = any(
+        str(record["idempotency_state"]) in _RECOVERY_IDEMPOTENCY_STATES
+        and str(record["terminal_outcome"]) in _SUCCESS_OUTCOMES
+        for record in recovery_records
+    )
+    first_pass = first_statuses[to_state] and not _has_recovery_disposition(
+        first_attempt_recovery_records
+    )
+    eventual_success = eventual_statuses[to_state]
+    recovery_type = _first_attempt_recovery_type(
+        first_pass=first_pass,
+        successful_attempt=successful_attempt,
+        first_attempt=first_attempt,
+        recovery_records=recovery_records,
+        operator_intervention=operator_intervention,
+    )
+    terminal_disposition = _terminal_disposition(
+        attempts=attempts,
+        stages_by_attempt=stages_by_attempt,
+        eventual_success=eventual_success,
+    )
+    terminal_failure = (
+        not eventual_success and terminal_disposition in _TERMINAL_FAILURE_OUTCOMES
+    )
+    usage_until = _stage_completion_time(
+        records=(
+            stages_by_attempt.get(str(successful_attempt["attempt_id"]), [])
+            if successful_attempt is not None
+            else first_records
+        ),
+        state=to_state,
+        fallback=(str(first_failure["completed_at_utc"]) if first_failure else ""),
+    )
+    usage = _usage_through_time(
+        usage_events=usage_events,
+        report_id=str(first_attempt["report_id"]),
+        completed_at_utc=usage_until,
+        available=usage_attribution_available,
+    )
+    return ValidationReliabilityFirstAttemptStage(
+        schema_version=_SCHEMA_VERSION,
+        from_state=from_state,
+        to_state=to_state,
+        first_pass=first_pass,
+        eventual_success=eventual_success,
+        first_failure_code=(
+            str(first_failure["failure_code"] or "unknown_failure")
+            if first_failure is not None
+            else ""
+        ),
+        first_failure_stage=(str(first_failure["stage"]) if first_failure else ""),
+        recovery_type=recovery_type,
+        attempts_required=len(attempts_through_success),
+        operator_intervention=operator_intervention,
+        terminal_failure=terminal_failure,
+        verified_replay=verified_replay,
+        terminal_disposition=terminal_disposition,
+        usage_attribution=("available" if usage is not None else "unavailable"),
+        provider_call_count_before_recovery=(int(usage["calls"]) if usage else None),
+        input_tokens_before_recovery=(int(usage["input_tokens"]) if usage else None),
+        output_tokens_before_recovery=(int(usage["output_tokens"]) if usage else None),
+        total_tokens_before_recovery=(int(usage["total_tokens"]) if usage else None),
+        estimated_cost_usd_before_recovery=(float(usage["cost"]) if usage else None),
+    )
+
+
+def _cascaded_state_statuses(records: list[dict[str, Any]]) -> dict[str, bool]:
+    raw_statuses = _state_statuses(records)
+    statuses: dict[str, bool] = {}
+    prior_completed = True
+    for state in _STATE_SEQUENCE:
+        statuses[state] = raw_statuses[state] and prior_completed
+        prior_completed = statuses[state]
+    return statuses
+
+
+def _first_failure_for_state(
+    records: list[dict[str, Any]], to_state: str
+) -> dict[str, Any] | None:
+    failures = [
+        record
+        for record in records
+        if str(record["stage"]) in _STATE_STAGE_GROUPS[to_state]
+        and str(record["terminal_outcome"]) in _FAILURE_OUTCOMES
+    ]
+    return (
+        min(
+            failures,
+            key=lambda record: (
+                str(record["completed_at_utc"]),
+                str(record["stage"]),
+            ),
+        )
+        if failures
+        else None
+    )
+
+
+def _causal_first_failure(
+    records: list[dict[str, Any]], to_state: str
+) -> dict[str, Any] | None:
+    direct_failure = _first_failure_for_state(records, to_state)
+    if direct_failure is not None:
+        return direct_failure
+    reachable_states = _STATE_SEQUENCE[1 : _STATE_SEQUENCE.index(to_state)]
+    failures = [
+        record
+        for state in reachable_states
+        for record in records
+        if str(record["stage"]) in _STATE_STAGE_GROUPS[state]
+        and str(record["terminal_outcome"]) in _FAILURE_OUTCOMES
+    ]
+    return (
+        min(
+            failures,
+            key=lambda record: (
+                str(record["completed_at_utc"]),
+                next(
+                    index
+                    for index, state in enumerate(_STATE_SEQUENCE)
+                    if str(record["stage"]) in _STATE_STAGE_GROUPS[state]
+                ),
+                str(record["stage"]),
+            ),
+        )
+        if failures
+        else None
+    )
+
+
+def _first_attempt_recovery_type(
+    *,
+    first_pass: bool,
+    successful_attempt: dict[str, Any] | None,
+    first_attempt: dict[str, Any],
+    recovery_records: list[dict[str, Any]],
+    operator_intervention: bool,
+) -> str:
+    if first_pass:
+        return "not_required"
+    if successful_attempt is None:
+        return "terminal_failure"
+    if operator_intervention:
+        return "operator_intervention"
+    if int(successful_attempt["attempt_number"]) > int(first_attempt["attempt_number"]):
+        return "bounded_recovery"
+    if _has_automatic_recovery_disposition(recovery_records):
+        return "bounded_recovery"
+    return "not_required"
+
+
+def _recovery_records_through_state(
+    *,
+    attempts: list[dict[str, Any]],
+    stages_by_attempt: dict[str, list[dict[str, Any]]],
+    to_state: str,
+) -> list[dict[str, Any]]:
+    relevant_stages = {
+        stage
+        for state in _STATE_SEQUENCE[1 : _STATE_SEQUENCE.index(to_state) + 1]
+        for stage in _STATE_STAGE_GROUPS[state]
+    }
+    return [
+        record
+        for attempt in attempts
+        for record in stages_by_attempt.get(str(attempt["attempt_id"]), [])
+        if str(record["stage"]) in relevant_stages
+    ]
+
+
+def _has_recovery_disposition(records: list[dict[str, Any]]) -> bool:
+    return any(
+        str(record["repair_disposition"]) not in {"", "none", "not_required"}
+        for record in records
+    )
+
+
+def _has_automatic_recovery_disposition(records: list[dict[str, Any]]) -> bool:
+    return any(
+        str(record["repair_disposition"]) in _AUTOMATIC_RECOVERY_DISPOSITIONS
+        and str(record["repair_disposition"]) not in {"none", "not_required"}
+        for record in records
+    )
+
+
+def _terminal_disposition(
+    *,
+    attempts: list[dict[str, Any]],
+    stages_by_attempt: dict[str, list[dict[str, Any]]],
+    eventual_success: bool,
+) -> str:
+    terminal_rows = [
+        record
+        for attempt in attempts
+        for record in stages_by_attempt.get(str(attempt["attempt_id"]), [])
+        if int(record.get("entity_terminal") or 0) == 1
+    ]
+    if terminal_rows:
+        latest = max(
+            terminal_rows,
+            key=lambda record: (
+                str(record["completed_at_utc"]),
+                str(record["stage"]),
+            ),
+        )
+        return str(latest["terminal_outcome"])
+    return "succeeded" if eventual_success else "incomplete"
+
+
+def _stage_completion_time(
+    *, records: list[dict[str, Any]], state: str, fallback: str
+) -> str:
+    completed = [
+        str(record["completed_at_utc"])
+        for record in records
+        if str(record["stage"]) in _STATE_STAGE_GROUPS[state]
+        and str(record["terminal_outcome"]) in _COMPLETED_OUTCOMES
+    ]
+    return max(completed, default=fallback)
+
+
+def _usage_through_time(
+    *,
+    usage_events: list[dict[str, Any]],
+    report_id: str,
+    completed_at_utc: str,
+    available: bool,
+) -> dict[str, int | float] | None:
+    if not available:
+        return None
+    relevant = [
+        row
+        for row in usage_events
+        if str(row["report_id"]) == report_id
+        and (not completed_at_utc or str(row["timestamp_utc"]) <= completed_at_utc)
+    ]
+    return {
+        "calls": len(relevant),
+        "input_tokens": sum(int(row["input_tokens"] or 0) for row in relevant),
+        "output_tokens": sum(int(row["output_tokens"] or 0) for row in relevant),
+        "total_tokens": sum(int(row["total_tokens"] or 0) for row in relevant),
+        "cost": round(
+            sum(float(row["estimated_cost_usd"] or 0.0) for row in relevant), 6
+        ),
+    }
+
+
 def _transition_metric(
     *,
     from_state: str,
@@ -593,6 +993,124 @@ def _transition_metric(
         completed_entity_count=completed,
         conversion_rate=_rate(completed, eligible),
     )
+
+
+def _first_attempt_transition_metrics(
+    entities: tuple[ValidationReliabilityFirstAttemptEntity, ...],
+) -> tuple[ValidationReliabilityFirstAttemptTransition, ...]:
+    metrics: list[ValidationReliabilityFirstAttemptTransition] = []
+    for from_state, to_state in zip(_STATE_SEQUENCE, _STATE_SEQUENCE[1:], strict=False):
+        stage_rows = [
+            next(stage for stage in entity.stages if stage.to_state == to_state)
+            for entity in entities
+        ]
+        first_eligible = sum(
+            _first_attempt_state(entity, from_state) for entity in entities
+        )
+        eventual_eligible = sum(
+            _eventual_state(entity, from_state) for entity in entities
+        )
+        first_passed = sum(
+            stage.first_pass
+            for entity, stage in zip(entities, stage_rows, strict=True)
+            if _first_attempt_state(entity, from_state)
+        )
+        eventual_succeeded = sum(
+            stage.eventual_success
+            for entity, stage in zip(entities, stage_rows, strict=True)
+            if _eventual_state(entity, from_state)
+        )
+        first_eligible_stage_rows = [
+            stage
+            for entity, stage in zip(entities, stage_rows, strict=True)
+            if _first_attempt_state(entity, from_state)
+        ]
+        metrics.append(
+            ValidationReliabilityFirstAttemptTransition(
+                schema_version=_SCHEMA_VERSION,
+                from_state=from_state,
+                to_state=to_state,
+                first_attempt_eligible_entity_count=first_eligible,
+                first_pass_entity_count=first_passed,
+                first_pass_conversion_rate=_rate(first_passed, first_eligible),
+                eventual_eligible_entity_count=eventual_eligible,
+                eventual_success_entity_count=eventual_succeeded,
+                eventual_conversion_rate=_rate(eventual_succeeded, eventual_eligible),
+                bounded_recovery_entity_count=sum(
+                    stage.recovery_type == "bounded_recovery"
+                    for stage in first_eligible_stage_rows
+                ),
+                bounded_recovery_rate=_rate(
+                    sum(
+                        stage.recovery_type == "bounded_recovery"
+                        for stage in first_eligible_stage_rows
+                    ),
+                    first_eligible,
+                ),
+                operator_intervention_entity_count=sum(
+                    stage.operator_intervention for stage in first_eligible_stage_rows
+                ),
+                operator_intervention_rate=_rate(
+                    sum(
+                        stage.operator_intervention
+                        for stage in first_eligible_stage_rows
+                    ),
+                    first_eligible,
+                ),
+                terminal_failure_entity_count=sum(
+                    stage.terminal_failure for stage in first_eligible_stage_rows
+                ),
+                terminal_failure_rate=_rate(
+                    sum(stage.terminal_failure for stage in first_eligible_stage_rows),
+                    first_eligible,
+                ),
+                verified_replay_entity_count=sum(
+                    stage.verified_replay for stage in first_eligible_stage_rows
+                ),
+                verified_replay_rate=_rate(
+                    sum(stage.verified_replay for stage in first_eligible_stage_rows),
+                    first_eligible,
+                ),
+            )
+        )
+    return tuple(metrics)
+
+
+def _first_attempt_state(
+    entity: ValidationReliabilityFirstAttemptEntity, state: str
+) -> bool:
+    if state == "admitted":
+        return entity.first_attempt_admitted
+    return next(stage for stage in entity.stages if stage.to_state == state).first_pass
+
+
+def _eventual_state(
+    entity: ValidationReliabilityFirstAttemptEntity, state: str
+) -> bool:
+    if state == "admitted":
+        return entity.eventual_admitted
+    return next(
+        stage for stage in entity.stages if stage.to_state == state
+    ).eventual_success
+
+
+def _first_attempt_failure_pareto(
+    entities: tuple[ValidationReliabilityFirstAttemptEntity, ...],
+) -> tuple[ValidationFailureParetoEntry, ...]:
+    failures = [
+        {
+            "failure_code": stage.first_failure_code,
+            "from_state": stage.from_state,
+            "to_state": stage.to_state,
+        }
+        for entity in entities
+        for stage in entity.stages
+        if (
+            stage.first_failure_code
+            and stage.first_failure_stage in _STATE_STAGE_GROUPS[stage.to_state]
+        )
+    ]
+    return _failure_pareto(failures)
 
 
 def _failure_transition_metrics(

@@ -41719,6 +41719,24 @@
           },
           "type": "array"
         },
+        "first_attempt_entities": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.validation_reliability.ValidationReliabilityFirstAttemptEntity"
+          },
+          "type": "array"
+        },
+        "first_attempt_failure_pareto": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.validation_reliability.ValidationFailureParetoEntry"
+          },
+          "type": "array"
+        },
+        "first_attempt_transitions": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.validation_reliability.ValidationReliabilityFirstAttemptTransition"
+          },
+          "type": "array"
+        },
         "policy_hash": {
           "type": "string"
         },
@@ -41751,7 +41769,10 @@
         "producer_build_identity",
         "transitions",
         "failed_transitions",
-        "failure_pareto"
+        "failure_pareto",
+        "first_attempt_entities",
+        "first_attempt_transitions",
+        "first_attempt_failure_pareto"
       ],
       "type": "object"
     },
@@ -41879,6 +41900,272 @@
         "operator_intervention_rate",
         "full_rerun_count",
         "full_rerun_rate"
+      ],
+      "type": "object"
+    },
+    "src.contracts.validation_reliability.ValidationReliabilityFirstAttemptEntity": {
+      "additionalProperties": false,
+      "properties": {
+        "attempts_required": {
+          "type": "integer"
+        },
+        "bounded_recovery": {
+          "type": "boolean"
+        },
+        "entity_key": {
+          "type": "string"
+        },
+        "eventual_admitted": {
+          "type": "boolean"
+        },
+        "eventual_success": {
+          "type": "boolean"
+        },
+        "first_attempt_admitted": {
+          "type": "boolean"
+        },
+        "first_attempt_number": {
+          "type": "integer"
+        },
+        "first_pass": {
+          "type": "boolean"
+        },
+        "operator_intervention": {
+          "type": "boolean"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "stages": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.validation_reliability.ValidationReliabilityFirstAttemptStage"
+          },
+          "type": "array"
+        },
+        "terminal_disposition": {
+          "type": "string"
+        },
+        "terminal_failure": {
+          "type": "boolean"
+        },
+        "verified_replay": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "schema_version",
+        "entity_key",
+        "report_id",
+        "first_attempt_number",
+        "first_attempt_admitted",
+        "eventual_admitted",
+        "first_pass",
+        "eventual_success",
+        "bounded_recovery",
+        "operator_intervention",
+        "terminal_failure",
+        "verified_replay",
+        "attempts_required",
+        "terminal_disposition",
+        "stages"
+      ],
+      "type": "object"
+    },
+    "src.contracts.validation_reliability.ValidationReliabilityFirstAttemptStage": {
+      "additionalProperties": false,
+      "properties": {
+        "attempts_required": {
+          "type": "integer"
+        },
+        "estimated_cost_usd_before_recovery": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "eventual_success": {
+          "type": "boolean"
+        },
+        "first_failure_code": {
+          "type": "string"
+        },
+        "first_failure_stage": {
+          "type": "string"
+        },
+        "first_pass": {
+          "type": "boolean"
+        },
+        "from_state": {
+          "type": "string"
+        },
+        "input_tokens_before_recovery": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "operator_intervention": {
+          "type": "boolean"
+        },
+        "output_tokens_before_recovery": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "provider_call_count_before_recovery": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "recovery_type": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "terminal_disposition": {
+          "type": "string"
+        },
+        "terminal_failure": {
+          "type": "boolean"
+        },
+        "to_state": {
+          "type": "string"
+        },
+        "total_tokens_before_recovery": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "usage_attribution": {
+          "type": "string"
+        },
+        "verified_replay": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "schema_version",
+        "from_state",
+        "to_state",
+        "first_pass",
+        "eventual_success",
+        "first_failure_code",
+        "first_failure_stage",
+        "recovery_type",
+        "attempts_required",
+        "operator_intervention",
+        "terminal_failure",
+        "verified_replay",
+        "terminal_disposition",
+        "usage_attribution",
+        "provider_call_count_before_recovery",
+        "input_tokens_before_recovery",
+        "output_tokens_before_recovery",
+        "total_tokens_before_recovery",
+        "estimated_cost_usd_before_recovery"
+      ],
+      "type": "object"
+    },
+    "src.contracts.validation_reliability.ValidationReliabilityFirstAttemptTransition": {
+      "additionalProperties": false,
+      "properties": {
+        "bounded_recovery_entity_count": {
+          "type": "integer"
+        },
+        "bounded_recovery_rate": {
+          "type": "number"
+        },
+        "eventual_conversion_rate": {
+          "type": "number"
+        },
+        "eventual_eligible_entity_count": {
+          "type": "integer"
+        },
+        "eventual_success_entity_count": {
+          "type": "integer"
+        },
+        "first_attempt_eligible_entity_count": {
+          "type": "integer"
+        },
+        "first_pass_conversion_rate": {
+          "type": "number"
+        },
+        "first_pass_entity_count": {
+          "type": "integer"
+        },
+        "from_state": {
+          "type": "string"
+        },
+        "operator_intervention_entity_count": {
+          "type": "integer"
+        },
+        "operator_intervention_rate": {
+          "type": "number"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "terminal_failure_entity_count": {
+          "type": "integer"
+        },
+        "terminal_failure_rate": {
+          "type": "number"
+        },
+        "to_state": {
+          "type": "string"
+        },
+        "verified_replay_entity_count": {
+          "type": "integer"
+        },
+        "verified_replay_rate": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "schema_version",
+        "from_state",
+        "to_state",
+        "first_attempt_eligible_entity_count",
+        "first_pass_entity_count",
+        "first_pass_conversion_rate",
+        "eventual_eligible_entity_count",
+        "eventual_success_entity_count",
+        "eventual_conversion_rate",
+        "bounded_recovery_entity_count",
+        "bounded_recovery_rate",
+        "operator_intervention_entity_count",
+        "operator_intervention_rate",
+        "terminal_failure_entity_count",
+        "terminal_failure_rate",
+        "verified_replay_entity_count",
+        "verified_replay_rate"
       ],
       "type": "object"
     },

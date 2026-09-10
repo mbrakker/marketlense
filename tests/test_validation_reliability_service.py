@@ -63,6 +63,7 @@ def _record(
     failure_code: str = "",
     repair_disposition: str = "not_required",
     entity_terminal: bool = False,
+    idempotency_state: str = "new",
     started_at_utc: str = "2026-07-26T10:00:00+00:00",
     completed_at_utc: str = "2026-07-26T10:01:00+00:00",
 ) -> None:
@@ -92,7 +93,7 @@ def _record(
                 repair_disposition=repair_disposition,
                 duplicate_disposition="none",
                 supersession_state="current",
-                idempotency_state="new",
+                idempotency_state=idempotency_state,
                 configuration_hash="configuration-hash",
                 policy_hash="policy-hash",
                 producer_build_identity="build-sha",
@@ -172,7 +173,11 @@ def test_reliability_artifact_is_deterministic_and_measures_recovery(tmp_path) -
         attempt=2,
         stage="evidence_generation",
         repair_disposition="targeted_repair",
+        started_at_utc="2026-07-26T10:06:00+00:00",
+        completed_at_utc="2026-07-26T10:10:00+00:00",
     )
+    for stage in ("taxonomy", "category_fit", "artifact_generation"):
+        _record(reports_db, attempt=2, stage=stage)
     append_usage(
         LLMUsageLedgerAppendRequest(
             schema_version="1.0", db_path=usage_db, entry=_usage_entry()
@@ -213,6 +218,36 @@ def test_reliability_artifact_is_deterministic_and_measures_recovery(tmp_path) -
     assert first.failure_pareto[0].transition_pairs == (
         "source_prepared->evidence_complete",
     )
+    first_attempt_stage = next(
+        row
+        for row in first.first_attempt_entities[0].stages
+        if row.to_state == "evidence_complete"
+    )
+    assert first_attempt_stage.first_pass is False
+    assert first_attempt_stage.eventual_success is True
+    assert first_attempt_stage.first_failure_code == "provider_timeout"
+    assert first_attempt_stage.first_failure_stage == "evidence_generation"
+    assert first_attempt_stage.recovery_type == "bounded_recovery"
+    assert first_attempt_stage.attempts_required == 2
+    assert first_attempt_stage.operator_intervention is False
+    assert first_attempt_stage.provider_call_count_before_recovery == 1
+    assert first_attempt_stage.total_tokens_before_recovery == 120
+    assert first_attempt_stage.estimated_cost_usd_before_recovery == 0.012
+    first_attempt_transition = next(
+        row
+        for row in first.first_attempt_transitions
+        if row.to_state == "evidence_complete"
+    )
+    assert first_attempt_transition.first_pass_conversion_rate == 0.0
+    assert first_attempt_transition.eventual_conversion_rate == 1.0
+    analysis_transition = next(
+        row
+        for row in first.first_attempt_transitions
+        if row.to_state == "analysis_complete"
+    )
+    assert analysis_transition.first_attempt_eligible_entity_count == 0
+    assert analysis_transition.bounded_recovery_entity_count == 0
+    assert first.first_attempt_failure_pareto[0].failure_code == "provider_timeout"
 
     target = tmp_path / "reliability.json"
     response = write_validation_reliability_artifact(
@@ -365,3 +400,137 @@ def test_reliability_artifact_reports_optional_repair_skips_and_downstream_block
         ("metadata_governance_blocked", 3),
         ("validation_failed", 1),
     ]
+    publish_ready_stage = next(
+        stage
+        for stage in artifact.first_attempt_entities[0].stages
+        if stage.to_state == "publish_ready"
+    )
+    assert publish_ready_stage.terminal_failure is True
+    assert publish_ready_stage.terminal_disposition == "permanent_failure"
+    rendered_stage = next(
+        stage
+        for stage in artifact.first_attempt_entities[0].stages
+        if stage.to_state == "rendered"
+    )
+    assert rendered_stage.first_failure_code == "validation_failed"
+    assert rendered_stage.first_failure_stage == "grounding_validation"
+
+
+def test_first_attempt_classifies_operator_recovery_and_verified_replay(
+    tmp_path,
+) -> None:
+    reports_db = str(tmp_path / "reports.sqlite")
+    usage_db = str(tmp_path / "usage.sqlite")
+    _create_run(reports_db)
+    for stage in ("admission_preflight", "source_preparation", "source_validation"):
+        _record(reports_db, attempt=1, stage=stage)
+    _record(
+        reports_db,
+        attempt=1,
+        stage="evidence_generation",
+        outcome="failed",
+        failure_code="validation_failed",
+    )
+    for stage in ("admission_preflight", "source_preparation", "source_validation"):
+        _record(reports_db, attempt=2, stage=stage)
+    _record(
+        reports_db,
+        attempt=2,
+        stage="evidence_generation",
+        repair_disposition="operator_intervention",
+        idempotency_state="replayed",
+    )
+
+    artifact = build_validation_reliability_artifact(
+        ValidationReliabilityBuildRequest(
+            schema_version="1.0",
+            reports_db_path=reports_db,
+            usage_db_path=usage_db,
+            validation_run_id="validation-1",
+        ),
+        _ctx(),
+    )
+
+    evidence_stage = next(
+        stage
+        for stage in artifact.first_attempt_entities[0].stages
+        if stage.to_state == "evidence_complete"
+    )
+    assert evidence_stage.first_pass is False
+    assert evidence_stage.eventual_success is True
+    assert evidence_stage.recovery_type == "operator_intervention"
+    assert evidence_stage.operator_intervention is True
+    assert evidence_stage.verified_replay is True
+
+
+def test_first_attempt_does_not_count_internal_automatic_repair_as_first_pass(
+    tmp_path,
+) -> None:
+    reports_db = str(tmp_path / "reports.sqlite")
+    usage_db = str(tmp_path / "usage.sqlite")
+    _create_run(reports_db)
+    for stage in ("admission_preflight", "source_preparation", "source_validation"):
+        _record(reports_db, attempt=1, stage=stage)
+    _record(
+        reports_db,
+        attempt=1,
+        stage="evidence_generation",
+        repair_disposition="targeted_repair",
+    )
+
+    artifact = build_validation_reliability_artifact(
+        ValidationReliabilityBuildRequest(
+            schema_version="1.0",
+            reports_db_path=reports_db,
+            usage_db_path=usage_db,
+            validation_run_id="validation-1",
+        ),
+        _ctx(),
+    )
+
+    evidence_stage = next(
+        stage
+        for stage in artifact.first_attempt_entities[0].stages
+        if stage.to_state == "evidence_complete"
+    )
+    assert evidence_stage.first_pass is False
+    assert evidence_stage.eventual_success is True
+    assert evidence_stage.recovery_type == "bounded_recovery"
+    assert evidence_stage.attempts_required == 1
+
+
+def test_first_attempt_classifies_later_lineage_attempt_without_operator_as_bounded(
+    tmp_path,
+) -> None:
+    reports_db = str(tmp_path / "reports.sqlite")
+    usage_db = str(tmp_path / "usage.sqlite")
+    _create_run(reports_db)
+    for stage in ("admission_preflight", "source_preparation", "source_validation"):
+        _record(reports_db, attempt=1, stage=stage)
+    _record(
+        reports_db,
+        attempt=1,
+        stage="evidence_generation",
+        outcome="failed",
+        failure_code="provider_timeout",
+    )
+    for stage in ("admission_preflight", "source_preparation", "source_validation"):
+        _record(reports_db, attempt=2, stage=stage)
+    _record(reports_db, attempt=2, stage="evidence_generation")
+
+    artifact = build_validation_reliability_artifact(
+        ValidationReliabilityBuildRequest(
+            schema_version="1.0",
+            reports_db_path=reports_db,
+            usage_db_path=usage_db,
+            validation_run_id="validation-1",
+        ),
+        _ctx(),
+    )
+
+    evidence_stage = next(
+        stage
+        for stage in artifact.first_attempt_entities[0].stages
+        if stage.to_state == "evidence_complete"
+    )
+    assert evidence_stage.recovery_type == "bounded_recovery"

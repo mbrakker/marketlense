@@ -74,6 +74,79 @@ class ValidationFailureParetoEntry(SemanticIdContract):
 
 
 @dataclass(frozen=True)
+class ValidationReliabilityFirstAttemptStage(SemanticIdContract):
+    """First-attempt and eventual result for one report lifecycle transition."""
+
+    schema_version: str = field(metadata={"doc": "First-attempt stage schema version."})
+    from_state: str
+    to_state: str
+    first_pass: bool
+    eventual_success: bool
+    first_failure_code: str
+    first_failure_stage: str
+    recovery_type: str
+    attempts_required: int
+    operator_intervention: bool
+    terminal_failure: bool
+    verified_replay: bool
+    terminal_disposition: str
+    usage_attribution: str
+    provider_call_count_before_recovery: int | None
+    input_tokens_before_recovery: int | None
+    output_tokens_before_recovery: int | None
+    total_tokens_before_recovery: int | None
+    estimated_cost_usd_before_recovery: float | None
+
+
+@dataclass(frozen=True)
+class ValidationReliabilityFirstAttemptEntity(SemanticIdContract):
+    """Retained first-attempt evidence and final disposition for one report."""
+
+    schema_version: str = field(
+        metadata={"doc": "First-attempt entity schema version."}
+    )
+    entity_key: str
+    report_id: str
+    first_attempt_number: int
+    first_attempt_admitted: bool
+    eventual_admitted: bool
+    first_pass: bool
+    eventual_success: bool
+    bounded_recovery: bool
+    operator_intervention: bool
+    terminal_failure: bool
+    verified_replay: bool
+    attempts_required: int
+    terminal_disposition: str
+    stages: tuple[ValidationReliabilityFirstAttemptStage, ...]
+
+
+@dataclass(frozen=True)
+class ValidationReliabilityFirstAttemptTransition(SemanticIdContract):
+    """Separate first-attempt and eventual conversion for one transition."""
+
+    schema_version: str = field(
+        metadata={"doc": "First-attempt transition schema version."}
+    )
+    from_state: str
+    to_state: str
+    first_attempt_eligible_entity_count: int
+    first_pass_entity_count: int
+    first_pass_conversion_rate: float
+    eventual_eligible_entity_count: int
+    eventual_success_entity_count: int
+    eventual_conversion_rate: float
+    bounded_recovery_entity_count: int
+    bounded_recovery_rate: float
+    operator_intervention_entity_count: int
+    operator_intervention_rate: float
+    terminal_failure_entity_count: int
+    terminal_failure_rate: float
+    verified_replay_entity_count: int
+    verified_replay_rate: float
+
+
+@dataclass(frozen=True)
 class ValidationReliabilityArtifact(SemanticIdContract):
     """The retained validation-run funnel, failure metrics, and Pareto report."""
 
@@ -89,6 +162,9 @@ class ValidationReliabilityArtifact(SemanticIdContract):
     transitions: tuple[ValidationReliabilityTransition, ...]
     failed_transitions: tuple[ValidationReliabilityFailureTransition, ...]
     failure_pareto: tuple[ValidationFailureParetoEntry, ...]
+    first_attempt_entities: tuple[ValidationReliabilityFirstAttemptEntity, ...]
+    first_attempt_transitions: tuple[ValidationReliabilityFirstAttemptTransition, ...]
+    first_attempt_failure_pareto: tuple[ValidationFailureParetoEntry, ...]
     artifact_hash: str = field(
         default="", metadata={"doc": "Hash of this artifact excluding itself."}
     )

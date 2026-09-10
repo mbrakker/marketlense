@@ -145,6 +145,28 @@ runtime state and exports bounded identifiers and scalar metrics only. It must
 not be used to infer a successful publication when publication-stage records
 are absent.
 
+The same canonical validation-reliability artifact separately retains the
+eventual/current-attempt funnel and a first-attempt funnel for every lifecycle
+transition. A first pass is a transition completed by an entity's earliest
+retained non-out-of-cohort attempt; a later success never changes that result.
+For every report and transition, the artifact records the first failure code
+and stage, eventual success, attempts required, recovery classification,
+operator-intervention flag, terminal disposition, verified-replay flag, and
+provider calls/tokens/cost through successful recovery. `bounded_recovery`
+includes a successful linked later attempt or a retained automatic repair
+disposition within attempt 1; a retained `operator_intervention` takes
+precedence. Missing usage-ledger attribution is represented by
+`usage_attribution="unavailable"` and null numeric fields, never zeroes.
+
+`first_attempt_failure_pareto` is a deterministic count of only first-attempt
+failure codes, sorted by descending count then code, with canonical transition
+pairs. It identifies lost first-attempt conversion without altering the legacy
+`failure_pareto`, which remains the all-attempt failure view. Building or
+writing this artifact reads only retained SQLite manifest and LLM-ledger
+records; it makes no provider, browser, Drive, mailbox, or WordPress call.
+Canonical JSON ordering and an artifact hash over the complete payload make
+identical retained inputs byte- and hash-equivalent.
+
 ### Reusable sanitized acquisition-assessment projection
 
 When a completed acquisition assessment has a retained raw current JSONL and a
