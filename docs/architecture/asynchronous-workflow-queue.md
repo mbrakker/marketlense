@@ -73,6 +73,22 @@ prior validated checkpoint rather than re-running PDF extraction or earlier
 model work. Analytics projection has a projection-only path from validated
 analysis and render checkpoints.
 
+## Frozen validation queue lineage
+
+`submit_frozen_validation_cohort_to_queue` is the single production bridge for
+a frozen validation cohort with retained source artifacts. It creates one
+durable queue root, stores that exact root as `validation_runs.workflow_run_id`,
+and carries the immutable validation run, cohort, and attempt provenance in the
+existing typed report queue payloads. Report-stage workers project that root
+into the report-only `RunContext`; they do not redefine `RunContext.run_id` for
+ordinary queue work. Each child report queue submission, including
+`publication_readiness`, preserves the same fields and root.
+
+Manifest creation and each stage write compare the queue root as part of
+provenance. A missing, changed, or ambiguous root fails closed, so state-db
+readiness, retry, requeue, and approval evidence cannot be attributed across
+workflows that happen to share a report ID.
+
 ## Bounded deferred recovery handoffs
 
 The workflow queue remains the canonical owner of normal `budget_deferred`

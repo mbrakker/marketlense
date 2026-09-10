@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from src.contracts.semantic_ids import RunId, SemanticIdContract, ValidationRunId
+from src.contracts.workflow_queue import SourceIngestPayload, WorkflowJob
 
 
 @dataclass(frozen=True)
@@ -20,6 +21,32 @@ class ValidationRunManifestCreateRequest(SemanticIdContract):
     policy_hash: str
     producer_build_identity: str
     created_at_utc: str
+
+
+@dataclass(frozen=True)
+class FrozenValidationCohortQueueSubmissionRequest:
+    """Submit immutable frozen-cohort report sources through the durable queue."""
+
+    schema_version: str = field(
+        metadata={"doc": "Frozen validation queue-submission schema version."}
+    )
+    state_db: str
+    reports_db: str
+    cohort_manifest: str
+    source_ingest_payloads: tuple[SourceIngestPayload, ...]
+
+
+@dataclass(frozen=True)
+class FrozenValidationCohortQueueSubmissionResponse(SemanticIdContract):
+    """Canonical queue lineage retained for one frozen validation cohort."""
+
+    schema_version: str = field(
+        metadata={"doc": "Frozen validation queue-submission response schema version."}
+    )
+    validation_run_id: ValidationRunId
+    cohort_id: str
+    root_workflow_id: RunId
+    jobs: tuple[WorkflowJob, ...]
 
 
 @dataclass(frozen=True)

@@ -274,6 +274,10 @@ def _report_acquisition_handler(
                 acquisition_route=result.route_family or result.route_kind,
                 processing_version=payload.processing_version or "acquisition-v1",
                 report_id=_report_id_for_acquisition(result.drive_uploads, artifact),
+                validation_run_id=payload.validation_run_id,
+                cohort_id=payload.cohort_id,
+                validation_attempt_number=payload.validation_attempt_number,
+                validation_parent_attempt_number=payload.validation_parent_attempt_number,
             ),
             parent_job=job,
             ctx=ctx,
@@ -299,6 +303,10 @@ def _report_acquisition_handler(
                     input_content_hash=payload.input_content_hash
                     or _digest(payload.source_url),
                     processing_version=payload.processing_version,
+                    validation_run_id=payload.validation_run_id,
+                    cohort_id=payload.cohort_id,
+                    validation_attempt_number=payload.validation_attempt_number,
+                    validation_parent_attempt_number=payload.validation_parent_attempt_number,
                     attributes={
                         "publisher_name": payload.publisher_name,
                         "delivery_email": delivery_email,
@@ -389,6 +397,10 @@ def _mailbox_delivery_handler(
             report_id=_report_id_for_acquisition(
                 download_result.drive_uploads if download_result else [], artifact
             ),
+            validation_run_id=payload.validation_run_id,
+            cohort_id=payload.cohort_id,
+            validation_attempt_number=payload.validation_attempt_number,
+            validation_parent_attempt_number=payload.validation_parent_attempt_number,
         ),
         parent_job=job,
         ctx=ctx,

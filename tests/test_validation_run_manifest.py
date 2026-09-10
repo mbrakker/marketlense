@@ -10,8 +10,8 @@ import pytest
 from src.contracts.publish import PublishOutcome
 from src.contracts.run_context import RunContext
 from src.contracts.validation_run_manifest import (
-    ValidationRunManifestAuditRequest,
     ValidationRunManifestAttemptResolveRequest,
+    ValidationRunManifestAuditRequest,
     ValidationRunManifestCreateRequest,
     ValidationRunManifestRecordRequest,
     ValidationRunManifestStageRecord,
@@ -104,6 +104,24 @@ def _create(db_path: str) -> None:
         ),
         _ctx(),
     )
+
+
+def test_manifest_stage_rejects_a_different_workflow_lineage(tmp_path) -> None:
+    db_path = str(tmp_path / "reports.sqlite")
+    _create(db_path)
+
+    with pytest.raises(AppError, match="provenance differs"):
+        record_validation_run_manifest_stage(
+            ValidationRunManifestRecordRequest(
+                schema_version="1.0",
+                db_path=db_path,
+                record=replace(
+                    _record(attempt=1, stage="discovery"),
+                    workflow_run_id="other-workflow",
+                ),
+            ),
+            _ctx(),
+        )
 
 
 def test_manifest_retains_stages_and_derives_a_reconciled_final_cohort(
@@ -356,6 +374,7 @@ def test_analysis_stage_recorder_uses_inherited_validation_provenance(tmp_path) 
     _create(db_path)
     ctx = replace(
         _ctx(),
+        run_id="workflow-1",
         producer_commit_sha="build-sha",
         validation_run_id="validation-1",
         cohort_id="cohort-1",
@@ -396,6 +415,7 @@ def test_analysis_stage_recorder_preserves_inherited_identity_over_pdf_checksum(
     _create(db_path)
     ctx = replace(
         _ctx(),
+        run_id="workflow-1",
         producer_commit_sha="build-sha",
         validation_run_id="validation-1",
         cohort_id="cohort-1",
@@ -440,6 +460,7 @@ def test_analysis_stage_recorder_uses_workspace_identity_for_local_runs(
     )
     ctx = replace(
         _ctx(),
+        run_id="workflow-1",
         validation_run_id="validation-1",
         cohort_id="cohort-1",
         report_id="report-1",
@@ -525,7 +546,7 @@ def test_wordpress_outcome_closes_the_matching_immutable_cohort_member(
                 authenticated_readback_verified=True,
             )
         ],
-        ctx=_ctx(),
+        ctx=replace(_ctx(), run_id="workflow-1"),
     )
 
     audit = audit_validation_run_manifest(

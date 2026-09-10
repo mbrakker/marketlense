@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from hashlib import sha256
 from pathlib import Path
 from typing import Any, Callable, Iterable, List, Optional
+from uuid import uuid4
 
 from src.contracts.drive import (
     DriveDownloadToPathRequest,
@@ -60,11 +61,17 @@ from src.contracts.validation_reliability import (
     ValidationReliabilityWriteRequest,
 )
 from src.contracts.validation_run_manifest import (
+    FrozenValidationCohortQueueSubmissionRequest,
+    FrozenValidationCohortQueueSubmissionResponse,
     ValidationRunManifestAttemptResolveRequest,
     ValidationRunManifestAuditRequest,
     ValidationRunManifestCreateRequest,
     ValidationRunManifestRecordRequest,
     ValidationRunManifestStageRecord,
+)
+from src.contracts.workflow_queue import (
+    WorkflowJob,
+    WorkflowJobSubmission,
 )
 from src.generators.report_generation_shared import report_slug
 from src.orchestrators._ingest_orchestrator.db_preflight import (
@@ -160,6 +167,7 @@ from src.services.validation_reliability_service import (
     validation_reliability_artifact_path,
     write_validation_reliability_artifact,
 )
+from src.services.workflow_queue_service import enqueue_workflow_job
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.path_utils import safe_pdf_name
@@ -1537,6 +1545,282 @@ def _validation_run_id_for_cohort(
         json.dumps(identity, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
     return ValidationRunId(f"validation:{digest}")
+
+
+def submit_frozen_validation_cohort_to_queue(
+    request: FrozenValidationCohortQueueSubmissionRequest,
+    ctx: RunContext,
+) -> FrozenValidationCohortQueueSubmissionResponse:
+    """Bind one immutable validation cohort to a new durable queue lineage.
+
+    This is deliberately the only bridge from frozen-cohort provenance into
+    queue-backed report execution.  It retains no duplicate lineage state: the
+    manifest and every queued payload receive the queue's one root workflow ID.
+    """
+
+    if request.schema_version != "1.0":
+        raise AppError(
+            code="validation_queue_submission_schema_invalid",
+            message="Frozen validation queue submission schema is unsupported",
+            retryable=False,
+        )
+    if not all(
+        (
+            request.state_db.strip(),
+            request.reports_db.strip(),
+            request.cohort_manifest.strip(),
+            request.source_ingest_payloads,
+        )
+    ):
+        raise AppError(
+            code="validation_queue_submission_incomplete",
+            message=(
+                "Frozen validation queue submission requires state, reports, cohort "
+                "and sources"
+            ),
+            retryable=False,
+        )
+    try:
+        frozen_payload = json.loads(
+            read_text(
+                ReadTextRequest(schema_version="1.0", path=request.cohort_manifest),
+                ctx,
+            ).content
+        )
+        if not isinstance(frozen_payload, dict):
+            raise ValueError("cohort manifest must be an object")
+        configuration_hash = str(frozen_payload["configuration_hash"] or "").strip()
+        policy_hash = str(frozen_payload["policy_hash"] or "").strip()
+        producer_build_identity = str(
+            frozen_payload.get("producer_build_identity") or "workspace"
+        ).strip()
+        members = frozen_payload["members"]
+        if not all((configuration_hash, policy_hash, producer_build_identity)):
+            raise ValueError("cohort provenance is incomplete")
+        if not isinstance(members, list):
+            raise ValueError("cohort members are invalid")
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise AppError(
+            code="validation_queue_cohort_manifest_invalid",
+            message=(
+                "Frozen validation queue submission requires a valid cohort manifest"
+            ),
+            cause=exc,
+            retryable=False,
+        ) from exc
+    if producer_build_identity != (ctx.producer_commit_sha or "workspace"):
+        raise AppError(
+            code="validation_queue_cohort_producer_mismatch",
+            message=(
+                "Frozen validation cohort was produced by a different build identity"
+            ),
+            retryable=False,
+        )
+    deps = IngestBatchDependencies.default()
+    _manifest_size, files = _load_frozen_cohort(
+        cohort_manifest=request.cohort_manifest,
+        expected_size=len(request.source_ingest_payloads),
+        expected_configuration_hash=configuration_hash,
+        expected_policy_hash=policy_hash,
+        expected_producer_build_identity=producer_build_identity,
+        deps=deps,
+        root_ctx=ctx,
+    )
+    cohort_id = _cohort_id(files)
+    validation_run_id = _validation_run_id_for_cohort(
+        cohort_id=cohort_id,
+        configuration_hash=configuration_hash,
+        policy_hash=policy_hash,
+        producer_build_identity=producer_build_identity,
+    )
+    if str(frozen_payload.get("cohort_id") or "") != cohort_id or str(
+        frozen_payload.get("validation_run_id") or ""
+    ) != str(validation_run_id):
+        raise AppError(
+            code="validation_queue_cohort_identity_invalid",
+            message=(
+                "Frozen validation cohort identity does not match its retained members"
+            ),
+            retryable=False,
+        )
+    member_by_report_id = {
+        str(member.get("report_id") or member.get("file_id") or ""): member
+        for member in members
+        if isinstance(member, dict)
+    }
+    if len(member_by_report_id) != len(files):
+        raise AppError(
+            code="validation_queue_cohort_members_invalid",
+            message="Frozen validation cohort report identity is ambiguous",
+            retryable=False,
+        )
+    root_workflow_id = RunId(str(uuid4()))
+    queue_ctx = replace(
+        ctx,
+        run_id=root_workflow_id,
+        validation_run_id=str(validation_run_id),
+        cohort_id=cohort_id,
+        workflow="report_generation",
+        stage="queue_submission",
+        artifact_family="report",
+        configuration_hash=configuration_hash,
+        policy_hash=policy_hash,
+    )
+    create_validation_run_manifest(
+        ValidationRunManifestCreateRequest(
+            schema_version="1.0",
+            db_path=request.reports_db,
+            validation_run_id=validation_run_id,
+            cohort_id=cohort_id,
+            workflow_run_id=root_workflow_id,
+            configuration_hash=configuration_hash,
+            policy_hash=policy_hash,
+            producer_build_identity=producer_build_identity,
+            created_at_utc=datetime.now(timezone.utc).isoformat(),
+        ),
+        queue_ctx,
+    )
+    attempt = resolve_validation_run_manifest_attempt(
+        ValidationRunManifestAttemptResolveRequest(
+            schema_version="1.0",
+            db_path=request.reports_db,
+            validation_run_id=validation_run_id,
+            mode="next_replay",
+        ),
+        queue_ctx,
+    )
+    timestamp = datetime.now(timezone.utc).isoformat()
+    for member in members:
+        assert isinstance(member, dict)
+        report_id = str(member.get("report_id") or member.get("file_id") or "").strip()
+        source_identity_id = str(member.get("source_identity_id") or "").strip()
+        publisher_id = str(member.get("publisher_id") or "").strip()
+        if not all((report_id, source_identity_id, publisher_id)):
+            raise AppError(
+                code="validation_queue_cohort_members_invalid",
+                message="Frozen validation cohort member provenance is incomplete",
+                retryable=False,
+            )
+        for stage in (
+            "discovery",
+            "candidate_qualification",
+            "admission_preflight",
+        ):
+            record_validation_run_manifest_stage(
+                ValidationRunManifestRecordRequest(
+                    schema_version="1.0",
+                    db_path=request.reports_db,
+                    record=ValidationRunManifestStageRecord(
+                        schema_version="1.0",
+                        validation_run_id=validation_run_id,
+                        cohort_id=cohort_id,
+                        workflow_run_id=root_workflow_id,
+                        entity_type="report",
+                        publisher_id=publisher_id,
+                        report_id=report_id,
+                        source_identity_id=source_identity_id,
+                        stage=stage,
+                        attempt_number=attempt.attempt_number,
+                        parent_attempt_number=attempt.parent_attempt_number,
+                        input_artifact_ids=(report_id,),
+                        output_artifact_ids=(cohort_id,),
+                        started_at_utc=timestamp,
+                        completed_at_utc=timestamp,
+                        terminal_outcome="succeeded",
+                        failure_code="",
+                        retryable=False,
+                        repair_disposition="not_required",
+                        duplicate_disposition="new",
+                        supersession_state="current",
+                        idempotency_state="new",
+                        configuration_hash=configuration_hash,
+                        policy_hash=policy_hash,
+                        producer_build_identity=producer_build_identity,
+                        cohort_disposition="final_validation",
+                        entity_terminal=False,
+                    ),
+                ),
+                queue_ctx,
+            )
+    queued_jobs: list[WorkflowJob] = []
+    for payload in request.source_ingest_payloads:
+        report_id = payload.report_id.strip()
+        member = member_by_report_id.get(report_id)
+        if member is None:
+            raise AppError(
+                code="validation_queue_source_not_in_cohort",
+                message="Queued source ingest is not a member of the frozen cohort",
+                retryable=False,
+                context={"report_id": report_id},
+            )
+        member_hash = str(member.get("md5_checksum") or "").strip()
+        member_source_identity = str(member.get("source_identity_id") or "").strip()
+        if (
+            not all((report_id, payload.source_content_hash.strip(), member_hash))
+            or payload.source_content_hash.strip() != member_hash
+            or payload.source_identity_id.strip() != member_source_identity
+            or (
+                payload.validation_run_id.strip()
+                and payload.validation_run_id.strip() != str(validation_run_id)
+            )
+            or (payload.cohort_id.strip() and payload.cohort_id.strip() != cohort_id)
+        ):
+            raise AppError(
+                code="validation_queue_source_lineage_invalid",
+                message=(
+                    "Queued source ingest does not match frozen validation provenance"
+                ),
+                retryable=False,
+                context={"report_id": report_id},
+            )
+        queue_payload = replace(
+            payload,
+            validation_run_id=str(validation_run_id),
+            cohort_id=cohort_id,
+            validation_attempt_number=attempt.attempt_number,
+            validation_parent_attempt_number=attempt.parent_attempt_number,
+        )
+        job, _created = enqueue_workflow_job(
+            request.state_db,
+            WorkflowJobSubmission(
+                schema_version="1.0",
+                queue_name="source_ingest",
+                job_type="source_ingest.v1",
+                payload=queue_payload,
+                idempotency_key=(
+                    f"{validation_run_id}:{report_id}:source_ingest:"
+                    f"{payload.source_content_hash}:{payload.processing_version}"
+                ),
+                deduplication_scope="frozen-validation-source-ingest",
+                root_workflow_id=str(root_workflow_id),
+                trigger_event_id=str(root_workflow_id),
+                correlation_id=str(root_workflow_id),
+                entity_type="report",
+                entity_id=report_id,
+                publisher_id=str(member.get("publisher_id") or "unattributed"),
+                source_identity_id=member_source_identity,
+                report_id=report_id,
+                budget_profile="report_ingest",
+            ),
+            queue_ctx,
+        )
+        if job.root_workflow_id != str(root_workflow_id):
+            raise AppError(
+                code="validation_queue_root_lineage_lost",
+                message=(
+                    "Durable source-ingest job did not retain validation workflow "
+                    "lineage"
+                ),
+                retryable=False,
+            )
+        queued_jobs.append(job)
+    return FrozenValidationCohortQueueSubmissionResponse(
+        schema_version="1.0",
+        validation_run_id=validation_run_id,
+        cohort_id=cohort_id,
+        root_workflow_id=root_workflow_id,
+        jobs=tuple(queued_jobs),
+    )
 
 
 def _record_cohort_ingest_manifest(

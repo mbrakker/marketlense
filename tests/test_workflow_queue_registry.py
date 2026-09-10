@@ -449,6 +449,10 @@ def test_queue_stage_builder_preserves_workflow_lineage() -> None:
             source_content_hash="source-md5",
             report_id="report-1",
             processing_version="parser.v2",
+            validation_run_id="validation-1",
+            cohort_id="cohort-1",
+            validation_attempt_number=2,
+            validation_parent_attempt_number=1,
         ),
         next_queue="report_selection",
         next_payload=SourceIngestPayload(
@@ -462,6 +466,10 @@ def test_queue_stage_builder_preserves_workflow_lineage() -> None:
     assert stage.root_workflow_id == job.job_id
     assert stage.correlation_id == job.job_id
     assert stage.source_identity_id == "source-1"
+    assert stage.payload.validation_run_id == "validation-1"
+    assert stage.payload.cohort_id == "cohort-1"
+    assert stage.payload.validation_attempt_number == 2
+    assert stage.payload.validation_parent_attempt_number == 1
 
 
 def test_operational_handlers_reject_incomplete_inputs_before_external_work() -> None:

@@ -7,10 +7,10 @@ import json
 
 from src.contracts.run_context import RunContext
 from src.contracts.validation_run_manifest import (
-    ValidationRunManifestAuditRequest,
-    ValidationRunManifestAuditResponse,
     ValidationRunManifestAttemptResolveRequest,
     ValidationRunManifestAttemptResolveResponse,
+    ValidationRunManifestAuditRequest,
+    ValidationRunManifestAuditResponse,
     ValidationRunManifestCreateRequest,
     ValidationRunManifestRecordRequest,
     ValidationRunManifestRecordResponse,
@@ -87,13 +87,14 @@ def create_validation_run_manifest(
             (str(request.validation_run_id),),
         ).fetchone()
         identity = (
+            str(request.workflow_run_id),
             request.cohort_id,
             request.configuration_hash,
             request.policy_hash,
             request.producer_build_identity,
         )
         if existing is not None:
-            existing_identity = tuple(str(existing[index]) for index in range(1, 5))
+            existing_identity = tuple(str(value) for value in existing)
             if existing_identity != identity:
                 raise AppError(
                     code="validation_manifest_run_identity_conflict",
@@ -208,7 +209,8 @@ def record_validation_run_manifest_stage(
     with _metadata_conn(request.db_path, ctx) as conn:
         run_row = conn.execute(
             """
-            SELECT cohort_id, configuration_hash, policy_hash, producer_build_identity
+            SELECT workflow_run_id, cohort_id, configuration_hash, policy_hash,
+                   producer_build_identity
             FROM validation_runs WHERE validation_run_id=?
             """,
             (str(record.validation_run_id),),
@@ -220,6 +222,7 @@ def record_validation_run_manifest_stage(
                 retryable=False,
             )
         if tuple(str(value) for value in run_row) != (
+            str(record.workflow_run_id),
             str(record.cohort_id),
             str(record.configuration_hash),
             str(record.policy_hash),
@@ -294,9 +297,10 @@ def record_validation_run_manifest_stage(
                         record.started_at_utc,
                     ),
                 )
-            elif member_row is not None and tuple(
-                str(value) for value in member_row
-            ) != member_identity:
+            elif (
+                member_row is not None
+                and tuple(str(value) for value in member_row) != member_identity
+            ):
                 raise AppError(
                     code="validation_manifest_cohort_member_conflict",
                     message="Stage changed the immutable identity of a cohort report",

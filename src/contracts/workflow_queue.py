@@ -95,7 +95,12 @@ class WorkflowArtifactReference:
 
 @dataclass(frozen=True)
 class WorkflowQueuePayload:
-    """Common non-sensitive reference payload accepted by every queue."""
+    """Common non-sensitive reference payload accepted by every queue.
+
+    Frozen validation identity is carried only as immutable scalar provenance.
+    The durable job's ``root_workflow_id`` remains the authoritative workflow
+    lineage and is projected into ``RunContext`` only by report queue workers.
+    """
 
     schema_version: str = field(
         default="1.0", metadata={"doc": "Contract schema version."}
@@ -107,6 +112,22 @@ class WorkflowQueuePayload:
     )
     processing_version: str = ""
     prompt_policy_version: str = ""
+    validation_run_id: str = field(
+        default="",
+        metadata={"doc": "Frozen validation-run identity, when queue-backed."},
+    )
+    cohort_id: str = field(
+        default="",
+        metadata={"doc": "Frozen validation cohort identity, when queue-backed."},
+    )
+    validation_attempt_number: int = field(
+        default=1,
+        metadata={"doc": "Immutable validation-manifest attempt number."},
+    )
+    validation_parent_attempt_number: int = field(
+        default=0,
+        metadata={"doc": "Parent validation-manifest attempt number."},
+    )
     attributes: dict[str, str | int | bool | list[str]] = field(default_factory=dict)
 
 

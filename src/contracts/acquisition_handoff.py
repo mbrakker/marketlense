@@ -64,3 +64,23 @@ class VerifiedAcquisitionIngestHandoffRequest:
             )
         },
     )
+    validation_run_id: str = field(
+        default="",
+        metadata={"doc": "Frozen validation-run identity propagated from queue work."},
+    )
+    cohort_id: str = field(
+        default="",
+        metadata={
+            "doc": "Frozen validation cohort identity propagated from queue work."
+        },
+    )
+    validation_attempt_number: int = field(
+        default=1,
+        metadata={"doc": "Frozen validation attempt propagated from queue work."},
+    )
+    validation_parent_attempt_number: int = field(
+        default=0,
+        metadata={
+            "doc": "Frozen validation parent attempt propagated from queue work."
+        },
+    )

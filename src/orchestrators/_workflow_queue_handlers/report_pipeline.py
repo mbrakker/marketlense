@@ -43,6 +43,7 @@ from src.contracts.publisher_inventory import PublisherInventoryDiscoveryRequest
 from src.contracts.report_cards import CoverFingerprint
 from src.contracts.run_budget import BudgetOverrideContext
 from src.contracts.run_context import RunContext
+from src.contracts.semantic_ids import RunId
 from src.contracts.signal_candidates import (
     SIGNAL_CANDIDATE_SCHEMA_VERSION,
     SignalCandidateExtractionRequest,
@@ -174,6 +175,13 @@ def _stage_child_submission(
     next_payload: QueuePayload,
 ) -> WorkflowJobSubmission:
     """Create the one deterministic report-stage handoff for a checkpoint."""
+    next_payload = replace(
+        next_payload,
+        validation_run_id=payload.validation_run_id,
+        cohort_id=payload.cohort_id,
+        validation_attempt_number=payload.validation_attempt_number,
+        validation_parent_attempt_number=payload.validation_parent_attempt_number,
+    )
     source_hash = payload.input_content_hash or getattr(
         payload, "source_content_hash", ""
     )
@@ -195,6 +203,45 @@ def _stage_child_submission(
         source_identity_id=job.source_identity_id,
         report_id=report_id,
         budget_profile="report_ingest",
+    )
+
+
+def _report_queue_validation_context(
+    *,
+    job: WorkflowJob,
+    payload: QueuePayload,
+    report_id: str,
+    ctx: RunContext,
+) -> RunContext:
+    """Project frozen validation provenance at the report queue boundary only."""
+
+    validation_run_id = payload.validation_run_id.strip()
+    cohort_id = payload.cohort_id.strip()
+    if not validation_run_id and not cohort_id:
+        return ctx
+    root_workflow_id = job.root_workflow_id.strip()
+    if (
+        not validation_run_id
+        or not cohort_id
+        or not root_workflow_id
+        or payload.validation_attempt_number < 1
+        or payload.validation_parent_attempt_number < 0
+        or payload.validation_parent_attempt_number >= payload.validation_attempt_number
+    ):
+        raise AppError(
+            code="workflow_queue_validation_lineage_incomplete",
+            message="Frozen validation queue work requires complete immutable lineage",
+            retryable=False,
+            context={"job_id": job.job_id, "queue_name": job.queue_name},
+        )
+    return replace(
+        ctx,
+        run_id=RunId(root_workflow_id),
+        validation_run_id=validation_run_id,
+        cohort_id=cohort_id,
+        validation_attempt_number=payload.validation_attempt_number,
+        validation_parent_attempt_number=payload.validation_parent_attempt_number,
+        report_id=report_id,
     )
 
 
@@ -232,6 +279,10 @@ def _report_publication_readiness_submission(
             input_reference=html_path,
             input_content_hash=package_checksum,
             processing_version=payload.processing_version,
+            validation_run_id=payload.validation_run_id,
+            cohort_id=payload.cohort_id,
+            validation_attempt_number=payload.validation_attempt_number,
+            validation_parent_attempt_number=payload.validation_parent_attempt_number,
             attributes=dict(payload.attributes),
         ),
         idempotency_key=_digest("publication-readiness", "report", package_checksum),
@@ -280,6 +331,12 @@ def _report_stage_handler(
                 retryable=False,
                 context={"job_id": job.job_id, "queue_name": job.queue_name},
             )
+        ctx = _report_queue_validation_context(
+            job=job,
+            payload=payload,
+            report_id=report_id,
+            ctx=ctx,
+        )
         config_path = str(payload.attributes.get("config_path", "")).strip()
         app_settings = load_settings(
             ConfigLoadRequest(schema_version="1.0", path=config_path), ctx

@@ -11592,6 +11592,9 @@
         "acquisition_route": {
           "type": "string"
         },
+        "cohort_id": {
+          "type": "string"
+        },
         "expected_content_hash": {
           "type": "string"
         },
@@ -11620,6 +11623,15 @@
           "type": "string"
         },
         "source_url": {
+          "type": "string"
+        },
+        "validation_attempt_number": {
+          "type": "integer"
+        },
+        "validation_parent_attempt_number": {
+          "type": "integer"
+        },
+        "validation_run_id": {
           "type": "string"
         }
       },
@@ -42244,6 +42256,68 @@
       ],
       "type": "object"
     },
+    "src.contracts.validation_run_manifest.FrozenValidationCohortQueueSubmissionRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "cohort_manifest": {
+          "type": "string"
+        },
+        "reports_db": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_ingest_payloads": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.workflow_queue.SourceIngestPayload"
+          },
+          "type": "array"
+        },
+        "state_db": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "state_db",
+        "reports_db",
+        "cohort_manifest",
+        "source_ingest_payloads"
+      ],
+      "type": "object"
+    },
+    "src.contracts.validation_run_manifest.FrozenValidationCohortQueueSubmissionResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "cohort_id": {
+          "type": "string"
+        },
+        "jobs": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.workflow_queue.WorkflowJob"
+          },
+          "type": "array"
+        },
+        "root_workflow_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "validation_run_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "validation_run_id",
+        "cohort_id",
+        "root_workflow_id",
+        "jobs"
+      ],
+      "type": "object"
+    },
     "src.contracts.validation_run_manifest.ValidationRunManifestAttemptResolveRequest": {
       "additionalProperties": false,
       "properties": {
@@ -47329,6 +47403,9 @@
           },
           "type": "object"
         },
+        "cohort_id": {
+          "type": "string"
+        },
         "input_content_hash": {
           "type": "string"
         },
@@ -47354,6 +47431,15 @@
           "type": "string"
         },
         "validated_artifact_reference": {
+          "type": "string"
+        },
+        "validation_attempt_number": {
+          "type": "integer"
+        },
+        "validation_parent_attempt_number": {
+          "type": "integer"
+        },
+        "validation_run_id": {
           "type": "string"
         }
       },
@@ -47423,6 +47509,9 @@
           },
           "type": "object"
         },
+        "cohort_id": {
+          "type": "string"
+        },
         "frozen_source_manifest": {
           "type": "string"
         },
@@ -47464,6 +47553,15 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "validation_attempt_number": {
+          "type": "integer"
+        },
+        "validation_parent_attempt_number": {
+          "type": "integer"
+        },
+        "validation_run_id": {
+          "type": "string"
         }
       },
       "required": [],
@@ -47616,6 +47714,9 @@
         "briefing_policy_version": {
           "type": "string"
         },
+        "cohort_id": {
+          "type": "string"
+        },
         "geography": {
           "type": "string"
         },
@@ -47656,6 +47757,15 @@
           "type": "array"
         },
         "topic": {
+          "type": "string"
+        },
+        "validation_attempt_number": {
+          "type": "integer"
+        },
+        "validation_parent_attempt_number": {
+          "type": "integer"
+        },
+        "validation_run_id": {
           "type": "string"
         }
       },
@@ -47728,6 +47838,9 @@
         "claim_id": {
           "type": "string"
         },
+        "cohort_id": {
+          "type": "string"
+        },
         "embedding_row_id": {
           "type": "string"
         },
@@ -47753,6 +47866,15 @@
           "type": "array"
         },
         "schema_version": {
+          "type": "string"
+        },
+        "validation_attempt_number": {
+          "type": "integer"
+        },
+        "validation_parent_attempt_number": {
+          "type": "integer"
+        },
+        "validation_run_id": {
           "type": "string"
         }
       },
@@ -47822,6 +47944,9 @@
           },
           "type": "object"
         },
+        "cohort_id": {
+          "type": "string"
+        },
         "entity_package_reference": {
           "type": "string"
         },
@@ -47850,6 +47975,15 @@
           "type": "string"
         },
         "template_version": {
+          "type": "string"
+        },
+        "validation_attempt_number": {
+          "type": "integer"
+        },
+        "validation_parent_attempt_number": {
+          "type": "integer"
+        },
+        "validation_run_id": {
           "type": "string"
         },
         "visual_semantics": {
@@ -47922,6 +48056,9 @@
           },
           "type": "object"
         },
+        "cohort_id": {
+          "type": "string"
+        },
         "deadline_at_utc": {
           "type": "string"
         },
@@ -47962,6 +48099,15 @@
           "type": "string"
         },
         "source_url": {
+          "type": "string"
+        },
+        "validation_attempt_number": {
+          "type": "integer"
+        },
+        "validation_parent_attempt_number": {
+          "type": "integer"
+        },
+        "validation_run_id": {
           "type": "string"
         }
       },
@@ -48031,6 +48177,9 @@
           },
           "type": "object"
         },
+        "cohort_id": {
+          "type": "string"
+        },
         "input_content_hash": {
           "type": "string"
         },
@@ -48056,6 +48205,15 @@
           "type": "string"
         },
         "subject_id": {
+          "type": "string"
+        },
+        "validation_attempt_number": {
+          "type": "integer"
+        },
+        "validation_parent_attempt_number": {
+          "type": "integer"
+        },
+        "validation_run_id": {
           "type": "string"
         }
       },
@@ -48123,6 +48281,9 @@
           },
           "type": "object"
         },
+        "cohort_id": {
+          "type": "string"
+        },
         "entity_package_reference": {
           "type": "string"
         },
@@ -48159,7 +48320,16 @@
         "schema_version": {
           "type": "string"
         },
+        "validation_attempt_number": {
+          "type": "integer"
+        },
+        "validation_parent_attempt_number": {
+          "type": "integer"
+        },
         "validation_reference": {
+          "type": "string"
+        },
+        "validation_run_id": {
           "type": "string"
         }
       },
@@ -48284,6 +48454,9 @@
           },
           "type": "object"
         },
+        "cohort_id": {
+          "type": "string"
+        },
         "discovery_policy_version": {
           "type": "string"
         },
@@ -48318,6 +48491,15 @@
           "type": "array"
         },
         "schema_version": {
+          "type": "string"
+        },
+        "validation_attempt_number": {
+          "type": "integer"
+        },
+        "validation_parent_attempt_number": {
+          "type": "integer"
+        },
+        "validation_run_id": {
           "type": "string"
         }
       },
@@ -48393,6 +48575,9 @@
           },
           "type": "object"
         },
+        "cohort_id": {
+          "type": "string"
+        },
         "delivery_email_reference": {
           "type": "string"
         },
@@ -48430,6 +48615,15 @@
           "type": "string"
         },
         "source_url": {
+          "type": "string"
+        },
+        "validation_attempt_number": {
+          "type": "integer"
+        },
+        "validation_parent_attempt_number": {
+          "type": "integer"
+        },
+        "validation_run_id": {
           "type": "string"
         }
       },
@@ -48499,6 +48693,9 @@
           },
           "type": "object"
         },
+        "cohort_id": {
+          "type": "string"
+        },
         "input_content_hash": {
           "type": "string"
         },
@@ -48527,6 +48724,15 @@
           "type": "string"
         },
         "selection_checkpoint": {
+          "type": "string"
+        },
+        "validation_attempt_number": {
+          "type": "integer"
+        },
+        "validation_parent_attempt_number": {
+          "type": "integer"
+        },
+        "validation_run_id": {
           "type": "string"
         },
         "validator_compatibility_version": {
@@ -48602,6 +48808,9 @@
           },
           "type": "object"
         },
+        "cohort_id": {
+          "type": "string"
+        },
         "input_content_hash": {
           "type": "string"
         },
@@ -48630,6 +48839,15 @@
           "type": "string"
         },
         "template_version": {
+          "type": "string"
+        },
+        "validation_attempt_number": {
+          "type": "integer"
+        },
+        "validation_parent_attempt_number": {
+          "type": "integer"
+        },
+        "validation_run_id": {
           "type": "string"
         }
       },
@@ -48699,6 +48917,9 @@
           },
           "type": "object"
         },
+        "cohort_id": {
+          "type": "string"
+        },
         "input_content_hash": {
           "type": "string"
         },
@@ -48727,6 +48948,15 @@
           "type": "string"
         },
         "source_prepared_checkpoint": {
+          "type": "string"
+        },
+        "validation_attempt_number": {
+          "type": "integer"
+        },
+        "validation_parent_attempt_number": {
+          "type": "integer"
+        },
+        "validation_run_id": {
           "type": "string"
         }
       },
@@ -48796,6 +49026,9 @@
           },
           "type": "object"
         },
+        "cohort_id": {
+          "type": "string"
+        },
         "embedding_ready": {
           "type": "boolean"
         },
@@ -48827,6 +49060,15 @@
           "type": "string"
         },
         "signal_selection_policy_version": {
+          "type": "string"
+        },
+        "validation_attempt_number": {
+          "type": "integer"
+        },
+        "validation_parent_attempt_number": {
+          "type": "integer"
+        },
+        "validation_run_id": {
           "type": "string"
         }
       },
@@ -48899,6 +49141,9 @@
         "candidate_group_id": {
           "type": "string"
         },
+        "cohort_id": {
+          "type": "string"
+        },
         "frozen_evidence_manifest": {
           "type": "string"
         },
@@ -48924,6 +49169,15 @@
           "type": "array"
         },
         "schema_version": {
+          "type": "string"
+        },
+        "validation_attempt_number": {
+          "type": "integer"
+        },
+        "validation_parent_attempt_number": {
+          "type": "integer"
+        },
+        "validation_run_id": {
           "type": "string"
         }
       },
@@ -48993,6 +49247,9 @@
           },
           "type": "object"
         },
+        "cohort_id": {
+          "type": "string"
+        },
         "input_content_hash": {
           "type": "string"
         },
@@ -49027,6 +49284,15 @@
           "type": "string"
         },
         "source_identity_id": {
+          "type": "string"
+        },
+        "validation_attempt_number": {
+          "type": "integer"
+        },
+        "validation_parent_attempt_number": {
+          "type": "integer"
+        },
+        "validation_run_id": {
           "type": "string"
         }
       },
@@ -49096,6 +49362,9 @@
           },
           "type": "object"
         },
+        "cohort_id": {
+          "type": "string"
+        },
         "entity_type": {
           "type": "string"
         },
@@ -49121,6 +49390,15 @@
           "type": "array"
         },
         "schema_version": {
+          "type": "string"
+        },
+        "validation_attempt_number": {
+          "type": "integer"
+        },
+        "validation_parent_attempt_number": {
+          "type": "integer"
+        },
+        "validation_run_id": {
           "type": "string"
         },
         "wordpress_id": {
@@ -49196,6 +49474,9 @@
           },
           "type": "object"
         },
+        "cohort_id": {
+          "type": "string"
+        },
         "dry_run": {
           "type": "boolean"
         },
@@ -49233,6 +49514,15 @@
           "type": "string"
         },
         "target_site": {
+          "type": "string"
+        },
+        "validation_attempt_number": {
+          "type": "integer"
+        },
+        "validation_parent_attempt_number": {
+          "type": "integer"
+        },
+        "validation_run_id": {
           "type": "string"
         }
       },
@@ -49908,6 +50198,9 @@
           },
           "type": "object"
         },
+        "cohort_id": {
+          "type": "string"
+        },
         "input_content_hash": {
           "type": "string"
         },
@@ -49927,6 +50220,15 @@
           "type": "array"
         },
         "schema_version": {
+          "type": "string"
+        },
+        "validation_attempt_number": {
+          "type": "integer"
+        },
+        "validation_parent_attempt_number": {
+          "type": "integer"
+        },
+        "validation_run_id": {
           "type": "string"
         }
       },
