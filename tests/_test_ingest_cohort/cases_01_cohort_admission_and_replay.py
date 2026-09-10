@@ -36,6 +36,18 @@ def _batch_dependencies(**overrides):
     return replace(orch.IngestBatchDependencies.default(), **defaults)
 
 
+def _admitted_decisions(files: list[DriveFile]) -> list[dict[str, str]]:
+    return [
+        {
+            "file_id": file.file_id,
+            "source_identity_id": f"source:canonical-{file.file_id}",
+            "publisher_id": "publisher:fixture",
+            "outcome": "admitted",
+        }
+        for file in files
+    ]
+
+
 def test_file_processing_context_preserves_admitted_identity_over_pdf_checksum(
     run_context,
 ) -> None:
@@ -209,11 +221,13 @@ def test_frozen_cohort_persists_and_replays_the_same_drive_members(
                 "file_id": "file-a",
                 "source_identity_id": "source:canonical-a",
                 "publisher_id": "publisher:a",
+                "outcome": "admitted",
             },
             {
                 "file_id": "file-b",
                 "source_identity_id": "source:canonical-b",
                 "publisher_id": "publisher:b",
+                "outcome": "admitted",
             },
         ],
     )
@@ -284,6 +298,76 @@ def test_frozen_cohort_persists_and_replays_the_same_drive_members(
         )
 
 
+def test_frozen_cohort_rejects_raw_content_hash_identity_before_manifest_write(
+    ingest_settings, run_context
+) -> None:
+    """A cohort must not substitute the raw PDF checksum for admission identity."""
+    file = DriveFile("1.0", "file-a", "A.pdf", "2026-01-01", "raw-content-md5")
+    stored: dict[str, bytes] = {}
+    deps = replace(
+        orch.IngestBatchDependencies.default(),
+        file_exists=lambda request, _ctx: SimpleNamespace(
+            exists=request.path in stored
+        ),
+        write_bytes=lambda request, _ctx: (
+            stored.__setitem__(request.path, request.content)
+            or SimpleNamespace(bytes_written=len(request.content))
+        ),
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        orch._frozen_cohort(
+            cohort_size=1,
+            cohort_manifest="cohorts/canonical-identity.json",
+            selected_files=[file],
+            settings=ingest_settings,
+            deps=deps,
+            root_ctx=run_context,
+            admission_decisions=[
+                {
+                    "file_id": file.file_id,
+                    "source_identity_id": file.md5_checksum,
+                    "publisher_id": "publisher:fixture",
+                    "outcome": "admitted",
+                }
+            ],
+        )
+
+    assert exc_info.value.code == "ingest_cohort_canonical_identity_incomplete"
+    assert stored == {}
+
+
+def test_frozen_cohort_requires_admitted_canonical_identity_before_manifest_write(
+    ingest_settings, run_context
+) -> None:
+    """Missing admission provenance cannot fall back to a report or content ID."""
+    file = DriveFile("1.0", "file-a", "A.pdf", "2026-01-01", "raw-content-md5")
+    stored: dict[str, bytes] = {}
+    deps = replace(
+        orch.IngestBatchDependencies.default(),
+        file_exists=lambda request, _ctx: SimpleNamespace(
+            exists=request.path in stored
+        ),
+        write_bytes=lambda request, _ctx: (
+            stored.__setitem__(request.path, request.content)
+            or SimpleNamespace(bytes_written=len(request.content))
+        ),
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        orch._frozen_cohort(
+            cohort_size=1,
+            cohort_manifest="cohorts/missing-canonical-identity.json",
+            selected_files=[file],
+            settings=ingest_settings,
+            deps=deps,
+            root_ctx=run_context,
+        )
+
+    assert exc_info.value.code == "ingest_cohort_canonical_identity_incomplete"
+    assert stored == {}
+
+
 def test_frozen_cohort_rejects_stale_admission_provenance(
     ingest_settings, run_context
 ) -> None:
@@ -309,6 +393,14 @@ def test_frozen_cohort_rejects_stale_admission_provenance(
         settings=ingest_settings,
         deps=deps,
         root_ctx=run_context,
+        admission_decisions=[
+            {
+                "file_id": file.file_id,
+                "source_identity_id": "source:canonical-a",
+                "publisher_id": "publisher:a",
+                "outcome": "admitted",
+            }
+        ],
     )
 
     with pytest.raises(AppError, match="Cohort manifest provenance differs"):
@@ -383,6 +475,14 @@ def test_frozen_cohort_replay_uses_retained_admission_decisions(
         settings=ingest_settings,
         deps=deps,
         root_ctx=run_context,
+        admission_decisions=[
+            {
+                "file_id": file.file_id,
+                "source_identity_id": "source:canonical-a",
+                "publisher_id": "publisher:a",
+                "outcome": "admitted",
+            }
+        ],
     )
     decisions = orch._load_frozen_cohort_admission_decisions(
         cohort_manifest="cohorts/replay.json",
@@ -434,6 +534,7 @@ def test_provenance_recovery_creates_linked_manifest_with_identical_members(
         settings=ingest_settings,
         deps=deps,
         root_ctx=run_context,
+        admission_decisions=_admitted_decisions(files),
     )
     original = json.loads(stored["cohorts/original.json"])
     recovered = orch.recover_frozen_cohort_provenance(
@@ -495,6 +596,7 @@ def test_provenance_recovery_rejects_policy_drift(ingest_settings, run_context) 
         settings=ingest_settings,
         deps=deps,
         root_ctx=run_context,
+        admission_decisions=_admitted_decisions([file]),
     )
 
     with pytest.raises(AppError, match="policy or producer identity differs"):
@@ -536,6 +638,7 @@ def test_provenance_recovery_records_explicit_producer_transition(
         settings=ingest_settings,
         deps=deps,
         root_ctx=run_context,
+        admission_decisions=_admitted_decisions([file]),
     )
     recovery_ctx = replace(run_context, producer_commit_sha="producer-after-fix")
     orch.recover_frozen_cohort_provenance(
@@ -581,6 +684,7 @@ def test_provenance_recovery_records_explicit_policy_transition(
         settings=ingest_settings,
         deps=deps,
         root_ctx=run_context,
+        admission_decisions=_admitted_decisions([file]),
     )
     changed_policies = {
         "report_vs": {
@@ -1123,6 +1227,7 @@ def test_manifest_replay_does_not_reselect_or_replace_cohort_members(
         settings=settings,
         deps=created_deps,
         root_ctx=run_context,
+        admission_decisions=_admitted_decisions(files),
     )
     attempted: list[str] = []
 

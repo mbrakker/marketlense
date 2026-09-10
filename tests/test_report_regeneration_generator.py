@@ -402,6 +402,11 @@ def _ctx() -> RunContext:
 def _current_artifacts() -> dict:
     return {
         "schema_version": "3.0",
+        "_cache": {
+            "prompts": {
+                "report_vs/artifacts/insights_final": {"prompt_content_hash": "c" * 64}
+            }
+        },
         "editorial_plan": {
             "report_thesis": "The report's retained evidence changes planning.",
             "themes": [
@@ -585,6 +590,7 @@ def test_regenerate_artifacts_insights_bundle_uses_targeted_steps_and_preserves_
     )
 
     assert response.regenerated_sections == ["insights_candidates", "insights_final"]
+    assert response.updated_artifacts["_cache"] == _current_artifacts()["_cache"]
     assert len(response.updated_artifacts["insights_candidates"]) == 4
     assert len(response.updated_artifacts["insights_final"]) == 5
     assert (

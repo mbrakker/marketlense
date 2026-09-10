@@ -73,6 +73,11 @@ prior validated checkpoint rather than re-running PDF extraction or earlier
 model work. Analytics projection has a projection-only path from validated
 analysis and render checkpoints.
 
+When bounded targeted regeneration replaces an artifact family, the regenerated
+artifact retains the prior `_cache.prompts` identity map. The next queue worker
+therefore validates the same immutable prompt provenance before resuming render;
+missing or stale identities remain a fail-closed checkpoint error.
+
 ## Frozen validation queue lineage
 
 `submit_frozen_validation_cohort_to_queue` is the single production bridge for
@@ -83,6 +88,14 @@ existing typed report queue payloads. Report-stage workers project that root
 into the report-only `RunContext`; they do not redefine `RunContext.run_id` for
 ordinary queue work. Each child report queue submission, including
 `publication_readiness`, preserves the same fields and root.
+
+Before a validation cohort is frozen, each admitted member must retain the
+canonical `source_identity_id` and `publisher_id` returned by admission/source
+provenance resolution. A PDF MD5 remains a content checksum only; neither it
+nor a file ID can stand in for canonical source identity. Missing or
+non-canonical admitted provenance fails before the manifest is written, while
+the queue bridge continues to reject a caller payload that differs from the
+immutable member.
 
 Manifest creation and each stage write compare the queue root as part of
 provenance. A missing, changed, or ambiguous root fails closed, so state-db

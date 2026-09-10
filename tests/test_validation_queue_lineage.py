@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from hashlib import md5, sha256
+from hashlib import md5
 from pathlib import Path
 
 from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
+from src.contracts.drive import DriveFile
 from src.contracts.report_store import ReportSourceRecordRequest
 from src.contracts.run_context import RunContext
 from src.contracts.validation_run_manifest import (
@@ -13,10 +14,15 @@ from src.contracts.validation_run_manifest import (
 )
 from src.contracts.workflow_queue import SourceIngestPayload
 from src.orchestrators.admission_preflight_orchestrator import (
+    AdmissionPreflightRequest,
     admission_configuration_hash,
+    admission_decision_payload,
     admission_policy_hash,
+    run_admission_preflight,
 )
 from src.orchestrators.ingest_orchestrator import (
+    IngestBatchDependencies,
+    _frozen_cohort,
     submit_frozen_validation_cohort_to_queue,
 )
 from src.orchestrators.workflow_worker_orchestrator import run_workflow_worker_once
@@ -77,75 +83,46 @@ def test_frozen_validation_queue_submission_binds_manifest_to_generated_queue_ro
         ),
         _ctx(),
     )
-    cohort_manifest = tmp_path / "frozen-cohort.json"
-    member = {
-        "schema_version": "1.0",
-        "file_id": "report-1",
-        "name": source_path.name,
-        "modified_time": None,
-        "md5_checksum": source_hash,
-        "mime_type": "application/pdf",
-        "report_id": "report-1",
-        "source_identity_id": source_hash,
-        "publisher_id": "publisher-1",
-        "selection_reason": "deterministic_admission_preflight",
-    }
-    cohort_id = sha256(
-        json.dumps(
-            [
-                {
-                    key: member[key]
-                    for key in (
-                        "schema_version",
-                        "file_id",
-                        "name",
-                        "modified_time",
-                        "md5_checksum",
-                        "mime_type",
-                    )
-                }
-            ],
-            sort_keys=True,
-            separators=(",", ":"),
-        ).encode("utf-8")
-    ).hexdigest()
-    validation_run_id = (
-        "validation:"
-        + sha256(
-            json.dumps(
-                {
-                    "cohort_id": cohort_id,
-                    "configuration_hash": admission_configuration_hash(settings),
-                    "policy_hash": admission_policy_hash(settings),
-                    "producer_build_identity": "build-sha",
-                },
-                sort_keys=True,
-                separators=(",", ":"),
-            ).encode("utf-8")
-        ).hexdigest()
+    source_file = DriveFile(
+        schema_version="1.0",
+        file_id="report-1",
+        name=source_path.name,
+        modified_time=None,
+        md5_checksum=source_hash,
+        mime_type="application/pdf",
     )
-    cohort_manifest.write_text(
-        json.dumps(
-            {
-                "schema_version": "1.2",
-                "cohort_id": cohort_id,
-                "cohort_size": 1,
-                "validation_run_id": validation_run_id,
-                "configuration_hash": admission_configuration_hash(settings),
-                "policy_hash": admission_policy_hash(settings),
-                "producer_build_identity": "build-sha",
-                "members": [member],
-                "admission_decisions": [
-                    {
-                        "file_id": "report-1",
-                        "source_identity_id": source_hash,
-                        "publisher_id": "publisher-1",
-                    }
-                ],
-            }
+    admitted = run_admission_preflight(
+        AdmissionPreflightRequest(
+            file=source_file,
+            source_artifact_path=str(source_path),
+            settings=settings,
+            runtime_preflight_passed=True,
+            runtime_preflight_hash="queue-lineage-test",
+            configuration_hash=admission_configuration_hash(settings),
+            policy_hash=admission_policy_hash(settings),
+            known_source_identities={},
+            known_title_keys={},
         ),
-        encoding="utf-8",
+        _ctx(),
     )
+    assert admitted.admitted is True
+    decision = admission_decision_payload(admitted.decision)
+    assert decision["source_identity_id"] != source_hash
+    cohort_manifest = tmp_path / "frozen-cohort.json"
+    _frozen_cohort(
+        cohort_size=1,
+        cohort_manifest=str(cohort_manifest),
+        selected_files=[source_file],
+        settings=settings,
+        deps=IngestBatchDependencies.default(),
+        root_ctx=_ctx(),
+        admission_decisions=[decision],
+    )
+    frozen_cohort = json.loads(cohort_manifest.read_text(encoding="utf-8"))
+    member = frozen_cohort["members"][0]
+    assert member["md5_checksum"] == source_hash
+    assert member["source_identity_id"] == decision["source_identity_id"]
+    assert member["publisher_id"] == decision["publisher_id"]
     reports_db = settings.reports_db
     state_db = settings.state_db
 
@@ -157,7 +134,7 @@ def test_frozen_validation_queue_submission_binds_manifest_to_generated_queue_ro
             cohort_manifest=str(cohort_manifest),
             source_ingest_payloads=(
                 SourceIngestPayload(
-                    source_identity_id=source_hash,
+                    source_identity_id=member["source_identity_id"],
                     source_artifact_reference=str(source_path),
                     source_content_hash=source_hash,
                     report_id="report-1",
@@ -173,14 +150,16 @@ def test_frozen_validation_queue_submission_binds_manifest_to_generated_queue_ro
     )
 
     assert response.root_workflow_id
-    assert response.validation_run_id == validation_run_id
-    assert response.cohort_id == cohort_id
+    assert response.validation_run_id == frozen_cohort["validation_run_id"]
+    assert response.cohort_id == frozen_cohort["cohort_id"]
     assert len(response.jobs) == 1
     source_job = response.jobs[0]
     assert source_job.root_workflow_id == response.root_workflow_id
     payload = load_workflow_job_payload(source_job)
     assert payload.validation_run_id == response.validation_run_id
     assert payload.cohort_id == response.cohort_id
+    assert payload.source_identity_id == decision["source_identity_id"]
+    assert payload.source_content_hash == source_hash
     worker_result = run_workflow_worker_once(
         state_db=state_db,
         queue_name="source_ingest",

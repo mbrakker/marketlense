@@ -1437,43 +1437,53 @@ def _frozen_cohort(
             retryable=False,
             context={"requested": cohort_size, "selected": len(selected_files)},
         )
-    decisions = admission_decisions or [
-        {
-            "file_id": file.file_id,
-            "source_identity_id": file.md5_checksum or file.file_id,
-            "title_key": _admission_title_key(file.name),
-            "mime_type": (file.mime_type or "application/pdf").casefold(),
-            "publisher_id": "unattributed",
-            "source_url_classification": "drive_pdf",
-            "runtime_dependency_status": "validated_pre_freeze",
-            "budget_policy": "run_budget_enforced",
-            "evidence_potential": "sufficient",
-            "outcome": "admitted",
-            "preflight_version": "2.0",
-            "decision_hash": sha256(
-                json.dumps(asdict(file), sort_keys=True, separators=(",", ":")).encode(
-                    "utf-8"
-                )
-            ).hexdigest(),
-        }
-        for file in selected_files
-    ]
+    decisions = admission_decisions or []
     decisions_by_file_id = {
-        str(decision.get("file_id") or ""): decision for decision in decisions
+        str(decision.get("file_id") or ""): decision
+        for decision in decisions
+        if isinstance(decision, dict) and str(decision.get("file_id") or "")
     }
+    if any(file.file_id not in decisions_by_file_id for file in selected_files):
+        raise AppError(
+            code="ingest_cohort_canonical_identity_incomplete",
+            message=(
+                "Frozen validation cohort requires one admitted canonical source "
+                "identity and publisher per member"
+            ),
+            retryable=False,
+        )
+    for file in selected_files:
+        decision = decisions_by_file_id.get(file.file_id)
+        source_identity_id = str(
+            (decision or {}).get("source_identity_id") or ""
+        ).strip()
+        publisher_id = str((decision or {}).get("publisher_id") or "").strip()
+        if (
+            decision is None
+            or str(decision.get("outcome") or "").strip() != "admitted"
+            or not source_identity_id
+            or not publisher_id
+            or source_identity_id in {file.md5_checksum or "", file.file_id}
+        ):
+            raise AppError(
+                code="ingest_cohort_canonical_identity_incomplete",
+                message=(
+                    "Frozen validation cohort requires one admitted canonical source "
+                    "identity and publisher per member"
+                ),
+                retryable=False,
+                context={"file_id": file.file_id},
+            )
     members = [
         {
             **asdict(file),
             "report_id": file.file_id,
             "source_identity_id": str(
-                decisions_by_file_id.get(file.file_id, {}).get("source_identity_id")
-                or file.md5_checksum
-                or file.file_id
-            ),
+                decisions_by_file_id[file.file_id]["source_identity_id"]
+            ).strip(),
             "publisher_id": str(
-                decisions_by_file_id.get(file.file_id, {}).get("publisher_id")
-                or "unattributed"
-            ),
+                decisions_by_file_id[file.file_id]["publisher_id"]
+            ).strip(),
             "selection_reason": "deterministic_admission_preflight",
         }
         for file in selected_files

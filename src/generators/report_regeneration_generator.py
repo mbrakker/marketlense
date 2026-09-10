@@ -257,6 +257,7 @@ def regenerate_artifacts(
     insights_candidates = discard_location_only_insights(insights_candidates)
     insights_final = discard_location_only_insights(insights_final)
     quotes_final = discard_location_only_quotes(quotes_final)
+    cache_meta = safe_artifacts.get("_cache")
     updated_artifacts = assemble_artifacts_payload(
         report_id=request.report_id,
         report_name=request.report_name,
@@ -281,6 +282,7 @@ def regenerate_artifacts(
         if isinstance(safe_artifacts.get("categories"), list)
         else [],
         ctx=ctx,
+        cache_meta=deepcopy(cache_meta) if isinstance(cache_meta, dict) else None,
         validate_references=False,
     )
     candidate_artifacts_path = store_artifacts_payload(

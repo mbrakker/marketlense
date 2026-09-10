@@ -101,8 +101,18 @@ from src.contracts.workflow_queue import (
     WorkflowStageResult,
 )
 from src.generators.cover_image_generator import generate_cover_images
+from src.orchestrators._report_analysis_orchestrator.manifest import (
+    record_validation_manifest_stage,
+)
+from src.orchestrators._workflow_queue_handlers.report_pipeline import (
+    _report_queue_validation_context,
+)
 from src.orchestrators.acquisition_ingest_handoff_orchestrator import (
     build_source_ingest_submission_from_verified_acquisition,
+)
+from src.orchestrators.admission_preflight_orchestrator import (
+    admission_configuration_hash,
+    admission_policy_hash,
 )
 from src.orchestrators.claim_embedding_orchestrator import (
     run_claim_embedding_workflow,
@@ -113,8 +123,10 @@ from src.orchestrators.cross_report_analysis_orchestrator import (
 from src.orchestrators.mail_report_acquisition_orchestrator import (
     run_mail_report_acquisition,
 )
-from src.orchestrators.publish_orchestrator import publish_cross_report_package
-from src.orchestrators.publish_orchestrator import run_publish
+from src.orchestrators.publish_orchestrator import (
+    publish_cross_report_package,
+    run_publish,
+)
 from src.orchestrators.publisher_inventory_orchestrator import (
     run_publisher_inventory_discovery,
 )
@@ -151,7 +163,6 @@ from src.utils.logging import log_event
 from src.utils.wp_auth import build_auth_header
 
 from .shared import WorkflowQueueHandlerResult, _boolean_attribute, _digest
-
 
 logger = logging.getLogger("market_lense.workflow_queue_publishing")
 
@@ -280,6 +291,33 @@ def _publication_readiness_handler(
     )
     config_path = str(payload.attributes.get("config_path", ""))
     app = load_settings(ConfigLoadRequest(schema_version="1.0", path=config_path), ctx)
+    validation_ctx = _report_queue_validation_context(
+        job=job,
+        payload=payload,
+        report_id=job.report_id,
+        ctx=ctx,
+    )
+    if validation_ctx is not ctx:
+        if not job.publisher_id or not job.source_identity_id:
+            raise AppError(
+                code="workflow_queue_validation_lineage_incomplete",
+                message="Frozen validation publication readiness requires canonical report provenance",
+                retryable=False,
+                context={"job_id": job.job_id, "queue_name": job.queue_name},
+            )
+        settings = build_ingest_settings(
+            IngestSettingsBuildRequest(schema_version="1.0", app_settings=app),
+            validation_ctx,
+        )
+        validation_ctx = replace(
+            validation_ctx,
+            publisher_id=job.publisher_id,
+            source_identity_id=job.source_identity_id,
+            workflow="report_generation",
+            stage="publication_preflight",
+            configuration_hash=admission_configuration_hash(settings),
+            policy_hash=admission_policy_hash(settings),
+        )
     readiness_record = record_publication_readiness(
         app.state_db,
         package_checksum=payload.package_checksum,
@@ -292,6 +330,35 @@ def _publication_readiness_handler(
         reason="queue_readiness_deterministic_check",
         ctx=ctx,
     )
+    if validation_ctx is not ctx:
+        record_validation_manifest_stage(
+            settings=settings,
+            ctx=validation_ctx,
+            stage="publication_preflight",
+            source_identity_id=job.source_identity_id,
+            input_artifact_ids=(
+                payload.entity_package_reference,
+                payload.validation_reference,
+            ),
+            output_artifact_ids=(readiness_record.package_checksum,),
+            terminal_outcome=(
+                "succeeded"
+                if readiness_record.readiness_status == "awaiting_review"
+                else "failed"
+            ),
+            failure_code=(
+                ""
+                if readiness_record.readiness_status == "awaiting_review"
+                else "publication_readiness_not_publishable"
+            ),
+            retryable=False,
+            repair_disposition="not_required",
+            duplicate_disposition="none",
+            idempotency_state="new",
+            attempt_number=payload.validation_attempt_number,
+            parent_attempt_number=payload.validation_parent_attempt_number,
+            entity_terminal=False,
+        )
     return WorkflowQueueHandlerResult(
         result=WorkflowStageResult(
             output_reference=readiness_record.package_reference,
