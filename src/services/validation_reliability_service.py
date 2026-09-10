@@ -7,7 +7,7 @@ import json
 import logging
 import sqlite3
 from collections import Counter, defaultdict
-from dataclasses import asdict, replace
+from dataclasses import asdict, dataclass, replace
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -61,11 +61,27 @@ _STATE_STAGE_GROUPS: dict[str, tuple[str, ...]] = {
     "published": ("wordpress_lookup", "wordpress_write"),
     "readback_verified": ("authenticated_readback",),
 }
+_A21_STATE_SEQUENCE: tuple[str, ...] = (
+    "admitted",
+    "source_prepared",
+    "evidence_complete",
+    "analysis_complete",
+    "validation_complete",
+    "rendered",
+    "awaiting_review",
+)
+_A21_STATE_STAGE_GROUPS: dict[str, tuple[str, ...]] = {
+    **{
+        state: stages
+        for state, stages in _STATE_STAGE_GROUPS.items()
+        if state in _A21_STATE_SEQUENCE
+    },
+    "awaiting_review": ("publication_preflight",),
+}
 _SUCCESS_OUTCOMES = {"succeeded", "publish_ready", "published_verified"}
 _COMPLETED_OUTCOMES = _SUCCESS_OUTCOMES | {"skipped"}
 _FAILURE_OUTCOMES = {"failed", "blocked", "permanent_failure"}
 _TERMINAL_FAILURE_OUTCOMES = {"blocked", "permanent_failure", "cancelled"}
-_RECOVERY_IDEMPOTENCY_STATES = {"replayed", "reused", "verified"}
 _AUTOMATIC_RECOVERY_DISPOSITIONS = {
     "not_required",
     "none",
@@ -75,6 +91,14 @@ _AUTOMATIC_RECOVERY_DISPOSITIONS = {
     "queue_redelivery",
     "process_restart",
 }
+_REPAIR_CAUSAL_CODES = {
+    "targeted_repair": "targeted_repair",
+    "structured_output_repair": "structured_output_repair",
+    "full_rerun": "full_rerun",
+    "queue_redelivery": "queue_redelivery",
+    "process_restart": "process_restart",
+}
+_EXPLICIT_REPAIR_STAGES = {"structured_output_repair"}
 _REQUIRED_USAGE_ATTRIBUTION = (
     "validation_run_id",
     "cohort_id",
@@ -95,6 +119,14 @@ _REQUIRED_USAGE_ATTRIBUTION = (
     "policy_hash",
     "producer_build_identity",
 )
+
+
+@dataclass(frozen=True)
+class _A21StateEvidence:
+    """Read-only canonical queue evidence associated with report identities."""
+
+    awaiting_review_report_ids: frozenset[str] = frozenset()
+    operator_requeue_report_ids: frozenset[str] = frozenset()
 
 
 def build_validation_reliability_artifact(
@@ -126,6 +158,10 @@ def build_validation_reliability_artifact(
         stages_by_attempt[str(row["attempt_id"])].append(row)
     for records in stages_by_attempt.values():
         records.sort(key=lambda row: (str(row["started_at_utc"]), str(row["stage"])))
+    state_evidence = _read_a21_state_evidence(
+        request=request,
+        report_ids={str(attempt["report_id"]) for attempt in attempts},
+    )
 
     complete_states: dict[str, set[str]] = {state: set() for state in _STATE_SEQUENCE}
     failures: list[dict[str, Any]] = []
@@ -173,6 +209,7 @@ def build_validation_reliability_artifact(
         stages_by_attempt=stages_by_attempt,
         usage_events=usage_events,
         usage_attribution_available=usage_attribution_available,
+        state_evidence=state_evidence,
     )
     failed_transitions = _failure_transition_metrics(failures)
     pareto = _failure_pareto(failures)
@@ -366,6 +403,85 @@ def _read_manifest_rows(
     )
 
 
+def _read_a21_state_evidence(
+    *, request: ValidationReliabilityBuildRequest, report_ids: set[str]
+) -> _A21StateEvidence:
+    """Read durable readiness and explicit requeue provenance without mutation.
+
+    A validation manifest has no authority to claim publication readiness by
+    itself.  The queue service retains that state under the immutable package
+    checksum, and joins it to the queue job's report identity.  Missing state
+    evidence deliberately produces no A21 success.
+    """
+
+    if not request.state_db_path.strip() or not Path(request.state_db_path).is_file():
+        return _A21StateEvidence()
+    try:
+        with sqlite3.connect(
+            f"file:{Path(request.state_db_path).resolve().as_posix()}?mode=ro",
+            uri=True,
+        ) as conn:
+            tables = {
+                str(row[0])
+                for row in conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                )
+            }
+            required = {"workflow_publication_readiness", "workflow_jobs"}
+            if not required.issubset(tables):
+                return _A21StateEvidence()
+            placeholders = ",".join("?" for _ in sorted(report_ids))
+            if not placeholders:
+                return _A21StateEvidence()
+            base = """
+                FROM workflow_publication_readiness AS readiness
+                JOIN workflow_jobs AS job
+                  ON job.queue_name='publication_readiness'
+                 AND job.output_content_hash=readiness.package_checksum
+                WHERE readiness.entity_type='report'
+                  AND readiness.readiness_status='awaiting_review'
+                  AND job.status='succeeded'
+                  AND job.report_id IN ({placeholders})
+            """.format(placeholders=placeholders)
+            params = tuple(sorted(report_ids))
+            awaiting_review = frozenset(
+                str(row[0])
+                for row in conn.execute(
+                    "SELECT DISTINCT job.report_id " + base + " ORDER BY job.report_id",
+                    params,
+                )
+            )
+            if "workflow_job_transitions" not in tables:
+                return _A21StateEvidence(awaiting_review_report_ids=awaiting_review)
+            operator_requeue = frozenset(
+                str(row[0])
+                for row in conn.execute(
+                    """
+                    SELECT DISTINCT job.report_id
+                    FROM workflow_jobs AS job
+                    JOIN workflow_job_transitions AS transition
+                      ON transition.job_id=job.job_id
+                    WHERE job.report_id IN ({placeholders})
+                      AND transition.reason IN ('operator_requeue','queue-requeue')
+                    ORDER BY job.report_id
+                    """.format(placeholders=placeholders),
+                    params,
+                )
+            )
+    except (OSError, sqlite3.Error) as exc:
+        raise AppError(
+            code="validation_reliability_state_evidence_read_failed",
+            message="Failed to read canonical publication-readiness evidence",
+            cause=exc,
+            retryable=False,
+            context={"state_db_path": request.state_db_path},
+        ) from exc
+    return _A21StateEvidence(
+        awaiting_review_report_ids=awaiting_review,
+        operator_requeue_report_ids=operator_requeue,
+    )
+
+
 def _read_usage_events(
     request: ValidationReliabilityBuildRequest, ctx: RunContext
 ) -> tuple[list[dict[str, Any]], bool]:
@@ -387,7 +503,7 @@ def _read_usage_events(
                 ).fetchone()[0]
             )
             if event_count == 0:
-                return [], True
+                return [], False
             required = set(_REQUIRED_USAGE_ATTRIBUTION) | {
                 "timestamp_utc",
                 "input_tokens",
@@ -614,6 +730,7 @@ def _first_attempt_entities(
     stages_by_attempt: dict[str, list[dict[str, Any]]],
     usage_events: list[dict[str, Any]],
     usage_attribution_available: bool,
+    state_evidence: _A21StateEvidence,
 ) -> tuple[ValidationReliabilityFirstAttemptEntity, ...]:
     entities: list[ValidationReliabilityFirstAttemptEntity] = []
     for current_attempt in sorted(
@@ -630,8 +747,17 @@ def _first_attempt_entities(
         first_attempt = attempts[0]
         first_records = stages_by_attempt.get(str(first_attempt["attempt_id"]), [])
         current_records = stages_by_attempt.get(str(current_attempt["attempt_id"]), [])
-        first_statuses = _cascaded_state_statuses(first_records)
-        eventual_statuses = _cascaded_state_statuses(current_records)
+        report_id = str(first_attempt["report_id"])
+        first_statuses = _a21_cascaded_state_statuses(
+            first_records,
+            report_id=report_id,
+            awaiting_review_report_ids=state_evidence.awaiting_review_report_ids,
+        )
+        eventual_statuses = _a21_cascaded_state_statuses(
+            current_records,
+            report_id=report_id,
+            awaiting_review_report_ids=state_evidence.awaiting_review_report_ids,
+        )
         stages = tuple(
             _first_attempt_stage(
                 from_state=from_state,
@@ -643,38 +769,44 @@ def _first_attempt_entities(
                 stages_by_attempt=stages_by_attempt,
                 usage_events=usage_events,
                 usage_attribution_available=usage_attribution_available,
+                operator_requeue=(
+                    report_id in state_evidence.operator_requeue_report_ids
+                ),
             )
             for from_state, to_state in zip(
-                _STATE_SEQUENCE, _STATE_SEQUENCE[1:], strict=False
+                _A21_STATE_SEQUENCE, _A21_STATE_SEQUENCE[1:], strict=False
             )
         )
         terminal_disposition = _terminal_disposition(
             attempts=attempts,
             stages_by_attempt=stages_by_attempt,
-            eventual_success=eventual_statuses["publish_ready"],
+            eventual_success=eventual_statuses["awaiting_review"],
         )
-        publish_ready_stage = next(
-            stage for stage in stages if stage.to_state == "publish_ready"
+        awaiting_review_stage = next(
+            stage for stage in stages if stage.to_state == "awaiting_review"
         )
         entities.append(
             ValidationReliabilityFirstAttemptEntity(
                 schema_version=_SCHEMA_VERSION,
                 entity_key=entity_key,
-                report_id=str(first_attempt["report_id"]),
+                report_id=report_id,
                 first_attempt_number=int(first_attempt["attempt_number"]),
                 first_attempt_admitted=first_statuses["admitted"],
                 eventual_admitted=eventual_statuses["admitted"],
-                first_pass=first_statuses["publish_ready"],
-                eventual_success=eventual_statuses["publish_ready"],
-                bounded_recovery=any(
-                    stage.recovery_type == "bounded_recovery" for stage in stages
+                first_pass=awaiting_review_stage.first_pass,
+                eventual_success=awaiting_review_stage.eventual_success,
+                bounded_recovery=(
+                    not awaiting_review_stage.operator_intervention
+                    and any(
+                        stage.recovery_type == "bounded_recovery" for stage in stages
+                    )
                 ),
                 operator_intervention=any(
                     stage.operator_intervention for stage in stages
                 ),
                 terminal_failure=any(stage.terminal_failure for stage in stages),
                 verified_replay=any(stage.verified_replay for stage in stages),
-                attempts_required=publish_ready_stage.attempts_required,
+                attempts_required=awaiting_review_stage.attempts_required,
                 terminal_disposition=terminal_disposition,
                 stages=stages,
             )
@@ -693,15 +825,25 @@ def _first_attempt_stage(
     stages_by_attempt: dict[str, list[dict[str, Any]]],
     usage_events: list[dict[str, Any]],
     usage_attribution_available: bool,
+    operator_requeue: bool,
 ) -> ValidationReliabilityFirstAttemptStage:
     first_records = stages_by_attempt.get(str(first_attempt["attempt_id"]), [])
-    first_failure = _causal_first_failure(first_records, to_state)
+    first_failure = _causal_first_failure(
+        first_records,
+        to_state,
+        states=_A21_STATE_SEQUENCE,
+        stage_groups=_A21_STATE_STAGE_GROUPS,
+    )
     successful_attempt = next(
         (
             attempt
             for attempt in attempts
-            if _cascaded_state_statuses(
-                stages_by_attempt.get(str(attempt["attempt_id"]), [])
+            if _a21_cascaded_state_statuses(
+                stages_by_attempt.get(str(attempt["attempt_id"]), []),
+                report_id=str(first_attempt["report_id"]),
+                awaiting_review_report_ids=frozenset({str(first_attempt["report_id"])})
+                if eventual_statuses["awaiting_review"]
+                else frozenset(),
             )[to_state]
         ),
         None,
@@ -720,23 +862,24 @@ def _first_attempt_stage(
         attempts=attempts_through_success,
         stages_by_attempt=stages_by_attempt,
         to_state=to_state,
+        states=_A21_STATE_SEQUENCE,
+        stage_groups=_A21_STATE_STAGE_GROUPS,
     )
     first_attempt_recovery_records = _recovery_records_through_state(
         attempts=[first_attempt],
         stages_by_attempt=stages_by_attempt,
         to_state=to_state,
+        states=_A21_STATE_SEQUENCE,
+        stage_groups=_A21_STATE_STAGE_GROUPS,
     )
     operator_intervention = any(
         str(record["repair_disposition"]) == "operator_intervention"
         for record in recovery_records
-    )
-    verified_replay = any(
-        str(record["idempotency_state"]) in _RECOVERY_IDEMPOTENCY_STATES
-        and str(record["terminal_outcome"]) in _SUCCESS_OUTCOMES
-        for record in recovery_records
-    )
-    first_pass = first_statuses[to_state] and not _has_recovery_disposition(
-        first_attempt_recovery_records
+    ) or (to_state == "awaiting_review" and operator_requeue)
+    first_pass = (
+        first_statuses[to_state]
+        and not _has_recovery_disposition(first_attempt_recovery_records)
+        and not (to_state == "awaiting_review" and operator_requeue)
     )
     eventual_success = eventual_statuses[to_state]
     recovery_type = _first_attempt_recovery_type(
@@ -754,14 +897,21 @@ def _first_attempt_stage(
     terminal_failure = (
         not eventual_success and terminal_disposition in _TERMINAL_FAILURE_OUTCOMES
     )
+    usage_records = stages_by_attempt.get(
+        str((successful_attempt or attempts[-1])["attempt_id"]), []
+    )
     usage_until = _stage_completion_time(
-        records=(
-            stages_by_attempt.get(str(successful_attempt["attempt_id"]), [])
-            if successful_attempt is not None
-            else first_records
-        ),
+        records=usage_records,
         state=to_state,
-        fallback=(str(first_failure["completed_at_utc"]) if first_failure else ""),
+        fallback=(
+            str(first_failure["completed_at_utc"])
+            if first_failure is not None
+            else max(
+                (str(record["completed_at_utc"]) for record in usage_records),
+                default="",
+            )
+        ),
+        stage_groups=_A21_STATE_STAGE_GROUPS,
     )
     usage = _usage_through_time(
         usage_events=usage_events,
@@ -769,23 +919,29 @@ def _first_attempt_stage(
         completed_at_utc=usage_until,
         available=usage_attribution_available,
     )
+    first_failure_code, first_failure_stage = _first_attempt_causal_reason(
+        first_pass=first_pass,
+        first_failure=first_failure,
+        first_attempt_recovery_records=first_attempt_recovery_records,
+        to_state=to_state,
+        operator_intervention=operator_intervention,
+    )
     return ValidationReliabilityFirstAttemptStage(
         schema_version=_SCHEMA_VERSION,
         from_state=from_state,
         to_state=to_state,
         first_pass=first_pass,
         eventual_success=eventual_success,
-        first_failure_code=(
-            str(first_failure["failure_code"] or "unknown_failure")
-            if first_failure is not None
-            else ""
-        ),
-        first_failure_stage=(str(first_failure["stage"]) if first_failure else ""),
+        first_failure_code=first_failure_code,
+        first_failure_stage=first_failure_stage,
         recovery_type=recovery_type,
         attempts_required=len(attempts_through_success),
         operator_intervention=operator_intervention,
         terminal_failure=terminal_failure,
-        verified_replay=verified_replay,
+        verified_replay=_has_verified_repeat_publication(
+            attempts=attempts_through_success,
+            stages_by_attempt=stages_by_attempt,
+        ),
         terminal_disposition=terminal_disposition,
         usage_attribution=("available" if usage is not None else "unavailable"),
         provider_call_count_before_recovery=(int(usage["calls"]) if usage else None),
@@ -806,13 +962,39 @@ def _cascaded_state_statuses(records: list[dict[str, Any]]) -> dict[str, bool]:
     return statuses
 
 
+def _a21_cascaded_state_statuses(
+    records: list[dict[str, Any]],
+    *,
+    report_id: str,
+    awaiting_review_report_ids: frozenset[str],
+) -> dict[str, bool]:
+    raw_statuses = _state_statuses(records)
+    preflight_succeeded = any(
+        str(record["stage"]) == "publication_preflight"
+        and str(record["terminal_outcome"]) in _COMPLETED_OUTCOMES
+        for record in records
+    )
+    raw_statuses["awaiting_review"] = (
+        preflight_succeeded and report_id in awaiting_review_report_ids
+    )
+    statuses: dict[str, bool] = {}
+    prior_completed = True
+    for state in _A21_STATE_SEQUENCE:
+        statuses[state] = raw_statuses[state] and prior_completed
+        prior_completed = statuses[state]
+    return statuses
+
+
 def _first_failure_for_state(
-    records: list[dict[str, Any]], to_state: str
+    records: list[dict[str, Any]],
+    to_state: str,
+    *,
+    stage_groups: dict[str, tuple[str, ...]] = _STATE_STAGE_GROUPS,
 ) -> dict[str, Any] | None:
     failures = [
         record
         for record in records
-        if str(record["stage"]) in _STATE_STAGE_GROUPS[to_state]
+        if str(record["stage"]) in stage_groups[to_state]
         and str(record["terminal_outcome"]) in _FAILURE_OUTCOMES
     ]
     return (
@@ -829,17 +1011,23 @@ def _first_failure_for_state(
 
 
 def _causal_first_failure(
-    records: list[dict[str, Any]], to_state: str
+    records: list[dict[str, Any]],
+    to_state: str,
+    *,
+    states: tuple[str, ...] = _STATE_SEQUENCE,
+    stage_groups: dict[str, tuple[str, ...]] = _STATE_STAGE_GROUPS,
 ) -> dict[str, Any] | None:
-    direct_failure = _first_failure_for_state(records, to_state)
+    direct_failure = _first_failure_for_state(
+        records, to_state, stage_groups=stage_groups
+    )
     if direct_failure is not None:
         return direct_failure
-    reachable_states = _STATE_SEQUENCE[1 : _STATE_SEQUENCE.index(to_state)]
+    reachable_states = states[1 : states.index(to_state)]
     failures = [
         record
         for state in reachable_states
         for record in records
-        if str(record["stage"]) in _STATE_STAGE_GROUPS[state]
+        if str(record["stage"]) in stage_groups[state]
         and str(record["terminal_outcome"]) in _FAILURE_OUTCOMES
     ]
     return (
@@ -849,8 +1037,8 @@ def _causal_first_failure(
                 str(record["completed_at_utc"]),
                 next(
                     index
-                    for index, state in enumerate(_STATE_SEQUENCE)
-                    if str(record["stage"]) in _STATE_STAGE_GROUPS[state]
+                    for index, state in enumerate(states)
+                    if str(record["stage"]) in stage_groups[state]
                 ),
                 str(record["stage"]),
             ),
@@ -858,6 +1046,39 @@ def _causal_first_failure(
         if failures
         else None
     )
+
+
+def _first_attempt_causal_reason(
+    *,
+    first_pass: bool,
+    first_failure: dict[str, Any] | None,
+    first_attempt_recovery_records: list[dict[str, Any]],
+    to_state: str,
+    operator_intervention: bool,
+) -> tuple[str, str]:
+    """Give every lost first pass a retained code or stable generic cause."""
+
+    if first_pass:
+        return "", ""
+    if first_failure is not None:
+        return (
+            str(first_failure["failure_code"] or "unknown_failure"),
+            str(first_failure["stage"]),
+        )
+    if operator_intervention:
+        return "operator_intervention", "workflow_queue"
+    for record in first_attempt_recovery_records:
+        disposition = str(record["repair_disposition"])
+        if disposition in _REPAIR_CAUSAL_CODES:
+            return _REPAIR_CAUSAL_CODES[disposition], str(record["stage"])
+        if (
+            str(record["stage"]) in _EXPLICIT_REPAIR_STAGES
+            and str(record["terminal_outcome"]) != "skipped"
+        ):
+            return "structured_output_repair", str(record["stage"])
+    if to_state == "awaiting_review":
+        return "awaiting_review_not_reached", "publication_preflight"
+    return "first_attempt_transition_incomplete", to_state
 
 
 def _first_attempt_recovery_type(
@@ -886,12 +1107,16 @@ def _recovery_records_through_state(
     attempts: list[dict[str, Any]],
     stages_by_attempt: dict[str, list[dict[str, Any]]],
     to_state: str,
+    states: tuple[str, ...] = _STATE_SEQUENCE,
+    stage_groups: dict[str, tuple[str, ...]] = _STATE_STAGE_GROUPS,
 ) -> list[dict[str, Any]]:
     relevant_stages = {
         stage
-        for state in _STATE_SEQUENCE[1 : _STATE_SEQUENCE.index(to_state) + 1]
-        for stage in _STATE_STAGE_GROUPS[state]
+        for state in states[1 : states.index(to_state) + 1]
+        for stage in stage_groups[state]
     }
+    if states.index(to_state) >= states.index("evidence_complete"):
+        relevant_stages.update(_EXPLICIT_REPAIR_STAGES)
     return [
         record
         for attempt in attempts
@@ -903,15 +1128,41 @@ def _recovery_records_through_state(
 def _has_recovery_disposition(records: list[dict[str, Any]]) -> bool:
     return any(
         str(record["repair_disposition"]) not in {"", "none", "not_required"}
+        or (
+            str(record["stage"]) in _EXPLICIT_REPAIR_STAGES
+            and str(record["terminal_outcome"]) != "skipped"
+        )
         for record in records
     )
 
 
 def _has_automatic_recovery_disposition(records: list[dict[str, Any]]) -> bool:
     return any(
-        str(record["repair_disposition"]) in _AUTOMATIC_RECOVERY_DISPOSITIONS
-        and str(record["repair_disposition"]) not in {"none", "not_required"}
+        (
+            str(record["repair_disposition"]) in _AUTOMATIC_RECOVERY_DISPOSITIONS
+            and str(record["repair_disposition"]) not in {"none", "not_required"}
+        )
+        or (
+            str(record["stage"]) in _EXPLICIT_REPAIR_STAGES
+            and str(record["terminal_outcome"]) != "skipped"
+        )
         for record in records
+    )
+
+
+def _has_verified_repeat_publication(
+    *,
+    attempts: list[dict[str, Any]],
+    stages_by_attempt: dict[str, list[dict[str, Any]]],
+) -> bool:
+    """Accept only the retained zero-write repeat-publication verification."""
+
+    return any(
+        str(record["stage"]) == "repeat_publication"
+        and str(record["terminal_outcome"]) == "succeeded"
+        and str(record["idempotency_state"]) == "reused"
+        for attempt in attempts
+        for record in stages_by_attempt.get(str(attempt["attempt_id"]), [])
     )
 
 
@@ -940,12 +1191,16 @@ def _terminal_disposition(
 
 
 def _stage_completion_time(
-    *, records: list[dict[str, Any]], state: str, fallback: str
+    *,
+    records: list[dict[str, Any]],
+    state: str,
+    fallback: str,
+    stage_groups: dict[str, tuple[str, ...]] = _STATE_STAGE_GROUPS,
 ) -> str:
     completed = [
         str(record["completed_at_utc"])
         for record in records
-        if str(record["stage"]) in _STATE_STAGE_GROUPS[state]
+        if str(record["stage"]) in stage_groups[state]
         and str(record["terminal_outcome"]) in _COMPLETED_OUTCOMES
     ]
     return max(completed, default=fallback)
@@ -999,7 +1254,9 @@ def _first_attempt_transition_metrics(
     entities: tuple[ValidationReliabilityFirstAttemptEntity, ...],
 ) -> tuple[ValidationReliabilityFirstAttemptTransition, ...]:
     metrics: list[ValidationReliabilityFirstAttemptTransition] = []
-    for from_state, to_state in zip(_STATE_SEQUENCE, _STATE_SEQUENCE[1:], strict=False):
+    for from_state, to_state in zip(
+        _A21_STATE_SEQUENCE, _A21_STATE_SEQUENCE[1:], strict=False
+    ):
         stage_rows = [
             next(stage for stage in entity.stages if stage.to_state == to_state)
             for entity in entities
@@ -1097,19 +1354,20 @@ def _eventual_state(
 def _first_attempt_failure_pareto(
     entities: tuple[ValidationReliabilityFirstAttemptEntity, ...],
 ) -> tuple[ValidationFailureParetoEntry, ...]:
-    failures = [
-        {
-            "failure_code": stage.first_failure_code,
-            "from_state": stage.from_state,
-            "to_state": stage.to_state,
-        }
-        for entity in entities
-        for stage in entity.stages
-        if (
-            stage.first_failure_code
-            and stage.first_failure_stage in _STATE_STAGE_GROUPS[stage.to_state]
+    failures = []
+    for entity in entities:
+        if entity.first_pass:
+            continue
+        final_stage = next(
+            stage for stage in entity.stages if stage.to_state == "awaiting_review"
         )
-    ]
+        failures.append(
+            {
+                "failure_code": final_stage.first_failure_code,
+                "from_state": final_stage.from_state,
+                "to_state": final_stage.to_state,
+            }
+        )
     return _failure_pareto(failures)
 
 

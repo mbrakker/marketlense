@@ -41785,6 +41785,9 @@
         "schema_version": {
           "type": "string"
         },
+        "state_db_path": {
+          "type": "string"
+        },
         "usage_db_path": {
           "type": "string"
         },

@@ -180,6 +180,7 @@ class ValidationReliabilityBuildRequest(SemanticIdContract):
     reports_db_path: str
     usage_db_path: str
     validation_run_id: ValidationRunId
+    state_db_path: str = ""
 
 
 @dataclass(frozen=True)

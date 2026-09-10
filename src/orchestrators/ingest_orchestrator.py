@@ -2949,6 +2949,7 @@ def run_ingest(
                     reports_db_path=settings.reports_db,
                     usage_db_path=settings.usage_db_path,
                     validation_run_id=validation_run_id,
+                    state_db_path=settings.state_db,
                 ),
                 root_ctx,
             )

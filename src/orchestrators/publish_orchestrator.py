@@ -2499,6 +2499,7 @@ def run_publish(
                     or str(Path(settings.state_db).with_name("llm_usage.sqlite"))
                 ),
                 validation_run_id=validation_run_id,
+                state_db_path=settings.state_db,
             ),
             root_ctx,
         )

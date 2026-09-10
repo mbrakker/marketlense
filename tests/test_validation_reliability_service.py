@@ -10,6 +10,11 @@ from src.contracts.validation_reliability import (
     ValidationReliabilityBuildRequest,
     ValidationReliabilityWriteRequest,
 )
+from src.contracts.workflow_queue import (
+    PublicationReadinessPayload,
+    WorkflowJobSubmission,
+    WorkflowStageResult,
+)
 from src.contracts.validation_run_manifest import (
     ValidationRunManifestCreateRequest,
     ValidationRunManifestRecordRequest,
@@ -23,6 +28,15 @@ from src.services.report_store_service import (
 from src.services.validation_reliability_service import (
     build_validation_reliability_artifact,
     write_validation_reliability_artifact,
+)
+from src.services.workflow_queue_service import (
+    claim_next_workflow_job,
+    complete_workflow_job,
+    enqueue_workflow_job,
+    fail_workflow_job,
+    record_publication_readiness,
+    requeue_workflow_job,
+    start_workflow_job,
 )
 from src.utils.errors import AppError
 
@@ -149,6 +163,153 @@ def _usage_entry() -> LLMUsageLedgerEntry:
     )
 
 
+def _record_full_first_attempt(
+    reports_db: str,
+    *,
+    attempt: int = 1,
+    evidence_repair_disposition: str = "not_required",
+    started_at_utc: str = "2026-07-26T10:00:00+00:00",
+    completed_at_utc: str = "2026-07-26T10:01:00+00:00",
+) -> None:
+    for stage in (
+        "admission_preflight",
+        "source_preparation",
+        "source_validation",
+    ):
+        _record(
+            reports_db,
+            attempt=attempt,
+            stage=stage,
+            started_at_utc=started_at_utc,
+            completed_at_utc=completed_at_utc,
+        )
+    _record(
+        reports_db,
+        attempt=attempt,
+        stage="evidence_generation",
+        repair_disposition=evidence_repair_disposition,
+        started_at_utc=started_at_utc,
+        completed_at_utc=completed_at_utc,
+    )
+    for stage in (
+        "taxonomy",
+        "category_fit",
+        "artifact_generation",
+        "regeneration",
+        "grounding_validation",
+        "semantic_validation",
+        "rendering",
+        "final_html_validation",
+        "ingestion",
+        "publication_preflight",
+    ):
+        _record(
+            reports_db,
+            attempt=attempt,
+            stage=stage,
+            started_at_utc=started_at_utc,
+            completed_at_utc=completed_at_utc,
+        )
+
+
+def _record_durable_awaiting_review(
+    state_db: str, *, operator_requeue: bool = False
+) -> None:
+    package_checksum = "package-1"
+    record_publication_readiness(
+        state_db,
+        package_checksum=package_checksum,
+        entity_type="report",
+        package_reference="output/report-1.html",
+        validation_reference="output/report-1.readiness.json",
+        lineage_reference="retained:source-1",
+        required_asset_status="ready",
+        readiness_status="awaiting_review",
+        reason="queue_readiness_deterministic_check",
+        ctx=_ctx(),
+    )
+    submission = WorkflowJobSubmission(
+        schema_version="1.0",
+        queue_name="publication_readiness",
+        job_type="publication_readiness.v1",
+        payload=PublicationReadinessPayload(
+            entity_type="report",
+            entity_package_reference="output/report-1.html",
+            package_checksum=package_checksum,
+            validation_reference="output/report-1.readiness.json",
+            lineage_reference="retained:source-1",
+            required_asset_status="ready",
+        ),
+        idempotency_key="publication-readiness:report-1",
+        deduplication_scope="validation-reliability-test",
+        entity_type="report",
+        entity_id="report-1",
+        report_id="report-1",
+    )
+    job, created = enqueue_workflow_job(
+        state_db, submission, _ctx(), now_utc="2026-07-26T10:10:00+00:00"
+    )
+    assert created is True
+    claimed = claim_next_workflow_job(
+        state_db,
+        "publication_readiness",
+        "worker-1",
+        _ctx(),
+        now_utc="2026-07-26T10:11:00+00:00",
+    )
+    assert claimed is not None and claimed.job_id == job.job_id
+    start_workflow_job(
+        state_db, job.job_id, "worker-1", _ctx(), now_utc="2026-07-26T10:12:00+00:00"
+    )
+    if operator_requeue:
+        failed = fail_workflow_job(
+            state_db,
+            job.job_id,
+            "worker-1",
+            AppError(
+                "publication_preflight_failed", "manual recovery", retryable=False
+            ),
+            _ctx(),
+            now_utc="2026-07-26T10:13:00+00:00",
+        )
+        assert failed.status == "dead_letter"
+        requeue_workflow_job(
+            state_db,
+            job.job_id,
+            "operator-1",
+            _ctx(),
+            now_utc="2026-07-26T10:14:00+00:00",
+        )
+        claimed = claim_next_workflow_job(
+            state_db,
+            "publication_readiness",
+            "worker-1",
+            _ctx(),
+            now_utc="2026-07-26T10:15:00+00:00",
+        )
+        assert claimed is not None and claimed.job_id == job.job_id
+        start_workflow_job(
+            state_db,
+            job.job_id,
+            "worker-1",
+            _ctx(),
+            now_utc="2026-07-26T10:16:00+00:00",
+        )
+    complete_workflow_job(
+        state_db,
+        job.job_id,
+        "worker-1",
+        WorkflowStageResult(
+            output_reference="output/report-1.html",
+            output_content_hash=package_checksum,
+            output_verified=True,
+        ),
+        [],
+        _ctx(),
+        now_utc="2026-07-26T10:17:00+00:00",
+    )
+
+
 def test_reliability_artifact_is_deterministic_and_measures_recovery(tmp_path) -> None:
     reports_db = str(tmp_path / "reports.sqlite")
     usage_db = str(tmp_path / "usage.sqlite")
@@ -180,7 +341,9 @@ def test_reliability_artifact_is_deterministic_and_measures_recovery(tmp_path) -
         _record(reports_db, attempt=2, stage=stage)
     append_usage(
         LLMUsageLedgerAppendRequest(
-            schema_version="1.0", db_path=usage_db, entry=_usage_entry()
+            schema_version="1.0",
+            db_path=usage_db,
+            entry=replace(_usage_entry(), timestamp_utc="2026-07-26T10:04:00+00:00"),
         ),
         _ctx(),
     )
@@ -400,13 +563,13 @@ def test_reliability_artifact_reports_optional_repair_skips_and_downstream_block
         ("metadata_governance_blocked", 3),
         ("validation_failed", 1),
     ]
-    publish_ready_stage = next(
+    awaiting_review_stage = next(
         stage
         for stage in artifact.first_attempt_entities[0].stages
-        if stage.to_state == "publish_ready"
+        if stage.to_state == "awaiting_review"
     )
-    assert publish_ready_stage.terminal_failure is True
-    assert publish_ready_stage.terminal_disposition == "permanent_failure"
+    assert awaiting_review_stage.terminal_failure is True
+    assert awaiting_review_stage.terminal_disposition == "permanent_failure"
     rendered_stage = next(
         stage
         for stage in artifact.first_attempt_entities[0].stages
@@ -460,7 +623,268 @@ def test_first_attempt_classifies_operator_recovery_and_verified_replay(
     assert evidence_stage.eventual_success is True
     assert evidence_stage.recovery_type == "operator_intervention"
     assert evidence_stage.operator_intervention is True
-    assert evidence_stage.verified_replay is True
+    assert evidence_stage.verified_replay is False
+
+
+def test_a21_requires_durable_awaiting_review_not_ingestion(tmp_path) -> None:
+    reports_db = str(tmp_path / "reports.sqlite")
+    usage_db = str(tmp_path / "usage.sqlite")
+    state_db = str(tmp_path / "state.sqlite")
+    _create_run(reports_db)
+    _record_full_first_attempt(reports_db)
+
+    artifact = build_validation_reliability_artifact(
+        ValidationReliabilityBuildRequest(
+            schema_version="1.0",
+            reports_db_path=reports_db,
+            usage_db_path=usage_db,
+            state_db_path=state_db,
+            validation_run_id="validation-1",
+        ),
+        _ctx(),
+    )
+
+    assert (
+        next(
+            stage
+            for stage in artifact.first_attempt_entities[0].stages
+            if stage.to_state == "awaiting_review"
+        ).eventual_success
+        is False
+    )
+    assert artifact.first_attempt_entities[0].eventual_success is False
+    assert all(
+        stage.to_state != "publish_ready"
+        for stage in artifact.first_attempt_entities[0].stages
+    )
+    assert (
+        next(
+            row for row in artifact.transitions if row.to_state == "publish_ready"
+        ).conversion_rate
+        == 1.0
+    )
+
+
+def test_a21_internal_repair_loses_entity_first_pass_and_has_typed_pareto(
+    tmp_path,
+) -> None:
+    reports_db = str(tmp_path / "reports.sqlite")
+    usage_db = str(tmp_path / "usage.sqlite")
+    state_db = str(tmp_path / "state.sqlite")
+    _create_run(reports_db)
+    _record_full_first_attempt(
+        reports_db, evidence_repair_disposition="targeted_repair"
+    )
+    _record_durable_awaiting_review(state_db)
+
+    artifact = build_validation_reliability_artifact(
+        ValidationReliabilityBuildRequest(
+            schema_version="1.0",
+            reports_db_path=reports_db,
+            usage_db_path=usage_db,
+            state_db_path=state_db,
+            validation_run_id="validation-1",
+        ),
+        _ctx(),
+    )
+
+    entity = artifact.first_attempt_entities[0]
+    awaiting_review = next(
+        stage for stage in entity.stages if stage.to_state == "awaiting_review"
+    )
+    assert awaiting_review.first_pass is False
+    assert awaiting_review.eventual_success is True
+    assert awaiting_review.recovery_type == "bounded_recovery"
+    assert entity.first_pass is False
+    assert entity.eventual_success is True
+    assert entity.bounded_recovery is True
+    assert artifact.first_attempt_failure_pareto[0].failure_code == "targeted_repair"
+
+
+def test_a21_structured_output_repair_stage_loses_first_pass(tmp_path) -> None:
+    reports_db = str(tmp_path / "reports.sqlite")
+    usage_db = str(tmp_path / "usage.sqlite")
+    state_db = str(tmp_path / "state.sqlite")
+    _create_run(reports_db)
+    _record_full_first_attempt(reports_db)
+    _record(reports_db, attempt=1, stage="structured_output_repair")
+    _record_durable_awaiting_review(state_db)
+
+    artifact = build_validation_reliability_artifact(
+        ValidationReliabilityBuildRequest(
+            schema_version="1.0",
+            reports_db_path=reports_db,
+            usage_db_path=usage_db,
+            state_db_path=state_db,
+            validation_run_id="validation-1",
+        ),
+        _ctx(),
+    )
+
+    entity = artifact.first_attempt_entities[0]
+    awaiting_review = next(
+        stage for stage in entity.stages if stage.to_state == "awaiting_review"
+    )
+    assert entity.first_pass is False
+    assert awaiting_review.first_pass is False
+    assert awaiting_review.recovery_type == "bounded_recovery"
+    assert artifact.first_attempt_failure_pareto[0].failure_code == (
+        "structured_output_repair"
+    )
+
+
+def test_a21_automatic_later_attempt_is_bounded_recovery_with_usage(tmp_path) -> None:
+    reports_db = str(tmp_path / "reports.sqlite")
+    usage_db = str(tmp_path / "usage.sqlite")
+    state_db = str(tmp_path / "state.sqlite")
+    _create_run(reports_db)
+    for stage in ("admission_preflight", "source_preparation", "source_validation"):
+        _record(reports_db, attempt=1, stage=stage)
+    _record(
+        reports_db,
+        attempt=1,
+        stage="evidence_generation",
+        outcome="failed",
+        failure_code="provider_timeout",
+        completed_at_utc="2026-07-26T10:05:00+00:00",
+    )
+    _record_full_first_attempt(
+        reports_db,
+        attempt=2,
+        started_at_utc="2026-07-26T10:06:00+00:00",
+        completed_at_utc="2026-07-26T10:10:00+00:00",
+    )
+    _record_durable_awaiting_review(state_db)
+    append_usage(
+        LLMUsageLedgerAppendRequest(
+            schema_version="1.0",
+            db_path=usage_db,
+            entry=replace(_usage_entry(), timestamp_utc="2026-07-26T10:04:00+00:00"),
+        ),
+        _ctx(),
+    )
+
+    artifact = build_validation_reliability_artifact(
+        ValidationReliabilityBuildRequest(
+            schema_version="1.0",
+            reports_db_path=reports_db,
+            usage_db_path=usage_db,
+            state_db_path=state_db,
+            validation_run_id="validation-1",
+        ),
+        _ctx(),
+    )
+
+    entity = artifact.first_attempt_entities[0]
+    awaiting_review = next(
+        stage for stage in entity.stages if stage.to_state == "awaiting_review"
+    )
+    assert entity.first_pass is False
+    assert entity.eventual_success is True
+    assert entity.bounded_recovery is True
+    assert awaiting_review.attempts_required == 2
+    assert awaiting_review.recovery_type == "bounded_recovery"
+    assert awaiting_review.provider_call_count_before_recovery == 1
+    assert awaiting_review.total_tokens_before_recovery == 120
+    assert awaiting_review.estimated_cost_usd_before_recovery == 0.012
+    assert artifact.first_attempt_failure_pareto[0].failure_code == "provider_timeout"
+
+
+def test_a21_queue_requeue_is_operator_intervention_not_bounded_recovery(
+    tmp_path,
+) -> None:
+    reports_db = str(tmp_path / "reports.sqlite")
+    usage_db = str(tmp_path / "usage.sqlite")
+    state_db = str(tmp_path / "state.sqlite")
+    _create_run(reports_db)
+    _record_full_first_attempt(reports_db)
+    _record_durable_awaiting_review(state_db, operator_requeue=True)
+
+    artifact = build_validation_reliability_artifact(
+        ValidationReliabilityBuildRequest(
+            schema_version="1.0",
+            reports_db_path=reports_db,
+            usage_db_path=usage_db,
+            state_db_path=state_db,
+            validation_run_id="validation-1",
+        ),
+        _ctx(),
+    )
+
+    entity = artifact.first_attempt_entities[0]
+    awaiting_review = next(
+        stage for stage in entity.stages if stage.to_state == "awaiting_review"
+    )
+    assert entity.first_pass is False
+    assert entity.operator_intervention is True
+    assert entity.bounded_recovery is False
+    assert awaiting_review.recovery_type == "operator_intervention"
+    assert awaiting_review.operator_intervention is True
+    assert (
+        artifact.first_attempt_failure_pareto[0].failure_code == "operator_intervention"
+    )
+
+
+def test_a21_verified_replay_requires_successful_repeat_publication_evidence(
+    tmp_path,
+) -> None:
+    reports_db = str(tmp_path / "reports.sqlite")
+    usage_db = str(tmp_path / "usage.sqlite")
+    state_db = str(tmp_path / "state.sqlite")
+    _create_run(reports_db)
+    _record_full_first_attempt(reports_db)
+    _record(
+        reports_db,
+        attempt=1,
+        stage="repeat_publication",
+        idempotency_state="reused",
+    )
+    _record_durable_awaiting_review(state_db)
+
+    artifact = build_validation_reliability_artifact(
+        ValidationReliabilityBuildRequest(
+            schema_version="1.0",
+            reports_db_path=reports_db,
+            usage_db_path=usage_db,
+            state_db_path=state_db,
+            validation_run_id="validation-1",
+        ),
+        _ctx(),
+    )
+
+    assert artifact.first_attempt_entities[0].verified_replay is True
+
+
+def test_a21_absent_run_usage_is_unavailable_not_zero(tmp_path) -> None:
+    reports_db = str(tmp_path / "reports.sqlite")
+    usage_db = str(tmp_path / "usage.sqlite")
+    state_db = str(tmp_path / "state.sqlite")
+    _create_run(reports_db)
+    _record_full_first_attempt(reports_db)
+    _record_durable_awaiting_review(state_db)
+
+    artifact = build_validation_reliability_artifact(
+        ValidationReliabilityBuildRequest(
+            schema_version="1.0",
+            reports_db_path=reports_db,
+            usage_db_path=usage_db,
+            state_db_path=state_db,
+            validation_run_id="validation-1",
+        ),
+        _ctx(),
+    )
+
+    awaiting_review = next(
+        stage
+        for stage in artifact.first_attempt_entities[0].stages
+        if stage.to_state == "awaiting_review"
+    )
+    assert awaiting_review.usage_attribution == "unavailable"
+    assert awaiting_review.provider_call_count_before_recovery is None
+    assert awaiting_review.input_tokens_before_recovery is None
+    assert awaiting_review.output_tokens_before_recovery is None
+    assert awaiting_review.total_tokens_before_recovery is None
+    assert awaiting_review.estimated_cost_usd_before_recovery is None
 
 
 def test_first_attempt_does_not_count_internal_automatic_repair_as_first_pass(
