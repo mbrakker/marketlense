@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from src.contracts.validation import ValidationIssue, ValidationReport
 from src.generators.publish_readiness_generator import (
     evaluate_publish_readiness,
@@ -10,7 +12,19 @@ from src.generators.publish_readiness_generator import (
 
 
 def _ready_inputs() -> tuple[dict, dict, str, dict]:
-    html = """<!doctype html><html><head>
+    html = """<!doctype html>
+<!--
+marketbearing-build:
+  git_sha: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  generation_run_id: generation-run-1
+  validation_run_id: validation-run-1
+  source_id: source:example
+  source_md5: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+  artifact_hash: cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+  generation_profile: safe_default
+  generated_at_utc: 2026-09-09T12:00:00+00:00
+-->
+<html><head>
 <title>Revenue outlook 2026 | MarketLense</title>
 <link rel="canonical" href="https://marketlense.example/reports/revenue-outlook">
 <meta property="og:title" content="Revenue outlook 2026">
@@ -91,6 +105,30 @@ def test_publish_readiness_binds_rendered_html_and_publication_projection() -> N
         "publish_readiness.final_html_changed",
         "publish_readiness.publication_projection_changed",
     ]
+
+
+def test_publish_readiness_rejects_html_without_build_traceability() -> None:
+    artifacts, evidence_packs, html, provenance = _ready_inputs()
+    html = re.sub(r"<!--.*?-->\s*", "", html, count=1, flags=re.DOTALL)
+
+    readiness = evaluate_publish_readiness(
+        report_id="report-1",
+        artifacts=artifacts,
+        evidence_packs=evidence_packs,
+        validation_report=ValidationReport(schema_version="1.1", status="pass"),
+        final_html=html,
+        final_html_path="",
+        category_ids=["markets"],
+        provenance=provenance,
+    )
+
+    traceability = next(
+        item
+        for item in readiness.rule_results
+        if item.rule_id == "publish_readiness.build_traceability"
+    )
+    assert readiness.status == "fail"
+    assert traceability.status == "fail"
 
 
 def test_publish_readiness_allows_non_fatal_grounding_interpretation() -> None:

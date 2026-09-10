@@ -74,6 +74,16 @@ _ANALYSIS_RULES = {
     "publish_readiness.regeneration",
     "publish_readiness.semantic_grounding",
 }
+_BUILD_PROVENANCE_FIELDS = (
+    "git_sha",
+    "generation_run_id",
+    "validation_run_id",
+    "source_id",
+    "source_md5",
+    "artifact_hash",
+    "generation_profile",
+    "generated_at_utc",
+)
 
 
 @dataclass(frozen=True)
@@ -429,6 +439,7 @@ def evaluate_publish_readiness(
             final_html_path=final_html_path,
         )
     )
+    results.append(_build_traceability_result(final_html))
     results.append(_provenance_result(final_html, provenance or {}))
     results.sort(key=lambda item: item.rule_id)
     artifact = PublishReadinessArtifact(
@@ -1000,6 +1011,33 @@ def _provenance_result(
     return _pass(
         "publish_readiness.public_source_provenance", ["source", "source.links"]
     )
+
+
+def _build_traceability_result(html: str) -> PublishReadinessRuleResult:
+    expected_prefix = "marketbearing-build:"
+    comments = re.findall(r"<!--(.*?)-->", str(html or ""), flags=re.DOTALL)
+    block = next(
+        (comment for comment in comments if expected_prefix in comment),
+        "",
+    )
+    if not block:
+        return _fail(
+            "publish_readiness.build_traceability",
+            ["html_comment"],
+            "missing marketbearing-build provenance comment",
+        )
+    present = {
+        match.group(1): match.group(2).strip()
+        for match in re.finditer(r"^\s{2}([a-z0-9_]+):\s*(.*?)\s*$", block, re.MULTILINE)
+    }
+    missing = [field for field in _BUILD_PROVENANCE_FIELDS if not present.get(field)]
+    if missing:
+        return _fail(
+            "publish_readiness.build_traceability",
+            ["html_comment"],
+            "missing build provenance values: " + ", ".join(missing),
+        )
+    return _pass("publish_readiness.build_traceability", ["html_comment"])
 
 
 def _editorial_result(

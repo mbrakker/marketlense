@@ -84,7 +84,14 @@ Duplicate detection compares normalized claim-token sets and material-number ove
 
 ## First-run prevention
 
-First-run artifact assembly removes editorial scaffold labels from executive-summary prose (for example, `Answer:` and `Implication:`) before the artifact is retained or rendered. The summary prompt also requires direct public prose. Doc-map extraction retains an explicitly named source publisher for the public report-card boundary. Expert-comment generation must not infer causal operational outcomes—such as fewer vendors, lower cost, or faster delivery—unless retained source material explicitly states them. An incomplete model-produced insight candidate set is completed with distinct, evidence-backed findings only when needed to cover a theme in the retained editorial plan; final selection retains one supported representative per plan theme without independently deriving a second theme set. Targeted final-insight repair retains explicit, report-specific `so_what` and `now_what` implications, so the public decision-quality gate does not need to reject a structurally incomplete repair. Public citation rendering removes internal evidence identifiers even when a model has wrapped one in quotes, contains an internal suffix, or names an evidence-pack provenance label. Renderer-only semantic keys used in public `data-*` attributes are hyphenated so they are not internal identifier tokens in the delivered document. The extraction-fragment detector distinguishes actual split words from intentional pipe-separated public taxonomy labels, and the truncation detector permits an ellipsis that closes a quoted public prompt. When the public coverage map is present, the renderer uses topic key points for signal cards and suppresses repeated chapter summaries, so a table-of-contents sentence is not printed in multiple public sections. These publisher-agnostic controls prevent known readiness defects at their origin; semantic and grounding validation remain the release defence-in-depth.
+First-run artifact assembly removes editorial scaffold labels from executive-summary prose (for example, `Answer:` and `Implication:`) before the artifact is retained or rendered. The summary prompt also requires direct public prose. Doc-map extraction retains an explicitly named source publisher for the public report-card boundary. Expert-comment generation must not infer causal operational outcomes—such as fewer vendors, lower cost, or faster delivery—unless retained source material explicitly states them. An incomplete model-produced insight candidate set is completed with distinct, evidence-backed findings only when needed to cover a theme in the retained editorial plan; final selection retains one supported representative per plan theme without independently deriving a second theme set. Targeted final-insight repair retains explicit, report-specific `so_what` and `now_what` implications, so the public decision-quality gate does not need to reject a structurally incomplete repair. Public citation rendering removes internal evidence identifiers even when a model has wrapped one in quotes, contains an internal suffix, or names an evidence-pack provenance label. Before reference validation, quote and insight candidates with only a `source:page:N` location hint are discarded, while that hint is removed from spans on otherwise grounded records; it never substitutes for retained evidence. Renderer-only semantic keys used in public `data-*` attributes are hyphenated so they are not internal identifier tokens in the delivered document. The extraction-fragment detector distinguishes actual split words from intentional pipe-separated public taxonomy labels, and the truncation detector permits an ellipsis that closes a quoted public prompt. When the public coverage map is present, the renderer uses topic key points for signal cards and suppresses repeated chapter summaries, so a table-of-contents sentence is not printed in multiple public sections. These publisher-agnostic controls prevent known readiness defects at their origin; semantic and grounding validation remain the release defence-in-depth.
+
+When a model produces an invalid compact card TLDR, normalization may replace it
+only with a complete, already evidence-linked claim that meets the configured
+word limit. It never truncates or invents a compact sentence; if no such claim
+exists, the card-TLDR gate remains a release blocker. After three failed
+grounding repairs for Expert View, that optional family abstains rather than
+retaining speculative causal synthesis.
 
 Once all public-copy families have generated and before canonical artifact
 assembly validates or retains them, a deterministic source-display pass preserves
@@ -159,6 +166,12 @@ artifact family retains the identical evidence-ID set and source-page set.
 Ambiguous, cross-family, incomplete, or changed-evidence cases remain blocked;
 the validator never chooses between candidate records or treats identifier
 normalization as a waiver.
+
+Final-insight regeneration also keeps its fixed-size roster one-to-one with
+the prior material stable IDs. A duplicate model ID cannot displace another
+retained insight: the duplicate or newly introduced slot is deterministically
+replaced with the displaced prior item before candidate validation, while an
+explicit repair for the first occurrence remains intact.
 
 The former `ingest.validation.public_editorial_quality.disabled_rule_waivers` setting applies only to retained repair diagnostics. It cannot waive the signed final HTML/projection decision or allow WordPress to reinterpret a failed artifact.
 

@@ -176,6 +176,24 @@ def test_normalize_artifact_summary_removes_editorial_scaffold_labels() -> None:
     )
 
 
+def test_normalize_artifact_summary_recovers_invalid_compact_copy_from_short_claim() -> None:
+    summary = normalize_artifact_summary(
+        {
+            "card_tldr_compact": "This model-provided compact summary exceeds the configured card limit and cannot be safely retained as public reader-facing copy today.",
+            "claim_evidence_map": [
+                {
+                    "claim": "Retail media investment is increasing.",
+                    "evidence_id": "finding-1",
+                    "evidence": "Retail media investment is increasing.",
+                    "pages": [4],
+                }
+            ],
+        }
+    )
+
+    assert summary["card_tldr_compact"] == "Retail media investment is increasing."
+
+
 def test_linkedin_reference_id_stripping_preserves_blank_line_paragraphs() -> None:
     assert (
         strip_linkedin_inline_reference_ids(

@@ -5,7 +5,12 @@ from copy import deepcopy
 from pathlib import Path
 
 from src.contracts.run_context import RunContext
-from src.generators.artifact_normalization import normalize_artifact_evidence_ids
+from src.generators.artifact_normalization import (
+    discard_location_only_insights,
+    discard_location_only_quotes,
+    normalize_artifact_evidence_ids,
+    normalize_artifact_insights,
+)
 from src.generators.validation.metrics import validate_insight_metrics
 from src.generators.validation.regeneration_candidate import (
     validate_regeneration_candidate,
@@ -113,6 +118,89 @@ def test_candidate_allows_known_evidence_remapping_and_abstention() -> None:
     assert remapped["quotes_final"][0]["evidence_id"] == "qc_003"
     assert remapped_result.passed
     assert abstained_result.passed
+
+
+def test_candidate_normalizes_a_known_namespaced_quote_evidence_id() -> None:
+    current, evidence_packs = _retained_artifact_and_evidence()
+    candidate = deepcopy(current)
+    candidate["quotes_final"][0]["evidence_id"] = (
+        "evidence:quote_candidates:quote_001"
+    )
+
+    normalize_artifact_evidence_ids(
+        summary=candidate["summary"],
+        insights_candidates=candidate["insights_candidates"],
+        insights_final=candidate["insights_final"],
+        quotes_final=candidate["quotes_final"],
+        doc_map=evidence_packs["doc_map"],
+        evidence_packs=evidence_packs,
+    )
+
+    assert candidate["quotes_final"][0]["evidence_id"] == "qc_001"
+
+
+def test_artifact_insight_drops_a_calendar_phrase_as_a_public_metric() -> None:
+    insight = normalize_artifact_insights(
+        [
+            {
+                "id": "identity-transition",
+                "text": (
+                    "Third-party cookies are expected to be eliminated by the end "
+                    "of 2021."
+                ),
+                "metric": {
+                    "label": "Cookie elimination timing",
+                    "value": "by the end of 2021",
+                    "unit": "",
+                },
+            }
+        ],
+        prefix="insight",
+    )[0]
+
+    assert insight["metric"]["value"] == ""
+    assert insight["metric"]["label"] == ""
+
+
+def test_quote_sanitizer_drops_location_only_evidence_and_spans() -> None:
+    quotes = discard_location_only_quotes(
+        [
+            {"text": "Retained quote", "evidence_id": "quote_001"},
+            {"text": "Unbound quote", "evidence_id": "source:page:3"},
+            {
+                "text": "Supported quote",
+                "evidence_id": "quote_002",
+                "evidence_spans": [
+                    {"evidence_id": "quote_002", "page": 2},
+                    {"evidence_id": "source:page:3", "page": 3},
+                ],
+            },
+        ]
+    )
+
+    assert [quote["text"] for quote in quotes] == ["Retained quote", "Supported quote"]
+    assert quotes[1]["evidence_spans"] == [{"evidence_id": "quote_002", "page": 2}]
+
+
+def test_insight_sanitizer_drops_location_only_evidence_and_spans() -> None:
+    insights = discard_location_only_insights(
+        [
+            {"id": "retained", "text": "Retained", "evidence_id": "finding_001"},
+            {"id": "unbound", "text": "Unbound", "evidence_id": "source:page:2"},
+            {
+                "id": "supported",
+                "text": "Supported",
+                "evidence_id": "finding_002",
+                "evidence_spans": [
+                    {"evidence_id": "finding_002", "page": 2},
+                    {"evidence_id": "source:page:2", "page": 2},
+                ],
+            },
+        ]
+    )
+
+    assert [insight["id"] for insight in insights] == ["retained", "supported"]
+    assert insights[1]["evidence_spans"] == [{"evidence_id": "finding_002", "page": 2}]
 
 
 def test_candidate_allows_a_unique_same_family_evidence_continuity_when_id_changes() -> (

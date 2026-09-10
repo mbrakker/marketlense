@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
+from html import escape
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -37,6 +38,29 @@ _MONTH_PATTERN = re.compile(
 _YEAR_PATTERN = re.compile(r"\b(20\d{2})\b")
 _ISO_DATE_PATTERN = re.compile(r"\b20\d{2}-\d{2}-\d{2}\b")
 _SENTENCE_SPLIT_PATTERN = re.compile(r"(?<=[.!?])\s+")
+_BUILD_PROVENANCE_FIELDS = (
+    "git_sha",
+    "generation_run_id",
+    "validation_run_id",
+    "source_id",
+    "source_md5",
+    "artifact_hash",
+    "generation_profile",
+    "generated_at_utc",
+)
+
+
+def _build_provenance_comment(provenance: object) -> str:
+    """Return a bounded non-visible comment with explicit unknown values."""
+    values = provenance if isinstance(provenance, dict) else {}
+    lines = ["<!--", "marketbearing-build:"]
+    for field_name in _BUILD_PROVENANCE_FIELDS:
+        value = " ".join(str(values.get(field_name) or "unknown").split())
+        # Comment delimiters must not be injectable through retained identity data.
+        safe_value = escape(value.replace("--", "- -"), quote=False)
+        lines.append(f"  {field_name}: {safe_value or 'unknown'}")
+    lines.append("-->")
+    return "\n".join(lines)
 
 
 def render_report(request: RenderRequest, ctx: RunContext) -> RenderResponse:
@@ -92,6 +116,7 @@ def render_report(request: RenderRequest, ctx: RunContext) -> RenderResponse:
         preview_png=request.preview_png,
         tag_acronym_map=tag_acronym_map,
         json_ld=json_ld,
+        build_provenance_comment=_build_provenance_comment(request.build_provenance),
     )
     report_name = slugify(request.doc_name)
     out_dir = Path(request.out_dir)

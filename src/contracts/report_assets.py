@@ -627,6 +627,15 @@ class RenderRequest:
             "doc": "Acronyms preserved in uppercase while formatting HTML taxonomy/category/topic chip labels."
         },
     )
+    build_provenance: Dict[str, str] = field(
+        default_factory=dict,
+        metadata={
+            "doc": (
+                "Immutable, non-public render provenance emitted in the final HTML "
+                "build comment."
+            )
+        },
+    )
 
 
 @dataclass(frozen=True)

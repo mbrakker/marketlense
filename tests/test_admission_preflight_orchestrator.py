@@ -417,6 +417,73 @@ def test_admission_records_explicit_provenance_when_source_identity_is_new(
     )
 
 
+def test_admission_retains_byline_when_verified_identity_supplies_publisher(
+    ingest_settings, run_context, tmp_path
+) -> None:
+    reports_db = str(tmp_path / "reports.sqlite")
+    record_report_source(
+        ReportSourceRecordRequest(
+            schema_version="1.0",
+            db_path=reports_db,
+            source_domain="datareportal.example",
+            report_name="Digital 2022: Sweden",
+            landing_page_url="https://datareportal.example/sweden",
+            downloaded_at_utc="2026-09-09T00:00:00Z",
+            md5="digital-sweden-md5",
+            publisher_name="DataReportal",
+            source_page_url="https://datareportal.example/sweden",
+        ),
+        run_context,
+    )
+    result = run_admission_preflight(
+        _request(
+            replace(ingest_settings, reports_db=reports_db),
+            file=replace(_file(md5="digital-sweden-md5"), name="digital-sweden.pdf"),
+        ),
+        run_context,
+        dependencies=replace(
+            _dependencies(),
+            get_source_identity=get_report_source_identity,
+            record_source_identity_observation=record_source_identity_observation,
+            check_pdf_integrity=lambda _request, _ctx: SimpleNamespace(
+                failure_code="",
+                page_count=12,
+                size_bytes=24_000,
+                md5="digital-sweden-md5",
+            ),
+            extract_pdf_info=lambda _request, _ctx: SimpleNamespace(
+                metadata={"Title": "Digital 2022: Sweden"}
+            ),
+            extract_pdf_text=lambda _request, _ctx: SimpleNamespace(
+                text=(
+                    "Digital 2022: Sweden\n"
+                    "By: Simon Kemp\n"
+                    "Source: Kepios\n"
+                    "Source: Ookla"
+                ),
+                char_count=2_000,
+                pages_extracted=3,
+                text_density=666.0,
+            ),
+        ),
+    )
+
+    resolved = get_report_source_identity(
+        ReportSourceIdentityGetRequest(
+            schema_version="1.0",
+            db_path=reports_db,
+            report_title="Digital 2022: Sweden",
+            md5="digital-sweden-md5",
+        ),
+        run_context,
+    ).resolution
+
+    assert result.admitted is True
+    assert resolved.publisher_name == "DataReportal"
+    assert resolved.provenance_roles.author_names == ("Simon Kemp",)
+    assert resolved.provenance_roles.data_provider_names == ("Kepios", "Ookla")
+
+
 def test_admission_rejects_unresolved_publisher_before_cohort_freeze(
     ingest_settings, run_context
 ) -> None:

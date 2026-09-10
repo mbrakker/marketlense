@@ -36,6 +36,42 @@ def test_source_pdf_is_never_used_as_a_marketlense_article_canonical() -> None:
     )
 
 
+def test_render_embeds_immutable_build_provenance_comment(tmp_path: Path) -> None:
+    response = render_report(
+        RenderRequest(
+            schema_version="1.0",
+            data={"title": "Traceable Report"},
+            doc_name="traceable-report.pdf",
+            file_id="traceable-report",
+            out_dir=str(tmp_path),
+            preview_png=None,
+            build_provenance={
+                "git_sha": "a" * 40,
+                "generation_run_id": "generation-run-1",
+                "validation_run_id": "validation-run-1",
+                "source_id": "source:example",
+                "source_md5": "b" * 32,
+                "artifact_hash": "c" * 64,
+                "generation_profile": "safe_default",
+                "generated_at_utc": "2026-09-09T12:00:00+00:00",
+            },
+        ),
+        _ctx(),
+    )
+
+    html = Path(response.html_path).read_text(encoding="utf-8")
+
+    assert "<!--\nmarketbearing-build:" in html
+    assert "git_sha: " + "a" * 40 in html
+    assert "generation_run_id: generation-run-1" in html
+    assert "validation_run_id: validation-run-1" in html
+    assert "source_id: source:example" in html
+    assert "source_md5: " + "b" * 32 in html
+    assert "artifact_hash: " + "c" * 64 in html
+    assert "generation_profile: safe_default" in html
+    assert "generated_at_utc: 2026-09-09T12:00:00+00:00" in html
+
+
 def test_public_title_and_meta_description_are_bounded_editorial_prose() -> None:
     assert (
         _normalize_public_title("Retail_Trends_2026_2026.pdf...")

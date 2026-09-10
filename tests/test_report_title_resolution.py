@@ -51,6 +51,47 @@ def test_missing_metadata_uses_clean_filename_title():
     assert resolution.confidence == "medium"
 
 
+def test_filename_fallback_strips_acquisition_month_year_suffix() -> None:
+    resolution = _resolve(
+        file_name="IAB_Europes_Guide_to_AI_in_Retail_Commerce_Media_June_26.pdf"
+    )
+
+    assert resolution.title == "IAB Europes Guide to AI in Retail Commerce Media"
+
+
+def test_explicit_source_title_preserves_apostrophe_ampersand_and_acronym_casing():
+    resolution = _resolve(
+        file_name="IAB_Europes_Guide_to_AI_in_Retail_Commerce_Media_June_26.pdf",
+        pages=[
+            (
+                1,
+                "IAB Europe's Guide to AI in Retail & Commerce Media\nIAB Europe",
+            )
+        ],
+    )
+
+    assert resolution.title == "IAB Europe's Guide to AI in Retail & Commerce Media"
+    assert resolution.candidate_source == "cover_title_page"
+
+
+def test_source_title_line_preserves_punctuation_when_cover_text_is_empty():
+    resolution = _resolve(
+        file_name="IAB_Europes_Guide_to_AI_in_Retail_Commerce_Media_June_26.pdf",
+        pages=[
+            (1, ""),
+            (
+                2,
+                "TABLE OF CONTENTS\n"
+                "IAB Europe's Guide to AI in Retail & Commerce Media\n"
+                "Published 2023\n",
+            ),
+        ],
+    )
+
+    assert resolution.title == "IAB Europe's Guide to AI in Retail & Commerce Media"
+    assert resolution.candidate_source == "source_content"
+
+
 def test_source_report_title_inherits_edition_from_filename():
     resolution = _resolve(
         file_name="IAB_Europe_AdEx_Benchmark_2025_updated.pdf",

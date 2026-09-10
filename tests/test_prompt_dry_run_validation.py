@@ -62,6 +62,7 @@ def test_final_insights_regeneration_prompt_requires_decision_implications() -> 
 
     assert "so_what" in prompt_set.user.text
     assert "now_what" in prompt_set.user.text
+    assert "at most once" in prompt_set.user.text
 
 
 def test_grounding_prompt_accepts_materially_entailed_paraphrases() -> None:

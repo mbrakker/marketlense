@@ -37,6 +37,8 @@ from src.generators.artifact_normalization import (
     artifact_vector_store_enabled,
     bind_artifact_evidence_spans,
     build_expert_synthesis_context,
+    discard_location_only_insights,
+    discard_location_only_quotes,
     fallback_artifact_insights_from_evidence,
     fallback_artifact_insights_from_findings,
     normalize_artifact_editorial_plan,
@@ -238,9 +240,21 @@ def generate_artifacts(
 
     def render_task(task: ArtifactRenderTask) -> Dict[str, Any]:
         payload_validator = None
-        if task.step_name in {"insights_candidates", "quotes"}:
+        if task.step_name in {"insights_candidates", "insights_final", "quotes"}:
 
             def payload_validator(payload: Dict[str, Any]) -> None:
+                if task.step_name == "insights_candidates":
+                    payload["insights_candidates"] = discard_location_only_insights(
+                        payload.get("insights_candidates")
+                    )
+                elif task.step_name == "insights_final":
+                    payload["insights_final"] = discard_location_only_insights(
+                        payload.get("insights_final")
+                    )
+                elif task.step_name == "quotes":
+                    payload["quotes_final"] = discard_location_only_quotes(
+                        payload.get("quotes_final")
+                    )
                 validate_required_evidence_references(payload, task.ctx)
 
         elif task.step_name == "summary":

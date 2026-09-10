@@ -68,6 +68,13 @@ _DATE_BYLINE = re.compile(
     r"september|october|november|december)\s+(?:19|20)\d{2}\b",
     re.IGNORECASE,
 )
+_FILENAME_TRAILING_DATE_OR_LABEL = re.compile(
+    r"(?:\s+(?:(?:19|20)\d{2}\s+\d{1,2}\s+\d{1,2}|"
+    r"(?:january|february|march|april|may|june|july|august|september|"
+    r"october|november|december)\s+(?:\d{1,2}|(?:19|20)?\d{2})|"
+    r"(?:updated|final|download)|v\d+))+$",
+    re.IGNORECASE,
+)
 _WEAK_TITLE = re.compile(
     r"^(?:\d+\s+)?(?:quarterly\s+)?benchmarks?(?:\s+report)?(?:\s*[|:-].*)?$",
     re.IGNORECASE,
@@ -271,6 +278,8 @@ def _cover_titles(lines: list[str], publisher_name: str) -> list[str]:
             break
         if not combined and _is_cover_brand_line(line, publisher_name):
             continue
+        if combined and _is_cover_brand_line(line, publisher_name):
+            break
         if not combined and not _looks_like_cover_title(line):
             continue
         if _is_cover_boundary(line):
@@ -285,6 +294,18 @@ def _cover_titles(lines: list[str], publisher_name: str) -> list[str]:
 
 def _source_titles(page_text: str, publisher_name: str) -> list[str]:
     values = []
+    # A source title can appear as a standalone contents/header line after an
+    # image-only cover. Keep that full visible line so punctuation and the
+    # words following "Guide to" do not get truncated by a prose-oriented
+    # title pattern.
+    for line in page_text.splitlines():
+        value = _clean(line)
+        if (
+            re.search(r"\bguide\s+to\b", value, re.IGNORECASE)
+            and _looks_like_title(value)
+            and _has_title_case_shape(value)
+        ):
+            values.append(value)
     for match in (
         *_COLONED_EDITION_TITLE.finditer(page_text),
         *_SOURCE_CONTEXT_TITLE.finditer(page_text),
@@ -346,6 +367,10 @@ def _deduplicate(
             candidate.source in {"source_content", "repeated_header_title"}
             and edition
             and not _edition(value)
+            # A full "Guide to …" heading is self-contained; a date elsewhere
+            # on the same contents/header page is publication context, not a
+            # missing title edition.
+            and not re.search(r"\bguide\s+to\b", value, re.IGNORECASE)
         ):
             value = _insert_edition(value, edition)
             candidate = replace(candidate, value=value, score=candidate.score + 45.0)
@@ -474,6 +499,13 @@ def _is_cover_brand_line(value: str, publisher_name: str) -> bool:
         return True
     if re.fullmatch(r"(?:[A-Z]\s+){3,}[A-Z]", normalized):
         return True
+    words = re.findall(r"[A-Za-z0-9]+", normalized)
+    if (
+        2 <= len(words) <= 4
+        and re.fullmatch(r"[A-Z]{2,8}", words[0])
+        and not (_TITLE_SIGNAL.search(normalized) or _YEAR.search(normalized))
+    ):
+        return True
     return bool(
         normalized.isupper()
         and not (_TITLE_SIGNAL.search(normalized) or _YEAR.search(normalized))
@@ -494,6 +526,7 @@ def _filename_title(file_name: str) -> str:
     if is_generic_report_title(raw):
         return ""
     raw = _clean(re.sub(r"[._-]+", " ", raw))
+    raw = _clean(_FILENAME_TRAILING_DATE_OR_LABEL.sub("", raw))
     return "" if is_generic_report_title(raw) else raw
 
 

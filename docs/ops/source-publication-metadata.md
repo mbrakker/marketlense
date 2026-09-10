@@ -108,6 +108,28 @@ change invalidates rendered HTML and downstream publication only; it does not
 require source parsing, OCR, selection, report analysis, artifact generation,
 validation, or a provider call.
 
+Every newly rendered review HTML begins with a non-visible
+`marketbearing-build` comment. It records the trusted producer commit when the
+runtime has one, generation and validation run IDs, canonical source identity,
+source-PDF MD5, deterministic artifact-bundle hash, active execution
+profile/configuration identity, and render UTC timestamp. Each key is always
+present; unavailable upstream provenance is written as `unknown`, never
+silently dropped. The comment is rendered by the canonical render service from
+the typed `RenderRequest` contract, so it is not public body content. The
+publish-readiness gate rejects HTML missing that complete block. Changing a
+title, provenance role, SEO/JSON-LD projection, or this marker therefore uses
+the existing render-only path and does not regenerate editorial artifacts.
+The same scalar build values are retained as `build_*` provenance entries in
+the publish-readiness package, linking the non-visible review artifact to its
+machine-readable decision without exposing them in public content.
+
+Editorial repair preserves the evidence-quality boundary. A summary claim with
+a number, magnitude, forecast, superlative, or requirement must bind to a
+direct finding or quote; a document-map section is permitted only for
+descriptive non-quantitative context. Namespaced model references are
+canonicalized only when their terminal identifier exactly matches retained
+evidence. Calendar phrases alone are not projected as public metrics.
+
 ## Cross-route retained-package reuse
 
 `resolve_report_source_reuse` is the report-store boundary for duplicate

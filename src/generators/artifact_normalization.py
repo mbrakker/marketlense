@@ -89,6 +89,11 @@ INLINE_REFERENCE_GROUP_RE = re.compile(
 )
 EVIDENCE_TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z0-9_-]*")
 QUOTE_ALIAS_RE = re.compile(r"^quote[-_]?(\d+)$", re.IGNORECASE)
+TEMPORAL_ONLY_METRIC_RE = re.compile(
+    r"^(?:(?:by|in|from|through|until|as\s+of)\s+)?"
+    r"(?:(?:the\s+)?(?:start|beginning|end)\s+of\s+)?\d{4}e?$",
+    re.IGNORECASE,
+)
 PUBLIC_EDITORIAL_SCAFFOLD_RE = re.compile(
     r"\b(?:answer|scale|implication|delivery and workflow|evidence note|caveat)\s*:\s*",
     re.IGNORECASE,
@@ -443,14 +448,30 @@ def artifact_retrieval_mode(use_vector_store: bool) -> str:
 def normalize_artifact_summary(value: Any) -> Dict[str, Any]:
     data = value if isinstance(value, dict) else {}
     claim_map = data.get("claim_evidence_map")
+    claims = _normalize_claims(claim_map)
+    compact = _s(data.get("card_tldr_compact"))
+    if not _is_complete_short_sentence(compact, limit=18):
+        compact = next(
+            (
+                _s(claim.get("claim")).strip()
+                for claim in claims
+                if _is_complete_short_sentence(_s(claim.get("claim")), limit=18)
+            ),
+            compact,
+        )
     return {
         "tldr": _s(data.get("tldr")),
-        "card_tldr_compact": _s(data.get("card_tldr_compact")),
+        "card_tldr_compact": compact,
         "executive_summary": _strip_public_editorial_scaffold(
             strip_artifact_inline_reference_ids(_s(data.get("executive_summary")))
         ),
-        "claim_evidence_map": _normalize_claims(claim_map),
+        "claim_evidence_map": claims,
     }
+
+
+def _is_complete_short_sentence(value: str, *, limit: int) -> bool:
+    text = " ".join(value.split())
+    return bool(text) and len(text.split()) <= limit and text.endswith((".", "?", "!"))
 
 
 def preserve_public_source_displays(
@@ -750,6 +771,8 @@ def normalize_artifact_insights(items: Any, *, prefix: str) -> List[Dict[str, An
         metric["value"], metric["unit"] = normalize_public_metric_display(
             value=metric["value"], unit=metric["unit"]
         )
+        if TEMPORAL_ONLY_METRIC_RE.fullmatch(metric["value"].strip()):
+            _clear_unproven_metric_metadata(metric)
         pages_raw_obj = item.get("pages")
         pages_raw = pages_raw_obj if isinstance(pages_raw_obj, list) else []
         pages = [int(p) for p in pages_raw if isinstance(p, int)]
@@ -1130,6 +1153,66 @@ def normalize_artifact_quotes(items: Any) -> List[Dict[str, Any]]:
                 quote[key] = value
         normalized.append(quote)
     return normalized
+
+
+def discard_location_only_quotes(items: Any) -> List[Dict[str, Any]]:
+    """Keep quote records that name retained evidence, never page hints alone."""
+    if not isinstance(items, list):
+        return []
+    sanitized: List[Dict[str, Any]] = []
+    for raw_item in items:
+        if not isinstance(raw_item, dict):
+            continue
+        evidence_id = _s(raw_item.get("evidence_id")).strip()
+        if re.fullmatch(r"source:page:\d+", evidence_id, flags=re.IGNORECASE):
+            continue
+        item = dict(raw_item)
+        spans = item.get("evidence_spans")
+        if isinstance(spans, list):
+            item["evidence_spans"] = [
+                span
+                for span in spans
+                if not (
+                    isinstance(span, dict)
+                    and re.fullmatch(
+                        r"source:page:\d+",
+                        _s(span.get("evidence_id")).strip(),
+                        flags=re.IGNORECASE,
+                    )
+                )
+            ]
+        sanitized.append(item)
+    return sanitized
+
+
+def discard_location_only_insights(items: Any) -> List[Dict[str, Any]]:
+    """Keep insight records grounded in retained evidence, never page hints alone."""
+    if not isinstance(items, list):
+        return []
+    sanitized: List[Dict[str, Any]] = []
+    for raw_item in items:
+        if not isinstance(raw_item, dict):
+            continue
+        evidence_id = _s(raw_item.get("evidence_id")).strip()
+        if re.fullmatch(r"source:page:\d+", evidence_id, flags=re.IGNORECASE):
+            continue
+        item = dict(raw_item)
+        spans = item.get("evidence_spans")
+        if isinstance(spans, list):
+            item["evidence_spans"] = [
+                span
+                for span in spans
+                if not (
+                    isinstance(span, dict)
+                    and re.fullmatch(
+                        r"source:page:\d+",
+                        _s(span.get("evidence_id")).strip(),
+                        flags=re.IGNORECASE,
+                    )
+                )
+            ]
+        sanitized.append(item)
+    return sanitized
 
 
 def strip_artifact_inline_reference_ids(text: str) -> str:
@@ -1567,6 +1650,13 @@ def _extract_evidence_id_candidates(raw_evidence_id: Any) -> List[str]:
         candidates.extend(EVIDENCE_TOKEN_RE.findall(raw))
     if " " in raw:
         candidates.extend(EVIDENCE_TOKEN_RE.findall(raw))
+    # Model prompts display evidence in a namespaced provenance form (for
+    # example ``evidence:quote_candidates:quote_001``).  Retain that form for
+    # audit, but offer its terminal identifier as a candidate only when the
+    # canonical lookup below proves it exists.  This deliberately does not
+    # turn arbitrary source/page strings into evidence.
+    if ":" in raw:
+        candidates.append(raw.rsplit(":", 1)[-1])
 
     normalized: List[str] = []
     seen: set[str] = set()
@@ -1599,7 +1689,7 @@ def _canonicalize_evidence_id(
             return canonical
         quote_alias = QUOTE_ALIAS_RE.match(candidate)
         if quote_alias:
-            alias_candidate = f"quote_{quote_alias.group(1)}"
+            alias_candidate = f"quote_{int(quote_alias.group(1))}"
             canonical = alias_to_id.get(alias_candidate)
             if canonical:
                 return canonical

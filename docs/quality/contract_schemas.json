@@ -32947,6 +32947,12 @@
     "src.contracts.report_assets.RenderRequest": {
       "additionalProperties": false,
       "properties": {
+        "build_provenance": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
         "data": {
           "additionalProperties": {},
           "type": "object"

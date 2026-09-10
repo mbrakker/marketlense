@@ -26,6 +26,8 @@ from src.generators.artifact_normalization import (
     artifact_quote_candidates,
     artifact_vector_store_enabled,
     build_expert_synthesis_context,
+    discard_location_only_insights,
+    discard_location_only_quotes,
     fallback_artifact_insights_from_findings,
     normalize_artifact_editorial_plan,
     normalize_artifact_evidence_ids,
@@ -252,6 +254,9 @@ def regenerate_artifacts(
         expert_comment=state.expert_comment,
         linkedin_post=state.linkedin_post,
     )
+    insights_candidates = discard_location_only_insights(insights_candidates)
+    insights_final = discard_location_only_insights(insights_final)
+    quotes_final = discard_location_only_quotes(quotes_final)
     updated_artifacts = assemble_artifacts_payload(
         report_id=request.report_id,
         report_name=request.report_name,
@@ -692,6 +697,48 @@ def _restore_final_insight_evidence_bindings(
     return restored
 
 
+def _restore_missing_final_insight_roster(
+    *,
+    selected_insights: List[Dict[str, Any]],
+    prior_final_insights: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Keep a repaired final-insight roster one-to-one with prior stable IDs.
+
+    A model can emit a duplicate ID while selecting a fixed-size final roster.
+    If that displaces another prior material insight, the deterministic
+    candidate gate correctly rejects the result for losing evidence continuity.
+    Replace only duplicate or newly introduced IDs with the displaced prior
+    item; explicit repairs for the first occurrence of a stable ID remain
+    intact.
+    """
+    prior_by_id = {
+        insight_id: deepcopy(item)
+        for item in prior_final_insights
+        if isinstance(item, dict)
+        and (insight_id := _s(item.get("id")).strip())
+        and _s(item.get("text")).strip()
+    }
+    if not prior_by_id:
+        return selected_insights
+
+    selected = [deepcopy(item) for item in selected_insights if isinstance(item, dict)]
+    selected_ids = [_s(item.get("id")).strip() for item in selected]
+    missing_ids = [
+        insight_id for insight_id in prior_by_id if insight_id not in set(selected_ids)
+    ]
+    if not missing_ids:
+        return selected
+
+    replace_indexes = [
+        index
+        for index, insight_id in enumerate(selected_ids)
+        if insight_id in selected_ids[:index] or insight_id not in prior_by_id
+    ]
+    for index, insight_id in zip(replace_indexes, missing_ids, strict=False):
+        selected[index] = deepcopy(prior_by_id[insight_id])
+    return selected
+
+
 def _merge_regenerated_insights_by_stable_id(
     *,
     current_insights: List[Dict[str, Any]],
@@ -832,6 +879,7 @@ def _handle_insights_bundle_regeneration(
     execution: _RegenerationHandlerExecution,
 ) -> None:
     candidates_namespace, final_namespace = execution.handler.prompt_namespaces
+    prior_final_insights = deepcopy(execution.state.insights_final)
     candidates_ctx = child_context(
         execution.target_ctx, task_id=f"{execution.target_ctx.task_id}:candidates"
     )
@@ -901,10 +949,13 @@ def _handle_insights_bundle_regeneration(
         current_insights=execution.state.insights_final,
         regenerated_insights=regenerated_final,
     )
-    execution.state.insights_final = select_artifact_insights(
-        final_insights=execution.state.insights_final,
-        candidate_insights=execution.state.insights_candidates,
-        editorial_plan=execution.state.editorial_plan,
+    execution.state.insights_final = _restore_missing_final_insight_roster(
+        selected_insights=select_artifact_insights(
+            final_insights=execution.state.insights_final,
+            candidate_insights=execution.state.insights_candidates,
+            editorial_plan=execution.state.editorial_plan,
+        ),
+        prior_final_insights=prior_final_insights,
     )
     execution.state.regenerated_sections.extend(
         ["insights_candidates", "insights_final"]
@@ -976,6 +1027,14 @@ def _handle_expert_comment_regeneration(
     execution: _RegenerationHandlerExecution,
 ) -> None:
     _normalize_state_evidence_ids(execution)
+    if execution.runtime.request.attempt_index >= 3 and any(
+        issue.rule_id == "grounding" for issue in execution.target.issues
+    ):
+        # An exhausted source-fidelity repair must abstain rather than retain
+        # another model-authored causal synthesis.
+        execution.state.expert_comment = ""
+        execution.state.regenerated_sections.append("expert_comment")
+        return
     namespace = execution.handler.prompt_namespaces[0]
     expert_synthesis_context = build_expert_synthesis_context(
         editorial_plan=execution.state.editorial_plan,

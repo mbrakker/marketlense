@@ -35,6 +35,7 @@ text: |
   - Fix the listed failures directly.
   - Retain the editorial plan's report thesis and themes; do not introduce a competing frame.
   - Every retained `claim_evidence_map` entry must use one existing `evidence_id`; omit a claim rather than output an empty or unverifiable binding.
+  - A claim containing a number, magnitude, superlative, requirement, or forecast must cite a direct finding or quote from `grounding_package.relevant_evidence`. Use a DocMap section ID only for descriptive, non-quantitative context; otherwise omit or soften the claim.
   - Copy the linked evidence ID and its exact page number(s) from the grounding package. Do not add, reorder, or infer adjacent pages.
   - Keep `claim_evidence_map` brief and fully grounded.
   - Author both TLDRs independently from the same evidence. The compact TLDR must not be a clipped prefix of the standard TLDR.

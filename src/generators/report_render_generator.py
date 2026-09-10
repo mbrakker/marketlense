@@ -51,6 +51,7 @@ from src.generators.report_generation_shared import (
 )
 from src.generators.report_title_resolution_generator import is_generic_report_title
 from src.utils.cache_utils import sha256_json
+from src.utils.clock import utc_now_iso
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 from src.utils.slugify import slugify
@@ -71,7 +72,42 @@ _GENERIC_PUBLIC_TITLES = {
     "slide deck",
     "untitled",
 }
-_HTML_RENDER_CONTRACT_VERSION = "2.0"
+_HTML_RENDER_CONTRACT_VERSION = "2.2"
+
+
+def _render_build_provenance(
+    runtime: ReportRuntimeState,
+    analysis: ReportAnalysisState,
+) -> dict[str, str]:
+    """Expose existing run and lineage identities in the rendered review artifact."""
+    identity = runtime.source_identity
+    artifact_hash = sha256_json(
+        {
+            "artifacts": analysis.artifacts_payload or {},
+            "evidence_packs": analysis.evidence_packs or {},
+            "validation": (
+                analysis.validation_report.to_dict()
+                if analysis.validation_report is not None
+                else {}
+            ),
+        }
+    )
+    return {
+        "git_sha": str(runtime.ctx.producer_commit_sha or "unknown"),
+        "generation_run_id": str(runtime.ctx.run_id or "unknown"),
+        "validation_run_id": str(runtime.ctx.validation_run_id or "unknown"),
+        "source_id": str(
+            getattr(identity, "source_identity_id", "") or "unknown"
+        ),
+        "source_md5": str(runtime.md5 or "unknown"),
+        "artifact_hash": artifact_hash or "unknown",
+        "generation_profile": str(
+            runtime.execution_plan_intent
+            or runtime.ctx.configuration_hash
+            or "unknown"
+        ),
+        "generated_at_utc": utc_now_iso(),
+    }
 
 
 def _publication_date(runtime: ReportRuntimeState) -> str:
@@ -354,6 +390,14 @@ def _resolved_report_title(
 ) -> str:
     source_resolution = source.title_resolution
     source_title = str(getattr(source_resolution, "title", "") or "").strip()
+    citation_title = (
+        _source_grounded_citation_title(analysis, source_title)
+        if str(getattr(source_resolution, "candidate_source", "") or "")
+        == "filename"
+        else ""
+    )
+    if citation_title:
+        return citation_title
     if source_title or source_resolution.candidates or source_resolution.issues:
         return (
             ""
@@ -374,6 +418,47 @@ def _resolved_report_title(
     if not _is_unusable_public_title(runtime, doc_map_title):
         return doc_map_title
     return _source_title_fallback(runtime)
+
+
+def _resolved_public_publisher(
+    runtime: ReportRuntimeState, analysis: ReportAnalysisState
+) -> str:
+    """Prefer matching source-grounded casing over an identity casing variant."""
+    identity_publisher = _resolved_identity_publisher(runtime)
+    document_publisher = _source_derived_publisher(analysis)
+    if identity_publisher and document_publisher:
+        identity_key = re.sub(r"[^a-z0-9]", "", identity_publisher.casefold())
+        document_key = re.sub(r"[^a-z0-9]", "", document_publisher.casefold())
+        if identity_key == document_key:
+            return document_publisher
+    return identity_publisher or document_publisher
+
+
+def _source_grounded_citation_title(
+    analysis: ReportAnalysisState, source_title: str
+) -> str:
+    """Recover a report title only from citations that match its weak identity."""
+    source_key = re.sub(r"\.pdf$", "", source_title, flags=re.IGNORECASE)
+    source_key = re.sub(r"[^a-z0-9]", "", source_key.casefold())
+    source_key = re.sub(
+        r"(?:january|february|march|april|may|june|july|august|september|october|november|december)\d{1,4}$",
+        "",
+        source_key,
+    )
+    if len(source_key) < 12:
+        return ""
+    ledger = (analysis.artifacts_payload or {}).get("claim_ledger") or []
+    if not isinstance(ledger, list):
+        return ""
+    for item in ledger:
+        citation = str(item.get("citation") or "") if isinstance(item, dict) else ""
+        title = citation.rsplit(",", 1)[0].strip()
+        title_key = re.sub(r"[^a-z0-9]", "", title.casefold())
+        if len(title) >= 12 and (
+            title_key.startswith(source_key) or source_key.startswith(title_key)
+        ):
+            return title
+    return ""
 
 
 def _title_identity_error(
@@ -410,9 +495,8 @@ def _build_metadata_upsert_request(
         title=_resolved_report_title(runtime, source, analysis),
         file_name=runtime.file_name,
         publisher=(
-            _resolved_identity_publisher(runtime)
+            _resolved_public_publisher(runtime, analysis)
             or payload.publisher
-            or _source_derived_publisher(analysis)
             or None
         ),
         taxonomy=payload.taxonomy,
@@ -625,6 +709,7 @@ def render_report_output(
         child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:render_metadata"),
     )
     render_data_dict = deepcopy(analysis.data_dict)
+    build_provenance = _render_build_provenance(runtime, analysis)
     public_publication_date = _publication_date(runtime)
     existing_title = str(render_data_dict.get("title") or "").strip()
     existing_publisher = str(render_data_dict.get("publisher") or "").strip()
@@ -635,7 +720,7 @@ def render_report_output(
             runtime, source, analysis, existing_title
         )
         render_data_dict["publisher"] = (
-            _resolved_identity_publisher(runtime)
+            _resolved_public_publisher(runtime, analysis)
             or existing_publisher
             or _source_derived_publisher(analysis)
         )
@@ -660,7 +745,7 @@ def render_report_output(
             runtime, source, analysis, render_meta.title or existing_title
         )
         render_data_dict["publisher"] = (
-            _resolved_identity_publisher(runtime)
+            _resolved_public_publisher(runtime, analysis)
             or str(render_meta.publisher or existing_publisher).strip()
             or _source_derived_publisher(analysis)
         )
@@ -783,6 +868,7 @@ def render_report_output(
                 out_dir=runtime.settings.output_dir,
                 preview_png=preview_resp.image_path,
                 tag_acronyms=runtime.settings.html_tag_acronyms,
+                build_provenance=build_provenance,
             ),
             runtime.ctx,
         )
@@ -834,6 +920,7 @@ def render_report_output(
                 dependencies=dependencies,
                 final_html_path=out_html,
                 report_card_manifest_path=report_card_manifest_path,
+                build_provenance=build_provenance,
             )
             logger.info(
                 log_event(
@@ -901,7 +988,7 @@ def render_report_output(
         cover_meta.title if cover_meta else render_data_dict["title"],
     )
     cover_publisher = (
-        _resolved_identity_publisher(runtime)
+        _resolved_public_publisher(runtime, analysis)
         or ((cover_meta.publisher or "").strip() if cover_meta else "")
         or analysis.payload.publisher
         or _source_derived_publisher(analysis)
@@ -1140,6 +1227,7 @@ def render_report_output(
         dependencies=dependencies,
         final_html_path=out_html,
         report_card_manifest_path=report_card_manifest_path,
+        build_provenance=build_provenance,
     )
 
     return IngestOutcome(
@@ -1182,6 +1270,7 @@ def _persist_publish_readiness(
     dependencies: ReportRenderDependencies,
     final_html_path: str,
     report_card_manifest_path: str | None,
+    build_provenance: dict[str, str],
 ) -> tuple[str, str]:
     """Persist the single readiness decision after the final render is complete."""
     final_html = dependencies.read_text(
@@ -1219,7 +1308,13 @@ def _persist_publish_readiness(
         configuration_hash=runtime.ctx.configuration_hash,
         policy_hash=runtime.ctx.policy_hash,
         producer_revision=runtime.ctx.producer_commit_sha,
-        provenance=_source_provenance(runtime),
+        provenance={
+            **_source_provenance(runtime),
+            **{
+                f"build_{field_name}": value
+                for field_name, value in build_provenance.items()
+            },
+        },
         metadata_evidence=_source_fidelity_metadata(runtime, source, analysis),
     )
     response = dependencies.analysis_store_pack(
@@ -1260,7 +1355,7 @@ def _source_fidelity_metadata(
     """Retained source identity expected on public report metadata surfaces."""
     title = _resolved_report_title(runtime, source, analysis)
     publisher = (
-        _resolved_identity_publisher(runtime)
+        _resolved_public_publisher(runtime, analysis)
         or str(analysis.payload.publisher or "").strip()
     )
     metadata = {"title": title, "publisher": publisher}

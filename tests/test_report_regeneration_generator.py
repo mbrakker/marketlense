@@ -29,6 +29,7 @@ from src.generators.report_regeneration_generator import (
     _build_grounding_package,
     _merge_regenerated_insights_by_stable_id,
     _restore_final_insight_evidence_bindings,
+    _restore_missing_final_insight_roster,
     regenerate_artifacts,
 )
 from src.utils.errors import AppError
@@ -43,6 +44,26 @@ METRIC = {
     "sample_size": "",
     "confidence": "",
 }
+
+
+def test_restore_missing_final_insight_roster_replaces_duplicate_model_id() -> None:
+    prior = [
+        {"id": "insight-1", "text": "Prior one", "evidence_id": "f1"},
+        {"id": "insight-2", "text": "Prior two", "evidence_id": "f2"},
+    ]
+    selected = [
+        {"id": "insight-2", "text": "Repaired two", "evidence_id": "f3"},
+        {"id": "insight-2", "text": "Duplicate model ID", "evidence_id": "f4"},
+    ]
+
+    restored = _restore_missing_final_insight_roster(
+        selected_insights=selected,
+        prior_final_insights=prior,
+    )
+
+    assert [item["id"] for item in restored] == ["insight-2", "insight-1"]
+    assert restored[0]["text"] == "Repaired two"
+    assert restored[1] == prior[0]
 
 
 def test_grounding_package_quarantines_failed_evidence_and_uses_replacements() -> None:

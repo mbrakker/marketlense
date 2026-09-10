@@ -446,7 +446,14 @@ def run_admission_preflight(
                     source_record_id = int(
                         getattr(resolved, "source_record_id", 0) or 0
                     )
-                    if provenance_roles.publisher_name:
+                    has_observed_roles = bool(
+                        provenance_roles.publisher_name
+                        or provenance_roles.author_names
+                        or provenance_roles.data_provider_names
+                        or provenance_roles.report_owner_name
+                    )
+                    observed_publisher = provenance_roles.publisher_name or publisher
+                    if has_observed_roles and observed_publisher:
                         artifact_url = _drive_artifact_url(file.file_id)
                         if source_record_id <= 0:
                             source_record_id = int(
@@ -460,7 +467,7 @@ def run_admission_preflight(
                                             landing_page_url=artifact_url,
                                             downloaded_at_utc=utc_now_iso(),
                                             md5=source_identity,
-                                            publisher_name=provenance_roles.publisher_name,
+                                            publisher_name=observed_publisher,
                                             source_page_url=artifact_url,
                                         ),
                                         ctx,
@@ -480,8 +487,8 @@ def run_admission_preflight(
                                         source_record_id=source_record_id,
                                         canonical_title=title,
                                         title_evidence_locator="source_visible_provenance",
-                                        publisher_id=provenance_roles.publisher_name,
-                                        publisher_name=provenance_roles.publisher_name,
+                                        publisher_id=observed_publisher,
+                                        publisher_name=observed_publisher,
                                         provenance_roles=provenance_roles,
                                         canonical_landing_page_url=str(
                                             getattr(

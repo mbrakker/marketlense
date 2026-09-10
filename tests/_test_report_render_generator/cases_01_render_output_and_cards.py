@@ -38,6 +38,7 @@ from src.generators.report_generation_shared import (
 )
 from src.generators.report_render_generator import (
     _public_source_note,
+    _resolved_public_publisher,
     _resolved_report_title,
     render_preview_asset,
     render_report_output,
@@ -327,6 +328,23 @@ def test_public_source_note_decodes_a_url_encoded_canonical_title(tmp_path) -> N
     assert _public_source_note(runtime) == "Source: GWI — GWI Brand tracking guide"
 
 
+def test_resolved_public_publisher_prefers_matching_document_casing(tmp_path) -> None:
+    runtime = replace(
+        _runtime(tmp_path, md5="md5"),
+        source_identity=SimpleNamespace(
+            identity_status="resolved", publisher_name="iAB Europe"
+        ),
+    )
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    analysis = replace(
+        _analysis(runtime, source, selection),
+        evidence_packs={"doc_map": {"publisher": "IAB Europe"}},
+    )
+
+    assert _resolved_public_publisher(runtime, analysis) == "IAB Europe"
+
+
 def test_resolved_report_title_replaces_a_runtime_slug_with_document_map_title(
     tmp_path,
 ) -> None:
@@ -421,6 +439,48 @@ def test_resolved_report_title_rejects_generic_pdf_metadata_and_humanizes_source
 
     assert _resolved_report_title(runtime, source, analysis) == (
         "IAB Europe AdEx Benchmark 2025 updated"
+    )
+
+
+def test_resolved_report_title_prefers_source_grounded_citation_over_filename_identity(
+    tmp_path,
+) -> None:
+    runtime = replace(
+        _runtime(tmp_path, md5="md5"),
+        source_identity=SimpleNamespace(
+            identity_status="resolved",
+            canonical_title="IAB-Europes-Guide-to-AI-in-Retail-Commerce-Media-June-26.pdf",
+            publisher_name="iAB Europe",
+        ),
+    )
+    source = replace(
+        _source(runtime),
+        title_resolution=ReportTitleResolution(
+            title="IAB-Europes-Guide-to-AI-in-Retail-Commerce-Media-June-26.pdf",
+            candidate_source="filename",
+        ),
+    )
+    selection = _selection(runtime, source)
+    analysis = replace(
+        _analysis(runtime, source, selection),
+        payload=replace(
+            source.payload,
+            title="IAB-Europes-Guide-to-AI-in-Retail-Commerce-Media-June-26.pdf",
+        ),
+        artifacts_payload={
+            "claim_ledger": [
+                {
+                        "citation": (
+                            "IAB Europe's Guide to AI in Retail & Commerce Media, "
+                            "Introduction"
+                        )
+                }
+            ]
+        },
+    )
+
+    assert _resolved_report_title(runtime, source, analysis) == (
+        "IAB Europe's Guide to AI in Retail & Commerce Media"
     )
 
 
@@ -760,7 +820,7 @@ def test_render_report_output_uses_html_cache_hit_and_skips_render(tmp_path):
         sha256_json(cached_data),
         "preview.png",
         runtime.file_name,
-        render_contract_version="2.0",
+            render_contract_version="2.2",
     )
 
     def _read_text(req, ctx):
