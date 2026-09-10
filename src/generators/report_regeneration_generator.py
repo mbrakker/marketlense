@@ -43,6 +43,7 @@ from src.generators.artifact_normalization import (
     stabilize_broad_artifact_editorial_plan,
     strip_linkedin_inline_reference_ids,
 )
+from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.generators.validation.evidence import retrieve_evidence_windows
 from src.generators.validation.preparation import prepare_validation_inputs
 from src.services import prompt_service, report_analysis_store_service
@@ -72,6 +73,7 @@ class _RegenerationState:
     source_status: Dict[str, Any]
     regenerated_sections: List[str] = field(default_factory=list)
     prompt_namespaces: List[str] = field(default_factory=list)
+    prompt_identities: Dict[str, Dict[str, Any]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -257,7 +259,13 @@ def regenerate_artifacts(
     insights_candidates = discard_location_only_insights(insights_candidates)
     insights_final = discard_location_only_insights(insights_final)
     quotes_final = discard_location_only_quotes(quotes_final)
-    cache_meta = safe_artifacts.get("_cache")
+    cache_meta = deepcopy(safe_artifacts.get("_cache"))
+    if not isinstance(cache_meta, dict):
+        cache_meta = {}
+    cached_prompts = cache_meta.get("prompts")
+    prompts = dict(cached_prompts) if isinstance(cached_prompts, dict) else {}
+    prompts.update(state.prompt_identities)
+    cache_meta["prompts"] = prompts
     updated_artifacts = assemble_artifacts_payload(
         report_id=request.report_id,
         report_name=request.report_name,
@@ -282,7 +290,7 @@ def regenerate_artifacts(
         if isinstance(safe_artifacts.get("categories"), list)
         else [],
         ctx=ctx,
-        cache_meta=deepcopy(cache_meta) if isinstance(cache_meta, dict) else None,
+        cache_meta=cache_meta,
         validate_references=False,
     )
     candidate_artifacts_path = store_artifacts_payload(
@@ -403,6 +411,24 @@ def _build_grounding_package(
         if quarantined_ids
         else _collect_relevant_evidence_entries(target.issues, evidence_packs, doc_map)
     )
+    if not relevant_evidence and target.target_section in {
+        "summary",
+        "expert_comment",
+        "linkedin_post",
+    }:
+        relevant_evidence = _replacement_evidence_entries(
+            evidence_packs=evidence_packs,
+            excluded_evidence_ids=set(quarantined_ids),
+            search_text=" ".join(
+                part
+                for part in (
+                    search_text,
+                    _dump_json(artifacts.get("editorial_plan") or {}),
+                    _dump_json(artifacts.get("insights_final") or []),
+                )
+                if part
+            ),
+        )
     evidence_ids = _unique_strings(
         _entry_evidence_id(entry) for entry in relevant_evidence
     )
@@ -817,6 +843,35 @@ def _render_regeneration_model(
     ctx: RunContext,
 ) -> Dict[str, Any]:
     request = execution.runtime.request
+    prepared = prepare_prompt_bundle(
+        namespace=namespace,
+        settings=request.settings,
+        ctx=ctx,
+        prompt_client=execution.runtime.prompt_client,
+        system_variables=variables,
+        user_variables=variables,
+        retrieval_mode=(
+            "vector_store"
+            if execution.runtime.artifact_use_vector_store and request.vector_store_id
+            else "chat_json"
+        ),
+        temperature=request.settings.temperature,
+        seed=request.settings.openai_seed,
+        timeout_seconds=request.settings.openai_timeout_seconds,
+        output_contract_schema_version="artifact_json:1.0",
+        validator_version="artifacts_schema:3.0",
+    )
+    execution.state.prompt_identities[namespace] = {
+        "prompt_system_sha256": prepared.prompt_set.system.sha256,
+        "prompt_user_sha256": prepared.prompt_set.user.sha256,
+        "prompt_content_hash": prepared.prompt_content_hash,
+        "dependency_manifest": asdict(prepared.dependency_manifest),
+        "execution_identity": prepared.execution_identity.execution_identity,
+        "execution_identity_manifest": asdict(prepared.execution_identity),
+        "model": prepared.resolved_model,
+        "execution_policy_hash": prepared.execution_policy.policy_hash,
+        "execution_policy_source": prepared.execution_policy.policy_source,
+    }
     return render_artifact_json_model(
         namespace=namespace,
         variables=variables,
@@ -829,6 +884,7 @@ def _render_regeneration_model(
         publisher_name=request.publisher_name,
         report_name=request.report_name,
         source_url=request.source_url,
+        prepared_prompt_bundle=prepared,
     )
 
 

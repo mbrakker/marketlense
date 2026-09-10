@@ -99,6 +99,39 @@ def test_grounding_package_quarantines_failed_evidence_and_uses_replacements() -
     assert "failed-evidence" not in json.dumps(package["relevant_evidence"])
 
 
+def test_grounding_package_selects_retained_evidence_for_soft_copy_without_issue_ids() -> None:
+    package = _build_grounding_package(
+        target=RegenerationTarget(
+            target_section="expert_comment",
+            issues=[
+                RegenerationIssue(
+                    rule_id="public_editorial_quality.support",
+                    affected_section="expert_comment",
+                    message="Unsupported operational benefit.",
+                    severity="error",
+                )
+            ],
+        ),
+        prepared=SimpleNamespace(evidence_windows=[]),
+        artifacts={
+            "expert_comment": "The retention signal supports a planning choice.",
+            "editorial_plan": {"themes": [{"evidence_ids": ["finding-2"]}]},
+            "insights_final": [{"evidence_id": "finding-1"}],
+        },
+        evidence_packs={
+            "findings": {
+                "findings": [
+                    {"id": "finding-1", "text": "Retention improved in the cohort."},
+                    {"id": "finding-2", "text": "Margin pressure remains visible."},
+                ]
+            }
+        },
+        doc_map={},
+    )
+
+    assert package["evidence_ids"] == ["finding-1", "finding-2"]
+
+
 class _FakePromptClient:
     def __init__(self) -> None:
         self.render_calls: list[dict] = []
@@ -590,7 +623,16 @@ def test_regenerate_artifacts_insights_bundle_uses_targeted_steps_and_preserves_
     )
 
     assert response.regenerated_sections == ["insights_candidates", "insights_final"]
-    assert response.updated_artifacts["_cache"] == _current_artifacts()["_cache"]
+    prompts = response.updated_artifacts["_cache"]["prompts"]
+    assert prompts["report_vs/artifacts/insights_final"] == {
+        "prompt_content_hash": "c" * 64
+    }
+    assert prompts["report_vs/artifacts/regenerate/insights_candidates"][
+        "prompt_content_hash"
+    ] == "c" * 64
+    assert prompts["report_vs/artifacts/regenerate/insights_final"][
+        "execution_identity"
+    ]
     assert len(response.updated_artifacts["insights_candidates"]) == 4
     assert len(response.updated_artifacts["insights_final"]) == 5
     assert (

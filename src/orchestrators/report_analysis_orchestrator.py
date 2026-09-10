@@ -393,7 +393,11 @@ def run_report_analysis(
             runtime.ctx,
             runtime.md5 or runtime.file.file_id,
         ),
-        publisher_id=runtime.publisher_name or "unattributed",
+        publisher_id=(
+            str(runtime.ctx.publisher_id or "").strip()
+            or runtime.publisher_name
+            or "unattributed"
+        ),
         workflow="report_analysis",
         stage="vector_store",
         artifact_family="report",
@@ -421,7 +425,9 @@ def run_report_analysis(
         settings=runtime.settings,
         ctx=mode_ctx,
         stage="source_validation",
-        source_identity_id=runtime.md5 or runtime.file.file_id,
+        source_identity_id=_analysis_source_identity_id(
+            mode_ctx, runtime.md5 or runtime.file.file_id
+        ),
         input_artifact_ids=(runtime.file.file_id, runtime.md5 or ""),
         output_artifact_ids=(vector_state.vector_store_id or "",),
     )
@@ -534,7 +540,9 @@ def run_report_analysis(
         settings=runtime.settings,
         ctx=mode_ctx,
         stage="taxonomy",
-        source_identity_id=runtime.md5 or runtime.file.file_id,
+        source_identity_id=_analysis_source_identity_id(
+            mode_ctx, runtime.md5 or runtime.file.file_id
+        ),
         input_artifact_ids=(vector_state.vector_store_id or "",),
         output_artifact_ids=tuple(taxonomy_state.taxonomy),
         repair_disposition=("targeted_repair" if taxonomy_repaired else "not_required"),
@@ -544,7 +552,9 @@ def run_report_analysis(
             settings=runtime.settings,
             ctx=mode_ctx,
             stage="taxonomy_structured_output_repair",
-            source_identity_id=runtime.md5 or runtime.file.file_id,
+            source_identity_id=_analysis_source_identity_id(
+                mode_ctx, runtime.md5 or runtime.file.file_id
+            ),
             input_artifact_ids=(vector_state.vector_store_id or "",),
             output_artifact_ids=tuple(taxonomy_state.taxonomy),
             repair_disposition="targeted_repair",
@@ -641,7 +651,9 @@ def run_report_analysis(
         settings=runtime.settings,
         ctx=mode_ctx,
         stage="evidence_generation",
-        source_identity_id=runtime.md5 or runtime.file.file_id,
+        source_identity_id=_analysis_source_identity_id(
+            mode_ctx, runtime.md5 or runtime.file.file_id
+        ),
         input_artifact_ids=(vector_state.vector_store_id or "",),
         output_artifact_ids=tuple(mode_evidence_paths.values()),
     )
@@ -786,7 +798,9 @@ def run_report_analysis(
         settings=runtime.settings,
         ctx=mode_ctx,
         stage="category_fit",
-        source_identity_id=runtime.md5 or runtime.file.file_id,
+        source_identity_id=_analysis_source_identity_id(
+            mode_ctx, runtime.md5 or runtime.file.file_id
+        ),
         input_artifact_ids=tuple(mode_evidence_paths.values()),
         output_artifact_ids=tuple(category_assignment.categories),
         repair_disposition=("targeted_repair" if category_repaired else "not_required"),
@@ -796,7 +810,9 @@ def run_report_analysis(
             settings=runtime.settings,
             ctx=mode_ctx,
             stage="category_fit_structured_output_repair",
-            source_identity_id=runtime.md5 or runtime.file.file_id,
+            source_identity_id=_analysis_source_identity_id(
+                mode_ctx, runtime.md5 or runtime.file.file_id
+            ),
             input_artifact_ids=("category_fit",),
             output_artifact_ids=tuple(category_assignment.categories),
             repair_disposition="targeted_repair",
@@ -805,7 +821,9 @@ def run_report_analysis(
         settings=runtime.settings,
         ctx=mode_ctx,
         stage="structured_output_repair",
-        source_identity_id=runtime.md5 or runtime.file.file_id,
+        source_identity_id=_analysis_source_identity_id(
+            mode_ctx, runtime.md5 or runtime.file.file_id
+        ),
         input_artifact_ids=(vector_state.vector_store_id or "",),
         output_artifact_ids=tuple(
             value
@@ -960,7 +978,9 @@ def run_report_analysis(
             settings=runtime.settings,
             ctx=mode_ctx,
             stage="artifact_generation",
-            source_identity_id=runtime.md5 or runtime.file.file_id,
+            source_identity_id=_analysis_source_identity_id(
+                mode_ctx, runtime.md5 or runtime.file.file_id
+            ),
             input_artifact_ids=tuple(mode_evidence_paths.values()),
             output_artifact_ids=(mode_evidence_paths["artifacts"],),
         )
@@ -1131,7 +1151,9 @@ def run_report_analysis(
             settings=runtime.settings,
             ctx=mode_ctx,
             stage=stage,
-            source_identity_id=runtime.md5 or runtime.file.file_id,
+            source_identity_id=_analysis_source_identity_id(
+                mode_ctx, runtime.md5 or runtime.file.file_id
+            ),
             input_artifact_ids=(mode_evidence_paths.get("artifacts", ""),),
             output_artifact_ids=(mode_evidence_paths.get("validation", ""),),
             terminal_outcome=validation_outcome,
@@ -1145,7 +1167,9 @@ def run_report_analysis(
             settings=runtime.settings,
             ctx=mode_ctx,
             stage="regeneration",
-            source_identity_id=runtime.md5 or runtime.file.file_id,
+            source_identity_id=_analysis_source_identity_id(
+                mode_ctx, runtime.md5 or runtime.file.file_id
+            ),
             input_artifact_ids=(mode_evidence_paths.get("artifacts", ""),),
             output_artifact_ids=tuple(
                 attempt.artifacts_path for attempt in regeneration_attempts
@@ -1159,7 +1183,9 @@ def run_report_analysis(
             settings=runtime.settings,
             ctx=mode_ctx,
             stage="regeneration",
-            source_identity_id=runtime.md5 or runtime.file.file_id,
+            source_identity_id=_analysis_source_identity_id(
+                mode_ctx, runtime.md5 or runtime.file.file_id
+            ),
             input_artifact_ids=(mode_evidence_paths.get("artifacts", ""),),
             output_artifact_ids=(mode_evidence_paths.get("validation", ""),),
             terminal_outcome="skipped",
@@ -1223,7 +1249,9 @@ def run_report_analysis(
         settings=runtime.settings,
         ctx=mode_ctx,
         stage="analysis_complete",
-        source_identity_id=runtime.md5 or runtime.file.file_id,
+        source_identity_id=_analysis_source_identity_id(
+            mode_ctx, runtime.md5 or runtime.file.file_id
+        ),
         input_artifact_ids=tuple(mode_evidence_paths.values()),
         output_artifact_ids=(snapshot_path,),
         terminal_outcome=validation_outcome,

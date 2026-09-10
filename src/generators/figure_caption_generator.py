@@ -324,8 +324,16 @@ def generate_figure_captions(
     caption_ctx = replace(
         child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:figure_captions"),
         report_id=runtime.file.file_id,
-        source_identity_id=runtime.md5 or runtime.file.file_id,
-        publisher_id=runtime.publisher_name or "unattributed",
+        source_identity_id=(
+            str(runtime.ctx.source_identity_id or "").strip()
+            or runtime.md5
+            or runtime.file.file_id
+        ),
+        publisher_id=(
+            str(runtime.ctx.publisher_id or "").strip()
+            or runtime.publisher_name
+            or "unattributed"
+        ),
         workflow="report_analysis",
         stage="artifact_generation",
         artifact_family="figure_caption",

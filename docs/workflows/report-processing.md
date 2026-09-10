@@ -336,6 +336,12 @@ The publisher accepted by admission is retained unchanged in every frozen-cohort
 stage record and in the immutable member ledger; later processing must not
 replace it with an `unattributed` fallback.
 
+The same rule applies to the admitted `source_identity_id`: report-analysis,
+OCR fallback, figure-caption, regeneration, render, and readiness descendants
+retain the canonical context identity when one is already bound to the run.
+The PDF MD5 and publisher display name remain compatibility fallbacks only for
+an unbound local workflow.
+
 Publish a fixed cohort with the same `--cohort-manifest <path>` passed to
 `publish-wp`. A frozen cohort automatically creates and retains a validation
 run manifest. Its immutable member ledger is populated by discovery and is

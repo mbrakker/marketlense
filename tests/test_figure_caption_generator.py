@@ -89,6 +89,8 @@ def _runtime(ingest_settings, tmp_path: Path) -> ReportRuntimeState:
             run_id="run",
             task_id="task",
             span_id="span",
+            source_identity_id="source:canonical",
+            publisher_id="publisher:stable",
         ),
         file_name="report.pdf",
         report_name="report",
@@ -162,8 +164,8 @@ def test_generate_figure_captions_builds_context_and_updates_assets(
     openai_requests = []
     store_requests = []
 
-    def _openai_chat_json_with_images(request, _ctx):
-        openai_requests.append(request)
+    def _openai_chat_json_with_images(request, request_ctx):
+        openai_requests.append((request, request_ctx))
         caption = (
             "Retail media accelerates where commerce-native channels convert attention into measurable demand."
             if len(openai_requests) == 1
@@ -251,7 +253,9 @@ def test_generate_figure_captions_builds_context_and_updates_assets(
     )
 
     assert len(openai_requests) == 2
-    assert openai_requests[0].model == "gpt-5-caption"
+    assert openai_requests[0][0].model == "gpt-5-caption"
+    assert openai_requests[0][1].source_identity_id == "source:canonical"
+    assert openai_requests[0][1].publisher_id == "publisher:stable"
     assert result.payload._figure_assets[0].caption_source == "generated"
     assert result.payload._figure_assets[1].caption_source == "generated"
     assert (

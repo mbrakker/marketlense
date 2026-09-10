@@ -260,6 +260,17 @@ snapshot, and candidate audit remain diagnostic-only negative feedback. A
 passing candidate promotes the artifact and its matching validation report
 together, after every required gate has passed.
 
+Candidate provenance is family-specific. Unchanged artifact families retain
+their prior prompt identity, while each regenerated family records the prepared
+`report_vs/artifacts/regenerate/...` prompt identity that produced its
+replacement, including content hash, dependency manifest, execution identity,
+and model-policy identity. A checkpoint with stale or incomplete replacement
+prompt provenance is not reusable. For soft public-copy repairs that have no
+issue-level evidence ID, the repair package deterministically selects a small
+set of relevant retained findings, insights, or editorial-theme evidence after
+excluding quarantined evidence; when no support remains, the normal abstention
+path applies.
+
 The deterministic candidate check is complete only when all evidence IDs,
 source pages, and material lineage relationships validate. A grounding-provider
 failure is release-blocking unless that complete deterministic check passed. In
