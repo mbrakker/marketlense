@@ -53,14 +53,20 @@ def _ctx() -> RunContext:
     )
 
 
-def _create_run(reports_db: str) -> None:
+def _create_run(
+    reports_db: str,
+    *,
+    validation_run_id: str = "validation-1",
+    cohort_id: str = "cohort-1",
+    workflow_run_id: str = "workflow-1",
+) -> None:
     create_validation_run_manifest(
         ValidationRunManifestCreateRequest(
             schema_version="1.0",
             db_path=reports_db,
-            validation_run_id="validation-1",
-            cohort_id="cohort-1",
-            workflow_run_id="workflow-1",
+            validation_run_id=validation_run_id,
+            cohort_id=cohort_id,
+            workflow_run_id=workflow_run_id,
             configuration_hash="configuration-hash",
             policy_hash="policy-hash",
             producer_build_identity="build-sha",
@@ -82,6 +88,10 @@ def _record(
     idempotency_state: str = "new",
     started_at_utc: str = "2026-07-26T10:00:00+00:00",
     completed_at_utc: str = "2026-07-26T10:01:00+00:00",
+    validation_run_id: str = "validation-1",
+    cohort_id: str = "cohort-1",
+    workflow_run_id: str = "workflow-1",
+    report_id: str = "report-1",
 ) -> None:
     record_validation_run_manifest_stage(
         ValidationRunManifestRecordRequest(
@@ -89,12 +99,12 @@ def _record(
             db_path=reports_db,
             record=ValidationRunManifestStageRecord(
                 schema_version="1.0",
-                validation_run_id="validation-1",
-                cohort_id="cohort-1",
-                workflow_run_id="workflow-1",
+                validation_run_id=validation_run_id,
+                cohort_id=cohort_id,
+                workflow_run_id=workflow_run_id,
                 entity_type="report",
                 publisher_id="publisher-1",
-                report_id="report-1",
+                report_id=report_id,
                 source_identity_id="source-1",
                 stage=stage,
                 attempt_number=attempt,
@@ -172,6 +182,10 @@ def _record_full_first_attempt(
     evidence_repair_disposition: str = "not_required",
     started_at_utc: str = "2026-07-26T10:00:00+00:00",
     completed_at_utc: str = "2026-07-26T10:01:00+00:00",
+    validation_run_id: str = "validation-1",
+    cohort_id: str = "cohort-1",
+    workflow_run_id: str = "workflow-1",
+    report_id: str = "report-1",
 ) -> None:
     for stage in (
         "admission_preflight",
@@ -184,6 +198,10 @@ def _record_full_first_attempt(
             stage=stage,
             started_at_utc=started_at_utc,
             completed_at_utc=completed_at_utc,
+            validation_run_id=validation_run_id,
+            cohort_id=cohort_id,
+            workflow_run_id=workflow_run_id,
+            report_id=report_id,
         )
     _record(
         reports_db,
@@ -192,6 +210,10 @@ def _record_full_first_attempt(
         repair_disposition=evidence_repair_disposition,
         started_at_utc=started_at_utc,
         completed_at_utc=completed_at_utc,
+        validation_run_id=validation_run_id,
+        cohort_id=cohort_id,
+        workflow_run_id=workflow_run_id,
+        report_id=report_id,
     )
     for stage in (
         "taxonomy",
@@ -211,19 +233,28 @@ def _record_full_first_attempt(
             stage=stage,
             started_at_utc=started_at_utc,
             completed_at_utc=completed_at_utc,
+            validation_run_id=validation_run_id,
+            cohort_id=cohort_id,
+            workflow_run_id=workflow_run_id,
+            report_id=report_id,
         )
 
 
 def _record_durable_awaiting_review(
-    state_db: str, *, operator_requeue: bool = False, automatic_retry: bool = False
+    state_db: str,
+    *,
+    operator_requeue: bool = False,
+    automatic_retry: bool = False,
+    root_workflow_id: str = "workflow-1",
+    report_id: str = "report-1",
+    package_checksum: str = "package-1",
 ) -> str:
-    package_checksum = "package-1"
     record_publication_readiness(
         state_db,
         package_checksum=package_checksum,
         entity_type="report",
-        package_reference="output/report-1.html",
-        validation_reference="output/report-1.readiness.json",
+        package_reference=f"output/{report_id}.html",
+        validation_reference=f"output/{report_id}.readiness.json",
         lineage_reference="retained:source-1",
         required_asset_status="ready",
         readiness_status="awaiting_review",
@@ -236,17 +267,18 @@ def _record_durable_awaiting_review(
         job_type="publication_readiness.v1",
         payload=PublicationReadinessPayload(
             entity_type="report",
-            entity_package_reference="output/report-1.html",
+            entity_package_reference=f"output/{report_id}.html",
             package_checksum=package_checksum,
-            validation_reference="output/report-1.readiness.json",
+            validation_reference=f"output/{report_id}.readiness.json",
             lineage_reference="retained:source-1",
             required_asset_status="ready",
         ),
-        idempotency_key="publication-readiness:report-1",
+        idempotency_key=f"publication-readiness:{report_id}:{root_workflow_id}",
         deduplication_scope="validation-reliability-test",
         entity_type="report",
-        entity_id="report-1",
-        report_id="report-1",
+        entity_id=report_id,
+        report_id=report_id,
+        root_workflow_id=root_workflow_id,
     )
     job, created = enqueue_workflow_job(
         state_db, submission, _ctx(), now_utc="2026-07-26T10:10:00+00:00"
@@ -306,7 +338,7 @@ def _record_durable_awaiting_review(
         job.job_id,
         "worker-1",
         WorkflowStageResult(
-            output_reference="output/report-1.html",
+            output_reference=f"output/{report_id}.html",
             output_content_hash=package_checksum,
             output_verified=True,
         ),
@@ -768,6 +800,171 @@ def test_a21_approval_without_readiness_queue_provenance_is_not_success(
     )
 
     assert artifact.first_attempt_entities[0].eventual_success is False
+
+
+def _lineage_artifact(
+    *, reports_db: str, usage_db: str, state_db: str, validation_run_id: str
+):
+    return build_validation_reliability_artifact(
+        ValidationReliabilityBuildRequest(
+            schema_version="1.0",
+            reports_db_path=reports_db,
+            usage_db_path=usage_db,
+            state_db_path=state_db,
+            validation_run_id=validation_run_id,
+        ),
+        _ctx(),
+    )
+
+
+def _create_same_report_cross_workflow_runs(reports_db: str) -> None:
+    for validation_run_id, cohort_id, workflow_run_id in (
+        ("validation-a", "cohort-a", "workflow-a"),
+        ("validation-b", "cohort-b", "workflow-b"),
+    ):
+        _create_run(
+            reports_db,
+            validation_run_id=validation_run_id,
+            cohort_id=cohort_id,
+            workflow_run_id=workflow_run_id,
+        )
+        _record_full_first_attempt(
+            reports_db,
+            validation_run_id=validation_run_id,
+            cohort_id=cohort_id,
+            workflow_run_id=workflow_run_id,
+        )
+
+
+def test_a21_workflow_lineage_isolates_achieved_readiness(tmp_path) -> None:
+    reports_db = str(tmp_path / "reports.sqlite")
+    usage_db = str(tmp_path / "usage.sqlite")
+    state_db = str(tmp_path / "state.sqlite")
+    _create_same_report_cross_workflow_runs(reports_db)
+    _record_durable_awaiting_review(
+        state_db,
+        root_workflow_id="workflow-b",
+        package_checksum="package-workflow-b",
+    )
+
+    artifact_a = _lineage_artifact(
+        reports_db=reports_db,
+        usage_db=usage_db,
+        state_db=state_db,
+        validation_run_id="validation-a",
+    )
+    artifact_b = _lineage_artifact(
+        reports_db=reports_db,
+        usage_db=usage_db,
+        state_db=state_db,
+        validation_run_id="validation-b",
+    )
+
+    assert artifact_a.first_attempt_entities[0].eventual_success is False
+    assert artifact_b.first_attempt_entities[0].eventual_success is True
+
+
+def test_a21_workflow_lineage_isolates_automatic_queue_recovery(tmp_path) -> None:
+    reports_db = str(tmp_path / "reports.sqlite")
+    usage_db = str(tmp_path / "usage.sqlite")
+    state_db = str(tmp_path / "state.sqlite")
+    _create_same_report_cross_workflow_runs(reports_db)
+    _record_durable_awaiting_review(
+        state_db,
+        automatic_retry=True,
+        root_workflow_id="workflow-b",
+        package_checksum="package-workflow-b",
+    )
+
+    entity_a = _lineage_artifact(
+        reports_db=reports_db,
+        usage_db=usage_db,
+        state_db=state_db,
+        validation_run_id="validation-a",
+    ).first_attempt_entities[0]
+    entity_b = _lineage_artifact(
+        reports_db=reports_db,
+        usage_db=usage_db,
+        state_db=state_db,
+        validation_run_id="validation-b",
+    ).first_attempt_entities[0]
+
+    assert entity_a.eventual_success is False
+    assert entity_a.bounded_recovery is False
+    assert entity_a.operator_intervention is False
+    assert entity_b.eventual_success is True
+    assert entity_b.bounded_recovery is True
+    assert entity_b.operator_intervention is False
+
+
+def test_a21_workflow_lineage_isolates_operator_requeue(tmp_path) -> None:
+    reports_db = str(tmp_path / "reports.sqlite")
+    usage_db = str(tmp_path / "usage.sqlite")
+    state_db = str(tmp_path / "state.sqlite")
+    _create_same_report_cross_workflow_runs(reports_db)
+    _record_durable_awaiting_review(
+        state_db,
+        operator_requeue=True,
+        root_workflow_id="workflow-b",
+        package_checksum="package-workflow-b",
+    )
+
+    entity_a = _lineage_artifact(
+        reports_db=reports_db,
+        usage_db=usage_db,
+        state_db=state_db,
+        validation_run_id="validation-a",
+    ).first_attempt_entities[0]
+    entity_b = _lineage_artifact(
+        reports_db=reports_db,
+        usage_db=usage_db,
+        state_db=state_db,
+        validation_run_id="validation-b",
+    ).first_attempt_entities[0]
+
+    assert entity_a.eventual_success is False
+    assert entity_a.operator_intervention is False
+    assert entity_b.eventual_success is True
+    assert entity_b.operator_intervention is True
+    assert entity_b.bounded_recovery is False
+
+
+def test_a21_workflow_lineage_isolates_approved_package_history(tmp_path) -> None:
+    reports_db = str(tmp_path / "reports.sqlite")
+    usage_db = str(tmp_path / "usage.sqlite")
+    state_db = str(tmp_path / "state.sqlite")
+    _create_same_report_cross_workflow_runs(reports_db)
+    package_checksum = _record_durable_awaiting_review(
+        state_db,
+        root_workflow_id="workflow-b",
+        package_checksum="package-workflow-b",
+    )
+    approve_publication_package(
+        state_db,
+        package_checksum=package_checksum,
+        actor_id="operator-b",
+        note="approval belongs to workflow-b",
+        publish_submission=_approval_submission(package_checksum),
+        ctx=_ctx(),
+        now_utc="2026-07-26T10:18:00+00:00",
+    )
+
+    artifact_a = _lineage_artifact(
+        reports_db=reports_db,
+        usage_db=usage_db,
+        state_db=state_db,
+        validation_run_id="validation-a",
+    )
+    artifact_b = _lineage_artifact(
+        reports_db=reports_db,
+        usage_db=usage_db,
+        state_db=state_db,
+        validation_run_id="validation-b",
+    )
+
+    assert artifact_a.first_attempt_entities[0].eventual_success is False
+    assert artifact_b.first_attempt_entities[0].first_pass is True
+    assert artifact_b.first_attempt_entities[0].eventual_success is True
 
 
 def test_a21_automatic_publication_readiness_retry_is_bounded_recovery(

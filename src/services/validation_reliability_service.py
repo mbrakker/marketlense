@@ -159,9 +159,18 @@ def build_validation_reliability_artifact(
         stages_by_attempt[str(row["attempt_id"])].append(row)
     for records in stages_by_attempt.values():
         records.sort(key=lambda row: (str(row["started_at_utc"]), str(row["stage"])))
+    workflow_run_id = str(run["workflow_run_id"]).strip()
+    a21_stages_by_attempt: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    if workflow_run_id:
+        for row in stages:
+            if str(row["workflow_run_id"]) == workflow_run_id:
+                a21_stages_by_attempt[str(row["attempt_id"])].append(row)
+    for records in a21_stages_by_attempt.values():
+        records.sort(key=lambda row: (str(row["started_at_utc"]), str(row["stage"])))
     state_evidence = _read_a21_state_evidence(
         request=request,
         report_ids={str(attempt["report_id"]) for attempt in attempts},
+        workflow_run_id=workflow_run_id,
     )
 
     complete_states: dict[str, set[str]] = {state: set() for state in _STATE_SEQUENCE}
@@ -207,7 +216,7 @@ def build_validation_reliability_artifact(
     first_attempt_entities = _first_attempt_entities(
         current_attempts=current_attempts,
         all_attempts_by_entity=all_attempts_by_entity,
-        stages_by_attempt=stages_by_attempt,
+        stages_by_attempt=a21_stages_by_attempt,
         usage_events=usage_events,
         usage_attribution_available=usage_attribution_available,
         state_evidence=state_evidence,
@@ -218,7 +227,7 @@ def build_validation_reliability_artifact(
         schema_version=_SCHEMA_VERSION,
         validation_run_id=request.validation_run_id,
         cohort_id=str(run["cohort_id"]),
-        workflow_run_id=str(run["workflow_run_id"]),
+        workflow_run_id=workflow_run_id,
         configuration_hash=str(run["configuration_hash"]),
         policy_hash=str(run["policy_hash"]),
         producer_build_identity=str(run["producer_build_identity"]),
@@ -380,7 +389,7 @@ def _read_manifest_rows(
                 """
                 SELECT attempt_id, stage, started_at_utc, completed_at_utc,
                        terminal_outcome, failure_code, repair_disposition,
-                       idempotency_state, entity_terminal
+                       idempotency_state, entity_terminal, workflow_run_id
                 FROM validation_run_stage_records
                 WHERE validation_run_id=?
                 ORDER BY attempt_id, started_at_utc, stage
@@ -405,7 +414,10 @@ def _read_manifest_rows(
 
 
 def _read_a21_state_evidence(
-    *, request: ValidationReliabilityBuildRequest, report_ids: set[str]
+    *,
+    request: ValidationReliabilityBuildRequest,
+    report_ids: set[str],
+    workflow_run_id: str,
 ) -> _A21StateEvidence:
     """Read durable readiness and explicit requeue provenance without mutation.
 
@@ -415,7 +427,11 @@ def _read_a21_state_evidence(
     evidence deliberately produces no A21 success.
     """
 
-    if not request.state_db_path.strip() or not Path(request.state_db_path).is_file():
+    if (
+        not workflow_run_id.strip()
+        or not request.state_db_path.strip()
+        or not Path(request.state_db_path).is_file()
+    ):
         return _A21StateEvidence()
     try:
         with sqlite3.connect(
@@ -453,12 +469,13 @@ def _read_a21_state_evidence(
                 WHERE readiness.entity_type='report'
                   AND {readiness_provenance}
                   AND job.status='succeeded'
+                  AND job.root_workflow_id=?
                   AND job.report_id IN ({placeholders})
             """.format(
                 readiness_provenance=readiness_provenance,
                 placeholders=placeholders,
             )
-            params = tuple(sorted(report_ids))
+            params = (workflow_run_id, *sorted(report_ids))
             awaiting_review = frozenset(
                 str(row[0])
                 for row in conn.execute(

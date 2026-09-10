@@ -154,7 +154,12 @@ the report's completed `publication_readiness` queue job; ingestion alone is
 not readiness. An explicit retained approval for that same checksum preserves
 the prior achieved readiness boundary after the mutable readiness row becomes
 `approved`; approval without the linked completed readiness job cannot create
-readiness. A first pass is the recovery-aware completion of that boundary
+readiness. The report ID and package checksum must also be bound to the same
+immutable workflow lineage: the validation run and each accepted stage record
+must carry the same `workflow_run_id` as the matched queue job's
+`root_workflow_id`. Missing or mismatched lineage produces no A21 readiness,
+approval, retry, or requeue evidence. A first pass is the recovery-aware
+completion of that boundary
 by an entity's earliest retained non-out-of-cohort attempt; a later success,
 automatic repair, targeted regeneration, structured-output repair, or explicit
 operator requeue never changes that result. For every report and transition,
