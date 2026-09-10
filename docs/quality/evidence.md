@@ -151,7 +151,10 @@ the durable `awaiting_review` boundary. A21 readiness requires both successful
 retained `publication_preflight` evidence and a successful canonical
 `workflow_publication_readiness` record linked by immutable package checksum to
 the report's completed `publication_readiness` queue job; ingestion alone is
-not readiness. A first pass is the recovery-aware completion of that boundary
+not readiness. An explicit retained approval for that same checksum preserves
+the prior achieved readiness boundary after the mutable readiness row becomes
+`approved`; approval without the linked completed readiness job cannot create
+readiness. A first pass is the recovery-aware completion of that boundary
 by an entity's earliest retained non-out-of-cohort attempt; a later success,
 automatic repair, targeted regeneration, structured-output repair, or explicit
 operator requeue never changes that result. For every report and transition,
@@ -160,7 +163,10 @@ attempts required, recovery classification, operator-intervention flag,
 terminal disposition, verified-replay flag, and
 provider calls/tokens/cost through successful recovery. `bounded_recovery`
 includes a successful linked later attempt or a retained automatic repair
-disposition within attempt 1. Explicit queue `operator_requeue` / `queue-requeue`
+disposition within attempt 1. A retryable `publication_readiness` queue attempt
+that reaches retained `retry_wait` and is followed by a successful later queue
+attempt is likewise bounded recovery and retains its queue failure code in the
+first-attempt Pareto. Explicit queue `operator_requeue` / `queue-requeue`
 transitions are operator intervention, not bounded recovery; automatic retry,
 redelivery, and restart remain automatic classifications. `verified_replay` is
 true only for a successful retained zero-write `repeat_publication` record with

@@ -127,6 +127,7 @@ class _A21StateEvidence:
 
     awaiting_review_report_ids: frozenset[str] = frozenset()
     operator_requeue_report_ids: frozenset[str] = frozenset()
+    automatic_queue_failure_codes: tuple[tuple[str, str], ...] = ()
 
 
 def build_validation_reliability_artifact(
@@ -433,16 +434,30 @@ def _read_a21_state_evidence(
             placeholders = ",".join("?" for _ in sorted(report_ids))
             if not placeholders:
                 return _A21StateEvidence()
+            readiness_provenance = "readiness.readiness_status='awaiting_review'"
+            if "workflow_publication_approvals" in tables:
+                readiness_provenance = """
+                    (readiness.readiness_status='awaiting_review'
+                     OR EXISTS (
+                        SELECT 1
+                        FROM workflow_publication_approvals AS approval
+                        WHERE approval.package_checksum=readiness.package_checksum
+                          AND approval.action='approved'
+                     ))
+                """
             base = """
                 FROM workflow_publication_readiness AS readiness
                 JOIN workflow_jobs AS job
                   ON job.queue_name='publication_readiness'
                  AND job.output_content_hash=readiness.package_checksum
                 WHERE readiness.entity_type='report'
-                  AND readiness.readiness_status='awaiting_review'
+                  AND {readiness_provenance}
                   AND job.status='succeeded'
                   AND job.report_id IN ({placeholders})
-            """.format(placeholders=placeholders)
+            """.format(
+                readiness_provenance=readiness_provenance,
+                placeholders=placeholders,
+            )
             params = tuple(sorted(report_ids))
             awaiting_review = frozenset(
                 str(row[0])
@@ -458,16 +473,74 @@ def _read_a21_state_evidence(
                 for row in conn.execute(
                     """
                     SELECT DISTINCT job.report_id
-                    FROM workflow_jobs AS job
-                    JOIN workflow_job_transitions AS transition
-                      ON transition.job_id=job.job_id
-                    WHERE job.report_id IN ({placeholders})
-                      AND transition.reason IN ('operator_requeue','queue-requeue')
+                    {base}
+                      AND EXISTS (
+                        SELECT 1
+                        FROM workflow_job_transitions AS transition
+                        WHERE transition.job_id=job.job_id
+                          AND transition.reason IN ('operator_requeue','queue-requeue')
+                      )
                     ORDER BY job.report_id
-                    """.format(placeholders=placeholders),
+                    """.format(base=base),
                     params,
                 )
             )
+            automatic_queue_failure_codes: tuple[tuple[str, str], ...] = ()
+            if "workflow_job_attempts" in tables:
+                automatic_rows = conn.execute(
+                    """
+                    SELECT DISTINCT job.report_id,
+                      (
+                        SELECT failed.error_code
+                        FROM workflow_job_attempts AS failed
+                        WHERE failed.job_id=job.job_id
+                          AND failed.outcome='retry_wait'
+                          AND EXISTS (
+                            SELECT 1
+                            FROM workflow_job_transitions AS retry_transition
+                            WHERE retry_transition.job_id=job.job_id
+                              AND retry_transition.to_status='retry_wait'
+                              AND retry_transition.reason=failed.error_code
+                          )
+                          AND EXISTS (
+                            SELECT 1
+                            FROM workflow_job_attempts AS recovered
+                            WHERE recovered.job_id=job.job_id
+                              AND recovered.attempt_number>failed.attempt_number
+                              AND recovered.outcome='succeeded'
+                          )
+                        ORDER BY failed.attempt_number, failed.error_code
+                        LIMIT 1
+                      )
+                    {base}
+                      AND EXISTS (
+                        SELECT 1
+                        FROM workflow_job_attempts AS failed
+                        WHERE failed.job_id=job.job_id
+                          AND failed.outcome='retry_wait'
+                          AND EXISTS (
+                            SELECT 1
+                            FROM workflow_job_transitions AS retry_transition
+                            WHERE retry_transition.job_id=job.job_id
+                              AND retry_transition.to_status='retry_wait'
+                              AND retry_transition.reason=failed.error_code
+                          )
+                          AND EXISTS (
+                            SELECT 1
+                            FROM workflow_job_attempts AS recovered
+                            WHERE recovered.job_id=job.job_id
+                              AND recovered.attempt_number>failed.attempt_number
+                              AND recovered.outcome='succeeded'
+                          )
+                      )
+                    ORDER BY job.report_id
+                    """.format(base=base),
+                    params,
+                )
+                automatic_queue_failure_codes = tuple(
+                    (str(row[0]), str(row[1] or "automatic_queue_retry"))
+                    for row in automatic_rows
+                )
     except (OSError, sqlite3.Error) as exc:
         raise AppError(
             code="validation_reliability_state_evidence_read_failed",
@@ -479,6 +552,20 @@ def _read_a21_state_evidence(
     return _A21StateEvidence(
         awaiting_review_report_ids=awaiting_review,
         operator_requeue_report_ids=operator_requeue,
+        automatic_queue_failure_codes=automatic_queue_failure_codes,
+    )
+
+
+def _automatic_queue_failure_code(evidence: _A21StateEvidence, report_id: str) -> str:
+    """Return the first retained automatic queue cause for one report."""
+
+    return next(
+        (
+            failure_code
+            for candidate_report_id, failure_code in evidence.automatic_queue_failure_codes
+            if candidate_report_id == report_id
+        ),
+        "",
     )
 
 
@@ -772,6 +859,9 @@ def _first_attempt_entities(
                 operator_requeue=(
                     report_id in state_evidence.operator_requeue_report_ids
                 ),
+                automatic_queue_failure_code=_automatic_queue_failure_code(
+                    state_evidence, report_id
+                ),
             )
             for from_state, to_state in zip(
                 _A21_STATE_SEQUENCE, _A21_STATE_SEQUENCE[1:], strict=False
@@ -826,6 +916,7 @@ def _first_attempt_stage(
     usage_events: list[dict[str, Any]],
     usage_attribution_available: bool,
     operator_requeue: bool,
+    automatic_queue_failure_code: str,
 ) -> ValidationReliabilityFirstAttemptStage:
     first_records = stages_by_attempt.get(str(first_attempt["attempt_id"]), [])
     first_failure = _causal_first_failure(
@@ -880,6 +971,7 @@ def _first_attempt_stage(
         first_statuses[to_state]
         and not _has_recovery_disposition(first_attempt_recovery_records)
         and not (to_state == "awaiting_review" and operator_requeue)
+        and not (to_state == "awaiting_review" and automatic_queue_failure_code)
     )
     eventual_success = eventual_statuses[to_state]
     recovery_type = _first_attempt_recovery_type(
@@ -888,6 +980,7 @@ def _first_attempt_stage(
         first_attempt=first_attempt,
         recovery_records=recovery_records,
         operator_intervention=operator_intervention,
+        automatic_queue_failure_code=automatic_queue_failure_code,
     )
     terminal_disposition = _terminal_disposition(
         attempts=attempts,
@@ -925,6 +1018,7 @@ def _first_attempt_stage(
         first_attempt_recovery_records=first_attempt_recovery_records,
         to_state=to_state,
         operator_intervention=operator_intervention,
+        automatic_queue_failure_code=automatic_queue_failure_code,
     )
     return ValidationReliabilityFirstAttemptStage(
         schema_version=_SCHEMA_VERSION,
@@ -1055,6 +1149,7 @@ def _first_attempt_causal_reason(
     first_attempt_recovery_records: list[dict[str, Any]],
     to_state: str,
     operator_intervention: bool,
+    automatic_queue_failure_code: str,
 ) -> tuple[str, str]:
     """Give every lost first pass a retained code or stable generic cause."""
 
@@ -1067,6 +1162,8 @@ def _first_attempt_causal_reason(
         )
     if operator_intervention:
         return "operator_intervention", "workflow_queue"
+    if automatic_queue_failure_code:
+        return automatic_queue_failure_code, "publication_readiness"
     for record in first_attempt_recovery_records:
         disposition = str(record["repair_disposition"])
         if disposition in _REPAIR_CAUSAL_CODES:
@@ -1088,6 +1185,7 @@ def _first_attempt_recovery_type(
     first_attempt: dict[str, Any],
     recovery_records: list[dict[str, Any]],
     operator_intervention: bool,
+    automatic_queue_failure_code: str,
 ) -> str:
     if first_pass:
         return "not_required"
@@ -1095,6 +1193,8 @@ def _first_attempt_recovery_type(
         return "terminal_failure"
     if operator_intervention:
         return "operator_intervention"
+    if automatic_queue_failure_code:
+        return "bounded_recovery"
     if int(successful_attempt["attempt_number"]) > int(first_attempt["attempt_number"]):
         return "bounded_recovery"
     if _has_automatic_recovery_disposition(recovery_records):

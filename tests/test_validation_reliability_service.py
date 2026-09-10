@@ -12,6 +12,7 @@ from src.contracts.validation_reliability import (
 )
 from src.contracts.workflow_queue import (
     PublicationReadinessPayload,
+    WordPressPublishPayload,
     WorkflowJobSubmission,
     WorkflowStageResult,
 )
@@ -34,6 +35,7 @@ from src.services.workflow_queue_service import (
     complete_workflow_job,
     enqueue_workflow_job,
     fail_workflow_job,
+    approve_publication_package,
     record_publication_readiness,
     requeue_workflow_job,
     start_workflow_job,
@@ -213,8 +215,8 @@ def _record_full_first_attempt(
 
 
 def _record_durable_awaiting_review(
-    state_db: str, *, operator_requeue: bool = False
-) -> None:
+    state_db: str, *, operator_requeue: bool = False, automatic_retry: bool = False
+) -> str:
     package_checksum = "package-1"
     record_publication_readiness(
         state_db,
@@ -261,25 +263,29 @@ def _record_durable_awaiting_review(
     start_workflow_job(
         state_db, job.job_id, "worker-1", _ctx(), now_utc="2026-07-26T10:12:00+00:00"
     )
-    if operator_requeue:
+    if operator_requeue or automatic_retry:
         failed = fail_workflow_job(
             state_db,
             job.job_id,
             "worker-1",
             AppError(
-                "publication_preflight_failed", "manual recovery", retryable=False
+                "publication_preflight_failed",
+                "queue recovery",
+                retryable=automatic_retry,
             ),
             _ctx(),
             now_utc="2026-07-26T10:13:00+00:00",
+            retry_at_utc="2026-07-26T10:14:00+00:00" if automatic_retry else "",
         )
-        assert failed.status == "dead_letter"
-        requeue_workflow_job(
-            state_db,
-            job.job_id,
-            "operator-1",
-            _ctx(),
-            now_utc="2026-07-26T10:14:00+00:00",
-        )
+        assert failed.status == ("retry_wait" if automatic_retry else "dead_letter")
+        if operator_requeue:
+            requeue_workflow_job(
+                state_db,
+                job.job_id,
+                "operator-1",
+                _ctx(),
+                now_utc="2026-07-26T10:14:00+00:00",
+            )
         claimed = claim_next_workflow_job(
             state_db,
             "publication_readiness",
@@ -307,6 +313,28 @@ def _record_durable_awaiting_review(
         [],
         _ctx(),
         now_utc="2026-07-26T10:17:00+00:00",
+    )
+    return package_checksum
+
+
+def _approval_submission(package_checksum: str) -> WorkflowJobSubmission:
+    return WorkflowJobSubmission(
+        schema_version="1.0",
+        queue_name="wordpress_publish",
+        job_type="wordpress_publish.v1",
+        payload=WordPressPublishPayload(
+            entity_type="report",
+            entity_package_reference="output/report-1.html",
+            package_checksum=package_checksum,
+            input_reference="output/report-1.html",
+            input_content_hash=package_checksum,
+            dry_run=True,
+        ),
+        idempotency_key=f"wordpress:{package_checksum}",
+        deduplication_scope="validation-reliability-approval-test",
+        entity_type="report",
+        entity_id="report-1",
+        report_id="report-1",
     )
 
 
@@ -662,6 +690,119 @@ def test_a21_requires_durable_awaiting_review_not_ingestion(tmp_path) -> None:
             row for row in artifact.transitions if row.to_state == "publish_ready"
         ).conversion_rate
         == 1.0
+    )
+
+
+def test_a21_approval_preserves_prior_durable_awaiting_review(tmp_path) -> None:
+    reports_db = str(tmp_path / "reports.sqlite")
+    usage_db = str(tmp_path / "usage.sqlite")
+    state_db = str(tmp_path / "state.sqlite")
+    _create_run(reports_db)
+    _record_full_first_attempt(reports_db)
+    package_checksum = _record_durable_awaiting_review(state_db)
+    request = ValidationReliabilityBuildRequest(
+        schema_version="1.0",
+        reports_db_path=reports_db,
+        usage_db_path=usage_db,
+        state_db_path=state_db,
+        validation_run_id="validation-1",
+    )
+
+    before = build_validation_reliability_artifact(request, _ctx())
+    approve_publication_package(
+        state_db,
+        package_checksum=package_checksum,
+        actor_id="operator-1",
+        note="approved for publication",
+        publish_submission=_approval_submission(package_checksum),
+        ctx=_ctx(),
+        now_utc="2026-07-26T10:18:00+00:00",
+    )
+    after = build_validation_reliability_artifact(request, _ctx())
+
+    assert before.first_attempt_entities[0].eventual_success is True
+    assert after.first_attempt_entities[0].first_pass is True
+    assert after.first_attempt_entities[0].eventual_success is True
+
+
+def test_a21_approval_without_readiness_queue_provenance_is_not_success(
+    tmp_path,
+) -> None:
+    reports_db = str(tmp_path / "reports.sqlite")
+    usage_db = str(tmp_path / "usage.sqlite")
+    state_db = str(tmp_path / "state.sqlite")
+    package_checksum = "approval-only-package"
+    _create_run(reports_db)
+    _record_full_first_attempt(reports_db)
+    record_publication_readiness(
+        state_db,
+        package_checksum=package_checksum,
+        entity_type="report",
+        package_reference="output/report-1.html",
+        validation_reference="output/report-1.readiness.json",
+        lineage_reference="retained:source-1",
+        required_asset_status="ready",
+        readiness_status="awaiting_review",
+        reason="queue_readiness_deterministic_check",
+        ctx=_ctx(),
+    )
+    approve_publication_package(
+        state_db,
+        package_checksum=package_checksum,
+        actor_id="operator-1",
+        note="approval cannot replace readiness execution",
+        publish_submission=_approval_submission(package_checksum),
+        ctx=_ctx(),
+        now_utc="2026-07-26T10:18:00+00:00",
+    )
+
+    artifact = build_validation_reliability_artifact(
+        ValidationReliabilityBuildRequest(
+            schema_version="1.0",
+            reports_db_path=reports_db,
+            usage_db_path=usage_db,
+            state_db_path=state_db,
+            validation_run_id="validation-1",
+        ),
+        _ctx(),
+    )
+
+    assert artifact.first_attempt_entities[0].eventual_success is False
+
+
+def test_a21_automatic_publication_readiness_retry_is_bounded_recovery(
+    tmp_path,
+) -> None:
+    reports_db = str(tmp_path / "reports.sqlite")
+    usage_db = str(tmp_path / "usage.sqlite")
+    state_db = str(tmp_path / "state.sqlite")
+    _create_run(reports_db)
+    _record_full_first_attempt(reports_db)
+    _record_durable_awaiting_review(state_db, automatic_retry=True)
+
+    artifact = build_validation_reliability_artifact(
+        ValidationReliabilityBuildRequest(
+            schema_version="1.0",
+            reports_db_path=reports_db,
+            usage_db_path=usage_db,
+            state_db_path=state_db,
+            validation_run_id="validation-1",
+        ),
+        _ctx(),
+    )
+
+    entity = artifact.first_attempt_entities[0]
+    awaiting_review = next(
+        stage for stage in entity.stages if stage.to_state == "awaiting_review"
+    )
+    assert entity.first_pass is False
+    assert entity.eventual_success is True
+    assert entity.bounded_recovery is True
+    assert entity.operator_intervention is False
+    assert awaiting_review.recovery_type == "bounded_recovery"
+    assert awaiting_review.first_failure_code == "publication_preflight_failed"
+    assert artifact.first_attempt_failure_pareto[0].failure_code == (
+        "publication_preflight_failed"
     )
 
 
