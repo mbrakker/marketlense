@@ -3,19 +3,99 @@
   "policy_cases": [
     {
       "name": "descriptive_evidence",
-      "required_text": "When source evidence is descriptive, factual statements must remain descriptive."
+      "title": "Checkout preference readout",
+      "scope": "Survey observations from a defined customer cohort.",
+      "report_thesis": "The survey describes current checkout preferences without attributing an outcome.",
+      "source_evidence": [
+        "Among surveyed customers, 41% selected account checkout as their preferred option.",
+        "The survey recorded preferences during a single fieldwork period."
+      ],
+      "candidate_implications": [],
+      "limitations": [
+        {"text": "The survey does not establish a cause, forecast, or operating consequence."}
+      ],
+      "expected_policy": [
+        "factual statements must remain descriptive",
+        "remain descriptive or omit it",
+        "do not invent predictions, causality, business impact"
+      ],
+      "namespace_expectations": {
+        "report_vs/artifacts/summary": ["write for executives"],
+        "report_vs/artifacts/expert_comment": ["strategic, analytical, and interpretive in tone"],
+        "report_vs/artifacts/linkedin_post": ["write for experienced ecommerce, digital, and strategy operators"]
+      }
     },
     {
       "name": "strongly_actionable_evidence",
-      "required_text": "Add analyst interpretation only when it follows without introducing a new factual premise."
+      "title": "Deployment control recommendation",
+      "scope": "A report with an explicit source recommendation for a defined rollout decision.",
+      "report_thesis": "The report directly recommends a pre-deployment control review for the stated rollout.",
+      "source_evidence": [
+        "The report recommends that teams review supplier controls before deploying the new workflow.",
+        "The report identifies missing supplier-control evidence as a rollout risk."
+      ],
+      "candidate_implications": [
+        {"text": "A MarketLense recommendation may condition a rollout review on the reported control gap."}
+      ],
+      "limitations": [],
+      "expected_policy": [
+        "add analyst interpretation only when it follows without introducing a new factual premise",
+        "recommendations must be explicitly marketlense-authored, conditional and traceable to supplied evidence",
+        "classify source-derived factual statements as factual and marketlense-authored recommendations as recommendation"
+      ],
+      "namespace_expectations": {
+        "report_vs/artifacts/summary": ["write for executives"],
+        "report_vs/artifacts/expert_comment": ["strategic, analytical, and interpretive in tone"],
+        "report_vs/artifacts/linkedin_post": ["write for experienced ecommerce, digital, and strategy operators"]
+      }
     },
     {
       "name": "insufficient_evidence",
-      "required_text": "If evidence does not support a distinct implication or action, remain descriptive or omit it."
+      "title": "Partial interview note",
+      "scope": "A partial observation without a documented sample, comparison, or outcome.",
+      "report_thesis": "The available evidence is too narrow to establish an implication or recommendation.",
+      "source_evidence": [
+        "One interview participant mentioned interest in a revised service option.",
+        "No adoption result, financial impact, operational effect, or forecast was supplied."
+      ],
+      "candidate_implications": [],
+      "limitations": [
+        {"text": "The evidence is a single partial observation and does not support extrapolation."}
+      ],
+      "expected_policy": [
+        "remain descriptive or omit it",
+        "do not invent predictions, causality, business impact",
+        "do not invent predictions, causality, business impact, budget movement, performance effects, operational benefits or mandatory actions"
+      ],
+      "namespace_expectations": {
+        "report_vs/artifacts/summary": ["write for executives"],
+        "report_vs/artifacts/expert_comment": ["strategic, analytical, and interpretive in tone"],
+        "report_vs/artifacts/linkedin_post": ["write for experienced ecommerce, digital, and strategy operators"]
+      }
     },
     {
       "name": "recommendation_vs_factual_claim",
-      "required_text": "Classify source-derived factual statements as factual and MarketLense-authored recommendations as recommendation; never present a recommendation as a source claim."
+      "title": "Observed service preference",
+      "scope": "A source-backed observation with a separately authored conditional recommendation.",
+      "report_thesis": "The source reports a measured preference; any MarketLense action remains conditional and separate.",
+      "source_evidence": [
+        "The source found that 62% of surveyed customers preferred appointment reminders by text message."
+      ],
+      "candidate_implications": [
+        {"text": "MarketLense recommendation: if the surveyed cohort matches the target audience, test text-message reminders before broader rollout."}
+      ],
+      "limitations": [
+        {"text": "The result is limited to the surveyed cohort and does not establish a performance outcome."}
+      ],
+      "expected_policy": [
+        "classify source-derived factual statements as factual and marketlense-authored recommendations as recommendation; never present a recommendation as a source claim",
+        "recommendations must be explicitly marketlense-authored, conditional and traceable to supplied evidence"
+      ],
+      "namespace_expectations": {
+        "report_vs/artifacts/summary": ["write for executives"],
+        "report_vs/artifacts/expert_comment": ["strategic, analytical, and interpretive in tone"],
+        "report_vs/artifacts/linkedin_post": ["write for experienced ecommerce, digital, and strategy operators"]
+      }
     }
   ],
   "retained_regression_cases": [
