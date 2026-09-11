@@ -120,7 +120,7 @@ def test_build_regeneration_plan_maps_public_artifact_copy_to_its_family():
     )
 
     assert plan.mode == "targeted"
-    assert [target.target_section for target in plan.targets] == ["insights_bundle"]
+    assert [target.target_section for target in plan.targets] == ["key_figures"]
 
 
 def test_run_report_analysis_snapshot_preserves_internal_payload_metadata(tmp_path):
