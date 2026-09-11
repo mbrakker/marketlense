@@ -316,6 +316,12 @@ For Expert View and LinkedIn factual claims with retained private provenance,
 candidate promotion additionally requires known, non-quarantined evidence;
 compatible retained source spans where they exist; unchanged lineage for
 unchanged prose; and an explicit new generation lineage for replacement prose.
+For a claim-scoped replacement, the private rewritten claim records its exact
+`repaired_from_claim_id`, while the existing original-keyed repair selection
+records the reciprocal `repaired_claim_id`; candidate validation requires both
+values to agree before applying that selection's quarantine set. The selection
+package hash remains the Prompt 5 hash of its evidence package and does not
+cover this later linkage metadata. Both fields remain outside public payloads.
 An empty, schema-valid abstention may remove a failed claim or family, but a
 candidate cannot retain public soft copy while silently dropping its claim
 provenance.

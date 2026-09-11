@@ -175,6 +175,12 @@ class SoftCopyClaimProvenance:
     regeneration_attempt: int = field(
         metadata={"doc": "Targeted regeneration pass; zero for initial generation."}
     )
+    repaired_from_claim_id: str = field(
+        default="",
+        metadata={
+            "doc": "Original claim ID replaced by this regenerated claim, if any."
+        },
+    )
 
     def validate(self) -> "SoftCopyClaimProvenance":
         if not str(self.artifact_family).strip() or not str(self.claim_id).strip():
@@ -209,24 +215,32 @@ def soft_copy_claim_provenance_to_payload(
 ) -> dict[str, Any]:
     """Serialize private claim provenance for the retained artifacts payload."""
 
-    return {
+    payload = {
         "schema_version": SOFT_COPY_CLAIM_PROVENANCE_SCHEMA_VERSION,
         "claims": [
-            {
-                "schema_version": claim.schema_version,
-                "artifact_family": claim.artifact_family,
-                "claim_id": claim.claim_id,
-                "text_hash": claim.text_hash,
-                "classification": claim.classification,
-                "evidence_ids": list(claim.evidence_ids),
-                "source_spans": [dict(span) for span in claim.source_spans],
-                "producing_prompt_identity": dict(claim.producing_prompt_identity),
-                "generation_attempt": claim.generation_attempt,
-                "regeneration_attempt": claim.regeneration_attempt,
-            }
+            _soft_copy_claim_to_payload(claim)
             for claim in (item.validate() for item in claims)
         ],
     }
+    return payload
+
+
+def _soft_copy_claim_to_payload(claim: SoftCopyClaimProvenance) -> dict[str, Any]:
+    payload = {
+        "schema_version": claim.schema_version,
+        "artifact_family": claim.artifact_family,
+        "claim_id": claim.claim_id,
+        "text_hash": claim.text_hash,
+        "classification": claim.classification,
+        "evidence_ids": list(claim.evidence_ids),
+        "source_spans": [dict(span) for span in claim.source_spans],
+        "producing_prompt_identity": dict(claim.producing_prompt_identity),
+        "generation_attempt": claim.generation_attempt,
+        "regeneration_attempt": claim.regeneration_attempt,
+    }
+    if claim.repaired_from_claim_id:
+        payload["repaired_from_claim_id"] = claim.repaired_from_claim_id
+    return payload
 
 
 def soft_copy_claim_provenance_from_payload(
@@ -272,6 +286,9 @@ def soft_copy_claim_provenance_from_payload(
                 producing_prompt_identity=prompt_identity,
                 generation_attempt=int(raw.get("generation_attempt") or 0),
                 regeneration_attempt=int(raw.get("regeneration_attempt") or 0),
+                repaired_from_claim_id=str(
+                    raw.get("repaired_from_claim_id") or ""
+                ).strip(),
             ).validate()
         )
     return claims

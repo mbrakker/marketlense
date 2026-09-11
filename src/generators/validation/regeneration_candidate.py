@@ -280,12 +280,33 @@ def _validate_soft_copy_claim_provenance(
         for claim in candidates:
             if claim.classification != "factual":
                 continue
+            original_claim = original_by_hash.get(claim.text_hash)
+            selection, lineage_error = _repair_selection_for_claim(
+                artifacts=candidate_artifacts,
+                claim=claim,
+                require_selection=bool(originals) and original_claim is None,
+            )
+            if lineage_error:
+                issues.append(
+                    _soft_copy_provenance_issue(
+                        family=claim.artifact_family,
+                        claim_id=claim.claim_id,
+                        message=lineage_error,
+                    )
+                )
             _validate_factual_soft_copy_claim(
                 claim=claim,
-                original=original_by_hash.get(claim.text_hash),
+                original=original_claim,
                 canonical_spans=canonical_spans,
-                quarantined_ids=_quarantined_evidence_ids(
+                quarantined_ids=_selection_evidence_ids(
+                    selection, "quarantined_evidence_ids"
+                )
+                if selection is not None
+                else _quarantined_evidence_ids(
                     candidate_artifacts, family, claim.claim_id
+                ),
+                selected_evidence_ids=_selection_evidence_ids(
+                    selection, "selected_evidence_ids"
                 ),
                 issues=issues,
             )
@@ -323,6 +344,7 @@ def _validate_factual_soft_copy_claim(
     original: SoftCopyClaimProvenance | None,
     canonical_spans: dict[str, list[dict[str, Any]]],
     quarantined_ids: set[str],
+    selected_evidence_ids: set[str],
     issues: list[ValidationIssue],
 ) -> None:
     if not claim.evidence_ids:
@@ -355,6 +377,17 @@ def _validate_factual_soft_copy_claim(
                 family=claim.artifact_family,
                 claim_id=claim.claim_id,
                 message="Factual soft-copy claim references quarantined evidence.",
+            )
+        )
+    if selected_evidence_ids and not evidence_ids.issubset(selected_evidence_ids):
+        issues.append(
+            _soft_copy_provenance_issue(
+                family=claim.artifact_family,
+                claim_id=claim.claim_id,
+                message=(
+                    "Factual soft-copy claim references evidence outside its "
+                    "retained repair selection."
+                ),
             )
         )
     for evidence_id in claim.evidence_ids:
@@ -423,6 +456,63 @@ def _quarantined_evidence_ids(
     return {
         s(evidence_id).strip().casefold()
         for evidence_id in selection.get("quarantined_evidence_ids") or []
+        if s(evidence_id).strip()
+    }
+
+
+def _repair_selection_for_claim(
+    *,
+    artifacts: dict[str, Any],
+    claim: SoftCopyClaimProvenance,
+    require_selection: bool,
+) -> tuple[dict[str, Any] | None, str]:
+    original_claim_id = claim.repaired_from_claim_id
+    if not original_claim_id:
+        return (
+            (
+                None,
+                "A repaired factual soft-copy claim is missing repair-selection lineage.",
+            )
+            if require_selection
+            else (None, "")
+        )
+    selections = artifacts.get("_repair_evidence_selection")
+    selection = (
+        selections.get(f"{claim.artifact_family}:{original_claim_id}")
+        if isinstance(selections, dict)
+        else None
+    )
+    if not isinstance(selection, dict):
+        return (
+            None,
+            "A repaired factual soft-copy claim is missing repair-selection lineage.",
+        )
+    if (
+        selection.get("claim_id") != original_claim_id
+        or selection.get("repaired_claim_id") != claim.claim_id
+        or not _selection_lists_are_valid(selection)
+    ):
+        return (
+            None,
+            "A repaired factual soft-copy claim has corrupt repair-selection lineage.",
+        )
+    return selection, ""
+
+
+def _selection_lists_are_valid(selection: dict[str, Any]) -> bool:
+    return all(
+        isinstance(selection.get(field), list)
+        and all(isinstance(value, str) for value in selection[field])
+        for field in ("quarantined_evidence_ids", "selected_evidence_ids")
+    )
+
+
+def _selection_evidence_ids(selection: dict[str, Any] | None, field: str) -> set[str]:
+    if selection is None:
+        return set()
+    return {
+        s(evidence_id).strip().casefold()
+        for evidence_id in selection.get(field) or []
         if s(evidence_id).strip()
     }
 

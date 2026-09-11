@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from typing import Any, Dict, List, Optional
 
 from src.contracts.config import AppSettings
@@ -127,6 +127,7 @@ def assemble_artifacts_payload(
     replaced_soft_copy_families: Optional[List[str]] = None,
     replaced_soft_copy_claim_ids: Optional[Dict[str, List[str]]] = None,
     soft_copy_repair_texts: Optional[Dict[str, List[str]]] = None,
+    soft_copy_repair_lineage: Optional[Dict[str, str]] = None,
     regeneration_attempt: int = 0,
     validate_references: bool = True,
 ) -> Dict[str, Any]:
@@ -271,6 +272,7 @@ def assemble_artifacts_payload(
             replaced_families=replaced_soft_copy_families or [],
             replaced_claim_ids=replaced_soft_copy_claim_ids or {},
             repair_texts=soft_copy_repair_texts or {},
+            repair_lineage=soft_copy_repair_lineage or {},
             regeneration_attempt=regeneration_attempt,
         )
     )
@@ -340,6 +342,7 @@ def _soft_copy_claim_provenance_payload(
     replaced_families: List[str],
     replaced_claim_ids: Dict[str, List[str]],
     repair_texts: Dict[str, List[str]],
+    repair_lineage: Dict[str, str],
     regeneration_attempt: int,
 ) -> Dict[str, Any]:
     public_output_by_family = {
@@ -383,20 +386,25 @@ def _soft_copy_claim_provenance_payload(
                     and " ".join(str(binding.get("claim") or "").split())
                     == normalized_text
                 ]
+                repaired_claims = build_soft_copy_claim_provenance(
+                    artifact_family=family,
+                    text=str(repaired_text),
+                    declared_claims=repaired_bindings,
+                    evidence_span_index=span_index,
+                    producing_prompt_identity=dict(prompt_identities.get(family) or {}),
+                    generation_attempt=max(
+                        1, int(generation_attempts.get(family) or 1)
+                    ),
+                    regeneration_attempt=regeneration_attempt,
+                )
                 claims.extend(
-                    build_soft_copy_claim_provenance(
-                        artifact_family=family,
-                        text=str(repaired_text),
-                        declared_claims=repaired_bindings,
-                        evidence_span_index=span_index,
-                        producing_prompt_identity=dict(
-                            prompt_identities.get(family) or {}
+                    replace(
+                        claim,
+                        repaired_from_claim_id=repair_lineage.get(
+                            f"{family}:{claim.claim_id}", ""
                         ),
-                        generation_attempt=max(
-                            1, int(generation_attempts.get(family) or 1)
-                        ),
-                        regeneration_attempt=regeneration_attempt,
                     )
+                    for claim in repaired_claims
                 )
         elif text:
             retained = [claim for claim in claims if claim.artifact_family == family]

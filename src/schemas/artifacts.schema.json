@@ -516,7 +516,8 @@
               "source_spans": { "type": "array", "items": { "type": "object" } },
               "producing_prompt_identity": { "type": "object" },
               "generation_attempt": { "type": "integer", "minimum": 1 },
-              "regeneration_attempt": { "type": "integer", "minimum": 0 }
+              "regeneration_attempt": { "type": "integer", "minimum": 0 },
+              "repaired_from_claim_id": { "type": "string", "minLength": 1 }
             }
           }
         }

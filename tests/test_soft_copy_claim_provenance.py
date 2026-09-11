@@ -215,11 +215,15 @@ def test_soft_copy_claim_provenance_round_trips_exact_evidence_and_source_span()
         },
         generation_attempt=1,
         regeneration_attempt=0,
+        repaired_from_claim_id="soft_copy:expert_comment:original",
     )
 
     payload = soft_copy_claim_provenance_to_payload([claim])
 
     assert payload["claims"][0]["evidence_ids"] == ["finding-7", "quote-3"]
+    assert payload["claims"][0]["repaired_from_claim_id"] == (
+        "soft_copy:expert_comment:original"
+    )
     assert soft_copy_claim_provenance_from_payload(payload) == [claim]
 
 
@@ -326,6 +330,7 @@ def test_public_report_payload_excludes_private_soft_copy_provenance() -> None:
                 "schema_version": "1.0",
                 "claims": [
                     {"claim_id": "internal-only", "evidence_ids": ["finding-7"]}
+                    | {"repaired_from_claim_id": "soft_copy:expert_comment:old"}
                 ],
             },
             "_repair_evidence_selection": {
@@ -339,5 +344,6 @@ def test_public_report_payload_excludes_private_soft_copy_provenance() -> None:
 
     assert "soft_copy_claim_provenance" not in asdict(public_payload)
     assert "finding-7" not in str(asdict(public_payload))
+    assert "soft_copy:expert_comment:old" not in str(asdict(public_payload))
     assert "_repair_evidence_selection" not in asdict(public_payload)
     assert "finding-8" not in str(asdict(public_payload))

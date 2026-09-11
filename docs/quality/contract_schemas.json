@@ -36162,6 +36162,9 @@
         "regeneration_attempt": {
           "type": "integer"
         },
+        "repaired_from_claim_id": {
+          "type": "string"
+        },
         "schema_version": {
           "type": "string"
         },

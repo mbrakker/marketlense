@@ -90,6 +90,7 @@ class _RegenerationState:
     replaced_soft_copy_families: List[str] = field(default_factory=list)
     replaced_soft_copy_claim_ids: Dict[str, List[str]] = field(default_factory=dict)
     soft_copy_repair_texts: Dict[str, List[str]] = field(default_factory=dict)
+    soft_copy_repair_lineage: Dict[str, str] = field(default_factory=dict)
     soft_copy_evidence_selections: Dict[str, Dict[str, Any]] = field(
         default_factory=dict
     )
@@ -329,6 +330,7 @@ def regenerate_artifacts(
         replaced_soft_copy_families=state.replaced_soft_copy_families,
         replaced_soft_copy_claim_ids=state.replaced_soft_copy_claim_ids,
         soft_copy_repair_texts=state.soft_copy_repair_texts,
+        soft_copy_repair_lineage=state.soft_copy_repair_lineage,
         regeneration_attempt=request.attempt_index,
         validate_references=False,
     )
@@ -1207,7 +1209,7 @@ def _valid_soft_copy_evidence_selection(key: str, value: object) -> bool:
         "selected_evidence_ids",
         "package_sha256",
     }
-    allowed_keys = required_keys | {"selected_evidence_entries"}
+    allowed_keys = required_keys | {"selected_evidence_entries", "repaired_claim_id"}
     if set(value) - allowed_keys or not required_keys.issubset(value):
         return False
     if (
@@ -1236,6 +1238,11 @@ def _valid_soft_copy_evidence_selection(key: str, value: object) -> bool:
             isinstance(item, str) for item in value[field_name]
         ):
             return False
+    if "repaired_claim_id" in value and (
+        not isinstance(value["repaired_claim_id"], str)
+        or not value["repaired_claim_id"]
+    ):
+        return False
     entries = value.get("selected_evidence_entries")
     if entries is None:
         # Prompt 5's earlier selection records did not retain entry content.
@@ -1246,7 +1253,9 @@ def _valid_soft_copy_evidence_selection(key: str, value: object) -> bool:
     ):
         return False
     hash_payload = {
-        name: item for name, item in value.items() if name != "package_sha256"
+        name: item
+        for name, item in value.items()
+        if name not in {"package_sha256", "repaired_claim_id"}
     }
     return value["package_sha256"] == _canonical_evidence_hash(hash_payload)
 
@@ -1333,17 +1342,32 @@ def _record_soft_copy_claim_bindings(
     )
     if repaired_claim is not None:
         normalized_repaired = _normalized_soft_copy_text(repaired_text)
+        repaired_claim_id = (
+            f"soft_copy:{artifact_family}:"
+            f"{hashlib.sha256(normalized_repaired.encode()).hexdigest()[:16]}"
+        )
+        if repaired_claim_id == repaired_claim.claim.claim_id:
+            return
         declared_bindings = [
             item
             for item in declared_bindings
             if _normalized_soft_copy_text(item.get("claim")) == normalized_repaired
         ]
-        execution.state.replaced_soft_copy_claim_ids.setdefault(
-            artifact_family, []
-        ).append(repaired_claim.claim.claim_id)
-        execution.state.soft_copy_repair_texts.setdefault(artifact_family, []).append(
-            repaired_text
-        )
+        if repaired_claim_id != repaired_claim.claim.claim_id:
+            execution.state.replaced_soft_copy_claim_ids.setdefault(
+                artifact_family, []
+            ).append(repaired_claim.claim.claim_id)
+            execution.state.soft_copy_repair_texts.setdefault(
+                artifact_family, []
+            ).append(repaired_text)
+            execution.state.soft_copy_repair_lineage[
+                f"{artifact_family}:{repaired_claim_id}"
+            ] = repaired_claim.claim.claim_id
+            selection = execution.state.soft_copy_evidence_selections.get(
+                f"{artifact_family}:{repaired_claim.claim.claim_id}"
+            )
+            if isinstance(selection, dict):
+                selection["repaired_claim_id"] = repaired_claim_id
     if repaired_claim is not None:
         execution.state.soft_copy_claim_bindings.setdefault(artifact_family, []).extend(
             declared_bindings

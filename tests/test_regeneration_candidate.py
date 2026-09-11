@@ -102,22 +102,35 @@ def _claim_for_family(artifacts: dict, family: str) -> dict:
     )
 
 
-def test_candidate_allows_repaired_expert_claim_with_explicit_new_lineage() -> None:
+@pytest.mark.parametrize("family", ["expert_comment", "linkedin_post"])
+def test_candidate_allows_repaired_factual_claim_with_explicit_new_lineage(
+    family: str,
+) -> None:
     current, candidate, evidence_packs = _soft_copy_artifacts()
-    candidate["expert_comment"] = "Generation Q developed in digital spaces."
+    original_claim = _claim_for_family(current, family)
+    candidate[family] = "Generation Q developed in digital spaces."
     repaired = _soft_copy_claim(
-        family="expert_comment",
-        text=candidate["expert_comment"],
+        family=family,
+        text=candidate[family],
         regeneration_attempt=1,
     )
     repaired["producing_prompt_identity"]["namespace"] = (
-        "report_vs/artifacts/regenerate/expert_comment"
+        f"report_vs/artifacts/regenerate/{family}"
     )
+    repaired["repaired_from_claim_id"] = original_claim["claim_id"]
     candidate["soft_copy_claim_provenance"]["claims"] = [
         claim
         for claim in candidate["soft_copy_claim_provenance"]["claims"]
-        if claim["artifact_family"] != "expert_comment"
+        if claim["artifact_family"] != family
     ] + [repaired]
+    candidate["_repair_evidence_selection"] = {
+        f"{family}:{original_claim['claim_id']}": {
+            "claim_id": original_claim["claim_id"],
+            "repaired_claim_id": repaired["claim_id"],
+            "quarantined_evidence_ids": [],
+            "selected_evidence_ids": ["qc_001"],
+        }
+    }
 
     result = validate_regeneration_candidate(
         current_artifacts=current,
@@ -127,6 +140,56 @@ def test_candidate_allows_repaired_expert_claim_with_explicit_new_lineage() -> N
     )
 
     assert result.passed
+
+
+@pytest.mark.parametrize("family", ["expert_comment", "linkedin_post"])
+def test_candidate_blocks_repaired_factual_claim_with_missing_or_corrupt_selection_lineage(
+    family: str,
+) -> None:
+    current, candidate, evidence_packs = _soft_copy_artifacts()
+    original_claim = _claim_for_family(current, family)
+    candidate[family] = "Generation Q developed in digital spaces."
+    repaired = _soft_copy_claim(
+        family=family,
+        text=candidate[family],
+        regeneration_attempt=1,
+    )
+    repaired["repaired_from_claim_id"] = original_claim["claim_id"]
+    candidate["soft_copy_claim_provenance"]["claims"] = [
+        claim
+        for claim in candidate["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] != family
+    ] + [repaired]
+
+    missing = validate_regeneration_candidate(
+        current_artifacts=current,
+        candidate_artifacts=candidate,
+        evidence_packs=evidence_packs,
+        ctx=_ctx(),
+    )
+    candidate["_repair_evidence_selection"] = {
+        f"{family}:{original_claim['claim_id']}": {
+            "claim_id": original_claim["claim_id"],
+            "repaired_claim_id": "different-repaired-claim",
+            "quarantined_evidence_ids": [],
+            "selected_evidence_ids": ["qc_001"],
+        }
+    }
+    corrupt = validate_regeneration_candidate(
+        current_artifacts=current,
+        candidate_artifacts=candidate,
+        evidence_packs=evidence_packs,
+        ctx=_ctx(),
+    )
+
+    assert not missing.passed
+    assert any(
+        "missing repair-selection lineage" in issue.message for issue in missing.issues
+    )
+    assert not corrupt.passed
+    assert any(
+        "corrupt repair-selection lineage" in issue.message for issue in corrupt.issues
+    )
 
 
 def test_candidate_blocks_repaired_expert_claim_without_new_lineage() -> None:
