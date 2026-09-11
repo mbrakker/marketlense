@@ -33,12 +33,13 @@ def _soft_copy_claim(
     text: str,
     classification: str,
     evidence_ids: list[str],
+    text_hash: str = "",
 ) -> dict:
     return {
         "schema_version": "1.0",
         "artifact_family": artifact_family,
         "claim_id": f"soft_copy:{artifact_family}:{len(text)}",
-        "text_hash": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+        "text_hash": text_hash or hashlib.sha256(text.encode("utf-8")).hexdigest(),
         "classification": classification,
         "evidence_ids": evidence_ids,
         "source_spans": [],
@@ -668,8 +669,9 @@ def test_retained_claim_validation_uses_soft_copy_factual_provenance() -> None:
     }
 
 
-def test_retained_claim_validation_fails_closed_for_unknown_soft_copy_evidence(
-) -> None:
+def test_retained_claim_validation_fails_closed_for_unknown_soft_copy_evidence() -> (
+    None
+):
     claim = "Wallet adoption reached 42% in 2026."
     package = validate_retained_claims(
         {
@@ -696,8 +698,9 @@ def test_retained_claim_validation_fails_closed_for_unknown_soft_copy_evidence(
     )
 
 
-def test_retained_claim_validation_fails_closed_for_missing_soft_copy_evidence(
-) -> None:
+def test_retained_claim_validation_fails_closed_for_missing_soft_copy_evidence() -> (
+    None
+):
     claim = "Wallet adoption reached 42% in 2026."
     package = validate_retained_claims(
         {
@@ -719,7 +722,7 @@ def test_retained_claim_validation_fails_closed_for_missing_soft_copy_evidence(
 
     assert package.readiness_status == "not_publishable"
     assert package.unsupported_factual_count == 1
-    assert "missing_or_unknown_evidence_reference" in package.results[0].reasons
+    assert "missing_evidence_reference" in package.results[0].reasons
 
 
 def test_retained_claim_validation_rejects_invented_soft_copy_quantity() -> None:
@@ -745,8 +748,7 @@ def test_retained_claim_validation_rejects_invented_soft_copy_quantity() -> None
 
     assert package.readiness_status == "not_publishable"
     assert any(
-        check.reason == "quantity_not_entailed"
-        for check in package.results[0].checks
+        check.reason == "quantity_not_entailed" for check in package.results[0].checks
     )
 
 
@@ -828,3 +830,146 @@ def test_retained_claim_validation_does_not_downgrade_declared_factual_copy() ->
     assert package.results[0].candidate.kind == "interpretive"
     assert package.results[0].candidate.factual is True
     assert package.results[0].semantic_validator_used is True
+
+
+def test_retained_claim_validation_rejects_partial_unknown_soft_copy_evidence() -> None:
+    claim = "Wallet adoption reached 42% in 2026."
+    package = validate_retained_claims(
+        {
+            "expert_comment": claim,
+            "soft_copy_claim_provenance": {
+                "schema_version": "1.0",
+                "claims": [
+                    _soft_copy_claim(
+                        artifact_family="expert_comment",
+                        text=claim,
+                        classification="factual",
+                        evidence_ids=["f1", "unknown-evidence"],
+                    )
+                ],
+            },
+        },
+        _evidence(),
+    )
+
+    assert package.readiness_status == "not_publishable"
+    assert package.unsupported_factual_count == 1
+    assert "unknown_evidence_reference" in package.results[0].reasons
+    assert {
+        reference.evidence_id
+        for reference in package.results[0].candidate.evidence_references
+    } == {
+        "f1",
+        "unknown-evidence",
+    }
+
+
+def test_retained_claim_validation_requires_current_soft_copy_provenance() -> None:
+    claim = "Leaders should treat wallets as core checkout infrastructure."
+    package = validate_retained_claims({"expert_comment": claim}, _evidence())
+
+    assert package.readiness_status == "not_publishable"
+    assert package.unsupported_factual_count == 1
+    assert package.results[0].candidate.factual is True
+    assert package.results[0].reasons == ["soft_copy_provenance_missing"]
+
+
+def test_retained_claim_validation_rejects_malformed_soft_copy_provenance() -> None:
+    claim = "Leaders should treat wallets as core checkout infrastructure."
+    package = validate_retained_claims(
+        {
+            "expert_comment": claim,
+            "soft_copy_claim_provenance": {
+                "schema_version": "1.0",
+                "claims": [
+                    _soft_copy_claim(
+                        artifact_family="expert_comment",
+                        text=claim,
+                        classification="unsupported",
+                        evidence_ids=[],
+                    )
+                ],
+            },
+        },
+        _evidence(),
+    )
+
+    assert package.readiness_status == "not_publishable"
+    assert package.unsupported_factual_count == 1
+    assert package.results[0].reasons == ["soft_copy_provenance_invalid"]
+
+
+def test_retained_claim_validation_rejects_unbound_soft_copy_sentence() -> None:
+    supported = "Wallet adoption reached 42% in 2026."
+    unbound = "Leaders should treat wallets as core checkout infrastructure."
+    package = validate_retained_claims(
+        {
+            "expert_comment": f"{supported} {unbound}",
+            "soft_copy_claim_provenance": {
+                "schema_version": "1.0",
+                "claims": [
+                    _soft_copy_claim(
+                        artifact_family="expert_comment",
+                        text=supported,
+                        classification="factual",
+                        evidence_ids=["f1"],
+                    )
+                ],
+            },
+        },
+        _evidence(),
+    )
+
+    assert package.readiness_status == "not_publishable"
+    assert package.unsupported_factual_count == 1
+    assert package.results[1].reasons == ["soft_copy_provenance_sentence_missing"]
+
+
+def test_retained_claim_validation_rejects_soft_copy_provenance_hash_mismatch() -> None:
+    claim = "Leaders should treat wallets as core checkout infrastructure."
+    package = validate_retained_claims(
+        {
+            "expert_comment": claim,
+            "soft_copy_claim_provenance": {
+                "schema_version": "1.0",
+                "claims": [
+                    _soft_copy_claim(
+                        artifact_family="expert_comment",
+                        text=claim,
+                        classification="interpretive",
+                        evidence_ids=[],
+                        text_hash="a" * 64,
+                    )
+                ],
+            },
+        },
+        _evidence(),
+    )
+
+    assert package.readiness_status == "not_publishable"
+    assert package.unsupported_factual_count == 1
+    assert package.results[0].reasons == ["soft_copy_provenance_sentence_missing"]
+
+
+def test_retained_claim_validation_rejects_ambiguous_soft_copy_provenance() -> None:
+    claim = "Wallet adoption reached 42% in 2026."
+    binding = _soft_copy_claim(
+        artifact_family="expert_comment",
+        text=claim,
+        classification="factual",
+        evidence_ids=["f1"],
+    )
+    package = validate_retained_claims(
+        {
+            "expert_comment": claim,
+            "soft_copy_claim_provenance": {
+                "schema_version": "1.0",
+                "claims": [binding, dict(binding)],
+            },
+        },
+        _evidence(),
+    )
+
+    assert package.readiness_status == "not_publishable"
+    assert package.unsupported_factual_count == 1
+    assert package.results[0].reasons == ["soft_copy_provenance_ambiguous"]

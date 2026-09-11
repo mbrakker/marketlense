@@ -246,6 +246,15 @@ its wording. Interpretations and recommendations remain non-factual here and
 continue through the existing grounding and editorial-quality policies rather
 than becoming a second factual-validation path.
 
+For material current soft copy, provenance is mandatory at this validation
+boundary. Every sentence must have exactly one hash-matching binding in a
+well-formed retained provenance payload; missing, malformed, ambiguous, or
+unbound records block readiness instead of falling back to text heuristics.
+For provenance-classified factual claims, every declared evidence ID must
+resolve (rather than merely one of several IDs); unresolved IDs remain in the
+validation package for diagnosis. Legacy insight, quote, and summary
+claim-evidence-map reference handling keeps its existing semantics.
+
 When a queue payload sets `claim_validation_required`, publication readiness
 accepts only a readable package in `awaiting_review` with zero unsupported and
 unresolved factual claims. This is a pre-publication gate, not automatic

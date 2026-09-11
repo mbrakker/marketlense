@@ -6,7 +6,7 @@ import hashlib
 import json
 import re
 from copy import deepcopy
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from typing import Callable
 
 from src.contracts.claim_validation import (
@@ -75,6 +75,14 @@ _RECOVERY_STOP_WORDS = {
 }
 
 SemanticValidator = Callable[[ClaimCandidate, list[str]], tuple[bool, str, str]]
+
+
+@dataclass(frozen=True)
+class _ClaimValidationInput:
+    candidate: ClaimCandidate
+    text: str
+    require_all_evidence_references: bool = False
+    provenance_error: str = ""
 
 
 def _hash(value: object) -> str:
@@ -168,9 +176,9 @@ def _references(
 
 def _candidates(
     artifacts: dict, evidence: dict[str, tuple[str, str, int | None]]
-) -> list[tuple[ClaimCandidate, str]]:
-    output: list[tuple[ClaimCandidate, str]] = []
-    soft_copy_claims = _soft_copy_claims_by_hash(artifacts)
+) -> list[_ClaimValidationInput]:
+    output: list[_ClaimValidationInput] = []
+    soft_copy_claims, soft_copy_provenance_error = _soft_copy_claims_by_hash(artifacts)
 
     def add(
         family: str,
@@ -179,6 +187,8 @@ def _candidates(
         *,
         classification: str = "",
         claim_id: str = "",
+        require_all_evidence_references: bool = False,
+        provenance_error: str = "",
     ) -> None:
         claim = str(text or "").strip()
         if not claim:
@@ -199,15 +209,38 @@ def _candidates(
             ),
             evidence_references=_references(raw, evidence),
         )
-        output.append((candidate, claim))
+        output.append(
+            _ClaimValidationInput(
+                candidate=candidate,
+                text=claim,
+                require_all_evidence_references=require_all_evidence_references,
+                provenance_error=provenance_error,
+            )
+        )
 
     def add_soft_copy(family: str, text: object) -> None:
         claim = str(text or "").strip()
         if not claim:
             return
-        provenance = soft_copy_claims.get((family, _soft_copy_text_hash(claim)))
+        text_hash = _soft_copy_text_hash(claim)
+        if soft_copy_provenance_error:
+            add(
+                family,
+                claim,
+                claim_id=f"soft_copy_provenance:{family}:{text_hash[:16]}",
+                classification="factual",
+                provenance_error=soft_copy_provenance_error,
+            )
+            return
+        provenance = soft_copy_claims.get((family, text_hash))
         if provenance is None:
-            add(family, claim)
+            add(
+                family,
+                claim,
+                claim_id=f"soft_copy_provenance:{family}:{text_hash[:16]}",
+                classification="factual",
+                provenance_error="soft_copy_provenance_sentence_missing",
+            )
             return
         add(
             family,
@@ -218,6 +251,7 @@ def _candidates(
             },
             classification=provenance.classification,
             claim_id=provenance.claim_id,
+            require_all_evidence_references=provenance.classification == "factual",
         )
 
     summary = artifacts.get("summary")
@@ -250,16 +284,26 @@ def _candidates(
 
 def _soft_copy_claims_by_hash(
     artifacts: dict,
-) -> dict[tuple[str, str], SoftCopyClaimProvenance]:
-    """Read retained soft-copy provenance without inferring any evidence links."""
+) -> tuple[dict[tuple[str, str], SoftCopyClaimProvenance], str]:
+    """Read exact soft-copy provenance as a mandatory validation boundary."""
+
+    if "soft_copy_claim_provenance" not in artifacts:
+        return {}, "soft_copy_provenance_missing"
+    payload = artifacts.get("soft_copy_claim_provenance")
+    if not isinstance(payload, dict) or payload.get("schema_version") != "1.0":
+        return {}, "soft_copy_provenance_invalid"
 
     try:
-        claims = soft_copy_claim_provenance_from_payload(
-            artifacts.get("soft_copy_claim_provenance")
-        )
-    except AppError:
-        return {}
-    return {(claim.artifact_family, claim.text_hash): claim for claim in claims}
+        claims = soft_copy_claim_provenance_from_payload(payload)
+    except (AppError, TypeError, ValueError):
+        return {}, "soft_copy_provenance_invalid"
+    indexed: dict[tuple[str, str], SoftCopyClaimProvenance] = {}
+    for claim in claims:
+        key = (claim.artifact_family, claim.text_hash)
+        if key in indexed:
+            return {}, "soft_copy_provenance_ambiguous"
+        indexed[key] = claim
+    return indexed, ""
 
 
 def _soft_copy_text_hash(text: str) -> str:
@@ -270,13 +314,27 @@ def _checks(
     candidate: ClaimCandidate,
     text: str,
     source_evidence: dict[str, tuple[str, str, int | None]],
+    *,
+    require_all_evidence_references: bool = False,
 ) -> tuple[list[ClaimValidationCheck], ProtectedFactComparison | None]:
     refs = candidate.evidence_references
     known = [
         reference for reference in refs if reference.evidence_id in source_evidence
     ]
-    checks = [
+    all_references_known = bool(refs) and len(known) == len(refs)
+    evidence_check = (
         ClaimValidationCheck(
+            schema_version=CLAIM_VALIDATION_SCHEMA_VERSION,
+            name="evidence_reference_completeness",
+            status="passed" if all_references_known else "failed",
+            reason="evidence_references_resolved"
+            if all_references_known
+            else "missing_evidence_reference"
+            if not refs
+            else "unknown_evidence_reference",
+        )
+        if require_all_evidence_references
+        else ClaimValidationCheck(
             schema_version=CLAIM_VALIDATION_SCHEMA_VERSION,
             name="evidence_reference_completeness",
             status="passed" if known else "failed",
@@ -284,7 +342,8 @@ def _checks(
             if known
             else "missing_or_unknown_evidence_reference",
         )
-    ]
+    )
+    checks = [evidence_check]
     cited = [source_evidence[reference.evidence_id][1] for reference in known]
     protected_facts = None
     if cited:
@@ -356,7 +415,7 @@ def _checks(
 
 
 def _validate_claims_against_sources(
-    candidates: list[tuple[ClaimCandidate, str]],
+    candidates: list[_ClaimValidationInput],
     source_evidence: dict[str, tuple[str, str, int | None]],
     *,
     artifact: object,
@@ -371,8 +430,28 @@ def _validate_claims_against_sources(
 
     results: list[ClaimValidationResult] = []
     semantic_ids: list[str] = []
-    for candidate, text in candidates:
-        checks, protected_facts = _checks(candidate, text, source_evidence)
+    for candidate_input in candidates:
+        candidate = candidate_input.candidate
+        text = candidate_input.text
+        if candidate_input.provenance_error:
+            checks = [
+                ClaimValidationCheck(
+                    schema_version=CLAIM_VALIDATION_SCHEMA_VERSION,
+                    name="soft_copy_provenance_integrity",
+                    status="failed",
+                    reason=candidate_input.provenance_error,
+                )
+            ]
+            protected_facts = None
+        else:
+            checks, protected_facts = _checks(
+                candidate,
+                text,
+                source_evidence,
+                require_all_evidence_references=(
+                    candidate_input.require_all_evidence_references
+                ),
+            )
         failed = [check.reason for check in checks if check.status == "failed"]
         deterministic_entailment = any(
             check.name in {"number_value_unit_match", "quote_match"}
@@ -614,8 +693,8 @@ def _quantity_entailed_by_evidence(candidate: object, evidence: object) -> bool:
 def _evidence_fidelity_candidates(
     evidence_packs: dict,
     source_evidence: dict[str, tuple[str, str, int | None]],
-) -> list[tuple[ClaimCandidate, str]]:
-    candidates: list[tuple[ClaimCandidate, str]] = []
+) -> list[_ClaimValidationInput]:
+    candidates: list[_ClaimValidationInput] = []
     for pack_name, root_key in (
         ("findings", "findings"),
         ("quote_candidates", "quote_candidates"),
@@ -635,8 +714,8 @@ def _evidence_fidelity_candidates(
                 continue
             kind = _claim_kind(text)
             candidates.append(
-                (
-                    ClaimCandidate(
+                _ClaimValidationInput(
+                    candidate=ClaimCandidate(
                         schema_version=CLAIM_VALIDATION_SCHEMA_VERSION,
                         claim_id=f"evidence:{pack_name}:{evidence_id}",
                         source_family=f"evidence_pack:{pack_name}",
@@ -645,7 +724,7 @@ def _evidence_fidelity_candidates(
                         factual=_factual(kind),
                         evidence_references=_source_references(item, source_evidence),
                     ),
-                    text,
+                    text=text,
                 )
             )
     return candidates

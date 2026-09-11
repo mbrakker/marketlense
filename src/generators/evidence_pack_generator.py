@@ -533,8 +533,8 @@ def generate_evidence_packs(
             results, source_spans=validated_source_spans
         )
         candidate_texts = {
-            candidate.claim_id: text
-            for candidate, text in _evidence_fidelity_candidates(
+            candidate_input.candidate.claim_id: candidate_input.text
+            for candidate_input in _evidence_fidelity_candidates(
                 results, _source_index(validated_source_spans)
             )
         }
