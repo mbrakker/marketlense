@@ -328,8 +328,16 @@ def test_public_report_payload_excludes_private_soft_copy_provenance() -> None:
                     {"claim_id": "internal-only", "evidence_ids": ["finding-7"]}
                 ],
             },
+            "_repair_evidence_selection": {
+                "expert_comment:internal-only": {
+                    "claim_id": "internal-only",
+                    "selected_evidence_ids": ["finding-8"],
+                }
+            },
         },
     )
 
     assert "soft_copy_claim_provenance" not in asdict(public_payload)
     assert "finding-7" not in str(asdict(public_payload))
+    assert "_repair_evidence_selection" not in asdict(public_payload)
+    assert "finding-8" not in str(asdict(public_payload))

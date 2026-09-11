@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 import re
 from copy import deepcopy
@@ -503,6 +504,7 @@ def _build_soft_copy_claim_evidence_package(
     artifacts: Dict[str, Any],
     evidence_packs: Dict[str, Any],
     quarantined_evidence_ids: tuple[str, ...],
+    doc_map: Dict[str, Any] | None = None,
     claim_text: str = "",
 ) -> Dict[str, Any]:
     """Build one bounded, deterministic retained-evidence package for a claim."""
@@ -512,7 +514,7 @@ def _build_soft_copy_claim_evidence_package(
         for evidence_id in quarantined_evidence_ids
         if _normalized_evidence_id(evidence_id)
     }
-    evidence_by_id = _retained_evidence_entries_by_id(evidence_packs)
+    evidence_by_id = _retained_evidence_entries_by_id(evidence_packs, doc_map)
     direct_ids = _unique_strings(claim.evidence_ids)
     parent_ids = _soft_copy_parent_evidence_ids(
         claim=claim, artifacts=artifacts, claim_text=claim_text
@@ -555,10 +557,9 @@ def _build_soft_copy_claim_evidence_package(
         "parent_evidence_ids": parent_ids,
         "quarantined_evidence_ids": sorted(quarantined),
         "selected_evidence_ids": evidence_ids,
+        "selected_evidence_entries": _canonical_evidence_entries(selected),
     }
-    provenance["package_sha256"] = hashlib.sha256(
-        _dump_json(provenance).encode("utf-8")
-    ).hexdigest()
+    provenance["package_sha256"] = _canonical_evidence_hash(provenance)
     return {
         "relevant_evidence": selected,
         "evidence_ids": evidence_ids,
@@ -578,14 +579,14 @@ def _claim_scoped_grounding_package(
         issue=repair.issue,
         artifacts=_artifact_state_from_state(execution.state),
         evidence_packs=execution.runtime.safe_evidence,
-        quarantined_evidence_ids=tuple(
-            execution.grounding_package.get("quarantined_evidence_ids") or []
-        ),
+        quarantined_evidence_ids=tuple(repair.issue.excluded_evidence_ids),
+        doc_map=execution.runtime.safe_doc_map,
         claim_text=repair.text,
     )
-    package.update(selected)
-    package["evidence_windows"] = []
     selection = selected["evidence_selection"]
+    package.update(selected)
+    package["quarantined_evidence_ids"] = list(selection["quarantined_evidence_ids"])
+    package["evidence_windows"] = []
     execution.state.soft_copy_evidence_selections[
         f"{repair.artifact_family}:{repair.claim.claim_id}"
     ] = selection
@@ -596,14 +597,66 @@ def _normalized_evidence_id(value: object) -> str:
     return _s(value).strip().casefold()
 
 
+_VOLATILE_EVIDENCE_FIELDS = frozenset(
+    {
+        "_cache",
+        "cache_key",
+        "created_at",
+        "created_at_utc",
+        "generated_at",
+        "generated_at_utc",
+        "path",
+        "retrieved_at",
+        "retrieved_at_utc",
+        "run_id",
+        "span_id",
+        "task_id",
+        "trace_id",
+        "updated_at",
+        "updated_at_utc",
+    }
+)
+
+
+def _canonical_evidence_entries(entries: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Return the selected package content in stable, non-volatile form."""
+
+    return [_canonical_evidence_value(entry) for entry in entries]
+
+
+def _canonical_evidence_value(value: Any, *, field_name: str = "") -> Any:
+    if isinstance(value, dict):
+        return {
+            key: _canonical_evidence_value(item, field_name=key)
+            for key, item in sorted(value.items())
+            if key not in _VOLATILE_EVIDENCE_FIELDS
+        }
+    if isinstance(value, list):
+        items = [_canonical_evidence_value(item) for item in value]
+        if field_name in {"evidence_ids", "pages"}:
+            return sorted(items, key=_canonical_json)
+        return items
+    return value
+
+
+def _canonical_json(value: Any) -> str:
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+
+
+def _canonical_evidence_hash(payload: Dict[str, Any]) -> str:
+    return hashlib.sha256(_canonical_json(payload).encode("utf-8")).hexdigest()
+
+
 def _retained_evidence_entries_by_id(
     evidence_packs: Dict[str, Any],
+    doc_map: Dict[str, Any] | None,
 ) -> Dict[str, Dict[str, Any]]:
     """Canonicalize retained entries independently of input mapping order."""
 
     candidates: List[Dict[str, Any]] = []
     for pack_name in sorted(evidence_packs):
         candidates.extend(_all_pack_entries(pack_name, evidence_packs[pack_name]))
+    candidates.extend(_doc_map_section_evidence_entries(doc_map or {}))
     ordered = sorted(
         candidates,
         key=lambda entry: (
@@ -618,6 +671,30 @@ def _retained_evidence_entries_by_id(
         if evidence_id and evidence_id not in result:
             result[evidence_id] = entry
     return result
+
+
+def _doc_map_section_evidence_entries(
+    doc_map: Dict[str, Any], target_ids: set[str] | None = None
+) -> List[Dict[str, Any]]:
+    """Return canonical retained DocMap entries in their existing package shape."""
+
+    entries: List[Dict[str, Any]] = []
+    for section in doc_map.get("sections") or []:
+        if not isinstance(section, dict):
+            continue
+        section_id = _s(section.get("id")).strip()
+        if not section_id or (target_ids is not None and section_id not in target_ids):
+            continue
+        entries.append(
+            {
+                "pack_name": "doc_map",
+                "id": section_id,
+                "title": _s(section.get("title")),
+                "summary": _s(section.get("summary")),
+                "pages": list(section.get("pages") or []),
+            }
+        )
+    return entries
 
 
 def _soft_copy_parent_evidence_ids(
@@ -771,7 +848,8 @@ def _all_pack_entries(pack_name: str, value: Any) -> List[Dict[str, Any]]:
 
 
 def _entry_evidence_id(entry: Dict[str, Any]) -> str:
-    payload = entry.get("entry") if isinstance(entry, dict) else {}
+    payload = entry.get("entry") if isinstance(entry, dict) else None
+    payload = payload if isinstance(payload, dict) else entry
     payload = payload if isinstance(payload, dict) else {}
     return _s(payload.get("id") or payload.get("evidence_id")).strip()
 
@@ -789,20 +867,7 @@ def _collect_relevant_evidence_entries(
     }
     entries: List[Dict[str, Any]] = []
     if target_ids and isinstance(doc_map, dict):
-        for section in doc_map.get("sections") or []:
-            if not isinstance(section, dict):
-                continue
-            section_id = _s(section.get("id"))
-            if section_id in target_ids:
-                entries.append(
-                    {
-                        "pack_name": "doc_map",
-                        "id": section_id,
-                        "title": _s(section.get("title")),
-                        "summary": _s(section.get("summary")),
-                        "pages": list(section.get("pages") or []),
-                    }
-                )
+        entries.extend(_doc_map_section_evidence_entries(doc_map, target_ids))
     for pack_name, pack in evidence_packs.items():
         entries.extend(_collect_pack_entries(pack_name, pack, target_ids))
     return entries[:8]
@@ -1089,6 +1154,9 @@ def _build_regeneration_state(
     topic_briefs = _copy_list(safe_artifacts.get("toc_topics_expanded"))
     if not topic_briefs:
         topic_briefs = _copy_list(fallback_toc_bundle.get("toc_topics_expanded"))
+    soft_copy_evidence_selections = _retained_soft_copy_evidence_selections(
+        safe_artifacts.get("_repair_evidence_selection")
+    )
     return _RegenerationState(
         toc_entries=toc_entries,
         toc_topics=toc_topics,
@@ -1107,7 +1175,80 @@ def _build_regeneration_state(
         existing_soft_copy_claim_provenance=_copy_dict(
             safe_artifacts.get("soft_copy_claim_provenance")
         ),
+        soft_copy_evidence_selections=soft_copy_evidence_selections,
     )
+
+
+def _retained_soft_copy_evidence_selections(value: object) -> Dict[str, Dict[str, Any]]:
+    """Restore only private selection records with the retained audit shape."""
+
+    if not isinstance(value, dict):
+        return {}
+    valid: Dict[str, Dict[str, Any]] = {}
+    for key, selection in value.items():
+        if not isinstance(key, str) or not _valid_soft_copy_evidence_selection(
+            key, selection
+        ):
+            continue
+        valid[key] = deepcopy(selection)
+    return valid
+
+
+def _valid_soft_copy_evidence_selection(key: str, value: object) -> bool:
+    if not isinstance(value, dict):
+        return False
+    required_keys = {
+        "schema_version",
+        "claim_id",
+        "strategy",
+        "direct_evidence_ids",
+        "parent_evidence_ids",
+        "quarantined_evidence_ids",
+        "selected_evidence_ids",
+        "package_sha256",
+    }
+    allowed_keys = required_keys | {"selected_evidence_entries"}
+    if set(value) - allowed_keys or not required_keys.issubset(value):
+        return False
+    if (
+        value.get("schema_version") != "1.0"
+        or not isinstance(value.get("claim_id"), str)
+        or not value["claim_id"]
+        or not key.endswith(value["claim_id"])
+        or value.get("strategy")
+        not in {
+            "claim_evidence_ids",
+            "parent_insight_or_theme",
+            "lexical_fallback",
+            "abstain",
+        }
+        or not isinstance(value.get("package_sha256"), str)
+        or not re.fullmatch(r"[0-9a-f]{64}", value["package_sha256"])
+    ):
+        return False
+    for field_name in (
+        "direct_evidence_ids",
+        "parent_evidence_ids",
+        "quarantined_evidence_ids",
+        "selected_evidence_ids",
+    ):
+        if not isinstance(value.get(field_name), list) or not all(
+            isinstance(item, str) for item in value[field_name]
+        ):
+            return False
+    entries = value.get("selected_evidence_entries")
+    if entries is None:
+        # Prompt 5's earlier selection records did not retain entry content.
+        # Preserve their known legacy shape unchanged across later attempts.
+        return True
+    if not isinstance(entries, list) or not all(
+        isinstance(entry, dict) for entry in entries
+    ):
+        return False
+    hash_payload = {
+        name: item for name, item in value.items() if name != "package_sha256"
+    }
+    return value["package_sha256"] == _canonical_evidence_hash(hash_payload)
 
 
 def _render_regeneration_model(

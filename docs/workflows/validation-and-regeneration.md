@@ -296,13 +296,18 @@ replacement, including content hash, dependency manifest, execution identity,
 and model-policy identity. A checkpoint with stale or incomplete replacement
 prompt provenance is not reusable. For each soft public-copy claim repair, the
 package deterministically selects at most four non-quarantined retained entries
-in this order: the claim's retained evidence IDs, evidence linked to its
-declared or text-matched parent insight/theme, then lexically relevant retained
-entries. It never expands to every report insight or treats a zero-overlap
-entry as support. The candidate retains the selection method, direct and parent
-candidates, quarantine set, chosen IDs, and stable package hash under private
-`_repair_evidence_selection`; when no support remains, the normal abstention
-path applies.
+in this order: the claim's retained evidence IDs (from evidence packs or
+canonical DocMap sections), evidence linked to its declared or text-matched
+parent insight/theme, then lexically relevant retained entries. It never
+expands to every report insight or treats a zero-overlap entry as support. A
+claim uses only its own quarantine set, so one failed claim cannot suppress a
+sibling's retained evidence. The candidate retains the selection method, direct
+and parent candidates, quarantine set, chosen IDs, canonical selected entries,
+and stable package hash under private `_repair_evidence_selection`. Valid prior
+selection records are carried forward across later attempts and a re-repaired
+claim replaces its own record. The hash covers the canonical selected package,
+not just its IDs; this metadata is never projected into public payloads. When
+no support remains, the normal abstention path applies.
 
 The deterministic candidate check is complete only when all evidence IDs,
 source pages, and material lineage relationships validate. A grounding-provider

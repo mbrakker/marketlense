@@ -32,6 +32,7 @@ from src.generators.public_editorial_quality_generator import (
     validation_issues_from_public_editorial_quality,
 )
 from src.generators.report_regeneration_generator import (
+    _build_regeneration_state,
     _build_grounding_package,
     _build_soft_copy_claim_evidence_package,
     _merge_regenerated_insights_by_stable_id,
@@ -180,6 +181,173 @@ def test_soft_copy_claim_evidence_package_prefers_direct_retained_ids() -> None:
 
     assert package["evidence_ids"] == ["f2", "f1"]
     assert package["evidence_selection"]["strategy"] == "claim_evidence_ids"
+
+
+def test_soft_copy_claim_evidence_package_resolves_direct_doc_map_section() -> None:
+    package = _build_soft_copy_claim_evidence_package(
+        claim=_soft_copy_claim(evidence_ids=("section-checkout",)),
+        issue=RegenerationIssue(
+            rule_id="grounding",
+            affected_section="expert_comment",
+            message="Bad claim",
+            severity="error",
+        ),
+        artifacts=_current_artifacts(),
+        evidence_packs=_evidence_packs(),
+        doc_map={
+            "sections": [
+                {
+                    "id": "section-checkout",
+                    "title": "Checkout behavior",
+                    "summary": "Checkout friction remains material.",
+                    "pages": [3, 4],
+                }
+            ]
+        },
+        quarantined_evidence_ids=(),
+    )
+
+    assert package["evidence_ids"] == ["section-checkout"]
+    assert package["relevant_evidence"] == [
+        {
+            "pack_name": "doc_map",
+            "id": "section-checkout",
+            "title": "Checkout behavior",
+            "summary": "Checkout friction remains material.",
+            "pages": [3, 4],
+        }
+    ]
+    assert package["evidence_selection"]["strategy"] == "claim_evidence_ids"
+
+
+def test_soft_copy_claim_evidence_package_skips_quarantined_doc_map_section() -> None:
+    package = _build_soft_copy_claim_evidence_package(
+        claim=_soft_copy_claim(evidence_ids=("section-checkout",)),
+        issue=RegenerationIssue(
+            rule_id="grounding",
+            affected_section="expert_comment",
+            message="Bad claim",
+            severity="error",
+        ),
+        artifacts=_current_artifacts(),
+        evidence_packs={},
+        doc_map={
+            "sections": [
+                {
+                    "id": "section-checkout",
+                    "title": "Checkout behavior",
+                    "summary": "Checkout friction remains material.",
+                    "pages": [3, 4],
+                }
+            ]
+        },
+        quarantined_evidence_ids=("section-checkout",),
+    )
+
+    assert package["evidence_ids"] == []
+    assert package["evidence_selection"]["strategy"] == "abstain"
+
+
+def test_soft_copy_claim_evidence_hash_tracks_only_selected_canonical_content() -> None:
+    inputs = {
+        "claim": _soft_copy_claim(evidence_ids=("f1",)),
+        "issue": RegenerationIssue(
+            rule_id="grounding",
+            affected_section="expert_comment",
+            message="Bad claim",
+            severity="error",
+        ),
+        "artifacts": _current_artifacts(),
+        "quarantined_evidence_ids": (),
+    }
+    original = _build_soft_copy_claim_evidence_package(
+        **inputs,
+        evidence_packs={
+            "findings": [
+                {"id": "f1", "text": "Selected evidence.", "pages": [1, 2]},
+                {"id": "f2", "text": "Unselected evidence."},
+            ]
+        },
+    )
+    reordered = _build_soft_copy_claim_evidence_package(
+        **inputs,
+        evidence_packs={
+            "findings": [
+                {"text": "Unselected evidence.", "id": "f2"},
+                {"pages": [2, 1], "text": "Selected evidence.", "id": "f1"},
+            ]
+        },
+    )
+    selected_changed = _build_soft_copy_claim_evidence_package(
+        **inputs,
+        evidence_packs={
+            "findings": [
+                {
+                    "id": "f1",
+                    "text": "Corrected selected evidence.",
+                    "pages": [1, 2],
+                },
+                {"id": "f2", "text": "Unselected evidence."},
+            ]
+        },
+    )
+    unselected_changed = _build_soft_copy_claim_evidence_package(
+        **inputs,
+        evidence_packs={
+            "findings": [
+                {"id": "f1", "text": "Selected evidence.", "pages": [1, 2]},
+                {"id": "f2", "text": "Changed but unselected evidence."},
+            ]
+        },
+    )
+
+    assert (
+        original["evidence_selection"]["package_sha256"]
+        == reordered["evidence_selection"]["package_sha256"]
+    )
+    assert (
+        original["evidence_selection"]["package_sha256"]
+        != selected_changed["evidence_selection"]["package_sha256"]
+    )
+    assert (
+        original["evidence_selection"]["package_sha256"]
+        == unselected_changed["evidence_selection"]["package_sha256"]
+    )
+
+
+def test_regeneration_state_restores_only_valid_private_evidence_selections() -> None:
+    retained_selection = _build_soft_copy_claim_evidence_package(
+        claim=_soft_copy_claim(evidence_ids=("f1",)),
+        issue=RegenerationIssue(
+            rule_id="grounding",
+            affected_section="expert_comment",
+            message="Bad claim",
+            severity="error",
+        ),
+        artifacts=_current_artifacts(),
+        evidence_packs={"findings": [{"id": "f1", "text": "Evidence."}]},
+        quarantined_evidence_ids=(),
+    )["evidence_selection"]
+    mismatched_hash = {**retained_selection, "package_sha256": "a" * 64}
+    retained_key = f"expert_comment:{retained_selection['claim_id']}"
+    state = _build_regeneration_state(
+        safe_artifacts={
+            **_current_artifacts(),
+            "_repair_evidence_selection": {
+                retained_key: retained_selection,
+                f"stale:{retained_selection['claim_id']}": mismatched_hash,
+                "bad": {"arbitrary": "data"},
+            },
+        },
+        fallback_toc_bundle={
+            "toc_entries": [],
+            "toc_topics": [],
+            "toc_topics_expanded": [],
+        },
+        source_status={"not_available": False, "reason": ""},
+    )
+
+    assert state.soft_copy_evidence_selections == {retained_key: retained_selection}
 
 
 def test_soft_copy_claim_evidence_package_uses_parent_insight_before_fallback() -> None:
@@ -1404,6 +1572,18 @@ def test_regeneration_repairs_only_the_failed_expert_claim_and_retains_sibling_p
     evidence_packs["findings"]["findings"].append(
         {"id": "f3", "evidence": "Third supported evidence."}
     )
+    current_artifacts["_repair_evidence_selection"] = {
+        f"expert_comment:{original_claims[1].claim_id}": {
+            "schema_version": "1.0",
+            "claim_id": original_claims[1].claim_id,
+            "strategy": "claim_evidence_ids",
+            "direct_evidence_ids": ["f1"],
+            "parent_evidence_ids": [],
+            "quarantined_evidence_ids": [],
+            "selected_evidence_ids": ["f1"],
+            "package_sha256": "a" * 64,
+        }
+    }
 
     response = regenerate_artifacts(
         ArtifactRegenerationRequest(
@@ -1452,6 +1632,7 @@ def test_regeneration_repairs_only_the_failed_expert_claim_and_retains_sibling_p
     assert selection["strategy"] == "claim_evidence_ids"
     assert selection["selected_evidence_ids"] == ["f2"]
     assert len(selection["package_sha256"]) == 64
+    assert selection["package_sha256"] != "a" * 64
     claims = response.updated_artifacts["soft_copy_claim_provenance"]["claims"]
     by_id = {claim["claim_id"]: claim for claim in claims}
     assert (
@@ -1935,6 +2116,189 @@ def test_multi_claim_regeneration_repairs_supported_claim_and_abstains_unsupport
     assert claims[0].claim_id in provenance_ids
     assert claims[3].claim_id in provenance_ids
     assert claims[2].claim_id not in provenance_ids
+
+
+def test_multi_claim_repair_keeps_quarantine_scoped_to_its_failed_claim(
+    tmp_path,
+) -> None:
+    current_artifacts = _current_artifacts()
+    sentences = ["Bad first claim.", "Bad second claim."]
+    current_artifacts["expert_comment"] = " ".join(sentences)
+    claims = [
+        SoftCopyClaimProvenance(
+            schema_version="1.0",
+            artifact_family="expert_comment",
+            claim_id=f"soft_copy:expert_comment:quarantine:{index}",
+            text_hash=hashlib.sha256(sentence.encode()).hexdigest(),
+            classification="interpretive",
+            evidence_ids=(f"f{index}",),
+            source_spans=(),
+            producing_prompt_identity={
+                "namespace": "report_vs/artifacts/expert_comment"
+            },
+            generation_attempt=1,
+            regeneration_attempt=0,
+        )
+        for index, sentence in enumerate(sentences, start=1)
+    ]
+    current_artifacts["soft_copy_claim_provenance"]["claims"] = [
+        claim
+        for claim in current_artifacts["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] != "expert_comment"
+    ] + soft_copy_claim_provenance_to_payload(claims)["claims"]
+    evidence_packs = _evidence_packs()
+
+    prompt_client = _FakePromptClient()
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=2,
+            plan=RegenerationPlan(
+                mode="targeted",
+                targets=[
+                    RegenerationTarget(
+                        target_section="expert_comment",
+                        regenerate_steps=["expert_comment"],
+                        issues=[
+                            RegenerationIssue(
+                                rule_id="grounding",
+                                affected_section="expert_comment",
+                                message="Unsupported first claim.",
+                                severity="error",
+                                entity_id=claims[0].claim_id,
+                                evidence_ids=["f1"],
+                                excluded_evidence_ids=["f1"],
+                            ),
+                            RegenerationIssue(
+                                rule_id="grounding",
+                                affected_section="expert_comment",
+                                message="Unsupported second claim.",
+                                severity="error",
+                                entity_id=claims[1].claim_id,
+                                evidence_ids=["f2"],
+                            ),
+                        ],
+                    )
+                ],
+                unmappable_issues=[],
+                broad_retry_allowed=False,
+            ),
+            current_artifacts=current_artifacts,
+            doc_map=evidence_packs["doc_map"],
+            evidence_packs=evidence_packs,
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current_artifacts["source_status"],
+            categories=["Category"],
+        ),
+        openai_client=_MultiClaimScopedExpertOpenAIClient(),
+        prompt_client=prompt_client,
+    )
+
+    selections = response.updated_artifacts["_repair_evidence_selection"]
+    first = selections[f"expert_comment:{claims[0].claim_id}"]
+    second = selections[f"expert_comment:{claims[1].claim_id}"]
+    assert first["selected_evidence_ids"] == []
+    assert first["quarantined_evidence_ids"] == ["f1"]
+    assert second["selected_evidence_ids"] == ["f2"]
+    assert second["quarantined_evidence_ids"] == []
+    scoped_prompt = next(
+        call
+        for call in prompt_client.render_calls
+        if call["path"] == "report_vs/artifacts/regenerate/expert_comment/user.yaml"
+    )
+    assert (
+        json.loads(scoped_prompt["variables"]["grounding_package_json"])[
+            "quarantined_evidence_ids"
+        ]
+        == []
+    )
+    assert response.updated_artifacts["expert_comment"] == "Repaired second claim."
+
+
+def test_sequential_claim_repairs_preserve_prior_selection_provenance(tmp_path) -> None:
+    current_artifacts = _current_artifacts()
+    sentences = ["First bad claim.", "Second bad claim."]
+    current_artifacts["expert_comment"] = " ".join(sentences)
+    claims = [
+        SoftCopyClaimProvenance(
+            schema_version="1.0",
+            artifact_family="expert_comment",
+            claim_id=f"soft_copy:expert_comment:sequential:{index}",
+            text_hash=hashlib.sha256(sentence.encode()).hexdigest(),
+            classification="interpretive",
+            evidence_ids=(f"f{index}",),
+            source_spans=(),
+            producing_prompt_identity={
+                "namespace": "report_vs/artifacts/expert_comment"
+            },
+            generation_attempt=1,
+            regeneration_attempt=0,
+        )
+        for index, sentence in enumerate(sentences, start=1)
+    ]
+    current_artifacts["soft_copy_claim_provenance"]["claims"] = [
+        claim
+        for claim in current_artifacts["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] != "expert_comment"
+    ] + soft_copy_claim_provenance_to_payload(claims)["claims"]
+    evidence_packs = _evidence_packs()
+    evidence_packs["findings"]["findings"].append(
+        {"id": "f3", "evidence": "Third repair evidence."}
+    )
+    openai_client = _MultiClaimScopedExpertOpenAIClient()
+
+    def repair(artifacts: dict, claim: SoftCopyClaimProvenance, attempt: int):
+        return regenerate_artifacts(
+            ArtifactRegenerationRequest(
+                report_id="report-1",
+                report_name="report-1",
+                attempt_index=attempt,
+                plan=RegenerationPlan(
+                    mode="targeted",
+                    targets=[
+                        RegenerationTarget(
+                            target_section="expert_comment",
+                            regenerate_steps=["expert_comment"],
+                            issues=[
+                                RegenerationIssue(
+                                    rule_id="grounding",
+                                    affected_section="expert_comment",
+                                    message="Unsupported claim.",
+                                    severity="error",
+                                    entity_id=claim.claim_id,
+                                    evidence_ids=list(claim.evidence_ids),
+                                )
+                            ],
+                        )
+                    ],
+                    unmappable_issues=[],
+                    broad_retry_allowed=False,
+                ),
+                current_artifacts=artifacts,
+                doc_map=evidence_packs["doc_map"],
+                evidence_packs=evidence_packs,
+                settings=_settings(tmp_path),
+                ctx=_ctx(),
+                source_status=artifacts["source_status"],
+                categories=["Category"],
+            ),
+            openai_client=openai_client,
+            prompt_client=_FakePromptClient(),
+        )
+
+    first = repair(current_artifacts, claims[0], 1)
+    first_selection = first.updated_artifacts["_repair_evidence_selection"][
+        f"expert_comment:{claims[0].claim_id}"
+    ]
+    second = repair(first.updated_artifacts, claims[1], 2)
+
+    selections = second.updated_artifacts["_repair_evidence_selection"]
+    assert selections[f"expert_comment:{claims[0].claim_id}"] == first_selection
+    assert selections[f"expert_comment:{claims[1].claim_id}"][
+        "selected_evidence_ids"
+    ] == ["f2"]
 
 
 @pytest.mark.parametrize(
