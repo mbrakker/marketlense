@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import json
+import hashlib
 from copy import deepcopy
 from pathlib import Path
 
 import pytest
 
 from src.contracts.public_editorial_quality import PUBLIC_EDITORIAL_VALIDATOR_VERSION
+from src.contracts.soft_copy_claim_provenance import (
+    SoftCopyClaimProvenance,
+    soft_copy_claim_provenance_to_payload,
+)
 from src.generators.public_editorial_quality_generator import (
     _public_text_items,
     enumerate_public_editorial_items,
@@ -1061,6 +1066,50 @@ def test_missing_evidence_abstains_without_broad_regeneration() -> None:
     assert any(issue.repair_status == "abstained" for issue in report.issues)
     assert plan.mode == "skip"
     assert plan.targets == []
+
+
+def test_public_quality_failure_propagates_exact_soft_claim_to_targeted_plan() -> None:
+    sentences = ["Supported sibling.", "{{TODO}} unsupported claim.", "Final sibling."]
+    claims = [
+        SoftCopyClaimProvenance(
+            schema_version="1.0",
+            artifact_family="expert_comment",
+            claim_id=f"soft_copy:expert_comment:validator:{index}",
+            text_hash=hashlib.sha256(sentence.encode()).hexdigest(),
+            classification="interpretive",
+            evidence_ids=(f"f{index}",),
+            source_spans=({"page": index},),
+            producing_prompt_identity={
+                "namespace": "report_vs/artifacts/expert_comment"
+            },
+            generation_attempt=1,
+            regeneration_attempt=0,
+        )
+        for index, sentence in enumerate(sentences, start=1)
+    ]
+    artifacts = {
+        "expert_comment": " ".join(sentences),
+        "insights_final": [
+            {"evidence_id": f"f{index}", "evidence": f"Evidence {index}"}
+            for index in range(1, 4)
+        ],
+        "soft_copy_claim_provenance": soft_copy_claim_provenance_to_payload(claims),
+    }
+
+    report = evaluate_public_editorial_quality(
+        report_id="claim-routing", artifacts=artifacts
+    )
+    issues = validation_issues_from_public_editorial_quality(report)
+    plan = _build_regeneration_plan(
+        issues=issues, artifacts=artifacts, broad_retry_available=True
+    )
+
+    issue = next(item for item in issues if item.entity_id == claims[1].claim_id)
+    planned = plan.targets[0].issues[0]
+    assert issue.affected_section == "expert_comment"
+    assert planned.entity_id == claims[1].claim_id
+    assert planned.evidence_ids == ["f2"]
+    assert planned.pages == [2]
 
 
 def test_rule_waiver_requires_a_nonempty_reason() -> None:

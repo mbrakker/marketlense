@@ -14,6 +14,9 @@ from src.contracts.regeneration import (
     RegenerationPlan,
     RegenerationTarget,
 )
+from src.contracts.soft_copy_claim_provenance import (
+    soft_copy_claim_provenance_from_payload,
+)
 from src.contracts.validation import ValidationIssue
 from src.utils.errors import AppError
 
@@ -130,10 +133,31 @@ def _lookup_topic_grounding(
 def _issue_grounding(
     affected_section: str,
     artifacts: Dict[str, Any],
+    entity_id: str = "",
 ) -> tuple[List[str], List[int]]:
     section = str(affected_section or "").strip()
     if not section:
         return [], []
+    resolved_entity_id = str(entity_id or "").strip()
+    if resolved_entity_id:
+        try:
+            claims = soft_copy_claim_provenance_from_payload(
+                artifacts.get("soft_copy_claim_provenance")
+            )
+        except AppError:
+            claims = []
+        matching = [claim for claim in claims if claim.claim_id == resolved_entity_id]
+        if len(matching) == 1:
+            claim = matching[0]
+            claim_evidence_ids = list(claim.evidence_ids)
+            claim_pages = list(
+                dict.fromkeys(
+                    int(span["page"])
+                    for span in claim.source_spans
+                    if isinstance(span, dict) and isinstance(span.get("page"), int)
+                )
+            )
+            return claim_evidence_ids, claim_pages
     lower_section = section.lower()
     if (
         lower_section.startswith("topics")
@@ -218,8 +242,10 @@ def _normalize_regeneration_issue(
     issue: ValidationIssue,
     artifacts: Dict[str, Any],
 ) -> RegenerationIssue:
-    derived_evidence_ids, pages = _issue_grounding(issue.affected_section, artifacts)
-    evidence_ids = list(issue.evidence_ids) or derived_evidence_ids
+    derived_evidence_ids, pages = _issue_grounding(
+        issue.affected_section, artifacts, issue.entity_id
+    )
+    evidence_ids = derived_evidence_ids or list(issue.evidence_ids)
     excluded_evidence_ids = (
         list(evidence_ids) if _quarantines_failed_evidence(issue) else []
     )

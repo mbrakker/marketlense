@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import re
 from dataclasses import asdict
 from typing import Any, List, Sequence
@@ -11,6 +12,9 @@ from src.contracts.prompt_family_materialization import (
     PromptFamilyReuseRequest,
 )
 from src.contracts.protected_facts import ProtectedFactComparison
+from src.contracts.soft_copy_claim_provenance import (
+    soft_copy_claim_provenance_from_payload,
+)
 from src.contracts.schema_validation import SchemaValidateRequest
 from src.contracts.structured_output import StructuredOutputExecutionRequest
 from src.contracts.validation import ValidationIssue, ValidationRequest
@@ -90,9 +94,7 @@ def run_grounding_check(
     audit_payload = grounding_payload(request, artifacts)
     public_item_ids = _public_item_ids(audit_payload.get("public_factual_items"))
     prompt_vars = {
-        "report_json": json.dumps(
-            audit_payload, ensure_ascii=False
-        ),
+        "report_json": json.dumps(audit_payload, ensure_ascii=False),
         "evidence_json": json.dumps(list(evidence_texts), ensure_ascii=False),
     }
     prompt_bundle = prepare_prompt_bundle(
@@ -611,6 +613,12 @@ def _public_factual_items(
 ) -> List[dict]:
     """Material public claims with their exact retained evidence payloads."""
     items: List[dict] = []
+    try:
+        soft_copy_claims = soft_copy_claim_provenance_from_payload(
+            artifacts.get("soft_copy_claim_provenance")
+        )
+    except AppError:
+        soft_copy_claims = []
 
     def add(
         item_id: str,
@@ -631,6 +639,54 @@ def _public_factual_items(
                 }
             )
 
+    def add_soft_copy_sentences(
+        family: str,
+        section: str,
+        text: object,
+        fallback_evidence_ids: Sequence[str],
+        fallback_evidence_text: object,
+        evidence_by_id: dict[str, str],
+    ) -> None:
+        public_text = sanitize_citation_tokens(s(text))
+        sentences = [
+            sanitize_citation_tokens(sentence)
+            for sentence in re.split(r"(?<=[.!?])\s+", public_text)
+            if sanitize_citation_tokens(sentence)
+        ]
+        claims_by_hash: dict[str, list[Any]] = {}
+        for claim in soft_copy_claims:
+            if claim.artifact_family == family:
+                claims_by_hash.setdefault(claim.text_hash, []).append(claim)
+        matched = [
+            claims_by_hash.get(
+                hashlib.sha256(" ".join(sentence.split()).encode("utf-8")).hexdigest(),
+                [],
+            )
+            for sentence in sentences
+        ]
+        if sentences and all(len(values) == 1 for values in matched):
+            for sentence, values in zip(sentences, matched, strict=True):
+                claim = values[0]
+                add(
+                    claim.claim_id,
+                    section,
+                    sentence,
+                    claim.evidence_ids,
+                    "\n".join(
+                        evidence_by_id[evidence_id]
+                        for evidence_id in claim.evidence_ids
+                        if evidence_id in evidence_by_id
+                    ),
+                )
+            return
+        add(
+            family if family != "summary" else f"summary:{section}",
+            section,
+            text,
+            fallback_evidence_ids,
+            fallback_evidence_text,
+        )
+
     summary_evidence = [
         entry
         for entry in (
@@ -642,13 +698,18 @@ def _public_factual_items(
     ]
     evidence_ids = [s(entry.get("evidence_id")) for entry in summary_evidence]
     evidence_text = "\n".join(s(entry.get("evidence")) for entry in summary_evidence)
+    summary_evidence_by_id = {
+        s(entry.get("evidence_id")): s(entry.get("evidence"))
+        for entry in summary_evidence
+    }
     for field_name in ("tldr", "card_tldr_compact", "executive_summary"):
-        add(
-            f"summary:{field_name}",
+        add_soft_copy_sentences(
+            "summary",
             field_name,
             summary.get(field_name),
             evidence_ids,
             evidence_text,
+            summary_evidence_by_id,
         )
     insight_evidence = {
         s(insight.get("evidence_id")): s(insight.get("evidence"))
@@ -678,12 +739,13 @@ def _public_factual_items(
                 insight_evidence.get(evidence_id, ""),
             )
     for family in ("expert_comment", "linkedin_post"):
-        add(
+        add_soft_copy_sentences(
             family,
             family,
             artifacts.get(family),
             list(insight_evidence),
             "\n".join(insight_evidence.values()),
+            insight_evidence,
         )
     add("metadata:title", "metadata.title", report_title)
     add("metadata:publisher", "metadata.publisher", publisher)

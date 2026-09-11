@@ -280,12 +280,17 @@ passing candidate promotes the artifact and its matching validation report
 together, after every required gate has passed.
 
 Candidate provenance is claim-specific for soft public copy and family-specific
-otherwise. An isolated Expert View or LinkedIn sentence finding (and a clearly
-named summary-field sentence finding) preserves sibling sentence bytes and
-their retained provenance, then records the prepared repair prompt identity
-only on the replacement claim. Insufficient scoped support deletes the failed
-claim rather than generating substitute prose. Ambiguous or family-wide
-findings use the existing family repair. Each regenerated family records the prepared
+otherwise. Every grounding or public-editorial finding that exactly matches a
+retained Expert View, LinkedIn, or named-summary sentence carries that claim ID
+into the regeneration plan, which derives only that claim's evidence IDs and
+source pages. A bounded set of distinct, non-overlapping claim IDs may repair
+in one pass: replacement or abstention spans are applied right-to-left, so
+untouched public bytes, order, and provenance are retained. Insufficient
+scoped support deletes only that failed claim rather than generating substitute
+prose. Artifact assembly then fails closed unless the final soft-copy family
+has an exact complete provenance cover with no stale claims. Ambiguous,
+conflicting, family-wide, or incoherent findings use the existing family
+repair. Each regenerated family records the prepared
 `report_vs/artifacts/regenerate/...` prompt identity that produced its
 replacement, including content hash, dependency manifest, execution identity,
 and model-policy identity. A checkpoint with stale or incomplete replacement

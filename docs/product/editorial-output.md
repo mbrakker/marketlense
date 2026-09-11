@@ -41,8 +41,11 @@ only that claim; a clearly named summary field follows the same path. Valid
 sibling sentences are reconstructed byte-for-byte with their original
 provenance, while only replacement prose receives new attempt and prompt
 provenance. If the scoped evidence is insufficient, that sentence is removed
-instead. Family-wide regeneration remains the fallback for ambiguous,
-family-wide, or incoherent failures.
+instead. A bounded set of independently attributable failed sentences may be
+repaired in one targeted pass; reconstruction applies their original spans
+right-to-left so every unaffected sibling remains byte-identical. Family-wide
+regeneration remains the fallback for ambiguous, family-wide, or incoherent
+failures.
 This internal metadata stays in retained artifacts and checkpoints; it is not
 part of the report payload or WordPress projection.
 

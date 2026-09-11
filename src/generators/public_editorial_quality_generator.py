@@ -8,6 +8,7 @@ regeneration orchestrator can route without rewriting passing artifacts.
 from __future__ import annotations
 
 import json
+import hashlib
 import re
 from collections import Counter
 from collections.abc import Mapping
@@ -23,9 +24,13 @@ from src.contracts.public_editorial_quality import (
     PublicEditorialQualityMeasurement,
     PublicEditorialQualityReport,
 )
+from src.contracts.soft_copy_claim_provenance import (
+    soft_copy_claim_provenance_from_payload,
+)
 from src.contracts.validation import ValidationIssue, ValidationReport
 from src.services.render_service import _sanitize_public_prose
 from src.utils.numeric_display import incomplete_source_numeric_displays
+from src.utils.errors import AppError
 
 BLOCKING_RULE_IDS = {
     "public_editorial_quality.unsupported_numeric_claim",
@@ -736,7 +741,16 @@ def _public_text_items(artifacts: dict[str, Any]) -> Iterable[dict[str, Any]]:
     for field_name in ("tldr", "card_tldr_compact", "executive_summary"):
         value = _sanitize_public_prose(summary.get(field_name))
         if value:
-            if summary_evidence:
+            claim_items = _retained_soft_copy_sentence_items(
+                artifacts=artifacts,
+                artifact="summary",
+                field=field_name,
+                text=value,
+                evidence_items=summary_evidence,
+            )
+            if claim_items:
+                yield from claim_items
+            elif summary_evidence:
                 for evidence_id, evidence_text in summary_evidence:
                     yield _item(
                         "summary",
@@ -752,7 +766,16 @@ def _public_text_items(artifacts: dict[str, Any]) -> Iterable[dict[str, Any]]:
     for field_name in ("expert_comment", "linkedin_post"):
         value = _sanitize_public_prose(artifacts.get(field_name))
         if value:
-            if downstream_evidence:
+            claim_items = _retained_soft_copy_sentence_items(
+                artifacts=artifacts,
+                artifact=field_name,
+                field=field_name,
+                text=value,
+                evidence_items=downstream_evidence,
+            )
+            if claim_items:
+                yield from claim_items
+            elif downstream_evidence:
                 for evidence_id, evidence_text in downstream_evidence:
                     yield _item(
                         field_name,
@@ -764,6 +787,58 @@ def _public_text_items(artifacts: dict[str, Any]) -> Iterable[dict[str, Any]]:
                     )
             else:
                 yield _item(field_name, field_name, value, [], field_name)
+
+
+def _retained_soft_copy_sentence_items(
+    *,
+    artifacts: dict[str, Any],
+    artifact: str,
+    field: str,
+    text: str,
+    evidence_items: list[tuple[str, str]],
+) -> list[dict[str, Any]]:
+    """Expose sentence claims only when retained provenance proves each match."""
+
+    try:
+        claims = soft_copy_claim_provenance_from_payload(
+            artifacts.get("soft_copy_claim_provenance")
+        )
+    except AppError:
+        return []
+    by_hash: dict[str, list[Any]] = {}
+    for claim in claims:
+        if claim.artifact_family == artifact:
+            by_hash.setdefault(claim.text_hash, []).append(claim)
+    sentences = [
+        " ".join(sentence.split())
+        for sentence in re.split(r"(?<=[.!?])\s+", text)
+        if " ".join(sentence.split())
+    ]
+    matched = [
+        by_hash.get(hashlib.sha256(sentence.encode("utf-8")).hexdigest(), [])
+        for sentence in sentences
+    ]
+    if not sentences or any(len(items) != 1 for items in matched):
+        return []
+    evidence_by_id = {evidence_id: evidence for evidence_id, evidence in evidence_items}
+    items: list[dict[str, Any]] = []
+    for sentence, claim_items in zip(sentences, matched, strict=True):
+        claim = claim_items[0]
+        item = _item(
+            artifact,
+            field,
+            sentence,
+            list(claim.evidence_ids),
+            artifact,
+            evidence_text=" ".join(
+                evidence_by_id[evidence_id]
+                for evidence_id in claim.evidence_ids
+                if evidence_id in evidence_by_id
+            ),
+        )
+        item["public_item_id"] = claim.claim_id
+        items.append(item)
+    return items
 
 
 def _public_inventory_text_items(artifacts: dict[str, Any]) -> Iterable[dict[str, Any]]:

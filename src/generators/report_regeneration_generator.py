@@ -83,9 +83,7 @@ class _RegenerationState:
     soft_copy_claim_bindings: Dict[str, List[Dict[str, Any]]] = field(
         default_factory=dict
     )
-    soft_copy_prompt_identities: Dict[str, Dict[str, Any]] = field(
-        default_factory=dict
-    )
+    soft_copy_prompt_identities: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     soft_copy_generation_attempts: Dict[str, int] = field(default_factory=dict)
     existing_soft_copy_claim_provenance: Dict[str, Any] = field(default_factory=dict)
     replaced_soft_copy_families: List[str] = field(default_factory=list)
@@ -125,6 +123,7 @@ class _SoftCopyClaimRepair:
     text: str
     start: int
     end: int
+    issue: RegenerationIssue
 
 
 @dataclass(frozen=True)
@@ -967,7 +966,12 @@ def _record_soft_copy_claim_bindings(
         execution.state.soft_copy_repair_texts.setdefault(artifact_family, []).append(
             repaired_text
         )
-    execution.state.soft_copy_claim_bindings[artifact_family] = declared_bindings
+    if repaired_claim is not None:
+        execution.state.soft_copy_claim_bindings.setdefault(artifact_family, []).extend(
+            declared_bindings
+        )
+    else:
+        execution.state.soft_copy_claim_bindings[artifact_family] = declared_bindings
     execution.state.soft_copy_prompt_identities[artifact_family] = dict(
         execution.state.prompt_identities.get(namespace) or {}
     )
@@ -1001,15 +1005,24 @@ def _soft_copy_sentence_spans(text: str) -> List[tuple[int, int, str]]:
     return spans
 
 
-def _isolated_soft_copy_claim_repair(
+MAX_SOFT_COPY_CLAIM_REPAIRS = 4
+
+
+def _soft_copy_claim_repairs(
     execution: _RegenerationHandlerExecution,
     *,
     artifact_family: str,
     text: str,
-) -> _SoftCopyClaimRepair | None:
-    """Resolve one unambiguous failed claim; otherwise retain family repair."""
+    issues: List[RegenerationIssue] | None = None,
+) -> List[_SoftCopyClaimRepair] | None:
+    """Resolve every distinct, unambiguous failed sentence in one soft family."""
 
-    if len(execution.target.issues) != 1 or not text:
+    target_issues = issues if issues is not None else execution.target.issues
+    if (
+        not target_issues
+        or len(target_issues) > MAX_SOFT_COPY_CLAIM_REPAIRS
+        or not text
+    ):
         return None
     try:
         claims = soft_copy_claim_provenance_from_payload(
@@ -1017,56 +1030,111 @@ def _isolated_soft_copy_claim_repair(
         )
     except AppError:
         return None
-    claims_by_hash = {
-        claim.text_hash: claim
-        for claim in claims
-        if claim.artifact_family == artifact_family
-    }
+    claims_by_hash: Dict[str, List[SoftCopyClaimProvenance]] = {}
+    for claim in claims:
+        if claim.artifact_family == artifact_family:
+            claims_by_hash.setdefault(claim.text_hash, []).append(claim)
     candidates: List[_SoftCopyClaimRepair] = []
     for start, end, sentence in _soft_copy_sentence_spans(text):
-        claim = claims_by_hash.get(
-            hashlib.sha256(_normalized_soft_copy_text(sentence).encode("utf-8")).hexdigest()
+        matched_claims = claims_by_hash.get(
+            hashlib.sha256(
+                _normalized_soft_copy_text(sentence).encode("utf-8")
+            ).hexdigest()
         )
-        if claim is not None:
-            candidates.append(
-                _SoftCopyClaimRepair(
-                    artifact_family=artifact_family,
-                    claim=claim,
-                    text=sentence,
-                    start=start,
-                    end=end,
-                )
+        if matched_claims is None or len(matched_claims) != 1:
+            return None
+        candidates.append(
+            _SoftCopyClaimRepair(
+                artifact_family=artifact_family,
+                claim=matched_claims[0],
+                text=sentence,
+                start=start,
+                end=end,
+                issue=target_issues[0],
             )
+        )
     if len(candidates) < 2:
         return None
-    issue = execution.target.issues[0]
-    entity_id = str(issue.entity_id or "").strip()
-    if entity_id:
-        matched = [
-            candidate
-            for candidate in candidates
-            if entity_id in {candidate.claim.claim_id, candidate.claim.text_hash}
-        ]
-    else:
-        issue_evidence_ids = {
-            str(evidence_id).strip().casefold()
-            for evidence_id in issue.evidence_ids
-            if str(evidence_id).strip()
-        }
-        matched = [
-            candidate
-            for candidate in candidates
-            if issue_evidence_ids
-            and issue_evidence_ids.intersection(
-                evidence_id.casefold() for evidence_id in candidate.claim.evidence_ids
+
+    def uniquely_matched(
+        values: List[_SoftCopyClaimRepair],
+    ) -> _SoftCopyClaimRepair | None:
+        return values[0] if len(values) == 1 else None
+
+    resolved: List[_SoftCopyClaimRepair] = []
+    for issue in target_issues:
+        entity_id = str(issue.entity_id or "").strip()
+        matched = (
+            uniquely_matched(
+                [
+                    candidate
+                    for candidate in candidates
+                    if entity_id == candidate.claim.claim_id
+                ]
             )
-        ]
-        if not matched:
+            if entity_id
+            else None
+        )
+        if matched is None and entity_id:
+            matched = uniquely_matched(
+                [
+                    candidate
+                    for candidate in candidates
+                    if entity_id == candidate.claim.text_hash
+                ]
+            )
+        if matched is None:
+            attributed = str(issue.affected_section or "").split(":", 1)
+            attributed_text = (
+                _normalized_soft_copy_text(attributed[1])
+                if len(attributed) == 2
+                else ""
+            )
             message = str(issue.message or "")
-            matched = [
-                candidate for candidate in candidates if candidate.text in message
-            ]
-    return matched[0] if len(matched) == 1 else None
+            matched = uniquely_matched(
+                [
+                    candidate
+                    for candidate in candidates
+                    if (
+                        attributed_text
+                        and attributed_text
+                        == _normalized_soft_copy_text(candidate.text)
+                    )
+                    or candidate.text in message
+                ]
+            )
+        if matched is None:
+            issue_evidence_ids = {
+                str(evidence_id).strip().casefold()
+                for evidence_id in issue.evidence_ids
+                if str(evidence_id).strip()
+            }
+            matched = uniquely_matched(
+                [
+                    candidate
+                    for candidate in candidates
+                    if issue_evidence_ids
+                    and issue_evidence_ids.intersection(
+                        evidence_id.casefold()
+                        for evidence_id in candidate.claim.evidence_ids
+                    )
+                ]
+            )
+        if matched is None or any(
+            prior.claim.claim_id == matched.claim.claim_id for prior in resolved
+        ):
+            return None
+        resolved.append(
+            _SoftCopyClaimRepair(
+                artifact_family=matched.artifact_family,
+                claim=matched.claim,
+                text=matched.text,
+                start=matched.start,
+                end=matched.end,
+                issue=issue,
+            )
+        )
+    return resolved
 
 
 def _claim_has_repair_support(
@@ -1075,7 +1143,7 @@ def _claim_has_repair_support(
 ) -> bool:
     issue_evidence_ids = {
         str(evidence_id).strip().casefold()
-        for issue in execution.target.issues
+        for issue in [repair.issue]
         for evidence_id in issue.evidence_ids
         if str(evidence_id).strip()
     }
@@ -1092,17 +1160,17 @@ def _claim_has_repair_support(
 def _replace_soft_copy_claim(
     text: str, repair: _SoftCopyClaimRepair, replacement: str
 ) -> str:
-    return f"{text[:repair.start]}{replacement.strip()}{text[repair.end:]}"
+    return f"{text[: repair.start]}{replacement.strip()}{text[repair.end :]}"
 
 
 def _remove_soft_copy_claim(text: str, repair: _SoftCopyClaimRepair) -> str:
     """Delete only the failed span and one adjacent separator when needed."""
 
     if repair.end < len(text):
-        separator = re.match(r"\s+", text[repair.end:])
+        separator = re.match(r"\s+", text[repair.end :])
         end = repair.end + (len(separator.group(0)) if separator else 0)
-        return f"{text[:repair.start]}{text[end:]}"
-    prefix = text[:repair.start]
+        return f"{text[: repair.start]}{text[end:]}"
+    prefix = text[: repair.start]
     return prefix.rstrip()
 
 
@@ -1114,45 +1182,120 @@ def _mark_soft_copy_claim_removed(
     ).append(repair.claim.claim_id)
 
 
-def _summary_claim_repair(
-    execution: _RegenerationHandlerExecution,
-) -> tuple[str, _SoftCopyClaimRepair] | None:
-    """Scope summary repair only when the validator names one public field."""
+def _reconstruct_soft_copy_claims(
+    text: str,
+    repairs: List[_SoftCopyClaimRepair],
+    replacements: Dict[str, str | None],
+) -> str:
+    """Apply original offsets right-to-left, preserving every untouched byte."""
 
-    if len(execution.target.issues) != 1:
-        return None
-    affected = str(execution.target.issues[0].affected_section or "").casefold()
+    reconstructed = text
+    for repair in sorted(repairs, key=lambda item: item.start, reverse=True):
+        replacement = replacements.get(repair.claim.claim_id)
+        reconstructed = (
+            _remove_soft_copy_claim(reconstructed, repair)
+            if replacement is None
+            else _replace_soft_copy_claim(reconstructed, repair, replacement)
+        )
+    return reconstructed
+
+
+def _summary_claim_repairs(
+    execution: _RegenerationHandlerExecution,
+) -> Dict[str, List[_SoftCopyClaimRepair]] | None:
+    """Resolve all named summary-field claims, or retain family repair semantics."""
+
     fields = ("tldr", "card_tldr_compact", "executive_summary")
-    field = next(
-        (
-            candidate
-            for candidate in fields
-            if affected in {candidate, f"summary.{candidate}"}
-        ),
-        "",
-    )
-    if not field:
-        return None
-    repair = _isolated_soft_copy_claim_repair(
-        execution,
-        artifact_family="summary",
-        text=_s(execution.state.summary.get(field)),
-    )
-    return (field, repair) if repair is not None else None
+    grouped: Dict[str, List[RegenerationIssue]] = {}
+    for issue in execution.target.issues:
+        affected = str(issue.affected_section or "").casefold()
+        field = next(
+            (
+                candidate
+                for candidate in fields
+                if affected in {candidate, f"summary.{candidate}"}
+            ),
+            "",
+        )
+        if not field:
+            return None
+        grouped.setdefault(field, []).append(issue)
+    resolved: Dict[str, List[_SoftCopyClaimRepair]] = {}
+    claim_ids: set[str] = set()
+    for field, issues in grouped.items():
+        repairs = _soft_copy_claim_repairs(
+            execution,
+            artifact_family="summary",
+            text=_s(execution.state.summary.get(field)),
+            issues=issues,
+        )
+        if repairs is None or any(
+            repair.claim.claim_id in claim_ids for repair in repairs
+        ):
+            return None
+        claim_ids.update(repair.claim.claim_id for repair in repairs)
+        resolved[field] = repairs
+    return resolved
 
 
 def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> None:
     namespace = execution.handler.prompt_namespaces[0]
-    scoped_repair = _summary_claim_repair(execution)
-    if scoped_repair is not None and not _claim_has_repair_support(
-        execution, scoped_repair[1]
-    ):
-        field, repair = scoped_repair
-        execution.state.summary[field] = _remove_soft_copy_claim(
-            _s(execution.state.summary.get(field)), repair
-        )
-        _mark_soft_copy_claim_removed(execution, repair)
+    scoped_repairs = _summary_claim_repairs(execution)
+    if scoped_repairs is not None:
+        for field, repairs in scoped_repairs.items():
+            replacements: Dict[str, str | None] = {}
+            for repair in repairs:
+                if not _claim_has_repair_support(execution, repair):
+                    replacements[repair.claim.claim_id] = None
+                    _mark_soft_copy_claim_removed(execution, repair)
+                    continue
+                result = _render_regeneration_model(
+                    execution=execution,
+                    namespace=namespace,
+                    ctx=execution.target_ctx,
+                    variables={
+                        **execution.runtime.base_vars,
+                        "attempt_index": execution.runtime.request.attempt_index,
+                        "target_section": execution.target.target_section,
+                        "current_section_json": _dump_json(execution.state.summary),
+                        "claim_repair_scope_json": _dump_json(
+                            {
+                                "mode": "claim",
+                                "field": field,
+                                "failed_claim": repair.text,
+                                "preserve_sibling_claims": True,
+                            }
+                        ),
+                        "failure_reasons_json": _issues_json([repair.issue]),
+                        "fix_checklist_json": _fix_checklist_json(execution.target),
+                        "grounding_package_json": _dump_json(
+                            execution.grounding_package
+                        ),
+                        "editorial_plan_json": _dump_json(
+                            execution.state.editorial_plan
+                        ),
+                    },
+                )
+                repaired_summary = result.get("summary")
+                repaired_text = (
+                    _s(repaired_summary.get(field))
+                    if isinstance(repaired_summary, dict)
+                    else ""
+                )
+                _record_soft_copy_claim_bindings(
+                    execution,
+                    artifact_family="summary",
+                    namespace=namespace,
+                    result=result,
+                    repaired_claim=repair,
+                    repaired_text=repaired_text,
+                )
+                replacements[repair.claim.claim_id] = repaired_text
+            execution.state.summary[field] = _reconstruct_soft_copy_claims(
+                _s(execution.state.summary.get(field)), repairs, replacements
+            )
         execution.state.regenerated_sections.append("summary")
+        execution.state.prompt_namespaces.append(namespace)
         return
     result = _render_regeneration_model(
         execution=execution,
@@ -1163,16 +1306,7 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
             "attempt_index": execution.runtime.request.attempt_index,
             "target_section": execution.target.target_section,
             "current_section_json": _dump_json(execution.state.summary),
-            "claim_repair_scope_json": _dump_json(
-                {
-                    "mode": "claim",
-                    "field": scoped_repair[0],
-                    "failed_claim": scoped_repair[1].text,
-                    "preserve_sibling_claims": True,
-                }
-                if scoped_repair is not None
-                else {"mode": "family"}
-            ),
+            "claim_repair_scope_json": _dump_json({"mode": "family"}),
             "failure_reasons_json": _issues_json(execution.target.issues),
             "fix_checklist_json": _fix_checklist_json(execution.target),
             "grounding_package_json": _dump_json(execution.grounding_package),
@@ -1184,26 +1318,8 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
         artifact_family="summary",
         namespace=namespace,
         result=result,
-        repaired_claim=scoped_repair[1] if scoped_repair is not None else None,
-        repaired_text=(
-            _s((result.get("summary") or {}).get(scoped_repair[0]))
-            if scoped_repair is not None and isinstance(result.get("summary"), dict)
-            else ""
-        ),
     )
-    if scoped_repair is not None:
-        field, repair = scoped_repair
-        repaired_summary = result.get("summary")
-        repaired_text = (
-            _s(repaired_summary.get(field))
-            if isinstance(repaired_summary, dict)
-            else ""
-        )
-        execution.state.summary[field] = _replace_soft_copy_claim(
-            _s(execution.state.summary.get(field)), repair, repaired_text
-        )
-    else:
-        execution.state.summary = normalize_artifact_summary(result.get("summary"))
+    execution.state.summary = normalize_artifact_summary(result.get("summary"))
     execution.state.regenerated_sections.append("summary")
     execution.state.prompt_namespaces.append(namespace)
 
@@ -1372,19 +1488,79 @@ def _handle_expert_comment_regeneration(
     execution: _RegenerationHandlerExecution,
 ) -> None:
     _normalize_state_evidence_ids(execution)
-    claim_repair = _isolated_soft_copy_claim_repair(
+    claim_repairs = _soft_copy_claim_repairs(
         execution,
         artifact_family="expert_comment",
         text=execution.state.expert_comment,
     )
-    if claim_repair is not None and not _claim_has_repair_support(
-        execution, claim_repair
-    ):
-        execution.state.expert_comment = _remove_soft_copy_claim(
-            execution.state.expert_comment, claim_repair
+    namespace = execution.handler.prompt_namespaces[0]
+    if claim_repairs is not None:
+        replacements: Dict[str, str | None] = {}
+        if execution.runtime.request.attempt_index >= 3 and any(
+            issue.rule_id == "grounding" for issue in execution.target.issues
+        ):
+            for repair in claim_repairs:
+                replacements[repair.claim.claim_id] = None
+                _mark_soft_copy_claim_removed(execution, repair)
+        else:
+            expert_synthesis_context = _exclude_quarantined_expert_context(
+                build_expert_synthesis_context(
+                    editorial_plan=execution.state.editorial_plan,
+                    insights_final=execution.state.insights_final,
+                    doc_map=execution.runtime.safe_doc_map,
+                    evidence_packs=execution.runtime.safe_evidence,
+                ),
+                set(execution.grounding_package.get("quarantined_evidence_ids") or []),
+            )
+            for repair in claim_repairs:
+                if not _claim_has_repair_support(execution, repair):
+                    replacements[repair.claim.claim_id] = None
+                    _mark_soft_copy_claim_removed(execution, repair)
+                    continue
+                result = _render_regeneration_model(
+                    execution=execution,
+                    namespace=namespace,
+                    ctx=execution.target_ctx,
+                    variables={
+                        "attempt_index": execution.runtime.request.attempt_index,
+                        "target_section": execution.target.target_section,
+                        "editorial_plan_json": _dump_json(
+                            execution.state.editorial_plan
+                        ),
+                        "expert_synthesis_context_json": _dump_json(
+                            expert_synthesis_context
+                        ),
+                        "expert_domain": execution.runtime.expert_domain,
+                        "current_section_text": repair.text,
+                        "claim_repair_scope_json": _dump_json(
+                            {
+                                "mode": "claim",
+                                "failed_claim": repair.text,
+                                "preserve_sibling_claims": True,
+                            }
+                        ),
+                        "failure_reasons_json": _issues_json([repair.issue]),
+                        "fix_checklist_json": _fix_checklist_json(execution.target),
+                        "grounding_package_json": _dump_json(
+                            execution.grounding_package
+                        ),
+                    },
+                )
+                repaired_text = _s(result.get("expert_comment"))
+                _record_soft_copy_claim_bindings(
+                    execution,
+                    artifact_family="expert_comment",
+                    namespace=namespace,
+                    result=result,
+                    repaired_claim=repair,
+                    repaired_text=repaired_text,
+                )
+                replacements[repair.claim.claim_id] = repaired_text
+        execution.state.expert_comment = _reconstruct_soft_copy_claims(
+            execution.state.expert_comment, claim_repairs, replacements
         )
-        _mark_soft_copy_claim_removed(execution, claim_repair)
         execution.state.regenerated_sections.append("expert_comment")
+        execution.state.prompt_namespaces.append(namespace)
         return
     if execution.runtime.request.attempt_index >= 3 and any(
         issue.rule_id == "grounding" for issue in execution.target.issues
@@ -1394,7 +1570,6 @@ def _handle_expert_comment_regeneration(
         execution.state.expert_comment = ""
         execution.state.regenerated_sections.append("expert_comment")
         return
-    namespace = execution.handler.prompt_namespaces[0]
     expert_synthesis_context = build_expert_synthesis_context(
         editorial_plan=execution.state.editorial_plan,
         insights_final=execution.state.insights_final,
@@ -1415,20 +1590,8 @@ def _handle_expert_comment_regeneration(
             "editorial_plan_json": _dump_json(execution.state.editorial_plan),
             "expert_synthesis_context_json": _dump_json(expert_synthesis_context),
             "expert_domain": execution.runtime.expert_domain,
-            "current_section_text": (
-                claim_repair.text
-                if claim_repair is not None
-                else execution.state.expert_comment
-            ),
-            "claim_repair_scope_json": _dump_json(
-                {
-                    "mode": "claim",
-                    "failed_claim": claim_repair.text,
-                    "preserve_sibling_claims": True,
-                }
-                if claim_repair is not None
-                else {"mode": "family"}
-            ),
+            "current_section_text": execution.state.expert_comment,
+            "claim_repair_scope_json": _dump_json({"mode": "family"}),
             "failure_reasons_json": _issues_json(execution.target.issues),
             "fix_checklist_json": _fix_checklist_json(execution.target),
             "grounding_package_json": _dump_json(execution.grounding_package),
@@ -1439,17 +1602,9 @@ def _handle_expert_comment_regeneration(
         artifact_family="expert_comment",
         namespace=namespace,
         result=result,
-        repaired_claim=claim_repair,
-        repaired_text=_s(result.get("expert_comment")),
     )
     regenerated_text = _s(result.get("expert_comment"))
-    execution.state.expert_comment = (
-        _replace_soft_copy_claim(
-            execution.state.expert_comment, claim_repair, regenerated_text
-        )
-        if claim_repair is not None
-        else regenerated_text
-    )
+    execution.state.expert_comment = regenerated_text
     execution.state.regenerated_sections.append("expert_comment")
     execution.state.prompt_namespaces.append(namespace)
 
@@ -1487,21 +1642,61 @@ def _handle_linkedin_post_regeneration(
     execution: _RegenerationHandlerExecution,
 ) -> None:
     _normalize_state_evidence_ids(execution)
-    claim_repair = _isolated_soft_copy_claim_repair(
+    claim_repairs = _soft_copy_claim_repairs(
         execution,
         artifact_family="linkedin_post",
         text=execution.state.linkedin_post,
     )
-    if claim_repair is not None and not _claim_has_repair_support(
-        execution, claim_repair
-    ):
-        execution.state.linkedin_post = _remove_soft_copy_claim(
-            execution.state.linkedin_post, claim_repair
-        )
-        _mark_soft_copy_claim_removed(execution, claim_repair)
-        execution.state.regenerated_sections.append("linkedin_post")
-        return
     namespace = execution.handler.prompt_namespaces[0]
+    if claim_repairs is not None:
+        replacements: Dict[str, str | None] = {}
+        for repair in claim_repairs:
+            if not _claim_has_repair_support(execution, repair):
+                replacements[repair.claim.claim_id] = None
+                _mark_soft_copy_claim_removed(execution, repair)
+                continue
+            result = _render_regeneration_model(
+                execution=execution,
+                namespace=namespace,
+                ctx=execution.target_ctx,
+                variables={
+                    "attempt_index": execution.runtime.request.attempt_index,
+                    "target_section": execution.target.target_section,
+                    "editorial_plan_json": _dump_json(execution.state.editorial_plan),
+                    "report_identity_json": _dump_json(
+                        _public_report_identity(execution.runtime.safe_doc_map)
+                    ),
+                    "current_section_text": repair.text,
+                    "claim_repair_scope_json": _dump_json(
+                        {
+                            "mode": "claim",
+                            "failed_claim": repair.text,
+                            "preserve_sibling_claims": True,
+                        }
+                    ),
+                    "failure_reasons_json": _issues_json([repair.issue]),
+                    "fix_checklist_json": _fix_checklist_json(execution.target),
+                    "grounding_package_json": _dump_json(execution.grounding_package),
+                },
+            )
+            repaired_text = strip_linkedin_inline_reference_ids(
+                _s(result.get("linkedin_post"))
+            )
+            _record_soft_copy_claim_bindings(
+                execution,
+                artifact_family="linkedin_post",
+                namespace=namespace,
+                result=result,
+                repaired_claim=repair,
+                repaired_text=repaired_text,
+            )
+            replacements[repair.claim.claim_id] = repaired_text
+        execution.state.linkedin_post = _reconstruct_soft_copy_claims(
+            execution.state.linkedin_post, claim_repairs, replacements
+        )
+        execution.state.regenerated_sections.append("linkedin_post")
+        execution.state.prompt_namespaces.append(namespace)
+        return
     result = _render_regeneration_model(
         execution=execution,
         namespace=namespace,
@@ -1513,20 +1708,8 @@ def _handle_linkedin_post_regeneration(
             "report_identity_json": _dump_json(
                 _public_report_identity(execution.runtime.safe_doc_map)
             ),
-            "current_section_text": (
-                claim_repair.text
-                if claim_repair is not None
-                else execution.state.linkedin_post
-            ),
-            "claim_repair_scope_json": _dump_json(
-                {
-                    "mode": "claim",
-                    "failed_claim": claim_repair.text,
-                    "preserve_sibling_claims": True,
-                }
-                if claim_repair is not None
-                else {"mode": "family"}
-            ),
+            "current_section_text": execution.state.linkedin_post,
+            "claim_repair_scope_json": _dump_json({"mode": "family"}),
             "failure_reasons_json": _issues_json(execution.target.issues),
             "fix_checklist_json": _fix_checklist_json(execution.target),
             "grounding_package_json": _dump_json(execution.grounding_package),
@@ -1537,19 +1720,11 @@ def _handle_linkedin_post_regeneration(
         artifact_family="linkedin_post",
         namespace=namespace,
         result=result,
-        repaired_claim=claim_repair,
-        repaired_text=_s(result.get("linkedin_post")),
     )
     regenerated_text = strip_linkedin_inline_reference_ids(
         _s(result.get("linkedin_post"))
     )
-    execution.state.linkedin_post = (
-        _replace_soft_copy_claim(
-            execution.state.linkedin_post, claim_repair, regenerated_text
-        )
-        if claim_repair is not None
-        else regenerated_text
-    )
+    execution.state.linkedin_post = regenerated_text
     execution.state.regenerated_sections.append("linkedin_post")
     execution.state.prompt_namespaces.append(namespace)
 

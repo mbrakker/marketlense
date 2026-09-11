@@ -354,9 +354,7 @@ def _soft_copy_claim_provenance_payload(
     replaced = {str(family).strip() for family in replaced_families}
     replaced_ids = {
         str(family).strip(): {
-            str(claim_id).strip()
-            for claim_id in claim_ids
-            if str(claim_id).strip()
+            str(claim_id).strip() for claim_id in claim_ids if str(claim_id).strip()
         }
         for family, claim_ids in replaced_claim_ids.items()
         if isinstance(claim_ids, list)
@@ -375,8 +373,6 @@ def _soft_copy_claim_provenance_payload(
     for family, public_output in public_output_by_family.items():
         text = soft_copy_public_text(family, public_output)
         declared = bindings.get(family)
-        if not text:
-            continue
         if family in repair_texts:
             for repaired_text in repair_texts[family]:
                 normalized_text = " ".join(str(repaired_text or "").split())
@@ -402,32 +398,47 @@ def _soft_copy_claim_provenance_payload(
                         regeneration_attempt=regeneration_attempt,
                     )
                 )
-            continue
-        retained = [claim for claim in claims if claim.artifact_family == family]
-        if not isinstance(declared, list) or not declared:
-            if retained_soft_copy_claims_cover_text(text=text, claims=retained):
-                continue
-            build_soft_copy_claim_provenance(
-                artifact_family=family,
-                text=text,
-                declared_claims=declared,
-                evidence_span_index=span_index,
-                producing_prompt_identity=dict(prompt_identities.get(family) or {}),
-                generation_attempt=max(1, int(generation_attempts.get(family) or 1)),
-                regeneration_attempt=regeneration_attempt,
+        elif text:
+            retained = [claim for claim in claims if claim.artifact_family == family]
+            if not isinstance(declared, list) or not declared:
+                if not retained_soft_copy_claims_cover_text(text=text, claims=retained):
+                    build_soft_copy_claim_provenance(
+                        artifact_family=family,
+                        text=text,
+                        declared_claims=declared,
+                        evidence_span_index=span_index,
+                        producing_prompt_identity=dict(
+                            prompt_identities.get(family) or {}
+                        ),
+                        generation_attempt=max(
+                            1, int(generation_attempts.get(family) or 1)
+                        ),
+                        regeneration_attempt=regeneration_attempt,
+                    )
+            else:
+                claims.extend(
+                    build_soft_copy_claim_provenance(
+                        artifact_family=family,
+                        text=text,
+                        declared_claims=declared,
+                        evidence_span_index=span_index,
+                        producing_prompt_identity=dict(
+                            prompt_identities.get(family) or {}
+                        ),
+                        generation_attempt=max(
+                            1, int(generation_attempts.get(family) or 1)
+                        ),
+                        regeneration_attempt=regeneration_attempt,
+                    )
+                )
+        family_claims = [claim for claim in claims if claim.artifact_family == family]
+        if not retained_soft_copy_claims_cover_text(text=text, claims=family_claims):
+            raise AppError(
+                code="soft_copy_claim_provenance_coverage_invalid",
+                message="Soft-copy claim provenance must exactly cover public prose",
+                retryable=False,
+                context={"artifact_family": family},
             )
-            continue
-        claims.extend(
-            build_soft_copy_claim_provenance(
-                artifact_family=family,
-                text=text,
-                declared_claims=declared,
-                evidence_span_index=span_index,
-                producing_prompt_identity=dict(prompt_identities.get(family) or {}),
-                generation_attempt=max(1, int(generation_attempts.get(family) or 1)),
-                regeneration_attempt=regeneration_attempt,
-            )
-        )
     return soft_copy_claim_provenance_to_payload(claims)
 
 

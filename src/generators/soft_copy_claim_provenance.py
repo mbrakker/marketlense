@@ -155,9 +155,9 @@ def _material_sentences(text: str) -> list[str]:
 def retained_soft_copy_claims_cover_text(
     *, text: str, claims: list[SoftCopyClaimProvenance]
 ) -> bool:
-    """Confirm retained claim hashes cover every material public sentence."""
-    sentences = _material_sentences(_normalized_text(text))
-    if not sentences:
-        return True
-    retained_hashes = {claim.text_hash for claim in claims}
-    return all(_sha256(sentence) in retained_hashes for sentence in sentences)
+    """Confirm retained claims exactly cover public sentences with no stale records."""
+    sentence_hashes = {
+        _sha256(sentence) for sentence in _material_sentences(_normalized_text(text))
+    }
+    claim_hashes = {claim.text_hash for claim in claims}
+    return sentence_hashes == claim_hashes and len(claims) == len(claim_hashes)
