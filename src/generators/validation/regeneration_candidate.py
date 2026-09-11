@@ -12,6 +12,7 @@ from src.contracts.soft_copy_claim_provenance import (
     SoftCopyClaimProvenance,
     soft_copy_claim_provenance_from_payload,
     soft_copy_public_text,
+    valid_soft_copy_evidence_selection,
 )
 from src.contracts.validation import ValidationIssue
 from src.generators.artifact_normalization import artifact_evidence_span_index
@@ -490,21 +491,24 @@ def _repair_selection_for_claim(
     if (
         selection.get("claim_id") != original_claim_id
         or selection.get("repaired_claim_id") != claim.claim_id
-        or not _selection_lists_are_valid(selection)
+        or not valid_soft_copy_evidence_selection(
+            f"{claim.artifact_family}:{original_claim_id}",
+            selection,
+            require_selected_evidence_entries=True,
+        )
     ):
         return (
             None,
             "A repaired factual soft-copy claim has corrupt repair-selection lineage.",
         )
+    if selection.get("strategy") == "abstain" or not _selection_evidence_ids(
+        selection, "selected_evidence_ids"
+    ):
+        return (
+            None,
+            "A repaired factual soft-copy claim has no selected evidence in its repair selection.",
+        )
     return selection, ""
-
-
-def _selection_lists_are_valid(selection: dict[str, Any]) -> bool:
-    return all(
-        isinstance(selection.get(field), list)
-        and all(isinstance(value, str) for value in selection[field])
-        for field in ("quarantined_evidence_ids", "selected_evidence_ids")
-    )
 
 
 def _selection_evidence_ids(selection: dict[str, Any] | None, field: str) -> set[str]:

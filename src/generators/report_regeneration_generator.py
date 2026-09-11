@@ -18,6 +18,7 @@ from src.contracts.run_context import RunContext
 from src.contracts.soft_copy_claim_provenance import (
     SoftCopyClaimProvenance,
     soft_copy_claim_provenance_from_payload,
+    valid_soft_copy_evidence_selection,
 )
 from src.contracts.validation import ValidationRequest
 from src.generators.artifact_generator import (
@@ -1188,76 +1189,12 @@ def _retained_soft_copy_evidence_selections(value: object) -> Dict[str, Dict[str
         return {}
     valid: Dict[str, Dict[str, Any]] = {}
     for key, selection in value.items():
-        if not isinstance(key, str) or not _valid_soft_copy_evidence_selection(
+        if not isinstance(key, str) or not valid_soft_copy_evidence_selection(
             key, selection
         ):
             continue
         valid[key] = deepcopy(selection)
     return valid
-
-
-def _valid_soft_copy_evidence_selection(key: str, value: object) -> bool:
-    if not isinstance(value, dict):
-        return False
-    required_keys = {
-        "schema_version",
-        "claim_id",
-        "strategy",
-        "direct_evidence_ids",
-        "parent_evidence_ids",
-        "quarantined_evidence_ids",
-        "selected_evidence_ids",
-        "package_sha256",
-    }
-    allowed_keys = required_keys | {"selected_evidence_entries", "repaired_claim_id"}
-    if set(value) - allowed_keys or not required_keys.issubset(value):
-        return False
-    if (
-        value.get("schema_version") != "1.0"
-        or not isinstance(value.get("claim_id"), str)
-        or not value["claim_id"]
-        or not key.endswith(value["claim_id"])
-        or value.get("strategy")
-        not in {
-            "claim_evidence_ids",
-            "parent_insight_or_theme",
-            "lexical_fallback",
-            "abstain",
-        }
-        or not isinstance(value.get("package_sha256"), str)
-        or not re.fullmatch(r"[0-9a-f]{64}", value["package_sha256"])
-    ):
-        return False
-    for field_name in (
-        "direct_evidence_ids",
-        "parent_evidence_ids",
-        "quarantined_evidence_ids",
-        "selected_evidence_ids",
-    ):
-        if not isinstance(value.get(field_name), list) or not all(
-            isinstance(item, str) for item in value[field_name]
-        ):
-            return False
-    if "repaired_claim_id" in value and (
-        not isinstance(value["repaired_claim_id"], str)
-        or not value["repaired_claim_id"]
-    ):
-        return False
-    entries = value.get("selected_evidence_entries")
-    if entries is None:
-        # Prompt 5's earlier selection records did not retain entry content.
-        # Preserve their known legacy shape unchanged across later attempts.
-        return True
-    if not isinstance(entries, list) or not all(
-        isinstance(entry, dict) for entry in entries
-    ):
-        return False
-    hash_payload = {
-        name: item
-        for name, item in value.items()
-        if name not in {"package_sha256", "repaired_claim_id"}
-    }
-    return value["package_sha256"] == _canonical_evidence_hash(hash_payload)
 
 
 def _render_regeneration_model(

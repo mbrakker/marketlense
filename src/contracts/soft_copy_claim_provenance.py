@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 from dataclasses import dataclass, field
 from typing import Any, Literal
@@ -139,6 +141,87 @@ def soft_copy_claim_bindings_cover_public_text(
         if " ".join(sentence.split())
     ]
     return bool(declared) and all(sentence in declared for sentence in sentences)
+
+
+def valid_soft_copy_evidence_selection(
+    key: str,
+    value: object,
+    *,
+    require_selected_evidence_entries: bool = False,
+) -> bool:
+    """Validate the private Prompt 5 claim-evidence selection record.
+
+    ``repaired_claim_id`` is later repair-lineage metadata, so it deliberately
+    stays outside the Prompt 5 package hash.  Earlier retained Prompt 5
+    records may omit selected evidence content; only claim-scoped replacement
+    validation requires that complete hashed package.
+    """
+
+    if not isinstance(value, dict):
+        return False
+    required_keys = {
+        "schema_version",
+        "claim_id",
+        "strategy",
+        "direct_evidence_ids",
+        "parent_evidence_ids",
+        "quarantined_evidence_ids",
+        "selected_evidence_ids",
+        "package_sha256",
+    }
+    allowed_keys = required_keys | {"selected_evidence_entries", "repaired_claim_id"}
+    if set(value) - allowed_keys or not required_keys.issubset(value):
+        return False
+    if (
+        value.get("schema_version") != "1.0"
+        or not isinstance(value.get("claim_id"), str)
+        or not value["claim_id"]
+        or not key.endswith(value["claim_id"])
+        or value.get("strategy")
+        not in {
+            "claim_evidence_ids",
+            "parent_insight_or_theme",
+            "lexical_fallback",
+            "abstain",
+        }
+        or not isinstance(value.get("package_sha256"), str)
+        or not re.fullmatch(r"[0-9a-f]{64}", value["package_sha256"])
+    ):
+        return False
+    for field_name in (
+        "direct_evidence_ids",
+        "parent_evidence_ids",
+        "quarantined_evidence_ids",
+        "selected_evidence_ids",
+    ):
+        if not isinstance(value.get(field_name), list) or not all(
+            isinstance(item, str) for item in value[field_name]
+        ):
+            return False
+    if "repaired_claim_id" in value and (
+        not isinstance(value["repaired_claim_id"], str)
+        or not value["repaired_claim_id"]
+    ):
+        return False
+    entries = value.get("selected_evidence_entries")
+    if entries is None:
+        return not require_selected_evidence_entries
+    if not isinstance(entries, list) or not all(
+        isinstance(entry, dict) for entry in entries
+    ):
+        return False
+    hash_payload = {
+        name: item
+        for name, item in value.items()
+        if name not in {"package_sha256", "repaired_claim_id"}
+    }
+    canonical_json = json.dumps(
+        hash_payload, ensure_ascii=False, separators=(",", ":"), sort_keys=True
+    )
+    return (
+        value["package_sha256"]
+        == hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
+    )
 
 
 @dataclass(frozen=True)

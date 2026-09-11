@@ -102,6 +102,41 @@ def _claim_for_family(artifacts: dict, family: str) -> dict:
     )
 
 
+def _complete_repair_selection(
+    *, original_claim_id: str, repaired_claim_id: str
+) -> dict[str, object]:
+    """Build a complete Prompt 5 selection record for candidate fixtures."""
+
+    selection: dict[str, object] = {
+        "schema_version": "1.0",
+        "claim_id": original_claim_id,
+        "strategy": "claim_evidence_ids",
+        "direct_evidence_ids": ["qc_001"],
+        "parent_evidence_ids": [],
+        "quarantined_evidence_ids": [],
+        "selected_evidence_ids": ["qc_001"],
+        "selected_evidence_entries": [
+            {"id": "qc_001", "page": 6, "text": "Quoted evidence."}
+        ],
+        "repaired_claim_id": repaired_claim_id,
+    }
+    _refresh_repair_selection_hash(selection)
+    return selection
+
+
+def _refresh_repair_selection_hash(selection: dict[str, object]) -> None:
+    hash_payload = {
+        name: value
+        for name, value in selection.items()
+        if name not in {"package_sha256", "repaired_claim_id"}
+    }
+    selection["package_sha256"] = hashlib.sha256(
+        json.dumps(
+            hash_payload, ensure_ascii=False, separators=(",", ":"), sort_keys=True
+        ).encode("utf-8")
+    ).hexdigest()
+
+
 @pytest.mark.parametrize("family", ["expert_comment", "linkedin_post"])
 def test_candidate_allows_repaired_factual_claim_with_explicit_new_lineage(
     family: str,
@@ -124,12 +159,10 @@ def test_candidate_allows_repaired_factual_claim_with_explicit_new_lineage(
         if claim["artifact_family"] != family
     ] + [repaired]
     candidate["_repair_evidence_selection"] = {
-        f"{family}:{original_claim['claim_id']}": {
-            "claim_id": original_claim["claim_id"],
-            "repaired_claim_id": repaired["claim_id"],
-            "quarantined_evidence_ids": [],
-            "selected_evidence_ids": ["qc_001"],
-        }
+        f"{family}:{original_claim['claim_id']}": _complete_repair_selection(
+            original_claim_id=str(original_claim["claim_id"]),
+            repaired_claim_id=str(repaired["claim_id"]),
+        )
     }
 
     result = validate_regeneration_candidate(
@@ -169,10 +202,11 @@ def test_candidate_blocks_repaired_factual_claim_with_missing_or_corrupt_selecti
     )
     candidate["_repair_evidence_selection"] = {
         f"{family}:{original_claim['claim_id']}": {
-            "claim_id": original_claim["claim_id"],
+            **_complete_repair_selection(
+                original_claim_id=str(original_claim["claim_id"]),
+                repaired_claim_id=str(repaired["claim_id"]),
+            ),
             "repaired_claim_id": "different-repaired-claim",
-            "quarantined_evidence_ids": [],
-            "selected_evidence_ids": ["qc_001"],
         }
     }
     corrupt = validate_regeneration_candidate(
@@ -189,6 +223,111 @@ def test_candidate_blocks_repaired_factual_claim_with_missing_or_corrupt_selecti
     assert not corrupt.passed
     assert any(
         "corrupt repair-selection lineage" in issue.message for issue in corrupt.issues
+    )
+
+
+@pytest.mark.parametrize(
+    ("family", "mutation"),
+    [
+        ("expert_comment", "quarantined_evidence_ids"),
+        ("linkedin_post", "selected_evidence_ids"),
+        ("expert_comment", "selected_evidence_entries"),
+        ("linkedin_post", "package_sha256"),
+        ("expert_comment", "strategy"),
+    ],
+)
+def test_candidate_rejects_repaired_claim_with_stale_or_missing_selection_hash(
+    family: str, mutation: str
+) -> None:
+    current, candidate, evidence_packs = _soft_copy_artifacts()
+    original_claim = _claim_for_family(current, family)
+    candidate[family] = "Generation Q developed in digital spaces."
+    repaired = _soft_copy_claim(
+        family=family,
+        text=candidate[family],
+        regeneration_attempt=1,
+    )
+    repaired["repaired_from_claim_id"] = original_claim["claim_id"]
+    candidate["soft_copy_claim_provenance"]["claims"] = [
+        claim
+        for claim in candidate["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] != family
+    ] + [repaired]
+    selection = _complete_repair_selection(
+        original_claim_id=str(original_claim["claim_id"]),
+        repaired_claim_id=str(repaired["claim_id"]),
+    )
+    if mutation == "quarantined_evidence_ids":
+        selection[mutation] = ["qc_001"]
+    elif mutation == "selected_evidence_ids":
+        selection[mutation] = ["different-evidence"]
+    elif mutation == "selected_evidence_entries":
+        selection[mutation] = [{"id": "qc_001", "page": 6, "text": "Changed."}]
+    elif mutation == "strategy":
+        selection[mutation] = "lexical_fallback"
+    else:
+        selection.pop("package_sha256")
+    candidate["_repair_evidence_selection"] = {
+        f"{family}:{original_claim['claim_id']}": selection
+    }
+
+    result = validate_regeneration_candidate(
+        current_artifacts=current,
+        candidate_artifacts=candidate,
+        evidence_packs=evidence_packs,
+        ctx=_ctx(),
+    )
+
+    assert not result.passed
+    assert any(
+        issue.affected_section == f"{family}:{repaired['claim_id']}"
+        and "corrupt repair-selection lineage" in issue.message
+        for issue in result.issues
+    )
+
+
+@pytest.mark.parametrize("strategy", ["abstain", "claim_evidence_ids"])
+def test_candidate_rejects_factual_repair_without_selected_evidence(
+    strategy: str,
+) -> None:
+    current, candidate, evidence_packs = _soft_copy_artifacts()
+    original_claim = _claim_for_family(current, "expert_comment")
+    candidate["expert_comment"] = "Generation Q developed in digital spaces."
+    repaired = _soft_copy_claim(
+        family="expert_comment",
+        text=candidate["expert_comment"],
+        regeneration_attempt=1,
+    )
+    repaired["repaired_from_claim_id"] = original_claim["claim_id"]
+    candidate["soft_copy_claim_provenance"]["claims"] = [
+        claim
+        for claim in candidate["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] != "expert_comment"
+    ] + [repaired]
+    selection = _complete_repair_selection(
+        original_claim_id=str(original_claim["claim_id"]),
+        repaired_claim_id=str(repaired["claim_id"]),
+    )
+    selection["strategy"] = strategy
+    selection["selected_evidence_ids"] = []
+    selection["selected_evidence_entries"] = []
+    _refresh_repair_selection_hash(selection)
+    candidate["_repair_evidence_selection"] = {
+        f"expert_comment:{original_claim['claim_id']}": selection
+    }
+
+    result = validate_regeneration_candidate(
+        current_artifacts=current,
+        candidate_artifacts=candidate,
+        evidence_packs=evidence_packs,
+        ctx=_ctx(),
+    )
+
+    assert not result.passed
+    assert any(
+        issue.affected_section == f"expert_comment:{repaired['claim_id']}"
+        and "no selected evidence" in issue.message
+        for issue in result.issues
     )
 
 

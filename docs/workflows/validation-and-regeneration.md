@@ -319,9 +319,13 @@ unchanged prose; and an explicit new generation lineage for replacement prose.
 For a claim-scoped replacement, the private rewritten claim records its exact
 `repaired_from_claim_id`, while the existing original-keyed repair selection
 records the reciprocal `repaired_claim_id`; candidate validation requires both
-values to agree before applying that selection's quarantine set. The selection
-package hash remains the Prompt 5 hash of its evidence package and does not
-cover this later linkage metadata. Both fields remain outside public payloads.
+values to agree and requires the complete Prompt 5 selection record, including
+its canonical selected-entry package hash, before applying its quarantine set.
+The selection package hash remains the Prompt 5 hash of its evidence package
+and does not cover this later linkage metadata. A factual replacement must use
+non-empty selected evidence; an `abstain` or empty selection requires the
+claim to be removed or the family to abstain. Both fields remain outside public
+payloads.
 An empty, schema-valid abstention may remove a failed claim or family, but a
 candidate cannot retain public soft copy while silently dropping its claim
 provenance.
