@@ -294,10 +294,14 @@ repair. Each regenerated family records the prepared
 `report_vs/artifacts/regenerate/...` prompt identity that produced its
 replacement, including content hash, dependency manifest, execution identity,
 and model-policy identity. A checkpoint with stale or incomplete replacement
-prompt provenance is not reusable. For soft public-copy repairs that have no
-issue-level evidence ID, the repair package deterministically selects a small
-set of relevant retained findings, insights, or editorial-theme evidence after
-excluding quarantined evidence; when no support remains, the normal abstention
+prompt provenance is not reusable. For each soft public-copy claim repair, the
+package deterministically selects at most four non-quarantined retained entries
+in this order: the claim's retained evidence IDs, evidence linked to its
+declared or text-matched parent insight/theme, then lexically relevant retained
+entries. It never expands to every report insight or treats a zero-overlap
+entry as support. The candidate retains the selection method, direct and parent
+candidates, quarantine set, chosen IDs, and stable package hash under private
+`_repair_evidence_selection`; when no support remains, the normal abstention
 path applies.
 
 The deterministic candidate check is complete only when all evidence IDs,

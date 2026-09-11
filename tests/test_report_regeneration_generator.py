@@ -33,6 +33,7 @@ from src.generators.public_editorial_quality_generator import (
 )
 from src.generators.report_regeneration_generator import (
     _build_grounding_package,
+    _build_soft_copy_claim_evidence_package,
     _merge_regenerated_insights_by_stable_id,
     _restore_final_insight_evidence_bindings,
     _restore_missing_final_insight_roster,
@@ -144,6 +145,171 @@ def test_grounding_package_selects_retained_evidence_for_soft_copy_without_issue
     )
 
     assert package["evidence_ids"] == ["finding-1", "finding-2"]
+
+
+def _soft_copy_claim(
+    *, evidence_ids: tuple[str, ...] = (), source_spans: tuple[dict, ...] = ()
+) -> SoftCopyClaimProvenance:
+    return SoftCopyClaimProvenance(
+        schema_version="1.0",
+        artifact_family="expert_comment",
+        claim_id="soft_copy:expert_comment:claim-1",
+        text_hash="a" * 64,
+        classification="interpretive",
+        evidence_ids=evidence_ids,
+        source_spans=source_spans,
+        producing_prompt_identity={"namespace": "report_vs/artifacts/expert_comment"},
+        generation_attempt=1,
+        regeneration_attempt=0,
+    )
+
+
+def test_soft_copy_claim_evidence_package_prefers_direct_retained_ids() -> None:
+    package = _build_soft_copy_claim_evidence_package(
+        claim=_soft_copy_claim(evidence_ids=("f2", "f1")),
+        issue=RegenerationIssue(
+            rule_id="grounding",
+            affected_section="expert_comment",
+            message="Bad claim",
+            severity="error",
+        ),
+        artifacts=_current_artifacts(),
+        evidence_packs=_evidence_packs(),
+        quarantined_evidence_ids=(),
+    )
+
+    assert package["evidence_ids"] == ["f2", "f1"]
+    assert package["evidence_selection"]["strategy"] == "claim_evidence_ids"
+
+
+def test_soft_copy_claim_evidence_package_uses_parent_insight_before_fallback() -> None:
+    artifacts = _current_artifacts()
+    artifacts["insights_final"] = [
+        {
+            "id": "insight-margin",
+            "text": "Margin pressure is material.",
+            "evidence_id": "f2",
+        }
+    ]
+    package = _build_soft_copy_claim_evidence_package(
+        claim=_soft_copy_claim(source_spans=({"insight_id": "insight-margin"},)),
+        issue=RegenerationIssue(
+            rule_id="grounding",
+            affected_section="expert_comment",
+            message="Bad claim",
+            severity="error",
+        ),
+        artifacts=artifacts,
+        evidence_packs=_evidence_packs(),
+        quarantined_evidence_ids=(),
+    )
+
+    assert package["evidence_ids"] == ["f2"]
+    assert package["evidence_selection"]["strategy"] == "parent_insight_or_theme"
+
+
+def test_soft_copy_claim_evidence_package_uses_text_matched_parent_theme() -> None:
+    artifacts = _current_artifacts()
+    artifacts["editorial_plan"] = {
+        "themes": [
+            {"theme": "Retention performance", "evidence_ids": ["f1"]},
+            {"theme": "Margin pressure", "evidence_ids": ["f2"]},
+        ]
+    }
+    package = _build_soft_copy_claim_evidence_package(
+        claim=_soft_copy_claim(),
+        issue=RegenerationIssue(
+            rule_id="grounding",
+            affected_section="expert_comment",
+            message="Margin pressure claim is unsupported.",
+            severity="error",
+        ),
+        artifacts=artifacts,
+        evidence_packs=_evidence_packs(),
+        quarantined_evidence_ids=(),
+        claim_text="Margin pressure affects planning.",
+    )
+
+    assert package["evidence_ids"] == ["f2"]
+    assert package["evidence_selection"]["strategy"] == "parent_insight_or_theme"
+
+
+def test_soft_copy_claim_evidence_package_excludes_quarantined_entries() -> None:
+    package = _build_soft_copy_claim_evidence_package(
+        claim=_soft_copy_claim(evidence_ids=("f2",)),
+        issue=RegenerationIssue(
+            rule_id="grounding",
+            affected_section="expert_comment",
+            message="Bad claim",
+            severity="error",
+        ),
+        artifacts=_current_artifacts(),
+        evidence_packs=_evidence_packs(),
+        quarantined_evidence_ids=("f2",),
+    )
+
+    assert package["evidence_ids"] == []
+    assert package["evidence_selection"]["strategy"] == "abstain"
+
+
+def test_soft_copy_claim_evidence_package_uses_only_bounded_lexical_fallback() -> None:
+    evidence_packs = {
+        "findings": {
+            "findings": [
+                {"id": f"relevant-{index}", "text": "Retention planning signal."}
+                for index in range(6)
+            ]
+            + [{"id": "irrelevant", "text": "Unrelated commodity price."}]
+        }
+    }
+    package = _build_soft_copy_claim_evidence_package(
+        claim=_soft_copy_claim(),
+        issue=RegenerationIssue(
+            rule_id="grounding",
+            affected_section="expert_comment",
+            message="Retention planning claim is unsupported.",
+            severity="error",
+        ),
+        artifacts=_current_artifacts(),
+        evidence_packs=evidence_packs,
+        quarantined_evidence_ids=(),
+    )
+
+    assert package["evidence_ids"] == [
+        "relevant-0",
+        "relevant-1",
+        "relevant-2",
+        "relevant-3",
+    ]
+    assert package["evidence_selection"]["strategy"] == "lexical_fallback"
+
+
+def test_soft_copy_claim_evidence_package_abstains_and_is_repeatable_without_support() -> (
+    None
+):
+    inputs = {
+        "claim": _soft_copy_claim(),
+        "issue": RegenerationIssue(
+            rule_id="grounding",
+            affected_section="expert_comment",
+            message="Bad claim",
+            severity="error",
+        ),
+        "artifacts": _current_artifacts(),
+        "evidence_packs": {"findings": [{"id": "f1", "text": "Different topic."}]},
+        "quarantined_evidence_ids": (),
+    }
+
+    first = _build_soft_copy_claim_evidence_package(**inputs)
+    second = _build_soft_copy_claim_evidence_package(**inputs)
+
+    assert first["evidence_ids"] == []
+    assert first["evidence_selection"]["strategy"] == "abstain"
+    assert first == second
+    assert (
+        first["evidence_selection"]["package_sha256"]
+        == second["evidence_selection"]["package_sha256"]
+    )
 
 
 class _FakePromptClient:
@@ -1280,6 +1446,12 @@ def test_regeneration_repairs_only_the_failed_expert_claim_and_retains_sibling_p
         "First supported sentence stays.  Repaired middle claim.  "
         "Third supported sentence stays."
     )
+    selection = response.updated_artifacts["_repair_evidence_selection"][
+        f"expert_comment:{original_claims[1].claim_id}"
+    ]
+    assert selection["strategy"] == "claim_evidence_ids"
+    assert selection["selected_evidence_ids"] == ["f2"]
+    assert len(selection["package_sha256"]) == 64
     claims = response.updated_artifacts["soft_copy_claim_provenance"]["claims"]
     by_id = {claim["claim_id"]: claim for claim in claims}
     assert (

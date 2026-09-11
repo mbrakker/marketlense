@@ -89,6 +89,9 @@ class _RegenerationState:
     replaced_soft_copy_families: List[str] = field(default_factory=list)
     replaced_soft_copy_claim_ids: Dict[str, List[str]] = field(default_factory=dict)
     soft_copy_repair_texts: Dict[str, List[str]] = field(default_factory=dict)
+    soft_copy_evidence_selections: Dict[str, Dict[str, Any]] = field(
+        default_factory=dict
+    )
 
 
 @dataclass(frozen=True)
@@ -328,6 +331,12 @@ def regenerate_artifacts(
         regeneration_attempt=request.attempt_index,
         validate_references=False,
     )
+    if state.soft_copy_evidence_selections:
+        # This is private candidate-audit provenance, never rendered public copy.
+        updated_artifacts["_repair_evidence_selection"] = {
+            key: state.soft_copy_evidence_selections[key]
+            for key in sorted(state.soft_copy_evidence_selections)
+        }
     candidate_artifacts_path = store_artifacts_payload(
         analysis_store=analysis_store,
         output_dir=request.settings.output_dir,
@@ -482,6 +491,234 @@ def _build_grounding_package(
         "quarantined_evidence_ids": quarantined_ids,
         "pages": _unique_ints(page for issue in target.issues for page in issue.pages),
     }
+
+
+MAX_SOFT_COPY_CLAIM_EVIDENCE_ENTRIES = 4
+
+
+def _build_soft_copy_claim_evidence_package(
+    *,
+    claim: SoftCopyClaimProvenance,
+    issue: RegenerationIssue,
+    artifacts: Dict[str, Any],
+    evidence_packs: Dict[str, Any],
+    quarantined_evidence_ids: tuple[str, ...],
+    claim_text: str = "",
+) -> Dict[str, Any]:
+    """Build one bounded, deterministic retained-evidence package for a claim."""
+
+    quarantined = {
+        _normalized_evidence_id(evidence_id)
+        for evidence_id in quarantined_evidence_ids
+        if _normalized_evidence_id(evidence_id)
+    }
+    evidence_by_id = _retained_evidence_entries_by_id(evidence_packs)
+    direct_ids = _unique_strings(claim.evidence_ids)
+    parent_ids = _soft_copy_parent_evidence_ids(
+        claim=claim, artifacts=artifacts, claim_text=claim_text
+    )
+
+    def resolved(ids: List[str]) -> List[Dict[str, Any]]:
+        selected: List[Dict[str, Any]] = []
+        seen: set[str] = set()
+        for evidence_id in ids:
+            normalized_id = _normalized_evidence_id(evidence_id)
+            entry = evidence_by_id.get(normalized_id)
+            if not normalized_id or normalized_id in quarantined or entry is None:
+                continue
+            if normalized_id not in seen:
+                seen.add(normalized_id)
+                selected.append(entry)
+            if len(selected) == MAX_SOFT_COPY_CLAIM_EVIDENCE_ENTRIES:
+                break
+        return selected
+
+    selected = resolved(direct_ids)
+    strategy = "claim_evidence_ids" if selected else ""
+    if not selected:
+        selected = resolved(parent_ids)
+        strategy = "parent_insight_or_theme" if selected else ""
+    if not selected:
+        selected = _lexically_relevant_evidence_entries(
+            evidence_by_id=evidence_by_id,
+            quarantined_ids=quarantined,
+            search_text=" ".join((claim_text, issue.message)),
+        )
+        strategy = "lexical_fallback" if selected else "abstain"
+
+    evidence_ids = [_entry_evidence_id(entry) for entry in selected]
+    provenance = {
+        "schema_version": "1.0",
+        "claim_id": claim.claim_id,
+        "strategy": strategy,
+        "direct_evidence_ids": direct_ids,
+        "parent_evidence_ids": parent_ids,
+        "quarantined_evidence_ids": sorted(quarantined),
+        "selected_evidence_ids": evidence_ids,
+    }
+    provenance["package_sha256"] = hashlib.sha256(
+        _dump_json(provenance).encode("utf-8")
+    ).hexdigest()
+    return {
+        "relevant_evidence": selected,
+        "evidence_ids": evidence_ids,
+        "evidence_selection": provenance,
+    }
+
+
+def _claim_scoped_grounding_package(
+    execution: _RegenerationHandlerExecution,
+    repair: _SoftCopyClaimRepair,
+) -> Dict[str, Any]:
+    """Replace target-wide evidence with the failed claim's retained support."""
+
+    package = dict(execution.grounding_package)
+    selected = _build_soft_copy_claim_evidence_package(
+        claim=repair.claim,
+        issue=repair.issue,
+        artifacts=_artifact_state_from_state(execution.state),
+        evidence_packs=execution.runtime.safe_evidence,
+        quarantined_evidence_ids=tuple(
+            execution.grounding_package.get("quarantined_evidence_ids") or []
+        ),
+        claim_text=repair.text,
+    )
+    package.update(selected)
+    package["evidence_windows"] = []
+    selection = selected["evidence_selection"]
+    execution.state.soft_copy_evidence_selections[
+        f"{repair.artifact_family}:{repair.claim.claim_id}"
+    ] = selection
+    return package
+
+
+def _normalized_evidence_id(value: object) -> str:
+    return _s(value).strip().casefold()
+
+
+def _retained_evidence_entries_by_id(
+    evidence_packs: Dict[str, Any],
+) -> Dict[str, Dict[str, Any]]:
+    """Canonicalize retained entries independently of input mapping order."""
+
+    candidates: List[Dict[str, Any]] = []
+    for pack_name in sorted(evidence_packs):
+        candidates.extend(_all_pack_entries(pack_name, evidence_packs[pack_name]))
+    ordered = sorted(
+        candidates,
+        key=lambda entry: (
+            _normalized_evidence_id(_entry_evidence_id(entry)),
+            _s(entry.get("pack_name")),
+            _dump_json(entry),
+        ),
+    )
+    result: Dict[str, Dict[str, Any]] = {}
+    for entry in ordered:
+        evidence_id = _normalized_evidence_id(_entry_evidence_id(entry))
+        if evidence_id and evidence_id not in result:
+            result[evidence_id] = entry
+    return result
+
+
+def _soft_copy_parent_evidence_ids(
+    *, claim: SoftCopyClaimProvenance, artifacts: Dict[str, Any], claim_text: str
+) -> List[str]:
+    """Resolve declared parent insight/theme links before lexical fallback."""
+
+    parent_insight_ids: set[str] = set()
+    parent_theme_ids: set[str] = set()
+    for span in claim.source_spans:
+        for key in ("insight_id", "parent_insight_id"):
+            value = _s(span.get(key)).strip()
+            if value:
+                parent_insight_ids.add(value)
+        for key in ("theme_id", "parent_theme_id", "theme"):
+            value = _s(span.get(key)).strip()
+            if value:
+                parent_theme_ids.add(value)
+
+    query_tokens = _evidence_query_tokens(claim_text)
+    insight_entries = [
+        entry
+        for entry in artifacts.get("insights_final") or []
+        if isinstance(entry, dict)
+    ]
+    theme_entries = [
+        entry
+        for entry in _copy_dict(artifacts.get("editorial_plan")).get("themes") or []
+        if isinstance(entry, dict)
+    ]
+    if query_tokens:
+        for insight in insight_entries:
+            if _token_overlap(query_tokens, _s(insight.get("text"))) >= 2:
+                parent_insight_ids.add(_s(insight.get("id")).strip())
+        for theme in theme_entries:
+            if _token_overlap(query_tokens, _s(theme.get("theme"))) >= 2:
+                parent_theme_ids.add(
+                    _s(
+                        theme.get("id") or theme.get("theme_id") or theme.get("theme")
+                    ).strip()
+                )
+
+    evidence_ids: List[str] = []
+    for insight in sorted(
+        insight_entries, key=lambda entry: _s(entry.get("id")).strip()
+    ):
+        if _s(insight.get("id")).strip() not in parent_insight_ids:
+            continue
+        evidence_ids.extend(_entry_declared_evidence_ids(insight))
+    for theme in sorted(
+        theme_entries,
+        key=lambda entry: _s(
+            entry.get("id") or entry.get("theme_id") or entry.get("theme")
+        ).strip(),
+    ):
+        theme_id = _s(
+            theme.get("id") or theme.get("theme_id") or theme.get("theme")
+        ).strip()
+        if theme_id not in parent_theme_ids:
+            continue
+        evidence_ids.extend(_entry_declared_evidence_ids(theme))
+    return _unique_strings(evidence_ids)
+
+
+def _entry_declared_evidence_ids(entry: Dict[str, Any]) -> List[str]:
+    values = [entry.get("evidence_id")]
+    values.extend(entry.get("evidence_ids") or [])
+    return _unique_strings(value for value in values if _s(value).strip())
+
+
+def _evidence_query_tokens(value: str) -> set[str]:
+    return {
+        token.casefold()
+        for token in re.findall(r"[A-Za-z0-9][A-Za-z0-9_-]+", value)
+        if len(token) >= 4
+    }
+
+
+def _token_overlap(query_tokens: set[str], value: str) -> int:
+    return len(query_tokens.intersection(_evidence_query_tokens(value)))
+
+
+def _lexically_relevant_evidence_entries(
+    *,
+    evidence_by_id: Dict[str, Dict[str, Any]],
+    quarantined_ids: set[str],
+    search_text: str,
+) -> List[Dict[str, Any]]:
+    query_tokens = _evidence_query_tokens(search_text)
+    ranked = [
+        (_token_overlap(query_tokens, _dump_json(entry)), evidence_id, entry)
+        for evidence_id, entry in evidence_by_id.items()
+        if evidence_id not in quarantined_ids
+    ]
+    return [
+        entry
+        for overlap, _evidence_id, entry in sorted(
+            ranked, key=lambda item: (-item[0], item[1])
+        )
+        if overlap > 0
+    ][:MAX_SOFT_COPY_CLAIM_EVIDENCE_ENTRIES]
 
 
 def _replacement_evidence_entries(
@@ -1138,23 +1375,11 @@ def _soft_copy_claim_repairs(
 
 
 def _claim_has_repair_support(
-    execution: _RegenerationHandlerExecution,
-    repair: _SoftCopyClaimRepair,
+    grounding_package: Dict[str, Any],
 ) -> bool:
-    issue_evidence_ids = {
-        str(evidence_id).strip().casefold()
-        for issue in [repair.issue]
-        for evidence_id in issue.evidence_ids
-        if str(evidence_id).strip()
-    }
-    if not issue_evidence_ids:
-        return bool(execution.grounding_package.get("relevant_evidence"))
-    available_ids = {
-        _entry_evidence_id(entry).casefold()
-        for entry in execution.grounding_package.get("relevant_evidence") or []
-        if isinstance(entry, dict) and _entry_evidence_id(entry)
-    }
-    return bool(issue_evidence_ids.intersection(available_ids))
+    """A scoped repair proceeds only with its selected retained support."""
+
+    return bool(grounding_package.get("relevant_evidence"))
 
 
 def _replace_soft_copy_claim(
@@ -1245,10 +1470,12 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
         for field, repairs in scoped_repairs.items():
             replacements: Dict[str, str | None] = {}
             for repair in repairs:
-                if not _claim_has_repair_support(execution, repair):
+                claim_grounding = _claim_scoped_grounding_package(execution, repair)
+                if not _claim_has_repair_support(claim_grounding):
                     replacements[repair.claim.claim_id] = None
                     _mark_soft_copy_claim_removed(execution, repair)
                     continue
+                selected_evidence_ids = set(claim_grounding["evidence_ids"])
                 result = _render_regeneration_model(
                     execution=execution,
                     namespace=namespace,
@@ -1268,11 +1495,11 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
                         ),
                         "failure_reasons_json": _issues_json([repair.issue]),
                         "fix_checklist_json": _fix_checklist_json(execution.target),
-                        "grounding_package_json": _dump_json(
-                            execution.grounding_package
-                        ),
+                        "grounding_package_json": _dump_json(claim_grounding),
                         "editorial_plan_json": _dump_json(
-                            execution.state.editorial_plan
+                            _claim_scoped_editorial_plan(
+                                execution.state.editorial_plan, selected_evidence_ids
+                            )
                         ),
                     },
                 )
@@ -1513,10 +1740,12 @@ def _handle_expert_comment_regeneration(
                 set(execution.grounding_package.get("quarantined_evidence_ids") or []),
             )
             for repair in claim_repairs:
-                if not _claim_has_repair_support(execution, repair):
+                claim_grounding = _claim_scoped_grounding_package(execution, repair)
+                if not _claim_has_repair_support(claim_grounding):
                     replacements[repair.claim.claim_id] = None
                     _mark_soft_copy_claim_removed(execution, repair)
                     continue
+                selected_evidence_ids = set(claim_grounding["evidence_ids"])
                 result = _render_regeneration_model(
                     execution=execution,
                     namespace=namespace,
@@ -1525,10 +1754,14 @@ def _handle_expert_comment_regeneration(
                         "attempt_index": execution.runtime.request.attempt_index,
                         "target_section": execution.target.target_section,
                         "editorial_plan_json": _dump_json(
-                            execution.state.editorial_plan
+                            _claim_scoped_editorial_plan(
+                                execution.state.editorial_plan, selected_evidence_ids
+                            )
                         ),
                         "expert_synthesis_context_json": _dump_json(
-                            expert_synthesis_context
+                            _claim_scoped_expert_context(
+                                expert_synthesis_context, selected_evidence_ids
+                            )
                         ),
                         "expert_domain": execution.runtime.expert_domain,
                         "current_section_text": repair.text,
@@ -1541,9 +1774,7 @@ def _handle_expert_comment_regeneration(
                         ),
                         "failure_reasons_json": _issues_json([repair.issue]),
                         "fix_checklist_json": _fix_checklist_json(execution.target),
-                        "grounding_package_json": _dump_json(
-                            execution.grounding_package
-                        ),
+                        "grounding_package_json": _dump_json(claim_grounding),
                     },
                 )
                 repaired_text = _s(result.get("expert_comment"))
@@ -1620,22 +1851,90 @@ def _exclude_quarantined_expert_context(
 ) -> Dict[str, Any]:
     if not excluded_evidence_ids:
         return context
+    normalized_excluded = {
+        _normalized_evidence_id(value) for value in excluded_evidence_ids
+    }
     safe_context = deepcopy(context)
     for theme in safe_context.get("themes") or []:
         if isinstance(theme, dict):
             theme["evidence"] = [
                 entry
                 for entry in theme.get("evidence") or []
-                if _s(entry.get("evidence_id")).strip() not in excluded_evidence_ids
+                if _normalized_evidence_id(entry.get("evidence_id"))
+                not in normalized_excluded
             ]
     for key in ("insight_implications", "limitations", "counter_signals"):
         safe_context[key] = [
             entry
             for entry in safe_context.get(key) or []
             if not isinstance(entry, dict)
-            or _s(entry.get("evidence_id")).strip() not in excluded_evidence_ids
+            or _normalized_evidence_id(entry.get("evidence_id"))
+            not in normalized_excluded
         ]
     return safe_context
+
+
+def _claim_scoped_editorial_plan(
+    editorial_plan: Dict[str, Any], selected_evidence_ids: set[str]
+) -> Dict[str, Any]:
+    """Keep only selected retained theme bindings in a scoped repair prompt."""
+
+    plan = deepcopy(editorial_plan)
+    normalized_selected = {
+        _normalized_evidence_id(value) for value in selected_evidence_ids
+    }
+    plan["themes"] = [
+        {
+            **theme,
+            "evidence_ids": [
+                evidence_id
+                for evidence_id in theme.get("evidence_ids") or []
+                if _normalized_evidence_id(evidence_id) in normalized_selected
+            ],
+        }
+        for theme in plan.get("themes") or []
+        if isinstance(theme, dict)
+        and any(
+            _normalized_evidence_id(evidence_id) in normalized_selected
+            for evidence_id in theme.get("evidence_ids") or []
+        )
+    ]
+    return plan
+
+
+def _claim_scoped_expert_context(
+    context: Dict[str, Any], selected_evidence_ids: set[str]
+) -> Dict[str, Any]:
+    """Keep an Expert View repair from receiving unrelated report evidence."""
+
+    allowed_ids = {_normalized_evidence_id(value) for value in selected_evidence_ids}
+    scoped = deepcopy(context)
+    scoped["themes"] = [
+        {
+            **theme,
+            "evidence": [
+                entry
+                for entry in theme.get("evidence") or []
+                if isinstance(entry, dict)
+                and _normalized_evidence_id(entry.get("evidence_id")) in allowed_ids
+            ],
+        }
+        for theme in scoped.get("themes") or []
+        if isinstance(theme, dict)
+        and any(
+            isinstance(entry, dict)
+            and _normalized_evidence_id(entry.get("evidence_id")) in allowed_ids
+            for entry in theme.get("evidence") or []
+        )
+    ]
+    for key in ("insight_implications", "limitations", "counter_signals"):
+        scoped[key] = [
+            entry
+            for entry in scoped.get(key) or []
+            if isinstance(entry, dict)
+            and _normalized_evidence_id(entry.get("evidence_id")) in allowed_ids
+        ]
+    return scoped
 
 
 def _handle_linkedin_post_regeneration(
@@ -1651,10 +1950,12 @@ def _handle_linkedin_post_regeneration(
     if claim_repairs is not None:
         replacements: Dict[str, str | None] = {}
         for repair in claim_repairs:
-            if not _claim_has_repair_support(execution, repair):
+            claim_grounding = _claim_scoped_grounding_package(execution, repair)
+            if not _claim_has_repair_support(claim_grounding):
                 replacements[repair.claim.claim_id] = None
                 _mark_soft_copy_claim_removed(execution, repair)
                 continue
+            selected_evidence_ids = set(claim_grounding["evidence_ids"])
             result = _render_regeneration_model(
                 execution=execution,
                 namespace=namespace,
@@ -1662,7 +1963,11 @@ def _handle_linkedin_post_regeneration(
                 variables={
                     "attempt_index": execution.runtime.request.attempt_index,
                     "target_section": execution.target.target_section,
-                    "editorial_plan_json": _dump_json(execution.state.editorial_plan),
+                    "editorial_plan_json": _dump_json(
+                        _claim_scoped_editorial_plan(
+                            execution.state.editorial_plan, selected_evidence_ids
+                        )
+                    ),
                     "report_identity_json": _dump_json(
                         _public_report_identity(execution.runtime.safe_doc_map)
                     ),
@@ -1676,7 +1981,7 @@ def _handle_linkedin_post_regeneration(
                     ),
                     "failure_reasons_json": _issues_json([repair.issue]),
                     "fix_checklist_json": _fix_checklist_json(execution.target),
-                    "grounding_package_json": _dump_json(execution.grounding_package),
+                    "grounding_package_json": _dump_json(claim_grounding),
                 },
             )
             repaired_text = strip_linkedin_inline_reference_ids(
