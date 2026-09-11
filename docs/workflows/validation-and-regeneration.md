@@ -236,6 +236,16 @@ only unresolved descriptive or causal claims can be sent to an injected
 semantic-validation boundary. The command does not re-ingest a source or make
 provider calls.
 
+The same package validates factual material sentences in Expert View, LinkedIn,
+and the summary's TLDR, compact TLDR, and executive summary from their retained
+`soft_copy_claim_provenance` bindings. A declared unknown evidence ID, absent
+evidence for a factual claim, protected-fact conflict, or unsupported quantity
+blocks readiness. Provenance classification is authoritative for the factual
+boundary: a declared factual claim cannot be downgraded to interpretation by
+its wording. Interpretations and recommendations remain non-factual here and
+continue through the existing grounding and editorial-quality policies rather
+than becoming a second factual-validation path.
+
 When a queue payload sets `claim_validation_required`, publication readiness
 accepts only a readable package in `awaiting_review` with zero unsupported and
 unresolved factual claims. This is a pre-publication gate, not automatic

@@ -22,6 +22,11 @@ from src.contracts.protected_facts import (
     ProtectedFactComparison,
     compare_protected_fact_texts,
 )
+from src.contracts.soft_copy_claim_provenance import (
+    SoftCopyClaimProvenance,
+    soft_copy_claim_provenance_from_payload,
+)
+from src.utils.errors import AppError
 from src.utils.quantity import extract_quantities, quantities_match
 from src.utils.text_normalization import normalize_for_lookup
 
@@ -133,6 +138,10 @@ def _references(
         root = str(raw.get("evidence_id") or "").strip()
         if root:
             values.append((root, None))
+        for evidence_id in raw.get("evidence_ids") or []:
+            value = str(evidence_id or "").strip()
+            if value:
+                values.append((value, None))
         for span in raw.get("evidence_spans") or []:
             if isinstance(span, dict) and str(span.get("evidence_id") or "").strip():
                 values.append(
@@ -161,22 +170,55 @@ def _candidates(
     artifacts: dict, evidence: dict[str, tuple[str, str, int | None]]
 ) -> list[tuple[ClaimCandidate, str]]:
     output: list[tuple[ClaimCandidate, str]] = []
+    soft_copy_claims = _soft_copy_claims_by_hash(artifacts)
 
-    def add(family: str, text: object, raw: object = None) -> None:
+    def add(
+        family: str,
+        text: object,
+        raw: object = None,
+        *,
+        classification: str = "",
+        claim_id: str = "",
+    ) -> None:
         claim = str(text or "").strip()
         if not claim:
             return
         kind = _claim_kind(claim)
         candidate = ClaimCandidate(
             schema_version=CLAIM_VALIDATION_SCHEMA_VERSION,
-            claim_id=f"claim:{len(output) + 1}",
+            claim_id=claim_id or f"claim:{len(output) + 1}",
             source_family=family,
             text_hash=_hash(claim),
             kind=kind,
-            factual=_factual(kind),
+            factual=(
+                True
+                if classification == "factual"
+                else False
+                if classification in {"interpretive", "recommendation"}
+                else _factual(kind)
+            ),
             evidence_references=_references(raw, evidence),
         )
         output.append((candidate, claim))
+
+    def add_soft_copy(family: str, text: object) -> None:
+        claim = str(text or "").strip()
+        if not claim:
+            return
+        provenance = soft_copy_claims.get((family, _soft_copy_text_hash(claim)))
+        if provenance is None:
+            add(family, claim)
+            return
+        add(
+            family,
+            claim,
+            {
+                "evidence_ids": list(provenance.evidence_ids),
+                "evidence_spans": list(provenance.source_spans),
+            },
+            classification=provenance.classification,
+            claim_id=provenance.claim_id,
+        )
 
     summary = artifacts.get("summary")
     if isinstance(summary, dict):
@@ -185,7 +227,7 @@ def _candidates(
                 add("summary", raw.get("claim"), raw)
         for key in ("tldr", "card_tldr_compact", "executive_summary"):
             for sentence in _SENTENCE_RE.split(str(summary.get(key) or "")):
-                add("summary", sentence)
+                add_soft_copy("summary", sentence)
     for family, item_key, text_key in (
         ("insights_final", "insights_final", "text"),
         ("quotes_final", "quotes_final", "text"),
@@ -193,17 +235,35 @@ def _candidates(
         for raw in artifacts.get(item_key) or []:
             if isinstance(raw, dict):
                 add(family, raw.get(text_key), raw)
-    for family in (
-        "expert_comment",
-        "linkedin_post",
-        "executive_summary",
-        "executive_takeaways",
-    ):
+    for family in ("expert_comment", "linkedin_post"):
+        value = artifacts.get(family)
+        if isinstance(value, str):
+            for sentence in _SENTENCE_RE.split(value):
+                add_soft_copy(family, sentence)
+    for family in ("executive_summary", "executive_takeaways"):
         value = artifacts.get(family)
         if isinstance(value, str):
             for sentence in _SENTENCE_RE.split(value):
                 add(family, sentence)
     return output
+
+
+def _soft_copy_claims_by_hash(
+    artifacts: dict,
+) -> dict[tuple[str, str], SoftCopyClaimProvenance]:
+    """Read retained soft-copy provenance without inferring any evidence links."""
+
+    try:
+        claims = soft_copy_claim_provenance_from_payload(
+            artifacts.get("soft_copy_claim_provenance")
+        )
+    except AppError:
+        return {}
+    return {(claim.artifact_family, claim.text_hash): claim for claim in claims}
+
+
+def _soft_copy_text_hash(text: str) -> str:
+    return hashlib.sha256(" ".join(text.split()).encode("utf-8")).hexdigest()
 
 
 def _checks(
