@@ -8,7 +8,16 @@ from typing import Any, Iterable, Sequence
 from src.contracts.regeneration import RegenerationEvidenceLineage
 from src.contracts.run_context import RunContext
 from src.contracts.schema_validation import SchemaValidateRequest
+from src.contracts.soft_copy_claim_provenance import (
+    SoftCopyClaimProvenance,
+    soft_copy_claim_provenance_from_payload,
+    soft_copy_public_text,
+)
 from src.contracts.validation import ValidationIssue
+from src.generators.artifact_normalization import artifact_evidence_span_index
+from src.generators.soft_copy_claim_provenance import (
+    retained_soft_copy_claims_cover_text,
+)
 from src.services.schema_validator_service import (
     validate_evidence_references,
     validate_schema,
@@ -41,6 +50,9 @@ class _EvidenceRecord:
     @property
     def key(self) -> tuple[str, str]:
         return self.entity_kind, self.entity_id
+
+
+_SOFT_COPY_FAMILIES = ("expert_comment", "linkedin_post")
 
 
 def validate_regeneration_candidate(
@@ -110,6 +122,12 @@ def validate_regeneration_candidate(
     current_records = _records(current_artifacts)
     candidate_records = _records(candidate_artifacts)
     evidence_pages = _evidence_source_pages(evidence_packs)
+    _validate_soft_copy_claim_provenance(
+        current_artifacts=current_artifacts,
+        candidate_artifacts=candidate_artifacts,
+        evidence_packs=evidence_packs,
+        issues=issues,
+    )
     candidate_by_key = {record.key: record for record in candidate_records}
     current_by_key = {record.key: record for record in current_records}
 
@@ -170,6 +188,270 @@ def validate_regeneration_candidate(
         issues=issues,
     )
     return CandidateIntegrityResult(issues=issues, evidence_lineage=lineage)
+
+
+def _validate_soft_copy_claim_provenance(
+    *,
+    current_artifacts: dict[str, Any],
+    candidate_artifacts: dict[str, Any],
+    evidence_packs: dict[str, Any],
+    issues: list[ValidationIssue],
+) -> None:
+    """Validate factual Expert View and LinkedIn claim provenance in-place."""
+
+    current_claims, current_error = _soft_copy_claims(current_artifacts)
+    candidate_claims, candidate_error = _soft_copy_claims(candidate_artifacts)
+    if candidate_error == "invalid":
+        issues.append(
+            _soft_copy_provenance_issue(
+                family="soft_copy",
+                claim_id="",
+                message="Candidate soft-copy claim provenance is invalid.",
+            )
+        )
+        return
+    if current_error:
+        # A legacy or malformed retained predecessor cannot establish lineage.
+        current_claims = []
+
+    raw_doc_map = evidence_packs.get("doc_map")
+    canonical_doc_map: dict[str, Any] = (
+        raw_doc_map if isinstance(raw_doc_map, dict) else {}
+    )
+    canonical_spans = artifact_evidence_span_index(
+        doc_map=canonical_doc_map,
+        evidence_packs=evidence_packs,
+    )
+    current_by_family = _claims_by_family(current_claims)
+    candidate_by_family = _claims_by_family(candidate_claims)
+
+    for family in _SOFT_COPY_FAMILIES:
+        originals = current_by_family.get(family, [])
+        candidates = candidate_by_family.get(family, [])
+        text = soft_copy_public_text(family, candidate_artifacts.get(family))
+        provenance_required = bool(originals or candidates)
+        if not provenance_required:
+            continue
+        if _family_is_abstained(candidate_artifacts, family) and not text:
+            continue
+        if not retained_soft_copy_claims_cover_text(text=text, claims=candidates):
+            issues.append(
+                _soft_copy_provenance_issue(
+                    family=family,
+                    claim_id="",
+                    message=(
+                        "Candidate soft-copy claim provenance does not exactly cover "
+                        "the retained public copy."
+                    ),
+                )
+            )
+            continue
+
+        original_by_hash = {
+            claim.text_hash: claim
+            for claim in originals
+            if claim.classification == "factual"
+        }
+        candidate_hashes = {claim.text_hash for claim in candidates}
+        for original_hash, original in original_by_hash.items():
+            if original_hash not in candidate_hashes:
+                continue
+            matching = next(
+                (
+                    claim
+                    for claim in candidates
+                    if claim.text_hash == original_hash
+                    and claim.classification == "factual"
+                ),
+                None,
+            )
+            if matching != original:
+                issues.append(
+                    _soft_copy_provenance_issue(
+                        family=family,
+                        claim_id=original.claim_id,
+                        message=(
+                            "An unchanged factual soft-copy claim must retain its "
+                            "original claim provenance lineage."
+                        ),
+                    )
+                )
+
+        for claim in candidates:
+            if claim.classification != "factual":
+                continue
+            _validate_factual_soft_copy_claim(
+                claim=claim,
+                original=original_by_hash.get(claim.text_hash),
+                canonical_spans=canonical_spans,
+                quarantined_ids=_quarantined_evidence_ids(
+                    candidate_artifacts, family, claim.claim_id
+                ),
+                issues=issues,
+            )
+
+
+def _soft_copy_claims(
+    artifacts: dict[str, Any],
+) -> tuple[list[SoftCopyClaimProvenance], str]:
+    if "soft_copy_claim_provenance" not in artifacts:
+        return [], "missing"
+    try:
+        return (
+            soft_copy_claim_provenance_from_payload(
+                artifacts.get("soft_copy_claim_provenance")
+            ),
+            "",
+        )
+    except (AppError, TypeError, ValueError):
+        return [], "invalid"
+
+
+def _claims_by_family(
+    claims: Sequence[SoftCopyClaimProvenance],
+) -> dict[str, list[SoftCopyClaimProvenance]]:
+    grouped: dict[str, list[SoftCopyClaimProvenance]] = {}
+    for claim in claims:
+        if claim.artifact_family in _SOFT_COPY_FAMILIES:
+            grouped.setdefault(claim.artifact_family, []).append(claim)
+    return grouped
+
+
+def _validate_factual_soft_copy_claim(
+    *,
+    claim: SoftCopyClaimProvenance,
+    original: SoftCopyClaimProvenance | None,
+    canonical_spans: dict[str, list[dict[str, Any]]],
+    quarantined_ids: set[str],
+    issues: list[ValidationIssue],
+) -> None:
+    if not claim.evidence_ids:
+        issues.append(
+            _soft_copy_provenance_issue(
+                family=claim.artifact_family,
+                claim_id=claim.claim_id,
+                message="Factual soft-copy claim has no evidence identifier.",
+                grounding_code="missing_material_evidence",
+            )
+        )
+        return
+    if original is None and (
+        claim.regeneration_attempt < 1 or not claim.producing_prompt_identity
+    ):
+        issues.append(
+            _soft_copy_provenance_issue(
+                family=claim.artifact_family,
+                claim_id=claim.claim_id,
+                message=(
+                    "A repaired factual soft-copy claim must declare explicit new "
+                    "lineage."
+                ),
+            )
+        )
+    evidence_ids = {evidence_id.casefold() for evidence_id in claim.evidence_ids}
+    if evidence_ids & quarantined_ids:
+        issues.append(
+            _soft_copy_provenance_issue(
+                family=claim.artifact_family,
+                claim_id=claim.claim_id,
+                message="Factual soft-copy claim references quarantined evidence.",
+            )
+        )
+    for evidence_id in claim.evidence_ids:
+        canonical = canonical_spans.get(evidence_id.casefold(), [])
+        claimed_spans = [
+            span
+            for span in claim.source_spans
+            if str(span.get("evidence_id") or "").strip().casefold()
+            == evidence_id.casefold()
+        ]
+        if canonical and not claimed_spans:
+            issues.append(
+                _source_page_issue(
+                    _EvidenceRecord(
+                        entity_kind=claim.artifact_family,
+                        entity_id=claim.claim_id,
+                        evidence_ids=claim.evidence_ids,
+                        source_pages=(),
+                        material=True,
+                    ),
+                    "Factual soft-copy claim omits retained source-span provenance.",
+                )
+            )
+            continue
+        for span in claimed_spans:
+            if canonical and not _source_span_is_compatible(span, canonical):
+                issues.append(
+                    _source_page_issue(
+                        _EvidenceRecord(
+                            entity_kind=claim.artifact_family,
+                            entity_id=claim.claim_id,
+                            evidence_ids=claim.evidence_ids,
+                            source_pages=(),
+                            material=True,
+                        ),
+                        "Factual soft-copy source pages or spans do not match "
+                        "the referenced evidence.",
+                    )
+                )
+
+
+def _source_span_is_compatible(
+    claimed: dict[str, Any], canonical: Sequence[dict[str, Any]]
+) -> bool:
+    fields = ("source_pack", "page", "section_id", "start_offset", "end_offset")
+    for reference in canonical:
+        if all(
+            field not in claimed
+            or field not in reference
+            or claimed[field] == reference[field]
+            for field in fields
+        ):
+            return True
+    return False
+
+
+def _quarantined_evidence_ids(
+    artifacts: dict[str, Any], family: str, claim_id: str
+) -> set[str]:
+    selections = artifacts.get("_repair_evidence_selection")
+    if not isinstance(selections, dict):
+        return set()
+    selection = selections.get(f"{family}:{claim_id}")
+    if not isinstance(selection, dict):
+        return set()
+    return {
+        s(evidence_id).strip().casefold()
+        for evidence_id in selection.get("quarantined_evidence_ids") or []
+        if s(evidence_id).strip()
+    }
+
+
+def _family_is_abstained(artifacts: dict[str, Any], family: str) -> bool:
+    status = artifacts.get("family_status")
+    payload = status.get(family) if isinstance(status, dict) else None
+    return (
+        isinstance(payload, dict)
+        and str(payload.get("status") or "").strip().lower() == "abstained"
+    )
+
+
+def _soft_copy_provenance_issue(
+    *,
+    family: str,
+    claim_id: str,
+    message: str,
+    grounding_code: str = "",
+) -> ValidationIssue:
+    prefix = f"[grounding|{grounding_code}] " if grounding_code else ""
+    return issue(
+        rule_id="grounding" if grounding_code else "soft_copy_claim_provenance",
+        message=f"{prefix}{message}",
+        severity="error",
+        section=f"{family}:{claim_id}".rstrip(":"),
+        repair_target=family,
+        entity_id=claim_id,
+    )
 
 
 def _has_unique_evidence_continuity_match(
@@ -397,6 +679,8 @@ def _repair_target(entity_kind: str) -> str:
         return "insights_bundle"
     if entity_kind == "quotes_final":
         return "quotes"
+    if entity_kind in _SOFT_COPY_FAMILIES:
+        return entity_kind
     return ""
 
 

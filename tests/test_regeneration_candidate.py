@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from copy import deepcopy
 from pathlib import Path
+
+import pytest
 
 from src.contracts.run_context import RunContext
 from src.generators.artifact_normalization import (
@@ -43,6 +46,260 @@ def _ctx() -> RunContext:
         task_id="task",
         span_id="span",
     )
+
+
+def _soft_copy_claim(
+    *,
+    family: str,
+    text: str,
+    evidence_id: str = "qc_001",
+    page: int = 6,
+    regeneration_attempt: int = 0,
+) -> dict[str, object]:
+    normalized = " ".join(text.split())
+    return {
+        "schema_version": "1.0",
+        "artifact_family": family,
+        "claim_id": f"soft_copy:{family}:{hashlib.sha256(normalized.encode()).hexdigest()[:16]}",
+        "text_hash": hashlib.sha256(normalized.encode()).hexdigest(),
+        "classification": "factual",
+        "evidence_ids": [evidence_id],
+        "source_spans": [
+            {
+                "evidence_id": evidence_id,
+                "source_pack": "quote_candidates",
+                "page": page,
+            }
+        ],
+        "producing_prompt_identity": {
+            "namespace": f"report_vs/artifacts/{family}",
+            "prompt_content_hash": "a" * 64,
+        },
+        "generation_attempt": 1,
+        "regeneration_attempt": regeneration_attempt,
+    }
+
+
+def _soft_copy_artifacts() -> tuple[dict, dict, dict]:
+    current, evidence_packs = _retained_artifact_and_evidence()
+    current["expert_comment"] = "Generation Q is a distinct cohort."
+    current["linkedin_post"] = "Generation Q formed identities online."
+    current["soft_copy_claim_provenance"] = {
+        "schema_version": "1.0",
+        "claims": [
+            _soft_copy_claim(family="expert_comment", text=current["expert_comment"]),
+            _soft_copy_claim(family="linkedin_post", text=current["linkedin_post"]),
+        ],
+    }
+    return current, deepcopy(current), evidence_packs
+
+
+def _claim_for_family(artifacts: dict, family: str) -> dict:
+    return next(
+        claim
+        for claim in artifacts["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] == family
+    )
+
+
+def test_candidate_allows_repaired_expert_claim_with_explicit_new_lineage() -> None:
+    current, candidate, evidence_packs = _soft_copy_artifacts()
+    candidate["expert_comment"] = "Generation Q developed in digital spaces."
+    repaired = _soft_copy_claim(
+        family="expert_comment",
+        text=candidate["expert_comment"],
+        regeneration_attempt=1,
+    )
+    repaired["producing_prompt_identity"]["namespace"] = (
+        "report_vs/artifacts/regenerate/expert_comment"
+    )
+    candidate["soft_copy_claim_provenance"]["claims"] = [
+        claim
+        for claim in candidate["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] != "expert_comment"
+    ] + [repaired]
+
+    result = validate_regeneration_candidate(
+        current_artifacts=current,
+        candidate_artifacts=candidate,
+        evidence_packs=evidence_packs,
+        ctx=_ctx(),
+    )
+
+    assert result.passed
+
+
+def test_candidate_blocks_repaired_expert_claim_without_new_lineage() -> None:
+    current, candidate, evidence_packs = _soft_copy_artifacts()
+    candidate["expert_comment"] = "Generation Q developed in digital spaces."
+    candidate["soft_copy_claim_provenance"]["claims"] = [
+        claim
+        for claim in candidate["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] != "expert_comment"
+    ] + [_soft_copy_claim(family="expert_comment", text=candidate["expert_comment"])]
+
+    result = validate_regeneration_candidate(
+        current_artifacts=current,
+        candidate_artifacts=candidate,
+        evidence_packs=evidence_packs,
+        ctx=_ctx(),
+    )
+
+    assert not result.passed
+    assert any(
+        issue.affected_section.startswith("expert_comment")
+        and "new lineage" in issue.message
+        for issue in result.issues
+    )
+
+
+@pytest.mark.parametrize("family", ["expert_comment", "linkedin_post"])
+def test_candidate_blocks_factual_soft_copy_claim_using_quarantined_evidence(
+    family: str,
+) -> None:
+    current, candidate, evidence_packs = _soft_copy_artifacts()
+    claim = _claim_for_family(candidate, family)
+    candidate["_repair_evidence_selection"] = {
+        f"{family}:{claim['claim_id']}": {
+            "quarantined_evidence_ids": ["qc_001"],
+        }
+    }
+
+    result = validate_regeneration_candidate(
+        current_artifacts=current,
+        candidate_artifacts=candidate,
+        evidence_packs=evidence_packs,
+        ctx=_ctx(),
+    )
+
+    assert not result.passed
+    assert any(
+        issue.affected_section == f"{family}:{claim['claim_id']}"
+        and "quarantined" in issue.message
+        for issue in result.issues
+    )
+
+
+@pytest.mark.parametrize("family", ["expert_comment", "linkedin_post"])
+def test_candidate_blocks_factual_soft_copy_claim_without_evidence_id(
+    family: str,
+) -> None:
+    current, candidate, evidence_packs = _soft_copy_artifacts()
+    _claim_for_family(candidate, family)["evidence_ids"] = []
+
+    result = validate_regeneration_candidate(
+        current_artifacts=current,
+        candidate_artifacts=candidate,
+        evidence_packs=evidence_packs,
+        ctx=_ctx(),
+    )
+
+    assert not result.passed
+    assert any(
+        issue.affected_section
+        == f"{family}:{_claim_for_family(candidate, family)['claim_id']}"
+        and "missing_material_evidence" in issue.message
+        for issue in result.issues
+    )
+
+
+@pytest.mark.parametrize("family", ["expert_comment", "linkedin_post"])
+def test_candidate_blocks_factual_soft_copy_claim_with_unknown_evidence_id(
+    family: str,
+) -> None:
+    current, candidate, evidence_packs = _soft_copy_artifacts()
+    claim = _claim_for_family(candidate, family)
+    claim["evidence_ids"] = ["missing-soft-copy-evidence"]
+    claim["source_spans"][0]["evidence_id"] = "missing-soft-copy-evidence"
+
+    result = validate_regeneration_candidate(
+        current_artifacts=current,
+        candidate_artifacts=candidate,
+        evidence_packs=evidence_packs,
+        ctx=_ctx(),
+    )
+
+    assert not result.passed
+    assert any("hallucinated_evidence_id" in issue.message for issue in result.issues)
+
+
+@pytest.mark.parametrize("family", ["expert_comment", "linkedin_post"])
+def test_candidate_blocks_factual_soft_copy_claim_with_wrong_source_page(
+    family: str,
+) -> None:
+    current, candidate, evidence_packs = _soft_copy_artifacts()
+    _claim_for_family(candidate, family)["source_spans"][0]["page"] = 99
+
+    result = validate_regeneration_candidate(
+        current_artifacts=current,
+        candidate_artifacts=candidate,
+        evidence_packs=evidence_packs,
+        ctx=_ctx(),
+    )
+
+    assert not result.passed
+    assert any(
+        issue.rule_id == "regeneration_source_page"
+        and issue.affected_section.startswith(family)
+        for issue in result.issues
+    )
+
+
+@pytest.mark.parametrize("family", ["expert_comment", "linkedin_post"])
+def test_candidate_blocks_unchanged_factual_soft_copy_claim_that_loses_lineage(
+    family: str,
+) -> None:
+    current, candidate, evidence_packs = _soft_copy_artifacts()
+    candidate["soft_copy_claim_provenance"]["claims"] = [
+        claim
+        for claim in candidate["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] != family
+    ]
+
+    result = validate_regeneration_candidate(
+        current_artifacts=current,
+        candidate_artifacts=candidate,
+        evidence_packs=evidence_packs,
+        ctx=_ctx(),
+    )
+
+    assert not result.passed
+    assert any(
+        issue.affected_section.startswith(family)
+        and "claim provenance" in issue.message
+        for issue in result.issues
+    )
+
+
+@pytest.mark.parametrize("family", ["expert_comment", "linkedin_post"])
+def test_candidate_allows_explicit_soft_copy_family_abstention(family: str) -> None:
+    current, candidate, evidence_packs = _soft_copy_artifacts()
+    candidate[family] = ""
+    candidate["soft_copy_claim_provenance"]["claims"] = [
+        claim
+        for claim in candidate["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] != family
+    ]
+    candidate["family_status"] = {
+        family: {
+            "schema_version": "1.0",
+            "family": family,
+            "source": "artifact",
+            "status": "abstained",
+            "confidence_score": 0.0,
+            "policy_action": "abstain",
+            "reason": "The failed factual claim has no retained support.",
+        }
+    }
+
+    result = validate_regeneration_candidate(
+        current_artifacts=current,
+        candidate_artifacts=candidate,
+        evidence_packs=evidence_packs,
+        ctx=_ctx(),
+    )
+
+    assert result.passed
 
 
 def test_candidate_blocks_lost_and_hallucinated_evidence_ids() -> None:
@@ -123,9 +380,7 @@ def test_candidate_allows_known_evidence_remapping_and_abstention() -> None:
 def test_candidate_normalizes_a_known_namespaced_quote_evidence_id() -> None:
     current, evidence_packs = _retained_artifact_and_evidence()
     candidate = deepcopy(current)
-    candidate["quotes_final"][0]["evidence_id"] = (
-        "evidence:quote_candidates:quote_001"
-    )
+    candidate["quotes_final"][0]["evidence_id"] = "evidence:quote_candidates:quote_001"
 
     normalize_artifact_evidence_ids(
         summary=candidate["summary"],

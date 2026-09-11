@@ -311,8 +311,16 @@ no support remains, the normal abstention path applies.
 
 The deterministic candidate check is complete only when all evidence IDs,
 source pages, and material lineage relationships validate. A grounding-provider
-failure is release-blocking unless that complete deterministic check passed. In
-all cases, material claims classified as unsupported, numerically inconsistent,
+failure is release-blocking unless that complete deterministic check passed.
+For Expert View and LinkedIn factual claims with retained private provenance,
+candidate promotion additionally requires known, non-quarantined evidence;
+compatible retained source spans where they exist; unchanged lineage for
+unchanged prose; and an explicit new generation lineage for replacement prose.
+An empty, schema-valid abstention may remove a failed claim or family, but a
+candidate cannot retain public soft copy while silently dropping its claim
+provenance.
+
+In all cases, material claims classified as unsupported, numerically inconsistent,
 contradicted, using an invalid comparison, missing material evidence, or citing
 a hallucinated evidence ID are blocking failures. An explicitly declared,
 schema-valid family abstention is retained as abstention rather than being
