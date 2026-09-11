@@ -94,6 +94,7 @@ agent-skills/
 
 # Logs & temporary files
 temp/
+tmp/
 backup/
 *.log
 *.bak
