@@ -33,6 +33,12 @@ class TaxonomyExtractRequest(SemanticIdContract):
         default=None,
         metadata={"doc": "Report source MD5 used for taxonomy cache keys."},
     )
+    source_identity_id: str = field(
+        default="",
+        metadata={
+            "doc": "Canonical source identity for retained model-output provenance."
+        },
+    )
     vector_store_content_hash: Optional[str] = field(
         default=None,
         metadata={

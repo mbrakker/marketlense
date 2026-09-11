@@ -85,6 +85,77 @@ def test_run_report_analysis_polls_vector_store_status_until_ready(
     )
 
 
+def test_report_scoped_requests_preserve_canonical_source_and_publisher_ids(tmp_path):
+    runtime = replace(
+        _runtime(tmp_path),
+        ctx=replace(
+            _runtime(tmp_path).ctx,
+            source_identity_id="source:canonical-report",
+            publisher_id="publisher:canonical-owner",
+        ),
+        md5="content-md5-that-is-not-the-source-id",
+        publisher_name="Publisher Display Name",
+    )
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    taxonomy_requests = []
+    category_requests = []
+    evidence_contexts = []
+    artifact_contexts = []
+    validation_requests = []
+
+    deps = _deps(
+        extract_taxonomy=lambda request, ctx: (
+            taxonomy_requests.append(request)
+            or TaxonomyExtractResponse(
+                schema_version="1.0", taxonomy=["tag"], region="US", time_period="2026"
+            )
+        ),
+        fit_report_categories_from_context=lambda request, ctx: (
+            category_requests.append(request) or _fit_response()
+        ),
+        generate_evidence_packs=lambda **kwargs: (
+            evidence_contexts.append(kwargs["ctx"])
+            or {"doc_map": {"docMap": {"title": "Doc Title", "publisher": "Publisher"}}}
+        ),
+        generate_artifacts=lambda **kwargs: (
+            artifact_contexts.append(kwargs["ctx"]) or _artifacts()
+        ),
+        run_validation=lambda request, *args, **kwargs: (
+            validation_requests.append(request)
+            or ValidationReport(
+                schema_version="1.1",
+                status="pass",
+                issues=[],
+                severity="pass",
+                source_path=str(tmp_path / "out" / "validation.json"),
+            )
+        ),
+    )
+
+    run_report_analysis(
+        runtime,
+        source,
+        selection,
+        VectorStoreIndexingState(
+            vector_store_id="vs_1",
+            openai_file_id="file_1",
+            vector_store_status="completed",
+            indexed_at_utc="2026-01-01T00:00:00Z",
+            last_error=None,
+        ),
+        deps,
+    )
+
+    assert taxonomy_requests[0].publisher_id == "publisher:canonical-owner"
+    assert category_requests[0].source_id == "source:canonical-report"
+    assert evidence_contexts[0].source_identity_id == "source:canonical-report"
+    assert evidence_contexts[0].publisher_id == "publisher:canonical-owner"
+    assert artifact_contexts[0].source_identity_id == "source:canonical-report"
+    assert artifact_contexts[0].publisher_id == "publisher:canonical-owner"
+    assert validation_requests[0].source_id == "source:canonical-report"
+
+
 def test_report_payload_ready_logs_only_bounded_summary(
     tmp_path,
     caplog,

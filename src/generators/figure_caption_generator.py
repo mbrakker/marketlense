@@ -338,6 +338,7 @@ def generate_figure_captions(
         stage="artifact_generation",
         artifact_family="figure_caption",
     )
+    source_identity_id = str(caption_ctx.source_identity_id or "").strip()
     prompt_namespace = runtime.settings.figure_caption_prompt_namespace
     prompt_set = dependencies.load_prompt_set(
         PromptLoadRequest(
@@ -478,13 +479,13 @@ def generate_figure_captions(
         family_id = f"report_vs/figure_caption/{asset_identity[:16]}"
         relevant_input_hash = sha256_json(
             {
-                "source_id": runtime.md5 or runtime.file.file_id,
+                "source_id": source_identity_id,
                 "asset_identity": asset_identity,
                 "context_bundle": context_bundle,
             }
         )
         reused_payload = None
-        if runtime.md5:
+        if source_identity_id:
             reuse = prompt_family_reuse_reader(
                 PromptFamilyReuseRequest(
                     schema_version=PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
@@ -492,7 +493,7 @@ def generate_figure_captions(
                     output_dir=runtime.settings.output_dir,
                     report_id=runtime.file.file_id,
                     report_slug=runtime.report_name,
-                    source_id=runtime.md5,
+                    source_id=source_identity_id,
                     family_id=family_id,
                     family_schema_version="1.0",
                     processing_version="figure_caption_generator_v2",
@@ -654,7 +655,7 @@ def generate_figure_captions(
                 )
             )
         updated_assets.append(updated_asset)
-        if not error_message and reused_payload is None and runtime.md5:
+        if not error_message and reused_payload is None and source_identity_id:
             prompt_family_materializer(
                 PromptFamilyMaterializationRequest(
                     schema_version=PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
@@ -662,7 +663,7 @@ def generate_figure_captions(
                     output_dir=runtime.settings.output_dir,
                     report_id=runtime.file.file_id,
                     report_slug=runtime.report_name,
-                    source_id=runtime.md5,
+                    source_id=source_identity_id,
                     family_id=family_id,
                     family_schema_version="1.0",
                     processing_version="figure_caption_generator_v2",

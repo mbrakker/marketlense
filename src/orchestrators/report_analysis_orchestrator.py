@@ -1061,7 +1061,9 @@ def run_report_analysis(
             evidence_packs=packs,
             vector_store_id=vector_state.vector_store_id,
             vector_store_content_hash=vector_store_content_hash or "",
-            source_id=runtime.md5 or "",
+            source_id=_analysis_source_identity_id(
+                mode_ctx, runtime.md5 or runtime.file.file_id
+            ),
             publisher_name=runtime.publisher_name,
             report_name=runtime.source_report_name or runtime.report_title,
             source_url=runtime.source_url,

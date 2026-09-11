@@ -41,11 +41,16 @@ def _require_vector_store_budget(
             budget=budget,
             run_id=ctx.run_id,
             workflow_id="vector_store",
-            publisher_id=str(getattr(request, "publisher_name", "") or ""),
+            publisher_id=(
+                str(ctx.publisher_id or "").strip()
+                or str(getattr(request, "publisher_id", "") or "").strip()
+                or str(getattr(request, "publisher_name", "") or "").strip()
+            ),
             resource_type="vector_store",
             operation=operation,
             provider="openai",
             model=str(getattr(request, "model", "") or "vector_store"),
+            source_id=str(ctx.source_identity_id or "").strip(),
             idempotency_key=f"openai:{operation}:{ctx.run_id}:{ctx.task_id}:{ctx.span_id}",
             reserve_in_flight=True,
             forecast_method="historical_median",

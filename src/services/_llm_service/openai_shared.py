@@ -159,8 +159,13 @@ def enforce_daily_spend_guardrail(
             ),
             run_id=ctx.run_id,
             workflow_id=str(getattr(request, "workflow_id", "llm")),
-            publisher_id=str(getattr(request, "publisher_name", "") or ""),
+            publisher_id=(
+                str(ctx.publisher_id or "").strip()
+                or str(getattr(request, "publisher_id", "") or "").strip()
+                or str(getattr(request, "publisher_name", "") or "").strip()
+            ),
             report_id=str(getattr(request, "report_name", "") or ""),
+            source_id=str(ctx.source_identity_id or "").strip(),
             resource_type="llm_provider",
             operation=semantic_action,
             provider=provider,

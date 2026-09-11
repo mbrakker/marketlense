@@ -54,7 +54,7 @@ class RunContext(SemanticIdContract):
     source_identity_id: str = field(
         default="",
         metadata={
-            "doc": "Immutable source checksum or equivalent identity for the current report."
+            "doc": "Immutable canonical source identity for the current report."
         },
     )
     publisher_id: str = field(

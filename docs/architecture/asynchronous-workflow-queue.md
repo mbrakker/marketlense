@@ -97,6 +97,13 @@ non-canonical admitted provenance fails before the manifest is written, while
 the queue bridge continues to reject a caller payload that differs from the
 immutable member.
 
+The same pair remains authoritative at every report-scoped model boundary:
+`RunContext.source_identity_id` is used for retained prompt-family, validation,
+regeneration, rendering, and lineage identity fields, while
+`RunContext.publisher_id` is used for model-usage and budget attribution.
+MD5 remains only in fields explicitly documented as content checksums, and a
+publisher display name remains only a display label.
+
 Manifest creation and each stage write compare the queue root as part of
 provenance. A missing, changed, or ambiguous root fails closed, so state-db
 readiness, retry, requeue, and approval evidence cannot be attributed across

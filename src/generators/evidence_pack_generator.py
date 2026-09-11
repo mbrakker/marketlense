@@ -301,6 +301,7 @@ def generate_evidence_packs(
     prompt_family_materializer=materialize_prompt_family,
 ) -> Dict[str, dict]:
     ctx = ctx or new_run_context(task_id=f"evidence_pack:{report_id}")
+    source_identity_id = str(ctx.source_identity_id or md5 or "").strip()
     openai_client = require_injected_model_client(
         openai_client,
         scope="evidence_pack_generator",
@@ -559,7 +560,7 @@ def generate_evidence_packs(
                 report_name=report_name,
                 source_url=source_url,
                 report_id=report_id,
-                source_id=md5 or "",
+                source_id=source_identity_id,
             )
             support = outcome.metric_support.get(candidate.claim_id)
             return (
@@ -619,6 +620,7 @@ def _generate_pack(
     strategy: EvidencePackStrategy,
     prompt_user_variables: Optional[Dict[str, str]] = None,
 ) -> dict:
+    source_identity_id = str(ctx.source_identity_id or md5 or "").strip()
     pack_name = strategy.pack_name
     prompt_namespace = _prompt_namespace_for_strategy(strategy)
     schema_name = strategy.schema_name
@@ -697,7 +699,7 @@ def _generate_pack(
         )
         return _attach_pack_family_status(pack_name, normalized)
 
-    if md5 and vector_provenance_verified:
+    if source_identity_id and vector_provenance_verified:
         reuse = prompt_family_reuse_reader(
             PromptFamilyReuseRequest(
                 schema_version=PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
@@ -705,7 +707,7 @@ def _generate_pack(
                 output_dir=settings.output_dir,
                 report_id=report_id,
                 report_slug=report_name,
-                source_id=md5,
+                source_id=source_identity_id,
                 family_id=prompt_namespace,
                 family_schema_version="1.0",
                 processing_version="report_generation_checkpoint_v2",
@@ -890,7 +892,7 @@ def _generate_pack(
         ctx=ctx,
         report_name=report_name,
     )
-    if md5 and vector_provenance_verified:
+    if source_identity_id and vector_provenance_verified:
         prompt_family_materializer(
             PromptFamilyMaterializationRequest(
                 schema_version=PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
@@ -898,7 +900,7 @@ def _generate_pack(
                 output_dir=settings.output_dir,
                 report_id=report_id,
                 report_slug=report_name,
-                source_id=md5,
+                source_id=source_identity_id,
                 family_id=prompt_namespace,
                 family_schema_version="1.0",
                 processing_version="report_generation_checkpoint_v2",

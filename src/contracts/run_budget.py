@@ -332,7 +332,9 @@ class RunBudget:
         metadata={"doc": "Stable run identifier governed by this budget."}
     )
     publisher_name: str = field(
-        metadata={"doc": "Publisher scope, or empty for global work."}
+        metadata={
+            "doc": "Canonical publisher-ID scope, or empty for global work."
+        }
     )
     usage_db_path: str = field(
         default="./state/llm_usage.sqlite",

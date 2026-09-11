@@ -78,6 +78,7 @@ def extract_taxonomy(
     prompt_family_reuse_reader=read_reusable_prompt_family,
     prompt_family_materializer=materialize_prompt_family,
 ) -> TaxonomyExtractResponse:
+    source_identity_id = str(request.source_identity_id or request.md5 or "").strip()
     openai_client = require_injected_model_client(openai_client, scope="taxonomy")
     taxonomy_temperature = _resolve_taxonomy_temperature(request)
     logger.info(
@@ -203,7 +204,7 @@ def extract_taxonomy(
         }
     )
     reused_payload = None
-    if request.md5 and vector_provenance_verified and not request.repair_attempt:
+    if source_identity_id and vector_provenance_verified and not request.repair_attempt:
         reuse = prompt_family_reuse_reader(
             PromptFamilyReuseRequest(
                 schema_version=PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
@@ -211,7 +212,7 @@ def extract_taxonomy(
                 output_dir=request.settings.output_dir,
                 report_id=str(request.report_id),
                 report_slug=request.report_slug or str(request.report_id),
-                source_id=request.md5,
+                source_id=source_identity_id,
                 family_id=request.prompt_namespace,
                 family_schema_version="1.0",
                 processing_version="report_generation_checkpoint_v2",
@@ -430,7 +431,7 @@ def extract_taxonomy(
     )
     if (
         reused_payload is None
-        and request.md5
+        and source_identity_id
         and vector_provenance_verified
         and not request.repair_attempt
     ):
@@ -441,7 +442,7 @@ def extract_taxonomy(
                 output_dir=request.settings.output_dir,
                 report_id=str(request.report_id),
                 report_slug=request.report_slug or str(request.report_id),
-                source_id=request.md5,
+                source_id=source_identity_id,
                 family_id=request.prompt_namespace,
                 family_schema_version="1.0",
                 processing_version="report_generation_checkpoint_v2",

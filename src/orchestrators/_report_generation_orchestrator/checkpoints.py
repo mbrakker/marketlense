@@ -469,7 +469,9 @@ def _record_checkpoint_artifact_lineage(
                 db_path=runtime.settings.reports_db,
                 artifact_kind=artifact_name,
                 report_id=runtime.file.file_id,
-                source_id=str(runtime.md5 or "").strip().lower(),
+                source_id=str(
+                    runtime.ctx.source_identity_id or runtime.md5 or ""
+                ).strip(),
                 storage_ref=storage_ref,
                 producer=stage_name,
                 schema_version_used=str(raw_ref.get("schema_version") or "1.0"),
@@ -1000,7 +1002,9 @@ def _record_rendered_html_prompt_family_lineage(
             db_path=runtime.settings.reports_db,
             artifact_kind="rendered_html",
             report_id=runtime.file.file_id,
-            source_id=str(runtime.md5 or "").strip().lower(),
+            source_id=str(
+                runtime.ctx.source_identity_id or runtime.md5 or ""
+            ).strip(),
             storage_ref=storage_ref,
             producer=STAGE_RENDER_COMPLETE,
             schema_version_used=str(rendered_ref.get("schema_version") or "1.0"),

@@ -38898,6 +38898,9 @@
             }
           ]
         },
+        "source_identity_id": {
+          "type": "string"
+        },
         "source_url": {
           "type": "string"
         },

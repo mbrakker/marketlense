@@ -1,6 +1,8 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+from dataclasses import replace
+
 from ._shared import *  # noqa: F401,F403
 
 
@@ -18,6 +20,7 @@ def test_evidence_pack_family_reuses_retained_output_before_model_call(tmp_path)
 
     def reuse_reader(request, _ctx):
         assert request.family_id == "report_vs/doc_map"
+        assert request.source_id == "source:canonical-report"
         return PromptFamilyReuseResponse(
             schema_version="1.0",
             reusable=True,
@@ -34,7 +37,7 @@ def test_evidence_pack_family_reuses_retained_output_before_model_call(tmp_path)
         vector_store_id="vs_1",
         vector_store_content_hash="verified-vector-content",
         settings=_settings(tmp_path, evidence_pack_registry=["doc_map"]),
-        ctx=_ctx(),
+        ctx=replace(_ctx(), source_identity_id="source:canonical-report"),
         md5="retained-source-md5",
         openai_client=client,
         prompt_client=FakePromptClient(),

@@ -8,6 +8,7 @@ import sqlite3
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 
 import pytest
 
@@ -32,6 +33,7 @@ from src.services.llm_usage_ledger_service import (
     reconcile_budget_reservation,
 )
 from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
+from src.services._llm_service.openai_shared import enforce_daily_spend_guardrail
 from src.utils.errors import AppError
 
 
@@ -94,6 +96,31 @@ def test_authority_returns_each_blocking_outcome(
     assert decision.reason_code == "budget_limit_reached"
     assert decision.affected_limit == "run.calls"
     assert decision.next_action == "defer_or_request_expiry_bound_override"
+
+
+def test_model_budget_attribution_prefers_canonical_context_publisher_id(tmp_path):
+    canonical_ctx = replace(_ctx(), publisher_id="publisher:canonical-owner")
+    budget = _budget(tmp_path, publisher_name="publisher:canonical-owner")
+
+    enforce_daily_spend_guardrail(
+        SimpleNamespace(
+            model="gpt-5-mini",
+            model_pricing={},
+            run_budget=budget,
+            publisher_name="Publisher Display Name",
+            report_name="report-1",
+            prompt_namespace="report_vs/taxonomy",
+            workflow_id="report_analysis",
+        ),
+        canonical_ctx,
+        operation="taxonomy",
+    )
+
+    with sqlite3.connect(budget.usage_db_path) as connection:
+        (publisher_id,) = connection.execute(
+            "SELECT publisher_name FROM budget_authority_events"
+        ).fetchone()
+    assert publisher_id == "publisher:canonical-owner"
 
 
 def test_authority_allows_and_warns_before_limit(tmp_path) -> None:

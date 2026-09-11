@@ -194,6 +194,7 @@ def generate_artifacts(
     prompt_family_reuse_reader=read_reusable_prompt_family,
 ) -> Dict[str, Any]:
     ctx = ctx or new_run_context(task_id=f"artifacts:{report_id}")
+    source_identity_id = str(ctx.source_identity_id or md5 or "").strip()
     openai_client = require_injected_model_client(
         openai_client,
         scope="artifact_generator",
@@ -350,7 +351,7 @@ def generate_artifacts(
         requested = family_reuse_telemetry["requested_families"]
         assert isinstance(requested, list)
         requested.append(namespace)
-        if md5 and vector_provenance_verified:
+        if source_identity_id and vector_provenance_verified:
             reuse = prompt_family_reuse_reader(
                 PromptFamilyReuseRequest(
                     schema_version=PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
@@ -358,7 +359,7 @@ def generate_artifacts(
                     output_dir=settings.output_dir,
                     report_id=report_id,
                     report_slug=report_name or report_id,
-                    source_id=md5,
+                    source_id=source_identity_id,
                     family_id=namespace,
                     family_schema_version="1.0",
                     processing_version="report_generation_checkpoint_v2",

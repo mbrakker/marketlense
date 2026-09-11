@@ -238,6 +238,7 @@ def _request(settings: AppSettings) -> TaxonomyExtractRequest:
         vector_store_id="vs_1",
         settings=settings,
         md5="md5-report-1",
+        source_identity_id="source:canonical-report-1",
         vector_store_content_hash="verified-vector-content",
         report_slug="report-1-slug",
     )
@@ -271,6 +272,10 @@ def test_taxonomy_invalid_json_is_a_typed_failure_not_empty_success(tmp_path):
 
 
 def test_taxonomy_materializes_primary_output_with_provenance(tmp_path):
+    from src.services.prompt_family_materialization_service import (
+        materialize_prompt_family,
+    )
+
     mapping_path = tmp_path / "category-mappings.yaml"
     _write_mapping(mapping_path)
     settings = _settings(tmp_path, mapping_path)
@@ -300,11 +305,16 @@ def test_taxonomy_materializes_primary_output_with_provenance(tmp_path):
         }
     )
 
+    materialization_requests = []
     response = extract_taxonomy(
         _request(settings),
         _ctx(),
         openai_client=fake_openai,
         prompt_client=FakePromptClient(),
+        prompt_family_materializer=lambda request, request_ctx: (
+            materialization_requests.append(request)
+            or materialize_prompt_family(request, request_ctx)
+        ),
     )
 
     assert fake_openai.calls == 1
@@ -319,6 +329,7 @@ def test_taxonomy_materializes_primary_output_with_provenance(tmp_path):
     retained = next((Path(settings.output_dir)).rglob("prompt_family_*.json"))
     retained_payload = json.loads(retained.read_text(encoding="utf-8"))
     assert retained_payload["family_id"] == "report_vs/taxonomy"
+    assert materialization_requests[0].source_id == "source:canonical-report-1"
     assert retained_payload["output"]["primary_tags"] == ["digital_payments"]
     assert (
         retained_payload["output"]["tag_evidence"][1]["section_label"]
