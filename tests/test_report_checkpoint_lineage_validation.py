@@ -17,7 +17,9 @@ from src.contracts.artifact_lineage import (
 )
 from src.contracts.drive import DriveFile
 from src.contracts.files import PipelineStageCheckpoint
+from src.contracts.prompts import PromptLoadRequest
 from src.contracts.report_generation import ReportRuntimeState
+from src.generators.artifact_prompt_provenance import current_artifact_prompt_identity
 from src.generators.report_generation_dependencies import ReportGenerationDependencies
 from src.generators.report_render_generator import render_preview_asset
 from src.orchestrators._report_generation_orchestrator.checkpoints import (
@@ -37,6 +39,7 @@ from src.orchestrators._report_generation_orchestrator.resume import (
 from src.orchestrators._report_generation_orchestrator.workflow import (
     _should_fresh_start_after_latest_safe_rejection,
 )
+from src.services import prompt_service
 from src.services.report_store_service import (
     invalidate_artifacts,
     record_artifact_lineage,
@@ -399,6 +402,239 @@ def test_checkpoint_rejects_artifacts_with_stale_editorial_prompt_identity(
         _checkpoint(artifact_id=""),
         artifact_refs={"artifacts": str(artifact_path)},
         payload={},
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        _validate_checkpoint_artifacts(runtime, checkpoint, "checkpoint.json")
+
+    assert exc_info.value.code == "report_pipeline_checkpoint_prompt_identity_invalid"
+
+
+def test_checkpoint_rejects_regenerated_family_without_producing_prompt_identity(
+    tmp_path: Path,
+) -> None:
+    """A repaired family cannot inherit its original prompt provenance."""
+    runtime = _runtime(tmp_path)
+    artifact_path = tmp_path / "artifacts.json"
+    primary_prompt = prompt_service.load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/summary",
+        ),
+        runtime.ctx,
+    )
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "editorial_plan": {
+                    "report_thesis": "Evidence supports one clear report thesis.",
+                    "themes": [
+                        {
+                            "theme": "The priority theme is evidence-led.",
+                            "priority": 1,
+                            "evidence_ids": ["finding-1"],
+                        },
+                        {
+                            "theme": "A second theme preserves the minimal contract.",
+                            "priority": 2,
+                            "evidence_ids": ["finding-2"],
+                        },
+                    ],
+                },
+                "_cache": {
+                    "prompts": {
+                        "report_vs/artifacts/summary": {
+                            "prompt_content_hash": primary_prompt.prompt_content_hash
+                        }
+                    },
+                    "family_reuse": {
+                        "report_vs/artifacts/summary": {
+                            "decision": "regenerated",
+                            "prompt_content_hash": primary_prompt.prompt_content_hash,
+                        }
+                    },
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    checkpoint = replace(
+        _checkpoint(artifact_id=""),
+        artifact_refs={"artifacts": str(artifact_path)},
+        payload={},
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        _validate_checkpoint_artifacts(runtime, checkpoint, "checkpoint.json")
+
+    assert exc_info.value.code == "report_pipeline_checkpoint_prompt_identity_invalid"
+
+
+def _current_artifact_prompt_identity(
+    runtime: ReportRuntimeState, namespace: str
+) -> dict[str, object]:
+    prompt_set = prompt_service.load_prompt_set(
+        PromptLoadRequest(schema_version="1.0", namespace=namespace), runtime.ctx
+    )
+    return current_artifact_prompt_identity(
+        namespace=namespace,
+        prompt_set=prompt_set,
+        settings=runtime.settings,
+        retrieval_mode="chat_json",
+        relevant_input_hash="test-input-hash",
+    )
+
+
+def _checkpoint_artifacts_with_prompt_provenance(
+    tmp_path: Path,
+    runtime: ReportRuntimeState,
+    *,
+    identity: dict[str, object],
+    requirements: dict[str, str] | None = None,
+    repaired_claim_identity: dict[str, object] | None = None,
+) -> PipelineStageCheckpoint:
+    artifact_path = tmp_path / "artifacts-with-provenance.json"
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "editorial_plan": {
+                    "report_thesis": "Evidence supports one clear report thesis.",
+                    "themes": [
+                        {
+                            "theme": "The priority theme is evidence-led.",
+                            "priority": 1,
+                            "evidence_ids": ["finding-1"],
+                        },
+                        {
+                            "theme": "A second theme preserves the minimal contract.",
+                            "priority": 2,
+                            "evidence_ids": ["finding-2"],
+                        },
+                    ],
+                },
+                "_cache": {
+                    "producing_prompt_identities": {
+                        "report_vs/artifacts/summary": identity
+                    },
+                    "regeneration_prompt_requirements": requirements or {},
+                },
+                **(
+                    {
+                        "soft_copy_claim_provenance": {
+                            "schema_version": "1.0",
+                            "claims": [
+                                {
+                                    "schema_version": "1.0",
+                                    "artifact_family": "summary",
+                                    "claim_id": "soft_copy:summary:repaired",
+                                    "text_hash": "a" * 64,
+                                    "classification": "recommendation",
+                                    "evidence_ids": [],
+                                    "source_spans": [],
+                                    "producing_prompt_identity": (
+                                        repaired_claim_identity
+                                    ),
+                                    "generation_attempt": 1,
+                                    "regeneration_attempt": 1,
+                                }
+                            ],
+                        }
+                    }
+                    if repaired_claim_identity is not None
+                    else {}
+                ),
+            }
+        ),
+        encoding="utf-8",
+    )
+    return replace(
+        _checkpoint(artifact_id=""),
+        artifact_refs={"artifacts": str(artifact_path)},
+        payload={},
+    )
+
+
+def test_checkpoint_accepts_regenerated_family_with_its_current_prompt_identity(
+    tmp_path: Path,
+) -> None:
+    runtime = _runtime(tmp_path)
+    namespace = "report_vs/artifacts/regenerate/summary"
+    checkpoint = _checkpoint_artifacts_with_prompt_provenance(
+        tmp_path,
+        runtime,
+        identity=_current_artifact_prompt_identity(runtime, namespace),
+        requirements={"report_vs/artifacts/summary": namespace},
+    )
+
+    _validate_checkpoint_artifacts(runtime, checkpoint, "checkpoint.json")
+
+
+def test_checkpoint_rejects_primary_identity_for_regenerated_family(
+    tmp_path: Path,
+) -> None:
+    runtime = _runtime(tmp_path)
+    regeneration_namespace = "report_vs/artifacts/regenerate/summary"
+    checkpoint = _checkpoint_artifacts_with_prompt_provenance(
+        tmp_path,
+        runtime,
+        identity=_current_artifact_prompt_identity(
+            runtime, "report_vs/artifacts/summary"
+        ),
+        requirements={"report_vs/artifacts/summary": regeneration_namespace},
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        _validate_checkpoint_artifacts(runtime, checkpoint, "checkpoint.json")
+
+    assert exc_info.value.code == "report_pipeline_checkpoint_prompt_identity_invalid"
+
+
+def test_checkpoint_rejects_changed_regeneration_prompt_identity(
+    tmp_path: Path,
+) -> None:
+    runtime = _runtime(tmp_path)
+    namespace = "report_vs/artifacts/regenerate/summary"
+    identity = _current_artifact_prompt_identity(runtime, namespace)
+    identity["prompt_content_hash"] = "changed-regeneration-prompt-hash"
+    checkpoint = _checkpoint_artifacts_with_prompt_provenance(
+        tmp_path,
+        runtime,
+        identity=identity,
+        requirements={"report_vs/artifacts/summary": namespace},
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        _validate_checkpoint_artifacts(runtime, checkpoint, "checkpoint.json")
+
+    assert exc_info.value.code == "report_pipeline_checkpoint_prompt_identity_invalid"
+
+
+def test_checkpoint_accepts_untouched_family_with_its_primary_prompt_identity(
+    tmp_path: Path,
+) -> None:
+    runtime = _runtime(tmp_path)
+    checkpoint = _checkpoint_artifacts_with_prompt_provenance(
+        tmp_path,
+        runtime,
+        identity=_current_artifact_prompt_identity(
+            runtime, "report_vs/artifacts/summary"
+        ),
+    )
+
+    _validate_checkpoint_artifacts(runtime, checkpoint, "checkpoint.json")
+
+
+def test_checkpoint_rejects_primary_identity_for_repaired_claim(tmp_path: Path) -> None:
+    runtime = _runtime(tmp_path)
+    namespace = "report_vs/artifacts/regenerate/summary"
+    checkpoint = _checkpoint_artifacts_with_prompt_provenance(
+        tmp_path,
+        runtime,
+        identity=_current_artifact_prompt_identity(runtime, namespace),
+        requirements={"report_vs/artifacts/summary": namespace},
+        repaired_claim_identity=_current_artifact_prompt_identity(
+            runtime, "report_vs/artifacts/summary"
+        ),
     )
 
     with pytest.raises(AppError) as exc_info:

@@ -476,6 +476,12 @@ def test_compatible_retained_families_make_zero_model_calls(tmp_path) -> None:
         analysis_store=FakeAnalysisStore(),
     )
     retained = first["_cache"]["family_outputs"]
+    producing_identity = first["_cache"]["producing_prompt_identities"][
+        "report_vs/artifacts/summary"
+    ]
+    assert producing_identity["namespace"] == "report_vs/artifacts/summary"
+    assert producing_identity["relevant_input_hash"]
+    assert "decision" not in producing_identity
 
     def reuse_reader(request, _ctx):
         return PromptFamilyReuseResponse(

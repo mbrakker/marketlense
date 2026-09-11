@@ -51,11 +51,16 @@ from src.generators.artifact_normalization import (
     stabilize_broad_artifact_editorial_plan,
     strip_linkedin_inline_reference_ids,
 )
+from src.generators.artifact_prompt_provenance import (
+    artifact_family_for_producing_namespace,
+    artifact_prompt_identity,
+)
 from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.generators.validation.evidence import retrieve_evidence_windows
 from src.generators.validation.preparation import prepare_validation_inputs
 from src.services import prompt_service, report_analysis_store_service
 from src.utils.analysis_family import family_is_abstained
+from src.utils.cache_utils import sha256_json
 from src.utils.coercion import string_value as _s
 from src.utils.errors import AppError
 from src.utils.json_utils import dump_json_text as _dump_json
@@ -82,6 +87,10 @@ class _RegenerationState:
     regenerated_sections: List[str] = field(default_factory=list)
     prompt_namespaces: List[str] = field(default_factory=list)
     prompt_identities: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    producing_prompt_identities: Dict[str, Dict[str, Any]] = field(
+        default_factory=dict
+    )
+    regeneration_prompt_requirements: Dict[str, str] = field(default_factory=dict)
     soft_copy_claim_bindings: Dict[str, List[Dict[str, Any]]] = field(
         default_factory=dict
     )
@@ -299,6 +308,10 @@ def regenerate_artifacts(
     prompts = dict(cached_prompts) if isinstance(cached_prompts, dict) else {}
     prompts.update(state.prompt_identities)
     cache_meta["prompts"] = prompts
+    cache_meta["producing_prompt_identities"] = state.producing_prompt_identities
+    cache_meta["regeneration_prompt_requirements"] = (
+        state.regeneration_prompt_requirements
+    )
     updated_artifacts = assemble_artifacts_payload(
         report_id=request.report_id,
         report_name=request.report_name,
@@ -1160,6 +1173,17 @@ def _build_regeneration_state(
     soft_copy_evidence_selections = _retained_soft_copy_evidence_selections(
         safe_artifacts.get("_repair_evidence_selection")
     )
+    raw_cache = safe_artifacts.get("_cache")
+    raw_producing_identities = (
+        raw_cache.get("producing_prompt_identities")
+        if isinstance(raw_cache, dict)
+        else None
+    )
+    raw_regeneration_requirements = (
+        raw_cache.get("regeneration_prompt_requirements")
+        if isinstance(raw_cache, dict)
+        else None
+    )
     return _RegenerationState(
         toc_entries=toc_entries,
         toc_topics=toc_topics,
@@ -1178,6 +1202,20 @@ def _build_regeneration_state(
         existing_soft_copy_claim_provenance=_copy_dict(
             safe_artifacts.get("soft_copy_claim_provenance")
         ),
+        producing_prompt_identities={
+            str(family): deepcopy(identity)
+            for family, identity in raw_producing_identities.items()
+            if isinstance(family, str) and isinstance(identity, dict)
+        }
+        if isinstance(raw_producing_identities, dict)
+        else {},
+        regeneration_prompt_requirements={
+            str(family): str(namespace)
+            for family, namespace in raw_regeneration_requirements.items()
+            if isinstance(family, str) and isinstance(namespace, str)
+        }
+        if isinstance(raw_regeneration_requirements, dict)
+        else {},
         soft_copy_evidence_selections=soft_copy_evidence_selections,
     )
 
@@ -1223,18 +1261,22 @@ def _render_regeneration_model(
         output_contract_schema_version="artifact_json:1.0",
         validator_version="artifacts_schema:3.0",
     )
-    execution.state.prompt_identities[namespace] = {
-        "namespace": namespace,
-        "prompt_system_sha256": prepared.prompt_set.system.sha256,
-        "prompt_user_sha256": prepared.prompt_set.user.sha256,
-        "prompt_content_hash": prepared.prompt_content_hash,
-        "dependency_manifest": asdict(prepared.dependency_manifest),
-        "execution_identity": prepared.execution_identity.execution_identity,
-        "execution_identity_manifest": asdict(prepared.execution_identity),
-        "model": prepared.resolved_model,
-        "execution_policy_hash": prepared.execution_policy.policy_hash,
-        "execution_policy_source": prepared.execution_policy.policy_source,
-    }
+    identity = artifact_prompt_identity(
+        prepared=prepared,
+        relevant_input_hash=sha256_json(
+            {
+                "namespace": namespace,
+                "variables": variables,
+                "vector_store_id": request.vector_store_id
+                if execution.runtime.artifact_use_vector_store
+                else "",
+            }
+        ),
+    )
+    execution.state.prompt_identities[namespace] = identity
+    artifact_family = artifact_family_for_producing_namespace(namespace)
+    execution.state.producing_prompt_identities[artifact_family] = identity
+    execution.state.regeneration_prompt_requirements[artifact_family] = namespace
     return render_artifact_json_model(
         namespace=namespace,
         variables=variables,

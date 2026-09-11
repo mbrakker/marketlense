@@ -290,11 +290,18 @@ scoped support deletes only that failed claim rather than generating substitute
 prose. Artifact assembly then fails closed unless the final soft-copy family
 has an exact complete provenance cover with no stale claims. Ambiguous,
 conflicting, family-wide, or incoherent findings use the existing family
-repair. Each regenerated family records the prepared
-`report_vs/artifacts/regenerate/...` prompt identity that produced its
-replacement, including content hash, dependency manifest, execution identity,
-and model-policy identity. A checkpoint with stale or incomplete replacement
-prompt provenance is not reusable. For each soft public-copy claim repair, the
+repair. Each current model-backed artifact family records one canonical
+producing-prompt identity, whether it was first generated or regenerated. A
+targeted repair additionally retains the required
+`report_vs/artifacts/regenerate/...` namespace for that family, so it cannot be
+relabeled as primary content. The identity contains its content hash,
+dependency manifest, execution identity and manifest, provider/model, policy
+namespace and routing version, validator version, relevant-input hash, and
+configuration-policy hash. Checkpoint resume recomputes that identity from the
+current prompt and execution configuration; a missing replacement identity, a
+primary identity in its place, or any prompt/execution/configuration mismatch
+is not reusable. Repaired soft public-copy claims retain the same producing
+identity. For each soft public-copy claim repair, the
 package deterministically selects at most four non-quarantined retained entries
 in this order: the claim's retained evidence IDs (from evidence packs or
 canonical DocMap sections), evidence linked to its declared or text-matched

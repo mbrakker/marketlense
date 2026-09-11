@@ -44,9 +44,16 @@ from src.contracts.report_store import (
     ReportValueScoreResponse,
 )
 from src.contracts.semantic_ids import ReportId
+from src.contracts.soft_copy_claim_provenance import (
+    soft_copy_claim_provenance_from_payload,
+)
 from src.contracts.validation import ValidationRequest
 from src.contracts.vector_store import VectorStoreDeleteRequest
 from src.generators.artifact_normalization import normalize_artifact_editorial_plan
+from src.generators.artifact_prompt_provenance import (
+    artifact_family_for_producing_namespace,
+    current_artifact_prompt_identity,
+)
 from src.generators.normalize_generator import normalize_report
 from src.generators.report_analysis_generator import start_vector_store_indexing
 from src.generators.report_generation_dependencies import ReportGenerationDependencies
@@ -656,41 +663,179 @@ def _validate_checkpoint_artifact_prompt_identities(
     checkpoint_path: str,
 ) -> None:
     raw_cache = artifacts_payload.get("_cache")
-    raw_prompts = raw_cache.get("prompts") if isinstance(raw_cache, dict) else None
-    if not isinstance(raw_prompts, dict):
+    raw_identities = (
+        raw_cache.get("producing_prompt_identities")
+        if isinstance(raw_cache, dict)
+        else None
+    )
+    if not isinstance(raw_identities, dict) or not raw_identities:
         raise AppError(
             code="report_pipeline_checkpoint_prompt_identity_invalid",
-            message="Checkpoint artifacts lack retained prompt identities",
+            message="Checkpoint artifacts lack producing prompt identities",
             retryable=False,
             context={"checkpoint_path": checkpoint_path},
         )
-    for namespace, raw_identity in raw_prompts.items():
-        normalized_namespace = str(namespace or "").strip()
-        if not normalized_namespace.startswith("report_vs/artifacts/"):
-            continue
-        cached_identity = raw_identity if isinstance(raw_identity, dict) else {}
-        cached_hash = str(cached_identity.get("prompt_content_hash") or "").strip()
+    raw_requirements = raw_cache.get("regeneration_prompt_requirements")
+    if raw_requirements is not None and not isinstance(raw_requirements, dict):
+        raise AppError(
+            code="report_pipeline_checkpoint_prompt_identity_invalid",
+            message="Checkpoint regeneration prompt requirements are invalid",
+            retryable=False,
+            context={"checkpoint_path": checkpoint_path},
+        )
+    requirements = raw_requirements if isinstance(raw_requirements, dict) else {}
+    for family, required_namespace in requirements.items():
+        normalized_family = str(family or "").strip()
+        required_namespace = str(required_namespace or "").strip()
+        identity = raw_identities.get(normalized_family)
+        if (
+            not required_namespace.startswith("report_vs/artifacts/regenerate/")
+            or artifact_family_for_producing_namespace(required_namespace)
+            != normalized_family
+            or not isinstance(identity, dict)
+            or str(identity.get("namespace") or "").strip() != required_namespace
+        ):
+            raise AppError(
+                code="report_pipeline_checkpoint_prompt_identity_invalid",
+                message=(
+                    "Checkpoint regenerated family lacks its required producing "
+                    "prompt identity"
+                ),
+                retryable=False,
+                context={
+                    "checkpoint_path": checkpoint_path,
+                    "artifact_family": normalized_family,
+                    "required_prompt_namespace": required_namespace,
+                },
+            )
+    for family, raw_identity in raw_identities.items():
+        normalized_family = str(family or "").strip()
+        identity = raw_identity if isinstance(raw_identity, dict) else {}
+        namespace = str(identity.get("namespace") or "").strip()
+        relevant_input_hash = str(identity.get("relevant_input_hash") or "").strip()
+        manifest = identity.get("execution_identity_manifest")
+        retrieval_mode = (
+            str(manifest.get("retrieval_mode") or "").strip()
+            if isinstance(manifest, dict)
+            else ""
+        )
+        if (
+            not normalized_family.startswith("report_vs/artifacts/")
+            or not namespace.startswith("report_vs/artifacts/")
+            or artifact_family_for_producing_namespace(namespace)
+            != normalized_family
+            or not relevant_input_hash
+            or not retrieval_mode
+            or (
+                "/regenerate/" in namespace
+                and namespace
+                != str(requirements.get(normalized_family) or "").strip()
+            )
+        ):
+            raise AppError(
+                code="report_pipeline_checkpoint_prompt_identity_invalid",
+                message="Checkpoint producing prompt identity is missing or mismatched",
+                retryable=False,
+                context={
+                    "checkpoint_path": checkpoint_path,
+                    "artifact_family": normalized_family,
+                    "prompt_namespace": namespace,
+                },
+            )
         current_prompt = prompt_service.load_prompt_set(
             PromptLoadRequest(
                 schema_version="1.0",
-                namespace=normalized_namespace,
+                namespace=namespace,
                 reload_if_changed=True,
             ),
             runtime.ctx,
         )
-        if cached_hash and cached_hash == current_prompt.prompt_content_hash:
-            continue
-        raise AppError(
-            code="report_pipeline_checkpoint_prompt_identity_invalid",
-            message="Checkpoint artifact prompt identity is stale or incomplete",
-            retryable=False,
-            context={
-                "checkpoint_path": checkpoint_path,
-                "prompt_namespace": normalized_namespace,
-                "cached_prompt_content_hash": cached_hash,
-                "current_prompt_content_hash": current_prompt.prompt_content_hash,
-            },
+        expected_identity = current_artifact_prompt_identity(
+            namespace=namespace,
+            prompt_set=current_prompt,
+            settings=runtime.settings,
+            retrieval_mode=retrieval_mode,
+            relevant_input_hash=relevant_input_hash,
         )
+        if identity != expected_identity:
+            raise AppError(
+                code="report_pipeline_checkpoint_prompt_identity_invalid",
+                message="Checkpoint producing prompt identity is stale or incomplete",
+                retryable=False,
+                context={
+                    "checkpoint_path": checkpoint_path,
+                    "artifact_family": normalized_family,
+                    "prompt_namespace": namespace,
+                    "cached_prompt_content_hash": str(
+                        identity.get("prompt_content_hash") or ""
+                    ),
+                    "current_prompt_content_hash": current_prompt.prompt_content_hash,
+                },
+            )
+    raw_claim_provenance = artifacts_payload.get("soft_copy_claim_provenance")
+    claims = (
+        soft_copy_claim_provenance_from_payload(raw_claim_provenance)
+        if isinstance(raw_claim_provenance, dict)
+        else []
+    )
+    for claim in claims:
+        if claim.regeneration_attempt < 1:
+            continue
+        identity = dict(claim.producing_prompt_identity)
+        namespace = str(identity.get("namespace") or "").strip()
+        relevant_input_hash = str(identity.get("relevant_input_hash") or "").strip()
+        manifest = identity.get("execution_identity_manifest")
+        retrieval_mode = (
+            str(manifest.get("retrieval_mode") or "").strip()
+            if isinstance(manifest, dict)
+            else ""
+        )
+        if (
+            not namespace.startswith("report_vs/artifacts/regenerate/")
+            or not relevant_input_hash
+            or not retrieval_mode
+        ):
+            raise AppError(
+                code="report_pipeline_checkpoint_prompt_identity_invalid",
+                message=(
+                    "Checkpoint repaired claim lacks its producing regeneration "
+                    "identity"
+                ),
+                retryable=False,
+                context={
+                    "checkpoint_path": checkpoint_path,
+                    "claim_id": claim.claim_id,
+                    "prompt_namespace": namespace,
+                },
+            )
+        current_prompt = prompt_service.load_prompt_set(
+            PromptLoadRequest(
+                schema_version="1.0",
+                namespace=namespace,
+                reload_if_changed=True,
+            ),
+            runtime.ctx,
+        )
+        expected_identity = current_artifact_prompt_identity(
+            namespace=namespace,
+            prompt_set=current_prompt,
+            settings=runtime.settings,
+            retrieval_mode=retrieval_mode,
+            relevant_input_hash=relevant_input_hash,
+        )
+        if identity != expected_identity:
+            raise AppError(
+                code="report_pipeline_checkpoint_prompt_identity_invalid",
+                message=(
+                    "Checkpoint repaired claim prompt identity is stale or incomplete"
+                ),
+                retryable=False,
+                context={
+                    "checkpoint_path": checkpoint_path,
+                    "claim_id": claim.claim_id,
+                    "prompt_namespace": namespace,
+                },
+            )
 
 
 def _validate_checkpoint_artifact_lineage(

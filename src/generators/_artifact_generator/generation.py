@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable, Sequence
-from dataclasses import asdict
 from typing import Any, Dict, List, Optional, TypedDict
 
 from src.contracts.artifact_generation import ArtifactRenderTask
@@ -60,6 +59,7 @@ from src.generators.artifact_normalization import (
     stabilize_broad_artifact_editorial_plan,
     strip_linkedin_inline_reference_ids,
 )
+from src.generators.artifact_prompt_provenance import artifact_prompt_identity
 from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.services import prompt_service, report_analysis_store_service
 from src.services.prompt_family_materialization_service import (
@@ -235,6 +235,7 @@ def generate_artifacts(
     step_executor = artifact_step_executor or _execute_artifact_tasks_serial
 
     family_reuse: dict[str, dict[str, object]] = {}
+    producing_prompt_identities: dict[str, dict[str, object]] = {}
     family_outputs: dict[str, object] = {}
     soft_copy_claim_bindings: dict[str, list[dict[str, object]]] = {}
     soft_copy_prompt_identities: dict[str, dict[str, object]] = {}
@@ -338,32 +339,14 @@ def generate_artifacts(
             if vector_provenance_verified
             else ""
         )
-        configuration_policy_hash = sha256_json(
-            {
-                "execution_policy_hash": prepared.execution_policy.policy_hash,
-                "execution_policy": asdict(prepared.execution_policy.policy),
-                "routing_policy": asdict(prepared.routing_decision),
-            }
+        identity = artifact_prompt_identity(
+            prepared=prepared,
+            relevant_input_hash=relevant_input_hash,
         )
-        model_provider = str(prepared.execution_policy.policy.provider or "")
-        model_policy_namespace = namespace.split("/", 1)[0]
-        identity: dict[str, object] = {
-            "namespace": namespace,
-            "family_schema_version": "1.0",
-            "processing_version": "report_generation_checkpoint_v2",
-            "prompt_content_hash": prepared.prompt_content_hash,
-            "prompt_dependency_manifest": asdict(prepared.dependency_manifest),
-            "execution_identity": prepared.execution_identity.execution_identity,
-            "execution_identity_manifest": asdict(prepared.execution_identity),
-            "model_provider": model_provider,
-            "model_name": prepared.resolved_model,
-            "model_policy_namespace": model_policy_namespace,
-            "routing_policy_version": prepared.execution_policy.policy_hash,
-            "validator_version": "artifacts_schema:3.0",
-            "relevant_input_hash": relevant_input_hash,
-            "configuration_policy_hash": configuration_policy_hash,
-        }
+        model_provider = str(identity["model_provider"])
+        model_policy_namespace = str(identity["model_policy_namespace"])
         family_reuse[namespace] = identity
+        producing_prompt_identities[namespace] = dict(identity)
         requested = family_reuse_telemetry["requested_families"]
         assert isinstance(requested, list)
         requested.append(namespace)
@@ -387,7 +370,9 @@ def generate_artifacts(
                     routing_policy_version=prepared.execution_policy.policy_hash,
                     validator_version="artifacts_schema:3.0",
                     relevant_input_hash=relevant_input_hash,
-                    configuration_policy_hash=configuration_policy_hash,
+                    configuration_policy_hash=str(
+                        identity["configuration_policy_hash"]
+                    ),
                 ),
                 ctx,
             )
@@ -1004,6 +989,7 @@ def generate_artifacts(
             **(cache_meta or {}),
             "key": cache_key,
             "family_reuse": family_reuse,
+            "producing_prompt_identities": producing_prompt_identities,
             "family_outputs": family_outputs,
             "family_reuse_telemetry": {
                 **family_reuse_telemetry,
