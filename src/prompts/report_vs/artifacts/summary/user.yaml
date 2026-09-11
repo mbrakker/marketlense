@@ -18,7 +18,7 @@ text: |
     "summary": {
       "tldr": "<one complete sentence, maximum 45 words>",
       "card_tldr_compact": "<one complete sentence, maximum 18 words>",
-      "executive_summary": "<5-7 sentence executive summary grounded in evidence: lead with the answer, quantify the most important movement, state the executive implication, then name the main caveat or limitation when present>",
+      "executive_summary": "<5-7 sentence executive summary grounded in evidence: lead with the answer, quantify the most important movement when present, state an executive implication only when supported, then name the main caveat or limitation when present>",
       "claim_evidence_map": [
         {"claim": "<concise claim>", "evidence_id": "<single existing evidence id from findings/quotes/doc map>", "evidence": "<supporting excerpt or paraphrase>", "pages": [<page numbers if known>]}
       ]
@@ -30,7 +30,11 @@ text: |
   `claim_provenance` is retained metadata only: include every material sentence or claim from the public summary fields, use exact existing IDs, and never place IDs in public prose. A factual claim must have at least one evidence ID.
   - Keep claims specific and tied to evidence identifiers present in the provided context.
   - Follow the editorial plan's report thesis and themes; do not introduce a competing thematic frame.
-  - Write for executives: answer "so what" before background, prefer decisions and tradeoffs over descriptive recap.
+  - When source evidence is descriptive, factual statements must remain descriptive. Add analyst interpretation only when it follows without introducing a new factual premise. Recommendations must be explicitly MarketLense-authored, conditional and traceable to supplied evidence. Do not invent predictions, causality, business impact, budget movement, performance effects, operational benefits or mandatory actions. If evidence does not support a distinct implication or action, remain descriptive or omit it.
+  - Classify source-derived factual statements as factual and MarketLense-authored recommendations as recommendation; never present a recommendation as a source claim.
+  - Write for executives: lead with the answer. When evidence supports a distinct
+    implication, foreground it; otherwise keep the summary descriptive rather than
+    forcing a decision or tradeoff.
   - Include no more than one caveat, and only when the evidence explicitly supports it.
   - Author both TLDRs independently from the same evidence. The compact TLDR must not be a clipped prefix of the standard TLDR.
   - End each TLDR with complete sentence punctuation. Never use an ellipsis.

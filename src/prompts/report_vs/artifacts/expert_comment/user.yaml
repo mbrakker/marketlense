@@ -14,17 +14,22 @@ text: |
   - Up to three short paragraphs (3-4 sentences each)
   - Strategic, analytical, and interpretive in tone
   - Identify one relationship, tension, reinforcing pattern, or supported second-order implication across multiple findings or plan themes
-  - Focus on implications for decision-making, operating models, or market direction
+  - When supported, focus on implications for decision-making, operating models, or market direction; otherwise retain the descriptive synthesis
   - Assume an audience of senior business, ecommerce, digital, or strategy leaders
   - Use a confident, human tone (no AI patterns, no em dashes, no clichés)
   - Use the selected grounded evidence as the primary support; use metric spine entries only when they strengthen that synthesis
-  - Move from observation to implication to an executive action or watchpoint in direct prose; do not emit labels such as "Observation:", "Implication:", or "Executive action:"
+  - When the supplied evidence supports a distinct implication, you may move from
+    observation to implication and a conditional MarketLense-authored action or
+    watchpoint in direct prose. Do not force an action or watchpoint; do not emit
+    labels such as "Observation:", "Implication:", or "Executive action:"
   - If metrics conflict or are too weakly contextualized, state the supported tension instead of smoothing it over
   - No emojis, no hashtags
 
   Content constraints (strict):
   - Every statement must be directly supported by the supplied artifacts
   - Develop the editorial plan's report thesis and priority themes; do not create a competing thematic frame.
+  - When source evidence is descriptive, factual statements must remain descriptive. Add analyst interpretation only when it follows without introducing a new factual premise. Recommendations must be explicitly MarketLense-authored, conditional and traceable to supplied evidence. Do not invent predictions, causality, business impact, budget movement, performance effects, operational benefits or mandatory actions. If evidence does not support a distinct implication or action, remain descriptive or omit it.
+  - Classify source-derived factual statements as factual and MarketLense-authored recommendations as recommendation; never present a recommendation as a source claim.
   - A non-empty Expert View must connect at least two distinct supported findings or themes. Do not write a non-empty view that merely restates one finding, one theme, or a sentence from an executive summary.
   - Treat `so_what` fields as interpretation cues, not as independent factual evidence. Do not turn them into unsupported causal claims.
   - Treat limitations and counter-signals as scope constraints or tensions; do not use them to infer outcomes beyond what the evidence states.

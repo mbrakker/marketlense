@@ -31,6 +31,16 @@ identity. Report-specific interpretation belongs exclusively to the generated
 Expert View body; an unsupported synthesis renders the existing explicit
 abstention notice instead of generic theme claims.
 
+Primary summary/TLDR, Expert View, and LinkedIn prompts preserve descriptive
+source evidence as descriptive factual prose. They add interpretation only when
+it follows without a new factual premise. Any recommendation is explicitly
+MarketLense-authored, conditional, and traceable to supplied evidence; it is
+never presented as a source claim. These prompts do not infer predictions,
+causality, business impact, budget movement, performance effects, operational
+benefits, or mandatory actions. Where evidence cannot support a distinct
+implication or action, the public copy remains descriptive or omits it; the
+existing validators continue to enforce grounding independently.
+
 For retained soft-copy families, the artifact keeps private sentence-level
 claim provenance beside the unchanged public prose. Expert View, LinkedIn, and
 useful summary/TLDR claims declare their exact canonical evidence IDs during

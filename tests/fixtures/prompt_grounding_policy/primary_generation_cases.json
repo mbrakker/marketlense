@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "policy_cases": [
+    {
+      "name": "descriptive_evidence",
+      "required_text": "When source evidence is descriptive, factual statements must remain descriptive."
+    },
+    {
+      "name": "strongly_actionable_evidence",
+      "required_text": "Add analyst interpretation only when it follows without introducing a new factual premise."
+    },
+    {
+      "name": "insufficient_evidence",
+      "required_text": "If evidence does not support a distinct implication or action, remain descriptive or omit it."
+    },
+    {
+      "name": "recommendation_vs_factual_claim",
+      "required_text": "Classify source-derived factual statements as factual and MarketLense-authored recommendations as recommendation; never present a recommendation as a source claim."
+    }
+  ],
+  "retained_regression_cases": [
+    {
+      "name": "retained_ias_primary_generation",
+      "doc_map_path": "tests/fixtures/docpacks/golden/ias-industry-pulse-report-2026-acig-pdf/report_analysis/doc_map.json",
+      "findings_path": "tests/fixtures/docpacks/golden/ias-industry-pulse-report-2026-acig-pdf/report_analysis/findings.json",
+      "artifacts_path": "tests/fixtures/docpacks/golden/ias-industry-pulse-report-2026-acig-pdf/report_analysis/artifacts.json"
+    }
+  ]
+}
