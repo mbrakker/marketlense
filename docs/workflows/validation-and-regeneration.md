@@ -78,6 +78,14 @@ a deterministic policy or lineage change to request the earlier safe stage.
 
 When a repair is supported, the workflow maps validation issues to the narrowest appropriate artifact family and revalidates the result. Retry and backoff are controlled by orchestration; generators surface typed errors rather than retrying provider calls themselves. Publication policy determines whether unresolved validation issues block WordPress side effects.
 
+For a blocking targetable finding, warning-only findings in unrelated artifact
+families are not allowed to widen the regeneration plan. A retained soft-copy
+claim can therefore be repaired or removed by its claim ID while untouched
+summary and LinkedIn copy retain their bytes and provenance. Run
+`python -m pytest -q tests/test_validation_queue_lineage.py -k "a21_full_chain"`
+before any live A21 canary; it is the required deterministic queue-to-A21 gate
+and performs no external publication.
+
 Taxonomy extraction has one orchestration-owned, prompt-specific recovery for
 `taxonomy_invalid_json` and `taxonomy_schema_invalid`. After the primary
 taxonomy call exhausts its shared structured-output recovery, the orchestrator

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from types import SimpleNamespace
 from typing import Any, Callable
 
 
@@ -223,6 +224,7 @@ class FakeOpenAIBoundary:
     def __init__(self) -> None:
         self.client_kwargs: list[dict[str, Any]] = []
         self.calls: dict[str, list[dict[str, Any]]] = {
+            "chat.completions.create": [],
             "embeddings.create": [],
             "responses.create": [],
             "vector_stores.create": [],
@@ -285,6 +287,14 @@ class _FakeResponsesResource:
         return self._boundary._resolve("responses.create", kwargs)
 
 
+class _FakeChatCompletionsResource:
+    def __init__(self, boundary: FakeOpenAIBoundary) -> None:
+        self._boundary = boundary
+
+    def create(self, **kwargs: Any) -> Any:
+        return self._boundary._resolve("chat.completions.create", kwargs)
+
+
 class _FakeEmbeddingsResource:
     def __init__(self, boundary: FakeOpenAIBoundary) -> None:
         self._boundary = boundary
@@ -333,6 +343,7 @@ class _FakeFilesResource:
 
 class _FakeOpenAIClient:
     def __init__(self, boundary: FakeOpenAIBoundary) -> None:
+        self.chat = SimpleNamespace(completions=_FakeChatCompletionsResource(boundary))
         self.embeddings = _FakeEmbeddingsResource(boundary)
         self.responses = _FakeResponsesResource(boundary)
         self.vector_stores = _FakeVectorStoresResource(boundary)

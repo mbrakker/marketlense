@@ -191,6 +191,23 @@ browser, Drive, mailbox, or WordPress call.
 Canonical JSON ordering and an artifact hash over the complete payload make
 identical retained inputs byte- and hash-equivalent.
 
+Before any live A21 canary, the deterministic full-chain A21 gate must pass:
+
+```powershell
+python -m pytest -q tests/test_validation_queue_lineage.py -k "a21_full_chain"
+```
+
+It creates a frozen one-report cohort and exercises the durable queue/outbox,
+handlers, manifest, checkpoints, report/state databases, validation,
+claim-scoped regeneration, rendering, publication readiness, and A21 builder.
+Its clean fixture proves first-pass `awaiting_review`; its repair fixture proves
+one unsupported soft-copy claim can recover without rewriting valid sibling
+copy or requesting an operator requeue. Both rebuild the same A21 artifact and
+require identical bytes and SHA-256. The fixtures mock only external
+provider/browser/Drive/WordPress boundaries, do not publish, and are a
+mandatory precondition rather than a substitute for the separately authorized
+live canary.
+
 ### Reusable sanitized acquisition-assessment projection
 
 When a completed acquisition assessment has a retained raw current JSONL and a

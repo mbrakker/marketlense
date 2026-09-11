@@ -101,6 +101,9 @@ from src.contracts.workflow_queue import (
     WorkflowStageResult,
 )
 from src.generators.cover_image_generator import generate_cover_images
+from src.orchestrators._report_analysis_orchestrator.manifest import (
+    record_validation_manifest_stage,
+)
 from src.orchestrators.acquisition_ingest_handoff_orchestrator import (
     build_source_ingest_submission_from_verified_acquisition,
 )
@@ -242,6 +245,8 @@ def _report_queue_validation_context(
         validation_attempt_number=payload.validation_attempt_number,
         validation_parent_attempt_number=payload.validation_parent_attempt_number,
         report_id=report_id,
+        source_identity_id=str(job.source_identity_id or "").strip(),
+        publisher_id=str(job.publisher_id or "").strip(),
     )
 
 
@@ -373,12 +378,14 @@ def _report_stage_handler(
         if carried_admission_hash:
             report_ctx = replace(
                 admission_ctx,
-                source_identity_id=str(
-                    payload.attributes.get("admission_source_identity_id", "")
-                ).strip(),
-                publisher_id=str(
-                    payload.attributes.get("admission_publisher_id", "")
-                ).strip(),
+                source_identity_id=(
+                    str(payload.attributes.get("admission_source_identity_id", "")).strip()
+                    or str(job.source_identity_id or "").strip()
+                ),
+                publisher_id=(
+                    str(payload.attributes.get("admission_publisher_id", "")).strip()
+                    or str(job.publisher_id or "").strip()
+                ),
                 admission_decision_hash=carried_admission_hash,
             )
             preflight_fn = None
@@ -444,6 +451,7 @@ def _report_stage_handler(
             report_ctx,
             resume_from_stage=resume_from_stage,
             stop_after_stage=stop_after_stage,
+            skip_post_render_projection=next_queue == "analytics_projection",
             projection_only=projection_only,
             budget_override=_requested_budget_override(payload),
             preflight_fn=preflight_fn,
@@ -455,6 +463,33 @@ def _report_stage_handler(
                 retryable=True,
                 context={"job_id": job.job_id, "report_id": report_id},
             )
+        if job.queue_name == "source_ingest":
+            record_validation_manifest_stage(
+                settings=settings,
+                ctx=report_ctx,
+                stage="source_preparation",
+                source_identity_id=report_ctx.source_identity_id,
+                input_artifact_ids=(artifact_reference,),
+                output_artifact_ids=(source_hash,),
+            )
+        elif job.queue_name == "report_render":
+            render_artifact_ids = tuple(
+                value
+                for value in (
+                    str(outcome.html_path or "").strip(),
+                    str((outcome.evidence_packs or {}).get("publish_readiness", "")).strip(),
+                )
+                if value
+            )
+            for stage in ("rendering", "final_html_validation"):
+                record_validation_manifest_stage(
+                    settings=settings,
+                    ctx=report_ctx,
+                    stage=stage,
+                    source_identity_id=report_ctx.source_identity_id,
+                    input_artifact_ids=(artifact_reference,),
+                    output_artifact_ids=render_artifact_ids,
+                )
         downstream: list[WorkflowJobSubmission] = []
         if next_queue:
             if next_queue == "report_selection":

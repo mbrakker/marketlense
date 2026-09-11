@@ -355,6 +355,7 @@ def run_report_generation(
     enforce_minimal_execution: bool = False,
     stop_after_stage: Optional[str] = None,
     projection_only: bool = False,
+    skip_post_render_projection: bool = False,
 ) -> IngestOutcome:
     if str(ctx.admission_decision_hash or "").strip():
         require_admitted_report_identity(
@@ -536,7 +537,9 @@ def run_report_generation(
             analytics_projection_fn,
             requested_resume_stage=requested_resume_stage,
             require_artifact_lineage=require_artifact_lineage,
-            skip_post_render_projection=enforced_render_only,
+            skip_post_render_projection=(
+                skip_post_render_projection or enforced_render_only
+            ),
             stop_after_stage=requested_stop_stage,
             projection_only=projection_only,
         )
@@ -650,7 +653,8 @@ def run_report_generation(
             regeneration_openai_client=regeneration_openai_client,
             figure_caption_openai_client=figure_caption_openai_client,
             skip_post_render_projection=(
-                enforce_minimal_execution and minimal_execution_plan is not None
+                skip_post_render_projection
+                or (enforce_minimal_execution and minimal_execution_plan is not None)
             ),
             stop_after_stage=requested_stop_stage,
             projection_only=projection_only,

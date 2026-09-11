@@ -1434,7 +1434,7 @@ def _soft_copy_claim_repairs(
                 issue=target_issues[0],
             )
         )
-    if len(candidates) < 2:
+    if not candidates:
         return None
 
     def uniquely_matched(

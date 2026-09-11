@@ -370,6 +370,7 @@ def _invoke_report_fn(
     enforce_minimal_execution: bool = False,
     stop_after_stage: str | None = None,
     projection_only: bool = False,
+    skip_post_render_projection: bool = False,
     budget_override: BudgetOverrideContext | None = None,
 ) -> IngestOutcome:
     arguments: dict[str, object] = {"resume_from_stage": resume_from_stage}
@@ -416,6 +417,13 @@ def _invoke_report_fn(
     )
     if supports_projection_only:
         arguments["projection_only"] = projection_only
+    supports_render_projection_skip = any(
+        parameter.kind == Parameter.VAR_KEYWORD
+        or parameter.name == "skip_post_render_projection"
+        for parameter in parameters
+    )
+    if supports_render_projection_skip:
+        arguments["skip_post_render_projection"] = skip_post_render_projection
     return report_fn(
         file,
         local_pdf_path,
@@ -623,6 +631,7 @@ def run_report_pipeline(
     requested_output_families: list[str] | None = None,
     stop_after_stage: str | None = None,
     projection_only: bool = False,
+    skip_post_render_projection: bool = False,
     budget_override: BudgetOverrideContext | None = None,
     readiness_refresh_plan: PublishReadinessRefreshPlan | None = None,
     refresh_telemetry_path: str = "",
@@ -723,6 +732,7 @@ def run_report_pipeline(
                     requested_output_families=requested_output_families,
                     stop_after_stage=stop_after_stage,
                     projection_only=projection_only,
+                    skip_post_render_projection=skip_post_render_projection,
                     budget_override=budget_override,
                     readiness_refresh_plan=readiness_refresh_plan,
                     refresh_telemetry_path=refresh_telemetry_path,
@@ -1160,6 +1170,7 @@ def run_report_pipeline(
                 enforce_minimal_execution=normalized_plan_mode == "enforce",
                 stop_after_stage=stop_after_stage,
                 projection_only=projection_only,
+                skip_post_render_projection=skip_post_render_projection,
             )
         except AppError as exc:
             if (
@@ -1194,6 +1205,7 @@ def run_report_pipeline(
                     enforce_minimal_execution=False,
                     stop_after_stage=stop_after_stage,
                     projection_only=projection_only,
+                    skip_post_render_projection=skip_post_render_projection,
                 )
             else:
                 raise

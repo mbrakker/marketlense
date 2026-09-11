@@ -388,6 +388,25 @@ def _build_regeneration_plan(
                 grouped.setdefault(target_key, []).append(normalized)
         else:
             unmappable.append(normalized)
+    hard_target_keys = {
+        target_key
+        for target_key, target_issues in grouped.items()
+        if any(str(issue.severity).lower() == "error" for issue in target_issues)
+    }
+    if hard_target_keys:
+        # A blocking, targetable failure must not fan out into unrelated
+        # warning-only families. Retain warnings on the same target so its
+        # repair still sees all local context, but keep claim recovery bounded.
+        grouped = {
+            target_key: target_issues
+            for target_key, target_issues in grouped.items()
+            if target_key in hard_target_keys
+        }
+        unmappable = [
+            issue
+            for issue in unmappable
+            if str(issue.severity).lower() == "error"
+        ]
     if grouped:
         targets = [
             _build_target(target_key, grouped[target_key])

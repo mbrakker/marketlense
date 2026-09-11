@@ -130,6 +130,25 @@ def _isolated_app_config(tmp_path: Path) -> Path:
     ingest = config_payload["ingest"]
     assert isinstance(ingest, dict)
     ingest["gdrive_folder_id"] = "test-drive-folder"
+    evidence_packs = ingest.setdefault("evidence_packs", {})
+    assert isinstance(evidence_packs, dict)
+    evidence_packs.update(
+        {
+            "parallel_workers": 1,
+            "global_max_in_flight": 1,
+            "global_min_interval_ms": 0,
+            "doc_map_retry_delay_ms": 0,
+        }
+    )
+    artifacts = ingest.setdefault("artifacts", {})
+    assert isinstance(artifacts, dict)
+    artifacts.update(
+        {
+            "parallel_workers": 1,
+            "global_max_in_flight": 1,
+            "global_min_interval_ms": 0,
+        }
+    )
     paths.update(
         {
             "output_dir": str(tmp_path / "out"),

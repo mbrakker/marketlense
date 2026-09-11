@@ -123,6 +123,44 @@ def test_build_regeneration_plan_maps_public_artifact_copy_to_its_family():
     assert [target.target_section for target in plan.targets] == ["key_figures"]
 
 
+def test_build_regeneration_plan_keeps_hard_repair_claim_scoped():
+    plan = _build_regeneration_plan(
+        issues=[
+            ValidationIssue(
+                schema_version="1.0",
+                message="Unsupported factual claim.",
+                severity="error",
+                affected_section="expert_comment",
+                rule_id="grounding",
+                repair_target="expert_comment",
+                entity_id="soft_copy:expert_comment:failed",
+            ),
+            ValidationIssue(
+                schema_version="1.0",
+                message="Quote family warning.",
+                severity="warning",
+                affected_section="quotes",
+                rule_id="family_confidence",
+                repair_target="quotes",
+            ),
+            ValidationIssue(
+                schema_version="1.0",
+                message="Summary copy warning.",
+                severity="warning",
+                affected_section="summary.executive_summary",
+                rule_id="artifact_quality",
+                repair_target="artifact_copy",
+            ),
+        ],
+        artifacts={},
+        broad_retry_available=True,
+    )
+
+    assert plan.mode == "targeted"
+    assert [target.target_section for target in plan.targets] == ["expert_comment"]
+    assert [issue.rule_id for issue in plan.targets[0].issues] == ["grounding"]
+
+
 def test_run_report_analysis_snapshot_preserves_internal_payload_metadata(tmp_path):
     runtime = _runtime(tmp_path)
     source = _source(runtime)
@@ -196,6 +234,7 @@ def test_run_report_analysis_snapshot_preserves_internal_payload_metadata(tmp_pa
 __all__ = [
     "test_build_regeneration_plan_skips_info_and_orders_errors_first",
     "test_build_regeneration_plan_maps_public_artifact_copy_to_its_family",
+    "test_build_regeneration_plan_keeps_hard_repair_claim_scoped",
     "test_run_report_analysis_rejects_unsupported_repair_target",
     "test_run_report_analysis_snapshot_preserves_internal_payload_metadata",
 ]
