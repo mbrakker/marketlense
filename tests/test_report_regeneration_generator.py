@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 from types import SimpleNamespace
@@ -103,7 +104,9 @@ def test_grounding_package_quarantines_failed_evidence_and_uses_replacements() -
     assert "failed-evidence" not in json.dumps(package["relevant_evidence"])
 
 
-def test_grounding_package_selects_retained_evidence_for_soft_copy_without_issue_ids() -> None:
+def test_grounding_package_selects_retained_evidence_for_soft_copy_without_issue_ids() -> (
+    None
+):
     package = _build_grounding_package(
         target=RegenerationTarget(
             target_section="expert_comment",
@@ -293,7 +296,19 @@ class _FakeOpenAIClient:
                                 "pages": [1],
                             }
                         ],
-                    }
+                    },
+                    "claim_provenance": [
+                        {
+                            "claim": "Repaired TLDR.",
+                            "classification": "interpretive",
+                            "evidence_ids": ["f1"],
+                        },
+                        {
+                            "claim": "Repaired executive summary",
+                            "classification": "interpretive",
+                            "evidence_ids": ["f1"],
+                        },
+                    ],
                 },
                 request_id="req-summary",
             )
@@ -396,7 +411,14 @@ class _TemporalSummaryOpenAIClient(_FakeOpenAIClient):
                                 "pages": [1],
                             }
                         ],
-                    }
+                    },
+                    "claim_provenance": [
+                        {
+                            "claim": source,
+                            "classification": "factual",
+                            "evidence_ids": ["f1"],
+                        }
+                    ],
                 },
                 request_id="req-temporal-summary",
             )
@@ -452,6 +474,26 @@ def _ctx() -> RunContext:
 
 
 def _current_artifacts() -> dict:
+    retained_claims = [
+        SoftCopyClaimProvenance(
+            schema_version="1.0",
+            artifact_family=family,
+            claim_id=f"soft_copy:{family}:{hashlib.sha256(text.encode()).hexdigest()[:16]}",
+            text_hash=hashlib.sha256(text.encode()).hexdigest(),
+            classification="interpretive",
+            evidence_ids=(),
+            source_spans=(),
+            producing_prompt_identity={"namespace": f"report_vs/artifacts/{family}"},
+            generation_attempt=1,
+            regeneration_attempt=0,
+        )
+        for family, text in (
+            ("summary", "Old TLDR."),
+            ("summary", "Old summary"),
+            ("expert_comment", "Old expert"),
+            ("linkedin_post", "Old linkedin"),
+        )
+    ]
     return {
         "schema_version": "3.0",
         "_cache": {
@@ -553,6 +595,9 @@ def _current_artifacts() -> dict:
         ],
         "expert_comment": "Old expert",
         "linkedin_post": "Old linkedin",
+        "soft_copy_claim_provenance": soft_copy_claim_provenance_to_payload(
+            retained_claims
+        ),
         "source_status": {
             "schema_version": "1.0",
             "text_density": 100.0,
@@ -646,9 +691,12 @@ def test_regenerate_artifacts_insights_bundle_uses_targeted_steps_and_preserves_
     assert prompts["report_vs/artifacts/insights_final"] == {
         "prompt_content_hash": "c" * 64
     }
-    assert prompts["report_vs/artifacts/regenerate/insights_candidates"][
-        "prompt_content_hash"
-    ] == "c" * 64
+    assert (
+        prompts["report_vs/artifacts/regenerate/insights_candidates"][
+            "prompt_content_hash"
+        ]
+        == "c" * 64
+    )
     assert prompts["report_vs/artifacts/regenerate/insights_final"][
         "execution_identity"
     ]
@@ -993,7 +1041,7 @@ def test_regenerated_soft_copy_claim_gets_new_provenance_and_untouched_claim_is_
         schema_version="1.0",
         artifact_family="linkedin_post",
         claim_id="soft_copy:linkedin_post:retained",
-        text_hash="a" * 64,
+        text_hash=hashlib.sha256(b"Old linkedin").hexdigest(),
         classification="interpretive",
         evidence_ids=("f1",),
         source_spans=(),
@@ -1001,9 +1049,11 @@ def test_regenerated_soft_copy_claim_gets_new_provenance_and_untouched_claim_is_
         generation_attempt=1,
         regeneration_attempt=0,
     )
-    current_artifacts["soft_copy_claim_provenance"] = (
-        soft_copy_claim_provenance_to_payload([retained_linkedin_claim])
-    )
+    current_artifacts["soft_copy_claim_provenance"]["claims"] = [
+        claim
+        for claim in current_artifacts["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] != "linkedin_post"
+    ] + soft_copy_claim_provenance_to_payload([retained_linkedin_claim])["claims"]
 
     response = regenerate_artifacts(
         ArtifactRegenerationRequest(
@@ -1038,16 +1088,19 @@ def test_regenerated_soft_copy_claim_gets_new_provenance_and_untouched_claim_is_
     regenerated = next(
         item for item in claims if item["artifact_family"] == "expert_comment"
     )
-    retained = next(item for item in claims if item["artifact_family"] == "linkedin_post")
+    retained = next(
+        item for item in claims if item["artifact_family"] == "linkedin_post"
+    )
     assert regenerated["classification"] == "interpretive"
     assert regenerated["evidence_ids"] == ["f1", "f2"]
     assert regenerated["regeneration_attempt"] == 2
     assert regenerated["producing_prompt_identity"]["namespace"] == (
         "report_vs/artifacts/regenerate/expert_comment"
     )
-    assert retained == soft_copy_claim_provenance_to_payload(
-        [retained_linkedin_claim]
-    )["claims"][0]
+    assert (
+        retained
+        == soft_copy_claim_provenance_to_payload([retained_linkedin_claim])["claims"][0]
+    )
 
 
 def test_regenerate_artifacts_summary_only_keeps_other_sections_unchanged(tmp_path):

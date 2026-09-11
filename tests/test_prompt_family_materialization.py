@@ -13,6 +13,10 @@ from src.contracts.prompt_family_materialization import (
     PromptFamilyReuseRequest,
 )
 from src.contracts.run_context import RunContext
+from src.contracts.soft_copy_claim_provenance import (
+    SOFT_COPY_PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+    SoftCopyPromptFamilyMaterialization,
+)
 from src.services.prompt_family_materialization_service import (
     materialize_prompt_family,
     read_reusable_prompt_family,
@@ -139,8 +143,30 @@ def test_materialization_rejects_dependency_without_verified_hash(
 
 
 def test_reusable_materialization_returns_hash_verified_output(tmp_path: Path) -> None:
-    retained = json.loads(RETAINED_ARTIFACTS.read_text(encoding="utf-8"))
-    request = _request(tmp_path, output=retained["summary"])
+    output = SoftCopyPromptFamilyMaterialization(
+        schema_version=SOFT_COPY_PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+        public_output={
+            "tldr": "Revenue grew by 10%.",
+            "card_tldr_compact": "Revenue grew by 10%.",
+            "executive_summary": "Leaders should protect retention investment.",
+            "claim_evidence_map": [],
+        },
+        claim_provenance=[
+            {
+                "claim": "Revenue grew by 10%.",
+                "classification": "factual",
+                "evidence_ids": ["f1"],
+            },
+            {
+                "claim": "Leaders should protect retention investment.",
+                "classification": "recommendation",
+                "evidence_ids": ["f1"],
+            },
+        ],
+        producing_prompt_identity={"namespace": "report_vs/artifacts/summary"},
+        generation_attempt=2,
+    ).to_payload()
+    request = _request(tmp_path, output=output)
     materialize_prompt_family(request, _ctx())
 
     reused = read_reusable_prompt_family(
@@ -168,7 +194,49 @@ def test_reusable_materialization_returns_hash_verified_output(tmp_path: Path) -
     )
 
     assert reused.reusable is True
-    assert reused.output_payload == retained["summary"]
+    assert reused.output_payload == output
+
+
+def test_reuse_rejects_material_soft_copy_without_private_bindings(
+    tmp_path: Path,
+) -> None:
+    request = _request(
+        tmp_path,
+        output={
+            "tldr": "Retained evidence changes planning.",
+            "card_tldr_compact": "Evidence changes planning.",
+            "executive_summary": "Leaders should act on evidence.",
+            "claim_evidence_map": [],
+        },
+    )
+    materialize_prompt_family(request, _ctx())
+
+    reused = read_reusable_prompt_family(
+        PromptFamilyReuseRequest(
+            schema_version=PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+            db_path=request.db_path,
+            output_dir=request.output_dir,
+            report_id=request.report_id,
+            report_slug=request.report_slug,
+            source_id=request.source_id,
+            family_id=request.family_id,
+            family_schema_version=request.family_schema_version,
+            processing_version=request.processing_version,
+            prompt_content_hash=request.prompt_content_hash,
+            execution_identity=request.execution_identity,
+            model_provider=request.model_provider,
+            model_name=request.model_name,
+            model_policy_namespace=request.model_policy_namespace,
+            routing_policy_version=request.routing_policy_version,
+            validator_version=request.validator_version,
+            relevant_input_hash=request.relevant_input_hash,
+            configuration_policy_hash=request.configuration_policy_hash,
+        ),
+        _ctx(),
+    )
+
+    assert reused.reusable is False
+    assert reused.reason == "soft_copy_provenance_missing"
 
 
 @pytest.mark.parametrize(

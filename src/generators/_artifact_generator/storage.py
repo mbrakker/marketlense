@@ -25,6 +25,7 @@ from src.contracts.soft_copy_claim_provenance import (
     SoftCopyClaimProvenance,
     soft_copy_claim_provenance_from_payload,
     soft_copy_claim_provenance_to_payload,
+    soft_copy_public_text,
 )
 from src.generators._artifact_generator.family_policy import (
     apply_artifact_family_policy,
@@ -60,6 +61,7 @@ from src.generators.public_editorial_quality_generator import (
 )
 from src.generators.soft_copy_claim_provenance import (
     build_soft_copy_claim_provenance,
+    retained_soft_copy_claims_cover_text,
 )
 from src.services import file_service
 from src.services.prompt_service import build_llm_execution_identity
@@ -334,12 +336,8 @@ def _soft_copy_claim_provenance_payload(
     replaced_families: List[str],
     regeneration_attempt: int,
 ) -> Dict[str, Any]:
-    text_by_family = {
-        "summary": " ".join(
-            _s(summary.get(key)).strip()
-            for key in ("tldr", "card_tldr_compact", "executive_summary")
-            if _s(summary.get(key)).strip()
-        ),
+    public_output_by_family = {
+        "summary": summary,
         "expert_comment": expert_comment,
         "linkedin_post": linkedin_post,
     }
@@ -358,9 +356,24 @@ def _soft_copy_claim_provenance_payload(
         )
         if claim.artifact_family not in replaced
     ]
-    for family, text in text_by_family.items():
+    for family, public_output in public_output_by_family.items():
+        text = soft_copy_public_text(family, public_output)
         declared = bindings.get(family)
-        if not text or not isinstance(declared, list) or not declared:
+        if not text:
+            continue
+        retained = [claim for claim in claims if claim.artifact_family == family]
+        if not isinstance(declared, list) or not declared:
+            if retained_soft_copy_claims_cover_text(text=text, claims=retained):
+                continue
+            build_soft_copy_claim_provenance(
+                artifact_family=family,
+                text=text,
+                declared_claims=declared,
+                evidence_span_index=span_index,
+                producing_prompt_identity=dict(prompt_identities.get(family) or {}),
+                generation_attempt=max(1, int(generation_attempts.get(family) or 1)),
+                regeneration_attempt=regeneration_attempt,
+            )
             continue
         claims.extend(
             build_soft_copy_claim_provenance(

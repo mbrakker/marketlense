@@ -87,6 +87,9 @@ def test_assemble_artifacts_logs_topic_brief_mapping_audit(
         linkedin_post="LinkedIn post",
         source_status={"not_available": False, "reason": "", "evidence_present": True},
         family_status=family_status,
+        soft_copy_claim_bindings=_declared_soft_copy_bindings(
+            summary, "Grounded comment", "LinkedIn post"
+        ),
         ctx=_ctx(),
     )
 
@@ -188,10 +191,18 @@ def test_generate_artifacts_backfills_missing_ids(tmp_path):
         == "summary_missing_claim_evidence"
     )
     assert [item["evidence_id"] for item in payload["insights_candidates"]] == [
-        "f1", "f2", "f3", "f4", "f5"
+        "f1",
+        "f2",
+        "f3",
+        "f4",
+        "f5",
     ]
     assert [item["evidence_id"] for item in payload["insights_final"]] == [
-        "f1", "f2", "f3", "f4", "f5"
+        "f1",
+        "f2",
+        "f3",
+        "f4",
+        "f5",
     ]
     assert payload["family_status"]["insights_bundle"]["status"] == "generated"
     assert payload["family_status"]["insights_bundle"]["policy_action"] == "keep"
@@ -224,7 +235,7 @@ def test_generate_artifacts_ignores_low_text_when_vector_store(tmp_path):
                         "pages": [1],
                     }
                 ],
-            }
+            },
         },
         "insights_candidates": {
             "insights_candidates": [
@@ -508,7 +519,19 @@ def test_generate_artifacts_strips_inline_reference_tokens_from_summary_and_link
                         "pages": [1],
                     }
                 ],
-            }
+            },
+            "claim_provenance": [
+                {
+                    "claim": "Grounded TLDR.",
+                    "classification": "interpretive",
+                    "evidence_ids": [],
+                },
+                {
+                    "claim": "Growth accelerated, especially in Q4.",
+                    "classification": "interpretive",
+                    "evidence_ids": [],
+                },
+            ],
         },
         "insights_candidates": {
             "insights_candidates": [
@@ -546,9 +569,25 @@ def test_generate_artifacts_strips_inline_reference_tokens_from_summary_and_link
                 }
             ]
         },
-        "expert_comment": {"expert_comment": "Comment"},
+        "expert_comment": {
+            "expert_comment": "Comment",
+            "claim_provenance": [
+                {
+                    "claim": "Comment",
+                    "classification": "interpretive",
+                    "evidence_ids": [],
+                }
+            ],
+        },
         "linkedin_post": {
-            "linkedin_post": "Leader takeaway (F-002 / IC-001): invest in omnichannel."
+            "linkedin_post": "Leader takeaway (F-002 / IC-001): invest in omnichannel.",
+            "claim_provenance": [
+                {
+                    "claim": "Leader takeaway: invest in omnichannel.",
+                    "classification": "interpretive",
+                    "evidence_ids": [],
+                }
+            ],
         },
     }
     payload = generate_artifacts(
@@ -588,7 +627,7 @@ def test_generate_artifacts_uses_vector_path_when_flag_enabled(tmp_path):
                         "pages": [1],
                     }
                 ],
-            }
+            },
         },
         "insights_candidates": {
             "insights_candidates": [

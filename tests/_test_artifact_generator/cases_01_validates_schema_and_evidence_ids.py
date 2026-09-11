@@ -47,6 +47,7 @@ def _assemble_summary_payload(summary, *, ctx=None):
         source_status={"not_available": False, "reason": ""},
         family_status=family_status,
         ctx=ctx or _ctx(),
+        soft_copy_claim_bindings=_declared_soft_copy_bindings(summary, "", ""),
         validate_references=False,
     )
 
@@ -110,6 +111,7 @@ def test_assemble_artifacts_retains_canonical_category_ids():
         family_status=family_status,
         category_ids=["consumer-retail", "digital-commerce"],
         ctx=_ctx(),
+        soft_copy_claim_bindings=_declared_soft_copy_bindings(summary, "", ""),
         validate_references=False,
     )
 
@@ -189,17 +191,17 @@ def test_generate_artifacts_validates_schema_and_evidence_ids(tmp_path):
             },
             {
                 "summary": {
-                "tldr": "Grounded TLDR.",
-                "card_tldr_compact": "Grounded TLDR.",
-                "executive_summary": "Exec",
-                "claim_evidence_map": [
-                    {
-                        "claim": "Claim",
-                        "evidence_id": "f1",
-                        "evidence": "Revenue +10%",
-                        "pages": [2],
-                    }
-                ],
+                    "tldr": "Grounded TLDR.",
+                    "card_tldr_compact": "Grounded TLDR.",
+                    "executive_summary": "Exec",
+                    "claim_evidence_map": [
+                        {
+                            "claim": "Claim",
+                            "evidence_id": "f1",
+                            "evidence": "Revenue +10%",
+                            "pages": [2],
+                        }
+                    ],
                 }
             },
         ],

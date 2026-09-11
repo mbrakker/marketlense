@@ -696,6 +696,15 @@ def test_assemble_artifacts_builds_universal_claim_ledger() -> None:
             linkedin_post="Grounded post.",
         ),
         ctx=_ctx(),
+        soft_copy_claim_bindings=_declared_soft_copy_bindings(
+            {
+                "tldr": "Wallet adoption is rising.",
+                "card_tldr_compact": "Wallet adoption is rising.",
+                "executive_summary": "Wallet adoption is rising among merchants.",
+            },
+            "Grounded comment.",
+            "Grounded post.",
+        ),
     )
 
     ledger = payload["claim_ledgers"]
@@ -807,6 +816,15 @@ def test_assemble_artifacts_builds_topics_key_figures_and_chart_cards() -> None:
             linkedin_post="Grounded post.",
         ),
         ctx=_ctx(),
+        soft_copy_claim_bindings=_declared_soft_copy_bindings(
+            {
+                "tldr": "Wallet adoption is rising.",
+                "card_tldr_compact": "Wallet adoption is rising.",
+                "executive_summary": "Wallet adoption is rising among merchants.",
+            },
+            "Grounded comment.",
+            "Grounded post.",
+        ),
     )
 
     assert payload["topics_covered"][0]["topic"] == "Adoption Signals"

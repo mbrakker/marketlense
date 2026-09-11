@@ -9,6 +9,7 @@ __file__ = str(
 
 import json
 import logging
+import re
 import threading
 import time
 from pathlib import Path
@@ -26,6 +27,10 @@ from src.contracts.prompts import (
 )
 from src.contracts.run_context import RunContext
 from src.contracts.schema_validation import SchemaValidateRequest
+from src.contracts.soft_copy_claim_provenance import (
+    SOFT_COPY_PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+    SoftCopyPromptFamilyMaterialization,
+)
 from src.generators._artifact_generator.family_policy import (
     build_artifact_family_status,
 )
@@ -59,6 +64,47 @@ def _cover_semantics():
 
 def _cover_semantics_response():
     return {"cover_semantics": _cover_semantics()}
+
+
+def _declared_soft_copy_bindings(summary, expert_comment, linkedin_post):
+    """Provide explicit model-declared bindings for direct assembly fixtures."""
+    public_by_family = {
+        "summary": " ".join(
+            str((summary or {}).get(key) or "").strip()
+            for key in ("tldr", "card_tldr_compact", "executive_summary")
+            if str((summary or {}).get(key) or "").strip()
+        ),
+        "expert_comment": str(expert_comment or "").strip(),
+        "linkedin_post": str(linkedin_post or "").strip(),
+    }
+    return {
+        family: [
+            {
+                "claim": " ".join(sentence.split()),
+                "classification": "interpretive",
+                "evidence_ids": [],
+            }
+            for sentence in re.split(r"(?<=[.!?])\s+", text)
+            if " ".join(sentence.split())
+        ]
+        for family, text in public_by_family.items()
+    }
+
+
+def _retained_soft_copy_family_output(namespace, public_output):
+    artifact_family = namespace.rsplit("/", 1)[-1]
+    bindings = _declared_soft_copy_bindings(
+        public_output if artifact_family == "summary" else {},
+        public_output if artifact_family == "expert_comment" else "",
+        public_output if artifact_family == "linkedin_post" else "",
+    )
+    return SoftCopyPromptFamilyMaterialization(
+        schema_version=SOFT_COPY_PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+        public_output=public_output,
+        claim_provenance=bindings[artifact_family],
+        producing_prompt_identity={"namespace": namespace},
+        generation_attempt=1,
+    ).to_payload()
 
 
 class FakePromptClient:
@@ -192,9 +238,43 @@ class FakeOpenAI:
         try:
             if self.sleep_seconds > 0:
                 time.sleep(self.sleep_seconds)
-            return self._next(step)
+            return self._complete_soft_copy_contract(step, self._next(step))
         finally:
             self._mark_completed(step)
+
+    @staticmethod
+    def _complete_soft_copy_contract(step, payload):
+        """Mirror the provider's required private bindings for artifact soft-copy."""
+        root_key = {
+            "summary": "summary",
+            "expert_comment": "expert_comment",
+            "linkedin_post": "linkedin_post",
+        }.get(step)
+        if (
+            not root_key
+            or not isinstance(payload, dict)
+            or "claim_provenance" in payload
+        ):
+            return payload
+        public_output = payload.get(root_key)
+        if root_key == "summary" and isinstance(public_output, dict):
+            text = " ".join(
+                str(public_output.get(key) or "").strip()
+                for key in ("tldr", "card_tldr_compact", "executive_summary")
+                if str(public_output.get(key) or "").strip()
+            )
+        else:
+            text = str(public_output or "").strip()
+        claims = [
+            {
+                "claim": " ".join(sentence.split()),
+                "classification": "interpretive",
+                "evidence_ids": [],
+            }
+            for sentence in re.split(r"(?<=[.!?])\s+", text)
+            if " ".join(sentence.split())
+        ]
+        return {**payload, "claim_provenance": claims}
 
     def openai_chat_json(self, req, ctx):
         step = self._step(ctx)

@@ -40,6 +40,14 @@ only the provenance of regenerated families and preserves untouched claims.
 This internal metadata stays in retained artifacts and checkpoints; it is not
 part of the report payload or WordPress projection.
 
+Prompt-family materialization retains a private soft-copy envelope alongside
+the family’s unchanged public value: declared claim bindings, the producing
+prompt identity, and generation attempt. Reuse rebuilds source spans from the
+current canonical evidence index before artifact assembly. A legacy cached
+soft-copy family with material prose but no complete bindings is a normal
+`soft_copy_provenance_missing` cache miss and regenerates through the bounded
+model path; empty or abstained soft-copy remains reusable with zero claims.
+
 The public metric spine is a bounded selection of source-backed textual metrics.
 It ranks a metric whose evidence ID directly supports a selected editorial-plan
 theme ahead of secondary metrics; the plan's positive priority order resolves

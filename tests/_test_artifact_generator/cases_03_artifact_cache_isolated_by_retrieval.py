@@ -184,8 +184,8 @@ def test_load_cached_artifacts_refreshes_derived_family_status(tmp_path):
             "report_thesis": "Engagement changes planning.",
             "themes": [
                 {"theme": "Engagement", "priority": 1, "evidence_ids": ["sec-07"]},
-                {"theme": "Practice", "priority": 2, "evidence_ids": ["sec-07"]}
-            ]
+                {"theme": "Practice", "priority": 2, "evidence_ids": ["sec-07"]},
+            ],
         },
         "summary": {
             "tldr": "Grounded TLDR.",
@@ -249,8 +249,8 @@ def test_load_cached_artifacts_rejects_legacy_tldr_that_cannot_be_compact(tmp_pa
             "report_thesis": "Forest-risk engagement changes planning.",
             "themes": [
                 {"theme": "Forest risk", "priority": 1, "evidence_ids": ["sec-10"]},
-                {"theme": "Engagement", "priority": 2, "evidence_ids": ["sec-10"]}
-            ]
+                {"theme": "Engagement", "priority": 2, "evidence_ids": ["sec-10"]},
+            ],
         },
         "summary": {
             "tldr": (
@@ -306,8 +306,8 @@ def test_load_cached_artifacts_clears_doc_map_only_quotes_after_policy_refresh(
             "report_thesis": "Forest-risk engagement changes planning.",
             "themes": [
                 {"theme": "Forest risk", "priority": 1, "evidence_ids": ["sec-10"]},
-                {"theme": "Engagement", "priority": 2, "evidence_ids": ["sec-10"]}
-            ]
+                {"theme": "Engagement", "priority": 2, "evidence_ids": ["sec-10"]},
+            ],
         },
         "summary": {
             "tldr": "",
@@ -475,16 +475,7 @@ def test_compatible_retained_families_make_zero_model_calls(tmp_path) -> None:
         prompt_client=FakePromptClient(),
         analysis_store=FakeAnalysisStore(),
     )
-    retained = {
-        "report_vs/artifacts/editorial_plan": first["editorial_plan"],
-        "report_vs/artifacts/summary": first["summary"],
-        "report_vs/artifacts/insights_candidates": first["insights_candidates"],
-        "report_vs/artifacts/quotes": first["quotes_final"],
-        "report_vs/artifacts/insights_final": first["insights_final"],
-        "report_vs/artifacts/cover_semantics": first["cover_semantics"],
-        "report_vs/artifacts/expert_comment": first["expert_comment"],
-        "report_vs/artifacts/linkedin_post": first["linkedin_post"],
-    }
+    retained = first["_cache"]["family_outputs"]
 
     def reuse_reader(request, _ctx):
         return PromptFamilyReuseResponse(
@@ -539,18 +530,25 @@ def test_compatible_retained_families_make_zero_model_calls(tmp_path) -> None:
 def test_vector_store_identity_is_part_of_family_reuse_proof(tmp_path) -> None:
     retained = {
         "report_vs/artifacts/editorial_plan": _default_editorial_plan(),
-        "report_vs/artifacts/summary": {
-            "tldr": "Grounded TLDR.",
-            "card_tldr_compact": "Grounded TLDR.",
-            "executive_summary": "Executive summary.",
-            "claim_evidence_map": [],
-        },
+        "report_vs/artifacts/summary": _retained_soft_copy_family_output(
+            "report_vs/artifacts/summary",
+            {
+                "tldr": "Grounded TLDR.",
+                "card_tldr_compact": "Grounded TLDR.",
+                "executive_summary": "Executive summary.",
+                "claim_evidence_map": [],
+            },
+        ),
         "report_vs/artifacts/insights_candidates": [],
         "report_vs/artifacts/quotes": [],
         "report_vs/artifacts/insights_final": [],
         "report_vs/artifacts/cover_semantics": _cover_semantics(),
-        "report_vs/artifacts/expert_comment": "Grounded comment.",
-        "report_vs/artifacts/linkedin_post": "Grounded LinkedIn post.",
+        "report_vs/artifacts/expert_comment": _retained_soft_copy_family_output(
+            "report_vs/artifacts/expert_comment", "Grounded comment."
+        ),
+        "report_vs/artifacts/linkedin_post": _retained_soft_copy_family_output(
+            "report_vs/artifacts/linkedin_post", "Grounded LinkedIn post."
+        ),
     }
     summary_input_hashes = []
 
@@ -606,7 +604,16 @@ def test_persisted_compatible_families_replay_without_model_calls(tmp_path) -> N
             "quotes": {"quotes_final": []},
             "insights_final": {"insights_final": []},
             "cover_semantics": _cover_semantics_response(),
-            "expert_comment": {"expert_comment": "Comment."},
+            "expert_comment": {
+                "expert_comment": "Revenue +10% YoY.",
+                "claim_provenance": [
+                    {
+                        "claim": "Revenue +10% YoY.",
+                        "classification": "factual",
+                        "evidence_ids": ["f1"],
+                    }
+                ],
+            },
             "linkedin_post": {"linkedin_post": "Post."},
         }
     )
@@ -672,23 +679,135 @@ def test_persisted_compatible_families_replay_without_model_calls(tmp_path) -> N
         "replay": replay["_cache"]["family_reuse"],
     }
     assert replay["summary"] == first["summary"]
+    assert replay["expert_comment"] == "Revenue +10% YoY."
+    first_claim = next(
+        claim
+        for claim in first["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] == "expert_comment"
+    )
+    replay_claim = next(
+        claim
+        for claim in replay["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] == "expert_comment"
+    )
+    assert replay_claim["evidence_ids"] == ["f1"]
+    assert replay_claim["source_spans"] == [
+        {
+            "evidence_id": "f1",
+            "source_pack": "findings",
+            "page": 2,
+            "text": "Revenue +10% YoY",
+        }
+    ]
+    assert (
+        replay_claim["producing_prompt_identity"]
+        == first_claim["producing_prompt_identity"]
+    )
+
+
+def test_legacy_soft_copy_reuse_regenerates_missing_provenance(tmp_path) -> None:
+    first = generate_artifacts(
+        report_id="legacy-soft-copy-reuse",
+        report_name="Legacy Soft Copy Reuse",
+        doc_map=_doc_map(),
+        evidence_packs=_evidence_packs(),
+        settings=_settings(tmp_path),
+        md5="legacy-soft-copy-reuse-md5",
+        openai_client=FakeOpenAI(
+            {
+                "summary": {
+                    "summary": {
+                        "tldr": "Grounded summary.",
+                        "card_tldr_compact": "Grounded summary.",
+                        "executive_summary": "Evidence informs planning.",
+                        "claim_evidence_map": [],
+                    }
+                },
+                "insights_candidates": {"insights_candidates": []},
+                "quotes": {"quotes_final": []},
+                "insights_final": {"insights_final": []},
+                "cover_semantics": _cover_semantics_response(),
+                "expert_comment": {"expert_comment": "Revenue +10% YoY."},
+                "linkedin_post": {"linkedin_post": "Leaders should keep investing."},
+            }
+        ),
+        prompt_client=FakePromptClient(),
+        analysis_store=FakeAnalysisStore(),
+    )
+    retained = dict(first["_cache"]["family_outputs"])
+    retained["report_vs/artifacts/expert_comment"] = first["expert_comment"]
+
+    def reuse_reader(request, _ctx):
+        return PromptFamilyReuseResponse(
+            schema_version="1.0",
+            reusable=True,
+            reason="reused",
+            output_payload=retained[request.family_id],
+            artifact_id="retained:" + request.family_id,
+            output_hash="retained-hash",
+        )
+
+    replay_client = FakeOpenAI(
+        {
+            "expert_comment": {
+                "expert_comment": "Revenue +10% YoY.",
+                "claim_provenance": [
+                    {
+                        "claim": "Revenue +10% YoY.",
+                        "classification": "factual",
+                        "evidence_ids": ["f1"],
+                    }
+                ],
+            }
+        }
+    )
+    replay = generate_artifacts(
+        report_id="legacy-soft-copy-reuse",
+        report_name="Legacy Soft Copy Reuse",
+        doc_map=_doc_map(),
+        evidence_packs=_evidence_packs(),
+        settings=_settings(tmp_path),
+        md5="legacy-soft-copy-reuse-md5",
+        openai_client=replay_client,
+        prompt_client=FakePromptClient(),
+        analysis_store=FakeAnalysisStore(),
+        prompt_family_reuse_reader=reuse_reader,
+    )
+
+    assert [request[2] for request in replay_client.requests] == ["expert_comment"]
+    assert replay["_cache"]["family_reuse_telemetry"]["regeneration_reasons"] == {
+        "report_vs/artifacts/expert_comment": "soft_copy_provenance_missing"
+    }
+    claim = next(
+        item
+        for item in replay["soft_copy_claim_provenance"]["claims"]
+        if item["artifact_family"] == "expert_comment"
+    )
+    assert claim["evidence_ids"] == ["f1"]
 
 
 def test_invalidating_one_family_calls_only_its_model_route(tmp_path) -> None:
     retained = {
         "report_vs/artifacts/editorial_plan": _default_editorial_plan(),
-        "report_vs/artifacts/summary": {
-            "tldr": "Grounded TLDR.",
-            "card_tldr_compact": "Grounded TLDR.",
-            "executive_summary": "Executive summary.",
-            "claim_evidence_map": [],
-        },
+        "report_vs/artifacts/summary": _retained_soft_copy_family_output(
+            "report_vs/artifacts/summary",
+            {
+                "tldr": "Grounded TLDR.",
+                "card_tldr_compact": "Grounded TLDR.",
+                "executive_summary": "Executive summary.",
+                "claim_evidence_map": [],
+            },
+        ),
         "report_vs/artifacts/insights_candidates": [],
         "report_vs/artifacts/quotes": [],
         "report_vs/artifacts/insights_final": [],
         "report_vs/artifacts/cover_semantics": _cover_semantics(),
-        "report_vs/artifacts/expert_comment": "Grounded comment.",
-        "report_vs/artifacts/linkedin_post": "Grounded LinkedIn post.",
+        "report_vs/artifacts/expert_comment": _retained_soft_copy_family_output(
+            "report_vs/artifacts/expert_comment", "Grounded comment."
+        ),
+        "report_vs/artifacts/linkedin_post": _retained_soft_copy_family_output(
+            "report_vs/artifacts/linkedin_post", "Grounded LinkedIn post."
+        ),
     }
 
     def reuse_reader(request, _ctx):
@@ -706,7 +825,16 @@ def test_invalidating_one_family_calls_only_its_model_route(tmp_path) -> None:
         )
 
     client = FakeOpenAI(
-        {"summary": {"summary": retained["report_vs/artifacts/summary"]}}
+        {
+            "summary": {
+                "summary": {
+                    "tldr": "Grounded TLDR.",
+                    "card_tldr_compact": "Grounded TLDR.",
+                    "executive_summary": "Executive summary.",
+                    "claim_evidence_map": [],
+                }
+            }
+        }
     )
     replay = generate_artifacts(
         report_id="single-family-repair",
@@ -731,18 +859,25 @@ def test_invalidating_one_family_calls_only_its_model_route(tmp_path) -> None:
 
 def test_editorial_plan_change_invalidates_only_linkedin_family_reuse(tmp_path) -> None:
     retained = {
-        "report_vs/artifacts/summary": {
-            "tldr": "Grounded TLDR.",
-            "card_tldr_compact": "Grounded TLDR.",
-            "executive_summary": "Executive summary.",
-            "claim_evidence_map": [],
-        },
+        "report_vs/artifacts/summary": _retained_soft_copy_family_output(
+            "report_vs/artifacts/summary",
+            {
+                "tldr": "Grounded TLDR.",
+                "card_tldr_compact": "Grounded TLDR.",
+                "executive_summary": "Executive summary.",
+                "claim_evidence_map": [],
+            },
+        ),
         "report_vs/artifacts/insights_candidates": [],
         "report_vs/artifacts/quotes": [],
         "report_vs/artifacts/insights_final": [],
         "report_vs/artifacts/cover_semantics": _cover_semantics(),
-        "report_vs/artifacts/expert_comment": "Grounded comment.",
-        "report_vs/artifacts/linkedin_post": "Retained LinkedIn post.",
+        "report_vs/artifacts/expert_comment": _retained_soft_copy_family_output(
+            "report_vs/artifacts/expert_comment", "Grounded comment."
+        ),
+        "report_vs/artifacts/linkedin_post": _retained_soft_copy_family_output(
+            "report_vs/artifacts/linkedin_post", "Retained LinkedIn post."
+        ),
     }
     first_plan = _default_editorial_plan()
     second_plan = {
@@ -837,6 +972,7 @@ __all__ = [
     "test_compatible_retained_families_make_zero_model_calls",
     "test_vector_store_identity_is_part_of_family_reuse_proof",
     "test_persisted_compatible_families_replay_without_model_calls",
+    "test_legacy_soft_copy_reuse_regenerates_missing_provenance",
     "test_invalidating_one_family_calls_only_its_model_route",
     "test_editorial_plan_change_invalidates_only_linkedin_family_reuse",
 ]

@@ -36130,6 +36130,97 @@
       ],
       "type": "object"
     },
+    "src.contracts.soft_copy_claim_provenance.SoftCopyClaimProvenance": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_family": {
+          "type": "string"
+        },
+        "claim_id": {
+          "type": "string"
+        },
+        "classification": {
+          "enum": [
+            "factual",
+            "interpretive",
+            "recommendation"
+          ]
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "generation_attempt": {
+          "type": "integer"
+        },
+        "producing_prompt_identity": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "regeneration_attempt": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_spans": {
+          "items": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "text_hash": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "artifact_family",
+        "claim_id",
+        "text_hash",
+        "classification",
+        "evidence_ids",
+        "source_spans",
+        "producing_prompt_identity",
+        "generation_attempt",
+        "regeneration_attempt"
+      ],
+      "type": "object"
+    },
+    "src.contracts.soft_copy_claim_provenance.SoftCopyPromptFamilyMaterialization": {
+      "additionalProperties": false,
+      "properties": {
+        "claim_provenance": {
+          "items": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "generation_attempt": {
+          "type": "integer"
+        },
+        "producing_prompt_identity": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "public_output": {},
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "public_output",
+        "claim_provenance",
+        "producing_prompt_identity",
+        "generation_attempt"
+      ],
+      "type": "object"
+    },
     "src.contracts.sqlite_migration.SqliteMigrationAppliedStep": {
       "additionalProperties": false,
       "properties": {

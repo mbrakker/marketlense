@@ -122,7 +122,10 @@ def build_soft_copy_claim_provenance(
             code="soft_copy_claim_provenance_bindings_incomplete",
             message="Soft-copy provenance must declare every material sentence",
             retryable=False,
-            context={"artifact_family": family, "missing_claim_count": len(missing_sentences)},
+            context={
+                "artifact_family": family,
+                "missing_claim_count": len(missing_sentences),
+            },
         )
     return claims
 
@@ -147,3 +150,14 @@ def _material_sentences(text: str) -> list[str]:
         for sentence in re.split(r"(?<=[.!?])\s+", text)
         if _normalized_text(sentence)
     ]
+
+
+def retained_soft_copy_claims_cover_text(
+    *, text: str, claims: list[SoftCopyClaimProvenance]
+) -> bool:
+    """Confirm retained claim hashes cover every material public sentence."""
+    sentences = _material_sentences(_normalized_text(text))
+    if not sentences:
+        return True
+    retained_hashes = {claim.text_hash for claim in claims}
+    return all(_sha256(sentence) in retained_hashes for sentence in sentences)

@@ -2,14 +2,143 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
 from src.utils.errors import AppError
 
 SOFT_COPY_CLAIM_PROVENANCE_SCHEMA_VERSION = "1.0"
+SOFT_COPY_PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION = "1.0"
 SoftCopyClaimClassification = Literal["factual", "interpretive", "recommendation"]
 _CLASSIFICATIONS = frozenset({"factual", "interpretive", "recommendation"})
+_PROMPT_FAMILY_TO_ARTIFACT_FAMILY = {
+    "report_vs/artifacts/summary": "summary",
+    "report_vs/artifacts/expert_comment": "expert_comment",
+    "report_vs/artifacts/linkedin_post": "linkedin_post",
+}
+
+
+@dataclass(frozen=True)
+class SoftCopyPromptFamilyMaterialization:
+    """Private retained representation for reusable material soft-copy."""
+
+    schema_version: str = field(
+        metadata={"doc": "Soft-copy prompt-family materialization schema version."}
+    )
+    public_output: Any = field(
+        metadata={"doc": "The original public family output retained for reuse."}
+    )
+    claim_provenance: list[dict[str, Any]] = field(
+        metadata={"doc": "Model-declared claim text, classification, and evidence IDs."}
+    )
+    producing_prompt_identity: dict[str, Any] = field(
+        metadata={"doc": "Verified materialization identity that produced this output."}
+    )
+    generation_attempt: int = field(
+        metadata={"doc": "Original structured-output attempt number."}
+    )
+
+    def to_payload(self) -> dict[str, Any]:
+        return {
+            "schema_version": self.schema_version,
+            "public_output": self.public_output,
+            "claim_provenance": [
+                dict(binding)
+                for binding in self.claim_provenance
+                if isinstance(binding, dict)
+            ],
+            "producing_prompt_identity": dict(self.producing_prompt_identity),
+            "generation_attempt": self.generation_attempt,
+        }
+
+
+def soft_copy_artifact_family_for_prompt_family(family_id: str) -> str:
+    """Return the soft-copy artifact family for a prompt family, if any."""
+    return _PROMPT_FAMILY_TO_ARTIFACT_FAMILY.get(str(family_id or "").strip(), "")
+
+
+def soft_copy_public_text(artifact_family: str, public_output: object) -> str:
+    """Return material public prose without reconstructing provenance from it."""
+    family = str(artifact_family or "").strip()
+    values: tuple[object, ...]
+    if family == "summary" and isinstance(public_output, dict):
+        values = (
+            public_output.get("tldr"),
+            public_output.get("card_tldr_compact"),
+            public_output.get("executive_summary"),
+        )
+    elif family in {"expert_comment", "linkedin_post"}:
+        values = (public_output,)
+    else:
+        values = ()
+    return " ".join(
+        " ".join(str(value or "").split())
+        for value in values
+        if str(value or "").strip()
+    )
+
+
+def soft_copy_prompt_family_materialization_from_payload(
+    payload: object,
+) -> SoftCopyPromptFamilyMaterialization | None:
+    """Read the private reuse envelope, returning ``None`` for legacy output."""
+    if not isinstance(payload, dict):
+        return None
+    required = {
+        "schema_version",
+        "public_output",
+        "claim_provenance",
+        "producing_prompt_identity",
+        "generation_attempt",
+    }
+    if not required.issubset(payload):
+        return None
+    bindings = payload.get("claim_provenance")
+    identity = payload.get("producing_prompt_identity")
+    if not isinstance(bindings, list) or not isinstance(identity, dict):
+        return None
+    try:
+        attempt = int(payload.get("generation_attempt") or 0)
+    except (TypeError, ValueError):
+        return None
+    if (
+        str(payload.get("schema_version") or "").strip()
+        != SOFT_COPY_PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION
+        or attempt < 1
+    ):
+        return None
+    return SoftCopyPromptFamilyMaterialization(
+        schema_version=SOFT_COPY_PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+        public_output=payload.get("public_output"),
+        claim_provenance=[
+            dict(binding) for binding in bindings if isinstance(binding, dict)
+        ],
+        producing_prompt_identity=dict(identity),
+        generation_attempt=attempt,
+    )
+
+
+def soft_copy_claim_bindings_cover_public_text(
+    *, artifact_family: str, public_output: object, claim_bindings: object
+) -> bool:
+    """Check that retained model bindings declare each material public sentence."""
+    text = soft_copy_public_text(artifact_family, public_output)
+    if not text:
+        return True
+    if not isinstance(claim_bindings, list) or not claim_bindings:
+        return False
+    declared = {
+        " ".join(str(binding.get("claim") or "").split())
+        for binding in claim_bindings
+        if isinstance(binding, dict) and str(binding.get("claim") or "").strip()
+    }
+    sentences = [
+        " ".join(sentence.split())
+        for sentence in re.split(r"(?<=[.!?])\s+", text)
+        if " ".join(sentence.split())
+    ]
+    return bool(declared) and all(sentence in declared for sentence in sentences)
 
 
 @dataclass(frozen=True)
@@ -39,7 +168,9 @@ class SoftCopyClaimProvenance:
         metadata={"doc": "Retained prompt namespace and content identity."}
     )
     generation_attempt: int = field(
-        metadata={"doc": "Structured-output generation attempt that produced the claim."}
+        metadata={
+            "doc": "Structured-output generation attempt that produced the claim."
+        }
     )
     regeneration_attempt: int = field(
         metadata={"doc": "Targeted regeneration pass; zero for initial generation."}
@@ -119,9 +250,7 @@ def soft_copy_claim_provenance_from_payload(
             )
         raw_prompt_identity = raw.get("producing_prompt_identity")
         prompt_identity = (
-            dict(raw_prompt_identity)
-            if isinstance(raw_prompt_identity, dict)
-            else {}
+            dict(raw_prompt_identity) if isinstance(raw_prompt_identity, dict) else {}
         )
         claims.append(
             SoftCopyClaimProvenance(

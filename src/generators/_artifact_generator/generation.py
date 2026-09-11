@@ -12,6 +12,13 @@ from src.contracts.prompt_family_materialization import (
     PromptFamilyReuseRequest,
 )
 from src.contracts.run_context import RunContext
+from src.contracts.soft_copy_claim_provenance import (
+    SOFT_COPY_PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+    SoftCopyPromptFamilyMaterialization,
+    soft_copy_claim_bindings_cover_public_text,
+    soft_copy_prompt_family_materialization_from_payload,
+    soft_copy_public_text,
+)
 from src.generators._artifact_generator.family_policy import (
     apply_artifact_family_policy,
 )
@@ -386,6 +393,43 @@ def generate_artifacts(
             )
         else:
             reuse = None
+        soft_copy_family = _SOFT_COPY_NAMESPACES.get(namespace)
+        retained_soft_copy = (
+            soft_copy_prompt_family_materialization_from_payload(reuse.output_payload)
+            if reuse is not None and reuse.reusable and soft_copy_family
+            else None
+        )
+        if (
+            reuse is not None
+            and reuse.reusable
+            and soft_copy_family
+            and (
+                (
+                    retained_soft_copy is None
+                    and bool(
+                        soft_copy_public_text(soft_copy_family, reuse.output_payload)
+                    )
+                )
+                or not soft_copy_claim_bindings_cover_public_text(
+                    artifact_family=soft_copy_family,
+                    public_output=(
+                        retained_soft_copy.public_output
+                        if retained_soft_copy is not None
+                        else reuse.output_payload
+                    ),
+                    claim_bindings=(
+                        retained_soft_copy.claim_provenance
+                        if retained_soft_copy is not None
+                        else []
+                    ),
+                )
+            )
+        ):
+            reuse = None
+            family_reuse[namespace]["soft_copy_reuse_rejected"] = True
+            family_reuse[namespace]["soft_copy_reuse_rejection_reason"] = (
+                "soft_copy_provenance_missing"
+            )
         if reuse is not None and reuse.reusable:
             reused = family_reuse_telemetry["reused_families"]
             assert isinstance(reused, list)
@@ -396,7 +440,22 @@ def generate_artifacts(
             family_reuse[namespace]["decision"] = "reused"
             family_reuse[namespace]["artifact_id"] = reuse.artifact_id
             family_reuse[namespace]["output_hash"] = reuse.output_hash
+            public_output = (
+                retained_soft_copy.public_output
+                if retained_soft_copy is not None
+                else reuse.output_payload
+            )
             family_outputs[namespace] = reuse.output_payload
+            if soft_copy_family and retained_soft_copy is not None:
+                soft_copy_claim_bindings[soft_copy_family] = [
+                    dict(binding) for binding in retained_soft_copy.claim_provenance
+                ]
+                soft_copy_prompt_identities[soft_copy_family] = dict(
+                    retained_soft_copy.producing_prompt_identity
+                )
+                soft_copy_generation_attempts[soft_copy_family] = (
+                    retained_soft_copy.generation_attempt
+                )
             logger.info(
                 log_event(
                     ctx,
@@ -406,10 +465,17 @@ def generate_artifacts(
                     fields={"family_id": namespace, "artifact_id": reuse.artifact_id},
                 )
             )
-            return {root_key: reuse.output_payload}
+            return {root_key: public_output}
         reason = (
-            reuse.reason
-            if reuse is not None
+            (
+                "soft_copy_provenance_missing"
+                if family_reuse[namespace].get("soft_copy_reuse_rejected")
+                else reuse.reason
+            )
+            if (
+                reuse is not None
+                or family_reuse[namespace].get("soft_copy_reuse_rejected")
+            )
             else (
                 "vector_store_provenance_missing"
                 if not vector_provenance_verified
@@ -496,7 +562,6 @@ def generate_artifacts(
             response_observer=observe_response,
         )
         family_outputs[namespace] = rendered.get(root_key)
-        soft_copy_family = _SOFT_COPY_NAMESPACES.get(namespace)
         if soft_copy_family:
             bindings = rendered.get("_soft_copy_claim_bindings")
             soft_copy_claim_bindings[soft_copy_family] = (
@@ -508,6 +573,13 @@ def generate_artifacts(
             soft_copy_generation_attempts[soft_copy_family] = max(
                 1, int(rendered.get("_soft_copy_generation_attempt") or 1)
             )
+            family_outputs[namespace] = SoftCopyPromptFamilyMaterialization(
+                schema_version=SOFT_COPY_PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+                public_output=rendered.get(root_key),
+                claim_provenance=soft_copy_claim_bindings[soft_copy_family],
+                producing_prompt_identity=soft_copy_prompt_identities[soft_copy_family],
+                generation_attempt=soft_copy_generation_attempts[soft_copy_family],
+            ).to_payload()
         return rendered
 
     logger.info(
