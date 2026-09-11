@@ -7,7 +7,8 @@ text: |
   - Metric spine (JSON): {{ metric_spine_json }}
 
   Task:
-  Produce an expert comment and return it as a JSON object with the key `expert_comment`.
+  Produce an expert comment and return it as a JSON object with the keys
+  `expert_comment` and `claim_provenance`.
 
   Writing requirements:
   - Up to three short paragraphs (3-4 sentences each)
@@ -30,9 +31,10 @@ text: |
   - Do not assert causal operational outcomes (for example, fewer vendors, lower costs, faster delivery, or improved performance) unless the supplied artifacts explicitly state that outcome.
   - Do not restate supplied evidence verbatim; synthesize across it
   - If an implication is not clearly supported, omit it
-  - Do not expose evidence IDs, evidence spans, report pages, pack names, JSON fields, or internal document structure
+  - Do not expose evidence IDs, evidence spans, report pages, pack names, JSON fields, or internal document structure in `expert_comment`.
+  - `claim_provenance` is private retained metadata. Include one object for every material sentence or claim in `expert_comment`, with its exact `claim` text, a `classification` of `factual`, `interpretive`, or `recommendation`, and the exact supporting `evidence_ids` from the supplied context. A factual claim must have at least one evidence ID. Do not put these identifiers in the public prose.
   - If the available evidence does not support a distinct synthesis across multiple findings, return exactly {"expert_comment": ""}.
 
   Output:
-  - Valid JSON only
+  - Valid JSON only, shaped as `{"expert_comment": "...", "claim_provenance": [{"claim": "...", "classification": "interpretive", "evidence_ids": ["..."]}]}`
   - No commentary, no explanations, no markdown

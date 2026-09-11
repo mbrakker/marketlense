@@ -112,6 +112,11 @@ _ARTIFACT_FAMILY_ROOTS = {
     "report_vs/artifacts/expert_comment": "expert_comment",
     "report_vs/artifacts/linkedin_post": "linkedin_post",
 }
+_SOFT_COPY_NAMESPACES = {
+    "report_vs/artifacts/summary": "summary",
+    "report_vs/artifacts/expert_comment": "expert_comment",
+    "report_vs/artifacts/linkedin_post": "linkedin_post",
+}
 
 
 def _render_insights_candidates_or_defer_to_fallback(
@@ -224,6 +229,9 @@ def generate_artifacts(
 
     family_reuse: dict[str, dict[str, object]] = {}
     family_outputs: dict[str, object] = {}
+    soft_copy_claim_bindings: dict[str, list[dict[str, object]]] = {}
+    soft_copy_prompt_identities: dict[str, dict[str, object]] = {}
+    soft_copy_generation_attempts: dict[str, int] = {}
     family_reuse_telemetry: PromptFamilyReuseTelemetry = {
         "requested_families": [],
         "reused_families": [],
@@ -333,6 +341,7 @@ def generate_artifacts(
         model_provider = str(prepared.execution_policy.policy.provider or "")
         model_policy_namespace = namespace.split("/", 1)[0]
         identity: dict[str, object] = {
+            "namespace": namespace,
             "family_schema_version": "1.0",
             "processing_version": "report_generation_checkpoint_v2",
             "prompt_content_hash": prepared.prompt_content_hash,
@@ -487,6 +496,18 @@ def generate_artifacts(
             response_observer=observe_response,
         )
         family_outputs[namespace] = rendered.get(root_key)
+        soft_copy_family = _SOFT_COPY_NAMESPACES.get(namespace)
+        if soft_copy_family:
+            bindings = rendered.get("_soft_copy_claim_bindings")
+            soft_copy_claim_bindings[soft_copy_family] = (
+                [dict(item) for item in bindings if isinstance(item, dict)]
+                if isinstance(bindings, list)
+                else []
+            )
+            soft_copy_prompt_identities[soft_copy_family] = dict(identity)
+            soft_copy_generation_attempts[soft_copy_family] = max(
+                1, int(rendered.get("_soft_copy_generation_attempt") or 1)
+            )
         return rendered
 
     logger.info(
@@ -926,6 +947,9 @@ def generate_artifacts(
                 ),
             },
         },
+        soft_copy_claim_bindings=soft_copy_claim_bindings,
+        soft_copy_prompt_identities=soft_copy_prompt_identities,
+        soft_copy_generation_attempts=soft_copy_generation_attempts,
     )
     store_artifacts_payload(
         analysis_store=analysis_store,

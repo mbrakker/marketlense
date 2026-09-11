@@ -21,6 +21,11 @@ from src.contracts.report_cards import (
 from src.contracts.run_context import RunContext
 from src.contracts.schema_validation import SchemaValidateRequest
 from src.contracts.semantic_ids import ReportId
+from src.contracts.soft_copy_claim_provenance import (
+    SoftCopyClaimProvenance,
+    soft_copy_claim_provenance_from_payload,
+    soft_copy_claim_provenance_to_payload,
+)
 from src.generators._artifact_generator.family_policy import (
     apply_artifact_family_policy,
 )
@@ -41,6 +46,7 @@ from src.generators.analysis_store_adapter import (
     store_pack as store_analysis_pack,
 )
 from src.generators.artifact_normalization import (
+    artifact_evidence_span_index,
     bind_artifact_evidence_spans,
     constrain_summary_to_source_backed_claims,
     normalize_artifact_editorial_plan,
@@ -51,6 +57,9 @@ from src.generators.artifact_normalization import (
 )
 from src.generators.public_editorial_quality_generator import (
     evaluate_public_editorial_quality,
+)
+from src.generators.soft_copy_claim_provenance import (
+    build_soft_copy_claim_provenance,
 )
 from src.services import file_service
 from src.services.prompt_service import build_llm_execution_identity
@@ -109,6 +118,12 @@ def assemble_artifacts_payload(
     ctx: RunContext,
     category_ids: Optional[List[str]] = None,
     cache_meta: Optional[Dict[str, Any]] = None,
+    soft_copy_claim_bindings: Optional[Dict[str, List[Dict[str, Any]]]] = None,
+    soft_copy_prompt_identities: Optional[Dict[str, Dict[str, Any]]] = None,
+    soft_copy_generation_attempts: Optional[Dict[str, int]] = None,
+    existing_soft_copy_claim_provenance: Optional[Dict[str, Any]] = None,
+    replaced_soft_copy_families: Optional[List[str]] = None,
+    regeneration_attempt: int = 0,
     validate_references: bool = True,
 ) -> Dict[str, Any]:
     del report_name
@@ -238,6 +253,21 @@ def assemble_artifacts_payload(
         "source_status": source_status,
         "family_status": family_status,
     }
+    artifacts_payload["soft_copy_claim_provenance"] = (
+        _soft_copy_claim_provenance_payload(
+            summary=summary,
+            expert_comment=expert_comment,
+            linkedin_post=linkedin_post,
+            doc_map=doc_map,
+            evidence_packs=evidence_packs,
+            bindings=soft_copy_claim_bindings or {},
+            prompt_identities=soft_copy_prompt_identities or {},
+            generation_attempts=soft_copy_generation_attempts or {},
+            existing_provenance=existing_soft_copy_claim_provenance,
+            replaced_families=replaced_soft_copy_families or [],
+            regeneration_attempt=regeneration_attempt,
+        )
+    )
     artifacts_payload["executive_advisory"] = build_executive_advisory_artifacts(
         summary=summary,
         insights_final=insights_final,
@@ -288,6 +318,62 @@ def assemble_artifacts_payload(
         )
         raise
     return artifacts_payload
+
+
+def _soft_copy_claim_provenance_payload(
+    *,
+    summary: Dict[str, Any],
+    expert_comment: str,
+    linkedin_post: str,
+    doc_map: Dict[str, Any],
+    evidence_packs: Dict[str, Any],
+    bindings: Dict[str, List[Dict[str, Any]]],
+    prompt_identities: Dict[str, Dict[str, Any]],
+    generation_attempts: Dict[str, int],
+    existing_provenance: Optional[Dict[str, Any]],
+    replaced_families: List[str],
+    regeneration_attempt: int,
+) -> Dict[str, Any]:
+    text_by_family = {
+        "summary": " ".join(
+            _s(summary.get(key)).strip()
+            for key in ("tldr", "card_tldr_compact", "executive_summary")
+            if _s(summary.get(key)).strip()
+        ),
+        "expert_comment": expert_comment,
+        "linkedin_post": linkedin_post,
+    }
+    span_index = artifact_evidence_span_index(
+        doc_map=doc_map,
+        evidence_packs=evidence_packs,
+    )
+    replaced = {str(family).strip() for family in replaced_families}
+    claims: List[SoftCopyClaimProvenance] = [
+        claim
+        for claim in (
+            soft_copy_claim_provenance_from_payload(existing_provenance)
+            if isinstance(existing_provenance, dict)
+            and isinstance(existing_provenance.get("claims"), list)
+            else []
+        )
+        if claim.artifact_family not in replaced
+    ]
+    for family, text in text_by_family.items():
+        declared = bindings.get(family)
+        if not text or not isinstance(declared, list) or not declared:
+            continue
+        claims.extend(
+            build_soft_copy_claim_provenance(
+                artifact_family=family,
+                text=text,
+                declared_claims=declared,
+                evidence_span_index=span_index,
+                producing_prompt_identity=dict(prompt_identities.get(family) or {}),
+                generation_attempt=max(1, int(generation_attempts.get(family) or 1)),
+                regeneration_attempt=regeneration_attempt,
+            )
+        )
+    return soft_copy_claim_provenance_to_payload(claims)
 
 
 def build_universal_claim_ledger(

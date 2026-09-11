@@ -54,6 +54,32 @@ _ARTIFACT_ABSTAINABLE_ROOTS = {
     "expert_comment",
     "linkedin_post",
 }
+_SOFT_COPY_ROOTS = {"summary", "expert_comment", "linkedin_post"}
+
+
+def _soft_copy_provider_output_schema(root_key: str) -> dict[str, Any]:
+    """Require private bindings in model output without making them public prose."""
+
+    schema = provider_output_schema("artifacts", root_key)
+    schema["properties"]["claim_provenance"] = {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["claim", "classification", "evidence_ids"],
+            "properties": {
+                "claim": {"type": "string"},
+                "classification": {
+                    "enum": ["factual", "interpretive", "recommendation"]
+                },
+                "evidence_ids": {
+                    "type": "array", "items": {"type": "string"}
+                },
+            },
+        },
+    }
+    schema["required"] = [root_key, "claim_provenance"]
+    return schema
 
 
 def render_artifact_json_model(
@@ -183,7 +209,11 @@ def render_artifact_json_model(
             retryable=False,
             context={"namespace": namespace},
         )
-    output_schema = provider_output_schema("artifacts", root_key)
+    output_schema = (
+        _soft_copy_provider_output_schema(root_key)
+        if root_key in _SOFT_COPY_ROOTS
+        else provider_output_schema("artifacts", root_key)
+    )
     resolved_report_id = str(report_id or getattr(ctx, "report_id", "") or report_name)
 
     def call_model(mode: str, original_response: str, schema_errors: str):
@@ -241,7 +271,7 @@ def render_artifact_json_model(
 
     def validate_payload(payload: Dict[str, Any]) -> None:
         validate_output_schema(
-            payload=payload,
+            payload={root_key: payload.get(root_key)},
             schema_name="artifacts",
             root_key=root_key,
             ctx=ctx,
@@ -277,7 +307,15 @@ def render_artifact_json_model(
             and not _artifact_response_substantive(payload, root_key)
         ),
     )
-    return dict(recovery.payload)
+    result = dict(recovery.payload)
+    if root_key in _SOFT_COPY_ROOTS:
+        result["_soft_copy_claim_bindings"] = list(
+            result.pop("claim_provenance", [])
+            if isinstance(result.get("claim_provenance"), list)
+            else []
+        )
+        result["_soft_copy_generation_attempt"] = recovery.attempts
+    return result
 
 
 def _artifact_response_substantive(payload: object, root_key: str) -> bool:
@@ -358,4 +396,11 @@ def _normalize_artifact_response(payload: object, root_key: str) -> Dict[str, An
             for item in value
             if isinstance(item, dict)
         ]
+    elif root_key in _SOFT_COPY_ROOTS:
+        bindings = normalized.get("claim_provenance")
+        normalized["claim_provenance"] = (
+            [dict(item) for item in bindings if isinstance(item, dict)]
+            if isinstance(bindings, list)
+            else []
+        )
     return normalized

@@ -1513,6 +1513,17 @@ def bind_artifact_evidence_spans(
     }
 
 
+def artifact_evidence_span_index(
+    *, doc_map: Dict[str, Any], evidence_packs: Dict[str, Any]
+) -> Dict[str, List[Dict[str, Any]]]:
+    """Expose canonical evidence spans for retained private provenance."""
+
+    return _build_evidence_span_index(
+        doc_map=doc_map,
+        evidence_packs=evidence_packs,
+    )
+
+
 def normalize_expert_domain(categories: Optional[List[str]]) -> str:
     if not isinstance(categories, (list, tuple)):
         return "industry"

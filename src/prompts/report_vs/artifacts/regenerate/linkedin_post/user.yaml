@@ -14,7 +14,8 @@ text: |
   Task:
   Return a JSON object with:
   {
-    "linkedin_post": "<grounded LinkedIn post>"
+    "linkedin_post": "<grounded LinkedIn post>",
+    "claim_provenance": [{"claim": "<exact material sentence>", "classification": "factual|interpretive|recommendation", "evidence_ids": ["<approved evidence id>"]}]
   }
 
   Requirements:
@@ -34,3 +35,4 @@ text: |
   - Do not introduce unsupported claims, numbers, or quotes.
   - Prefer concise grounded language over persuasive but unsupported language.
   - Return direct public prose without editorial labels such as "Executive takeaway:", "Observation:", or "Implication:".
+  - `claim_provenance` is private retained metadata. Bind every material sentence or claim to exact approved evidence IDs; never expose IDs in `linkedin_post`. A factual claim must have at least one evidence ID.

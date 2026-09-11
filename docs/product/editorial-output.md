@@ -31,6 +31,15 @@ identity. Report-specific interpretation belongs exclusively to the generated
 Expert View body; an unsupported synthesis renders the existing explicit
 abstention notice instead of generic theme claims.
 
+For retained soft-copy families, the artifact keeps private sentence-level
+claim provenance beside the unchanged public prose. Expert View, LinkedIn, and
+useful summary/TLDR claims declare their exact canonical evidence IDs during
+generation, retain known source pages/spans, claim classification, text hash,
+prompt identity, and generation/regeneration attempt. Regeneration replaces
+only the provenance of regenerated families and preserves untouched claims.
+This internal metadata stays in retained artifacts and checkpoints; it is not
+part of the report payload or WordPress projection.
+
 The public metric spine is a bounded selection of source-backed textual metrics.
 It ranks a metric whose evidence ID directly supports a selected editorial-plan
 theme ahead of secondary metrics; the plan's positive priority order resolves

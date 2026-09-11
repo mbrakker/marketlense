@@ -25,7 +25,10 @@ text: |
           "pages": [<page numbers if known>]
         }
       ]
-    }
+    },
+    "claim_provenance": [
+      {"claim": "<exact material sentence>", "classification": "factual|interpretive|recommendation", "evidence_ids": ["<approved evidence id>"]}
+    ]
   }
 
   Requirements:
@@ -42,3 +45,4 @@ text: |
   - End each TLDR with complete sentence punctuation. Never use an ellipsis.
   - Do not use mechanical lead-ins or labels such as "Answer:", "Observation:", or "Implication:"; write direct public prose throughout the executive summary.
   - Do not introduce unsupported numbers, entities, quotes, or conclusions. A numeric value may appear only when it is explicitly supported by that claim's linked retained evidence.
+  - `claim_provenance` is private retained metadata. Bind every material sentence or claim from `tldr`, `card_tldr_compact`, and `executive_summary` to exact approved evidence IDs; never expose IDs in public prose. A factual claim must have at least one evidence ID.

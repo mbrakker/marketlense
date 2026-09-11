@@ -13,7 +13,7 @@ text: |
   Source-of-truth summary schema:
   {{ summary_schema }}
 
-  Task: Return a JSON object with the `summary` field:
+  Task: Return a JSON object with the `summary` and private `claim_provenance` fields:
   {
     "summary": {
       "tldr": "<one complete sentence, maximum 45 words>",
@@ -22,8 +22,12 @@ text: |
       "claim_evidence_map": [
         {"claim": "<concise claim>", "evidence_id": "<single existing evidence id from findings/quotes/doc map>", "evidence": "<supporting excerpt or paraphrase>", "pages": [<page numbers if known>]}
       ]
-    }
+    },
+    "claim_provenance": [
+      {"claim": "<exact material sentence from tldr, compact TLDR, or executive_summary>", "classification": "factual|interpretive|recommendation", "evidence_ids": ["<existing evidence id>"]}
+    ]
   }
+  `claim_provenance` is retained metadata only: include every material sentence or claim from the public summary fields, use exact existing IDs, and never place IDs in public prose. A factual claim must have at least one evidence ID.
   - Keep claims specific and tied to evidence identifiers present in the provided context.
   - Follow the editorial plan's report thesis and themes; do not introduce a competing thematic frame.
   - Write for executives: answer "so what" before background, prefer decisions and tradeoffs over descriptive recap.

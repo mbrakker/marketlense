@@ -8,7 +8,8 @@ text: |
   - Metric spine (supporting evidence, JSON): {{ metric_spine_json }}
 
   Task:
-  Create a single LinkedIn post and return it as a JSON object with the key `linkedin_post`.
+  Create a single LinkedIn post and return it as a JSON object with the keys
+  `linkedin_post` and `claim_provenance`.
 
   Writing requirements:
   - Target 180–280 words. The hard maximum is 500 words.
@@ -29,8 +30,9 @@ text: |
   - Do not introduce new metrics, benchmarks, projections, or assumptions
   - Do not generalize beyond what the report explicitly supports
   - If something is not clearly supported, omit it
-  - Do not reference report pages, sections, evidence packs, evidence IDs, evidence spans, JSON fields, or any internal document structure
+  - Do not reference report pages, sections, evidence packs, evidence IDs, evidence spans, JSON fields, or any internal document structure in `linkedin_post`.
+  - `claim_provenance` is private retained metadata. Include one object for every material sentence or claim in `linkedin_post`, with its exact `claim` text, a `classification` of `factual`, `interpretive`, or `recommendation`, and the exact supporting `evidence_ids` from the supplied context. A factual claim must have at least one evidence ID. Do not put these identifiers in the public prose.
 
   Output:
-  - Valid JSON only
+  - Valid JSON only, shaped as `{"linkedin_post": "...", "claim_provenance": [{"claim": "...", "classification": "factual", "evidence_ids": ["..."]}]}`
   - No commentary, no explanations, no markdown

@@ -22,6 +22,10 @@ from src.contracts.regeneration import (
     RegenerationTarget,
 )
 from src.contracts.run_context import RunContext
+from src.contracts.soft_copy_claim_provenance import (
+    SoftCopyClaimProvenance,
+    soft_copy_claim_provenance_to_payload,
+)
 from src.generators.public_editorial_quality_generator import (
     evaluate_public_editorial_quality,
 )
@@ -318,7 +322,17 @@ class _FakeOpenAIClient:
                     "expert_comment": (
                         "Retention and margin evidence create a supported planning "
                         "tension."
-                    )
+                    ),
+                    "claim_provenance": [
+                        {
+                            "claim": (
+                                "Retention and margin evidence create a supported "
+                                "planning tension."
+                            ),
+                            "classification": "interpretive",
+                            "evidence_ids": ["f1", "f2"],
+                        }
+                    ],
                 },
                 request_id="req-expert",
             )
@@ -327,9 +341,14 @@ class _FakeOpenAIClient:
                 schema_version="1.0",
                 text='{"linkedin_post":"Retention efficiency is replacing broad expansion."}',
                 parsed_json={
-                    "linkedin_post": (
-                        "Retention efficiency is replacing broad expansion."
-                    )
+                    "linkedin_post": "Retention efficiency is replacing broad expansion.",
+                    "claim_provenance": [
+                        {
+                            "claim": "Retention efficiency is replacing broad expansion.",
+                            "classification": "interpretive",
+                            "evidence_ids": ["f1"],
+                        }
+                    ],
                 },
                 request_id="req-linkedin",
             )
@@ -964,6 +983,71 @@ def test_regenerate_artifacts_linkedin_post_receives_editorial_plan(tmp_path):
             {"theme": "Margin evidence", "priority": 2, "evidence_ids": ["f2"]},
         ],
     }
+
+
+def test_regenerated_soft_copy_claim_gets_new_provenance_and_untouched_claim_is_retained(
+    tmp_path,
+) -> None:
+    current_artifacts = _current_artifacts()
+    retained_linkedin_claim = SoftCopyClaimProvenance(
+        schema_version="1.0",
+        artifact_family="linkedin_post",
+        claim_id="soft_copy:linkedin_post:retained",
+        text_hash="a" * 64,
+        classification="interpretive",
+        evidence_ids=("f1",),
+        source_spans=(),
+        producing_prompt_identity={"namespace": "old/linkedin"},
+        generation_attempt=1,
+        regeneration_attempt=0,
+    )
+    current_artifacts["soft_copy_claim_provenance"] = (
+        soft_copy_claim_provenance_to_payload([retained_linkedin_claim])
+    )
+
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=2,
+            plan=RegenerationPlan(
+                mode="targeted",
+                targets=[
+                    RegenerationTarget(
+                        target_section="expert_comment",
+                        regenerate_steps=["expert_comment"],
+                        issues=[],
+                    )
+                ],
+                unmappable_issues=[],
+                broad_retry_allowed=False,
+            ),
+            current_artifacts=current_artifacts,
+            doc_map=_evidence_packs()["doc_map"],
+            evidence_packs=_evidence_packs(),
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current_artifacts["source_status"],
+            categories=["Category"],
+        ),
+        openai_client=_FakeOpenAIClient(),
+        prompt_client=_FakePromptClient(),
+    )
+
+    claims = response.updated_artifacts["soft_copy_claim_provenance"]["claims"]
+    regenerated = next(
+        item for item in claims if item["artifact_family"] == "expert_comment"
+    )
+    retained = next(item for item in claims if item["artifact_family"] == "linkedin_post")
+    assert regenerated["classification"] == "interpretive"
+    assert regenerated["evidence_ids"] == ["f1", "f2"]
+    assert regenerated["regeneration_attempt"] == 2
+    assert regenerated["producing_prompt_identity"]["namespace"] == (
+        "report_vs/artifacts/regenerate/expert_comment"
+    )
+    assert retained == soft_copy_claim_provenance_to_payload(
+        [retained_linkedin_claim]
+    )["claims"][0]
 
 
 def test_regenerate_artifacts_summary_only_keeps_other_sections_unchanged(tmp_path):

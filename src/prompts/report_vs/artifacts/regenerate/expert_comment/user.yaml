@@ -15,7 +15,8 @@ text: |
   Task:
   Return a JSON object with:
   {
-    "expert_comment": "<grounded expert-style commentary>"
+    "expert_comment": "<grounded expert-style commentary>",
+    "claim_provenance": [{"claim": "<exact material sentence>", "classification": "factual|interpretive|recommendation", "evidence_ids": ["<approved evidence id>"]}]
   }
 
   Requirements:
@@ -32,4 +33,5 @@ text: |
   - Treat `so_what` fields as interpretation cues, not independent factual evidence, and preserve limitations and counter-signals as constraints.
   - Prefer deletion of unsupported material over speculation.
   - Return direct public prose without editorial labels such as "Observation:", "Implication:", or "Executive action:".
+  - `claim_provenance` is private retained metadata. Bind every material sentence or claim to exact approved evidence IDs; never expose IDs in `expert_comment`. A factual claim must have at least one evidence ID.
   - If no distinct supported synthesis remains after repair, return exactly {"expert_comment": ""}.

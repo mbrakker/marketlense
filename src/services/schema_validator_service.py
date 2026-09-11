@@ -333,6 +333,21 @@ def validate_evidence_references(
                 span_value = str(span.get("evidence_id") or "").strip()
                 if span_value:
                     references.append(span_value)
+    soft_copy_provenance = artifacts_payload.get("soft_copy_claim_provenance")
+    if isinstance(soft_copy_provenance, dict):
+        for claim in soft_copy_provenance.get("claims") or []:
+            if not isinstance(claim, dict):
+                continue
+            for evidence_id in claim.get("evidence_ids") or []:
+                value = str(evidence_id or "").strip()
+                if value:
+                    references.append(value)
+            for span in claim.get("source_spans") or []:
+                if not isinstance(span, dict):
+                    continue
+                value = str(span.get("evidence_id") or "").strip()
+                if value:
+                    references.append(value)
 
     missing = sorted(
         {reference for reference in references if reference not in evidence_ids}

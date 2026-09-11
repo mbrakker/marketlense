@@ -74,6 +74,15 @@ class _RegenerationState:
     regenerated_sections: List[str] = field(default_factory=list)
     prompt_namespaces: List[str] = field(default_factory=list)
     prompt_identities: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    soft_copy_claim_bindings: Dict[str, List[Dict[str, Any]]] = field(
+        default_factory=dict
+    )
+    soft_copy_prompt_identities: Dict[str, Dict[str, Any]] = field(
+        default_factory=dict
+    )
+    soft_copy_generation_attempts: Dict[str, int] = field(default_factory=dict)
+    existing_soft_copy_claim_provenance: Dict[str, Any] = field(default_factory=dict)
+    replaced_soft_copy_families: List[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -291,6 +300,12 @@ def regenerate_artifacts(
         else [],
         ctx=ctx,
         cache_meta=cache_meta,
+        soft_copy_claim_bindings=state.soft_copy_claim_bindings,
+        soft_copy_prompt_identities=state.soft_copy_prompt_identities,
+        soft_copy_generation_attempts=state.soft_copy_generation_attempts,
+        existing_soft_copy_claim_provenance=state.existing_soft_copy_claim_provenance,
+        replaced_soft_copy_families=state.replaced_soft_copy_families,
+        regeneration_attempt=request.attempt_index,
         validate_references=False,
     )
     candidate_artifacts_path = store_artifacts_payload(
@@ -832,6 +847,9 @@ def _build_regeneration_state(
         expert_comment=_s(safe_artifacts.get("expert_comment")),
         linkedin_post=_s(safe_artifacts.get("linkedin_post")),
         source_status=deepcopy(source_status),
+        existing_soft_copy_claim_provenance=_copy_dict(
+            safe_artifacts.get("soft_copy_claim_provenance")
+        ),
     )
 
 
@@ -862,6 +880,7 @@ def _render_regeneration_model(
         validator_version="artifacts_schema:3.0",
     )
     execution.state.prompt_identities[namespace] = {
+        "namespace": namespace,
         "prompt_system_sha256": prepared.prompt_set.system.sha256,
         "prompt_user_sha256": prepared.prompt_set.user.sha256,
         "prompt_content_hash": prepared.prompt_content_hash,
@@ -899,6 +918,29 @@ def _normalize_state_evidence_ids(execution: _RegenerationHandlerExecution) -> N
     )
 
 
+def _record_soft_copy_claim_bindings(
+    execution: _RegenerationHandlerExecution,
+    *,
+    artifact_family: str,
+    namespace: str,
+    result: Dict[str, Any],
+) -> None:
+    bindings = result.get("_soft_copy_claim_bindings")
+    execution.state.soft_copy_claim_bindings[artifact_family] = (
+        [dict(item) for item in bindings if isinstance(item, dict)]
+        if isinstance(bindings, list)
+        else []
+    )
+    execution.state.soft_copy_prompt_identities[artifact_family] = dict(
+        execution.state.prompt_identities.get(namespace) or {}
+    )
+    execution.state.soft_copy_generation_attempts[artifact_family] = max(
+        1, int(result.get("_soft_copy_generation_attempt") or 1)
+    )
+    if artifact_family not in execution.state.replaced_soft_copy_families:
+        execution.state.replaced_soft_copy_families.append(artifact_family)
+
+
 def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> None:
     namespace = execution.handler.prompt_namespaces[0]
     result = _render_regeneration_model(
@@ -915,6 +957,12 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
             "grounding_package_json": _dump_json(execution.grounding_package),
             "editorial_plan_json": _dump_json(execution.state.editorial_plan),
         },
+    )
+    _record_soft_copy_claim_bindings(
+        execution,
+        artifact_family="summary",
+        namespace=namespace,
+        result=result,
     )
     execution.state.summary = normalize_artifact_summary(result.get("summary"))
     execution.state.regenerated_sections.append("summary")
@@ -1120,6 +1168,12 @@ def _handle_expert_comment_regeneration(
             "grounding_package_json": _dump_json(execution.grounding_package),
         },
     )
+    _record_soft_copy_claim_bindings(
+        execution,
+        artifact_family="expert_comment",
+        namespace=namespace,
+        result=result,
+    )
     execution.state.expert_comment = _s(result.get("expert_comment"))
     execution.state.regenerated_sections.append("expert_comment")
     execution.state.prompt_namespaces.append(namespace)
@@ -1175,6 +1229,12 @@ def _handle_linkedin_post_regeneration(
             "fix_checklist_json": _fix_checklist_json(execution.target),
             "grounding_package_json": _dump_json(execution.grounding_package),
         },
+    )
+    _record_soft_copy_claim_bindings(
+        execution,
+        artifact_family="linkedin_post",
+        namespace=namespace,
+        result=result,
     )
     execution.state.linkedin_post = strip_linkedin_inline_reference_ids(
         _s(result.get("linkedin_post"))
