@@ -43,6 +43,7 @@ from src.orchestrators.signal_candidate_orchestrator import (
 from src.services import llm_service
 from src.utils.errors import AppError
 from src.utils.logging import log_event
+from src.utils.report_identity import require_admitted_report_identity
 
 from .checkpoints import (
     _analysis_checkpoint_payload,
@@ -82,9 +83,9 @@ _UNATTRIBUTED_PUBLISHER_IDS = frozenset(
 )
 
 
-def _manifest_source_identity_id(ctx: RunContext, fallback: str) -> str:
-    """Keep an inherited cohort identity when recording a pipeline stage."""
-    return str(ctx.source_identity_id or "").strip() or fallback
+def _manifest_source_identity_id(ctx: RunContext) -> str:
+    """Return the inherited canonical cohort identity for pipeline lineage."""
+    return str(ctx.source_identity_id or "").strip()
 
 
 def _should_fresh_start_after_latest_safe_rejection(error: AppError) -> bool:
@@ -355,6 +356,11 @@ def run_report_generation(
     stop_after_stage: Optional[str] = None,
     projection_only: bool = False,
 ) -> IngestOutcome:
+    if str(ctx.admission_decision_hash or "").strip():
+        require_admitted_report_identity(
+            ctx,
+            legacy_source_values=(md5, file.file_id),
+        )
     deps = (
         _with_signal_candidate_orchestrator(dependencies)
         if dependencies is not None
@@ -373,12 +379,40 @@ def run_report_generation(
         ctx=ctx,
         deps=deps,
     )
+    resolved_source_identity_id = str(
+        getattr(source_identity, "source_identity_id", "") or ""
+    ).strip()
+    resolved_publisher_id = str(
+        getattr(source_identity, "publisher_id", "") or ""
+    ).strip()
+    resolved_publisher_name = str(
+        getattr(source_identity, "publisher_name", "") or ""
+    ).strip()
+    if resolved_source_identity_id in {str(md5 or "").strip(), file.file_id}:
+        resolved_source_identity_id = ""
+    if resolved_publisher_id.casefold() in {
+        "unattributed",
+        "drive_unattributed",
+        "unknown",
+        "unknown publisher",
+        resolved_publisher_name.casefold(),
+    }:
+        resolved_publisher_id = ""
+    runtime_ctx = replace(
+        ctx,
+        source_identity_id=(
+            str(ctx.source_identity_id or "").strip() or resolved_source_identity_id
+        ),
+        publisher_id=(
+            str(ctx.publisher_id or "").strip() or resolved_publisher_id
+        ),
+    )
     runtime = _build_runtime_state(
         file,
         local_pdf_path,
         settings,
         md5,
-        ctx,
+        runtime_ctx,
         publisher_name=publisher_name,
         source_report_name=source_report_name,
         source_url=source_url,
@@ -748,19 +782,12 @@ def run_report_generation(
                     "resume_stage": STAGE_ANALYSIS_COMPLETE,
                 },
             ) from exc
-        manifest_source_identity_id = _manifest_source_identity_id(
-            runtime.ctx,
-            runtime.md5 or runtime.file.file_id,
-        )
+        manifest_source_identity_id = _manifest_source_identity_id(runtime.ctx)
         manifest_ctx = replace(
             runtime.ctx,
             report_id=runtime.file.file_id,
             source_identity_id=manifest_source_identity_id,
-            publisher_id=(
-                str(runtime.ctx.publisher_id or "").strip()
-                or runtime.publisher_name
-                or "unattributed"
-            ),
+            publisher_id=str(runtime.ctx.publisher_id or "").strip(),
             workflow="report_generation",
             stage="rendering",
             artifact_family="rendered_html",

@@ -545,13 +545,15 @@ def _bind_cohort_publish_candidates(
                 retryable=False,
                 context={"file_id": file_id, "html_path": html_path},
             )
-        expected_source_identity = str(
-            member.get("source_identity_id") or member.get("md5_checksum") or file_id
-        ).strip()
+        expected_source_identity = str(member.get("source_identity_id") or "").strip()
         expected_md5 = str(member.get("md5_checksum") or "").strip()
-        legacy_content_identity = bool(
-            expected_md5 and expected_source_identity == expected_md5
-        )
+        if not expected_source_identity:
+            raise AppError(
+                code="validation_cohort_canonical_identity_missing",
+                message="Cohort publication requires the admitted canonical source identity",
+                retryable=False,
+                context={"file_id": file_id},
+            )
         if metadata is not None and (
             (
                 expected_md5
@@ -559,8 +561,7 @@ def _bind_cohort_publish_candidates(
                 and str(getattr(metadata, "md5", "")).strip() != expected_md5
             )
             or (
-                not legacy_content_identity
-                and str(getattr(metadata, "source_identity_id", "") or "").strip()
+                str(getattr(metadata, "source_identity_id", "") or "").strip()
                 and str(getattr(metadata, "source_identity_id", "")).strip()
                 != expected_source_identity
             )
@@ -703,9 +704,15 @@ def _record_validation_cohort_publish_outcomes(
     timestamp = datetime.now(timezone.utc).isoformat()
     for file_id, member in members.items():
         outcome = outcomes_by_file_id.get(file_id)
-        source_identity_id = str(
-            member.get("source_identity_id") or member.get("md5_checksum") or file_id
-        )
+        source_identity_id = str(member.get("source_identity_id") or "").strip()
+        publisher_id = str(member.get("publisher_id") or "").strip()
+        if not source_identity_id or not publisher_id:
+            raise AppError(
+                code="validation_cohort_canonical_identity_missing",
+                message="Cohort publication requires admitted canonical identities",
+                retryable=False,
+                context={"file_id": file_id},
+            )
 
         def record_stage(
             stage: str,
@@ -726,7 +733,7 @@ def _record_validation_cohort_publish_outcomes(
                         cohort_id=cohort_id,
                         workflow_run_id=RunId(ctx.run_id),
                         entity_type="report",
-                        publisher_id="unattributed",
+                        publisher_id=publisher_id,
                         report_id=file_id,
                         source_identity_id=source_identity_id,
                         stage=stage,
@@ -1891,7 +1898,7 @@ def run_publish(
             post_type=entity_route.post_type,
             ctx=file_ctx,
         )
-        source_id = state_row.md5
+        source_id = str(file_ctx.source_identity_id or "").strip()
 
         def _record_publish_failure(
             exc: Exception,

@@ -1228,7 +1228,7 @@ def run_ingest_file(
             settings=settings,
             ctx=file_ctx,
             stage="acquisition",
-            source_identity_id=runtime.md5 or runtime.file.file_id,
+            source_identity_id=str(file_ctx.source_identity_id or "").strip(),
             input_artifact_ids=(runtime.file.file_id,),
             output_artifact_ids=(runtime.cache_path,),
             idempotency_state="reused" if cache_hit else "new",
@@ -1237,7 +1237,7 @@ def run_ingest_file(
             settings=settings,
             ctx=file_ctx,
             stage="source_preparation",
-            source_identity_id=runtime.md5 or runtime.file.file_id,
+            source_identity_id=str(file_ctx.source_identity_id or "").strip(),
             input_artifact_ids=(runtime.cache_path,),
             output_artifact_ids=(runtime.md5 or runtime.file.file_id,),
         )
@@ -1245,7 +1245,7 @@ def run_ingest_file(
             settings=settings,
             ctx=file_ctx,
             stage="source_validation",
-            source_identity_id=runtime.md5 or runtime.file.file_id,
+            source_identity_id=str(file_ctx.source_identity_id or "").strip(),
             input_artifact_ids=(runtime.cache_path,),
             output_artifact_ids=(runtime.md5 or runtime.file.file_id,),
         )

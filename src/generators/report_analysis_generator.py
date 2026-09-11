@@ -286,16 +286,12 @@ def _resolve_taxonomy(
             vector_store_id=vector_store_id or "",
             settings=runtime.settings,
             md5=runtime.md5,
-            source_identity_id=str(
-                mode_ctx.source_identity_id or runtime.md5 or runtime.file.file_id
-            ).strip(),
+            source_identity_id=str(mode_ctx.source_identity_id or "").strip(),
             vector_store_content_hash=vector_store_content_hash,
             report_slug=runtime.report_name,
             publisher_name=runtime.publisher_name,
             source_url=runtime.source_url,
-            publisher_id=str(
-                mode_ctx.publisher_id or runtime.publisher_name or "unattributed"
-            ).strip(),
+            publisher_id=str(mode_ctx.publisher_id or "").strip(),
             prompt_namespace=(
                 "report_vs/taxonomy_repair" if repair_attempt else "report_vs/taxonomy"
             ),
@@ -372,9 +368,7 @@ def _resolve_categories_from_report_context(
             publisher_name=runtime.publisher_name,
             report_name=runtime.source_report_name or runtime.report_title,
             source_url=runtime.source_url,
-            source_id=str(
-                mode_ctx.source_identity_id or runtime.md5 or runtime.file.file_id
-            ).strip(),
+            source_id=str(mode_ctx.source_identity_id or "").strip(),
             prompt_namespace=(
                 "report_vs/context_category_fit_repair"
                 if repair_attempt

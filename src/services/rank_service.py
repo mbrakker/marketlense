@@ -188,7 +188,7 @@ def rank_candidates(
                 plan_hash=ctx.execution_plan_hash,
                 artifact_family="figure_ranking",
                 validation_run_id=ctx.validation_run_id,
-                publisher_id=ctx.publisher_id or "unattributed",
+                publisher_id=str(ctx.publisher_id or "").strip(),
                 configuration_hash=ctx.configuration_hash,
                 policy_hash=ctx.policy_hash or request.execution_policy_hash,
                 producer_build_identity=ctx.producer_commit_sha or "workspace",

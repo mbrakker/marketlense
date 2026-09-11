@@ -605,12 +605,8 @@ def _file_processing_context(file: DriveFile, root_ctx: RunContext) -> RunContex
     return replace(
         root_ctx,
         report_id=file.file_id,
-        source_identity_id=(
-            str(root_ctx.source_identity_id or "").strip()
-            or file.md5_checksum
-            or file.file_id
-        ),
-        publisher_id=(root_ctx.publisher_id or "unattributed"),
+        source_identity_id=str(root_ctx.source_identity_id or "").strip(),
+        publisher_id=str(root_ctx.publisher_id or "").strip(),
         workflow="report_generation",
         stage="report_pipeline",
         artifact_family="report",
@@ -1807,7 +1803,7 @@ def submit_frozen_validation_cohort_to_queue(
                 correlation_id=str(root_workflow_id),
                 entity_type="report",
                 entity_id=report_id,
-                publisher_id=str(member.get("publisher_id") or "unattributed"),
+                publisher_id=str(member.get("publisher_id") or "").strip(),
                 source_identity_id=member_source_identity,
                 report_id=report_id,
                 budget_profile="report_ingest",
@@ -1869,13 +1865,11 @@ def _record_cohort_ingest_manifest(
 
     def _publisher_id(file: DriveFile) -> str:
         decision = decisions_by_file_id.get(file.file_id, {})
-        return str(decision.get("publisher_id") or "unattributed")
+        return str(decision.get("publisher_id") or "").strip()
 
     def _source_identity_id(file: DriveFile) -> str:
         decision = decisions_by_file_id.get(file.file_id, {})
-        return str(
-            decision.get("source_identity_id") or file.md5_checksum or file.file_id
-        )
+        return str(decision.get("source_identity_id") or "").strip()
 
     if outcomes is None:
         for file in files:
@@ -2635,10 +2629,8 @@ def _process_ingest_batch(
         row = decisions_by_file_id.get(file.file_id, {})
         return replace(
             root_ctx,
-            source_identity_id=str(
-                row.get("source_identity_id") or file.md5_checksum or file.file_id
-            ),
-            publisher_id=str(row.get("publisher_id") or "drive_unattributed"),
+            source_identity_id=str(row.get("source_identity_id") or "").strip(),
+            publisher_id=str(row.get("publisher_id") or "").strip(),
             admission_decision_hash=str(row.get("decision_hash") or ""),
         )
 

@@ -317,11 +317,10 @@ records the configuration hash, policy hash, cohort ID, derived validation-run
 ID, and a redacted effective-configuration snapshot. Loading recomputes the
 cohort and validation identities from those records, so an edited member list
 fails closed rather than silently changing an existing cohort. Schema `1.0`
-and `1.1` manifests remain readable for replay compatibility; schema `1.1`
-retains a checksum in its historical `source_identity_id` field, so publication
-uses that checksum for artifact compatibility while still rejecting stale source
-metadata. A new membership must be frozen into a new schema-`1.2` manifest and
-cohort identity.
+and `1.1` manifests remain readable for replay inspection, but a historical
+checksum in `source_identity_id` is never accepted as canonical attribution.
+A new membership must be frozen into a schema-`1.2` manifest with canonical
+identity.
 
 If an interrupted run cannot recreate its configuration identity, do not alter
 the original manifest or admit replacements. The canonical provenance-recovery
@@ -339,8 +338,11 @@ replace it with an `unattributed` fallback.
 The same rule applies to the admitted `source_identity_id`: report-analysis,
 OCR fallback, figure-caption, regeneration, render, and readiness descendants
 retain the canonical context identity when one is already bound to the run.
-The PDF MD5 and publisher display name remain compatibility fallbacks only for
-an unbound local workflow.
+The PDF MD5 remains a checksum/cache/state value and `publisher_name` remains
+display/model-context text; neither may populate a canonical identity field.
+An admitted workflow with either canonical identity missing fails before model
+or provider work. Isolated generators may continue without an identity, but
+must disable retained prompt-family reuse/materialization rather than using MD5.
 
 Publish a fixed cohort with the same `--cohort-manifest <path>` passed to
 `publish-wp`. A frozen cohort automatically creates and retains a validation

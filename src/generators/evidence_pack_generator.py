@@ -301,7 +301,8 @@ def generate_evidence_packs(
     prompt_family_materializer=materialize_prompt_family,
 ) -> Dict[str, dict]:
     ctx = ctx or new_run_context(task_id=f"evidence_pack:{report_id}")
-    source_identity_id = str(ctx.source_identity_id or md5 or "").strip()
+    # Missing identity disables retained-family reuse; it must not borrow MD5.
+    source_identity_id = str(ctx.source_identity_id or "").strip()
     openai_client = require_injected_model_client(
         openai_client,
         scope="evidence_pack_generator",
@@ -620,7 +621,7 @@ def _generate_pack(
     strategy: EvidencePackStrategy,
     prompt_user_variables: Optional[Dict[str, str]] = None,
 ) -> dict:
-    source_identity_id = str(ctx.source_identity_id or md5 or "").strip()
+    source_identity_id = str(ctx.source_identity_id or "").strip()
     pack_name = strategy.pack_name
     prompt_namespace = _prompt_namespace_for_strategy(strategy)
     schema_name = strategy.schema_name

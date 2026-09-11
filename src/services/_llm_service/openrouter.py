@@ -432,12 +432,7 @@ def _record_openrouter_usage_accounting(
                 getattr(request, "cohort_id", "") or getattr(ctx, "cohort_id", "")
             ),
             workflow_run_id=str(getattr(request, "workflow_run_id", "") or ctx.run_id),
-            publisher_id=str(
-                getattr(request, "publisher_id", "")
-                or getattr(ctx, "publisher_id", "")
-                or getattr(request, "publisher_name", "")
-                or "unattributed"
-            ),
+            publisher_id=str(getattr(ctx, "publisher_id", "") or "").strip(),
             model_policy_namespace=str(
                 getattr(request, "model_policy_namespace", "")
                 or getattr(request, "prompt_namespace", "")

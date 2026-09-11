@@ -60,7 +60,7 @@ class RunContext(SemanticIdContract):
     publisher_id: str = field(
         default="",
         metadata={
-            "doc": "Current publisher identity, or an explicit unattributed sentinel."
+            "doc": "Immutable canonical publisher identity for the current report."
         },
     )
     workflow: str = field(

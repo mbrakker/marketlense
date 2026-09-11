@@ -861,7 +861,7 @@ def run_report_pipeline(
                     schema_version=MINIMAL_EXECUTION_PLAN_SCHEMA_VERSION,
                     execution_intent=execution_intent,
                     report_id=file.file_id,
-                    source_id=str(ctx.source_identity_id or md5 or "").strip(),
+                    source_id=str(ctx.source_identity_id or "").strip(),
                     current_source_content_hashes={},
                     retained_graph=RetainedArtifactGraph(),
                     requested_output_families=list(
@@ -1280,7 +1280,7 @@ def run_report_pipeline(
                 run_id=ctx.run_id,
                 workflow_id="report_generation",
                 report_id=file.file_id,
-                source_id=str(ctx.source_identity_id or md5 or "").strip(),
+                source_id=str(ctx.source_identity_id or "").strip(),
                 stage="source_prepared",
                 plan_hash=minimal_plan.plan_hash if minimal_plan is not None else "",
                 reusable_artifact_references=(

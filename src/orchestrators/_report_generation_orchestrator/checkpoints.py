@@ -469,9 +469,7 @@ def _record_checkpoint_artifact_lineage(
                 db_path=runtime.settings.reports_db,
                 artifact_kind=artifact_name,
                 report_id=runtime.file.file_id,
-                source_id=str(
-                    runtime.ctx.source_identity_id or runtime.md5 or ""
-                ).strip(),
+                source_id=str(runtime.ctx.source_identity_id or "").strip(),
                 storage_ref=storage_ref,
                 producer=stage_name,
                 schema_version_used=str(raw_ref.get("schema_version") or "1.0"),
@@ -693,16 +691,7 @@ def _record_prompt_family_materializations(
         raw_validator_versions if isinstance(raw_validator_versions, dict) else {}
     )
     evidence_set_hash = sha256_json(evidence_packs)
-    source_identity = (
-        str(
-            runtime.md5
-            or artifact_hashes.get("source_pdf")
-            or artifact_hashes.get("analysis_pdf")
-            or ""
-        )
-        .strip()
-        .lower()
-    )
+    source_identity = str(runtime.ctx.source_identity_id or "").strip()
     validation_report = analysis.get("validation_report")
     validation_status = (
         str(validation_report.get("status") or "fail")
@@ -1002,9 +991,7 @@ def _record_rendered_html_prompt_family_lineage(
             db_path=runtime.settings.reports_db,
             artifact_kind="rendered_html",
             report_id=runtime.file.file_id,
-            source_id=str(
-                runtime.ctx.source_identity_id or runtime.md5 or ""
-            ).strip(),
+            source_id=str(runtime.ctx.source_identity_id or "").strip(),
             storage_ref=storage_ref,
             producer=STAGE_RENDER_COMPLETE,
             schema_version_used=str(rendered_ref.get("schema_version") or "1.0"),

@@ -34,6 +34,7 @@ from src.services.llm_usage_ledger_service import (
 )
 from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
 from src.services._llm_service.openai_shared import enforce_daily_spend_guardrail
+from src.services._llm_service.vector_store import _require_vector_store_budget
 from src.utils.errors import AppError
 
 
@@ -117,6 +118,30 @@ def test_model_budget_attribution_prefers_canonical_context_publisher_id(tmp_pat
     )
 
     with sqlite3.connect(budget.usage_db_path) as connection:
+        (publisher_id,) = connection.execute(
+            "SELECT publisher_name FROM budget_authority_events"
+        ).fetchone()
+    assert publisher_id == "publisher:canonical-owner"
+
+
+def test_vector_store_budget_attribution_uses_canonical_context_publisher_id(
+    tmp_path,
+):
+    canonical_ctx = replace(_ctx(), publisher_id="publisher:canonical-owner")
+    usage_db_path = str(tmp_path / "vector-usage.sqlite")
+
+    _require_vector_store_budget(
+        SimpleNamespace(
+            publisher_name="Publisher Display Name",
+            usage_db_path=usage_db_path,
+            daily_spend_stop_usd=6.0,
+            model="vector-store",
+        ),
+        canonical_ctx,
+        operation="create_vector_store",
+    )
+
+    with sqlite3.connect(usage_db_path) as connection:
         (publisher_id,) = connection.execute(
             "SELECT publisher_name FROM budget_authority_events"
         ).fetchone()

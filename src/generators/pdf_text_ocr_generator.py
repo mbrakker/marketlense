@@ -42,16 +42,8 @@ def recover_pdf_text_with_ocr(
     ocr_ctx = replace(
         child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:ocr_fallback"),
         report_id=runtime.file.file_id,
-        source_identity_id=(
-            str(runtime.ctx.source_identity_id or "").strip()
-            or runtime.md5
-            or runtime.file.file_id
-        ),
-        publisher_id=(
-            str(runtime.ctx.publisher_id or "").strip()
-            or runtime.publisher_name
-            or "unattributed"
-        ),
+        source_identity_id=str(runtime.ctx.source_identity_id or "").strip(),
+        publisher_id=str(runtime.ctx.publisher_id or "").strip(),
         workflow="report_generation",
         stage="source_preparation",
         artifact_family="source_ocr",

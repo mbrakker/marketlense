@@ -43,7 +43,14 @@ from tests.support.fakes import FakeHttpResponse, RecordedHttpRequest
 
 
 def _record_final_validation_attempt(
-    settings, *, validation_run_id: str, cohort_id: str, file_id: str, ctx
+    settings,
+    *,
+    validation_run_id: str,
+    cohort_id: str,
+    file_id: str,
+    ctx,
+    source_identity_id: str = "",
+    publisher_id: str = "publisher-1",
 ) -> None:
     record_validation_run_manifest_stage(
         ValidationRunManifestRecordRequest(
@@ -55,9 +62,9 @@ def _record_final_validation_attempt(
                 cohort_id=cohort_id,
                 workflow_run_id=ctx.run_id,
                 entity_type="report",
-                publisher_id="publisher-1",
+                publisher_id=publisher_id,
                 report_id=file_id,
-                source_identity_id=file_id,
+                source_identity_id=source_identity_id or file_id,
                 stage="process",
                 attempt_number=1,
                 parent_attempt_number=0,

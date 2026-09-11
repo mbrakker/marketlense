@@ -29,9 +29,9 @@ def report_runtime_run_budget(runtime: ReportRuntimeState) -> RunBudget:
     return RunBudget(
         schema_version="1.0",
         run_id=runtime.ctx.run_id,
-        publisher_name=(
-            str(runtime.ctx.publisher_id or "").strip() or runtime.publisher_name
-        ),
+        # Legacy field name retained by the budget contract; value is always
+        # the canonical publisher ID, never display text.
+        publisher_name=str(runtime.ctx.publisher_id or "").strip(),
         usage_db_path=settings.usage_db_path,
         max_spend_usd=getattr(settings, "run_budget_max_spend_usd", None),
         max_tokens=getattr(settings, "run_budget_max_tokens", None),

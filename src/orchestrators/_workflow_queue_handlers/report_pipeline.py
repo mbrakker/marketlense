@@ -375,12 +375,10 @@ def _report_stage_handler(
                 admission_ctx,
                 source_identity_id=str(
                     payload.attributes.get("admission_source_identity_id", "")
-                    or source_hash
-                ),
+                ).strip(),
                 publisher_id=str(
                     payload.attributes.get("admission_publisher_id", "")
-                    or "drive_unattributed"
-                ),
+                ).strip(),
                 admission_decision_hash=carried_admission_hash,
             )
             preflight_fn = None

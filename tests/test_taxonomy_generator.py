@@ -337,6 +337,47 @@ def test_taxonomy_materializes_primary_output_with_provenance(tmp_path):
     )
 
 
+def test_taxonomy_missing_canonical_source_skips_retained_family_operations(tmp_path):
+    mapping_path = tmp_path / "category-mappings.yaml"
+    _write_mapping(mapping_path)
+    retained_requests = []
+    request = replace(
+        _request(_settings(tmp_path, mapping_path)), source_identity_id=""
+    )
+
+    extract_taxonomy(
+        request,
+        _ctx(),
+        openai_client=FakeOpenAI(
+            {
+                "taxonomy": ["digital_payments"],
+                "primary_tags": ["digital_payments"],
+                "secondary_tags": [],
+                "tag_evidence": [
+                    {
+                        "tag": "digital_payments",
+                        "tier": "primary",
+                        "section_label": "Executive Summary",
+                        "evidence": "Digital payment rails are expanding.",
+                    }
+                ],
+                "region": "US",
+                "time_period": "2026",
+                "not_found_reason": "",
+            }
+        ),
+        prompt_client=FakePromptClient(),
+        prompt_family_reuse_reader=lambda request, ctx: retained_requests.append(
+            ("reuse", request.source_id)
+        ),
+        prompt_family_materializer=lambda request, ctx: retained_requests.append(
+            ("materialize", request.source_id)
+        ),
+    )
+
+    assert retained_requests == []
+
+
 def test_taxonomy_materialized_family_bypasses_openai(tmp_path):
     mapping_path = tmp_path / "category-mappings.yaml"
     _write_mapping(mapping_path)

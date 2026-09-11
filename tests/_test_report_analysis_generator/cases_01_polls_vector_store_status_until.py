@@ -4,6 +4,45 @@ from __future__ import annotations
 from ._shared import *  # noqa: F401,F403
 
 
+@pytest.mark.parametrize(
+    ("source_identity_id", "publisher_id", "missing_field"),
+    [
+        ("", "publisher:canonical", "source_identity_id"),
+        ("source:canonical", "", "publisher_id"),
+    ],
+)
+def test_admitted_analysis_rejects_missing_canonical_identity_before_provider_work(
+    tmp_path, source_identity_id, publisher_id, missing_field
+):
+    runtime = replace(
+        _runtime(tmp_path),
+        ctx=RunContext(
+            schema_version="1.0",
+            run_id="run",
+            task_id="task",
+            span_id="span",
+            source_identity_id=source_identity_id,
+            publisher_id=publisher_id,
+            admission_decision_hash="admission-hash",
+        ),
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        run_report_analysis(
+            runtime,
+            None,
+            None,
+            None,
+            SimpleNamespace(
+                vector_store_create=lambda *args: pytest.fail("provider called")
+            ),
+        )
+
+    assert exc_info.value.code == "report_canonical_identity_missing"
+    assert exc_info.value.retryable is False
+    assert exc_info.value.context["missing_fields"] == [missing_field]
+
+
 def test_run_report_analysis_polls_vector_store_status_until_ready(
     tmp_path,
     caplog,

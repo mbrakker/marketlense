@@ -1,6 +1,8 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+from dataclasses import replace
+
 from src.contracts.prompt_family_materialization import (
     PromptFamilyMaterializationRequest,
     PromptFamilyReuseResponse,
@@ -471,6 +473,7 @@ def test_compatible_retained_families_make_zero_model_calls(tmp_path) -> None:
         evidence_packs=_evidence_packs(),
         settings=_settings(tmp_path),
         md5="family-reuse-md5",
+        ctx=replace(_ctx(), source_identity_id="source:family-reuse"),
         openai_client=fresh_client,
         prompt_client=FakePromptClient(),
         analysis_store=FakeAnalysisStore(),
@@ -501,6 +504,7 @@ def test_compatible_retained_families_make_zero_model_calls(tmp_path) -> None:
         evidence_packs=_evidence_packs(),
         settings=_settings(tmp_path),
         md5="family-reuse-md5",
+        ctx=replace(_ctx(), source_identity_id="source:family-reuse"),
         openai_client=replay_client,
         prompt_client=FakePromptClient(),
         analysis_store=FakeAnalysisStore(),
@@ -582,6 +586,7 @@ def test_vector_store_identity_is_part_of_family_reuse_proof(tmp_path) -> None:
             evidence_packs=_evidence_packs(),
             settings=settings,
             md5="vector-store-reuse-proof-md5",
+            ctx=replace(_ctx(), source_identity_id="source:vector-store-reuse"),
             vector_store_id="vs-retained",
             vector_store_content_hash=vector_store_content_hash,
             openai_client=FakeOpenAI({}),
@@ -630,6 +635,7 @@ def test_persisted_compatible_families_replay_without_model_calls(tmp_path) -> N
         evidence_packs=_evidence_packs(),
         settings=settings,
         md5="persisted-family-reuse-md5",
+        ctx=replace(_ctx(), source_identity_id="source:persisted-family-reuse"),
         openai_client=fresh_client,
         prompt_client=FakePromptClient(),
         analysis_store=FakeAnalysisStore(),
@@ -644,7 +650,7 @@ def test_persisted_compatible_families_replay_without_model_calls(tmp_path) -> N
                 output_dir=settings.output_dir,
                 report_id="persisted-family-reuse",
                 report_slug="Persisted Family Reuse",
-                source_id="persisted-family-reuse-md5",
+                source_id="source:persisted-family-reuse",
                 family_id=family_id,
                 family_schema_version=identity["family_schema_version"],
                 processing_version=identity["processing_version"],
@@ -674,6 +680,7 @@ def test_persisted_compatible_families_replay_without_model_calls(tmp_path) -> N
         evidence_packs=_evidence_packs(),
         settings=settings,
         md5="persisted-family-reuse-md5",
+        ctx=replace(_ctx(), source_identity_id="source:persisted-family-reuse"),
         openai_client=replay_client,
         prompt_client=FakePromptClient(),
         analysis_store=FakeAnalysisStore(),
@@ -719,6 +726,7 @@ def test_legacy_soft_copy_reuse_regenerates_missing_provenance(tmp_path) -> None
         evidence_packs=_evidence_packs(),
         settings=_settings(tmp_path),
         md5="legacy-soft-copy-reuse-md5",
+        ctx=replace(_ctx(), source_identity_id="source:legacy-soft-copy-reuse"),
         openai_client=FakeOpenAI(
             {
                 "summary": {
@@ -774,6 +782,7 @@ def test_legacy_soft_copy_reuse_regenerates_missing_provenance(tmp_path) -> None
         evidence_packs=_evidence_packs(),
         settings=_settings(tmp_path),
         md5="legacy-soft-copy-reuse-md5",
+        ctx=replace(_ctx(), source_identity_id="source:legacy-soft-copy-reuse"),
         openai_client=replay_client,
         prompt_client=FakePromptClient(),
         analysis_store=FakeAnalysisStore(),
@@ -849,6 +858,7 @@ def test_invalidating_one_family_calls_only_its_model_route(tmp_path) -> None:
         evidence_packs=_evidence_packs(),
         settings=_settings(tmp_path),
         md5="single-family-repair-md5",
+        ctx=replace(_ctx(), source_identity_id="source:single-family-repair"),
         openai_client=client,
         prompt_client=FakePromptClient(),
         analysis_store=FakeAnalysisStore(),
@@ -929,6 +939,7 @@ def test_editorial_plan_change_invalidates_only_linkedin_family_reuse(tmp_path) 
         evidence_packs=_evidence_packs(),
         settings=_settings(tmp_path),
         md5="linkedin-plan-reuse-md5",
+        ctx=replace(_ctx(), source_identity_id="source:linkedin-plan-reuse"),
         openai_client=FakeOpenAI({"editorial_plan": {"editorial_plan": first_plan}}),
         prompt_client=FakePromptClient(),
         analysis_store=FakeAnalysisStore(),
@@ -948,6 +959,7 @@ def test_editorial_plan_change_invalidates_only_linkedin_family_reuse(tmp_path) 
         evidence_packs=_evidence_packs(),
         settings=_settings(tmp_path),
         md5="linkedin-plan-reuse-md5",
+        ctx=replace(_ctx(), source_identity_id="source:linkedin-plan-reuse"),
         openai_client=second_client,
         prompt_client=FakePromptClient(),
         analysis_store=FakeAnalysisStore(),

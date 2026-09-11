@@ -149,11 +149,7 @@ def record_usage_accounting(
             workflow_run_id=(
                 _attribution_value(source, ctx, "workflow_run_id") or str(ctx.run_id)
             ),
-            publisher_id=(
-                _attribution_value(source, ctx, "publisher_id")
-                or str(getattr(source, "publisher_name", "") or "").strip()
-                or "unattributed"
-            ),
+            publisher_id=str(ctx.publisher_id or "").strip(),
             model_policy_namespace=str(
                 getattr(source, "model_policy_namespace", "") or prompt_namespace
             ),

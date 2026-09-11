@@ -499,10 +499,10 @@ def test_publish_cohort_manifest_binding_hash_is_deterministic_for_unchanged_art
     )
 
 
-def test_publish_cohort_legacy_checksum_identity_accepts_compatible_canonical_source(
+def test_publish_cohort_requires_canonical_identity_distinct_from_checksum(
     publish_settings_factory, run_context, tmp_path
 ) -> None:
-    """Schema-1.1 manifests retain a content checksum, not a canonical source ID."""
+    """A cohort member carries its canonical identity separately from MD5."""
     settings = publish_settings_factory(validation_policy="warn")
     target_path = _write_html(
         settings.output_dir, "target.html", "Drive fileId: target-file"
@@ -516,8 +516,9 @@ def test_publish_cohort_legacy_checksum_identity_accepts_compatible_canonical_so
         "target-file": {
             "file_id": "target-file",
             "report_id": "target-file",
-            "source_identity_id": "target-md5",
+            "source_identity_id": "source:canonical-target",
             "md5_checksum": "target-md5",
+            "publisher_id": "publisher:target",
             "html_path": str(target_path),
         }
     }

@@ -54,8 +54,7 @@ def record_validation_manifest_stage(
         "cohort_id": str(getattr(ctx, "cohort_id", "") or "").strip(),
         "run_id": str(getattr(ctx, "run_id", "") or "").strip(),
         "report_id": str(getattr(ctx, "report_id", "") or "").strip(),
-        "source_identity_id": inherited_source_identity_id
-        or str(source_identity_id or "").strip(),
+        "source_identity_id": inherited_source_identity_id,
         "configuration_hash": str(getattr(ctx, "configuration_hash", "") or "").strip(),
         "policy_hash": str(getattr(ctx, "policy_hash", "") or "").strip(),
         "producer": str(getattr(ctx, "producer_commit_sha", "") or "workspace").strip(),
@@ -78,10 +77,7 @@ def record_validation_manifest_stage(
                 cohort_id=required["cohort_id"],
                 workflow_run_id=RunId(required["run_id"]),
                 entity_type="report",
-                publisher_id=(
-                    str(getattr(ctx, "publisher_id", "") or "").strip()
-                    or "unattributed"
-                ),
+                publisher_id=str(getattr(ctx, "publisher_id", "") or "").strip(),
                 report_id=required["report_id"],
                 source_identity_id=required["source_identity_id"],
                 stage=stage,

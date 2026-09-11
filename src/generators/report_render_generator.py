@@ -80,7 +80,6 @@ def _render_build_provenance(
     analysis: ReportAnalysisState,
 ) -> dict[str, str]:
     """Expose existing run and lineage identities in the rendered review artifact."""
-    identity = runtime.source_identity
     artifact_hash = sha256_json(
         {
             "artifacts": analysis.artifacts_payload or {},
@@ -96,9 +95,7 @@ def _render_build_provenance(
         "git_sha": str(runtime.ctx.producer_commit_sha or "unknown"),
         "generation_run_id": str(runtime.ctx.run_id or "unknown"),
         "validation_run_id": str(runtime.ctx.validation_run_id or "unknown"),
-        "source_id": str(
-            getattr(identity, "source_identity_id", "") or "unknown"
-        ),
+        "source_id": str(runtime.ctx.source_identity_id or "").strip() or "unknown",
         "source_md5": str(runtime.md5 or "unknown"),
         "artifact_hash": artifact_hash or "unknown",
         "generation_profile": str(
@@ -512,9 +509,7 @@ def _build_metadata_upsert_request(
         analysis_mode=runtime.analysis_mode,
         vector_store_id=analysis.vector_store_id,
         evidence_pack_paths=analysis.evidence_paths,
-        source_identity_id=str(
-            getattr(runtime.source_identity, "source_identity_id", "") or ""
-        ).strip(),
+        source_identity_id=str(runtime.ctx.source_identity_id or "").strip(),
         source_metadata_hash=str(
             getattr(runtime.source_identity, "source_metadata_hash", "") or ""
         ).strip(),

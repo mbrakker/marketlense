@@ -28,7 +28,7 @@ def _require_vector_store_budget(
     budget = getattr(request, "run_budget", None) or RunBudget(
         schema_version="1.0",
         run_id=ctx.run_id,
-        publisher_name=str(getattr(request, "publisher_name", "") or ""),
+        publisher_name=str(ctx.publisher_id or "").strip(),
         usage_db_path=str(
             getattr(request, "usage_db_path", "./state/llm_usage.sqlite")
         ),
@@ -41,11 +41,7 @@ def _require_vector_store_budget(
             budget=budget,
             run_id=ctx.run_id,
             workflow_id="vector_store",
-            publisher_id=(
-                str(ctx.publisher_id or "").strip()
-                or str(getattr(request, "publisher_id", "") or "").strip()
-                or str(getattr(request, "publisher_name", "") or "").strip()
-            ),
+            publisher_id=str(ctx.publisher_id or "").strip(),
             resource_type="vector_store",
             operation=operation,
             provider="openai",

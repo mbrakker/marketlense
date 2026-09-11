@@ -511,7 +511,14 @@ def test_wordpress_outcome_closes_the_matching_immutable_cohort_member(
                 "cohort_id": "cohort-1",
                 "configuration_hash": "config-hash",
                 "policy_hash": "policy-hash",
-                "members": [{"file_id": "report-1", "md5_checksum": "source-1"}],
+                "members": [
+                    {
+                        "file_id": "report-1",
+                        "source_identity_id": "source:report-1",
+                        "publisher_id": "publisher:report-1",
+                        "md5_checksum": "checksum-1",
+                    }
+                ],
             }
         ),
         encoding="utf-8",

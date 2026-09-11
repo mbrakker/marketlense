@@ -664,11 +664,7 @@ def _run_validation_regeneration_loop(
                 artifacts=candidate_artifacts,
                 evidence_packs=evidence_packs,
                 vector_store_id=vector_store_id,
-                source_id=str(
-                    runtime.ctx.source_identity_id
-                    or runtime.md5
-                    or runtime.file.file_id
-                ).strip(),
+                source_id=str(runtime.ctx.source_identity_id or "").strip(),
                 deterministic_grounding_passed=candidate_result.passed,
                 publisher_name=runtime.publisher_name,
                 report_name=runtime.source_report_name or runtime.report_title,

@@ -78,7 +78,8 @@ def extract_taxonomy(
     prompt_family_reuse_reader=read_reusable_prompt_family,
     prompt_family_materializer=materialize_prompt_family,
 ) -> TaxonomyExtractResponse:
-    source_identity_id = str(request.source_identity_id or request.md5 or "").strip()
+    # MD5 is a checksum/cache key, never a retained-provenance source ID.
+    source_identity_id = str(request.source_identity_id or "").strip()
     openai_client = require_injected_model_client(openai_client, scope="taxonomy")
     taxonomy_temperature = _resolve_taxonomy_temperature(request)
     logger.info(

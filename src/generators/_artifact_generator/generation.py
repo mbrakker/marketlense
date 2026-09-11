@@ -194,7 +194,9 @@ def generate_artifacts(
     prompt_family_reuse_reader=read_reusable_prompt_family,
 ) -> Dict[str, Any]:
     ctx = ctx or new_run_context(task_id=f"artifacts:{report_id}")
-    source_identity_id = str(ctx.source_identity_id or md5 or "").strip()
+    # MD5 remains available for artifact cache operations below, but never as
+    # prompt-family provenance.
+    source_identity_id = str(ctx.source_identity_id or "").strip()
     openai_client = require_injected_model_client(
         openai_client,
         scope="artifact_generator",

@@ -1136,5 +1136,5 @@ def test_pdf_budget_defer_persists_resumable_report_work_without_generation(
     assert records[0].status == "pending"
     assert records[0].stage == "source_prepared"
     assert records[0].report_id == file.file_id
-    assert records[0].source_id == "md5"
+    assert records[0].source_id == ""
     assert records[0].reusable_artifacts[0].reference == str(tmp_path / "retained.pdf")

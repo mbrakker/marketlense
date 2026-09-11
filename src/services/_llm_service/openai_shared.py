@@ -150,7 +150,9 @@ def enforce_daily_spend_guardrail(
             or RunBudget(
                 schema_version="1.0",
                 run_id=ctx.run_id,
-                publisher_name=str(getattr(request, "publisher_name", "") or ""),
+                # ``publisher_name`` is a legacy budget field name.  Its value
+                # remains a canonical ID for scoped accounting.
+                publisher_name=str(ctx.publisher_id or "").strip(),
                 usage_db_path=str(
                     getattr(request, "usage_db_path", "./state/llm_usage.sqlite")
                 ),
@@ -159,11 +161,7 @@ def enforce_daily_spend_guardrail(
             ),
             run_id=ctx.run_id,
             workflow_id=str(getattr(request, "workflow_id", "llm")),
-            publisher_id=(
-                str(ctx.publisher_id or "").strip()
-                or str(getattr(request, "publisher_id", "") or "").strip()
-                or str(getattr(request, "publisher_name", "") or "").strip()
-            ),
+            publisher_id=str(ctx.publisher_id or "").strip(),
             report_id=str(getattr(request, "report_name", "") or ""),
             source_id=str(ctx.source_identity_id or "").strip(),
             resource_type="llm_provider",

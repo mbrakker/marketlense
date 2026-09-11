@@ -49,6 +49,34 @@ def test_evidence_pack_family_reuses_retained_output_before_model_call(tmp_path)
     assert packs["doc_map"]["doc_id"] == retained["doc_id"]
 
 
+def test_evidence_pack_missing_canonical_source_skips_retained_family_operations(
+    tmp_path,
+):
+    retained_requests = []
+
+    packs = generate_evidence_packs(
+        report_id="r1",
+        report_name="report",
+        vector_store_id="vs_1",
+        vector_store_content_hash="verified-vector-content",
+        settings=_settings(tmp_path, evidence_pack_registry=["doc_map"]),
+        ctx=_ctx(),
+        md5="source-content-md5",
+        openai_client=FakeOpenAIClient(substantive_doc_map()),
+        prompt_client=FakePromptClient(),
+        analysis_store=FakeAnalysisStore(),
+        prompt_family_reuse_reader=lambda request, ctx: retained_requests.append(
+            ("reuse", request.source_id)
+        ),
+        prompt_family_materializer=lambda request, ctx: retained_requests.append(
+            ("materialize", request.source_id)
+        ),
+    )
+
+    assert packs["doc_map"]["doc_id"] == "d1"
+    assert retained_requests == []
+
+
 def test_generate_evidence_packs_success(tmp_path):
     parsed = substantive_doc_map()
     fake_openai = FakeOpenAIClient(parsed)

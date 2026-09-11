@@ -1,14 +1,18 @@
 from types import SimpleNamespace
 
+import pytest
+
 from src.contracts.drive import DriveFile
 from src.contracts.run_context import RunContext
 from src.orchestrators._report_generation_orchestrator.workflow import (
     _admission_context_identity,
     _manifest_source_identity_id,
     _resolve_runtime_source_identity,
+    run_report_generation,
 )
 from src.orchestrators.report_analysis_orchestrator import _analysis_source_identity_id
 from src.utils.errors import AppError
+from src.utils.report_identity import require_admitted_report_identity
 
 
 def test_render_manifest_identity_preserves_admitted_identity_over_pdf_checksum() -> None:
@@ -25,7 +29,7 @@ def test_render_manifest_identity_preserves_admitted_identity_over_pdf_checksum(
         cohort_id="cohort",
     )
 
-    assert _manifest_source_identity_id(ctx, "pdf-md5") == "source:admitted-report"
+    assert _manifest_source_identity_id(ctx) == "source:admitted-report"
 
 
 def test_analysis_context_identity_preserves_admitted_identity_over_pdf_checksum() -> None:
@@ -38,7 +42,85 @@ def test_analysis_context_identity_preserves_admitted_identity_over_pdf_checksum
         source_identity_id="source:admitted-report",
     )
 
-    assert _analysis_source_identity_id(ctx, "pdf-md5") == "source:admitted-report"
+    assert _analysis_source_identity_id(ctx) == "source:admitted-report"
+
+
+def test_canonical_identity_helpers_never_promote_checksum_file_or_display_values() -> None:
+    ctx = RunContext(
+        schema_version="1.0",
+        run_id="run",
+        task_id="task",
+        span_id="span",
+        source_identity_id="source:canonical",
+        publisher_id="publisher:canonical",
+    )
+
+    assert _analysis_source_identity_id(ctx) == "source:canonical"
+    assert _manifest_source_identity_id(ctx) == "source:canonical"
+    assert require_admitted_report_identity(ctx) == (
+        "source:canonical",
+        "publisher:canonical",
+    )
+
+
+def test_admitted_identity_rejects_missing_values_instead_of_legacy_aliases() -> None:
+    ctx = RunContext(
+        schema_version="1.0",
+        run_id="run",
+        task_id="task",
+        span_id="span",
+        admission_decision_hash="admission-hash",
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        require_admitted_report_identity(ctx)
+
+    assert exc_info.value.code == "report_canonical_identity_missing"
+    assert exc_info.value.retryable is False
+    assert exc_info.value.context["missing_fields"] == [
+        "source_identity_id",
+        "publisher_id",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("source_identity_id", "publisher_id", "missing_field"),
+    [
+        ("", "publisher:canonical", "source_identity_id"),
+        ("source:canonical", "", "publisher_id"),
+    ],
+)
+def test_admitted_generation_fails_before_dependency_or_provider_work(
+    source_identity_id: str, publisher_id: str, missing_field: str
+) -> None:
+    file = DriveFile(
+        schema_version="1.0",
+        file_id="file-identity",
+        name="report.pdf",
+        modified_time=None,
+        md5_checksum="content-md5",
+    )
+    ctx = RunContext(
+        schema_version="1.0",
+        run_id="run",
+        task_id="task",
+        span_id="span",
+        source_identity_id=source_identity_id,
+        publisher_id=publisher_id,
+        admission_decision_hash="admission-hash",
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        run_report_generation(
+            file,
+            "unused.pdf",
+            SimpleNamespace(),
+            "content-md5",
+            ctx,
+        )
+
+    assert exc_info.value.code == "report_canonical_identity_missing"
+    assert exc_info.value.context["missing_fields"] == [missing_field]
 
 
 def test_runtime_source_identity_uses_verified_admission_context_when_store_is_empty(
