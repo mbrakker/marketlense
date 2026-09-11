@@ -338,6 +338,7 @@ fixtures:
       target_section: "expert_comment"
       attempt_index: 2
       current_section_text: *current_section_text
+      claim_repair_scope_json: '{"mode":"family"}'
       failure_reasons_json: *failure_reasons_json
       fix_checklist_json: *fix_checklist_json
       grounding_package_json: *grounding_package_json
@@ -388,6 +389,7 @@ fixtures:
       target_section: "linkedin_post"
       attempt_index: 2
       current_section_text: *current_section_text
+      claim_repair_scope_json: '{"mode":"family"}'
       failure_reasons_json: *failure_reasons_json
       fix_checklist_json: *fix_checklist_json
       grounding_package_json: *grounding_package_json
@@ -419,6 +421,7 @@ fixtures:
       target_section: "summary"
       attempt_index: 2
       current_section_json: *current_section_json
+      claim_repair_scope_json: '{"mode":"family"}'
       failure_reasons_json: *failure_reasons_json
       fix_checklist_json: *fix_checklist_json
       grounding_package_json: *grounding_package_json

@@ -279,8 +279,13 @@ snapshot, and candidate audit remain diagnostic-only negative feedback. A
 passing candidate promotes the artifact and its matching validation report
 together, after every required gate has passed.
 
-Candidate provenance is family-specific. Unchanged artifact families retain
-their prior prompt identity, while each regenerated family records the prepared
+Candidate provenance is claim-specific for soft public copy and family-specific
+otherwise. An isolated Expert View or LinkedIn sentence finding (and a clearly
+named summary-field sentence finding) preserves sibling sentence bytes and
+their retained provenance, then records the prepared repair prompt identity
+only on the replacement claim. Insufficient scoped support deletes the failed
+claim rather than generating substitute prose. Ambiguous or family-wide
+findings use the existing family repair. Each regenerated family records the prepared
 `report_vs/artifacts/regenerate/...` prompt identity that produced its
 replacement, including content hash, dependency manifest, execution identity,
 and model-policy identity. A checkpoint with stale or incomplete replacement

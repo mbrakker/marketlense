@@ -5,6 +5,7 @@ text: |
   - Attempt index: {{ attempt_index }}
   - Target section: {{ target_section }}
   - Current LinkedIn post text: {{ current_section_text }}
+  - Claim repair scope JSON: {{ claim_repair_scope_json }}
   - Editorial plan JSON (primary thematic authority): {{ editorial_plan_json }}
   - Report identity JSON: {{ report_identity_json }}
   - Validator failures JSON: {{ failure_reasons_json }}
@@ -20,6 +21,10 @@ text: |
 
   Requirements:
   - Fix the listed failures directly.
+  - When `claim_repair_scope.mode` is `claim`, return only one replacement
+    sentence for `linkedin_post` and bind only that replacement sentence. The
+    generator preserves and deterministically reconstructs all sibling claims;
+    never rewrite or repeat them.
   - Treat the current post and editorial plan as failed editorial input, not
     source evidence. Use only `grounding_package.relevant_evidence`; never use
     an ID listed in `grounding_package.quarantined_evidence_ids`.

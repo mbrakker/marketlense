@@ -125,6 +125,8 @@ def assemble_artifacts_payload(
     soft_copy_generation_attempts: Optional[Dict[str, int]] = None,
     existing_soft_copy_claim_provenance: Optional[Dict[str, Any]] = None,
     replaced_soft_copy_families: Optional[List[str]] = None,
+    replaced_soft_copy_claim_ids: Optional[Dict[str, List[str]]] = None,
+    soft_copy_repair_texts: Optional[Dict[str, List[str]]] = None,
     regeneration_attempt: int = 0,
     validate_references: bool = True,
 ) -> Dict[str, Any]:
@@ -267,6 +269,8 @@ def assemble_artifacts_payload(
             generation_attempts=soft_copy_generation_attempts or {},
             existing_provenance=existing_soft_copy_claim_provenance,
             replaced_families=replaced_soft_copy_families or [],
+            replaced_claim_ids=replaced_soft_copy_claim_ids or {},
+            repair_texts=soft_copy_repair_texts or {},
             regeneration_attempt=regeneration_attempt,
         )
     )
@@ -334,6 +338,8 @@ def _soft_copy_claim_provenance_payload(
     generation_attempts: Dict[str, int],
     existing_provenance: Optional[Dict[str, Any]],
     replaced_families: List[str],
+    replaced_claim_ids: Dict[str, List[str]],
+    repair_texts: Dict[str, List[str]],
     regeneration_attempt: int,
 ) -> Dict[str, Any]:
     public_output_by_family = {
@@ -346,6 +352,15 @@ def _soft_copy_claim_provenance_payload(
         evidence_packs=evidence_packs,
     )
     replaced = {str(family).strip() for family in replaced_families}
+    replaced_ids = {
+        str(family).strip(): {
+            str(claim_id).strip()
+            for claim_id in claim_ids
+            if str(claim_id).strip()
+        }
+        for family, claim_ids in replaced_claim_ids.items()
+        if isinstance(claim_ids, list)
+    }
     claims: List[SoftCopyClaimProvenance] = [
         claim
         for claim in (
@@ -355,11 +370,38 @@ def _soft_copy_claim_provenance_payload(
             else []
         )
         if claim.artifact_family not in replaced
+        and claim.claim_id not in replaced_ids.get(claim.artifact_family, set())
     ]
     for family, public_output in public_output_by_family.items():
         text = soft_copy_public_text(family, public_output)
         declared = bindings.get(family)
         if not text:
+            continue
+        if family in repair_texts:
+            for repaired_text in repair_texts[family]:
+                normalized_text = " ".join(str(repaired_text or "").split())
+                repaired_bindings = [
+                    binding
+                    for binding in declared or []
+                    if isinstance(binding, dict)
+                    and " ".join(str(binding.get("claim") or "").split())
+                    == normalized_text
+                ]
+                claims.extend(
+                    build_soft_copy_claim_provenance(
+                        artifact_family=family,
+                        text=str(repaired_text),
+                        declared_claims=repaired_bindings,
+                        evidence_span_index=span_index,
+                        producing_prompt_identity=dict(
+                            prompt_identities.get(family) or {}
+                        ),
+                        generation_attempt=max(
+                            1, int(generation_attempts.get(family) or 1)
+                        ),
+                        regeneration_attempt=regeneration_attempt,
+                    )
+                )
             continue
         retained = [claim for claim in claims if claim.artifact_family == family]
         if not isinstance(declared, list) or not declared:

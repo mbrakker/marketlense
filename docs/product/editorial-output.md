@@ -35,8 +35,14 @@ For retained soft-copy families, the artifact keeps private sentence-level
 claim provenance beside the unchanged public prose. Expert View, LinkedIn, and
 useful summary/TLDR claims declare their exact canonical evidence IDs during
 generation, retain known source pages/spans, claim classification, text hash,
-prompt identity, and generation/regeneration attempt. Regeneration replaces
-only the provenance of regenerated families and preserves untouched claims.
+prompt identity, and generation/regeneration attempt. When one retained
+sentence has an unambiguous validation finding, Expert View and LinkedIn repair
+only that claim; a clearly named summary field follows the same path. Valid
+sibling sentences are reconstructed byte-for-byte with their original
+provenance, while only replacement prose receives new attempt and prompt
+provenance. If the scoped evidence is insufficient, that sentence is removed
+instead. Family-wide regeneration remains the fallback for ambiguous,
+family-wide, or incoherent failures.
 This internal metadata stays in retained artifacts and checkpoints; it is not
 part of the report payload or WordPress projection.
 

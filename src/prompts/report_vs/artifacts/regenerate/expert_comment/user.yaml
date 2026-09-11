@@ -5,6 +5,7 @@ text: |
   - Attempt index: {{ attempt_index }}
   - Target section: {{ target_section }}
   - Current expert comment text: {{ current_section_text }}
+  - Claim repair scope JSON: {{ claim_repair_scope_json }}
   - Editorial plan JSON: {{ editorial_plan_json }}
   - Selected grounded theme evidence, insight implications, limitations, and counter-signals JSON: {{ expert_synthesis_context_json }}
   - Expert domain: {{ expert_domain }}
@@ -21,6 +22,10 @@ text: |
 
   Requirements:
   - Fix the listed failures directly.
+  - When `claim_repair_scope.mode` is `claim`, return only one replacement
+    sentence for `expert_comment` and bind only that replacement sentence.
+    The generator preserves and deterministically reconstructs all sibling
+    claims; never rewrite or repeat them.
   - Treat the current comment and synthesis context as failed editorial input,
     not source evidence. Make factual assertions only from
     `grounding_package.relevant_evidence`; never use an ID listed in

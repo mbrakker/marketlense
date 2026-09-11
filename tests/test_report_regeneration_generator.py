@@ -425,6 +425,67 @@ class _TemporalSummaryOpenAIClient(_FakeOpenAIClient):
         return super().openai_chat_json(req, ctx)
 
 
+class _ClaimScopedExpertOpenAIClient(_FakeOpenAIClient):
+    def openai_chat_json(self, req, ctx):
+        if "system::report_vs/artifacts/regenerate/expert_comment" in req.system_prompt:
+            self.calls.append(req)
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text='{"expert_comment":"Repaired middle claim."}',
+                parsed_json={
+                    "expert_comment": "Repaired middle claim.",
+                    "claim_provenance": [
+                        {
+                            "claim": "Repaired middle claim.",
+                            "classification": "interpretive",
+                            "evidence_ids": ["f2"],
+                        }
+                    ],
+                },
+                request_id="req-claim-scoped-expert",
+            )
+        return super().openai_chat_json(req, ctx)
+
+
+class _ClaimScopedSoftCopyOpenAIClient(_ClaimScopedExpertOpenAIClient):
+    def openai_chat_json(self, req, ctx):
+        if "system::report_vs/artifacts/regenerate/linkedin_post" in req.system_prompt:
+            self.calls.append(req)
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text='{"linkedin_post":"Repaired LinkedIn claim."}',
+                parsed_json={
+                    "linkedin_post": "Repaired LinkedIn claim.",
+                    "claim_provenance": [
+                        {
+                            "claim": "Repaired LinkedIn claim.",
+                            "classification": "interpretive",
+                            "evidence_ids": ["f2"],
+                        }
+                    ],
+                },
+                request_id="req-claim-scoped-linkedin",
+            )
+        if "system::report_vs/artifacts/regenerate/summary" in req.system_prompt:
+            self.calls.append(req)
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text='{"summary":{"executive_summary":"Repaired summary claim."}}',
+                parsed_json={
+                    "summary": {"executive_summary": "Repaired summary claim."},
+                    "claim_provenance": [
+                        {
+                            "claim": "Repaired summary claim.",
+                            "classification": "interpretive",
+                            "evidence_ids": ["f2"],
+                        }
+                    ],
+                },
+                request_id="req-claim-scoped-summary",
+            )
+        return super().openai_chat_json(req, ctx)
+
+
 def _settings(tmp_path: Path) -> IngestSettings:
     output_dir = tmp_path / "out"
     cache_dir = tmp_path / "cache"
@@ -1101,6 +1162,315 @@ def test_regenerated_soft_copy_claim_gets_new_provenance_and_untouched_claim_is_
         retained
         == soft_copy_claim_provenance_to_payload([retained_linkedin_claim])["claims"][0]
     )
+
+
+def test_regeneration_repairs_only_the_failed_expert_claim_and_retains_sibling_provenance(
+    tmp_path,
+) -> None:
+    """Removing claim-scoped reconstruction makes this assertion fail."""
+    current_artifacts = _current_artifacts()
+    sentences = [
+        "First supported sentence stays.",
+        "Bad sentence needs repair.",
+        "Third supported sentence stays.",
+    ]
+    current_artifacts["expert_comment"] = "  ".join(sentences)
+    original_claims = [
+        SoftCopyClaimProvenance(
+            schema_version="1.0",
+            artifact_family="expert_comment",
+            claim_id=f"soft_copy:expert_comment:{index}",
+            text_hash=hashlib.sha256(sentence.encode()).hexdigest(),
+            classification="interpretive",
+            evidence_ids=(f"f{index}",),
+            source_spans=(),
+            producing_prompt_identity={"namespace": "report_vs/artifacts/expert_comment"},
+            generation_attempt=1,
+            regeneration_attempt=0,
+        )
+        for index, sentence in enumerate(sentences, start=1)
+    ]
+    current_artifacts["soft_copy_claim_provenance"]["claims"] = [
+        claim
+        for claim in current_artifacts["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] != "expert_comment"
+    ] + soft_copy_claim_provenance_to_payload(original_claims)["claims"]
+    evidence_packs = _evidence_packs()
+    evidence_packs["findings"]["findings"].append(
+        {"id": "f3", "evidence": "Third supported evidence."}
+    )
+
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=2,
+            plan=RegenerationPlan(
+                mode="targeted",
+                targets=[
+                    RegenerationTarget(
+                        target_section="expert_comment",
+                        regenerate_steps=["expert_comment"],
+                        issues=[
+                            RegenerationIssue(
+                                rule_id="grounding",
+                                affected_section="expert_comment",
+                                message="Unsupported middle sentence.",
+                                severity="error",
+                                evidence_ids=["f2"],
+                            )
+                        ],
+                    )
+                ],
+                unmappable_issues=[],
+                broad_retry_allowed=False,
+            ),
+            current_artifacts=current_artifacts,
+            doc_map=evidence_packs["doc_map"],
+            evidence_packs=evidence_packs,
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current_artifacts["source_status"],
+            categories=["Category"],
+        ),
+        openai_client=_ClaimScopedExpertOpenAIClient(),
+        prompt_client=_FakePromptClient(),
+    )
+
+    assert response.updated_artifacts["expert_comment"] == (
+        "First supported sentence stays.  Repaired middle claim.  "
+        "Third supported sentence stays."
+    )
+    claims = response.updated_artifacts["soft_copy_claim_provenance"]["claims"]
+    by_id = {claim["claim_id"]: claim for claim in claims}
+    assert by_id[original_claims[0].claim_id] == soft_copy_claim_provenance_to_payload(
+        [original_claims[0]]
+    )["claims"][0]
+    assert by_id[original_claims[2].claim_id] == soft_copy_claim_provenance_to_payload(
+        [original_claims[2]]
+    )["claims"][0]
+    repaired = next(
+        claim
+        for claim in claims
+        if claim["text_hash"]
+        == hashlib.sha256(b"Repaired middle claim.").hexdigest()
+    )
+    assert repaired["regeneration_attempt"] == 2
+    assert repaired["producing_prompt_identity"]["namespace"] == (
+        "report_vs/artifacts/regenerate/expert_comment"
+    )
+
+
+def test_regeneration_abstains_only_an_unsupported_expert_claim_without_model_call(
+    tmp_path,
+) -> None:
+    """The unsupported claim is removed while valid prose and provenance remain."""
+    current_artifacts = _current_artifacts()
+    sentences = [
+        "First supported sentence.",
+        "Unsupported sentence.",
+        "Last supported sentence.",
+    ]
+    current_artifacts["expert_comment"] = " ".join(sentences)
+    original_claims = [
+        SoftCopyClaimProvenance(
+            schema_version="1.0",
+            artifact_family="expert_comment",
+            claim_id=f"soft_copy:expert_comment:unsupported:{index}",
+            text_hash=hashlib.sha256(sentence.encode()).hexdigest(),
+            classification="factual",
+            evidence_ids=(evidence_id,),
+            source_spans=(),
+            producing_prompt_identity={
+                "namespace": "report_vs/artifacts/expert_comment"
+            },
+            generation_attempt=1,
+            regeneration_attempt=0,
+        )
+        for index, (sentence, evidence_id) in enumerate(
+            zip(sentences, ("f1", "missing", "f2"), strict=True), start=1
+        )
+    ]
+    current_artifacts["soft_copy_claim_provenance"]["claims"] = [
+        claim
+        for claim in current_artifacts["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] != "expert_comment"
+    ] + soft_copy_claim_provenance_to_payload(original_claims)["claims"]
+    openai_client = _ClaimScopedExpertOpenAIClient()
+    evidence_packs = _evidence_packs()
+
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=2,
+            plan=RegenerationPlan(
+                mode="targeted",
+                targets=[
+                    RegenerationTarget(
+                        target_section="expert_comment",
+                        regenerate_steps=["expert_comment"],
+                        issues=[
+                            RegenerationIssue(
+                                rule_id="grounding",
+                                affected_section="expert_comment",
+                                message="Unsupported sentence.",
+                                severity="error",
+                                evidence_ids=["missing"],
+                            )
+                        ],
+                    )
+                ],
+                unmappable_issues=[],
+                broad_retry_allowed=False,
+            ),
+            current_artifacts=current_artifacts,
+            doc_map=evidence_packs["doc_map"],
+            evidence_packs=evidence_packs,
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current_artifacts["source_status"],
+            categories=["Category"],
+        ),
+        openai_client=openai_client,
+        prompt_client=_FakePromptClient(),
+    )
+
+    assert response.updated_artifacts["expert_comment"] == (
+        "First supported sentence. Last supported sentence."
+    )
+    assert openai_client.calls == []
+    claim_ids = {
+        claim["claim_id"]
+        for claim in response.updated_artifacts["soft_copy_claim_provenance"]["claims"]
+    }
+    assert original_claims[0].claim_id in claim_ids
+    assert original_claims[1].claim_id not in claim_ids
+    assert original_claims[2].claim_id in claim_ids
+
+
+@pytest.mark.parametrize(
+    ("family", "section", "expected", "field"),
+    [
+        (
+            "linkedin_post",
+            "linkedin_post",
+            (
+                "First linkedin_post claim. Repaired LinkedIn claim. "
+                "Last linkedin_post claim."
+            ),
+            None,
+        ),
+        (
+            "summary",
+            "summary.executive_summary",
+            "First summary claim. Repaired summary claim. Last summary claim.",
+            "executive_summary",
+        ),
+    ],
+)
+def test_regeneration_claim_scope_preserves_unrelated_soft_copy_on_repeat(
+    tmp_path, family: str, section: str, expected: str, field: str | None
+) -> None:
+    """A repeated isolated failure must not churn sibling copy or its provenance."""
+    current_artifacts = _current_artifacts()
+    sentences = [
+        f"First {family} claim.",
+        f"Bad {family} claim.",
+        f"Last {family} claim.",
+    ]
+    if field is None:
+        current_artifacts[family] = " ".join(sentences)
+    else:
+        current_artifacts["summary"][field] = " ".join(sentences)
+    original_claims = [
+        SoftCopyClaimProvenance(
+            schema_version="1.0",
+            artifact_family=family,
+            claim_id=f"soft_copy:{family}:repeat:{index}",
+            text_hash=hashlib.sha256(sentence.encode()).hexdigest(),
+            classification="interpretive",
+            evidence_ids=(f"f{index}",),
+            source_spans=(),
+            producing_prompt_identity={"namespace": f"report_vs/artifacts/{family}"},
+            generation_attempt=1,
+            regeneration_attempt=0,
+        )
+        for index, sentence in enumerate(sentences, start=1)
+    ]
+    current_artifacts["soft_copy_claim_provenance"]["claims"] = [
+        claim
+        for claim in current_artifacts["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] != family
+    ] + (
+        [
+            claim
+            for claim in _current_artifacts()["soft_copy_claim_provenance"]["claims"]
+            if family == "summary"
+            and claim["artifact_family"] == "summary"
+            and claim["text_hash"] == hashlib.sha256(b"Old TLDR.").hexdigest()
+        ]
+        + soft_copy_claim_provenance_to_payload(original_claims)["claims"]
+    )
+    evidence_packs = _evidence_packs()
+    evidence_packs["findings"]["findings"].append(
+        {"id": "f3", "evidence": "Last supported evidence."}
+    )
+
+    def regenerate(current: dict, attempt_index: int):
+        return regenerate_artifacts(
+            ArtifactRegenerationRequest(
+                report_id="report-1",
+                report_name="report-1",
+                attempt_index=attempt_index,
+                plan=RegenerationPlan(
+                    mode="targeted",
+                    targets=[
+                        RegenerationTarget(
+                            target_section=family,
+                            regenerate_steps=[family],
+                            issues=[
+                                RegenerationIssue(
+                                    rule_id="grounding",
+                                    affected_section=section,
+                                    message="Unsupported middle claim.",
+                                    severity="error",
+                                    evidence_ids=["f2"],
+                                )
+                            ],
+                        )
+                    ],
+                    unmappable_issues=[],
+                    broad_retry_allowed=False,
+                ),
+                current_artifacts=current,
+                doc_map=evidence_packs["doc_map"],
+                evidence_packs=evidence_packs,
+                settings=_settings(tmp_path),
+                ctx=_ctx(),
+                source_status=current["source_status"],
+                categories=["Category"],
+            ),
+            openai_client=_ClaimScopedSoftCopyOpenAIClient(),
+            prompt_client=_FakePromptClient(),
+        )
+
+    first = regenerate(current_artifacts, 1)
+    second = regenerate(first.updated_artifacts, 2)
+    value = (
+        second.updated_artifacts[family]
+        if field is None
+        else second.updated_artifacts["summary"][field]
+    )
+    assert value == expected
+    claims = {
+        claim["claim_id"]: claim
+        for claim in second.updated_artifacts["soft_copy_claim_provenance"]["claims"]
+    }
+    for claim in (original_claims[0], original_claims[2]):
+        assert claims[claim.claim_id] == soft_copy_claim_provenance_to_payload(
+            [claim]
+        )["claims"][0]
 
 
 def test_regenerate_artifacts_summary_only_keeps_other_sections_unchanged(tmp_path):

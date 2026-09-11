@@ -215,6 +215,7 @@ def test_linkedin_prompt_materializes_editorial_plan_and_report_scope(
         "attempt_index": 1,
         "target_section": "linkedin_post",
         "current_section_text": "Current post.",
+        "claim_repair_scope_json": '{"mode":"family"}',
         "failure_reasons_json": "[]",
         "fix_checklist_json": "[]",
         "grounding_package_json": "{}",
