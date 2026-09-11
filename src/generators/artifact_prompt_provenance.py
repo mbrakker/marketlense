@@ -9,6 +9,7 @@ from src.contracts.prompts import PromptSet
 from src.generators.prompt_preparation import PreparedPromptBundle
 from src.services.prompt_service import build_llm_execution_identity
 from src.utils.cache_utils import sha256_json
+from src.utils.errors import AppError
 from src.utils.model_resolver import (
     execution_policies_from_config,
     resolve_execution_policy,
@@ -68,6 +69,13 @@ def current_artifact_prompt_identity(
 ) -> dict[str, object]:
     """Build the current identity without rendering templates or calling a model."""
 
+    dependency_manifest = prompt_set.dependency_manifest
+    if dependency_manifest is None:
+        raise AppError(
+            code="artifact_prompt_dependency_manifest_missing",
+            message="Artifact prompt identity requires its dependency manifest",
+            retryable=False,
+        )
     default_model = str(getattr(settings, "openai_model", "") or "")
     default_temperature = float(getattr(settings, "temperature", 1.0))
     routing_decision = resolve_routing_policy(
@@ -137,7 +145,7 @@ def current_artifact_prompt_identity(
         "family_schema_version": "1.0",
         "processing_version": "report_generation_checkpoint_v2",
         "prompt_content_hash": prompt_set.prompt_content_hash,
-        "prompt_dependency_manifest": asdict(prompt_set.dependency_manifest),
+        "prompt_dependency_manifest": asdict(dependency_manifest),
         "execution_identity": execution_identity.execution_identity,
         "execution_identity_manifest": asdict(execution_identity),
         "model_provider": str(policy.provider or ""),

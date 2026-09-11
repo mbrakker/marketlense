@@ -8,10 +8,12 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from src.contracts.files import FileStatRequest
 from src.contracts.openai import OpenAIJSONImagePromptRequest
 from src.contracts.report_assets import PreviewRequest
 from src.contracts.report_generation import ReportRuntimeState
 from src.contracts.report_identity import ReportTitleResolution
+from src.contracts.run_context import RunContext
 from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.generators.report_generation_dependencies import ReportSourceDependencies
 from src.generators.report_title_resolution_generator import resolve_report_title
@@ -50,7 +52,12 @@ def resolve_ambiguous_report_title(
         ),
         identity_ctx,
     )
-    image_path = _absolute_preview_path(runtime, getattr(preview, "image_path", ""))
+    image_path = _absolute_preview_path(
+        runtime,
+        dependencies,
+        getattr(preview, "image_path", ""),
+        identity_ctx,
+    )
     if image_path is None:
         raise AppError(
             code="report_title_identity_preview_missing",
@@ -134,13 +141,21 @@ def resolve_ambiguous_report_title(
     return result
 
 
-def _absolute_preview_path(runtime: ReportRuntimeState, value: object) -> Path | None:
+def _absolute_preview_path(
+    runtime: ReportRuntimeState,
+    dependencies: ReportSourceDependencies,
+    value: object,
+    ctx: RunContext,
+) -> Path | None:
     path = Path(str(value or "").strip())
     if not str(path):
         return None
     if not path.is_absolute():
         path = Path(runtime.settings.output_dir) / path
-    return path if path.is_file() else None
+    stat = dependencies.file_stat(
+        FileStatRequest(schema_version="1.0", path=str(path)), ctx
+    )
+    return path if bool(stat.exists) and bool(stat.is_file) else None
 
 
 def _identity_evidence(

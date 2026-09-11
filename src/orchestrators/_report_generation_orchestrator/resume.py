@@ -626,7 +626,9 @@ def _validate_checkpoint_editorial_plan(
         if not isinstance(payload, dict):
             raise ValueError("artifacts payload must be an object")
         normalize_artifact_editorial_plan(payload.get("editorial_plan"))
-        _validate_checkpoint_artifact_prompt_identities(runtime, payload, checkpoint_path)
+        _validate_checkpoint_artifact_prompt_identities(
+            runtime, payload, checkpoint_path
+        )
     except AppError as exc:
         if exc.code == "report_pipeline_checkpoint_prompt_identity_invalid":
             raise
@@ -663,11 +665,14 @@ def _validate_checkpoint_artifact_prompt_identities(
     checkpoint_path: str,
 ) -> None:
     raw_cache = artifacts_payload.get("_cache")
-    raw_identities = (
-        raw_cache.get("producing_prompt_identities")
-        if isinstance(raw_cache, dict)
-        else None
-    )
+    if not isinstance(raw_cache, dict):
+        raise AppError(
+            code="report_pipeline_checkpoint_prompt_identity_invalid",
+            message="Checkpoint artifacts lack producing prompt identities",
+            retryable=False,
+            context={"checkpoint_path": checkpoint_path},
+        )
+    raw_identities = raw_cache.get("producing_prompt_identities")
     if not isinstance(raw_identities, dict) or not raw_identities:
         raise AppError(
             code="report_pipeline_checkpoint_prompt_identity_invalid",
@@ -722,14 +727,12 @@ def _validate_checkpoint_artifact_prompt_identities(
         if (
             not normalized_family.startswith("report_vs/artifacts/")
             or not namespace.startswith("report_vs/artifacts/")
-            or artifact_family_for_producing_namespace(namespace)
-            != normalized_family
+            or artifact_family_for_producing_namespace(namespace) != normalized_family
             or not relevant_input_hash
             or not retrieval_mode
             or (
                 "/regenerate/" in namespace
-                and namespace
-                != str(requirements.get(normalized_family) or "").strip()
+                and namespace != str(requirements.get(normalized_family) or "").strip()
             )
         ):
             raise AppError(

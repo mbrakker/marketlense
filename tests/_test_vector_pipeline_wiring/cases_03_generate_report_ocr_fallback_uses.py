@@ -130,7 +130,19 @@ def test_generate_report_ocr_fallback_uses_ocr_pdf_for_vector_and_original_for_v
         collect_candidates=_collect_candidates,
         vector_store_upload_file=_vector_store_upload_file,
         generate_evidence_packs=lambda **kwargs: {
-            "doc_map": {"docMap": {"title": "Doc Title", "publisher": "Doc Publisher"}}
+            "doc_map": {
+                "doc_id": "d",
+                "title": "Doc Title",
+                "publisher": "Doc Publisher",
+                "sections": [
+                    {
+                        "id": "overview",
+                        "title": "Overview",
+                        "summary": "Overview summary.",
+                        "key_points": ["Point"],
+                    }
+                ],
+            }
         },
         generate_artifacts=lambda **kwargs: _analysis_artifacts(),
         run_validation=lambda *args, **kwargs: ValidationReport(
@@ -307,7 +319,12 @@ def test_generate_report_vector_store_figure_caption_fail_open_runs_before_valid
                     "title": "Doc Title",
                     "publisher": "Doc Publisher",
                     "sections": [
-                        {"title": "Overview", "summary": "Summary", "pages": [1]}
+                        {
+                            "id": "overview",
+                            "title": "Overview",
+                            "summary": "Summary",
+                            "pages": [1],
+                        }
                     ],
                 }
             },

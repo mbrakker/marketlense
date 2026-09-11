@@ -1209,7 +1209,9 @@ def run_report_analysis(
         getattr(provenance_roles, "author_kind", "unknown") or "unknown"
     )
     if provenance_roles is not None:
-        data_dict["source_provenance_roles"] = asdict(provenance_roles)
+        data_dict["source_provenance_roles"] = _serialize_source_provenance_roles(
+            provenance_roles
+        )
     data_dict["categories_display"] = category_assignment.category_labels
     data_dict["analysis_mode"] = runtime.analysis_mode
     data_dict["regeneration_loop_state"] = asdict(regeneration_loop_state)

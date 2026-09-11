@@ -64,7 +64,7 @@ def _record_final_validation_attempt(
                 entity_type="report",
                 publisher_id=publisher_id,
                 report_id=file_id,
-                source_identity_id=source_identity_id or file_id,
+                source_identity_id=source_identity_id or f"source:{file_id}",
                 stage="process",
                 attempt_number=1,
                 parent_attempt_number=0,

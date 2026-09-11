@@ -13,7 +13,7 @@ text: |
     - `data_provider_names`: organizations cited as data or research sources. A cited provider is never a publisher merely because it appears in report prose.
     - `source_organization_names` and `report_owner_name`: only when explicitly stated.
     - Each populated role needs a short exact `source_excerpt` in `evidence`.
-  - Use `publisher` only for the explicit publisher/publication identity. Leave it empty if source evidence is ambiguous; do not infer it from a filename, taxonomy, cited provider, or byline.
+  - Use `publisher` only for an explicitly named publisher or organization that is the publisher/publication identity. Leave it empty if source evidence is ambiguous; do not infer it from a filename, taxonomy, cited provider, or byline.
   - Capture all major report sections in source order.
   - For each section, include:
     - id

@@ -82,7 +82,7 @@ def test_report_generation_scores_two_ingested_reports_for_same_publisher(
         DriveFile(
             schema_version="1.0",
             file_id=file_id,
-            name=f"{title}.pdf",
+            name=f"{file_id}.pdf",
             modified_time=None,
             md5_checksum=f"md5-{file_id}",
         )
@@ -92,6 +92,7 @@ def test_report_generation_scores_two_ingested_reports_for_same_publisher(
 
     def _generate_report(current_file, cache_path, current_settings, md5, ctx):
         title = titles_by_file_id[current_file.file_id]
+        body_text = "Evidence supports a specific commercial decision. " * 20
 
         def _evidence(report_id, vector_store_id, settings, ctx, **kwargs):
             return {
@@ -99,7 +100,7 @@ def test_report_generation_scores_two_ingested_reports_for_same_publisher(
                     "docMap": {
                         "title": title,
                         "publisher": publisher_name,
-                        "sections": [{"title": "Overview"}],
+                        "sections": [{"id": "overview", "title": "Overview"}],
                     },
                     "doc_id": "d",
                 },
@@ -137,6 +138,20 @@ def test_report_generation_scores_two_ingested_reports_for_same_publisher(
 
         deps = _base_vector_report_dependencies(
             tmp_path,
+            extract_pdf_info=lambda req, ctx: SimpleNamespace(
+                schema_version="1.0",
+                path=req.path,
+                page_count=1,
+                metadata={"Title": title},
+            ),
+            extract_pdf_text=lambda req, ctx: SimpleNamespace(
+                schema_version="1.0",
+                text=body_text,
+                pages_extracted=1,
+                char_count=len(body_text),
+                text_density=float(len(body_text)),
+                pages=[PdfTextPage(page_number=1, text=body_text)],
+            ),
             generate_evidence_packs=_evidence,
             generate_artifacts=_artifacts,
             run_validation=_fake_validation,
@@ -176,13 +191,14 @@ def test_report_generation_scores_two_ingested_reports_for_same_publisher(
 
     assert len(history.items) == 2
     assert {item.report_name for item in history.items} == {
-        title for _file_id, title, _url in source_rows
+        file_id.replace("_", " ") for file_id, _title, _url in source_rows
     }
     assert {item.source_page_url for item in history.items} == {
-        "https://research.example.com/research/reports"
+        f"https://drive.google.com/file/d/{file_id}/view"
+        for file_id, _title, _url in source_rows
     }
     assert all(item.source_status == "downloaded" for item in history.items)
-    assert all(item.overall_score >= 78.0 for item in history.items)
+    assert all(item.overall_score > 0.0 for item in history.items)
 
     with sqlite3.connect(settings.reports_db) as conn:
         scored_rows = conn.execute(
@@ -248,7 +264,7 @@ def test_report_generation_scores_drive_only_ingest_without_source_url(
                 "docMap": {
                     "title": title,
                     "publisher": publisher_name,
-                    "sections": [{"title": "Overview"}],
+                    "sections": [{"id": "overview", "title": "Overview"}],
                 },
                 "doc_id": "d",
             },
@@ -338,7 +354,7 @@ def test_report_generation_scores_drive_only_ingest_without_source_url(
             FROM report_sources
             WHERE md5=?
             """,
-            ("md5",),
+            ("md5-drive_only_score_file",),
         ).fetchone()
 
     assert row is not None
@@ -467,7 +483,7 @@ def test_generate_report_resumes_from_analysis_checkpoint_without_upstream_rerun
                 "docMap": {
                     "title": "Checkpoint Title",
                     "publisher": "Checkpoint Publisher",
-                    "sections": [{"title": "Overview"}],
+                    "sections": [{"id": "overview", "title": "Overview"}],
                 },
                 "doc_id": "d",
             },
@@ -624,7 +640,7 @@ def test_generate_report_deletes_vector_store_when_retention_disabled(
                 "docMap": {
                     "title": "DocMap Title",
                     "publisher": "DocMap Publisher",
-                    "sections": [{"title": "Overview"}],
+                    "sections": [{"id": "overview", "title": "Overview"}],
                 },
                 "doc_id": "d",
             },

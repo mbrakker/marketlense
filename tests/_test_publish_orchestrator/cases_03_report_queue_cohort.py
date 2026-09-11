@@ -32,7 +32,8 @@ def test_publish_cohort_manifest_limits_selection_to_cohort_members(
                     {
                         "schema_version": "1.0",
                         "file_id": "target-file",
-                        "source_identity_id": "target-file",
+                        "source_identity_id": "source:target-file",
+                        "publisher_id": "publisher:target",
                         "md5_checksum": "target-md5",
                         "html_path": str(target_path),
                     }
@@ -185,13 +186,15 @@ def test_publish_cohort_manifest_rejects_a_missing_member_before_wordpress_write
                     {
                         "file_id": "target-file",
                         "report_id": "target-file",
-                        "source_identity_id": "target-file",
+                        "source_identity_id": "source:target-file",
+                        "publisher_id": "publisher:target",
                         "html_path": str(target_path),
                     },
                     {
                         "file_id": "missing-file",
                         "report_id": "missing-file",
-                        "source_identity_id": "missing-file",
+                        "source_identity_id": "source:missing-file",
+                        "publisher_id": "publisher:missing",
                     },
                 ],
             }
@@ -251,7 +254,8 @@ def test_publish_cohort_rejects_changed_artifact_mapping_before_wordpress_write(
                     {
                         "file_id": "target-file",
                         "report_id": "target-file",
-                        "source_identity_id": "target-file",
+                        "source_identity_id": "source:target-file",
+                        "publisher_id": "publisher:target",
                         "html_path": str(changed_path),
                     }
                 ],
@@ -318,7 +322,8 @@ def test_publish_cohort_rejects_duplicate_artifact_mapping_before_wordpress_writ
                     {
                         "file_id": "target-file",
                         "report_id": "target-file",
-                        "source_identity_id": "target-file",
+                        "source_identity_id": "source:target-file",
+                        "publisher_id": "publisher:target",
                         "html_path": str(manifest_path),
                     }
                 ],
@@ -439,13 +444,15 @@ def test_publish_cohort_manifest_binding_hash_is_deterministic_for_unchanged_art
         "target-file": {
             "file_id": "target-file",
             "report_id": "target-file",
-            "source_identity_id": "target-file",
+            "source_identity_id": "source:target-file",
+            "publisher_id": "publisher:target",
             "html_path": str(target_path),
         },
         "second-file": {
             "file_id": "second-file",
             "report_id": "second-file",
-            "source_identity_id": "second-file",
+            "source_identity_id": "source:second-file",
+            "publisher_id": "publisher:second",
             "html_path": str(second_path),
         },
     }
@@ -575,7 +582,8 @@ def test_publish_cohort_manifest_rejects_not_ready_member_before_wordpress_write
                     {
                         "file_id": "target-file",
                         "report_id": "target-file",
-                        "source_identity_id": "target-file",
+                        "source_identity_id": "source:target-file",
+                        "publisher_id": "publisher:target",
                         "html_path": str(target_path),
                     }
                 ],

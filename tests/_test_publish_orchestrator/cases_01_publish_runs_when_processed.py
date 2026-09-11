@@ -871,7 +871,17 @@ def test_publish_uses_hash_bound_readiness_over_regen_snapshots(
     html_path = Path(settings.output_dir) / "report.html"
     html_path.parent.mkdir(parents=True, exist_ok=True)
     html = (
-        "<!doctype html><html><head><title>Report 2026 | MarketLense</title>"
+        "<!doctype html><!--\n"
+        "marketbearing-build:\n"
+        "  git_sha: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+        "  generation_run_id: generation-run-1\n"
+        "  validation_run_id: validation-run-1\n"
+        "  source_id: source:file123\n"
+        "  source_md5: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n"
+        "  artifact_hash: cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\n"
+        "  generation_profile: safe_default\n"
+        "  generated_at_utc: 2026-08-26T12:00:00+00:00\n"
+        "--><html><head><title>Report 2026 | MarketLense</title>"
         '<link rel="canonical" href="https://marketlense.example/reports/report"></head>'
         "<body><h1>Report 2026</h1><p>Revenue grew in the measured market.</p>"
         '<section id="source"><a href="https://publisher.example/reports/report">'

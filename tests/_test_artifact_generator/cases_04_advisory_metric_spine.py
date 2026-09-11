@@ -293,8 +293,8 @@ def test_metric_spine_label_keeps_a_complete_long_source_sentence() -> None:
     ("value", "unit", "expected_display"),
     [
         ("70%", "percent", "70%"),
-        ("$258.6", "billion", "$258.6 billion"),
-        ("258.6", "$ billion", "$258.6 billion"),
+        ("$258.6", "billion", "$258.6"),
+        ("258.6", "$ billion", "$258.6"),
         ("$7.2T to $10.4T", "", "$7.2T to $10.4T"),
     ],
 )
@@ -718,6 +718,12 @@ def test_assemble_artifacts_builds_universal_claim_ledger() -> None:
 
 def test_assemble_artifacts_builds_topics_key_figures_and_chart_cards() -> None:
     evidence = _evidence_packs()
+    evidence["findings"]["findings"][0] = {
+        "id": "f1",
+        "text": "Wallet adoption rose to 42 percent.",
+        "evidence": "Wallet adoption rose to 42 percent.",
+        "pages": [2],
+    }
     evidence["visual_candidates"] = {
         "chart_candidates": [
             {
@@ -759,14 +765,14 @@ def test_assemble_artifacts_builds_topics_key_figures_and_chart_cards() -> None:
                 {
                     "claim": "Wallet adoption is rising.",
                     "evidence_id": "f1",
-                    "evidence": "Revenue +10% YoY",
+                    "evidence": "Wallet adoption rose to 42 percent.",
                     "pages": [2],
                     "evidence_spans": [
                         {
                             "evidence_id": "f1",
                             "source_pack": "findings",
                             "page": 2,
-                            "text": "Revenue +10% YoY",
+                            "text": "Wallet adoption rose to 42 percent.",
                         }
                     ],
                 }
@@ -779,7 +785,7 @@ def test_assemble_artifacts_builds_topics_key_figures_and_chart_cards() -> None:
                 "id": "i1",
                 "text": "Enterprise merchants are adopting wallets faster.",
                 "evidence_id": "f1",
-                "evidence": "Revenue +10% YoY",
+                "evidence": "Wallet adoption rose to 42 percent.",
                 "metric": {
                     "label": "Wallet adoption",
                     "value": "42",
@@ -840,6 +846,12 @@ def test_assemble_artifacts_builds_topics_key_figures_and_chart_cards() -> None:
 
 def test_generate_artifacts_passes_metric_spine_to_editorial_prompts(tmp_path) -> None:
     evidence = _evidence_packs()
+    evidence["findings"]["findings"][0] = {
+        "id": "f1",
+        "text": "Enterprise wallet adoption reached 42 percent.",
+        "evidence": "Enterprise wallet adoption reached 42 percent.",
+        "pages": [2],
+    }
     responses = {
         "summary": {
             "tldr": "Wallet adoption is rising.",
@@ -849,9 +861,26 @@ def test_generate_artifacts_passes_metric_spine_to_editorial_prompts(tmp_path) -
                 {
                     "claim": "Wallet adoption is rising.",
                     "evidence_id": "f1",
-                    "evidence": "Revenue +10% YoY",
+                    "evidence": "Enterprise wallet adoption reached 42 percent.",
                     "pages": [2],
                 }
+            ],
+            "claim_provenance": [
+                {
+                    "claim": "Wallet adoption is rising.",
+                    "classification": "interpretive",
+                    "evidence_ids": [],
+                },
+                {
+                    "claim": "Wallet adoption rose.",
+                    "classification": "interpretive",
+                    "evidence_ids": [],
+                },
+                {
+                    "claim": "Wallet adoption is rising among merchants.",
+                    "classification": "interpretive",
+                    "evidence_ids": [],
+                },
             ],
         },
         "insights_candidates": {
@@ -860,7 +889,7 @@ def test_generate_artifacts_passes_metric_spine_to_editorial_prompts(tmp_path) -
                     "id": "i1",
                     "text": "Wallet adoption: adoption is rising among merchants.",
                     "evidence_id": "f1",
-                    "evidence": "Revenue +10% YoY",
+                    "evidence": "Enterprise wallet adoption reached 42 percent.",
                     "metric": {},
                     "pages": [2],
                 }
@@ -872,7 +901,7 @@ def test_generate_artifacts_passes_metric_spine_to_editorial_prompts(tmp_path) -
                     "id": "i1",
                     "text": "Wallet adoption: adoption is rising among merchants.",
                     "evidence_id": "f1",
-                    "evidence": "Revenue +10% YoY",
+                    "evidence": "Enterprise wallet adoption reached 42 percent.",
                     "metric": {
                         "label": "Enterprise wallet adoption",
                         "value": "42",

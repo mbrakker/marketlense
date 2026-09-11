@@ -58,13 +58,15 @@ def test_private_api_playbook_downloads_pdf_before_full_agent(
     external_boundary_mocks_only.setattr(
         preflight_runtime,
         "import_module",
-        lambda module_name: browser_preflight_imports.append(module_name)
-        or _runtime(
-            tmp_path,
-            route_kind="pdf_download",
-            route_summary="Unused preflight runtime.",
-            create_pdf=False,
-            email_submission_completed=None,
+        lambda module_name: (
+            browser_preflight_imports.append(module_name)
+            or _runtime(
+                tmp_path,
+                route_kind="pdf_download",
+                route_summary="Unused preflight runtime.",
+                create_pdf=False,
+                email_submission_completed=None,
+            )
         ),
     )
     external_boundary_mocks_only.setattr(
@@ -199,7 +201,7 @@ def _write_private_api_playbook(tmp_path: Path) -> Path:
                 "playbook_id": "private-api-example",
                 "version": "1.0.0",
                 "status": "active",
-                "updated_at": "2026-05-06T00:00:00+00:00",
+                "updated_at": "2026-09-01T00:00:00+00:00",
                 "stale_after_days": 120,
                 "publisher_pattern": "Example",
                 "host_patterns": ["example.com"],
@@ -239,7 +241,7 @@ def _write_private_api_playbook(tmp_path: Path) -> Path:
                 "history": [
                     {
                         "schema_version": "1.0",
-                        "changed_at": "2026-05-06T00:00:00+00:00",
+                        "changed_at": "2026-09-01T00:00:00+00:00",
                         "source": "test_seed",
                         "summary": "Seeded private API test playbook.",
                     }

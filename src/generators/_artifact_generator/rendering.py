@@ -72,9 +72,7 @@ def _soft_copy_provider_output_schema(root_key: str) -> dict[str, Any]:
                 "classification": {
                     "enum": ["factual", "interpretive", "recommendation"]
                 },
-                "evidence_ids": {
-                    "type": "array", "items": {"type": "string"}
-                },
+                "evidence_ids": {"type": "array", "items": {"type": "string"}},
             },
         },
     }
@@ -345,7 +343,10 @@ def _normalize_artifact_response(payload: object, root_key: str) -> Dict[str, An
             key in normalized
             for key in ("tldr", "tldr_card", "card_tldr_compact", "executive_summary")
         ):
-            normalized = {root_key: normalized}
+            normalized = {
+                root_key: normalized,
+                "claim_provenance": normalized.get("claim_provenance", []),
+            }
         elif root_key in {"expert_comment", "linkedin_post"}:
             normalized[root_key] = ""
         else:

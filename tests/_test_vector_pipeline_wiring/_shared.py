@@ -41,8 +41,10 @@ from src.contracts.report_cards import (
 from src.contracts.report_generation import ReportRuntimeState
 from src.contracts.report_store import (
     ReportMetadataGetResponse,
+    ReportSourceIdentityGetResponse,
     ReportSourceDiscoveryRecordRequest,
     ReportSourceQualityHistoryRequest,
+    SourceIdentityResolution,
 )
 from src.contracts.run_context import RunContext
 from src.contracts.signal_candidates import (
@@ -363,13 +365,13 @@ def _batch_dependencies(**overrides) -> orch.IngestBatchDependencies:
 
 def _make_ingest_process(*, generate_report):
     def _download(req, ctx):
-        payload = _pdf_bytes()
+        payload = _pdf_bytes() + Path(req.output_path).stem.encode("utf-8")
         path = Path(req.output_path)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(payload)
         return SimpleNamespace(
             output_path=req.output_path,
-            md5="md5",
+            md5=f"md5-{Path(req.output_path).stem}",
             size=len(payload),
         )
 
@@ -593,12 +595,36 @@ def _base_vector_report_dependencies(
             schema_version="1.0",
             path=req.path,
             content=(
-                "<!doctype html><html><head><title>Market conditions outlook</title>"
+                "<!doctype html><!--\n"
+                "marketbearing-build:\n"
+                "  git_sha: test\n"
+                "  generation_run_id: test\n"
+                "  validation_run_id: test\n"
+                "  source_id: test\n"
+                "  source_md5: test\n"
+                "  artifact_hash: test\n"
+                "  generation_profile: test\n"
+                "  generated_at_utc: 2026-01-01T00:00:00Z\n"
+                "--><html><head><title>Market conditions outlook</title>"
                 "</head><body><h1>Market conditions outlook</h1>"
                 "<p>Revenue growth is concentrating in the highest-value customer segments.</p>"
                 '<section id="source">Source URL: Not available</section>'
                 "</body></html>"
             ),
+        ),
+        "get_report_source_identity": lambda req, ctx: ReportSourceIdentityGetResponse(
+            schema_version="1.0",
+            resolution=SourceIdentityResolution(
+                schema_version="1.0",
+                source_identity_id=(
+                    f"source:{ctx.report_id or req.md5 or req.report_title}"
+                ),
+                publisher_id="publisher:test",
+                resolution_method="test_fixture",
+                identity_confidence="high",
+                identity_status="unknown",
+            ),
+            resolution_source="md5",
         ),
         "generate_cover_images": _generate_cover_images,
         "write_report_card_manifest": _write_report_card_manifest,

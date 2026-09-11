@@ -318,7 +318,7 @@ def test_prompt_cites_selected_playbook_id_version_and_steps(
     _write_playbook(
         playbook_dir / "pdf.yaml",
         playbook_id="local-pdf-click",
-        updated_at="2026-05-06T00:00:00+00:00",
+        updated_at="2026-09-01T00:00:00+00:00",
     )
     request = browser_report_download_service.attach_browser_route_playbooks(
         request=_request(tmp_path, route_playbook_dir=str(playbook_dir)),

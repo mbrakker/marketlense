@@ -318,7 +318,7 @@ def test_generate_report_vector_store_with_validation(
                 "docMap": {
                     "title": "DocMap Title",
                     "publisher": "DocMap Publisher",
-                    "sections": [{"title": "Overview"}],
+                    "sections": [{"id": "overview", "title": "Overview"}],
                 },
                 "doc_id": "d",
             },
@@ -374,7 +374,7 @@ def test_generate_report_vector_store_with_validation(
         assert req.data.get("_figure_section_enabled") is False
         assert req.data.get("_figure_gallery") in ([], None)
         assert req.data.get("_figure_top", "") == ""
-        assert req.data.get("title") == "DB Title"
+        assert req.data.get("title") == "Checkpoint Title 2025 Report"
         assert req.data.get("publisher") == "DB Publisher"
         assert req.data.get("time_period") == "Q1-Q3 2026"
         html_path = tmp_path / "out.html"
@@ -419,6 +419,20 @@ def test_generate_report_vector_store_with_validation(
             vector_store_id="vs_new",
             evidence_pack_paths={},
         ),
+        get_report_source_identity=lambda req, ctx: ReportSourceIdentityGetResponse(
+            schema_version="1.0",
+            resolution=SourceIdentityResolution(
+                schema_version="1.0",
+                source_identity_id="source:file-vs",
+                canonical_title="DB Title",
+                publisher_id="publisher:db",
+                publisher_name="DB Publisher",
+                resolution_method="test_fixture",
+                identity_confidence="high",
+                identity_status="resolved",
+            ),
+            resolution_source="md5",
+        ),
     )
 
     projection_requests = []
@@ -459,7 +473,7 @@ def test_generate_report_vector_store_with_validation(
     assert "validation" in outcome.evidence_packs
     assert outcome.html_path is not None
     assert Path(outcome.html_path).exists()
-    assert metadata_upserts[0].title == "DocMap Title"
+    assert metadata_upserts[0].title == "Checkpoint Title 2025 Report"
     assert metadata_upserts[0].publisher == "DocMap Publisher"
     assert validation_calls == ["file_vs"]
     assert overlap_flags["taxonomy_saw_evidence"] is True
@@ -573,7 +587,7 @@ def test_generate_report_adds_signal_artifact_pack_after_projection(tmp_path) ->
                 "docMap": {
                     "title": "Signal Report",
                     "publisher": "Signal Publisher",
-                    "sections": [{"title": "Market movement"}],
+                    "sections": [{"id": "market-movement", "title": "Market movement"}],
                 },
                 "doc_id": "d",
             },

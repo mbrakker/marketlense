@@ -379,7 +379,9 @@ def _report_stage_handler(
             report_ctx = replace(
                 admission_ctx,
                 source_identity_id=(
-                    str(payload.attributes.get("admission_source_identity_id", "")).strip()
+                    str(
+                        payload.attributes.get("admission_source_identity_id", "")
+                    ).strip()
                     or str(job.source_identity_id or "").strip()
                 ),
                 publisher_id=(
@@ -477,7 +479,9 @@ def _report_stage_handler(
                 value
                 for value in (
                     str(outcome.html_path or "").strip(),
-                    str((outcome.evidence_packs or {}).get("publish_readiness", "")).strip(),
+                    str(
+                        (outcome.evidence_packs or {}).get("publish_readiness", "")
+                    ).strip(),
                 )
                 if value
             )

@@ -76,7 +76,7 @@ def test_generate_report_resumes_from_all_semantic_checkpoints_with_validated_ar
                 "docMap": {
                     "title": "Checkpoint Title",
                     "publisher": "Checkpoint Publisher",
-                    "sections": [{"title": "Overview"}],
+                    "sections": [{"id": "overview", "title": "Overview"}],
                 },
                 "doc_id": "d",
             },
@@ -343,7 +343,7 @@ def test_generate_report_latest_safe_restart_skips_corrupt_newer_checkpoint(
                 "docMap": {
                     "title": "Checkpoint Title",
                     "publisher": "Checkpoint Publisher",
-                    "sections": [{"title": "Overview"}],
+                    "sections": [{"id": "overview", "title": "Overview"}],
                 },
                 "doc_id": "d",
             },
@@ -454,7 +454,7 @@ def test_generate_report_restart_rejects_checkpoint_artifact_hash_mismatch(
                 "docMap": {
                     "title": "Checkpoint Title",
                     "publisher": "Checkpoint Publisher",
-                    "sections": [{"title": "Overview"}],
+                    "sections": [{"id": "overview", "title": "Overview"}],
                 },
                 "doc_id": "d",
             },

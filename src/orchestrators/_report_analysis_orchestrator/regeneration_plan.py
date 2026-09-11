@@ -403,9 +403,7 @@ def _build_regeneration_plan(
             if target_key in hard_target_keys
         }
         unmappable = [
-            issue
-            for issue in unmappable
-            if str(issue.severity).lower() == "error"
+            issue for issue in unmappable if str(issue.severity).lower() == "error"
         ]
     if grouped:
         targets = [

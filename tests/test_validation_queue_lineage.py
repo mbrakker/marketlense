@@ -480,7 +480,9 @@ def _full_chain_chat_response_factory(*, repair_soft_copy: bool = False):
             )
         return SimpleNamespace(
             id=f"fixture-chat-{schema_name}",
-            choices=[SimpleNamespace(message=SimpleNamespace(content=response.output_text))],
+            choices=[
+                SimpleNamespace(message=SimpleNamespace(content=response.output_text))
+            ],
             usage=SimpleNamespace(
                 prompt_tokens=10,
                 completion_tokens=10,
@@ -678,9 +680,7 @@ def test_a21_full_chain_from_frozen_cohort_through_awaiting_review(
             f" error={completed_job.error_code if completed_job else ''}"
             f" message={completed_job.error_message_summary if completed_job else ''}"
         )
-        materialize_workflow_outbox(
-            state_db, "validation-lineage-test-worker", _ctx()
-        )
+        materialize_workflow_outbox(state_db, "validation-lineage-test-worker", _ctx())
     with sqlite3.connect(reports_db) as conn:
         run = conn.execute(
             "SELECT workflow_run_id FROM validation_runs WHERE validation_run_id=?",
@@ -757,9 +757,10 @@ def test_a21_full_chain_from_frozen_cohort_through_awaiting_review(
         _ctx(),
     )
     assert first_path.read_bytes() == second_path.read_bytes()
-    assert sha256(first_path.read_bytes()).hexdigest() == sha256(
-        second_path.read_bytes()
-    ).hexdigest()
+    assert (
+        sha256(first_path.read_bytes()).hexdigest()
+        == sha256(second_path.read_bytes()).hexdigest()
+    )
     assert first.artifact_hash == second.artifact_hash
     assert len(first.first_attempt_entities) == 1
     entity = first.first_attempt_entities[0]
@@ -770,7 +771,9 @@ def test_a21_full_chain_from_frozen_cohort_through_awaiting_review(
     )
     assert awaiting_review_stage.eventual_success is True
     analysis_dir = next((tmp_path / "out").glob("*/report_analysis"))
-    artifacts = json.loads((analysis_dir / "artifacts.json").read_text(encoding="utf-8"))
+    artifacts = json.loads(
+        (analysis_dir / "artifacts.json").read_text(encoding="utf-8")
+    )
     if repair_soft_copy:
         regeneration_audit = json.loads(
             (analysis_dir / "regeneration_candidate_audit_1.json").read_text(

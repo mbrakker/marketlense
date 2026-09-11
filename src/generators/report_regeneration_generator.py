@@ -87,9 +87,7 @@ class _RegenerationState:
     regenerated_sections: List[str] = field(default_factory=list)
     prompt_namespaces: List[str] = field(default_factory=list)
     prompt_identities: Dict[str, Dict[str, Any]] = field(default_factory=dict)
-    producing_prompt_identities: Dict[str, Dict[str, Any]] = field(
-        default_factory=dict
-    )
+    producing_prompt_identities: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     regeneration_prompt_requirements: Dict[str, str] = field(default_factory=dict)
     soft_copy_claim_bindings: Dict[str, List[Dict[str, Any]]] = field(
         default_factory=dict

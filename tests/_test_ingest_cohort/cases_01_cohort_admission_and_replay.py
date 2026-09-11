@@ -1011,12 +1011,14 @@ def test_failed_fixed_cohort_member_records_blocked_remaining_stages(
         settings=ingest_settings,
         root_ctx=run_context,
         files=[file],
+        admission_decisions=_admitted_decisions([file]),
     )
     orch._record_cohort_ingest_manifest(
         validation_run_id=validation_run_id,
         settings=ingest_settings,
         root_ctx=run_context,
         files=[file],
+        admission_decisions=_admitted_decisions([file]),
         outcomes=[
             IngestOutcome(
                 schema_version="1.0",
@@ -1056,12 +1058,14 @@ def test_fixed_cohort_replay_supersedes_a_failure_with_validated_reuse(
         settings=ingest_settings,
         root_ctx=run_context,
         files=[file],
+        admission_decisions=_admitted_decisions([file]),
     )
     orch._record_cohort_ingest_manifest(
         validation_run_id=validation_run_id,
         settings=ingest_settings,
         root_ctx=run_context,
         files=[file],
+        admission_decisions=_admitted_decisions([file]),
         outcomes=[
             IngestOutcome(
                 schema_version="1.0",
@@ -1084,12 +1088,14 @@ def test_fixed_cohort_replay_supersedes_a_failure_with_validated_reuse(
         settings=ingest_settings,
         root_ctx=replay_ctx,
         files=[file],
+        admission_decisions=_admitted_decisions([file]),
     )
     orch._record_cohort_ingest_manifest(
         validation_run_id=validation_run_id,
         settings=ingest_settings,
         root_ctx=replay_ctx,
         files=[file],
+        admission_decisions=_admitted_decisions([file]),
         outcomes=[
             IngestOutcome(
                 schema_version="1.0",
@@ -1136,6 +1142,7 @@ def test_fixed_cohort_requires_explicit_passing_readiness(
         settings=ingest_settings,
         root_ctx=run_context,
         files=[file],
+        admission_decisions=_admitted_decisions([file]),
         outcomes=[
             IngestOutcome(
                 schema_version="1.1",
@@ -1170,12 +1177,14 @@ def test_fixed_cohort_does_not_treat_state_only_skip_as_publish_ready(
         settings=ingest_settings,
         root_ctx=run_context,
         files=[file],
+        admission_decisions=_admitted_decisions([file]),
     )
     orch._record_cohort_ingest_manifest(
         validation_run_id=validation_run_id,
         settings=ingest_settings,
         root_ctx=run_context,
         files=[file],
+        admission_decisions=_admitted_decisions([file]),
         outcomes=[
             IngestOutcome(
                 schema_version="1.0",

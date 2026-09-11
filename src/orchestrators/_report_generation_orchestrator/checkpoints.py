@@ -488,6 +488,7 @@ def _record_checkpoint_artifact_lineage(
                     "complete"
                     if (
                         runtime.file.file_id.strip()
+                        and str(runtime.ctx.source_identity_id or "").strip()
                         and str(runtime.md5 or "").strip()
                         and stage_name.strip()
                         and str(raw_ref.get("schema_version") or "1.0").strip()

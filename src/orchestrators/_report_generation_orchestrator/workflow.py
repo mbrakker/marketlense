@@ -404,9 +404,7 @@ def run_report_generation(
         source_identity_id=(
             str(ctx.source_identity_id or "").strip() or resolved_source_identity_id
         ),
-        publisher_id=(
-            str(ctx.publisher_id or "").strip() or resolved_publisher_id
-        ),
+        publisher_id=(str(ctx.publisher_id or "").strip() or resolved_publisher_id),
     )
     runtime = _build_runtime_state(
         file,
@@ -594,9 +592,7 @@ def run_report_generation(
                 settings,
                 scope="pdf_text_ocr",
                 provided_client=source_openai_client,
-                openai_chat_json_with_images=(
-                    deps.source.openai_chat_json_with_images
-                ),
+                openai_chat_json_with_images=(deps.source.openai_chat_json_with_images),
                 openai_ocr_pdf=deps.source.openai_ocr_pdf,
             )
         if requested_resume_stage != STAGE_RENDER_COMPLETE:
