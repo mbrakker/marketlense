@@ -1,0 +1,1361 @@
+{
+  "schema_version": "1.0",
+  "artifact_hash": "b6f22d1fa56e0949ed571ed5a35f0f6c9cee7bf05561ea27bb4b8bf49591b079",
+  "package_hash": "7768824e5e6b115dbad92abee5e45ed6519576a301adf25887378b69763b2aa9",
+  "results": [
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "claim:1",
+        "source_family": "summary",
+        "text_hash": "f21ea2911816b269d1092bf026b34311511807b19bbc9522f9a269727632fd68",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.0",
+            "evidence_id": "f1",
+            "source_pack": "",
+            "page": null,
+            "text_hash": ""
+          }
+        ]
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "evidence_reference_completeness",
+          "status": "failed",
+          "reason": "missing_or_unknown_evidence_reference"
+        },
+        {
+          "schema_version": "1.0",
+          "name": "entity_geography_period_consistency",
+          "status": "not_applicable",
+          "reason": "requires_semantic_or_editorial_assessment"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "missing_or_unknown_evidence_reference"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "claim:2",
+        "source_family": "summary",
+        "text_hash": "e59b4f22122a8e2ad00236bc103cacadfed26003a21cc9e2c62d5838cbd47c14",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.0",
+            "evidence_id": "qc-002",
+            "source_pack": "",
+            "page": null,
+            "text_hash": ""
+          }
+        ]
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "evidence_reference_completeness",
+          "status": "failed",
+          "reason": "missing_or_unknown_evidence_reference"
+        },
+        {
+          "schema_version": "1.0",
+          "name": "entity_geography_period_consistency",
+          "status": "not_applicable",
+          "reason": "requires_semantic_or_editorial_assessment"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "missing_or_unknown_evidence_reference"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "claim:3",
+        "source_family": "summary",
+        "text_hash": "19200142d3b65c9580d328c8b36405b37c3d678b93605378d9d7db2c665b4c22",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.0",
+            "evidence_id": "qc-001",
+            "source_pack": "",
+            "page": null,
+            "text_hash": ""
+          }
+        ]
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "evidence_reference_completeness",
+          "status": "failed",
+          "reason": "missing_or_unknown_evidence_reference"
+        },
+        {
+          "schema_version": "1.0",
+          "name": "entity_geography_period_consistency",
+          "status": "not_applicable",
+          "reason": "requires_semantic_or_editorial_assessment"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "missing_or_unknown_evidence_reference"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "claim:4",
+        "source_family": "summary",
+        "text_hash": "2d64565c49e78ba1c4b8b22b0be05c0c0fabe91de4bfe46aea62b923d5fa5e25",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.0",
+            "evidence_id": "f4",
+            "source_pack": "",
+            "page": null,
+            "text_hash": ""
+          }
+        ]
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "evidence_reference_completeness",
+          "status": "failed",
+          "reason": "missing_or_unknown_evidence_reference"
+        },
+        {
+          "schema_version": "1.0",
+          "name": "entity_geography_period_consistency",
+          "status": "not_applicable",
+          "reason": "requires_semantic_or_editorial_assessment"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "missing_or_unknown_evidence_reference"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "claim:5",
+        "source_family": "summary",
+        "text_hash": "01a345193dc2585c9ffa2bb286b2dc1e55838f156ed2d3b0bb553b4e376fc5d7",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.0",
+            "evidence_id": "f3",
+            "source_pack": "",
+            "page": null,
+            "text_hash": ""
+          }
+        ]
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "evidence_reference_completeness",
+          "status": "failed",
+          "reason": "missing_or_unknown_evidence_reference"
+        },
+        {
+          "schema_version": "1.0",
+          "name": "entity_geography_period_consistency",
+          "status": "not_applicable",
+          "reason": "requires_semantic_or_editorial_assessment"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "missing_or_unknown_evidence_reference"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "soft_copy_provenance:summary:e382dbeaa27f730b",
+        "source_family": "summary",
+        "text_hash": "5ccdaa843a9329bb7d578864799623eb7f8ba9dbafc2a796a8c589904c46dda4",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": []
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "soft_copy_provenance_integrity",
+          "status": "failed",
+          "reason": "soft_copy_provenance_missing"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "soft_copy_provenance_missing"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "soft_copy_provenance:summary:b251b3e11375cec6",
+        "source_family": "summary",
+        "text_hash": "55e917f01a4cd079c21c69cabda784394d8a8bb7baca03480b9d10abd03d6be5",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": []
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "soft_copy_provenance_integrity",
+          "status": "failed",
+          "reason": "soft_copy_provenance_missing"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "soft_copy_provenance_missing"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "soft_copy_provenance:summary:55672987b216c2a8",
+        "source_family": "summary",
+        "text_hash": "8b6ba7b47b5dc90e48e7495b7da6f6c3d6f05d595812402b8301009cc94d72e5",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": []
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "soft_copy_provenance_integrity",
+          "status": "failed",
+          "reason": "soft_copy_provenance_missing"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "soft_copy_provenance_missing"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "soft_copy_provenance:summary:de6877035ebf62ba",
+        "source_family": "summary",
+        "text_hash": "e95c420a73f053312e272685cb3b58f15a017ce0a1e3d1eac3c1e1940fe1f72c",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": []
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "soft_copy_provenance_integrity",
+          "status": "failed",
+          "reason": "soft_copy_provenance_missing"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "soft_copy_provenance_missing"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "soft_copy_provenance:summary:a39859202a8447b1",
+        "source_family": "summary",
+        "text_hash": "f07fb2683adde41f4958109fbdb2533c3e8f78389c17c3a180015e5efa84fca3",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": []
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "soft_copy_provenance_integrity",
+          "status": "failed",
+          "reason": "soft_copy_provenance_missing"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "soft_copy_provenance_missing"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "soft_copy_provenance:summary:e90b264312e56c7c",
+        "source_family": "summary",
+        "text_hash": "03c9d9ac41eb2cb8f80d79568f7b27f6c3b79a176ece445115bef79d3a29a1ac",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": []
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "soft_copy_provenance_integrity",
+          "status": "failed",
+          "reason": "soft_copy_provenance_missing"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "soft_copy_provenance_missing"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "claim:12",
+        "source_family": "insights_final",
+        "text_hash": "a7bb4151a60f3305bd846a35a755a9d447146fe78b2d15d659b0c998ab90ae0f",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.0",
+            "evidence_id": "f1",
+            "source_pack": "",
+            "page": null,
+            "text_hash": ""
+          }
+        ]
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "evidence_reference_completeness",
+          "status": "failed",
+          "reason": "missing_or_unknown_evidence_reference"
+        },
+        {
+          "schema_version": "1.0",
+          "name": "number_value_unit_match",
+          "status": "failed",
+          "reason": "quantity_not_entailed"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "missing_or_unknown_evidence_reference",
+        "quantity_not_entailed"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "claim:13",
+        "source_family": "insights_final",
+        "text_hash": "44d3d6fbb8830ba31382436399959ed9025752167abc852f317b9704ec85349a",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.0",
+            "evidence_id": "f2",
+            "source_pack": "",
+            "page": null,
+            "text_hash": ""
+          }
+        ]
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "evidence_reference_completeness",
+          "status": "failed",
+          "reason": "missing_or_unknown_evidence_reference"
+        },
+        {
+          "schema_version": "1.0",
+          "name": "number_value_unit_match",
+          "status": "failed",
+          "reason": "quantity_not_entailed"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "missing_or_unknown_evidence_reference",
+        "quantity_not_entailed"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "claim:14",
+        "source_family": "insights_final",
+        "text_hash": "c74947ff16dd1738918c07764f871717754dffb61d67151ed4f24e44fc00c8fc",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.0",
+            "evidence_id": "f3",
+            "source_pack": "",
+            "page": null,
+            "text_hash": ""
+          }
+        ]
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "evidence_reference_completeness",
+          "status": "failed",
+          "reason": "missing_or_unknown_evidence_reference"
+        },
+        {
+          "schema_version": "1.0",
+          "name": "number_value_unit_match",
+          "status": "failed",
+          "reason": "quantity_not_entailed"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "missing_or_unknown_evidence_reference",
+        "quantity_not_entailed"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "claim:15",
+        "source_family": "insights_final",
+        "text_hash": "59da7150830dcaf88f8b7b2e92da34fb11c7e351d07f0b372685624f3248311e",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.0",
+            "evidence_id": "f4",
+            "source_pack": "",
+            "page": null,
+            "text_hash": ""
+          }
+        ]
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "evidence_reference_completeness",
+          "status": "failed",
+          "reason": "missing_or_unknown_evidence_reference"
+        },
+        {
+          "schema_version": "1.0",
+          "name": "number_value_unit_match",
+          "status": "failed",
+          "reason": "quantity_not_entailed"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "missing_or_unknown_evidence_reference",
+        "quantity_not_entailed"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "claim:16",
+        "source_family": "insights_final",
+        "text_hash": "e7c7848128fc2bfbf56340c8e370b1497baff7c2b1cca1e63af266018796b272",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.0",
+            "evidence_id": "f5",
+            "source_pack": "",
+            "page": null,
+            "text_hash": ""
+          }
+        ]
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "evidence_reference_completeness",
+          "status": "failed",
+          "reason": "missing_or_unknown_evidence_reference"
+        },
+        {
+          "schema_version": "1.0",
+          "name": "number_value_unit_match",
+          "status": "failed",
+          "reason": "quantity_not_entailed"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "missing_or_unknown_evidence_reference",
+        "quantity_not_entailed"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "claim:17",
+        "source_family": "quotes_final",
+        "text_hash": "2957173213d03a193ddabaef9c1e303a773c676109037c3811fadf5996990a46",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.0",
+            "evidence_id": "qc-001",
+            "source_pack": "",
+            "page": null,
+            "text_hash": ""
+          }
+        ]
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "evidence_reference_completeness",
+          "status": "failed",
+          "reason": "missing_or_unknown_evidence_reference"
+        },
+        {
+          "schema_version": "1.0",
+          "name": "entity_geography_period_consistency",
+          "status": "not_applicable",
+          "reason": "requires_semantic_or_editorial_assessment"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "missing_or_unknown_evidence_reference"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "claim:18",
+        "source_family": "quotes_final",
+        "text_hash": "b2259b216080505b02721a174f971dc55d8b5d598898f3aa9f0a3e311229e003",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.0",
+            "evidence_id": "qc-002",
+            "source_pack": "",
+            "page": null,
+            "text_hash": ""
+          }
+        ]
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "evidence_reference_completeness",
+          "status": "failed",
+          "reason": "missing_or_unknown_evidence_reference"
+        },
+        {
+          "schema_version": "1.0",
+          "name": "entity_geography_period_consistency",
+          "status": "not_applicable",
+          "reason": "requires_semantic_or_editorial_assessment"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "missing_or_unknown_evidence_reference"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "claim:19",
+        "source_family": "quotes_final",
+        "text_hash": "195f59b40b3771f0cae839ce9fc4c0c67019eefcdc9af81d05bfc201bbb8fd0c",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.0",
+            "evidence_id": "qc-003",
+            "source_pack": "",
+            "page": null,
+            "text_hash": ""
+          }
+        ]
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "evidence_reference_completeness",
+          "status": "failed",
+          "reason": "missing_or_unknown_evidence_reference"
+        },
+        {
+          "schema_version": "1.0",
+          "name": "entity_geography_period_consistency",
+          "status": "not_applicable",
+          "reason": "requires_semantic_or_editorial_assessment"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "missing_or_unknown_evidence_reference"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "soft_copy_provenance:expert_comment:32034a9ac17ad94d",
+        "source_family": "expert_comment",
+        "text_hash": "f57b9d201372727c8e9799253e8b2dbf4c14796b95b895ea4a67d30cb65d8bc2",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": []
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "soft_copy_provenance_integrity",
+          "status": "failed",
+          "reason": "soft_copy_provenance_missing"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "soft_copy_provenance_missing"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "soft_copy_provenance:expert_comment:a2a9e34f8bae309f",
+        "source_family": "expert_comment",
+        "text_hash": "20b623937ff22967c3a8cec5397775b51b17e3b46953ea756fc66464f3e68662",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": []
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "soft_copy_provenance_integrity",
+          "status": "failed",
+          "reason": "soft_copy_provenance_missing"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "soft_copy_provenance_missing"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "soft_copy_provenance:expert_comment:dde9433a4805aebd",
+        "source_family": "expert_comment",
+        "text_hash": "a9915f8c9c37301fee8b1ca9862990a092b60e6829447d872492bae609bb2016",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": []
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "soft_copy_provenance_integrity",
+          "status": "failed",
+          "reason": "soft_copy_provenance_missing"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "soft_copy_provenance_missing"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "soft_copy_provenance:expert_comment:1a2a0ddb68d44eae",
+        "source_family": "expert_comment",
+        "text_hash": "4231e0e3ddd1d531991fb1f11c0f5784b139aaad9f7f0b0bb24c7d0ee2c82ac0",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": []
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "soft_copy_provenance_integrity",
+          "status": "failed",
+          "reason": "soft_copy_provenance_missing"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "soft_copy_provenance_missing"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "soft_copy_provenance:expert_comment:4eb3a71f5be36261",
+        "source_family": "expert_comment",
+        "text_hash": "f833cb30863d8ae9dbb268036f15272f2e2bc88f5efc4b9a9aade468269eabbe",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": []
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "soft_copy_provenance_integrity",
+          "status": "failed",
+          "reason": "soft_copy_provenance_missing"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "soft_copy_provenance_missing"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "soft_copy_provenance:expert_comment:513740f1d4f4e308",
+        "source_family": "expert_comment",
+        "text_hash": "d8e53b6711fe6d352d30a489515e6585630526a8ac7bb8def2b51329eaa81995",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": []
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "soft_copy_provenance_integrity",
+          "status": "failed",
+          "reason": "soft_copy_provenance_missing"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "soft_copy_provenance_missing"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "soft_copy_provenance:expert_comment:c55aeca33095e015",
+        "source_family": "expert_comment",
+        "text_hash": "6e8e69f121eef53237139cb80923052dcad4f692097e7e6af41e4ca099fd6558",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": []
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "soft_copy_provenance_integrity",
+          "status": "failed",
+          "reason": "soft_copy_provenance_missing"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "soft_copy_provenance_missing"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "soft_copy_provenance:expert_comment:0eac3be6849bb7f4",
+        "source_family": "expert_comment",
+        "text_hash": "27a062373680c0f1ba7e5939bf347a6210eb25a53b5b7def9c9145d0e36bdd58",
+        "kind": "interpretive",
+        "factual": true,
+        "evidence_references": []
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "soft_copy_provenance_integrity",
+          "status": "failed",
+          "reason": "soft_copy_provenance_missing"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "soft_copy_provenance_missing"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "soft_copy_provenance:expert_comment:d418ded72ebbe2f2",
+        "source_family": "expert_comment",
+        "text_hash": "780f418f90f882c6a01fffb9f015a1476cd5b0134e128a8159534ef1ba455649",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": []
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "soft_copy_provenance_integrity",
+          "status": "failed",
+          "reason": "soft_copy_provenance_missing"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "soft_copy_provenance_missing"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "soft_copy_provenance:expert_comment:56c6df324611d7eb",
+        "source_family": "expert_comment",
+        "text_hash": "5a64c70341da81665b78cdedd71b389a6670e7e0b9bae9d0d8a0e270cf4da35d",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": []
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "soft_copy_provenance_integrity",
+          "status": "failed",
+          "reason": "soft_copy_provenance_missing"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "soft_copy_provenance_missing"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "soft_copy_provenance:expert_comment:3cdfa2b53454a5b8",
+        "source_family": "expert_comment",
+        "text_hash": "9168dcdab40792c87dec5e991506be9d2376ca277683fbdc825e4624e05ad5d4",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": []
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "soft_copy_provenance_integrity",
+          "status": "failed",
+          "reason": "soft_copy_provenance_missing"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "soft_copy_provenance_missing"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "soft_copy_provenance:expert_comment:dbf031e3a0daf61d",
+        "source_family": "expert_comment",
+        "text_hash": "45e782c6cc0458559a741782f64dcab485362d2564de42a403edb9fad7509d8c",
+        "kind": "interpretive",
+        "factual": true,
+        "evidence_references": []
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "soft_copy_provenance_integrity",
+          "status": "failed",
+          "reason": "soft_copy_provenance_missing"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "soft_copy_provenance_missing"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "soft_copy_provenance:linkedin_post:23837224dd4fba58",
+        "source_family": "linkedin_post",
+        "text_hash": "4d50d798f33037a96759193ff637b914ee4acd7035eff677de16db9cde5dfc38",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": []
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "soft_copy_provenance_integrity",
+          "status": "failed",
+          "reason": "soft_copy_provenance_missing"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "soft_copy_provenance_missing"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "soft_copy_provenance:linkedin_post:aec2fba5b293ad4d",
+        "source_family": "linkedin_post",
+        "text_hash": "1746264e61da33136b3d3bcc05c59e2913e4e324923fa852b885999b0e309b22",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": []
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "soft_copy_provenance_integrity",
+          "status": "failed",
+          "reason": "soft_copy_provenance_missing"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "soft_copy_provenance_missing"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "soft_copy_provenance:linkedin_post:d6ce7e85e8debf28",
+        "source_family": "linkedin_post",
+        "text_hash": "6f773195b939179b9d531d75cb0f84deef21fdf1b18cb9750c037d8d5e542126",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": []
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "soft_copy_provenance_integrity",
+          "status": "failed",
+          "reason": "soft_copy_provenance_missing"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "soft_copy_provenance_missing"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "soft_copy_provenance:linkedin_post:4b3c9f9caf64ec15",
+        "source_family": "linkedin_post",
+        "text_hash": "f2e05c95dd5eeccd0de70da4a635a250e71c1f99bdc9d512ca5dca2d5559f008",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": []
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "soft_copy_provenance_integrity",
+          "status": "failed",
+          "reason": "soft_copy_provenance_missing"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "soft_copy_provenance_missing"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "soft_copy_provenance:linkedin_post:53f591cdae544202",
+        "source_family": "linkedin_post",
+        "text_hash": "7b89a6cc56874b6e95ba9b25c585b11a977c8cd04eba8995a596dc7dc088c6b2",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": []
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "soft_copy_provenance_integrity",
+          "status": "failed",
+          "reason": "soft_copy_provenance_missing"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "soft_copy_provenance_missing"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "soft_copy_provenance:linkedin_post:79db75161c1d88f4",
+        "source_family": "linkedin_post",
+        "text_hash": "7bbc749cc91d9cf8703c5ff1dbf969f1ed522d10645a83f25962376822264630",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": []
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "soft_copy_provenance_integrity",
+          "status": "failed",
+          "reason": "soft_copy_provenance_missing"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "soft_copy_provenance_missing"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "soft_copy_provenance:linkedin_post:ed0cb91910f75818",
+        "source_family": "linkedin_post",
+        "text_hash": "2820369a52089d8fe21f52f84db2e106201d70f5d4b9c57b14b7b5ca6f9b85f6",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": []
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "soft_copy_provenance_integrity",
+          "status": "failed",
+          "reason": "soft_copy_provenance_missing"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "soft_copy_provenance_missing"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "soft_copy_provenance:linkedin_post:5041b9fd59f8768a",
+        "source_family": "linkedin_post",
+        "text_hash": "d7d1398b5462523a2e44bd1f3e540df40cdeaaaaa976bf534bf5eb62a767b9b5",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": []
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "soft_copy_provenance_integrity",
+          "status": "failed",
+          "reason": "soft_copy_provenance_missing"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "soft_copy_provenance_missing"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "soft_copy_provenance:linkedin_post:6218a55875bc21ca",
+        "source_family": "linkedin_post",
+        "text_hash": "023428430cda9156a3039401f65a4479b393307c1ae16ae7203e44bb4488752f",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": []
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "soft_copy_provenance_integrity",
+          "status": "failed",
+          "reason": "soft_copy_provenance_missing"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "soft_copy_provenance_missing"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "soft_copy_provenance:linkedin_post:dbdb683270ca10d3",
+        "source_family": "linkedin_post",
+        "text_hash": "6900dff46990303eff286f0f17d4c6b8acb4a55e433c2e193990de95e6706033",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": []
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "soft_copy_provenance_integrity",
+          "status": "failed",
+          "reason": "soft_copy_provenance_missing"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "soft_copy_provenance_missing"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "soft_copy_provenance:linkedin_post:48891f5556b903ed",
+        "source_family": "linkedin_post",
+        "text_hash": "2bf752fcbb5dfb8c6aecd35613946f73063ba3a0bad9c5e99ad92c53cce66f30",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": []
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "soft_copy_provenance_integrity",
+          "status": "failed",
+          "reason": "soft_copy_provenance_missing"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "soft_copy_provenance_missing"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.0",
+      "candidate": {
+        "schema_version": "1.0",
+        "claim_id": "soft_copy_provenance:linkedin_post:15100001cbd5b617",
+        "source_family": "linkedin_post",
+        "text_hash": "f5f88e80ad23519ee84838f3dd43df001b16a497a2eafcc1c246e8b7e4702a34",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": []
+      },
+      "checks": [
+        {
+          "schema_version": "1.0",
+          "name": "soft_copy_provenance_integrity",
+          "status": "failed",
+          "reason": "soft_copy_provenance_missing"
+        }
+      ],
+      "status": "unsupported",
+      "reasons": [
+        "soft_copy_provenance_missing"
+      ],
+      "protected_facts": null,
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    }
+  ],
+  "readiness_status": "not_publishable",
+  "unsupported_factual_count": 43,
+  "unresolved_factual_count": 0,
+  "deterministic_pass_count": 0,
+  "semantic_validation_count": 0,
+  "semantic_execution_identities": []
+}

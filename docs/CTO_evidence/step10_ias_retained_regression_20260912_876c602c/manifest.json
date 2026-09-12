@@ -1,0 +1,64 @@
+{
+  "schema_version": "1.0",
+  "step": "10B",
+  "decision": "NO-GO STEP 10B: retained IAS historical artifact lacks mandatory soft-copy claim provenance, so the provider-safe claim-scoped bounded-regeneration path cannot construct a legal repair candidate.",
+  "git_sha": "876c602c2b877fc90db165e96aa2d3bbef9f2b37",
+  "fixture": {
+    "report_id": "ias-industry-pulse-report-2026-acig-pdf",
+    "source_path": "tests/fixtures/pdf_benchmark/golden/IAS - Industry_Pulse_Report_2026_ACIG.pdf",
+    "source_sha256": "8b05b13067748baebff51844a702a05dd6eb560706db5fa94b2ee5badbd672cd",
+    "historical_artifacts_path": "tests/fixtures/docpacks/golden/ias-industry-pulse-report-2026-acig-pdf/report_analysis/artifacts.json",
+    "historical_artifacts_sha256": "cc41e608f7aac2ca428598510f87bc5b06fc130aeb320b0c2ae889fa4a71a53a",
+    "historical_validation_path": "tests/fixtures/docpacks/golden/ias-industry-pulse-report-2026-acig-pdf/report_analysis/validation.json",
+    "historical_validation_sha256": "ccfedc5ce80adfc982c0ebaf27f5e6167f7467a1793a8196c47782e71fa2569d"
+  },
+  "historical_grounding_failure_families": [
+    "unsupported_budget_concentration",
+    "unsupported_prediction",
+    "invented_genai_causality",
+    "unsupported_adjacency_recommendation",
+    "unsupported_ctv_retail_media_performance_or_causality",
+    "unsupported_attention_measurement_prescription",
+    "unsupported_linkedin_performance_claim"
+  ],
+  "before_retained_claim_validation": {
+    "command": "python -m src.cli validate-retained-claims --artifacts-path tests/fixtures/docpacks/golden/ias-industry-pulse-report-2026-acig-pdf/report_analysis/artifacts.json --evidence-packs-path tests/fixtures/docpacks/golden/ias-industry-pulse-report-2026-acig-pdf/report_analysis/findings.json --output-path out/step10_ias_retained_claim_validation_before.json",
+    "result_file": "before_claim_validation.json",
+    "result_sha256": "8a514500aac0c05111db984b06ac47ff5c9ce7c40a394845d24e6e7faa4ce922",
+    "readiness_status": "not_publishable",
+    "unsupported_factual_count": 43,
+    "unresolved_factual_count": 0,
+    "semantic_validation_count": 0,
+    "failure_reasons": {
+      "soft_copy_provenance_missing": 30,
+      "missing_or_unknown_evidence_reference": 13
+    }
+  },
+  "attempted_provider_safe_path": {
+    "analysis_input_preserved": true,
+    "historical_fixture_modified": false,
+    "validation_thresholds_modified": false,
+    "bounded_regeneration_candidate": "not_constructed",
+    "blocker": "The historical artifact has no soft_copy_claim_provenance. Current validation deliberately treats every material soft-copy sentence as unpublishable without its exact claim ID, classification, selected evidence, and producing-prompt lineage. There is consequently no legal claim-scoped target from which to record repair/provenance lineage."
+  },
+  "after_bounded_repair": {
+    "status": "not_run",
+    "reason": "blocked before candidate construction",
+    "validate_retained_claims": "not_passed",
+    "protected_facts": "not_evaluated",
+    "grounding": "not_evaluated",
+    "regeneration_candidate_validation": "not_evaluated",
+    "public_editorial_quality": "not_evaluated",
+    "publish_readiness": "not_evaluated",
+    "review_ready_boundary": "not_reached"
+  },
+  "determinism": {
+    "a21_full_chain_gate": {
+      "command": "python -m pytest -q tests/test_validation_queue_lineage.py -k a21_full_chain",
+      "result": "2 passed in 49.37s",
+      "scope_note": "The passing A21 clean and synthetic single-claim repair fixtures prove the generic route and its internal twice-build byte/SHA/artifact-hash assertions. They do not feed this historical IAS artifact or its seven failure families into the route."
+    },
+    "historical_ias_twice_build": "not_run because no retained IAS repair state was constructed"
+  },
+  "live_canary": "not_run"
+}

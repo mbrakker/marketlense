@@ -263,6 +263,14 @@ resolve (rather than merely one of several IDs); unresolved IDs remain in the
 validation package for diagnosis. Legacy insight, quote, and summary
 claim-evidence-map reference handling keeps its existing semantics.
 
+When an immutable historical artifact is used as a regression before-state,
+the explicit retained-provenance adaptation boundary may copy it into a
+separate current-state candidate. It requires a complete supplied declaration
+of every material claim, its classification, and its evidence IDs; it neither
+infers those fields from old prose nor changes the historical artifact. The
+copied state then follows the ordinary claim-scoped candidate validation and
+bounded-regeneration path. An incomplete declaration remains fail-closed.
+
 When a queue payload sets `claim_validation_required`, publication readiness
 accepts only a readable package in `awaiting_review` with zero unsupported and
 unresolved factual claims. This is a pre-publication gate, not automatic

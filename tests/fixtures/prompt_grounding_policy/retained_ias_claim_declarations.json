@@ -1,0 +1,61 @@
+{
+  "schema_version": "1.0",
+  "report_id": "ias-industry-pulse-report-2026-acig-pdf",
+  "purpose": "Explicit legacy before-state declarations for Step 10 only. These declarations do not repair, suppress, or reinterpret any historical claim.",
+  "evidence_span_index": {
+    "f1": [{"evidence_id": "f1", "source_pack": "findings", "page": 3}],
+    "f2": [{"evidence_id": "f2", "source_pack": "findings", "page": 3}],
+    "f3": [{"evidence_id": "f3", "source_pack": "findings", "page": 29}],
+    "f4": [{"evidence_id": "f4", "source_pack": "findings", "page": 25}],
+    "f5": [{"evidence_id": "f5", "source_pack": "findings", "page": 21}],
+    "qc-001": [{"evidence_id": "qc-001", "source_pack": "quote_candidates", "page": 13}],
+    "qc-002": [{"evidence_id": "qc-002", "source_pack": "quote_candidates", "page": 11}]
+  },
+  "declared_claims": {
+    "summary": [
+      {"claim": "UK media experts are prioritizing digital video and social media for 2026 while tightening quality controls across AI, CTV, and retail media to protect attention, suitability, and safety.", "classification": "factual", "evidence_ids": ["f1", "f2", "f3", "f4"]},
+      {"claim": "UK media experts prioritize digital video while tightening AI, CTV and retail-media controls.", "classification": "factual", "evidence_ids": ["f1", "f2", "f3", "f4"]},
+      {"claim": "UK media experts are prioritising digital video (87%) and digital display (81%) for 2026, while digital audio lags (55%); social media remains the top digital environment.", "classification": "factual", "evidence_ids": ["f1"]},
+      {"claim": "The industry must balance innovation with control as generative AI, MFA sites, and adjacency risks threaten media quality.", "classification": "factual", "evidence_ids": ["f2"]},
+      {"claim": "Experts are generally positive about advertising near generative AI content when quality controls align to brand values, yet AI content that is inaccurate, cluttered, bot‑attracting, plagiarised/regurgitated, or on unverifiable domains is widely deemed unsuitable.", "classification": "factual", "evidence_ids": ["qc-001", "qc-002"]},
+      {"claim": "Social media faces the most serious challenges (41%), followed by digital video (31%), digital display (29%), and influencer marketing (27%); in CTV, attention (84%), brand safety (82%), and ad fraud (76%) are growing concerns, and in retail media networks, attention (84%), viewability (82%), and brand suitability (82%) underpin performance.", "classification": "factual", "evidence_ids": ["f3", "f4"]}
+    ],
+    "expert_comment": [
+      {"claim": "UK media leaders are concentrating budgets in digital video and social, with 87% naming digital video as a primary format for 2026 while social remains the top digital environment.", "classification": "factual", "evidence_ids": ["f1"]},
+      {"claim": "That concentration raises exposure to creator and environment risk: 41% flag social as the most challenging environment and 31% do so for digital video.", "classification": "factual", "evidence_ids": ["f1", "f5"]},
+      {"claim": "Suitability at the creator level is now a gating factor, with 89% saying influencer brand safety and suitability will be important.", "classification": "factual", "evidence_ids": ["f5"]},
+      {"claim": "Expect planning to tilt toward adjacency-first controls inside video and social activation.", "classification": "factual", "evidence_ids": ["f2", "f5"]},
+      {"claim": "Generative AI intensifies this tension.", "classification": "factual", "evidence_ids": ["f2"]},
+      {"claim": "Experts are generally positive about advertising near generative AI content when quality controls align to brand values, yet 56% still cite AI adjacency as a top challenge for the year ahead.", "classification": "factual", "evidence_ids": ["f2", "qc-002"]},
+      {"claim": "The lines not to cross are explicit: AI content that is inaccurate or delivers a cluttered experience is widely deemed unsuitable, along with bot-attracting, plagiarised or unverifiable domains.", "classification": "factual", "evidence_ids": ["qc-001"]},
+      {"claim": "Governance should codify gen-AI adjacency policies and apply consistent quality controls across buying and optimization workflows.", "classification": "recommendation", "evidence_ids": ["f2", "qc-001"]},
+      {"claim": "CTV and retail media are scaling, but performance will hinge on attention and safety controls.", "classification": "factual", "evidence_ids": ["f3", "f4"]},
+      {"claim": "In CTV, attention (84%), brand safety (82%), and ad fraud (76%) are growing concerns as inventory and sellers expand, and 82% expect brand-safety risks to rise.", "classification": "factual", "evidence_ids": ["f4"]},
+      {"claim": "In retail media networks, attention is treated as a key performance metric by 84%, with viewability and suitability each at 82%.", "classification": "factual", "evidence_ids": ["f3"]},
+      {"claim": "Operating models should elevate attention measurement and suitability governance to the same level as reach, with supply decisions anchored in these thresholds.", "classification": "recommendation", "evidence_ids": ["f3", "f4"]}
+    ],
+    "linkedin_post": [
+      {"claim": "Digital video is set to lead the UK market in 2026, but performance will hinge on tighter quality controls across AI, CTV, social, and retail media to protect attention, suitability, and safety.", "classification": "factual", "evidence_ids": ["f1", "f3", "f4"]},
+      {"claim": "Evidence from UK media experts points to a clear agenda: - 87% name digital video a primary format for 2026.", "classification": "factual", "evidence_ids": ["f1"]},
+      {"claim": "Social media remains the top digital environment.", "classification": "factual", "evidence_ids": ["f1"]},
+      {"claim": "- 56% cite adjacency to AI‑generated content as a top challenge, yet experts are generally positive about advertising near generative AI content when controls align to brand values.", "classification": "factual", "evidence_ids": ["f2", "qc-002"]},
+      {"claim": "AI content that is inaccurate, cluttered, bot‑attracting, plagiarised/regurgitated, or on unverifiable domains is widely deemed unsuitable.", "classification": "factual", "evidence_ids": ["qc-001"]},
+      {"claim": "- Social media carries the most serious challenges (41%), followed by digital video (31%), digital display (29%), and influencer marketing (27%).", "classification": "factual", "evidence_ids": ["f1"]},
+      {"claim": "- In CTV, attention (84%), brand safety (82%), and ad fraud (76%) are growing concerns; 82% agree brand safety will be a growing concern as CTV inventory and the number of sellers increase.", "classification": "factual", "evidence_ids": ["f4"]},
+      {"claim": "- In retail media networks, attention (84%), viewability (82%), and brand suitability (82%) underpin performance; 84% say measuring attention is an important campaign metric.", "classification": "factual", "evidence_ids": ["f3"]},
+      {"claim": "- For creator‑driven video, 89% say influencer safety and suitability is an important consideration.", "classification": "factual", "evidence_ids": ["f5"]},
+      {"claim": "What this means: the market is prioritising digital video and social while elevating governance.", "classification": "interpretive", "evidence_ids": ["f1", "f2"]},
+      {"claim": "Aligning placements with brand values, verifying suitability in creator and AI‑adjacent environments, and focusing on attention, brand safety, and viewability in CTV and retail media are central to protecting outcomes in 2026.", "classification": "factual", "evidence_ids": ["f3", "f4", "f5"]},
+      {"claim": "#DigitalVideo #BrandSafety #RetailMedia", "classification": "interpretive", "evidence_ids": []}
+    ]
+  },
+  "historical_unsupported_claims": [
+    {"family": "expert_comment", "claim": "UK media leaders are concentrating budgets in digital video and social, with 87% naming digital video as a primary format for 2026 while social remains the top digital environment.", "code": "unsupported_budget_concentration"},
+    {"family": "expert_comment", "claim": "Expect planning to tilt toward adjacency-first controls inside video and social activation.", "code": "unsupported_prediction"},
+    {"family": "expert_comment", "claim": "Generative AI intensifies this tension.", "code": "invented_genai_causality"},
+    {"family": "expert_comment", "claim": "Governance should codify gen-AI adjacency policies and apply consistent quality controls across buying and optimization workflows.", "code": "unsupported_adjacency_recommendation"},
+    {"family": "expert_comment", "claim": "CTV and retail media are scaling, but performance will hinge on attention and safety controls.", "code": "unsupported_ctv_retail_media_performance_or_causality"},
+    {"family": "expert_comment", "claim": "Operating models should elevate attention measurement and suitability governance to the same level as reach, with supply decisions anchored in these thresholds.", "code": "unsupported_attention_measurement_prescription"},
+    {"family": "linkedin_post", "claim": "Digital video is set to lead the UK market in 2026, but performance will hinge on tighter quality controls across AI, CTV, social, and retail media to protect attention, suitability, and safety.", "code": "unsupported_linkedin_performance_claim"}
+  ]
+}

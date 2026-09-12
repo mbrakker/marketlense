@@ -125,7 +125,14 @@ def _evidence_index(evidence_packs: dict) -> dict[str, tuple[str, str, int | Non
                 ).strip()
                 text = " ".join(
                     str(item.get(key) or "").strip()
-                    for key in ("text", "evidence", "quote", "description", "summary")
+                    for key in (
+                        "text",
+                        "evidence",
+                        "excerpt",
+                        "quote",
+                        "description",
+                        "summary",
+                    )
                     if str(item.get(key) or "").strip()
                 )
                 if evidence_id and text:

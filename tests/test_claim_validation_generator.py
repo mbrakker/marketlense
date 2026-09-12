@@ -9,6 +9,21 @@ from src.generators.claim_validation_generator import (
 )
 
 
+def test_retained_claim_validation_indexes_legacy_finding_excerpt() -> None:
+    package = validate_retained_claims(
+        {
+            "summary": {
+                "claim_evidence_map": [
+                    {"claim": "Revenue grew by 12%.", "evidence_id": "f1"}
+                ]
+            }
+        },
+        {"findings": {"findings": [{"id": "f1", "excerpt": "Revenue grew by 12%."}]}},
+    )
+
+    assert package.results[0].status == "supported"
+
+
 def _evidence() -> dict:
     return {
         "findings": {
