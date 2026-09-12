@@ -19,6 +19,10 @@
     "schema_version": { "type": "string" },
     "attempt_index": { "type": "integer", "minimum": 1 },
     "transformation_scope": { "type": "array", "items": { "type": "string" } },
+    "unchanged_family_sha256": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 64, "maxLength": 64 }
+    },
     "before_sha256": { "type": "string", "minLength": 64, "maxLength": 64 },
     "after_sha256": { "type": "string", "minLength": 64, "maxLength": 64 },
     "current_artifacts_path": { "type": "string" },

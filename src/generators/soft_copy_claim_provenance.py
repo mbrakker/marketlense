@@ -4,61 +4,15 @@ from __future__ import annotations
 
 import hashlib
 import re
-from copy import deepcopy
 from typing import Any
 
 from src.contracts.soft_copy_claim_provenance import (
     SoftCopyClaimProvenance,
-    soft_copy_claim_provenance_to_payload,
 )
 from src.utils.errors import AppError
 
 _SUPPORTED_FAMILIES = frozenset({"summary", "expert_comment", "linkedin_post"})
 _CLASSIFICATIONS = frozenset({"factual", "interpretive", "recommendation"})
-
-
-def materialize_retained_soft_copy_provenance(
-    *,
-    artifacts: dict[str, Any],
-    declared_claims: dict[str, object],
-    evidence_span_index: dict[str, list[dict[str, Any]]],
-    producing_prompt_identities: dict[str, dict[str, Any]],
-    generation_attempt: int,
-) -> dict[str, Any]:
-    """Copy a legacy artifact into a current, explicitly declared provenance state.
-
-    This is deliberately an adaptation boundary: it never derives a claim,
-    classification, or evidence ID from historical prose.  The original
-    retained artifact remains untouched, and incomplete declarations retain the
-    normal fail-closed behavior of ``build_soft_copy_claim_provenance``.
-    """
-
-    materialized = deepcopy(artifacts)
-    claims: list[SoftCopyClaimProvenance] = []
-    for family in sorted(_SUPPORTED_FAMILIES):
-        text = materialized.get(family)
-        if family == "summary" and isinstance(text, dict):
-            text = " ".join(
-                str(text.get(key) or "")
-                for key in ("tldr", "card_tldr_compact", "executive_summary")
-            )
-        if not isinstance(text, str) or not _normalized_text(text):
-            continue
-        claims.extend(
-            build_soft_copy_claim_provenance(
-                artifact_family=family,
-                text=text,
-                declared_claims=declared_claims.get(family),
-                evidence_span_index=evidence_span_index,
-                producing_prompt_identity=producing_prompt_identities.get(family, {}),
-                generation_attempt=generation_attempt,
-                regeneration_attempt=0,
-            )
-        )
-    materialized["soft_copy_claim_provenance"] = soft_copy_claim_provenance_to_payload(
-        claims
-    )
-    return materialized
 
 
 def build_soft_copy_claim_provenance(

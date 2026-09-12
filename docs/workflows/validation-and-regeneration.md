@@ -264,12 +264,12 @@ validation package for diagnosis. Legacy insight, quote, and summary
 claim-evidence-map reference handling keeps its existing semantics.
 
 When an immutable historical artifact is used as a regression before-state,
-the explicit retained-provenance adaptation boundary may copy it into a
-separate current-state candidate. It requires a complete supplied declaration
-of every material claim, its classification, and its evidence IDs; it neither
-infers those fields from old prose nor changes the historical artifact. The
-copied state then follows the ordinary claim-scoped candidate validation and
-bounded-regeneration path. An incomplete declaration remains fail-closed.
+it remains immutable and is never supplied retroactive prompt or claim
+provenance. A provider-safe current-schema reproduction must generate the
+known bad propositions through the canonical artifact boundary, then follow
+the ordinary claim-scoped candidate validation and bounded-regeneration path.
+The historical artifact remains before-state evidence only; its missing
+provenance remains fail-closed rather than being adapted into a repair input.
 
 When a queue payload sets `claim_validation_required`, publication readiness
 accepts only a readable package in `awaiting_review` with zero unsupported and
@@ -371,9 +371,10 @@ Every candidate writes a schema-backed
 `regeneration_candidate_audit_<attempt>.json`. It records the original
 claim/insight identity, original and candidate evidence IDs and source pages,
 validation issue codes, transformation scope, before/after canonical hashes,
-candidate/current artifact paths, and whether the attempt was promoted or
-rolled back. Promotion uses the canonical atomic artifact store only after every
-gate passes, so the prior current artifact stays recoverable until the atomic
-replacement succeeds. A failed candidate remains retained for diagnosis while
-the existing current artifact remains publishable only if it independently
-satisfies readiness policy.
+and per-family hashes for claim-bearing siblings that are byte-equivalent across
+the candidate. It also retains candidate/current artifact paths and whether the
+attempt was promoted or rolled back. Promotion uses the canonical atomic
+artifact store only after every gate passes, so the prior current artifact stays
+recoverable until the atomic replacement succeeds. A failed candidate remains
+retained for diagnosis while the existing current artifact remains publishable
+only if it independently satisfies readiness policy.

@@ -345,6 +345,9 @@ def _candidate_audit(
         transformation_scope=list(transformation_scope),
         before_sha256=sha256_json(current_artifacts),
         after_sha256=sha256_json(candidate_artifacts),
+        unchanged_family_sha256=_unchanged_claim_family_hashes(
+            current_artifacts, candidate_artifacts
+        ),
         current_artifacts_path=current_artifacts_path,
         candidate_artifacts_path=candidate_artifacts_path,
         validation_status=report.status,
@@ -352,6 +355,26 @@ def _candidate_audit(
         validation_issues=_validation_issue_keys(report),
         evidence_lineage=list(candidate_result.evidence_lineage),
     )
+
+
+def _unchanged_claim_family_hashes(
+    current_artifacts: Dict[str, Any], candidate_artifacts: Dict[str, Any]
+) -> Dict[str, str]:
+    """Retain byte-equivalence evidence for non-regenerated claim families."""
+
+    return {
+        family: before_hash
+        for family in (
+            "summary",
+            "insights_candidates",
+            "insights_final",
+            "quotes_final",
+        )
+        if family in current_artifacts
+        and family in candidate_artifacts
+        and (before_hash := sha256_json(current_artifacts[family]))
+        == sha256_json(candidate_artifacts[family])
+    }
 
 
 def _store_regeneration_candidate_audit(

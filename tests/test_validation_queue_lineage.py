@@ -26,6 +26,7 @@ from src.contracts.validation_run_manifest import (
     FrozenValidationCohortQueueSubmissionRequest,
 )
 from src.contracts.workflow_queue import SourceIngestPayload
+from src.generators.claim_validation_generator import validate_retained_claims
 from src.orchestrators.admission_preflight_orchestrator import (
     AdmissionPreflightRequest,
     admission_configuration_hash,
@@ -53,7 +54,12 @@ from src.services.workflow_queue_service import (
     load_workflow_job_payload,
     materialize_workflow_outbox,
 )
+from src.utils.cache_utils import sha256_json
 from tests.support.fakes import FakeOpenAIResult
+from tests.support.ias_soft_copy_reproduction import (
+    IAS_UNSUPPORTED_SOFT_COPY_CLAIMS,
+    ias_soft_copy_payload,
+)
 from tests.test_workflow_queue_registry import _isolated_app_config
 
 
@@ -374,28 +380,47 @@ _UNSUPPORTED_SOFT_COPY_CLAIM = (
 _REPAIRED_SOFT_COPY_CLAIM = "Planning should retain the source evidence."
 
 
-def _full_chain_response_factory(*, repair_soft_copy: bool = False):
+def _full_chain_response_factory(
+    *,
+    repair_soft_copy: bool = False,
+    reproduce_ias_soft_copy: bool = False,
+    detected_unsupported_claims: list[str] | None = None,
+):
     """Return the Responses API fixture, optionally forcing one claim repair."""
 
     def respond(call: dict) -> FakeOpenAIResult:
         response = _full_chain_model_response(call)
         schema_name = call["text"]["format"]["name"]
         payload = json.loads(response.output_text)
-        if (
-            repair_soft_copy
-            and schema_name == "grounding_validation_output_v1"
-            and _UNSUPPORTED_SOFT_COPY_CLAIM in json.dumps(call, default=str)
-        ):
+        unsupported_claims = (
+            IAS_UNSUPPORTED_SOFT_COPY_CLAIMS
+            if reproduce_ias_soft_copy
+            else (("expert_comment", _UNSUPPORTED_SOFT_COPY_CLAIM, ""),)
+        )
+        seen_unsupported_claims = [
+            (section, claim, code)
+            for section, claim, code in unsupported_claims
+            if claim in json.dumps(call, default=str)
+        ]
+        if schema_name == "grounding_validation_output_v1" and seen_unsupported_claims:
+            if detected_unsupported_claims is not None:
+                detected_unsupported_claims.extend(
+                    claim for _section, claim, _code in seen_unsupported_claims
+                )
             payload = {
                 "unsupported": [
                     {
-                        "section": "expert_comment",
-                        "text": _UNSUPPORTED_SOFT_COPY_CLAIM,
+                        "section": section,
+                        "text": claim,
                         "classification": "factual_claim",
                         "entailment_outcome": "not_established",
                         "violation_type": "unsupported_factual_claim",
-                        "reason": "The retained source does not establish this claim.",
+                        "reason": (
+                            "The retained source does not establish this claim"
+                            + (f" ({code})." if code else ".")
+                        ),
                     }
+                    for section, claim, code in seen_unsupported_claims
                 ],
                 "checks": [],
             }
@@ -406,14 +431,18 @@ def _full_chain_response_factory(*, repair_soft_copy: bool = False):
     return respond
 
 
-def _full_chain_chat_response_factory(*, repair_soft_copy: bool = False):
+def _full_chain_chat_response_factory(
+    *,
+    repair_soft_copy: bool = False,
+    reproduce_ias_soft_copy: bool = False,
+    generated_soft_copy_payloads: list[dict[str, object]] | None = None,
+    detected_unsupported_claims: list[str] | None = None,
+):
     """Return the legacy chat-completions fixture used by artifact generation."""
 
-    expert_comment_calls = 0
+    soft_copy_calls = {"expert_comment": 0, "linkedin_post": 0}
 
     def respond(call: dict) -> SimpleNamespace:
-        nonlocal expert_comment_calls
-
         response_format = call["response_format"]
         schema_name = response_format.get("json_schema", {}).get("name", "")
         if not schema_name:
@@ -431,9 +460,19 @@ def _full_chain_chat_response_factory(*, repair_soft_copy: bool = False):
                 {"text": {"format": {"name": schema_name}}}
             )
             payload = json.loads(response.output_text)
-            if repair_soft_copy and schema_name == "artifact_expert_comment_v1":
-                expert_comment_calls += 1
-                if expert_comment_calls == 1:
+            family = schema_name.removeprefix("artifact_").removesuffix("_v1")
+            if reproduce_ias_soft_copy and family in soft_copy_calls:
+                soft_copy_calls[family] += 1
+                payload = ias_soft_copy_payload(
+                    family,
+                    repaired=soft_copy_calls[family] > 1,
+                    repaired_expert_comment=_REPAIRED_SOFT_COPY_CLAIM,
+                )
+                if generated_soft_copy_payloads is not None:
+                    generated_soft_copy_payloads.append(dict(payload))
+            elif repair_soft_copy and schema_name == "artifact_expert_comment_v1":
+                soft_copy_calls["expert_comment"] += 1
+                if soft_copy_calls["expert_comment"] == 1:
                     payload = {
                         "expert_comment": _UNSUPPORTED_SOFT_COPY_CLAIM,
                         "claim_provenance": [
@@ -455,21 +494,38 @@ def _full_chain_chat_response_factory(*, repair_soft_copy: bool = False):
                             }
                         ],
                     }
+            unsupported_claims = (
+                IAS_UNSUPPORTED_SOFT_COPY_CLAIMS
+                if reproduce_ias_soft_copy
+                else (("expert_comment", _UNSUPPORTED_SOFT_COPY_CLAIM, ""),)
+            )
+            seen_unsupported_claims = [
+                (section, claim, code)
+                for section, claim, code in unsupported_claims
+                if claim in json.dumps(call, default=str)
+            ]
             if (
-                repair_soft_copy
-                and schema_name == "grounding_validation_output_v1"
-                and _UNSUPPORTED_SOFT_COPY_CLAIM in json.dumps(call, default=str)
+                schema_name == "grounding_validation_output_v1"
+                and seen_unsupported_claims
             ):
+                if detected_unsupported_claims is not None:
+                    detected_unsupported_claims.extend(
+                        claim for _section, claim, _code in seen_unsupported_claims
+                    )
                 payload = {
                     "unsupported": [
                         {
-                            "section": "expert_comment",
-                            "text": _UNSUPPORTED_SOFT_COPY_CLAIM,
+                            "section": section,
+                            "text": claim,
                             "classification": "factual_claim",
                             "entailment_outcome": "not_established",
                             "violation_type": "unsupported_factual_claim",
-                            "reason": "The retained source does not establish this claim.",
+                            "reason": (
+                                "The retained source does not establish this claim"
+                                + (f" ({code})." if code else ".")
+                            ),
                         }
+                        for section, claim, code in seen_unsupported_claims
                     ],
                     "checks": [],
                 }
@@ -495,15 +551,16 @@ def _full_chain_chat_response_factory(*, repair_soft_copy: bool = False):
 
 
 @pytest.mark.parametrize(
-    "repair_soft_copy",
-    (False, True),
-    ids=("clean", "unsupported-soft-copy-repair"),
+    ("repair_soft_copy", "reproduce_ias_soft_copy"),
+    ((False, False), (True, False), (False, True)),
+    ids=("clean", "unsupported-soft-copy-repair", "ias-known-claim-repair"),
 )
 def test_a21_full_chain_from_frozen_cohort_through_awaiting_review(
     tmp_path,
     external_boundary_mocks_only,
     fake_openai,
     repair_soft_copy: bool,
+    reproduce_ias_soft_copy: bool,
 ) -> None:
     """Run the deterministic durable A21 chain with clean and repaired fixtures."""
     external_boundary_mocks_only.setenv("OPENAI_API_KEY", "test-openai-key")
@@ -512,13 +569,24 @@ def test_a21_full_chain_from_frozen_cohort_through_awaiting_review(
     fake_openai.add("vector_stores.files.create", {"id": "file_queue_test"})
     fake_openai.add("vector_stores.retrieve", {"status": "completed"})
     fake_openai.add("vector_stores.update", {"id": "vs_queue_test"})
+    generated_soft_copy_payloads: list[dict[str, object]] = []
+    detected_unsupported_claims: list[str] = []
     fake_openai.add(
         "responses.create",
-        _full_chain_response_factory(repair_soft_copy=repair_soft_copy),
+        _full_chain_response_factory(
+            repair_soft_copy=repair_soft_copy,
+            reproduce_ias_soft_copy=reproduce_ias_soft_copy,
+            detected_unsupported_claims=detected_unsupported_claims,
+        ),
     )
     fake_openai.add(
         "chat.completions.create",
-        _full_chain_chat_response_factory(repair_soft_copy=repair_soft_copy),
+        _full_chain_chat_response_factory(
+            repair_soft_copy=repair_soft_copy,
+            reproduce_ias_soft_copy=reproduce_ias_soft_copy,
+            generated_soft_copy_payloads=generated_soft_copy_payloads,
+            detected_unsupported_claims=detected_unsupported_claims,
+        ),
     )
     config_path = _isolated_app_config(tmp_path)
     settings = build_ingest_settings(
@@ -774,15 +842,48 @@ def test_a21_full_chain_from_frozen_cohort_through_awaiting_review(
     artifacts = json.loads(
         (analysis_dir / "artifacts.json").read_text(encoding="utf-8")
     )
-    if repair_soft_copy:
+    if repair_soft_copy or reproduce_ias_soft_copy:
         regeneration_audit = json.loads(
             (analysis_dir / "regeneration_candidate_audit_1.json").read_text(
                 encoding="utf-8"
             )
         )
-        assert regeneration_audit["transformation_scope"] == ["expert_comment"]
+        expected_scope = (
+            ["expert_comment", "linkedin_post"]
+            if reproduce_ias_soft_copy
+            else ["expert_comment"]
+        )
+        assert regeneration_audit["transformation_scope"] == expected_scope
         assert _UNSUPPORTED_SOFT_COPY_CLAIM not in artifacts["expert_comment"]
         assert artifacts["expert_comment"] == _REPAIRED_SOFT_COPY_CLAIM
+        if reproduce_ias_soft_copy:
+            initial_by_family = {}
+            for payload in generated_soft_copy_payloads:
+                for family in ("expert_comment", "linkedin_post"):
+                    if family in payload:
+                        initial_by_family.setdefault(family, str(payload[family]))
+            assert set(initial_by_family) == {"expert_comment", "linkedin_post"}
+            missing_initial_claims = [
+                claim
+                for family, claim, _code in IAS_UNSUPPORTED_SOFT_COPY_CLAIMS
+                if claim not in initial_by_family[family]
+            ]
+            assert missing_initial_claims == []
+            assert set(detected_unsupported_claims) == {
+                claim for _family, claim, _code in IAS_UNSUPPORTED_SOFT_COPY_CLAIMS
+            }
+            assert (
+                artifacts["linkedin_post"] == "Read the report as an input to planning."
+            )
+            assert regeneration_audit["unchanged_family_sha256"] == {
+                family: sha256_json(artifacts[family])
+                for family in (
+                    "summary",
+                    "insights_candidates",
+                    "insights_final",
+                    "quotes_final",
+                )
+            }
         soft_copy_claims = artifacts["soft_copy_claim_provenance"]["claims"]
         repaired_claims = [
             claim
@@ -797,11 +898,76 @@ def test_a21_full_chain_from_frozen_cohort_through_awaiting_review(
         assert artifacts["linkedin_post"].encode() == (
             b"Read the report as an input to planning."
         )
+        untouched_soft_copy_families = (
+            {"summary"} if reproduce_ias_soft_copy else {"summary", "linkedin_post"}
+        )
         assert all(
             claim["regeneration_attempt"] == 0
             for claim in soft_copy_claims
-            if claim["artifact_family"] in {"summary", "linkedin_post"}
+            if claim["artifact_family"] in untouched_soft_copy_families
         )
+        if reproduce_ias_soft_copy:
+            assert any(
+                claim["artifact_family"] == "linkedin_post"
+                and claim["regeneration_attempt"] == 1
+                for claim in soft_copy_claims
+            )
+            evidence_packs = {
+                name: json.loads(
+                    (analysis_dir / f"{name}.json").read_text(encoding="utf-8")
+                )
+                for name in (
+                    "doc_map",
+                    "findings",
+                    "limitations",
+                    "methods",
+                    "quote_candidates",
+                    "scope",
+                )
+            }
+            retained_claims = validate_retained_claims(
+                artifacts,
+                evidence_packs,
+                semantic_validator=lambda candidate, sources: (
+                    bool(sources) or not candidate.factual,
+                    "fixture_current_schema_evidence",
+                    "fixture-current-schema-semantic-v1",
+                ),
+            )
+            assert retained_claims.readiness_status == "awaiting_review"
+            assert retained_claims.unsupported_factual_count == 0
+            assert retained_claims.unresolved_factual_count == 0
+            assert (
+                json.loads(
+                    (analysis_dir / "validation_regen_candidate_1.json").read_text(
+                        encoding="utf-8"
+                    )
+                )["status"]
+                == "pass"
+            )
+            assert (
+                json.loads(
+                    (
+                        analysis_dir / "public_editorial_quality_regen_attempt_1.json"
+                    ).read_text(encoding="utf-8")
+                )["status"]
+                == "pass"
+            )
+            assert (
+                json.loads(
+                    (analysis_dir / "publish_readiness.json").read_text(
+                        encoding="utf-8"
+                    )
+                )["status"]
+                == "pass"
+            )
+            for family in ("expert_comment", "linkedin_post"):
+                prompt = artifacts["_cache"]["prompts"][
+                    f"report_vs/artifacts/regenerate/{family}"
+                ]
+                assert prompt["namespace"] == f"report_vs/artifacts/regenerate/{family}"
+                assert prompt["execution_identity"]
+                assert prompt["prompt_content_hash"]
         assert entity.first_pass is False
         assert entity.bounded_recovery is True
     else:

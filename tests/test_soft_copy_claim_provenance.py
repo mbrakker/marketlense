@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import json
-from copy import deepcopy
 from dataclasses import asdict
+from hashlib import sha256
 from pathlib import Path
 
 import pytest
@@ -154,95 +154,29 @@ def test_material_soft_copy_sentence_without_declared_binding_is_rejected() -> N
         )
 
 
-def test_materialize_retained_provenance_keeps_legacy_artifact_immutable() -> None:
-    from src.generators.soft_copy_claim_provenance import (
-        materialize_retained_soft_copy_provenance,
-    )
-
-    historical = {
-        "expert_comment": "The survey reports 12% growth.",
-        "linkedin_post": "Leaders should review the survey result.",
-    }
-    before = deepcopy(historical)
-
-    materialized = materialize_retained_soft_copy_provenance(
-        artifacts=historical,
-        declared_claims={
-            "expert_comment": [
-                {
-                    "claim": "The survey reports 12% growth.",
-                    "classification": "factual",
-                    "evidence_ids": ["f1"],
-                }
-            ],
-            "linkedin_post": [
-                {
-                    "claim": "Leaders should review the survey result.",
-                    "classification": "recommendation",
-                    "evidence_ids": ["f1"],
-                }
-            ],
-        },
-        evidence_span_index={"f1": [{"evidence_id": "f1", "page": 1}]},
-        producing_prompt_identities={
-            "expert_comment": {"namespace": "retained/legacy/expert_comment"},
-            "linkedin_post": {"namespace": "retained/legacy/linkedin_post"},
-        },
-        generation_attempt=1,
-    )
-
-    assert historical == before
-    assert materialized is not historical
-    claims = soft_copy_claim_provenance_from_payload(
-        materialized["soft_copy_claim_provenance"]
-    )
-    assert {(claim.artifact_family, claim.classification) for claim in claims} == {
-        ("expert_comment", "factual"),
-        ("linkedin_post", "recommendation"),
-    }
-
-
-def test_retained_ias_declaration_covers_the_immutable_historical_soft_copy() -> None:
-    from src.generators.soft_copy_claim_provenance import (
-        materialize_retained_soft_copy_provenance,
-    )
-
+def test_retained_ias_artifact_remains_immutable_before_state_evidence() -> None:
     root = Path(__file__).resolve().parents[1]
-    artifacts = json.loads(
+    artifact_path = (
+        root
+        / "tests/fixtures/docpacks/golden/ias-industry-pulse-report-2026-acig-pdf"
+        / "report_analysis/artifacts.json"
+    )
+    evidence_manifest = json.loads(
         (
             root
-            / "tests/fixtures/docpacks/golden/ias-industry-pulse-report-2026-acig-pdf"
-            / "report_analysis/artifacts.json"
+            / "docs/CTO_evidence/step10_ias_retained_regression_20260912_876c602c"
+            / "manifest.json"
         ).read_text(encoding="utf-8")
     )
-    declaration = json.loads(
-        (
-            root
-            / "tests/fixtures/prompt_grounding_policy"
-            / "retained_ias_claim_declarations.json"
-        ).read_text(encoding="utf-8")
-    )
+    artifact_bytes = artifact_path.read_bytes()
+    artifacts = json.loads(artifact_bytes)
 
-    materialized = materialize_retained_soft_copy_provenance(
-        artifacts=artifacts,
-        declared_claims=declaration["declared_claims"],
-        evidence_span_index=declaration["evidence_span_index"],
-        producing_prompt_identities={
-            family: {"namespace": f"retained/ias/{family}"}
-            for family in declaration["declared_claims"]
-        },
-        generation_attempt=1,
+    assert (
+        sha256(artifact_bytes).hexdigest()
+        == evidence_manifest["fixture"]["historical_artifacts_sha256"]
     )
-
     assert "soft_copy_claim_provenance" not in artifacts
-    claims = soft_copy_claim_provenance_from_payload(
-        materialized["soft_copy_claim_provenance"]
-    )
-    assert {claim.artifact_family for claim in claims} == {
-        "summary",
-        "expert_comment",
-        "linkedin_post",
-    }
+    assert "retained/ias/" not in artifact_bytes.decode("utf-8")
 
 
 @pytest.mark.parametrize(

@@ -30572,6 +30572,12 @@
           },
           "type": "array"
         },
+        "unchanged_family_sha256": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
         "validation_issues": {
           "items": {
             "type": "string"

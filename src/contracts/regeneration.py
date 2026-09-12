@@ -137,7 +137,9 @@ class LineageRegenerationQualityReport:
         metadata={"doc": "Expensive work families safely avoided."}
     )
     estimated_avoided_cost_usd: float | None = field(
-        metadata={"doc": "Known avoided cost, or null when no defensible price is available."}
+        metadata={
+            "doc": "Known avoided cost, or null when no defensible price is available."
+        }
     )
     cost_status: str = field(
         metadata={"doc": "known or unpriced; unpriced never represents free work."}
@@ -270,7 +272,9 @@ class ArtifactRegenerationRequest(SemanticIdContract):
     )
     source_url: str = field(
         default="",
-        metadata={"doc": "Source/report URL context recorded with downstream LLM usage."},
+        metadata={
+            "doc": "Source/report URL context recorded with downstream LLM usage."
+        },
     )
     schema_version: str = field(
         default="1.0", metadata={"doc": "Artifact regeneration request schema version."}
@@ -321,9 +325,7 @@ class RegenerationEvidenceLineage:
         metadata={"doc": "Artifact family: summary_claim, insight, or quote."}
     )
     entity_id: str = field(
-        metadata={
-            "doc": "Stable original claim or insight identity within its family."
-        }
+        metadata={"doc": "Stable original claim or insight identity within its family."}
     )
     original_evidence_ids: List[str] = field(
         default_factory=list,
@@ -343,9 +345,7 @@ class RegenerationEvidenceLineage:
     )
     validation_issues: List[str] = field(
         default_factory=list,
-        metadata={
-            "doc": "Bounded validation issue codes associated with the entity."
-        },
+        metadata={"doc": "Bounded validation issue codes associated with the entity."},
     )
     schema_version: str = field(
         default="1.0",
@@ -367,6 +367,15 @@ class RegenerationCandidateAudit:
     transformation_scope: List[str] = field(
         default_factory=list,
         metadata={"doc": "Regenerated artifact families in this candidate."},
+    )
+    unchanged_family_sha256: Dict[str, str] = field(
+        default_factory=dict,
+        metadata={
+            "doc": (
+                "Canonical hashes of claim-bearing artifact families proven "
+                "byte-equivalent before and after this candidate repair."
+            )
+        },
     )
     current_artifacts_path: str = field(
         default="",
