@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from src.orchestrators.ias_live_canary_orchestrator import run_ias_first_attempt_canary
+from scripts.quality.ias_live_canary_runner import run_ias_first_attempt_canary
 
 
 def main() -> int:

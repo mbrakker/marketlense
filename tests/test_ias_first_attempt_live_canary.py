@@ -3,7 +3,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from src.orchestrators.ias_live_canary_orchestrator import (
+from scripts.quality.ias_live_canary_runner import (
     prepare_isolated_canary_run,
     run_ias_first_attempt_canary,
 )

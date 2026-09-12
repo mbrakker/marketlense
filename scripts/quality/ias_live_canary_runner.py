@@ -1,4 +1,4 @@
-"""One isolated live IAS first-attempt canary using the production queue."""
+"""Operational runner for one isolated live IAS first-attempt canary."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
+from statistics import median
 from typing import Any
 
 import yaml
@@ -132,7 +133,9 @@ def prepare_isolated_canary_run(*, runs_root: Path) -> IsolatedCanaryRun:
 def _isolated_config(
     *, root: Path, paths: dict[str, Path], cost_paths: dict[str, Path]
 ) -> dict[str, Any]:
-    base_config_path = Path(__file__).resolve().parents[1] / "config" / "app.yaml"
+    base_config_path = (
+        Path(__file__).resolve().parents[2] / "src" / "config" / "app.yaml"
+    )
     config = copy.deepcopy(yaml.safe_load(base_config_path.read_text(encoding="utf-8")))
     if not isinstance(config, dict):
         raise RuntimeError("Base application configuration must be a mapping")
@@ -290,6 +293,130 @@ def run_ias_first_attempt_canary(
         result["terminal_failure_code"] = exc.code
     except Exception:
         result["terminal_failure_code"] = "ias_canary_runner_defect"
+    finally:
+        result["total_duration_seconds"] = round(time.monotonic() - started_at, 3)
+        _write_result(run.root / "result.json", result)
+    return result
+
+
+def run_first_attempt_canary(
+    *,
+    runs_root: Path,
+    source_path: Path,
+    max_duration_seconds: int = 7_200,
+) -> dict[str, Any]:
+    """Run one non-IAS source through the same one-attempt queue path."""
+
+    started_at = time.monotonic()
+    run = prepare_isolated_canary_run(runs_root=runs_root)
+    result = _empty_result(run, started_at)
+    try:
+        if not source_path.is_file():
+            result["terminal_failure_code"] = "frozen_cohort_source_missing"
+            return result
+        ctx = new_runtime_context(task_id="frozen_reliability_cohort")
+        settings = build_ingest_settings(
+            IngestSettingsBuildRequest(
+                schema_version="1.0",
+                app_settings=load_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=str(run.config_path)),
+                    ctx,
+                ),
+            ),
+            ctx,
+        )
+        _assert_empty_stores(run=run, settings=settings)
+        source_hash = hashlib.md5(
+            source_path.read_bytes(), usedforsecurity=False
+        ).hexdigest()
+        report_id = f"cohort-{source_hash[:20]}"
+        result["report_id"] = report_id
+        source = DriveFile(
+            schema_version="1.0",
+            file_id=report_id,
+            name=source_path.name,
+            modified_time=None,
+            md5_checksum=source_hash,
+            mime_type="application/pdf",
+        )
+        runtime_preflight = preflight_report_pipeline(settings, ctx)
+        admission = run_admission_preflight(
+            AdmissionPreflightRequest(
+                file=source,
+                source_artifact_path=str(source_path.resolve()),
+                settings=settings,
+                runtime_preflight_passed=runtime_preflight.passed,
+                runtime_preflight_hash=pipeline_preflight_decision_hash(
+                    runtime_preflight
+                ),
+                configuration_hash=admission_configuration_hash(settings),
+                policy_hash=admission_policy_hash(settings),
+                known_source_identities={},
+                known_title_keys={},
+            ),
+            ctx,
+        )
+        decision = admission_decision_payload(admission.decision)
+        result["source_identity_id"] = str(decision.get("source_identity_id") or "")
+        result["publisher_id"] = str(decision.get("publisher_id") or "")
+        if not admission.admitted:
+            result["terminal_failure_code"] = (
+                f"frozen_cohort_admission_{admission.decision.outcome}"
+            )
+            return result
+        cohort_manifest = run.root / "cohort" / "source.json"
+        _frozen_cohort(
+            cohort_size=1,
+            cohort_manifest=str(cohort_manifest),
+            selected_files=[source],
+            settings=settings,
+            deps=IngestBatchDependencies.default(),
+            root_ctx=ctx,
+            admission_decisions=[decision],
+        )
+        submission = submit_frozen_validation_cohort_to_queue(
+            FrozenValidationCohortQueueSubmissionRequest(
+                schema_version="1.0",
+                state_db=settings.state_db,
+                reports_db=settings.reports_db,
+                cohort_manifest=str(cohort_manifest),
+                source_ingest_payloads=(
+                    SourceIngestPayload(
+                        source_identity_id=str(decision["source_identity_id"]),
+                        source_artifact_reference=str(source_path.resolve()),
+                        source_content_hash=source_hash,
+                        report_id=report_id,
+                        parser_ocr_compatibility_version="parser.v1",
+                        input_reference=str(source_path.resolve()),
+                        input_content_hash=source_hash,
+                        processing_version="parser.v1",
+                        attributes={"config_path": str(run.config_path)},
+                    ),
+                ),
+            ),
+            ctx,
+        )
+        result["workflow_root_id"] = str(submission.root_workflow_id)
+        _drain_report_path(
+            state_db=settings.state_db,
+            report_id=report_id,
+            root_workflow_id=str(submission.root_workflow_id),
+            ctx=ctx,
+            max_duration_seconds=max_duration_seconds,
+        )
+        result.update(
+            _read_result(
+                settings=settings,
+                report_id=report_id,
+                validation_run_id=str(submission.validation_run_id),
+                root_workflow_id=str(submission.root_workflow_id),
+                ctx=ctx,
+            )
+        )
+    except AppError as exc:
+        result["terminal_failure_code"] = exc.code
+    except Exception:
+        result["terminal_failure_code"] = "frozen_cohort_runner_defect"
     finally:
         result["total_duration_seconds"] = round(time.monotonic() - started_at, 3)
         _write_result(run.root / "result.json", result)
@@ -598,3 +725,53 @@ def _write_result(path: Path, result: dict[str, Any]) -> None:
     path.write_text(
         json.dumps(result, sort_keys=True, separators=(",", ":")), encoding="utf-8"
     )
+
+
+def summarize_frozen_cohort_results(
+    results: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Summarize every frozen admitted member without changing its denominator."""
+
+    count = len(results)
+    denominator = max(1, count)
+    costs = [float(item.get("cost") or 0.0) for item in results]
+    durations = [float(item.get("total_duration_seconds") or 0.0) for item in results]
+    failures = [
+        str(item.get("terminal_failure_code") or "")
+        for item in results
+        if str(item.get("terminal_failure_code") or "")
+    ]
+    pareto = {code: failures.count(code) for code in sorted(set(failures))}
+    return {
+        "report_count": count,
+        "first_attempt_awaiting_review_rate": sum(
+            bool(item.get("awaiting_review"))
+            and int(item.get("workflow_attempt_count") or 1) == 1
+            for item in results
+        )
+        / denominator,
+        "publication_readiness_rate": sum(
+            item.get("publication_readiness") == "pass" for item in results
+        )
+        / denominator,
+        "bounded_repair_rate": sum(
+            bool(item.get("bounded_automatic_repair")) for item in results
+        )
+        / denominator,
+        "workflow_failure_rate": sum(
+            item.get("final_state") != "awaiting_review" for item in results
+        )
+        / denominator,
+        "typed_terminal_rate": sum(
+            item.get("final_state") in {"awaiting_review", "failed"} for item in results
+        )
+        / denominator,
+        "operator_intervention_count": sum(
+            bool(item.get("operator_intervention")) for item in results
+        ),
+        "failure_code_pareto": pareto,
+        "mean_cost": round(sum(costs) / denominator, 6),
+        "median_cost": round(median(costs), 6) if costs else 0.0,
+        "mean_duration_seconds": round(sum(durations) / denominator, 3),
+        "median_duration_seconds": round(median(durations), 3) if durations else 0.0,
+    }

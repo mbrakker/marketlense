@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0",
+  "cohort_name": "frozen_representative_reliability_20",
+  "members": [
+    {"source_path": "out/browser_downloads/www.capgemini.com/c3d75e99ed7c/Final-Web-Version-Report-Consumer-Trends-2026.pdf"},
+    {"source_path": "out/browser_downloads/cdn.sanity.io/b224e6d4d2bc/d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf"},
+    {"source_path": "out/browser_downloads/doubleverify.com/2710ece9fc61/DV_QualityandAttentionBenchmark_Q1_2026.pdf"},
+    {"source_path": "out/browser_downloads/kpmg.com/d2cdf31f6df8/kpmg-2026-global-ma-outlook.pdf"},
+    {"source_path": "out/browser_downloads/reutersinstitute.politics.ox.ac.uk/b0e410340498/Trends_and_Predictions_2026.pdf"},
+    {"source_path": "out/browser_downloads/merchantriskcouncil.org/d649ea17ec88/2026_global_payments_and_fraud_report.pdf"},
+    {"source_path": "out/browser_downloads/www.adjust.com/b6b998e34a7c/mobile-app-trends-2026.pdf"},
+    {"source_path": "out/browser_downloads/www.algolia.com/2ef62190c537/2026%20B2C%20ecommerce%20AI%20trends_eBook_EN_2.pdf"},
+    {"source_path": "out/browser_downloads/www.bain.com/9e6d7f717c38/tech-tonic-shifts.pdf"},
+    {"source_path": "out/browser_downloads/www.bigcommerce.com/e72f39fe19e5/ebook_0225_future_commerce_new_modes_guide_en_us.pdf"},
+    {"source_path": "out/browser_downloads/www.criteo.com/1fd90493947a/Agency-Guide-Report-Criteo.pdf"},
+    {"source_path": "out/browser_downloads/www.deloitte.com/0b9f54f8fa8d/q1-2026-emerging-retail-and-consumer-trends.pdf"},
+    {"source_path": "out/browser_downloads/www.dhl.com/21a23a924cea/g0-ec-trends-report-2026.pdf"},
+    {"source_path": "out/browser_downloads/s3.amazonaws.com/29d97ddbfdbb/EMPLIFI_Digital_Authenticity_AI_2026.pdf"},
+    {"source_path": "out/browser_downloads/www.qualtrics.com/4a9ec0a6bf77/EX_Trends_AMR_020326.pdf"},
+    {"source_path": "out/browser_downloads/www.stackadapt.com/4ee9fe55e371/StackAdapt_Retail-Marketing-Trends_Report_2026.pdf"},
+    {"source_path": "out/browser_downloads/www.robeco.com/67321530add3/docu-202601-active-ownership-report-q4-en.pdf"},
+    {"source_path": "out/browser_downloads/www.similarweb.com/5935ab3c37c2/attachment-The-Sales-Signals-Playbook-4.pdf"},
+    {"source_path": "out/browser_downloads/azure-na-assets.contentstack.com/de0971e49916/2026_Global_Connected_Consumer_Trends_Report.pdf"},
+    {"source_path": "out/browser_downloads/www.mintel.com/fb6bb01f2666/2026_Global_Food_and_Drink_Predictions.pdf"}
+  ]
+}

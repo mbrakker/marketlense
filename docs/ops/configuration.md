@@ -62,7 +62,10 @@ uses its containing directory as its portable workspace. Provider rate-card
 paths remain relative to their configuration file so an external profile can
 ship its matching rate card together.
 
-An isolated live-canary profile must declare `paths.canary_state_root`. Before
+An isolated live-canary profile must declare `paths.canary_state_root`. The
+operational canary runner belongs under `scripts/quality/`; production
+orchestrators do not directly create its files, inspect its SQLite state, or
+invoke processes. Before
 any provider work, pipeline preflight resolves the output, cache, state,
 reports, signal, lock, usage-ledger, and cost-ledger paths and rejects the
 profile if any lies outside that root. The profile must give the usage ledger
