@@ -135,12 +135,35 @@ def soft_copy_claim_bindings_cover_public_text(
         for binding in claim_bindings
         if isinstance(binding, dict) and str(binding.get("claim") or "").strip()
     }
-    sentences = [
-        " ".join(sentence.split())
-        for sentence in re.split(r"(?<=[.!?])\s+", text)
-        if " ".join(sentence.split())
-    ]
+    sentences = soft_copy_material_sentences(text)
     return bool(declared) and all(sentence in declared for sentence in sentences)
+
+
+def soft_copy_material_sentences(text: object) -> list[str]:
+    """Split public prose without treating an initialism as a sentence end.
+
+    Provenance declares complete public sentences.  ``U.K. digital media`` is
+    one such sentence, not the two fragments produced by a punctuation-only
+    splitter.  The lowercase continuation condition keeps a genuine terminal
+    initialism followed by a new capitalized sentence fail-closed.
+    """
+
+    fragments = [
+        " ".join(fragment.split())
+        for fragment in re.split(r"(?<=[.!?])\s+", " ".join(str(text or "").split()))
+        if " ".join(fragment.split())
+    ]
+    sentences: list[str] = []
+    for fragment in fragments:
+        if (
+            sentences
+            and re.search(r"(?:\b[A-Za-z]\.){2,}$", sentences[-1])
+            and fragment[:1].islower()
+        ):
+            sentences[-1] = f"{sentences[-1]} {fragment}"
+        else:
+            sentences.append(fragment)
+    return sentences
 
 
 def valid_soft_copy_evidence_selection(
