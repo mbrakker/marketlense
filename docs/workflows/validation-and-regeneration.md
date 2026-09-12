@@ -270,6 +270,8 @@ known bad propositions through the canonical artifact boundary, then follow
 the ordinary claim-scoped candidate validation and bounded-regeneration path.
 The historical artifact remains before-state evidence only; its missing
 provenance remains fail-closed rather than being adapted into a repair input.
+Its retained checksum is computed from canonical LF Git-blob bytes so the
+evidence remains stable across platform checkout line endings.
 
 When a queue payload sets `claim_validation_required`, publication readiness
 accepts only a readable package in `awaiting_review` with zero unsupported and

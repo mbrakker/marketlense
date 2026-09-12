@@ -169,10 +169,11 @@ def test_retained_ias_artifact_remains_immutable_before_state_evidence() -> None
         ).read_text(encoding="utf-8")
     )
     artifact_bytes = artifact_path.read_bytes()
+    canonical_artifact_bytes = artifact_bytes.replace(b"\r\n", b"\n")
     artifacts = json.loads(artifact_bytes)
 
     assert (
-        sha256(artifact_bytes).hexdigest()
+        sha256(canonical_artifact_bytes).hexdigest()
         == evidence_manifest["fixture"]["historical_artifacts_sha256"]
     )
     assert "soft_copy_claim_provenance" not in artifacts

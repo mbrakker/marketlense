@@ -8,7 +8,8 @@
     "source_path": "tests/fixtures/pdf_benchmark/golden/IAS - Industry_Pulse_Report_2026_ACIG.pdf",
     "source_sha256": "8b05b13067748baebff51844a702a05dd6eb560706db5fa94b2ee5badbd672cd",
     "historical_artifacts_path": "tests/fixtures/docpacks/golden/ias-industry-pulse-report-2026-acig-pdf/report_analysis/artifacts.json",
-    "historical_artifacts_sha256": "cc41e608f7aac2ca428598510f87bc5b06fc130aeb320b0c2ae889fa4a71a53a",
+    "historical_artifacts_sha256": "aa5b4ab41b16c374cdd1e2ff08458575213b89b605f1994d3f05a64236424e43",
+    "historical_artifacts_hash_format": "git_blob_lf_bytes",
     "historical_validation_path": "tests/fixtures/docpacks/golden/ias-industry-pulse-report-2026-acig-pdf/report_analysis/validation.json",
     "historical_validation_sha256": "ccfedc5ce80adfc982c0ebaf27f5e6167f7467a1793a8196c47782e71fa2569d"
   },

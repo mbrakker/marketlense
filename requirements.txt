@@ -7,7 +7,7 @@ rich==14.3.1
 python-dotenv==1.2.2
 Pillow==12.3.0
 pymupdf==1.26.7
-pypdf==6.15.0
+pypdf==6.16.1
 pdfplumber==0.11.9
 PyYAML==6.0.3
 requests==2.33.0
