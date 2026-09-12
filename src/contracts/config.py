@@ -706,6 +706,15 @@ class AppSettings:
             "doc": "Deterministic cross-report signal score weights loaded from YAML."
         },
     )
+    canary_state_root: str = field(
+        default="",
+        metadata={
+            "doc": (
+                "Optional absolute root that must contain every mutable canary "
+                "runtime path before provider work begins."
+            )
+        },
+    )
 
 
 @dataclass(frozen=True)

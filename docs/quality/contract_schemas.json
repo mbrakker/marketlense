@@ -15111,6 +15111,9 @@
         "cache_dir": {
           "type": "string"
         },
+        "canary_state_root": {
+          "type": "string"
+        },
         "candidate_page_gate_enabled": {
           "type": "boolean"
         },
@@ -21461,6 +21464,9 @@
           "type": "integer"
         },
         "cache_dir": {
+          "type": "string"
+        },
+        "canary_state_root": {
           "type": "string"
         },
         "candidate_page_gate_enabled": {

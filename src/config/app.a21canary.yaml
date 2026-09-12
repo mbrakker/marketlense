@@ -1,7 +1,16 @@
 paths:
+  canary_state_root: "./tmp/a21_canary_isolated4_af16661c"
   output_dir: "./tmp/a21_canary_isolated4_af16661c/out"
   cache_dir: "./tmp/a21_canary_isolated4_af16661c/cache"
   state_db: "./tmp/a21_canary_isolated4_af16661c/state.sqlite"
   reports_db: "./tmp/a21_canary_isolated4_af16661c/reports.sqlite"
   signal_store_db: "./tmp/a21_canary_isolated4_af16661c/signals.sqlite"
   ingest_lock: "./tmp/a21_canary_isolated4_af16661c/ingest.lock"
+
+analysis:
+  cost_ledger_path: "./tmp/a21_canary_isolated4_af16661c/llm_cost_ledger.jsonl"
+
+cost:
+  usage_db_path: "./tmp/a21_canary_isolated4_af16661c/llm_usage.sqlite"
+  daily_path: "./tmp/a21_canary_isolated4_af16661c/llm_cost_daily.json"
+  ledger_path: "./tmp/a21_canary_isolated4_af16661c/llm_cost_ledger.jsonl"

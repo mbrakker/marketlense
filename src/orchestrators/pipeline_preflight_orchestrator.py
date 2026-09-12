@@ -134,15 +134,18 @@ def run_pipeline_preflight(
         )
     )
     checks: list[PipelinePreflightCheck] = []
-    checks.extend(_check_local_paths(request, ctx, deps))
-    checks.extend(_check_llm(request))
-    checks.extend(_check_llm_policy_coverage(request))
-    checks.extend(_check_prompts(request, ctx, deps))
-    checks.extend(_check_drive(request, ctx, deps))
-    checks.extend(_check_browser(request))
-    checks.extend(_check_publish(request, ctx, deps))
+    checks.extend(_check_canary_mutable_state_root(request))
+    if not any(check.status == "blocker" for check in checks):
+        checks.extend(_check_local_paths(request, ctx, deps))
+        checks.extend(_check_llm(request))
+        checks.extend(_check_llm_policy_coverage(request))
+        checks.extend(_check_prompts(request, ctx, deps))
+        checks.extend(_check_drive(request, ctx, deps))
+        checks.extend(_check_browser(request))
+        checks.extend(_check_publish(request, ctx, deps))
     report = _build_report(request, checks)
-    _persist_resolved_policy_matrix(report, request, ctx, deps)
+    if report.expensive_side_effects_allowed:
+        _persist_resolved_policy_matrix(report, request, ctx, deps)
     logger.info(
         log_event(
             ctx,
@@ -161,6 +164,56 @@ def run_pipeline_preflight(
         )
     )
     return report
+
+
+def _check_canary_mutable_state_root(
+    request: PipelinePreflightRequest,
+) -> list[PipelinePreflightCheck]:
+    """Reject canary accounting or runtime state that escapes its declared root."""
+
+    raw_root = str(getattr(request.settings, "canary_state_root", "") or "").strip()
+    if not raw_root:
+        return []
+    root = Path(raw_root).resolve()
+    mutable_paths = (
+        ("output_dir", request.settings.output_dir),
+        ("cache_dir", request.settings.cache_dir),
+        ("state_db", request.settings.state_db),
+        ("reports_db", request.settings.reports_db),
+        ("signal_store_db", request.settings.signal_store_db),
+        ("ingest_lock_path", request.settings.ingest_lock_path),
+        ("usage_db_path", request.settings.usage_db_path),
+        ("cost_ledger_path", request.settings.cost_ledger_path),
+        ("cost_daily_path", request.settings.cost_daily_path),
+    )
+    for name, raw_path in mutable_paths:
+        resolved_path = Path(str(raw_path)).resolve()
+        try:
+            resolved_path.relative_to(root)
+        except ValueError:
+            return [
+                _check(
+                    f"canary_mutable_state:{name}",
+                    "blocker",
+                    "canary_mutable_state_outside_root",
+                    "Canary mutable state path is outside its isolated state root",
+                    f"set_canary_mutable_path:{name}",
+                    metadata={
+                        "canary_state_root": str(root),
+                        "path": str(resolved_path),
+                    },
+                )
+            ]
+    return [
+        _check(
+            "canary_mutable_state_root",
+            "pass",
+            "canary_mutable_state_isolated",
+            "Every mutable canary state path is under the isolated state root",
+            "continue",
+            metadata={"canary_state_root": str(root)},
+        )
+    ]
 
 
 def assert_expensive_side_effects_allowed(

@@ -442,6 +442,103 @@ def test_pipeline_preflight_blocks_unwritable_usage_ledger_path(
     assert report.blockers[-1].next_action == "fix_path_permissions:usage_db"
 
 
+def test_pipeline_preflight_blocks_canary_usage_ledger_outside_isolation_root(
+    tmp_path,
+    ingest_settings,
+) -> None:
+    """Catch a canary that would write usage rows into historical state."""
+
+    settings = replace(
+        ingest_settings,
+        canary_state_root=str(tmp_path / "a21-state"),
+        output_dir=str(tmp_path / "a21-state" / "out"),
+        cache_dir=str(tmp_path / "a21-state" / "cache"),
+        state_db=str(tmp_path / "a21-state" / "state.sqlite"),
+        reports_db=str(tmp_path / "a21-state" / "reports.sqlite"),
+        signal_store_db=str(tmp_path / "a21-state" / "signals.sqlite"),
+        ingest_lock_path=str(tmp_path / "a21-state" / "ingest.lock"),
+        cost_ledger_path=str(tmp_path / "a21-state" / "cost-ledger.jsonl"),
+        cost_daily_path=str(tmp_path / "a21-state" / "cost-daily.json"),
+        usage_db_path=str(tmp_path / "historical" / "llm_usage.sqlite"),
+    )
+
+    report = run_pipeline_preflight(
+        PipelinePreflightRequest(
+            schema_version="1.0",
+            workflow="report_pipeline",
+            planned_side_effects=["model"],
+            settings=settings,
+            prompt_namespaces=[],
+            require_llm=False,
+            require_drive=False,
+            require_publish=False,
+            require_browser=False,
+            require_live_endpoints=False,
+        ),
+        _ctx(),
+        dependencies=_deps(tmp_path),
+    )
+
+    assert report.passed is False
+    assert report.blockers[0].check_name == "canary_mutable_state:usage_db_path"
+    assert report.blockers[0].code == "canary_mutable_state_outside_root"
+
+
+def test_pipeline_preflight_rejects_escaped_canary_state_before_live_probe(
+    tmp_path,
+    ingest_settings,
+) -> None:
+    """Catch a root violation before a configured live dependency can be probed."""
+
+    root = tmp_path / "a21-state"
+    settings = replace(
+        ingest_settings,
+        canary_state_root=str(root),
+        output_dir=str(root / "out"),
+        cache_dir=str(root / "cache"),
+        state_db=str(root / "state.sqlite"),
+        reports_db=str(root / "reports.sqlite"),
+        signal_store_db=str(root / "signals.sqlite"),
+        ingest_lock_path=str(root / "ingest.lock"),
+        cost_ledger_path=str(root / "cost-ledger.jsonl"),
+        cost_daily_path=str(root / "cost-daily.json"),
+        usage_db_path=str(tmp_path / "historical" / "llm_usage.sqlite"),
+        gdrive_folder_id="drive-folder",
+    )
+    deps = _deps(tmp_path)
+    deps = PipelinePreflightDependencies(
+        file_stat=deps.file_stat,
+        write_bytes=deps.write_bytes,
+        delete_file=deps.delete_file,
+        load_prompt_set=deps.load_prompt_set,
+        preflight_drive_write_access=lambda request, ctx: pytest.fail(
+            "live Drive preflight must not run after canary isolation fails"
+        ),
+        preflight_wordpress_publish_target=deps.preflight_wordpress_publish_target,
+    )
+
+    report = run_pipeline_preflight(
+        PipelinePreflightRequest(
+            schema_version="1.0",
+            workflow="report_pipeline",
+            planned_side_effects=["model"],
+            settings=settings,
+            prompt_namespaces=[],
+            require_llm=False,
+            require_drive=True,
+            require_publish=False,
+            require_browser=False,
+            require_live_endpoints=True,
+        ),
+        _ctx(),
+        dependencies=deps,
+    )
+
+    assert [check.code for check in report.blockers] == [
+        "canary_mutable_state_outside_root"
+    ]
+
+
 def test_pipeline_preflight_surfaces_drive_oauth_refresh_as_auto_fix(
     tmp_path,
     ingest_settings,

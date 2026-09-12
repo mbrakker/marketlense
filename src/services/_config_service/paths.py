@@ -58,6 +58,10 @@ def _resolve_paths_settings(
     if _is_missing(lock_path_raw):
         lock_path_raw = str(Path(state_db).parent / "ingest.lock")
     return {
+        "canary_state_root": _resolve_optional_path(
+            paths.get("canary_state_root"),
+            base_path=runtime_base_path,
+        ),
         "output_dir": output_dir,
         "cache_dir": cache_dir,
         "state_db": state_db,

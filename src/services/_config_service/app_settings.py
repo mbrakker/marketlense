@@ -353,6 +353,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         state_db=paths_settings["state_db"],
         reports_db=paths_settings["reports_db"],
         signal_store_db=paths_settings["signal_store_db"],
+        canary_state_root=paths_settings["canary_state_root"],
         publisher_profiles_path=paths_settings["publisher_profiles_path"],
         category_mapping_path=paths_settings["category_mapping_path"],
         cover_style_path=paths_settings["cover_style_path"],

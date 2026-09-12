@@ -614,6 +614,15 @@ class IngestSettings:
             "doc": "Explicit release-waiver reasons keyed by disabled public editorial quality rule ID."
         },
     )
+    canary_state_root: str = field(
+        default="",
+        metadata={
+            "doc": (
+                "Optional absolute root that must contain every mutable canary "
+                "runtime path before provider work begins."
+            )
+        },
+    )
 
 
 @dataclass(frozen=True)

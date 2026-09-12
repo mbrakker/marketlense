@@ -62,6 +62,15 @@ uses its containing directory as its portable workspace. Provider rate-card
 paths remain relative to their configuration file so an external profile can
 ship its matching rate card together.
 
+An isolated live-canary profile must declare `paths.canary_state_root`. Before
+any provider work, pipeline preflight resolves the output, cache, state,
+reports, signal, lock, usage-ledger, and cost-ledger paths and rejects the
+profile if any lies outside that root. The profile must give the usage ledger
+its own path under that root; a retained historical P6/P7 ledger is not a
+valid canary input. Source PDFs and versioned configuration mappings may stay
+outside the root because they are immutable inputs, but derived run state may
+not be reused.
+
 The important operator sections are `paths`, `ingest`, `publish`, `browser_download`, `mailbox_acquisition`, `publisher_discovery`, and `workflow_control`. The committed base leaves both recovery reapers and the supervisor disabled. The reviewed `MARKET_LENSE_CONFIG_PROFILE=autonomous_mvp` overlay enables the lease-protected supervisor plus remediation and deferred-work reapers with a two-record limit each; normal queue-worker batches remain disabled so the existing durable workers retain execution ownership. `workflow_control.remediation_reaper.execution_enabled` and `workflow_control.deferred_work_reaper.execution_enabled` remain independent rollback gates, while their record limits, lease duration, and retry delay bound each invocation. `openai_models`, `llm_routing`, `llm_execution_policies`, and `cost` govern model routing and accounting. `llm_execution_policies` is the versioned namespace policy for provider/model, sampling, output limits, timeout, structured-output mode, compaction, pricing key, and same-provider fallback. Settings startup resolves the complete finite production namespace inventory before any provider client can be used; an unknown or uncovered reachable namespace rejects configuration. The workflow preflight then retains the exact resolved namespace/provider/model/full-policy matrix and policy hashes with the run-owned artifacts. Provider-owned retries remain forbidden and workflow retry policy remains orchestrator-owned. The compatibility adapter preserves historical non-report namespaces until they are explicitly migrated. An external host owns recurrence for `workflow_control.supervisor`; the command itself is one-shot.
 
 Evidence-constrained first-pass artifact families use exact execution-policy

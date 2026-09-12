@@ -106,3 +106,64 @@ assert settings.openai_api_key == ''
     )
 
     assert result.returncode == 0, result.stderr
+
+
+def test_a21_profile_resolves_mutable_stores_beneath_its_canary_root(
+    tmp_path: Path,
+) -> None:
+    """Catch a profile falling back to a historical usage ledger."""
+
+    workspace = Path(__file__).resolve().parents[1]
+    script = """
+from pathlib import Path
+
+from src.contracts.config import ConfigLoadRequest
+from src.contracts.run_context import RunContext
+from src.services.config_service import load_settings
+
+ctx = RunContext(schema_version='1.0', run_id='a21-profile', task_id='test', span_id='test')
+settings = load_settings(ConfigLoadRequest(schema_version='1.0', path=''), ctx)
+root = Path(settings.canary_state_root).resolve()
+assert root.name == 'a21_canary_isolated4_af16661c'
+for raw_path in (
+    settings.output_dir,
+    settings.cache_dir,
+    settings.state_db,
+    settings.reports_db,
+    settings.signal_store_db,
+    settings.ingest_lock_path,
+    settings.usage_db_path,
+    settings.cost_ledger_path,
+    settings.cost_daily_path,
+):
+    Path(raw_path).resolve().relative_to(root)
+assert Path(settings.usage_db_path).name == 'llm_usage.sqlite'
+assert 'p6_source_fidelity_acceptance' not in settings.usage_db_path.lower()
+"""
+    environment = dict(os.environ)
+    for key in (
+        "GDRIVE_FOLDER_ID",
+        "OPENAI_API_KEY",
+        "OPENROUTER_API_KEY",
+        "MARKET_LENSE_CONFIG_PATH",
+        "MARKET_LENSE_CONFIG_PROFILE",
+    ):
+        environment.pop(key, None)
+    environment["MARKET_LENSE_CONFIG_PATH"] = str(
+        workspace / "src" / "config" / "app.yaml"
+    )
+    environment["MARKET_LENSE_CONFIG_PROFILE"] = "a21canary"
+    environment["PYTHONPATH"] = os.pathsep.join(
+        value for value in (str(workspace), environment.get("PYTHONPATH", "")) if value
+    )
+
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=tmp_path,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
