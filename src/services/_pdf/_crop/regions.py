@@ -53,6 +53,7 @@ CROP_FILENAME_ID_MAX_LEN = 96
 CROP_FILENAME_MAX_LEN = 96
 _WINDOWS_SAFE_ARTIFACT_PATH_LENGTH = 240
 _FINGERPRINT_SIDECAR_SUFFIX = ".fingerprint.json"
+_FINGERPRINT_TEMP_SUFFIX_LENGTH = len(".fingerprint.json.tmp-write-") + 10
 
 
 @dataclass(frozen=True)
@@ -94,6 +95,35 @@ def _crop_output_filename(
         compact_stem=item_slug,
         extension=".png",
         max_length=min(CROP_FILENAME_MAX_LEN, available_filename_length),
+    )
+
+
+def _bounded_crop_report_name(
+    out_root: Path,
+    report_name: str,
+    subdir: str,
+    filename: str,
+) -> str:
+    """Keep crop artifacts and their sidecar temporary files path-safe on Windows."""
+    if _crop_artifact_temp_path_length(out_root, report_name, subdir, filename) <= (
+        _WINDOWS_SAFE_ARTIFACT_PATH_LENGTH
+    ):
+        return report_name
+    digest = hashlib.sha256(report_name.encode("utf-8")).hexdigest()[:12]
+    base_length = _crop_artifact_temp_path_length(out_root, digest, subdir, filename)
+    prefix_budget = max(0, _WINDOWS_SAFE_ARTIFACT_PATH_LENGTH - base_length - 1)
+    prefix = report_name[:prefix_budget].rstrip(" .-_")
+    return f"{prefix}-{digest}" if prefix else digest
+
+
+def _crop_artifact_temp_path_length(
+    out_root: Path,
+    report_name: str,
+    subdir: str,
+    filename: str,
+) -> int:
+    return len(str(out_root.resolve() / report_name / subdir / filename)) + (
+        _FINGERPRINT_TEMP_SUFFIX_LENGTH
     )
 
 
@@ -162,9 +192,17 @@ def _crop_regions(
     artifact_cache=None,
     ctx: RunContext | None = None,
 ) -> tuple[List[str], List[CropOutcome]]:
+    out_root = Path(out_dir)
     safe_report_name = safe_path_segment(report_name, fallback="report")
     safe_subdir = safe_path_segment(subdir or "slices", fallback="slices")
-    output_dir = Path(out_dir) / safe_report_name / safe_subdir
+    provisional_filename = "crop-artifact-placeholder.png"
+    safe_report_name = _bounded_crop_report_name(
+        out_root,
+        safe_report_name,
+        safe_subdir,
+        provisional_filename,
+    )
+    output_dir = out_root / safe_report_name / safe_subdir
     output_dir.mkdir(parents=True, exist_ok=True)
     paths: list[str] = []
     outcomes: list[CropOutcome] = []

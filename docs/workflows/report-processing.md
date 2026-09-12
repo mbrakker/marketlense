@@ -25,11 +25,14 @@ reach the blocking publication boundary; it never reports a package as ready
 with orphaned card assets.
 
 PDF previews, refinements, and crop regions keep fingerprint sidecars beside
-their rendered artifacts. Concurrent workers may produce the same eligible
-artifact, so each sidecar write uses a unique temporary file followed by an
-atomic replace. A bounded retry absorbs transient Windows replacement
-contention. This makes the cache race-safe without treating a missing sidecar
-as a valid cache hit; an interrupted write is simply regenerated.
+their rendered artifacts. Crop artifact filenames and, when a deep workspace
+would otherwise exceed the Windows-safe path budget, their report directory
+are deterministically compacted with a content-derived suffix. Concurrent
+workers may produce the same eligible artifact, so each sidecar write uses a
+unique temporary file followed by an atomic replace. A bounded retry absorbs
+transient Windows replacement contention. This makes the cache race-safe
+without treating a missing sidecar as a valid cache hit; an interrupted write
+is simply regenerated.
 If a report pipeline still observes a missing local processing artifact, it
 maps that OS-level condition to the configured bounded report-pipeline retry;
 a persistent missing source or artifact remains a typed terminal failure.

@@ -107,6 +107,10 @@ def test_crop_regions_compacts_filename_for_long_report_slug(tmp_path):
     assert artifact_path.is_file()
     assert artifact_path.name.startswith("chart-4-1-")
     assert len(artifact_path.name) <= 96
+    assert (
+        len(str(artifact_path.resolve())) + len(".fingerprint.json.tmp-write-") + 10
+        <= 240
+    )
 
 
 def test_chart_strict_tightens_partial_bottom_text_spillover(tmp_path):
