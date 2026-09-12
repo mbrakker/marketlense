@@ -877,6 +877,10 @@ class OpenAIJSONImagePromptRequest:
         default="./state/llm_usage.sqlite",
         metadata={"doc": "Canonical SQLite usage ledger path for this provider call."},
     )
+    run_budget: RunBudget | None = field(
+        default=None,
+        metadata={"doc": "Optional canonical scoped budget for this provider call."},
+    )
 
 
 @dataclass(frozen=True)

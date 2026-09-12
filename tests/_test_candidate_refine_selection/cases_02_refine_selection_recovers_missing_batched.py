@@ -3,6 +3,76 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
+def test_refine_selection_forwards_its_isolated_usage_ledger(tmp_path):
+    usage_db_path = str(tmp_path / "isolated-state" / "llm_usage.sqlite")
+    settings = _settings(
+        tmp_path,
+        crop_refine_enabled=True,
+        crop_refine_mode="always",
+        usage_db_path=usage_db_path,
+    )
+    observed_usage_paths: list[str] = []
+
+    def _refine(req, ctx):
+        assert req.run_budget is not None
+        observed_usage_paths.append(req.run_budget.usage_db_path)
+        candidate = req.candidates[0]
+        return CropRefineResponse(
+            schema_version="1.0",
+            results=[
+                CropRefineResult(
+                    schema_version="1.0",
+                    id=candidate.id,
+                    is_valid_candidate=True,
+                    refined_bbox=candidate.bbox,
+                    include_title=True,
+                    include_note_if_present=True,
+                    confidence=0.95,
+                    reason="valid",
+                )
+            ],
+            raw_content='{"results":[]}',
+            prompt_tokens=10,
+            completion_tokens=5,
+            total_tokens=15,
+            request_id="req-isolated-ledger",
+        )
+
+    candidate = _candidate(
+        cid="chart_1",
+        kind="chart",
+        meta={"area_frac": 0.08, "text_ratio": 0.42},
+    )
+    ranked = RankedCandidate(
+        id="chart_1",
+        type="chart",
+        score=92,
+        quality_score=90,
+        insight_score=91,
+        data_score=88,
+        keep=True,
+    )
+
+    _items, accepted = rsg.select_refined_candidate_items(
+        ranked_rows=[ranked],
+        ranked_candidates=[candidate],
+        settings=settings,
+        local_pdf_path=_pdf_path(tmp_path),
+        report_name="report",
+        file_id="file",
+        md5=None,
+        ctx=_ctx(),
+        pdf_context=None,
+        fallback_model="gpt-5-mini",
+        selected_kind_max=1,
+        dependencies=_deps(refine_candidate_crops=_refine),
+    )
+
+    assert [item.id for item in accepted] == ["chart_1"]
+    assert observed_usage_paths == [usage_db_path, usage_db_path]
+
+
 def test_refine_selection_recovers_missing_batched_decisions(tmp_path):
     settings = _settings(tmp_path, crop_refine_enabled=True, crop_refine_mode="always")
     llm_calls: list[tuple[str, list[str]]] = []
@@ -119,6 +189,7 @@ def test_refine_selection_recovers_missing_batched_decisions(tmp_path):
     assert [item.id for item in items] == ["chart_1", "chart_2"]
     assert [candidate.id for candidate in accepted] == ["chart_1", "chart_2"]
 
+
 def test_refine_selection_recovers_multiple_missing_decisions_without_rescanning(
     tmp_path,
     caplog,
@@ -158,9 +229,11 @@ def test_refine_selection_recovers_multiple_missing_decisions_without_rescanning
         candidate_ids = [str(candidate.id) for candidate in req.candidates]
         phase = "finalize" if "finalize" in req.user_prompt else "coarse"
         llm_calls.append((phase, candidate_ids))
-        results = [_result_for(req.candidates[0])] if len(req.candidates) > 1 else [
-            _result_for(candidate) for candidate in req.candidates
-        ]
+        results = (
+            [_result_for(req.candidates[0])]
+            if len(req.candidates) > 1
+            else [_result_for(candidate) for candidate in req.candidates]
+        )
         return CropRefineResponse(
             schema_version="1.0",
             results=results,
@@ -259,6 +332,7 @@ def test_refine_selection_recovers_multiple_missing_decisions_without_rescanning
     ]
     assert candidate_id_eq_checks["count"] <= len(candidates)
 
+
 def test_refine_selection_early_stops_at_selected_max(tmp_path):
     settings = _settings(
         tmp_path,
@@ -313,6 +387,7 @@ def test_refine_selection_early_stops_at_selected_max(tmp_path):
 
     assert len(items) == 5
     assert len(accepted) == 5
+
 
 def test_refine_selection_enforces_per_kind_limit(tmp_path):
     settings = _settings(
@@ -405,6 +480,7 @@ def test_refine_selection_enforces_per_kind_limit(tmp_path):
     assert len(accepted) == 2
     assert {item.type for item in items} == {"table", "chart"}
 
+
 def test_select_fallback_candidate_crop_paths_prefers_ranked_order(tmp_path):
     candidates = [
         _candidate(
@@ -469,6 +545,7 @@ def test_select_fallback_candidate_crop_paths_prefers_ranked_order(tmp_path):
     assert [candidate.id for candidate in selected] == ["chart_b", "table_a"]
     assert stats["selected_by_source"] == {"ranked": 2}
 
+
 def test_select_fallback_candidate_crop_paths_skips_obvious_rejects():
     candidates = [
         _candidate(
@@ -511,6 +588,7 @@ def test_select_fallback_candidate_crop_paths_skips_obvious_rejects():
     assert paths == ["report/candidates/good_chart.png"]
     assert [candidate.id for candidate in selected] == ["good_chart"]
     assert stats["rejected_reasons"] == {"chart_text_fragment": 1}
+
 
 def test_select_fallback_candidate_crop_paths_blocks_threshold_rejects_with_settings(
     tmp_path,
@@ -579,6 +657,7 @@ def test_select_fallback_candidate_crop_paths_blocks_threshold_rejects_with_sett
     assert stats["selected_by_source"] == {"ranked": 1, "prefilter": 1}
     assert stats["rejected_reasons"] == {"overall_below_threshold": 1}
 
+
 def test_candidate_prefilter_rejects_obvious_table_text_blocks():
     figure_text_table = _candidate(
         cid="table_figure",
@@ -630,6 +709,7 @@ def test_candidate_prefilter_rejects_obvious_table_text_blocks():
         == "table_large_text_block"
     )
 
+
 def test_candidate_prefilter_does_not_reject_arbitrary_doi_substrings():
     pseudo_reference = _candidate(
         cid="table_pseudo_reference",
@@ -648,6 +728,7 @@ def test_candidate_prefilter_does_not_reject_arbitrary_doi_substrings():
         rsg._candidate_prefilter_reject_reason(pseudo_reference)
         != "table_reference_text_block"
     )
+
 
 def test_truncate_prefiltered_candidates_keeps_kind_balance():
     candidates = []
@@ -685,6 +766,7 @@ def test_truncate_prefiltered_candidates_keeps_kind_balance():
     assert sum(1 for candidate in selected if candidate.kind == "chart") == 20
     assert sum(1 for candidate in selected if candidate.kind == "table") == 20
 
+
 def test_resolve_figure_section_assets_enables_primary_image_without_gallery():
     gallery, top, enabled = rsg._resolve_figure_section_assets(
         [],
@@ -695,6 +777,7 @@ def test_resolve_figure_section_assets_enables_primary_image_without_gallery():
     assert top == "report/assets/figure.png"
     assert enabled is True
 
+
 def test_resolve_figure_section_assets_disables_without_any_asset():
     gallery, top, enabled = rsg._resolve_figure_section_assets([], "")
 
@@ -702,7 +785,9 @@ def test_resolve_figure_section_assets_disables_without_any_asset():
     assert top == ""
     assert enabled is False
 
+
 __all__ = [
+    "test_refine_selection_forwards_its_isolated_usage_ledger",
     "test_refine_selection_recovers_missing_batched_decisions",
     "test_refine_selection_recovers_multiple_missing_decisions_without_rescanning",
     "test_refine_selection_early_stops_at_selected_max",

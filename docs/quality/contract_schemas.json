@@ -25177,6 +25177,16 @@
             }
           ]
         },
+        "run_budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "schema_version": {
           "type": "string"
         },
@@ -32187,6 +32197,9 @@
             }
           ]
         },
+        "run_budget": {
+          "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+        },
         "schema_version": {
           "type": "string"
         },
@@ -32236,7 +32249,8 @@
         "page",
         "page_width",
         "page_height",
-        "candidates"
+        "candidates",
+        "run_budget"
       ],
       "type": "object"
     },

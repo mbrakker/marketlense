@@ -67,7 +67,10 @@ any provider work, pipeline preflight resolves the output, cache, state,
 reports, signal, lock, usage-ledger, and cost-ledger paths and rejects the
 profile if any lies outside that root. The profile must give the usage ledger
 its own path under that root; a retained historical P6/P7 ledger is not a
-valid canary input. Source PDFs and versioned configuration mappings may stay
+valid canary input. Every provider request in the canary path must forward its
+resolved usage-ledger path and, where its contract carries budget authority,
+the resolved run budget, so image, OCR, and text accounting cannot fall back to
+a shared default ledger. Source PDFs and versioned configuration mappings may stay
 outside the root because they are immutable inputs, but derived run state may
 not be reused.
 

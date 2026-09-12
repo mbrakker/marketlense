@@ -255,7 +255,10 @@ def rank_candidates(
 
 
 def refine_candidate_crops(
-    request: CropRefineRequest, ctx: RunContext
+    request: CropRefineRequest,
+    ctx: RunContext,
+    *,
+    openai_chat_json_with_images_client=None,
 ) -> CropRefineResponse:
     logger.info(
         log_event(
@@ -277,7 +280,9 @@ def refine_candidate_crops(
     )
     llm_client = llm_service.build_client_from_callables(
         policy=_rank_llm_policy("crop_refine"),
-        openai_chat_json_with_images=openai_chat_json_with_images,
+        openai_chat_json_with_images=(
+            openai_chat_json_with_images_client or openai_chat_json_with_images
+        ),
     )
     response = llm_client.openai_chat_json_with_images(
         OpenAIJSONImagePromptRequest(
@@ -296,6 +301,12 @@ def refine_candidate_crops(
             response_cache_enabled=request.response_cache_enabled,
             response_cache_dir=request.response_cache_dir,
             response_cache_ttl_seconds=request.response_cache_ttl_seconds,
+            publisher_name=request.run_budget.publisher_name,
+            prompt_namespace="rank_candidates/crop_refine",
+            report_name=ctx.report_id,
+            prompt_hash=request.prompt_hash,
+            usage_db_path=request.run_budget.usage_db_path,
+            run_budget=request.run_budget,
         ),
         ctx,
     )

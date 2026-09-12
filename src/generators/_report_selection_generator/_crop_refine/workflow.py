@@ -34,8 +34,10 @@ from src.generators._report_selection_generator.ranking import (
     _candidate_is_obvious_reject,
     _candidate_meta,
     _candidate_quality_signals,
+    _ranking_run_budget,
     _rank_threshold_pass,
 )
+
 
 def select_refined_candidate_items(
     *,
@@ -365,6 +367,7 @@ def select_refined_candidate_items(
                     model_pricing=settings.model_pricing,
                     response_cache_enabled=True,
                     response_cache_dir=settings.cache_dir,
+                    run_budget=_ranking_run_budget(settings, ctx),
                 ),
                 ctx,
             )

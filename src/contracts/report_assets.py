@@ -443,6 +443,11 @@ class CropRefineRequest:
     candidates: List[CropRefineCandidate] = field(
         metadata={"doc": "Candidates to evaluate and refine on this page."}
     )
+    run_budget: RunBudget = field(
+        metadata={
+            "doc": "Canonical budget that governs this crop-refinement provider call."
+        }
+    )
     seed: Optional[int] = field(
         default=None,
         metadata={"doc": "Optional deterministic seed for crop refinement."},
