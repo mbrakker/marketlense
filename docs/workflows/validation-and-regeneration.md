@@ -92,6 +92,32 @@ summary and LinkedIn copy retain their bytes and provenance. Run
 before any live A21 canary; it is the required deterministic queue-to-A21 gate
 and performs no external publication.
 
+## IAS first-attempt live canary
+
+Run the one-report live decision with:
+
+```powershell
+python scripts/quality/run_ias_first_attempt_canary.py
+```
+
+The runner creates a unique directory below `tmp/ias-first-attempt-live-canaries`,
+generates an isolated configuration with its report/state/usage databases,
+checkpoints, cache, ledgers, and output beneath that directory, and rejects any
+pre-existing mutable store before submission. It uses the normal admitted
+frozen-cohort queue submission and production workers for `source_ingest`,
+`report_selection`, `report_analysis`, `report_render`, and
+`publication_readiness`; it does not consume unrelated analytics queues or
+invoke a report stage directly.
+
+It writes and prints one JSON result. A pass requires exactly one submitted IAS
+report and one validation workflow attempt, isolated fresh state, no operator
+requeue, passing existing validation and publication-readiness decisions, and
+the final durable state `awaiting_review`. Existing same-attempt bounded
+validation repair and internal operation retries remain eligible; a second
+workflow attempt, manual state change, replacement source, or targeted stage
+rescue does not. On a pass, run the same queue-backed procedure immediately for
+the frozen representative 20-report cohort; do not add an intervening harness.
+
 Taxonomy extraction has one orchestration-owned, prompt-specific recovery for
 `taxonomy_invalid_json` and `taxonomy_schema_invalid`. After the primary
 taxonomy call exhausts its shared structured-output recovery, the orchestrator
