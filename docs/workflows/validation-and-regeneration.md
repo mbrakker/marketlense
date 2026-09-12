@@ -78,6 +78,12 @@ a deterministic policy or lineage change to request the earlier safe stage.
 
 When a repair is supported, the workflow maps validation issues to the narrowest appropriate artifact family and revalidates the result. Retry and backoff are controlled by orchestration; generators surface typed errors rather than retrying provider calls themselves. Publication policy determines whether unresolved validation issues block WordPress side effects.
 
+For summary, Expert Comment, and LinkedIn output, structured-output validation
+also requires retained private claim bindings to cover every material public
+sentence after deterministic removal of internal reference tokens. A coverage
+gap enters the existing bounded structured-output recovery before artifact
+storage; it cannot become a later dead-letter after provider work is complete.
+
 For a blocking targetable finding, warning-only findings in unrelated artifact
 families are not allowed to widen the regeneration plan. A retained soft-copy
 claim can therefore be repaired or removed by its claim ID while untouched

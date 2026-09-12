@@ -7,6 +7,9 @@ from typing import Any, Dict, Optional
 from src.contracts.config import AppSettings
 from src.contracts.ingest import IngestSettings
 from src.contracts.run_context import RunContext
+from src.contracts.soft_copy_claim_provenance import (
+    soft_copy_claim_bindings_cover_public_text,
+)
 from src.contracts.structured_output import StructuredOutputExecutionRequest
 from src.generators.prompt_preparation import (
     PreparedPromptBundle,
@@ -15,6 +18,10 @@ from src.generators.prompt_preparation import (
 from src.generators.structured_output_execution import (
     invoke_structured_output_model,
     recovery_prompt_bundle,
+)
+from src.generators.artifact_normalization import (
+    normalize_artifact_summary,
+    strip_linkedin_inline_reference_ids,
 )
 from src.services.schema_validator_service import (
     provider_output_schema,
@@ -274,6 +281,27 @@ def render_artifact_json_model(
             root_key=root_key,
             ctx=ctx,
         )
+        public_output = payload.get(root_key)
+        if root_key == "summary":
+            public_output = normalize_artifact_summary(public_output)
+        elif root_key == "linkedin_post":
+            public_output = strip_linkedin_inline_reference_ids(
+                str(public_output or "")
+            )
+        if (
+            root_key in _SOFT_COPY_ROOTS
+            and not soft_copy_claim_bindings_cover_public_text(
+                artifact_family=root_key,
+                public_output=public_output,
+                claim_bindings=payload.get("claim_provenance"),
+            )
+        ):
+            raise AppError(
+                code="soft_copy_claim_provenance_bindings_incomplete",
+                message="Soft-copy provenance must declare every material sentence",
+                retryable=False,
+                context={"artifact_family": root_key},
+            )
         if payload_validator is not None:
             payload_validator(payload)
 

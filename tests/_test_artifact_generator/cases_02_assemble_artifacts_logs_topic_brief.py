@@ -1,6 +1,8 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+import json
+
 from src.generators._artifact_generator.rendering import render_artifact_json_model
 from src.generators._artifact_generator.storage import _validate_cover_semantics
 
@@ -738,6 +740,72 @@ def test_cover_semantics_repairs_one_invalid_structured_response(tmp_path) -> No
     assert client.requests[1].repair_attempt == 1
 
 
+def test_soft_copy_binding_gap_uses_bounded_structured_recovery(tmp_path) -> None:
+    class SoftCopyRepairClient:
+        def __init__(self) -> None:
+            self.requests = []
+
+        def openai_chat_json(self, request, ctx):
+            del ctx
+            self.requests.append(request)
+            claims = (
+                [
+                    {
+                        "claim": "The first supported sentence.",
+                        "classification": "interpretive",
+                        "evidence_ids": [],
+                    }
+                ]
+                if len(self.requests) == 1
+                else [
+                    {
+                        "claim": "The first supported sentence.",
+                        "classification": "interpretive",
+                        "evidence_ids": [],
+                    },
+                    {
+                        "claim": "The second supported sentence.",
+                        "classification": "interpretive",
+                        "evidence_ids": [],
+                    },
+                ]
+            )
+            payload = {
+                "expert_comment": (
+                    "The first supported sentence. The second supported sentence."
+                ),
+                "claim_provenance": claims,
+            }
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text=json.dumps(payload),
+                parsed_json=payload,
+                input_tokens=0,
+                output_tokens=0,
+                tool_calls=0,
+                model=request.model,
+            )
+
+    client = SoftCopyRepairClient()
+    result = render_artifact_json_model(
+        namespace="report_vs/artifacts/expert_comment",
+        variables={"doc_map_json": "{}"},
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=client,
+        prompt_client=FakePromptClient(),
+        allow_vector_store=False,
+        vector_store_id=None,
+    )
+
+    assert len(client.requests) == 2
+    assert client.requests[0].prompt_namespace == "report_vs/artifacts/expert_comment"
+    assert [binding["claim"] for binding in result["_soft_copy_claim_bindings"]] == [
+        "The first supported sentence.",
+        "The second supported sentence.",
+    ]
+
+
 def test_generate_artifacts_does_not_fabricate_insights_after_unknown_evidence(
     tmp_path,
 ) -> None:
@@ -890,5 +958,6 @@ __all__ = [
     "test_generate_artifacts_strips_inline_reference_tokens_from_summary_and_linkedin",
     "test_generate_artifacts_uses_vector_path_when_flag_enabled",
     "test_cover_semantics_repairs_one_invalid_structured_response",
+    "test_soft_copy_binding_gap_uses_bounded_structured_recovery",
     "test_generate_artifacts_does_not_fabricate_insights_after_unknown_evidence",
 ]
