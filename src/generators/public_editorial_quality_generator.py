@@ -7,8 +7,8 @@ regeneration orchestrator can route without rewriting passing artifacts.
 
 from __future__ import annotations
 
-import json
 import hashlib
+import json
 import re
 from collections import Counter
 from collections.abc import Mapping
@@ -29,8 +29,9 @@ from src.contracts.soft_copy_claim_provenance import (
 )
 from src.contracts.validation import ValidationIssue, ValidationReport
 from src.services.render_service import _sanitize_public_prose
-from src.utils.numeric_display import incomplete_source_numeric_displays
+from src.utils.editorial_identity import insight_entity_id
 from src.utils.errors import AppError
+from src.utils.numeric_display import incomplete_source_numeric_displays
 
 BLOCKING_RULE_IDS = {
     "public_editorial_quality.unsupported_numeric_claim",
@@ -468,7 +469,7 @@ def _insight_issues(
     issues: list[PublicEditorialQualityIssue] = []
     seen: list[tuple[int, set[str], set[str]]] = []
     for index, insight in enumerate(insights):
-        insight_id = str(insight.get("id") or index + 1)
+        insight_id = insight_entity_id(insight) or str(index + 1)
         text = _sanitize_public_prose(insight.get("text"))
         evidence_id = str(insight.get("evidence_id") or "").strip()
         evidence = str(insight.get("evidence") or "").strip()
@@ -508,7 +509,9 @@ def _insight_issues(
         numbers = {_normalized_number(value) for value in _NUMBER.findall(text)}
         for prior_index, prior_tokens, prior_numbers in seen:
             if _near_duplicate(tokens, numbers, prior_tokens, prior_numbers):
-                prior_id = str(insights[prior_index].get("id") or prior_index + 1)
+                prior_id = insight_entity_id(insights[prior_index]) or str(
+                    prior_index + 1
+                )
                 fields = f"insights:{insight_id}~insights:{prior_id}"
                 duplicate_item = dict(item)
                 duplicate_item["field"] = fields
@@ -820,7 +823,7 @@ def _retained_soft_copy_sentence_items(
     ]
     if not sentences or any(len(items) != 1 for items in matched):
         return []
-    evidence_by_id = {evidence_id: evidence for evidence_id, evidence in evidence_items}
+    evidence_by_id = dict(evidence_items)
     items: list[dict[str, Any]] = []
     for sentence, claim_items in zip(sentences, matched, strict=True):
         claim = claim_items[0]
@@ -1070,7 +1073,7 @@ def enumerate_public_editorial_items(
     """
     items: list[dict[str, Any]] = list(_public_inventory_text_items(artifacts))
     for insight in _dict_items(artifacts.get("insights_final")):
-        insight_id = str(insight.get("id") or "").strip()
+        insight_id = insight_entity_id(insight)
         if not insight_id:
             continue
         evidence_id = str(insight.get("evidence_id") or "").strip()

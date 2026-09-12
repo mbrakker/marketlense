@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import json
 import hashlib
+import json
 import re
 from dataclasses import asdict
 from typing import Any, List, Sequence
@@ -12,10 +12,10 @@ from src.contracts.prompt_family_materialization import (
     PromptFamilyReuseRequest,
 )
 from src.contracts.protected_facts import ProtectedFactComparison
+from src.contracts.schema_validation import SchemaValidateRequest
 from src.contracts.soft_copy_claim_provenance import (
     soft_copy_claim_provenance_from_payload,
 )
-from src.contracts.schema_validation import SchemaValidateRequest
 from src.contracts.structured_output import StructuredOutputExecutionRequest
 from src.contracts.validation import ValidationIssue, ValidationRequest
 from src.generators.prompt_preparation import prepare_prompt_bundle
@@ -33,6 +33,7 @@ from src.services.schema_validator_service import (
 )
 from src.services.structured_output_service import execute_structured_output
 from src.utils.cache_utils import sha256_json
+from src.utils.editorial_identity import insight_entity_id
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 from src.utils.quantity import extract_quantities
@@ -716,7 +717,7 @@ def _public_factual_items(
         for insight in insights
     }
     for insight in insights:
-        insight_id = s(insight.get("id"))
+        insight_id = insight_entity_id(insight)
         evidence_id = s(insight.get("evidence_id"))
         for field_name in ("text", "so_what", "now_what"):
             add(

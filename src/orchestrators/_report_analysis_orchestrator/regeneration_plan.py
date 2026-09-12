@@ -18,6 +18,10 @@ from src.contracts.soft_copy_claim_provenance import (
     soft_copy_claim_provenance_from_payload,
 )
 from src.contracts.validation import ValidationIssue
+from src.utils.editorial_identity import (
+    insight_entity_id,
+    insight_entity_id_from_public_item_id,
+)
 from src.utils.errors import AppError
 
 __all__ = [
@@ -77,7 +81,7 @@ def _lookup_insight_grounding(
         for entry in artifacts.get(key) or []:
             if not isinstance(entry, dict):
                 continue
-            entry_id = str(entry.get("id") or "").strip()
+            entry_id = insight_entity_id(entry)
             if insight_id and entry_id != insight_id:
                 continue
             evidence_id = str(entry.get("evidence_id") or "").strip()
@@ -158,6 +162,9 @@ def _issue_grounding(
                 )
             )
             return claim_evidence_ids, claim_pages
+    public_insight_id = insight_entity_id_from_public_item_id(resolved_entity_id)
+    if public_insight_id:
+        return _lookup_insight_grounding(public_insight_id, artifacts)
     lower_section = section.lower()
     if (
         lower_section.startswith("topics")

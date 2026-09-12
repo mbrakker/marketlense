@@ -35,6 +35,14 @@ metadata. Final readiness projects unresolved hard failures as
 `publish_readiness.source_fidelity`, so publication fails closed even if an
 earlier aggregate validation result passed.
 
+For final insights, the atomic ID is `insight:<insight-entity-id>:<field>`.
+The stable entity ID comes from the retained `id` (or compatible
+`insight_id`) field; an `evidence_id` is never an editorial identity. Evidence
+IDs remain separately attached to the validation issue and repair grounding
+package, so an evidence rebind does not change the public item or redirect a
+targeted repair. Repair planning resolves the public insight ID before any
+ambiguous affected-section text.
+
 The existing grounding call is the single batched LLM source-fidelity audit. It
 receives the atomic public-item inventory, retained evidence, and report
 identity metadata, and judges source fidelity only—not writing quality.
