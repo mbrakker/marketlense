@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import hashlib
-import re
 from typing import Any
 
 from src.contracts.soft_copy_claim_provenance import (
     SoftCopyClaimProvenance,
+    soft_copy_material_sentences,
 )
 from src.utils.errors import AppError
 
@@ -149,11 +149,7 @@ def _unique_strings(value: object) -> list[str]:
 
 
 def _material_sentences(text: str) -> list[str]:
-    return [
-        _normalized_text(sentence)
-        for sentence in re.split(r"(?<=[.!?])\s+", text)
-        if _normalized_text(sentence)
-    ]
+    return soft_copy_material_sentences(text)
 
 
 def retained_soft_copy_claims_cover_text(

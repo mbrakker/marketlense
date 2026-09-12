@@ -83,6 +83,10 @@ also requires retained private claim bindings to cover every material public
 sentence after deterministic removal of internal reference tokens. A coverage
 gap enters the existing bounded structured-output recovery before artifact
 storage; it cannot become a later dead-letter after provider work is complete.
+Sentence identity preserves initialisms followed by lowercase prose (for
+example, `U.K. digital media`) as one sentence. This normalization changes no
+claim text or evidence binding; a missing sentence or a terminal initialism
+followed by a new capitalized sentence still fails closed.
 
 For a blocking targetable finding, warning-only findings in unrelated artifact
 families are not allowed to widen the regeneration plan. A retained soft-copy

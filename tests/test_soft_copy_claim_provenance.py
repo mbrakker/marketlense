@@ -16,6 +16,7 @@ from src.contracts.report_models import Figure, Quote, ReportPayload
 from src.contracts.run_context import RunContext
 from src.contracts.soft_copy_claim_provenance import (
     SoftCopyClaimProvenance,
+    soft_copy_claim_bindings_cover_public_text,
     soft_copy_claim_provenance_from_payload,
     soft_copy_claim_provenance_to_payload,
 )
@@ -152,6 +153,49 @@ def test_material_soft_copy_sentence_without_declared_binding_is_rejected() -> N
             generation_attempt=1,
             regeneration_attempt=0,
         )
+
+
+def test_ias_summary_claim_bindings_cover_uk_abbreviation_sentences() -> None:
+    """The IAS canary's valid provider shape must not split ``U.K.`` in two."""
+    summary = {
+        "tldr": (
+            "U.K. media experts prioritise digital video and display over the "
+            "next 12 months."
+        ),
+        "card_tldr_compact": ("U.K. experts prioritise digital video and display."),
+        "executive_summary": (
+            "U.K. media experts prioritise digital video and display over the "
+            "next 12 months."
+        ),
+        "claim_evidence_map": [
+            {
+                "claim": (
+                    "U.K. media experts prioritise digital video and display "
+                    "over the next 12 months."
+                ),
+                "evidence_id": "finding-2",
+                "evidence": "Digital video and display lead the stated priorities.",
+            }
+        ],
+    }
+    claim_bindings = [
+        {
+            "claim": summary["tldr"],
+            "classification": "factual",
+            "evidence_ids": ["finding-2"],
+        },
+        {
+            "claim": summary["card_tldr_compact"],
+            "classification": "factual",
+            "evidence_ids": ["finding-2"],
+        },
+    ]
+
+    assert soft_copy_claim_bindings_cover_public_text(
+        artifact_family="summary",
+        public_output=summary,
+        claim_bindings=claim_bindings,
+    )
 
 
 def test_retained_ias_artifact_remains_immutable_before_state_evidence() -> None:
