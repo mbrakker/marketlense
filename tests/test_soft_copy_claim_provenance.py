@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import asdict
-from copy import deepcopy
 import json
+from copy import deepcopy
+from dataclasses import asdict
 from pathlib import Path
 
 import pytest
@@ -83,7 +83,10 @@ def test_declared_soft_copy_claims_keep_exact_evidence_and_interpretive_type() -
 
     claims = build_soft_copy_claim_provenance(
         artifact_family="expert_comment",
-        text="Revenue grew by 12%. This suggests leaders should protect retention investment.",
+        text=(
+            "Revenue grew by 12%. This suggests leaders should protect retention "
+            "investment."
+        ),
         declared_claims=[
             {
                 "claim": "Revenue grew by 12%.",
@@ -151,7 +154,7 @@ def test_material_soft_copy_sentence_without_declared_binding_is_rejected() -> N
         )
 
 
-def test_materialize_retained_soft_copy_provenance_keeps_legacy_artifact_immutable() -> None:
+def test_materialize_retained_provenance_keeps_legacy_artifact_immutable() -> None:
     from src.generators.soft_copy_claim_provenance import (
         materialize_retained_soft_copy_provenance,
     )
@@ -206,10 +209,18 @@ def test_retained_ias_declaration_covers_the_immutable_historical_soft_copy() ->
 
     root = Path(__file__).resolve().parents[1]
     artifacts = json.loads(
-        (root / "tests/fixtures/docpacks/golden/ias-industry-pulse-report-2026-acig-pdf/report_analysis/artifacts.json").read_text(encoding="utf-8")
+        (
+            root
+            / "tests/fixtures/docpacks/golden/ias-industry-pulse-report-2026-acig-pdf"
+            / "report_analysis/artifacts.json"
+        ).read_text(encoding="utf-8")
     )
     declaration = json.loads(
-        (root / "tests/fixtures/prompt_grounding_policy/retained_ias_claim_declarations.json").read_text(encoding="utf-8")
+        (
+            root
+            / "tests/fixtures/prompt_grounding_policy"
+            / "retained_ias_claim_declarations.json"
+        ).read_text(encoding="utf-8")
     )
 
     materialized = materialize_retained_soft_copy_provenance(
@@ -228,7 +239,9 @@ def test_retained_ias_declaration_covers_the_immutable_historical_soft_copy() ->
         materialized["soft_copy_claim_provenance"]
     )
     assert {claim.artifact_family for claim in claims} == {
-        "summary", "expert_comment", "linkedin_post"
+        "summary",
+        "expert_comment",
+        "linkedin_post",
     }
 
 

@@ -55,8 +55,8 @@ def materialize_retained_soft_copy_provenance(
                 regeneration_attempt=0,
             )
         )
-    materialized["soft_copy_claim_provenance"] = (
-        soft_copy_claim_provenance_to_payload(claims)
+    materialized["soft_copy_claim_provenance"] = soft_copy_claim_provenance_to_payload(
+        claims
     )
     return materialized
 
@@ -118,7 +118,9 @@ def build_soft_copy_claim_provenance(
         ):
             raise AppError(
                 code="soft_copy_claim_provenance_binding_invalid",
-                message="Soft-copy claim binding must match public text and classification",
+                message=(
+                    "Soft-copy claim binding must match public text and classification"
+                ),
                 retryable=False,
                 context={"artifact_family": family},
             )

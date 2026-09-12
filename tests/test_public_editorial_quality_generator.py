@@ -23,10 +23,10 @@ from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
 )
 from src.services._config_service.validation import _resolve_validation_settings
 
-_GOLDEN_ARTIFACT = next(
-    (Path(__file__).parent / "fixtures" / "docpacks" / "golden").glob(
-        "*/report_analysis/artifacts.json"
-    )
+_GOLDEN_ARTIFACT = Path(__file__).parent / (
+    "fixtures/docpacks/golden/"
+    "allegro-2026-trends-macrotrends-es-acig-pdf/"
+    "report_analysis/artifacts.json"
 )
 _TEMPORAL_FIXTURE_DIR = Path(__file__).parent / "fixtures" / "editorial_temporal"
 _RELATIONSHIP_FIXTURE_DIR = (
