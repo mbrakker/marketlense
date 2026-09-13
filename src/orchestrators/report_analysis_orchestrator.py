@@ -381,7 +381,6 @@ def run_report_analysis(
         require_admitted_report_identity(
             runtime.ctx,
             legacy_source_values=(runtime.md5, runtime.file.file_id),
-            legacy_publisher_values=(runtime.publisher_name,),
         )
     if runtime.execution_plan_hash:
         logger.info(

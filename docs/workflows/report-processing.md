@@ -343,6 +343,8 @@ OCR fallback, figure-caption, regeneration, render, and readiness descendants
 retain the canonical context identity when one is already bound to the run.
 The PDF MD5 remains a checksum/cache/state value and `publisher_name` remains
 display/model-context text; neither may populate a canonical identity field.
+An admitted canonical publisher ID may legitimately equal the display name
+(for example, `Mintel`) and remains valid when it was retained at admission.
 An admitted workflow with either canonical identity missing fails before model
 or provider work. Isolated generators may continue without an identity, but
 must disable retained prompt-family reuse/materialization rather than using MD5.

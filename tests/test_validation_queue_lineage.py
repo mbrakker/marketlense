@@ -625,7 +625,7 @@ def test_a21_full_chain_from_frozen_cohort_through_awaiting_review(
                 source_record_id=source_record.record_id,
                 canonical_title="Industry Pulse Report 2026",
                 title_evidence_locator="fixture:source-title",
-                publisher_id="publisher:industry-analytics-summit",
+                publisher_id="Industry Analytics Summit",
                 publisher_name="Industry Analytics Summit",
                 canonical_landing_page_url=(
                     "https://publisher.example/reports/industry-pulse-2026"
@@ -641,7 +641,7 @@ def test_a21_full_chain_from_frozen_cohort_through_awaiting_review(
         _ctx(),
     ).resolution
     assert observed_identity.identity_status == "resolved"
-    assert observed_identity.publisher_id == "publisher:industry-analytics-summit"
+    assert observed_identity.publisher_id == "Industry Analytics Summit"
     source_file = DriveFile(
         schema_version="1.0",
         file_id="report-1",
