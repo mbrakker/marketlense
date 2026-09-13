@@ -15,7 +15,9 @@ from src.utils.errors import AppError
 from src.utils.report_identity import require_admitted_report_identity
 
 
-def test_render_manifest_identity_preserves_admitted_identity_over_pdf_checksum() -> None:
+def test_render_manifest_identity_preserves_admitted_identity_over_pdf_checksum() -> (
+    None
+):
     """A frozen cohort must not create a second MD5-keyed manifest entity."""
     ctx = RunContext(
         schema_version="1.0",
@@ -32,7 +34,9 @@ def test_render_manifest_identity_preserves_admitted_identity_over_pdf_checksum(
     assert _manifest_source_identity_id(ctx) == "source:admitted-report"
 
 
-def test_analysis_context_identity_preserves_admitted_identity_over_pdf_checksum() -> None:
+def test_analysis_context_identity_preserves_admitted_identity_over_pdf_checksum() -> (
+    None
+):
     """Analysis must not discard the immutable identity inherited from ingest."""
     ctx = RunContext(
         schema_version="1.0",
@@ -45,7 +49,9 @@ def test_analysis_context_identity_preserves_admitted_identity_over_pdf_checksum
     assert _analysis_source_identity_id(ctx) == "source:admitted-report"
 
 
-def test_canonical_identity_helpers_never_promote_checksum_file_or_display_values() -> None:
+def test_canonical_identity_helpers_never_promote_checksum_file_or_display_values() -> (
+    None
+):
     ctx = RunContext(
         schema_version="1.0",
         run_id="run",
@@ -61,6 +67,24 @@ def test_canonical_identity_helpers_never_promote_checksum_file_or_display_value
         "source:canonical",
         "publisher:canonical",
     )
+
+
+def test_admitted_identity_accepts_a_publisher_id_matching_display_metadata() -> None:
+    """A source-backed canonical ID may itself be human-readable."""
+    ctx = RunContext(
+        schema_version="1.0",
+        run_id="run",
+        task_id="task",
+        span_id="span",
+        source_identity_id="source:canonical",
+        publisher_id="Mintel",
+        admission_decision_hash="admission-hash",
+    )
+
+    assert require_admitted_report_identity(
+        ctx,
+        legacy_publisher_values=("Mintel",),
+    ) == ("source:canonical", "Mintel")
 
 
 def test_admitted_identity_rejects_missing_values_instead_of_legacy_aliases() -> None:

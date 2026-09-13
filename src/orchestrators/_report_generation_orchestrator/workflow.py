@@ -43,7 +43,10 @@ from src.orchestrators.signal_candidate_orchestrator import (
 from src.services import llm_service
 from src.utils.errors import AppError
 from src.utils.logging import log_event
-from src.utils.report_identity import require_admitted_report_identity
+from src.utils.report_identity import (
+    is_unattributed_publisher_id,
+    require_admitted_report_identity,
+)
 
 from .checkpoints import (
     _analysis_checkpoint_payload,
@@ -78,9 +81,6 @@ STAGE_SOURCE_PREPARED = "source_prepared"
 STAGE_SELECTION_COMPLETE = "selection_complete"
 STAGE_ANALYSIS_COMPLETE = "analysis_complete"
 STAGE_RENDER_COMPLETE = "render_complete"
-_UNATTRIBUTED_PUBLISHER_IDS = frozenset(
-    {"", "unattributed", "drive_unattributed", "unknown", "unknown publisher"}
-)
 
 
 def _manifest_source_identity_id(ctx: RunContext) -> str:
@@ -152,7 +152,7 @@ def _admission_context_identity(
     if (
         not str(ctx.admission_decision_hash or "").strip()
         or not identity_id
-        or publisher.casefold() in _UNATTRIBUTED_PUBLISHER_IDS
+        or is_unattributed_publisher_id(publisher)
     ):
         return None
     return SourceIdentityResolution(
@@ -386,18 +386,9 @@ def run_report_generation(
     resolved_publisher_id = str(
         getattr(source_identity, "publisher_id", "") or ""
     ).strip()
-    resolved_publisher_name = str(
-        getattr(source_identity, "publisher_name", "") or ""
-    ).strip()
     if resolved_source_identity_id in {str(md5 or "").strip(), file.file_id}:
         resolved_source_identity_id = ""
-    if resolved_publisher_id.casefold() in {
-        "unattributed",
-        "drive_unattributed",
-        "unknown",
-        "unknown publisher",
-        resolved_publisher_name.casefold(),
-    }:
+    if is_unattributed_publisher_id(resolved_publisher_id):
         resolved_publisher_id = ""
     runtime_ctx = replace(
         ctx,
