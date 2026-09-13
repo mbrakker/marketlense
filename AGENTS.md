@@ -57,6 +57,8 @@ Model outputs are untrusted external data. Validate schema, grounding, completen
 
 Before regenerating or recalling an external system, check canonical persisted artifacts, hashes, caches, ledgers, and idempotency records. Reuse only when provenance and compatibility are valid. Never reuse stale or mismatched data merely to avoid a failure.
 
+Validation runs MUST reuse the canonical production workflow and production orchestration by default. Validation-specific code may isolate inputs, state, outputs, external side effects and evidence collection, but MUST NOT reproduce workflow sequencing or business logic. A divergent/component validation is permitted only when explicitly required by the validation objective and must identify that limitation in its evidence.
+
 ### 2.5 Safe autonomy and clarification threshold
 
 Proceed autonomously on repository-local, reversible, in-scope work. Report material assumptions and tradeoffs, but do not turn routine naming or internal structure into blockers. Stop when authority is missing for an irreversible or externally consequential action.

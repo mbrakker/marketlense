@@ -7,6 +7,12 @@ from scripts.quality.ias_live_canary_runner import (
     prepare_isolated_canary_run,
     run_ias_first_attempt_canary,
 )
+from src.contracts.config import ConfigLoadRequest
+from src.services.config_service import (
+    load_settings,
+    load_workflow_control_settings,
+    new_runtime_context,
+)
 
 
 def test_prepare_isolated_canary_run_creates_fresh_root_with_only_rooted_mutable_paths(
@@ -20,6 +26,25 @@ def test_prepare_isolated_canary_run_creates_fresh_root_with_only_rooted_mutable
     assert run.mutable_paths
     assert all(path.is_relative_to(run.root) for path in run.mutable_paths)
     assert not any(path.exists() for path in run.mutable_paths)
+
+
+def test_isolated_canary_config_keeps_repository_owned_cost_pricing_available(
+    tmp_path: Path,
+) -> None:
+    run = prepare_isolated_canary_run(runs_root=tmp_path)
+
+    settings = load_settings(
+        ConfigLoadRequest(schema_version="1.0", path=str(run.config_path)),
+        new_runtime_context(task_id="isolated-canary-config-test"),
+    )
+
+    assert settings.model_pricing
+    control = load_workflow_control_settings(
+        ConfigLoadRequest(schema_version="1.0", path=str(run.config_path)),
+        new_runtime_context(task_id="isolated-canary-supervisor-test"),
+    )
+    assert control.supervisor.enabled is True
+    assert control.supervisor.worker_batches_enabled is True
 
 
 def test_live_canary_records_a_typed_terminal_input_failure(tmp_path: Path) -> None:

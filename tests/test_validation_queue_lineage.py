@@ -11,40 +11,21 @@ from types import SimpleNamespace
 import pytest
 
 from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
-from src.contracts.drive import DriveFile
-from src.contracts.report_store import (
-    ReportSourceRecordRequest,
-    SourceIdentityObservation,
-    SourceIdentityObservationRecordRequest,
-)
 from src.contracts.run_context import RunContext
 from src.contracts.validation_reliability import (
     ValidationReliabilityBuildRequest,
     ValidationReliabilityWriteRequest,
 )
 from src.contracts.validation_run_manifest import (
-    FrozenValidationCohortQueueSubmissionRequest,
+    PreselectedFrozenValidationCohortSubmissionRequest,
+    PreselectedFrozenValidationSource,
 )
-from src.contracts.workflow_queue import SourceIngestPayload
 from src.generators.claim_validation_generator import validate_retained_claims
-from src.orchestrators.admission_preflight_orchestrator import (
-    AdmissionPreflightRequest,
-    admission_configuration_hash,
-    admission_decision_payload,
-    admission_policy_hash,
-    run_admission_preflight,
-)
 from src.orchestrators.ingest_orchestrator import (
-    IngestBatchDependencies,
-    _frozen_cohort,
-    submit_frozen_validation_cohort_to_queue,
+    submit_preselected_frozen_validation_cohort,
 )
 from src.orchestrators.workflow_worker_orchestrator import run_workflow_worker_once
 from src.services.config_service import build_ingest_settings, load_settings
-from src.services.report_store_service import (
-    record_report_source,
-    record_source_identity_observation,
-)
 from src.services.validation_reliability_service import (
     build_validation_reliability_artifact,
     write_validation_reliability_artifact,
@@ -603,111 +584,41 @@ def test_a21_full_chain_from_frozen_cohort_through_awaiting_review(
         "tests/fixtures/pdf_benchmark/golden/IAS - Industry_Pulse_Report_2026_ACIG.pdf"
     ).resolve()
     source_hash = md5(source_path.read_bytes(), usedforsecurity=False).hexdigest()
-    source_record = record_report_source(
-        ReportSourceRecordRequest(
+    cohort_manifest = tmp_path / "frozen-cohort.json"
+    prepared = submit_preselected_frozen_validation_cohort(
+        PreselectedFrozenValidationCohortSubmissionRequest(
             schema_version="1.0",
-            db_path=settings.reports_db,
-            source_domain="publisher.example",
-            report_name="Industry Pulse Report 2026",
-            landing_page_url="https://publisher.example/reports/industry-pulse-2026",
-            downloaded_at_utc="2026-08-10T12:00:00Z",
-            md5=source_hash,
-            publisher_name="Industry Analytics Summit",
-        ),
-        _ctx(),
-    )
-    observed_identity = record_source_identity_observation(
-        SourceIdentityObservationRecordRequest(
-            schema_version="1.0",
-            db_path=settings.reports_db,
-            observation=SourceIdentityObservation(
-                schema_version="1.0",
-                source_record_id=source_record.record_id,
-                canonical_title="Industry Pulse Report 2026",
-                title_evidence_locator="fixture:source-title",
-                publisher_id="Industry Analytics Summit",
-                publisher_name="Industry Analytics Summit",
-                canonical_landing_page_url=(
-                    "https://publisher.example/reports/industry-pulse-2026"
+            settings=settings,
+            cohort_manifest=str(cohort_manifest),
+            config_path=str(config_path),
+            sources=(
+                PreselectedFrozenValidationSource(
+                    schema_version="1.0",
+                    report_id="report-1",
+                    source_artifact_path=str(source_path),
+                    content_md5=source_hash,
+                    source_domain="publisher.example",
+                    report_name="Industry Pulse Report 2026",
+                    landing_page_url="https://publisher.example/reports/industry-pulse-2026",
+                    source_page_url="https://publisher.example/reports",
+                    publisher_name="Industry Analytics Summit",
+                    downloaded_at_utc="2026-08-10T12:00:00Z",
                 ),
-                source_page_url="https://publisher.example/reports",
-                retrieved_at_utc="2026-08-10T12:00:00Z",
-                acquisition_route="fixture",
-                content_hash=f"md5:{source_hash}",
-                resolution_method="fixture_source_observation",
-                identity_confidence="high",
             ),
         ),
         _ctx(),
-    ).resolution
-    assert observed_identity.identity_status == "resolved"
-    assert observed_identity.publisher_id == "Industry Analytics Summit"
-    source_file = DriveFile(
-        schema_version="1.0",
-        file_id="report-1",
-        name=source_path.name,
-        modified_time=None,
-        md5_checksum=source_hash,
-        mime_type="application/pdf",
     )
-    admitted = run_admission_preflight(
-        AdmissionPreflightRequest(
-            file=source_file,
-            source_artifact_path=str(source_path),
-            settings=settings,
-            runtime_preflight_passed=True,
-            runtime_preflight_hash="queue-lineage-test",
-            configuration_hash=admission_configuration_hash(settings),
-            policy_hash=admission_policy_hash(settings),
-            known_source_identities={},
-            known_title_keys={},
-        ),
-        _ctx(),
-    )
-    assert admitted.admitted is True
-    decision = admission_decision_payload(admitted.decision)
-    assert decision["source_identity_id"] != source_hash
-    cohort_manifest = tmp_path / "frozen-cohort.json"
-    _frozen_cohort(
-        cohort_size=1,
-        cohort_manifest=str(cohort_manifest),
-        selected_files=[source_file],
-        settings=settings,
-        deps=IngestBatchDependencies.default(),
-        root_ctx=_ctx(),
-        admission_decisions=[decision],
-    )
+    assert len(prepared.admission_decisions) == 1
+    assert prepared.admission_decisions[0].outcome == "admitted"
+    assert prepared.queue_submission is not None
+    response = prepared.queue_submission
     frozen_cohort = json.loads(cohort_manifest.read_text(encoding="utf-8"))
     member = frozen_cohort["members"][0]
     assert member["md5_checksum"] == source_hash
-    assert member["source_identity_id"] == decision["source_identity_id"]
-    assert member["publisher_id"] == decision["publisher_id"]
-    assert member["publisher_id"] == observed_identity.publisher_id
+    assert member["source_identity_id"] == prepared.admission_decisions[0].source_identity_id
+    assert member["publisher_id"] == "Industry Analytics Summit"
     reports_db = settings.reports_db
     state_db = settings.state_db
-
-    response = submit_frozen_validation_cohort_to_queue(
-        FrozenValidationCohortQueueSubmissionRequest(
-            schema_version="1.0",
-            state_db=state_db,
-            reports_db=reports_db,
-            cohort_manifest=str(cohort_manifest),
-            source_ingest_payloads=(
-                SourceIngestPayload(
-                    source_identity_id=member["source_identity_id"],
-                    source_artifact_reference=str(source_path),
-                    source_content_hash=source_hash,
-                    report_id="report-1",
-                    parser_ocr_compatibility_version="parser.v1",
-                    input_reference=str(source_path),
-                    input_content_hash=source_hash,
-                    processing_version="parser.v1",
-                    attributes={"config_path": str(config_path)},
-                ),
-            ),
-        ),
-        _ctx(),
-    )
 
     assert response.root_workflow_id
     assert response.validation_run_id == frozen_cohort["validation_run_id"]
@@ -718,7 +629,10 @@ def test_a21_full_chain_from_frozen_cohort_through_awaiting_review(
     payload = load_workflow_job_payload(source_job)
     assert payload.validation_run_id == response.validation_run_id
     assert payload.cohort_id == response.cohort_id
-    assert payload.source_identity_id == decision["source_identity_id"]
+    assert (
+        payload.source_identity_id
+        == prepared.admission_decisions[0].source_identity_id
+    )
     assert payload.source_content_hash == source_hash
     worker_result = run_workflow_worker_once(
         state_db=state_db,

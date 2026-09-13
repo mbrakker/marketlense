@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Callable, Iterable, List, Optional
 from uuid import uuid4
 
+from src.contracts.admission_preflight import AdmissionPreflightDecision
 from src.contracts.drive import (
     DriveDownloadToPathRequest,
     DriveFile,
@@ -41,6 +42,7 @@ from src.contracts.report_store import (
     ReportSourceIdentityGetRequest,
     ReportSourceRecordRequest,
     ReportSourceReuseResolveRequest,
+    SourceIdentityObservation,
     SourceIdentityObservationRecordRequest,
 )
 from src.contracts.run_budget import RunBudget
@@ -63,6 +65,8 @@ from src.contracts.validation_reliability import (
 from src.contracts.validation_run_manifest import (
     FrozenValidationCohortQueueSubmissionRequest,
     FrozenValidationCohortQueueSubmissionResponse,
+    PreselectedFrozenValidationCohortSubmissionRequest,
+    PreselectedFrozenValidationCohortSubmissionResponse,
     ValidationRunManifestAttemptResolveRequest,
     ValidationRunManifestAuditRequest,
     ValidationRunManifestCreateRequest,
@@ -70,6 +74,7 @@ from src.contracts.validation_run_manifest import (
     ValidationRunManifestStageRecord,
 )
 from src.contracts.workflow_queue import (
+    SourceIngestPayload,
     WorkflowJob,
     WorkflowJobSubmission,
 )
@@ -906,6 +911,7 @@ def _cohort_admission_preflight(
     admission_decisions: list[dict[str, Any]] | None = None,
     runtime_preflight_passed: bool = True,
     runtime_preflight_hash: str = "",
+    source_artifact_paths: dict[str, str] | None = None,
 ) -> list[DriveFile]:
     """Admit deterministic, locally verifiable sources before freezing a cohort.
 
@@ -934,7 +940,10 @@ def _cohort_admission_preflight(
         result = run_admission_preflight(
             AdmissionPreflightRequest(
                 file=file,
-                source_artifact_path=_cache_pdf_path(settings, file),
+                source_artifact_path=(
+                    (source_artifact_paths or {}).get(file.file_id)
+                    or _cache_pdf_path(settings, file)
+                ),
                 settings=settings,
                 runtime_preflight_passed=runtime_preflight_passed,
                 runtime_preflight_hash=runtime_preflight_hash,
@@ -1522,6 +1531,214 @@ def _frozen_cohort(
         root_ctx,
     )
     return selected_files
+
+
+def freeze_admitted_validation_cohort(
+    *,
+    cohort_manifest: str,
+    selected_files: list[DriveFile],
+    settings: IngestSettings,
+    root_ctx: RunContext,
+    admission_decisions: list[dict[str, Any]],
+    dependencies: IngestBatchDependencies | None = None,
+) -> list[DriveFile]:
+    """Persist the canonical immutable cohort after production admission."""
+
+    return _frozen_cohort(
+        cohort_size=len(selected_files),
+        cohort_manifest=cohort_manifest,
+        selected_files=selected_files,
+        settings=settings,
+        deps=dependencies or IngestBatchDependencies.default(),
+        root_ctx=root_ctx,
+        admission_decisions=admission_decisions,
+    )
+
+
+def submit_preselected_frozen_validation_cohort(
+    request: PreselectedFrozenValidationCohortSubmissionRequest,
+    ctx: RunContext,
+) -> PreselectedFrozenValidationCohortSubmissionResponse:
+    """Submit retained local reports through the canonical production workflow.
+
+    Discovery normally creates source provenance before ingest. This boundary is
+    for an already retained source, so it performs that same production-owned
+    provenance recording before applying the normal runtime preflight,
+    admission, cohort freezing, and durable queue submission sequence.
+    """
+
+    if request.schema_version != "1.0" or not request.sources:
+        raise AppError(
+            code="preselected_validation_cohort_invalid",
+            message="A preselected frozen validation cohort requires sources",
+            retryable=False,
+        )
+    settings = request.settings
+    root_ctx = replace(
+        ctx,
+        workflow="report_generation",
+        stage="admission_preflight",
+        artifact_family="report",
+        configuration_hash=admission_configuration_hash(settings),
+        policy_hash=admission_policy_hash(settings),
+    )
+    files: list[DriveFile] = []
+    source_paths: dict[str, str] = {}
+    for source in request.sources:
+        _record_preselected_source_provenance(
+            source=source,
+            settings=settings,
+            ctx=root_ctx,
+        )
+        files.append(
+            DriveFile(
+                schema_version="1.0",
+                file_id=source.report_id,
+                name=Path(source.source_artifact_path).name,
+                modified_time=None,
+                md5_checksum=source.content_md5,
+                mime_type="application/pdf",
+            )
+        )
+        source_paths[source.report_id] = source.source_artifact_path
+    runtime_preflight = preflight_report_pipeline(settings, root_ctx)
+    admission_decisions: list[dict[str, Any]] = []
+    admitted = _cohort_admission_preflight(
+        files,
+        settings=settings,
+        deps=IngestBatchDependencies.default(),
+        root_ctx=root_ctx,
+        admitted_source_identities=set(),
+        admitted_title_keys=set(),
+        admission_decisions=admission_decisions,
+        runtime_preflight_passed=runtime_preflight.passed,
+        runtime_preflight_hash=pipeline_preflight_decision_hash(runtime_preflight),
+        source_artifact_paths=source_paths,
+    )
+    _persist_admission_funnel(
+        admission_decisions,
+        settings=settings,
+        deps=IngestBatchDependencies.default(),
+        root_ctx=root_ctx,
+    )
+    decisions_by_file_id = {
+        str(item["file_id"]): item for item in admission_decisions
+    }
+    decisions = tuple(
+        _admission_decision_from_payload(decisions_by_file_id[file.file_id])
+        for file in files
+    )
+    if len(admitted) != len(files):
+        return PreselectedFrozenValidationCohortSubmissionResponse(
+            schema_version="1.0",
+            admission_decisions=decisions,
+            queue_submission=None,
+        )
+    freeze_admitted_validation_cohort(
+        cohort_manifest=request.cohort_manifest,
+        selected_files=admitted,
+        settings=settings,
+        root_ctx=root_ctx,
+        admission_decisions=admission_decisions,
+    )
+    submission = submit_frozen_validation_cohort_to_queue(
+        FrozenValidationCohortQueueSubmissionRequest(
+            schema_version="1.0",
+            state_db=settings.state_db,
+            reports_db=settings.reports_db,
+            cohort_manifest=request.cohort_manifest,
+            source_ingest_payloads=tuple(
+                SourceIngestPayload(
+                    source_identity_id=str(
+                        decisions_by_file_id[file.file_id]["source_identity_id"]
+                    ),
+                    source_artifact_reference=source_paths[file.file_id],
+                    source_content_hash=str(file.md5_checksum or ""),
+                    report_id=file.file_id,
+                    parser_ocr_compatibility_version="parser.v1",
+                    input_reference=source_paths[file.file_id],
+                    input_content_hash=str(file.md5_checksum or ""),
+                    processing_version="parser.v1",
+                    attributes={"config_path": request.config_path},
+                )
+                for file in admitted
+            ),
+        ),
+        root_ctx,
+    )
+    return PreselectedFrozenValidationCohortSubmissionResponse(
+        schema_version="1.0",
+        admission_decisions=decisions,
+        queue_submission=submission,
+    )
+
+
+def _record_preselected_source_provenance(*, source, settings, ctx) -> None:
+    required = (
+        source.report_id,
+        source.source_artifact_path,
+        source.content_md5,
+        source.source_domain,
+        source.report_name,
+        source.landing_page_url,
+        source.source_page_url,
+        source.publisher_name,
+        source.downloaded_at_utc,
+    )
+    if any(not str(value).strip() for value in required):
+        raise AppError(
+            code="preselected_validation_source_provenance_invalid",
+            message="Preselected validation source provenance is incomplete",
+            retryable=False,
+        )
+    record = record_report_source(
+        ReportSourceRecordRequest(
+            schema_version="1.0",
+            db_path=settings.reports_db,
+            source_domain=source.source_domain,
+            report_name=source.report_name,
+            landing_page_url=source.landing_page_url,
+            source_page_url=source.source_page_url,
+            downloaded_at_utc=source.downloaded_at_utc,
+            md5=source.content_md5,
+            publisher_name=source.publisher_name,
+        ),
+        ctx,
+    )
+    record_source_identity_observation(
+        SourceIdentityObservationRecordRequest(
+            schema_version="1.0",
+            db_path=settings.reports_db,
+            observation=SourceIdentityObservation(
+                schema_version="1.0",
+                source_record_id=record.record_id,
+                canonical_title=source.report_name,
+                title_evidence_locator="preselected_validation_source:report_name",
+                publisher_id=source.publisher_name,
+                publisher_name=source.publisher_name,
+                canonical_landing_page_url=source.landing_page_url,
+                acquired_artifact_url=source.landing_page_url,
+                source_page_url=source.source_page_url,
+                retrieved_at_utc=source.downloaded_at_utc,
+                acquisition_route="retained_preselected_source",
+                content_hash=f"md5:{source.content_md5}",
+                resolution_method="retained_preselected_source",
+                identity_confidence="high",
+            ),
+        ),
+        ctx,
+    )
+
+
+def _admission_decision_from_payload(
+    payload: dict[str, Any],
+) -> AdmissionPreflightDecision:
+    return AdmissionPreflightDecision(
+        **{
+            name: payload[name]
+            for name in AdmissionPreflightDecision.__dataclass_fields__
+        }
+    )
 
 
 def _cohort_id(files: list[DriveFile]) -> str:
@@ -3091,14 +3308,13 @@ def run_ingest(
                 manifest_path = cohort_manifest or str(
                     Path(settings.output_dir) / "cohorts" / f"{root_ctx.run_id}.json"
                 )
-                files_to_process = _frozen_cohort(
-                    cohort_size=cohort_size,
+                files_to_process = freeze_admitted_validation_cohort(
                     cohort_manifest=manifest_path,
                     selected_files=files_to_process,
                     settings=settings,
-                    deps=deps,
                     root_ctx=root_ctx,
-                    admission_decisions=admission_decisions,
+                    admission_decisions=admission_decisions or [],
+                    dependencies=deps,
                 )
             elif files_to_process is None:
                 files_to_process = _run_step_with_retry(

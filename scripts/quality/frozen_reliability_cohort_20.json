@@ -1,26 +1,206 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "cohort_name": "frozen_representative_reliability_20",
   "members": [
-    {"source_path": "out/browser_downloads/www.capgemini.com/c3d75e99ed7c/Final-Web-Version-Report-Consumer-Trends-2026.pdf"},
-    {"source_path": "out/browser_downloads/cdn.sanity.io/b224e6d4d2bc/d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf"},
-    {"source_path": "out/browser_downloads/doubleverify.com/2710ece9fc61/DV_QualityandAttentionBenchmark_Q1_2026.pdf"},
-    {"source_path": "out/browser_downloads/kpmg.com/d2cdf31f6df8/kpmg-2026-global-ma-outlook.pdf"},
-    {"source_path": "out/browser_downloads/reutersinstitute.politics.ox.ac.uk/b0e410340498/Trends_and_Predictions_2026.pdf"},
-    {"source_path": "out/browser_downloads/merchantriskcouncil.org/d649ea17ec88/2026_global_payments_and_fraud_report.pdf"},
-    {"source_path": "out/browser_downloads/www.adjust.com/b6b998e34a7c/mobile-app-trends-2026.pdf"},
-    {"source_path": "out/browser_downloads/www.algolia.com/2ef62190c537/2026%20B2C%20ecommerce%20AI%20trends_eBook_EN_2.pdf"},
-    {"source_path": "out/browser_downloads/www.bain.com/9e6d7f717c38/tech-tonic-shifts.pdf"},
-    {"source_path": "out/browser_downloads/www.bigcommerce.com/e72f39fe19e5/ebook_0225_future_commerce_new_modes_guide_en_us.pdf"},
-    {"source_path": "out/browser_downloads/www.criteo.com/1fd90493947a/Agency-Guide-Report-Criteo.pdf"},
-    {"source_path": "out/browser_downloads/www.deloitte.com/0b9f54f8fa8d/q1-2026-emerging-retail-and-consumer-trends.pdf"},
-    {"source_path": "out/browser_downloads/www.dhl.com/21a23a924cea/g0-ec-trends-report-2026.pdf"},
-    {"source_path": "out/browser_downloads/s3.amazonaws.com/29d97ddbfdbb/EMPLIFI_Digital_Authenticity_AI_2026.pdf"},
-    {"source_path": "out/browser_downloads/www.qualtrics.com/4a9ec0a6bf77/EX_Trends_AMR_020326.pdf"},
-    {"source_path": "out/browser_downloads/www.stackadapt.com/4ee9fe55e371/StackAdapt_Retail-Marketing-Trends_Report_2026.pdf"},
-    {"source_path": "out/browser_downloads/www.robeco.com/67321530add3/docu-202601-active-ownership-report-q4-en.pdf"},
-    {"source_path": "out/browser_downloads/www.similarweb.com/5935ab3c37c2/attachment-The-Sales-Signals-Playbook-4.pdf"},
-    {"source_path": "out/browser_downloads/azure-na-assets.contentstack.com/de0971e49916/2026_Global_Connected_Consumer_Trends_Report.pdf"},
-    {"source_path": "out/browser_downloads/www.mintel.com/fb6bb01f2666/2026_Global_Food_and_Drink_Predictions.pdf"}
+    {
+      "source_path": "out/browser_downloads/www.capgemini.com/c3d75e99ed7c/Final-Web-Version-Report-Consumer-Trends-2026.pdf",
+      "content_md5": "81af3890cd84ece81ef16e1aabda8027",
+      "source_domain": "www.capgemini.com",
+      "report_name": "Final Web Version Report Consumer Trends 2026",
+      "landing_page_url": "https://www.capgemini.com/us-en/insights/research-library/what-matters-to-todays-consumer-2026/",
+      "source_page_url": "https://www.capgemini.com/us-en/insights/research-library/what-matters-to-todays-consumer-2026/",
+      "publisher_name": "Capgemini Research Institute",
+      "downloaded_at_utc": "2026-07-17T20:26:08Z"
+    },
+    {
+      "source_path": "out/browser_downloads/cdn.sanity.io/b224e6d4d2bc/d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+      "content_md5": "cbb6e7df67412186b8bc094a424ac890",
+      "source_domain": "cdn.sanity.io",
+      "report_name": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f",
+      "landing_page_url": "https://cdn.sanity.io/files/bw8wgpyt/production/d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+      "source_page_url": "https://www.activate.com/insights",
+      "publisher_name": "Activate",
+      "downloaded_at_utc": "2026-06-13T14:20:21.367702+00:00"
+    },
+    {
+      "source_path": "out/browser_downloads/doubleverify.com/2710ece9fc61/DV_QualityandAttentionBenchmark_Q1_2026.pdf",
+      "content_md5": "e854b71d6fb10333b47fd518a6e51cf9",
+      "source_domain": "doubleverify.com",
+      "report_name": "DV QualityandAttentionBenchmark Q1 2026",
+      "landing_page_url": "https://doubleverify.com/hubfs/content/DV_QualityandAttentionBenchmark_Q1_2026.pdf",
+      "source_page_url": "https://doubleverify.com/hubfs/content/DV_QualityandAttentionBenchmark_Q1_2026.pdf",
+      "publisher_name": "DoubleVerify",
+      "downloaded_at_utc": "2026-07-11T11:45:37Z"
+    },
+    {
+      "source_path": "out/browser_downloads/kpmg.com/d2cdf31f6df8/kpmg-2026-global-ma-outlook.pdf",
+      "content_md5": "2acb4a56e14add5d7717f34c378f9091",
+      "source_domain": "kpmg.com",
+      "report_name": "2026 Global M&A Outlook",
+      "landing_page_url": "https://kpmg.com/xx/en/our-insights/value-creation/global-m-and-a-outlook.html",
+      "source_page_url": "https://kpmg.com/xx/en/our-insights/value-creation/global-m-and-a-outlook.html",
+      "publisher_name": "KPMG",
+      "downloaded_at_utc": "2026-06-10T21:56:38.335410+00:00"
+    },
+    {
+      "source_path": "out/browser_downloads/reutersinstitute.politics.ox.ac.uk/b0e410340498/Trends_and_Predictions_2026.pdf",
+      "content_md5": "4b763ae2286ca69fe8acb63b17508dfb",
+      "source_domain": "reutersinstitute.politics.ox.ac.uk",
+      "report_name": "Trends and Predictions 2026",
+      "landing_page_url": "https://reutersinstitute.politics.ox.ac.uk/journalism-media-and-technology-trends-and-predictions",
+      "source_page_url": "https://reutersinstitute.politics.ox.ac.uk/journalism-media-and-technology-trends-and-predictions",
+      "publisher_name": "Reuters Institute",
+      "downloaded_at_utc": "2026-07-17T20:25:39Z"
+    },
+    {
+      "source_path": "out/browser_downloads/merchantriskcouncil.org/d649ea17ec88/2026_global_payments_and_fraud_report.pdf",
+      "content_md5": "11b0b55157f7d0636815ad72435e1cf5",
+      "source_domain": "merchantriskcouncil.org",
+      "report_name": "2026 global payments and fraud report",
+      "landing_page_url": "https://merchantriskcouncil.org/learning/mrc-exclusive-reports/global-payments-and-fraud-report",
+      "source_page_url": "https://merchantriskcouncil.org/learning/mrc-exclusive-reports/global-payments-and-fraud-report",
+      "publisher_name": "Merchant Risk Council",
+      "downloaded_at_utc": "2026-07-06T07:07:51Z"
+    },
+    {
+      "source_path": "out/browser_downloads/www.adjust.com/b6b998e34a7c/mobile-app-trends-2026.pdf",
+      "content_md5": "b638414df0b1fccea1cd8a93eaf8f5aa",
+      "source_domain": "www.adjust.com",
+      "report_name": "mobile-app-trends-2026-pdf",
+      "landing_page_url": "https://www.adjust.com/resources/ebooks/mobile-app-trends-2026",
+      "source_page_url": "https://www.adjust.com/resources/ebooks",
+      "publisher_name": "Adjust",
+      "downloaded_at_utc": "2026-07-24T06:25:52.296472+00:00"
+    },
+    {
+      "source_path": "out/browser_downloads/www.algolia.com/2ef62190c537/2026%20B2C%20ecommerce%20AI%20trends_eBook_EN_2.pdf",
+      "content_md5": "86858bdcb370266f26c29b40316a4db0",
+      "source_domain": "www.algolia.com",
+      "report_name": "2026%20B2C%20ecommerce%20AI%20trends eBook EN 2",
+      "landing_page_url": "https://www.algolia.com/resources/asset/ebook-2026-b2c-ecommerce-ai-trends",
+      "source_page_url": "https://www.algolia.com/resources?reports=",
+      "publisher_name": "Algolia",
+      "downloaded_at_utc": "2026-07-06T08:00:41Z"
+    },
+    {
+      "source_path": "out/browser_downloads/www.bain.com/9e6d7f717c38/tech-tonic-shifts.pdf",
+      "content_md5": "77bc67b2bc98187d9d589a4e69fd85f7",
+      "source_domain": "www.bain.com",
+      "report_name": "How to win with tech",
+      "landing_page_url": "https://www.bain.com/globalassets/noindex/2021/tech-tonic-shifts.pdf",
+      "source_page_url": "https://www.bain.com/insights/technology-isnt-just-an-industry-anymore-its-everything-infographic",
+      "publisher_name": "Bain & Company",
+      "downloaded_at_utc": "2026-06-23T21:33:58.009298+00:00"
+    },
+    {
+      "source_path": "out/browser_downloads/www.bigcommerce.com/e72f39fe19e5/ebook_0225_future_commerce_new_modes_guide_en_us.pdf",
+      "content_md5": "0a019f840c3f89ad0a9672e058d1ff83",
+      "source_domain": "www.bigcommerce.com",
+      "report_name": "ebook 0225 future commerce new modes guide en us",
+      "landing_page_url": "https://www.bigcommerce.com/resources/reports/future-commerce-report-cdl-report",
+      "source_page_url": "https://www.bigcommerce.com/resources/reports",
+      "publisher_name": "Bigcommerce",
+      "downloaded_at_utc": "2026-07-06T18:26:45Z"
+    },
+    {
+      "source_path": "out/browser_downloads/www.criteo.com/1fd90493947a/Agency-Guide-Report-Criteo.pdf",
+      "content_md5": "979a63a1633a7f2ccc5123540a079d79",
+      "source_domain": "www.criteo.com",
+      "report_name": "The Advertiser Guide to New and Emerging Channels for 2023",
+      "landing_page_url": "https://www.criteo.com/wp-content/uploads/2023/01/Agency-Guide-Report-Criteo.pdf",
+      "source_page_url": "https://www.criteo.com/resources?format=Data+Report%2CGuide%2CIndustry+Report",
+      "publisher_name": "Criteo",
+      "downloaded_at_utc": "2026-06-10T22:22:21.988580+00:00"
+    },
+    {
+      "source_path": "out/browser_downloads/www.deloitte.com/0b9f54f8fa8d/q1-2026-emerging-retail-and-consumer-trends.pdf",
+      "content_md5": "b10ed6c82b76739a806a9f10ec0b9723",
+      "source_domain": "www.deloitte.com",
+      "report_name": "q1 2026 emerging retail and consumer trends",
+      "landing_page_url": "https://www.deloitte.com/content/dam/assets-zone3/us/en/docs/industries/consumer/2026/q1-2026-emerging-retail-and-consumer-trends.pdf",
+      "source_page_url": "https://www.deloitte.com/content/dam/assets-zone3/us/en/docs/industries/consumer/2026/q1-2026-emerging-retail-and-consumer-trends.pdf",
+      "publisher_name": "Deloitte",
+      "downloaded_at_utc": "2026-07-17T20:20:08Z"
+    },
+    {
+      "source_path": "out/browser_downloads/www.dhl.com/21a23a924cea/g0-ec-trends-report-2026.pdf",
+      "content_md5": "9b97626fc83c086961a7416d65e05faa",
+      "source_domain": "www.dhl.com",
+      "report_name": "g0 ec trends report 2026",
+      "landing_page_url": "https://www.dhl.com/content/dam/dhl/local/global/dhl-ecommerce/documents/pdf/g0-ec-trends-report-2026.pdf",
+      "source_page_url": "https://www.dhl.com/content/dam/dhl/local/global/dhl-ecommerce/documents/pdf/g0-ec-trends-report-2026.pdf",
+      "publisher_name": "DHL eCommerce",
+      "downloaded_at_utc": "2026-07-17T20:24:51Z"
+    },
+    {
+      "source_path": "out/browser_downloads/s3.amazonaws.com/29d97ddbfdbb/EMPLIFI_Digital_Authenticity_AI_2026.pdf",
+      "content_md5": "f62048b469dd784e6e7c0349c8b92f9b",
+      "source_domain": "s3.amazonaws.com",
+      "report_name": "EMPLIFI Digital Authenticity AI 2026",
+      "landing_page_url": "https://s3.amazonaws.com/media.mediapost.com/uploads/EMPLIFI_Digital_Authenticity_AI_2026.pdf",
+      "source_page_url": "https://s3.amazonaws.com/media.mediapost.com/uploads/EMPLIFI_Digital_Authenticity_AI_2026.pdf",
+      "publisher_name": "Emplifi",
+      "downloaded_at_utc": "2026-07-17T20:25:12Z"
+    },
+    {
+      "source_path": "out/browser_downloads/www.qualtrics.com/4a9ec0a6bf77/EX_Trends_AMR_020326.pdf",
+      "content_md5": "fb16d52bb8f60827077c38d6c3f22607",
+      "source_domain": "www.qualtrics.com",
+      "report_name": "EX Trends AMR 020326",
+      "landing_page_url": "https://www.qualtrics.com/ebooks-guides/employee-experience-trends/",
+      "source_page_url": "https://www.qualtrics.com/ebooks-guides/employee-experience-trends/",
+      "publisher_name": "Qualtrics",
+      "downloaded_at_utc": "2026-07-06T07:50:08Z"
+    },
+    {
+      "source_path": "out/browser_downloads/www.stackadapt.com/4ee9fe55e371/StackAdapt_Retail-Marketing-Trends_Report_2026.pdf",
+      "content_md5": "8ef1021c332aa85ba008da58ff8ec866",
+      "source_domain": "www.stackadapt.com",
+      "report_name": "Retail Marketing Trends: How To Win in 2026",
+      "landing_page_url": "https://www.stackadapt.com/main/wp-content/uploads/sites/2/2026/01/StackAdapt_Retail-Marketing-Trends_Report_2026.pdf",
+      "source_page_url": "https://www.stackadapt.com/main/wp-content/uploads/sites/2/2026/01/StackAdapt_Retail-Marketing-Trends_Report_2026.pdf",
+      "publisher_name": "StackAdapt Inc.",
+      "downloaded_at_utc": "2026-07-17T21:38:00.007802+00:00"
+    },
+    {
+      "source_path": "out/browser_downloads/www.robeco.com/67321530add3/docu-202601-active-ownership-report-q4-en.pdf",
+      "content_md5": "5ceb3b4498de7288ce5a42546d137262",
+      "source_domain": "www.robeco.com",
+      "report_name": "docu 202601 active ownership report q4 en",
+      "landing_page_url": "https://www.robeco.com/en-int/insights/2026/01/nature-and-governance-lead-q4-active-ownership-report",
+      "source_page_url": "https://www.robeco.com/en-int/insights/2026/04/stewardship-report-2025-unwavering-commitment-to-drive-change",
+      "publisher_name": "Robeco",
+      "downloaded_at_utc": "2026-07-05T22:15:20Z"
+    },
+    {
+      "source_path": "out/browser_downloads/www.similarweb.com/5935ab3c37c2/attachment-The-Sales-Signals-Playbook-4.pdf",
+      "content_md5": "f1652970000cfe246c944412e0b1e4fe",
+      "source_domain": "www.similarweb.com",
+      "report_name": "attachment The Sales Signals Playbook 4",
+      "landing_page_url": "https://www.similarweb.com/corp/reports/sales-signals-playbook",
+      "source_page_url": "https://www.similarweb.com/corp/reports",
+      "publisher_name": "SimilarWeb",
+      "downloaded_at_utc": "2026-07-05T22:09:54Z"
+    },
+    {
+      "source_path": "out/browser_downloads/azure-na-assets.contentstack.com/de0971e49916/2026_Global_Connected_Consumer_Trends_Report.pdf",
+      "content_md5": "076eca6d31e0c1dcddf0f991b3000b40",
+      "source_domain": "azure-na-assets.contentstack.com",
+      "report_name": "2026 Global Connected Consumer Trends Report",
+      "landing_page_url": "https://azure-na-assets.contentstack.com/v3/assets/blt87461b8270f4f92b/blt0de28453a5317c87/6a1d7d93084e9b613cb56ab4/2026_Global_Connected_Consumer_Trends_Report.pdf",
+      "source_page_url": "https://azure-na-assets.contentstack.com/v3/assets/blt87461b8270f4f92b/blt0de28453a5317c87/6a1d7d93084e9b613cb56ab4/2026_Global_Connected_Consumer_Trends_Report.pdf",
+      "publisher_name": "Contentstack",
+      "downloaded_at_utc": "2026-07-17T20:21:14Z"
+    },
+    {
+      "source_path": "out/browser_downloads/www.mintel.com/fb6bb01f2666/2026_Global_Food_and_Drink_Predictions.pdf",
+      "content_md5": "b3cb5f66cccda4420be21b2b407b3c59",
+      "source_domain": "www.mintel.com",
+      "report_name": "2026 Global Food and Drink Predictions",
+      "landing_page_url": "https://www.mintel.com/insights/food-and-drink/global-food-and-drink-trends",
+      "source_page_url": "https://www.mintel.com/insights/consumer-research",
+      "publisher_name": "Mintel",
+      "downloaded_at_utc": "2026-07-05T22:07:45Z"
+    }
   ]
 }

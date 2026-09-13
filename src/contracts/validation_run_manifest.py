@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from src.contracts.admission_preflight import AdmissionPreflightDecision
+from src.contracts.ingest import IngestSettings
 from src.contracts.semantic_ids import RunId, SemanticIdContract, ValidationRunId
 from src.contracts.workflow_queue import SourceIngestPayload, WorkflowJob
 
@@ -47,6 +49,48 @@ class FrozenValidationCohortQueueSubmissionResponse(SemanticIdContract):
     cohort_id: str
     root_workflow_id: RunId
     jobs: tuple[WorkflowJob, ...]
+
+
+@dataclass(frozen=True)
+class PreselectedFrozenValidationSource:
+    """One retained local source entering the canonical frozen-cohort path."""
+
+    schema_version: str = field(
+        metadata={"doc": "Preselected source request schema version."}
+    )
+    report_id: str
+    source_artifact_path: str
+    content_md5: str
+    source_domain: str
+    report_name: str
+    landing_page_url: str
+    source_page_url: str
+    publisher_name: str
+    downloaded_at_utc: str
+
+
+@dataclass(frozen=True)
+class PreselectedFrozenValidationCohortSubmissionRequest:
+    """Run retained sources through production admission, freezing, and queueing."""
+
+    schema_version: str = field(
+        metadata={"doc": "Preselected frozen-cohort submission schema version."}
+    )
+    settings: IngestSettings
+    cohort_manifest: str
+    config_path: str
+    sources: tuple[PreselectedFrozenValidationSource, ...]
+
+
+@dataclass(frozen=True)
+class PreselectedFrozenValidationCohortSubmissionResponse:
+    """Admission evidence and, only for a fully admitted cohort, queue lineage."""
+
+    schema_version: str = field(
+        metadata={"doc": "Preselected frozen-cohort submission response version."}
+    )
+    admission_decisions: tuple[AdmissionPreflightDecision, ...]
+    queue_submission: FrozenValidationCohortQueueSubmissionResponse | None
 
 
 @dataclass(frozen=True)

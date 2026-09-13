@@ -10,6 +10,7 @@ import subprocess
 import tempfile
 import time
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from statistics import median
 from typing import Any
@@ -25,27 +26,26 @@ from src.contracts.report_store import (
     SourceIdentityObservationRecordRequest,
 )
 from src.contracts.validation_run_manifest import (
-    FrozenValidationCohortQueueSubmissionRequest,
+    PreselectedFrozenValidationCohortSubmissionRequest,
+    PreselectedFrozenValidationSource,
 )
-from src.contracts.workflow_queue import SourceIngestPayload
+from src.contracts.workflow_control import SupervisorRunRequest
 from src.orchestrators.admission_preflight_orchestrator import (
     AdmissionPreflightRequest,
     admission_configuration_hash,
-    admission_decision_payload,
     admission_policy_hash,
     pipeline_preflight_decision_hash,
     run_admission_preflight,
 )
 from src.orchestrators.ingest_orchestrator import (
-    IngestBatchDependencies,
-    _frozen_cohort,
-    submit_frozen_validation_cohort_to_queue,
+    submit_preselected_frozen_validation_cohort,
 )
 from src.orchestrators.pipeline_preflight_orchestrator import preflight_report_pipeline
-from src.orchestrators.workflow_worker_orchestrator import run_workflow_worker_once
+from src.orchestrators.workflow_supervisor_orchestrator import run_supervisor_once
 from src.services.config_service import (
     build_ingest_settings,
     load_settings,
+    load_workflow_control_settings,
     new_runtime_context,
 )
 from src.services.llm_usage_ledger_service import read_usage_run_summary
@@ -53,7 +53,6 @@ from src.services.report_store_service import (
     record_report_source,
     record_source_identity_observation,
 )
-from src.services.workflow_queue_service import materialize_workflow_outbox
 from src.utils.errors import AppError
 
 
@@ -66,13 +65,6 @@ class IsolatedCanaryRun:
     mutable_paths: tuple[Path, ...]
 
 
-_REPORT_QUEUES = (
-    "source_ingest",
-    "report_selection",
-    "report_analysis",
-    "report_render",
-    "publication_readiness",
-)
 _AUTOMATIC_REPAIR_DISPOSITIONS = {
     "targeted_repair",
     "full_rerun",
@@ -142,6 +134,7 @@ def _isolated_config(
     config["paths"] = {
         **dict(config.get("paths") or {}),
         **{name: str(path) for name, path in paths.items()},
+        "html_tag_acronyms": str(base_config_path.with_name("html-tag-acronyms.yaml")),
     }
     config["analysis"] = {
         **dict(config.get("analysis") or {}),
@@ -150,10 +143,14 @@ def _isolated_config(
     config["cost"] = {
         **dict(config.get("cost") or {}),
         **{name: str(path) for name, path in cost_paths.items()},
+        "pricing_path": str(base_config_path.with_name("llm-costs.yaml")),
     }
     config["browser_download"] = {
         **dict(config.get("browser_download") or {}),
         "output_dir": str(root / "output" / "browser_downloads"),
+        "identity_config_path": str(
+            base_config_path.with_name("browser_download_identity.yaml")
+        ),
     }
     config["publisher_discovery"] = {
         **dict(config.get("publisher_discovery") or {}),
@@ -164,6 +161,13 @@ def _isolated_config(
         "projection_daily_path": str(root / "state" / "projection_cost_daily.json"),
         "projection_ledger_path": str(root / "state" / "projection_cost_ledger.jsonl"),
     }
+    workflow_control = dict(config.get("workflow_control") or {})
+    workflow_control["supervisor"] = {
+        **dict(workflow_control.get("supervisor") or {}),
+        "enabled": True,
+        "worker_batches_enabled": True,
+    }
+    config["workflow_control"] = workflow_control
     return config
 
 
@@ -174,15 +178,69 @@ def run_ias_first_attempt_canary(
     max_duration_seconds: int = 7_200,
 ) -> dict[str, Any]:
     """Run one IAS source through the normal frozen-cohort queue exactly once."""
+    return _run_preselected_canary(
+        runs_root=runs_root,
+        source_path=source_path,
+        source_metadata={
+            "source_domain": "integralads.com",
+            "report_name": "IAS Industry Pulse Report 2026",
+            "landing_page_url": "https://integralads.com/insider/industry-pulse-report/",
+            "source_page_url": "https://integralads.com/insider/",
+            "publisher_name": "Integral Ad Science",
+            "downloaded_at_utc": "2026-09-12T00:00:00Z",
+        },
+        report_prefix="ias",
+        task_id="ias_first_attempt_live_canary",
+        missing_source_code="ias_canary_source_missing",
+        admission_code_prefix="ias_canary_admission",
+        runner_defect_code="ias_canary_runner_defect",
+        max_duration_seconds=max_duration_seconds,
+    )
+
+
+def run_first_attempt_canary(
+    *,
+    runs_root: Path,
+    source_path: Path,
+    source_metadata: dict[str, str] | None = None,
+    max_duration_seconds: int = 7_200,
+) -> dict[str, Any]:
+    """Run one non-IAS source through the same one-attempt queue path."""
+    return _run_preselected_canary(
+        runs_root=runs_root,
+        source_path=source_path,
+        source_metadata=source_metadata or _local_source_metadata(source_path),
+        report_prefix="cohort",
+        task_id="frozen_reliability_cohort",
+        missing_source_code="frozen_cohort_source_missing",
+        admission_code_prefix="frozen_cohort_admission",
+        runner_defect_code="frozen_cohort_runner_defect",
+        max_duration_seconds=max_duration_seconds,
+    )
+
+
+def _run_preselected_canary(
+    *,
+    runs_root: Path,
+    source_path: Path,
+    source_metadata: dict[str, str],
+    report_prefix: str,
+    task_id: str,
+    missing_source_code: str,
+    admission_code_prefix: str,
+    runner_defect_code: str,
+    max_duration_seconds: int,
+) -> dict[str, Any]:
+    """Isolate one source, then delegate processing to production orchestration."""
 
     started_at = time.monotonic()
     run = prepare_isolated_canary_run(runs_root=runs_root)
     result = _empty_result(run, started_at)
     try:
         if not source_path.is_file():
-            result["terminal_failure_code"] = "ias_canary_source_missing"
+            result["terminal_failure_code"] = missing_source_code
             return result
-        ctx = new_runtime_context(task_id="ias_first_attempt_live_canary")
+        ctx = new_runtime_context(task_id=task_id)
         settings = build_ingest_settings(
             IngestSettingsBuildRequest(
                 schema_version="1.0",
@@ -197,84 +255,46 @@ def run_ias_first_attempt_canary(
         source_hash = hashlib.md5(
             source_path.read_bytes(), usedforsecurity=False
         ).hexdigest()
-        report_id = f"ias-{source_hash[:20]}"
+        report_id = f"{report_prefix}-{source_hash[:20]}"
         result["report_id"] = report_id
-        observation = _record_ias_source_identity(
-            settings=settings,
-            report_id=report_id,
-            source_hash=source_hash,
-            ctx=ctx,
-        )
-        source = DriveFile(
-            schema_version="1.0",
-            file_id=report_id,
-            name=source_path.name,
-            modified_time=None,
-            md5_checksum=source_hash,
-            mime_type="application/pdf",
-        )
-        runtime_preflight = preflight_report_pipeline(settings, ctx)
-        admission = run_admission_preflight(
-            AdmissionPreflightRequest(
-                file=source,
-                source_artifact_path=str(source_path.resolve()),
-                settings=settings,
-                runtime_preflight_passed=runtime_preflight.passed,
-                runtime_preflight_hash=pipeline_preflight_decision_hash(
-                    runtime_preflight
-                ),
-                configuration_hash=admission_configuration_hash(settings),
-                policy_hash=admission_policy_hash(settings),
-                known_source_identities={},
-                known_title_keys={},
-            ),
-            ctx,
-        )
-        if not admission.admitted:
-            result["source_identity_id"] = observation.source_identity_id
-            result["publisher_id"] = observation.publisher_id
-            result["terminal_failure_code"] = (
-                f"ias_canary_admission_{admission.decision.outcome}"
-            )
-            return result
-        decision = admission_decision_payload(admission.decision)
-        result["source_identity_id"] = str(decision["source_identity_id"])
-        result["publisher_id"] = str(decision["publisher_id"])
-        cohort_manifest = run.root / "cohort" / "ias.json"
-        _frozen_cohort(
-            cohort_size=1,
-            cohort_manifest=str(cohort_manifest),
-            selected_files=[source],
-            settings=settings,
-            deps=IngestBatchDependencies.default(),
-            root_ctx=ctx,
-            admission_decisions=[decision],
-        )
-        submission = submit_frozen_validation_cohort_to_queue(
-            FrozenValidationCohortQueueSubmissionRequest(
+        prepared = submit_preselected_frozen_validation_cohort(
+            PreselectedFrozenValidationCohortSubmissionRequest(
                 schema_version="1.0",
-                state_db=settings.state_db,
-                reports_db=settings.reports_db,
-                cohort_manifest=str(cohort_manifest),
-                source_ingest_payloads=(
-                    SourceIngestPayload(
-                        source_identity_id=str(decision["source_identity_id"]),
-                        source_artifact_reference=str(source_path.resolve()),
-                        source_content_hash=source_hash,
+                settings=settings,
+                cohort_manifest=str(run.root / "cohort" / "source.json"),
+                config_path=str(run.config_path),
+                sources=(
+                    PreselectedFrozenValidationSource(
+                        schema_version="1.0",
                         report_id=report_id,
-                        parser_ocr_compatibility_version="parser.v1",
-                        input_reference=str(source_path.resolve()),
-                        input_content_hash=source_hash,
-                        processing_version="parser.v1",
-                        attributes={"config_path": str(run.config_path)},
+                        source_artifact_path=str(source_path.resolve()),
+                        content_md5=source_hash,
+                        source_domain=source_metadata["source_domain"],
+                        report_name=source_metadata["report_name"],
+                        landing_page_url=source_metadata["landing_page_url"],
+                        source_page_url=source_metadata["source_page_url"],
+                        publisher_name=source_metadata["publisher_name"],
+                        downloaded_at_utc=source_metadata["downloaded_at_utc"],
                     ),
                 ),
             ),
             ctx,
         )
+        decision = prepared.admission_decisions[0]
+        result["admission_outcome"] = decision.outcome
+        result["source_identity_id"] = decision.source_identity_id
+        result["publisher_id"] = decision.publisher_id
+        if prepared.queue_submission is None:
+            result["terminal_failure_code"] = (
+                f"{admission_code_prefix}_{decision.outcome}"
+            )
+            return result
+        submission = prepared.queue_submission
         result["workflow_root_id"] = str(submission.root_workflow_id)
         _drain_report_path(
             state_db=settings.state_db,
+            usage_db_path=settings.usage_db_path,
+            config_path=run.config_path,
             report_id=report_id,
             root_workflow_id=str(submission.root_workflow_id),
             ctx=ctx,
@@ -292,29 +312,37 @@ def run_ias_first_attempt_canary(
     except AppError as exc:
         result["terminal_failure_code"] = exc.code
     except Exception:
-        result["terminal_failure_code"] = "ias_canary_runner_defect"
+        result["terminal_failure_code"] = runner_defect_code
     finally:
         result["total_duration_seconds"] = round(time.monotonic() - started_at, 3)
         _write_result(run.root / "result.json", result)
     return result
 
 
-def run_first_attempt_canary(
-    *,
-    runs_root: Path,
-    source_path: Path,
-    max_duration_seconds: int = 7_200,
-) -> dict[str, Any]:
-    """Run one non-IAS source through the same one-attempt queue path."""
+def _local_source_metadata(source_path: Path) -> dict[str, str]:
+    return {
+        "source_domain": "retained.local",
+        "report_name": source_path.stem,
+        "landing_page_url": source_path.resolve().as_uri(),
+        "source_page_url": source_path.resolve().as_uri(),
+        "publisher_name": "Retained local source",
+        "downloaded_at_utc": "1970-01-01T00:00:00Z",
+    }
 
+
+def preflight_frozen_cohort_member(
+    *, runs_root: Path, source_path: Path, source_metadata: dict[str, str]
+) -> dict[str, Any]:
+    """Component-only admission check; this is not end-to-end workflow validation."""
     started_at = time.monotonic()
     run = prepare_isolated_canary_run(runs_root=runs_root)
     result = _empty_result(run, started_at)
+    result["validation_scope"] = "component_admission_preflight_not_end_to_end"
     try:
         if not source_path.is_file():
             result["terminal_failure_code"] = "frozen_cohort_source_missing"
             return result
-        ctx = new_runtime_context(task_id="frozen_reliability_cohort")
+        ctx = new_runtime_context(task_id="frozen_reliability_cohort_preflight")
         settings = build_ingest_settings(
             IngestSettingsBuildRequest(
                 schema_version="1.0",
@@ -331,18 +359,25 @@ def run_first_attempt_canary(
         ).hexdigest()
         report_id = f"cohort-{source_hash[:20]}"
         result["report_id"] = report_id
-        source = DriveFile(
-            schema_version="1.0",
-            file_id=report_id,
-            name=source_path.name,
-            modified_time=None,
-            md5_checksum=source_hash,
-            mime_type="application/pdf",
+        observation = _record_frozen_source_identity(
+            settings=settings,
+            source_hash=source_hash,
+            metadata=source_metadata,
+            ctx=ctx,
         )
+        result["source_identity_id"] = observation.source_identity_id
+        result["publisher_id"] = observation.publisher_id
         runtime_preflight = preflight_report_pipeline(settings, ctx)
         admission = run_admission_preflight(
             AdmissionPreflightRequest(
-                file=source,
+                file=DriveFile(
+                    schema_version="1.0",
+                    file_id=report_id,
+                    name=source_path.name,
+                    modified_time=None,
+                    md5_checksum=source_hash,
+                    mime_type="application/pdf",
+                ),
                 source_artifact_path=str(source_path.resolve()),
                 settings=settings,
                 runtime_preflight_passed=runtime_preflight.passed,
@@ -356,84 +391,48 @@ def run_first_attempt_canary(
             ),
             ctx,
         )
-        decision = admission_decision_payload(admission.decision)
-        result["source_identity_id"] = str(decision.get("source_identity_id") or "")
-        result["publisher_id"] = str(decision.get("publisher_id") or "")
+        result["admission_outcome"] = admission.decision.outcome
         if not admission.admitted:
             result["terminal_failure_code"] = (
                 f"frozen_cohort_admission_{admission.decision.outcome}"
             )
-            return result
-        cohort_manifest = run.root / "cohort" / "source.json"
-        _frozen_cohort(
-            cohort_size=1,
-            cohort_manifest=str(cohort_manifest),
-            selected_files=[source],
-            settings=settings,
-            deps=IngestBatchDependencies.default(),
-            root_ctx=ctx,
-            admission_decisions=[decision],
-        )
-        submission = submit_frozen_validation_cohort_to_queue(
-            FrozenValidationCohortQueueSubmissionRequest(
-                schema_version="1.0",
-                state_db=settings.state_db,
-                reports_db=settings.reports_db,
-                cohort_manifest=str(cohort_manifest),
-                source_ingest_payloads=(
-                    SourceIngestPayload(
-                        source_identity_id=str(decision["source_identity_id"]),
-                        source_artifact_reference=str(source_path.resolve()),
-                        source_content_hash=source_hash,
-                        report_id=report_id,
-                        parser_ocr_compatibility_version="parser.v1",
-                        input_reference=str(source_path.resolve()),
-                        input_content_hash=source_hash,
-                        processing_version="parser.v1",
-                        attributes={"config_path": str(run.config_path)},
-                    ),
-                ),
-            ),
-            ctx,
-        )
-        result["workflow_root_id"] = str(submission.root_workflow_id)
-        _drain_report_path(
-            state_db=settings.state_db,
-            report_id=report_id,
-            root_workflow_id=str(submission.root_workflow_id),
-            ctx=ctx,
-            max_duration_seconds=max_duration_seconds,
-        )
-        result.update(
-            _read_result(
-                settings=settings,
-                report_id=report_id,
-                validation_run_id=str(submission.validation_run_id),
-                root_workflow_id=str(submission.root_workflow_id),
-                ctx=ctx,
-            )
-        )
+        else:
+            result["final_state"] = "preflight_admitted"
     except AppError as exc:
         result["terminal_failure_code"] = exc.code
-    except Exception:
-        result["terminal_failure_code"] = "frozen_cohort_runner_defect"
     finally:
         result["total_duration_seconds"] = round(time.monotonic() - started_at, 3)
-        _write_result(run.root / "result.json", result)
+        _write_result(run.root / "preflight.json", result)
     return result
 
 
-def _record_ias_source_identity(*, settings, report_id: str, source_hash: str, ctx):
+def _record_frozen_source_identity(*, settings, source_hash: str, metadata, ctx):
+    """Persist retained discovery metadata through the production identity boundary."""
+    required = (
+        "source_domain",
+        "report_name",
+        "landing_page_url",
+        "source_page_url",
+        "publisher_name",
+        "downloaded_at_utc",
+    )
+    if any(not str(metadata.get(name) or "").strip() for name in required):
+        raise AppError(
+            code="frozen_cohort_source_provenance_invalid",
+            message="Frozen cohort source metadata is incomplete",
+            retryable=False,
+        )
     source = record_report_source(
         ReportSourceRecordRequest(
             schema_version="1.0",
             db_path=settings.reports_db,
-            source_domain="integralads.com",
-            report_name="IAS Industry Pulse Report 2026",
-            landing_page_url="https://integralads.com/insider/industry-pulse-report/",
-            downloaded_at_utc="2026-09-12T00:00:00Z",
+            source_domain=str(metadata["source_domain"]),
+            report_name=str(metadata["report_name"]),
+            landing_page_url=str(metadata["landing_page_url"]),
+            source_page_url=str(metadata["source_page_url"]),
+            downloaded_at_utc=str(metadata["downloaded_at_utc"]),
             md5=source_hash,
-            publisher_name="Integral Ad Science",
+            publisher_name=str(metadata["publisher_name"]),
         ),
         ctx,
     )
@@ -444,18 +443,17 @@ def _record_ias_source_identity(*, settings, report_id: str, source_hash: str, c
             observation=SourceIdentityObservation(
                 schema_version="1.0",
                 source_record_id=source.record_id,
-                canonical_title="IAS Industry Pulse Report 2026",
-                title_evidence_locator="ias-live-canary:fixture-title",
-                publisher_id="publisher:integral-ad-science",
-                publisher_name="Integral Ad Science",
-                canonical_landing_page_url=(
-                    "https://integralads.com/insider/industry-pulse-report/"
-                ),
-                source_page_url="https://integralads.com/insider/",
-                retrieved_at_utc="2026-09-12T00:00:00Z",
-                acquisition_route="frozen_ias_fixture",
+                canonical_title=str(metadata["report_name"]),
+                title_evidence_locator="frozen_cohort_manifest:report_name",
+                publisher_id=str(metadata["publisher_name"]),
+                publisher_name=str(metadata["publisher_name"]),
+                canonical_landing_page_url=str(metadata["landing_page_url"]),
+                acquired_artifact_url=str(metadata["landing_page_url"]),
+                source_page_url=str(metadata["source_page_url"]),
+                retrieved_at_utc=str(metadata["downloaded_at_utc"]),
+                acquisition_route="frozen_cohort_retained_discovery",
                 content_hash=f"md5:{source_hash}",
-                resolution_method="ias_live_canary_source_observation",
+                resolution_method="frozen_cohort_retained_discovery",
                 identity_confidence="high",
             ),
         ),
@@ -490,25 +488,30 @@ def _assert_empty_stores(*, run: IsolatedCanaryRun, settings) -> None:
 def _drain_report_path(
     *,
     state_db: str,
+    usage_db_path: str,
+    config_path: Path,
     report_id: str,
     root_workflow_id: str,
     ctx,
     max_duration_seconds: int,
 ) -> None:
+    control = load_workflow_control_settings(
+        ConfigLoadRequest(schema_version="1.0", path=str(config_path)), ctx
+    )
     deadline = time.monotonic() + max(1, max_duration_seconds)
     worker_id = f"ias-live-canary:{root_workflow_id}"
     while time.monotonic() < deadline:
-        materialize_workflow_outbox(state_db, worker_id, ctx)
-        progress = False
-        for queue_name in _REPORT_QUEUES:
-            worker = run_workflow_worker_once(
+        supervisor = run_supervisor_once(
+            SupervisorRunRequest(
+                schema_version="1.0",
                 state_db=state_db,
-                queue_name=queue_name,
+                usage_db_path=usage_db_path,
                 worker_id=worker_id,
-                ctx=ctx,
-            )
-            progress = progress or bool(worker.claimed_job_id)
-        materialize_workflow_outbox(state_db, worker_id, ctx)
+                now_utc=datetime.now(timezone.utc).isoformat(),
+                settings=control.supervisor,
+            ),
+            ctx,
+        )
         state = _queue_terminal_state(
             state_db=state_db,
             report_id=report_id,
@@ -516,7 +519,7 @@ def _drain_report_path(
         )
         if state in {"awaiting_review", "failed"}:
             return
-        if not progress:
+        if supervisor.completed_job_count == 0:
             time.sleep(1)
 
 
@@ -694,6 +697,7 @@ def _empty_result(run: IsolatedCanaryRun, started_at: float) -> dict[str, Any]:
         "publisher_id": "",
         "workflow_root_id": "",
         "workflow_attempt_count": 0,
+        "admission_outcome": "",
         "isolated_fresh_state": True,
         "final_state": "failed",
         "awaiting_review": False,
@@ -734,6 +738,12 @@ def summarize_frozen_cohort_results(
 
     count = len(results)
     denominator = max(1, count)
+    admitted = [
+        item
+        for item in results
+        if item.get("admission_outcome", "admitted") == "admitted"
+    ]
+    workflow_denominator = max(1, len(admitted))
     costs = [float(item.get("cost") or 0.0) for item in results]
     durations = [float(item.get("total_duration_seconds") or 0.0) for item in results]
     failures = [
@@ -744,28 +754,32 @@ def summarize_frozen_cohort_results(
     pareto = {code: failures.count(code) for code in sorted(set(failures))}
     return {
         "report_count": count,
+        "admitted_report_count": len(admitted),
+        "cohort_admission_rate": len(admitted) / denominator,
+        "workflow_denominator": len(admitted),
         "first_attempt_awaiting_review_rate": sum(
             bool(item.get("awaiting_review"))
             and int(item.get("workflow_attempt_count") or 1) == 1
-            for item in results
+            for item in admitted
         )
-        / denominator,
+        / workflow_denominator,
         "publication_readiness_rate": sum(
-            item.get("publication_readiness") == "pass" for item in results
+            item.get("publication_readiness") == "pass" for item in admitted
         )
-        / denominator,
+        / workflow_denominator,
         "bounded_repair_rate": sum(
-            bool(item.get("bounded_automatic_repair")) for item in results
+            bool(item.get("bounded_automatic_repair")) for item in admitted
         )
-        / denominator,
+        / workflow_denominator,
         "workflow_failure_rate": sum(
-            item.get("final_state") != "awaiting_review" for item in results
+            item.get("final_state") != "awaiting_review" for item in admitted
         )
-        / denominator,
+        / workflow_denominator,
         "typed_terminal_rate": sum(
-            item.get("final_state") in {"awaiting_review", "failed"} for item in results
+            item.get("final_state") in {"awaiting_review", "failed"}
+            for item in admitted
         )
-        / denominator,
+        / workflow_denominator,
         "operator_intervention_count": sum(
             bool(item.get("operator_intervention")) for item in results
         ),
