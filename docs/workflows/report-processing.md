@@ -33,6 +33,13 @@ unique temporary file followed by an atomic replace. A bounded retry absorbs
 transient Windows replacement contention. This makes the cache race-safe
 without treating a missing sidecar as a valid cache hit; an interrupted write
 is simply regenerated.
+Report-analysis packs use the same bounded-path rule at their canonical store
+boundary: when a report slug plus the shared atomic-write temporary filename
+would exceed the Windows-safe budget, the report directory is deterministically
+compacted with a slug-derived suffix. Every producer and downstream reader
+resolves that one canonical path through the analysis-pack service, including
+the crop-refinement cache; a genuine directory, permission, serialization, or
+atomic-write failure remains a typed persistence failure.
 If a report pipeline still observes a missing local processing artifact, it
 maps that OS-level condition to the configured bounded report-pipeline retry;
 a persistent missing source or artifact remains a typed terminal failure.

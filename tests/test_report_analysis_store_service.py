@@ -6,6 +6,10 @@ from pathlib import Path
 import pytest
 
 from src.contracts.report_analysis import AnalysisStorePackRequest
+from src.services.file_service import (
+    WINDOWS_SAFE_ATOMIC_PATH_LENGTH,
+    atomic_write_temp_path_length,
+)
 from src.services.report_analysis_store_service import store_pack
 from src.utils.errors import AppError
 
@@ -263,3 +267,34 @@ def test_store_pack_overwrites_existing_pack_atomically(
 
     stored = json.loads(Path(response.output_path).read_text(encoding="utf-8"))
     assert stored["title"] == "Updated Title"
+
+
+def test_store_pack_bounds_stackadapt_crop_refine_path_for_atomic_write(
+    run_context, tmp_path: Path
+) -> None:
+    report_slug = "StackAdapt_Retail-Marketing-Trends_Report_2026.pdf"
+    report_id = "cohort-8ef1021c332aa85ba008"
+    artifact_name = "crop_refine.json"
+    output_dir = tmp_path / "isolated-cohort"
+    unbounded_path = output_dir / report_slug / "report_analysis" / artifact_name
+    padding = "x" * (220 - len(str(unbounded_path.resolve())))
+    output_dir = output_dir / padding
+    payload = {"schema_version": "1.0", "results": []}
+
+    response = store_pack(
+        AnalysisStorePackRequest(
+            schema_version="1.0",
+            output_dir=str(output_dir),
+            report_id=report_id,
+            pack_name="crop_refine",
+            payload=payload,
+            report_slug=report_slug,
+        ),
+        run_context,
+    )
+
+    stored_path = Path(response.output_path)
+    assert stored_path.name == artifact_name
+    assert stored_path.parent.name == "report_analysis"
+    assert atomic_write_temp_path_length(stored_path) <= WINDOWS_SAFE_ATOMIC_PATH_LENGTH
+    assert json.loads(stored_path.read_text(encoding="utf-8")) == payload

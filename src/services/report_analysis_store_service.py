@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import re
@@ -39,6 +40,29 @@ _PACK_SCHEMA_NAMES: dict[str, str] = {
 
 def _report_base_dir(output_dir: str, report_slug: str) -> Path:
     return Path(output_dir) / report_slug / "report_analysis"
+
+
+def _bounded_report_slug(output_dir: str, report_slug: str, pack_name: str) -> str:
+    """Keep each report-analysis pack and its atomic temp file path-safe."""
+
+    artifact_name = f"{pack_name}.json"
+    if (
+        file_service.atomic_write_temp_path_length(
+            _report_base_dir(output_dir, report_slug) / artifact_name
+        )
+        <= file_service.WINDOWS_SAFE_ATOMIC_PATH_LENGTH
+    ):
+        return report_slug
+    digest = hashlib.sha256(report_slug.encode("utf-8")).hexdigest()[:12]
+    compact_path = _report_base_dir(output_dir, digest) / artifact_name
+    prefix_budget = max(
+        0,
+        file_service.WINDOWS_SAFE_ATOMIC_PATH_LENGTH
+        - file_service.atomic_write_temp_path_length(compact_path)
+        - 1,
+    )
+    prefix = report_slug[:prefix_budget].rstrip(" .-_")
+    return f"{prefix}-{digest}" if prefix else digest
 
 
 def _resolve_report_slug(report_slug: str | None, report_id: str) -> str:
@@ -90,8 +114,9 @@ def pack_path(
             },
         )
     )
-    slug = _resolve_report_slug(request.report_slug, request.report_id)
     pack_name = _validate_pack_name(request.pack_name)
+    resolved_slug = _resolve_report_slug(request.report_slug, request.report_id)
+    slug = _bounded_report_slug(request.output_dir, resolved_slug, pack_name)
     path = _report_base_dir(request.output_dir, slug) / f"{pack_name}.json"
     response = AnalysisPackPathResponse(schema_version="1.0", output_path=str(path))
     logger.info(
@@ -100,7 +125,10 @@ def pack_path(
             role="service",
             event="analysis_pack_path_complete",
             module=logger.name,
-            fields={"path": response.output_path},
+            fields={
+                "path": response.output_path,
+                "report_slug_compacted": slug != resolved_slug,
+            },
         )
     )
     return response
