@@ -42441,6 +42441,115 @@
       ],
       "type": "object"
     },
+    "src.contracts.validation_run_manifest.PreselectedFrozenValidationCohortSubmissionRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "cohort_manifest": {
+          "type": "string"
+        },
+        "config_path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "settings": {
+          "$ref": "#/$defs/src.contracts.ingest.IngestSettings"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.validation_run_manifest.PreselectedFrozenValidationSource"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "settings",
+        "cohort_manifest",
+        "config_path",
+        "sources"
+      ],
+      "type": "object"
+    },
+    "src.contracts.validation_run_manifest.PreselectedFrozenValidationCohortSubmissionResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "admission_decisions": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.admission_preflight.AdmissionPreflightDecision"
+          },
+          "type": "array"
+        },
+        "queue_submission": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.validation_run_manifest.FrozenValidationCohortQueueSubmissionResponse"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "admission_decisions",
+        "queue_submission"
+      ],
+      "type": "object"
+    },
+    "src.contracts.validation_run_manifest.PreselectedFrozenValidationSource": {
+      "additionalProperties": false,
+      "properties": {
+        "content_md5": {
+          "type": "string"
+        },
+        "downloaded_at_utc": {
+          "type": "string"
+        },
+        "landing_page_url": {
+          "type": "string"
+        },
+        "publisher_name": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "report_name": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_artifact_path": {
+          "type": "string"
+        },
+        "source_domain": {
+          "type": "string"
+        },
+        "source_page_url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "report_id",
+        "source_artifact_path",
+        "content_md5",
+        "source_domain",
+        "report_name",
+        "landing_page_url",
+        "source_page_url",
+        "publisher_name",
+        "downloaded_at_utc"
+      ],
+      "type": "object"
+    },
     "src.contracts.validation_run_manifest.ValidationRunManifestAttemptResolveRequest": {
       "additionalProperties": false,
       "properties": {
