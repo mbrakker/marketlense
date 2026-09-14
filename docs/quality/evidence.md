@@ -139,7 +139,18 @@ python scripts/quality/release_evidence_manifest.py \
 Ordinary CI runs the collector and release-evidence unit/contract tests but does not synthesize retained databases, report artifacts, or logs merely to manufacture a passed CTO bundle. The real strict bundle remains an operator/review action against retained state.
 
 For a frozen validation cohort, `scripts/quality/export_reliability_run_evidence.py`
-adds run-specific funnel, terminal-outcome, failure, recovery, publication, and
+projects terminal-outcome, failure-detail, and Pareto views directly from the
+production-derived `cohort_result.json`; it does not reconstruct terminal state
+from a separate exporter query. Regenerate those frozen terminal views without
+live work using:
+
+```powershell
+python scripts/quality/export_reliability_run_evidence.py \
+  --cohort-result <retained-cohort_result.json> \
+  --output-dir <retained-evidence-export>
+```
+
+The exporter also supports run-specific funnel, recovery, publication, and
 cost-attribution views beneath that bundle. It is read-only with respect to
 runtime state and exports bounded identifiers and scalar metrics only. It must
 not be used to infer a successful publication when publication-stage records

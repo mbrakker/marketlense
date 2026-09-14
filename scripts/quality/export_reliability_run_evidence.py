@@ -35,6 +35,107 @@ def _write_json(path: Path, payload: Any) -> None:
     )
 
 
+def _authoritative_terminal_rows(cohort_result_path: Path) -> list[dict[str, str]]:
+    """Read the production-derived typed outcomes retained by the cohort runner."""
+
+    payload = json.loads(cohort_result_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("cohort_result must be a JSON object")
+    reports = payload.get("reports")
+    if not isinstance(reports, list):
+        raise ValueError("cohort_result reports must be a list")
+    cohort_size = payload.get("cohort_size")
+    if isinstance(cohort_size, int) and len(reports) != cohort_size:
+        raise ValueError("cohort_result reports do not match declared cohort_size")
+
+    terminal_rows: list[dict[str, str]] = []
+    for report in reports:
+        if not isinstance(report, dict):
+            raise ValueError("cohort_result report must be an object")
+        report_id = str(report.get("report_id") or "").strip()
+        terminal_outcome = str(report.get("final_state") or "").strip()
+        failure_code = str(report.get("terminal_failure_code") or "").strip()
+        if not report_id:
+            raise ValueError("cohort_result report has no report_id")
+        if terminal_outcome not in {"awaiting_review", "failed"}:
+            raise ValueError("cohort_result report has no typed terminal outcome")
+        if terminal_outcome == "failed" and not failure_code:
+            raise ValueError("failed cohort_result report has no failure code")
+        if terminal_outcome != "failed" and failure_code:
+            raise ValueError("non-failed cohort_result report has a failure code")
+        terminal_rows.append(
+            {
+                "report_id": report_id,
+                "terminal_outcome": terminal_outcome,
+                "terminal_stage": "",
+                "failure_code": failure_code,
+            }
+        )
+    if len({row["report_id"] for row in terminal_rows}) != len(terminal_rows):
+        raise ValueError("cohort_result contains duplicate report IDs")
+
+    terminal_rows.sort(key=lambda row: row["report_id"])
+    failures = Counter(
+        row["failure_code"] for row in terminal_rows if row["failure_code"]
+    )
+    expected_pareto = dict(
+        sorted(failures.items(), key=lambda item: (-item[1], item[0]))
+    )
+    summary = payload.get("summary")
+    actual_pareto = (
+        summary.get("failure_code_pareto") if isinstance(summary, dict) else None
+    )
+    if actual_pareto != expected_pareto:
+        raise ValueError("cohort_result failure Pareto does not match typed outcomes")
+    return terminal_rows
+
+
+def _write_terminal_outcome_views(
+    *,
+    output_dir: Path,
+    terminal_rows: list[dict[str, str]],
+    failure_details_metadata: dict[str, str] | None = None,
+) -> None:
+    """Write every terminal view from the same already-typed outcome records."""
+
+    _write_csv(
+        output_dir / "terminal_outcomes.csv",
+        ["report_id", "terminal_outcome", "terminal_stage", "failure_code"],
+        terminal_rows,
+    )
+    failure_rows = [row for row in terminal_rows if row["failure_code"]]
+    _write_json(
+        output_dir / "failure_details.json",
+        {
+            **(failure_details_metadata or {}),
+            "terminal_failures": failure_rows,
+        },
+    )
+    failures = Counter(row["failure_code"] for row in failure_rows)
+    _write_csv(
+        output_dir / "failure_pareto.csv",
+        ["failure_code", "affected_reports"],
+        [
+            {"failure_code": code, "affected_reports": count}
+            for code, count in sorted(
+                failures.items(), key=lambda item: (-item[1], item[0])
+            )
+        ],
+    )
+
+
+def export_frozen_cohort_outcome_views(
+    *, cohort_result_path: Path, output_dir: Path
+) -> None:
+    """Project frozen-cohort terminal views from its authoritative typed result."""
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    _write_terminal_outcome_views(
+        output_dir=output_dir,
+        terminal_rows=_authoritative_terminal_rows(cohort_result_path),
+    )
+
+
 def export_run_evidence(
     *, state_dir: Path, artifact_dir: Path, output_dir: Path, validation_run_id: str
 ) -> None:
@@ -82,10 +183,10 @@ def export_run_evidence(
                 ),
             }
         )
-    _write_csv(
-        output_dir / "terminal_outcomes.csv",
-        ["report_id", "terminal_outcome", "terminal_stage", "failure_code"],
-        terminal_rows,
+    _write_terminal_outcome_views(
+        output_dir=output_dir,
+        terminal_rows=terminal_rows,
+        failure_details_metadata={"validation_run_id": validation_run_id},
     )
     _write_csv(
         output_dir / "per_report_funnel.csv",
@@ -132,25 +233,6 @@ def export_run_evidence(
             ),
             "terminal_outcomes": dict(sorted(counts.items())),
             "stage_outcomes": stage_rows,
-        },
-    )
-    failures = Counter(
-        row["failure_code"] for row in terminal_rows if row["failure_code"]
-    )
-    failure_rows = [
-        {"failure_code": code, "affected_reports": count}
-        for code, count in failures.most_common()
-    ]
-    _write_csv(
-        output_dir / "failure_pareto.csv",
-        ["failure_code", "affected_reports"],
-        failure_rows,
-    )
-    _write_json(
-        output_dir / "failure_details.json",
-        {
-            "validation_run_id": validation_run_id,
-            "terminal_failures": [row for row in terminal_rows if row["failure_code"]],
         },
     )
     _write_csv(
@@ -339,15 +421,42 @@ def export_run_evidence(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--state-dir", required=True)
-    parser.add_argument("--artifact-dir", required=True)
+    parser.add_argument("--state-dir")
+    parser.add_argument("--artifact-dir")
     parser.add_argument("--output-dir", required=True)
-    parser.add_argument("--validation-run-id", required=True)
+    parser.add_argument("--validation-run-id")
+    parser.add_argument(
+        "--cohort-result",
+        type=Path,
+        help="Authoritative production-derived cohort_result.json for frozen outcomes.",
+    )
     args = parser.parse_args()
+    output_dir = Path(args.output_dir)
+    if args.cohort_result is not None:
+        run_state_arguments = (
+            args.state_dir,
+            args.artifact_dir,
+            args.validation_run_id,
+        )
+        if any(value is not None for value in run_state_arguments):
+            parser.error(
+                "--cohort-result projects frozen terminal views alone; "
+                "do not combine it with run-state export arguments"
+            )
+        export_frozen_cohort_outcome_views(
+            cohort_result_path=args.cohort_result,
+            output_dir=output_dir,
+        )
+        return 0
+    if not all((args.state_dir, args.artifact_dir, args.validation_run_id)):
+        parser.error(
+            "--state-dir, --artifact-dir, and --validation-run-id are required "
+            "without --cohort-result"
+        )
     export_run_evidence(
         state_dir=Path(args.state_dir),
         artifact_dir=Path(args.artifact_dir),
-        output_dir=Path(args.output_dir),
+        output_dir=output_dir,
         validation_run_id=args.validation_run_id,
     )
     return 0

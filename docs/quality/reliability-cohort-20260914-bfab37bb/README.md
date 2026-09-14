@@ -44,14 +44,15 @@ be false attribution.
 | `workflow_queue_report_stage_failed` | 5 |
 | `artifact_structured_output_invalid` | 2 |
 | `soft_copy_claim_provenance_binding_invalid` | 2 |
-| `soft_copy_claim_provenance_bindings_missing` | 1 |
 | `evidence_pack_invalid_json` | 1 |
+| `soft_copy_claim_provenance_bindings_missing` | 1 |
 
-Every non-success is retained in `cohort_result.json` and the bounded evidence
-views under [`evidence-export/`](evidence-export/), including the terminal
-outcome, current terminal stage, and failure code. No manual requeue, database
-edit, member replacement, or second workflow attempt occurred during this
-measurement.
+Every non-success is retained in `cohort_result.json`. The bounded terminal
+outcome, failure-detail, and Pareto views under
+[`evidence-export/`](evidence-export/) are projected directly from those typed
+outcomes, rather than reconstructed from a separate exporter query. No manual
+requeue, database edit, member replacement, or second workflow attempt occurred
+during this measurement.
 
 ## Comparison and conclusion
 

@@ -1,2 +1,7 @@
 failure_code,affected_reports
-validation_terminal_outcome_missing,20
+schema_reference_missing,7
+workflow_queue_report_stage_failed,5
+artifact_structured_output_invalid,2
+soft_copy_claim_provenance_binding_invalid,2
+evidence_pack_invalid_json,1
+soft_copy_claim_provenance_bindings_missing,1
