@@ -86,13 +86,22 @@ def run_frozen_reliability_cohort(
     results = list(execution["reports"])
     if len(results) != len(members):
         raise RuntimeError("Frozen reliability cohort execution omitted a member")
+    git_sha = str(execution.get("git_sha") or "")
+    if len(git_sha) != 40 or any(
+        character not in "0123456789abcdef" for character in git_sha
+    ):
+        raise RuntimeError("Frozen reliability cohort execution lacks a clean git SHA")
     result = {
         "schema_version": "1.0",
+        "git_sha": git_sha,
         "cohort_size": len(results),
         "cohort_directory": str(root),
         "production_run_directory": str(execution.get("run_directory") or ""),
+        "cohort_metrics": dict(execution.get("cohort_metrics") or {}),
         "reports": results,
-        "summary": summarize_frozen_cohort_results(results),
+        "summary": summarize_frozen_cohort_results(
+            results, cohort_metrics=execution.get("cohort_metrics")
+        ),
     }
     root.joinpath("cohort_result.json").write_text(
         json.dumps(result, sort_keys=True, separators=(",", ":")), encoding="utf-8"

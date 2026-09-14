@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import sqlite3
 from pathlib import Path
@@ -167,11 +168,33 @@ def test_frozen_manifest_rejects_missing_provenance_before_file_access(
 def test_frozen_cohort_submits_all_members_through_one_production_run(
     tmp_path: Path,
 ) -> None:
+    members = []
+    for index in range(20):
+        source_path = tmp_path / f"source-{index}.pdf"
+        content = f"frozen-cohort-fixture-{index}".encode("utf-8")
+        source_path.write_bytes(content)
+        members.append(
+            {
+                "source_path": str(source_path.resolve()),
+                "content_md5": hashlib.md5(
+                    content, usedforsecurity=False
+                ).hexdigest(),
+                "source_domain": "publisher.example",
+                "report_name": f"Frozen fixture {index}",
+                "landing_page_url": f"https://publisher.example/reports/{index}",
+                "source_page_url": "https://publisher.example/reports",
+                "publisher_name": "Fixture Publisher",
+                "downloaded_at_utc": "2026-09-01T00:00:00Z",
+            }
+        )
+    manifest = tmp_path / "cohort.json"
+    manifest.write_text(json.dumps({"members": members}), encoding="utf-8")
     captured: list[dict[str, object]] = []
 
     def run_once(**kwargs):
         captured.append(kwargs)
         return {
+            "git_sha": "a" * 40,
             "run_directory": str(tmp_path / "single-production-run"),
             "reports": [
                 {
@@ -185,7 +208,7 @@ def test_frozen_cohort_submits_all_members_through_one_production_run(
         }
 
     result = run_frozen_reliability_cohort(
-        sources_manifest=Path("scripts/quality/frozen_reliability_cohort_20.json"),
+        sources_manifest=manifest,
         runs_root=tmp_path,
         run_cohort_once=run_once,
     )
@@ -194,6 +217,41 @@ def test_frozen_cohort_submits_all_members_through_one_production_run(
     assert len(captured[0]["sources"]) == 20
     assert result["cohort_size"] == 20
     assert len(result["reports"]) == 20
+    assert result["git_sha"] == "a" * 40
+    retained = json.loads(
+        Path(result["cohort_directory"])
+        .joinpath("cohort_result.json")
+        .read_text(encoding="utf-8")
+    )
+    assert retained["git_sha"] == "a" * 40
+
+
+def test_cohort_summary_retains_batch_metrics_only_at_cohort_scope() -> None:
+    summary = summarize_frozen_cohort_results(
+        [
+            {
+                "report_id": "report-1",
+                "admission_outcome": "admitted",
+                "final_state": "failed",
+                "terminal_failure_code": "typed_failure",
+                "cost": None,
+                "total_duration_seconds": None,
+                "bounded_automatic_repair": None,
+            }
+        ],
+        cohort_metrics={
+            "cost_usd": 1.25,
+            "duration_seconds": 90.0,
+            "bounded_automatic_repair": True,
+        },
+    )
+
+    assert summary["cohort_cost_usd"] == 1.25
+    assert summary["cohort_duration_seconds"] == 90.0
+    assert summary["cohort_bounded_automatic_repair"] is True
+    assert summary["mean_cost"] == "unavailable"
+    assert summary["mean_duration_seconds"] == "unavailable"
+    assert summary["bounded_repair_rate"] == "unavailable"
 
 
 def test_cohort_summary_keeps_failed_admitted_reports_in_its_denominator() -> None:

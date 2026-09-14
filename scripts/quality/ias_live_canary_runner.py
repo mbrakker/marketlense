@@ -239,6 +239,11 @@ def run_frozen_cohort_once(
     started_at = time.monotonic()
     run = prepare_isolated_canary_run(runs_root=runs_root)
     results = [_empty_result(run, started_at) for _ in sources]
+    cohort_metrics: dict[str, Any] = {
+        "cost_usd": None,
+        "duration_seconds": None,
+        "bounded_automatic_repair": None,
+    }
     for result in results:
         result["git_sha"] = git_sha
     prepared_sources: list[PreselectedFrozenValidationSource] = []
@@ -337,6 +342,22 @@ def run_frozen_cohort_once(
                         ctx=ctx,
                     )
                 )
+            cohort_metrics.update(
+                {
+                    "model_provider_calls": results[0]["model_provider_calls"],
+                    "input_tokens": results[0]["input_tokens"],
+                    "output_tokens": results[0]["output_tokens"],
+                    "cost_usd": results[0]["cost"],
+                    "bounded_automatic_repair": any(
+                        bool(result["bounded_automatic_repair"])
+                        for result in results
+                    ),
+                    "operator_intervention_count": _cohort_operator_intervention_count(
+                        state_db=settings.state_db,
+                        root_workflow_id=root_workflow_id,
+                    ),
+                }
+            )
     except AppError as exc:
         for result in results:
             if not result["terminal_failure_code"]:
@@ -346,13 +367,34 @@ def run_frozen_cohort_once(
             if not result["terminal_failure_code"]:
                 result["terminal_failure_code"] = "frozen_cohort_runner_defect"
     finally:
-        _finish_frozen_cohort_results(results, started_at)
+        cohort_metrics["duration_seconds"] = _finish_frozen_cohort_results(
+            results, started_at, retain_member_duration=False
+        )
+        for result in results:
+            # Usage and repair records are scoped to the one batch root workflow.
+            # They cannot be attributed to an individual member without retained
+            # report-specific telemetry, so never duplicate them into members.
+            result.update(
+                {
+                    "bounded_automatic_repair": None,
+                    "operator_intervention": None,
+                    "model_provider_calls": None,
+                    "input_tokens": None,
+                    "output_tokens": None,
+                    "cost": None,
+                    "total_duration_seconds": None,
+                    "metric_attribution": "unavailable",
+                }
+            )
         _write_result(run.root / "cohort_members.json", {"reports": results})
     return {
         "git_sha": git_sha,
         "run_directory": str(run.root),
         "reports": results,
-        "summary": summarize_frozen_cohort_results(results),
+        "cohort_metrics": cohort_metrics,
+        "summary": summarize_frozen_cohort_results(
+            results, cohort_metrics=cohort_metrics
+        ),
     }
 
 
@@ -844,6 +886,25 @@ def _read_readiness_payload(row: tuple[Any, ...] | None) -> dict[str, Any]:
         return {}
 
 
+def _cohort_operator_intervention_count(
+    *, state_db: str, root_workflow_id: str
+) -> int:
+    """Count retained manual requeues for the one submitted cohort workflow."""
+
+    with sqlite3.connect(state_db) as conn:
+        return int(
+            conn.execute(
+                """
+                SELECT COUNT(*) FROM workflow_job_transitions AS transition
+                JOIN workflow_jobs AS job ON job.job_id=transition.job_id
+                WHERE job.root_workflow_id=?
+                  AND transition.reason IN ('operator_requeue','queue-requeue')
+                """,
+                (root_workflow_id,),
+            ).fetchone()[0]
+        )
+
+
 def _validation_passed(output_dir: Path) -> bool:
     reports = sorted(output_dir.rglob("validation.json"))
     if not reports:
@@ -884,8 +945,11 @@ def _empty_result(run: IsolatedCanaryRun, started_at: float) -> dict[str, Any]:
 
 
 def _finish_frozen_cohort_results(
-    results: list[dict[str, Any]], started_at: float
-) -> list[dict[str, Any]]:
+    results: list[dict[str, Any]],
+    started_at: float,
+    *,
+    retain_member_duration: bool = True,
+) -> float:
     """Make every retained cohort member explicitly terminal before export."""
 
     duration = round(time.monotonic() - started_at, 3)
@@ -894,8 +958,9 @@ def _finish_frozen_cohort_results(
             result["final_state"] = "failed"
         if result["final_state"] == "failed" and not result["terminal_failure_code"]:
             result["terminal_failure_code"] = "frozen_cohort_terminal_outcome_missing"
-        result["total_duration_seconds"] = duration
-    return results
+        if retain_member_duration:
+            result["total_duration_seconds"] = duration
+    return duration
 
 
 def _git_sha() -> str:
@@ -940,6 +1005,8 @@ def _write_result(path: Path, result: dict[str, Any]) -> None:
 
 def summarize_frozen_cohort_results(
     results: list[dict[str, Any]],
+    *,
+    cohort_metrics: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Summarize every frozen admitted member without changing its denominator."""
 
@@ -965,7 +1032,7 @@ def summarize_frozen_cohort_results(
         if str(item.get("final_state") or "") not in terminal_states
     )
     pareto = {code: failures.count(code) for code in sorted(set(failures))}
-    return {
+    summary = {
         "report_count": count,
         "terminal_outcome_complete": not missing_terminal_report_ids,
         "missing_terminal_report_count": len(missing_terminal_report_ids),
@@ -1005,3 +1072,27 @@ def summarize_frozen_cohort_results(
         "mean_duration_seconds": round(sum(durations) / denominator, 3),
         "median_duration_seconds": round(median(durations), 3) if durations else 0.0,
     }
+    if cohort_metrics is not None:
+        summary.update(
+            {
+                "cohort_cost_usd": cohort_metrics.get("cost_usd"),
+                "cohort_duration_seconds": cohort_metrics.get("duration_seconds"),
+                "cohort_bounded_automatic_repair": cohort_metrics.get(
+                    "bounded_automatic_repair"
+                ),
+                "cohort_model_provider_calls": cohort_metrics.get(
+                    "model_provider_calls"
+                ),
+                "cohort_input_tokens": cohort_metrics.get("input_tokens"),
+                "cohort_output_tokens": cohort_metrics.get("output_tokens"),
+                "bounded_repair_rate": "unavailable",
+                "operator_intervention_count": cohort_metrics.get(
+                    "operator_intervention_count", "unavailable"
+                ),
+                "mean_cost": "unavailable",
+                "median_cost": "unavailable",
+                "mean_duration_seconds": "unavailable",
+                "median_duration_seconds": "unavailable",
+            }
+        )
+    return summary

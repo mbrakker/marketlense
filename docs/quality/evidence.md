@@ -150,6 +150,13 @@ member without a current typed terminal attempt and marks that evidence
 incomplete; a blank terminal row is never treated as a successful or excluded
 report. A measured frozen cohort is submitted as one production cohort and
 requires a clean 40-character Git SHA before its supervisor drain begins.
+The retained `cohort_result.json` records that SHA at its top level. Batch
+usage, elapsed duration, automatic-repair, and operator-intervention metrics
+are retained as cohort-scoped totals; member records retain report-specific
+terminal evidence and use null numeric fields with
+`metric_attribution="unavailable"` when report-level telemetry was not
+retained. Aggregate repair rates are likewise `unavailable` unless the
+underlying repair records are report-attributable.
 
 Benchmark and reliability evidence MUST use the standard, already-produced
 discovery, acquisition, ingest, analysis, render, and publication flows and
