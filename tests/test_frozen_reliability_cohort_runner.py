@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 from pathlib import Path
 
 from scripts.quality.ias_live_canary_runner import (
@@ -8,6 +9,10 @@ from scripts.quality.ias_live_canary_runner import (
     summarize_frozen_cohort_results,
 )
 from scripts.quality.run_frozen_reliability_cohort import _load_members
+from tests.test_validation_queue_lineage import (
+    _full_chain_chat_response_factory,
+    _full_chain_response_factory,
+)
 
 
 def test_cohort_member_missing_source_has_typed_terminal_result(tmp_path: Path) -> None:
@@ -21,6 +26,113 @@ def test_cohort_member_missing_source_has_typed_terminal_result(tmp_path: Path) 
     assert result["workflow_attempt_count"] == 0
     assert result["terminal_failure_code"] == "frozen_cohort_source_missing"
     assert Path(result["run_directory"]).joinpath("result.json").is_file()
+
+
+def test_first_attempt_canary_uses_production_submission_and_supervisor_path(
+    tmp_path: Path,
+    external_boundary_mocks_only,
+    fake_openai,
+) -> None:
+    """The canary reaches a terminal result through durable production queues."""
+
+    external_boundary_mocks_only.setenv("OPENAI_API_KEY", "test-openai-key")
+    fake_openai.add("vector_stores.create", {"id": "vs_canary_test"})
+    fake_openai.add("files.create", {"id": "file_canary_test"})
+    fake_openai.add("vector_stores.files.create", {"id": "file_canary_test"})
+    fake_openai.add("vector_stores.retrieve", {"status": "completed"})
+    fake_openai.add("vector_stores.update", {"id": "vs_canary_test"})
+    generated_soft_copy_payloads: list[dict[str, object]] = []
+    detected_unsupported_claims: list[str] = []
+    fake_openai.add(
+        "responses.create",
+        _full_chain_response_factory(
+            repair_soft_copy=False,
+            reproduce_ias_soft_copy=False,
+            detected_unsupported_claims=detected_unsupported_claims,
+        ),
+    )
+    fake_openai.add(
+        "chat.completions.create",
+        _full_chain_chat_response_factory(
+            repair_soft_copy=False,
+            reproduce_ias_soft_copy=False,
+            generated_soft_copy_payloads=generated_soft_copy_payloads,
+            detected_unsupported_claims=detected_unsupported_claims,
+        ),
+    )
+    source_path = Path(
+        "tests/fixtures/pdf_benchmark/golden/IAS - Industry_Pulse_Report_2026_ACIG.pdf"
+    ).resolve()
+
+    result = run_first_attempt_canary(
+        runs_root=tmp_path,
+        source_path=source_path,
+        source_metadata={
+            "source_domain": "publisher.example",
+            "report_name": "Industry Pulse Report 2026",
+            "landing_page_url": "https://publisher.example/reports/industry-pulse-2026",
+            "source_page_url": "https://publisher.example/reports",
+            "publisher_name": "Industry Analytics Summit",
+            "downloaded_at_utc": "2026-08-10T12:00:00Z",
+        },
+        max_duration_seconds=60,
+    )
+
+    assert result["admission_outcome"] == "admitted"
+    assert result["workflow_root_id"]
+    assert result["final_state"] in {"awaiting_review", "failed"}
+    assert Path(result["run_directory"]).joinpath("cohort", "source.json").is_file()
+    with sqlite3.connect(
+        Path(result["run_directory"]) / "state" / "workflow.sqlite"
+    ) as conn:
+        jobs = conn.execute(
+            """
+            SELECT queue_name, status
+            FROM workflow_jobs
+            WHERE root_workflow_id=?
+            ORDER BY created_at_utc, queue_name
+            """,
+            (result["workflow_root_id"],),
+        ).fetchall()
+        workers = conn.execute(
+            """
+            SELECT DISTINCT attempts.worker_id
+            FROM workflow_job_attempts AS attempts
+            JOIN workflow_jobs AS jobs ON jobs.job_id=attempts.job_id
+            WHERE jobs.root_workflow_id=?
+            """,
+            (result["workflow_root_id"],),
+        ).fetchall()
+
+    assert jobs
+    assert jobs[0][0] == "source_ingest"
+    assert {queue_name for queue_name, _ in jobs} >= {
+        "source_ingest",
+        "report_selection",
+    }
+    assert workers
+    assert all(
+        str(worker_id).startswith(f"ias-live-canary:{result['workflow_root_id']}:")
+        for (worker_id,) in workers
+    )
+    reports_db = Path(result["run_directory"]) / "state" / "reports.sqlite"
+    with sqlite3.connect(reports_db) as conn:
+        manifest_root = conn.execute(
+            "SELECT workflow_run_id FROM validation_runs"
+        ).fetchone()
+        manifest_stages = {
+            stage
+            for (stage,) in conn.execute(
+                "SELECT DISTINCT stage FROM validation_run_stage_records"
+            )
+        }
+
+    assert manifest_root == (result["workflow_root_id"],)
+    assert manifest_stages >= {
+        "admission_preflight",
+        "candidate_qualification",
+        "source_preparation",
+    }
 
 
 def test_frozen_manifest_requires_pinned_source_provenance(tmp_path: Path) -> None:

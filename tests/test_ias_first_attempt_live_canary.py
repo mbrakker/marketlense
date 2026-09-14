@@ -39,6 +39,9 @@ def test_isolated_canary_config_keeps_repository_owned_cost_pricing_available(
     )
 
     assert settings.model_pricing
+    assert Path(settings.category_mapping_path).is_file()
+    assert Path(settings.publisher_profiles_path).is_file()
+    assert Path(settings.cover_style_path).is_file()
     control = load_workflow_control_settings(
         ConfigLoadRequest(schema_version="1.0", path=str(run.config_path)),
         new_runtime_context(task_id="isolated-canary-supervisor-test"),

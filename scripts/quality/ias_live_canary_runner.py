@@ -134,7 +134,17 @@ def _isolated_config(
     config["paths"] = {
         **dict(config.get("paths") or {}),
         **{name: str(path) for name, path in paths.items()},
+        "publisher_profiles": str(
+            base_config_path.parents[2]
+            / "Wordpress"
+            / "config"
+            / "publisher-profiles.json"
+        ),
+        "category_mappings": str(
+            base_config_path.with_name("category-mappings.yaml")
+        ),
         "html_tag_acronyms": str(base_config_path.with_name("html-tag-acronyms.yaml")),
+        "cover_styles": str(base_config_path.with_name("cover-styles.yaml")),
     }
     config["analysis"] = {
         **dict(config.get("analysis") or {}),
