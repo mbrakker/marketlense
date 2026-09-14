@@ -8,7 +8,10 @@ from scripts.quality.ias_live_canary_runner import (
     run_first_attempt_canary,
     summarize_frozen_cohort_results,
 )
-from scripts.quality.run_frozen_reliability_cohort import _load_members
+from scripts.quality.run_frozen_reliability_cohort import (
+    _load_members,
+    run_frozen_reliability_cohort,
+)
 from tests.test_validation_queue_lineage import (
     _full_chain_chat_response_factory,
     _full_chain_response_factory,
@@ -161,6 +164,38 @@ def test_frozen_manifest_rejects_missing_provenance_before_file_access(
         raise AssertionError("missing provenance was accepted")
 
 
+def test_frozen_cohort_submits_all_members_through_one_production_run(
+    tmp_path: Path,
+) -> None:
+    captured: list[dict[str, object]] = []
+
+    def run_once(**kwargs):
+        captured.append(kwargs)
+        return {
+            "run_directory": str(tmp_path / "single-production-run"),
+            "reports": [
+                {
+                    "report_id": f"report-{index}",
+                    "admission_outcome": "admitted",
+                    "final_state": "failed",
+                    "terminal_failure_code": "typed_failure",
+                }
+                for index in range(20)
+            ],
+        }
+
+    result = run_frozen_reliability_cohort(
+        sources_manifest=Path("scripts/quality/frozen_reliability_cohort_20.json"),
+        runs_root=tmp_path,
+        run_cohort_once=run_once,
+    )
+
+    assert len(captured) == 1
+    assert len(captured[0]["sources"]) == 20
+    assert result["cohort_size"] == 20
+    assert len(result["reports"]) == 20
+
+
 def test_cohort_summary_keeps_failed_admitted_reports_in_its_denominator() -> None:
     summary = summarize_frozen_cohort_results(
         [
@@ -202,6 +237,9 @@ def test_cohort_summary_keeps_failed_admitted_reports_in_its_denominator() -> No
 
     assert summary == {
         "report_count": 3,
+        "terminal_outcome_complete": True,
+        "missing_terminal_report_count": 0,
+        "missing_terminal_report_ids": [],
         "admitted_report_count": 2,
         "cohort_admission_rate": 2 / 3,
         "workflow_denominator": 2,
@@ -217,3 +255,20 @@ def test_cohort_summary_keeps_failed_admitted_reports_in_its_denominator() -> No
         "mean_duration_seconds": 20.0,
         "median_duration_seconds": 20.0,
     }
+
+
+def test_cohort_summary_marks_missing_terminal_outcomes_incomplete() -> None:
+    summary = summarize_frozen_cohort_results(
+        [
+            {
+                "report_id": "report-1",
+                "admission_outcome": "admitted",
+                "final_state": "running",
+                "terminal_failure_code": "",
+            }
+        ]
+    )
+
+    assert summary["terminal_outcome_complete"] is False
+    assert summary["missing_terminal_report_count"] == 1
+    assert summary["missing_terminal_report_ids"] == ["report-1"]

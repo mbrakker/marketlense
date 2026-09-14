@@ -38,6 +38,10 @@ def test_export_run_evidence_writes_terminal_and_funnel_views(tmp_path: Path) ->
         (run_id, "r1", "p1", "s1"),
     )
     conn.execute(
+        "INSERT INTO validation_run_cohort_members VALUES (?, ?, ?, ?)",
+        (run_id, "r2", "p2", "s2"),
+    )
+    conn.execute(
         "INSERT INTO validation_run_entity_attempts VALUES (?, ?, ?, ?, ?, ?)",
         (run_id, "r1", "permanent_failure", "ingestion", "typed_failure", 1),
     )
@@ -77,5 +81,11 @@ def test_export_run_evidence_writes_terminal_and_funnel_views(tmp_path: Path) ->
             "terminal_outcome": "permanent_failure",
             "terminal_stage": "ingestion",
             "failure_code": "typed_failure",
-        }
+        },
+        {
+            "report_id": "r2",
+            "terminal_outcome": "missing",
+            "terminal_stage": "",
+            "failure_code": "validation_terminal_outcome_missing",
+        },
     ]

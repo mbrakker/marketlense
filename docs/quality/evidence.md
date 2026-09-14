@@ -145,6 +145,12 @@ runtime state and exports bounded identifiers and scalar metrics only. It must
 not be used to infer a successful publication when publication-stage records
 are absent.
 
+The exporter writes `validation_terminal_outcome_missing` for every immutable
+member without a current typed terminal attempt and marks that evidence
+incomplete; a blank terminal row is never treated as a successful or excluded
+report. A measured frozen cohort is submitted as one production cohort and
+requires a clean 40-character Git SHA before its supervisor drain begins.
+
 Benchmark and reliability evidence MUST use the standard, already-produced
 discovery, acquisition, ingest, analysis, render, and publication flows and
 their retained logs, state, and artifacts unless an operator explicitly

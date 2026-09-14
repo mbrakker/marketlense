@@ -8,13 +8,13 @@ import json
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from scripts.quality.ias_live_canary_runner import (
     preflight_frozen_cohort_member,
-    run_first_attempt_canary,
+    run_frozen_cohort_once,
     summarize_frozen_cohort_results,
 )
 
@@ -68,6 +68,7 @@ def run_frozen_reliability_cohort(
     sources_manifest: Path,
     runs_root: Path,
     max_duration_seconds: int = 7_200,
+    run_cohort_once: Callable[..., dict[str, Any]] = run_frozen_cohort_once,
 ) -> dict[str, Any]:
     """Freeze and execute all listed members once, retaining every result."""
 
@@ -77,19 +78,19 @@ def run_frozen_reliability_cohort(
     root.joinpath("frozen_cohort.json").write_text(
         sources_manifest.read_text(encoding="utf-8"), encoding="utf-8"
     )
-    results = [
-        run_first_attempt_canary(
-            runs_root=root / "members",
-            source_path=Path(str(member["resolved_source_path"])),
-            source_metadata=member,
-            max_duration_seconds=max_duration_seconds,
-        )
-        for member in members
-    ]
+    execution = run_cohort_once(
+        runs_root=root / "members",
+        sources=members,
+        max_duration_seconds=max_duration_seconds,
+    )
+    results = list(execution["reports"])
+    if len(results) != len(members):
+        raise RuntimeError("Frozen reliability cohort execution omitted a member")
     result = {
         "schema_version": "1.0",
         "cohort_size": len(results),
         "cohort_directory": str(root),
+        "production_run_directory": str(execution.get("run_directory") or ""),
         "reports": results,
         "summary": summarize_frozen_cohort_results(results),
     }

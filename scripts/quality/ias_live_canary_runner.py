@@ -227,6 +227,135 @@ def run_first_attempt_canary(
     )
 
 
+def run_frozen_cohort_once(
+    *,
+    runs_root: Path,
+    sources: list[dict[str, Any]],
+    max_duration_seconds: int = 7_200,
+) -> dict[str, Any]:
+    """Submit one immutable retained cohort through the production queue once."""
+
+    git_sha = _require_clean_git_sha()
+    started_at = time.monotonic()
+    run = prepare_isolated_canary_run(runs_root=runs_root)
+    results = [_empty_result(run, started_at) for _ in sources]
+    for result in results:
+        result["git_sha"] = git_sha
+    prepared_sources: list[PreselectedFrozenValidationSource] = []
+    try:
+        ctx = new_runtime_context(task_id="frozen_reliability_cohort")
+        settings = build_ingest_settings(
+            IngestSettingsBuildRequest(
+                schema_version="1.0",
+                app_settings=load_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=str(run.config_path)),
+                    ctx,
+                ),
+            ),
+            ctx,
+        )
+        _assert_empty_stores(run=run, settings=settings)
+        for result, source in zip(results, sources, strict=True):
+            source_path = Path(str(source["resolved_source_path"]))
+            if not source_path.is_file():
+                result["terminal_failure_code"] = "frozen_cohort_source_missing"
+                continue
+            source_hash = hashlib.md5(
+                source_path.read_bytes(), usedforsecurity=False
+            ).hexdigest()
+            report_id = f"cohort-{source_hash[:20]}"
+            result["report_id"] = report_id
+            prepared_sources.append(
+                PreselectedFrozenValidationSource(
+                    schema_version="1.0",
+                    report_id=report_id,
+                    source_artifact_path=str(source_path.resolve()),
+                    content_md5=source_hash,
+                    source_domain=str(source["source_domain"]),
+                    report_name=str(source["report_name"]),
+                    landing_page_url=str(source["landing_page_url"]),
+                    source_page_url=str(source["source_page_url"]),
+                    publisher_name=str(source["publisher_name"]),
+                    downloaded_at_utc=str(source["downloaded_at_utc"]),
+                )
+            )
+        if len(prepared_sources) != len(results):
+            raise AppError(
+                code="frozen_cohort_submission_incomplete",
+                message="Every frozen cohort member must be present before submission",
+                retryable=False,
+            )
+        submission = submit_preselected_frozen_validation_cohort(
+            PreselectedFrozenValidationCohortSubmissionRequest(
+                schema_version="1.0",
+                settings=settings,
+                cohort_manifest=str(run.root / "cohort" / "source.json"),
+                config_path=str(run.config_path),
+                sources=tuple(prepared_sources),
+            ),
+            ctx,
+        )
+        decisions = {
+            decision.file_id: decision for decision in submission.admission_decisions
+        }
+        for result in results:
+            decision = decisions.get(str(result["report_id"]))
+            if decision is None:
+                result["terminal_failure_code"] = "frozen_cohort_admission_missing"
+                continue
+            result["admission_outcome"] = decision.outcome
+            result["source_identity_id"] = decision.source_identity_id
+            result["publisher_id"] = decision.publisher_id
+        if submission.queue_submission is None:
+            for result in results:
+                if not result["terminal_failure_code"]:
+                    result["terminal_failure_code"] = (
+                        "frozen_cohort_admission_"
+                        f"{result['admission_outcome'] or 'missing'}"
+                    )
+        else:
+            queue_submission = submission.queue_submission
+            root_workflow_id = str(queue_submission.root_workflow_id)
+            for result in results:
+                result["workflow_root_id"] = root_workflow_id
+            _drain_report_paths(
+                state_db=settings.state_db,
+                usage_db_path=settings.usage_db_path,
+                config_path=run.config_path,
+                report_ids=tuple(str(result["report_id"]) for result in results),
+                root_workflow_id=root_workflow_id,
+                ctx=ctx,
+                max_duration_seconds=max_duration_seconds,
+            )
+            for result in results:
+                result.update(
+                    _read_result(
+                        settings=settings,
+                        report_id=str(result["report_id"]),
+                        validation_run_id=str(queue_submission.validation_run_id),
+                        root_workflow_id=root_workflow_id,
+                        ctx=ctx,
+                    )
+                )
+    except AppError as exc:
+        for result in results:
+            if not result["terminal_failure_code"]:
+                result["terminal_failure_code"] = exc.code
+    except Exception:
+        for result in results:
+            if not result["terminal_failure_code"]:
+                result["terminal_failure_code"] = "frozen_cohort_runner_defect"
+    finally:
+        _finish_frozen_cohort_results(results, started_at)
+        _write_result(run.root / "cohort_members.json", {"reports": results})
+    return {
+        "git_sha": git_sha,
+        "run_directory": str(run.root),
+        "reports": results,
+        "summary": summarize_frozen_cohort_results(results),
+    }
+
+
 def _run_preselected_canary(
     *,
     runs_root: Path,
@@ -503,6 +632,29 @@ def _drain_report_path(
     ctx,
     max_duration_seconds: int,
 ) -> None:
+    _drain_report_paths(
+        state_db=state_db,
+        usage_db_path=usage_db_path,
+        config_path=config_path,
+        report_ids=(report_id,),
+        root_workflow_id=root_workflow_id,
+        ctx=ctx,
+        max_duration_seconds=max_duration_seconds,
+    )
+
+
+def _drain_report_paths(
+    *,
+    state_db: str,
+    usage_db_path: str,
+    config_path: Path,
+    report_ids: tuple[str, ...],
+    root_workflow_id: str,
+    ctx,
+    max_duration_seconds: int,
+) -> None:
+    """Drive the canonical supervisor until every submitted report is terminal."""
+
     control = load_workflow_control_settings(
         ConfigLoadRequest(schema_version="1.0", path=str(config_path)), ctx
     )
@@ -520,12 +672,15 @@ def _drain_report_path(
             ),
             ctx,
         )
-        state = _queue_terminal_state(
-            state_db=state_db,
-            report_id=report_id,
-            root_workflow_id=root_workflow_id,
-        )
-        if state in {"awaiting_review", "failed"}:
+        states = {
+            report_id: _queue_terminal_state(
+                state_db=state_db,
+                report_id=report_id,
+                root_workflow_id=root_workflow_id,
+            )
+            for report_id in report_ids
+        }
+        if all(state in {"awaiting_review", "failed"} for state in states.values()):
             return
         if supervisor.completed_job_count == 0:
             time.sleep(1)
@@ -647,12 +802,17 @@ def _read_result(
     )
     validation_pass = _validation_passed(Path(settings.output_dir))
     terminal_failure = ""
+    final_state = status
     if status != "awaiting_review":
+        # A bounded supervisor drain cannot leave a submitted member in a
+        # non-terminal result. Preserve an observed queue failure when present;
+        # otherwise make the elapsed bound explicit and typed.
+        final_state = "failed"
         terminal_failure = str((failure or ("ias_canary_timeout",))[0])
     return {
         "workflow_attempt_count": attempts,
-        "final_state": status,
-        "awaiting_review": status == "awaiting_review",
+        "final_state": final_state,
+        "awaiting_review": final_state == "awaiting_review",
         "bounded_automatic_repair": (
             bounded_manifest_repair
             or automatic_queue_repair
@@ -723,6 +883,21 @@ def _empty_result(run: IsolatedCanaryRun, started_at: float) -> dict[str, Any]:
     }
 
 
+def _finish_frozen_cohort_results(
+    results: list[dict[str, Any]], started_at: float
+) -> list[dict[str, Any]]:
+    """Make every retained cohort member explicitly terminal before export."""
+
+    duration = round(time.monotonic() - started_at, 3)
+    for result in results:
+        if result["final_state"] not in {"awaiting_review", "failed"}:
+            result["final_state"] = "failed"
+        if result["final_state"] == "failed" and not result["terminal_failure_code"]:
+            result["terminal_failure_code"] = "frozen_cohort_terminal_outcome_missing"
+        result["total_duration_seconds"] = duration
+    return results
+
+
 def _git_sha() -> str:
     completed = subprocess.run(
         ["git", "rev-parse", "HEAD"],
@@ -731,6 +906,30 @@ def _git_sha() -> str:
         text=True,
     )
     return completed.stdout.strip() or "unknown"
+
+
+def _require_clean_git_sha() -> str:
+    """Refuse a measured cohort run unless its source revision is immutable."""
+
+    sha = _git_sha()
+    dirty = subprocess.run(
+        ["git", "status", "--porcelain"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if (
+        len(sha) != 40
+        or any(character not in "0123456789abcdef" for character in sha)
+        or dirty.returncode != 0
+        or dirty.stdout.strip()
+    ):
+        raise AppError(
+            code="frozen_cohort_git_worktree_dirty",
+            message="Measured frozen cohort runs require a clean 40-character git SHA",
+            retryable=False,
+        )
+    return sha
 
 
 def _write_result(path: Path, result: dict[str, Any]) -> None:
@@ -759,9 +958,18 @@ def summarize_frozen_cohort_results(
         for item in results
         if str(item.get("terminal_failure_code") or "")
     ]
+    terminal_states = {"awaiting_review", "failed"}
+    missing_terminal_report_ids = sorted(
+        str(item.get("report_id") or "")
+        for item in results
+        if str(item.get("final_state") or "") not in terminal_states
+    )
     pareto = {code: failures.count(code) for code in sorted(set(failures))}
     return {
         "report_count": count,
+        "terminal_outcome_complete": not missing_terminal_report_ids,
+        "missing_terminal_report_count": len(missing_terminal_report_ids),
+        "missing_terminal_report_ids": missing_terminal_report_ids,
         "admitted_report_count": len(admitted),
         "cohort_admission_rate": len(admitted) / denominator,
         "workflow_denominator": len(admitted),

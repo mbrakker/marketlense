@@ -157,6 +157,8 @@ def test_admission_uses_a_middle_sample_after_a_weak_opening_sample(
     assert result.admitted is True
     assert result.decision.sample_char_count == 2_700
     assert result.decision.sample_text_density == 900.0
+    assert result.decision.source_identity_id == "source:fixture"
+    assert result.decision.publisher_id == "publisher:fixture"
 
 
 def test_admission_checks_exact_identity_and_retains_near_title_as_a_signal(

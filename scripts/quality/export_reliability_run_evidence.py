@@ -65,21 +65,23 @@ def export_run_evidence(
             (validation_run_id,),
         )
     by_report = {row["report_id"]: row for row in attempts}
-    terminal_rows = [
-        {
-            "report_id": item["report_id"],
-            "terminal_outcome": by_report.get(item["report_id"], {}).get(
-                "terminal_outcome", "missing"
-            ),
-            "terminal_stage": by_report.get(item["report_id"], {}).get(
-                "terminal_stage", ""
-            ),
-            "failure_code": by_report.get(item["report_id"], {}).get(
-                "failure_code", ""
-            ),
-        }
-        for item in members
-    ]
+    terminal_rows = []
+    for item in members:
+        attempt = by_report.get(item["report_id"], {})
+        terminal_outcome = str(attempt.get("terminal_outcome") or "missing")
+        terminal_rows.append(
+            {
+                "report_id": item["report_id"],
+                "terminal_outcome": terminal_outcome,
+                "terminal_stage": str(attempt.get("terminal_stage") or ""),
+                "failure_code": str(attempt.get("failure_code") or "")
+                or (
+                    "validation_terminal_outcome_missing"
+                    if terminal_outcome == "missing"
+                    else ""
+                ),
+            }
+        )
     _write_csv(
         output_dir / "terminal_outcomes.csv",
         ["report_id", "terminal_outcome", "terminal_stage", "failure_code"],
@@ -122,6 +124,12 @@ def export_run_evidence(
             "schema_version": "1.0",
             "validation_run_id": validation_run_id,
             "immutable_cohort_size": len(members),
+            "terminal_outcome_complete": all(
+                row["terminal_outcome"] != "missing" for row in terminal_rows
+            ),
+            "missing_terminal_report_count": sum(
+                row["terminal_outcome"] == "missing" for row in terminal_rows
+            ),
             "terminal_outcomes": dict(sorted(counts.items())),
             "stage_outcomes": stage_rows,
         },

@@ -421,10 +421,14 @@ def run_admission_preflight(
                         sample_char_count, sample_density, request.settings
                     ):
                         outcome = "insufficient_content"
-            elif not _has_evidence_potential(required_families, request.settings):
+            if outcome == "admitted" and not _has_evidence_potential(
+                required_families, request.settings
+            ):
                 outcome = "policy_blocked"
                 evidence_potential = "policy_blocked"
-            else:
+            if outcome == "admitted" and _has_evidence_potential(
+                required_families, request.settings
+            ):
                 evidence_potential = "sufficient"
                 try:
                     pdf_info = deps.extract_pdf_info(
