@@ -17,6 +17,9 @@ from src.contracts.workflow_queue import (
     WordPressPublishPayload,
     WorkflowJobSubmission,
 )
+from src.orchestrators._workflow_queue_handlers.report_pipeline import (
+    _report_pipeline_outcome_error,
+)
 from src.orchestrators.workflow_queue_orchestrator import (
     WorkflowQueueHandlerRegistration,
     default_workflow_queue_registry,
@@ -77,6 +80,31 @@ def test_worker_claims_runs_and_completes_a_verified_reference_job(tmp_path) -> 
     completed = get_workflow_job(db, job.job_id, _ctx())
     assert completed.status == "succeeded"
     assert completed.output_reference == "verified:inventory-snapshot"
+
+
+@pytest.mark.parametrize(
+    ("outcome_error", "expected_code"),
+    (
+        ("publish_readiness_failed", "publish_readiness_failed"),
+        (
+            "cover_asset_set_incomplete: "
+            "All three canonical report-card covers are required",
+            "cover_asset_set_incomplete",
+        ),
+    ),
+)
+def test_report_pipeline_terminal_outcome_preserves_typed_failure_code(
+    outcome_error: str, expected_code: str
+) -> None:
+    error = _report_pipeline_outcome_error(
+        outcome_error=outcome_error,
+        job_id="job-1",
+        report_id="report-1",
+    )
+
+    assert error.code == expected_code
+    assert error.message == outcome_error
+    assert error.retryable is False
 
 
 @pytest.mark.parametrize(

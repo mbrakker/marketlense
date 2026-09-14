@@ -73,6 +73,13 @@ prior validated checkpoint rather than re-running PDF extraction or earlier
 model work. Analytics projection has a projection-only path from validated
 analysis and render checkpoints.
 
+When the pipeline returns a terminal `error` outcome, the report-stage handler
+persists its typed failure code (the code prefix before an optional detail
+message) on the durable queue job. It does not replace that reason with a
+generic queue wrapper or schedule another retry for a terminal outcome. This
+keeps queue inspection, failure recovery, and validation evidence actionable
+without retaining unbounded pipeline detail.
+
 When bounded targeted regeneration replaces an artifact family, the regenerated
 artifact retains the prior `_cache.prompts` identity map. The next queue worker
 therefore validates the same immutable prompt provenance before resuming render;

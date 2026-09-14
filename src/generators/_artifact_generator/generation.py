@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable, Sequence
-from typing import Any, Dict, List, Optional, TypedDict
+from typing import Any, Dict, List, Optional, TypedDict, cast
 
 from src.contracts.artifact_generation import ArtifactRenderTask
 from src.contracts.config import AppSettings
@@ -219,6 +219,23 @@ def generate_artifacts(
     ) -> None:
         validate_evidence_references(payload, reference_evidence_packs, task_ctx)
 
+    def normalize_required_evidence_references(payload: Dict[str, Any]) -> None:
+        """Canonicalize model reference aliases before enforcing their contract."""
+
+        def list_field(name: str) -> List[Dict[str, Any]]:
+            value = payload.get(name)
+            return cast(List[Dict[str, Any]], value) if isinstance(value, list) else []
+
+        summary = payload.get("summary")
+        normalize_artifact_evidence_ids(
+            summary=summary if isinstance(summary, dict) else {},
+            insights_candidates=list_field("insights_candidates"),
+            insights_final=list_field("insights_final"),
+            quotes_final=list_field("quotes_final"),
+            doc_map=safe_doc_map,
+            evidence_packs=safe_evidence,
+        )
+
     def validate_editorial_plan(payload: Dict[str, Any], task_ctx: RunContext) -> None:
         normalize_artifact_editorial_plan(payload.get("editorial_plan"))
         validate_required_evidence_references(payload, task_ctx)
@@ -262,6 +279,7 @@ def generate_artifacts(
         if task.step_name in {"insights_candidates", "insights_final", "quotes"}:
 
             def payload_validator(payload: Dict[str, Any]) -> None:
+                normalize_required_evidence_references(payload)
                 if task.step_name == "insights_candidates":
                     payload["insights_candidates"] = discard_location_only_insights(
                         payload.get("insights_candidates")
@@ -801,13 +819,16 @@ def generate_artifacts(
         "insights_candidates_json": _dump_json(insights_candidates),
         "final_insight_target_count": final_insight_target_count,
     }
+
+    def validate_final_insight_references(payload: Dict[str, Any]) -> None:
+        normalize_required_evidence_references(payload)
+        validate_required_evidence_references(payload, insights_final_ctx)
+
     insights_final_result = resolve_or_render_family(
         namespace="report_vs/artifacts/insights_final",
         variables=insights_final_vars,
         ctx=insights_final_ctx,
-        payload_validator=lambda payload: validate_required_evidence_references(
-            payload, insights_final_ctx
-        ),
+        payload_validator=validate_final_insight_references,
     )
     insights_final = select_artifact_insights(
         final_insights=normalize_artifact_insights(

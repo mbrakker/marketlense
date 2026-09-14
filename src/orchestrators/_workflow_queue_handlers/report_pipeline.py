@@ -209,6 +209,30 @@ def _stage_child_submission(
     )
 
 
+def _report_pipeline_outcome_error(
+    *, outcome_error: str, job_id: str, report_id: str
+) -> AppError:
+    """Convert a terminal pipeline outcome into its original queue error code."""
+
+    message = str(outcome_error or "").strip() or (
+        "The retained report pipeline returned an error outcome"
+    )
+    candidate = message.split(":", 1)[0].strip()
+    code = (
+        candidate
+        if candidate
+        and candidate.replace("_", "").isalnum()
+        and candidate == candidate.lower()
+        else "report_pipeline_outcome_error"
+    )
+    return AppError(
+        code=code,
+        message=message,
+        retryable=False,
+        context={"job_id": job_id, "report_id": report_id},
+    )
+
+
 def _report_queue_validation_context(
     *,
     job: WorkflowJob,
@@ -459,11 +483,10 @@ def _report_stage_handler(
             preflight_fn=preflight_fn,
         )
         if outcome.status == "error":
-            raise AppError(
-                code="workflow_queue_report_stage_failed",
-                message="The retained report pipeline returned an error outcome",
-                retryable=True,
-                context={"job_id": job.job_id, "report_id": report_id},
+            raise _report_pipeline_outcome_error(
+                outcome_error=str(outcome.error or ""),
+                job_id=job.job_id,
+                report_id=report_id,
             )
         if job.queue_name == "source_ingest":
             record_validation_manifest_stage(

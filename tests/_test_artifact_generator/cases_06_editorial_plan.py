@@ -86,7 +86,7 @@ def test_editorial_plan_is_the_shared_basis_for_summary_insights_and_expert(tmp_
                 {
                     "id": "candidate-1",
                     "text": "Retention efficiency is the main growth lever.",
-                    "evidence_id": "f3",
+                    "evidence_id": "evidence:findings:f3",
                     "evidence": "Retention improved",
                     "metric": {},
                     "pages": [4],
@@ -95,7 +95,7 @@ def test_editorial_plan_is_the_shared_basis_for_summary_insights_and_expert(tmp_
                 {
                     "id": "candidate-2",
                     "text": "Margin pressure constrains expansion.",
-                    "evidence_id": "f2",
+                    "evidence_id": "evidence:findings:f2",
                     "evidence": "Margin declined",
                     "metric": {},
                     "pages": [3],
@@ -110,7 +110,7 @@ def test_editorial_plan_is_the_shared_basis_for_summary_insights_and_expert(tmp_
                     "speaker": "CEO",
                     "citation": "",
                     "page": 3,
-                    "evidence_id": "q1",
+                    "evidence_id": "quote-1",
                 }
             ]
         },
@@ -119,7 +119,7 @@ def test_editorial_plan_is_the_shared_basis_for_summary_insights_and_expert(tmp_
                 {
                     "id": "candidate-2",
                     "text": "Margin pressure constrains expansion.",
-                    "evidence_id": "f2",
+                    "evidence_id": "evidence:findings:f2",
                     "evidence": "Margin declined",
                     "metric": {},
                     "pages": [3],
@@ -128,7 +128,7 @@ def test_editorial_plan_is_the_shared_basis_for_summary_insights_and_expert(tmp_
                 {
                     "id": "candidate-1",
                     "text": "Retention efficiency is the main growth lever.",
-                    "evidence_id": "f3",
+                    "evidence_id": "evidence:findings:f3",
                     "evidence": "Retention improved",
                     "metric": {},
                     "pages": [4],
@@ -177,6 +177,7 @@ def test_editorial_plan_is_the_shared_basis_for_summary_insights_and_expert(tmp_
         "f2",
         "f3",
     ]
+    assert [item["evidence_id"] for item in payload["quotes_final"]] == ["q1"]
     assert "retention-led efficiency" in payload["summary"]["executive_summary"].lower()
     assert "operating tradeoff" in payload["expert_comment"].lower()
 
