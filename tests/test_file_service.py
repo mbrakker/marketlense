@@ -1,32 +1,31 @@
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
 import os
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
 
 from src.contracts.files import (
     AppendBytesRequest,
+    DirectoryPatternCountRequest,
+    DirectoryPatternSpec,
     FileBundleHashRequest,
     FileStatRequest,
     JsonObjectCacheReadRequest,
     JsonObjectCacheWriteRequest,
     ListDirectoryRequest,
-    DirectoryPatternCountRequest,
-    DirectoryPatternSpec,
+    PdfCacheTextReadRequest,
     PipelineCheckpointReadRequest,
     PipelineCheckpointWriteRequest,
     PipelineStageCheckpoint,
-    PdfCacheTextReadRequest,
-    ReadTextRequest,
-    WriteBytesRequest,
     ReadJsonRequest,
+    ReadTextRequest,
     StructuredLogLoadRequest,
+    WriteBytesRequest,
 )
-from src.contracts.run_context import RunContext
 from src.contracts.report_cards import (
     CardCoverAsset,
     CardCoverAssetSet,
@@ -34,22 +33,25 @@ from src.contracts.report_cards import (
     ReportCardManifest,
     ReportCardManifestWriteRequest,
 )
+from src.contracts.run_context import RunContext
 from src.services.file_service import (
+    WINDOWS_SAFE_ATOMIC_PATH_LENGTH,
     append_bytes,
-    hash_file_bundle,
-    read_json_object_cache,
-    write_json_object_cache,
-    list_directory,
+    atomic_write_temp_path_length,
     count_directory_patterns,
     file_stat,
+    hash_file_bundle,
+    list_directory,
     load_structured_log_events,
     read_json,
-    read_pipeline_checkpoint,
+    read_json_object_cache,
     read_latest_pdf_cache_text,
+    read_pipeline_checkpoint,
     read_text,
+    write_bytes,
+    write_json_object_cache,
     write_pipeline_checkpoint,
     write_report_card_manifest,
-    write_bytes,
 )
 from src.utils.errors import AppError
 
@@ -613,6 +615,51 @@ def test_pipeline_checkpoint_roundtrip_persists_artifact_refs_and_schema(
         "pipeline_checkpoint_read_complete",
     }
     assert_logs_have_required_fields(checkpoint_events)
+
+
+def test_pipeline_checkpoint_compacts_a_deep_atomic_write_path(tmp_path: Path) -> None:
+    """An isolated cohort root must not exhaust the Windows temp-file budget."""
+
+    checkpoint = PipelineStageCheckpoint(
+        schema_version="1.0",
+        pipeline_name="report_generation",
+        file_id="cohort-cbb6e7df67412186b8bc",
+        report_slug="market-report",
+        stage_name="source_prepared",
+        stage_status="completed",
+        artifact_refs={},
+        payload={"schema_version": "1.0"},
+        completed_at_utc="2026-09-13T00:00:00+00:00",
+        source_run_id="run-1",
+        source_task_id="task-1",
+    )
+    checkpoint_root = tmp_path / ("isolated-cohort-" + "x" * 25)
+
+    response = write_pipeline_checkpoint(
+        PipelineCheckpointWriteRequest(
+            schema_version="1.0",
+            checkpoint_root=str(checkpoint_root),
+            checkpoint=checkpoint,
+        ),
+        _ctx(),
+    )
+
+    stored_path = Path(response.checkpoint_path)
+    assert stored_path.parts[-4] == ".cp"
+    assert atomic_write_temp_path_length(stored_path) <= WINDOWS_SAFE_ATOMIC_PATH_LENGTH
+    assert (
+        read_pipeline_checkpoint(
+            PipelineCheckpointReadRequest(
+                schema_version="1.0",
+                checkpoint_root=str(checkpoint_root),
+                pipeline_name=checkpoint.pipeline_name,
+                file_id=checkpoint.file_id,
+                stage_name=checkpoint.stage_name,
+            ),
+            _ctx(),
+        ).checkpoint
+        == checkpoint
+    )
 
 
 def test_write_report_card_manifest_persists_validated_payload_and_logs(

@@ -1,0 +1,73 @@
+{
+  "immutable_cohort_size": 1,
+  "schema_version": "1.0",
+  "stage_outcomes": [
+    {
+      "cohort_size": 1,
+      "conversion_percent": 100.0,
+      "count": 1,
+      "outcome": "succeeded",
+      "stage": "admission_preflight"
+    },
+    {
+      "cohort_size": 1,
+      "conversion_percent": 100.0,
+      "count": 1,
+      "outcome": "succeeded",
+      "stage": "candidate_qualification"
+    },
+    {
+      "cohort_size": 1,
+      "conversion_percent": 100.0,
+      "count": 1,
+      "outcome": "succeeded",
+      "stage": "category_fit"
+    },
+    {
+      "cohort_size": 1,
+      "conversion_percent": 100.0,
+      "count": 1,
+      "outcome": "succeeded",
+      "stage": "discovery"
+    },
+    {
+      "cohort_size": 1,
+      "conversion_percent": 100.0,
+      "count": 1,
+      "outcome": "succeeded",
+      "stage": "evidence_generation"
+    },
+    {
+      "cohort_size": 1,
+      "conversion_percent": 100.0,
+      "count": 1,
+      "outcome": "succeeded",
+      "stage": "source_preparation"
+    },
+    {
+      "cohort_size": 1,
+      "conversion_percent": 100.0,
+      "count": 1,
+      "outcome": "succeeded",
+      "stage": "source_validation"
+    },
+    {
+      "cohort_size": 1,
+      "conversion_percent": 100.0,
+      "count": 1,
+      "outcome": "skipped",
+      "stage": "structured_output_repair"
+    },
+    {
+      "cohort_size": 1,
+      "conversion_percent": 100.0,
+      "count": 1,
+      "outcome": "succeeded",
+      "stage": "taxonomy"
+    }
+  ],
+  "terminal_outcomes": {
+    "missing": 1
+  },
+  "validation_run_id": "validation:650af8b214c697612d38ef2443a76b10e9991f4aebaa610ee10123394efa8492"
+}

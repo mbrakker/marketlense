@@ -30,27 +30,27 @@ from src.contracts.files import (
     FileHashResponse,
     FileStatRequest,
     FileStatResponse,
-    ListDirectoryRequest,
-    ListDirectoryResponse,
-    ListHtmlRequest,
-    ListHtmlResponse,
     JsonObjectCacheReadRequest,
     JsonObjectCacheReadResponse,
     JsonObjectCacheWriteRequest,
     JsonObjectCacheWriteResponse,
+    ListDirectoryRequest,
+    ListDirectoryResponse,
+    ListHtmlRequest,
+    ListHtmlResponse,
+    PdfCacheTextReadRequest,
+    PdfCacheTextReadResponse,
     PipelineCheckpointReadRequest,
     PipelineCheckpointReadResponse,
     PipelineCheckpointWriteRequest,
     PipelineCheckpointWriteResponse,
     PipelineStageCheckpoint,
-    PdfCacheTextReadRequest,
-    PdfCacheTextReadResponse,
-    ReadTextFilesRequest,
-    ReadTextFilesResponse,
     ReadBytesRequest,
     ReadBytesResponse,
     ReadJsonRequest,
     ReadJsonResponse,
+    ReadTextFilesRequest,
+    ReadTextFilesResponse,
     ReadTextRequest,
     ReadTextResponse,
     StructuredLogLoadRequest,
@@ -58,19 +58,19 @@ from src.contracts.files import (
     WriteBytesRequest,
     WriteBytesResponse,
 )
-from src.contracts.run_context import RunContext
 from src.contracts.report_cards import (
     ReportCardManifest,
     ReportCardManifestWriteRequest,
     ReportCardManifestWriteResponse,
 )
+from src.contracts.run_context import RunContext
+from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from src.utils.gui_utils import (
     extract_log_date_from_filename,
     parse_structured_log_line,
 )
 from src.utils.logging import log_event
-from src.utils.cache_utils import sha256_json
 
 logger = logging.getLogger("market_lense.file_service")
 _WINDOWS_ABSOLUTE_PATH_RX = re.compile(r"^[A-Za-z]:[\\/]")
@@ -78,6 +78,8 @@ _PDF_CACHE_MD5_RX = re.compile(r"^[0-9a-fA-F]{32}$")
 _PIPELINE_CHECKPOINT_TOKEN_RX = re.compile(r"^[A-Za-z0-9_.=-]+$")
 _PIPELINE_CHECKPOINT_SCHEMA_VERSION = "1.0"
 _PIPELINE_CHECKPOINT_DIR = ".checkpoints"
+_COMPACT_PIPELINE_CHECKPOINT_DIR = ".cp"
+_COMPACT_PIPELINE_CHECKPOINT_TOKEN_LENGTH = 12
 _ATOMIC_WRITE_STALE_SECONDS = 3600.0
 _ATOMIC_WRITE_TEMP_TAG = ".tmp-write-"
 _ATOMIC_REPLACE_MAX_ATTEMPTS = 3
@@ -150,13 +152,28 @@ def _pipeline_checkpoint_path(
     pipeline_token = _require_checkpoint_token(pipeline_name, "pipeline_name")
     file_token = _require_checkpoint_token(file_id, "file_id")
     stage_token = _require_checkpoint_token(stage_name, "stage_name")
-    return (
+    path = (
         root
         / _PIPELINE_CHECKPOINT_DIR
         / pipeline_token
         / file_token
         / f"{stage_token}.json"
     )
+    if atomic_write_temp_path_length(path) <= WINDOWS_SAFE_ATOMIC_PATH_LENGTH:
+        return path
+    return (
+        root
+        / _COMPACT_PIPELINE_CHECKPOINT_DIR
+        / _checkpoint_path_token(pipeline_token)
+        / _checkpoint_path_token(file_token)
+        / f"{_checkpoint_path_token(stage_token)}.json"
+    )
+
+
+def _checkpoint_path_token(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()[
+        :_COMPACT_PIPELINE_CHECKPOINT_TOKEN_LENGTH
+    ]
 
 
 def _checkpoint_to_payload(checkpoint: PipelineStageCheckpoint) -> dict:

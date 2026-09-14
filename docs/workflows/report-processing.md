@@ -40,6 +40,12 @@ compacted with a slug-derived suffix. Every producer and downstream reader
 resolves that one canonical path through the analysis-pack service, including
 the crop-refinement cache; a genuine directory, permission, serialization, or
 atomic-write failure remains a typed persistence failure.
+Pipeline checkpoints apply that rule at their own canonical path boundary. If
+the normal pipeline, file, and stage hierarchy would exceed the same atomic
+write budget, both writer and reader deterministically use a compact,
+SHA-256-derived hierarchy. The checkpoint payload continues to retain the
+complete pipeline, file, and stage identities; compaction never relaxes
+checkpoint validation or replaces an I/O failure with success.
 If a report pipeline still observes a missing local processing artifact, it
 maps that OS-level condition to the configured bounded report-pipeline retry;
 a persistent missing source or artifact remains a typed terminal failure.

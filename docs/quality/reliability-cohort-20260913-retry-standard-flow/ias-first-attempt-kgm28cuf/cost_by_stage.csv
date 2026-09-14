@@ -1,0 +1,12 @@
+stage,estimated_cost_usd
+doc_map,0.003841
+evidence_packs:findings,0.003140
+evidence_packs:limitations,0.001190
+evidence_packs:methods,0.001639
+evidence_packs:quote_candidates,0.001766
+evidence_packs:scope,0.001402
+rank_candidates,0.001538
+rank_candidates:crop_refine,0.002211
+structured_output:regenerate,0.001238
+structured_output:repair,0.001236
+taxonomy,0.002917

@@ -1,0 +1,11 @@
+{
+  "members": [
+    {
+      "publisher_id": "Activate",
+      "report_id": "cohort-cbb6e7df67412186b8bc",
+      "source_identity_id": "source:4d84943bbcfdef81ad8c08f29f6f6b0b"
+    }
+  ],
+  "schema_version": "1.0",
+  "validation_run_id": "validation:acbd96c99c57badac5d8d8c281b85f4f36a7631915cee0a3541dfc7a65badb95"
+}

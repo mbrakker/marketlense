@@ -1,0 +1,7 @@
+stage,outcome,count,cohort_size,conversion_percent
+admission_preflight,succeeded,1,1,100.0
+candidate_qualification,succeeded,1,1,100.0
+discovery,succeeded,1,1,100.0
+source_preparation,succeeded,1,1,100.0
+source_validation,succeeded,1,1,100.0
+taxonomy,succeeded,1,1,100.0

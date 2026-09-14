@@ -1,0 +1,11 @@
+{
+  "members": [
+    {
+      "publisher_id": "Bigcommerce",
+      "report_id": "cohort-0a019f840c3f89ad0a96",
+      "source_identity_id": "source:5c922bfa405c19d9cbc9a0a00ea70d1b"
+    }
+  ],
+  "schema_version": "1.0",
+  "validation_run_id": "validation:650af8b214c697612d38ef2443a76b10e9991f4aebaa610ee10123394efa8492"
+}

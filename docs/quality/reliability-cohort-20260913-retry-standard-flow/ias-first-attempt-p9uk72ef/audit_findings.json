@@ -1,0 +1,12 @@
+{
+  "cohort_size": 1,
+  "findings": [
+    "Immutable cohort retained; no member replacement occurred.",
+    "Publication and repeat publication were not run because the required cohort success threshold was not met.",
+    "Terminal outcomes are complete and typed."
+  ],
+  "publication_performed": false,
+  "publish_ready": 0,
+  "status": "failed_reliability_targets",
+  "validation_run_id": "validation:a91a523d41b240640faad26194ffe7dbc806649b0ef1f8ccac74a33e1580a92e"
+}

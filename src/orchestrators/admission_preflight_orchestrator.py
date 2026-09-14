@@ -15,7 +15,7 @@ from src.contracts.admission_preflight import (
 )
 from src.contracts.drive import DriveFile
 from src.contracts.files import WriteBytesRequest
-from src.contracts.pdf_text import PdfTextExtractRequest
+from src.contracts.pdf_text import PdfTextExtractRequest, PdfTextSampleRequest
 from src.contracts.pdf_utils import PdfInfoRequest, PdfIntegrityCheckRequest
 from src.contracts.report_store import (
     ReportSourceIdentityGetRequest,
@@ -39,6 +39,7 @@ from src.services.pdf_service import (
     check_pdf_integrity,
     extract_pdf_info,
     extract_pdf_text,
+    sample_pdf_text,
 )
 from src.services.report_store_service import (
     get_report_source_identity,
@@ -229,6 +230,7 @@ class AdmissionPreflightDependencies:
     extract_pdf_text: Callable[[PdfTextExtractRequest, RunContext], Any] = (
         extract_pdf_text
     )
+    sample_pdf_text: Callable[[PdfTextSampleRequest, RunContext], Any] = sample_pdf_text
     extract_pdf_info: Callable[[PdfInfoRequest, RunContext], Any] = extract_pdf_info
     get_source_quarantine: Callable[[SourceQuarantineGetRequest, RunContext], Any] = (
         get_source_quarantine
@@ -403,7 +405,22 @@ def run_admission_preflight(
             if not _has_minimum_content(
                 sample_char_count, sample_density, request.settings
             ):
-                outcome = "insufficient_content"
+                middle_sample = _sample_middle_pages(
+                    request=request,
+                    page_count=page_count,
+                    sample_pages=max(1, int(request.settings.pdf_text_sample_pages)),
+                    dependencies=deps,
+                    ctx=ctx,
+                )
+                if middle_sample is None:
+                    outcome = "insufficient_content"
+                else:
+                    sample_char_count, sampled_pages = middle_sample
+                    sample_density = sample_char_count / sampled_pages
+                    if not _has_minimum_content(
+                        sample_char_count, sample_density, request.settings
+                    ):
+                        outcome = "insufficient_content"
             elif not _has_evidence_potential(required_families, request.settings):
                 outcome = "policy_blocked"
                 evidence_potential = "policy_blocked"
@@ -417,9 +434,7 @@ def run_admission_preflight(
                         ),
                         ctx,
                     )
-                    pdf_metadata = dict(
-                        getattr(pdf_info, "metadata", {}) or {}
-                    )
+                    pdf_metadata = dict(getattr(pdf_info, "metadata", {}) or {})
                 except AppError:
                     # PDF metadata supplements source-visible text but is never
                     # required for structural admission.
@@ -815,6 +830,37 @@ def _has_minimum_content(char_count: int, density: float, settings: Any) -> bool
     min_chars = max(1, int(getattr(settings, "admission_min_text_chars", 500)))
     min_density = float(getattr(settings, "pdf_text_min_density", 0.0) or 0.0)
     return char_count >= min_chars and density >= min_density
+
+
+def _sample_middle_pages(
+    *,
+    request: AdmissionPreflightRequest,
+    page_count: int,
+    sample_pages: int,
+    dependencies: AdmissionPreflightDependencies,
+    ctx: RunContext,
+) -> tuple[int, int] | None:
+    if page_count <= sample_pages:
+        return None
+    first_page = max(sample_pages, (page_count - sample_pages) // 2)
+    page_indices = list(range(first_page, min(page_count, first_page + sample_pages)))
+    if len(page_indices) != sample_pages:
+        return None
+    try:
+        response = dependencies.sample_pdf_text(
+            PdfTextSampleRequest(
+                schema_version="1.0",
+                path=request.source_artifact_path,
+                page_indices=page_indices,
+            ),
+            ctx,
+        )
+    except AppError:
+        return None
+    samples = list(getattr(response, "samples", []) or [])
+    if len(samples) != sample_pages:
+        return None
+    return sum(max(0, int(sample.char_count)) for sample in samples), len(samples)
 
 
 def _has_evidence_potential(required_families: tuple[str, ...], settings: Any) -> bool:

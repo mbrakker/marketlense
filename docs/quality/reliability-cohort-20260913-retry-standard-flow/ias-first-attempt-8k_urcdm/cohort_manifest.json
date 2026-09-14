@@ -1,0 +1,11 @@
+{
+  "members": [
+    {
+      "publisher_id": "Adjust",
+      "report_id": "cohort-b638414df0b1fccea1cd",
+      "source_identity_id": "source:8cb648b6bbd9dbae4ec1d915c38cf235"
+    }
+  ],
+  "schema_version": "1.0",
+  "validation_run_id": "validation:f07df910f0cfda87ba0d6e13499b16d4c478a3531d47a076c96dfb8eef50c07d"
+}

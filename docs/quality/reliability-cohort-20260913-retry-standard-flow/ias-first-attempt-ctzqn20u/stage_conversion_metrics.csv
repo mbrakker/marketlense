@@ -1,0 +1,15 @@
+stage,outcome,count,cohort_size,conversion_percent
+admission_preflight,succeeded,1,1,100.0
+analysis_complete,succeeded,1,1,100.0
+artifact_generation,succeeded,1,1,100.0
+candidate_qualification,succeeded,1,1,100.0
+category_fit,succeeded,1,1,100.0
+discovery,succeeded,1,1,100.0
+evidence_generation,succeeded,1,1,100.0
+grounding_validation,succeeded,1,1,100.0
+regeneration,succeeded,1,1,100.0
+semantic_validation,succeeded,1,1,100.0
+source_preparation,succeeded,1,1,100.0
+source_validation,succeeded,1,1,100.0
+structured_output_repair,skipped,1,1,100.0
+taxonomy,succeeded,1,1,100.0

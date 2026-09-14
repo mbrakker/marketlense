@@ -4,7 +4,15 @@ from types import SimpleNamespace
 import pytest
 
 from src.contracts.run_context import RunContext
-from src.generators.report_generation_shared import read_cache_json, template_sha256
+from src.generators.report_generation_shared import (
+    cache_path,
+    read_cache_json,
+    template_sha256,
+)
+from src.services.file_service import (
+    WINDOWS_SAFE_ATOMIC_PATH_LENGTH,
+    atomic_write_temp_path_length,
+)
 from src.utils.errors import AppError
 
 
@@ -54,3 +62,13 @@ def test_template_sha256_propagates_retryable_read_error(assert_app_error):
         retryable=True,
         severity="error",
     )
+
+
+def test_cache_path_compacts_deep_pdf_cache_for_atomic_write(tmp_path: Path) -> None:
+    path = cache_path(
+        tmp_path / ("isolated-cohort-" + "x" * 30) / "pdf_cache" / ("a" * 32),
+        "pdf_info",
+        "b" * 64,
+    )
+
+    assert atomic_write_temp_path_length(path) <= WINDOWS_SAFE_ATOMIC_PATH_LENGTH

@@ -1,0 +1,3 @@
+stage,outcome,repair_disposition,failure_code
+regeneration,failed,targeted_repair,validation_failed
+structured_output_repair,skipped,not_required,

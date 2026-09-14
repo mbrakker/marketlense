@@ -1,0 +1,108 @@
+{
+  "immutable_cohort_size": 1,
+  "schema_version": "1.0",
+  "stage_outcomes": [
+    {
+      "cohort_size": 1,
+      "conversion_percent": 100.0,
+      "count": 1,
+      "outcome": "succeeded",
+      "stage": "admission_preflight"
+    },
+    {
+      "cohort_size": 1,
+      "conversion_percent": 100.0,
+      "count": 1,
+      "outcome": "succeeded",
+      "stage": "analysis_complete"
+    },
+    {
+      "cohort_size": 1,
+      "conversion_percent": 100.0,
+      "count": 1,
+      "outcome": "succeeded",
+      "stage": "artifact_generation"
+    },
+    {
+      "cohort_size": 1,
+      "conversion_percent": 100.0,
+      "count": 1,
+      "outcome": "succeeded",
+      "stage": "candidate_qualification"
+    },
+    {
+      "cohort_size": 1,
+      "conversion_percent": 100.0,
+      "count": 1,
+      "outcome": "succeeded",
+      "stage": "category_fit"
+    },
+    {
+      "cohort_size": 1,
+      "conversion_percent": 100.0,
+      "count": 1,
+      "outcome": "succeeded",
+      "stage": "discovery"
+    },
+    {
+      "cohort_size": 1,
+      "conversion_percent": 100.0,
+      "count": 1,
+      "outcome": "succeeded",
+      "stage": "evidence_generation"
+    },
+    {
+      "cohort_size": 1,
+      "conversion_percent": 100.0,
+      "count": 1,
+      "outcome": "succeeded",
+      "stage": "grounding_validation"
+    },
+    {
+      "cohort_size": 1,
+      "conversion_percent": 100.0,
+      "count": 1,
+      "outcome": "skipped",
+      "stage": "regeneration"
+    },
+    {
+      "cohort_size": 1,
+      "conversion_percent": 100.0,
+      "count": 1,
+      "outcome": "succeeded",
+      "stage": "semantic_validation"
+    },
+    {
+      "cohort_size": 1,
+      "conversion_percent": 100.0,
+      "count": 1,
+      "outcome": "succeeded",
+      "stage": "source_preparation"
+    },
+    {
+      "cohort_size": 1,
+      "conversion_percent": 100.0,
+      "count": 1,
+      "outcome": "succeeded",
+      "stage": "source_validation"
+    },
+    {
+      "cohort_size": 1,
+      "conversion_percent": 100.0,
+      "count": 1,
+      "outcome": "skipped",
+      "stage": "structured_output_repair"
+    },
+    {
+      "cohort_size": 1,
+      "conversion_percent": 100.0,
+      "count": 1,
+      "outcome": "succeeded",
+      "stage": "taxonomy"
+    }
+  ],
+  "terminal_outcomes": {
+    "missing": 1
+  },
+  "validation_run_id": "validation:a00c4fbc45670265ed5e7a1bb7315d0d16cc5552afb7b8e0068be15ca2d67235"
+}

@@ -1,0 +1,11 @@
+stage,record_count
+admission_preflight,1
+artifact_generation,1
+candidate_qualification,1
+category_fit,1
+discovery,1
+evidence_generation,1
+source_preparation,1
+source_validation,1
+structured_output_repair,1
+taxonomy,1

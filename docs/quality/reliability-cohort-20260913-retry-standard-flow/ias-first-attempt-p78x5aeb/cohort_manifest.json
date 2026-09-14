@@ -1,0 +1,11 @@
+{
+  "members": [
+    {
+      "publisher_id": "Mintel",
+      "report_id": "cohort-b3cb5f66cccda4420be2",
+      "source_identity_id": "source:4903a7aedf42d978f33da5188f523bb6"
+    }
+  ],
+  "schema_version": "1.0",
+  "validation_run_id": "validation:7c50626e1a61ae462457dc7713044d1f18722ea014ed4346a3909c8ea5184c6c"
+}

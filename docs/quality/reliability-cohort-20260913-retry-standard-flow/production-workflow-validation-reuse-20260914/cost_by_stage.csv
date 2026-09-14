@@ -1,0 +1,10 @@
+stage,estimated_cost_usd
+doc_map,0.005358
+evidence_packs:findings,0.004378
+evidence_packs:limitations,0.003870
+evidence_packs:methods,0.002275
+evidence_packs:quote_candidates,0.002636
+evidence_packs:scope,0.002349
+rank_candidates,0.005156
+rank_candidates:crop_refine,0.007418
+validate:semantic,0.000622

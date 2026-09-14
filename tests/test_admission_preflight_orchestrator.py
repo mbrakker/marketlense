@@ -135,6 +135,30 @@ def test_admission_rejects_unsupported_corrupt_and_insufficient_sources(
     assert insufficient.decision.outcome == "insufficient_content"
 
 
+def test_admission_uses_a_middle_sample_after_a_weak_opening_sample(
+    ingest_settings, run_context
+) -> None:
+    result = run_admission_preflight(
+        _request(ingest_settings),
+        run_context,
+        dependencies=replace(
+            _dependencies(),
+            extract_pdf_text=lambda _request, _ctx: SimpleNamespace(
+                char_count=630,
+                pages_extracted=3,
+                text_density=210.0,
+            ),
+            sample_pdf_text=lambda request, _ctx: SimpleNamespace(
+                samples=[SimpleNamespace(char_count=900) for _ in request.page_indices]
+            ),
+        ),
+    )
+
+    assert result.admitted is True
+    assert result.decision.sample_char_count == 2_700
+    assert result.decision.sample_text_density == 900.0
+
+
 def test_admission_checks_exact_identity_and_retains_near_title_as_a_signal(
     ingest_settings, run_context
 ) -> None:
@@ -375,8 +399,7 @@ def test_admission_records_explicit_provenance_when_source_identity_is_new(
             extract_pdf_info=lambda _request, _ctx: SimpleNamespace(
                 metadata={
                     "Title": (
-                        "Digital 2022: Sweden � DataReportal � "
-                        "Global Digital Insights"
+                        "Digital 2022: Sweden � DataReportal � Global Digital Insights"
                     )
                 }
             ),

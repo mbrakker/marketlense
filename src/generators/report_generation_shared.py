@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from hashlib import sha256
 from pathlib import Path
 from typing import Any, Optional, Protocol
 
@@ -15,11 +16,12 @@ from src.contracts.report_models import Figure, Quote, ReportPayload
 from src.contracts.run_context import RunContext
 from src.contracts.semantic_ids import ReportId
 from src.contracts.state import StateRecordRequest
+from src.services import file_service
 from src.utils.analysis_family import family_is_abstained
+from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 from src.utils.slugify import slugify
-from src.utils.cache_utils import sha256_json
 
 LOGGER_NAME = "market_lense.report_generator"
 logger = logging.getLogger(LOGGER_NAME)
@@ -148,7 +150,16 @@ def text_cache_key(md5: str, settings: IngestSettings) -> str:
 
 
 def cache_path(cache_root: Path, prefix: str, cache_key: str) -> Path:
-    return cache_root / f"{prefix}_{cache_key}.json"
+    path = cache_root / f"{prefix}_{cache_key}.json"
+    if (
+        file_service.atomic_write_temp_path_length(path)
+        <= file_service.WINDOWS_SAFE_ATOMIC_PATH_LENGTH
+    ):
+        return path
+    compact_root = (
+        cache_root.parent / sha256(cache_root.name.encode("utf-8")).hexdigest()[:12]
+    )
+    return compact_root / f"{prefix}_{cache_key[:12]}.json"
 
 
 def template_sha256(

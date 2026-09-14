@@ -1,0 +1,11 @@
+{
+  "members": [
+    {
+      "publisher_id": "Robeco",
+      "report_id": "cohort-5ceb3b4498de7288ce5a",
+      "source_identity_id": "source:14e4b564697078fdbf61e999bf7f2d82"
+    }
+  ],
+  "schema_version": "1.0",
+  "validation_run_id": "validation:ac45165a6ab5bcaa30f0ca96d70677a39c179694d1deb346549d0e9813130461"
+}

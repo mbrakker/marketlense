@@ -1,0 +1,11 @@
+{
+  "members": [
+    {
+      "publisher_id": "Merchant Risk Council",
+      "report_id": "cohort-11b0b55157f7d0636815",
+      "source_identity_id": "source:67f65e9e8a4ad7c658cc6d3a2c4631da"
+    }
+  ],
+  "schema_version": "1.0",
+  "validation_run_id": "validation:7cb81499bda11e704dd4fd40dd14b67159e3ca1358f533c16877ab87b0b211a2"
+}

@@ -145,6 +145,13 @@ runtime state and exports bounded identifiers and scalar metrics only. It must
 not be used to infer a successful publication when publication-stage records
 are absent.
 
+Benchmark and reliability evidence MUST use the standard, already-produced
+discovery, acquisition, ingest, analysis, render, and publication flows and
+their retained logs, state, and artifacts unless an operator explicitly
+requests a nonstandard diagnostic flow. A diagnostic harness may inspect or
+export those records, but it must not substitute bespoke workflow behavior for
+the production path being measured.
+
 The same canonical validation-reliability artifact separately retains the
 legacy eventual/current-attempt funnel and an A21 first-attempt funnel through
 the durable `awaiting_review` boundary. A21 readiness requires both successful
