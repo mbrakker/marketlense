@@ -140,9 +140,7 @@ def _isolated_config(
             / "config"
             / "publisher-profiles.json"
         ),
-        "category_mappings": str(
-            base_config_path.with_name("category-mappings.yaml")
-        ),
+        "category_mappings": str(base_config_path.with_name("category-mappings.yaml")),
         "html_tag_acronyms": str(base_config_path.with_name("html-tag-acronyms.yaml")),
         "cover_styles": str(base_config_path.with_name("cover-styles.yaml")),
     }
