@@ -1,4 +1,5 @@
 {
+  "awaiting_review": 2,
   "cohort_size": 20,
   "findings": [
     "Immutable cohort retained; no member replacement occurred.",
@@ -6,7 +7,7 @@
     "Terminal outcomes are complete and typed."
   ],
   "publication_performed": false,
-  "publish_ready": 0,
+  "publish_ready": 2,
   "status": "failed_reliability_targets",
-  "validation_run_id": "validation:739e8a9f621d0fdb0f0e37acf49ff0819f93dce43d36bc687f18a330e33b8ba8"
+  "typed_terminal_outcomes": 20
 }

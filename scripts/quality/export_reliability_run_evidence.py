@@ -35,7 +35,9 @@ def _write_json(path: Path, payload: Any) -> None:
     )
 
 
-def _authoritative_terminal_rows(cohort_result_path: Path) -> list[dict[str, str]]:
+def _authoritative_frozen_cohort_projection(
+    cohort_result_path: Path,
+) -> tuple[list[dict[str, str]], dict[str, Any]]:
     """Read the production-derived typed outcomes retained by the cohort runner."""
 
     payload = json.loads(cohort_result_path.read_text(encoding="utf-8"))
@@ -49,12 +51,14 @@ def _authoritative_terminal_rows(cohort_result_path: Path) -> list[dict[str, str
         raise ValueError("cohort_result reports do not match declared cohort_size")
 
     terminal_rows: list[dict[str, str]] = []
+    publication_ready_count = 0
     for report in reports:
         if not isinstance(report, dict):
             raise ValueError("cohort_result report must be an object")
         report_id = str(report.get("report_id") or "").strip()
         terminal_outcome = str(report.get("final_state") or "").strip()
         failure_code = str(report.get("terminal_failure_code") or "").strip()
+        publication_readiness = str(report.get("publication_readiness") or "").strip()
         if not report_id:
             raise ValueError("cohort_result report has no report_id")
         if terminal_outcome not in {"awaiting_review", "failed"}:
@@ -63,6 +67,9 @@ def _authoritative_terminal_rows(cohort_result_path: Path) -> list[dict[str, str
             raise ValueError("failed cohort_result report has no failure code")
         if terminal_outcome != "failed" and failure_code:
             raise ValueError("non-failed cohort_result report has a failure code")
+        if publication_readiness not in {"pass", "fail"}:
+            raise ValueError("cohort_result report has no publication readiness")
+        publication_ready_count += publication_readiness == "pass"
         terminal_rows.append(
             {
                 "report_id": report_id,
@@ -87,7 +94,18 @@ def _authoritative_terminal_rows(cohort_result_path: Path) -> list[dict[str, str
     )
     if actual_pareto != expected_pareto:
         raise ValueError("cohort_result failure Pareto does not match typed outcomes")
-    return terminal_rows
+    terminal_outcomes = dict(
+        sorted(Counter(row["terminal_outcome"] for row in terminal_rows).items())
+    )
+    return terminal_rows, {
+        "schema_version": "1.0",
+        "immutable_cohort_size": len(terminal_rows),
+        "terminal_outcome_complete": True,
+        "missing_terminal_report_count": 0,
+        "terminal_outcomes": terminal_outcomes,
+        "awaiting_review_count": terminal_outcomes.get("awaiting_review", 0),
+        "publication_ready_count": publication_ready_count,
+    }
 
 
 def _write_terminal_outcome_views(
@@ -130,9 +148,30 @@ def export_frozen_cohort_outcome_views(
     """Project frozen-cohort terminal views from its authoritative typed result."""
 
     output_dir.mkdir(parents=True, exist_ok=True)
+    terminal_rows, aggregate_funnel = _authoritative_frozen_cohort_projection(
+        cohort_result_path
+    )
     _write_terminal_outcome_views(
         output_dir=output_dir,
-        terminal_rows=_authoritative_terminal_rows(cohort_result_path),
+        terminal_rows=terminal_rows,
+    )
+    _write_json(output_dir / "aggregate_funnel.json", aggregate_funnel)
+    _write_json(
+        output_dir / "audit_findings.json",
+        {
+            "status": "failed_reliability_targets",
+            "cohort_size": aggregate_funnel["immutable_cohort_size"],
+            "typed_terminal_outcomes": aggregate_funnel["immutable_cohort_size"],
+            "awaiting_review": aggregate_funnel["awaiting_review_count"],
+            "publish_ready": aggregate_funnel["publication_ready_count"],
+            "publication_performed": False,
+            "findings": [
+                "Immutable cohort retained; no member replacement occurred.",
+                "Publication and repeat publication were not run because the required "
+                "cohort success threshold was not met.",
+                "Terminal outcomes are complete and typed.",
+            ],
+        },
     )
 
 

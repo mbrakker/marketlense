@@ -122,9 +122,7 @@ def test_retained_frozen_cohort_evidence_matches_authoritative_typed_outcomes() 
     """Fails if a checked-in outcome view drifts from the typed cohort result."""
 
     result = json.loads(
-        _RETAINED_COHORT_ROOT.joinpath("cohort_result.json").read_text(
-            encoding="utf-8"
-        )
+        _RETAINED_COHORT_ROOT.joinpath("cohort_result.json").read_text(encoding="utf-8")
     )
     reports = sorted(result["reports"], key=lambda item: item["report_id"])
     expected_terminal_rows = [
@@ -163,6 +161,36 @@ def test_retained_frozen_cohort_evidence_matches_authoritative_typed_outcomes() 
             for code, count in expected_pareto.items()
         ]
 
+    expected_terminal_outcomes = dict(
+        sorted(
+            Counter(row["terminal_outcome"] for row in expected_terminal_rows).items()
+        )
+    )
+    awaiting_review_count = expected_terminal_outcomes.get("awaiting_review", 0)
+    publication_ready_count = sum(
+        report["publication_readiness"] == "pass" for report in reports
+    )
+    aggregate_funnel = json.loads(
+        evidence_dir.joinpath("aggregate_funnel.json").read_text(encoding="utf-8")
+    )
+    assert aggregate_funnel == {
+        "schema_version": "1.0",
+        "immutable_cohort_size": len(reports),
+        "terminal_outcome_complete": True,
+        "missing_terminal_report_count": 0,
+        "terminal_outcomes": expected_terminal_outcomes,
+        "awaiting_review_count": awaiting_review_count,
+        "publication_ready_count": publication_ready_count,
+    }
+    audit_findings = json.loads(
+        evidence_dir.joinpath("audit_findings.json").read_text(encoding="utf-8")
+    )
+    assert audit_findings["cohort_size"] == len(reports)
+    assert audit_findings["typed_terminal_outcomes"] == len(reports)
+    assert audit_findings["awaiting_review"] == awaiting_review_count
+    assert audit_findings["publish_ready"] == publication_ready_count
+    assert audit_findings["publication_performed"] is False
+
     readme = _RETAINED_COHORT_ROOT.joinpath("README.md").read_text(encoding="utf-8")
     cohort_size = len(reports)
     admitted_count = sum(
@@ -185,8 +213,7 @@ def test_retained_frozen_cohort_evidence_matches_authoritative_typed_outcomes() 
         f"({failure_count * 100 // cohort_size}%) |"
     ) in readme
     assert (
-        f"| typed-terminal outcomes | {typed_terminal_count} / {cohort_size} "
-        "(100%) |"
+        f"| typed-terminal outcomes | {typed_terminal_count} / {cohort_size} (100%) |"
     ) in readme
     assert (
         "| operator interventions | "
@@ -208,26 +235,28 @@ def test_frozen_outcome_export_projects_only_authoritative_cohort_results(
     cohort_result.write_text(
         json.dumps(
             {
+                "cohort_size": 3,
                 "reports": [
                     {
                         "report_id": "r2",
                         "final_state": "failed",
                         "terminal_failure_code": "schema_reference_missing",
+                        "publication_readiness": "fail",
                     },
                     {
                         "report_id": "r1",
                         "final_state": "awaiting_review",
                         "terminal_failure_code": "",
+                        "publication_readiness": "pass",
                     },
                     {
                         "report_id": "r3",
                         "final_state": "failed",
                         "terminal_failure_code": "schema_reference_missing",
+                        "publication_readiness": "fail",
                     },
                 ],
-                "summary": {
-                    "failure_code_pareto": {"schema_reference_missing": 2}
-                },
+                "summary": {"failure_code_pareto": {"schema_reference_missing": 2}},
             }
         ),
         encoding="utf-8",
@@ -278,6 +307,19 @@ def test_frozen_outcome_export_projects_only_authoritative_cohort_results(
             },
         ]
     }
+    assert json.loads(output_dir.joinpath("aggregate_funnel.json").read_text()) == {
+        "schema_version": "1.0",
+        "immutable_cohort_size": 3,
+        "terminal_outcome_complete": True,
+        "missing_terminal_report_count": 0,
+        "terminal_outcomes": {"awaiting_review": 1, "failed": 2},
+        "awaiting_review_count": 1,
+        "publication_ready_count": 1,
+    }
+    audit_findings = json.loads(output_dir.joinpath("audit_findings.json").read_text())
+    assert audit_findings["typed_terminal_outcomes"] == 3
+    assert audit_findings["awaiting_review"] == 1
+    assert audit_findings["publish_ready"] == 1
 
 
 def test_frozen_outcome_export_rejects_missing_members_and_inconsistent_pareto(
@@ -295,16 +337,16 @@ def test_frozen_outcome_export_rejects_missing_members_and_inconsistent_pareto(
                         "report_id": "r1",
                         "final_state": "failed",
                         "terminal_failure_code": "schema_reference_missing",
+                        "publication_readiness": "fail",
                     },
                     {
                         "report_id": "r2",
                         "final_state": "awaiting_review",
                         "terminal_failure_code": "",
+                        "publication_readiness": "pass",
                     },
                 ],
-                "summary": {
-                    "failure_code_pareto": {"schema_reference_missing": 2}
-                },
+                "summary": {"failure_code_pareto": {"schema_reference_missing": 2}},
             }
         ),
         encoding="utf-8",
@@ -329,16 +371,16 @@ def test_frozen_outcome_export_rejects_missing_members_and_inconsistent_pareto(
                         "report_id": "r1",
                         "final_state": "failed",
                         "terminal_failure_code": "schema_reference_missing",
+                        "publication_readiness": "fail",
                     },
                     {
                         "report_id": "r2",
                         "final_state": "awaiting_review",
                         "terminal_failure_code": "",
+                        "publication_readiness": "pass",
                     },
                 ],
-                "summary": {
-                    "failure_code_pareto": {"schema_reference_missing": 2}
-                },
+                "summary": {"failure_code_pareto": {"schema_reference_missing": 2}},
             }
         ),
         encoding="utf-8",
