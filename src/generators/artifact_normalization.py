@@ -1308,6 +1308,7 @@ def normalize_artifact_evidence_ids(
     quotes_final: List[Dict[str, Any]],
     doc_map: Dict[str, Any],
     evidence_packs: Dict[str, Any],
+    editorial_plan: Dict[str, Any] | None = None,
 ) -> Dict[str, int]:
     known_ids, alias_to_id = _collect_known_evidence_ids(
         doc_map=doc_map, evidence_packs=evidence_packs
@@ -1346,6 +1347,21 @@ def normalize_artifact_evidence_ids(
         _normalize_item(item)
     for item in quotes_final:
         _normalize_item(item)
+    if isinstance(editorial_plan, dict):
+        themes = editorial_plan.get("themes")
+        if isinstance(themes, list):
+            for theme in themes:
+                if not isinstance(theme, dict):
+                    continue
+                evidence_ids = theme.get("evidence_ids")
+                if not isinstance(evidence_ids, list):
+                    continue
+                normalized_ids: List[str] = []
+                for evidence_id in evidence_ids:
+                    reference = {"evidence_id": evidence_id}
+                    _normalize_item(reference)
+                    normalized_ids.append(_s(reference.get("evidence_id")).strip())
+                theme["evidence_ids"] = normalized_ids
 
     return {
         "known_reference_count": len(known_ids),

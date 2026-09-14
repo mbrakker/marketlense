@@ -63,7 +63,13 @@ def test_editorial_plan_normalizes_priority_and_rejects_unknown_evidence_id():
 
 
 def test_editorial_plan_is_the_shared_basis_for_summary_insights_and_expert(tmp_path):
+    expected_plan = _editorial_plan()
     plan = _editorial_plan()
+    plan["themes"][0]["evidence_ids"] = [
+        "evidence:findings:f3",
+        "evidence:findings:f1",
+        "evidence:doc_map:s1",
+    ]
     responses = {
         "editorial_plan": {"editorial_plan": plan},
         "summary": {
@@ -157,7 +163,7 @@ def test_editorial_plan_is_the_shared_basis_for_summary_insights_and_expert(tmp_
         analysis_store=FakeAnalysisStore(),
     )
 
-    assert payload["editorial_plan"] == plan
+    assert payload["editorial_plan"] == expected_plan
     for namespace in (
         "report_vs/artifacts/summary",
         "report_vs/artifacts/insights_final",
@@ -168,7 +174,7 @@ def test_editorial_plan_is_the_shared_basis_for_summary_insights_and_expert(tmp_
             json.loads(
                 prompt_client.variables_for_namespace(namespace)["editorial_plan_json"]
             )
-            == plan
+            == expected_plan
         )
     assert [item["evidence_id"] for item in payload["insights_final"]] == [
         "f3",

@@ -227,6 +227,7 @@ def generate_artifacts(
             return cast(List[Dict[str, Any]], value) if isinstance(value, list) else []
 
         summary = payload.get("summary")
+        editorial_plan = payload.get("editorial_plan")
         normalize_artifact_evidence_ids(
             summary=summary if isinstance(summary, dict) else {},
             insights_candidates=list_field("insights_candidates"),
@@ -234,9 +235,13 @@ def generate_artifacts(
             quotes_final=list_field("quotes_final"),
             doc_map=safe_doc_map,
             evidence_packs=safe_evidence,
+            editorial_plan=(
+                editorial_plan if isinstance(editorial_plan, dict) else None
+            ),
         )
 
     def validate_editorial_plan(payload: Dict[str, Any], task_ctx: RunContext) -> None:
+        normalize_required_evidence_references(payload)
         normalize_artifact_editorial_plan(payload.get("editorial_plan"))
         validate_required_evidence_references(payload, task_ctx)
 
@@ -872,6 +877,7 @@ def generate_artifacts(
         quotes_final=quotes_final,
         doc_map=safe_doc_map,
         evidence_packs=safe_evidence,
+        editorial_plan=editorial_plan,
     )
     if evidence_id_stats.get("normalized_count", 0) > 0:
         logger.info(

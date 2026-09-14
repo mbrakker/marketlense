@@ -171,6 +171,7 @@ def assemble_artifacts_payload(
         quotes_final=quotes_final,
         doc_map=doc_map,
         evidence_packs=evidence_packs,
+        editorial_plan=editorial_plan,
     )
     if evidence_id_stats.get("normalized_count", 0) > 0:
         logger.info(

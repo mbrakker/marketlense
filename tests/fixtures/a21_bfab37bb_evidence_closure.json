@@ -1,0 +1,169 @@
+{
+  "schema_version": "1.0",
+  "frozen_revision": "bfab37bbd1e4c194c027f14dd54817fb61f940a6",
+  "schema_reference_missing": [
+    {
+      "report_id": "cohort-0a019f840c3f89ad0a96",
+      "publisher": "Bigcommerce",
+      "terminal_stage": "report_analysis.editorial_plan",
+      "retained_reference_aliases": [
+        {
+          "source_pack": "findings",
+          "alias": "evidence:findings:finding-01",
+          "canonical_id": "finding-01"
+        },
+        {
+          "source_pack": "quote_candidates",
+          "alias": "evidence:quote_candidates:quote_001",
+          "canonical_id": "quote_001"
+        }
+      ]
+    },
+    {
+      "report_id": "cohort-8ef1021c332aa85ba008",
+      "publisher": "StackAdapt Inc",
+      "terminal_stage": "report_analysis.editorial_plan",
+      "retained_reference_aliases": [
+        {
+          "source_pack": "findings",
+          "alias": "evidence:findings:finding-1",
+          "canonical_id": "finding-1"
+        },
+        {
+          "source_pack": "quote_candidates",
+          "alias": "evidence:quote_candidates:quote_001",
+          "canonical_id": "quote_001"
+        }
+      ]
+    },
+    {
+      "report_id": "cohort-979a63a1633a7f2ccc51",
+      "publisher": "Criteo",
+      "terminal_stage": "report_analysis.editorial_plan",
+      "retained_reference_aliases": [
+        {
+          "source_pack": "findings",
+          "alias": "evidence:findings:finding-1",
+          "canonical_id": "finding-1"
+        },
+        {
+          "source_pack": "quote_candidates",
+          "alias": "evidence:quote_candidates:quote-001",
+          "canonical_id": "quote-001"
+        }
+      ]
+    },
+    {
+      "report_id": "cohort-9b97626fc83c086961a7",
+      "publisher": "DHL eCommerce",
+      "terminal_stage": "report_analysis.editorial_plan",
+      "retained_reference_aliases": [
+        {
+          "source_pack": "findings",
+          "alias": "evidence:findings:finding-1",
+          "canonical_id": "finding-1"
+        },
+        {
+          "source_pack": "quote_candidates",
+          "alias": "evidence:quote_candidates:quote_001",
+          "canonical_id": "quote_001"
+        }
+      ]
+    },
+    {
+      "report_id": "cohort-b3cb5f66cccda4420be2",
+      "publisher": "Mintel",
+      "terminal_stage": "report_analysis.editorial_plan",
+      "retained_reference_aliases": [
+        {
+          "source_pack": "findings",
+          "alias": "evidence:findings:finding-1",
+          "canonical_id": "finding-1"
+        },
+        {
+          "source_pack": "quote_candidates",
+          "alias": "evidence:quote_candidates:quote_001",
+          "canonical_id": "quote_001"
+        }
+      ]
+    },
+    {
+      "report_id": "cohort-cbb6e7df67412186b8bc",
+      "publisher": "Activate",
+      "terminal_stage": "report_analysis.editorial_plan",
+      "retained_reference_aliases": [
+        {
+          "source_pack": "findings",
+          "alias": "evidence:findings:finding-01",
+          "canonical_id": "finding-01"
+        },
+        {
+          "source_pack": "quote_candidates",
+          "alias": "evidence:quote_candidates:quote_001",
+          "canonical_id": "quote_001"
+        }
+      ]
+    },
+    {
+      "report_id": "cohort-e854b71d6fb10333b47f",
+      "publisher": "DoubleVerify",
+      "terminal_stage": "report_analysis.editorial_plan",
+      "retained_reference_aliases": [
+        {
+          "source_pack": "findings",
+          "alias": "evidence:findings:global-quality-regional-benchmarks",
+          "canonical_id": "global-quality-regional-benchmarks"
+        },
+        {
+          "source_pack": "quote_candidates",
+          "alias": "evidence:quote_candidates:quote_001",
+          "canonical_id": "quote_001"
+        }
+      ]
+    }
+  ],
+  "workflow_queue_report_stage_failed": [
+    {
+      "report_id": "cohort-076eca6d31e0c1dcddf0",
+      "publisher": "Contentstack",
+      "terminal_stage": "report_render",
+      "recovery_status": "recovered",
+      "underlying_error_code": "publish_readiness_failed",
+      "retained_rule_ids": [
+        "publish_readiness.repeated_boilerplate"
+      ]
+    },
+    {
+      "report_id": "cohort-b10ed6c82b76739a806a",
+      "publisher": "Deloitte",
+      "terminal_stage": "report_render",
+      "recovery_status": "recovered",
+      "underlying_error_code": "publish_readiness_failed",
+      "retained_rule_ids": [
+        "publish_readiness.editorial_quality",
+        "publish_readiness.source_fidelity"
+      ]
+    },
+    {
+      "report_id": "cohort-2acb4a56e14add5d7717",
+      "publisher": "KPMG",
+      "terminal_stage": "report_render",
+      "recovery_status": "unresolved",
+      "unresolved_reason": "Readiness passed; the historical report-card error value was not retained."
+    },
+    {
+      "report_id": "cohort-81af3890cd84ece81ef1",
+      "publisher": "Capgemini",
+      "terminal_stage": "report_render",
+      "recovery_status": "unresolved",
+      "unresolved_reason": "Readiness passed; the historical report-card error value was not retained."
+    },
+    {
+      "report_id": "cohort-4b763ae2286ca69fe8ac",
+      "publisher": "Reuters",
+      "terminal_stage": "report_render",
+      "recovery_status": "unresolved",
+      "unresolved_reason": "No retained readiness artifact or underlying report-render error value exists."
+    }
+  ]
+}

@@ -222,6 +222,40 @@ browser, Drive, mailbox, or WordPress call.
 Canonical JSON ordering and an artifact hash over the complete payload make
 identical retained inputs byte- and hash-equivalent.
 
+### A21 frozen `bfab37bb` retained-evidence closure
+
+The deterministic regression fixture
+[`tests/fixtures/a21_bfab37bb_evidence_closure.json`](../../tests/fixtures/a21_bfab37bb_evidence_closure.json)
+records the 12 affected members from frozen revision
+`bfab37bbd1e4c194c027f14dd54817fb61f940a6`. This closure is read-only:
+it does not rerun the 20-report cohort or infer an unretained model output.
+
+All seven `schema_reference_missing` members stopped in the first
+`report_analysis.editorial_plan` family before a rendered artifact family was
+retained. Their retained source packs use canonical references in namespaced
+form: zero-padded finding IDs (Bigcommerce, Activate), unpadded finding IDs
+(StackAdapt, Criteo, DHL eCommerce, Mintel), a slug finding ID
+(DoubleVerify), and quote-candidate IDs using underscore or hyphen forms.
+The source pack is evidence of the reference forms available to the family,
+not the discarded raw model field. The artifact boundary canonicalizes each
+form in `editorial_plan.themes[].evidence_ids` before the existing strict
+reference validator runs; an unknown identifier remains unknown and is still
+rejected. The fixture exercises every retained report/pattern against that
+boundary.
+
+Of the five historical `workflow_queue_report_stage_failed` members, retained
+render evidence recovers `publish_readiness_failed` for Contentstack
+(`publish_readiness.repeated_boilerplate`) and Deloitte
+(`publish_readiness.editorial_quality` and
+`publish_readiness.source_fidelity`). KPMG and Capgemini had passing retained
+readiness artifacts, which proves only that their missing historical value was
+a non-readiness report-card error; its typed code was not retained. Reuters
+has neither a retained readiness artifact nor the underlying report-render
+value. The latter three are explicitly `unresolved` in the fixture rather
+than classified by guesswork. Current queue terminal evidence preserves an
+available typed report-pipeline code; no common production root cause is
+proven by the two recovered readiness failures.
+
 Before any live A21 canary, the deterministic full-chain A21 gate must pass:
 
 ```powershell
