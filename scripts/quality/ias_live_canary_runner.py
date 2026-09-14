@@ -349,8 +349,7 @@ def run_frozen_cohort_once(
                     "output_tokens": results[0]["output_tokens"],
                     "cost_usd": results[0]["cost"],
                     "bounded_automatic_repair": any(
-                        bool(result["bounded_automatic_repair"])
-                        for result in results
+                        bool(result["bounded_automatic_repair"]) for result in results
                     ),
                     "operator_intervention_count": _cohort_operator_intervention_count(
                         state_db=settings.state_db,
@@ -886,9 +885,7 @@ def _read_readiness_payload(row: tuple[Any, ...] | None) -> dict[str, Any]:
         return {}
 
 
-def _cohort_operator_intervention_count(
-    *, state_db: str, root_workflow_id: str
-) -> int:
+def _cohort_operator_intervention_count(*, state_db: str, root_workflow_id: str) -> int:
     """Count retained manual requeues for the one submitted cohort workflow."""
 
     with sqlite3.connect(state_db) as conn:

@@ -176,9 +176,7 @@ def test_frozen_cohort_submits_all_members_through_one_production_run(
         members.append(
             {
                 "source_path": str(source_path.resolve()),
-                "content_md5": hashlib.md5(
-                    content, usedforsecurity=False
-                ).hexdigest(),
+                "content_md5": hashlib.md5(content, usedforsecurity=False).hexdigest(),
                 "source_domain": "publisher.example",
                 "report_name": f"Frozen fixture {index}",
                 "landing_page_url": f"https://publisher.example/reports/{index}",
