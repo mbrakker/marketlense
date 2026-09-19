@@ -1,0 +1,13 @@
+{
+  "awaiting_review": 5,
+  "cohort_size": 20,
+  "findings": [
+    "Immutable cohort retained; no member replacement occurred.",
+    "Publication and repeat publication were not run because the required cohort success threshold was not met.",
+    "Terminal outcomes are complete and typed."
+  ],
+  "publication_performed": false,
+  "publish_ready": 5,
+  "status": "failed_reliability_targets",
+  "typed_terminal_outcomes": 20
+}

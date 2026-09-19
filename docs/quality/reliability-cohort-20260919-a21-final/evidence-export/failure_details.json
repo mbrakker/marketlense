@@ -1,0 +1,94 @@
+{
+  "terminal_failures": [
+    {
+      "failure_code": "schema_reference_missing",
+      "report_id": "cohort-076eca6d31e0c1dcddf0",
+      "terminal_outcome": "failed",
+      "terminal_stage": ""
+    },
+    {
+      "failure_code": "soft_copy_claim_provenance_binding_invalid",
+      "report_id": "cohort-0a019f840c3f89ad0a96",
+      "terminal_outcome": "failed",
+      "terminal_stage": ""
+    },
+    {
+      "failure_code": "cover_asset_set_incomplete",
+      "report_id": "cohort-2acb4a56e14add5d7717",
+      "terminal_outcome": "failed",
+      "terminal_stage": ""
+    },
+    {
+      "failure_code": "artifact_structured_output_invalid",
+      "report_id": "cohort-4b763ae2286ca69fe8ac",
+      "terminal_outcome": "failed",
+      "terminal_stage": ""
+    },
+    {
+      "failure_code": "artifact_structured_output_invalid",
+      "report_id": "cohort-77bc67b2bc98187d9d58",
+      "terminal_outcome": "failed",
+      "terminal_stage": ""
+    },
+    {
+      "failure_code": "validation_failed",
+      "report_id": "cohort-8ef1021c332aa85ba008",
+      "terminal_outcome": "failed",
+      "terminal_stage": ""
+    },
+    {
+      "failure_code": "artifact_structured_output_invalid",
+      "report_id": "cohort-979a63a1633a7f2ccc51",
+      "terminal_outcome": "failed",
+      "terminal_stage": ""
+    },
+    {
+      "failure_code": "soft_copy_claim_provenance_coverage_invalid",
+      "report_id": "cohort-9b97626fc83c086961a7",
+      "terminal_outcome": "failed",
+      "terminal_stage": ""
+    },
+    {
+      "failure_code": "artifact_structured_output_invalid",
+      "report_id": "cohort-b10ed6c82b76739a806a",
+      "terminal_outcome": "failed",
+      "terminal_stage": ""
+    },
+    {
+      "failure_code": "schema_reference_missing",
+      "report_id": "cohort-b3cb5f66cccda4420be2",
+      "terminal_outcome": "failed",
+      "terminal_stage": ""
+    },
+    {
+      "failure_code": "schema_reference_missing",
+      "report_id": "cohort-b638414df0b1fccea1cd",
+      "terminal_outcome": "failed",
+      "terminal_stage": ""
+    },
+    {
+      "failure_code": "validation_failed",
+      "report_id": "cohort-e854b71d6fb10333b47f",
+      "terminal_outcome": "failed",
+      "terminal_stage": ""
+    },
+    {
+      "failure_code": "schema_reference_missing",
+      "report_id": "cohort-f1652970000cfe246c94",
+      "terminal_outcome": "failed",
+      "terminal_stage": ""
+    },
+    {
+      "failure_code": "schema_reference_missing",
+      "report_id": "cohort-f62048b469dd784e6e7c",
+      "terminal_outcome": "failed",
+      "terminal_stage": ""
+    },
+    {
+      "failure_code": "schema_reference_missing",
+      "report_id": "cohort-fb16d52bb8f60827077c",
+      "terminal_outcome": "failed",
+      "terminal_stage": ""
+    }
+  ]
+}

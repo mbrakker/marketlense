@@ -1,0 +1,7 @@
+failure_code,affected_reports
+schema_reference_missing,6
+artifact_structured_output_invalid,4
+validation_failed,2
+cover_asset_set_incomplete,1
+soft_copy_claim_provenance_binding_invalid,1
+soft_copy_claim_provenance_coverage_invalid,1

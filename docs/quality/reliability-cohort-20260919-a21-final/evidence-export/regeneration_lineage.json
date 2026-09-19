@@ -1,0 +1,53 @@
+{
+  "stage_records": [
+    {
+      "failure_code": "validation_failed",
+      "outcome": "failed",
+      "repair_disposition": "targeted_repair",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "validation_failed",
+      "outcome": "failed",
+      "repair_disposition": "targeted_repair",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "skipped",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "skipped",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "skipped",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "skipped",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "succeeded",
+      "repair_disposition": "targeted_repair",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "succeeded",
+      "repair_disposition": "targeted_repair",
+      "stage": "regeneration"
+    }
+  ],
+  "validation_run_id": "validation:2e3e49965f8ff3ac9614946b70d512a323ba76c3042bb74301eea5adaf1925b8"
+}

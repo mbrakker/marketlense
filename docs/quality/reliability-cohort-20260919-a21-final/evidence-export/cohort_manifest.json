@@ -1,0 +1,106 @@
+{
+  "members": [
+    {
+      "publisher_id": "Contentstack",
+      "report_id": "cohort-076eca6d31e0c1dcddf0",
+      "source_identity_id": "source:ac8915b43ea20012f9da2bf3c8150b9f"
+    },
+    {
+      "publisher_id": "Bigcommerce",
+      "report_id": "cohort-0a019f840c3f89ad0a96",
+      "source_identity_id": "source:5c922bfa405c19d9cbc9a0a00ea70d1b"
+    },
+    {
+      "publisher_id": "Merchant Risk Council",
+      "report_id": "cohort-11b0b55157f7d0636815",
+      "source_identity_id": "source:67f65e9e8a4ad7c658cc6d3a2c4631da"
+    },
+    {
+      "publisher_id": "Copyright owned by one or more of the KPMG International entities. KPMG International entities p",
+      "report_id": "cohort-2acb4a56e14add5d7717",
+      "source_identity_id": "source:1ffb71d718276f8a1761fc706a2a3cb3"
+    },
+    {
+      "publisher_id": "Reuters Institute",
+      "report_id": "cohort-4b763ae2286ca69fe8ac",
+      "source_identity_id": "source:79cb8c886c55b49bfdec2128d5b25e0b"
+    },
+    {
+      "publisher_id": "Robeco",
+      "report_id": "cohort-5ceb3b4498de7288ce5a",
+      "source_identity_id": "source:14e4b564697078fdbf61e999bf7f2d82"
+    },
+    {
+      "publisher_id": "Bain & Company",
+      "report_id": "cohort-77bc67b2bc98187d9d58",
+      "source_identity_id": "source:6416ece4ac85fe49d209541676aeab97"
+    },
+    {
+      "publisher_id": "Capgemini Research Institute",
+      "report_id": "cohort-81af3890cd84ece81ef1",
+      "source_identity_id": "source:f584854bc13cdca0b0d86327c85f71ff"
+    },
+    {
+      "publisher_id": "Algolia",
+      "report_id": "cohort-86858bdcb370266f26c2",
+      "source_identity_id": "source:4ea9ae5709898e763efb0945d8d4fa1e"
+    },
+    {
+      "publisher_id": "StackAdapt Inc",
+      "report_id": "cohort-8ef1021c332aa85ba008",
+      "source_identity_id": "source:038b017d7942e0bcce44627e5c9ff227"
+    },
+    {
+      "publisher_id": "Criteo",
+      "report_id": "cohort-979a63a1633a7f2ccc51",
+      "source_identity_id": "source:81027fd399837b2cbd3cefa2abca222b"
+    },
+    {
+      "publisher_id": "DHL eCommerce",
+      "report_id": "cohort-9b97626fc83c086961a7",
+      "source_identity_id": "source:51ecf17fd1dd14390636cdf033f41edf"
+    },
+    {
+      "publisher_id": "Deloitte",
+      "report_id": "cohort-b10ed6c82b76739a806a",
+      "source_identity_id": "source:2bd805b867ad7b0401f2343e63a2787f"
+    },
+    {
+      "publisher_id": "Mintel",
+      "report_id": "cohort-b3cb5f66cccda4420be2",
+      "source_identity_id": "source:4903a7aedf42d978f33da5188f523bb6"
+    },
+    {
+      "publisher_id": "Adjust",
+      "report_id": "cohort-b638414df0b1fccea1cd",
+      "source_identity_id": "source:8cb648b6bbd9dbae4ec1d915c38cf235"
+    },
+    {
+      "publisher_id": "Activate",
+      "report_id": "cohort-cbb6e7df67412186b8bc",
+      "source_identity_id": "source:4d84943bbcfdef81ad8c08f29f6f6b0b"
+    },
+    {
+      "publisher_id": "DoubleVerify",
+      "report_id": "cohort-e854b71d6fb10333b47f",
+      "source_identity_id": "source:6c7377bbcd7e21ffe4683dad478a3fad"
+    },
+    {
+      "publisher_id": "SimilarWeb",
+      "report_id": "cohort-f1652970000cfe246c94",
+      "source_identity_id": "source:28e4b4d73a69f2c37f70151adf362589"
+    },
+    {
+      "publisher_id": "Emplifi",
+      "report_id": "cohort-f62048b469dd784e6e7c",
+      "source_identity_id": "source:dda03b3a0d65814672444674bb59908f"
+    },
+    {
+      "publisher_id": "Qualtrics",
+      "report_id": "cohort-fb16d52bb8f60827077c",
+      "source_identity_id": "source:3da816a4e926b7848df636dfec933574"
+    }
+  ],
+  "schema_version": "1.0",
+  "validation_run_id": "validation:2e3e49965f8ff3ac9614946b70d512a323ba76c3042bb74301eea5adaf1925b8"
+}

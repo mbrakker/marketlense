@@ -301,6 +301,27 @@ provider/browser/Drive/WordPress boundaries, do not publish, and are a
 mandatory precondition rather than a substitute for the separately authorized
 live canary.
 
+### Final A21 frozen 20-report validation — 2026-09-19
+
+The final bundle in
+[`reliability-cohort-20260919-a21-final/`](reliability-cohort-20260919-a21-final/)
+reused the exact immutable cohort and source hashes from official baseline
+`bfab37bbd1e4c194c027f14dd54817fb61f940a6`. It made one fresh isolated
+production submission from clean, CI-green
+`c89c545d649a2852f4602b8ddbfa4c09a8c39e18`, retained 20/20 admissions and
+typed terminal outcomes, and made no WordPress publication attempt or operator
+intervention.
+
+First-attempt `awaiting_review` and publication readiness improved from 2/20
+(10%) to 5/20 (25%), but missed the A21 targets of 19/20 and 18/20. Four final
+packages were ready without targeted editorial regeneration; one used a
+bounded targeted repair. All 15 typed failures, stage conversion,
+repair/regeneration, provider usage, tokens, cost, duration, source-manifest
+identity, and ready-package editorial/factual inspection are retained. The
+remaining failure Pareto is led by `schema_reference_missing` (6) and
+`artifact_structured_output_invalid` (4); no result was waived, rerun, or
+reclassified.
+
 ### Reusable sanitized acquisition-assessment projection
 
 When a completed acquisition assessment has a retained raw current JSONL and a
