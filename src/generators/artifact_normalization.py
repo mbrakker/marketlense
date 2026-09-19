@@ -1682,6 +1682,17 @@ def _collect_known_evidence_ids(
                             alias_to_id.setdefault(f"quote_{idx}", quote_id)
                             alias_to_id.setdefault(f"quote-{idx}", quote_id)
                             alias_to_id.setdefault(f"quote{idx}", quote_id)
+                        if item_key == "findings" and quote_id:
+                            # Some retained reports use opaque finding IDs
+                            # (for example ``f1`` or ``methodology-1``), while
+                            # prompts present their ordered evidence as
+                            # ``Finding 1``.  Mirror the established quote
+                            # index aliases, but resolve only to this retained
+                            # finding's canonical ID.
+                            alias_to_id.setdefault(f"finding_{idx}", quote_id)
+                            alias_to_id.setdefault(f"finding-{idx}", quote_id)
+                            alias_to_id.setdefault(f"finding {idx}", quote_id)
+                            alias_to_id.setdefault(f"finding{idx}", quote_id)
 
     if isinstance(doc_map, dict):
         for section in doc_map.get("sections") or []:

@@ -304,9 +304,9 @@ and soft-copy provenance references (including retained spans). The same
 boundary runs for newly assembled and cache-hit artifacts. It preserves unknown
 values unchanged so the strict check continues to fail closed, and it does not
 alter already canonical IDs.
-Hyphen/underscore variants are resolved only when the retained evidence index
-proves the corresponding canonical ID; formatting similarity alone never
-authorizes an unknown reference.
+Hyphen/underscore variants and ordered finding aliases are resolved only when
+the retained evidence index proves the corresponding canonical ID; formatting
+similarity alone never authorizes an unknown reference.
 
 When an immutable historical artifact is used as a regression before-state,
 it remains immutable and is never supplied retroactive prompt or claim
