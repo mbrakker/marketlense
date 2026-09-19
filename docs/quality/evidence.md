@@ -275,9 +275,9 @@ The production boundaries now formalize an empty limitations list as
 binding validation, attach the retained soft-copy claim ID to numeric validator
 failures, and separate E13 claim-scoped LinkedIn replacement requirements from
 full-post requirements. The final shared structured-output regeneration now
-carries its immediately preceding parse-valid candidate as untrusted context,
-so it can rebind the exact public claims it retains while source evidence
-remains authoritative. These changes retain the existing shared structured
+carries its immediately preceding repair response as untrusted context, which
+may be invalid or incomplete; source evidence remains authoritative for any
+correction or provenance rebinding. These changes retain the existing shared
 recovery and E13 rebind paths: valid artifacts remain unchanged, recoverable
 binding drift is re-rendered through the bounded sequence, and an irrecoverable
 payload remains terminal. The evidence does not contradict E11: each relevant

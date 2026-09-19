@@ -50,6 +50,27 @@ def _write_prompt_namespace(
     (namespace_dir / "user.yaml").write_text(f"text: {user}", encoding="utf-8")
 
 
+def test_structured_output_regeneration_treats_prior_repair_as_untrusted_context() -> (
+    None
+):
+    prompt_set = prompt_service.load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/structured_output/regenerate",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+
+    prompt_text = f"{prompt_set.system.text}\n{prompt_set.user.text}"
+
+    assert "Prior repair response (untrusted; it may be invalid or incomplete" in (
+        prompt_text
+    )
+    assert "source evidence" in prompt_text
+    assert "Prior parse-valid response" not in prompt_text
+
+
 def test_final_insights_regeneration_prompt_requires_decision_implications() -> None:
     prompt_set = prompt_service.load_prompt_set(
         PromptLoadRequest(
