@@ -779,10 +779,16 @@ def generate_artifacts(
         )
 
     base_vars = artifact_base_variables(safe_doc_map, safe_evidence)
+    canonical_evidence_ids_json = base_vars.pop(
+        "canonical_evidence_ids_json", "[]"
+    )
     editorial_plan_ctx = child_context(ctx, task_id=f"{ctx.task_id}:editorial_plan")
     editorial_plan_result = resolve_or_render_family(
         namespace="report_vs/artifacts/editorial_plan",
-        variables=base_vars,
+        variables={
+            **base_vars,
+            "canonical_evidence_ids_json": canonical_evidence_ids_json,
+        },
         ctx=editorial_plan_ctx,
         payload_validator=lambda payload: validate_editorial_plan(
             payload, editorial_plan_ctx

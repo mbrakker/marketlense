@@ -5,7 +5,10 @@ from typing import Any
 import pytest
 
 from src.contracts.run_context import RunContext
-from src.generators.artifact_normalization import normalize_artifact_evidence_ids
+from src.generators.artifact_normalization import (
+    artifact_base_variables,
+    normalize_artifact_evidence_ids,
+)
 from src.services.schema_validator_service import validate_evidence_references
 from src.utils.errors import AppError
 
@@ -52,6 +55,58 @@ def test_retained_a21_editorial_plan_reference_aliases_are_canonicalized() -> No
             ]
             assert stats["normalized_count"] == 1
             assert stats["unresolved_count"] == 0
+
+
+def test_editorial_plan_context_exposes_retained_canonical_id_vocabulary() -> None:
+    """The model sees actual IDs for the Emplifi, Qualtrics, and Mintel forms."""
+    cases = (
+        ("finding-01", "quote_001"),
+        ("finding-1", "quote_001"),
+        ("f1", "quote-001"),
+    )
+
+    for finding_id, quote_id in cases:
+        variables = artifact_base_variables(
+            {},
+            {
+                "findings": {"findings": [{"id": finding_id}]},
+                "quote_candidates": {"quote_candidates": [{"id": quote_id}]},
+            },
+        )
+
+        assert json.loads(variables["canonical_evidence_ids_json"]) == [
+            finding_id,
+            quote_id,
+        ]
+
+
+def test_retained_publisher_reference_forms_resolve_to_their_unique_ids() -> None:
+    """Regression coverage for the failing Emplifi, Qualtrics, and Mintel forms."""
+    cases = (
+        ("finding-01", "evidence:findings:finding-1"),
+        ("finding-1", "evidence:findings:finding_1"),
+        ("f1", "evidence:findings:Finding 1"),
+    )
+
+    for canonical_id, generated_id in cases:
+        editorial_plan = {"themes": [{"evidence_ids": [generated_id]}]}
+        evidence_packs = {"findings": {"findings": [{"id": canonical_id}]}}
+
+        stats = normalize_artifact_evidence_ids(
+            summary={},
+            editorial_plan=editorial_plan,
+            insights_candidates=[],
+            insights_final=[],
+            quotes_final=[],
+            doc_map={},
+            evidence_packs=evidence_packs,
+        )
+
+        assert editorial_plan["themes"][0]["evidence_ids"] == [canonical_id]
+        assert stats["normalized_count"] == 1
+        validate_evidence_references(
+            {"editorial_plan": editorial_plan}, evidence_packs, _ctx()
+        )
 
 
 def test_common_reference_boundary_canonicalizes_every_artifact_family() -> None:
@@ -238,6 +293,37 @@ def test_common_reference_boundary_rejects_unknown_numeric_aliases() -> None:
         validate_evidence_references(
             {"summary": summary}, evidence_packs, _ctx()
         )
+    assert exc.value.code == "schema_reference_missing"
+
+
+def test_common_reference_boundary_preserves_ambiguous_separator_variant() -> None:
+    """A collision between retained IDs must not choose either by insertion order."""
+    summary = {
+        "claim_evidence_map": [
+            {"evidence_id": "finding_1"},
+            {"evidence_id": "FINDING_1"},
+        ]
+    }
+    evidence_packs = {
+        "findings": {
+            "findings": [{"id": "finding-1"}, {"id": "finding_1"}]
+        }
+    }
+
+    stats = normalize_artifact_evidence_ids(
+        summary=summary,
+        insights_candidates=[],
+        insights_final=[],
+        quotes_final=[],
+        doc_map={},
+        evidence_packs=evidence_packs,
+    )
+
+    assert summary["claim_evidence_map"][0]["evidence_id"] == "finding_1"
+    assert stats["normalized_count"] == 0
+    assert stats["unresolved_count"] == 1
+    with pytest.raises(AppError) as exc:
+        validate_evidence_references({"summary": summary}, evidence_packs, _ctx())
     assert exc.value.code == "schema_reference_missing"
 
 

@@ -126,9 +126,15 @@ def artifact_base_variables(
     doc_map: Dict[str, Any],
     evidence_packs: Dict[str, Any],
 ) -> Dict[str, str]:
+    known_evidence_ids, _ = _collect_known_evidence_ids(
+        doc_map=doc_map or {}, evidence_packs=evidence_packs or {}
+    )
     return {
         "doc_map_json": _dump_json(doc_map or {}),
         "evidence_json": _dump_json(evidence_packs or {}),
+        "canonical_evidence_ids_json": _dump_json(
+            sorted(known_evidence_ids, key=str.casefold)
+        ),
     }
 
 
@@ -1682,20 +1688,26 @@ def _collect_known_evidence_ids(
     evidence_packs: Dict[str, Any],
 ) -> tuple[set[str], Dict[str, str]]:
     known_ids: set[str] = set()
-    alias_to_id: Dict[str, str] = {}
+    alias_candidates: dict[str, set[str]] = {}
+    indexed_ids: list[tuple[str, int, str]] = []
 
     def _register(value: Any) -> None:
         evidence_id = _s(value).strip()
         if not evidence_id:
             return
         known_ids.add(evidence_id)
-        alias_to_id.setdefault(evidence_id.lower(), evidence_id)
+
+    def _add_alias(alias: str, evidence_id: str) -> None:
+        alias_candidates.setdefault(alias.lower(), set()).add(evidence_id)
+
+    def _register_separator_aliases(evidence_id: str) -> None:
+        _add_alias(evidence_id, evidence_id)
         # Extraction families have historically used both separators.  Register
         # only the equivalent spelling of a retained canonical ID, so this
         # remains a lookup proof rather than a permissive rewrite of unknown
         # model references.
-        alias_to_id.setdefault(evidence_id.replace("-", "_").lower(), evidence_id)
-        alias_to_id.setdefault(evidence_id.replace("_", "-").lower(), evidence_id)
+        _add_alias(evidence_id.replace("-", "_"), evidence_id)
+        _add_alias(evidence_id.replace("_", "-"), evidence_id)
 
     if isinstance(evidence_packs, dict):
         for pack in evidence_packs.values():
@@ -1713,9 +1725,7 @@ def _collect_known_evidence_ids(
                         quote_id = _s(item.get("id")).strip()
                         _register(quote_id)
                         if item_key == "quote_candidates" and quote_id:
-                            alias_to_id.setdefault(f"quote_{idx}", quote_id)
-                            alias_to_id.setdefault(f"quote-{idx}", quote_id)
-                            alias_to_id.setdefault(f"quote{idx}", quote_id)
+                            indexed_ids.append(("quote", idx, quote_id))
                         if item_key == "findings" and quote_id:
                             # Some retained reports use opaque finding IDs
                             # (for example ``f1`` or ``methodology-1``), while
@@ -1723,15 +1733,18 @@ def _collect_known_evidence_ids(
                             # ``Finding 1``.  Mirror the established quote
                             # index aliases, but resolve only to this retained
                             # finding's canonical ID.
-                            alias_to_id.setdefault(f"finding_{idx}", quote_id)
-                            alias_to_id.setdefault(f"finding-{idx}", quote_id)
-                            alias_to_id.setdefault(f"finding {idx}", quote_id)
-                            alias_to_id.setdefault(f"finding{idx}", quote_id)
+                            indexed_ids.append(("finding", idx, quote_id))
 
     if isinstance(doc_map, dict):
         for section in doc_map.get("sections") or []:
             if isinstance(section, dict):
                 _register(section.get("id"))
+
+    for evidence_id in known_ids:
+        _register_separator_aliases(evidence_id)
+    for kind, index, evidence_id in indexed_ids:
+        for separator in ("_", "-", "", " "):
+            _add_alias(f"{kind}{separator}{index}", evidence_id)
 
     canonical_ids_by_lower = {evidence_id.lower() for evidence_id in known_ids}
     numeric_ids: dict[tuple[str, int], list[str]] = {}
@@ -1755,18 +1768,25 @@ def _collect_known_evidence_ids(
         for separator in ("", "-", "_", " "):
             alias = f"{prefix}{separator}{index}"
             if alias not in canonical_ids_by_lower:
-                alias_to_id.setdefault(alias, evidence_id)
+                _add_alias(alias, evidence_id)
 
     for evidence_id in list(known_ids):
         match = re.match(r"^q(\d+)$", evidence_id, flags=re.IGNORECASE)
         if not match:
             continue
         quote_num = match.group(1)
-        alias_to_id.setdefault(f"quote_{quote_num}", evidence_id)
-        alias_to_id.setdefault(f"quote-{quote_num}", evidence_id)
-        alias_to_id.setdefault(f"quote{quote_num}", evidence_id)
+        _add_alias(f"quote_{quote_num}", evidence_id)
+        _add_alias(f"quote-{quote_num}", evidence_id)
+        _add_alias(f"quote{quote_num}", evidence_id)
 
-    return known_ids, alias_to_id
+    return (
+        known_ids,
+        {
+            alias: next(iter(candidates))
+            for alias, candidates in alias_candidates.items()
+            if len(candidates) == 1
+        },
+    )
 
 
 def _extract_evidence_id_candidates(raw_evidence_id: Any) -> List[str]:
@@ -1816,6 +1836,10 @@ def _canonicalize_evidence_id(
     for candidate in _extract_evidence_id_candidates(raw):
         if not candidate:
             continue
+        # An explicit retained ID is authoritative even when a separator
+        # alias for a different retained ID would otherwise collide.
+        if candidate in known_ids:
+            return candidate
         canonical = alias_to_id.get(candidate.lower())
         if canonical:
             return canonical
@@ -1825,8 +1849,6 @@ def _canonicalize_evidence_id(
             canonical = alias_to_id.get(alias_candidate)
             if canonical:
                 return canonical
-        if candidate in known_ids:
-            return candidate
     return ""
 
 

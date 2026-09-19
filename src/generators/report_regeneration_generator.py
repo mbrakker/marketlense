@@ -199,6 +199,7 @@ def regenerate_artifacts(
     )
 
     base_vars = artifact_base_variables(safe_doc_map, safe_evidence)
+    base_vars.pop("canonical_evidence_ids_json", None)
     quote_candidates = artifact_quote_candidates(safe_evidence)
     expert_domain = normalize_expert_domain(request.categories)
     fallback_toc_bundle = build_toc_artifacts(doc_map=safe_doc_map)
