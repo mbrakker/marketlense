@@ -298,6 +298,11 @@ For provenance-classified factual claims, every declared evidence ID must
 resolve (rather than merely one of several IDs); unresolved IDs remain in the
 validation package for diagnosis. Legacy insight, quote, and summary
 claim-evidence-map reference handling keeps its existing semantics.
+Before this strict reference check, the shared evidence-ID canonicalisation
+boundary resolves valid aliases across summary, insight, quote, editorial-plan,
+and soft-copy provenance references (including retained spans). It preserves
+unknown values unchanged so the strict check continues to fail closed, and it
+does not alter already canonical IDs.
 
 When an immutable historical artifact is used as a regression before-state,
 it remains immutable and is never supplied retroactive prompt or claim

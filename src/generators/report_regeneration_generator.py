@@ -1299,6 +1299,8 @@ def _normalize_state_evidence_ids(execution: _RegenerationHandlerExecution) -> N
         quotes_final=execution.state.quotes_final,
         doc_map=execution.runtime.safe_doc_map,
         evidence_packs=execution.runtime.safe_evidence,
+        editorial_plan=execution.state.editorial_plan,
+        soft_copy_claim_provenance=execution.state.existing_soft_copy_claim_provenance,
     )
 
 

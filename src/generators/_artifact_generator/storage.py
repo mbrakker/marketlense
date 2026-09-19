@@ -172,6 +172,15 @@ def assemble_artifacts_payload(
         doc_map=doc_map,
         evidence_packs=evidence_packs,
         editorial_plan=editorial_plan,
+        soft_copy_claim_provenance={
+            "claims": [
+                binding
+                for bindings in (soft_copy_claim_bindings or {}).values()
+                if isinstance(bindings, list)
+                for binding in bindings
+                if isinstance(binding, dict)
+            ]
+        },
     )
     if evidence_id_stats.get("normalized_count", 0) > 0:
         logger.info(
@@ -276,6 +285,16 @@ def assemble_artifacts_payload(
             repair_lineage=soft_copy_repair_lineage or {},
             regeneration_attempt=regeneration_attempt,
         )
+    )
+    normalize_artifact_evidence_ids(
+        summary=summary,
+        insights_candidates=insights_candidates,
+        insights_final=insights_final,
+        quotes_final=quotes_final,
+        doc_map=doc_map,
+        evidence_packs=evidence_packs,
+        editorial_plan=editorial_plan,
+        soft_copy_claim_provenance=artifacts_payload["soft_copy_claim_provenance"],
     )
     artifacts_payload["executive_advisory"] = build_executive_advisory_artifacts(
         summary=summary,

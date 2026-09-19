@@ -228,6 +228,7 @@ def generate_artifacts(
 
         summary = payload.get("summary")
         editorial_plan = payload.get("editorial_plan")
+        soft_copy_claim_provenance = payload.get("soft_copy_claim_provenance")
         normalize_artifact_evidence_ids(
             summary=summary if isinstance(summary, dict) else {},
             insights_candidates=list_field("insights_candidates"),
@@ -237,6 +238,11 @@ def generate_artifacts(
             evidence_packs=safe_evidence,
             editorial_plan=(
                 editorial_plan if isinstance(editorial_plan, dict) else None
+            ),
+            soft_copy_claim_provenance=(
+                soft_copy_claim_provenance
+                if isinstance(soft_copy_claim_provenance, dict)
+                else None
             ),
         )
 

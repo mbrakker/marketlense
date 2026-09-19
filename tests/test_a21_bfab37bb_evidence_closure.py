@@ -2,8 +2,12 @@ import json
 from pathlib import Path
 from typing import Any
 
-from src.generators.artifact_normalization import normalize_artifact_evidence_ids
+import pytest
 
+from src.contracts.run_context import RunContext
+from src.generators.artifact_normalization import normalize_artifact_evidence_ids
+from src.services.schema_validator_service import validate_evidence_references
+from src.utils.errors import AppError
 
 _FIXTURE_PATH = (
     Path(__file__).parent / "fixtures" / "a21_bfab37bb_evidence_closure.json"
@@ -19,6 +23,10 @@ def _evidence_packs_for(reference: dict[str, str]) -> dict[str, Any]:
     if reference["source_pack"] == "findings":
         return {"findings": {"findings": [{"id": canonical_id}]}}
     return {"quote_candidates": {"quote_candidates": [{"id": canonical_id}]}}
+
+
+def _ctx() -> RunContext:
+    return RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
 
 
 def test_retained_a21_editorial_plan_reference_aliases_are_canonicalized() -> None:
@@ -44,6 +52,120 @@ def test_retained_a21_editorial_plan_reference_aliases_are_canonicalized() -> No
             ]
             assert stats["normalized_count"] == 1
             assert stats["unresolved_count"] == 0
+
+
+def test_common_reference_boundary_canonicalizes_every_artifact_family() -> None:
+    """Valid aliases must resolve before the strict reference validator runs."""
+    alias_finding = "evidence:findings:f1"
+    alias_quote = "evidence:quote_candidates:q1"
+    summary = {
+        "claim_evidence_map": [
+            {
+                "evidence_id": alias_finding,
+                "evidence_spans": [{"evidence_id": alias_finding}],
+            }
+        ]
+    }
+    insights_candidates = [
+        {
+            "evidence_id": alias_finding,
+            "evidence_spans": [{"evidence_id": alias_finding}],
+        }
+    ]
+    insights_final = [
+        {
+            "evidence_id": alias_finding,
+            "evidence_spans": [{"evidence_id": alias_finding}],
+        }
+    ]
+    quotes_final = [
+        {"evidence_id": alias_quote, "evidence_spans": [{"evidence_id": alias_quote}]}
+    ]
+    editorial_plan = {"themes": [{"evidence_ids": [alias_finding, alias_quote]}]}
+    soft_copy_claim_provenance = {
+        "claims": [
+            {
+                "evidence_ids": [alias_finding, "q1"],
+                "source_spans": [
+                    {"evidence_id": alias_finding},
+                    {"evidence_id": alias_quote},
+                ],
+            }
+        ]
+    }
+    evidence_packs = {
+        "findings": {"findings": [{"id": "f1"}]},
+        "quote_candidates": {"quote_candidates": [{"id": "q1"}]},
+    }
+
+    stats = normalize_artifact_evidence_ids(
+        summary=summary,
+        insights_candidates=insights_candidates,
+        insights_final=insights_final,
+        quotes_final=quotes_final,
+        doc_map={},
+        evidence_packs=evidence_packs,
+        editorial_plan=editorial_plan,
+        soft_copy_claim_provenance=soft_copy_claim_provenance,
+    )
+
+    assert summary["claim_evidence_map"][0] == {
+        "evidence_id": "f1",
+        "evidence_spans": [{"evidence_id": "f1"}],
+    }
+    assert insights_candidates[0]["evidence_id"] == "f1"
+    assert insights_candidates[0]["evidence_spans"] == [{"evidence_id": "f1"}]
+    assert insights_final[0]["evidence_id"] == "f1"
+    assert insights_final[0]["evidence_spans"] == [{"evidence_id": "f1"}]
+    assert quotes_final[0]["evidence_id"] == "q1"
+    assert quotes_final[0]["evidence_spans"] == [{"evidence_id": "q1"}]
+    assert editorial_plan["themes"][0]["evidence_ids"] == ["f1", "q1"]
+    assert soft_copy_claim_provenance["claims"][0] == {
+        "evidence_ids": ["f1", "q1"],
+        "source_spans": [{"evidence_id": "f1"}, {"evidence_id": "q1"}],
+    }
+    assert stats["normalized_count"] == 13
+    validate_evidence_references(
+        {
+            "summary": summary,
+            "insights_candidates": insights_candidates,
+            "insights_final": insights_final,
+            "quotes_final": quotes_final,
+            "editorial_plan": editorial_plan,
+            "soft_copy_claim_provenance": soft_copy_claim_provenance,
+        },
+        evidence_packs,
+        _ctx(),
+    )
+
+
+def test_common_reference_boundary_preserves_unknown_soft_copy_references() -> None:
+    soft_copy_claim_provenance = {
+        "claims": [{"evidence_ids": ["evidence:findings:unknown"]}]
+    }
+    evidence_packs = {"findings": {"findings": [{"id": "f1"}]}}
+
+    stats = normalize_artifact_evidence_ids(
+        summary={},
+        insights_candidates=[],
+        insights_final=[],
+        quotes_final=[],
+        doc_map={},
+        evidence_packs=evidence_packs,
+        soft_copy_claim_provenance=soft_copy_claim_provenance,
+    )
+
+    assert soft_copy_claim_provenance == {
+        "claims": [{"evidence_ids": ["evidence:findings:unknown"]}]
+    }
+    assert stats["unresolved_count"] == 1
+    with pytest.raises(AppError) as exc:
+        validate_evidence_references(
+            {"soft_copy_claim_provenance": soft_copy_claim_provenance},
+            evidence_packs,
+            _ctx(),
+        )
+    assert exc.value.code == "schema_reference_missing"
 
 
 def test_retained_a21_queue_wrapper_classification_is_explicit_about_gaps() -> None:

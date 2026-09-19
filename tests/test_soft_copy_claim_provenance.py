@@ -32,6 +32,9 @@ def _assemble_soft_copy(
     summary: dict[str, object] | None = None,
     expert_comment: str = "",
     linkedin_post: str = "",
+    evidence_packs: dict[str, object] | None = None,
+    soft_copy_claim_bindings: dict[str, list[dict[str, object]]] | None = None,
+    validate_references: bool = False,
 ) -> dict[str, object]:
     """Exercise the canonical artifact assembly boundary with no claim bindings."""
     resolved_summary = summary or {"claim_evidence_map": []}
@@ -47,7 +50,7 @@ def _assemble_soft_copy(
         report_id="soft-copy-provenance",
         report_name="Soft copy provenance",
         doc_map={"sections": []},
-        evidence_packs={},
+        evidence_packs=evidence_packs or {},
         toc_bundle={"toc_entries": []},
         editorial_plan={
             "report_thesis": "Retained evidence governs copy.",
@@ -73,7 +76,8 @@ def _assemble_soft_copy(
         source_status={"not_available": False, "reason": ""},
         family_status=family_status,
         ctx=RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
-        validate_references=False,
+        soft_copy_claim_bindings=soft_copy_claim_bindings,
+        validate_references=validate_references,
     )
 
 
@@ -264,6 +268,51 @@ def test_artifact_assembly_allows_empty_soft_copy_without_claims() -> None:
         "schema_version": "1.0",
         "claims": [],
     }
+
+
+def test_artifact_assembly_canonicalizes_soft_copy_aliases_before_strict_validation(
+) -> None:
+    payload = _assemble_soft_copy(
+        expert_comment="Revenue grew by 12%.",
+        evidence_packs={
+            "findings": {
+                "findings": [
+                    {"id": "f1", "evidence": "Evidence context.", "pages": [1]},
+                    {
+                        "id": "finding-7",
+                        "evidence": "Revenue grew by 12%.",
+                        "pages": [12],
+                    },
+                    {"id": "f2", "evidence": "Planning context.", "pages": [2]},
+                ]
+            }
+        },
+        soft_copy_claim_bindings={
+            "expert_comment": [
+                {
+                    "claim": "Revenue grew by 12%.",
+                    "classification": "factual",
+                    "evidence_ids": ["evidence:findings:finding-7"],
+                }
+            ]
+        },
+        validate_references=True,
+    )
+
+    claim = next(
+        item
+        for item in payload["soft_copy_claim_provenance"]["claims"]
+        if item["artifact_family"] == "expert_comment"
+    )
+    assert claim["evidence_ids"] == ["finding-7"]
+    assert claim["source_spans"] == [
+        {
+            "evidence_id": "finding-7",
+            "source_pack": "findings",
+            "page": 12,
+            "text": "Revenue grew by 12%.",
+        }
+    ]
 
 
 def test_soft_copy_claim_provenance_round_trips_exact_evidence_and_source_span() -> (

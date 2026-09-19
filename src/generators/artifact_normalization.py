@@ -1309,6 +1309,7 @@ def normalize_artifact_evidence_ids(
     doc_map: Dict[str, Any],
     evidence_packs: Dict[str, Any],
     editorial_plan: Dict[str, Any] | None = None,
+    soft_copy_claim_provenance: Dict[str, Any] | None = None,
 ) -> Dict[str, int]:
     known_ids, alias_to_id = _collect_known_evidence_ids(
         doc_map=doc_map, evidence_packs=evidence_packs
@@ -1317,9 +1318,11 @@ def normalize_artifact_evidence_ids(
     unresolved_count = 0
     checked_count = 0
 
-    def _normalize_item(item: Any) -> None:
+    def _normalize_reference(item: Any, *, preserve_missing: bool = False) -> None:
         nonlocal normalized_count, unresolved_count, checked_count
         if not isinstance(item, dict):
+            return
+        if preserve_missing and "evidence_id" not in item:
             return
         original = _s(item.get("evidence_id")).strip()
         checked_count += 1
@@ -1336,6 +1339,25 @@ def normalize_artifact_evidence_ids(
             item["evidence_id"] = original
             return
         item["evidence_id"] = normalized
+
+    def _normalize_item(item: Any) -> None:
+        _normalize_reference(item)
+        if not isinstance(item, dict):
+            return
+        spans = item.get("evidence_spans")
+        if isinstance(spans, list):
+            for span in spans:
+                _normalize_reference(span, preserve_missing=True)
+
+    def _normalize_evidence_ids(evidence_ids: Any) -> List[str]:
+        if not isinstance(evidence_ids, list):
+            return []
+        normalized_ids: List[str] = []
+        for evidence_id in evidence_ids:
+            reference = {"evidence_id": evidence_id}
+            _normalize_reference(reference)
+            normalized_ids.append(_s(reference.get("evidence_id")).strip())
+        return normalized_ids
 
     claim_map = summary.get("claim_evidence_map")
     if isinstance(claim_map, list):
@@ -1356,12 +1378,20 @@ def normalize_artifact_evidence_ids(
                 evidence_ids = theme.get("evidence_ids")
                 if not isinstance(evidence_ids, list):
                     continue
-                normalized_ids: List[str] = []
-                for evidence_id in evidence_ids:
-                    reference = {"evidence_id": evidence_id}
-                    _normalize_item(reference)
-                    normalized_ids.append(_s(reference.get("evidence_id")).strip())
-                theme["evidence_ids"] = normalized_ids
+                theme["evidence_ids"] = _normalize_evidence_ids(evidence_ids)
+    if isinstance(soft_copy_claim_provenance, dict):
+        claims = soft_copy_claim_provenance.get("claims")
+        if isinstance(claims, list):
+            for claim in claims:
+                if not isinstance(claim, dict):
+                    continue
+                evidence_ids = claim.get("evidence_ids")
+                if isinstance(evidence_ids, list):
+                    claim["evidence_ids"] = _normalize_evidence_ids(evidence_ids)
+                source_spans = claim.get("source_spans")
+                if isinstance(source_spans, list):
+                    for span in source_spans:
+                        _normalize_reference(span, preserve_missing=True)
 
     return {
         "known_reference_count": len(known_ids),
