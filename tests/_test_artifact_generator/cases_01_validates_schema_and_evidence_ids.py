@@ -183,11 +183,35 @@ def test_generate_artifacts_validates_schema_and_evidence_ids(tmp_path):
         "summary": [
             {
                 "summary": {
-                    "tldr": "Incomplete standard summary",
+                    "tldr": "Grounded TLDR.",
                     "card_tldr_compact": "Grounded TLDR.",
                     "executive_summary": "Exec",
-                    "claim_evidence_map": [],
-                }
+                    "claim_evidence_map": [
+                        {
+                            "claim": "Claim",
+                            "evidence_id": "insight-001",
+                            "evidence": "Revenue +10%",
+                            "pages": [2],
+                        }
+                    ],
+                },
+                "claim_provenance": [
+                    {
+                        "claim": "Grounded TLDR.",
+                        "classification": "interpretive",
+                        "evidence_ids": ["insight-001"],
+                    },
+                    {
+                        "claim": "Grounded TLDR.",
+                        "classification": "interpretive",
+                        "evidence_ids": ["insight-001"],
+                    },
+                    {
+                        "claim": "Exec",
+                        "classification": "interpretive",
+                        "evidence_ids": ["insight-001"],
+                    },
+                ],
             },
             {
                 "summary": {
@@ -202,7 +226,24 @@ def test_generate_artifacts_validates_schema_and_evidence_ids(tmp_path):
                             "pages": [2],
                         }
                     ],
-                }
+                },
+                "claim_provenance": [
+                    {
+                        "claim": "Grounded TLDR.",
+                        "classification": "interpretive",
+                        "evidence_ids": ["f1"],
+                    },
+                    {
+                        "claim": "Grounded TLDR.",
+                        "classification": "interpretive",
+                        "evidence_ids": ["f1"],
+                    },
+                    {
+                        "claim": "Exec",
+                        "classification": "interpretive",
+                        "evidence_ids": ["f1"],
+                    },
+                ],
             },
         ],
         "insights_candidates": {
@@ -357,8 +398,8 @@ def test_generate_artifacts_validates_schema_and_evidence_ids(tmp_path):
         "expert_comment": {"expert_comment": "Grounded comment"},
         "linkedin_post": {"linkedin_post": "Post summary"},
     }
-    fake_openai = FakeOpenAI(responses)
     analysis_store = FakeAnalysisStore()
+    fake_openai = FakeOpenAI(responses)
     payload = generate_artifacts(
         report_id="r1",
         report_name="report",
@@ -393,6 +434,15 @@ def test_generate_artifacts_validates_schema_and_evidence_ids(tmp_path):
     assert payload["family_status"]["quotes"]["status"] == "generated"
     assert len([req for req in fake_openai.requests if req[0] == "chat"]) == 9
     assert len([req for req in fake_openai.requests if req[0] == "vector"]) == 0
+    summary_requests = [
+        request
+        for transport, request, step in fake_openai.requests
+        if transport == "chat" and step == "summary"
+    ]
+    assert [request.prompt_namespace for request in summary_requests] == [
+        "report_vs/artifacts/summary",
+        "report_vs/structured_output/repair",
+    ]
     assert payload["toc_entries"][0]["section_title"] == "Intro"
     assert payload["toc_topics"] == ["Intro"]
     validate_schema(
@@ -472,6 +522,7 @@ def test_generate_artifacts_prunes_unbound_summary_claims(tmp_path):
         "linkedin_post": {"linkedin_post": "Post summary"},
     }
 
+    fake_openai = FakeOpenAI(responses)
     payload = generate_artifacts(
         report_id="r_prune_unbound_claims",
         report_name="report",
@@ -480,7 +531,7 @@ def test_generate_artifacts_prunes_unbound_summary_claims(tmp_path):
         settings=_settings(tmp_path),
         vector_store_id="vs_1",
         ctx=_ctx(),
-        openai_client=FakeOpenAI(responses),
+        openai_client=fake_openai,
         prompt_client=FakePromptClient(),
         analysis_store=FakeAnalysisStore(),
     )
@@ -494,6 +545,12 @@ def test_generate_artifacts_prunes_unbound_summary_claims(tmp_path):
     ]
     assert all(claim["evidence_spans"] for claim in claims)
     assert payload["family_status"]["summary"]["status"] == "generated"
+    summary_namespaces = [
+        request.prompt_namespace
+        for transport, request, step in fake_openai.requests
+        if transport == "chat" and step == "summary"
+    ]
+    assert summary_namespaces == ["report_vs/artifacts/summary"]
     validate_schema(
         SchemaValidateRequest(
             schema_version="1.0", payload=payload, schema_name="artifacts"

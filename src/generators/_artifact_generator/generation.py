@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable, Sequence
+from copy import deepcopy
 from typing import Any, Dict, List, Optional, TypedDict, cast
 
 from src.contracts.artifact_generation import ArtifactRenderTask
@@ -246,6 +247,63 @@ def generate_artifacts(
             ),
         )
 
+    def prune_supplementary_unbound_summary_claims(
+        payload: Dict[str, Any],
+    ) -> None:
+        """Keep the established deterministic prune without hiding total failure.
+
+        Span binding has always removed isolated, unbound entries from an
+        otherwise grounded summary claim map.  Run that repair at the summary
+        boundary so its remaining references can be validated before the
+        structured-output service decides whether a model repair is needed.
+        If every claim is unbound, retain the original payload: dropping the
+        entire map would conceal the unsupported model output instead of
+        routing it through the bounded repair path.
+        """
+
+        summary = payload.get("summary")
+        if not isinstance(summary, dict):
+            return
+        repaired_summary = deepcopy(summary)
+        span_stats = bind_artifact_evidence_spans(
+            summary=repaired_summary,
+            insights_candidates=[],
+            insights_final=[],
+            quotes_final=[],
+            doc_map=safe_doc_map,
+            evidence_packs=safe_evidence,
+        )
+        if (
+            span_stats.get("pruned_claim_count", 0) > 0
+            and repaired_summary.get("claim_evidence_map")
+        ):
+            summary.clear()
+            summary.update(repaired_summary)
+
+    def validate_soft_copy_provenance_references(
+        payload: Dict[str, Any], task_ctx: RunContext
+    ) -> None:
+        """Validate model-declared private bindings at their family boundary."""
+
+        bindings = payload.get("claim_provenance")
+        provenance = {
+            "claims": bindings if isinstance(bindings, list) else [],
+        }
+        normalize_artifact_evidence_ids(
+            summary={},
+            insights_candidates=[],
+            insights_final=[],
+            quotes_final=[],
+            doc_map=safe_doc_map,
+            evidence_packs=safe_evidence,
+            soft_copy_claim_provenance=provenance,
+        )
+        validate_evidence_references(
+            {"soft_copy_claim_provenance": provenance},
+            reference_evidence_packs,
+            task_ctx,
+        )
+
     def validate_editorial_plan(payload: Dict[str, Any], task_ctx: RunContext) -> None:
         normalize_required_evidence_references(payload)
         normalize_artifact_editorial_plan(payload.get("editorial_plan"))
@@ -308,11 +366,20 @@ def generate_artifacts(
         elif task.step_name == "summary":
 
             def payload_validator(payload: Dict[str, Any]) -> None:
+                normalize_required_evidence_references(payload)
+                prune_supplementary_unbound_summary_claims(payload)
+                validate_required_evidence_references(payload, task.ctx)
+                validate_soft_copy_provenance_references(payload, task.ctx)
                 _validate_card_tldrs(
                     normalize_artifact_summary(payload.get("summary")),
                     summary_abstained=False,
                     ctx=task.ctx,
                 )
+
+        elif task.step_name in {"expert_comment", "linkedin_post"}:
+
+            def payload_validator(payload: Dict[str, Any]) -> None:
+                validate_soft_copy_provenance_references(payload, task.ctx)
 
         return _render_insights_candidates_or_defer_to_fallback(
             task,

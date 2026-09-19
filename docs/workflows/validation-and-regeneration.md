@@ -80,9 +80,15 @@ When a repair is supported, the workflow maps validation issues to the narrowest
 
 For summary, Expert Comment, and LinkedIn output, structured-output validation
 also requires retained private claim bindings to cover every material public
-sentence after deterministic removal of internal reference tokens. A coverage
-gap enters the existing bounded structured-output recovery before artifact
-storage; it cannot become a later dead-letter after provider work is complete.
+sentence after deterministic removal of internal reference tokens. Summary
+claim-evidence-map identifiers are likewise canonicalized and validated against
+retained evidence before the structured-output call is accepted. When a summary
+already has grounded claims, a supplementary unbound map row is pruned
+deterministically; an entirely ungrounded map remains intact and enters the
+existing bounded structured-output recovery. A coverage or unresolved reference
+therefore cannot become a later dead-letter after provider work is complete.
+The same canonical-ID check applies to the private claim-provenance bindings
+returned with summary, Expert Comment, and LinkedIn families.
 Sentence identity preserves initialisms followed by lowercase prose (for
 example, `U.K. digital media`) as one sentence. This normalization changes no
 claim text or evidence binding; a missing sentence or a terminal initialism
