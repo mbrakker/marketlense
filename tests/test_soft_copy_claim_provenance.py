@@ -472,3 +472,129 @@ def test_public_report_payload_excludes_private_soft_copy_provenance() -> None:
     assert "soft_copy:expert_comment:old" not in str(asdict(public_payload))
     assert "_repair_evidence_selection" not in asdict(public_payload)
     assert "finding-8" not in str(asdict(public_payload))
+
+
+def test_hashtag_only_closing_line_is_not_a_material_sentence() -> None:
+    from src.contracts.soft_copy_claim_provenance import (
+        soft_copy_material_sentences,
+        soft_copy_uncovered_sentences,
+    )
+
+    post = (
+        "Advertisers are rethinking authenticity in an AI-made media world. "
+        "Trust now decides attention. #AI #MediaTrust"
+    )
+    sentences = soft_copy_material_sentences(post)
+    assert sentences == [
+        "Advertisers are rethinking authenticity in an AI-made media world.",
+        "Trust now decides attention.",
+    ]
+    declared = [
+        {
+            "claim": sentences[0],
+            "classification": "factual",
+            "evidence_ids": ["f1"],
+        },
+        {
+            "claim": sentences[1],
+            "classification": "interpretive",
+            "evidence_ids": ["f2"],
+        },
+    ]
+    assert (
+        soft_copy_uncovered_sentences(
+            artifact_family="linkedin_post",
+            public_output=post,
+            claim_bindings=declared,
+        )
+        == []
+    )
+
+
+def test_align_bindings_splits_paragraph_claims_onto_sentence_grid() -> None:
+    from src.contracts.soft_copy_claim_provenance import (
+        align_soft_copy_claim_bindings_to_sentences,
+        soft_copy_claim_bindings_cover_public_text,
+    )
+
+    post = "First supported point. Second supported point. Third supported point."
+    aligned = align_soft_copy_claim_bindings_to_sentences(
+        artifact_family="linkedin_post",
+        public_output=post,
+        claim_bindings=[
+            {
+                "claim": "First supported point. Second supported point.",
+                "classification": "factual",
+                "evidence_ids": ["f1"],
+            },
+            {
+                "claim": "Third supported point.",
+                "classification": "interpretive",
+                "evidence_ids": ["f2"],
+            },
+        ],
+    )
+    assert [binding["claim"] for binding in aligned] == [
+        "First supported point.",
+        "Second supported point.",
+        "Third supported point.",
+    ]
+    assert all(binding["evidence_ids"] == ["f1"] for binding in aligned[:2])
+    assert aligned[2]["evidence_ids"] == ["f2"]
+    assert aligned[2]["classification"] == "interpretive"
+    assert soft_copy_claim_bindings_cover_public_text(
+        artifact_family="linkedin_post",
+        public_output=post,
+        claim_bindings=aligned,
+    )
+
+
+def test_align_bindings_keeps_exact_and_unmatched_bindings() -> None:
+    from src.contracts.soft_copy_claim_provenance import (
+        align_soft_copy_claim_bindings_to_sentences,
+    )
+
+    post = "Exact sentence here. Off-grid model phrasing."
+    exact_binding = {
+        "claim": "Exact sentence here.",
+        "classification": "factual",
+        "evidence_ids": ["f1"],
+    }
+    unmatched_binding = {
+        "claim": "Off-grid model phrasing",
+        "classification": "interpretive",
+        "evidence_ids": ["f2"],
+    }
+    aligned = align_soft_copy_claim_bindings_to_sentences(
+        artifact_family="linkedin_post",
+        public_output=post,
+        claim_bindings=[exact_binding, unmatched_binding],
+    )
+    assert aligned[0] == exact_binding
+    assert aligned[1] == unmatched_binding
+
+
+def test_align_bindings_dedupes_sentences_keeping_first_declaration() -> None:
+    from src.contracts.soft_copy_claim_provenance import (
+        align_soft_copy_claim_bindings_to_sentences,
+    )
+
+    post = "Repeated sentence here."
+    aligned = align_soft_copy_claim_bindings_to_sentences(
+        artifact_family="linkedin_post",
+        public_output=post,
+        claim_bindings=[
+            {
+                "claim": "Repeated sentence here.",
+                "classification": "factual",
+                "evidence_ids": ["f1"],
+            },
+            {
+                "claim": "Repeated sentence here.",
+                "classification": "interpretive",
+                "evidence_ids": ["f2"],
+            },
+        ],
+    )
+    assert len(aligned) == 1
+    assert aligned[0]["evidence_ids"] == ["f1"]

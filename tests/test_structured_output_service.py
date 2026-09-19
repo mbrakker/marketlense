@@ -43,6 +43,88 @@ def _response(payload: dict, *, model: str = "gpt-5-mini") -> OpenAIResponseResu
     )
 
 
+def test_recovery_feedback_names_unknown_references_and_uncovered_sentences() -> None:
+    """Repair feedback carries specifics; terminal context stays identifier-only."""
+
+    seen_schema_errors: list[str] = []
+    responses = [
+        {
+            "linkedin_post": "First point. Second point.",
+            "claim_provenance": [],
+        },
+        {
+            "linkedin_post": "First point. Second point.",
+            "claim_provenance": [
+                {
+                    "claim": "First point.",
+                    "classification": "factual",
+                    "evidence_ids": ["f1"],
+                },
+                {
+                    "claim": "Second point.",
+                    "classification": "factual",
+                    "evidence_ids": ["f1"],
+                },
+            ],
+        },
+    ]
+
+    def call_model(mode: str, original_response: str, schema_errors: str):
+        seen_schema_errors.append(schema_errors)
+        return _response(responses[min(len(seen_schema_errors) - 1, 1)])
+
+    def validate_payload(candidate: dict) -> None:
+        if not candidate.get("claim_provenance"):
+            raise AppError(
+                code="soft_copy_claim_provenance_bindings_incomplete",
+                message=(
+                    "Soft-copy provenance must declare every material sentence; "
+                    "uncovered sentences: 2"
+                ),
+                retryable=False,
+                context={
+                    "artifact_family": "linkedin_post",
+                    "missing_claim_count": 2,
+                },
+            )
+        raise AppError(
+            code="schema_reference_missing",
+            message="Artifact evidence references contain unknown identifiers",
+            retryable=False,
+            context={
+                "artifact_family": "linkedin_post",
+                "missing_references": ["f9", "insight_metric_1"],
+            },
+        )
+
+    with pytest.raises(StructuredOutputFailure) as exc_info:
+        execute_structured_output(
+            StructuredOutputExecutionRequest(
+                schema_version="1.0",
+                report_id="linkedin-1",
+                artifact_family="linkedin_post",
+                schema_name="artifacts",
+                model="gpt-5-mini",
+                terminal_failure_code="artifact_structured_output_invalid",
+            ),
+            _ctx(),
+            call_model=call_model,
+            normalize_payload=lambda payload: payload,
+            validate_payload=validate_payload,
+            is_substantive=lambda candidate: bool(candidate),
+            model_pricing={},
+        )
+
+    assert "uncovered sentences: 2" in seen_schema_errors[1]
+    assert "missing references: f9, insight_metric_1" in seen_schema_errors[2]
+    assert "missing references: f9, insight_metric_1" in exc_info.value.schema_errors
+    assert exc_info.value.context["missing_references"] == [
+        "f9",
+        "insight_metric_1",
+    ]
+    assert "response_text" not in exc_info.value.context
+
+
 def test_recovery_repairs_retained_empty_document_map_and_records_attempts(
     caplog,
     assert_logs_have_required_fields,

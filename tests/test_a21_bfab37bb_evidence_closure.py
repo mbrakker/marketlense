@@ -8,6 +8,7 @@ from src.contracts.run_context import RunContext
 from src.generators.artifact_normalization import (
     artifact_base_variables,
     normalize_artifact_evidence_ids,
+    soft_copy_context_evidence_anchors,
 )
 from src.services.schema_validator_service import validate_evidence_references
 from src.utils.errors import AppError
@@ -292,6 +293,78 @@ def test_common_reference_boundary_rejects_unknown_numeric_aliases() -> None:
     with pytest.raises(AppError) as exc:
         validate_evidence_references(
             {"summary": summary}, evidence_packs, _ctx()
+        )
+    assert exc.value.code == "schema_reference_missing"
+
+
+def test_context_anchors_resolve_cited_metric_ids_to_retained_evidence() -> None:
+    """A metric-spine identifier resolves to that row's own retained evidence."""
+
+    soft_copy_claim_provenance = {
+        "claims": [{"evidence_ids": ["insight_metric_1", "f3-retained-2"]}]
+    }
+    evidence_packs = {
+        "findings": {"findings": [{"id": "f1"}, {"id": "f3"}]},
+    }
+    anchors = soft_copy_context_evidence_anchors(
+        insights_final=[
+            {"id": "insight-1", "evidence_id": "f1"},
+        ],
+        metric_spine=[
+            {"metric_id": "insight_metric_1", "evidence_id": "f1"},
+            {"metric_id": "f3-retained-2", "evidence_id": "f3"},
+        ],
+    )
+
+    stats = normalize_artifact_evidence_ids(
+        summary={},
+        insights_candidates=[],
+        insights_final=[],
+        quotes_final=[],
+        doc_map={},
+        evidence_packs=evidence_packs,
+        soft_copy_claim_provenance=soft_copy_claim_provenance,
+        context_anchors=anchors,
+    )
+
+    assert soft_copy_claim_provenance == {"claims": [{"evidence_ids": ["f1", "f3"]}]}
+    assert stats["normalized_count"] == 2
+    validate_evidence_references(
+        {"soft_copy_claim_provenance": soft_copy_claim_provenance},
+        evidence_packs,
+        _ctx(),
+    )
+
+
+def test_context_anchor_without_retained_target_stays_unknown() -> None:
+    """Anchors never invent evidence: unknown targets still fail validation."""
+
+    soft_copy_claim_provenance = {"claims": [{"evidence_ids": ["ghost-metric"]}]}
+    anchors = soft_copy_context_evidence_anchors(
+        insights_final=[],
+        metric_spine=[{"metric_id": "ghost-metric", "evidence_id": ""}],
+    )
+
+    stats = normalize_artifact_evidence_ids(
+        summary={},
+        insights_candidates=[],
+        insights_final=[],
+        quotes_final=[],
+        doc_map={},
+        evidence_packs={"findings": {"findings": [{"id": "f1"}]}},
+        soft_copy_claim_provenance=soft_copy_claim_provenance,
+        context_anchors=anchors,
+    )
+
+    assert soft_copy_claim_provenance == {
+        "claims": [{"evidence_ids": ["ghost-metric"]}]
+    }
+    assert stats["unresolved_count"] == 1
+    with pytest.raises(AppError) as exc:
+        validate_evidence_references(
+            {"soft_copy_claim_provenance": soft_copy_claim_provenance},
+            {"findings": {"findings": [{"id": "f1"}]}},
+            _ctx(),
         )
     assert exc.value.code == "schema_reference_missing"
 

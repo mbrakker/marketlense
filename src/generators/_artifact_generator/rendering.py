@@ -8,7 +8,8 @@ from src.contracts.config import AppSettings
 from src.contracts.ingest import IngestSettings
 from src.contracts.run_context import RunContext
 from src.contracts.soft_copy_claim_provenance import (
-    soft_copy_claim_bindings_cover_public_text,
+    align_soft_copy_claim_bindings_to_sentences,
+    soft_copy_uncovered_sentences,
 )
 from src.contracts.structured_output import StructuredOutputExecutionRequest
 from src.generators.prompt_preparation import (
@@ -289,20 +290,37 @@ def render_artifact_json_model(
             public_output = strip_linkedin_inline_reference_ids(
                 str(public_output or "")
             )
-        if (
-            root_key in _SOFT_COPY_ROOTS
-            and not soft_copy_claim_bindings_cover_public_text(
+        if root_key in _SOFT_COPY_ROOTS:
+            # Models legitimately declare one binding per paragraph or clause
+            # group.  Resegment those declared bindings onto the canonical
+            # sentence grid before enforcing per-sentence coverage so the gate
+            # measures evidence declaration, not sentence-splitting variance.
+            payload["claim_provenance"] = align_soft_copy_claim_bindings_to_sentences(
                 artifact_family=root_key,
                 public_output=public_output,
                 claim_bindings=payload.get("claim_provenance"),
             )
-        ):
-            raise AppError(
-                code="soft_copy_claim_provenance_bindings_incomplete",
-                message="Soft-copy provenance must declare every material sentence",
-                retryable=False,
-                context={"artifact_family": root_key},
+            uncovered_sentences = soft_copy_uncovered_sentences(
+                artifact_family=root_key,
+                public_output=public_output,
+                claim_bindings=payload.get("claim_provenance"),
             )
+            if uncovered_sentences:
+                first_excerpt = " ".join(str(uncovered_sentences[0]).split())[:100]
+                raise AppError(
+                    code="soft_copy_claim_provenance_bindings_incomplete",
+                    message=(
+                        "Soft-copy provenance must declare every material "
+                        f"sentence; uncovered sentences: "
+                        f"{len(uncovered_sentences)}; first uncovered sentence "
+                        f"starts: {first_excerpt}"
+                    ),
+                    retryable=False,
+                    context={
+                        "artifact_family": root_key,
+                        "missing_claim_count": len(uncovered_sentences),
+                    },
+                )
         if payload_validator is not None:
             payload_validator(payload)
 

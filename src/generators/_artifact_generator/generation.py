@@ -57,6 +57,7 @@ from src.generators.artifact_normalization import (
     normalize_expert_domain,
     preserve_public_source_displays,
     select_artifact_insights,
+    soft_copy_context_evidence_anchors,
     stabilize_broad_artifact_editorial_plan,
     strip_linkedin_inline_reference_ids,
 )
@@ -214,6 +215,10 @@ def generate_artifacts(
     safe_doc_map = doc_map or {}
     safe_evidence = evidence_packs or {}
     reference_evidence_packs = {**safe_evidence, "doc_map": safe_doc_map}
+    # Bounded aliases for the insight/metric-spine identifiers that the
+    # soft-copy prompt context itself exposes beside one retained evidence ID
+    # each.  Populated once those inputs exist; consulted at render time.
+    context_anchor_evidence_ids: Dict[str, str] = {}
 
     def validate_required_evidence_references(
         payload: Dict[str, Any], task_ctx: RunContext
@@ -273,9 +278,8 @@ def generate_artifacts(
             doc_map=safe_doc_map,
             evidence_packs=safe_evidence,
         )
-        if (
-            span_stats.get("pruned_claim_count", 0) > 0
-            and repaired_summary.get("claim_evidence_map")
+        if span_stats.get("pruned_claim_count", 0) > 0 and repaired_summary.get(
+            "claim_evidence_map"
         ):
             summary.clear()
             summary.update(repaired_summary)
@@ -297,6 +301,7 @@ def generate_artifacts(
             doc_map=safe_doc_map,
             evidence_packs=safe_evidence,
             soft_copy_claim_provenance=provenance,
+            context_anchors=context_anchor_evidence_ids,
         )
         validate_evidence_references(
             {"soft_copy_claim_provenance": provenance},
@@ -762,23 +767,18 @@ def generate_artifacts(
             analysis_store=analysis_store,
         )
         if cached is not None:
+
             def cached_list_field(name: str) -> List[Dict[str, Any]]:
                 value = cached.get(name)
                 return (
-                    cast(List[Dict[str, Any]], value)
-                    if isinstance(value, list)
-                    else []
+                    cast(List[Dict[str, Any]], value) if isinstance(value, list) else []
                 )
 
             cached_summary = cached.get("summary")
             cached_editorial_plan = cached.get("editorial_plan")
-            cached_soft_copy_claim_provenance = cached.get(
-                "soft_copy_claim_provenance"
-            )
+            cached_soft_copy_claim_provenance = cached.get("soft_copy_claim_provenance")
             normalize_artifact_evidence_ids(
-                summary=(
-                    cached_summary if isinstance(cached_summary, dict) else {}
-                ),
+                summary=(cached_summary if isinstance(cached_summary, dict) else {}),
                 insights_candidates=cached_list_field("insights_candidates"),
                 insights_final=cached_list_field("insights_final"),
                 quotes_final=cached_list_field("quotes_final"),
@@ -846,9 +846,7 @@ def generate_artifacts(
         )
 
     base_vars = artifact_base_variables(safe_doc_map, safe_evidence)
-    canonical_evidence_ids_json = base_vars.pop(
-        "canonical_evidence_ids_json", "[]"
-    )
+    canonical_evidence_ids_json = base_vars.pop("canonical_evidence_ids_json", "[]")
     editorial_plan_ctx = child_context(ctx, task_id=f"{ctx.task_id}:editorial_plan")
     editorial_plan_result = resolve_or_render_family(
         namespace="report_vs/artifacts/editorial_plan",
@@ -1080,6 +1078,13 @@ def generate_artifacts(
         evidence_packs=safe_evidence,
     )
     metric_spine_json = _dump_json(metric_spine)
+    context_anchor_evidence_ids.clear()
+    context_anchor_evidence_ids.update(
+        soft_copy_context_evidence_anchors(
+            insights_final=insights_final,
+            metric_spine=metric_spine,
+        )
+    )
     expert_synthesis_context = build_expert_synthesis_context(
         editorial_plan=editorial_plan,
         insights_final=insights_final,

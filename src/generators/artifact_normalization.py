@@ -1316,10 +1316,24 @@ def normalize_artifact_evidence_ids(
     evidence_packs: Dict[str, Any],
     editorial_plan: Dict[str, Any] | None = None,
     soft_copy_claim_provenance: Dict[str, Any] | None = None,
+    context_anchors: Dict[str, str] | None = None,
 ) -> Dict[str, int]:
     known_ids, alias_to_id = _collect_known_evidence_ids(
         doc_map=doc_map, evidence_packs=evidence_packs
     )
+    # The soft-copy context also exposes the insight and metric-spine anchors
+    # whose rows each carry one retained evidence ID.  A model that cites such
+    # an anchor is binding to that row's own retained evidence, so resolve the
+    # anchor to it exactly as other retained aliases are resolved.  Retained
+    # alias spellings always win over a context anchor.
+    for anchor_alias, anchor_target in (context_anchors or {}).items():
+        anchor_key = _s(anchor_alias).strip().lower()
+        if (
+            anchor_key
+            and _s(anchor_target).strip() in known_ids
+            and anchor_key not in alias_to_id
+        ):
+            alias_to_id[anchor_key] = _s(anchor_target).strip()
     normalized_count = 0
     unresolved_count = 0
     checked_count = 0
@@ -1439,6 +1453,38 @@ def normalize_artifact_evidence_ids(
         "normalized_count": normalized_count,
         "unresolved_count": unresolved_count,
     }
+
+
+def soft_copy_context_evidence_anchors(
+    *,
+    insights_final: Any,
+    metric_spine: Any,
+) -> Dict[str, str]:
+    """Map context-exposed insight/metric anchors to their retained evidence ID.
+
+    The summary, expert-comment, and LinkedIn prompts receive the final
+    insights and the derived metric spine as supporting context.  Each row
+    carries exactly one retained ``evidence_id`` beside its public identifier,
+    so citing the row identifier is a resolvable alias for that retained
+    evidence, not a new evidence system.  Anchors without a retained evidence
+    ID are skipped so unknown references still fail validation.
+    """
+
+    anchors: Dict[str, str] = {}
+
+    def _register(alias: Any, target: Any) -> None:
+        alias_key = _s(alias).strip()
+        target_id = _s(target).strip()
+        if alias_key and target_id:
+            anchors.setdefault(alias_key, target_id)
+
+    for insight in insights_final if isinstance(insights_final, list) else []:
+        if isinstance(insight, dict):
+            _register(insight.get("id"), insight.get("evidence_id"))
+    for metric in metric_spine if isinstance(metric_spine, list) else []:
+        if isinstance(metric, dict):
+            _register(metric.get("metric_id"), metric.get("evidence_id"))
+    return anchors
 
 
 def bind_artifact_evidence_spans(

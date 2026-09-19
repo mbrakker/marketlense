@@ -125,18 +125,100 @@ def soft_copy_claim_bindings_cover_public_text(
     *, artifact_family: str, public_output: object, claim_bindings: object
 ) -> bool:
     """Check that retained model bindings declare each material public sentence."""
+    return not soft_copy_uncovered_sentences(
+        artifact_family=artifact_family,
+        public_output=public_output,
+        claim_bindings=claim_bindings,
+    )
+
+
+def soft_copy_uncovered_sentences(
+    *,
+    artifact_family: str,
+    public_output: object,
+    claim_bindings: object,
+) -> list[str]:
+    """Return material public sentences that no declared binding covers exactly."""
+
     text = soft_copy_public_text(artifact_family, public_output)
     if not text:
-        return True
+        return []
     if not isinstance(claim_bindings, list) or not claim_bindings:
-        return False
+        return soft_copy_material_sentences(text)
     declared = {
         " ".join(str(binding.get("claim") or "").split())
         for binding in claim_bindings
         if isinstance(binding, dict) and str(binding.get("claim") or "").strip()
     }
+    if not declared:
+        return soft_copy_material_sentences(text)
+    return [
+        sentence
+        for sentence in soft_copy_material_sentences(text)
+        if sentence not in declared
+    ]
+
+
+def align_soft_copy_claim_bindings_to_sentences(
+    *,
+    artifact_family: str,
+    public_output: object,
+    claim_bindings: object,
+) -> list[dict[str, Any]]:
+    """Resegment model-declared bindings onto the canonical sentence grid.
+
+    The provenance contract retains one binding per material public sentence,
+    while models legitimately declare one object per paragraph or clause group.
+    Splitting a declared binding distributes its own unchanged classification
+    and evidence IDs across the exact public sentences it already covers; it
+    never invents evidence or rewrites declared text. Bindings that do not
+    correspond to the public sentence grid are returned unchanged so the
+    coverage gate can reject them with actionable context.
+    """
+
+    if not isinstance(claim_bindings, list):
+        return []
+    text = soft_copy_public_text(artifact_family, public_output)
+    if not text:
+        return [binding for binding in claim_bindings if isinstance(binding, dict)]
     sentences = soft_copy_material_sentences(text)
-    return bool(declared) and all(sentence in declared for sentence in sentences)
+    aligned: list[dict[str, Any]] = []
+    covered_sentences: set[str] = set()
+    for binding in claim_bindings:
+        if not isinstance(binding, dict):
+            continue
+        claim_text = " ".join(str(binding.get("claim") or "").split())
+        if not claim_text:
+            continue
+        run = _matching_sentence_run(sentences, claim_text)
+        if run is None:
+            if claim_text in covered_sentences:
+                continue
+            covered_sentences.add(claim_text)
+            aligned.append(binding)
+            continue
+        for sentence in run:
+            if sentence in covered_sentences:
+                continue
+            covered_sentences.add(sentence)
+            aligned.append({**binding, "claim": sentence})
+    return aligned
+
+
+def _matching_sentence_run(sentences: list[str], claim_text: str) -> list[str] | None:
+    """Return the consecutive sentence run exactly equal to ``claim_text``."""
+
+    if claim_text in sentences:
+        return [claim_text]
+    for start in range(len(sentences)):
+        joined = sentences[start]
+        for end in range(start + 1, len(sentences)):
+            joined = f"{joined} {sentences[end]}"
+            if joined == claim_text:
+                return sentences[start : end + 1]
+            if len(joined) > len(claim_text):
+                break
+    return None
 
 
 def soft_copy_material_sentences(text: object) -> list[str]:
@@ -145,7 +227,10 @@ def soft_copy_material_sentences(text: object) -> list[str]:
     Provenance declares complete public sentences.  ``U.K. digital media`` is
     one such sentence, not the two fragments produced by a punctuation-only
     splitter.  The lowercase continuation condition keeps a genuine terminal
-    initialism followed by a new capitalized sentence fail-closed.
+    initialism followed by a new capitalized sentence fail-closed.  Fragments
+    that carry no prose (for example a closing line of only ``#tag``
+    hashtags, which LinkedIn formatting treats as metadata rather than a
+    claim) are not material sentences and therefore require no provenance.
     """
 
     fragments = [
@@ -161,9 +246,14 @@ def soft_copy_material_sentences(text: object) -> list[str]:
             and fragment[:1].islower()
         ):
             sentences[-1] = f"{sentences[-1]} {fragment}"
-        else:
+        elif _is_prose_fragment(fragment):
             sentences.append(fragment)
     return sentences
+
+
+def _is_prose_fragment(fragment: str) -> bool:
+    without_hashtags = re.sub(r"#[A-Za-z0-9_]+", "", fragment)
+    return bool(re.search(r"[A-Za-z0-9]", without_hashtags))
 
 
 def valid_soft_copy_evidence_selection(

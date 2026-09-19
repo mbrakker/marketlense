@@ -806,6 +806,122 @@ def test_soft_copy_binding_gap_uses_bounded_structured_recovery(tmp_path) -> Non
     ]
 
 
+def test_linkedin_paragraph_bindings_align_onto_sentences_and_hashtags_pass(
+    tmp_path,
+) -> None:
+    class ParagraphClaimsClient:
+        def __init__(self) -> None:
+            self.requests = []
+
+        def openai_chat_json(self, request, ctx):
+            del ctx
+            self.requests.append(request)
+            payload = {
+                "linkedin_post": (
+                    "First supported point. Second supported point.\n\n"
+                    "Third supported point.\n\n#AI #MediaTrust"
+                ),
+                "claim_provenance": [
+                    {
+                        "claim": "First supported point. Second supported point.",
+                        "classification": "factual",
+                        "evidence_ids": [],
+                    },
+                    {
+                        "claim": "Third supported point.",
+                        "classification": "interpretive",
+                        "evidence_ids": [],
+                    },
+                ],
+            }
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text=json.dumps(payload),
+                parsed_json=payload,
+                input_tokens=0,
+                output_tokens=0,
+                tool_calls=0,
+                model=request.model,
+            )
+
+    client = ParagraphClaimsClient()
+    result = render_artifact_json_model(
+        namespace="report_vs/artifacts/linkedin_post",
+        variables={"doc_map_json": "{}"},
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=client,
+        prompt_client=FakePromptClient(),
+        allow_vector_store=False,
+        vector_store_id=None,
+    )
+
+    assert len(client.requests) == 1
+    assert [binding["claim"] for binding in result["_soft_copy_claim_bindings"]] == [
+        "First supported point.",
+        "Second supported point.",
+        "Third supported point.",
+    ]
+
+
+def test_linkedin_binding_gap_feedback_names_uncovered_sentence(tmp_path) -> None:
+    class UncoveredThenRepairedClient:
+        def __init__(self) -> None:
+            self.requests = []
+
+        def openai_chat_json(self, request, ctx):
+            del ctx
+            self.requests.append(request)
+            claims = [
+                {
+                    "claim": "The first supported sentence.",
+                    "classification": "interpretive",
+                    "evidence_ids": [],
+                }
+            ]
+            if len(self.requests) > 1:
+                claims.append(
+                    {
+                        "claim": "The trailing hashtag sentence.",
+                        "classification": "interpretive",
+                        "evidence_ids": [],
+                    }
+                )
+            payload = {
+                "linkedin_post": (
+                    "The first supported sentence. The trailing hashtag sentence."
+                ),
+                "claim_provenance": claims,
+            }
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text=json.dumps(payload),
+                parsed_json=payload,
+                input_tokens=0,
+                output_tokens=0,
+                tool_calls=0,
+                model=request.model,
+            )
+
+    client = UncoveredThenRepairedClient()
+    result = render_artifact_json_model(
+        namespace="report_vs/artifacts/linkedin_post",
+        variables={"doc_map_json": "{}"},
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=client,
+        prompt_client=FakePromptClient(),
+        allow_vector_store=False,
+        vector_store_id=None,
+    )
+
+    assert len(client.requests) == 2
+    assert [binding["claim"] for binding in result["_soft_copy_claim_bindings"]] == [
+        "The first supported sentence.",
+        "The trailing hashtag sentence.",
+    ]
+
+
 def test_generate_artifacts_does_not_fabricate_insights_after_unknown_evidence(
     tmp_path,
 ) -> None:

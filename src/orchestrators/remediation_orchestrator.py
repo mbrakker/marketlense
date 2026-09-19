@@ -53,6 +53,7 @@ _FAILURE_CONTEXT_KEYS = {
     "error_class",
     "evidence_id",
     "field",
+    "missing_claim_count",
     "missing_claim_ids",
     "missing_evidence_ids",
     "missing_references",
@@ -321,6 +322,10 @@ def _bounded_failure_context(context: object) -> dict[str, object]:
         if key == "repair_attempt":
             if isinstance(value, int) and not isinstance(value, bool):
                 result[key] = max(0, min(9, value))
+            continue
+        if key == "missing_claim_count":
+            if isinstance(value, int) and not isinstance(value, bool):
+                result[key] = max(0, min(999, value))
             continue
         if key in {
             "missing_claim_ids",

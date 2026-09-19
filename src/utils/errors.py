@@ -2,6 +2,12 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
+# Bounded identifier charset shared by error-context retention paths: keeps
+# only scalar tokens (IDs, codes, rules) out of report content territory.
+SAFE_ERROR_CONTEXT_TOKEN_CHARS = frozenset(
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._:-"
+)
+
 
 class AppError(Exception):
     def __init__(

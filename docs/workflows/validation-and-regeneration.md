@@ -80,17 +80,34 @@ When a repair is supported, the workflow maps validation issues to the narrowest
 
 For summary, Expert Comment, and LinkedIn output, structured-output validation
 also requires retained private claim bindings to cover every material public
-sentence after deterministic removal of internal reference tokens. Summary
-claim-evidence-map identifiers are likewise canonicalized and validated against
-retained evidence before the structured-output call is accepted. When a summary
-already has grounded claims, a supplementary unbound map row is pruned
-deterministically; an entirely ungrounded map remains intact and enters the
-existing bounded structured-output recovery. A coverage or unresolved reference
-therefore cannot become a later dead-letter after provider work is complete.
-The same canonical-ID check applies to the private claim-provenance bindings
-returned with summary, Expert Comment, and LinkedIn families.
+sentence after deterministic removal of internal reference tokens. Material
+sentences are prose fragments: a closing line that contains only hashtag
+metadata (for example #AI #MediaTrust, which LinkedIn formatting treats as
+tags rather than claims) is not a material sentence. Models may declare one
+binding per paragraph, so before the coverage gate each declared binding is
+deterministically resegmented onto the canonical sentence grid; the split
+distributes the unchanged classification and evidence IDs across the exact
+public sentences the binding already covers and never invents or rewrites
+evidence. A binding that does not correspond to the public sentence grid is
+left unchanged and still fails closed. When coverage is incomplete, the bounded
+structured-output recovery receives the uncovered sentence count and the first
+uncovered sentence, and terminal remediation records retain the identifier-only
+count. Summary claim-evidence-map identifiers are likewise canonicalized and
+validated against retained evidence before the structured-output call is
+accepted. When a summary already has grounded claims, a supplementary unbound
+map row is pruned deterministically; an entirely ungrounded map remains intact
+and enters the existing bounded structured-output recovery. A coverage or
+unresolved reference therefore cannot become a later dead-letter after provider
+work is complete. The same canonical-ID check applies to the private
+claim-provenance bindings returned with summary, Expert Comment, and LinkedIn
+families. Private bindings in those families may cite the insight and
+metric-spine row identifiers that the same prompt context exposes; each such
+anchor resolves to the row's own retained evidence ID, while an anchor without
+a retained target stays unknown and fails validation. The bounded recovery is
+told which references were unknown, and terminal remediation records retain up
+to three unknown reference identifiers.
 Sentence identity preserves initialisms followed by lowercase prose (for
-example, `U.K. digital media`) as one sentence. This normalization changes no
+example, U.K. digital media) as one sentence. This normalization changes no
 claim text or evidence binding; a missing sentence or a terminal initialism
 followed by a new capitalized sentence still fails closed.
 

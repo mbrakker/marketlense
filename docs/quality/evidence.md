@@ -165,7 +165,11 @@ artifact and remediation record already produced by the canonical workflow;
 it does not inspect runtime logs or rerun validation. The context accepts only
 short identifier-like values (for example rule, field, schema, component, and
 evidence IDs). Prompt text, provider/model responses, source text, exception
-messages, file paths, and arbitrary error-context values are excluded.
+messages, file paths, and arbitrary error-context values are excluded. For
+soft-copy coverage and reference failures, the retained context additionally
+includes the bounded `missing_claim_count` and up to three unknown
+`missing_references` identifiers, so each terminal record names its exact
+uncovered-sentence count or unknown evidence IDs.
 
 The exporter writes `validation_terminal_outcome_missing` for every immutable
 member without a current typed terminal attempt and marks that evidence

@@ -19,7 +19,7 @@ from src.contracts.structured_output import (
     StructuredOutputExecutionResult,
 )
 from src.utils.costing import estimate_cost_usd
-from src.utils.errors import AppError
+from src.utils.errors import SAFE_ERROR_CONTEXT_TOKEN_CHARS, AppError
 from src.utils.json_recovery import parse_json_from_text, repair_json_once
 from src.utils.logging import log_event
 from src.utils.structured_output import StructuredOutputFailure
@@ -284,6 +284,11 @@ def execute_structured_output(
     )
     raise StructuredOutputFailure(
         code=request.terminal_failure_code,
+        failure_context=(
+            regenerated_evaluation.bounded_context
+            or repaired_evaluation.bounded_context
+            or initial.bounded_context
+        ),
         message=(
             f"{request.artifact_family} did not produce a substantive "
             "schema-valid JSON artifact"
@@ -303,9 +308,11 @@ class _Evaluation:
         error_class: str = "",
         error_detail: str = "",
         disposition: str = "",
+        context: dict[str, Any] | None = None,
     ) -> None:
         self.payload = payload
         self.error_class = error_class
+        self.bounded_context = context or {}
         self.error_detail = error_detail
         self.disposition = disposition
 
@@ -378,7 +385,12 @@ def _normalize_validate(
         normalized = normalize_payload(payload)
         validate_payload(normalized)
     except AppError as exc:
-        return _Evaluation(None, exc.code, f"{exc.code}:{exc.message}")
+        return _Evaluation(
+            None,
+            exc.code,
+            _app_error_feedback(exc),
+            context=_bounded_app_error_context(exc),
+        )
     except (TypeError, ValueError, KeyError) as exc:
         return _Evaluation(
             None, "schema_normalization_failed", f"schema_normalization_failed:{exc}"
@@ -591,6 +603,55 @@ def _outcome_id(request: StructuredOutputExecutionRequest, ctx: RunContext) -> s
 
 def _join_errors(*errors: str) -> str:
     return " | ".join(str(error).strip() for error in errors if str(error).strip())
+
+
+_ACTIONABLE_CONTEXT_LIST_KEYS = (
+    "missing_references",
+    "missing_reference_ids",
+    "missing_evidence_ids",
+    "missing_claim_ids",
+)
+
+
+def _app_error_feedback(error: AppError) -> str:
+    """Build the bounded schema-error string the one model repair sees."""
+
+    detail = f"{error.code}:{error.message}"
+    context = error.context if isinstance(error.context, dict) else {}
+    for key in _ACTIONABLE_CONTEXT_LIST_KEYS:
+        value = context.get(key)
+        if not isinstance(value, list):
+            continue
+        tokens = [
+            token for token in (str(item or "").strip() for item in value) if token
+        ][:6]
+        if tokens:
+            detail = f"{detail}; {key.replace('_', ' ')}: {', '.join(tokens)}"
+    return detail[:600]
+
+
+def _bounded_app_error_context(error: AppError) -> dict[str, Any]:
+    """Keep identifier-only inner-cause context for terminal retention."""
+
+    context = error.context if isinstance(error.context, dict) else {}
+    retained: dict[str, Any] = {}
+    for key in _ACTIONABLE_CONTEXT_LIST_KEYS:
+        value = context.get(key)
+        if not isinstance(value, list):
+            continue
+        tokens = [
+            token
+            for token in (str(item or "").strip() for item in value)
+            if token
+            and len(token) <= 128
+            and set(token) <= SAFE_ERROR_CONTEXT_TOKEN_CHARS
+        ][:3]
+        if tokens:
+            retained[key] = tokens
+    count = context.get("missing_claim_count")
+    if isinstance(count, int) and not isinstance(count, bool) and count > 0:
+        retained["missing_claim_count"] = min(count, 999)
+    return retained
 
 
 def _result(
