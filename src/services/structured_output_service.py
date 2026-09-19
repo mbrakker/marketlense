@@ -209,12 +209,13 @@ def execute_structured_output(
         model_pricing=model_pricing,
     )
 
+    repaired_response = str(repaired.text or original_response)
     regenerated = _call_model(
         request=request,
         ctx=ctx,
         call_model=call_model,
         mode="regeneration",
-        original_response="",
+        original_response=repaired_response,
         schema_errors=repaired_evaluation.error_detail,
         attempt=2,
         model_pricing=model_pricing,

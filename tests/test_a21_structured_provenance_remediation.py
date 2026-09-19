@@ -6,6 +6,7 @@ from src.contracts.openai import OpenAIResponseResult
 from src.generators._artifact_generator.rendering import render_artifact_json_model
 from src.generators.evidence_pack_generator import generate_evidence_packs
 from tests._test_artifact_generator._shared import (
+    CapturingPromptClient as ArtifactCapturingPromptClient,
     FakePromptClient as ArtifactPromptClient,
 )
 from tests._test_artifact_generator._shared import _ctx as artifact_ctx
@@ -81,6 +82,91 @@ def test_soft_copy_display_normalization_rebinds_through_bounded_recovery(
             "classification": "factual",
             "evidence_ids": ["finding-1"],
         }
+    ]
+
+
+def test_parse_valid_soft_copy_recovery_candidate_rebinds_on_final_regeneration(
+    tmp_path,
+) -> None:
+    """The final bounded recovery keeps the parse-valid candidate to rebind it."""
+
+    class BainEquivalentRecoveryClient:
+        def __init__(self, prompt_client) -> None:
+            self.prompt_client = prompt_client
+            self.requests = []
+
+        def openai_chat_json(self, request, ctx):
+            del ctx
+            self.requests.append(request)
+            first_claim = "Born-tech companies created 52% of reported growth."
+            second_claim = "Tech-led companies contributed another 20%."
+            recovery_variables = self.prompt_client.variables_for_namespace(
+                "report_vs/structured_output/regenerate"
+            )
+            complete = len(self.requests) == 3 and second_claim in str(
+                recovery_variables.get("original_response") or ""
+            )
+            payload = {
+                "linkedin_post": f"{first_claim} {second_claim}",
+                "claim_provenance": [
+                    {
+                        "claim": first_claim,
+                        "classification": "factual",
+                        "evidence_ids": ["finding-1"],
+                    },
+                    *(
+                        [
+                            {
+                                "claim": second_claim,
+                                "classification": "factual",
+                                "evidence_ids": ["finding-2"],
+                            }
+                        ]
+                        if complete
+                        else []
+                    ),
+                ],
+            }
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text=json.dumps(payload),
+                parsed_json=payload,
+                input_tokens=0,
+                output_tokens=0,
+                tool_calls=0,
+                model=request.model,
+            )
+
+    prompt_client = ArtifactCapturingPromptClient()
+    client = BainEquivalentRecoveryClient(prompt_client)
+    result = render_artifact_json_model(
+        namespace="report_vs/artifacts/linkedin_post",
+        variables={"doc_map_json": "{}"},
+        settings=artifact_settings(tmp_path),
+        ctx=artifact_ctx(),
+        openai_client=client,
+        prompt_client=prompt_client,
+        allow_vector_store=False,
+        vector_store_id=None,
+    )
+
+    assert [request.prompt_namespace for request in client.requests] == [
+        "report_vs/artifacts/linkedin_post",
+        "report_vs/structured_output/repair",
+        "report_vs/structured_output/regenerate",
+    ]
+    assert "Tech-led companies contributed another 20%." in str(
+        prompt_client.variables_for_namespace(
+            "report_vs/structured_output/regenerate"
+        ).get("original_response")
+    )
+    assert result["linkedin_post"] == (
+        "Born-tech companies created 52% of reported growth. "
+        "Tech-led companies contributed another 20%."
+    )
+    assert [binding["claim"] for binding in result["_soft_copy_claim_bindings"]] == [
+        "Born-tech companies created 52% of reported growth.",
+        "Tech-led companies contributed another 20%.",
     ]
 
 
