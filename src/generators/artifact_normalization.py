@@ -1656,6 +1656,12 @@ def _collect_known_evidence_ids(
             return
         known_ids.add(evidence_id)
         alias_to_id.setdefault(evidence_id.lower(), evidence_id)
+        # Extraction families have historically used both separators.  Register
+        # only the equivalent spelling of a retained canonical ID, so this
+        # remains a lookup proof rather than a permissive rewrite of unknown
+        # model references.
+        alias_to_id.setdefault(evidence_id.replace("-", "_").lower(), evidence_id)
+        alias_to_id.setdefault(evidence_id.replace("_", "-").lower(), evidence_id)
 
     if isinstance(evidence_packs, dict):
         for pack in evidence_packs.values():

@@ -56,8 +56,8 @@ def test_retained_a21_editorial_plan_reference_aliases_are_canonicalized() -> No
 
 def test_common_reference_boundary_canonicalizes_every_artifact_family() -> None:
     """Valid aliases must resolve before the strict reference validator runs."""
-    alias_finding = "evidence:findings:f1"
-    alias_quote = "evidence:quote_candidates:q1"
+    alias_finding = "evidence:findings:finding_1"
+    alias_quote = "evidence:quote_candidates:quote-1"
     summary = {
         "claim_evidence_map": [
             {
@@ -85,7 +85,7 @@ def test_common_reference_boundary_canonicalizes_every_artifact_family() -> None
     soft_copy_claim_provenance = {
         "claims": [
             {
-                "evidence_ids": [alias_finding, "q1"],
+                "evidence_ids": [alias_finding, "quote_001"],
                 "source_spans": [
                     {"evidence_id": alias_finding},
                     {"evidence_id": alias_quote},
@@ -94,8 +94,8 @@ def test_common_reference_boundary_canonicalizes_every_artifact_family() -> None
         ]
     }
     evidence_packs = {
-        "findings": {"findings": [{"id": "f1"}]},
-        "quote_candidates": {"quote_candidates": [{"id": "q1"}]},
+        "findings": {"findings": [{"id": "finding-1"}]},
+        "quote_candidates": {"quote_candidates": [{"id": "quote_001"}]},
     }
 
     stats = normalize_artifact_evidence_ids(
@@ -110,19 +110,22 @@ def test_common_reference_boundary_canonicalizes_every_artifact_family() -> None
     )
 
     assert summary["claim_evidence_map"][0] == {
-        "evidence_id": "f1",
-        "evidence_spans": [{"evidence_id": "f1"}],
+        "evidence_id": "finding-1",
+        "evidence_spans": [{"evidence_id": "finding-1"}],
     }
-    assert insights_candidates[0]["evidence_id"] == "f1"
-    assert insights_candidates[0]["evidence_spans"] == [{"evidence_id": "f1"}]
-    assert insights_final[0]["evidence_id"] == "f1"
-    assert insights_final[0]["evidence_spans"] == [{"evidence_id": "f1"}]
-    assert quotes_final[0]["evidence_id"] == "q1"
-    assert quotes_final[0]["evidence_spans"] == [{"evidence_id": "q1"}]
-    assert editorial_plan["themes"][0]["evidence_ids"] == ["f1", "q1"]
+    assert insights_candidates[0]["evidence_id"] == "finding-1"
+    assert insights_candidates[0]["evidence_spans"] == [{"evidence_id": "finding-1"}]
+    assert insights_final[0]["evidence_id"] == "finding-1"
+    assert insights_final[0]["evidence_spans"] == [{"evidence_id": "finding-1"}]
+    assert quotes_final[0]["evidence_id"] == "quote_001"
+    assert quotes_final[0]["evidence_spans"] == [{"evidence_id": "quote_001"}]
+    assert editorial_plan["themes"][0]["evidence_ids"] == ["finding-1", "quote_001"]
     assert soft_copy_claim_provenance["claims"][0] == {
-        "evidence_ids": ["f1", "q1"],
-        "source_spans": [{"evidence_id": "f1"}, {"evidence_id": "q1"}],
+        "evidence_ids": ["finding-1", "quote_001"],
+        "source_spans": [
+            {"evidence_id": "finding-1"},
+            {"evidence_id": "quote_001"},
+        ],
     }
     assert stats["normalized_count"] == 13
     validate_evidence_references(
