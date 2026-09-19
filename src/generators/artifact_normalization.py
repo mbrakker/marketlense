@@ -1699,6 +1699,19 @@ def _collect_known_evidence_ids(
             if isinstance(section, dict):
                 _register(section.get("id"))
 
+    canonical_ids_by_lower = {evidence_id.lower() for evidence_id in known_ids}
+    for evidence_id in known_ids:
+        compact_numeric = re.fullmatch(r"(.+?)(\d+)", evidence_id)
+        if not compact_numeric:
+            continue
+        prefix, index = compact_numeric.groups()
+        if prefix.endswith(("-", "_", " ")):
+            continue
+        for separator in ("-", "_", " "):
+            alias = f"{prefix}{separator}{index}".lower()
+            if alias not in canonical_ids_by_lower:
+                alias_to_id.setdefault(alias, evidence_id)
+
     for evidence_id in list(known_ids):
         match = re.match(r"^q(\d+)$", evidence_id, flags=re.IGNORECASE)
         if not match:

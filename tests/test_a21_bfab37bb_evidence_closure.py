@@ -171,6 +171,28 @@ def test_common_reference_boundary_preserves_unknown_soft_copy_references() -> N
     assert exc.value.code == "schema_reference_missing"
 
 
+def test_common_reference_boundary_canonicalizes_compact_numeric_aliases() -> None:
+    summary = {
+        "claim_evidence_map": [{"evidence_id": "evidence:findings:F-1"}]
+    }
+    evidence_packs = {"findings": {"findings": [{"id": "f1"}]}}
+
+    stats = normalize_artifact_evidence_ids(
+        summary=summary,
+        insights_candidates=[],
+        insights_final=[],
+        quotes_final=[],
+        doc_map={},
+        evidence_packs=evidence_packs,
+    )
+
+    assert summary["claim_evidence_map"][0]["evidence_id"] == "f1"
+    assert stats["normalized_count"] == 1
+    validate_evidence_references(
+        {"summary": summary}, evidence_packs, _ctx()
+    )
+
+
 def test_retained_a21_queue_wrapper_classification_is_explicit_about_gaps() -> None:
     fixture = _closure_fixture()
     cases = fixture["workflow_queue_report_stage_failed"]
