@@ -38,6 +38,7 @@ from src.services.state_service import (
 )
 from src.utils.errors import AppError
 from src.utils.logging import new_run_context
+from src.utils.structured_output import StructuredOutputFailure
 
 NOW = "2026-07-15T12:00:00Z"
 
@@ -554,6 +555,40 @@ def test_failure_specific_recovery_rule_persists_narrow_scope(tmp_path) -> None:
         "crop_render",
         "crop_qa",
     ]
+
+
+def test_terminal_failure_retains_only_bounded_actionable_error_context(
+    tmp_path,
+) -> None:
+    """A remediation row retains cause identifiers, never provider response text."""
+
+    record = record_workflow_failure(
+        state_db=str(tmp_path / "state.sqlite"),
+        workflow="report_generation",
+        stage="artifact_generation",
+        operation="generate_artifacts",
+        error=StructuredOutputFailure(
+            code="artifact_structured_output_invalid",
+            message="invalid artifact",
+            artifact_family="summary",
+            response_text='{"private":"provider response"}',
+            schema_errors="schema_missing_required",
+            repair_attempt=2,
+            error_class="schema_missing_required",
+        ),
+        ctx=_ctx(),
+        workflow_run_id="run-diagnostic",
+        report_id="report-diagnostic",
+    )
+
+    assert record is not None
+    assert record.diagnostics["error_context"] == {
+        "artifact_family": "summary",
+        "error_class": "schema_missing_required",
+        "repair_attempt": 2,
+    }
+    assert "provider response" not in json.dumps(record.diagnostics)
+    assert "schema_errors" not in json.dumps(record.diagnostics)
 
 
 def test_wordpress_readback_alias_is_auto_enqueued_only_with_preflight_proof(

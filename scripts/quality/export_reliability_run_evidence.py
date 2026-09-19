@@ -10,6 +10,70 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, Iterable
 
+_FAILURE_DIAGNOSTIC_FIELDS = (
+    "stage",
+    "outer_code",
+    "inner_error_class",
+    "validator_rule",
+    "artifact_family",
+    "claim_or_entity_id",
+)
+_FAILURE_CONTEXT_FIELDS = {
+    "affected_section",
+    "artifact_family",
+    "cause_code",
+    "cause_type",
+    "component",
+    "entity_id",
+    "evidence_id",
+    "field",
+    "reason",
+    "rule_id",
+    "schema_name",
+    "schema_root_key",
+}
+_SAFE_DIAGNOSTIC_TOKEN_CHARS = frozenset(
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._:-"
+)
+
+
+def _bounded_diagnostic_token(value: object) -> str:
+    """Keep only a short identifier, never prose or untrusted payload content."""
+
+    token = str(value or "").strip()
+    if not token or len(token) > 128:
+        return ""
+    return token if set(token) <= _SAFE_DIAGNOSTIC_TOKEN_CHARS else ""
+
+
+def _failure_diagnostic(raw: object, *, failure_code: str) -> dict[str, Any]:
+    """Project a retained failure cause into fixed, source-text-free fields."""
+
+    if not isinstance(raw, dict):
+        return {}
+    diagnostic = {
+        key: _bounded_diagnostic_token(raw.get(key))
+        for key in _FAILURE_DIAGNOSTIC_FIELDS
+    }
+    repair_attempt = raw.get("repair_attempt")
+    diagnostic["repair_attempt"] = (
+        repair_attempt
+        if isinstance(repair_attempt, int) and not isinstance(repair_attempt, bool)
+        else 0
+    )
+    diagnostic["repair_attempt"] = max(0, min(9, diagnostic["repair_attempt"]))
+    context = raw.get("error_context")
+    diagnostic["error_context"] = {
+        key: token
+        for key, value in sorted(context.items())
+        if key in _FAILURE_CONTEXT_FIELDS
+        if (token := _bounded_diagnostic_token(value))
+    } if isinstance(context, dict) else {}
+    diagnostic["outer_code"] = _bounded_diagnostic_token(
+        diagnostic["outer_code"] or failure_code
+    )
+    return diagnostic
+
 
 def _rows(
     conn: sqlite3.Connection, query: str, args: tuple[Any, ...]
@@ -20,6 +84,28 @@ def _rows(
         return []
     columns = [item[0] for item in cursor.description or ()]
     return [dict(zip(columns, row, strict=True)) for row in cursor.fetchall()]
+
+
+def _root_workflow_id(state_db: Path, report_id: str) -> str:
+    """Find the workflow lineage needed to read its retained remediation row."""
+
+    if not state_db.is_file():
+        return ""
+    try:
+        with sqlite3.connect(state_db) as conn:
+            row = conn.execute(
+                """
+                SELECT root_workflow_id
+                FROM workflow_jobs
+                WHERE report_id=? AND root_workflow_id<>''
+                ORDER BY rowid DESC
+                LIMIT 1
+                """,
+                (report_id,),
+            ).fetchone()
+    except sqlite3.Error:
+        return ""
+    return str(row[0] or "") if row else ""
 
 
 def _write_csv(path: Path, fields: list[str], rows: Iterable[dict[str, Any]]) -> None:
@@ -76,6 +162,13 @@ def _authoritative_frozen_cohort_projection(
                 "terminal_outcome": terminal_outcome,
                 "terminal_stage": "",
                 "failure_code": failure_code,
+                **(
+                    _failure_diagnostic(
+                        report.get("failure_diagnostic"), failure_code=failure_code
+                    )
+                    if failure_code
+                    else {}
+                ),
             }
         )
     if len({row["report_id"] for row in terminal_rows}) != len(terminal_rows):
@@ -179,6 +272,11 @@ def export_run_evidence(
     *, state_dir: Path, artifact_dir: Path, output_dir: Path, validation_run_id: str
 ) -> None:
     """Create bounded, no-source-text evidence views for one validation run."""
+    # Keep the run-scoped export on the same retained-diagnostics projection as
+    # the frozen cohort.  This is intentionally a read-only import: the runner
+    # owns the canonical mapping from validation findings/remediation records.
+    from scripts.quality.ias_live_canary_runner import _read_failure_diagnostic
+
     output_dir.mkdir(parents=True, exist_ok=True)
     reports_db = state_dir / "reports.sqlite"
     usage_db = state_dir / "llm_usage.sqlite"
@@ -209,16 +307,35 @@ def export_run_evidence(
     for item in members:
         attempt = by_report.get(item["report_id"], {})
         terminal_outcome = str(attempt.get("terminal_outcome") or "missing")
+        failure_code = str(attempt.get("failure_code") or "") or (
+            "validation_terminal_outcome_missing"
+            if terminal_outcome == "missing"
+            else ""
+        )
+        diagnostic = (
+            _read_failure_diagnostic(
+                state_db=state_dir / "workflow.sqlite",
+                reports_db=reports_db,
+                report_id=str(item["report_id"]),
+                validation_run_id=validation_run_id,
+                root_workflow_id=_root_workflow_id(
+                    state_dir / "workflow.sqlite", str(item["report_id"])
+                ),
+                outer_code=failure_code,
+            )
+            if failure_code
+            else {}
+        )
         terminal_rows.append(
             {
                 "report_id": item["report_id"],
                 "terminal_outcome": terminal_outcome,
                 "terminal_stage": str(attempt.get("terminal_stage") or ""),
-                "failure_code": str(attempt.get("failure_code") or "")
-                or (
-                    "validation_terminal_outcome_missing"
-                    if terminal_outcome == "missing"
-                    else ""
+                "failure_code": failure_code,
+                **(
+                    _failure_diagnostic(diagnostic, failure_code=failure_code)
+                    if diagnostic
+                    else {}
                 ),
             }
         )

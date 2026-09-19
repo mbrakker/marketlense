@@ -6,6 +6,7 @@ import sqlite3
 from pathlib import Path
 
 from scripts.quality.ias_live_canary_runner import (
+    _read_failure_diagnostic,
     run_first_attempt_canary,
     summarize_frozen_cohort_results,
 )
@@ -30,6 +31,163 @@ def test_cohort_member_missing_source_has_typed_terminal_result(tmp_path: Path) 
     assert result["workflow_attempt_count"] == 0
     assert result["terminal_failure_code"] == "frozen_cohort_source_missing"
     assert Path(result["run_directory"]).joinpath("result.json").is_file()
+
+
+def test_failure_diagnostic_uses_retained_validation_finding_without_source_text(
+    tmp_path: Path,
+) -> None:
+    """A terminal validation export identifies a retained rule and entity."""
+
+    validation_path = tmp_path / "validation.json"
+    validation_path.write_text(
+        json.dumps(
+            {
+                "status": "fail",
+                "issues": [
+                    {
+                        "severity": "error",
+                        "rule_id": "schema_reference_missing",
+                        "affected_section": "editorial_plan",
+                        "entity_id": "finding:42",
+                        "evidence_ids": ["finding:42"],
+                        "message": "private source text must not be exported",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    reports_db = tmp_path / "reports.sqlite"
+    with sqlite3.connect(reports_db) as conn:
+        conn.executescript(
+            """
+            CREATE TABLE validation_run_entity_attempts (
+              attempt_id TEXT, validation_run_id TEXT, report_id TEXT,
+              attempt_number INTEGER
+            );
+            CREATE TABLE validation_run_stage_records (
+              attempt_id TEXT, stage TEXT, failure_code TEXT,
+              repair_disposition TEXT, output_artifact_ids_json TEXT,
+              completed_at_utc TEXT
+            );
+            """
+        )
+        conn.execute(
+            "INSERT INTO validation_run_entity_attempts VALUES (?, ?, ?, ?)",
+            ("attempt-1", "validation-1", "report-1", 1),
+        )
+        conn.execute(
+            "INSERT INTO validation_run_stage_records VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                "attempt-1",
+                "semantic_validation",
+                "validation_failed",
+                "targeted_repair",
+                json.dumps([str(validation_path)]),
+                "2026-09-19T12:00:00Z",
+            ),
+        )
+
+    diagnostic = _read_failure_diagnostic(
+        state_db=tmp_path / "workflow.sqlite",
+        reports_db=reports_db,
+        report_id="report-1",
+        validation_run_id="validation-1",
+        root_workflow_id="workflow-1",
+        outer_code="validation_failed",
+    )
+
+    assert diagnostic == {
+        "stage": "semantic_validation",
+        "outer_code": "validation_failed",
+        "inner_error_class": "",
+        "validator_rule": "schema_reference_missing",
+        "artifact_family": "editorial_plan",
+        "claim_or_entity_id": "finding:42",
+        "repair_attempt": 1,
+        "error_context": {
+            "affected_section": "editorial_plan",
+            "evidence_id": "finding:42",
+        },
+    }
+
+
+def test_failure_diagnostic_projects_structured_reference_and_cover_terminal_causes(
+    tmp_path: Path,
+) -> None:
+    """Each non-validation terminal family keeps its actionable retained identifier."""
+
+    state_db = tmp_path / "workflow.sqlite"
+    with sqlite3.connect(state_db) as conn:
+        conn.executescript(
+            """
+            CREATE TABLE remediation_records (
+              report_id TEXT, run_id TEXT, error_code TEXT, failed_stage TEXT,
+              diagnostics_json TEXT, updated_at_utc TEXT
+            );
+            """
+        )
+        rows = [
+            (
+                "contentstack",
+                "workflow-1",
+                "artifact_structured_output_invalid",
+                "report_pipeline",
+                {
+                    "error_context": {
+                        "artifact_family": "summary",
+                        "error_class": "schema_missing_required",
+                        "repair_attempt": 2,
+                    }
+                },
+            ),
+            (
+                "reference",
+                "workflow-1",
+                "schema_reference_missing",
+                "report_pipeline",
+                {"error_context": {"missing_references": ["finding:42"]}},
+            ),
+            (
+                "cover",
+                "workflow-1",
+                "cover_fingerprint_invalid",
+                "report_pipeline",
+                {"error_context": {"field": "selection_reason"}},
+            ),
+        ]
+        conn.executemany(
+            "INSERT INTO remediation_records VALUES (?, ?, ?, ?, ?, ?)",
+            [
+                (*row[:4], json.dumps(row[4]), "2026-09-19T12:00:00Z")
+                for row in rows
+            ],
+        )
+
+    diagnostics = {
+        report_id: _read_failure_diagnostic(
+            state_db=state_db,
+            reports_db=tmp_path / "reports.sqlite",
+            report_id=report_id,
+            validation_run_id="validation-1",
+            root_workflow_id="workflow-1",
+            outer_code=code,
+        )
+        for report_id, code in (
+            ("contentstack", "artifact_structured_output_invalid"),
+            ("reference", "schema_reference_missing"),
+            ("cover", "cover_fingerprint_invalid"),
+        )
+    }
+
+    assert diagnostics["contentstack"]["stage"] == "artifact_generation"
+    assert diagnostics["contentstack"]["inner_error_class"] == "schema_missing_required"
+    assert diagnostics["contentstack"]["artifact_family"] == "summary"
+    assert diagnostics["contentstack"]["repair_attempt"] == 2
+    assert diagnostics["reference"]["stage"] == "artifact_generation"
+    assert diagnostics["reference"]["claim_or_entity_id"] == "finding:42"
+    assert diagnostics["cover"]["stage"] == "rendering"
+    assert diagnostics["cover"]["error_context"] == {"field": "selection_reason"}
 
 
 def test_first_attempt_canary_uses_production_submission_and_supervisor_path(

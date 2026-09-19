@@ -23,6 +23,7 @@ class StructuredOutputFailure(AppError):
         response_text: str,
         schema_errors: str = "",
         repair_attempt: int = 0,
+        error_class: str = "",
     ) -> None:
         super().__init__(
             code=code,
@@ -32,6 +33,7 @@ class StructuredOutputFailure(AppError):
                 "artifact_family": artifact_family,
                 "response_chars": len(response_text or ""),
                 "repair_attempt": max(0, int(repair_attempt or 0)),
+                "error_class": str(error_class or "").strip(),
             },
         )
         self.response_text = response_text

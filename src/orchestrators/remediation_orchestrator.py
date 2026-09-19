@@ -44,6 +44,29 @@ _SIDE_EFFECTING_ACTIONS = {
     "revalidate_replaced_source",
 }
 
+_FAILURE_CONTEXT_KEYS = {
+    "affected_section",
+    "artifact_family",
+    "claim_id",
+    "component",
+    "entity_id",
+    "error_class",
+    "evidence_id",
+    "field",
+    "missing_claim_ids",
+    "missing_evidence_ids",
+    "missing_references",
+    "missing_reference_ids",
+    "reason",
+    "repair_attempt",
+    "rule_id",
+    "schema_name",
+    "schema_root_key",
+}
+_SAFE_FAILURE_CONTEXT_CHARS = frozenset(
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._:-"
+)
+
 # This is intentionally narrow.  Adding an action requires an explicit
 # workflow/error pair and still does not enable execution without the reaper
 # feature gate, an executor, and idempotency evidence where applicable.
@@ -275,12 +298,54 @@ def _failure_diagnostics(error: Exception) -> dict[str, object]:
         "retryable": error.retryable,
         "context_keys": sorted(str(key) for key in error.context),
     }
+    bounded_context = _bounded_failure_context(error.context)
+    if bounded_context:
+        diagnostics["error_context"] = bounded_context
     if error.cause is not None:
         diagnostics["cause_type"] = error.cause.__class__.__name__
         if isinstance(error.cause, AppError):
             diagnostics["cause_code"] = error.cause.code
             diagnostics["cause_retryable"] = error.cause.retryable
     return diagnostics
+
+
+def _bounded_failure_context(context: object) -> dict[str, object]:
+    """Keep only bounded diagnostic identifiers from untrusted error context."""
+
+    if not isinstance(context, dict):
+        return {}
+    result: dict[str, object] = {}
+    for key, value in context.items():
+        if key not in _FAILURE_CONTEXT_KEYS:
+            continue
+        if key == "repair_attempt":
+            if isinstance(value, int) and not isinstance(value, bool):
+                result[key] = max(0, min(9, value))
+            continue
+        if key in {
+            "missing_claim_ids",
+            "missing_evidence_ids",
+            "missing_references",
+            "missing_reference_ids",
+        }:
+            identifiers = [
+                token
+                for item in value if isinstance(value, list)
+                if (token := str(item or "").strip())
+                and len(token) <= 128
+                and set(token) <= _SAFE_FAILURE_CONTEXT_CHARS
+            ]
+            if identifiers:
+                result[key] = identifiers[:3]
+            continue
+        token = str(value or "").strip()
+        if (
+            token
+            and len(token) <= 128
+            and set(token) <= _SAFE_FAILURE_CONTEXT_CHARS
+        ):
+            result[key] = token
+    return result
 
 
 def _allowlisted_actions(workflow: str, error_code: str) -> set[RemediationActionCode]:

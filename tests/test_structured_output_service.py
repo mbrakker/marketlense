@@ -319,6 +319,8 @@ def test_recovery_fails_closed_for_parseable_invalid_payloads(
 
     assert modes == ["primary", "model_repair", "regeneration"]
     assert error_code in exc_info.value.schema_errors
+    assert exc_info.value.context["error_class"] == error_code
+    assert "response_text" not in exc_info.value.context
 
 
 def test_provider_error_records_terminal_failure_outcome(caplog) -> None:

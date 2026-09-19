@@ -292,6 +292,7 @@ def execute_structured_output(
         response_text=str(regenerated.text or original_response),
         schema_errors=_join_errors(exact_errors, regenerated_evaluation.error_detail),
         repair_attempt=2,
+        error_class=final_error,
     )
 
 

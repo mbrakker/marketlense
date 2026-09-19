@@ -118,6 +118,196 @@ def test_export_run_evidence_writes_terminal_and_funnel_views(tmp_path: Path) ->
     }
 
 
+def test_export_run_evidence_projects_retained_validator_cause(
+    tmp_path: Path,
+) -> None:
+    """The ordinary run export retains a validation cause without source text."""
+
+    state_dir = tmp_path / "state"
+    output_dir = tmp_path / "evidence"
+    state_dir.mkdir()
+    validation_path = tmp_path / "validation.json"
+    validation_path.write_text(
+        json.dumps(
+            {
+                "issues": [
+                    {
+                        "severity": "error",
+                        "rule_id": "schema_reference_missing",
+                        "affected_section": "editorial_plan",
+                        "entity_id": "finding:42",
+                        "message": "private source text must not be exported",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    with sqlite3.connect(state_dir / "reports.sqlite") as conn:
+        conn.executescript(
+            """
+            CREATE TABLE validation_run_cohort_members (
+              validation_run_id TEXT, report_id TEXT, publisher_id TEXT,
+              source_identity_id TEXT
+            );
+            CREATE TABLE validation_run_entity_attempts (
+              attempt_id TEXT, validation_run_id TEXT, report_id TEXT,
+              attempt_number INTEGER, terminal_outcome TEXT,
+              terminal_stage TEXT, failure_code TEXT, is_current INTEGER
+            );
+            CREATE TABLE validation_run_stage_records (
+              attempt_id TEXT, validation_run_id TEXT, stage TEXT,
+              terminal_outcome TEXT, failure_code TEXT, retryable INTEGER,
+              repair_disposition TEXT, idempotency_state TEXT,
+              output_artifact_ids_json TEXT, started_at_utc TEXT,
+              completed_at_utc TEXT
+            );
+            """
+        )
+        conn.execute(
+            "INSERT INTO validation_run_cohort_members VALUES (?, ?, ?, ?)",
+            ("validation-1", "reference", "publisher", "source"),
+        )
+        conn.execute(
+            "INSERT INTO validation_run_entity_attempts "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                "attempt-1",
+                "validation-1",
+                "reference",
+                1,
+                "permanent_failure",
+                "semantic_validation",
+                "validation_failed",
+                1,
+            ),
+        )
+        conn.execute(
+            "INSERT INTO validation_run_stage_records "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                "attempt-1",
+                "validation-1",
+                "semantic_validation",
+                "failed",
+                "validation_failed",
+                0,
+                "targeted_repair",
+                "new",
+                json.dumps([str(validation_path)]),
+                "2026-09-19T12:00:00Z",
+                "2026-09-19T12:00:01Z",
+            ),
+        )
+
+    export_run_evidence(
+        state_dir=state_dir,
+        artifact_dir=tmp_path / "artifacts",
+        output_dir=output_dir,
+        validation_run_id="validation-1",
+    )
+
+    failures = json.loads(output_dir.joinpath("failure_details.json").read_text())[
+        "terminal_failures"
+    ]
+    failure = failures[0]
+    assert failure["validator_rule"] == "schema_reference_missing"
+    assert failure["claim_or_entity_id"] == "finding:42"
+    assert failure["repair_attempt"] == 1
+    assert "private source text" not in json.dumps(failure)
+
+
+def test_export_run_evidence_projects_retained_remediation_cause(
+    tmp_path: Path,
+) -> None:
+    """The ordinary run export finds the root workflow for a terminal cause."""
+
+    state_dir = tmp_path / "state"
+    output_dir = tmp_path / "evidence"
+    state_dir.mkdir()
+    with sqlite3.connect(state_dir / "reports.sqlite") as conn:
+        conn.executescript(
+            """
+            CREATE TABLE validation_run_cohort_members (
+              validation_run_id TEXT, report_id TEXT, publisher_id TEXT,
+              source_identity_id TEXT
+            );
+            CREATE TABLE validation_run_entity_attempts (
+              validation_run_id TEXT, report_id TEXT, terminal_outcome TEXT,
+              terminal_stage TEXT, failure_code TEXT, is_current INTEGER
+            );
+            CREATE TABLE validation_run_stage_records (
+              validation_run_id TEXT, stage TEXT, terminal_outcome TEXT,
+              failure_code TEXT, retryable INTEGER, repair_disposition TEXT,
+              idempotency_state TEXT, started_at_utc TEXT, completed_at_utc TEXT
+            );
+            """
+        )
+        conn.execute(
+            "INSERT INTO validation_run_cohort_members VALUES (?, ?, ?, ?)",
+            ("validation-1", "contentstack", "publisher", "source"),
+        )
+        conn.execute(
+            "INSERT INTO validation_run_entity_attempts VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                "validation-1",
+                "contentstack",
+                "permanent_failure",
+                "artifact_generation",
+                "artifact_structured_output_invalid",
+                1,
+            ),
+        )
+    with sqlite3.connect(state_dir / "workflow.sqlite") as conn:
+        conn.executescript(
+            """
+            CREATE TABLE workflow_jobs (report_id TEXT, root_workflow_id TEXT);
+            CREATE TABLE remediation_records (
+              report_id TEXT, run_id TEXT, error_code TEXT, failed_stage TEXT,
+              diagnostics_json TEXT, updated_at_utc TEXT
+            );
+            """
+        )
+        conn.execute(
+            "INSERT INTO workflow_jobs VALUES (?, ?)",
+            ("contentstack", "workflow-1"),
+        )
+        conn.execute(
+            "INSERT INTO remediation_records VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                "contentstack",
+                "workflow-1",
+                "artifact_structured_output_invalid",
+                "report_pipeline",
+                json.dumps(
+                    {
+                        "error_context": {
+                            "artifact_family": "summary",
+                            "error_class": "schema_missing_required",
+                            "repair_attempt": 2,
+                        }
+                    }
+                ),
+                "2026-09-19T12:00:00Z",
+            ),
+        )
+
+    export_run_evidence(
+        state_dir=state_dir,
+        artifact_dir=tmp_path / "artifacts",
+        output_dir=output_dir,
+        validation_run_id="validation-1",
+    )
+
+    failure_details = json.loads(
+        output_dir.joinpath("failure_details.json").read_text()
+    )
+    failure = failure_details["terminal_failures"][0]
+    assert failure["inner_error_class"] == "schema_missing_required"
+    assert failure["artifact_family"] == "summary"
+    assert failure["repair_attempt"] == 2
+
+
 def test_retained_frozen_cohort_evidence_matches_authoritative_typed_outcomes() -> None:
     """Fails if a checked-in outcome view drifts from the typed cohort result."""
 
@@ -394,3 +584,111 @@ def test_frozen_outcome_export_rejects_missing_members_and_inconsistent_pareto(
         assert str(exc) == "cohort_result failure Pareto does not match typed outcomes"
     else:
         raise AssertionError("inconsistent frozen cohort failure Pareto was exported")
+
+
+def test_frozen_outcome_export_retains_bounded_actionable_failure_diagnostics(
+    tmp_path: Path,
+) -> None:
+    """Fails if the evidence projection drops an actionable terminal cause."""
+
+    cohort_result = tmp_path / "cohort_result.json"
+    cohort_result.write_text(
+        json.dumps(
+            {
+                "cohort_size": 4,
+                "reports": [
+                    {
+                        "report_id": "contentstack",
+                        "final_state": "failed",
+                        "terminal_failure_code": "artifact_structured_output_invalid",
+                        "publication_readiness": "fail",
+                        "failure_diagnostic": {
+                            "stage": "artifact_generation",
+                            "outer_code": "artifact_structured_output_invalid",
+                            "inner_error_class": "schema_validation",
+                            "artifact_family": "summary",
+                            "claim_or_entity_id": "",
+                            "repair_attempt": 2,
+                            "error_context": {"schema_name": "artifacts"},
+                        },
+                    },
+                    {
+                        "report_id": "similarweb",
+                        "final_state": "failed",
+                        "terminal_failure_code": "validation_failed",
+                        "publication_readiness": "fail",
+                        "failure_diagnostic": {
+                            "stage": "semantic_validation",
+                            "outer_code": "validation_failed",
+                            "validator_rule": "limitations_formal_abstention_required",
+                            "artifact_family": "limitations",
+                            "claim_or_entity_id": "limitations:0",
+                            "repair_attempt": 1,
+                            "error_context": {"affected_section": "limitations"},
+                        },
+                    },
+                    {
+                        "report_id": "reference",
+                        "final_state": "failed",
+                        "terminal_failure_code": "schema_reference_missing",
+                        "publication_readiness": "fail",
+                        "failure_diagnostic": {
+                            "stage": "artifact_generation",
+                            "outer_code": "schema_reference_missing",
+                            "validator_rule": "schema_reference_missing",
+                            "artifact_family": "editorial_plan",
+                            "claim_or_entity_id": "finding:42",
+                            "repair_attempt": 0,
+                            "error_context": {"evidence_id": "finding:42"},
+                        },
+                    },
+                    {
+                        "report_id": "cover",
+                        "final_state": "failed",
+                        "terminal_failure_code": "cover_fingerprint_invalid",
+                        "publication_readiness": "fail",
+                        "failure_diagnostic": {
+                            "stage": "rendering",
+                            "outer_code": "cover_fingerprint_invalid",
+                            "artifact_family": "cover_semantics",
+                            "claim_or_entity_id": "",
+                            "repair_attempt": 0,
+                            "error_context": {"field": "selection_reason"},
+                        },
+                    },
+                ],
+                "summary": {
+                    "failure_code_pareto": {
+                        "artifact_structured_output_invalid": 1,
+                        "cover_fingerprint_invalid": 1,
+                        "schema_reference_missing": 1,
+                        "validation_failed": 1,
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    output_dir = tmp_path / "evidence"
+    export_reliability_run_evidence.export_frozen_cohort_outcome_views(
+        cohort_result_path=cohort_result,
+        output_dir=output_dir,
+    )
+
+    failure_details = json.loads(
+        output_dir.joinpath("failure_details.json").read_text()
+    )
+    failures = failure_details["terminal_failures"]
+    by_report = {failure["report_id"]: failure for failure in failures}
+    assert by_report["contentstack"]["stage"] == "artifact_generation"
+    assert by_report["contentstack"]["inner_error_class"] == "schema_validation"
+    assert (
+        by_report["similarweb"]["validator_rule"]
+        == "limitations_formal_abstention_required"
+    )
+    assert by_report["similarweb"]["claim_or_entity_id"] == "limitations:0"
+    assert by_report["reference"]["claim_or_entity_id"] == "finding:42"
+    assert by_report["cover"]["error_context"] == {"field": "selection_reason"}
+    assert "raw prompt" not in json.dumps(failures).lower()
+    assert "provider response" not in json.dumps(failures).lower()

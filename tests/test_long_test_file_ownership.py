@@ -67,6 +67,12 @@ LONG_TEST_FILE_ALLOWLIST = {
         "expires_on": "2026-09-30",
         "max_lines": 1165,
     },
+    "tests/_test_artifact_generator/cases_03_artifact_cache_isolated_by_retrieval.py": {
+        "owner": "quality/repository-hygiene",
+        "reason": "Artifact-cache isolation cases require a follow-up split.",
+        "expires_on": "2026-09-30",
+        "max_lines": 1125,
+    },
     "tests/test_ingest_file_orchestrator.py": {
         "owner": "quality/repository-hygiene",
         "reason": "Ingest-file orchestration coverage requires a follow-up split.",

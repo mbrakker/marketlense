@@ -72,6 +72,9 @@ _AUTOMATIC_REPAIR_DISPOSITIONS = {
     "queue_redelivery",
     "process_restart",
 }
+_DIAGNOSTIC_TOKEN_CHARS = frozenset(
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._:-"
+)
 
 
 def prepare_isolated_canary_run(*, runs_root: Path) -> IsolatedCanaryRun:
@@ -850,6 +853,18 @@ def _read_result(
         # otherwise make the elapsed bound explicit and typed.
         final_state = "failed"
         terminal_failure = str((failure or ("ias_canary_timeout",))[0])
+    failure_diagnostic = (
+        _read_failure_diagnostic(
+            state_db=Path(settings.state_db),
+            reports_db=Path(settings.reports_db),
+            report_id=report_id,
+            validation_run_id=validation_run_id,
+            root_workflow_id=root_workflow_id,
+            outer_code=terminal_failure,
+        )
+        if terminal_failure
+        else {}
+    )
     return {
         "workflow_attempt_count": attempts,
         "final_state": final_state,
@@ -871,7 +886,221 @@ def _read_result(
         "output_tokens": usage.output_tokens,
         "cost": usage.estimated_cost_usd,
         "terminal_failure_code": terminal_failure,
+        **({"failure_diagnostic": failure_diagnostic} if failure_diagnostic else {}),
     }
+
+
+def _read_failure_diagnostic(
+    *,
+    state_db: Path,
+    reports_db: Path,
+    report_id: str,
+    validation_run_id: str,
+    root_workflow_id: str,
+    outer_code: str,
+) -> dict[str, Any]:
+    """Read one bounded terminal cause from canonical retained artifacts/state."""
+
+    if outer_code == "validation_failed":
+        validation = _read_validation_failure_diagnostic(
+            reports_db=reports_db,
+            report_id=report_id,
+            validation_run_id=validation_run_id,
+            outer_code=outer_code,
+        )
+        if validation:
+            return validation
+    remediation = _read_remediation_failure_diagnostic(
+        state_db=state_db,
+        report_id=report_id,
+        root_workflow_id=root_workflow_id,
+        outer_code=outer_code,
+    )
+    if remediation:
+        return remediation
+    return _read_validation_failure_diagnostic(
+        reports_db=reports_db,
+        report_id=report_id,
+        validation_run_id=validation_run_id,
+        outer_code=outer_code,
+    )
+
+
+def _read_validation_failure_diagnostic(
+    *, reports_db: Path, report_id: str, validation_run_id: str, outer_code: str
+) -> dict[str, Any]:
+    if not reports_db.is_file():
+        return {}
+    try:
+        with sqlite3.connect(reports_db) as conn:
+            row = conn.execute(
+                """
+                SELECT stages.stage, stages.failure_code, stages.repair_disposition,
+                       stages.output_artifact_ids_json
+                FROM validation_run_stage_records AS stages
+                JOIN validation_run_entity_attempts AS attempts
+                  ON attempts.attempt_id=stages.attempt_id
+                WHERE attempts.validation_run_id=? AND attempts.report_id=?
+                  AND stages.failure_code<>''
+                ORDER BY stages.completed_at_utc DESC
+                LIMIT 1
+                """,
+                (validation_run_id, report_id),
+            ).fetchone()
+    except sqlite3.Error:
+        return {}
+    if row is None:
+        return {}
+    stage, failure_code, repair_disposition, artifact_ids = row
+    if str(failure_code or "") != outer_code and outer_code == "validation_failed":
+        return {}
+    issue = _read_validation_issue(artifact_ids)
+    if issue is None:
+        return {}
+    affected_section = _diagnostic_token(issue.get("affected_section"))
+    entity_id = _diagnostic_token(issue.get("entity_id"))
+    evidence_ids = issue.get("evidence_ids")
+    evidence_id = (
+        _diagnostic_token(evidence_ids[0])
+        if isinstance(evidence_ids, list) and evidence_ids
+        else ""
+    )
+    rule_id = _diagnostic_token(issue.get("rule_id"))
+    context = {
+        key: value
+        for key, value in (
+            ("affected_section", affected_section),
+            ("evidence_id", evidence_id),
+        )
+        if value
+    }
+    return {
+        "stage": _diagnostic_token(stage),
+        "outer_code": _diagnostic_token(outer_code),
+        "inner_error_class": "",
+        "validator_rule": rule_id,
+        "artifact_family": affected_section,
+        "claim_or_entity_id": entity_id or evidence_id,
+        "repair_attempt": 1 if repair_disposition == "targeted_repair" else 0,
+        "error_context": context,
+    }
+
+
+def _read_validation_issue(artifact_ids: object) -> dict[str, Any] | None:
+    try:
+        paths = json.loads(str(artifact_ids or "[]"))
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(paths, list):
+        return None
+    for value in paths:
+        try:
+            payload = json.loads(Path(str(value)).read_text(encoding="utf-8"))
+        except (OSError, TypeError, ValueError, json.JSONDecodeError):
+            continue
+        issues = payload.get("issues") if isinstance(payload, dict) else None
+        if not isinstance(issues, list):
+            continue
+        for issue in issues:
+            if isinstance(issue, dict) and issue.get("severity") == "error":
+                return issue
+    return None
+
+
+def _read_remediation_failure_diagnostic(
+    *, state_db: Path, report_id: str, root_workflow_id: str, outer_code: str
+) -> dict[str, Any]:
+    if not state_db.is_file():
+        return {}
+    try:
+        with sqlite3.connect(state_db) as conn:
+            row = conn.execute(
+                """
+                SELECT failed_stage, error_code, diagnostics_json
+                FROM remediation_records
+                WHERE report_id=? AND run_id=? AND error_code=?
+                ORDER BY updated_at_utc DESC
+                LIMIT 1
+                """,
+                (report_id, root_workflow_id, outer_code),
+            ).fetchone()
+    except sqlite3.Error:
+        return {}
+    if row is None:
+        return {}
+    stage, error_code, raw_diagnostics = row
+    try:
+        diagnostics = json.loads(str(raw_diagnostics or "{}"))
+    except json.JSONDecodeError:
+        diagnostics = {}
+    context = diagnostics.get("error_context") if isinstance(diagnostics, dict) else {}
+    context = context if isinstance(context, dict) else {}
+    artifact_family = _diagnostic_token(context.get("artifact_family"))
+    claim_or_entity_id = _first_diagnostic_identifier(context)
+    return {
+        "stage": _failure_stage(
+            stage=_diagnostic_token(stage),
+            outer_code=_diagnostic_token(error_code),
+            artifact_family=artifact_family,
+        ),
+        "outer_code": _diagnostic_token(outer_code),
+        "inner_error_class": _diagnostic_token(context.get("error_class")),
+        "validator_rule": _diagnostic_token(context.get("rule_id")),
+        "artifact_family": artifact_family,
+        "claim_or_entity_id": claim_or_entity_id,
+        "repair_attempt": _repair_attempt(context.get("repair_attempt")),
+        "error_context": {
+            key: token
+            for key, value in sorted(context.items())
+            if isinstance(value, str)
+            if (token := _diagnostic_token(value))
+        },
+    }
+
+
+def _failure_stage(*, stage: str, outer_code: str, artifact_family: str) -> str:
+    if stage and stage != "report_pipeline":
+        return stage
+    if outer_code.startswith("cover_"):
+        return "rendering"
+    if artifact_family or any(
+        token in outer_code for token in ("artifact", "provenance", "reference")
+    ):
+        return "artifact_generation"
+    return stage or "report_pipeline"
+
+
+def _first_diagnostic_identifier(context: dict[str, Any]) -> str:
+    for key in ("claim_id", "entity_id", "evidence_id"):
+        if token := _diagnostic_token(context.get(key)):
+            return token
+    for key in (
+        "missing_claim_ids",
+        "missing_evidence_ids",
+        "missing_references",
+        "missing_reference_ids",
+    ):
+        values = context.get(key)
+        if isinstance(values, list):
+            for value in values:
+                if token := _diagnostic_token(value):
+                    return token
+    return ""
+
+
+def _repair_attempt(value: object) -> int:
+    if not isinstance(value, int) or isinstance(value, bool):
+        return 0
+    return max(0, min(9, value))
+
+
+def _diagnostic_token(value: object) -> str:
+    token = str(value or "").strip()
+    return (
+        token
+        if token and len(token) <= 128 and set(token) <= _DIAGNOSTIC_TOKEN_CHARS
+        else ""
+    )
 
 
 def _read_readiness_payload(row: tuple[Any, ...] | None) -> dict[str, Any]:
