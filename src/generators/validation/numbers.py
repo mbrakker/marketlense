@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+import hashlib
 from typing import List, Optional, Sequence, Tuple
 
 from src.contracts.report_models import ReportPayload
+from src.contracts.soft_copy_claim_provenance import (
+    soft_copy_claim_provenance_from_payload,
+)
 from src.contracts.validation import ValidationIssue
 from src.utils.quantity import extract_quantities, should_ground_quantity
+from src.utils.errors import AppError
 
 from .evidence import retrieve_evidence_windows, split_sentences
 from .models import EvidenceWindow, ValidationRuntime
@@ -43,6 +48,7 @@ def validate_new_numbers(
         insights, report, artifacts, evidence_texts
     )
     windows = list(evidence_windows or [])
+    soft_copy_claim_ids = _soft_copy_claim_ids_by_sentence(artifacts)
     summary = artifacts.get("summary") if isinstance(artifacts, dict) else {}
     summary = summary if isinstance(summary, dict) else {}
     section_texts: List[Tuple[str, str]] = [
@@ -74,7 +80,9 @@ def validate_new_numbers(
                 (s(insight.get(field_name)), f"insights:{insight_id}.{field_name}")
             )
     figures = artifacts.get("key_figures") if isinstance(artifacts, dict) else []
-    for index, figure in enumerate(figures if isinstance(figures, list) else [], start=1):
+    for index, figure in enumerate(
+        figures if isinstance(figures, list) else [], start=1
+    ):
         if not isinstance(figure, dict):
             continue
         for field_name in ("label", "figure", "why_it_matters"):
@@ -123,13 +131,14 @@ def validate_new_numbers(
                         message=f"Number {quantity.value} not present in report or evidence",
                         severity=severity,
                         section=section,
+                        entity_id=soft_copy_claim_ids.get(
+                            (section, _normalized_text_hash(sentence)), ""
+                        ),
                     )
                 )
         unsupported_pairs = unsupported_period_time_pairs(text, source_text)
         source_pairs = period_time_pairs(source_text)
-        source_values_by_period = {
-            period: value for period, value in source_pairs
-        }
+        source_values_by_period = {period: value for period, value in source_pairs}
         for period, value in sorted(unsupported_pairs):
             key = (section, f"{period}:{value}", "error")
             if key in seen:
@@ -148,3 +157,24 @@ def validate_new_numbers(
                 )
             )
     return issues
+
+
+def _soft_copy_claim_ids_by_sentence(artifacts: object) -> dict[tuple[str, str], str]:
+    """Keep a soft-copy validator failure claim-scoped for E13 regeneration."""
+    if not isinstance(artifacts, dict):
+        return {}
+    try:
+        claims = soft_copy_claim_provenance_from_payload(
+            artifacts.get("soft_copy_claim_provenance")
+        )
+    except (AppError, TypeError, ValueError):
+        return {}
+    return {
+        (claim.artifact_family, claim.text_hash): claim.claim_id
+        for claim in claims
+        if claim.artifact_family in {"expert_comment", "linkedin_post"}
+    }
+
+
+def _normalized_text_hash(text: str) -> str:
+    return hashlib.sha256(" ".join(text.split()).encode("utf-8")).hexdigest()

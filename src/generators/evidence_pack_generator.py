@@ -842,7 +842,19 @@ def _generate_pack(
                 message="doc_map payload must be a JSON object",
                 retryable=False,
             )
-        return strategy.normalize_payload(payload, report_id, report_name).payload
+        normalized = strategy.normalize_payload(payload, report_id, report_name).payload
+        # A limitations pack with an explicitly empty list has a deterministic
+        # meaning: no limitation was found.  Canonicalize that documented
+        # optional-pack abstention before the shared bounded recovery service
+        # decides whether another model call is necessary.
+        if (
+            pack_name == "limitations"
+            and not normalized.get("limitations")
+            and not str(normalized.get("not_found_reason") or "").strip()
+        ):
+            normalized = dict(normalized)
+            normalized["not_found_reason"] = "limitations_not_found"
+        return normalized
 
     recovery = execute_structured_output(
         StructuredOutputExecutionRequest(

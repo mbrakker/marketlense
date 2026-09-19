@@ -256,6 +256,31 @@ than classified by guesswork. Current queue terminal evidence preserves an
 available typed report-pipeline code; no common production root cause is
 proven by the two recovered readiness failures.
 
+The retained LLM ledger and surviving artifacts also isolate the six remaining
+structured-artifact/provenance members without recovering or retaining raw
+model prose. Bain's two artifact attempts were provider-parse-valid JSON whose
+private soft-copy bindings failed semantic coverage after the shared bounded
+recovery sequence. SimilarWeb's three limitations attempts were likewise
+parse-valid but normalized to an empty optional list without the existing
+formal-abstention reason. Robeco and Algolia reached artifact assembly with
+valid model bindings, then a source-display correction could change public
+soft-copy after that binding check. Adjust's unsupported numeric claim had no
+claim ID, so E13 could not select its sentence and reconstructed the family.
+Qualtrics had valid initial bindings but its claim-scoped LinkedIn regeneration
+prompt simultaneously required a one-sentence replacement and a full
+180–280-word post.
+
+The production boundaries now formalize an empty limitations list as
+`limitations_not_found`, apply source-display preservation before soft-copy
+binding validation, attach the retained soft-copy claim ID to numeric validator
+failures, and separate E13 claim-scoped LinkedIn replacement requirements from
+full-post requirements. These changes retain the existing shared structured
+recovery and E13 rebind paths: valid artifacts remain unchanged, recoverable
+binding drift is re-rendered through the bounded sequence, and an irrecoverable
+payload remains terminal. The evidence does not contradict E11: each relevant
+provider response was already JSON-parse-valid, so the failure was semantic or
+post-normalization rather than a regression in E11 structured-output parsing.
+
 Before any live A21 canary, the deterministic full-chain A21 gate must pass:
 
 ```powershell

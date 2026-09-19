@@ -21,22 +21,26 @@ text: |
 
   Requirements:
   - Fix the listed failures directly.
-  - When `claim_repair_scope.mode` is `claim`, return only one replacement
-    sentence for `linkedin_post` and bind only that replacement sentence. The
-    generator preserves and deterministically reconstructs all sibling claims;
-    never rewrite or repeat them.
+  - Obey `claim_repair_scope.mode` before applying any format constraint:
+    - In `claim` mode, return exactly one complete replacement sentence for
+      `linkedin_post` and bind only that sentence. The generator preserves and
+      deterministically reconstructs all sibling claims; never rewrite or
+      repeat them. Do not apply the full-post word, paragraph, proof-point, or
+      hashtag rules in claim mode.
+    - In `family` mode, return a complete LinkedIn post and apply every
+      full-post requirement below.
   - Treat the current post and editorial plan as failed editorial input, not
     source evidence. Use only `grounding_package.relevant_evidence`; never use
     an ID listed in `grounding_package.quarantined_evidence_ids`.
   - If the approved evidence cannot support the post, return an empty post
     rather than reuse a rejected evidence binding or claim.
-  - Keep one central, source-supported insight, tension, or implication selected from the editorial plan; do not turn the post into a mini-summary.
-  - For a broad report, explicitly frame the repaired post as one representative angle rather than a complete report summary. For a narrow report, it may express the overall thesis.
-  - Target 180–280 words while retaining the hard 500-word maximum. Attribute the publisher/publication naturally near the beginning when known from the report context. Keep a named byline separate, and never use a data provider as the publisher without explicit publisher evidence.
-  - Use two to four supporting proof points and no more than four quantitative proof points. Select the four or fewer quantitative proof points before drafting, then use no more than four distinct numerical values in the post; a percentage and its comparison value count separately. Do not introduce any additional number, percentage, currency figure, volume, or comparison beyond that selection. A report title or source period may include its year without counting as a proof point.
-  - Include one distinct source-supported interpretation or decision implication. Do not introduce unsupported claims, numbers, quotes, recommendations, or causal outcomes.
-  - Avoid the phrases "The evidence points to", "The market signals are clear", "For senior leaders", "The strategic question is not simply", and "The practical agenda"; do not use engagement bait or unnecessary tagging.
-  - Use zero to three highly relevant hashtags only when useful. Use only plain-text short paragraphs separated by blank lines so every supporting point remains native LinkedIn prose. Write at least three paragraphs and separate each with two newline characters. Do not return fewer than 180 words or more than 280 words. Do not use bullets or Markdown formatting, including *title*, **bold**, headings, code fences, or Markdown links.
+  - In `family` mode, keep one central, source-supported insight, tension, or implication selected from the editorial plan; do not turn the post into a mini-summary.
+  - In `family` mode, explicitly frame a broad report as one representative angle rather than a complete report summary. A narrow report may express the overall thesis.
+  - In `family` mode, target 180–280 words while retaining the hard 500-word maximum. Attribute the publisher/publication naturally near the beginning when known from the report context. Keep a named byline separate, and never use a data provider as the publisher without explicit publisher evidence.
+  - In `family` mode, use two to four supporting proof points and no more than four quantitative proof points. Select the four or fewer quantitative proof points before drafting, then use no more than four distinct numerical values in the post; a percentage and its comparison value count separately. Do not introduce any additional number, percentage, currency figure, volume, or comparison beyond that selection. A report title or source period may include its year without counting as a proof point.
+  - In `family` mode, include one distinct source-supported interpretation or decision implication. Do not introduce unsupported claims, numbers, quotes, recommendations, or causal outcomes.
+  - In `family` mode, avoid the phrases "The evidence points to", "The market signals are clear", "For senior leaders", "The strategic question is not simply", and "The practical agenda"; do not use engagement bait or unnecessary tagging.
+  - In `family` mode, use zero to three highly relevant hashtags only when useful. Use only plain-text short paragraphs separated by blank lines so every supporting point remains native LinkedIn prose. Write at least three paragraphs and separate each with two newline characters. Do not return fewer than 180 words or more than 280 words. Do not use bullets or Markdown formatting, including *title*, **bold**, headings, code fences, or Markdown links.
   - Do not introduce unsupported claims, numbers, or quotes.
   - Prefer concise grounded language over persuasive but unsupported language.
   - Return direct public prose without editorial labels such as "Executive takeaway:", "Observation:", or "Implication:".

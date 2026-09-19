@@ -106,6 +106,7 @@ def render_artifact_json_model(
     report_id: str = "",
     prepared_prompt_bundle: PreparedPromptBundle | None = None,
     response_observer: Callable[[Any, float, str], None] | None = None,
+    public_output_normalizer: Callable[[Dict[str, Any]], None] | None = None,
 ) -> Dict[str, Any]:
     """Render one artifact through the shared bounded JSON recovery service."""
     prompt_bundle = prepared_prompt_bundle or prepare_prompt_bundle(
@@ -321,7 +322,7 @@ def render_artifact_json_model(
         ctx,
         call_model=call_model,
         normalize_payload=lambda payload: _normalize_artifact_response(
-            payload, root_key
+            payload, root_key, public_output_normalizer=public_output_normalizer
         ),
         validate_payload=validate_payload,
         is_substantive=lambda payload: _artifact_response_substantive(
@@ -360,7 +361,12 @@ def _artifact_response_substantive(payload: object, root_key: str) -> bool:
     return False
 
 
-def _normalize_artifact_response(payload: object, root_key: str) -> Dict[str, Any]:
+def _normalize_artifact_response(
+    payload: object,
+    root_key: str,
+    *,
+    public_output_normalizer: Callable[[Dict[str, Any]], None] | None = None,
+) -> Dict[str, Any]:
     if not isinstance(payload, dict):
         return payload  # type: ignore[return-value]
     normalized = dict(payload)
@@ -432,4 +438,6 @@ def _normalize_artifact_response(payload: object, root_key: str) -> Dict[str, An
             if isinstance(bindings, list)
             else []
         )
+    if public_output_normalizer is not None:
+        public_output_normalizer(normalized)
     return normalized

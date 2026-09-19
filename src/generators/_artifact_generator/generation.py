@@ -315,8 +315,49 @@ def generate_artifacts(
                 variables=current_task.variables,
                 ctx=current_task.ctx,
                 payload_validator=payload_validator,
+                public_output_normalizer=_public_output_normalizer(
+                    current_task.namespace
+                ),
             ),
         )
+
+    def _public_output_normalizer(namespace: str):
+        """Apply source-display preservation before soft-copy bindings are checked."""
+
+        root_key = _SOFT_COPY_NAMESPACES.get(namespace)
+        if not root_key:
+            return None
+
+        def normalize(payload: Dict[str, Any]) -> None:
+            if root_key == "summary":
+                summary_payload = payload.get("summary")
+                if isinstance(summary_payload, dict):
+                    preserve_public_source_displays(
+                        summary=summary_payload,
+                        insights_final=[],
+                        expert_comment="",
+                        linkedin_post="",
+                    )
+                return
+            expert_comment, linkedin_post = preserve_public_source_displays(
+                summary=summary,
+                insights_final=insights_final,
+                expert_comment=(
+                    _s(payload.get("expert_comment"))
+                    if root_key == "expert_comment"
+                    else ""
+                ),
+                linkedin_post=(
+                    _s(payload.get("linkedin_post"))
+                    if root_key == "linkedin_post"
+                    else ""
+                ),
+            )
+            payload[root_key] = (
+                expert_comment if root_key == "expert_comment" else linkedin_post
+            )
+
+        return normalize
 
     def resolve_or_render_family(
         *,
@@ -325,6 +366,7 @@ def generate_artifacts(
         ctx: RunContext,
         payload_validator=None,
         repair_namespace: str = "",
+        public_output_normalizer=None,
     ) -> Dict[str, Any]:
         """Resolve one exact retained family before entering model recovery."""
         root_key = _ARTIFACT_FAMILY_ROOTS[namespace]
@@ -571,6 +613,7 @@ def generate_artifacts(
             repair_namespace=repair_namespace,
             prepared_prompt_bundle=prepared,
             response_observer=observe_response,
+            public_output_normalizer=public_output_normalizer,
         )
         family_outputs[namespace] = rendered.get(root_key)
         if soft_copy_family:

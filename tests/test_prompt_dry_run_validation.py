@@ -206,9 +206,7 @@ def test_linkedin_prompt_materializes_editorial_plan_and_report_scope(
     variables = {
         "editorial_plan_json": '{"report_thesis":"Retention is the angle."}',
         "doc_map_json": json.dumps({"scope": scope, "publisher": "Source Co."}),
-        "report_identity_json": json.dumps(
-            {"scope": scope, "publisher": "Source Co."}
-        ),
+        "report_identity_json": json.dumps({"scope": scope, "publisher": "Source Co."}),
         "summary_json": '{"executive_summary":"Secondary context."}',
         "insights_final_json": '[{"text":"Supporting insight."}]',
         "metric_spine_json": "[]",
@@ -240,6 +238,22 @@ def test_linkedin_prompt_materializes_editorial_plan_and_report_scope(
     assert "no more than four distinct numerical values" in rendered.text
     assert "Do not use bullets" in rendered.text
     assert "The evidence points to" in rendered.text
+
+
+def test_linkedin_regeneration_prompt_separates_claim_scope_from_full_post_rules() -> (
+    None
+):
+    prompt_set = prompt_service.load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/regenerate/linkedin_post",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+
+    assert "Do not apply the full-post word" in prompt_set.user.text
+    assert "hashtag rules in claim mode" in prompt_set.user.text
 
 
 @pytest.mark.parametrize(

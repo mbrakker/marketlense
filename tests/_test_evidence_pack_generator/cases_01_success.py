@@ -246,8 +246,7 @@ def test_generate_evidence_packs_passes_source_temporal_relationships_to_finding
         report_name="Source temporal pairs",
         vector_store_id="vs_1",
         source_text=(
-            "2019 2020 2021 2022 2023 2024E 2028E "
-            "0:20 0:28 0:36 0:43 0:48 0:52 0:57"
+            "2019 2020 2021 2022 2023 2024E 2028E 0:20 0:28 0:36 0:43 0:48 0:52 0:57"
         ),
         settings=_settings(tmp_path, evidence_pack_registry=["doc_map", "findings"]),
         ctx=_ctx(),
