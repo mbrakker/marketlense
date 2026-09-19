@@ -695,6 +695,39 @@ def generate_artifacts(
             analysis_store=analysis_store,
         )
         if cached is not None:
+            def cached_list_field(name: str) -> List[Dict[str, Any]]:
+                value = cached.get(name)
+                return (
+                    cast(List[Dict[str, Any]], value)
+                    if isinstance(value, list)
+                    else []
+                )
+
+            cached_summary = cached.get("summary")
+            cached_editorial_plan = cached.get("editorial_plan")
+            cached_soft_copy_claim_provenance = cached.get(
+                "soft_copy_claim_provenance"
+            )
+            normalize_artifact_evidence_ids(
+                summary=(
+                    cached_summary if isinstance(cached_summary, dict) else {}
+                ),
+                insights_candidates=cached_list_field("insights_candidates"),
+                insights_final=cached_list_field("insights_final"),
+                quotes_final=cached_list_field("quotes_final"),
+                doc_map=safe_doc_map,
+                evidence_packs=safe_evidence,
+                editorial_plan=(
+                    cached_editorial_plan
+                    if isinstance(cached_editorial_plan, dict)
+                    else None
+                ),
+                soft_copy_claim_provenance=(
+                    cached_soft_copy_claim_provenance
+                    if isinstance(cached_soft_copy_claim_provenance, dict)
+                    else None
+                ),
+            )
             logger.info(
                 log_event(
                     ctx,

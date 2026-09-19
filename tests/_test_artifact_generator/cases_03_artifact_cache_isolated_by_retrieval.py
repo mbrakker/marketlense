@@ -8,8 +8,132 @@ from src.contracts.prompt_family_materialization import (
     PromptFamilyReuseResponse,
 )
 from src.services.prompt_family_materialization_service import materialize_prompt_family
+from src.services.schema_validator_service import validate_evidence_references
 
 from ._shared import *  # noqa: F401,F403
+
+
+def test_artifact_cache_hit_canonicalizes_all_reference_bearing_families(tmp_path):
+    responses = {
+        "toc": {"toc_topics": ["Topic"]},
+        "summary": {
+            "summary": {
+                "tldr": "Grounded TLDR.",
+                "card_tldr_compact": "Grounded TLDR.",
+                "executive_summary": "Executive summary.",
+                "claim_evidence_map": [
+                    {
+                        "claim": "Claim",
+                        "evidence_id": "f1",
+                        "evidence": "Support",
+                        "pages": [1],
+                    }
+                ],
+            }
+        },
+        "insights_candidates": {
+            "insights_candidates": [
+                {
+                    "id": "c1",
+                    "text": "Candidate 1",
+                    "evidence_id": "f1",
+                    "evidence": "Support",
+                    "metric": {},
+                    "pages": [1],
+                    "score": 0.9,
+                }
+            ]
+        },
+        "insights_final": {
+            "insights_final": [
+                {
+                    "id": "f1",
+                    "text": "Final",
+                    "evidence_id": "f1",
+                    "evidence": "Support",
+                    "metric": {},
+                    "pages": [1],
+                }
+            ]
+        },
+        "quotes": {
+            "quotes_final": [
+                {
+                    "text": "Quote",
+                    "speaker": "Analyst",
+                    "citation": "",
+                    "page": 1,
+                    "evidence_id": "q1",
+                }
+            ]
+        },
+        "expert_comment": {"expert_comment": "Comment."},
+        "linkedin_post": {"linkedin_post": "Post."},
+    }
+    report_id = "cache_reference_alias_report"
+    report_name = "cache reference alias report"
+    settings = _settings(tmp_path)
+    initial = generate_artifacts(
+        report_id=report_id,
+        report_name=report_name,
+        doc_map=_doc_map(),
+        evidence_packs=_evidence_packs(),
+        settings=settings,
+        vector_store_id="",
+        ctx=_ctx(),
+        openai_client=FakeOpenAI(responses),
+        prompt_client=FakePromptClient(),
+        md5="cache-reference-alias",
+    )
+    cache_path = tmp_path / slugify(report_name) / "report_analysis" / "artifacts.json"
+    cached = json.loads(cache_path.read_text(encoding="utf-8"))
+    finding_alias = "evidence:findings:f1"
+    quote_alias = "evidence:quote_candidates:quote_001"
+    cached["summary"]["claim_evidence_map"][0]["evidence_id"] = finding_alias
+    cached["insights_candidates"][0]["evidence_id"] = finding_alias
+    cached["insights_final"][0]["evidence_id"] = finding_alias
+    cached["quotes_final"][0]["evidence_id"] = quote_alias
+    cached["editorial_plan"]["themes"][0]["evidence_ids"] = [finding_alias]
+    soft_claim = cached["soft_copy_claim_provenance"]["claims"][0]
+    soft_claim["evidence_ids"] = [finding_alias, quote_alias]
+    soft_claim["source_spans"] = [
+        {"evidence_id": finding_alias, "page": 2},
+        {"evidence_id": quote_alias, "page": 3},
+    ]
+    cache_path.write_text(json.dumps(cached), encoding="utf-8")
+
+    replay = generate_artifacts(
+        report_id=report_id,
+        report_name=report_name,
+        doc_map=_doc_map(),
+        evidence_packs=_evidence_packs(),
+        settings=settings,
+        vector_store_id="",
+        ctx=_ctx(),
+        openai_client=FakeOpenAI({}),
+        prompt_client=FakePromptClient(),
+        md5="cache-reference-alias",
+    )
+
+    assert replay["summary"]["claim_evidence_map"][0]["evidence_id"] == "f1"
+    assert replay["insights_candidates"][0]["evidence_id"] == "f1"
+    assert replay["insights_final"][0]["evidence_id"] == "f1"
+    assert replay["quotes_final"][0]["evidence_id"] == "q1"
+    assert replay["editorial_plan"]["themes"][0]["evidence_ids"] == ["f1"]
+    assert replay["soft_copy_claim_provenance"]["claims"][0]["evidence_ids"] == [
+        "f1",
+        "q1",
+    ]
+    assert [
+        span["evidence_id"]
+        for span in replay["soft_copy_claim_provenance"]["claims"][0]["source_spans"]
+    ] == ["f1", "q1"]
+    validate_evidence_references(
+        replay,
+        {**_evidence_packs(), "doc_map": _doc_map()},
+        _ctx(),
+    )
+    assert initial["quotes_final"][0]["evidence_id"] == "q1"
 
 
 def test_artifact_cache_isolated_by_retrieval_mode(tmp_path):
@@ -981,6 +1105,7 @@ def test_editorial_plan_change_invalidates_only_linkedin_family_reuse(tmp_path) 
 
 
 __all__ = [
+    "test_artifact_cache_hit_canonicalizes_all_reference_bearing_families",
     "test_artifact_cache_isolated_by_retrieval_mode",
     "test_load_cached_artifacts_rejects_schema_invalid_payload",
     "test_load_cached_artifacts_rejects_v2_without_cover_semantics",

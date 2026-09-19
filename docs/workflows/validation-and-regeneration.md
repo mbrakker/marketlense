@@ -300,9 +300,10 @@ validation package for diagnosis. Legacy insight, quote, and summary
 claim-evidence-map reference handling keeps its existing semantics.
 Before this strict reference check, the shared evidence-ID canonicalisation
 boundary resolves valid aliases across summary, insight, quote, editorial-plan,
-and soft-copy provenance references (including retained spans). It preserves
-unknown values unchanged so the strict check continues to fail closed, and it
-does not alter already canonical IDs.
+and soft-copy provenance references (including retained spans). The same
+boundary runs for newly assembled and cache-hit artifacts. It preserves unknown
+values unchanged so the strict check continues to fail closed, and it does not
+alter already canonical IDs.
 
 When an immutable historical artifact is used as a regression before-state,
 it remains immutable and is never supplied retroactive prompt or claim
