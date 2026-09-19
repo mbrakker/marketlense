@@ -1344,10 +1344,32 @@ def normalize_artifact_evidence_ids(
         _normalize_reference(item)
         if not isinstance(item, dict):
             return
+        parent_evidence_id = _s(item.get("evidence_id")).strip()
         spans = item.get("evidence_spans")
         if isinstance(spans, list):
             for span in spans:
-                _normalize_reference(span, preserve_missing=True)
+                _normalize_span(
+                    span, parent_evidence_id=parent_evidence_id
+                )
+
+    def _normalize_span(span: Any, *, parent_evidence_id: str = "") -> None:
+        nonlocal normalized_count, unresolved_count
+        if not isinstance(span, dict) or "evidence_id" not in span:
+            return
+        original = _s(span.get("evidence_id")).strip()
+        _normalize_reference(span, preserve_missing=True)
+        # A source-page label is location provenance, not an independent
+        # evidence identity.  When the containing artifact has already
+        # resolved one retained evidence ID, preserve the page/source metadata
+        # while binding that location to its proven canonical parent.
+        if (
+            parent_evidence_id in known_ids
+            and span.get("evidence_id") == original
+            and re.fullmatch(r"source:page:\d+", original, flags=re.IGNORECASE)
+        ):
+            span["evidence_id"] = parent_evidence_id
+            normalized_count += 1
+            unresolved_count -= 1
 
     def _normalize_evidence_ids(evidence_ids: Any) -> List[str]:
         if not isinstance(evidence_ids, list):
@@ -1388,10 +1410,22 @@ def normalize_artifact_evidence_ids(
                 evidence_ids = claim.get("evidence_ids")
                 if isinstance(evidence_ids, list):
                     claim["evidence_ids"] = _normalize_evidence_ids(evidence_ids)
+                canonical_evidence_ids = {
+                    _s(evidence_id).strip()
+                    for evidence_id in claim.get("evidence_ids") or []
+                    if _s(evidence_id).strip() in known_ids
+                }
+                parent_evidence_id = (
+                    next(iter(canonical_evidence_ids))
+                    if len(canonical_evidence_ids) == 1
+                    else ""
+                )
                 source_spans = claim.get("source_spans")
                 if isinstance(source_spans, list):
                     for span in source_spans:
-                        _normalize_reference(span, preserve_missing=True)
+                        _normalize_span(
+                            span, parent_evidence_id=parent_evidence_id
+                        )
 
     return {
         "known_reference_count": len(known_ids),

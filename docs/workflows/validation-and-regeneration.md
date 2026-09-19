@@ -308,6 +308,10 @@ Separator variants of retained IDs (including compact and unpadded numeric
 IDs) and ordered finding aliases are resolved only when the retained evidence
 index proves the corresponding canonical ID; formatting similarity alone never
 authorizes an unknown reference.
+When a retained artifact already resolves a parent evidence ID, a nested
+`source:page:N` location span is bound to that parent before strict validation;
+its page, source-pack, and text provenance are retained. A location label alone
+never becomes evidence, and any other unknown reference still fails closed.
 
 When an immutable historical artifact is used as a regression before-state,
 it remains immutable and is never supplied retroactive prompt or claim

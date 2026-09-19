@@ -241,6 +241,68 @@ def test_common_reference_boundary_rejects_unknown_numeric_aliases() -> None:
     assert exc.value.code == "schema_reference_missing"
 
 
+def test_common_reference_boundary_binds_location_spans_to_proven_parent() -> None:
+    summary = {
+        "claim_evidence_map": [
+            {
+                "evidence_id": "evidence:findings:finding_001",
+                "evidence_spans": [
+                    {
+                        "evidence_id": "source:page:3",
+                        "source_pack": "source_pdf",
+                        "page": 3,
+                        "text": "Retained location context",
+                    }
+                ],
+            }
+        ]
+    }
+    soft_copy_claim_provenance = {
+        "claims": [
+            {
+                "evidence_ids": ["evidence:findings:finding_001"],
+                "source_spans": [
+                    {
+                        "evidence_id": "source:page:3",
+                        "source_pack": "source_pdf",
+                        "page": 3,
+                        "text": "Retained location context",
+                    }
+                ],
+            }
+        ]
+    }
+    evidence_packs = {"findings": {"findings": [{"id": "finding_001"}]}}
+
+    normalize_artifact_evidence_ids(
+        summary=summary,
+        insights_candidates=[],
+        insights_final=[],
+        quotes_final=[],
+        doc_map={},
+        evidence_packs=evidence_packs,
+        soft_copy_claim_provenance=soft_copy_claim_provenance,
+    )
+
+    summary_span = summary["claim_evidence_map"][0]["evidence_spans"][0]
+    soft_copy_span = soft_copy_claim_provenance["claims"][0]["source_spans"][0]
+    assert summary_span == {
+        "evidence_id": "finding_001",
+        "source_pack": "source_pdf",
+        "page": 3,
+        "text": "Retained location context",
+    }
+    assert soft_copy_span == summary_span
+    validate_evidence_references(
+        {
+            "summary": summary,
+            "soft_copy_claim_provenance": soft_copy_claim_provenance,
+        },
+        evidence_packs,
+        _ctx(),
+    )
+
+
 def test_retained_a21_queue_wrapper_classification_is_explicit_about_gaps() -> None:
     fixture = _closure_fixture()
     cases = fixture["workflow_queue_report_stage_failed"]
