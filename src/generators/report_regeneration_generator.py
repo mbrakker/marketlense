@@ -66,6 +66,7 @@ from src.utils.errors import AppError
 from src.utils.json_utils import dump_json_text as _dump_json
 from src.utils.logging import child_context, log_event
 from src.utils.model_client_contract import require_injected_model_client
+from src.utils.text_normalization import normalize_text
 
 logger = logging.getLogger("market_lense.report_regeneration_generator")
 
@@ -1104,11 +1105,11 @@ def _restore_missing_final_insight_roster(
     selected = [deepcopy(item) for item in selected_insights if isinstance(item, dict)]
     selected_ids = [_s(item.get("id")).strip() for item in selected]
     missing_ids = [
-        insight_id for insight_id in prior_by_id if insight_id not in set(selected_ids)
+        insight_id
+        for insight_id in prior_by_id
+        if insight_id not in set(selected_ids)
+        and not _prior_insight_duplicates_selected(prior_by_id[insight_id], selected)
     ]
-    if not missing_ids:
-        return selected
-
     replace_indexes = [
         index
         for index, insight_id in enumerate(selected_ids)
@@ -1116,7 +1117,34 @@ def _restore_missing_final_insight_roster(
     ]
     for index, insight_id in zip(replace_indexes, missing_ids, strict=False):
         selected[index] = deepcopy(prior_by_id[insight_id])
-    return selected
+    replaced_indexes = set(replace_indexes[: len(missing_ids)])
+    return [
+        insight
+        for index, insight in enumerate(selected)
+        if index not in set(replace_indexes) or index in replaced_indexes
+    ]
+
+
+def _prior_insight_duplicates_selected(
+    prior_insight: Dict[str, Any], selected_insights: List[Dict[str, Any]]
+) -> bool:
+    prior_key = _regeneration_insight_duplicate_key(prior_insight)
+    return bool(
+        prior_key
+        and any(
+            _regeneration_insight_duplicate_key(item) == prior_key
+            for item in selected_insights
+        )
+    )
+
+
+def _regeneration_insight_duplicate_key(
+    insight: Dict[str, Any],
+) -> tuple[str, str] | None:
+    text = normalize_text(_s(insight.get("text")))
+    if not text:
+        return None
+    return (text, normalize_text(_s(insight.get("evidence_id"))))
 
 
 def _merge_regenerated_insights_by_stable_id(

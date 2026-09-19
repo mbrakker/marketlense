@@ -1,6 +1,7 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+from src.generators.validation.evidence import extract_quotes
 from src.generators.validation.semantic import run_semantic_validation
 
 from ._shared import *  # noqa: F401,F403
@@ -42,6 +43,21 @@ def test_validation_flags_metric_and_quote_mismatches(tmp_path):
     assert any("Metric value" in issue.message for issue in result.issues)
     assert any("Quote not verbatim" in issue.message for issue in result.issues)
     assert analysis_store.stored and analysis_store.stored[0][2] == "validation"
+
+
+def test_validation_does_not_restore_payload_quote_for_abstained_family() -> None:
+    request = ValidationRequest(
+        schema_version="1.0",
+        report_id="abstained-quote",
+        report=_report(),
+        artifacts={
+            "quotes_final": [],
+            "family_status": {"quotes": {"status": "abstained"}},
+        },
+        evidence_packs={},
+    )
+
+    assert extract_quotes(request, [{"evidence_id": "f1"}]) == []
 
 
 def test_validation_blocks_more_than_doubled_when_evidence_only_doubles(tmp_path):
@@ -1193,6 +1209,7 @@ def test_semantic_validation_reuses_retained_result_without_recovery_state(tmp_p
 
 __all__ = [
     "test_validation_flags_metric_and_quote_mismatches",
+    "test_validation_does_not_restore_payload_quote_for_abstained_family",
     "test_number_validation_ignores_soft_planning_timeframes",
     "test_number_validation_preserves_ordered_source_period_value_pairs",
     "test_validation_uses_retained_source_text_for_ordered_period_value_pairs",

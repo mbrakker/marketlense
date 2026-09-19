@@ -59,6 +59,15 @@ def test_filename_fallback_strips_acquisition_month_year_suffix() -> None:
     assert resolution.title == "IAB Europes Guide to AI in Retail Commerce Media"
 
 
+def test_attachment_filename_does_not_override_exact_pdf_metadata_title() -> None:
+    resolution = _resolve(
+        file_name="attachment-The-Sales-Signals-Playbook-4.pdf",
+        pdf_metadata={"Title": "The Sales Signals Playbook"},
+    )
+
+    assert resolution.title == "The Sales Signals Playbook"
+
+
 def test_explicit_source_title_preserves_apostrophe_ampersand_and_acronym_casing():
     resolution = _resolve(
         file_name="IAB_Europes_Guide_to_AI_in_Retail_Commerce_Media_June_26.pdf",

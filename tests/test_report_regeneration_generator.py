@@ -33,19 +33,19 @@ from src.generators.public_editorial_quality_generator import (
     validation_issues_from_public_editorial_quality,
 )
 from src.generators.report_regeneration_generator import (
-    _build_regeneration_state,
     _build_grounding_package,
+    _build_regeneration_state,
     _build_soft_copy_claim_evidence_package,
     _merge_regenerated_insights_by_stable_id,
     _restore_final_insight_evidence_bindings,
     _restore_missing_final_insight_roster,
     regenerate_artifacts,
 )
-from src.generators.validation.regeneration_candidate import (
-    validate_regeneration_candidate,
-)
 from src.generators.soft_copy_claim_provenance import (
     retained_soft_copy_claims_cover_text,
+)
+from src.generators.validation.regeneration_candidate import (
+    validate_regeneration_candidate,
 )
 from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
     _build_regeneration_plan,
@@ -82,6 +82,35 @@ def test_restore_missing_final_insight_roster_replaces_duplicate_model_id() -> N
     assert [item["id"] for item in restored] == ["insight-2", "insight-1"]
     assert restored[0]["text"] == "Repaired two"
     assert restored[1] == prior[0]
+
+
+def test_restore_missing_final_insight_roster_does_not_restore_removed_duplicate() -> None:
+    prior = [
+        {
+            "id": "insight-apac",
+            "text": "Regional benchmarks cover viewability and fraud.",
+            "evidence_id": "quality-benchmarks",
+        },
+        {
+            "id": "insight-emea",
+            "text": "Regional benchmarks cover viewability and fraud.",
+            "evidence_id": "quality-benchmarks",
+        },
+    ]
+
+    restored = _restore_missing_final_insight_roster(
+        selected_insights=[
+            prior[0],
+            {
+                "id": "insight-apac",
+                "text": "APAC viewability was 63% in Q1 2026.",
+                "evidence_id": "quality-benchmarks",
+            },
+        ],
+        prior_final_insights=prior,
+    )
+
+    assert restored == [prior[0]]
 
 
 def test_grounding_package_quarantines_failed_evidence_and_uses_replacements() -> None:

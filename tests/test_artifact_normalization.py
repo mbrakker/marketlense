@@ -1057,6 +1057,51 @@ def test_select_artifact_insights_fills_required_report_slots_after_theme_covera
     assert [item["evidence_id"] for item in selected] == ["e1", "e2", "e3", "e4", "e5"]
 
 
+def test_select_artifact_insights_keeps_distinct_ids_after_duplicate_final_claim() -> None:
+    final_insights = [
+        {
+            "id": "apac",
+            "text": "Regional quality benchmarks cover viewability and fraud.",
+            "evidence_id": "quality",
+            "score": 0.9,
+        },
+        {
+            "id": "emea",
+            "text": "Regional quality benchmarks cover viewability and fraud.",
+            "evidence_id": "quality",
+            "score": 0.9,
+        },
+    ]
+    candidate_insights = [
+        {
+            "id": "apac",
+            "text": "APAC authentic viewability was 63% in Q1 2026.",
+            "evidence_id": "quality",
+            "score": 0.9,
+        },
+        {
+            "id": "emea",
+            "text": "EMEA authentic viewability was 68% in Q1 2026.",
+            "evidence_id": "quality",
+            "score": 0.9,
+        },
+    ]
+
+    selected = select_artifact_insights(
+        final_insights=final_insights,
+        candidate_insights=candidate_insights,
+        editorial_plan={
+            "report_thesis": "Regional quality benchmarks differ by market.",
+            "themes": [
+                {"theme": "Quality", "priority": 1, "evidence_ids": ["quality"]},
+                {"theme": "Operations", "priority": 2, "evidence_ids": ["other"]},
+            ],
+        },
+    )
+
+    assert [item["id"] for item in selected] == ["apac", "emea"]
+
+
 def test_normalize_artifact_insights_omits_composite_public_metric_fields() -> None:
     insight = normalize_artifact_insights(
         [

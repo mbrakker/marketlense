@@ -105,6 +105,17 @@ candidate audits for diagnosis. A rejected regeneration candidate therefore
 cannot be rendered as a public package or replace the artifact/validation pair
 from which the next bounded attempt is planned.
 
+An artifact family marked `abstained` is authoritative at validation assembly:
+the validator must not restore a legacy payload value for that family. Before
+validation, final-insight selection also preserves one stable ID per retained
+slot and does not restore an omitted prior insight when its exact claim and
+evidence binding are already represented. These deterministic assembly repairs
+run before the normal factual-fidelity, grounding, semantic, and editorial
+gates; they do not waive or alter any validator result. Unsupported soft-copy
+sentences remain claim-scoped regeneration candidates using only their retained
+evidence, while canonical source title resolution strips browser transport
+wrappers from acquired filenames before source identity reaches validation.
+
 Before analysis, source preparation resolves one canonical report title using a
 fixed hierarchy: an explicit cover/title-page title, a repeated in-document
 header, clear source content, a clean acquired filename, then only specific,

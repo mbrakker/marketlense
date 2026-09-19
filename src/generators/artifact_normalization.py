@@ -818,6 +818,7 @@ def select_artifact_insights(
     required_count = max(REQUIRED_REPORT_PAYLOAD_INSIGHTS, len(plan["themes"]))
     selected: List[Dict[str, Any]] = []
     selected_keys: set[tuple[str, str]] = set()
+    selected_ids: set[str] = set()
     for theme in plan["themes"]:
         evidence_ids = {
             normalize_text(evidence_id) for evidence_id in theme["evidence_ids"]
@@ -829,12 +830,12 @@ def select_artifact_insights(
         ]
         if matching:
             _append_distinct_insight(
-                selected, selected_keys, _best_ranked_insight(matching)[1]
+                selected, selected_keys, selected_ids, _best_ranked_insight(matching)[1]
             )
     for _, insight in ranked:
         if len(selected) >= required_count:
             break
-        _append_distinct_insight(selected, selected_keys, insight)
+        _append_distinct_insight(selected, selected_keys, selected_ids, insight)
     return selected
 
 
@@ -1018,13 +1019,19 @@ def _insight_rank_key(item: tuple[int, Dict[str, Any]]) -> tuple[float, int]:
 def _append_distinct_insight(
     selected: List[Dict[str, Any]],
     selected_keys: set[tuple[str, str]],
+    selected_ids: set[str],
     insight: Dict[str, Any],
 ) -> None:
+    insight_id = _s(insight.get("id")).strip()
+    if insight_id and insight_id in selected_ids:
+        return
     duplicate_key = _insight_duplicate_key(insight)
     if duplicate_key and duplicate_key in selected_keys:
         return
     if duplicate_key:
         selected_keys.add(duplicate_key)
+    if insight_id:
+        selected_ids.add(insight_id)
     selected.append(insight)
 
 

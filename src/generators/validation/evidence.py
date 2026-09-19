@@ -354,6 +354,12 @@ def extract_quotes(request: ValidationRequest, insights: Sequence[dict]) -> List
     quotes = artifacts.get("quotes_final") or []
     if quotes:
         return quotes
+    family_status = artifacts.get("family_status")
+    quote_status = (
+        family_status.get("quotes") if isinstance(family_status, dict) else None
+    )
+    if isinstance(quote_status, dict) and quote_status.get("status") == "abstained":
+        return []
     quote = request.report.quote
     return [
         {

@@ -333,6 +333,33 @@ remaining failure Pareto is led by `schema_reference_missing` (6) and
 `artifact_structured_output_invalid` (4); no result was waived, rerun, or
 reclassified.
 
+### Retained validation repair trace — 2026-09-19
+
+Three retained `validation_failed` diagnostics from the final cohort were
+traced to the earliest responsible assembly boundary and repaired without
+changing validator policy:
+
+| Report | Retained finding | Responsible stage | Repair |
+| --- | --- | --- | --- |
+| StackAdapt | The semantic quote rule compared an empty legacy payload quote after `quotes_final` had explicitly abstained. | `validation.evidence.extract_quotes()` legacy fallback | An explicit `family_status.quotes=abstained` now returns no quote; legacy packages without family status retain the fallback. |
+| DoubleVerify | The public-editorial rule found the EMEA and APAC final insights identical with the same evidence binding. | Final-insight selection followed by roster restoration | Selection preserves distinct stable IDs while removing duplicate claim/binding slots; roster restoration does not reinsert a prior claim already represented by the selected binding. |
+| SimilarWeb | A grounded LinkedIn replacement was retained in the candidate, but the title validator received browser transport filename `attachment-The-Sales-Signals-Playbook-4`. | Report-title resolution | The resolver recognizes that transport wrapper and lets exact document metadata, `The Sales Signals Playbook`, win over the filename. |
+
+The existing claim-scoped LinkedIn regeneration path already repaired the
+SimilarWeb unsupported sentence from retained evidence; no broader
+regeneration or validator exception was added. Focused regressions cover all
+three deterministic faults. The factual-fidelity, grounding, semantic, and
+publication-readiness test suites passed locally.
+
+Fresh isolated replays used the original frozen manifest provenance and made
+no publication attempt. They were not counted as passes: DoubleVerify and
+StackAdapt stopped at `artifact_generation` after two bounded repairs with
+`soft_copy_claim_provenance_bindings_incomplete` for `linkedin_post`; SimilarWeb
+stopped at the same stage with `schema_reference_missing` for `summary`.
+Those are distinct pre-validation artifact-generation terminals, so the live
+runs did not reach the repaired historical validators. They remain retained
+replay blockers rather than waived or reclassified validation outcomes.
+
 ### Reusable sanitized acquisition-assessment projection
 
 When a completed acquisition assessment has a retained raw current JSONL and a

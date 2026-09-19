@@ -525,7 +525,14 @@ def _filename_title(file_name: str) -> str:
     raw = re.sub(r"\.(?:pdf|docx?|pptx?)$", "", raw, flags=re.IGNORECASE)
     if is_generic_report_title(raw):
         return ""
+    attachment_wrapper = bool(
+        re.match(r"^attachment[._-]+", raw, re.IGNORECASE)
+        and re.search(r"[._-]\d{1,3}$", raw)
+    )
     raw = _clean(re.sub(r"[._-]+", " ", raw))
+    if attachment_wrapper:
+        raw = _clean(re.sub(r"^attachment\s+", "", raw, flags=re.IGNORECASE))
+        raw = _clean(re.sub(r"\s+\d{1,3}$", "", raw))
     raw = _clean(_FILENAME_TRAILING_DATE_OR_LABEL.sub("", raw))
     return "" if is_generic_report_title(raw) else raw
 
