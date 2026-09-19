@@ -1700,15 +1700,26 @@ def _collect_known_evidence_ids(
                 _register(section.get("id"))
 
     canonical_ids_by_lower = {evidence_id.lower() for evidence_id in known_ids}
+    numeric_ids: dict[tuple[str, int], list[str]] = {}
     for evidence_id in known_ids:
-        compact_numeric = re.fullmatch(r"(.+?)(\d+)", evidence_id)
-        if not compact_numeric:
+        numeric_suffix = re.fullmatch(r"(.+?)(\d+)", evidence_id)
+        if not numeric_suffix:
             continue
-        prefix, index = compact_numeric.groups()
-        if prefix.endswith(("-", "_", " ")):
+        prefix, index = numeric_suffix.groups()
+        normalized_prefix = prefix.rstrip("-_ ").lower()
+        if normalized_prefix:
+            numeric_ids.setdefault(
+                (normalized_prefix, int(index)), []
+            ).append(evidence_id)
+    for (prefix, index), evidence_ids in numeric_ids.items():
+        # Only one retained canonical ID may prove a compact/unpadded form.
+        # Distinct canonical spellings remain distinct, even if their numeric
+        # suffix and separator-normalized prefixes otherwise match.
+        if len(evidence_ids) != 1:
             continue
-        for separator in ("-", "_", " "):
-            alias = f"{prefix}{separator}{index}".lower()
+        evidence_id = evidence_ids[0]
+        for separator in ("", "-", "_", " "):
+            alias = f"{prefix}{separator}{index}"
             if alias not in canonical_ids_by_lower:
                 alias_to_id.setdefault(alias, evidence_id)
 

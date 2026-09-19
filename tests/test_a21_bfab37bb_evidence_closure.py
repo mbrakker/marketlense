@@ -193,6 +193,54 @@ def test_common_reference_boundary_canonicalizes_compact_numeric_aliases() -> No
     )
 
 
+def test_common_reference_boundary_canonicalizes_unpadded_numeric_aliases() -> None:
+    summary = {
+        "claim_evidence_map": [{"evidence_id": "evidence:findings:metric-1"}]
+    }
+    evidence_packs = {"findings": {"findings": [{"id": "metric-001"}]}}
+
+    stats = normalize_artifact_evidence_ids(
+        summary=summary,
+        insights_candidates=[],
+        insights_final=[],
+        quotes_final=[],
+        doc_map={},
+        evidence_packs=evidence_packs,
+    )
+
+    assert summary["claim_evidence_map"][0]["evidence_id"] == "metric-001"
+    assert stats["normalized_count"] == 1
+    validate_evidence_references(
+        {"summary": summary}, evidence_packs, _ctx()
+    )
+
+
+def test_common_reference_boundary_rejects_unknown_numeric_aliases() -> None:
+    summary = {
+        "claim_evidence_map": [{"evidence_id": "evidence:findings:metric-2"}]
+    }
+    evidence_packs = {"findings": {"findings": [{"id": "metric-001"}]}}
+
+    stats = normalize_artifact_evidence_ids(
+        summary=summary,
+        insights_candidates=[],
+        insights_final=[],
+        quotes_final=[],
+        doc_map={},
+        evidence_packs=evidence_packs,
+    )
+
+    assert summary["claim_evidence_map"][0]["evidence_id"] == (
+        "evidence:findings:metric-2"
+    )
+    assert stats["unresolved_count"] == 1
+    with pytest.raises(AppError) as exc:
+        validate_evidence_references(
+            {"summary": summary}, evidence_packs, _ctx()
+        )
+    assert exc.value.code == "schema_reference_missing"
+
+
 def test_retained_a21_queue_wrapper_classification_is_explicit_about_gaps() -> None:
     fixture = _closure_fixture()
     cases = fixture["workflow_queue_report_stage_failed"]
